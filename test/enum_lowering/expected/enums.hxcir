@@ -1,5 +1,5 @@
 hxcir schema=17
-module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-164:3
+module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-173:3
   type "type.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a" name="Rule" kind=aggregate @"test/enum_lowering/fixtures/positive/EnumFixture.hx":22:1-26:2
     field "actions" type=instance("instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c") mutable=false @"test/enum_lowering/fixtures/positive/EnumFixture.hx":25:2-25:27
     field "chain" type=instance("instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73") mutable=false @"test/enum_lowering/fixtures/positive/EnumFixture.hx":23:2-23:25
@@ -311,7 +311,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       terminator return value="parameter.0" cleanup=[] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":40:3-40:15
     end block "entry"
   end function "function.EnumFixture.identityMode"
-  function "function.EnumFixture.main" name="EnumFixture.main" returns=void failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-164:3
+  function "function.EnumFixture.main" name="EnumFixture.main" returns=void failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-173:3
     local "local.0" type=instance("instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":145:3-145:17
     local "local.1" type=instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":146:3-146:47
     local "local.10" type=instance("instance.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":152:3-152:35
@@ -321,19 +321,19 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
     local "local.14" type=instance("instance.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":155:40-155:50
     local "local.15" type=instance("instance.haxe-array.400559e4cf5d14046c5de138b56239fcb089ca6010e49b9787862f41e271e315") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":156:3-156:30
     local "local.16" type=instance("instance.haxe-array.84c38722b2d7577c1cedaec802f72d2ad1d63f76cf42840564ed8f86a908ddca") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":158:3-158:42
-    local "local.17" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
-    local "local.18" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
-    local "local.19" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
+    local "local.17" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
+    local "local.18" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
+    local "local.19" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
     local "local.2" type=instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":147:3-147:33
-    local "local.20" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
-    local "local.21" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
-    local "local.22" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
-    local "local.23" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
-    local "local.24" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
-    local "local.25" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
-    local "local.26" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
-    local "local.27" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
-    local "local.28" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
+    local "local.20" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
+    local "local.21" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
+    local "local.22" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
+    local "local.23" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
+    local "local.24" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
+    local "local.25" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
+    local "local.26" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
+    local "local.27" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
+    local "local.28" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
     local "local.3" type=instance("instance.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":148:3-148:39
     local "local.4" type=instance("instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":149:3-149:21
     local "local.5" type=instance("instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":150:3-150:21
@@ -341,7 +341,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
     local "local.7" type=instance("instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":151:23-151:38
     local "local.8" type=instance("instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":151:53-151:60
     local "local.9" type=instance("instance.enum.d215f6115399f1aee252ec00f591b14438842533b70cc7cb0061b31863d2d2ce") ownership=owned-or-value storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":151:40-151:61
-    cleanup "cleanup.construction" parent=none registration-order @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-164:3
+    cleanup "cleanup.construction" parent=none registration-order @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-173:3
       action "array-local.4.release" idempotence=exactly-once release place=local("local.4") implementation=runtime("array") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":149:3-149:21
       action "array-local.5.release" idempotence=exactly-once release place=local("local.5") implementation=runtime("array") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":150:3-150:21
       action "enum-temporary.local.7.release" idempotence=exactly-once release place=local("local.7") implementation=program-local("enum-lifecycle:instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73:destroy") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":151:23-151:38
@@ -353,7 +353,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       action "enum-local.13.release" idempotence=exactly-once release place=local("local.13") implementation=program-local("enum-lifecycle:instance.enum.249367042efd11cc63c8c7f59875e4ac7665c507c5b0b88f26b5cb9066b1d4d8:destroy") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":155:3-155:52
       action "array-local.15.release" idempotence=exactly-once release place=local("local.15") implementation=runtime("array") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":156:3-156:30
       action "array-local.16.release" idempotence=exactly-once release place=local("local.16") implementation=runtime("array") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":158:3-158:42
-    block "entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-164:3
+    block "entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-173:3
       instruction "instruction.0.construct-enum" result="value.0":instance("instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6") construct-tag instance="instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6" tag="On" payload=[] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":145:14-145:16
       instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":145:3-145:17
       instruction "instruction.2.constant" result="value.1":i32 constant value=int(7) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":146:43-146:44
@@ -414,172 +414,172 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       instruction "instruction.57.load" result="value.37":instance("instance.haxe-array.84c38722b2d7577c1cedaec802f72d2ad1d63f76cf42840564ed8f86a908ddca") load place=local("local.16") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":159:3-159:12
       instruction "instruction.58.load" result="value.38":instance("instance.enum.ffce8027b64408d579f9f82d3436423417f0e58c7d5f11b904e00528130b979e") load place=local("local.12") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":159:18-159:32
       instruction "instruction.59.array-push" result="value.39":i32 call dispatch=runtime(feature="array",operation="push") arguments=["value.37","value.38"] returns=i32 failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":159:3-159:33
-      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-163:95
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-172:29
     end block "entry"
-    block "block.0.while-condition" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-163:95
+    block "block.0.while-condition" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-172:29
       instruction "instruction.60.load" result="value.40":instance("instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6") load place=local("local.0") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:22-160:26
       instruction "instruction.61.call" result="value.41":i32 call dispatch=direct("function.EnumFixture.modeValue") arguments=["value.40"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:27
       instruction "instruction.62.constant" result="value.42":i32 constant value=int(1) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:31-160:32
       instruction "instruction.63.binary" result="value.43":bool binary operation="haxe.i32.equal" left="value.41" right="value.42" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:32
-      instruction "instruction.64.short-circuit-result-initialize" result=- initialize place=local("local.17") value="value.43" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
-      terminator branch condition="value.43" true=edge(target="block.3.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
+      instruction "instruction.64.short-circuit-result-initialize" result=- initialize place=local("local.17") value="value.43" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
+      terminator branch condition="value.43" true=edge(target="block.3.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
     end block "block.0.while-condition"
-    block "block.1.while-body" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-163:95
-      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-163:95
+    block "block.1.while-body" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-172:29
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-172:29
     end block "block.1.while-body"
-    block "block.10.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
-      instruction "instruction.87.short-circuit-load" result="value.59":bool load place=local("local.20") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
-      instruction "instruction.88.short-circuit-result-initialize" result=- initialize place=local("local.21") value="value.59" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
-      terminator branch condition="value.59" true=edge(target="block.11.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
+    block "block.10.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
+      instruction "instruction.87.short-circuit-load" result="value.59":bool load place=local("local.20") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
+      instruction "instruction.88.short-circuit-result-initialize" result=- initialize place=local("local.21") value="value.59" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
+      terminator branch condition="value.59" true=edge(target="block.11.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
     end block "block.10.short-circuit-join"
-    block "block.11.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
-      instruction "instruction.89.load" result="value.60":instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") load place=local("local.1") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":161:20-161:27
-      instruction "instruction.90.call" result="value.61":i32 call dispatch=direct("function.EnumFixture.guardedValue") arguments=["value.60"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":161:7-161:28
-      instruction "instruction.91.constant" result="value.62":i32 constant value=int(7) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":161:32-161:33
-      instruction "instruction.92.binary" result="value.63":bool binary operation="haxe.i32.equal" left="value.61" right="value.62" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":161:7-161:33
-      instruction "instruction.93.short-circuit-store" result=- store place=local("local.21") value="value.63" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
-      terminator jump edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
+    block "block.11.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
+      instruction "instruction.89.load" result="value.60":instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") load place=local("local.1") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":165:20-165:27
+      instruction "instruction.90.call" result="value.61":i32 call dispatch=direct("function.EnumFixture.guardedValue") arguments=["value.60"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":165:7-165:28
+      instruction "instruction.91.constant" result="value.62":i32 constant value=int(7) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":165:32-165:33
+      instruction "instruction.92.binary" result="value.63":bool binary operation="haxe.i32.equal" left="value.61" right="value.62" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":165:7-165:33
+      instruction "instruction.93.short-circuit-store" result=- store place=local("local.21") value="value.63" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
+      terminator jump edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
     end block "block.11.short-circuit-rhs"
-    block "block.12.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
-      instruction "instruction.94.short-circuit-load" result="value.64":bool load place=local("local.21") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:33
-      instruction "instruction.95.short-circuit-result-initialize" result=- initialize place=local("local.22") value="value.64" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
-      terminator branch condition="value.64" true=edge(target="block.13.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.14.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
+    block "block.12.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
+      instruction "instruction.94.short-circuit-load" result="value.64":bool load place=local("local.21") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-165:33
+      instruction "instruction.95.short-circuit-result-initialize" result=- initialize place=local("local.22") value="value.64" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
+      terminator branch condition="value.64" true=edge(target="block.13.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.14.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
     end block "block.12.short-circuit-join"
-    block "block.13.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
-      instruction "instruction.96.load" result="value.65":instance("instance.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef") load place=local("local.3") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:23-162:28
-      instruction "instruction.97.call" result="value.66":i32 call dispatch=direct("function.EnumFixture.boolOptionValue") arguments=["value.65"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:7-162:29
-      instruction "instruction.98.constant" result="value.67":i32 constant value=int(1) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:33-162:34
-      instruction "instruction.99.binary" result="value.68":bool binary operation="haxe.i32.equal" left="value.66" right="value.67" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:7-162:34
-      instruction "instruction.100.short-circuit-store" result=- store place=local("local.22") value="value.68" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
-      terminator jump edge(target="block.14.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
+    block "block.13.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
+      instruction "instruction.96.load" result="value.65":instance("instance.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef") load place=local("local.3") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":166:23-166:28
+      instruction "instruction.97.call" result="value.66":i32 call dispatch=direct("function.EnumFixture.boolOptionValue") arguments=["value.65"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":166:7-166:29
+      instruction "instruction.98.constant" result="value.67":i32 constant value=int(1) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":166:33-166:34
+      instruction "instruction.99.binary" result="value.68":bool binary operation="haxe.i32.equal" left="value.66" right="value.67" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":166:7-166:34
+      instruction "instruction.100.short-circuit-store" result=- store place=local("local.22") value="value.68" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
+      terminator jump edge(target="block.14.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
     end block "block.13.short-circuit-rhs"
-    block "block.14.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
-      instruction "instruction.101.short-circuit-load" result="value.69":bool load place=local("local.22") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:34
-      instruction "instruction.102.short-circuit-result-initialize" result=- initialize place=local("local.23") value="value.69" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
-      terminator branch condition="value.69" true=edge(target="block.15.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.16.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
+    block "block.14.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
+      instruction "instruction.101.short-circuit-load" result="value.69":bool load place=local("local.22") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-166:34
+      instruction "instruction.102.short-circuit-result-initialize" result=- initialize place=local("local.23") value="value.69" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
+      terminator branch condition="value.69" true=edge(target="block.15.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.16.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
     end block "block.14.short-circuit-join"
-    block "block.15.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
-      instruction "instruction.103.call" result="value.70":i32 call dispatch=direct("function.EnumFixture.recursiveLocal") arguments=[] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:38-162:54
-      instruction "instruction.104.constant" result="value.71":i32 constant value=int(3) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:58-162:59
-      instruction "instruction.105.binary" result="value.72":bool binary operation="haxe.i32.equal" left="value.70" right="value.71" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:38-162:59
-      instruction "instruction.106.short-circuit-store" result=- store place=local("local.23") value="value.72" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
-      terminator jump edge(target="block.16.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
+    block "block.15.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
+      instruction "instruction.103.call" result="value.70":i32 call dispatch=direct("function.EnumFixture.recursiveLocal") arguments=[] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":167:7-167:23
+      instruction "instruction.104.constant" result="value.71":i32 constant value=int(3) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":167:27-167:28
+      instruction "instruction.105.binary" result="value.72":bool binary operation="haxe.i32.equal" left="value.70" right="value.71" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":167:7-167:28
+      instruction "instruction.106.short-circuit-store" result=- store place=local("local.23") value="value.72" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
+      terminator jump edge(target="block.16.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
     end block "block.15.short-circuit-rhs"
-    block "block.16.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
-      instruction "instruction.107.short-circuit-load" result="value.73":bool load place=local("local.23") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:59
-      instruction "instruction.108.short-circuit-result-initialize" result=- initialize place=local("local.24") value="value.73" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
-      terminator branch condition="value.73" true=edge(target="block.17.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.18.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
+    block "block.16.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
+      instruction "instruction.107.short-circuit-load" result="value.73":bool load place=local("local.23") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-167:28
+      instruction "instruction.108.short-circuit-result-initialize" result=- initialize place=local("local.24") value="value.73" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
+      terminator branch condition="value.73" true=edge(target="block.17.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.18.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
     end block "block.16.short-circuit-join"
-    block "block.17.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
-      instruction "instruction.109.load" result="value.74":instance("instance.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a") load place=local("local.10") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:73-162:83
-      instruction "instruction.110.call" result="value.75":i32 call dispatch=direct("function.EnumFixture.ruleValue") arguments=["value.74"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:63-162:84
-      instruction "instruction.111.constant" result="value.76":i32 constant value=int(10) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:88-162:90
-      instruction "instruction.112.binary" result="value.77":bool binary operation="haxe.i32.equal" left="value.75" right="value.76" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:63-162:90
-      instruction "instruction.113.short-circuit-store" result=- store place=local("local.24") value="value.77" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
-      terminator jump edge(target="block.18.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
+    block "block.17.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
+      instruction "instruction.109.load" result="value.74":instance("instance.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a") load place=local("local.10") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":168:17-168:27
+      instruction "instruction.110.call" result="value.75":i32 call dispatch=direct("function.EnumFixture.ruleValue") arguments=["value.74"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":168:7-168:28
+      instruction "instruction.111.constant" result="value.76":i32 constant value=int(10) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":168:32-168:34
+      instruction "instruction.112.binary" result="value.77":bool binary operation="haxe.i32.equal" left="value.75" right="value.76" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":168:7-168:34
+      instruction "instruction.113.short-circuit-store" result=- store place=local("local.24") value="value.77" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
+      terminator jump edge(target="block.18.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
     end block "block.17.short-circuit-rhs"
-    block "block.18.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
-      instruction "instruction.114.short-circuit-load" result="value.78":bool load place=local("local.24") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:90
-      instruction "instruction.115.short-circuit-result-initialize" result=- initialize place=local("local.25") value="value.78" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
-      terminator branch condition="value.78" true=edge(target="block.19.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.20.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
+    block "block.18.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
+      instruction "instruction.114.short-circuit-load" result="value.78":bool load place=local("local.24") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-168:34
+      instruction "instruction.115.short-circuit-result-initialize" result=- initialize place=local("local.25") value="value.78" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
+      terminator branch condition="value.78" true=edge(target="block.19.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.20.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
     end block "block.18.short-circuit-join"
-    block "block.19.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
-      instruction "instruction.116.load" result="value.79":instance("instance.enum.ffce8027b64408d579f9f82d3436423417f0e58c7d5f11b904e00528130b979e") load place=local("local.12") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:108-162:122
-      instruction "instruction.117.call" result="value.80":i32 call dispatch=direct("function.EnumFixture.envelopeValue") arguments=["value.79"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:94-162:123
-      instruction "instruction.118.constant" result="value.81":i32 constant value=int(10) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:127-162:129
-      instruction "instruction.119.binary" result="value.82":bool binary operation="haxe.i32.equal" left="value.80" right="value.81" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:94-162:129
-      instruction "instruction.120.short-circuit-store" result=- store place=local("local.25") value="value.82" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
-      terminator jump edge(target="block.20.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
+    block "block.19.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
+      instruction "instruction.116.load" result="value.79":instance("instance.enum.ffce8027b64408d579f9f82d3436423417f0e58c7d5f11b904e00528130b979e") load place=local("local.12") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":169:21-169:35
+      instruction "instruction.117.call" result="value.80":i32 call dispatch=direct("function.EnumFixture.envelopeValue") arguments=["value.79"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":169:7-169:36
+      instruction "instruction.118.constant" result="value.81":i32 constant value=int(10) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":169:40-169:42
+      instruction "instruction.119.binary" result="value.82":bool binary operation="haxe.i32.equal" left="value.80" right="value.81" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":169:7-169:42
+      instruction "instruction.120.short-circuit-store" result=- store place=local("local.25") value="value.82" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
+      terminator jump edge(target="block.20.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
     end block "block.19.short-circuit-rhs"
-    block "block.2.while-exit" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-163:95
-      terminator return value=none cleanup=["cleanup.construction"."array-local.16.release","cleanup.construction"."array-local.15.release","cleanup.construction"."enum-local.13.release","cleanup.construction"."enum-local.12.release","cleanup.construction"."enum-local.11.release","cleanup.construction"."record-local.10.release","cleanup.construction"."record-local.6.release","cleanup.construction"."enum-temporary.local.9.release","cleanup.construction"."enum-temporary.local.7.release","cleanup.construction"."array-local.5.release","cleanup.construction"."array-local.4.release"] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-164:3
+    block "block.2.while-exit" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-172:29
+      terminator return value=none cleanup=["cleanup.construction"."array-local.16.release","cleanup.construction"."array-local.15.release","cleanup.construction"."enum-local.13.release","cleanup.construction"."enum-local.12.release","cleanup.construction"."enum-local.11.release","cleanup.construction"."record-local.10.release","cleanup.construction"."record-local.6.release","cleanup.construction"."enum-temporary.local.9.release","cleanup.construction"."enum-temporary.local.7.release","cleanup.construction"."array-local.5.release","cleanup.construction"."array-local.4.release"] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":144:30-173:3
     end block "block.2.while-exit"
-    block "block.20.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
-      instruction "instruction.121.short-circuit-load" result="value.83":bool load place=local("local.25") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:129
-      instruction "instruction.122.short-circuit-result-initialize" result=- initialize place=local("local.26") value="value.83" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
-      terminator branch condition="value.83" true=edge(target="block.21.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.22.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
+    block "block.20.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
+      instruction "instruction.121.short-circuit-load" result="value.83":bool load place=local("local.25") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-169:42
+      instruction "instruction.122.short-circuit-result-initialize" result=- initialize place=local("local.26") value="value.83" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
+      terminator branch condition="value.83" true=edge(target="block.21.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.22.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
     end block "block.20.short-circuit-join"
-    block "block.21.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
-      instruction "instruction.123.load" result="value.84":instance("instance.enum.249367042efd11cc63c8c7f59875e4ac7665c507c5b0b88f26b5cb9066b1d4d8") load place=local("local.13") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:25-163:37
-      instruction "instruction.124.call" result="value.85":i32 call dispatch=direct("function.EnumFixture.optionalRuleValue") arguments=["value.84"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:7-163:38
-      instruction "instruction.125.constant" result="value.86":i32 constant value=int(10) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:42-163:44
-      instruction "instruction.126.binary" result="value.87":bool binary operation="haxe.i32.equal" left="value.85" right="value.86" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:7-163:44
-      instruction "instruction.127.short-circuit-store" result=- store place=local("local.26") value="value.87" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
-      terminator jump edge(target="block.22.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
+    block "block.21.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
+      instruction "instruction.123.load" result="value.84":instance("instance.enum.249367042efd11cc63c8c7f59875e4ac7665c507c5b0b88f26b5cb9066b1d4d8") load place=local("local.13") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":170:25-170:37
+      instruction "instruction.124.call" result="value.85":i32 call dispatch=direct("function.EnumFixture.optionalRuleValue") arguments=["value.84"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":170:7-170:38
+      instruction "instruction.125.constant" result="value.86":i32 constant value=int(10) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":170:42-170:44
+      instruction "instruction.126.binary" result="value.87":bool binary operation="haxe.i32.equal" left="value.85" right="value.86" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":170:7-170:44
+      instruction "instruction.127.short-circuit-store" result=- store place=local("local.26") value="value.87" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
+      terminator jump edge(target="block.22.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
     end block "block.21.short-circuit-rhs"
-    block "block.22.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
-      instruction "instruction.128.short-circuit-load" result="value.88":bool load place=local("local.26") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:44
-      instruction "instruction.129.short-circuit-result-initialize" result=- initialize place=local("local.27") value="value.88" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
-      terminator branch condition="value.88" true=edge(target="block.23.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.24.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
+    block "block.22.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
+      instruction "instruction.128.short-circuit-load" result="value.88":bool load place=local("local.26") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-170:44
+      instruction "instruction.129.short-circuit-result-initialize" result=- initialize place=local("local.27") value="value.88" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
+      terminator branch condition="value.88" true=edge(target="block.23.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.24.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
     end block "block.22.short-circuit-join"
-    block "block.23.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
-      instruction "instruction.130.load" result="value.89":instance("instance.haxe-array.84c38722b2d7577c1cedaec802f72d2ad1d63f76cf42840564ed8f86a908ddca") load place=local("local.16") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:48-163:57
-      instruction "instruction.131.array-length" result="value.90":i32 call dispatch=runtime(feature="array",operation="length") arguments=["value.89"] returns=i32 failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:48-163:64
-      instruction "instruction.132.constant" result="value.91":i32 constant value=int(1) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:68-163:69
-      instruction "instruction.133.binary" result="value.92":bool binary operation="haxe.i32.equal" left="value.90" right="value.91" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:48-163:69
-      instruction "instruction.134.short-circuit-store" result=- store place=local("local.27") value="value.92" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
-      terminator jump edge(target="block.24.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
+    block "block.23.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
+      instruction "instruction.130.load" result="value.89":instance("instance.haxe-array.84c38722b2d7577c1cedaec802f72d2ad1d63f76cf42840564ed8f86a908ddca") load place=local("local.16") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":171:7-171:16
+      instruction "instruction.131.array-length" result="value.90":i32 call dispatch=runtime(feature="array",operation="length") arguments=["value.89"] returns=i32 failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":171:7-171:23
+      instruction "instruction.132.constant" result="value.91":i32 constant value=int(1) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":171:27-171:28
+      instruction "instruction.133.binary" result="value.92":bool binary operation="haxe.i32.equal" left="value.90" right="value.91" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":171:7-171:28
+      instruction "instruction.134.short-circuit-store" result=- store place=local("local.27") value="value.92" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
+      terminator jump edge(target="block.24.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
     end block "block.23.short-circuit-rhs"
-    block "block.24.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
-      instruction "instruction.135.short-circuit-load" result="value.93":bool load place=local("local.27") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:69
-      instruction "instruction.136.short-circuit-result-initialize" result=- initialize place=local("local.28") value="value.93" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
-      terminator branch condition="value.93" true=edge(target="block.25.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.26.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
+    block "block.24.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
+      instruction "instruction.135.short-circuit-load" result="value.93":bool load place=local("local.27") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-171:28
+      instruction "instruction.136.short-circuit-result-initialize" result=- initialize place=local("local.28") value="value.93" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
+      terminator branch condition="value.93" true=edge(target="block.25.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.26.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
     end block "block.24.short-circuit-join"
-    block "block.25.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
-      instruction "instruction.137.load" result="value.94":instance("instance.haxe-array.400559e4cf5d14046c5de138b56239fcb089ca6010e49b9787862f41e271e315") load place=local("local.15") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:73-163:78
-      instruction "instruction.138.array-length" result="value.95":i32 call dispatch=runtime(feature="array",operation="length") arguments=["value.94"] returns=i32 failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:73-163:85
-      instruction "instruction.139.constant" result="value.96":i32 constant value=int(1) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:89-163:90
-      instruction "instruction.140.binary" result="value.97":bool binary operation="haxe.i32.equal" left="value.95" right="value.96" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:73-163:90
-      instruction "instruction.141.short-circuit-store" result=- store place=local("local.28") value="value.97" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
-      terminator jump edge(target="block.26.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
+    block "block.25.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
+      instruction "instruction.137.load" result="value.94":instance("instance.haxe-array.400559e4cf5d14046c5de138b56239fcb089ca6010e49b9787862f41e271e315") load place=local("local.15") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":172:7-172:12
+      instruction "instruction.138.array-length" result="value.95":i32 call dispatch=runtime(feature="array",operation="length") arguments=["value.94"] returns=i32 failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":172:7-172:19
+      instruction "instruction.139.constant" result="value.96":i32 constant value=int(1) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":172:23-172:24
+      instruction "instruction.140.binary" result="value.97":bool binary operation="haxe.i32.equal" left="value.95" right="value.96" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":172:7-172:24
+      instruction "instruction.141.short-circuit-store" result=- store place=local("local.28") value="value.97" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
+      terminator jump edge(target="block.26.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
     end block "block.25.short-circuit-rhs"
-    block "block.26.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
-      instruction "instruction.142.short-circuit-load" result="value.98":bool load place=local("local.28") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:90
-      instruction "instruction.143.unary" result="value.99":bool unary operation="haxe.bool.not" value="value.98" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:10-163:91
-      terminator branch condition="value.99" true=edge(target="block.1.while-body",arguments=[],cleanup=[]) false=edge(target="block.2.while-exit",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-163:95
+    block "block.26.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
+      instruction "instruction.142.short-circuit-load" result="value.98":bool load place=local("local.28") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-172:24
+      instruction "instruction.143.unary" result="value.99":bool unary operation="haxe.bool.not" value="value.98" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:10-172:25
+      terminator branch condition="value.99" true=edge(target="block.1.while-body",arguments=[],cleanup=[]) false=edge(target="block.2.while-exit",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:3-172:29
     end block "block.26.short-circuit-join"
-    block "block.3.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
-      instruction "instruction.65.call" result="value.44":bool call dispatch=direct("function.EnumFixture.modeEquality") arguments=[] returns=bool failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:36-160:50
-      instruction "instruction.66.short-circuit-store" result=- store place=local("local.17") value="value.44" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
-      terminator jump edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
+    block "block.3.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
+      instruction "instruction.65.call" result="value.44":bool call dispatch=direct("function.EnumFixture.modeEquality") arguments=[] returns=bool failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":161:7-161:21
+      instruction "instruction.66.short-circuit-store" result=- store place=local("local.17") value="value.44" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
+      terminator jump edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
     end block "block.3.short-circuit-rhs"
-    block "block.4.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
-      instruction "instruction.67.short-circuit-load" result="value.45":bool load place=local("local.17") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:50
-      instruction "instruction.68.short-circuit-result-initialize" result=- initialize place=local("local.18") value="value.45" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
-      terminator branch condition="value.45" true=edge(target="block.5.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
+    block "block.4.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
+      instruction "instruction.67.short-circuit-load" result="value.45":bool load place=local("local.17") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-161:21
+      instruction "instruction.68.short-circuit-result-initialize" result=- initialize place=local("local.18") value="value.45" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
+      terminator branch condition="value.45" true=edge(target="block.5.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
     end block "block.4.short-circuit-join"
-    block "block.5.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
-      instruction "instruction.69.load" result="value.46":instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") load place=local("local.1") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:66-160:73
-      instruction "instruction.70.call" result="value.47":i32 call dispatch=direct("function.EnumFixture.optionValue") arguments=["value.46"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:54-160:74
-      instruction "instruction.71.constant" result="value.48":i32 constant value=int(7) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:78-160:79
-      instruction "instruction.72.binary" result="value.49":bool binary operation="haxe.i32.equal" left="value.47" right="value.48" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:54-160:79
-      instruction "instruction.73.short-circuit-store" result=- store place=local("local.18") value="value.49" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
-      terminator jump edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
+    block "block.5.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
+      instruction "instruction.69.load" result="value.46":instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") load place=local("local.1") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:19-162:26
+      instruction "instruction.70.call" result="value.47":i32 call dispatch=direct("function.EnumFixture.optionValue") arguments=["value.46"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:7-162:27
+      instruction "instruction.71.constant" result="value.48":i32 constant value=int(7) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:31-162:32
+      instruction "instruction.72.binary" result="value.49":bool binary operation="haxe.i32.equal" left="value.47" right="value.48" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":162:7-162:32
+      instruction "instruction.73.short-circuit-store" result=- store place=local("local.18") value="value.49" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
+      terminator jump edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
     end block "block.5.short-circuit-rhs"
-    block "block.6.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
-      instruction "instruction.74.short-circuit-load" result="value.50":bool load place=local("local.18") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:79
-      instruction "instruction.75.short-circuit-result-initialize" result=- initialize place=local("local.19") value="value.50" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
-      terminator branch condition="value.50" true=edge(target="block.7.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
+    block "block.6.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
+      instruction "instruction.74.short-circuit-load" result="value.50":bool load place=local("local.18") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-162:32
+      instruction "instruction.75.short-circuit-result-initialize" result=- initialize place=local("local.19") value="value.50" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
+      terminator branch condition="value.50" true=edge(target="block.7.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
     end block "block.6.short-circuit-join"
-    block "block.7.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
-      instruction "instruction.76.load" result="value.51":instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") load place=local("local.2") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:95-160:101
-      instruction "instruction.77.call" result="value.52":i32 call dispatch=direct("function.EnumFixture.optionValue") arguments=["value.51"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:83-160:102
-      instruction "instruction.78.constant" result="value.53":i32 constant value=int(0) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:106-160:107
-      instruction "instruction.79.binary" result="value.54":bool binary operation="haxe.i32.equal" left="value.52" right="value.53" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:83-160:107
-      instruction "instruction.80.short-circuit-store" result=- store place=local("local.19") value="value.54" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
-      terminator jump edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
+    block "block.7.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
+      instruction "instruction.76.load" result="value.51":instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") load place=local("local.2") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:19-163:25
+      instruction "instruction.77.call" result="value.52":i32 call dispatch=direct("function.EnumFixture.optionValue") arguments=["value.51"] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:7-163:26
+      instruction "instruction.78.constant" result="value.53":i32 constant value=int(0) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:30-163:31
+      instruction "instruction.79.binary" result="value.54":bool binary operation="haxe.i32.equal" left="value.52" right="value.53" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":163:7-163:31
+      instruction "instruction.80.short-circuit-store" result=- store place=local("local.19") value="value.54" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
+      terminator jump edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
     end block "block.7.short-circuit-rhs"
-    block "block.8.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
-      instruction "instruction.81.short-circuit-load" result="value.55":bool load place=local("local.19") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:107
-      instruction "instruction.82.short-circuit-result-initialize" result=- initialize place=local("local.20") value="value.55" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
-      terminator branch condition="value.55" true=edge(target="block.9.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
+    block "block.8.short-circuit-join" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
+      instruction "instruction.81.short-circuit-load" result="value.55":bool load place=local("local.19") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-163:31
+      instruction "instruction.82.short-circuit-result-initialize" result=- initialize place=local("local.20") value="value.55" transition=uninitialized->initialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
+      terminator branch condition="value.55" true=edge(target="block.9.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
     end block "block.8.short-circuit-join"
-    block "block.9.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
-      instruction "instruction.83.call" result="value.56":i32 call dispatch=direct("function.EnumFixture.constructorValue") arguments=[] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:111-160:129
-      instruction "instruction.84.constant" result="value.57":i32 constant value=int(9) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:133-160:134
-      instruction "instruction.85.binary" result="value.58":bool binary operation="haxe.i32.equal" left="value.56" right="value.57" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:111-160:134
-      instruction "instruction.86.short-circuit-store" result=- store place=local("local.20") value="value.58" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
-      terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-160:134
+    block "block.9.short-circuit-rhs" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
+      instruction "instruction.83.call" result="value.56":i32 call dispatch=direct("function.EnumFixture.constructorValue") arguments=[] returns=i32 failure=none @"test/enum_lowering/fixtures/positive/EnumFixture.hx":164:7-164:25
+      instruction "instruction.84.constant" result="value.57":i32 constant value=int(9) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":164:29-164:30
+      instruction "instruction.85.binary" result="value.58":bool binary operation="haxe.i32.equal" left="value.56" right="value.57" implementation=static @"test/enum_lowering/fixtures/positive/EnumFixture.hx":164:7-164:30
+      instruction "instruction.86.short-circuit-store" result=- store place=local("local.20") value="value.58" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
+      terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":160:12-164:30
     end block "block.9.short-circuit-rhs"
   end function "function.EnumFixture.main"
   function "function.EnumFixture.makeRule" name="EnumFixture.makeRule" returns=instance("instance.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a") failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":100:3-100:60
