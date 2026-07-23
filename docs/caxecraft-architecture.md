@@ -52,8 +52,10 @@ multiply that coordination.
 The implemented slice now has a `Character` value that composes body, aquatics,
 capability, and vitals; a stable `EntityId`; a narrow `EntityStore`; and a
 `PlayerAgent` that adds only the local-player binding. `GameSession` owns that
-entity store, the water simulation, voxel storage, pending-water marks, and
-authored-item flags. `CaxecraftApp` commits its local character through the session,
+entity store, the water simulation, voxel storage, and authored-item flags. The
+water simulation owns its pending-work marks because they form one invariant
+with its scheduler counters; it borrows the session's shared world only during
+each operation. `CaxecraftApp` commits its local character through the session,
 while the aquatics fixture advances a separate non-player character with the
 same movement and damage functions. This proves the first composition and
 storage boundary, but not yet the later multi-actor controllers,

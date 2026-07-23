@@ -753,8 +753,8 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
             "modules": 2,
             "typeInstances": 2,
             "functions": 20,
-            "blocks": 38,
-            "instructions": 237,
+            "blocks": 41,
+            "instructions": 264,
             "cleanupActions": 4,
             "runtimeIntents": 0,
         }
@@ -850,11 +850,11 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or source.count("const int32_t *") != 3
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
         or source.count("const uint8_t *") != 10
-        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 8
+        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 10
         or source.count(" = sizeof(") != 11
         or source.count("bounds") != 0
-        or source.count("abort();") != 15
-        or source.count("[(size_t)") != 22
+        or source.count("abort();") != 17
+        or source.count("[(size_t)") != 24
     ):
         raise SpanLoweringFailure(f"{profile}/{build} fixed-array/span C shape drifted")
     if (
@@ -863,8 +863,22 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or source.count(" + 1;") != 3
     ):
         raise SpanLoweringFailure("span iteration stopped being a direct guarded index loop")
-    if source.count(" < 0 || (size_t)") != 12 or source.count(" >= ") != 17:
+    if source.count(" < 0 || (size_t)") != 14 or source.count(" >= ") != 19:
         raise SpanLoweringFailure("dynamic span access lost its signed/size_t bounds check")
+    if (
+        len(
+            re.findall(
+                r"(?m)^  uint8_t \*[A-Za-z0-9_]+ = &[A-Za-z0-9_]+\[\(size_t\)[A-Za-z0-9_]+\];$",
+                source,
+            )
+        )
+        != 2
+        or len(re.findall(r"(?m)^  \*[A-Za-z0-9_]+ = [A-Za-z0-9_]+;$", source))
+        != 2
+    ):
+        raise SpanLoweringFailure(
+            "conditional span stores stopped carrying one checked element address"
+        )
     parameter_signatures = re.findall(
         r"(?m)^uint8_t [^(]+\((?:const )?uint8_t \*[^,]+, size_t [^,]+,",
         source,

@@ -46,11 +46,11 @@ typedef GameTickResult = {
 	Owns the mutable, controller-neutral state of one loaded game simulation.
 
 	`EntityStore` and `WaterSimulation` are real child objects embedded directly
-	inside this session by haxe.c. The world, pending-water marks, and authored-item
-	flags are fixed fields in the same object. They have one stable lifetime,
-	require no heap allocation, and cannot escape as independent owned values.
-	This is ordinary Haxe composition; the compiler selects the safe, readable C
-	representation.
+	inside this session by haxe.c. The session owns the world and authored-item
+	flags; the water child owns the queue that must agree with its scheduler
+	counters. They have one stable lifetime, require no heap allocation, and cannot
+	escape as independent owned values. This is ordinary Haxe composition; the
+	compiler selects the safe, readable C representation.
 
 	A class is used instead of a record because the session is the stable mutable
 	owner: callers must update and observe the same loaded simulation across many
@@ -60,8 +60,8 @@ typedef GameTickResult = {
 
 	The C build uses compact `CArray` fields. Eval uses ordinary Haxe arrays as an
 	independent behavior oracle. Haxe removes the inactive representation branch
-	at compile time; simulation methods below are shared. A span is created only
-	inside the operation that consumes it and is never returned or stored.
+	at compile time; simulation methods below are shared. A world span is created
+	only inside the operation that consumes it and is never returned or stored.
 **/
 // `CaxecraftApp` is the application composition root and still needs scoped
 // read/write views for rendering and level assembly. `@:allow` is Haxe's
@@ -87,18 +87,12 @@ final class GameSession {
 	/** Compact voxel storage embedded directly in the generated C session struct. */
 	final worldStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 
-	/** One work mark per voxel; embedded beside the world it describes. */
-	final pendingWaterStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
-
 	/** Loaded authored-item activity flags, bounded by the engine capacity. */
 	final authoredItemStorage:CArray<Int, AuthoredItemSlots> = CArray.zero(AuthoredItemSlots.CAPACITY);
 	#else
 
 	/** Eval's behavior-oracle carrier for the same fixed world semantics. */
 	final worldStorage:Array<Int> = [];
-
-	/** Eval's behavior-oracle carrier for deterministic water work marks. */
-	final pendingWaterStorage:Array<Int> = [];
 
 	/** Eval's behavior-oracle carrier for authored-item activity flags. */
 	final authoredItemStorage:Array<Int> = [];
@@ -111,7 +105,6 @@ final class GameSession {
 		var worldIndex = 0;
 		while (worldIndex < World.VOLUME) {
 			worldStorage.push(0);
-			pendingWaterStorage.push(0);
 			worldIndex++;
 		}
 		var itemIndex = 0;
@@ -120,12 +113,7 @@ final class GameSession {
 			itemIndex++;
 		}
 		#end
-		#if c
-		var pending:WaterPendingCells = pendingWaterStorage.span();
-		#else
-		var pending:WaterPendingCells = pendingWaterStorage;
-		#end
-		water.resetPending(pending);
+		water.resetPending();
 	}
 
 	/**
@@ -195,17 +183,15 @@ final class GameSession {
 	public function resetEmptyWorld():Void {
 		#if c
 		var cells:WorldCells = worldStorage.span();
-		var pending:WaterPendingCells = pendingWaterStorage.span();
 		#else
 		var cells:WorldCells = worldStorage;
-		var pending:WaterPendingCells = pendingWaterStorage;
 		#end
 		var index = 0;
 		while (index < World.VOLUME) {
 			WorldStorage.writeCode(cells, index, 0);
 			index++;
 		}
-		water.resetPending(pending);
+		water.resetPending();
 	}
 
 	/** Write one already validated terrain cell while a level is being assembled. */
@@ -222,12 +208,10 @@ final class GameSession {
 	public function placeWaterSource(coord:BlockCoord):Bool {
 		#if c
 		var cells:WorldCells = worldStorage.span();
-		var pending:WaterPendingCells = pendingWaterStorage.span();
 		#else
 		var cells:WorldCells = worldStorage;
-		var pending:WaterPendingCells = pendingWaterStorage;
 		#end
-		return water.placeSource(cells, pending, coord);
+		return water.placeSource(cells, coord);
 	}
 
 	/**
@@ -265,12 +249,10 @@ final class GameSession {
 	public function placeInitialWaterVolume(origin:BlockCoord, width:Int, height:Int, depth:Int):Bool {
 		#if c
 		var cells:WorldCells = worldStorage.span();
-		var pending:WaterPendingCells = pendingWaterStorage.span();
 		#else
 		var cells:WorldCells = worldStorage;
-		var pending:WaterPendingCells = pendingWaterStorage;
 		#end
-		return water.placeInitialVolume(cells, pending, origin, width, height, depth);
+		return water.placeInitialVolume(cells, origin, width, height, depth);
 	}
 
 	/** Mark one validated authored-item slot active in an unpublished level. */
@@ -309,10 +291,8 @@ final class GameSession {
 	public function tick(input:GameTickInput):GameTickResult {
 		#if c
 		var cells:WorldCells = worldStorage.span();
-		var pending:WaterPendingCells = pendingWaterStorage.span();
 		#else
 		var cells:WorldCells = worldStorage;
-		var pending:WaterPendingCells = pendingWaterStorage;
 		#end
 		final characterId = localPlayer.characterId;
 		final original = entities.read(characterId);
@@ -327,7 +307,7 @@ final class GameSession {
 			};
 		}
 
-		final waterResult = water.tick(cells, pending, input.waterUpdateBudget);
+		final waterResult = water.tick(cells, input.waterUpdateBudget);
 		final characterResult = stepCharacter(cells, original, input.intent, input.damagePolicy);
 		final committed = entities.replace(characterId, characterResult.character);
 		final tickIndex = committed ? completedTicks : -1;

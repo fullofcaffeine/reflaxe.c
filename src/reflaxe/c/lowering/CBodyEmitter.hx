@@ -853,7 +853,8 @@ class CBodyEmitter {
 					}
 				case IRIOAddress(place) | IRIOBorrowClassField(place):
 					emitAddress(statements, state.values, state.referencedValues, instruction, place, fn, state.localNames, state.globalNames,
-						state.spanLengthNames, state.temporaryNames, state.lineDirectives);
+						state.spanLengthNames, state.temporaryNames, state.lineDirectives,
+						state.coalescing.shouldInlineSequencedAddress(requireResult(instruction, fn.id).id));
 				case IRIOConstructAggregate(instanceId, fields):
 					emitAggregateConstruction(statements, state.values, state.referencedValues, instruction, instanceId, fields, state.temporaryNames,
 						state.lineDirectives, fn.id, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
@@ -1347,13 +1348,17 @@ class CBodyEmitter {
 
 	function emitAddress(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
 			place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
-			spanLengthNames:Map<String, CIdentifier>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+			spanLengthNames:Map<String, CIdentifier>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, shouldInline:Bool):Void {
 		final result = requireResult(instruction, fn.id);
 		final pointee = switch result.type {
 			case IRTPointer(type, false): type;
 			case _: return fail('address `${instruction.id}` in `${fn.id}` lost its validated non-null pointer result');
 		};
 		final expression = EUnary(AddressOf, placeExpression(place, fn, localNames, globalNames, spanLengthNames, values));
+		if (shouldInline) {
+			values.set(result.id, expression);
+			return;
+		}
 		final temporaryName = temporaryNames.get(result.id);
 		addLineDirective(statements, instruction.source, lineDirectives);
 		if (temporaryName == null) {

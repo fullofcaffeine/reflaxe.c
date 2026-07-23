@@ -9,6 +9,9 @@ import caxecraft.domain.WaterCellCodec.isValidCode;
 import caxecraft.domain.WaterCellCodec.isWaterCode;
 import caxecraft.domain.WaterCellCodec.sourceCode;
 import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
+#if c
+import c.CArray;
+#end
 
 /**
 	Deterministic, bounded voxel water for the target-neutral game domain.
@@ -29,35 +32,52 @@ import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
 	water. Rendering, player physics, save files, and campaign content consume
 	this state in later vertical slices; they never advance it themselves.
 
-	A class is used because the scheduler owns counters that persist across ticks
-	and must agree with one pending-work buffer. A pure module function would make
-	every caller carry and commit those invariants separately. The class remains
-	`final` and stores no borrowed buffer; `GameSession` owns both objects and
-	passes a short-lived view to each operation. Haxe.c embeds the simulation in
-	the session C struct without a heap allocation.
+	A class is used because the scheduler owns counters and queue marks that must
+	persist and agree across ticks. A pure module function would make every caller
+	carry and commit those invariants separately. The class remains `final` and
+	owns its queue storage directly. It does not retain the shared world: each
+	operation borrows that storage only for the call, making mutation explicit and
+	allowing tests or future sessions to supply another world safely. Haxe.c embeds
+	the simulation and its fixed queue array in the session C struct without a heap
+	allocation.
 **/
 final class WaterSimulation {
 	var pendingCount:Int;
 	var lowestPending:Int;
 
-	/**
-		Initialize only the two scheduling numbers that persist between calls.
+	#if c
+	/** One compact work mark per voxel, owned beside the scheduler counters. */
+	final pendingStorage:WaterPendingOwner = CArray.zero(World.VOLUME);
+	#else
 
-		The class deliberately stores no borrowed world or pending span: the C
-		compiler cannot prove that such a borrow outlives a class instance. Each
-		operation receives its caller-owned buffers for that call. Call
-		`resetPending` once after creating or restoring pending storage.
+	/** Eval carrier for the same queue ownership and deterministic behavior. */
+	final pendingStorage:WaterPendingOwner = [];
+	#end
+
+	/**
+		Construct one empty scheduler and its matching queue storage.
+
+		The simulation owns the queue because its marks and counters form one
+		invariant. The world remains caller-owned and is borrowed only by operations
+		that read or change it.
 	**/
 	public function new() {
+		#if !c
+		var index = 0;
+		while (index < World.VOLUME) {
+			pendingStorage.push(0);
+			index++;
+		}
+		#end
 		pendingCount = 0;
 		lowestPending = World.VOLUME;
 	}
 
 	/** Clear scheduled work without changing terrain or water bytes. */
-	public function resetPending(pendingCells:WaterPendingCells):Void {
+	public function resetPending():Void {
 		var index = 0;
 		while (index < World.VOLUME) {
-			WaterPendingStorage.setMarked(pendingCells, index, false);
+			WaterPendingStorage.setOwnerMarked(pendingStorage, index, false);
 			index++;
 		}
 		pendingCount = 0;
@@ -65,19 +85,35 @@ final class WaterSimulation {
 	}
 
 	/**
-		Rebuild the two scheduler counters from restored per-cell queue marks.
+		Copy the exact unfinished-work set into caller-owned snapshot storage.
+
+		The destination is borrowed only during this call. Save code receives the
+		marks but cannot retain or mutate the simulation's live queue.
+	**/
+	public function capturePending(destination:WaterPendingCells):Void {
+		var index = 0;
+		while (index < World.VOLUME) {
+			WaterPendingStorage.setSnapshotMarked(destination, index, WaterPendingStorage.ownerIsMarked(pendingStorage, index));
+			index++;
+		}
+	}
+
+	/**
+		Replace the live work set from validated caller-owned snapshot storage.
 
 		A save owns the marks because they determine which unfinished fluid work
 		runs next. The counters are derived state: scanning in ascending world-index
 		order reproduces the same next cell without persisting an implementation
 		detail separately.
 	**/
-	public function restorePending(pendingCells:WaterPendingCells):Void {
+	public function restorePending(source:WaterPendingCells):Void {
 		pendingCount = 0;
 		lowestPending = World.VOLUME;
 		var index = 0;
 		while (index < World.VOLUME) {
-			if (WaterPendingStorage.isMarked(pendingCells, index)) {
+			final marked = WaterPendingStorage.snapshotIsMarked(source, index);
+			WaterPendingStorage.setOwnerMarked(pendingStorage, index, marked);
+			if (marked) {
 				pendingCount++;
 				if (lowestPending == World.VOLUME)
 					lowestPending = index;
@@ -101,7 +137,7 @@ final class WaterSimulation {
 		Solid and malformed cells reject the edit. Neighbor recomputation begins
 		immediately but remains subject to the next `tick` budget.
 	**/
-	public function placeSource(cells:WorldCells, pendingCells:WaterPendingCells, coord:BlockCoord):Bool {
+	public function placeSource(cells:WorldCells, coord:BlockCoord):Bool {
 		final index = World.indexOf(coord);
 		if (index < 0)
 			return false;
@@ -109,7 +145,7 @@ final class WaterSimulation {
 			case Blocked | InvalidStorage(_): false;
 			case Empty | Source | Flowing(_, _):
 				WorldStorage.writeCode(cells, index, sourceCode());
-				scheduleAround(pendingCells, coord);
+				scheduleAround(coord);
 				true;
 		};
 	}
@@ -123,7 +159,7 @@ final class WaterSimulation {
 		scheduled: a sealed pool stays full, while an open face begins leaking on
 		later bounded ticks. Permanent replenishment still requires `placeSource`.
 	**/
-	public function placeInitialVolume(cells:WorldCells, pendingCells:WaterPendingCells, origin:BlockCoord, width:Int, height:Int, depth:Int):Bool {
+	public function placeInitialVolume(cells:WorldCells, origin:BlockCoord, width:Int, height:Int, depth:Int):Bool {
 		if (width <= 0 || height <= 0 || depth <= 0 || origin.x < 0 || origin.y < 0 || origin.z < 0 || origin.x > World.WIDTH - width
 			|| origin.y > World.HEIGHT - height || origin.z > World.DEPTH - depth)
 			return false;
@@ -159,19 +195,19 @@ final class WaterSimulation {
 			}
 			z++;
 		}
-		scheduleOutsideVolume(pendingCells, origin, width, height, depth);
+		scheduleOutsideVolume(origin, width, height, depth);
 		return true;
 	}
 
 	/** Remove water without removing a solid cell that occupies the coordinate. */
-	public function removeWater(cells:WorldCells, pendingCells:WaterPendingCells, coord:BlockCoord):Bool {
+	public function removeWater(cells:WorldCells, coord:BlockCoord):Bool {
 		final index = World.indexOf(coord);
 		if (index < 0)
 			return false;
 		return switch decodeWaterCell(WorldStorage.readCode(cells, index)) {
 			case Source | Flowing(_, _):
 				WorldStorage.writeCode(cells, index, emptyCode());
-				scheduleAround(pendingCells, coord);
+				scheduleAround(coord);
 				true;
 			case Empty | Blocked | InvalidStorage(_): false;
 		};
@@ -183,25 +219,25 @@ final class WaterSimulation {
 		This is the dam-building hook. Water disappears from the occupied voxel and
 		neighboring cells re-evaluate whether they still have a feed or a new route.
 	**/
-	public function replaceTerrain(cells:WorldCells, pendingCells:WaterPendingCells, coord:BlockCoord, kind:BlockKind):Bool {
+	public function replaceTerrain(cells:WorldCells, coord:BlockCoord, kind:BlockKind):Bool {
 		if (!World.isSolid(kind) || !World.replace(cells, coord, kind))
 			return false;
-		scheduleAround(pendingCells, coord);
+		scheduleAround(coord);
 		return true;
 	}
 
 	/** Remove solid terrain and let nearby water test the new opening. */
-	public function removeTerrain(cells:WorldCells, pendingCells:WaterPendingCells, coord:BlockCoord):Bool {
+	public function removeTerrain(cells:WorldCells, coord:BlockCoord):Bool {
 		if (!World.contains(coord) || !World.isSolid(World.query(cells, coord)))
 			return false;
 		if (!World.replace(cells, coord, BlockKind.Air))
 			return false;
-		scheduleAround(pendingCells, coord);
+		scheduleAround(coord);
 		return true;
 	}
 
 	/** Place ordinary buildable terrain into air or water and schedule repair. */
-	public function placeTerrain(cells:WorldCells, pendingCells:WaterPendingCells, coord:BlockCoord, kind:BlockKind):Bool {
+	public function placeTerrain(cells:WorldCells, coord:BlockCoord, kind:BlockKind):Bool {
 		if (!World.isPlaceable(kind))
 			return false;
 		final index = World.indexOf(coord);
@@ -211,20 +247,20 @@ final class WaterSimulation {
 		if (!isValidCode(code) || isSolidCode(code))
 			return false;
 		WorldStorage.writeCode(cells, index, World.kindCode(kind));
-		scheduleAround(pendingCells, coord);
+		scheduleAround(coord);
 		return true;
 	}
 
 	/** Notify water after another transactional mechanic removed terrain. */
-	public function terrainChanged(pendingCells:WaterPendingCells, coord:BlockCoord):Void
-		scheduleAround(pendingCells, coord);
+	public function terrainChanged(coord:BlockCoord):Void
+		scheduleAround(coord);
 
 	/** Add one cell to the duplicate-free deterministic work set. */
-	public function schedule(pendingCells:WaterPendingCells, coord:BlockCoord):Bool {
+	public function schedule(coord:BlockCoord):Bool {
 		final index = World.indexOf(coord);
-		if (index < 0 || WaterPendingStorage.isMarked(pendingCells, index))
+		if (index < 0 || WaterPendingStorage.ownerIsMarked(pendingStorage, index))
 			return false;
-		WaterPendingStorage.setMarked(pendingCells, index, true);
+		WaterPendingStorage.setOwnerMarked(pendingStorage, index, true);
 		pendingCount++;
 		if (index < lowestPending)
 			lowestPending = index;
@@ -232,14 +268,14 @@ final class WaterSimulation {
 	}
 
 	/** Process at most `maximumUpdates` cells and retain unfinished work. */
-	public function tick(cells:WorldCells, pendingCells:WaterPendingCells, maximumUpdates:Int):WaterTickResult {
+	public function tick(cells:WorldCells, maximumUpdates:Int):WaterTickResult {
 		var processed = 0;
 		var changed = 0;
 		while (processed < maximumUpdates && pendingCount > 0) {
-			final index = takeLowestPending(pendingCells);
+			final index = takeLowestPending();
 			if (index < 0)
 				break;
-			if (recompute(cells, pendingCells, index))
+			if (recompute(cells, index))
 				changed++;
 			processed++;
 		}
@@ -253,10 +289,10 @@ final class WaterSimulation {
 		rendering loop should call `tick` once per fixed simulation step so a large
 		water release cannot monopolize a frame.
 	**/
-	public function settle(cells:WorldCells, pendingCells:WaterPendingCells, updateBudget:Int, maximumTicks:Int):Bool {
+	public function settle(cells:WorldCells, updateBudget:Int, maximumTicks:Int):Bool {
 		var ticks = 0;
 		while (pendingCount > 0 && ticks < maximumTicks) {
-			final result = tick(cells, pendingCells, updateBudget);
+			final result = tick(cells, updateBudget);
 			if (result.processed <= 0 || result.processed > updateBudget)
 				return false;
 			ticks++;
@@ -280,24 +316,24 @@ final class WaterSimulation {
 	}
 
 	/** Mark an edited cell and its six face-sharing neighbors for local repair. */
-	function scheduleAround(pendingCells:WaterPendingCells, coord:BlockCoord):Void {
-		schedule(pendingCells, coord);
-		schedule(pendingCells, World.coord(coord.x, coord.y - 1, coord.z));
-		schedule(pendingCells, World.coord(coord.x - 1, coord.y, coord.z));
-		schedule(pendingCells, World.coord(coord.x + 1, coord.y, coord.z));
-		schedule(pendingCells, World.coord(coord.x, coord.y, coord.z - 1));
-		schedule(pendingCells, World.coord(coord.x, coord.y, coord.z + 1));
-		schedule(pendingCells, World.coord(coord.x, coord.y + 1, coord.z));
+	function scheduleAround(coord:BlockCoord):Void {
+		schedule(coord);
+		schedule(World.coord(coord.x, coord.y - 1, coord.z));
+		schedule(World.coord(coord.x - 1, coord.y, coord.z));
+		schedule(World.coord(coord.x + 1, coord.y, coord.z));
+		schedule(World.coord(coord.x, coord.y, coord.z - 1));
+		schedule(World.coord(coord.x, coord.y, coord.z + 1));
+		schedule(World.coord(coord.x, coord.y + 1, coord.z));
 	}
 
 	/** Mark the six outside faces where a newly filled box may begin flowing. */
-	function scheduleOutsideVolume(pendingCells:WaterPendingCells, origin:BlockCoord, width:Int, height:Int, depth:Int):Void {
+	function scheduleOutsideVolume(origin:BlockCoord, width:Int, height:Int, depth:Int):Void {
 		var z = origin.z;
 		while (z < origin.z + depth) {
 			var x = origin.x;
 			while (x < origin.x + width) {
-				schedule(pendingCells, World.coord(x, origin.y - 1, z));
-				schedule(pendingCells, World.coord(x, origin.y + height, z));
+				schedule(World.coord(x, origin.y - 1, z));
+				schedule(World.coord(x, origin.y + height, z));
 				x++;
 			}
 			z++;
@@ -306,8 +342,8 @@ final class WaterSimulation {
 		while (z < origin.z + depth) {
 			var y = origin.y;
 			while (y < origin.y + height) {
-				schedule(pendingCells, World.coord(origin.x - 1, y, z));
-				schedule(pendingCells, World.coord(origin.x + width, y, z));
+				schedule(World.coord(origin.x - 1, y, z));
+				schedule(World.coord(origin.x + width, y, z));
 				y++;
 			}
 			z++;
@@ -316,8 +352,8 @@ final class WaterSimulation {
 		while (y < origin.y + height) {
 			var x = origin.x;
 			while (x < origin.x + width) {
-				schedule(pendingCells, World.coord(x, y, origin.z - 1));
-				schedule(pendingCells, World.coord(x, y, origin.z + depth));
+				schedule(World.coord(x, y, origin.z - 1));
+				schedule(World.coord(x, y, origin.z + depth));
 				x++;
 			}
 			y++;
@@ -325,23 +361,23 @@ final class WaterSimulation {
 	}
 
 	/** Remove and return the lowest marked world index in deterministic order. */
-	function takeLowestPending(pendingCells:WaterPendingCells):Int {
+	function takeLowestPending():Int {
 		if (pendingCount <= 0 || lowestPending >= World.VOLUME)
 			return -1;
 		final result = lowestPending;
-		WaterPendingStorage.setMarked(pendingCells, result, false);
+		WaterPendingStorage.setOwnerMarked(pendingStorage, result, false);
 		pendingCount--;
 		lowestPending = World.VOLUME;
 		if (pendingCount > 0) {
 			var index = result + 1;
 			while (index < World.VOLUME && lowestPending == World.VOLUME) {
-				if (WaterPendingStorage.isMarked(pendingCells, index))
+				if (WaterPendingStorage.ownerIsMarked(pendingStorage, index))
 					lowestPending = index;
 				index++;
 			}
 			index = 0;
 			while (index < result && lowestPending == World.VOLUME) {
-				if (WaterPendingStorage.isMarked(pendingCells, index))
+				if (WaterPendingStorage.ownerIsMarked(pendingStorage, index))
 					lowestPending = index;
 				index++;
 			}
@@ -350,7 +386,7 @@ final class WaterSimulation {
 	}
 
 	/** Recompute one non-source cell and propagate only when its byte changes. */
-	function recompute(cells:WorldCells, pendingCells:WaterPendingCells, index:Int):Bool {
+	function recompute(cells:WorldCells, index:Int):Bool {
 		final currentCode = WorldStorage.readCode(cells, index);
 		final current = decodeWaterCell(currentCode);
 		final coord = coordFromIndex(index);
@@ -360,7 +396,7 @@ final class WaterSimulation {
 				final desiredCode = desiredFlowCode(cells, coord);
 				if (desiredCode == currentCode) false; else {
 					WorldStorage.writeCode(cells, index, desiredCode);
-					scheduleAround(pendingCells, coord);
+					scheduleAround(coord);
 					true;
 				}
 		};

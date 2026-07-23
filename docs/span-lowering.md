@@ -232,6 +232,18 @@ profile/build combination for both local views and forwarded span parameters.
 The current failure hook is the exact standard C `abort` function, registered
 through `CSymbolRegistry`; it is not raw C and is not an `hxrt` feature.
 
+An assignment whose right side branches needs one extra ordering step. For
+example, an inlined helper may become
+`span[index] = choose ? first : second` in its caller. The bounds check belongs
+before the conditional, but HxcIR values are local to the basic block that
+created them. Haxe.c therefore takes the checked element address immediately,
+saves that pointer in automatic storage, evaluates the branches, and stores
+through the saved pointer after they join. It does not repeat the index
+expression, does not repeat the check, and does not let the pointer escape the
+function. The checked-in direct and inlined conditional-assignment fixture owns
+this rule because Caxecraft's water queue first exposed the missing cross-block
+destination.
+
 ## Generated C shape and safety proof
 
 Literal storage is emitted as a structural declarator and initializer such as

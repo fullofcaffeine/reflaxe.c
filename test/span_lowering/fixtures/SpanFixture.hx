@@ -125,11 +125,20 @@ class SpanFixture {
 	#end
 
 	#if !span_lowering_report
-	/** Exercise a module-level indexed store whose value joins two branches. */
+	/**
+		Exercise direct and inlined indexed stores whose values join two branches.
+
+		The direct call proves a span parameter remains available throughout its
+		callee. The inline call is the stricter case: `index` is a caller-local
+		value that haxe.c must carry into the conditional's join block before it
+		can perform the store.
+	**/
 	static function conditionalAssignment(selectReplacement:Bool):UInt8 {
 		var values:CArray<UInt8, Length4> = CArray.zero(4);
 		var mutable:Span<UInt8> = values.span();
-		return SpanConditionalAssignment.assignSelected(mutable, 1, c.IntConvert.modulo(37), c.IntConvert.modulo(73), selectReplacement);
+		var index = 1;
+		SpanConditionalAssignment.assignSelected(mutable, index, c.IntConvert.modulo(37), c.IntConvert.modulo(73), selectReplacement);
+		return SpanConditionalAssignment.assignSelectedInline(mutable, index, c.IntConvert.modulo(37), c.IntConvert.modulo(73), selectReplacement);
 	}
 	#end
 

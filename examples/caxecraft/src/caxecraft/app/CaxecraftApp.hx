@@ -166,7 +166,6 @@ final class CaxecraftApp {
 		// Level assembly above creates its own short-lived views inside GameSession.
 		// `GameView` will remove the remaining reads in the presentation task.
 		final cells = session.worldStorage.span();
-		final pendingCells = session.pendingWaterStorage.span();
 		final itemActive = session.authoredItemStorage.span();
 		final itemActiveRead = session.authoredItemStorage.constSpan();
 		final inactiveItem = 0;
@@ -628,7 +627,7 @@ final class CaxecraftApp {
 							final mining = attemptMining(cells, minedCoordinate, inventory);
 							inventory = mining.inventory;
 							if (mining.outcome == MiningOutcome.Collected) {
-								session.water.terrainChanged(pendingCells, minedCoordinate);
+								session.water.terrainChanged(minedCoordinate);
 								terrainRenderer.invalidate(minedCoordinate);
 							}
 							#if caxecraft_pilot
@@ -645,7 +644,7 @@ final class CaxecraftApp {
 						}
 					} else if (hit.hit) {
 						final removedCoordinate = World.coord(hit.cellX, hit.cellY, hit.cellZ);
-						final removed = session.water.removeTerrain(cells, pendingCells, removedCoordinate);
+						final removed = session.water.removeTerrain(cells, removedCoordinate);
 						if (removed)
 							terrainRenderer.invalidate(removedCoordinate);
 						#if caxecraft_pilot
@@ -670,7 +669,7 @@ final class CaxecraftApp {
 						if (!hasItem
 							|| !World.isPlaceable(selectedBlock)
 							|| !playerCanPlaceAt(character.body, placement)
-							|| !session.water.placeTerrain(cells, pendingCells, placement, selectedBlock)) {
+							|| !session.water.placeTerrain(cells, placement, selectedBlock)) {
 							placementBlockedFrames = 60;
 							#if caxecraft_pilot
 							rejectedEdits++;

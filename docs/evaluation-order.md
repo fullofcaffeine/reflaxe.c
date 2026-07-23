@@ -202,6 +202,18 @@ safe `UInt` updates as direct unsigned C. A
 right operand that creates control flow forces the already evaluated left value
 into a typed flow local before that control flow begins.
 
+Assignment destinations follow the same source-order rule. In
+`span[index] = condition ? first : second`, Haxe locates and checks the indexed
+element before it evaluates the conditional value. The conditional introduces
+separate HxcIR basic blocks, so its join cannot reuse the receiver or index
+value IDs created in the earlier block. Haxe.c takes the checked element's
+address, stores that nonescaping pointer in one automatic flow local, evaluates
+the right side, and writes through the pointer after the join. This preserves
+the original failure and side-effect order without repeating the index
+expression or the bounds check. The address coalescing rule is deliberately
+narrow: only an address consumed by the immediately following flow-local
+initializer can stay structural in generated C.
+
 The existing representation-neutral HxcIR fixture for
 `arr[nextIndex()] += produce()` continues to fix the general compound-index
 order as index call, stable element address, load, right-side call, and store.
@@ -252,5 +264,5 @@ builds must be byte-identical on repetition; the direct generated C must remain
 free of `goto`, allocation calls, and `hxrt` before strict `-O0`/`-O2` native
 execution.
 The span suite adds the six-way profile/build bounds-policy matrix, direct
-element-scaled indexing, fail-stop out-of-bounds execution, and linked
-zero-`hxrt` evidence.
+element-scaled indexing, direct and inlined conditional assignments, fail-stop
+out-of-bounds execution, and linked zero-`hxrt` evidence.

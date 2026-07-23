@@ -128,8 +128,9 @@ The current conditionals are deliberately narrow:
   carrier;
 - `CaxecraftTrace` and `DomainProbe` construct fixed C storage or ordinary Haxe
   test storage and choose the appropriate output plumbing;
-- `WaterPendingCells`, its tiny storage adapter, and `WaterProbe` make the same
-  carrier choice for deterministic pending marks and water-test storage.
+- `WaterPendingOwner` selects the live queue embedded in `WaterSimulation`,
+  while `WaterPendingCells`, the tiny storage adapter, and `WaterProbe` select
+  short-lived snapshot/test views over the same deterministic marks.
 
 Terrain generation, block rules, DDA picking, player collision, and trace
 hashing contain no target conditional. The non-C path is tested under pinned

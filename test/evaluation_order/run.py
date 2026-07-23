@@ -429,11 +429,15 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise EvaluationOrderFailure("evaluation-order schema/status/profile drifted")
     proof = required_text(report, "temporaryElisionProof")
-    if "barrier-free single-use private-local loads may remain inline" not in proof:
+    if (
+        "barrier-free single-use private-local loads" not in proof
+        or "checked addresses consumed by an adjacent flow-local initializer"
+        not in proof
+    ):
         raise EvaluationOrderFailure("temporary-elision proof contract drifted")
     value_coalescing_proof = required_text(report, "valueCoalescingProof")
     if value_coalescing_proof != (
-        "value-coalescing:single-use-private-local-and-field-and-pure-record-inline;"
+        "value-coalescing:single-use-private-local-and-field-pure-record-and-adjacent-checked-address-inline;"
         "read-call-lifetime-cleanup-failure-global-pointer-index-multiuse-fanout-cross-block-and-call-result-materialized;"
         "planner-reuse-isolated"
     ):

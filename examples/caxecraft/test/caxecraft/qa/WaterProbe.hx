@@ -41,21 +41,18 @@ final class WaterProbe {
 	public static function selfCheck():Int {
 		#if c
 		var worldStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
-		var pendingStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		var snapshotStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		var snapshotPendingStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		var cells:WorldCells = worldStorage.span();
-		var pending:WaterPendingCells = pendingStorage.span();
 		var snapshotCells:WorldCells = snapshotStorage.span();
 		var snapshotPending:WaterPendingCells = snapshotPendingStorage.span();
 		#else
 		var cells:WorldCells = zeroes();
-		var pending:WaterPendingCells = zeroes();
 		var snapshotCells:WorldCells = zeroes();
 		var snapshotPending:WaterPendingCells = zeroes();
 		#end
 		final water = new WaterSimulation();
-		water.resetPending(pending);
+		water.resetPending();
 
 		final malformed = World.coord(1, 1, 1);
 		WorldStorage.writeCode(cells, World.indexOf(malformed), 99);
@@ -67,8 +64,8 @@ final class WaterProbe {
 			case Empty | Blocked | Source | Flowing(_, _):
 				return 1;
 		}
-		water.schedule(pending, malformed);
-		water.tick(cells, pending, 1);
+		water.schedule(malformed);
+		water.tick(cells, 1);
 		if (WorldStorage.readCode(cells, World.indexOf(malformed)) != 99)
 			return 2;
 		var solidCode = 5;
@@ -84,9 +81,9 @@ final class WaterProbe {
 
 		clear(cells);
 		makeFloor(cells);
-		water.resetPending(pending);
+		water.resetPending();
 		final dryFloorHash = water.stateHash(cells);
-		if (!water.placeSource(cells, pending, World.coord(8, 6, 8)) || !water.settle(cells, pending, 32, 1000))
+		if (!water.placeSource(cells, World.coord(8, 6, 8)) || !water.settle(cells, 32, 1000))
 			return 10;
 		if (!isFlow(water.cellState(cells, World.coord(8, 5, 8)), WaterLevel.Full, true))
 			return 11;
@@ -98,7 +95,7 @@ final class WaterProbe {
 			return 14;
 		if (!isEmpty(water.cellState(cells, World.coord(16, 1, 8))))
 			return 15;
-		if (!water.removeWater(cells, pending, World.coord(8, 6, 8)) || !water.settle(cells, pending, 32, 2000))
+		if (!water.removeWater(cells, World.coord(8, 6, 8)) || !water.settle(cells, 32, 2000))
 			return 16;
 		if (water.stateHash(cells) != dryFloorHash || water.hasAnyWater(cells))
 			return 17;
@@ -106,20 +103,20 @@ final class WaterProbe {
 		clear(cells);
 		makeFloor(cells);
 		makeDam(cells, true);
-		water.resetPending(pending);
-		if (!water.placeSource(cells, pending, World.coord(8, 1, 8)) || !water.settle(cells, pending, 16, 1000))
+		water.resetPending();
+		if (!water.placeSource(cells, World.coord(8, 1, 8)) || !water.settle(cells, 16, 1000))
 			return 20;
 		if (!isWater(water.cellState(cells, World.coord(11, 1, 8))))
 			return 21;
-		if (!water.replaceTerrain(cells, pending, World.coord(10, 1, 8), BlockKind.Stone) || !water.settle(cells, pending, 16, 1000))
+		if (!water.replaceTerrain(cells, World.coord(10, 1, 8), BlockKind.Stone) || !water.settle(cells, 16, 1000))
 			return 22;
 		if (!isEmpty(water.cellState(cells, World.coord(11, 1, 8))))
 			return 23;
-		if (!water.removeTerrain(cells, pending, World.coord(10, 1, 8)) || !water.settle(cells, pending, 16, 1000))
+		if (!water.removeTerrain(cells, World.coord(10, 1, 8)) || !water.settle(cells, 16, 1000))
 			return 24;
 		if (!isWater(water.cellState(cells, World.coord(11, 1, 8))))
 			return 25;
-		if (!water.replaceTerrain(cells, pending, World.coord(10, 1, 8), BlockKind.Stone) || !water.settle(cells, pending, 16, 1000))
+		if (!water.replaceTerrain(cells, World.coord(10, 1, 8), BlockKind.Stone) || !water.settle(cells, 16, 1000))
 			return 26;
 		if (!isEmpty(water.cellState(cells, World.coord(11, 1, 8))))
 			return 27;
@@ -127,50 +124,51 @@ final class WaterProbe {
 		clear(cells);
 		makeFloor(cells);
 		World.replace(cells, World.coord(9, 1, 8), BlockKind.Stone);
-		water.resetPending(pending);
-		if (!water.placeSource(cells, pending, World.coord(8, 1, 8)) || !water.settle(cells, pending, 16, 1000))
+		water.resetPending();
+		if (!water.placeSource(cells, World.coord(8, 1, 8)) || !water.settle(cells, 16, 1000))
 			return 30;
 		if (!isWater(water.cellState(cells, World.coord(10, 1, 8))))
 			return 31;
 
 		clear(cells);
 		makeFloor(cells);
-		water.resetPending(pending);
-		water.placeSource(cells, pending, World.coord(8, 6, 8));
-		final bounded = water.tick(cells, pending, 1);
+		water.resetPending();
+		water.placeSource(cells, World.coord(8, 6, 8));
+		final bounded = water.tick(cells, 1);
 		if (bounded.processed != 1 || bounded.remaining <= 0 || water.pending() != bounded.remaining)
 			return 40;
 
 		clear(cells);
 		makeFloor(cells);
-		water.resetPending(pending);
+		water.resetPending();
 		final beforeRejectedVolume = water.stateHash(cells);
-		if (water.placeInitialVolume(cells, pending, World.coord(20, 0, 20), 2, 2, 2)
+		if (water.placeInitialVolume(cells, World.coord(20, 0, 20), 2, 2, 2)
 			|| water.stateHash(cells) != beforeRejectedVolume
 			|| water.pending() != 0)
 			return 42;
-		if (!water.placeInitialVolume(cells, pending, World.coord(20, 1, 20), 2, 2, 2))
+		if (!water.placeInitialVolume(cells, World.coord(20, 1, 20), 2, 2, 2))
 			return 43;
 		if (!isFlow(water.cellState(cells, World.coord(20, 1, 20)), WaterLevel.Full, false) || water.pending() <= 0)
 			return 44;
-		water.tick(cells, pending, 3);
-		if (!captureWaterSnapshot(cells, pending, snapshotCells, snapshotPending))
+		water.tick(cells, 3);
+		if (!captureWaterSnapshot(cells, water, snapshotCells, snapshotPending))
 			return 45;
 		final savedHash = waterSnapshotHash(snapshotCells, snapshotPending);
 		final savedPending = water.pending();
-		if (!water.settle(cells, pending, 16, 2000))
+		if (!water.settle(cells, 16, 2000))
 			return 46;
 		final settledHash = water.stateHash(cells);
-		if (!restoreWaterSnapshot(snapshotCells, snapshotPending, cells, pending))
+		if (!restoreWaterSnapshot(snapshotCells, snapshotPending, cells, water))
 			return 47;
-		water.restorePending(pending);
-		if (waterSnapshotHash(cells, pending) != savedHash || water.pending() != savedPending)
+		if (!captureWaterSnapshot(cells, water, snapshotCells, snapshotPending)
+			|| waterSnapshotHash(snapshotCells, snapshotPending) != savedHash
+			|| water.pending() != savedPending)
 			return 47;
-		if (!water.settle(cells, pending, 16, 2000) || water.stateHash(cells) != settledHash)
+		if (!water.settle(cells, 16, 2000) || water.stateHash(cells) != settledHash)
 			return 48;
 		final beforeRejectedRestore = water.stateHash(cells);
 		WorldStorage.writeCode(snapshotCells, World.indexOf(World.coord(31, 15, 31)), 1);
-		if (restoreWaterSnapshot(snapshotCells, snapshotPending, cells, pending)
+		if (restoreWaterSnapshot(snapshotCells, snapshotPending, cells, water)
 			|| water.stateHash(cells) != beforeRejectedRestore
 			|| water.pending() != 0)
 			return 49;
@@ -192,26 +190,23 @@ final class WaterProbe {
 	static function deterministicHash(budget:Int, reverseScheduling:Bool):Int {
 		#if c
 		var worldStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
-		var pendingStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		var cells:WorldCells = worldStorage.span();
-		var pending:WaterPendingCells = pendingStorage.span();
 		#else
 		var cells:WorldCells = zeroes();
-		var pending:WaterPendingCells = zeroes();
 		#end
 		makeFloor(cells);
 		makeDam(cells, true);
 		final water = new WaterSimulation();
-		water.resetPending(pending);
-		water.placeSource(cells, pending, World.coord(8, 6, 8));
+		water.resetPending();
+		water.placeSource(cells, World.coord(8, 6, 8));
 		if (reverseScheduling) {
-			water.schedule(pending, World.coord(14, 1, 8));
-			water.schedule(pending, World.coord(4, 1, 8));
+			water.schedule(World.coord(14, 1, 8));
+			water.schedule(World.coord(4, 1, 8));
 		} else {
-			water.schedule(pending, World.coord(4, 1, 8));
-			water.schedule(pending, World.coord(14, 1, 8));
+			water.schedule(World.coord(4, 1, 8));
+			water.schedule(World.coord(14, 1, 8));
 		}
-		if (!water.settle(cells, pending, budget, 10000))
+		if (!water.settle(cells, budget, 10000))
 			return 0;
 		var hash = water.stateHash(cells);
 		hash = CaxecraftTrace.mix(hash, water.pending());

@@ -231,13 +231,25 @@ recede. Placing or removing a solid schedules the edited cell and its six
 face-sharing neighbors, so opening a one-cell dam leaks and closing it repairs
 the downstream water.
 
-The scheduler stores one queued/not-queued mark per world cell. It always takes
-the lowest marked linear index, so the order in which edits requested work
-cannot change the settled result. `tick` performs at most the caller's explicit
-cell budget and leaves remaining marks for later fixed simulation steps. This
-prevents a large release from freezing a rendered frame. `settle` is an
-offline/test helper with a second tick-count bound; the interactive loop should
-not use it every frame.
+The scheduler owns one queued/not-queued mark per world cell beside the two
+counters that summarize those marks. Keeping all three facts inside the same
+`WaterSimulation` prevents a caller from accidentally pairing the counters with
+another queue. It always takes the lowest marked linear index, so the order in
+which edits requested work cannot change the settled result. `tick` performs at
+most the caller's explicit cell budget and leaves remaining marks for later
+fixed simulation steps. This prevents a large release from freezing a rendered
+frame. `settle` is an offline/test helper with a second tick-count bound; the
+interactive loop should not use it every frame.
+
+The world has different ownership. `GameSession` owns the shared voxel buffer,
+and each water operation receives a short-lived mutable view for that call.
+This is preferable to storing a world pointer in the water object: rendering,
+collision, level loading, and water all share the world, while only the water
+scheduler understands its private queue. Per-call borrowing keeps mutation
+visible at the API boundary and cannot leave a dangling pointer when a session
+ends. Haxe.c still rejects arbitrary stored span fields; the future design
+research for cases that genuinely need a retained view is tracked by
+`haxe_c-53k.7`, not assumed by this game.
 
 Current limits are deliberate and executable:
 
@@ -262,8 +274,8 @@ Current limits are deliberate and executable:
 only exact source/flow bytes plus pending queue marks in ascending world-index
 order. Restore validates the complete candidate before changing live bytes,
 preserves solid terrain, clears authored water removed during play, overlays the
-saved water, and lets the owning `WaterSimulation` rebuild its two derived
-scheduler counters from the restored marks. The future full CAXESAVE codec
+saved water, and asks the owning `WaterSimulation` to copy the marks into its
+private queue and rebuild its two derived scheduler counters. The future full CAXESAVE codec
 owned by `haxe_c-4my` will place those facts beside player, terrain, inventory,
 quest, and actor state; this slice deliberately adds no private file format or
 filesystem path.

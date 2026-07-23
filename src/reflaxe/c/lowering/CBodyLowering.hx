@@ -934,6 +934,13 @@ private typedef LoweredPlace = {
 	final mutable:Bool;
 }
 
+/** An assignment destination, optionally saved as one checked element address. */
+private typedef StagedFlowPlace = {
+	final target:LoweredPlace;
+	final addressLocalId:Null<String>;
+	final position:Position;
+}
+
 private enum UIntIntrinsicResult {
 	UIIntrinsicLowered(value:LoweredValue);
 	UIIntrinsicNotMatched;
@@ -4851,9 +4858,11 @@ private class FunctionBuilder {
 			unsupported(expression, "TBinop(OpAssign:managed-Array-reassignment-not-admitted)");
 		if (target.mapping.bytesValue() != null)
 			unsupported(expression, "TBinop(OpAssign:managed-Bytes-reassignment-not-admitted)");
+		final stagedTarget = stageFlowPlace(target, left.pos, expressionCreatesFlow(right), "assignment-target");
 		final source = lowerValue(right, target.mapping);
 		final value = coerce(source, target.mapping, right.pos, "TBinop(OpAssign:right)");
 		rejectOwnedClassBorrow(value, right.pos, "TBinop(OpAssign:owned-class-borrow-escape)");
+		final stableTarget = restoreStagedPlace(stagedTarget, "assignment-target");
 		final optional = target.mapping.optionalValue();
 		if (optional != null && optional.managedLifetime) {
 			final destroyId = optional.destroyImplementationId();
@@ -4863,11 +4872,11 @@ private class FunctionBuilder {
 			final sourceSpan = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 			// Capture the replacement before destroying the prior owner. Besides
 			// preserving failure behavior, this makes `value = value` safe.
-			appendInstruction(null, IRIORelease(target.place, IRIProgramLocal(destroyId)), sourceSpan, "release-optional-assignment-target");
-			appendInstruction(null, IRIOStore(target.place, replacement.id), sourceSpan, "store-optional-assignment-replacement");
+			appendInstruction(null, IRIORelease(stableTarget.place, IRIProgramLocal(destroyId)), sourceSpan, "release-optional-assignment-target");
+			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-optional-assignment-replacement");
 			return replacement;
 		}
-		appendInstruction(null, IRIOStore(target.place, value.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "store");
+		appendInstruction(null, IRIOStore(stableTarget.place, value.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "store");
 		return value;
 	}
 
@@ -4916,14 +4925,17 @@ private class FunctionBuilder {
 			unsupported(left, "TBinop(OpAssignOp:immutable-place)");
 		}
 		final oldValue = loadPlace(target, left.pos, "compound-load");
-		final oldValueLocal = expressionCreatesFlow(right) ? createFlowLocal(oldValue.mapping, oldValue.id,
-			HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "compound-left") : null;
+		final rightCreatesFlow = expressionCreatesFlow(right);
+		final stagedTarget = stageFlowPlace(target, left.pos, rightCreatesFlow, "compound-target");
+		final oldValueLocal = rightCreatesFlow ? createFlowLocal(oldValue.mapping, oldValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"compound-left") : null;
 		final rightValue = lowerValue(right);
 		final stableOldValue = oldValueLocal == null ? oldValue : loadPlace({place: IRPLocal(oldValueLocal), mapping: oldValue.mapping, mutable: true},
 			left.pos, "compound-left-load");
 		final nextValue = lowerBinaryValues(expression, operation, stableOldValue, rightValue, "compound", target.mapping);
 		final stored = coerce(nextValue, target.mapping, expression.pos, "TBinop(OpAssignOp:result)");
-		appendInstruction(null, IRIOStore(target.place, stored.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "compound-store");
+		final stableTarget = restoreStagedPlace(stagedTarget, "compound-target");
+		appendInstruction(null, IRIOStore(stableTarget.place, stored.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "compound-store");
 		return stored;
 	}
 
@@ -5502,7 +5514,11 @@ private class FunctionBuilder {
 					appendInstruction(null, IRIONullCheck(receiverValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 						HaxeSourceSpan.fromPosition(receiver.pos, input.sourcePath), "class-field-null-check");
 				}
-				{place: IRPField(IRPDereference(receiverValue.id), fieldName), mapping: field.type, mutable: field.mutable};
+				{
+					place: IRPField(IRPDereference(receiverValue.id), fieldName),
+					mapping: field.type,
+					mutable: field.mutable
+				};
 			case TField(_, FStatic(classReference, fieldReference)):
 				final global = globalRegistry.require(classReference, fieldReference, expression, rejectGlobal);
 				{place: IRPGlobal(global.ir.id), mapping: CBodyValueType.primitive(global.mapping), mutable: global.ir.mutable};
@@ -5521,13 +5537,18 @@ private class FunctionBuilder {
 		}
 		final indexType = CBodyValueType.primitive(indexMapping);
 		final indexValue = coerce(lowerValue(index, indexType), indexType, index.pos, "TArray(index)");
-		appendInstruction(null, IRIOBoundsCheck(binding.place, indexValue.id, boundsPolicy(binding.length, index)),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "collection-bounds");
+		final policy = boundsPolicy(binding.length, index);
+		appendInstruction(null, IRIOBoundsCheck(binding.place, indexValue.id, policy), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
+			"collection-bounds");
 		final mutable = switch binding.kind {
 			case BCKFixedArray(_): true;
 			case BCKSpan(value): value;
 		};
-		return {place: IRPIndex(binding.place, indexValue.id), mapping: CBodyValueType.primitive(binding.element), mutable: mutable};
+		return {
+			place: IRPIndex(binding.place, indexValue.id),
+			mapping: CBodyValueType.primitive(binding.element),
+			mutable: mutable
+		};
 	}
 
 	/** Resolve a local span/fixed array or a fixed array embedded in a class. */
@@ -7217,6 +7238,78 @@ private class FunctionBuilder {
 		for (index => argument in arguments)
 			restored.push(restoreStagedValue(argument, '$role-$index-load'));
 		return restored;
+	}
+
+	/**
+	 * Save an assignment destination before its right side creates control flow.
+	 *
+	 * Haxe locates `receiver.field` or `span[index]` before evaluating the
+	 * assigned value. A conditional right side moves lowering into new HxcIR
+	 * blocks, where value IDs used by that place are no longer available. After
+	 * its null and bounds checks have succeeded, the element address is the
+	 * smallest complete representation of that already-evaluated destination.
+	 * Saving that address in an automatic local avoids both re-evaluating user
+	 * code and repeating a runtime check after the branches join.
+	 */
+	function stageFlowPlace(target:LoweredPlace, position:Position, crossesFlow:Bool, role:String):StagedFlowPlace {
+		if (!crossesFlow || !placeUsesBlockValue(target.place))
+			return {target: target, addressLocalId: null, position: position};
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final address:HxcIRResult = {
+			id: nextValueId(),
+			type: IRTPointer(target.mapping.irType, false)
+		};
+		appendInstruction(address, IRIOAddress(target.place), source, role + "-address");
+		registerValueTemporary(address.id, role + "-address");
+		final ordinal = localOrdinal++;
+		final localId = 'local.$ordinal';
+		locals.push({
+			id: localId,
+			type: address.type,
+			storage: IRLSAutomatic,
+			initialState: IRISUninitialized,
+			source: source
+		});
+		final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, role, "address"]),
+			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+		context.symbols.register(request);
+		localRequests.set(localId, request);
+		appendInstruction(null, IRIOInitialize(IRPLocal(localId), address.id, IRISUninitialized, IRISInitialized), source, role + "-initialize");
+		return {target: target, addressLocalId: localId, position: position};
+	}
+
+	/**
+	 * Reload a staged destination address in the current block.
+	 *
+	 * The dereference is valid because `stageFlowPlace` took the address only
+	 * after HxcIR had validated the original place's null and bounds evidence.
+	 * The pointer remains local to this function and cannot escape.
+	 */
+	function restoreStagedPlace(staged:StagedFlowPlace, role:String):LoweredPlace {
+		if (staged.addressLocalId == null)
+			return staged.target;
+		final pointer:HxcIRResult = {
+			id: nextValueId(),
+			type: IRTPointer(staged.target.mapping.irType, false)
+		};
+		appendInstruction(pointer, IRIOLoad(IRPLocal(staged.addressLocalId)), HaxeSourceSpan.fromPosition(staged.position, input.sourcePath),
+			role + "-address-load");
+		registerValueTemporary(pointer.id, role + "-address-load");
+		return {
+			place: IRPDereference(pointer.id),
+			mapping: staged.target.mapping,
+			mutable: staged.target.mutable
+		};
+	}
+
+	/** True when a place contains an HxcIR value that belongs to one basic block. */
+	function placeUsesBlockValue(place:HxcIRPlace):Bool {
+		return switch place {
+			case IRPLocal(_) | IRPGlobal(_): false;
+			case IRPDereference(_): true;
+			case IRPField(base, _): placeUsesBlockValue(base);
+			case IRPIndex(_, _): true;
+		};
 	}
 
 	function anyExpressionCreatesFlow(expressions:Array<TypedExpr>):Bool {

@@ -19,8 +19,13 @@ import caxecraft.domain.WaterCellCodec.isWaterCode;
 	`haxe_c-4my`; keeping the mechanic seam here prevents that codec from
 	reimplementing fluid rules.
 **/
-/** Copy exact water and pending marks into caller-owned canonical buffers. */
-function capture(cells:WorldCells, pendingCells:WaterPendingCells, snapshotCells:WorldCells, snapshotPending:WaterPendingCells):Bool {
+/**
+	Copy exact water and scheduler marks into caller-owned canonical buffers.
+
+	The simulation lends no live pointer: it copies its owned queue into the
+	snapshot destination after the complete world has been validated.
+**/
+function capture(cells:WorldCells, water:WaterSimulation, snapshotCells:WorldCells, snapshotPending:WaterPendingCells):Bool {
 	var index = 0;
 	while (index < World.VOLUME) {
 		if (!isValidCode(WorldStorage.readCode(cells, index)))
@@ -32,9 +37,9 @@ function capture(cells:WorldCells, pendingCells:WaterPendingCells, snapshotCells
 	while (index < World.VOLUME) {
 		final code = WorldStorage.readCode(cells, index);
 		WorldStorage.writeCode(snapshotCells, index, isWaterCode(code) ? code : emptyCode());
-		WaterPendingStorage.setMarked(snapshotPending, index, WaterPendingStorage.isMarked(pendingCells, index));
 		index++;
 	}
+	water.capturePending(snapshotPending);
 	return true;
 }
 
@@ -44,11 +49,10 @@ function capture(cells:WorldCells, pendingCells:WaterPendingCells, snapshotCells
 	Authored water currently in `cells` is cleared first, which means removing a
 	permanent source during play survives reload. Solid terrain is preserved. A
 	saved water byte that now overlaps a solid or malformed cell rejects the
-	complete restore before any live byte changes. After success, the owner calls
-	`WaterSimulation.restorePending` on its own scheduler instance; the byte codec
-	does not borrow or mutate that stateful object.
+	complete restore before any live byte changes. After success, the simulation
+	replaces its owned queue and rebuilds the derived counters in one operation.
 **/
-function restore(snapshotCells:WorldCells, snapshotPending:WaterPendingCells, cells:WorldCells, pendingCells:WaterPendingCells):Bool {
+function restore(snapshotCells:WorldCells, snapshotPending:WaterPendingCells, cells:WorldCells, water:WaterSimulation):Bool {
 	var index = 0;
 	while (index < World.VOLUME) {
 		final savedCode = WorldStorage.readCode(snapshotCells, index);
@@ -68,9 +72,9 @@ function restore(snapshotCells:WorldCells, snapshotPending:WaterPendingCells, ce
 			WorldStorage.writeCode(cells, index, emptyCode());
 		if (savedCode != emptyCode())
 			WorldStorage.writeCode(cells, index, savedCode);
-		WaterPendingStorage.setMarked(pendingCells, index, WaterPendingStorage.isMarked(snapshotPending, index));
 		index++;
 	}
+	water.restorePending(snapshotPending);
 	return true;
 }
 
@@ -81,7 +85,7 @@ function stateHash(cells:WorldCells, pendingCells:WaterPendingCells):Int {
 	while (index < World.VOLUME) {
 		final code = WorldStorage.readCode(cells, index);
 		hash = (hash ^ (isWaterCode(code) ? code : emptyCode())) * 16777619;
-		hash = (hash ^ (WaterPendingStorage.isMarked(pendingCells, index) ? 1 : 0)) * 16777619;
+		hash = (hash ^ (WaterPendingStorage.snapshotIsMarked(pendingCells, index) ? 1 : 0)) * 16777619;
 		index++;
 	}
 	return hash;

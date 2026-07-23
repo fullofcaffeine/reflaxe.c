@@ -25,6 +25,9 @@ enum CBodyValueDisposition {
 	/** A local read can move to its one final sink without crossing another read/effect. */
 	CBVDInlineSequencedLoad;
 
+	/** A checked place address can initialize its flow local in the next instruction. */
+	CBVDInlineSequencedAddress;
+
 	CBVDMaterialize(reason:CBodyValueMaterializationReason);
 }
 
@@ -52,7 +55,7 @@ class CBodyValueCoalescingPlan {
 
 	public function shouldInline(valueId:String):Bool
 		return switch disposition(valueId) {
-			case CBVDInlinePure | CBVDInlineSequencedLoad: true;
+			case CBVDInlinePure | CBVDInlineSequencedLoad | CBVDInlineSequencedAddress: true;
 			case CBVDMaterialize(_): false;
 		};
 
@@ -61,6 +64,9 @@ class CBodyValueCoalescingPlan {
 
 	public function shouldInlineSequencedLoad(valueId:String):Bool
 		return disposition(valueId) == CBVDInlineSequencedLoad;
+
+	public function shouldInlineSequencedAddress(valueId:String):Bool
+		return disposition(valueId) == CBVDInlineSequencedAddress;
 }
 
 /**
@@ -69,6 +75,8 @@ class CBodyValueCoalescingPlan {
 	This is deliberately narrower than a general optimizer. Mutable reads remain
 	separate unless one local read reaches one sink in the same block without
 	crossing any other read, call, store, check, failure, alias, or lifetime event.
+	A checked place address may remain structural only when the next instruction
+	initializes the automatic local that carries that address across control flow.
 	Compiler-owned record/enum expressions are total and non-volatile, so a
 	single-use value can remain structural without changing when an observable
 	operation happens.
@@ -107,6 +115,8 @@ class CBodyValueCoalescingPlanner {
 			switch producer.instruction.kind {
 				case IRIOLoad(place):
 					dispositions.set(valueId, loadDisposition(valueId, producer, place, dispositions));
+				case IRIOAddress(_):
+					dispositions.set(valueId, addressDisposition(valueId, producer));
 				case _:
 			}
 		}
@@ -170,6 +180,34 @@ class CBodyValueCoalescingPlanner {
 				return CBVDMaterialize(barrierReason(crossed));
 		}
 		return CBVDInlineSequencedLoad;
+	}
+
+	/**
+		Inline only an address consumed by the immediately following local initializer.
+
+		Taking the address after the place's checks is how assignment lowering
+		preserves a destination across right-side control flow. Keeping the address
+		structural in that adjacent declaration removes a redundant pointer
+		temporary without moving it past a read, effect, or failure boundary.
+	**/
+	function addressDisposition(valueId:String, producer:CBodyValueProducer):CBodyValueDisposition {
+		final valueUses = valueUses(valueId);
+		if (valueUses.length != 1)
+			return CBVDMaterialize(CBVMRMultipleUses(valueUses.length));
+		return switch valueUses[0] {
+			case CBVUInstruction(blockId, instructionIndex) if (blockId == producer.blockId
+				&& instructionIndex == producer.instructionIndex + 1):
+				final block = blocks.get(blockId);
+				if (block == null
+					|| instructionIndex >= block.instructions.length) CBVDMaterialize(CBVMRUnsupportedProducer); else
+					switch block.instructions[instructionIndex].kind {
+					case IRIOInitialize(IRPLocal(_), usedValueId, _, _) if (usedValueId == valueId): CBVDInlineSequencedAddress;
+					case _: CBVDMaterialize(CBVMRExpressionFanout);
+				};
+			case CBVUInstruction(blockId, _) | CBVUTerminator(blockId, _) if (blockId != producer.blockId):
+				CBVDMaterialize(CBVMRCrossBlock);
+			case _: CBVDMaterialize(CBVMRExpressionFanout);
+		};
 	}
 
 	function traceSink(producer:CBodyValueProducer, firstUse:CBodyValueUseSite,

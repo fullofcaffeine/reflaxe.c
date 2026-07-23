@@ -114,6 +114,14 @@ composition--“a session has a water simulation”--when parts have separate
 responsibilities. Use inheritance only when callers truly need one subtype to
 stand in for another through the same behavior contract.
 
+Ownership should follow the invariant, not merely physical proximity.
+`WaterSimulation` owns its pending-work marks because those marks must always
+agree with its counters. It does not own or retain the shared world; each method
+borrows the session-owned world for one call. That shorter borrow is easier to
+reason about and cannot outlive the session. Arbitrary stored `Span` fields
+remain fail-closed until haxe.c has a sound retained-view lifetime model; see
+the planned research task `haxe_c-53k.7`.
+
 ### Data-driven style: let content select reusable behavior
 
 Data-driven design keeps changing content outside engine control flow. A map or
@@ -387,14 +395,17 @@ Use a class when a value has a meaningful identity or owns state across calls:
 
 ```haxe
 final class WaterSimulation {
-	var revision:Int;
+	var pendingCount:Int;
+	var lowestPending:Int;
+	final pendingStorage:WaterPendingOwner = CArray.zero(World.VOLUME);
 
 	public function new() {
-		revision = 0;
+		pendingCount = 0;
+		lowestPending = World.VOLUME;
 	}
 
-	public function tick(...):WaterTickResult {
-		// Mutate the one owned simulation.
+	public function tick(world:WorldCells, budget:Int):WaterTickResult {
+		// Mutate the borrowed world and this object's owned queue together.
 	}
 }
 ```
@@ -414,7 +425,11 @@ table. A reachable polymorphic hierarchy receives only the closed-world table
 it actually needs.
 
 ```c
-struct hxc_WaterSimulation { int32_t revision; };
+struct hxc_WaterSimulation {
+    int32_t pending_count;
+    int32_t lowest_pending;
+    uint8_t pending_storage[16384];
+};
 
 struct hxc_WaterTickResult hxc_WaterSimulation_tick(
     struct hxc_WaterSimulation *self,
@@ -427,6 +442,12 @@ parent-owned `final` child objects. `GameSession`, for example, owns its
 those children in the parent C struct without heap allocation. A known helper
 may borrow such an object for one call, but cannot return, store, or otherwise
 let the pointer outlive its owner.
+
+The same distinction applies inside the child: the water queue is embedded
+because the child owns it, while a `WorldCells` span remains a method parameter
+because the session owns the world. Storing the span would not make the design
+more object-oriented; it would create a second long-lived alias whose lifetime
+the source language has not proved.
 
 General heap allocation, garbage-collected escaping objects, generic classes,
 interfaces, reflection, and public class ABI are not implied by this support.

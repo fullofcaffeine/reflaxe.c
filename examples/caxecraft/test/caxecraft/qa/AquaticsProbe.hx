@@ -23,7 +23,6 @@ import caxecraft.domain.AquaticMedium;
 import caxecraft.domain.PlayerAgent.bind as bindPlayer;
 import caxecraft.domain.CharacterPhysics.body as createPlayer;
 import caxecraft.domain.CharacterBody;
-import caxecraft.domain.WaterPendingCells;
 import caxecraft.domain.WaterSimulation;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
@@ -58,14 +57,11 @@ function main():Void {
 function selfCheck():Int {
 	#if c
 	var worldStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
-	var pendingStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 	var cells:WorldCells = worldStorage.span();
-	var pending:WaterPendingCells = pendingStorage.span();
 	#else
 	var cells:WorldCells = zeroes();
-	var pending:WaterPendingCells = zeroes();
 	#end
-	prepare(cells, pending);
+	prepare(cells);
 	final basic = basicProfile();
 	final enhanced = enhancedProfile();
 
@@ -292,23 +288,36 @@ private function basicProfile():AquaticProfile
 private function enhancedProfile():AquaticProfile
 	return profile(12, 4, 0.90, 18.0, 22.0, 14.0, 0.10, 3, true, true);
 
-private function prepare(cells:WorldCells, pending:WaterPendingCells):Void {
+/**
+	Build the small deterministic floor and two pools used by every aquatic case.
+
+	The helper owns its temporary water scheduler while `cells` remains the
+	caller's world. This mirrors the production ownership rule without exposing
+	queue storage as another test argument.
+**/
+private function prepare(cells:WorldCells):Void {
 	clear(cells);
 	makeFloor(cells);
-	placeLayer(cells, pending, 4, 4, 1, 0);
-	placeLayer(cells, pending, 8, 8, 1, 1);
+	final water = new WaterSimulation();
+	water.resetPending();
+	placeLayer(cells, water, 4, 4, 1, 0);
+	placeLayer(cells, water, 8, 8, 1, 1);
 }
 
-private function placeLayer(cells:WorldCells, pending:WaterPendingCells, centerX:Int, centerZ:Int, bottomY:Int, extraLayers:Int):Void {
-	final water = new WaterSimulation();
-	water.resetPending(pending);
+/**
+	Place one three-by-three authored water column through the public mechanic.
+
+	Reusing the supplied scheduler keeps all source placement and pending-work
+	invariants in the same object while this helper only describes test geometry.
+**/
+private function placeLayer(cells:WorldCells, water:WaterSimulation, centerX:Int, centerZ:Int, bottomY:Int, extraLayers:Int):Void {
 	var layer = 0;
 	while (layer <= extraLayers) {
 		var z = centerZ - 1;
 		while (z <= centerZ + 1) {
 			var x = centerX - 1;
 			while (x <= centerX + 1) {
-				water.placeSource(cells, pending, World.coord(x, bottomY + layer, z));
+				water.placeSource(cells, World.coord(x, bottomY + layer, z));
 				x++;
 			}
 			z++;

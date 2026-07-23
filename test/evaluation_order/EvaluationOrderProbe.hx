@@ -198,7 +198,7 @@ class EvaluationOrderProbe {
 			globals: globals,
 			symbols: lowered.symbolTable,
 			runtimeFeatures: [],
-			temporaryElisionProof: "constants, parameters, proven-total pure conversions/operators, single-use compiler-owned aggregate values, and barrier-free single-use private-local loads may remain inline; calls and observable/cross-block/barrier loads stay materialized",
+			temporaryElisionProof: "constants, parameters, proven-total pure conversions/operators, single-use compiler-owned aggregate values, barrier-free single-use private-local loads, and checked addresses consumed by an adjacent flow-local initializer may remain inline; calls and observable/cross-block/barrier loads stay materialized",
 			valueCoalescingProof: proveValueCoalescing(),
 			controlFlowPlanProof: controlFlowProof.summary,
 			controlFlowEmissionC: controlFlowProof.emissionC,
@@ -312,6 +312,14 @@ class EvaluationOrderProbe {
 				valueInstruction("load-indexed", "value.indexed", i32, IRIOLoad(IRPIndex(IRPLocal("local.items"), "index")), source)
 			])
 		], source)).disposition("value.indexed"), "materialize:mutable-or-foreign-place");
+		requireValueDisposition("checked address into adjacent flow local",
+			planner.plan(syntheticValueFunction("synthetic.coalesce.address-initialize", i32, [candidate], [localValue, localPointer], [
+				syntheticBlock("entry", IRTReturn("candidate", []), source, [
+					valueInstruction("address-local", "value.address", pointerType, IRIOAddress(IRPLocal("local.value")), source),
+					effectInstruction("initialize-address", IRIOInitialize(IRPLocal("local.pointer"), "value.address", IRISUninitialized, IRISInitialized),
+						source)
+				])
+			], source)).disposition("value.address"), "inline-sequenced-address");
 
 		requireValueDisposition("multiple reads of one value", planner.plan(syntheticValueFunction("synthetic.coalesce.multiple-use", i32, [], [localValue], [
 			syntheticBlock("entry", IRTReturn("value.sum", []), source, [
@@ -387,7 +395,7 @@ class EvaluationOrderProbe {
 			])
 		], source)).disposition("value.reused"), "inline-sequenced-load");
 
-		return "value-coalescing:single-use-private-local-and-field-and-pure-record-inline;"
+		return "value-coalescing:single-use-private-local-and-field-pure-record-and-adjacent-checked-address-inline;"
 			+ "read-call-lifetime-cleanup-failure-global-pointer-index-multiuse-fanout-cross-block-and-call-result-materialized;planner-reuse-isolated";
 	}
 
@@ -401,6 +409,7 @@ class EvaluationOrderProbe {
 		return switch disposition {
 			case CBVDInlinePure: "inline-pure";
 			case CBVDInlineSequencedLoad: "inline-sequenced-load";
+			case CBVDInlineSequencedAddress: "inline-sequenced-address";
 			case CBVDMaterialize(reason):
 				switch reason {
 					case CBVMRMultipleUses(count): 'materialize:multiple-uses:$count';
