@@ -937,6 +937,11 @@
             "kind": "hxc-ir-operation"
           },
           {
+            "description": "A reachable ordinary Haxe String.lastIndexOf whose receiver, needle, or start position is known only at run time.",
+            "id": "last-index-of",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "A reachable ordinary Haxe String.length whose scalar count is not known at compile time.",
             "id": "length",
             "kind": "hxc-ir-operation"
@@ -971,6 +976,7 @@
         "hxc_string_haxe_length",
         "hxc_string_index_of",
         "hxc_string_is_valid",
+        "hxc_string_last_index_of",
         "hxc_string_scalar_at",
         "hxc_string_scalar_length",
         "hxc_string_slice",
@@ -985,13 +991,13 @@
           "sourcePath": "runtime/hxrt/include/hxrt/string_decode.h"
         },
         {
-          "sourceSha256": "8d218effd4c89727ed865cfe9e431a75294eb5bbf63991528396520e5bacc320",
+          "sourceSha256": "7dfac11f06f3a544dbe3177ac0e60cdb7bac4bcd0c3fbc6d20f2f6bea7a41352",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_scalar.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_scalar.h"
         },
         {
-          "sourceSha256": "e5583c0bfbec8f1884ba13165b63b3209cd84fc319e685fe7bb3232494113b28",
+          "sourceSha256": "1df11e7045ccdd0c64503478477425ca3a55b71e9ac7f18e1cd623d9f17581b3",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_scalar.c",
           "sourcePath": "runtime/hxrt/src/string_scalar.c"
@@ -1068,7 +1074,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "d529fcab07171729342010b1bcfcb623cd454bb3c537001e469f66d8e9ae5ef5",
+      "sourceSetSha256": "413bbefaea68346cb719e70c08a70801f8193d9e901568e517eee98f6b97742b",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

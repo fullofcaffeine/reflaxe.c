@@ -2177,13 +2177,15 @@ private class HxcIRValidationState {
 				} else if (featureId == "string-scalar") {
 					validateStringScalarCall(call, argumentTypes, path, source);
 					final requiresReceiverProof = switch operationId {
-						case "char-at" | "char-code-at" | "index-of" | "length" | "substring": true;
+						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substring": true;
 						case _: false;
 					};
 					if (requiresReceiverProof && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
 						add(path, 'String.$operationId requires a preceding dominating receiver null check', source);
-					if (operationId == "index-of" && call.arguments.length > 1 && !nullProofs.exists(call.arguments[1]))
-						add(path, "String.indexOf requires a preceding dominating needle null check", source);
+					if ((operationId == "index-of" || operationId == "last-index-of")
+						&& call.arguments.length > 1
+						&& !nullProofs.exists(call.arguments[1]))
+						add(path, 'String.$operationId requires a preceding dominating needle null check', source);
 				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
@@ -2520,6 +2522,15 @@ private class HxcIRValidationState {
 					|| typeKey(call.returnType) != typeKey(IRTInt(32, true)))
 					add(path, "String.indexOf requires source String, needle String, and start Int, then returns Haxe Int", source);
 				validateCleanupFreeStatusAbort(call.failure, path, source, "String.indexOf");
+			case "last-index-of":
+				if (argumentTypes.length != 4
+					|| (argumentTypes[0] != IRTString && argumentTypes[0] != IRTManagedString)
+					|| (argumentTypes[1] != IRTString && argumentTypes[1] != IRTManagedString)
+					|| argumentTypes[2] != IRTBool
+					|| typeKey(argumentTypes[3]) != typeKey(IRTInt(32, true))
+					|| typeKey(call.returnType) != typeKey(IRTInt(32, true)))
+					add(path, "String.lastIndexOf requires source String, needle String, start-presence Bool, and start Int, then returns Haxe Int", source);
+				validateCleanupFreeStatusAbort(call.failure, path, source, "String.lastIndexOf");
 			case "substring":
 				final matchingStringCarrier = argumentTypes.length == 0 ? false : switch argumentTypes[0] {
 					case IRTString: call.returnType == IRTString;

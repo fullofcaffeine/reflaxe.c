@@ -416,6 +416,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string-scalar",operation="char-at")',
         'runtime(feature="string-scalar",operation="char-code-at")',
         'runtime(feature="string-scalar",operation="index-of")',
+        'runtime(feature="string-scalar",operation="last-index-of")',
         'runtime(feature="string-scalar",operation="length")',
         'runtime(feature="string-scalar",operation="substring")',
         'implementation=runtime("string")',
@@ -464,6 +465,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "char-at",
         "char-code-at",
         "index-of",
+        "last-index-of",
         "length",
         "substring",
     }:
@@ -483,6 +485,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "concat",
         "from-scalar",
         "index-of",
+        "last-index-of",
         "length",
         "retain",
         "static-value",
@@ -501,6 +504,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_retain(",
         "hxc_string_release(",
         "hxc_string_index_of(",
+        "hxc_string_last_index_of(",
         "hxc_string_substring(",
     ):
         if required not in source_text:
@@ -754,6 +758,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         "hxc_string_retain",
         "hxc_string_release",
         "hxc_string_index_of",
+        "hxc_string_last_index_of",
         "hxc_string_substring",
     ):
         if required not in result.stdout:

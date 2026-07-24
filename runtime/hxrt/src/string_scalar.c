@@ -306,6 +306,82 @@ hxc_status hxc_string_index_of(
   return HXC_STATUS_OK;
 }
 
+hxc_status hxc_string_last_index_of(
+  hxc_string source,
+  hxc_string needle,
+  bool has_start_index,
+  int32_t start_index,
+  int32_t *out_index
+) {
+  size_t source_length;
+  size_t needle_length;
+  size_t latest_start;
+  size_t byte_index = 0u;
+  size_t scalar_index = 0u;
+  int64_t normalized_start;
+  int32_t found = -1;
+  hxc_utf8_step step;
+  hxc_status status;
+  if (out_index == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_string_scalar_length(source, &source_length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  status = hxc_string_scalar_length(needle, &needle_length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  if (source_length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  if (needle_length == 0u) {
+    normalized_start = has_start_index
+      ? (int64_t)start_index
+      : (int64_t)source_length;
+    if (normalized_start < 0) {
+      normalized_start = 0;
+    } else if ((uint64_t)normalized_start > (uint64_t)source_length) {
+      normalized_start = (int64_t)source_length;
+    }
+    *out_index = (int32_t)normalized_start;
+    return HXC_STATUS_OK;
+  }
+  if (needle_length > source_length) {
+    *out_index = -1;
+    return HXC_STATUS_OK;
+  }
+  latest_start = source_length - needle_length;
+  normalized_start = has_start_index
+    ? (int64_t)start_index
+    : (int64_t)latest_start;
+  if (normalized_start < 0) {
+    *out_index = -1;
+    return HXC_STATUS_OK;
+  }
+  if ((uint64_t)normalized_start > (uint64_t)latest_start) {
+    normalized_start = (int64_t)latest_start;
+  }
+  for (;;) {
+    if (needle.byte_length <= source.byte_length - byte_index
+      && memcmp(source.data + byte_index, needle.data, needle.byte_length) == 0) {
+      found = (int32_t)scalar_index;
+    }
+    if (scalar_index == (size_t)normalized_start) {
+      break;
+    }
+    step = hxc_utf8_read(
+      source.data + byte_index,
+      source.byte_length - byte_index
+    );
+    byte_index += step.consumed;
+    scalar_index++;
+  }
+  *out_index = found;
+  return HXC_STATUS_OK;
+}
+
 hxc_status hxc_string_compare(
   hxc_string left,
   hxc_string right,

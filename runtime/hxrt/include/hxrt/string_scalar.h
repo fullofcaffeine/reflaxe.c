@@ -3,10 +3,11 @@
  *
  * This allocation-free slice owns valid-UTF-8 inspection and Unicode-scalar
  * indexing for the private hxc_string view. Generated Haxe selects it for
- * ordinary String operations such as charAt and indexOf without pulling in the
- * allocator, owned strings, mutable builders, or CString conversion. Checked
- * native helpers retain hxc_status results; hxc_string_char_at is total because
- * Haxe defines negative and out-of-range indices as the empty String.
+ * ordinary String operations such as charAt, indexOf, and lastIndexOf without
+ * pulling in the allocator, owned strings, mutable builders, or CString
+ * conversion. Checked native helpers retain hxc_status results;
+ * hxc_string_char_at is total because Haxe defines negative and out-of-range
+ * indices as the empty String.
  */
 #ifndef HXRT_STRING_SCALAR_H_INCLUDED
 #define HXRT_STRING_SCALAR_H_INCLUDED
@@ -123,6 +124,24 @@ HXC_API hxc_status hxc_string_substring(
 HXC_API hxc_status hxc_string_index_of(
   hxc_string source,
   hxc_string needle,
+  int32_t start_index,
+  int32_t *out_index
+);
+
+/**
+ * Find the rightmost exact String occurrence at or before one scalar index.
+ *
+ * The Boolean preserves whether Haxe supplied its optional start argument.
+ * Omission searches from the latest possible match; a supplied start is the
+ * latest allowed match position. Oversized starts clamp to that last possible
+ * position. For a nonempty needle, a negative start follows the pinned Eval
+ * target and returns -1. Empty needles instead clamp into the inclusive range
+ * from zero through source length.
+ */
+HXC_API hxc_status hxc_string_last_index_of(
+  hxc_string source,
+  hxc_string needle,
+  bool has_start_index,
   int32_t start_index,
   int32_t *out_index
 );

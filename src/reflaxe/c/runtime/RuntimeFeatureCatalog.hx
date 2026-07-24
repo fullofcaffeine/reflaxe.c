@@ -308,6 +308,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_char_at",
 					"hxc_string_char_code_at",
 					"hxc_string_index_of",
+					"hxc_string_last_index_of",
 					"hxc_string_substring",
 					"hxc_string_compare",
 					"hxc_string_hash"
@@ -321,6 +322,8 @@ class RuntimeFeatureCatalog {
 						"A reachable ordinary Haxe String.length whose scalar count is not known at compile time."),
 					new RuntimeFeatureSelectionRoot("index-of", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe String.indexOf whose receiver, needle, or start position is known only at run time."),
+					new RuntimeFeatureSelectionRoot("last-index-of", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.lastIndexOf whose receiver, needle, or start position is known only at run time."),
 					new RuntimeFeatureSelectionRoot("substring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe String.substring whose bounds are known only at run time."),
 					dependencyRoot("Selected transitively by a broader String feature that reuses the same validated scalar rules.")
@@ -447,7 +450,7 @@ class RuntimeFeatureCatalog {
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
 			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
-			case "string_scalar.h": "8d218effd4c89727ed865cfe9e431a75294eb5bbf63991528396520e5bacc320";
+			case "string_scalar.h": "7dfac11f06f3a544dbe3177ac0e60cdb7bac4bcd0c3fbc6d20f2f6bea7a41352";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
 		};
 	}
@@ -465,7 +468,7 @@ class RuntimeFeatureCatalog {
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "432062278957800ffed153e6b237b4bd22c27906a17e7299c330c4bc9621e0e7";
 			case "string_map.c": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04";
-			case "string_scalar.c": "e5583c0bfbec8f1884ba13165b63b3209cd84fc319e685fe7bb3232494113b28";
+			case "string_scalar.c": "1df11e7045ccdd0c64503478477425ca3a55b71e9ac7f18e1cd623d9f17581b3";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}

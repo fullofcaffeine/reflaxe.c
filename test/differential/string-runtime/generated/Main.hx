@@ -28,6 +28,14 @@ final class Main {
 	static function findFrom(value:String, needle:String, start:Int):Int
 		return value.indexOf(needle, start);
 
+	/** Search backward without a start so omission reaches typed lowering. */
+	static function findLast(value:String, needle:String):Int
+		return value.lastIndexOf(needle);
+
+	/** Search backward from the latest allowed runtime-supplied position. */
+	static function findLastFrom(value:String, needle:String, start:Int):Int
+		return value.lastIndexOf(needle, start);
+
 	/**
 		Exercise aliases, branches, records, enums, arrays, and borrowed views.
 
@@ -38,6 +46,7 @@ final class Main {
 	static function contractHolds(enabled:Bool):Bool {
 		final built = build(0xE9, 0x1F600);
 		final direct = fromCode(0xE9) + fromCode(0x1F600);
+		final repeated = built + built;
 		final alias = built;
 		final selected = enabled ? alias : "unused";
 		final record = {left: selected, right: selected.substring(1)};
@@ -53,12 +62,47 @@ final class Main {
 			case Empty:
 		}
 		final optional:Null<String> = enabled ? payload : null;
-		return built == "Aé😀" && alias.length == 3 && direct == "é😀" && record.right == "é😀" && selected.substring(2, 1) == "é"
-			&& selected.substring(-3, 1) == "A" && selected.substring(99) == "" && selected.charCodeAt(2) == 0x1F600 && values[2] == "😀"
-			&& reassigned == built && optional == "é😀" && find(built, "é") == 1 && find(built, fromCode(0x1F600)) == 2 && find(built, "é😀") == 1
-			&& find(built, "missing") == -1 && findFrom(built, "", 99) == 3 && findFrom(built, "", -1) == 0 && findFrom(built, "é", -2) == 1
-			&& findFrom(built, "A", -99) == 0 && findFrom(built, "😀", -1) == 2 && findFrom(built, "é", 2) == -1 && find("A\x00🙂", "\x00") == 1
-			&& find("A\x00🙂", "🙂") == 2 && find("caxecraft:grass", ":") == 9;
+		return built == "Aé😀"
+			&& alias.length == 3
+			&& direct == "é😀"
+			&& record.right == "é😀"
+			&& selected.substring(2, 1) == "é"
+			&& selected.substring(-3, 1) == "A"
+			&& selected.substring(99) == ""
+			&& selected.charCodeAt(2) == 0x1F600
+			&& values[2] == "😀"
+			&& reassigned == built
+			&& optional == "é😀"
+			&& find(built, "é") == 1
+			&& find(built, fromCode(0x1F600)) == 2
+			&& find(built, "é😀") == 1
+			&& find(built, "missing") == -1
+			&& findFrom(built, "", 99) == 3
+			&& findFrom(built, "", -1) == 0
+			&& findFrom(built, "é", -2) == 1
+			&& findFrom(built, "A", -99) == 0
+			&& findFrom(built, "😀", -1) == 2
+			&& findFrom(built, "é", 2) == -1
+			&& find("A\x00🙂", "\x00") == 1
+			&& find("A\x00🙂", "🙂") == 2
+			&& find("caxecraft:grass", ":") == 9
+			&& findLast(repeated, "A") == 3
+			&& findLast(repeated, fromCode(0x1F600)) == 5
+			&& findLast(repeated, "Aé") == 3
+			&& findLastFrom(repeated, "Aé", 2) == 0
+			&& findLastFrom(repeated, "Aé", 99) == 3
+			&& findLastFrom(repeated, "Aé", -1) == -1
+			&& findLast(repeated, "") == 6
+			&& findLastFrom(repeated, "", 99) == 6
+			&& findLastFrom(repeated, "", -1) == 0
+			&& findLast(repeated, "Aé😀Aé😀A") == -1
+			&& findLast("ababa", "aba") == 2
+			&& findLastFrom("ababa", "aba", 1) == 0
+			&& findLastFrom("ababa", "aba", 2) == 2
+			&& findLast("A\x00🙂\x00", "\x00") == 3
+			&& findLast("ée\u0301é", "e\u0301") == 1
+			&& findLast("ée\u0301é", "é") == 3
+			&& findLast("caxecraft:grass", ":") == 9;
 	}
 
 	/** Publish one deterministic literal result for Eval/native comparison. */

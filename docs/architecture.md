@@ -760,9 +760,10 @@ ordinary-Haxe scalar String operations request `string-scalar`; their closure
 adds the shared UTF-8 decoder and allocation-free inspection without `alloc` or
 the owned-string source. `charAt` and `substring` return views into the
 receiver's existing bytes, so an escaping result keeps that storage alive.
-`indexOf` only observes its receiver and needle, advances at Unicode-scalar
-boundaries, and returns a scalar position. These closures package no allocator,
-full string operations, objects, collector, dynamic, reflection, or exceptions.
+`indexOf` and `lastIndexOf` only observe their receiver and needle, advance at
+Unicode-scalar boundaries, and return scalar positions. These closures package
+no allocator, full string operations, objects, collector, dynamic, reflection,
+or exceptions.
 New semantic lowerings remain responsible for supplying typed candidates for
 any explicit runtime intent and fail internally
 if they do not. The checked-in allocator contract has E4.T02 native evidence for checked

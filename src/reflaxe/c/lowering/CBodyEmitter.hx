@@ -4744,7 +4744,12 @@ class CBodyEmitter {
 				emitStringLengthCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
 			case IRCDRuntime("string-scalar", "index-of"):
-				emitStringIndexOfCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				emitStringSearchCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn, "indexOf",
+					CBRNStringIndexOf, 3);
+				return false;
+			case IRCDRuntime("string-scalar", "last-index-of"):
+				emitStringSearchCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn,
+					"lastIndexOf", CBRNStringLastIndexOf, 4);
 				return false;
 			case IRCDRuntime("string-scalar", "char-code-at"):
 				emitStringCharCodeAtCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, fn);
@@ -5182,13 +5187,14 @@ class CBodyEmitter {
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
 	}
 
-	/** Emit allocation-free scalar-indexed String search into one Haxe `Int`. */
-	function emitStringIndexOfCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
-			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+	/** Emit one checked allocation-free String search into a Haxe `Int`. */
+	function emitStringSearchCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction, method:String,
+			runtimeName:CBodyRuntimeName, expectedArgumentCount:Int):Void {
 		final result = requireResult(instruction, fn.id);
 		final temporary = temporaryNames.get(result.id);
-		if (temporary == null || call.arguments.length != 3 || typeKey(result.type) != typeKey(IRTInt(32, true)))
-			return fail('String.indexOf call `${instruction.id}` in `${fn.id}` lost its checked String/String/Int signature');
+		if (temporary == null || call.arguments.length != expectedArgumentCount || typeKey(result.type) != typeKey(IRTInt(32, true)))
+			return fail('String.$method call `${instruction.id}` in `${fn.id}` lost its checked search signature');
 		final declaration = typedDeclarator(result.type, DName(temporary));
 		statements.push(SDecl({
 			storage: [],
@@ -5199,12 +5205,9 @@ class CBodyEmitter {
 			attributes: []
 		}));
 		addLineDirective(statements, instruction.source, lineDirectives);
-		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringIndexOf)), [
-			requireValue(values, call.arguments[0], fn.id),
-			requireValue(values, call.arguments[1], fn.id),
-			requireValue(values, call.arguments[2], fn.id),
-			EUnary(AddressOf, EIdentifier(temporary))
-		]), boundsAbortName, instruction.id, fn.id);
+		final arguments = call.arguments.map(argument -> requireValue(values, argument, fn.id));
+		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
 		values.set(result.id, EIdentifier(temporary));
 		if (!referencedValues.exists(result.id))
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));

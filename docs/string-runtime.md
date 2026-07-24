@@ -11,10 +11,10 @@ Literal-backed Strings remain allocation-free. Runtime-created values from
 `StringBuf.addChar` path use a small reference-counted owner. Those values may
 cross calls and returns, aliases, branches, closed records and enums, fixed
 Array literals, `Null<String>`, and class fields without dangling bytes.
-`length`, `charAt`, `charCodeAt`, `indexOf`, and `substring` use the shared
-Unicode-scalar rules. Other String methods still fail closed. E4.T11
-established the internal same-major runtime contract, and E7 owns any future
-public ABI.
+`length`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, and `substring` use
+the shared Unicode-scalar rules. Other String methods still fail closed.
+E4.T11 established the internal same-major runtime contract, and E7 owns any
+future public ABI.
 
 E4.T03 advanced the incompatible native-seed marker from 0.2.0 to 0.3.0.
 E2.T07 added the provisional hosted output API and advanced it to 0.4.0;
@@ -144,7 +144,7 @@ The core operations have these costs and ownership effects:
 | Direct literal | None; static compiler-owned storage |
 | Scalar length/access | None; scans UTF-8 from known boundaries |
 | Borrowed scalar slice | None; lifetime remains tied to the source |
-| Forward substring search | None; compares UTF-8 bytes only at scalar boundaries |
+| Forward/reverse substring search | None; compares UTF-8 bytes only at scalar boundaries |
 | Compare/equality basis | None; lexicographic canonical UTF-8 bytes |
 | Stable hash | None; 32-bit FNV-1a over all logical bytes |
 | Checked or lossy owned decode | Zero callbacks for empty, otherwise one exact allocation |
@@ -155,13 +155,16 @@ The core operations have these costs and ownership effects:
 
 Canonical UTF-8 preserves scalar ordering under byte-wise lexicographic
 comparison, so compare does not decode or allocate after invariant validation.
-`indexOf` uses the same property for exact matching, but it advances the source
-only at decoded scalar boundaries and returns the scalar count at the match,
-not the byte offset. Its optional start also uses scalar positions. Haxe leaves
-negative starts unspecified across all targets; haxe.c deliberately follows
-the pinned Eval oracle by counting a nonempty search back from the end and
-clamping an empty-search start into the valid range. That target choice is
-recorded in differential tests rather than inherited accidentally from C.
+`indexOf` and `lastIndexOf` use the same property for exact matching, but they
+advance the source only at decoded scalar boundaries and return the scalar
+count at the match, not the byte offset. Their optional starts also use scalar
+positions. `lastIndexOf` scans forward while remembering the latest allowed
+match; this avoids allocating a reversed buffer or a scalar-index table. Haxe
+leaves negative starts unspecified across all targets, so haxe.c deliberately
+follows the pinned Eval oracle. For `indexOf`, a negative nonempty start counts
+back from the end. For `lastIndexOf`, a negative nonempty start returns `-1`.
+An empty needle clamps either start into the valid range. These target choices
+are recorded in differential tests rather than inherited accidentally from C.
 No scalar index table or cache is unconditional. Later compiler analysis may
 emit direct C or a program-local specialization instead of selecting this slice
 when lifetime and representation are statically known.
@@ -192,10 +195,10 @@ lowering owner is implemented.
 
 The allocation-free `string-scalar` feature is compiler-selectable and depends
 only on `status` plus the `string-literal` carrier. Ordinary Haxe `length`,
-`charAt`, `charCodeAt`, `indexOf`, and `substring` select this slice when their
-inputs remain dynamic. Scalar views borrow the source bytes; `indexOf` only
-observes its receiver and needle. Literal-only search programs therefore still
-avoid `alloc` and the broader `string` source.
+`charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, and `substring` select this
+slice when their inputs remain dynamic. Scalar views borrow the source bytes;
+both searches only observe their receiver and needle. Literal-only search
+programs therefore still avoid `alloc` and the broader `string` source.
 
 The `string` feature is compiler-selectable and depends on `alloc` plus
 `string-scalar`. A generated program selects it only for a reachable owned
@@ -232,11 +235,12 @@ CString lifetime, reference counts, and exact allocations. Its ordinary-Haxe
 fixture compares Eval with generated C for `String.fromCharCode`, upstream
 `StringBuf.addChar`, concatenation, aliases, branches, records, enums, arrays,
 reassignment, nullable values, calls, returns, borrowed scalar slices, and
-`indexOf` over literal and owned Strings, non-Basic Multilingual Plane text,
-embedded NUL, empty needles, omitted/supplied starts, and the pinned
-negative-start behavior. Generated projects are checked in split, package, and
-unity layouts under cold, reversed, and warm compiler-server discovery. Strict
-C11 `-O0`/`-O2`, C++17 headers, AddressSanitizer, UndefinedBehaviorSanitizer,
+forward and reverse search over literal and owned Strings, repeated and
+overlapping matches, non-Basic Multilingual Plane and combining text, embedded
+NUL, empty needles, omitted/supplied starts, and the pinned negative-start
+behavior. Generated projects are checked in split, package, and unity layouts
+under cold, reversed, and warm compiler-server discovery. Strict C11
+`-O0`/`-O2`, C++17 headers, AddressSanitizer, UndefinedBehaviorSanitizer,
 runtime-none rejection, and malformed-HxcIR diagnostics keep both behavior and
 ownership plan honest.
 

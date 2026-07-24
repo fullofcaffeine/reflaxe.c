@@ -110,6 +110,27 @@ static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   const hxc_string decomposed = HXC_STRING_LITERAL("e\xCC\x81");
   const hxc_string sequence = HXC_STRING_LITERAL("x\xF0\x9F\x98\x80\xC3\xA9");
   const hxc_string emoji_accent = HXC_STRING_LITERAL("\xF0\x9F\x98\x80\xC3\xA9");
+  const hxc_string repeated = HXC_STRING_LITERAL(
+    "A\xC3\xA9\xF0\x9F\x98\x80"
+    "A\xC3\xA9\xF0\x9F\x98\x80"
+  );
+  const hxc_string repeated_prefix = HXC_STRING_LITERAL("A\xC3\xA9");
+  const hxc_string too_long = HXC_STRING_LITERAL(
+    "A\xC3\xA9\xF0\x9F\x98\x80"
+    "A\xC3\xA9\xF0\x9F\x98\x80"
+    "A"
+  );
+  const hxc_string overlap_source = HXC_STRING_LITERAL("ababa");
+  const hxc_string overlap_needle = HXC_STRING_LITERAL("aba");
+  const hxc_string repeated_nul = HXC_STRING_LITERAL(
+    "A\0\xF0\x9F\x99\x82\0"
+  );
+  const hxc_string combining_source = HXC_STRING_LITERAL(
+    "\xC3\xA9"
+    "e\xCC\x81"
+    "\xC3\xA9"
+  );
+  const hxc_string combining_needle = HXC_STRING_LITERAL("e\xCC\x81");
   hxc_string slice = HXC_STRING_INITIALIZER;
   size_t length = 99u;
   size_t allocations = arena->allocation_count;
@@ -179,6 +200,96 @@ static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   HXC_TEST_CHECK(found == 77);
   HXC_TEST_CHECK(
     hxc_string_index_of(sequence, composed, 0, NULL)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, emoji, false, 0, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 5);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, repeated_prefix, false, 0, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 3);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, repeated_prefix, true, 2, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 0);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, repeated_prefix, true, 99, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 3);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, repeated_prefix, true, -1, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == -1);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, empty, false, 0, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 6);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, empty, true, 99, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 6);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, empty, true, -1, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 0);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated, too_long, false, 0, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == -1);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(
+      overlap_source,
+      overlap_needle,
+      false,
+      0,
+      &found
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 2);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(
+      overlap_source,
+      overlap_needle,
+      true,
+      1,
+      &found
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 0);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(repeated_nul, nul, false, 0, &found)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 3);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(
+      combining_source,
+      combining_needle,
+      false,
+      0,
+      &found
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 1);
+  found = 77;
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(missing, composed, false, 0, &found)
+      == HXC_STATUS_INVALID_UTF8
+  );
+  HXC_TEST_CHECK(found == 77);
+  HXC_TEST_CHECK(
+    hxc_string_last_index_of(sequence, composed, false, 0, NULL)
       == HXC_STATUS_INVALID_ARGUMENT
   );
   HXC_TEST_CHECK(arena->allocation_count == allocations);

@@ -437,12 +437,13 @@ content. It is intentionally separate from the full string feature.
 
 Compiler-selectable, allocation-free inspection of immutable valid-UTF-8
 String views. Admitted ordinary-Haxe roots are `length`, `charAt`,
-`charCodeAt`, `substring`, and `indexOf`. Every index and result position counts
-Unicode scalar values rather than UTF-8 bytes. `charAt` and `substring` return
-borrowed views into the receiver; “borrowed” means the view shares the
-receiver's immutable byte lifetime and owns nothing to free. `indexOf` allocates
-nothing: canonical UTF-8 lets it compare bytes while advancing only across
-scalar boundaries and returning the corresponding scalar position.
+`charCodeAt`, `substring`, `indexOf`, and `lastIndexOf`. Every index and result
+position counts Unicode scalar values rather than UTF-8 bytes. `charAt` and
+`substring` return borrowed views into the receiver; “borrowed” means the view
+shares the receiver's immutable byte lifetime and owns nothing to free. Both
+search operations allocate nothing: canonical UTF-8 lets them compare bytes
+while advancing only across scalar boundaries and returning the corresponding
+scalar position.
 
 The slice also owns checked validation, scalar length/access, borrowed slicing,
 comparison, and hashing used by the broader native String seed. A private
