@@ -166,6 +166,15 @@ int main(void) {
 
   arena.failure_armed = true;
   arena.successful_allocations_before_failure = 1u;
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_create_utf8_copy(allocator, text_view, &failed)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  HXC_TEST_CHECK(failed == NULL);
+  arena.failure_armed = false;
+
+  arena.failure_armed = true;
+  arena.successful_allocations_before_failure = 1u;
   HXC_TEST_CHECK(hxc_bytes_ref_create_zeroed(allocator, 4, &failed) == HXC_STATUS_OUT_OF_MEMORY);
   HXC_TEST_CHECK(failed == NULL);
   arena.failure_armed = false;

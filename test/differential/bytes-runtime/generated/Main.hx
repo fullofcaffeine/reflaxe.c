@@ -25,6 +25,16 @@ final class Main {
 		return left.compare(right) == 0;
 
 	/**
+		Copy one runtime String parameter into independent mutable byte storage.
+
+		The parameter is a borrowed immutable UTF-8 view. `Bytes.ofString` copies
+		its exact logical byte length, so embedded NUL remains content rather than
+		ending the value as it would in an unbounded C string.
+	**/
+	static function copyText(value:String):Bytes
+		return Bytes.ofString(value);
+
+	/**
 		Return early after passing a fresh managed result directly into another call.
 
 		The caller must own `makeText()` across `firstByte(...)`, then release that
@@ -61,6 +71,11 @@ final class Main {
 		final twoFreshArguments = sameBytes(makeText(), Bytes.ofString("Haxe"));
 		final freshReceiverByte = Bytes.ofString("Haxe").get(0);
 		final earlyFreshByte = readFreshText(true);
+		final runtimeText = "hé\x00🙂";
+		final runtimeAlias = runtimeText;
+		final runtimeCopy = copyText(runtimeAlias);
+		final repeatedCopy = copyText(runtimeText);
+		final emptyCopy = copyText("");
 
 		while (bytes.length != 8
 			|| bytes.get(0) != 0x41
@@ -79,6 +94,15 @@ final class Main {
 			|| directFreshByte != 0x48
 			|| !twoFreshArguments
 			|| freshReceiverByte != 0x48
-			|| earlyFreshByte != 0x48) {}
+			|| earlyFreshByte != 0x48
+			|| runtimeCopy.length != 8
+			|| runtimeCopy.get(0) != 0x68
+			|| runtimeCopy.get(1) != 0xc3
+			|| runtimeCopy.get(2) != 0xa9
+			|| runtimeCopy.get(3) != 0
+			|| runtimeCopy.get(4) != 0xf0
+			|| runtimeCopy.get(7) != 0x82
+			|| repeatedCopy.compare(runtimeCopy) != 0
+			|| emptyCopy.length != 0) {}
 	}
 }

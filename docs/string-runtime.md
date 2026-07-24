@@ -191,6 +191,14 @@ the output helper writes by length, adds a newline, flushes, and returns
 `HXC_STATUS_IO_ERROR` on write or flush failure. The generated caller follows
 the admitted fail-stop policy by aborting on any non-OK status.
 
+`Bytes.ofString(value)` may also consume an admitted String parameter, local,
+or alias. “Runtime” here describes when the expression is selected, not who
+owns its bytes: the value remains the same immutable length-delimited view
+backed by already-admitted storage. The Bytes operation copies those bytes
+synchronously into its own managed allocation, so it does not select the full
+`string` feature or create an owned String. Runtime-created Strings still
+remain outside this boundary.
+
 [`test/differential/string-runtime`](../test/differential/string-runtime)
 compares BMP/non-BMP/embedded-NUL/composed/decomposed scalar behavior with the
 pinned Haxe Eval oracle. Its independent strict-C fixture covers checked and

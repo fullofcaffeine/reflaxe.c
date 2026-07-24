@@ -19,6 +19,7 @@
     "test/differential/bytes-runtime/generated/Main.hx",
     "test/differential/bytes-runtime/generated/oracle.hxml",
     "test/differential/bytes-runtime/negative/return_escape/Main.hx",
+    "test/differential/bytes-runtime/negative/runtime_string_operation/Main.hx",
     "test/differential/bytes-runtime/negative/unsupported_method/Main.hx",
     "test/differential/bytes-runtime/run.py"
   ],

@@ -14,8 +14,10 @@ The first haxe.c slice supports ordinary Haxe calls to:
   guarantee;
 - `length`, `get`, and `set`;
 - `sub`, `blit`, `fill`, and `compare`;
-- `Bytes.ofString` when its input is a compile-time String literal and the
-  optional encoding is absent or `null`.
+- `Bytes.ofString` when its input is an admitted immutable Haxe String view and
+  the optional encoding is absent or `null`. The expression may be a source
+  literal, local, alias, or parameter; runtime-created owned Strings remain a
+  separate unsupported capability.
 
 Assignment shares the same mutable Bytes value. `sub` is different: it creates
 an independent copy. `set` and `fill` keep the low eight bits of the supplied
@@ -98,8 +100,14 @@ runs.
 The selected C representation is private `hxc_bytes_ref *`. Generated public C
 interfaces must not expose it as a stable application ABI. The runtime feature
 depends on the checked allocator and status slices. String-literal support is
-selected because the admitted `Bytes.ofString` boundary copies a validated
-UTF-8 view; the Bytes storage itself is still untyped binary data.
+selected because every currently admitted String view ultimately borrows
+validated UTF-8 storage from a compiler-owned literal. `Bytes.ofString` accepts
+that length-delimited view by value and copies its logical bytes immediately,
+so it preserves non-ASCII scalars, empty text, and embedded NUL without needing
+a C-string terminator or extending the String's lifetime. The resulting Bytes
+storage is independent mutable binary data. This use of a runtime parameter is
+not evidence for parsing, concatenation, interpolation, input, or another
+operation that creates owned String storage at runtime.
 
 Fresh Bytes results are admitted at compiler-known direct, indirect, instance,
 constructor, super-constructor, and supported Bytes-operation borrow
@@ -127,7 +135,9 @@ lowering mistake could affect both sides and make the comparison falsely pass.
 The direct C is therefore independent runtime evidence, not application code or
 a workaround for a missing compiler feature.
 
-The runner also checks reversed typed-module discovery, HxcIR ownership markers,
-the exact runtime feature closure, strict warnings, AddressSanitizer and
-UndefinedBehaviorSanitizer where Clang is available, selective linked symbols,
-negative diagnostics, and `hxc_runtime=none` rejection.
+The runner also checks reversed typed-module discovery independently for split
+and unity projects, HxcIR ownership markers, the exact runtime feature closure,
+strict C11 execution at `-O0` and `-O2`, C++17 header consumption,
+AddressSanitizer and UndefinedBehaviorSanitizer on both the direct runtime
+contract and generated split project where Clang is available, selective
+linked symbols, negative diagnostics, and `hxc_runtime=none` rejection.

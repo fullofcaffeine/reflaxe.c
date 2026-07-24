@@ -1317,7 +1317,7 @@
         "test/differential/bytes-runtime/generated/Main.hx",
         "test/differential/bytes-runtime/run.py"
       ],
-      "notes": "A compiler-known valid UTF-8 String literal with absent or null encoding is copied exactly, including embedded NUL; run-time Strings and explicit encodings remain unsupported."
+      "notes": "An admitted immutable UTF-8 String view with absent or null encoding is copied exactly, including non-ASCII scalars and embedded NUL. The expression may be a literal, local, alias, or parameter; runtime-created owned Strings and explicit encodings remain unsupported."
     },
     {
       "id": "bytes-set-partial",
@@ -39852,7 +39852,7 @@
         "test/differential/bytes-runtime/generated/Main.hx",
         "test/differential/bytes-runtime/run.py"
       ],
-      "notes": "A compiler-known valid UTF-8 String literal with absent or null encoding is copied exactly, including embedded NUL; run-time Strings and explicit encodings remain unsupported.",
+      "notes": "An admitted immutable UTF-8 String view with absent or null encoding is copied exactly, including non-ASCII scalars and embedded NUL. The expression may be a literal, local, alias, or parameter; runtime-created owned Strings and explicit encodings remain unsupported.",
       "ruleId": "bytes-of-string-partial"
     },
     {

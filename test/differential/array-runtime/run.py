@@ -703,20 +703,21 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     if result.returncode == 0:
         return
     # Caxecraft now passes the managed Array element copied by
-    # EditorScenarioSnapshot.actionsAreRepresentable and the fresh Bytes call
-    # argument that followed it. The next reachable boundary converts an
-    # already-computed String into Bytes; haxe_c-aml.1 owns that distinct
-    # runtime-String encoding contract. Requiring the exact later diagnostic
-    # proves this task did not merely move or hide its former Array failure.
-    # Accepting an arbitrary failure would weaken this product check into
-    # "Caxecraft still does not compile."
+    # EditorScenarioSnapshot.actionsAreRepresentable, the fresh Bytes call
+    # argument, and the runtime String-to-Bytes copy that followed it. The next
+    # reachable boundary is Haxe's legacy-nullable String coercion, owned by
+    # haxe_c-aml.2. Requiring the exact later diagnostic proves this task did not
+    # merely move or hide its former Array failure. Accepting an arbitrary
+    # failure would weaken this product check into "Caxecraft still does not
+    # compile."
     if (
-        "src/caxecraft/scenario/CaxeFlowRulePlanner.hx:169:" not in result.stderr
-        or "TCall(Bytes.ofString:non-literal-String-not-yet-admitted)"
+        "src/caxecraft/scenario/CaxeFlowValueReader.hx:166:" not in result.stderr
+        or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
         not in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
+        or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
     ):
         raise ArrayRuntimeFailure(
             "Caxecraft did not compile past its former managed Array element boundary\n"

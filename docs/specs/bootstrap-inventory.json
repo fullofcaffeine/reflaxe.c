@@ -976,7 +976,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage and compiler-owned lifetimes.",
-      "scope": "Bytes.alloc, literal Bytes.ofString, length, get, set, sub, blit, fill, compare, aliases, owned returns, fresh results borrowed by compiler-known calls and Bytes operations, and private tagged-enum payload ownership lower through validated HxcIR into an exact allocator/string-literal/bytes closure. Strict C11 and Eval evidence cover byte masking, copy independence, overlap, bounds, allocation rollback, left-to-right nested calls, early-return and reverse temporary cleanup, shared mutation through an enum projection, active-tag retain/destroy behavior, deterministic output, and cleanup.",
+      "scope": "Bytes.alloc, Bytes.ofString from literal-backed immutable String expressions including parameters and aliases, length, get, set, sub, blit, fill, compare, owned returns, fresh results borrowed by compiler-known calls and Bytes operations, and private tagged-enum payload ownership lower through validated HxcIR into an exact allocator/string-literal/bytes closure. Strict C11 and Eval evidence cover non-ASCII and embedded-NUL runtime String copies, byte masking, copy independence, overlap, bounds, allocation rollback, left-to-right nested calls, early-return and reverse temporary cleanup, shared mutation through an enum projection, active-tag retain/destroy behavior, deterministic output, and cleanup.",
       "evidence": [
         "docs/bytes-runtime.md",
         "docs/enum-lowering.md",
@@ -995,7 +995,7 @@
         "E5.T04"
       ],
       "limitations": [
-        "Runtime String inputs, explicit encodings, numeric/endian methods, BytesData, BytesBuffer, Input, Output, borrowed returns, whole-reference reassignment, unknown call-ownership boundaries, and managed aggregate or Array elements remain unsupported.",
+        "Runtime-created owned String inputs, explicit encodings, numeric/endian methods, BytesData, BytesBuffer, Input, Output, borrowed returns, whole-reference reassignment, unknown call-ownership boundaries, and managed aggregate or Array elements remain unsupported.",
         "The private hxc_bytes_ref layout is versioned internal ABI and cannot cross a generated public application export."
       ]
     },
@@ -1162,7 +1162,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe standard-library parity is not implemented.",
-      "scope": "Only exact compiler-recognized slices are covered: Std.int; compiler-known literal Sys.println and default trace in hosted builds; and the bounded haxe.io.Bytes alloc, literal ofString, length, get, set, sub, blit, fill, and compare operations.",
+      "scope": "Only exact compiler-recognized slices are covered: Std.int; compiler-known literal Sys.println and default trace in hosted builds; and the bounded haxe.io.Bytes alloc, ofString from admitted immutable String views, length, get, set, sub, blit, fill, and compare operations.",
       "evidence": [
         "docs/specs/stdlib-ledger.json",
         "test/arithmetic_semantics/run.py",

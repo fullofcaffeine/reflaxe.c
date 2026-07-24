@@ -7194,18 +7194,11 @@ private class FunctionBuilder {
 					return unsupported(expression, 'TCall(Bytes.ofString:argument-count=${arguments.length})');
 				if (arguments.length == 2 && !isNullExpression(arguments[1]))
 					return unsupported(arguments[1], "TCall(Bytes.ofString:explicit-encoding-not-yet-admitted)");
-				final text = stringLiteral(arguments[0]);
-				if (text == null)
-					return unsupported(arguments[0], "TCall(Bytes.ofString:non-literal-String-not-yet-admitted)");
-				final byteLength = HxcUtf8.byteLength(text);
-				if (byteLength == null)
-					return unsupported(arguments[0], "TCall(Bytes.ofString:malformed-Unicode-literal)");
-				final literalResult:HxcIRResult = {id: nextValueId(), type: IRTString};
-				final literalSource = HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath);
-				appendInstruction(literalResult, IRIOConstant(IRCString(text, byteLength)), literalSource, "bytes-string-literal");
-				runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", "Bytes.ofString literal", literalSource,
-					arguments[0].pos, "direct-string-value"));
-				loweredArguments.push(literalResult.id);
+				final sourceMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Bytes.ofString:source-type)");
+				if (sourceMapping.staticStringIdentity() == null || typeKey(sourceMapping.irType) != typeKey(IRTString))
+					return unsupported(arguments[0], "TCall(Bytes.ofString:source-not-immutable-String-view)");
+				final sourceValue = coerce(lowerValue(arguments[0], sourceMapping), sourceMapping, arguments[0].pos, "TCall(Bytes.ofString:source)");
+				loweredArguments.push(sourceValue.id);
 			case _:
 				return unsupported(expression, 'TCall(Bytes.$method:not-yet-admitted)');
 		}
