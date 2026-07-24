@@ -3479,6 +3479,40 @@ private class FunctionBuilder {
 		}
 
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final constructedClass = localMapping.classValue();
+		if (constructedClass == null)
+			throw new CBodyEmissionError('constructed local `${variable.name}` lost its class layout');
+		final self = lowerStackConstructedObject(expression, signature, targetId, arguments, source, variable.name, constructedClass);
+		final reference = coerce(self, localMapping, expression.pos, 'TNew(result:$targetId)');
+		locals.push({
+			id: localId,
+			type: localMapping.irType,
+			storage: IRLSAutomatic,
+			initialState: IRISUninitialized,
+			source: source
+		});
+		final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, variable.name]),
+			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+		context.symbols.register(request);
+		localRequests.set(localId, request);
+		appendInstruction(null, IRIOInitialize(IRPLocal(localId), reference.id, IRISUninitialized, IRISInitialized), source, "initialize-class-reference");
+		localIdsByCompilerId.set(variable.id, localId);
+		localTypesByCompilerId.set(variable.id, localMapping);
+		stackConstructedCompilerIds.set(variable.id, true);
+	}
+
+	/**
+		Build one direct Haxe class in automatic C storage and register cleanup.
+
+		This helper owns the representation shared by a named Haxe local and an
+		unnamed direct method receiver. The caller decides how the resulting
+		pointer may be used; this function only preserves constructor order,
+		failure cleanup, managed-field lifetime, and optional virtual-table setup.
+		Keeping those rules in one path prevents the expression form from drifting
+		from the already verified local form.
+	**/
+	function lowerStackConstructedObject(expression:TypedExpr, signature:PreparedConstructorSignature, targetId:String, arguments:Array<String>,
+			source:HxcSourceSpan, storageName:String, constructedClass:CPreparedBodyClass):LoweredValue {
 		final backingOrdinal = localOrdinal++;
 		final backingLocalId = 'local.$backingOrdinal';
 		locals.push({
@@ -3488,7 +3522,7 @@ private class FunctionBuilder {
 			initialState: IRISUninitialized,
 			source: source
 		});
-		final backingRequest = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, variable.name, "object-storage"]),
+		final backingRequest = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, storageName, "object-storage"]),
 			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], backingOrdinal);
 		context.symbols.register(backingRequest);
 		localRequests.set(backingLocalId, backingRequest);
@@ -3521,52 +3555,12 @@ private class FunctionBuilder {
 			source: source
 		});
 
-		if (!signature.input.elided) {
-			final target = functionsById.get(targetId);
-			if (target == null)
-				throw new CBodyEmissionError('non-elided constructor `$targetId` has no prepared function');
-			final failure:Null<HxcIRFailureEdge> = signature.input.canFail ? {
-				kind: IRFException,
-				target: constructionFailureTarget(),
-				arguments: [],
-				cleanup: partialConstructionCleanup(partialActionId)
-			} : null;
-			appendInstruction(null, IRIOCall({
-				dispatch: IRCDDirect(targetId),
-				arguments: [self.id].concat(arguments),
-				returnType: IRTVoid,
-				failure: failure
-			}), source, "constructor-call");
-			appendInstruction(null, IRIOLifetime(IRPLocal(backingLocalId), IRISInitializing, IRISInitialized, "constructor completed"), source,
-				"constructor-complete");
-		}
-
-		final reference = coerce(self, localMapping, expression.pos, 'TNew(result:$targetId)');
-		locals.push({
-			id: localId,
-			type: localMapping.irType,
-			storage: IRLSAutomatic,
-			initialState: IRISUninitialized,
-			source: source
-		});
-		final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, variable.name]),
-			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
-		context.symbols.register(request);
-		localRequests.set(localId, request);
-		appendInstruction(null, IRIOInitialize(IRPLocal(localId), reference.id, IRISUninitialized, IRISInitialized), source, "initialize-class-reference");
-		localIdsByCompilerId.set(variable.id, localId);
-		localTypesByCompilerId.set(variable.id, localMapping);
-		stackConstructedCompilerIds.set(variable.id, true);
-		constructedObjects.push({
-			backingLocalId: backingLocalId,
-			partialActionId: partialActionId,
-			initializedActionId: initializedActionId,
-			source: source
-		});
-		normalCleanupActionIds.push(initializedActionId);
-		final constructedClass = localMapping.classValue();
-		if (constructedClass == null)
-			throw new CBodyEmissionError('constructed local `${variable.name}` lost its class layout');
+		// Register field releases before building a fallible call edge. A failed
+		// constructor may already have retained one or more fields, while fields it
+		// did not reach still contain the null/zero default written above. The
+		// family-specific release operations are null-safe, so one reverse-order
+		// list cleans the exact initialized prefix without runtime field flags.
+		final fieldCleanupActionIds:Array<String> = [];
 		for (field in managedArrayFields(constructedClass)) {
 			final cleanupId = 'construction.$constructionOrdinal.array-field.${field.name}.release';
 			constructionCleanupActions.push({
@@ -3575,7 +3569,7 @@ private class FunctionBuilder {
 				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("array")),
 				source: source
 			});
-			normalCleanupActionIds.push(cleanupId);
+			fieldCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release",
 				'ordinary Haxe Array field `${constructedClass.haxePath}.${field.name}` lifetime', source, expression.pos));
 		}
@@ -3587,7 +3581,7 @@ private class FunctionBuilder {
 				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("string-map")),
 				source: source
 			});
-			normalCleanupActionIds.push(cleanupId);
+			fieldCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release",
 				'ordinary Haxe StringMap field `${constructedClass.haxePath}.${field.name}` lifetime', source, expression.pos));
 		}
@@ -3599,7 +3593,7 @@ private class FunctionBuilder {
 				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("string")),
 				source: source
 			});
-			normalCleanupActionIds.push(cleanupId);
+			fieldCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, expression.pos));
 		}
 		for (field in managedDirectFields(constructedClass)) {
@@ -3613,8 +3607,99 @@ private class FunctionBuilder {
 				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), implementation),
 				source: source
 			});
-			normalCleanupActionIds.push(cleanupId);
+			fieldCleanupActionIds.push(cleanupId);
 		}
+
+		if (!signature.input.elided) {
+			final target = functionsById.get(targetId);
+			if (target == null)
+				throw new CBodyEmissionError('non-elided constructor `$targetId` has no prepared function');
+			final failure:Null<HxcIRFailureEdge> = signature.input.canFail ? {
+				kind: IRFException,
+				target: constructionFailureTarget(),
+				arguments: [],
+				cleanup: partialConstructionCleanup(partialActionId, fieldCleanupActionIds)
+			} : null;
+			appendInstruction(null, IRIOCall({
+				dispatch: IRCDDirect(targetId),
+				arguments: [self.id].concat(arguments),
+				returnType: IRTVoid,
+				failure: failure
+			}), source, "constructor-call");
+			appendInstruction(null, IRIOLifetime(IRPLocal(backingLocalId), IRISInitializing, IRISInitialized, "constructor completed"), source,
+				"constructor-complete");
+		}
+
+		constructedObjects.push({
+			backingLocalId: backingLocalId,
+			partialActionId: partialActionId,
+			initializedActionId: initializedActionId,
+			source: source
+		});
+		normalCleanupActionIds.push(initializedActionId);
+		for (cleanupId in fieldCleanupActionIds)
+			normalCleanupActionIds.push(cleanupId);
+		return self;
+	}
+
+	/**
+		Materialize an unnamed constructed object for one immediate method call.
+
+		Haxe permits `new Reader(input).read()` without naming `Reader`. For a
+		non-escaping class, C still needs an addressable object, so haxe.c creates
+		one compiler-owned automatic local and marks the returned pointer as a
+		borrow. The surrounding instance-call lowering may consume that borrow as
+		its receiver, while existing return, assignment, and forwarding checks
+		prevent the pointer from escaping the object's lexical lifetime.
+
+		This first slice stays in the unconditional entry block. Branch-local
+		object destruction needs the separate path-sensitive constructor work
+		tracked by the existing conditional-construction issues.
+	**/
+	function lowerConstructedReceiver(expression:TypedExpr, construction:BodyNewExpression):LoweredValue {
+		final sourceMapping = bodyValueType(expression.t, expression.pos, "TNew(receiver-result-type)");
+		final classValue = sourceMapping.classValue();
+		if (classValue == null)
+			return unsupported(expression, "TNew(receiver-not-concrete-class)");
+		if (classValue.managedByCollector)
+			return lowerManagedConstructedValue(expression, construction, sourceMapping);
+		if (currentBlock.id != "entry" || blocks.length != 1)
+			return unsupported(expression, "TNew(stack-construction-requires-unconditional-entry-block)");
+
+		final classDefinition = construction.classReference.get();
+		final classPath = CBodyConstructor.classPath(construction.classReference);
+		if (construction.parameters.length != 0 || classDefinition.params.length != 0)
+			return unsupported(expression, 'TNew(generic-class-constructor-requires-specialization:$classPath)');
+		if (classDefinition.isExtern || classDefinition.meta.has(":c.layout"))
+			return unsupported(expression, 'TNew(unsupported-native-layout:$classPath)');
+		if (classDefinition.isInterface)
+			return unsupported(expression, 'TNew(interface-layout:$classPath)');
+		if (classPath != classValue.haxePath)
+			return unsupported(expression, 'TNew(receiver-class-type-mismatch:$classPath->${classValue.haxePath})');
+
+		final targetId = CBodyConstructor.id(classPath);
+		final signature = constructorSignaturesById.get(targetId);
+		if (signature == null)
+			return unsupported(expression, 'TNew(unavailable-constructor:$targetId)');
+		final argumentExpressions = completeDirectCallArguments(expression, construction.arguments, signature.arguments, 0, targetId, "constructor-argument");
+		final arguments:Array<String> = [];
+		for (index in 0...argumentExpressions.length) {
+			final argumentExpression = argumentExpressions[index];
+			if (referencesStackConstructedValue(argumentExpression) && !signature.arguments[index].borrowedReference)
+				return unsupported(argumentExpression, 'TNew(stack-reference-escape:constructor-argument:$index)');
+			var argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
+				argumentExpression.pos, 'TNew(argument:$index,target=$targetId)');
+			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
+			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
+			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
+			arguments.push(argument.id);
+		}
+
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final self = lowerStackConstructedObject(expression, signature, targetId, arguments, source, "constructed-receiver", classValue);
+		final reference = coerce(self, sourceMapping, expression.pos, 'TNew(receiver-result:$targetId)');
+		borrowedClassValueIds.set(reference.id, true);
+		return reference;
 	}
 
 	/**
@@ -3792,8 +3877,20 @@ private class FunctionBuilder {
 		while (normalCleanupActionIds.length > depth)
 			normalCleanupActionIds.pop();
 
-	function partialConstructionCleanup(partialActionId:String):Array<HxcIRCleanupStep> {
-		final result:Array<HxcIRCleanupStep> = [{regionId: "cleanup.construction", actionId: partialActionId}];
+	/**
+		Build the exact reverse-order cleanup for a failed stack construction.
+
+		The object field actions are already registered after its lifetime
+		actions, so they run first in reverse order. The partial lifetime action
+		then closes the object itself, followed by any older argument or object
+		owners already active in the caller.
+	**/
+	function partialConstructionCleanup(partialActionId:String, fieldActionIds:Array<String>):Array<HxcIRCleanupStep> {
+		final result:Array<HxcIRCleanupStep> = [];
+		var index = fieldActionIds.length;
+		while (index > 0)
+			result.push({regionId: "cleanup.construction", actionId: fieldActionIds[--index]});
+		result.push({regionId: "cleanup.construction", actionId: partialActionId});
 		return result.concat(normalCleanupSteps());
 	}
 
@@ -8260,7 +8357,8 @@ private class FunctionBuilder {
 			final self = selfValue;
 			self == null ? unsupported(access.receiver, 'TCall(super-method:outside-instance-method:$baseTargetId)') : self;
 		} else {
-			lowerValue(access.receiver);
+			final construction = newExpression(access.receiver);
+			construction == null ? lowerValue(access.receiver) : lowerConstructedReceiver(access.receiver, construction);
 		};
 		receiver = coerce(receiver, ownerMapping, access.receiver.pos, 'TCall(instance:$baseTargetId:receiver)');
 
@@ -8382,6 +8480,9 @@ private class FunctionBuilder {
 			freshManagedStringValueIds.set(result.id, true);
 		if (returnMapping.irType == IRTManagedString)
 			freshManagedStringValueRoles.set(result.id, "instance-call-result");
+		final returnedArray = returnMapping.arrayValue();
+		if (returnedArray != null && !returnedArray.managedByCollector)
+			freshManagedArrayValueIds.set(result.id, true);
 		if (returnMapping.stringMapValue() != null)
 			freshManagedStringMapValueIds.set(result.id, true);
 		final returnedEnum = returnMapping.enumValue();

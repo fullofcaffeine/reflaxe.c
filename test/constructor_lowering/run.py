@@ -35,6 +35,9 @@ ARRAY_PARAMETER = FIXTURES / "array_parameter"
 STRING_PARAMETER = FIXTURES / "string_parameter"
 ENUM_PARAMETER = FIXTURES / "enum_parameter"
 ENUM_PAYLOAD_PARAMETER = FIXTURES / "enum_payload_parameter"
+DIRECT_RECEIVER = FIXTURES / "direct_receiver"
+DIRECT_RECEIVER_FAILURE = FIXTURES / "direct_receiver_failure"
+DIRECT_RECEIVER_ESCAPE = FIXTURES / "direct_receiver_escape"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -85,6 +88,7 @@ NEGATIVE_CASES = {
         "TFunction(constructor-argument:callback):"
         "payload-requires-direct-unmanaged-value:direct-function:()->int32_t"
     ),
+    "direct_receiver_escape": "TVar(escaped:owned-class-borrow-escape)",
     "escape_alias": "TNew(stack-reference-escape:assignment)",
     "escape_return": "TNew(stack-reference-escape:return)",
     "escape_self": "TNew(stack-reference-escape:assignment)",
@@ -185,6 +189,20 @@ ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE = frozenset(
         "constructor-unmanaged-payload-enum-final-field",
         "constructor-unmanaged-payload-enum-active-tag",
         "constructor-unmanaged-payload-enum-allocation-free",
+    }
+)
+DIRECT_RECEIVER_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-direct-receiver-automatic-storage",
+        "constructor-direct-receiver-managed-cleanup",
+        "constructor-direct-receiver-nested-argument",
+        "constructor-direct-receiver-result-transfer",
+    }
+)
+DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-direct-receiver-partial-cleanup",
+        "constructor-direct-receiver-throw",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -631,6 +649,84 @@ def validate_array_parameter_project(output: Path) -> None:
             )
 
 
+def validate_direct_receiver_project(output: Path) -> None:
+    """Prove unnamed receivers use bounded storage and transfer method results."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    parse_start = source.find("struct hxc_array_ref *hxc_Main_parse(")
+    fresh_start = source.find("struct hxc_array_ref *hxc_Main_parseFresh(")
+    values_start = source.find("struct hxc_array_ref *hxc_Main_valuesFrom(")
+    if min(parse_start, fresh_start, values_start) < 0:
+        raise ConstructorLoweringFailure(
+            "direct-receiver fixture omitted parse, nested parse, or argument producer"
+        )
+    parse_body = source[parse_start:fresh_start]
+    fresh_body = source[fresh_start:values_start]
+    if (
+        source.count("struct hxc_NumberReader hxc_tmp_object_storage_") != 2
+        or source.count(" = { 0 };") < 2
+        or source.count("hxc_compiler_constructor_NumberReader(") < 3
+        or source.count("hxc_NumberReader_read(") < 3
+        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in parse_body
+        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in fresh_body
+        or "constructed_receiver_argument_0_owner" not in fresh_body
+        or "constructed_receiver_argument_0_borrow_result" not in fresh_body
+        or "hxc_array_ref_retain(" in parse_body
+        or "hxc_array_ref_retain(" in fresh_body
+        or "struct hxc_NumberReader" not in headers
+    ):
+        raise ConstructorLoweringFailure(
+            "direct receiver lost automatic storage, nested ownership, cleanup, or result transfer"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != ["runtime-base", "status", "alloc", "array"]
+        or "bounded-stack-construction" not in plan.get("directDecisions", [])
+        or "managed-haxe-arrays" not in plan.get("directDecisions", [])
+        or "gc" in plan.get("features", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "direct receiver lost its bounded stack and dependency-closed Array plan"
+        )
+    for forbidden in ("goto ", "malloc(", "calloc(", "realloc("):
+        if forbidden in source:
+            raise ConstructorLoweringFailure(
+                f"direct-receiver application module emitted forbidden shape {forbidden!r}"
+            )
+
+
+def validate_direct_receiver_failure_project(output: Path) -> None:
+    """Prove a throwing constructor releases its field and nested argument once."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    failure_start = source.find(
+        "if (!hxc_compiler_constructor_ExplodingReader("
+    )
+    failure_end = source.find("\n  if (hxc_tmp_class_object_address_", failure_start)
+    if min(failure_start, failure_end) < 0:
+        raise ConstructorLoweringFailure(
+            "direct-receiver failure fixture omitted its checked constructor call"
+        )
+    failure_body = source[failure_start:failure_end]
+    if (
+        failure_body.count("hxc_array_ref_release(") != 2
+        or "hxc_tmp_object_storage_" not in failure_body
+        or "constructed_receiver_argument_0_owner" not in failure_body
+        or failure_body.rfind("abort();") < failure_body.rfind("hxc_array_ref_release(")
+    ):
+        raise ConstructorLoweringFailure(
+            "throwing direct receiver did not release its initialized field and nested argument before abort"
+        )
+
+
 def validate_string_parameter_project(output: Path) -> None:
     """Prove nominal literal String views stay exact, by-value, and allocation-free."""
 
@@ -975,6 +1071,72 @@ def render_parameter_projects(
             f"{slug} constructor output changed under warm compiler-server reuse"
         )
     return tuple(projects)
+
+
+def render_direct_receiver_failure_project(
+    fixture_root: Path,
+) -> CFixtureProject:
+    """Render the fail-closed constructor path once with order determinism."""
+
+    normal = fixture_root / "direct-receiver-failure-split"
+    reverse = fixture_root / "direct-receiver-failure-split-reverse"
+    for label, result in (
+        (
+            "direct-receiver failure",
+            custom_target(
+                DIRECT_RECEIVER_FAILURE,
+                normal,
+                layout="split",
+                runtime_diagnostics="off",
+            ),
+        ),
+        (
+            "reversed direct-receiver failure",
+            custom_target(
+                DIRECT_RECEIVER_FAILURE,
+                reverse,
+                layout="split",
+                reverse=True,
+                runtime_diagnostics="off",
+            ),
+        ),
+    ):
+        if result.returncode != 0 or result.stdout or result.stderr:
+            raise ConstructorLoweringFailure(
+                f"{label} compile failed\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise ConstructorLoweringFailure(
+            "direct-receiver failure output changed with typed-module order"
+        )
+    validate_direct_receiver_failure_project(normal)
+    return CFixtureProject(
+        "constructor-direct-receiver-failure",
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in sorted(normal.rglob("*.c"))
+        ),
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in sorted((normal / "include").rglob("*.h"))
+        ),
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in (
+                normal / "include",
+                normal / "runtime" / "include",
+            )
+            if path.is_dir()
+        ),
+        "",
+        tuple(
+            sorted(
+                (*DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE, "strict-c11")
+            )
+        ),
+        expected_exit=-signal.SIGABRT,
+    )
 
 
 def required_text(value: object, label: str) -> str:
@@ -1404,6 +1566,35 @@ def compile_default_fixture(destination: Path) -> None:
 def check_cpp_header(
     fixture_root: Path, build_root: Path, *, requested_toolchain: str
 ) -> None:
+    check_cpp_consumers(
+        build_root,
+        requested_toolchain=requested_toolchain,
+        consumers=(
+            (
+                "constructor",
+                (fixture_root / "positive/include",),
+                NATIVE / "constructor_header_cpp.cpp",
+            ),
+            (
+                "direct-receiver",
+                (
+                    fixture_root / "direct-receiver-split/include",
+                    fixture_root / "direct-receiver-split/runtime/include",
+                ),
+                NATIVE / "direct_receiver_header_cpp.cpp",
+            ),
+        ),
+    )
+
+
+def check_cpp_consumers(
+    build_root: Path,
+    *,
+    requested_toolchain: str,
+    consumers: tuple[tuple[str, tuple[Path, ...], Path], ...],
+) -> None:
+    """Compile one or more generated private headers as strict C++17."""
+
     for toolchain in resolve_toolchains(requested_toolchain, repository_root=ROOT):
         command_name = CXX_COMMANDS[toolchain.family]
         compiler = shutil.which(command_name)
@@ -1416,22 +1607,31 @@ def check_cpp_header(
                 f"constructor-lowering: SKIP optional {toolchain.family} C++17 header consumer"
             )
             continue
-        for optimization in ("-O0", "-O2"):
-            output = build_root / toolchain.family / optimization[1:].lower()
-            output.mkdir(parents=True, exist_ok=True)
-            require_silent_success(
-                [
-                    compiler,
-                    *CXX_STRICT_FLAGS,
-                    optimization,
-                    f"-I{fixture_root / 'positive/include'}",
-                    "-c",
-                    str(NATIVE / "constructor_header_cpp.cpp"),
-                    "-o",
-                    str(output / "constructor_header_cpp.o"),
-                ],
-                label=f"{toolchain.family} {optimization} constructor C++17 header",
-            )
+        for consumer, includes, source in consumers:
+            for optimization in ("-O0", "-O2"):
+                output = (
+                    build_root
+                    / toolchain.family
+                    / consumer
+                    / optimization[1:].lower()
+                )
+                output.mkdir(parents=True, exist_ok=True)
+                require_silent_success(
+                    [
+                        compiler,
+                        *CXX_STRICT_FLAGS,
+                        optimization,
+                        *(f"-I{include}" for include in includes),
+                        "-c",
+                        str(source),
+                        "-o",
+                        str(output / f"{consumer}_header_cpp.o"),
+                    ],
+                    label=(
+                        f"{toolchain.family} {optimization} {consumer} "
+                        "C++17 header"
+                    ),
+                )
 
 
 def check_native(
@@ -1541,6 +1741,16 @@ def check_native(
                 coverage=ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE,
                 validate_project=validate_enum_payload_parameter_project,
             )
+            direct_receiver_projects = render_parameter_projects(
+                fixture_root,
+                fixture=DIRECT_RECEIVER,
+                slug="direct-receiver",
+                coverage=DIRECT_RECEIVER_NATIVE_COVERAGE,
+                validate_project=validate_direct_receiver_project,
+            )
+            direct_receiver_failure_project = (
+                render_direct_receiver_failure_project(fixture_root)
+            )
             parameter_projects = (
                 record_projects
                 + interface_projects
@@ -1550,6 +1760,8 @@ def check_native(
                 + string_parameter_projects
                 + enum_parameter_projects
                 + enum_payload_parameter_projects
+                + direct_receiver_projects
+                + (direct_receiver_failure_project,)
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1577,6 +1789,8 @@ def check_native(
                     | STRING_PARAMETER_NATIVE_COVERAGE
                     | ENUM_PARAMETER_NATIVE_COVERAGE
                     | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
+                    | DIRECT_RECEIVER_NATIVE_COVERAGE
+                    | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1622,10 +1836,63 @@ def check_native(
                     | STRING_PARAMETER_NATIVE_COVERAGE
                     | ENUM_PARAMETER_NATIVE_COVERAGE
                     | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
+                    | DIRECT_RECEIVER_NATIVE_COVERAGE
+                    | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
             fixture_root, root / "cxx-build", requested_toolchain=requested_toolchain
+        )
+
+
+def check_direct_receiver_oracles() -> None:
+    """Compare the successful and throwing receiver paths with Haxe Eval."""
+
+    success = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(DIRECT_RECEIVER),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if success.returncode != 0 or success.stdout or success.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe direct-receiver oracle failed\n"
+            f"stdout:\n{success.stdout}\nstderr:\n{success.stderr}"
+        )
+    failure = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(DIRECT_RECEIVER_FAILURE),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if (
+        failure.returncode == 0
+        or failure.stdout
+        or "Uncaught exception 99" not in failure.stderr
+    ):
+        raise ConstructorLoweringFailure(
+            "pinned Haxe direct-receiver failure oracle did not throw 99\n"
+            f"stdout:\n{failure.stdout}\nstderr:\n{failure.stderr}"
         )
 
 
@@ -1660,6 +1927,99 @@ def check_eval_oracle() -> None:
             raise ConstructorLoweringFailure(
                 f"pinned Haxe {label} failed\n"
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+    check_direct_receiver_oracles()
+
+
+def check_direct_receiver_only(*, requested_toolchain: str) -> None:
+    """Run the complete direct-receiver slice without unrelated constructors."""
+
+    check_direct_receiver_oracles()
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-direct-receiver-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        projects = render_parameter_projects(
+            fixture_root,
+            fixture=DIRECT_RECEIVER,
+            slug="direct-receiver",
+            coverage=DIRECT_RECEIVER_NATIVE_COVERAGE,
+            validate_project=validate_direct_receiver_project,
+        )
+        failure_project = render_direct_receiver_failure_project(fixture_root)
+        ordered_projects = tuple(
+            sorted(
+                (*projects, failure_project),
+                key=lambda project: project.identifier.encode("utf-8"),
+            )
+        )
+        required_coverage = (
+            DIRECT_RECEIVER_NATIVE_COVERAGE
+            | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
+            | {"strict-c11"}
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-direct-receiver-{optimization[1:].lower()}",
+                projects=ordered_projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in ordered_projects
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-direct-receiver-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required_coverage)
+        check_cpp_consumers(
+            root / "cxx-build",
+            requested_toolchain=requested_toolchain,
+            consumers=(
+                (
+                    "direct-receiver",
+                    (
+                        fixture_root / "direct-receiver-split/include",
+                        fixture_root / "direct-receiver-split/runtime/include",
+                    ),
+                    NATIVE / "direct_receiver_header_cpp.cpp",
+                ),
+            ),
+        )
+        escape_output = root / "direct-receiver-escape"
+        escape = custom_target(DIRECT_RECEIVER_ESCAPE, escape_output)
+        combined = escape.stdout + escape.stderr
+        if (
+            escape.returncode == 0
+            or "HXC1001" not in combined
+            or "TVar(escaped:owned-class-borrow-escape)" not in combined
+            or generated_files(escape_output)
+        ):
+            raise ConstructorLoweringFailure(
+                "direct receiver escape did not fail closed with no output\n"
+                f"stdout:\n{escape.stdout}\nstderr:\n{escape.stderr}"
             )
 
 
@@ -1723,6 +2083,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--direct-receiver-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -1740,6 +2101,13 @@ def main(arguments: Iterable[str] = ()) -> int:
                 render_parameter_fixtures=False,
             )
             print("constructor-lowering: OK: required constructor native matrix passed")
+            return 0
+        if args.direct_receiver_only:
+            check_direct_receiver_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: direct fresh receiver Eval/C11/C++17/"
+                "sanitizer/determinism/escape matrix passed"
+            )
             return 0
 
         first_payload, first = render("first constructor render")
@@ -1784,6 +2152,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         "nominal literal-backed String parameters and final fields, "
         "fieldless enum parameters and final fields, "
         "unmanaged payload-enum parameters and final fields, "
+        "fresh automatic method receivers with nested managed arguments, "
+        "owned result transfer and throwing-constructor cleanup, "
         "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
         "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
         "edges passed"

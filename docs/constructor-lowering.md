@@ -60,6 +60,47 @@ struct hxc_widget storage = { 0 };
 That supplies Haxe defaults for the admitted direct fields before any explicit
 field initializer or constructor statement runs. It is not a raw C fragment.
 
+### Immediate constructed receivers
+
+Haxe does not require an object to have a local name before calling one of its
+methods:
+
+```haxe
+return new ScenarioDocumentReader(records).read();
+```
+
+When the complete object is proven not to escape, haxe.c gives this unnamed
+receiver the same bounded storage as a named local. “Receiver” here simply
+means the value to the left of the method call. Generated C creates one
+compiler-named automatic object, calls its ordinary constructor, and borrows
+the object's address for `read`:
+
+```c
+struct hxc_ScenarioDocumentReader object_storage = { 0 };
+hxc_compiler_constructor_ScenarioDocumentReader(&object_storage, records);
+result = hxc_ScenarioDocumentReader_read(&object_storage);
+```
+
+The borrow is not a second owner. It is valid only while `object_storage`
+exists, and the usual HxcIR checks reject returning, storing, or forwarding
+that pointer beyond a proven call. This keeps the natural Haxe expression
+without paying for heap allocation or requiring the application to introduce a
+local solely to satisfy C storage rules.
+
+Constructor arguments still run first and exactly once. If a nested call
+creates a fresh managed value such as an `Array`, the caller gives it a short
+owner before construction. The constructor may retain it into a field; cleanup
+then releases the receiver's field and the short argument owner once each. A
+managed method result follows the ordinary function-return contract: the
+callee returns one owner, so the caller transfers that owner rather than
+retaining it again.
+
+This first direct-receiver slice remains limited to the function's
+unconditional entry block. Constructing the receiver inside a branch needs
+path-specific destruction at the branch exit; until that separate lifetime
+work is implemented, haxe.c reports `HXC1001` instead of extending the
+receiver's lifetime or leaking it.
+
 An owned child is a direct `IRTInstance` field in HxcIR rather than the
 `IRTPointer` used for an ordinary Haxe class reference. That explicit semantic
 choice lets the HxcIR validator reject recursive by-value layouts before C
@@ -342,13 +383,17 @@ calls `abort()`.
 
 Every constructed object registers two typed cleanup actions against its
 stable backing place: one for `initializing -> destroyed` and one for
-`initialized -> destroyed`. A failing constructor call executes the current
-partial action first, then older initialized objects in reverse construction
-order. Normal returns and constructor throws execute initialized actions in
-reverse order. Direct scalar/class-reference storage currently needs no native
-destructor statement, but the validated HxcIR order is still mandatory; later
-owned fields can consume the same edges without recovering lifetime facts from
-C lexical nesting.
+`initialized -> destroyed`. A failing constructor call releases the current
+object's managed fields in reverse order, marks the partial object destroyed,
+and then executes older cleanup actions in reverse construction order. Fields
+the constructor did not reach still contain their zero/null defaults, and each
+admitted release operation is null-safe; no hidden per-field “was initialized”
+flags are needed. Normal returns execute the initialized object's field
+releases and lifetime action in the same strict reverse registration order.
+Direct scalar/class-reference storage currently needs no native destructor
+statement, but the validated HxcIR order is still mandatory; owned fields
+consume these edges without trying to recover lifetime facts from C lexical
+nesting.
 
 This bounded status path does not claim general Haxe exceptions. There is no
 catch/finally surface, exception payload transport, foreign-frame transfer, or
@@ -397,6 +442,7 @@ Run:
 
 ```sh
 npm run test:constructor-lowering
+npm run test:constructor-direct-receiver
 npm run test:virtual-dispatch
 npm run test:class-layout
 npm run test:hxc-ir
@@ -404,6 +450,12 @@ npm run test:all-sources
 npm run test:typed-boundaries
 npm run snapshots:check
 ```
+
+Use `test:constructor-direct-receiver` while changing the immediate-receiver
+slice. It runs that slice's complete Eval, layout, order, compiler-server,
+native, sanitizer, C++ header, and escape matrix without recompiling unrelated
+constructor families. `test:constructor-lowering` remains the exhaustive
+reference gate before integration.
 
 `test/constructor_lowering/fixtures/minimal/Main.hx` is the small readable
 example. The focused `record_parameter` fixture proves a direct closed record
@@ -432,7 +484,16 @@ and Eval/native/sanitizer parity across the same deterministic layouts.
 comparison, final-field storage, and runtime-free output across that matrix.
 `enum_payload_parameter` proves all active unmanaged payload variants,
 by-value tagged-struct passing, final-field storage, exact identity, and
-allocation-free header-only String-literal support. The revised
+allocation-free header-only String-literal support. `direct_receiver` proves
+`new Reader(records).read()` with a retained Array input, an owned Array
+result, a fresh nested argument, automatic object storage, and no collector or
+`goto`. It compares Eval with split, package, and unity C; reversed discovery;
+warm compiler-server reuse; strict GCC and Clang at `-O0` and `-O2`; C++17
+header consumption; and sanitizer execution. `direct_receiver_failure` proves
+that a constructor which throws after retaining its Array field releases both
+that field and the caller's fresh argument owner before the fail-closed abort.
+`direct_receiver_escape` keeps a child borrowed through the temporary parent
+from becoming an independent local. The revised
 `instance_parameter` negative reaches the more precise
 `function-exit:unowned-fresh-managed-enum-value` boundary: the constructor can
 read its admitted payload enum, but the caller cannot yet transfer or release

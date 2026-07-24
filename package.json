@@ -68,6 +68,7 @@
     "test:aggregate-lowering": "python3 test/aggregate_lowering/run.py",
     "test:class-layout": "python3 test/class_layout/run.py",
     "test:constructor-lowering": "python3 test/constructor_lowering/run.py",
+    "test:constructor-direct-receiver": "python3 test/constructor_lowering/run.py --direct-receiver-only",
     "test:virtual-dispatch": "python3 test/virtual_dispatch/run.py",
     "test:enum-lowering": "python3 test/enum_lowering/run.py",
     "test:enum-lowering:bytes": "python3 test/enum_lowering/run.py --bytes-payload-only",
