@@ -6,6 +6,8 @@ import json
 import math
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -713,7 +715,7 @@ class ToolchainShardTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/governance.yml").read_text(
             encoding="utf-8"
         )
-        resume = "npm run test:toolchain:parallel -- --resume"
+        resume = "npm run test:toolchain:parallel -- --resume --with-native"
         self.assertIn(resume, hook)
         self.assertIn("scripts/ci/select_pre_commit_route.py", hook)
         for uncached_check in (
@@ -726,9 +728,143 @@ class ToolchainShardTests(unittest.TestCase):
         ):
             with self.subTest(uncached_check=uncached_check):
                 self.assertLess(hook.index(uncached_check), hook.index(resume))
-        self.assertLess(hook.index(resume), hook.index("npm run test:native"))
+        self.assertNotIn("\n  npm run test:native\n", hook)
         self.assertNotIn("--resume", workflow)
         self.assertIn("npm run test:toolchain:shard", workflow)
+
+    def test_native_lane_shares_the_global_worker_limit(self) -> None:
+        scripts = self.runner.load_scripts()
+        for jobs in (1, 2, 4):
+            with self.subTest(jobs=jobs):
+                active = 0
+                maximum_active = 0
+                native_calls = 0
+                lock = threading.Lock()
+
+                def enter_work() -> None:
+                    nonlocal active, maximum_active
+                    with lock:
+                        active += 1
+                        maximum_active = max(maximum_active, active)
+                    time.sleep(0.02)
+                    with lock:
+                        active -= 1
+
+                def fake_run_shard(
+                    shard, scripts, *, timing_report=None, stream=None
+                ):
+                    enter_work()
+                    self.runner.write_timing_report(
+                        timing_report, self.successful_report(shard)
+                    )
+
+                def fake_subprocess_run(command, **kwargs):
+                    nonlocal native_calls
+                    self.assertEqual(
+                        command, ["npm", "run", self.runner.NATIVE_SCRIPT]
+                    )
+                    native_calls += 1
+                    enter_work()
+                    return self.runner.subprocess.CompletedProcess(command, 0)
+
+                with (
+                    mock.patch.object(
+                        self.runner, "run_shard", side_effect=fake_run_shard
+                    ),
+                    mock.patch.object(
+                        self.runner.subprocess,
+                        "run",
+                        side_effect=fake_subprocess_run,
+                    ),
+                    mock.patch("sys.stdout", new=io.StringIO()),
+                ):
+                    self.runner.run_all_shards(
+                        scripts,
+                        jobs=jobs,
+                        include_native=True,
+                    )
+
+                self.assertEqual(native_calls, 1)
+                self.assertEqual(maximum_active, jobs)
+
+    def test_native_lane_failure_is_attributed_without_hiding_shard_results(
+        self,
+    ) -> None:
+        scripts = self.runner.load_scripts()
+
+        def fake_run_shard(shard, scripts, *, timing_report=None, stream=None):
+            self.runner.write_timing_report(
+                timing_report, self.successful_report(shard)
+            )
+
+        with (
+            mock.patch.object(self.runner, "run_shard", side_effect=fake_run_shard),
+            mock.patch.object(
+                self.runner.subprocess,
+                "run",
+                return_value=self.runner.subprocess.CompletedProcess(
+                    ["npm", "run", self.runner.NATIVE_SCRIPT], 9
+                ),
+            ),
+            mock.patch("sys.stdout", new=io.StringIO()),
+        ):
+            with self.assertRaisesRegex(
+                self.runner.ToolchainShardFailure,
+                "native: native lane stopped with exit 9",
+            ):
+                self.runner.run_all_shards(
+                    scripts,
+                    jobs=4,
+                    include_native=True,
+                )
+
+    def test_native_lane_is_visible_in_parallel_timing_report(self) -> None:
+        scripts = self.runner.load_scripts()
+
+        def fake_run_shard(shard, scripts, *, timing_report=None, stream=None):
+            self.runner.write_timing_report(
+                timing_report, self.successful_report(shard)
+            )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            timing_dir = Path(temporary) / "timings"
+            with (
+                mock.patch.object(
+                    self.runner, "run_shard", side_effect=fake_run_shard
+                ),
+                mock.patch.object(
+                    self.runner.subprocess,
+                    "run",
+                    return_value=self.runner.subprocess.CompletedProcess(
+                        ["npm", "run", self.runner.NATIVE_SCRIPT], 0
+                    ),
+                ),
+                mock.patch("sys.stdout", new=io.StringIO()),
+            ):
+                self.runner.run_all_shards(
+                    scripts,
+                    jobs=4,
+                    include_native=True,
+                    timing_dir=timing_dir,
+                )
+            summary = json.loads(
+                (timing_dir / "toolchain-parallel-summary.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        self.assertEqual(
+            summary["auxiliaryLanes"],
+            [
+                {
+                    "lane": "native",
+                    "script": "test:native",
+                    "outcome": "passed",
+                    "exitCode": 0,
+                    "durationMs": mock.ANY,
+                }
+            ],
+        )
 
 
 if __name__ == "__main__":

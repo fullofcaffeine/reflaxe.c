@@ -127,6 +127,8 @@ EVIDENCE_MARKER_PAYLOAD = {
     "owner": "reflaxe.c-local-toolchain-shards",
 }
 CAXECRAFT_SCRIPT = "test:caxecraft-domain:full"
+NATIVE_LANE = "native"
+NATIVE_SCRIPT = "test:native"
 CAXECRAFT_TIMING_ENV = "HXC_CAXECRAFT_TIMING_REPORT"
 CAXECRAFT_FULL_PHASES = (
     ("asset-contracts", 0),
@@ -1219,6 +1221,7 @@ def run_all_shards(
     timing_dir: Path | None = None,
     resume: bool = False,
     evidence_dir: Path | None = None,
+    include_native: bool = False,
 ) -> None:
     parallel_start = time.monotonic_ns()
     if selection is None:
@@ -1229,13 +1232,15 @@ def run_all_shards(
             one_minute_load=None,
             reason="worker count supplied by caller",
         )
+    work_order = (*SHARD_ORDER, *((NATIVE_LANE,) if include_native else ()))
     print(
         "toolchain-parallel: starting "
-        f"{len(SHARD_ORDER)} isolated shards with {jobs} worker(s); "
+        f"{len(work_order)} isolated lane(s) with {jobs} worker(s); "
         f"{selection.reason}",
         flush=True,
     )
     failures: dict[str, str] = {}
+    auxiliary_records: dict[str, dict[str, object]] = {}
     initial_evidence_inputs: dict[str, dict[str, str]] = {}
     reused: dict[str, tuple[int, str]] = {}
     selected_evidence_dir = evidence_dir or DEFAULT_EVIDENCE_DIR
@@ -1265,8 +1270,8 @@ def run_all_shards(
     with tempfile.TemporaryDirectory(prefix="hxc-toolchain-parallel-") as temporary:
         temporary_root = Path(temporary)
         log_paths = {
-            shard: temporary_root / f"{index:02d}-{shard}.log"
-            for index, shard in enumerate(SHARD_ORDER)
+            lane: temporary_root / f"{index:02d}-{lane}.log"
+            for index, lane in enumerate(work_order)
         }
         if timing_dir is not None:
             report_paths = {
@@ -1282,22 +1287,46 @@ def run_all_shards(
         def worker(shard: str) -> str | None:
             try:
                 with log_paths[shard].open("w", encoding="utf-8", newline="") as log:
-                    run_shard(
-                        shard,
-                        scripts,
-                        timing_report=report_paths[shard],
-                        stream=log,
-                    )
+                    if shard == NATIVE_LANE:
+                        native_start = time.monotonic_ns()
+                        result = subprocess.run(
+                            ["npm", "run", NATIVE_SCRIPT],
+                            cwd=ROOT,
+                            check=False,
+                            stdout=log,
+                            stderr=subprocess.STDOUT,
+                        )
+                        auxiliary_records[NATIVE_LANE] = {
+                            "lane": NATIVE_LANE,
+                            "script": NATIVE_SCRIPT,
+                            "outcome": (
+                                "passed" if result.returncode == 0 else "failed"
+                            ),
+                            "exitCode": result.returncode,
+                            "durationMs": elapsed_milliseconds(native_start),
+                        }
+                        if result.returncode != 0:
+                            raise ToolchainShardFailure(
+                                f"native lane stopped with exit {result.returncode}"
+                            )
+                    else:
+                        run_shard(
+                            shard,
+                            scripts,
+                            timing_report=report_paths[shard],
+                            stream=log,
+                        )
                 return None
             except (ToolchainShardFailure, OSError) as error:
                 return str(error)
 
-        if active_shards:
+        active_lanes = (*active_shards, *((NATIVE_LANE,) if include_native else ()))
+        if active_lanes:
             with concurrent.futures.ThreadPoolExecutor(
-                max_workers=min(jobs, len(active_shards))
+                max_workers=min(jobs, len(active_lanes))
             ) as executor:
                 futures = {
-                    executor.submit(worker, shard): shard for shard in active_shards
+                    executor.submit(worker, lane): lane for lane in active_lanes
                 }
                 pending = set(futures)
                 while pending:
@@ -1308,14 +1337,14 @@ def run_all_shards(
                     )
                     if not done:
                         waiting = ", ".join(
-                            shard
-                            for shard in SHARD_ORDER
-                            if any(futures[future] == shard for future in pending)
+                            lane
+                            for lane in work_order
+                            if any(futures[future] == lane for future in pending)
                         )
                         print(f"toolchain-parallel: waiting: {waiting}", flush=True)
                         continue
                     for future in sorted(
-                        done, key=lambda item: SHARD_ORDER.index(futures[item])
+                        done, key=lambda item: work_order.index(futures[item])
                     ):
                         shard = futures[future]
                         error = future.result()
@@ -1357,6 +1386,16 @@ def run_all_shards(
                             )
                 else:
                     failures[shard] = "timing report is not a JSON object"
+        if include_native:
+            print(f"\n===== auxiliary lane: {NATIVE_LANE} =====", flush=True)
+            try:
+                print(
+                    log_paths[NATIVE_LANE].read_text(encoding="utf-8"),
+                    end="",
+                    flush=True,
+                )
+            except OSError as error:
+                failures[NATIVE_LANE] = f"cannot read isolated log: {error}"
 
         if resume:
             try:
@@ -1406,17 +1445,22 @@ def run_all_shards(
                         for shard in SHARD_ORDER
                         if shard in reused
                     ],
+                    "auxiliaryLanes": [
+                        auxiliary_records[lane]
+                        for lane in (NATIVE_LANE,)
+                        if lane in auxiliary_records
+                    ],
                 },
             )
 
     if failures:
-        failure_order = (*SHARD_ORDER, "evidence")
+        failure_order = (*SHARD_ORDER, NATIVE_LANE, "evidence")
         details = "; ".join(
             f"{shard}: {failures[shard]}" for shard in failure_order if shard in failures
         )
         raise ToolchainShardFailure("parallel toolchain failure: " + details)
     print(
-        f"toolchain-parallel: OK: {len(SHARD_ORDER)} shard(s), {jobs} worker(s)",
+        f"toolchain-parallel: OK: {len(work_order)} lane(s), {jobs} worker(s)",
         flush=True,
     )
 
@@ -1452,6 +1496,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="reuse exact, unexpired local passing shard evidence for --run-all",
     )
+    parser.add_argument(
+        "--with-native",
+        action="store_true",
+        help="schedule test:native in the same bounded worker pool for --run-all",
+    )
     return parser.parse_args(list(argv))
 
 
@@ -1466,9 +1515,10 @@ def main(argv: Iterable[str] = ()) -> int:
             args.jobs is not None
             or args.timing_dir is not None
             or args.resume
+            or args.with_native
         ) and not args.run_all:
             raise ToolchainShardFailure(
-                "--jobs, --timing-dir, and --resume require --run-all"
+                "--jobs, --timing-dir, --resume, and --with-native require --run-all"
             )
         if args.list:
             for shard in SHARD_ORDER:
@@ -1488,6 +1538,7 @@ def main(argv: Iterable[str] = ()) -> int:
                 selection=selection,
                 timing_dir=args.timing_dir,
                 resume=args.resume,
+                include_native=args.with_native,
             )
             return 0
         run_shard(args.run, scripts, timing_report=args.timing_report)

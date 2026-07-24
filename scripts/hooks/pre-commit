@@ -85,8 +85,7 @@ if [ "$PRE_COMMIT_ROUTE" = "parallel-exhaustive" ]; then
   # Resume is deliberately local to this hook. It can reuse only exact,
   # unexpired passing shards from the same staged/worktree/tool environment;
   # hosted CI and ordinary shard commands always run cold.
-  npm run test:toolchain:parallel -- --resume
-  npm run test:native
+  npm run test:toolchain:parallel -- --resume --with-native
   echo "[pre-commit] OK"
   exit 0
 fi

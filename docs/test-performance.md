@@ -115,6 +115,9 @@ npm run test:toolchain:parallel -- --jobs 4 --timing-dir /tmp/hxc-timings
 # Reuse only exact, unexpired passing shards from an interrupted local run.
 npm run test:toolchain:parallel -- --resume
 
+# Also schedule native smoke inside the same global worker budget.
+npm run test:toolchain:parallel -- --resume --with-native
+
 # Run the canonical exhaustive reference lane.
 npm run test:toolchain
 ```
@@ -234,6 +237,14 @@ at 30-second intervals, then full logs are replayed in canonical shard order so
 interleaving cannot hide the first useful failure. All scheduled shards finish
 to retain independent evidence even when one fails.
 
+The high-fanout pre-commit route also queues native smoke in this same worker
+pool. It does not start an unbounded fifth worker: four toolchain shards plus
+native smoke are five pieces of work sharing the selected one, two, or four
+workers. Native smoke starts as soon as a worker becomes free, so it no longer
+waits for every shard to finish. Its isolated log is replayed after the four
+shard logs and failures remain attributed to `native`. The canonical serial
+`test:toolchain` and standalone `test:native` commands are unchanged.
+
 The pre-commit hook uses this exhaustive path once when staged changes touch
 cross-cutting test infrastructure such as `package.json`, the snapshot
 registry, shard runner, CI policy, or their governance tests. It also uses this
@@ -245,10 +256,11 @@ keeps this classification explicit and unit-tested. Narrow fixtures,
 target-library surfaces, examples, and focused documentation continue to select
 only their owning gates.
 
-The parallel route still runs governance and native smoke around the complete
-canonical partition. It does not omit evidence or run commands concurrently
-inside a shard. On a busy host it may choose one worker; safe resume then avoids
-discarding completed shards when the same unchanged staged tree is retried.
+The parallel route still runs governance before the complete canonical
+partition and native-smoke queue. It does not omit evidence or run commands
+concurrently inside a shard. On a busy host it may choose one worker; safe
+resume then avoids discarding completed shards when the same unchanged staged
+tree is retried.
 
 ### Safe local resume
 

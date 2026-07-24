@@ -359,6 +359,39 @@
               }
             }
           }
+        },
+        "auxiliaryLanes": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "lane",
+              "script",
+              "outcome",
+              "exitCode",
+              "durationMs"
+            ],
+            "properties": {
+              "lane": {
+                "const": "native"
+              },
+              "script": {
+                "const": "test:native"
+              },
+              "outcome": {
+                "$ref": "#/$defs/outcome"
+              },
+              "exitCode": {
+                "type": "integer"
+              },
+              "durationMs": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
         }
       }
     }
