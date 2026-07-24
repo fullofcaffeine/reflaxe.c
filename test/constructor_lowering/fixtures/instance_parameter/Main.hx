@@ -1,12 +1,12 @@
 /**
- * Keeps unrelated `IRTInstance` constructor parameters fail-closed.
+ * Keeps payload-enum `IRTInstance` constructor parameters fail-closed.
  *
- * A fieldless Haxe enum also becomes an IR instance, but it is not a closed
- * record. This fixture ensures the record admission does not accidentally
- * authorize every value that happens to share that low-level IR constructor.
+ * A payload enum is a tagged C union whose copy may need nested ownership work.
+ * Admitting a fieldless enum tag must not silently authorize this wider family
+ * merely because both values use `IRTInstance` in HxcIR.
  */
 enum Choice {
-	First;
+	First(value:Int);
 }
 
 /** A deliberately unsupported constructor parameter family. */
@@ -15,14 +15,16 @@ final class EnumConfigured {
 
 	/** This constructor must remain rejected until enum parameters are proven. */
 	public function new(choice:Choice) {
-		selected = choice == First;
+		selected = switch choice {
+			case First(value): value == 1;
+		};
 	}
 }
 
 /** Reaches the unsupported constructor so the compiler must diagnose it. */
 final class Main {
 	static function main():Void {
-		final configured = new EnumConfigured(First);
+		final configured = new EnumConfigured(First(1));
 		while (!configured.selected) {}
 	}
 }

@@ -1974,6 +1974,8 @@ private class ConstructorPreparer {
 				'array-reference:${array.instanceId}';
 			case CBVKStaticString(sourceIdentity):
 				'string-utf8-static-view:$sourceIdentity';
+			case CBVKEnum(value) if (value.representation == CBERNativeEnum && !value.managedLifetime):
+				'direct-enum:${value.instanceId}';
 			case CBVKOptional(optional) if (!optional.managedLifetime):
 				'direct-optional:${optional.planId}';
 			case CBVKInterface(interfaceValue):
@@ -2078,6 +2080,7 @@ private class FunctionBuilder {
 	final initializedOwnedClassFields:Map<String, Bool> = [];
 	final initializedRetainedInterfaceFields:Map<String, Bool> = [];
 	final initializedStaticStringFields:Map<String, Bool> = [];
+	final initializedDirectEnumFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
 	final initializedManagedStringMapFields:Map<String, Bool> = [];
 	var selfValue:Null<LoweredValue> = null;
@@ -2345,6 +2348,9 @@ private class FunctionBuilder {
 				// The immutable view is copied by value. Its bytes come from
 				// compiler-owned literal storage and therefore outlive every object;
 				// no retain, release, or owned-String runtime operation is needed.
+			case TBinop(OpAssign, left, right) if (lowerDirectEnumFieldInitializer(left, right)):
+				// A fieldless enum is one nominal C tag. The first assignment
+				// initializes the final field by value without lifetime work.
 			case TBinop(OpAssign, left, right) if (lowerManagedArrayFieldInitializer(left, right)):
 				// A final Haxe Array field receives the one newly allocated shared
 				// container. Later local aliases retain that identity; the enclosing
@@ -2523,6 +2529,54 @@ private class FunctionBuilder {
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
 			"initialize-static-string-field");
 		initializedStaticStringFields.set(fieldName, true);
+		return true;
+	}
+
+	/**
+	 * Initialize one final fieldless-enum field during construction.
+	 *
+	 * A fieldless Haxe enum has no payload, pointer, or cleanup obligation. Its
+	 * prepared `CBERNativeEnum` representation is one nominal C enum value, so
+	 * construction copies that tag directly into the field.
+	 *
+	 * This owner accepts only the first `this.field = value` in the constructor.
+	 * Normal assignment still rejects later writes to the final field. Payload
+	 * enums deliberately do not enter this path: their tagged union may own
+	 * nested values and must use a separately proven retain/transfer rule.
+	 */
+	function lowerDirectEnumFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedDirectEnumFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing enum field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		final enumValue = field == null ? null : field.type.enumValue();
+		if (field == null
+			|| field.mutable
+			|| enumValue == null
+			|| enumValue.representation != CBERNativeEnum
+			|| enumValue.managedLifetime)
+			return false;
+		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:direct-enum-initializer)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-direct-enum-field");
+		initializedDirectEnumFields.set(fieldName, true);
 		return true;
 	}
 

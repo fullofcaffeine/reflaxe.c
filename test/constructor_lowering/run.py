@@ -33,6 +33,7 @@ RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
 DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
 ARRAY_PARAMETER = FIXTURES / "array_parameter"
 STRING_PARAMETER = FIXTURES / "string_parameter"
+ENUM_PARAMETER = FIXTURES / "enum_parameter"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -163,6 +164,15 @@ STRING_PARAMETER_NATIVE_COVERAGE = frozenset(
         "constructor-static-string-call-borrow",
         "constructor-static-string-retained-field",
         "constructor-static-string-allocation-free",
+    }
+)
+ENUM_PARAMETER_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-fieldless-enum-parameter",
+        "constructor-fieldless-enum-identity",
+        "constructor-fieldless-enum-call-borrow",
+        "constructor-fieldless-enum-final-field",
+        "constructor-fieldless-enum-runtime-free",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -675,6 +685,75 @@ def validate_string_parameter_project(output: Path) -> None:
         if forbidden in source.lower():
             raise ConstructorLoweringFailure(
                 f"nominal String constructor emitted forbidden shape {forbidden!r}"
+            )
+
+
+def validate_enum_parameter_project(output: Path) -> None:
+    """Prove fieldless enum constructor values stay nominal and runtime-free."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    constructors = [
+        symbol
+        for symbol in symbols.get("symbols", [])
+        if isinstance(symbol, dict)
+        and symbol.get("kind") == "method"
+        and str(symbol.get("sourceSymbol", "")).startswith("compiler.constructor.")
+        and (
+            ".BorrowedObjectiveReader(" in str(symbol.get("sourceSymbol", ""))
+            or ".RetainedObjectiveReader(" in str(symbol.get("sourceSymbol", ""))
+        )
+    ]
+    direct_constructors = [
+        symbol
+        for symbol in constructors
+        if isinstance(symbol.get("overloadSignature"), list)
+        and any(
+            str(value).startswith("direct-enum:instance.enum.")
+            for value in symbol["overloadSignature"]
+        )
+    ]
+    if len(direct_constructors) != 2:
+        raise ConstructorLoweringFailure(
+            "fieldless enum fixture lost its two exact constructor symbol identities"
+        )
+    parameter_spelling = "enum hxc_Main_ObjectiveState hxc_state"
+    if (
+        source.count(parameter_spelling) < 2
+        or parameter_spelling not in headers
+        or "hxc_state == hxc_Main_ObjectiveState_Active" not in source
+        or "(*hxc_self).hxc_state = hxc_state;" not in source
+    ):
+        raise ConstructorLoweringFailure(
+            "fieldless enum constructor lost its by-value call, comparison, or final-field store"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != []
+        or plan.get("status") != "analyzed-runtime-free"
+        or "bounded-haxe-enum-values" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "fieldless enum constructor lost its exact runtime-free plan"
+        )
+    for forbidden in (
+        "hxrt",
+        "malloc(",
+        "calloc(",
+        "realloc(",
+        "retain(",
+        "release(",
+        "goto ",
+    ):
+        if forbidden in (source + headers).lower():
+            raise ConstructorLoweringFailure(
+                f"fieldless enum constructor emitted forbidden shape {forbidden!r}"
             )
 
 
@@ -1365,6 +1444,13 @@ def check_native(
                 coverage=STRING_PARAMETER_NATIVE_COVERAGE,
                 validate_project=validate_string_parameter_project,
             )
+            enum_parameter_projects = render_parameter_projects(
+                fixture_root,
+                fixture=ENUM_PARAMETER,
+                slug="enum-parameter",
+                coverage=ENUM_PARAMETER_NATIVE_COVERAGE,
+                validate_project=validate_enum_parameter_project,
+            )
             parameter_projects = (
                 record_projects
                 + interface_projects
@@ -1372,6 +1458,7 @@ def check_native(
                 + default_argument_projects
                 + array_parameter_projects
                 + string_parameter_projects
+                + enum_parameter_projects
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1397,6 +1484,7 @@ def check_native(
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
                     | STRING_PARAMETER_NATIVE_COVERAGE
+                    | ENUM_PARAMETER_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1440,6 +1528,7 @@ def check_native(
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
                     | STRING_PARAMETER_NATIVE_COVERAGE
+                    | ENUM_PARAMETER_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
@@ -1455,6 +1544,7 @@ def check_eval_oracle() -> None:
         ("default-argument oracle", DEFAULT_ARGUMENTS),
         ("array-parameter oracle", ARRAY_PARAMETER),
         ("string-parameter oracle", STRING_PARAMETER),
+        ("enum-parameter oracle", ENUM_PARAMETER),
     ):
         result = subprocess.run(
             [
@@ -1598,6 +1688,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "call-bounded and collector-retained interface parameters and dispatch, "
         "borrowed and field-retained Array parameters, "
         "nominal literal-backed String parameters and final fields, "
+        "fieldless enum parameters and final fields, "
         "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
         "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
         "edges passed"

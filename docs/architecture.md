@@ -333,6 +333,13 @@ the existing exact root-and-trace plan. Fresh literal arguments receive a
 caller-owned cleanup slot so a constructor never consumes an ownerless
 temporary. Other collections remain closed at this boundary.
 
+A fieldless Haxe enum constructor parameter uses its exact prepared enum
+instance identity and passes the nominal C tag by value. The first
+construction-time assignment to the object's own final field is also one
+by-value store, with no retain, release, tracing, or runtime feature. Payload
+enums remain separate: their tagged unions can own active-case data and cannot
+inherit the fieldless copy rule.
+
 HxcIR classifies interfaces from their dispatch-layout roots, not merely from
 `IRTKReference`. Arrays, maps, Bytes, and interfaces are all reference-shaped
 semantic types, but only an interface carries an `{ object, table }` dispatch

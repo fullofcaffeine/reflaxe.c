@@ -198,6 +198,32 @@ their byte storage an explicit owner and cleanup contract. A future owned
 String must not inherit this program-long lifetime merely because it uses a
 similar C view.
 
+### Fieldless enum parameters
+
+A Haxe enum whose cases carry no payload is one nominal C enum tag. A
+constructor receives that value directly:
+
+```c
+void hxc_compiler_constructor_RuntimeObjective(
+  struct hxc_RuntimeObjective *self,
+  enum hxc_ObjectiveState state
+);
+```
+
+The exact prepared enum instance participates in the constructor symbol key,
+so unrelated enum types remain distinct even if both use the same C integer
+representation. A constructor may compare the parameter or copy it into its
+own final field. Because the value has no payload, pointer, or cleanup
+obligation, both operations are allocation-free and select no runtime feature.
+Normal assignment still rejects a later write to the final field.
+
+Payload enums are not covered by this rule. They use a tagged C union and may
+own Arrays, recursive values, or other managed payloads. Passing or retaining
+one requires an explicit active-case-aware retain, transfer, tracing, and
+cleanup contract. The focused negative fixture keeps that broader family
+fail-closed instead of treating every `IRTInstance` as an interchangeable
+constructor value.
+
 ### Shared Array parameters
 
 An ordinary Haxe `Array<T>` has shared identity: two variables can name the
@@ -389,6 +415,10 @@ field fail-closed. The positive
 `string_parameter` fixture proves nominal constructor identity, by-value
 literal-backed borrowing, final-field storage, header-only runtime selection,
 and Eval/native/sanitizer parity across the same deterministic layouts.
+`enum_parameter` proves exact fieldless-enum identity, by-value tag passing,
+comparison, final-field storage, and runtime-free output across that matrix.
+The revised `instance_parameter` negative uses a payload enum and proves that
+the fieldless admission does not authorize tagged-union ownership.
 The positive
 semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an
