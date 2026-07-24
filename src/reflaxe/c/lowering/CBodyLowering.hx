@@ -1958,6 +1958,13 @@ private class ConstructorPreparer {
 	 * independently and an unsupported family receives a source diagnostic.
 	 */
 	function constructorTypeKey(value:CBodyValueType, role:String):String {
+		// Enum recursion and payload ownership are whole-graph facts. Type
+		// discovery has already reached this enum and its payload dependencies,
+		// but the registry computes those lifecycle flags lazily. Recompute before
+		// admitting a constructor key so an early recursive or managed enum cannot
+		// look like an unmanaged by-value carrier.
+		if (value.enumValue() != null)
+			aggregateRegistry.canonicalEnums();
 		return switch value.kind {
 			case CBVKPrimitive(_):
 				switch value.irType {
@@ -1976,6 +1983,8 @@ private class ConstructorPreparer {
 				'string-utf8-static-view:$sourceIdentity';
 			case CBVKEnum(value) if (value.representation == CBERNativeEnum && !value.managedLifetime):
 				'direct-enum:${value.instanceId}';
+			case CBVKEnum(value) if (value.representation == CBERTaggedUnion && !value.managedLifetime):
+				'unmanaged-payload-enum:${value.instanceId}';
 			case CBVKOptional(optional) if (!optional.managedLifetime):
 				'direct-optional:${optional.planId}';
 			case CBVKInterface(interfaceValue):
@@ -2080,7 +2089,7 @@ private class FunctionBuilder {
 	final initializedOwnedClassFields:Map<String, Bool> = [];
 	final initializedRetainedInterfaceFields:Map<String, Bool> = [];
 	final initializedStaticStringFields:Map<String, Bool> = [];
-	final initializedDirectEnumFields:Map<String, Bool> = [];
+	final initializedUnmanagedEnumFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
 	final initializedManagedStringMapFields:Map<String, Bool> = [];
 	var selfValue:Null<LoweredValue> = null;
@@ -2348,9 +2357,9 @@ private class FunctionBuilder {
 				// The immutable view is copied by value. Its bytes come from
 				// compiler-owned literal storage and therefore outlive every object;
 				// no retain, release, or owned-String runtime operation is needed.
-			case TBinop(OpAssign, left, right) if (lowerDirectEnumFieldInitializer(left, right)):
-				// A fieldless enum is one nominal C tag. The first assignment
-				// initializes the final field by value without lifetime work.
+			case TBinop(OpAssign, left, right) if (lowerUnmanagedEnumFieldInitializer(left, right)):
+				// The prepared enum needs no retain, tracing, or destruction. The
+				// first assignment initializes the final field by value.
 			case TBinop(OpAssign, left, right) if (lowerManagedArrayFieldInitializer(left, right)):
 				// A final Haxe Array field receives the one newly allocated shared
 				// container. Later local aliases retain that identity; the enclosing
@@ -2533,18 +2542,20 @@ private class FunctionBuilder {
 	}
 
 	/**
-	 * Initialize one final fieldless-enum field during construction.
+	 * Initialize one final unmanaged-enum field during construction.
 	 *
-	 * A fieldless Haxe enum has no payload, pointer, or cleanup obligation. Its
-	 * prepared `CBERNativeEnum` representation is one nominal C enum value, so
-	 * construction copies that tag directly into the field.
+	 * A fieldless Haxe enum is one nominal C tag. An unmanaged payload enum is a
+	 * tagged C value whose complete active payload is safe to copy by value.
+	 * Preparation proves the shared requirement through `managedLifetime ==
+	 * false`, so construction can store either representation directly.
 	 *
 	 * This owner accepts only the first `this.field = value` in the constructor.
-	 * Normal assignment still rejects later writes to the final field. Payload
-	 * enums deliberately do not enter this path: their tagged union may own
-	 * nested values and must use a separately proven retain/transfer rule.
+	 * Normal assignment still rejects later writes to the final field. Managed
+	 * or recursive enums deliberately do not enter this path: their active
+	 * payload may own nested values and needs a separately proven
+	 * retain/transfer rule.
 	 */
-	function lowerDirectEnumFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+	function lowerUnmanagedEnumFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
 		switch prepared.role {
 			case PBRConstructor(_):
 			case _:
@@ -2559,7 +2570,7 @@ private class FunctionBuilder {
 			case _:
 				return false;
 		};
-		if (initializedDirectEnumFields.exists(fieldName))
+		if (initializedUnmanagedEnumFields.exists(fieldName))
 			return false;
 		final self = selfValue;
 		if (self == null)
@@ -2567,16 +2578,12 @@ private class FunctionBuilder {
 		final owner = self.mapping.classValue();
 		final field = owner == null ? null : owner.field(fieldName);
 		final enumValue = field == null ? null : field.type.enumValue();
-		if (field == null
-			|| field.mutable
-			|| enumValue == null
-			|| enumValue.representation != CBERNativeEnum
-			|| enumValue.managedLifetime)
+		if (field == null || field.mutable || enumValue == null || enumValue.managedLifetime)
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:direct-enum-initializer)');
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-direct-enum-field");
-		initializedDirectEnumFields.set(fieldName, true);
+			"initialize-unmanaged-enum-field");
+		initializedUnmanagedEnumFields.set(fieldName, true);
 		return true;
 	}
 

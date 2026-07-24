@@ -198,7 +198,7 @@ their byte storage an explicit owner and cleanup contract. A future owned
 String must not inherit this program-long lifetime merely because it uses a
 similar C view.
 
-### Fieldless enum parameters
+### Unmanaged enum parameters
 
 A Haxe enum whose cases carry no payload is one nominal C enum tag. A
 constructor receives that value directly:
@@ -217,12 +217,24 @@ own final field. Because the value has no payload, pointer, or cleanup
 obligation, both operations are allocation-free and select no runtime feature.
 Normal assignment still rejects a later write to the final field.
 
-Payload enums are not covered by this rule. They use a tagged C union and may
-own Arrays, recursive values, or other managed payloads. Passing or retaining
-one requires an explicit active-case-aware retain, transfer, tracing, and
-cleanup contract. The focused negative fixture keeps that broader family
-fail-closed instead of treating every `IRTInstance` as an interchangeable
-constructor value.
+A payload enum uses a tagged C struct: one discriminant says which case is
+active, and one union stores that case's fields. The constructor may also copy
+this complete value when the prepared enum graph proves
+`managedLifetime == false`. For example, a `FlowValue` whose variants carry
+`Bool`, `Int`, or a literal-backed `ContentId(String)` has no owned storage.
+The tag and active payload therefore pass and store by value without allocation
+or cleanup. The exact enum instance still participates in the symbol key.
+
+That lifecycle fact is computed from the complete reached enum graph before
+constructor symbol admission. This ordering matters for recursive or nested
+types: default `false` flags during discovery must never make an unfinished
+enum look safe.
+
+Payload enums that own Arrays, Bytes, recursive values, or other managed state
+remain outside this rule. Passing or retaining one requires an explicit
+active-case-aware retain, transfer, tracing, rollback, and cleanup contract.
+Focused managed and recursive negatives keep those broader families
+fail-closed instead of treating every `IRTInstance` as interchangeable.
 
 ### Shared Array parameters
 
@@ -417,8 +429,12 @@ literal-backed borrowing, final-field storage, header-only runtime selection,
 and Eval/native/sanitizer parity across the same deterministic layouts.
 `enum_parameter` proves exact fieldless-enum identity, by-value tag passing,
 comparison, final-field storage, and runtime-free output across that matrix.
-The revised `instance_parameter` negative uses a payload enum and proves that
-the fieldless admission does not authorize tagged-union ownership.
+`enum_payload_parameter` proves all active unmanaged payload variants,
+by-value tagged-struct passing, final-field storage, exact identity, and
+allocation-free header-only String-literal support. The revised
+`instance_parameter` negative owns an Array payload, while
+`recursive_enum_parameter` owns an indirect recursive payload; both prove that
+the unmanaged admission does not authorize lifecycle-bearing tagged unions.
 The positive
 semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an

@@ -34,6 +34,7 @@ DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
 ARRAY_PARAMETER = FIXTURES / "array_parameter"
 STRING_PARAMETER = FIXTURES / "string_parameter"
 ENUM_PARAMETER = FIXTURES / "enum_parameter"
+ENUM_PAYLOAD_PARAMETER = FIXTURES / "enum_payload_parameter"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -89,6 +90,7 @@ NEGATIVE_CASES = {
     "escape_self": "TNew(stack-reference-escape:assignment)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
     "instance_parameter": "TFunction(constructor-argument:0-type-not-admitted:haxe-enum:",
+    "recursive_enum_parameter": "TFunction(constructor-argument:0-type-not-admitted:haxe-enum:",
     "interface_parameter_escape": (
         "TFunction(constructor-argument:source:"
         "interface-retention-must-target-this-field)"
@@ -173,6 +175,16 @@ ENUM_PARAMETER_NATIVE_COVERAGE = frozenset(
         "constructor-fieldless-enum-call-borrow",
         "constructor-fieldless-enum-final-field",
         "constructor-fieldless-enum-runtime-free",
+    }
+)
+ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-unmanaged-payload-enum-parameter",
+        "constructor-unmanaged-payload-enum-identity",
+        "constructor-unmanaged-payload-enum-call-borrow",
+        "constructor-unmanaged-payload-enum-final-field",
+        "constructor-unmanaged-payload-enum-active-tag",
+        "constructor-unmanaged-payload-enum-allocation-free",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -754,6 +766,77 @@ def validate_enum_parameter_project(output: Path) -> None:
         if forbidden in (source + headers).lower():
             raise ConstructorLoweringFailure(
                 f"fieldless enum constructor emitted forbidden shape {forbidden!r}"
+            )
+
+
+def validate_enum_payload_parameter_project(output: Path) -> None:
+    """Prove unmanaged payload enums keep exact tags, payloads, and value copies."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    constructors = [
+        symbol
+        for symbol in symbols.get("symbols", [])
+        if isinstance(symbol, dict)
+        and symbol.get("kind") == "method"
+        and str(symbol.get("sourceSymbol", "")).startswith("compiler.constructor.")
+        and (
+            ".BorrowedFlowReader(" in str(symbol.get("sourceSymbol", ""))
+            or ".RetainedFlowReader(" in str(symbol.get("sourceSymbol", ""))
+        )
+    ]
+    payload_constructors = [
+        symbol
+        for symbol in constructors
+        if isinstance(symbol.get("overloadSignature"), list)
+        and any(
+            str(value).startswith("unmanaged-payload-enum:instance.enum.")
+            for value in symbol["overloadSignature"]
+        )
+    ]
+    if len(payload_constructors) != 2:
+        raise ConstructorLoweringFailure(
+            "unmanaged payload-enum fixture lost its two exact constructor identities"
+        )
+    parameter_spelling = "struct hxc_Main_FlowValue hxc_value"
+    if (
+        source.count(parameter_spelling) < 2
+        or parameter_spelling not in headers
+        or "switch (hxc_value.hxc_tag)" not in source
+        or "(*hxc_self).hxc_value = hxc_value;" not in source
+        or "hxc_Main_FlowValue_Flag" not in source
+        or "hxc_Main_FlowValue_Counter" not in source
+        or "hxc_Main_FlowValue_State" not in source
+    ):
+        raise ConstructorLoweringFailure(
+            "unmanaged payload-enum constructor lost its by-value call, active tags, or final-field store"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != ["runtime-base", "string-literal"]
+        or plan.get("symbols") != []
+        or "bounded-haxe-enum-values" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "unmanaged payload-enum constructor lost its exact allocation-free plan"
+        )
+    for forbidden in (
+        "malloc(",
+        "calloc(",
+        "realloc(",
+        "retain(",
+        "release(",
+        "goto ",
+    ):
+        if forbidden in source.lower():
+            raise ConstructorLoweringFailure(
+                f"unmanaged payload-enum constructor emitted forbidden shape {forbidden!r}"
             )
 
 
@@ -1451,6 +1534,13 @@ def check_native(
                 coverage=ENUM_PARAMETER_NATIVE_COVERAGE,
                 validate_project=validate_enum_parameter_project,
             )
+            enum_payload_parameter_projects = render_parameter_projects(
+                fixture_root,
+                fixture=ENUM_PAYLOAD_PARAMETER,
+                slug="enum-payload-parameter",
+                coverage=ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE,
+                validate_project=validate_enum_payload_parameter_project,
+            )
             parameter_projects = (
                 record_projects
                 + interface_projects
@@ -1459,6 +1549,7 @@ def check_native(
                 + array_parameter_projects
                 + string_parameter_projects
                 + enum_parameter_projects
+                + enum_payload_parameter_projects
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1485,6 +1576,7 @@ def check_native(
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
                     | STRING_PARAMETER_NATIVE_COVERAGE
                     | ENUM_PARAMETER_NATIVE_COVERAGE
+                    | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1529,6 +1621,7 @@ def check_native(
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
                     | STRING_PARAMETER_NATIVE_COVERAGE
                     | ENUM_PARAMETER_NATIVE_COVERAGE
+                    | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
@@ -1545,6 +1638,7 @@ def check_eval_oracle() -> None:
         ("array-parameter oracle", ARRAY_PARAMETER),
         ("string-parameter oracle", STRING_PARAMETER),
         ("enum-parameter oracle", ENUM_PARAMETER),
+        ("enum-payload-parameter oracle", ENUM_PAYLOAD_PARAMETER),
     ):
         result = subprocess.run(
             [
@@ -1689,6 +1783,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "borrowed and field-retained Array parameters, "
         "nominal literal-backed String parameters and final fields, "
         "fieldless enum parameters and final fields, "
+        "unmanaged payload-enum parameters and final fields, "
         "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
         "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
         "edges passed"

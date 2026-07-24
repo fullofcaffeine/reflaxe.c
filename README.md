@@ -276,7 +276,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `class-layout` | `implemented` | Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts. |
 | `closed-anonymous-record-lowering` | `implemented` | A bounded closed anonymous-record graph emits deduplicated private value structs and runs as runtime-free strict C11. |
 | `configuration-policies` | `implemented` | A target-neutral typed core strictly parses schema-1 hxc.json, resolves six precedence layers, and reports every effective value with provenance. |
-| `constructor-lowering` | `implemented` | Concrete non-generic Haxe classes support bounded stack or collector construction, final inline child ownership, by-value closed-record, literal-backed nominal String, and fieldless-enum arguments, plus call-only or retained interface arguments with exact order and cleanup. |
+| `constructor-lowering` | `implemented` | Concrete non-generic Haxe classes support bounded stack or collector construction, final inline child ownership, by-value closed-record, literal-backed nominal String, and unmanaged-enum arguments, plus call-only or retained interface arguments with exact order and cleanup. |
 | `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
 | `diagnostics` | `implemented` | Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
 | `direct-c-import` | `implemented` | Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C. |

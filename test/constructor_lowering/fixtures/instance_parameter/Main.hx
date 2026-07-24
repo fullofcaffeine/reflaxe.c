@@ -6,7 +6,7 @@
  * merely because both values use `IRTInstance` in HxcIR.
  */
 enum Choice {
-	First(value:Int);
+	First(values:Array<Int>);
 }
 
 /** A deliberately unsupported constructor parameter family. */
@@ -16,7 +16,7 @@ final class EnumConfigured {
 	/** This constructor must remain rejected until enum parameters are proven. */
 	public function new(choice:Choice) {
 		selected = switch choice {
-			case First(value): value == 1;
+			case First(values): values[0] == 1;
 		};
 	}
 }
@@ -24,7 +24,7 @@ final class EnumConfigured {
 /** Reaches the unsupported constructor so the compiler must diagnose it. */
 final class Main {
 	static function main():Void {
-		final configured = new EnumConfigured(First(1));
+		final configured = new EnumConfigured(First([1]));
 		while (!configured.selected) {}
 	}
 }
