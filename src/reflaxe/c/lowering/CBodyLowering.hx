@@ -1788,8 +1788,9 @@ private class ConstructorPreparer {
 			case TFunction(value): value;
 			case _: unsupported(input.expression.pos, FunctionBuilder.nodeName(input.expression));
 		};
-		final overloadSignature = [constructorTypeKey(signature.selfMapping.irType)].concat(signature.arguments.map(parameter ->
-			constructorTypeKey(parameter.ir.type)));
+		final overloadSignature = [constructorTypeKey(signature.selfMapping, "self")];
+		for (index in 0...signature.arguments.length)
+			overloadSignature.push(constructorTypeKey(signature.arguments[index].mapping, 'argument:$index'));
 		final functionRequest = new CSymbolRequest(CSKMethod, ["compiler", "constructor"].concat(input.declarationPath.split(".")),
 			CNSOrdinary("translation-unit"), CSVInternal, null, overloadSignature, [], input.sourceOrder);
 		context.symbols.register(functionRequest);
@@ -1856,13 +1857,30 @@ private class ConstructorPreparer {
 		};
 	}
 
-	static function constructorTypeKey(type:HxcIRTypeRef):String {
-		return switch type {
-			case IRTBool: "bool";
-			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
-			case IRTFloat(width): 'f$width';
-			case IRTPointer(IRTInstance(instanceId), nullable): 'class-reference:${nullable ? "nullable" : "nonnull"}:$instanceId';
-			case _: throw new CBodyEmissionError("constructor signature contains a non-admitted body type");
+	/**
+	 * Build one constructor overload component without erasing its Haxe family.
+	 *
+	 * Several unrelated values use `IRTInstance` after semantic lowering. A raw
+	 * IR match therefore cannot tell a direct closed record from an enum, Array,
+	 * map, interface value, or managed object. Constructor admission uses the
+	 * prepared `CBodyValueType` instead, so each family earns this boundary
+	 * independently and an unsupported family receives a source diagnostic.
+	 */
+	function constructorTypeKey(value:CBodyValueType, role:String):String {
+		return switch value.kind {
+			case CBVKPrimitive(_):
+				switch value.irType {
+					case IRTBool: "bool";
+					case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
+					case IRTFloat(width): 'f$width';
+					case _: throw new CBodyEmissionError('constructor primitive `$role` has unexpected IR type `${Std.string(value.irType)}`');
+				}
+			case CBVKClass(classValue, nullable):
+				'class-reference:${nullable ? "nullable" : "nonnull"}:${classValue.instanceId}';
+			case CBVKAggregate(aggregate):
+				'closed-record:${aggregate.instanceId}';
+			case _:
+				unsupported(input.expression.pos, 'TFunction(constructor-$role-type-not-admitted:${value.cSpelling})');
 		};
 	}
 }

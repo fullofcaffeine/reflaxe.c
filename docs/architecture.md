@@ -308,6 +308,11 @@ address remain parent-bound borrows. Locals and owned children select no
 runtime, while aliases, escapes, reassignment, recursive direct layouts, and
 fallible child construction remain fail-closed; see [bounded constructor
 lowering](constructor-lowering.md).
+Constructor symbol planning also retains the prepared Haxe value family. A
+closed record parameter may use its validated by-value aggregate identity,
+while an enum, interface, collection, or managed value that shares the
+`IRTInstance` IR constructor remains closed until its own call and lifetime
+contract is proven.
 Closed-world class dispatch adds a request-local reachable call catalog,
 hierarchy-root table layouts, representation-checked slots, typed receiver
 adapters, and explicit table binding. Direct calls stay direct, unused

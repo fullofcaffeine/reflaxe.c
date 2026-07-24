@@ -10,10 +10,13 @@ import json
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Iterable
+from dataclasses import replace
 from pathlib import Path
 
 
@@ -24,6 +27,7 @@ ORACLE = FIXTURES / "oracle"
 MINIMAL = FIXTURES / "minimal"
 FAILURE_RUNTIME = FIXTURES / "failure_runtime"
 DEFAULT_RUNTIME = FIXTURES / "default_runtime"
+RECORD_PARAMETER = FIXTURES / "record_parameter"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -74,6 +78,7 @@ NEGATIVE_CASES = {
     "escape_return": "TNew(stack-reference-escape:return)",
     "escape_self": "TNew(stack-reference-escape:assignment)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
+    "instance_parameter": "TFunction(constructor-argument:0-type-not-admitted:haxe-enum:",
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
     "owned_fallible": "TNew(owned-field-fallible-construction-not-admitted:constructor.Child)",
     "owned_mutable": "field:child:owned-class-field-must-be-final",
@@ -93,6 +98,13 @@ REQUIRED_NATIVE_COVERAGE = frozenset(
         "strict-c11",
         "super-constructor-order",
         "trivial-constructor-elision",
+    }
+)
+RECORD_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-record-parameter",
+        "constructor-record-parameter-by-value",
+        "constructor-record-parameter-stack-owner",
     }
 )
 
@@ -126,6 +138,13 @@ CXX_STRICT_FLAGS = (
     "-Wcast-qual",
 )
 CXX_COMMANDS = {"gcc": "g++", "clang": "clang++"}
+SANITIZER_FLAGS = (
+    "-O1",
+    "-g",
+    "-fno-omit-frame-pointer",
+    "-fno-sanitize-recover=all",
+    "-fsanitize=address,undefined",
+)
 
 
 class ConstructorLoweringFailure(RuntimeError):
@@ -137,9 +156,12 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
-def haxe_environment() -> dict[str, str]:
+def haxe_environment(*, server: bool = False) -> dict[str, str]:
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
+    if server:
+        environment.pop("HAXE_NO_SERVER", None)
+    else:
+        environment["HAXE_NO_SERVER"] = "1"
     return environment
 
 
@@ -151,16 +173,22 @@ def custom_target(
     runtime: str | None = None,
     reverse: bool = False,
     report: bool = False,
+    layout: str = "unity",
+    connect: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    command = [
-        development_tool("haxe"),
-        "-cp",
-        str(fixture),
-        "-lib",
-        "reflaxe.c",
-        "-main",
-        "Main",
-    ]
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.extend(
+        [
+            "-cp",
+            str(fixture),
+            "-lib",
+            "reflaxe.c",
+            "-main",
+            "Main",
+        ]
+    )
     if profile == "metal":
         command.extend(["-D", "reflaxe_c_profile=metal"])
     elif profile != "portable":
@@ -171,11 +199,11 @@ def custom_target(
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if report:
         command.extend(["-D", "reflaxe_c_constructor_lowering_report"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
+    command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=ROOT,
-        env=haxe_environment(),
+        env=haxe_environment(server=connect is not None),
         check=False,
         capture_output=True,
         text=True,
@@ -199,6 +227,186 @@ def generated_tree(root: Path) -> dict[str, bytes]:
         for path in sorted(root.rglob("*"))
         if path.is_file() and path.name != "_GeneratedFiles.json"
     }
+
+
+def available_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
+        candidate.bind(("127.0.0.1", 0))
+        return int(candidate.getsockname()[1])
+
+
+def validate_record_parameter_project(output: Path) -> None:
+    sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    constructors = [
+        symbol
+        for symbol in symbols.get("symbols", [])
+        if isinstance(symbol, dict)
+        and symbol.get("kind") == "method"
+        and str(symbol.get("sourceSymbol", "")).startswith(
+            "compiler.constructor.ConfiguredSpawn("
+        )
+    ]
+    if len(constructors) != 1:
+        raise ConstructorLoweringFailure(
+            "record-parameter fixture omitted its one constructor symbol"
+        )
+    overload = constructors[0].get("overloadSignature")
+    if (
+        not isinstance(overload, list)
+        or len(overload) != 2
+        or not str(overload[0]).startswith("class-reference:nonnull:")
+        or not str(overload[1]).startswith("closed-record:instance.closed-record.")
+    ):
+        raise ConstructorLoweringFailure(
+            "record-parameter constructor lost its family-specific semantic key"
+        )
+    if (
+        "struct hxc_SpawnPoint hxc_point" not in sources
+        or "struct hxc_SpawnPoint hxc_point" not in headers
+        or "struct hxc_ConfiguredSpawn" not in sources
+        or " = { 0 };" not in sources
+        or "struct hxc_SpawnPoint *hxc_point" in sources
+        or "struct hxc_SpawnPoint *hxc_point" in headers
+    ):
+        raise ConstructorLoweringFailure(
+            "record parameter was not passed by value to a stack-owned class"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != []
+        or "bounded-stack-construction" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "record-parameter constructor lost its direct runtime-free plan"
+        )
+    for forbidden in ("hxrt", "malloc(", "calloc(", "realloc(", "goto "):
+        if forbidden in (sources + headers).lower():
+            raise ConstructorLoweringFailure(
+                f"record-parameter constructor emitted forbidden shape {forbidden!r}"
+            )
+
+
+def render_record_server_pair(root: Path) -> tuple[Path, Path]:
+    port = available_port()
+    endpoint = str(port)
+    server = subprocess.Popen(
+        [development_tool("haxe"), "--wait", endpoint],
+        cwd=ROOT,
+        env=haxe_environment(server=True),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        deadline = time.monotonic() + 10.0
+        while time.monotonic() < deadline:
+            if server.poll() is not None:
+                stdout, stderr = server.communicate()
+                raise ConstructorLoweringFailure(
+                    "Haxe server exited before constructor determinism requests: "
+                    f"{stdout!r} {stderr!r}"
+                )
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                    break
+            except OSError:
+                time.sleep(0.05)
+        else:
+            raise ConstructorLoweringFailure(
+                "Haxe server did not accept constructor determinism requests"
+            )
+
+        outputs = (root / "record-server-first", root / "record-server-second")
+        for label, output in zip(("first", "second"), outputs):
+            result = custom_target(
+                RECORD_PARAMETER, output, layout="split", connect=endpoint
+            )
+            if result.returncode != 0 or result.stdout or result.stderr:
+                raise ConstructorLoweringFailure(
+                    f"{label} warm-server record constructor compile failed\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
+        return outputs
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait(timeout=5)
+
+
+def render_record_parameter_projects(
+    fixture_root: Path,
+) -> tuple[CFixtureProject, ...]:
+    projects: list[CFixtureProject] = []
+    split_tree: dict[str, bytes] | None = None
+    for layout in ("split", "package", "unity"):
+        normal = fixture_root / f"record-{layout}"
+        reverse = fixture_root / f"record-{layout}-reverse"
+        for label, result in (
+            (
+                f"{layout} record constructor",
+                custom_target(RECORD_PARAMETER, normal, layout=layout),
+            ),
+            (
+                f"{layout} reversed record constructor",
+                custom_target(
+                    RECORD_PARAMETER, reverse, layout=layout, reverse=True
+                ),
+            ),
+        ):
+            if result.returncode != 0 or result.stdout or result.stderr:
+                raise ConstructorLoweringFailure(
+                    f"{label} compile failed\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
+        if generated_tree(normal) != generated_tree(reverse):
+            raise ConstructorLoweringFailure(
+                f"{layout} record constructor changed with typed-module order"
+            )
+        validate_record_parameter_project(normal)
+        if layout == "split":
+            split_tree = generated_tree(normal)
+        projects.append(
+            CFixtureProject(
+                f"constructor-record-parameter-{layout}",
+                tuple(
+                    path.relative_to(fixture_root).as_posix()
+                    for path in sorted((normal / "src").rglob("*.c"))
+                ),
+                tuple(
+                    path.relative_to(fixture_root).as_posix()
+                    for path in sorted((normal / "include").rglob("*.h"))
+                ),
+                ((normal / "include").relative_to(fixture_root).as_posix(),),
+                "",
+                (
+                    "constructor-record-parameter",
+                    "constructor-record-parameter-by-value",
+                    "constructor-record-parameter-stack-owner",
+                    "strict-c11",
+                ),
+            )
+        )
+
+    server_first, server_second = render_record_server_pair(fixture_root)
+    if (
+        split_tree is None
+        or generated_tree(server_first) != split_tree
+        or generated_tree(server_second) != split_tree
+    ):
+        raise ConstructorLoweringFailure(
+            "record constructor output changed under warm compiler-server reuse"
+        )
+    return tuple(projects)
 
 
 def required_text(value: object, label: str) -> str:
@@ -659,7 +867,10 @@ def check_cpp_header(
 
 
 def check_native(
-    report: dict[str, object], *, requested_toolchain: str = "auto"
+    report: dict[str, object],
+    *,
+    requested_toolchain: str = "auto",
+    render_record_parameter: bool = True,
 ) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-constructor-native-") as temporary:
         root = Path(temporary)
@@ -667,7 +878,7 @@ def check_native(
         write_generated_fixture(report, fixture_root / "positive")
         compile_failure_fixture(fixture_root / "failure")
         compile_default_fixture(fixture_root / "defaults")
-        projects = (
+        projects = [
             CFixtureProject(
                 "constructor-default-fields",
                 ("defaults/src/program.c",),
@@ -703,44 +914,94 @@ def check_native(
                     "trivial-constructor-elision",
                 ),
             ),
+        ]
+        record_projects: tuple[CFixtureProject, ...] = ()
+        if render_record_parameter:
+            record_projects = render_record_parameter_projects(fixture_root)
+            projects.extend(record_projects)
+        ordered_projects = tuple(
+            sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
         )
         for optimization in ("-O0", "-O2"):
             native_report = run_c_fixture_corpus(
                 suite=f"constructor-lowering-{optimization[1:].lower()}",
-                projects=projects,
+                projects=ordered_projects,
                 fixture_root=fixture_root,
                 build_root=root / f"c-build-{optimization[1:].lower()}",
                 repository_root=ROOT,
                 requested_toolchain=requested_toolchain,
                 strict_flags=(*C11_STRICT_FLAGS, optimization),
             )
-            validate_report(native_report, required_coverage=REQUIRED_NATIVE_COVERAGE)
+            required_coverage = REQUIRED_NATIVE_COVERAGE
+            if render_record_parameter:
+                required_coverage = required_coverage | RECORD_NATIVE_COVERAGE
+            validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
             for forbidden in (str(ROOT), str(fixture_root), str(root)):
                 if forbidden in encoded:
                     raise ConstructorLoweringFailure(
                         f"native report leaked absolute path {forbidden}"
                     )
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if record_projects and "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in sorted(
+                    record_projects,
+                    key=lambda project: project.identifier.encode("utf-8"),
+                )
+            )
+            sanitizer_report = run_c_fixture_corpus(
+                suite="constructor-record-parameter-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(
+                sanitizer_report, required_coverage=RECORD_NATIVE_COVERAGE
+            )
         check_cpp_header(
             fixture_root, root / "cxx-build", requested_toolchain=requested_toolchain
         )
 
 
 def check_eval_oracle() -> None:
-    result = subprocess.run(
-        [development_tool("haxe"), "-cp", str(ORACLE), "-main", "Main", "--interp"],
-        cwd=ROOT,
-        env=haxe_environment(),
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if result.returncode != 0 or result.stdout or result.stderr:
-        raise ConstructorLoweringFailure(
-            "pinned Haxe constructor oracle failed\n"
-            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    for label, fixture in (
+        ("constructor oracle", ORACLE),
+        ("record-parameter oracle", RECORD_PARAMETER),
+    ):
+        result = subprocess.run(
+            [
+                development_tool("haxe"),
+                "-cp",
+                str(fixture),
+                "-main",
+                "Main",
+                "--interp",
+            ],
+            cwd=ROOT,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
+        if result.returncode != 0 or result.stdout or result.stderr:
+            raise ConstructorLoweringFailure(
+                f"pinned Haxe {label} failed\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
 
 
 def check_minimal_example() -> None:
@@ -814,7 +1075,11 @@ def main(arguments: Iterable[str] = ()) -> int:
     try:
         if args.native_only:
             report = snapshot_report()
-            check_native(report, requested_toolchain=args.toolchain)
+            check_native(
+                report,
+                requested_toolchain=args.toolchain,
+                render_record_parameter=False,
+            )
             print("constructor-lowering: OK: required constructor native matrix passed")
             return 0
 
@@ -854,9 +1119,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "constructor-lowering: OK: pinned super/field/body order, default storage, "
-        "status cleanup, direct caller-owned class parameters, trivial elision, "
-        "runtime-free strict C11/C++17 consumers, determinism, and fail-closed "
-        "borrow/escape/cycle/native-layout/generic edges passed"
+        "status cleanup, direct caller-owned class and closed-record parameters, "
+        "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
+        "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
+        "edges passed"
     )
     return 0
 

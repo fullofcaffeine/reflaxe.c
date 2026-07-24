@@ -105,6 +105,32 @@ so no cast or C++ syntax is involved. Constructor declarations and definitions
 use the same `CSymbolRegistry`, C declarator tree, and private generated header
 as other functions.
 
+Constructor symbol identity is planned from each prepared body type, not from
+the HxcIR constructor name alone. This distinction matters because several
+unrelated Haxe families eventually use `IRTInstance`: closed records, enums,
+arrays, maps, interface values, and other managed values all need a nominal IR
+instance even though their call, copy, ownership, and cleanup rules differ.
+Treating every `IRTInstance` as interchangeable would make a new record
+capability silently authorize all of those families.
+
+The bounded constructor slice therefore admits a closed anonymous record
+parameter through its already validated aggregate identity. Generated C passes
+the record by value, while the constructed class keeps its separate automatic
+storage and identity:
+
+```c
+void hxc_compiler_constructor_ConfiguredSpawn(
+  struct hxc_ConfiguredSpawn *self,
+  struct hxc_SpawnPoint point
+);
+```
+
+The full record identity participates in the constructor's semantic symbol key;
+the readable C name stays source-shaped because that key is only a collision
+and determinism input. Other instance families remain source-positioned
+`HXC1001` failures until their own dispatch, ownership, and lifetime contracts
+are proven.
+
 An empty constructor, or an empty zero-argument `super` chain whose base is
 also proven trivial, has no C symbol and no call. Source arguments are still
 evaluated before elision, so optimization never removes observable effects.
@@ -157,6 +183,9 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
 - extern or `@:c.layout` native construction, because imported construction
   and destruction policy is not inferred from a Haxe declaration;
 - generic class construction without a closed class specialization; and
+- constructor parameters whose prepared value family has no constructor-call
+  contract, even when the family shares the generic `IRTInstance` IR shape;
+  and
 - broader exceptions, interface/dynamic/generic dispatch, allocation,
   ownership, or public ABI.
 
@@ -183,7 +212,11 @@ npm run snapshots:check
 ```
 
 `test/constructor_lowering/fixtures/minimal/Main.hx` is the small readable
-example. The positive semantic corpus adds inheritance, default fields,
+example. The focused `record_parameter` fixture proves a direct closed record
+argument in split, package, and unity output, reversed discovery, warm compiler
+server reuse, and strict native execution; `instance_parameter` proves that a
+fieldless enum sharing the `IRTInstance` shape remains rejected. The positive
+semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an
 inner temporary, empty-constructor elision, a same-function stack alias, and a
 parent with an inline owned child whose constructor, stable identity, and later mutation are observed. It
