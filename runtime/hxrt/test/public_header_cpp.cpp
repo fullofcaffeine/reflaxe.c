@@ -16,7 +16,7 @@
 extern "C" void hxc_test_c_allocator_layout(std::size_t *values);
 
 static_assert(HXC_RUNTIME_ABI_MAJOR == 0u, "C++ consumer must see the reviewed runtime ABI major");
-static_assert(HXC_RUNTIME_ABI_MINOR == 8u, "C++ consumer must see the reviewed runtime ABI minor");
+static_assert(HXC_RUNTIME_ABI_MINOR == 9u, "C++ consumer must see the reviewed runtime ABI minor");
 static_assert(
   std::is_same<
     hxc_allocate_fn,
@@ -133,6 +133,13 @@ int main() {
   }
   if (!hxc_string_is_valid(literal) || literal.byte_length != 14u) {
     return 4;
+  }
+  const hxc_string missing = HXC_STRING_INITIALIZER;
+  const hxc_string empty_string = HXC_STRING_EMPTY_INITIALIZER;
+  if (hxc_string_is_valid(missing)
+      || !hxc_string_is_valid(empty_string)
+      || empty_string.data == nullptr) {
+    return 5;
   }
   hxc_test_c_allocator_layout(c_layout.data());
   if (c_layout != cpp_layout) {

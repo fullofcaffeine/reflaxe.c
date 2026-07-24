@@ -35,6 +35,9 @@
   "nonExhaustiveTagSwitch": [
     "HXC9000 error [profile=portable] test/negative/NonExhaustiveTagSwitch.hx:3:1-3:2 [module:invalid.NonExhaustiveTagSwitch.function:invalid.NonExhaustiveTagSwitch.main.block:entry.terminator] Invalid HxcIR: tag switch without a default omits `None` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "invalidStringNonNullProof": [
+    "HXC9000 error [profile=portable] test/negative/StringNonNullProof.hx:2:1-2:2 [module:invalid.StringNonNullProof.function:invalid.StringNonNullProof.main.block:entry.instruction:2:bad.equal] Invalid HxcIR: String equality's left-non-null proof requires a directly defined String constant Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "nonDominatingNullProof": [
     "HXC9000 error [profile=portable] test/negative/NonDominatingNullProof.hx:6:1-6:2 [module:invalid.NonDominatingNullProof.function:invalid.NonDominatingNullProof.main.block:join.instruction:0:bad.load.place.base] Invalid HxcIR: nullable pointer `value.object` requires a preceding dominating null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

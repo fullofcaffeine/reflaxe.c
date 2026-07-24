@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "string-null",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-008",
+    "HXC-RT-008"
+  ],
+  "sources": [
+    "docs/adr/0004-utf8-scalar-string-contract.md",
+    "docs/string-runtime.md",
+    "runtime/hxrt/include/hxrt/string_literal.h",
+    "src/reflaxe/c/ir/HxcIR.hx",
+    "src/reflaxe/c/lowering/CBodyAggregate.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "test/differential/string-null/generated/Main.hx",
+    "test/differential/string-null/generated/oracle.hxml",
+    "test/differential/string-null/negative/Main.hx",
+    "test/differential/string-null/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/string-null",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "string-null: OK: .*Eval parity, null/empty/content identity, calls, aliases, nominal abstracts, early returns, HxcIR, layouts, determinism, C11, C\\+\\+17 headers, sanitizers, and negative diagnostics passed$"
+    },
+    "oracle": "test/differential/string-null/generated/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/string_literal.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

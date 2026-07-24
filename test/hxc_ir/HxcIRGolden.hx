@@ -65,6 +65,7 @@ class HxcIRGolden {
 				nonDominatingNullProof: invalidDiagnostics(nonDominatingNullProofProgram()),
 				unsafeClassUpcast: invalidDiagnostics(unsafeClassUpcastProgram()),
 				mismatchedClassEquality: invalidDiagnostics(mismatchedClassEqualityProgram()),
+				invalidStringNonNullProof: invalidDiagnostics(invalidStringNonNullProofProgram()),
 				mismatchedEnumTagEquality: invalidDiagnostics(mismatchedEnumTagEqualityProgram()),
 				payloadEnumTagEquality: invalidDiagnostics(payloadEnumTagEqualityProgram()),
 				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
@@ -1436,6 +1437,23 @@ class HxcIRGolden {
 		program.modules[0].functions[0].parameters.push(parameter("value.root", IRTPointer(IRTInstance("instance.class.root"), true), file, 2));
 		program.modules[0].functions[0].parameters.push(parameter("value.leaf", IRTPointer(IRTInstance("instance.class.leaf"), true), file, 2));
 		return program;
+	}
+
+	/**
+		Reject an optimization that falsely labels Haxe null as a real String.
+
+		The proof-bearing equality operation may skip a null branch in generated
+		C, so its claimed side must be defined by `IRCString`, never `IRCNull` or
+		an unproved call/load result.
+	**/
+	static function invalidStringNonNullProofProgram():HxcIRProgram {
+		final file = "test/negative/StringNonNullProof.hx";
+		return minimalProgram("invalid.StringNonNullProof", [
+			instruction("bad.null", result("value.null", IRTString), IRIOConstant(IRCNull), file, 2),
+			instruction("bad.literal", result("value.literal", IRTString), IRIOConstant(IRCString("", 0)), file, 2),
+			instruction("bad.equal", result("value.equal", IRTBool), IRIOBinary("haxe.string.equal.left-non-null", "value.null", "value.literal", IRIStatic),
+				file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
 	}
 
 	static function payloadEnumTagEqualityProgram():HxcIRProgram {

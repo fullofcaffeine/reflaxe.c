@@ -284,15 +284,15 @@ class RuntimeFeatureCatalog {
 					"General escaping Haxe graphs need stable identity, cyclic reclamation, and exact roots coordinated across functions. One selected backend owns those shared lifetimes without conservatively scanning arbitrary C memory.",
 					"docs/gc-runtime.md", ["test/runtime/gc/run.py", "test/runtime/runtime-feature-graph/run.py"])),
 			new RuntimeFeatureDefinition(stringLiteral,
-				"Immutable valid UTF-8 literal carrier with explicit byte length and no allocation or object dependency.", CompilerSelectable, true,
+				"Nullable immutable UTF-8 String carrier with explicit byte length and no allocation or object dependency.", CompilerSelectable, true,
 				environments, [runtimeBase], [header("string_literal.h")], [], [], [],
-				documentation("Defines the allocation-free private hxc_string view used for compiler-owned valid UTF-8 literal storage, including embedded NUL bytes.",
+				documentation("Defines the allocation-free private hxc_string view used for Haxe null and compiler-owned valid UTF-8 literal storage, including embedded NUL bytes.",
 					[
-					new RuntimeFeatureSelectionRoot("direct-string-value", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-						"A reachable immutable Haxe String value backed by compiler-owned literal storage."),
-					dependencyRoot("Selected transitively when a runtime operation consumes the compiler's direct literal representation.")
-				],
-					"The literal bytes and length are emitted directly in generated C; no runtime source or constructor is used.",
+						new RuntimeFeatureSelectionRoot("direct-string-value", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable immutable Haxe String value backed by compiler-owned literal storage."),
+						dependencyRoot("Selected transitively when a runtime operation consumes the compiler's direct literal representation.")
+					],
+					"The literal bytes and length are emitted directly in generated C; Haxe null uses a null data pointer, while every real String including the empty String has a non-null address.",
 					"The carrier itself is already the program-specific representation; cloning its ABI would make runtime consumers incompatible.",
 					"The header only shares the three-field call-boundary layout needed by selected consumers such as io.", "docs/hxrt.md",
 					["test/string_output/run.py", "test/runtime/runtime-feature-graph/run.py"])),
@@ -411,7 +411,7 @@ class RuntimeFeatureCatalog {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
 			case "array.h": "5fa277cf34f4b0e01c1a5d3b7152857cf6570d3a9d537cb2a18c41f444db3512";
-			case "base.h": "138aaf48fdb3abbf00d0403f891c3779578e50c4cb7629c4cc30027702896966";
+			case "base.h": "a31a991d83ff4dd172c256d2fd83fa5b607d938577d1ef2b66fd36eecd0418a7";
 			case "bytes.h": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
@@ -421,7 +421,7 @@ class RuntimeFeatureCatalog {
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
 			case "string.h": "ce5ac5689f7661deaaf954200d6c3f45e968e0cb91889e8bcad17cf5a5ca178c";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
-			case "string_literal.h": "0c9c2b70aa847b7e8a6f2a3fcca18e11bdafd03340a4955527446b3a47388e36";
+			case "string_literal.h": "2d3eb0b3382570a0350ea65c426fc27bd9ee43ccf23c990c3fcbaa0df7a7c802";
 			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
 			case "string_scalar.h": "528b1687cd8e358f7545f82b94ec08e037d594a49cdd0db42d9daae6c06eff87";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
@@ -441,7 +441,7 @@ class RuntimeFeatureCatalog {
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "c1fd06b27c78e644f3bf77bb8f9733fe7535bf6a0b05e40ebc1670e44422401d";
 			case "string_map.c": "5ab15280f51ec98b2aa8a1d39deaa256bbee889e5adf881aa4f3fa7b51e6f0b0";
-			case "string_scalar.c": "41171bfdd476b0862128676b2de23ed33b9533655e0667e86a614d257732c24c";
+			case "string_scalar.c": "ead61426f32caf4620bb6cf6bb447e72cb3b8b772b98671d1b57b13fca0cdf24";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}

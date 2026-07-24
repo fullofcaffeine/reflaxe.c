@@ -5569,20 +5569,53 @@ private class FunctionBuilder {
 		};
 	}
 
-	/** Compare immutable UTF-8 String views by contents, never by data pointer. */
+	/**
+		Compare nullable immutable UTF-8 String views by Haxe value semantics.
+
+		A general String comparison must distinguish Haxe `null` from every real
+		String, including `""`. A direct source literal is always a real String,
+		so the operation records that small proof in its closed operation name.
+		The C emitter can then omit impossible null branches while preserving the
+		source operand order and content comparison.
+	**/
 	function lowerStaticStringEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr, leftMapping:Null<CBodyValueType>,
 			rightMapping:Null<CBodyValueType>):LoweredValue {
-		if (leftMapping == null
-			|| rightMapping == null
-			|| leftMapping.staticStringIdentity() == null
-			|| rightMapping.staticStringIdentity() == null)
-			return unsupported(expression, "TBinop(String-equality:both-operands-must-be-non-null-admitted-String-values)");
-		final leftValue = coerce(lowerValue(left, leftMapping), leftMapping, left.pos, "TBinop(String-equality:left)");
+		if (leftMapping == null && rightMapping == null)
+			return unsupported(expression, "TBinop(String-equality-without-String-type)");
+		final target = leftMapping == null ? rightMapping : leftMapping;
+		if (target == null || target.staticStringIdentity() == null)
+			return unsupported(expression, "TBinop(String-equality-target-not-String)");
+		final leftIsNull = isNullConstantExpression(left);
+		final rightIsNull = isNullConstantExpression(right);
+		if (leftIsNull != rightIsNull) {
+			final valueExpression = leftIsNull ? right : left;
+			final value = coerce(lowerValue(valueExpression, target), target, valueExpression.pos, "TBinop(String-null-equality:value)");
+			final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(String-null-equality:result-type)");
+			if (boolMapping.irType != IRTBool)
+				return unsupported(expression, "TBinop(String-null-equality:result-not-Bool)");
+			final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
+			appendInstruction(result, IRIOUnary(operation == OpEq ? "haxe.string.is-null" : "haxe.string.is-not-null", value.id, IRIStatic),
+				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "string-null-equality");
+			return {id: result.id, type: result.type, mapping: boolMapping};
+		}
+		if (leftMapping != null
+			&& rightMapping != null
+			&& (leftMapping.staticStringIdentity() == null || rightMapping.staticStringIdentity() == null))
+			return unsupported(expression, "TBinop(String-equality-mixed-value-category)");
+		final leftValue = coerce(lowerValue(left, target), target, left.pos, "TBinop(String-equality:left)");
 		final stagedLeft = stageFlowValue(leftValue, left, expressionCreatesFlow(right), "string-equality-left");
-		final rightValue = coerce(lowerValue(right, rightMapping), rightMapping, right.pos, "TBinop(String-equality:right)");
+		final rightValue = coerce(lowerValue(right, target), target, right.pos, "TBinop(String-equality:right)");
 		final stableLeftId = restoreStagedValue(stagedLeft, "string-equality-left");
 		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
-		appendInstruction(result, IRIOBinary(operation == OpEq ? "haxe.string.equal" : "haxe.string.not-equal", stableLeftId, rightValue.id, IRIStatic),
+		// A left operand that crosses right-side control flow is first saved in a
+		// local. Do not claim the narrower literal proof after that structural
+		// rewrite: HxcIR's verifier intentionally accepts only a direct constant.
+		final leftLiteral = directStringLiteral(left) != null && !expressionCreatesFlow(right);
+		final rightLiteral = directStringLiteral(right) != null;
+		final proofSuffix = leftLiteral
+			&& rightLiteral ? ".non-null" : leftLiteral ? ".left-non-null" : rightLiteral ? ".right-non-null" : "";
+		appendInstruction(result,
+			IRIOBinary('${operation == OpEq ? "haxe.string.equal" : "haxe.string.not-equal"}$proofSuffix', stableLeftId, rightValue.id, IRIStatic),
 			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "string-equality");
 		registerValueTemporary(result.id, "string-equality-result");
 		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(String-equality:result-type)");
@@ -7140,6 +7173,8 @@ private class FunctionBuilder {
 		if (receiverMapping.staticStringIdentity() == null || typeKey(receiverMapping.irType) != typeKey(IRTString))
 			return unsupported(access.receiver, "TCall(String.charAt:receiver-not-immutable-String-view)");
 		final receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, "TCall(String.charAt:receiver)");
+		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+			HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), "string-char-at-receiver-null-check");
 		final indexMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(String.charAt:index-type)");
 		if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
 			return unsupported(arguments[0], "TCall(String.charAt:index-requires-Haxe-Int)");
@@ -7198,6 +7233,8 @@ private class FunctionBuilder {
 				if (sourceMapping.staticStringIdentity() == null || typeKey(sourceMapping.irType) != typeKey(IRTString))
 					return unsupported(arguments[0], "TCall(Bytes.ofString:source-not-immutable-String-view)");
 				final sourceValue = coerce(lowerValue(arguments[0], sourceMapping), sourceMapping, arguments[0].pos, "TCall(Bytes.ofString:source)");
+				appendInstruction(null, IRIONullCheck(sourceValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+					HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath), "bytes-of-string-source-null-check");
 				loweredArguments.push(sourceValue.id);
 			case _:
 				return unsupported(expression, 'TCall(Bytes.$method:not-yet-admitted)');

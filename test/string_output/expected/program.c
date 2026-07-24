@@ -3,11 +3,11 @@
 void hxc_Main_main(void)
 {
   hxc_string hxc_tmp_call_result_n0 = hxc_Main_selectLabel(true);
-  bool hxc_tmp_short_circuit_result_n0 = hxc_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true }.byte_length && (hxc_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true }.data, hxc_tmp_call_result_n0.byte_length) == 0);
-  if (hxc_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true }.byte_length && (hxc_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true }.data, hxc_tmp_call_result_n0.byte_length) == 0))
+  bool hxc_tmp_short_circuit_result_n0 = hxc_tmp_call_result_n0.data != NULL && (hxc_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true }.byte_length && (hxc_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true }.data, hxc_tmp_call_result_n0.byte_length) == 0));
+  if (hxc_tmp_call_result_n0.data != NULL && (hxc_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true }.byte_length && (hxc_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true }.data, hxc_tmp_call_result_n0.byte_length) == 0)))
   {
     hxc_string hxc_tmp_call_result_n2 = hxc_Main_selectLabel(false);
-    hxc_tmp_short_circuit_result_n0 = hxc_tmp_call_result_n2.byte_length == (hxc_string){ (const uint8_t *)"fallback", 8, true }.byte_length && (hxc_tmp_call_result_n2.byte_length == 0 || memcmp(hxc_tmp_call_result_n2.data, (hxc_string){ (const uint8_t *)"fallback", 8, true }.data, hxc_tmp_call_result_n2.byte_length) == 0);
+    hxc_tmp_short_circuit_result_n0 = hxc_tmp_call_result_n2.data != NULL && (hxc_tmp_call_result_n2.byte_length == (hxc_string){ (const uint8_t *)"fallback", 8, true }.byte_length && (hxc_tmp_call_result_n2.byte_length == 0 || memcmp(hxc_tmp_call_result_n2.data, (hxc_string){ (const uint8_t *)"fallback", 8, true }.data, hxc_tmp_call_result_n2.byte_length) == 0));
   }
   if (hxc_tmp_short_circuit_result_n0)
   {

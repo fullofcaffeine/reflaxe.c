@@ -351,7 +351,7 @@ class CBodyValueType {
 	**/
 	public function hasExactNullCarrier():Bool
 		return switch kind {
-			case CBVKClass(_, true) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_): true;
+			case CBVKStaticString(_) | CBVKClass(_, true) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_): true;
 			case _: false;
 		};
 }
@@ -910,11 +910,17 @@ class CBodyAggregateRegistry {
 	}
 
 	/**
-		Recognize `String` and nominal abstracts whose runtime carrier is String.
+		Recognize `String`, its documentary `Null` spelling, and nominal String abstracts.
 
 		The returned name is a source identity, not a C type name. Keeping it in
 		plans means diagnostics can still say `LogicalPath` even though C stores the
 		same immutable three-field view as ordinary `String`.
+
+		Haxe's default legacy null safety makes reference types nullable already,
+		so `Null<String>` does not introduce a second tagged representation. The
+		shared String carrier represents `null` directly through a null data
+		pointer and keeps a real empty String distinct through a non-null
+		zero-length pointer.
 	**/
 	static function staticStringIdentity(type:Type, depth:Int = 0, ?outerIdentity:String):Null<String> {
 		if (depth > 32)
@@ -929,6 +935,8 @@ class CBodyAggregateRegistry {
 				final definition = reference.get();
 				staticStringIdentity(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), depth + 1, outerIdentity);
 			case TInst(reference, parameters): final definition = reference.get(); parameters.length == 0 && definition.pack.length == 0 && definition.name == "String" ? (outerIdentity == null ? "String" : outerIdentity) : null;
+			case TAbstract(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Null" && parameters.length == 1):
+				staticStringIdentity(parameters[0], depth + 1, outerIdentity);
 			case TAbstract(reference, parameters) if (!reference.get().meta.has(":coreType")):
 				final definition = reference.get();
 				final identity = outerIdentity == null ? definition.pack.concat([definition.name]).join(".") : outerIdentity;

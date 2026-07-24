@@ -101,6 +101,8 @@ static bool hxc_bytes_equal(
 }
 
 static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
+  const hxc_string missing = HXC_STRING_INITIALIZER;
+  const hxc_string empty = HXC_STRING_EMPTY_INITIALIZER;
   const hxc_string emoji = HXC_STRING_LITERAL("\xF0\x9F\x98\x80");
   const hxc_string embedded = HXC_STRING_LITERAL("a\0b");
   const hxc_string composed = HXC_STRING_LITERAL("\xC3\xA9");
@@ -113,6 +115,9 @@ static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   uint32_t hash = UINT32_C(0);
   int32_t order = 7;
 
+  HXC_TEST_CHECK(!hxc_string_is_valid(missing));
+  HXC_TEST_CHECK(hxc_string_is_valid(empty));
+  HXC_TEST_CHECK(empty.data != NULL && empty.byte_length == 0u);
   HXC_TEST_CHECK(hxc_string_is_valid(emoji));
   HXC_TEST_CHECK(hxc_string_is_valid(embedded));
   HXC_TEST_CHECK(hxc_string_scalar_length(emoji, &length) == HXC_STATUS_OK);

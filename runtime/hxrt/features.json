@@ -609,7 +609,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "138aaf48fdb3abbf00d0403f891c3779578e50c4cb7629c4cc30027702896966",
+          "sourceSha256": "a31a991d83ff4dd172c256d2fd83fa5b607d938577d1ef2b66fd36eecd0418a7",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -801,8 +801,8 @@
           "test/runtime/runtime-feature-graph/run.py",
           "test/string_output/run.py"
         ],
-        "directAlternative": "The literal bytes and length are emitted directly in generated C; no runtime source or constructor is used.",
-        "contract": "Defines the allocation-free private hxc_string view used for compiler-owned valid UTF-8 literal storage, including embedded NUL bytes.",
+        "directAlternative": "The literal bytes and length are emitted directly in generated C; Haxe null uses a null data pointer, while every real String including the empty String has a non-null address.",
+        "contract": "Defines the allocation-free private hxc_string view used for Haxe null and compiler-owned valid UTF-8 literal storage, including embedded NUL bytes.",
         "programLocalAlternative": "The carrier itself is already the program-specific representation; cloning its ABI would make runtime consumers incompatible."
       },
       "dependencies": [
@@ -813,7 +813,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "0c9c2b70aa847b7e8a6f2a3fcca18e11bdafd03340a4955527446b3a47388e36",
+          "sourceSha256": "2d3eb0b3382570a0350ea65c426fc27bd9ee43ccf23c990c3fcbaa0df7a7c802",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_literal.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_literal.h"
@@ -821,7 +821,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Immutable valid UTF-8 literal carrier with explicit byte length and no allocation or object dependency.",
+      "summary": "Nullable immutable UTF-8 String carrier with explicit byte length and no allocation or object dependency.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -948,7 +948,7 @@
           "sourcePath": "runtime/hxrt/include/hxrt/string_scalar.h"
         },
         {
-          "sourceSha256": "41171bfdd476b0862128676b2de23ed33b9533655e0667e86a614d257732c24c",
+          "sourceSha256": "ead61426f32caf4620bb6cf6bb447e72cb3b8b772b98671d1b57b13fca0cdf24",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_scalar.c",
           "sourcePath": "runtime/hxrt/src/string_scalar.c"
@@ -987,7 +987,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 8
+      "minor": 9
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1024,7 +1024,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "018e7a8577784c07bd62b53232811d51464f3bc9ba6946586eb537ed29c168b5",
+      "sourceSetSha256": "8e732d619d0a746faf509b1b72cdb07d6e08882976fd2b80a5fe63f8616e2293",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

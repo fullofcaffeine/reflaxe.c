@@ -15,7 +15,8 @@ it to 0.3.0, E2.T07's hosted literal-output addition advanced it to 0.4.0, and
 E4.T04's additive typed-array storage advanced it to 0.5.0, E5.T03's
 shared-identity Array container advanced it to 0.6.0, E5.T04's fixed-length
 Bytes owner advanced it to 0.7.0, and the selected collector/root API advances
-it to 0.8.0. The schema-3 ABI
+it to 0.8.0. The later legacy-nullable String contract advances it to 0.9.0
+without changing the String carrier's field layout. The schema-3 ABI
 contract now defines same-major compatibility, but none of these internal
 markers is a stable application ABI promise.
 

@@ -137,6 +137,11 @@ REQUIRED_GATE_FILES = (
     "test/differential/string-char-at/generated/oracle.hxml",
     "test/differential/string-char-at/negative/Main.hx",
     "test/differential/string-char-at/run.py",
+    "test/differential/string-null/case.json",
+    "test/differential/string-null/generated/Main.hx",
+    "test/differential/string-null/generated/oracle.hxml",
+    "test/differential/string-null/negative/Main.hx",
+    "test/differential/string-null/run.py",
     "test/differential/bytes-runtime/bytes_runtime.c",
     "test/differential/bytes-runtime/case.json",
     "test/differential/bytes-runtime/generated/Main.hx",
@@ -1113,6 +1118,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:string-map entry point")
     if scripts.get("test:string-char-at") != "python3 test/differential/string-char-at/run.py":
         errors.append("package.json must retain the test:string-char-at entry point")
+    if scripts.get("test:string-null") != "python3 test/differential/string-null/run.py":
+        errors.append("package.json must retain the test:string-null entry point")
     if scripts.get("test:bytes-runtime") != "python3 test/differential/bytes-runtime/run.py":
         errors.append("package.json must retain the test:bytes-runtime entry point")
     if scripts.get("test:gc-runtime") != "python3 test/runtime/gc/run.py":
@@ -1273,6 +1280,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:string-map")
     if "npm run test:string-char-at" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-char-at")
+    if "npm run test:string-null" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:string-null")
     if "npm run test:bytes-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:bytes-runtime")
     if "npm run test:gc-runtime" not in str(scripts.get("test:toolchain", "")):
@@ -1487,6 +1496,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed StringMap runtime test")
     if "test/differential/string-char-at/run.py" not in pre_commit:
         errors.append("pre-commit must run the ordinary String.charAt differential test")
+    if "test/differential/string-null/run.py" not in pre_commit:
+        errors.append("pre-commit must run the legacy-nullable String differential test")
     if "test/differential/bytes-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the fixed-length Bytes runtime test")
     if "test/differential/string-runtime/run.py" not in pre_commit:

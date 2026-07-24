@@ -1003,6 +1003,9 @@ class CBodyEmitter {
 						final optional = requireOptional(valueType(fn, valueId));
 						final present = EMember(requireValue(state.values, valueId, fn.id), optional.presenceName, false);
 						operationId == "haxe.direct-optional.is-null" ? EUnary(LogicalNot, present) : present;
+					} else if (operationId == "haxe.string.is-null" || operationId == "haxe.string.is-not-null") {
+						final data = EMember(requireValue(state.values, valueId, fn.id), new CIdentifier("data"), false);
+						EBinary(operationId == "haxe.string.is-null" ? Equal : NotEqual, data, ENull);
 					} else {
 						operationExpression(operationId, implementation, [requireValue(state.values, valueId, fn.id)], state.helperNames, instruction.id,
 							fn.id);
@@ -1927,6 +1930,8 @@ class CBodyEmitter {
 			case IRTNullable(_, IRNTagged):
 				final optional = requireOptional(valueType(fn, valueId));
 				EUnary(LogicalNot, EMember(requireValue(values, valueId, functionId), optional.presenceName, false));
+			case IRTString:
+				EBinary(Equal, EMember(requireValue(values, valueId, functionId), new CIdentifier("data"), false), ENull);
 			case _: EBinary(Equal, requireValue(values, valueId, functionId), ENull);
 		};
 		addLineDirective(statements, instruction.source, lineDirectives);
@@ -2288,8 +2293,14 @@ class CBodyEmitter {
 				EBinary(NotEqual, left, right);
 			case "haxe.class-reference.not-equal" | "haxe.array-reference.not-equal" | "haxe.string-map-reference.not-equal":
 				EBinary(NotEqual, left, right);
-			case "haxe.string.equal": stringViewEqualExpression(left, right);
-			case "haxe.string.not-equal": EUnary(LogicalNot, stringViewEqualExpression(left, right));
+			case "haxe.string.equal": stringViewEqualExpression(left, right, false, false);
+			case "haxe.string.equal.left-non-null": stringViewEqualExpression(left, right, true, false);
+			case "haxe.string.equal.right-non-null": stringViewEqualExpression(left, right, false, true);
+			case "haxe.string.equal.non-null": stringViewEqualExpression(left, right, true, true);
+			case "haxe.string.not-equal": EUnary(LogicalNot, stringViewEqualExpression(left, right, false, false));
+			case "haxe.string.not-equal.left-non-null": EUnary(LogicalNot, stringViewEqualExpression(left, right, true, false));
+			case "haxe.string.not-equal.right-non-null": EUnary(LogicalNot, stringViewEqualExpression(left, right, false, true));
+			case "haxe.string.not-equal.non-null": EUnary(LogicalNot, stringViewEqualExpression(left, right, true, true));
 			case "haxe.i32.less" | "haxe.u32.less" | "haxe.f64.less": EBinary(Less, left, right);
 			case "haxe.i32.less-equal" | "haxe.u32.less-equal" | "haxe.f64.less-equal": EBinary(LessEqual, left, right);
 			case "haxe.i32.greater" | "haxe.u32.greater" | "haxe.f64.greater": EBinary(Greater, left, right);
@@ -2301,20 +2312,33 @@ class CBodyEmitter {
 	/**
 		Compare Haxe String contents without allocating or comparing data pointers.
 
-		Equal byte length is checked first. Empty strings compare equal without
-		calling `memcmp`, so a valid empty view may use a null data pointer. Canonical
-		UTF-8 makes byte equality exactly String equality for this admitted slice.
+		A null data pointer is Haxe `null`, while every real String--including the
+		empty String--has a non-null byte address. Two nulls compare equal; exactly
+		one null compares unequal. Non-null values compare by canonical UTF-8 bytes,
+		and zero-length values avoid calling `memcmp`.
 	**/
-	static function stringViewEqualExpression(left:CExpr, right:CExpr):CExpr {
+	static function stringViewEqualExpression(left:CExpr, right:CExpr, leftKnownNonNull:Bool, rightKnownNonNull:Bool):CExpr {
 		final data = new CIdentifier("data");
 		final byteLength = new CIdentifier("byte_length");
+		final leftData = EMember(left, data, false);
+		final rightData = EMember(right, data, false);
+		final leftIsNull = EBinary(Equal, leftData, ENull);
+		final rightIsNull = EBinary(Equal, rightData, ENull);
+		final leftIsNotNull = EBinary(NotEqual, leftData, ENull);
+		final rightIsNotNull = EBinary(NotEqual, rightData, ENull);
 		final leftLength = EMember(left, byteLength, false);
 		final rightLength = EMember(right, byteLength, false);
 		final sameLength = EBinary(Equal, leftLength, rightLength);
 		final empty = EBinary(Equal, leftLength, EInt(CIntegerLiteral.decimal("0")));
-		final sameBytes = EBinary(Equal, ECall(EIdentifier(new CIdentifier("memcmp")), [EMember(left, data, false), EMember(right, data, false), leftLength]),
-			EInt(CIntegerLiteral.decimal("0")));
-		return EBinary(LogicalAnd, sameLength, EBinary(LogicalOr, empty, sameBytes));
+		final sameBytes = EBinary(Equal, ECall(EIdentifier(new CIdentifier("memcmp")), [leftData, rightData, leftLength]), EInt(CIntegerLiteral.decimal("0")));
+		final bothNonNullEqual = EBinary(LogicalAnd, sameLength, EBinary(LogicalOr, empty, sameBytes));
+		if (leftKnownNonNull && rightKnownNonNull)
+			return bothNonNullEqual;
+		if (leftKnownNonNull)
+			return EBinary(LogicalAnd, rightIsNotNull, bothNonNullEqual);
+		if (rightKnownNonNull)
+			return EBinary(LogicalAnd, leftIsNotNull, bothNonNullEqual);
+		return EConditional(EBinary(LogicalOr, leftIsNull, rightIsNull), EBinary(Equal, leftData, rightData), bothNonNullEqual);
 	}
 
 	/**
@@ -2487,7 +2511,8 @@ class CBodyEmitter {
 						addUnique(headers, "stdlib.h");
 					case IRIOCall({dispatch: IRCDRuntime("string-scalar", "char-at")}):
 						addUnique(headers, "hxrt/string_scalar.h");
-					case IRIOBinary("haxe.string.equal" | "haxe.string.not-equal", _, _, IRIStatic):
+					case IRIOBinary("haxe.string.equal" | "haxe.string.equal.left-non-null" | "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null",
+						_, _, IRIStatic):
 						addUnique(headers, "string.h");
 					case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
 						addUnique(headers, "stddef.h");
@@ -4495,9 +4520,18 @@ class CBodyEmitter {
 	function constantExpressionForType(value:HxcIRConstant, type:HxcIRTypeRef):CExpr {
 		return switch [value, type] {
 			case [IRCNull, IRTNullable(_, IRNTagged)]: directOptionalNullExpression(type);
+			case [IRCNull, IRTString]: stringNullExpression();
 			case _: constantExpression(value);
 		};
 	}
+
+	/** Build the struct-valued C carrier for Haxe's nullable String reference. */
+	static function stringNullExpression():CExpr
+		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType))), DName(null), IList([
+			{designators: [DField(new CIdentifier("data"))], value: IExpr(ENull)},
+			{designators: [DField(new CIdentifier("byte_length"))], value: IExpr(EInt(CIntegerLiteral.decimal("0", ISUnsigned)))},
+			{designators: [DField(new CIdentifier("has_trailing_nul"))], value: IExpr(EBool(false))}
+		]));
 
 	function directOptionalNullExpression(type:HxcIRTypeRef):CExpr {
 		final optional = requireOptional(type);

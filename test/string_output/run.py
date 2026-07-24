@@ -669,7 +669,7 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
 
         compatibility_root = build / f"{toolchain.family}-runtime-compatibility"
         compatibility_root.mkdir()
-        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "8u", "999u")
+        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "9u", "999u")
         compatible_build = compatibility_root / "compatible-build"
         compatible_build.mkdir()
         compatible_executable = compile_native(toolchain, compatible, "O0", compatible_build)

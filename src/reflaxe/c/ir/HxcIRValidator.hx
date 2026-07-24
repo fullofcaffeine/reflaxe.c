@@ -1516,6 +1516,10 @@ private class HxcIRValidationState {
 					if (!validOperand || implementation != IRIStatic || !validResult)
 						add(path, "direct-optional null testing requires a tagged scalar, record, or enum operand and a static Bool result",
 							instruction.source);
+				} else if (operationId == "haxe.string.is-null" || operationId == "haxe.string.is-not-null") {
+					final validResult = instruction.result != null && instruction.result.type == IRTBool;
+					if (operandType != IRTString || implementation != IRIStatic || !validResult)
+						add(path, "String null testing requires one String carrier and a static Bool result", instruction.source);
 				}
 			case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
 				validateStableId(operationId, '$path.operation', instruction.source);
@@ -1580,11 +1584,15 @@ private class HxcIRValidationState {
 					if (implementation != IRIStatic || !hasBoolResult) {
 						add(path, "enum-tag equality requires a static Bool result", instruction.source);
 					}
-				} else if (operationId == "haxe.string.equal" || operationId == "haxe.string.not-equal") {
+				} else if (isStringEqualityOperation(operationId)) {
 					final binaryResult = instruction.result;
 					final hasBoolResult = binaryResult != null && binaryResult.type == IRTBool;
 					if (leftType != IRTString || rightType != IRTString || implementation != IRIStatic || !hasBoolResult)
 						add(path, "String equality requires two immutable String views and a static Bool result", instruction.source);
+					if (stringEqualityRequiresLeftNonNull(operationId) && !isStringConstantValue(leftValueId, valueSites))
+						add(path, "String equality's left-non-null proof requires a directly defined String constant", instruction.source);
+					if (stringEqualityRequiresRightNonNull(operationId) && !isStringConstantValue(rightValueId, valueSites))
+						add(path, "String equality's right-non-null proof requires a directly defined String constant", instruction.source);
 				}
 			case IRIOConvert(valueId, kind, targetType, implementation, failure):
 				final sourceType = requireValue(valueId, '$path.value', instruction.source, available);
@@ -2023,10 +2031,12 @@ private class HxcIRValidationState {
 					switch checkedType {
 						case IRTPointer(IRTInstance(instanceId), true) if (isClassInstance(instanceId)):
 							nullProofs.set(valueId, true);
+						case IRTString:
+							nullProofs.set(valueId, true);
 						case value if (isTaggedOptionalType(value)):
 							nullProofs.set(valueId, true);
 						case _:
-							add(path, "null check requires a nullable concrete-class reference or tagged scalar, record, or enum", instruction.source);
+							add(path, "null check requires a nullable String, concrete-class reference, or tagged scalar, record, or enum", instruction.source);
 					}
 				}
 				validateNullCheckPolicy(policy, '$path.policy', instruction.source);
@@ -2150,8 +2160,12 @@ private class HxcIRValidationState {
 					validateIntMapCall(call, argumentTypes, path, source);
 				} else if (featureId == "bytes") {
 					validateManagedBytesCall(call, argumentTypes, path, source);
+					if (operationId == "of-string-utf8" && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
+						add(path, "Bytes.ofString requires a preceding dominating String null check", source);
 				} else if (featureId == "string-scalar") {
 					validateStringScalarCall(call, argumentTypes, path, source);
+					if (operationId == "char-at" && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
+						add(path, "String.charAt requires a preceding dominating receiver null check", source);
 				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
@@ -3500,6 +3514,63 @@ private class HxcIRValidationState {
 	static function isNumeric(type:HxcIRTypeRef):Bool
 		return isInteger(type) || isFloat(type);
 
+	/**
+		Recognize the closed String-equality family, including non-null proofs.
+
+		The proof-bearing variants do not change Haxe semantics. They state that
+		one or both operands came from a direct String literal, which lets CAST
+		omit a null branch that cannot be taken. Listing every spelling here keeps
+		unknown operation names fail-closed.
+	**/
+	static function isStringEqualityOperation(operationId:String):Bool {
+		return switch operationId {
+			case "haxe.string.equal" | "haxe.string.equal.left-non-null" | "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" |
+				"haxe.string.not-equal" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	/** Whether this closed operation spelling claims a non-null left operand. */
+	static function stringEqualityRequiresLeftNonNull(operationId:String):Bool {
+		return switch operationId {
+			case "haxe.string.equal.left-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.non-null":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	/** Whether this closed operation spelling claims a non-null right operand. */
+	static function stringEqualityRequiresRightNonNull(operationId:String):Bool {
+		return switch operationId {
+			case "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null":
+				true;
+			case _:
+				false;
+		};
+	}
+
+	/**
+		Prove that one SSA value is a real String rather than Haxe `null`.
+
+		`IRCString` always owns compiler-emitted bytes, including a non-null byte
+		address for `""`. Looking through loads or calls would require a separate
+		data-flow proof, so this focused optimization deliberately accepts only a
+		direct constant definition.
+	**/
+	static function isStringConstantValue(valueId:String, valueSites:Map<String, HxcIRInstructionSite>):Bool {
+		final site = valueSites.get(valueId);
+		if (site == null)
+			return false;
+		return switch site.instruction.kind {
+			case IRIOConstant(IRCString(_, _)): true;
+			case _:
+				false;
+		};
+	}
+
 	static function isInteger(type:HxcIRTypeRef):Bool {
 		return switch type {
 			case IRTInt(_, _) | IRTAbiInteger(_): true;
@@ -3881,7 +3952,7 @@ private class HxcIRValidationState {
 				};
 			case IRCNull:
 				switch type {
-					case IRTPointer(_, true) | IRTNullable(_, _): true;
+					case IRTString | IRTPointer(_, true) | IRTNullable(_, _): true;
 					case IRTInstance(_): isManagedArrayReference(type) || isManagedIntBoolMap(type) || isManagedStringMapReference(type);
 					case _: false;
 				}

@@ -20,7 +20,9 @@ E2.T07 added the provisional hosted output API and advanced it to 0.4.0;
 E4.T04's additive array slice advances the internal same-major contract to
 0.5.0, E5.T03's shared Array identity layer advanced it to 0.6.0, E5.T04's
 fixed-length Bytes owner advanced it to 0.7.0, and the separate selected
-collector/root API advances it to 0.8.0. That
+collector/root API advanced it to 0.8.0. Preserving Haxe's legacy-nullable
+String identity without changing the three-field layout advances the internal
+semantic contract to 0.9.0. That
 marker does not stabilize the private string layout or application ABI.
 
 ## Representation and invariants
@@ -39,6 +41,12 @@ shortest-form UTF-8 for Unicode scalar values:
   different strings; and
 - scalar positions, never byte or UTF-16-unit positions, drive length, access,
   and slicing.
+
+The byte pointer also carries Haxe reference-null identity. A null pointer is
+Haxe `null`; every actual String, including `""`, has a non-null address.
+Runtime validators reject the null carrier as String content, and generated
+operations that require a value perform a checked null access first. This
+keeps null distinct without adding a second tagged wrapper to every String.
 
 `HXC_STRING_LITERAL` and the private `hxc_string` carrier live in the narrow
 `string_literal.h` header. The initializer accepts an actual valid UTF-8 C
@@ -62,11 +70,14 @@ parameters and returns and can be stored in closed records, tagged enums,
 abstract such as `ScenarioId(String)` keeps its Haxe identity in plans and
 diagnostics even though its generated C carrier is the same String view.
 
-`Null<String>` and `Null<ScenarioId>` use an explicit presence flag beside the
-view. The flag—not a null byte pointer—distinguishes `null` from the valid empty
-String. Equality compares byte lengths and then the canonical UTF-8 bytes with
-`memcmp`; it never compares the storage pointers, because two equal Strings are
-allowed to reside at different addresses.
+Under Haxe's default legacy null safety, both `String` and `Null<String>` are
+the same nullable reference value; `Null` is documentary for a reference type.
+`Null<ScenarioId>` follows the same rule for an abstract over String. The
+three-field view therefore uses its null data pointer for absence, while the
+empty literal points at non-null static storage. Equality first handles null
+identity, then compares non-null values by byte length and canonical UTF-8
+content with `memcmp`. It never treats different non-null storage pointers as
+unequal.
 
 This is deliberately smaller than general String support. `String.charAt`
 returns another borrowed view, so it works without creating owned bytes. A
@@ -216,6 +227,13 @@ indices. It also proves the exact allocation-free runtime plan and generated
 strict C across split, package, and unity layouts. This is evidence for
 `charAt`, not for neighboring String methods.
 
+[`test/differential/string-null`](../test/differential/string-null) compares
+the pinned Eval and generated-C behavior for plain and explicit nullable
+Strings. It covers calls, returns, early control flow, aliases, a nominal
+String abstract, null-versus-empty equality, HxcIR null identity, strict C/C++
+consumption, deterministic layouts, and sanitizers. Its negative fixture keeps
+runtime-created String operations outside this bounded capability.
+
 [`test/enum_lowering`](../test/enum_lowering) proves that a nominal
 abstract-over-String literal can be constructed, copied, passed, returned,
 stored in an enum, projected, and compared across split, package, and unity
@@ -232,6 +250,7 @@ Run the focused evidence with:
 python3 test/differential/string-runtime/run.py
 python3 test/differential/string-runtime/run.py --native-only --toolchain clang
 npm run test:string-char-at
+npm run test:string-null
 npm run test:runtime-features
 npm run test:string-output
 npm run test:native

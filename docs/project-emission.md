@@ -255,7 +255,7 @@ evidence. `CProjectEmitter` rejects any unrelated runtime plan or payload. See
 
 Because every selected closure includes `runtime-base`, the private generated
 program header also carries one structural C11 assertion that the runtime ABI
-major matches the compiler's internal 0.8.0 contract. Same-major minor changes
+major matches the compiler's internal 0.9.0 contract. Same-major minor changes
 remain compatible; a changed major fails before linking. Runtime-free projects
 contain no `hxrt` include, version marker, or compatibility assertion. This is
 not a public application ABI: primitive production emission rejects public

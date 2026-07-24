@@ -739,7 +739,7 @@ artifact read for an empty plan.
 
 The schema-3 feature catalog also owns each feature's semantic contract,
 selection roots, rejected direct/local alternatives, executable evidence,
-internal runtime ABI 0.8.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
+internal runtime ABI 0.9.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
 rechecks those bytes, and the sorted source set has one aggregate digest. Every
 nonempty closure contains `runtime-base`; generated private headers therefore
 emit a structural same-major assertion against `HXC_RUNTIME_ABI_MAJOR`. Empty

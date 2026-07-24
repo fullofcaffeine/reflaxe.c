@@ -393,16 +393,18 @@ def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
     if result.returncode == 0:
         return
     # Runtime String parameters now reach Bytes.ofString as immutable UTF-8
-    # views. The next reachable boundary is Haxe's legacy-nullable String
-    # coercion, owned by haxe_c-aml.2. Requiring that exact later diagnostic
-    # proves this lane passed both the caller-owner and String-view boundaries
-    # rather than accepting an arbitrary Caxecraft failure.
+    # views, and the following legacy-nullable String flow also lowers. The next
+    # reachable boundary is the nominal action-id switch owned by haxe_c-aml.3.
+    # Requiring that exact later diagnostic proves this lane passed both prior
+    # boundaries rather than accepting an arbitrary Caxecraft failure.
     if (
-        "src/caxecraft/scenario/CaxeFlowValueReader.hx:166:" not in result.stderr
-        or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
+        "src/caxecraft/scenario/CaxeFlowValueReader.hx:170:" not in result.stderr
+        or "TSwitch(subject-type):closed-record-not-admitted-in-primitive-operation"
         not in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
         or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
+        or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
+        in result.stderr
     ):
         raise BytesRuntimeFailure(
             "Caxecraft did not compile past its former fresh Bytes argument boundary\n"

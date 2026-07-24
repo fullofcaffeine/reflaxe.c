@@ -74,7 +74,7 @@ The catalog is the machine-diffable internal schema-3
 `hxc-runtime-feature-graph-v3` contract. In addition to graph and packaging
 facts, every feature records its selection roots, semantic contract, rejected
 direct/program-local alternatives, shared-runtime rationale, documentation, and
-executable evidence. It records internal ABI version 0.8.0, same-major
+executable evidence. It records internal ABI version 0.9.0, same-major
 generated-code compatibility, the exact application-export exclusion for
 runtime-owned types, every artifact digest, one digest over the sorted source
 set, and the strict C11/C++17 header build baselines. The runtime plan remains
@@ -171,7 +171,7 @@ prevents independent C evidence from becoming a generated-Haxe support claim.
 | Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. `none` either records the structured whole-program proof or reports every blocker before output/native linking. |
 | Environment | Literal output is hosted-only and fails planning for freestanding, WASI, or Emscripten. The native allocator retains hosted execution and freestanding custom-allocator/no-libc-allocation evidence. |
 | Generated C | Admitted runtime-free graphs, including bounded stack constructors, remain byte-stable and contain no `hxrt` artifact or symbol. Literal output, Array, Bytes, object descriptors, and GC package only their declared dependency closures through normal Reflaxe ownership. Every runtime-using program checks ABI major 0 structurally. |
-| Public ABI | Runtime 0.8.0 is a versioned internal same-major contract. The manifest marks all runtime-owned layouts forbidden in application exports; generated application exports remain unsupported and E7/E10.T09 own their future admission and stabilization. |
+| Public ABI | Runtime 0.9.0 is a versioned internal same-major contract. The manifest marks all runtime-owned layouts forbidden in application exports; generated application exports remain unsupported and E7/E10.T09 own their future admission and stabilization. |
 
 ## Exact packaging
 

@@ -32,7 +32,7 @@ hxc_status hxc_utf8_validate(
 bool hxc_string_is_valid(hxc_string value) {
   hxc_byte_view view;
   size_t scalar_length;
-  if (value.data == NULL && value.byte_length != 0u) {
+  if (value.data == NULL) {
     return false;
   }
   if (value.has_trailing_nul
@@ -96,7 +96,7 @@ hxc_status hxc_string_slice(
   size_t slice_start;
   size_t consumed = 0u;
   hxc_utf8_step step;
-  hxc_string result = HXC_STRING_INITIALIZER;
+  hxc_string result = HXC_STRING_EMPTY_INITIALIZER;
   if (out_slice == NULL) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
@@ -138,7 +138,7 @@ hxc_string hxc_string_char_at(
   hxc_string source,
   int32_t scalar_index
 ) {
-  hxc_string result = HXC_STRING_INITIALIZER;
+  hxc_string result = HXC_STRING_EMPTY_INITIALIZER;
   if (scalar_index < 0) {
     return result;
   }

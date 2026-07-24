@@ -188,6 +188,13 @@ enum HxcIRConstant {
 	/** A header-owned C enum or object-like macro with a typed result. */
 	IRCNativeConstant(constantId:String);
 
+	/**
+		An absent value whose result type names its exact nullable carrier.
+
+		This includes nullable pointers, tagged direct optionals, and `IRTString`.
+		String uses a struct in C, but its null data pointer is the reference-null
+		discriminant; a non-null empty String therefore remains distinguishable.
+	**/
 	IRCNull;
 }
 

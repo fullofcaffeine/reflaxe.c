@@ -56,6 +56,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:int-map",
         "test:string-map",
         "test:string-char-at",
+        "test:string-null",
         "test:bytes-runtime",
         "test:gc-runtime",
         "test:string-runtime",

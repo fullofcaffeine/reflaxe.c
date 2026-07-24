@@ -42,6 +42,14 @@ at least a byte pointer and byte length. It may also carry ownership flags,
 cached scalar length, an ASCII flag, or indexing metadata, but its layout is
 private and is never the stable exported C ABI.
 
+With Haxe's default legacy null safety, `String` is a nullable reference type;
+writing `Null<String>` documents that fact but does not introduce another
+source-level value representation. The private C carrier therefore represents
+Haxe `null` directly. In the current layout a null data pointer is the null
+discriminant, while every real String--including `""`--has a non-null byte
+address. This keeps `null != ""`, lets plain `String` parameters receive the
+null values that Haxe permits, and avoids a redundant presence wrapper.
+
 The stored bytes are well-formed, shortest-form UTF-8 for Unicode scalar values:
 
 - embedded NUL is ordinary string content;
@@ -103,6 +111,9 @@ failure, and lifetime.
   reported costs rather than hidden baseline allocation.
 - Invalid external text has a stable lossy conversion and a separate checked
   conversion; binary round trips stay on `Bytes`.
+- Legacy-nullable `String` values preserve null identity across parameters,
+  returns, control-flow joins, and nominal abstracts without confusing null
+  with the empty String.
 - The string runtime can link independently of object graphs, reflection, and
   the collector.
 
@@ -117,3 +128,7 @@ failure, and lifetime.
 - Implicit normalization: it changes equality, length, hashes, and round trips.
 - Allowing malformed UTF-8 inside `String`: every consumer would need a second
   error model and ordinary Haxe operations could cease to be total.
+- Encoding null as the empty String: Haxe observes them as different values.
+- Wrapping only explicit `Null<String>` in a tagged optional: under default
+  null safety plain `String` is nullable too, so the wrapper would make
+  equivalent Haxe types use incompatible call representations.
