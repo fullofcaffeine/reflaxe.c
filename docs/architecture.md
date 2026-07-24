@@ -308,6 +308,11 @@ address remain parent-bound borrows. Locals and owned children select no
 runtime, while aliases, escapes, reassignment, recursive direct layouts, and
 fallible child construction remain fail-closed; see [bounded constructor
 lowering](constructor-lowering.md).
+Direct constructor and `super` calls also settle omitted trailing defaults
+before HxcIR. The validator therefore sees only one fixed-arity direct call and
+can reject a missing or mistyped value before CAST chooses C syntax. Non-managed
+tagged record optionals participate in this bounded path; managed or callable
+families still require their own ownership contract.
 Constructor symbol planning also retains the prepared Haxe value family. A
 closed record parameter uses its validated by-value aggregate identity. An
 interface parameter uses its exact nominal interface identity only when the

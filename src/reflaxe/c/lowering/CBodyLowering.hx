@@ -1834,8 +1834,8 @@ private class ConstructorPreparer {
 			final declared = declaredSignature.arguments[index];
 			if (isRestType(argument.v.t))
 				unsupported(input.expression.pos, 'TFunction(constructor-rest-argument:${argument.v.name})');
-			if (argument.value != null || declared.opt)
-				unsupported(input.expression.pos, 'TFunction(constructor-optional-or-default-argument:${argument.v.name})');
+			if (declared.opt && argument.value == null)
+				unsupported(input.expression.pos, 'TFunction(constructor-optional-argument-without-typed-default:${argument.v.name})');
 			final mapping = admittedValueType(declared.t, input.expression.pos, 'TFunction(constructor-argument:${argument.v.name})');
 			if (mapping.irType == IRTVoid)
 				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:Void)');
@@ -1861,7 +1861,7 @@ private class ConstructorPreparer {
 				// storage. A `this.field` capture instead enters the collector graph
 				// settled before this body is lowered.
 				borrowedReference: interfaceRemainsCallBounded,
-				defaultValue: null
+				defaultValue: argument.value
 			});
 		}
 		return {
@@ -1970,6 +1970,8 @@ private class ConstructorPreparer {
 				'class-reference:${nullable ? "nullable" : "nonnull"}:${classValue.instanceId}';
 			case CBVKAggregate(aggregate):
 				'closed-record:${aggregate.instanceId}';
+			case CBVKOptional(optional) if (!optional.managedLifetime):
+				'direct-optional:${optional.planId}';
 			case CBVKInterface(interfaceValue):
 				'interface-reference:${interfaceValue.instanceId}';
 			case _:
@@ -3131,17 +3133,15 @@ private class FunctionBuilder {
 		final signature = constructorSignaturesById.get(targetId);
 		if (signature == null)
 			unsupported(expression, 'TNew(unavailable-constructor:$targetId)');
-		if (construction.arguments.length != signature.arguments.length) {
-			unsupported(expression, 'TNew(argument-count=${construction.arguments.length},expected=${signature.arguments.length},target=$targetId)');
-		}
+		final argumentExpressions = completeDirectCallArguments(expression, construction.arguments, signature.arguments, 0, targetId, "constructor-argument");
 		final localMapping = bodyValueType(variable.t, position, 'TVar(${variable.name}:constructed-type)');
 		if (localMapping.classValue() == null)
 			unsupportedAt(position, 'TNew(non-class-local:${variable.name})');
 
 		// Haxe evaluates constructor arguments before entering the constructor body.
 		final arguments:Array<String> = [];
-		for (index in 0...construction.arguments.length) {
-			final argumentExpression = construction.arguments[index];
+		for (index in 0...argumentExpressions.length) {
+			final argumentExpression = argumentExpressions[index];
 			if (referencesStackConstructedValue(argumentExpression) && !signature.arguments[index].borrowedReference) {
 				unsupported(argumentExpression, 'TNew(stack-reference-escape:constructor-argument:$index)');
 			}
@@ -3292,12 +3292,12 @@ private class FunctionBuilder {
 			return unsupported(expression, 'TNew(unavailable-constructor:$targetId)');
 		if (signature.input.canFail)
 			return unsupported(expression, 'TNew(managed-fallible-constructor-not-yet-admitted:$targetId)');
-		if (construction.arguments.length != signature.arguments.length)
-			return unsupported(expression, 'TNew(argument-count=${construction.arguments.length},expected=${signature.arguments.length},target=$targetId)');
+		final argumentExpressions = completeDirectCallArguments(expression, construction.arguments, signature.arguments, 0, targetId,
+			"managed-constructor-argument");
 
 		final arguments:Array<String> = [];
-		for (index in 0...construction.arguments.length) {
-			final sourceArgument = construction.arguments[index];
+		for (index in 0...argumentExpressions.length) {
+			final sourceArgument = argumentExpressions[index];
 			final argument = coerce(lowerValue(sourceArgument, signature.arguments[index].mapping), signature.arguments[index].mapping, sourceArgument.pos,
 				'TNew(managed-argument:$index,target=$targetId)');
 			rejectOwnedClassBorrow(argument, sourceArgument.pos, 'TNew(owned-class-borrow-escape:managed-constructor-argument:$index)');
@@ -3342,16 +3342,14 @@ private class FunctionBuilder {
 		final target = constructorSignaturesById.get(baseId);
 		if (target == null)
 			unsupported(expression, 'TCall(super:unavailable-constructor:$baseId)');
-		if (callArguments.length != target.arguments.length) {
-			unsupported(expression, 'TCall(super:argument-count=${callArguments.length},expected=${target.arguments.length},target=$baseId)');
-		}
+		final argumentExpressions = completeDirectCallArguments(expression, callArguments, target.arguments, 0, baseId, "super-argument");
 		final self = selfValue;
 		if (self == null)
 			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter');
 		final baseSelf = coerce(self, target.selfMapping, expression.pos, 'TCall(super:self,target=$baseId)');
 		final arguments:Array<String> = [baseSelf.id];
-		for (index in 0...callArguments.length) {
-			final argument = callArguments[index];
+		for (index in 0...argumentExpressions.length) {
+			final argument = argumentExpressions[index];
 			if (referencesStackConstructedValue(argument))
 				unsupported(argument, 'TNew(stack-reference-escape:super-argument:$index)');
 			final converted = coerce(lowerValue(argument, target.arguments[index].mapping), target.arguments[index].mapping, argument.pos,

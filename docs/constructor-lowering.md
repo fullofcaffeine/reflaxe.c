@@ -129,6 +129,41 @@ The full record identity participates in the constructor's semantic symbol key;
 the readable C name stays source-shaped because that key is only a collision
 and determinism input.
 
+### Optional and default constructor arguments
+
+Haxe may omit trailing constructor arguments whose declarations provide a
+default. C has no omitted-call syntax: every call must match its prototype
+exactly. Haxe.c therefore settles the argument list before HxcIR, using the same
+rule as proven direct function calls:
+
+```haxe
+new RestoreReader();                 // inserts both declaration defaults
+new RestoreReader(7, null);          // explicit null stays explicit
+new RestoreReader(7, {tick: 12});    // supplied record stays present
+```
+
+The constructor declaration keeps each default as a typed Haxe expression.
+When `new` or `super` supplies fewer trailing arguments, the call lowerer
+appends those typed defaults and then lowers the completed list from left to
+right. Haxe requires default declarations to be compile-time constants, so a
+side-effecting call cannot legally appear as a declaration default. Supplied
+argument expressions can have effects and are still evaluated exactly once
+before object initialization and the constructor body.
+
+An optional `?restore:RestorePoint` uses a typed `null` default. Omission and an
+explicitly written `null` both produce an absent tagged optional, while a
+supplied record sets its presence flag and carries the record by value. The
+generated constructor remains one ordinary fixed-arity C function; it has no
+overload wrapper or runtime “was this argument supplied?” test.
+
+This bounded constructor slice admits tagged optionals only when their payload
+has no managed lifetime. A managed optional may need retain/release or tracing
+when copied or stored, so it remains closed until its constructor-call
+ownership contract is explicit. Function values and other unproven parameter
+families remain closed for the same reason. HxcIR receives only the completed
+argument list, then independently verifies its count and exact type against the
+direct constructor function before CAST selects C syntax.
+
 The independently proven interface-dispatch family also has a bounded
 constructor contract. A Haxe interface value becomes a small C value containing
 two pointers: `object` points at the concrete instance and `table` points at the
@@ -226,6 +261,8 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
 - generic class construction without a closed class specialization; and
 - constructor parameters whose prepared value family has no constructor-call
   contract, even when the family shares the generic `IRTInstance` IR shape;
+- managed optional, callable, or other constructor parameters whose copy and
+  lifetime contract has not yet been admitted;
 - an interface constructor parameter that is stored, returned, thrown,
   captured, or otherwise allowed to outlive its call; and
 - broader exceptions, runtime-checked interface casts, dynamic/generic
@@ -261,7 +298,13 @@ server reuse, and strict native execution. `interface_parameter` proves the
 same output and native matrix for a by-value interface pair whose constructor
 performs real interface dispatch; `interface_parameter_escape` proves that the
 pair cannot be retained after the call. `instance_parameter` proves that a
-fieldless enum sharing the `IRTInstance` shape remains rejected. The positive
+fieldless enum sharing the `IRTInstance` shape remains rejected.
+`default_arguments` proves omitted and supplied defaults, explicit `null`, a
+present optional record, exactly-once supplied-argument evaluation, and
+`super()` completion across split/package/unity, reversed discovery, warm
+server reuse, Eval, strict C11, and sanitizer lanes. `default_callable` proves
+that valid Haxe with an unproven callable representation still fails before any
+C is emitted. The positive
 semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an
 inner temporary, empty-constructor elision, a same-function stack alias, and a

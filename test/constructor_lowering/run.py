@@ -30,6 +30,7 @@ DEFAULT_RUNTIME = FIXTURES / "default_runtime"
 RECORD_PARAMETER = FIXTURES / "record_parameter"
 INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
+DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -76,6 +77,7 @@ NEGATIVE_CASES = {
     ),
     "conditional": "TNew(stack-construction-requires-unconditional-entry-block)",
     "cycle": "TNew(constructor-cycle:CycleA -> CycleB -> CycleA)",
+    "default_callable": "TFunction(constructor-argument:0-type-not-admitted:",
     "escape_alias": "TNew(stack-reference-escape:assignment)",
     "escape_return": "TNew(stack-reference-escape:return)",
     "escape_self": "TNew(stack-reference-escape:assignment)",
@@ -128,6 +130,15 @@ RETAINED_INTERFACE_NATIVE_COVERAGE = frozenset(
         "constructor-retained-interface-managed-implementation",
         "constructor-retained-interface-trace",
         "constructor-retained-interface-dispatch-after-collection",
+    }
+)
+DEFAULT_ARGUMENT_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-default-argument-omission",
+        "constructor-default-argument-supplied-once",
+        "constructor-explicit-null-argument",
+        "constructor-optional-record-argument",
+        "super-constructor-default-argument",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -432,6 +443,67 @@ def validate_retained_interface_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "retained interface fixture lost exact object tracing or later dispatch"
         )
+
+
+def validate_default_argument_project(output: Path) -> None:
+    """Prove constructor calls settle defaults before fixed-arity C emission."""
+
+    sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    constructors = [
+        symbol
+        for symbol in symbols.get("symbols", [])
+        if isinstance(symbol, dict)
+        and symbol.get("kind") == "method"
+        and str(symbol.get("sourceSymbol", "")).startswith(
+            "compiler.constructor.Main.DefaultedRecord("
+        )
+    ]
+    if len(constructors) != 1:
+        raise ConstructorLoweringFailure(
+            "default-argument fixture omitted its fixed-arity constructor symbol"
+        )
+    overload = constructors[0].get("overloadSignature")
+    if (
+        not isinstance(overload, list)
+        or len(overload) != 3
+        or not str(overload[0]).startswith("class-reference:nonnull:")
+        or overload[1] != "i32"
+        or not str(overload[2]).startswith("direct-optional:optional.")
+    ):
+        raise ConstructorLoweringFailure(
+            "default-argument constructor lost its settled optional-record signature"
+        )
+    if (
+        "hxc_compiler_constructor_Main_DefaultedRecord("
+        "struct hxc_Main_DefaultedRecord *hxc_self, int32_t hxc_value, "
+        "struct hxc_optional_Main_RestorePoint hxc_restore)" not in headers
+        or sources.count("= hxc_Main_DefaultSource_next();") != 1
+        or sources.count(".hxc_has_value = true") != 1
+        or sources.count(".hxc_has_value = false") < 4
+    ):
+        raise ConstructorLoweringFailure(
+            "constructor omission, explicit null, presence, or once-only argument evaluation drifted"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != []
+        or "bounded-stack-construction" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "default-argument fixture lost its direct runtime-free plan"
+        )
+    for forbidden in ("hxrt", "malloc(", "calloc(", "realloc(", "goto "):
+        if forbidden in (sources + headers).lower():
+            raise ConstructorLoweringFailure(
+                f"default-argument constructor emitted forbidden shape {forbidden!r}"
+            )
 
 
 def render_parameter_server_pair(
@@ -1100,8 +1172,18 @@ def check_native(
                 coverage=RETAINED_INTERFACE_NATIVE_COVERAGE,
                 validate_project=validate_retained_interface_project,
             )
+            default_argument_projects = render_parameter_projects(
+                fixture_root,
+                fixture=DEFAULT_ARGUMENTS,
+                slug="default-arguments",
+                coverage=DEFAULT_ARGUMENT_NATIVE_COVERAGE,
+                validate_project=validate_default_argument_project,
+            )
             parameter_projects = (
-                record_projects + interface_projects + retained_interface_projects
+                record_projects
+                + interface_projects
+                + retained_interface_projects
+                + default_argument_projects
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1124,6 +1206,7 @@ def check_native(
                     | RECORD_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
+                    | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1161,7 +1244,9 @@ def check_native(
             validate_report(
                 sanitizer_report,
                 required_coverage=(
-                    RECORD_NATIVE_COVERAGE | INTERFACE_NATIVE_COVERAGE
+                    RECORD_NATIVE_COVERAGE
+                    | INTERFACE_NATIVE_COVERAGE
+                    | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
@@ -1174,6 +1259,7 @@ def check_eval_oracle() -> None:
         ("constructor oracle", ORACLE),
         ("record-parameter oracle", RECORD_PARAMETER),
         ("interface-parameter oracle", INTERFACE_PARAMETER),
+        ("default-argument oracle", DEFAULT_ARGUMENTS),
     ):
         result = subprocess.run(
             [

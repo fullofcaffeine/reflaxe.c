@@ -95,8 +95,11 @@ values: one presence bit plus the exact primitive payload. Consequently,
 omitted/null, false/zero, and nonzero values remain distinct without boxing or
 a magic sentinel. Literal `String` defaults and nullable admitted records,
 enums, Arrays, and class references also work through their selected
-representations. Constructors, indirect function values, unresolved
-virtual/interface omission, exports, and rest parameters remain fail-closed.
+representations. Bounded concrete constructors reuse this completion rule for
+the parameter families documented in
+[constructor lowering](constructor-lowering.md). Indirect function values,
+unresolved virtual/interface omission, exports, and rest parameters remain
+fail-closed.
 Rest parameters still report the parameter-specific `HXC1001`; they are not C
 variadics.
 
@@ -276,7 +279,7 @@ both fixture and production C under strict GCC and Clang lanes at `-O0` and
 Broader object/string operations, general arrays, generic classes/references,
 descriptor-driven generic bodies, unresolved virtual/interface omission,
 capturing closures and closure environments, exceptions, escaping allocation,
-managed or recursive enum-constructor adapters, optional/default constructors,
+managed or recursive enum-constructor adapters,
 public exports, rest arguments, and general standard-library lowering remain
 outside this slice and fail closed. Native
 build orchestration is still future `hxc`/adapter work; direct Haxe invocation
