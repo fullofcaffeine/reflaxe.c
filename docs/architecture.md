@@ -309,10 +309,13 @@ runtime, while aliases, escapes, reassignment, recursive direct layouts, and
 fallible child construction remain fail-closed; see [bounded constructor
 lowering](constructor-lowering.md).
 Constructor symbol planning also retains the prepared Haxe value family. A
-closed record parameter may use its validated by-value aggregate identity,
-while an enum, interface, collection, or managed value that shares the
-`IRTInstance` IR constructor remains closed until its own call and lifetime
-contract is proven.
+closed record parameter uses its validated by-value aggregate identity. An
+interface parameter uses its exact nominal interface identity only when the
+constructor body proves that the copied object/table pair remains a
+call-bounded borrow; HxcIR records and validates that interface borrow
+separately from a class-pointer borrow. Enums, collections, and other managed
+values that share the `IRTInstance` IR constructor remain closed until their
+own call and lifetime contracts are proven.
 Closed-world class dispatch adds a request-local reachable call catalog,
 hierarchy-root table layouts, representation-checked slots, typed receiver
 adapters, and explicit table binding. Direct calls stay direct, unused

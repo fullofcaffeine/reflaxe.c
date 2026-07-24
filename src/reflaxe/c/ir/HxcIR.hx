@@ -508,6 +508,16 @@ typedef HxcIRFunction = {
 	/** Class-reference parameters whose storage remains owned by the caller. */
 	final borrowedClassParameterIds:Array<String>;
 
+	/**
+		Interface-value parameters whose referenced object remains caller-owned.
+
+		The interface value itself is copied by value, but its object pointer is
+		only valid for the call. This optional field is an additive compatibility
+		bridge for older hand-built HxcIR fixtures; compiler-produced functions
+		always supply it, including an empty list.
+	**/
+	final ?borrowedInterfaceParameterIds:Array<String>;
+
 	/** Automatic pointer locals that only rename caller- or parent-owned class storage. */
 	final borrowedClassLocalIds:Array<String>;
 

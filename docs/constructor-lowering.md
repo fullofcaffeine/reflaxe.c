@@ -127,9 +127,34 @@ void hxc_compiler_constructor_ConfiguredSpawn(
 
 The full record identity participates in the constructor's semantic symbol key;
 the readable C name stays source-shaped because that key is only a collision
-and determinism input. Other instance families remain source-positioned
-`HXC1001` failures until their own dispatch, ownership, and lifetime contracts
-are proven.
+and determinism input.
+
+The independently proven interface-dispatch family also has a bounded
+constructor contract. A Haxe interface value becomes a small C value containing
+two pointers: `object` points at the concrete instance and `table` points at the
+method table for that exact interface. A constructor receives that pair by
+value and may call its methods during the constructor call:
+
+```c
+void hxc_compiler_constructor_ConfiguredScore(
+  struct hxc_ConfiguredScore *self,
+  struct hxc_compiler_interface_dispatch_ScoreSource_value source
+);
+```
+
+Copying the pair does **not** copy or own the object. The object can be a local
+whose storage belongs to the caller, so the constructor parameter is a
+call-bounded borrow: it may inspect the object or call through the interface,
+but it may not store, return, throw, or capture the interface value. Constructor
+preparation checks the typed Haxe body for that no-escape contract. HxcIR then
+records the parameter as `ownership=borrowed-interface` and independently
+rejects a later operation that would let the borrow escape. This keeps the
+generated code allocation-free without turning a short-lived pointer into a
+dangling one.
+
+Enums, collections, managed values, and every other `IRTInstance` family remain
+source-positioned `HXC1001` failures until their own call, copy, ownership, and
+lifetime contracts are proven.
 
 An empty constructor, or an empty zero-argument `super` chain whose base is
 also proven trivial, has no C symbol and no call. Source arguments are still
@@ -185,8 +210,10 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
 - generic class construction without a closed class specialization; and
 - constructor parameters whose prepared value family has no constructor-call
   contract, even when the family shares the generic `IRTInstance` IR shape;
-  and
-- broader exceptions, interface/dynamic/generic dispatch, allocation,
+- an interface constructor parameter that is stored, returned, thrown,
+  captured, or otherwise allowed to outlive its call; and
+- broader exceptions, runtime-checked interface casts, dynamic/generic
+  dispatch, allocation,
   ownership, or public ABI.
 
 Haxe itself rejects attempts to instantiate an interface before the custom
@@ -214,7 +241,10 @@ npm run snapshots:check
 `test/constructor_lowering/fixtures/minimal/Main.hx` is the small readable
 example. The focused `record_parameter` fixture proves a direct closed record
 argument in split, package, and unity output, reversed discovery, warm compiler
-server reuse, and strict native execution; `instance_parameter` proves that a
+server reuse, and strict native execution. `interface_parameter` proves the
+same output and native matrix for a by-value interface pair whose constructor
+performs real interface dispatch; `interface_parameter_escape` proves that the
+pair cannot be retained after the call. `instance_parameter` proves that a
 fieldless enum sharing the `IRTInstance` shape remains rejected. The positive
 semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an

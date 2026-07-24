@@ -283,7 +283,7 @@
         "E3.T04"
       ],
       "limitations": [
-        "Bounded nonescaping stack construction and closed-world virtual dispatch are separate capabilities; general allocation, interface/dynamic dispatch, generic classes, runtime descriptors, reflection/type tests, ownership/GC, and public class ABI remain fail-closed.",
+        "Bounded nonescaping stack construction and closed-world class/interface dispatch are separate capabilities; general allocation, retained interface fields, dynamic dispatch, generic classes, runtime descriptors, reflection/type tests, ownership/GC, and public class ABI remain fail-closed.",
         "The generated program header and every asserted layout are private compiler implementation details, not stable exports."
       ]
     },
@@ -334,8 +334,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Concrete non-generic Haxe classes support bounded nonescaping stack construction and final inline child ownership with exact constructor order and explicit failure cleanup.",
-      "scope": "Unconditional entry-block local new expressions lower through schema-17 HxcIR to default-initialized automatic storage and ordinary private C constructor functions. A proven nonescaping parent may directly own an exact final child initialized with an infallible constructor; HxcIR retains by-value ownership, child definitions precede parents, and child references remain nonescaping borrows. Haxe-generated inline-method receiver aliases use an explicit non-owning automatic local, so they can be reloaded after lazy Boolean control flow without creating a second owner or extending the parent lifetime. Known ordinary Haxe functions and methods may use caller-owned class parameters during one direct call; HxcIR rejects alias reassignment, return, owning storage, constructor capture, block-edge forwarding, and calls without a proven borrow parameter. Super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
+      "summary": "Concrete non-generic Haxe classes support bounded nonescaping stack construction, final inline child ownership, by-value closed-record arguments, and call-bounded interface arguments with exact order and cleanup.",
+      "scope": "Unconditional entry-block local new expressions lower through schema-17 HxcIR to default-initialized automatic storage and ordinary private C constructor functions. A proven nonescaping parent may directly own an exact final child initialized with an infallible constructor; HxcIR retains by-value ownership, child definitions precede parents, and child references remain nonescaping borrows. Haxe-generated inline-method receiver aliases use an explicit non-owning automatic local, so they can be reloaded after lazy Boolean control flow without creating a second owner or extending the parent lifetime. Known ordinary Haxe functions and methods may use caller-owned class parameters during one direct call. Constructors may receive a validated closed record by value or an exact two-pointer interface value when the typed body proves that the interface remains a call-bounded borrow. HxcIR distinguishes borrowed class and interface parameters and rejects alias reassignment, return, owning storage, constructor capture, block-edge forwarding, and calls without a proven borrow parameter. Super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
       "evidence": [
         "docs/constructor-lowering.md",
         "src/reflaxe/c/lowering/CBodyConstructor.hx",
@@ -347,10 +347,11 @@
         "examples/caxecraft/run_haxe_c_test.py"
       ],
       "owners": [
-        "E3.T05"
+        "E3.T05",
+        "E3.T07"
       ],
       "limitations": [
-        "Escaping, aliased, assigned, returned, passed, or conditional object references; mutable, reassigned, escaping, type-mismatched, or fallibly constructed owned children; constructor or direct-layout cycles; native layouts; generic/interface construction; heap allocation; general exceptions; interface/dynamic dispatch; object runtime metadata; and public class ABI remain fail-closed."
+        "Escaping, aliased, assigned, returned, passed, or conditional object references; retained interface fields; mutable, reassigned, escaping, type-mismatched, or fallibly constructed owned children; constructor or direct-layout cycles; native layouts; generic construction; heap allocation; general exceptions; dynamic dispatch; object runtime metadata; and public class ABI remain fail-closed."
       ]
     },
     {
@@ -602,8 +603,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Schema-13 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, explicit binary32 rounding/binary64 widening, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, Float32, fixed-array/span, aggregate, concrete class-reference, bounded constructor, closed-world virtual-dispatch, bounded enum, literal-output, managed Array, haxe.io.Bytes, and direct-C-import lowering slices.",
+      "summary": "Schema-17 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable class/interface layouts, slots and tables, distinct caller-owned class and interface borrows, exact native dispatch/constants, binary32 rounding/binary64 widening, strings, ordering, control flow, failures, cleanup, managed roots, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, Float32, fixed-array/span, aggregate, concrete class-reference, bounded constructor, closed-world class/interface dispatch, bounded enum, literal-output, managed Array, haxe.io.Bytes, collector-root, and direct-C-import lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
@@ -623,6 +624,7 @@
         "E3.T04",
         "E3.T05",
         "E3.T06",
+        "E3.T07",
         "E6.T03",
         "E6.T05"
       ],
@@ -1370,8 +1372,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Reachable ordinary class methods support deterministic minimal closed-world virtual dispatch while statically known calls remain direct.",
-      "scope": "Non-generic infallible class methods lower through schema-17 HxcIR with explicit caller-owned self, root-only reachable slots, constructed-class tables, typed receiver adapters, exact override representation validation, and a conditional explanatory dispatch report; the generated strict C11 remains runtime-free and has no public exports.",
+      "summary": "Reachable ordinary class and interface methods support deterministic minimal closed-world dispatch while statically known class calls remain direct.",
+      "scope": "Non-generic infallible class methods lower through schema-17 HxcIR with explicit caller-owned self, root-only reachable slots, constructed-class tables, typed receiver adapters, and exact override representation validation. Proven class-to-interface conversion builds a compact object/table pair; inherited and multiple-interface views dispatch through exact program-local interface tables, and call-bounded constructor parameters carry separate borrow metadata. The conditional report explains both class and interface calls. Generated strict C11 remains runtime-free and has no public exports.",
       "evidence": [
         "docs/virtual-dispatch.md",
         "docs/specs/dispatch-report.schema.json",
@@ -1384,10 +1386,11 @@
         "test/virtual_dispatch/run.py"
       ],
       "owners": [
-        "E3.T06"
+        "E3.T06",
+        "E3.T07"
       ],
       "limitations": [
-        "Interfaces, closures, dynamic or generic methods/classes, escaping allocation, exception-bearing virtual methods, reflection/type tests, public class layouts, and stable method ABI remain fail-closed.",
+        "Retained interface fields, runtime-checked interface casts/type tests, closures, dynamic or generic methods/classes, escaping allocation, exception-bearing virtual methods, reflection, public class layouts, and stable method ABI remain fail-closed.",
         "The generated table structs, object header pointer, adapters, identifiers, and hxc.dispatch.json report are private compiler artifacts rather than public ABI."
       ]
     }

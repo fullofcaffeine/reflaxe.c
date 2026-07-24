@@ -1050,7 +1050,15 @@ private typedef PreparedParameter = {
 	final compilerId:Int;
 	final ir:HxcIRParameter;
 	final mapping:CBodyValueType;
-	final borrowedClass:Bool;
+
+	/**
+		Whether the parameter may name caller-owned object storage for this call.
+
+		Concrete class pointers and interface `{ object, table }` values use
+		different HxcIR ownership lists, but source-level escape checks need the
+		same answer: the callee may use this reference and must not keep it.
+	**/
+	final borrowedReference:Bool;
 
 	/**
 	 * The Haxe-typed value used when a direct call omits this parameter.
@@ -1315,7 +1323,7 @@ private class EnumConstructorAdapterRegistry {
 				compilerId: -1 - index,
 				ir: {id: parameterId, type: payload.valueType.irType, source: source},
 				mapping: payload.valueType,
-				borrowedClass: false,
+				borrowedReference: false,
 				defaultValue: null
 			});
 			final parameterRequest = new CSymbolRequest(CSKLocal, [
@@ -1373,6 +1381,7 @@ private class EnumConstructorAdapterRegistry {
 			displayName: '${prepared.declarationPath}.${prepared.displayName}',
 			parameters: prepared.parameters.map(parameter -> parameter.ir),
 			borrowedClassParameterIds: [],
+			borrowedInterfaceParameterIds: [],
 			borrowedClassLocalIds: [],
 			managedRoots: [],
 			locals: [],
@@ -1505,7 +1514,7 @@ private class FunctionPreparer {
 				compilerId: argument.v.id,
 				ir: {id: parameterId, type: mapping.irType, source: source},
 				mapping: mapping,
-				borrowedClass: mapping.classValue() != null && parameterCanBorrow(functionValue.expr, argument.v.id),
+				borrowedReference: mapping.classValue() != null && parameterCanBorrow(functionValue.expr, argument.v.id),
 				defaultValue: argument.value
 			});
 		}
@@ -1528,7 +1537,7 @@ private class FunctionPreparer {
 				compilerId: -1,
 				ir: {id: "parameter.self", type: selfMapping.irType, source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)},
 				mapping: selfMapping,
-				borrowedClass: true,
+				borrowedReference: true,
 				defaultValue: null
 			};
 		}
@@ -1628,7 +1637,7 @@ private class FunctionPreparer {
 		known target parameter, which permits safe direct borrow forwarding while
 		virtual, native, and otherwise unproven forwarding remains closed.
 	**/
-	static function parameterCanBorrow(body:TypedExpr, compilerId:Int):Bool {
+	public static function parameterCanBorrow(body:TypedExpr, compilerId:Int):Bool {
 		var safe = true;
 		function visit(expression:TypedExpr):Void {
 			if (!safe)
@@ -1761,6 +1770,9 @@ private class ConstructorPreparer {
 				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:Void)');
 			if (mapping.spanElement() != null)
 				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:borrowed-span-constructor-not-admitted)');
+			final borrowedInterface = mapping.interfaceValue() != null;
+			if (borrowedInterface && !FunctionPreparer.parameterCanBorrow(functionValue.expr, argument.v.id))
+				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:interface-value-must-remain-call-bounded)');
 			arguments.push({
 				compilerId: argument.v.id,
 				ir: {
@@ -1769,7 +1781,7 @@ private class ConstructorPreparer {
 					source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)
 				},
 				mapping: mapping,
-				borrowedClass: false,
+				borrowedReference: borrowedInterface,
 				defaultValue: null
 			});
 		}
@@ -1799,7 +1811,7 @@ private class ConstructorPreparer {
 			compilerId: -1,
 			ir: {id: "parameter.self", type: signature.selfMapping.irType, source: source},
 			mapping: signature.selfMapping,
-			borrowedClass: false,
+			borrowedReference: false,
 			defaultValue: null
 		};
 		final parameters = [self].concat(signature.arguments);
@@ -1879,6 +1891,8 @@ private class ConstructorPreparer {
 				'class-reference:${nullable ? "nullable" : "nonnull"}:${classValue.instanceId}';
 			case CBVKAggregate(aggregate):
 				'closed-record:${aggregate.instanceId}';
+			case CBVKInterface(interfaceValue):
+				'interface-reference:${interfaceValue.instanceId}';
 			case _:
 				unsupported(input.expression.pos, 'TFunction(constructor-$role-type-not-admitted:${value.cSpelling})');
 		};
@@ -2004,7 +2018,7 @@ private class FunctionBuilder {
 		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.bodyExpression.pos, input.sourcePath));
 		for (parameter in prepared.parameters) {
 			final value:LoweredValue = {id: parameter.ir.id, type: parameter.ir.type, mapping: parameter.mapping};
-			if (parameter.borrowedClass)
+			if (parameter.borrowedReference)
 				borrowedClassValueIds.set(parameter.ir.id, true);
 			if (parameter.ir.id == "parameter.self") {
 				selfValue = value;
@@ -2163,8 +2177,11 @@ private class FunctionBuilder {
 			parameters: prepared.parameters.map(parameter -> parameter.ir),
 			borrowedClassParameterIds: prepared.parameters.filter(parameter -> {
 				final classValue = parameter.mapping.classValue();
-				return parameter.borrowedClass && (classValue == null || !classValue.managedByCollector);
+				return parameter.borrowedReference && classValue != null && !classValue.managedByCollector;
 			}).map(parameter -> parameter.ir.id),
+			borrowedInterfaceParameterIds: prepared.parameters.filter(parameter -> parameter.borrowedReference
+				&& parameter.mapping.interfaceValue() != null)
+				.map(parameter -> parameter.ir.id),
 			borrowedClassLocalIds: borrowedLocalIds,
 			managedRoots: [],
 			locals: locals,
@@ -2999,7 +3016,7 @@ private class FunctionBuilder {
 		final arguments:Array<String> = [];
 		for (index in 0...construction.arguments.length) {
 			final argumentExpression = construction.arguments[index];
-			if (referencesStackConstructedValue(argumentExpression)) {
+			if (referencesStackConstructedValue(argumentExpression) && !signature.arguments[index].borrowedReference) {
 				unsupported(argumentExpression, 'TNew(stack-reference-escape:constructor-argument:$index)');
 			}
 			final argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
@@ -5957,7 +5974,7 @@ private class FunctionBuilder {
 		for (index in 0...argumentExpressions.length) {
 			final argumentExpression = argumentExpressions[index];
 			final parameter = target.parameters[index];
-			if (referencesStackConstructedValue(argumentExpression) && !parameter.borrowedClass) {
+			if (referencesStackConstructedValue(argumentExpression) && !parameter.borrowedReference) {
 				return unsupported(argumentExpression, 'TNew(stack-reference-escape:static-call-argument:$index,target=$targetId)');
 			}
 			final value = lowerValue(argumentExpression, parameter.mapping);
@@ -5973,7 +5990,7 @@ private class FunctionBuilder {
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Bytes-argument-needs-owner:$index,target=$targetId)');
 			if (borrowedManagedArrayElementValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(borrowed-managed-Array-element-argument:$index,target=$targetId)');
-			if (!parameter.borrowedClass)
+			if (!parameter.borrowedReference)
 				rejectOwnedClassBorrow(converted, argumentExpression.pos, 'TCall(owned-class-borrow-escape:static-call-argument:$index,target=$targetId)');
 			stagedArguments.push(stageFlowValue(converted, argumentExpression, laterExpressionCreatesFlow(argumentExpressions, index),
 				'static-call-argument-$index'));
@@ -6941,7 +6958,7 @@ private class FunctionBuilder {
 				throw new CBodyEmissionError('instance target `$targetId` lost its self parameter');
 			for (index in 1...directTarget.parameters.length) {
 				explicitMappings.push(directTarget.parameters[index].mapping);
-				explicitBorrowedClasses.push(directTarget.parameters[index].borrowedClass);
+				explicitBorrowedClasses.push(directTarget.parameters[index].borrowedReference);
 			}
 			returnMapping = directTarget.returnMapping;
 			dispatchKind = IRCDDirect(targetId);

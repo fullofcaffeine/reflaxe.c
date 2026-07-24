@@ -276,7 +276,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `class-layout` | `implemented` | Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts. |
 | `closed-anonymous-record-lowering` | `implemented` | A bounded closed anonymous-record graph emits deduplicated private value structs and runs as runtime-free strict C11. |
 | `configuration-policies` | `implemented` | A target-neutral typed core strictly parses schema-1 hxc.json, resolves six precedence layers, and reports every effective value with provenance. |
-| `constructor-lowering` | `implemented` | Concrete non-generic Haxe classes support bounded nonescaping stack construction and final inline child ownership with exact constructor order and explicit failure cleanup. |
+| `constructor-lowering` | `implemented` | Concrete non-generic Haxe classes support bounded nonescaping stack construction, final inline child ownership, by-value closed-record arguments, and call-bounded interface arguments with exact order and cleanup. |
 | `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
 | `diagnostics` | `implemented` | Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
 | `direct-c-import` | `implemented` | Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C. |
@@ -288,7 +288,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
 | `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
-| `hxc-ir` | `implemented` | Schema-13 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, explicit binary32 rounding/binary64 widening, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent. |
+| `hxc-ir` | `implemented` | Schema-17 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable class/interface layouts, slots and tables, distinct caller-owned class and interface borrows, exact native dispatch/constants, binary32 rounding/binary64 widening, strings, ordering, control flow, failures, cleanup, managed roots, and runtime intent. |
 | `literal-backed-string-values` | `implemented` | Immutable Haxe String values backed by source literals can flow through direct typed values without allocation. |
 | `literal-string-output` | `implemented` | Compiler-known String literals support hosted Sys.println and default trace with exact UTF-8/NUL bytes and explicit output failure handling. |
 | `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim inputs validate interop boundary shapes. |
@@ -319,7 +319,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `typed-ast-input` | `implemented` | Complete typed-module capture and deterministic normalized ownership survive order changes and compiler-server reuse. |
 | `typed-boundary-governance` | `implemented` | Repository-owned Haxe has a source-exact guard against unreviewed untyped compiler seams. |
 | `typed-c-contract-validation` | `implemented` | Namespaced typed-C declaration and build metadata produce a deterministic validated structural snapshot. |
-| `virtual-dispatch` | `implemented` | Reachable ordinary class methods support deterministic minimal closed-world virtual dispatch while statically known calls remain direct. |
+| `virtual-dispatch` | `implemented` | Reachable ordinary class and interface methods support deterministic minimal closed-world dispatch while statically known class calls remain direct. |
 
 **Hard claim gates not passed:** `full-standard-library`, `general-haxe-to-c`, `performance-validated`, `production-ready`, `public-abi-stability`, `supported-platforms`, `supported-release`.
 

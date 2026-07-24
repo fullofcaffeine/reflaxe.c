@@ -195,6 +195,7 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "mismatchedClassEquality",
         "borrowedClassStore",
         "borrowedClassReturn",
+        "borrowedInterfaceStore",
         "primitiveRuntimeConversion",
         "invalidFloat32Narrow",
         "invalidFloat32Widen",

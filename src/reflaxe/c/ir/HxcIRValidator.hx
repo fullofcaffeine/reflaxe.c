@@ -653,6 +653,27 @@ private class HxcIRValidationState {
 				}
 			}
 		}
+		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
+		for (index => parameterId in borrowedInterfaceParameterIds) {
+			final borrowPath = '$path.borrowedInterfaceParameter:$index';
+			validateStableId(parameterId, borrowPath, fn.source);
+			if (borrowedIds.exists(parameterId)) {
+				add(borrowPath, 'duplicate borrowed reference parameter `$parameterId`', fn.source);
+				continue;
+			}
+			borrowedIds.set(parameterId, true);
+			final parameter = parametersById.get(parameterId);
+			if (parameter == null) {
+				add(borrowPath, 'borrowed interface parameter `$parameterId` is not a function parameter', fn.source);
+			} else {
+				switch parameter.type {
+					case IRTInstance(instanceId):
+						requireDirectReferenceInstance(instanceId, '$borrowPath.type', parameter.source);
+					case _:
+						add(borrowPath, 'borrowed interface parameter `$parameterId` must be a direct interface value', parameter.source);
+				}
+			}
+		}
 		for (local in sorted(fn.locals, item -> item.id)) {
 			final localPath = '$path.local:${local.id}';
 			validateStableId(local.id, '$localPath.id', local.source);
@@ -1024,6 +1045,9 @@ private class HxcIRValidationState {
 		}
 		for (parameterId in fn.borrowedClassParameterIds)
 			borrowedClassValues.set(parameterId, true);
+		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
+		for (parameterId in borrowedInterfaceParameterIds)
+			borrowedClassValues.set(parameterId, true);
 		for (parameter in block.parameters) {
 			available.set(parameter.id, parameter.type);
 		}
@@ -1058,22 +1082,23 @@ private class HxcIRValidationState {
 	}
 
 	/**
-		Enforce the caller-owned class-reference contract before HxcIR reaches C.
+		Enforce caller-owned class and interface reference contracts before C.
 
-		A borrowed class value is a pointer to storage that this function may use
-		during the call but may not keep. Scalar field mutation is therefore fine;
-		copying the pointer into another owner, returning it, or handing it to a
-		callee without the same checked contract is not.
+		A borrowed class pointer or interface pair refers to storage that this
+		function may use during the call but may not keep. Scalar field mutation
+		and interface dispatch are therefore fine; copying the reference into
+		another owner, returning it, or handing it to a callee without the same
+		checked contract is not.
 	**/
 	function validateBorrowedClassInstruction(instruction:HxcIRInstruction, path:String, borrowed:Map<String, Bool>, borrowedLocals:Map<String, Bool>):Void {
 		function rejectValue(valueId:String, role:String):Void {
 			if (borrowed.exists(valueId))
-				add(path, 'borrowed class value `$valueId` escapes through $role', instruction.source);
+				add(path, 'borrowed reference value `$valueId` escapes through $role', instruction.source);
 		}
 		function rejectValues(valueIds:Array<String>, role:String):Void {
 			for (index => valueId in valueIds)
 				if (borrowed.exists(valueId))
-					add(path, 'borrowed class value `$valueId` escapes through $role $index', instruction.source);
+					add(path, 'borrowed reference value `$valueId` escapes through $role $index', instruction.source);
 		}
 
 		switch instruction.kind {
@@ -1119,12 +1144,12 @@ private class HxcIRValidationState {
 			if (!borrowed.exists(valueId))
 				continue;
 			final admitted = switch call.dispatch {
-				case IRCDDirect(functionId): final target = functions.get(functionId); target != null && index < target.parameters.length && target.borrowedClassParameterIds.indexOf(target.parameters[index].id) != -1;
+				case IRCDDirect(functionId): directTargetBorrowsArgument(functionId, index);
 				case IRCDVirtual(_, _) | IRCDInterface(_, _, _) | IRCDClosure(_) | IRCDNative(_) | IRCDRuntime(_, _) | IRCDIntrinsic(_):
 					false;
 			};
 			if (!admitted)
-				add(path, 'borrowed class argument `$valueId` has no checked borrow contract at argument $index', source);
+				add(path, 'borrowed reference argument `$valueId` has no checked borrow contract at argument $index', source);
 		}
 		for (receiverId in borrowedDispatchReceivers(call.dispatch))
 			if (borrowed.exists(receiverId))
@@ -1133,8 +1158,18 @@ private class HxcIRValidationState {
 						// A virtual or interface receiver is used only for this dispatch. Its explicit
 						// arguments remain rejected above until slots carry borrow contracts.
 					case _:
-						add(path, 'borrowed class receiver `$receiverId` has no checked dispatch contract', source);
+						add(path, 'borrowed reference receiver `$receiverId` has no checked dispatch contract', source);
 				}
+	}
+
+	/** Check one direct-call parameter against both admitted borrow carriers. */
+	function directTargetBorrowsArgument(functionId:String, argumentIndex:Int):Bool {
+		final target = functions.get(functionId);
+		if (target == null || argumentIndex >= target.parameters.length)
+			return false;
+		final parameterId = target.parameters[argumentIndex].id;
+		final borrowedInterfaces = target.borrowedInterfaceParameterIds == null ? [] : target.borrowedInterfaceParameterIds;
+		return target.borrowedClassParameterIds.indexOf(parameterId) != -1 || borrowedInterfaces.indexOf(parameterId) != -1;
 	}
 
 	function borrowedDispatchReceivers(dispatch:HxcIRCallDispatch):Array<String> {
@@ -1176,12 +1211,12 @@ private class HxcIRValidationState {
 	function validateBorrowedClassTerminator(kind:HxcIRTerminatorKind, path:String, source:HxcSourceSpan, borrowed:Map<String, Bool>):Void {
 		function rejectValue(valueId:String, role:String):Void {
 			if (borrowed.exists(valueId))
-				add(path, 'borrowed class value `$valueId` escapes through $role', source);
+				add(path, 'borrowed reference value `$valueId` escapes through $role', source);
 		}
 		function rejectEdge(edge:HxcIRBlockEdge, role:String):Void {
 			for (index => valueId in edge.arguments)
 				if (borrowed.exists(valueId))
-					add(path, 'borrowed class value `$valueId` escapes through $role argument $index', source);
+					add(path, 'borrowed reference value `$valueId` escapes through $role argument $index', source);
 		}
 		switch kind {
 			case IRTJump(edge):
@@ -1205,7 +1240,7 @@ private class HxcIRValidationState {
 				rejectValue(valueId, "a throw");
 				for (index => argument in edge.arguments)
 					if (borrowed.exists(argument))
-						add(path, 'borrowed class value `$argument` escapes through failure-edge argument $index', source);
+						add(path, 'borrowed reference value `$argument` escapes through failure-edge argument $index', source);
 			case IRTUnreachable:
 		}
 	}

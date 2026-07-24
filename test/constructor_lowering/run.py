@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import replace
 from pathlib import Path
 
@@ -28,6 +28,7 @@ MINIMAL = FIXTURES / "minimal"
 FAILURE_RUNTIME = FIXTURES / "failure_runtime"
 DEFAULT_RUNTIME = FIXTURES / "default_runtime"
 RECORD_PARAMETER = FIXTURES / "record_parameter"
+INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -79,6 +80,10 @@ NEGATIVE_CASES = {
     "escape_self": "TNew(stack-reference-escape:assignment)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
     "instance_parameter": "TFunction(constructor-argument:0-type-not-admitted:haxe-enum:",
+    "interface_parameter_escape": (
+        "TFunction(constructor-argument:source:"
+        "interface-value-must-remain-call-bounded)"
+    ),
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
     "owned_fallible": "TNew(owned-field-fallible-construction-not-admitted:constructor.Child)",
     "owned_mutable": "field:child:owned-class-field-must-be-final",
@@ -105,6 +110,14 @@ RECORD_NATIVE_COVERAGE = frozenset(
         "constructor-record-parameter",
         "constructor-record-parameter-by-value",
         "constructor-record-parameter-stack-owner",
+    }
+)
+INTERFACE_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-interface-parameter",
+        "constructor-interface-parameter-by-value",
+        "constructor-interface-parameter-call-borrow",
+        "constructor-interface-parameter-dispatch",
     }
 )
 
@@ -293,7 +306,85 @@ def validate_record_parameter_project(output: Path) -> None:
             )
 
 
-def render_record_server_pair(root: Path) -> tuple[Path, Path]:
+def validate_interface_parameter_project(output: Path) -> None:
+    """Prove the constructor keeps the nominal interface and its bounded borrow."""
+
+    sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    dispatch = json.loads((output / "hxc.dispatch.json").read_text(encoding="utf-8"))
+    constructors = [
+        symbol
+        for symbol in symbols.get("symbols", [])
+        if isinstance(symbol, dict)
+        and symbol.get("kind") == "method"
+        and str(symbol.get("sourceSymbol", "")).startswith(
+            "compiler.constructor.ConfiguredScore("
+        )
+    ]
+    if len(constructors) != 1:
+        raise ConstructorLoweringFailure(
+            "interface-parameter fixture omitted its one constructor symbol"
+        )
+    overload = constructors[0].get("overloadSignature")
+    if (
+        not isinstance(overload, list)
+        or len(overload) != 3
+        or not str(overload[0]).startswith("class-reference:nonnull:")
+        or not str(overload[1]).startswith(
+            "interface-reference:instance.interface."
+        )
+        or overload[2] != "i32"
+    ):
+        raise ConstructorLoweringFailure(
+            "interface-parameter constructor lost its nominal semantic key"
+        )
+    interface_value = "struct hxc_compiler_interface_dispatch_ScoreSource_value"
+    if (
+        f"{interface_value} hxc_source" not in sources
+        or f"{interface_value} hxc_source" not in headers
+        or f"{interface_value} *hxc_source" in sources
+        or f"{interface_value} *hxc_source" in headers
+        or "hxc_source.table->hxc_interface_slot_ScoreSource_score("
+        "hxc_source.object, hxc_seed)" not in sources
+    ):
+        raise ConstructorLoweringFailure(
+            "interface parameter was not a by-value object/table pair with interface dispatch"
+        )
+    calls = dispatch.get("calls")
+    if (
+        not isinstance(calls, list)
+        or not any(
+            isinstance(call, dict)
+            and call.get("callerFunctionId") == "constructor.ConfiguredScore"
+            and call.get("methodFunctionId") == "method.ScoreSource.score"
+            and call.get("dispatch") == "interface"
+            for call in calls
+        )
+    ):
+        raise ConstructorLoweringFailure(
+            "interface-parameter constructor lost its typed interface-dispatch plan"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if plan.get("features") != []:
+        raise ConstructorLoweringFailure(
+            "interface-parameter constructor unexpectedly selected hxrt"
+        )
+    for forbidden in ("hxrt", "malloc(", "calloc(", "realloc(", "goto "):
+        if forbidden in (sources + headers).lower():
+            raise ConstructorLoweringFailure(
+                f"interface-parameter constructor emitted forbidden shape {forbidden!r}"
+            )
+
+
+def render_parameter_server_pair(
+    root: Path, fixture: Path, slug: str
+) -> tuple[Path, Path]:
     port = available_port()
     endpoint = str(port)
     server = subprocess.Popen(
@@ -323,14 +414,12 @@ def render_record_server_pair(root: Path) -> tuple[Path, Path]:
                 "Haxe server did not accept constructor determinism requests"
             )
 
-        outputs = (root / "record-server-first", root / "record-server-second")
+        outputs = (root / f"{slug}-server-first", root / f"{slug}-server-second")
         for label, output in zip(("first", "second"), outputs):
-            result = custom_target(
-                RECORD_PARAMETER, output, layout="split", connect=endpoint
-            )
+            result = custom_target(fixture, output, layout="split", connect=endpoint)
             if result.returncode != 0 or result.stdout or result.stderr:
                 raise ConstructorLoweringFailure(
-                    f"{label} warm-server record constructor compile failed\n"
+                    f"{label} warm-server {slug} constructor compile failed\n"
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
         return outputs
@@ -343,24 +432,27 @@ def render_record_server_pair(root: Path) -> tuple[Path, Path]:
             server.wait(timeout=5)
 
 
-def render_record_parameter_projects(
+def render_parameter_projects(
     fixture_root: Path,
+    *,
+    fixture: Path,
+    slug: str,
+    coverage: frozenset[str],
+    validate_project: Callable[[Path], None],
 ) -> tuple[CFixtureProject, ...]:
     projects: list[CFixtureProject] = []
     split_tree: dict[str, bytes] | None = None
     for layout in ("split", "package", "unity"):
-        normal = fixture_root / f"record-{layout}"
-        reverse = fixture_root / f"record-{layout}-reverse"
+        normal = fixture_root / f"{slug}-{layout}"
+        reverse = fixture_root / f"{slug}-{layout}-reverse"
         for label, result in (
             (
-                f"{layout} record constructor",
-                custom_target(RECORD_PARAMETER, normal, layout=layout),
+                f"{layout} {slug} constructor",
+                custom_target(fixture, normal, layout=layout),
             ),
             (
-                f"{layout} reversed record constructor",
-                custom_target(
-                    RECORD_PARAMETER, reverse, layout=layout, reverse=True
-                ),
+                f"{layout} reversed {slug} constructor",
+                custom_target(fixture, reverse, layout=layout, reverse=True),
             ),
         ):
             if result.returncode != 0 or result.stdout or result.stderr:
@@ -370,14 +462,14 @@ def render_record_parameter_projects(
                 )
         if generated_tree(normal) != generated_tree(reverse):
             raise ConstructorLoweringFailure(
-                f"{layout} record constructor changed with typed-module order"
+                f"{layout} {slug} constructor changed with typed-module order"
             )
-        validate_record_parameter_project(normal)
+        validate_project(normal)
         if layout == "split":
             split_tree = generated_tree(normal)
         projects.append(
             CFixtureProject(
-                f"constructor-record-parameter-{layout}",
+                f"constructor-{slug}-{layout}",
                 tuple(
                     path.relative_to(fixture_root).as_posix()
                     for path in sorted((normal / "src").rglob("*.c"))
@@ -388,23 +480,20 @@ def render_record_parameter_projects(
                 ),
                 ((normal / "include").relative_to(fixture_root).as_posix(),),
                 "",
-                (
-                    "constructor-record-parameter",
-                    "constructor-record-parameter-by-value",
-                    "constructor-record-parameter-stack-owner",
-                    "strict-c11",
-                ),
+                tuple(sorted((*coverage, "strict-c11"))),
             )
         )
 
-    server_first, server_second = render_record_server_pair(fixture_root)
+    server_first, server_second = render_parameter_server_pair(
+        fixture_root, fixture, slug
+    )
     if (
         split_tree is None
         or generated_tree(server_first) != split_tree
         or generated_tree(server_second) != split_tree
     ):
         raise ConstructorLoweringFailure(
-            "record constructor output changed under warm compiler-server reuse"
+            f"{slug} constructor output changed under warm compiler-server reuse"
         )
     return tuple(projects)
 
@@ -870,7 +959,7 @@ def check_native(
     report: dict[str, object],
     *,
     requested_toolchain: str = "auto",
-    render_record_parameter: bool = True,
+    render_parameter_fixtures: bool = True,
 ) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-constructor-native-") as temporary:
         root = Path(temporary)
@@ -915,10 +1004,24 @@ def check_native(
                 ),
             ),
         ]
-        record_projects: tuple[CFixtureProject, ...] = ()
-        if render_record_parameter:
-            record_projects = render_record_parameter_projects(fixture_root)
-            projects.extend(record_projects)
+        parameter_projects: tuple[CFixtureProject, ...] = ()
+        if render_parameter_fixtures:
+            record_projects = render_parameter_projects(
+                fixture_root,
+                fixture=RECORD_PARAMETER,
+                slug="record-parameter",
+                coverage=RECORD_NATIVE_COVERAGE,
+                validate_project=validate_record_parameter_project,
+            )
+            interface_projects = render_parameter_projects(
+                fixture_root,
+                fixture=INTERFACE_PARAMETER,
+                slug="interface-parameter",
+                coverage=INTERFACE_NATIVE_COVERAGE,
+                validate_project=validate_interface_parameter_project,
+            )
+            parameter_projects = record_projects + interface_projects
+            projects.extend(parameter_projects)
         ordered_projects = tuple(
             sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
         )
@@ -933,8 +1036,12 @@ def check_native(
                 strict_flags=(*C11_STRICT_FLAGS, optimization),
             )
             required_coverage = REQUIRED_NATIVE_COVERAGE
-            if render_record_parameter:
-                required_coverage = required_coverage | RECORD_NATIVE_COVERAGE
+            if render_parameter_fixtures:
+                required_coverage = (
+                    required_coverage
+                    | RECORD_NATIVE_COVERAGE
+                    | INTERFACE_NATIVE_COVERAGE
+                )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
             for forbidden in (str(ROOT), str(fixture_root), str(root)):
@@ -948,19 +1055,19 @@ def check_native(
                 requested_toolchain, repository_root=ROOT
             )
         }
-        if record_projects and "clang" in available_families:
+        if parameter_projects and "clang" in available_families:
             sanitized_projects = tuple(
                 replace(
                     project,
                     link_arguments=("-fsanitize=address,undefined",),
                 )
                 for project in sorted(
-                    record_projects,
+                    parameter_projects,
                     key=lambda project: project.identifier.encode("utf-8"),
                 )
             )
             sanitizer_report = run_c_fixture_corpus(
-                suite="constructor-record-parameter-sanitized",
+                suite="constructor-parameter-families-sanitized",
                 projects=sanitized_projects,
                 fixture_root=fixture_root,
                 build_root=root / "c-build-sanitized",
@@ -969,7 +1076,10 @@ def check_native(
                 strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
             )
             validate_report(
-                sanitizer_report, required_coverage=RECORD_NATIVE_COVERAGE
+                sanitizer_report,
+                required_coverage=(
+                    RECORD_NATIVE_COVERAGE | INTERFACE_NATIVE_COVERAGE
+                ),
             )
         check_cpp_header(
             fixture_root, root / "cxx-build", requested_toolchain=requested_toolchain
@@ -980,6 +1090,7 @@ def check_eval_oracle() -> None:
     for label, fixture in (
         ("constructor oracle", ORACLE),
         ("record-parameter oracle", RECORD_PARAMETER),
+        ("interface-parameter oracle", INTERFACE_PARAMETER),
     ):
         result = subprocess.run(
             [
@@ -1078,7 +1189,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             check_native(
                 report,
                 requested_toolchain=args.toolchain,
-                render_record_parameter=False,
+                render_parameter_fixtures=False,
             )
             print("constructor-lowering: OK: required constructor native matrix passed")
             return 0
@@ -1120,6 +1231,7 @@ def main(arguments: Iterable[str] = ()) -> int:
     print(
         "constructor-lowering: OK: pinned super/field/body order, default storage, "
         "status cleanup, direct caller-owned class and closed-record parameters, "
+        "call-bounded interface parameters and interface dispatch, "
         "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
         "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
         "edges passed"

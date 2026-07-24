@@ -72,6 +72,7 @@ class HxcIRGolden {
 				borrowedClassStore: invalidDiagnostics(borrowedClassStoreProgram()),
 				borrowedClassAliasEscape: invalidDiagnostics(borrowedClassAliasEscapeProgram()),
 				borrowedClassReturn: invalidDiagnostics(borrowedClassReturnProgram()),
+				borrowedInterfaceStore: invalidDiagnostics(borrowedInterfaceStoreProgram()),
 				invalidManagedRoot: invalidDiagnostics(managedRootProgram(true)),
 				invalidManagedRootProjection: invalidDiagnostics(invalidManagedRootProjectionProgram()),
 				deferredInitializerMissingWrite: invalidDiagnostics(deferredInitializerMissingWriteProgram()),
@@ -646,6 +647,7 @@ class HxcIRGolden {
 			displayName: "coverage.IR.coverage",
 			parameters: [
 				parameter("value.receiver", IRTPointer(IRTInstance("instance.object"), true), COVERAGE_SOURCE, 16),
+				parameter("value.interface-parameter", IRTInstance("instance.interface"), COVERAGE_SOURCE, 16),
 				parameter("value.callable", IRTFunction([IRTInt(32, true)], IRTInt(32, true)), COVERAGE_SOURCE, 16),
 				parameter("value.argument", IRTInt(32, true), COVERAGE_SOURCE, 16),
 				parameter("value.float-input", IRTFloat(64), COVERAGE_SOURCE, 16),
@@ -653,6 +655,7 @@ class HxcIRGolden {
 				parameter("value.nullable-reference", IRTNullable(IRTInstance("instance.object"), IRNPointer), COVERAGE_SOURCE, 16)
 			],
 			borrowedClassParameterIds: [],
+			borrowedInterfaceParameterIds: ["value.interface-parameter"],
 			borrowedClassLocalIds: [],
 			managedRoots: [],
 			locals: [
@@ -1526,6 +1529,18 @@ class HxcIRGolden {
 			cleanupRegions: [],
 			source: span(file, 1, 4)
 		};
+		return program;
+	}
+
+	/** A borrowed interface pair cannot initialize storage that outlives its call. */
+	static function borrowedInterfaceStoreProgram():HxcIRProgram {
+		final file = "test/negative/BorrowedInterfaceStore.hx";
+		final program = coverageProgram();
+		final fn = program.modules[0].functions.filter(candidate -> candidate.id == "fn.coverage")[0];
+		fn.locals.push(local("local.saved-interface", IRTInstance("instance.interface"), IRLSAutomatic, IRISUninitialized, file, 1));
+		coverageEntryInstructions(program).insert(0,
+			instruction("bad.interface-store", null,
+				IRIOInitialize(IRPLocal("local.saved-interface"), "value.interface-parameter", IRISUninitialized, IRISInitialized), file, 2));
 		return program;
 	}
 

@@ -87,8 +87,15 @@ class HxcIRDumper {
 		final managedRoots = fn.managedRoots == null ? [] : fn.managedRoots;
 		for (root in managedRoots)
 			line('    managed-root ${quote(root.id)} value=${quote(root.valueId)} path=${quote(HxcIRManagedRootPaths.key(root.projections))} ${source(root.source)}');
+		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
 		for (parameter in fn.parameters) {
-			final ownership = fn.borrowedClassParameterIds.indexOf(parameter.id) < 0 ? "owned-or-value" : "borrowed-class";
+			final ownership = if (fn.borrowedClassParameterIds.indexOf(parameter.id) >= 0) {
+				"borrowed-class";
+			} else if (borrowedInterfaceParameterIds.indexOf(parameter.id) >= 0) {
+				"borrowed-interface";
+			} else {
+				"owned-or-value";
+			};
 			line('    parameter ${quote(parameter.id)} type=${typeRef(parameter.type)} ownership=$ownership ${source(parameter.source)}');
 		}
 		for (local in sorted(fn.locals, item -> item.id)) {

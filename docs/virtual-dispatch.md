@@ -62,6 +62,31 @@ calls the implementation. Direct calls do not pass through these adapters.
 Structural layout assertions cover the selected root header along with the
 existing base and field layout checks.
 
+## Bounded interface values
+
+The current E3.T07 slice also admits a closed, non-generic Haxe interface when
+the typed program already proves the implementing class. The generated
+interface value is a compact pair:
+
+- `object` is a pointer to the concrete instance; and
+- `table` is a pointer to the program-local method table for that exact
+  interface.
+
+This is often called a *fat pointer*: “fat” only means the value carries a
+second pointer with the dispatch information that a plain object pointer lacks.
+It does not allocate and it does not add a general runtime object header.
+HxcIR's `IRIOConstructInterface` builds the pair, while `IRCDInterface` names
+the exact interface, slot, and receiver used by a call. The validator checks
+that the interface instance, table, slot, object implementation, and function
+signature agree before C syntax is selected.
+
+A constructor may accept this interface pair by value when its typed body proves
+that the pair remains a short-lived borrow for that call. HxcIR records
+`ownership=borrowed-interface`; storing, returning, or forwarding it without
+another checked borrow contract is rejected. See
+[bounded constructor lowering](constructor-lowering.md#c-function-and-elision-model)
+for the lifetime reason and generated-C example.
+
 ## Override representation boundary
 
 The pinned Haxe compiler may admit source-level covariant returns or
@@ -98,12 +123,15 @@ compiler decisions; it is not a stable public ABI map.
 
 ## Remaining boundaries
 
-Interface tables and casts remain E3.T07. Function values and closures remain
-E3.T08. Generic classes or methods, dynamic instance methods, escaping/heap
-objects, reflection and type tests, general exception-bearing virtual methods,
-public class layouts, and stable exported method ABI remain fail-closed. E3.T09
-owns later devirtualization and escape analysis; E4 owns general allocation,
-ownership, tracing, and descriptor policy.
+E3.T07 remains in progress: proven class-to-interface construction, inherited
+interface slots, multiple interface views, interface calls, and call-bounded
+constructor parameters are implemented; runtime-checked casts, dynamic type
+tests, and general retained interface ownership remain fail-closed. Function
+values and closures remain E3.T08. Generic classes or methods, dynamic instance
+methods, escaping/heap objects, reflection, general exception-bearing virtual
+methods, public class layouts, and stable exported method ABI remain
+fail-closed. E3.T09 owns later devirtualization and escape analysis; E4 owns
+general allocation, ownership, tracing, and descriptor policy.
 
 ## Evidence
 
