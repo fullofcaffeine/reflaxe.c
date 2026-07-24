@@ -2318,6 +2318,8 @@ class CBodyEmitter {
 					case IRIOCall(call) if (isHostedOutputDispatch(call.dispatch)):
 						addUnique(headers, "hxrt/io.h");
 						addUnique(headers, "stdlib.h");
+					case IRIOCall({dispatch: IRCDRuntime("string-scalar", "char-at")}):
+						addUnique(headers, "hxrt/string_scalar.h");
 					case IRIOBinary("haxe.string.equal" | "haxe.string.not-equal", _, _, IRIStatic):
 						addUnique(headers, "string.h");
 					case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
@@ -4441,6 +4443,10 @@ class CBodyEmitter {
 			case IRCDRuntime("bytes", _):
 				emitManagedBytesCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
+			case IRCDRuntime("string-scalar", "char-at"):
+				if (call.failure != null || call.arguments.length != 2 || call.returnType != IRTString)
+					return fail('String.charAt call `${instruction.id}` in `$functionId` lost its total String/Int signature');
+				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringCharAt)), call.arguments.map(argument -> requireValue(values, argument, functionId)));
 			case _: return fail('call `${instruction.id}` in `$functionId` has no admitted static or runtime dispatch');
 		};
 		addLineDirective(statements, instruction.source, lineDirectives);

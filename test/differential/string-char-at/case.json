@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "string-char-at",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-008",
+    "HXC-RT-008",
+    "HXC-RT-009"
+  ],
+  "sources": [
+    "docs/string-runtime.md",
+    "runtime/hxrt/include/hxrt/string_decode.h",
+    "runtime/hxrt/include/hxrt/string_scalar.h",
+    "runtime/hxrt/src/string_scalar.c",
+    "src/reflaxe/c/lowering/CBodyIntrinsicReceiver.hx",
+    "test/differential/string-char-at/generated/Main.hx",
+    "test/differential/string-char-at/generated/oracle.hxml",
+    "test/differential/string-char-at/negative/Main.hx",
+    "test/differential/string-char-at/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/string-char-at",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "string-char-at: OK: .*Eval parity, ASCII/non-BMP/NUL/bounds, exact allocation-free runtime selection, split/package/unity, cold/reverse/warm determinism, unsupported-owner/runtime-none failures, strict C11, and sanitizers passed$"
+    },
+    "oracle": "test/differential/string-char-at/generated/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/string_scalar.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

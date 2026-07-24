@@ -1,15 +1,18 @@
 # UTF-8 scalar string runtime contract
 
-This document records the bounded E4.T03 native `hxrt` string slice. It
-implements the storage and operation contract from
-[ADR 0004](adr/0004-utf8-scalar-string-contract.md), but it does not make the
-full operation slice compiler-selectable, expose the private layout as a public
-ABI, or claim general Haxe `String`/standard-library lowering. The compiler can
-now keep a String whose bytes come from a source literal as an immutable value:
+This document records the bounded UTF-8 String runtime and the first
+compiler-selectable E5.T02 operation. It implements the storage and operation
+contract from [ADR 0004](adr/0004-utf8-scalar-string-contract.md), but it does
+not make the full operation slice compiler-selectable, expose the private
+layout as a public ABI, or claim general Haxe `String`/standard-library
+lowering. The compiler can keep a String whose bytes come from a source literal
+as an immutable value:
 it may pass or return that value, store it in a closed record, enum, optional, or
 managed Array, and compare it for content equality. E2.T07 also uses the same
 literal carrier for hosted literal output. E5.T02 owns runtime-created and
-owned Strings plus broader standard-library connections, E4.T11 established
+owned Strings plus broader standard-library connections. It now admits
+ordinary `String.charAt` through the allocation-free `string-scalar` feature;
+all other general String operations remain outside this bounded step. E4.T11 established
 the internal same-major runtime contract, and E7 owns any future public ABI.
 
 E4.T03 advanced the incompatible native-seed marker from 0.2.0 to 0.3.0.
@@ -65,9 +68,11 @@ String. Equality compares byte lengths and then the canonical UTF-8 bytes with
 `memcmp`; it never compares the storage pointers, because two equal Strings are
 allowed to reside at different addresses.
 
-This is deliberately smaller than general String support. A value created at
-run time by parsing, input, concatenation, interpolation, or another allocating
-operation needs an owned lifetime plan and remains unsupported until E5.T02
+This is deliberately smaller than general String support. `String.charAt`
+returns another borrowed view, so it works without creating owned bytes. A
+value created at run time by parsing, input, concatenation, interpolation, or
+another allocating operation needs an owned lifetime plan and remains
+unsupported until E5.T02
 connects that plan. Likewise, `Sys.println(value)` remains unsupported even
 when `value` is literal-backed: the current output API accepts a literal at the
 call site, and broadening that API is a separate standard-library lowering
@@ -162,10 +167,16 @@ lowering owner is implemented.
 
 ## Feature and evidence boundary
 
+The allocation-free `string-scalar` feature is compiler-selectable and depends
+only on `status` plus the `string-literal` carrier. Ordinary Haxe
+`value.charAt(index)` selects this slice when the call remains at run time. It
+returns a borrowed one-scalar view, or the empty String for a negative or
+out-of-range index, without selecting `alloc` or the broader `string` source.
+
 The full `string` feature remains `native-seed-only` and depends on `alloc` plus
-the compiler-selectable `string-literal` carrier. It has no object, tracing
-collector, dynamic, reflection, exception, thread, or Unicode-table dependency.
-A generated Haxe program cannot request the full feature.
+`string-scalar`. It has no object, tracing collector, dynamic, reflection,
+exception, thread, or Unicode-table dependency. A generated Haxe program
+cannot request the full feature.
 
 The compiler admits literal-backed String values as the direct
 `string-literal/static-value` capability. A program using only those values
@@ -190,6 +201,13 @@ lifetime, and exact allocation counts. Required GCC and Clang lanes run at
 inspect the link for the string symbols and absence of object/GC/reflection/
 dynamic families.
 
+[`test/differential/string-char-at`](../test/differential/string-char-at)
+compares ordinary Haxe `String.charAt` with Eval for ASCII, non-Basic
+Multilingual Plane scalars, embedded NUL, empty, negative, and out-of-range
+indices. It also proves the exact allocation-free runtime plan and generated
+strict C across split, package, and unity layouts. This is evidence for
+`charAt`, not for neighboring String methods.
+
 [`test/enum_lowering`](../test/enum_lowering) proves that a nominal
 abstract-over-String literal can be constructed, copied, passed, returned,
 stored in an enum, projected, and compared across split, package, and unity
@@ -205,6 +223,7 @@ Run the focused evidence with:
 ```sh
 python3 test/differential/string-runtime/run.py
 python3 test/differential/string-runtime/run.py --native-only --toolchain clang
+npm run test:string-char-at
 npm run test:runtime-features
 npm run test:string-output
 npm run test:native

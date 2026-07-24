@@ -32,6 +32,7 @@ BYTES_CONSUMER = CASE / "bytes_consumer.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
+STRING_SCALAR_CONSUMER = CASE / "string_scalar_consumer.c"
 IO_CONSUMER = CASE / "io_consumer.c"
 CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG="
 PLANS_PREFIX = "HXC_RUNTIME_FEATURE_PLANS="
@@ -178,6 +179,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status",
         "string-literal",
         "string-map",
+        "string-scalar",
     ]:
         raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
     runtime_abi = record(catalog.get("runtimeAbi"), "runtime ABI contract")
@@ -227,6 +229,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "gc",
         "object",
         "string-literal",
+        "string-scalar",
         "string",
         "io",
     }:
@@ -243,7 +246,8 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "gc": ["alloc", "object"],
         "object": ["runtime-base"],
         "string-literal": ["runtime-base"],
-        "string": ["alloc", "string-literal"],
+        "string-scalar": ["status", "string-literal"],
+        "string": ["alloc", "string-scalar"],
         "io": ["status", "string-literal"],
     }
     expected_availability = {
@@ -258,6 +262,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "gc": "compiler-selectable",
         "object": "compiler-selectable",
         "string-literal": "compiler-selectable",
+        "string-scalar": "compiler-selectable",
         "string": "native-seed-only",
         "io": "compiler-selectable",
     }
@@ -493,6 +498,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
+    string_scalar = record(plans.get("stringScalar"), "string scalar plan")
     string = record(plans.get("string"), "string plan")
     minimal = record(plans.get("minimalString"), "minimal string plan")
     compiler_io = record(plans.get("compilerIo"), "compiler io plan")
@@ -514,7 +520,21 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("object descriptor closure is incomplete or nondeterministic")
     if gc_plan.get("features") != ["runtime-base", "status", "alloc", "object", "gc"]:
         raise RuntimeFeatureFailure("collector closure is incomplete or nondeterministic")
-    if string.get("features") != ["runtime-base", "status", "alloc", "string-literal", "string"]:
+    if string_scalar.get("features") != [
+        "runtime-base",
+        "status",
+        "string-literal",
+        "string-scalar",
+    ]:
+        raise RuntimeFeatureFailure("string scalar closure is incomplete or nondeterministic")
+    if string.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "string-scalar",
+        "string",
+    ]:
         raise RuntimeFeatureFailure("string closure is incomplete or nondeterministic")
     validate_selected_reasons(alloc, "alloc")
     validate_selected_reasons(array, "array")
@@ -522,6 +542,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
+    validate_selected_reasons(string_scalar, "string scalar")
     validate_selected_reasons(string, "string")
     validate_selected_reasons(minimal, "minimal string")
     if (
@@ -542,6 +563,13 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc build plan retained an unselected string artifact or symbol")
     if "runtime/src/string.c" not in text_list(string.get("artifacts"), "string artifacts"):
         raise RuntimeFeatureFailure("string build plan omitted its selected source")
+    string_scalar_artifacts = text_list(string_scalar.get("artifacts"), "string scalar artifacts")
+    if (
+        "runtime/src/string_scalar.c" not in string_scalar_artifacts
+        or "runtime/src/string.c" in string_scalar_artifacts
+        or any(path.endswith("/alloc.c") for path in string_scalar_artifacts)
+    ):
+        raise RuntimeFeatureFailure("string scalar plan did not remain allocation-free and independently packageable")
     if "runtime/src/array.c" not in text_list(array.get("artifacts"), "array artifacts"):
         raise RuntimeFeatureFailure("array build plan omitted its selected source")
     if "runtime/src/string_map.c" not in text_list(
@@ -558,6 +586,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("array build plan omitted its selected symbol")
     if "hxc_string_copy" not in text_list(string.get("symbols"), "string symbols"):
         raise RuntimeFeatureFailure("string build plan omitted its selected symbol")
+    if "hxc_string_char_at" not in text_list(string_scalar.get("symbols"), "string scalar symbols"):
+        raise RuntimeFeatureFailure("string scalar build plan omitted its selected charAt symbol")
     overrides = records(minimal.get("manualOverrides"), "minimal overrides")
     if (
         minimal.get("resolvedPolicy") != "minimal"
@@ -605,7 +635,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("runtime-none blockers are incomplete or not sorted by stable root ID")
     if blockers[0].get("dependencyChains") != [
         ["string", "alloc", "status", "runtime-base"],
-        ["string", "string-literal", "runtime-base"],
+        ["string", "string-scalar", "status", "runtime-base"],
+        ["string", "string-scalar", "string-literal", "runtime-base"],
     ] or blockers[1].get("dependencyChains") != [["alloc", "status", "runtime-base"]]:
         raise RuntimeFeatureFailure("runtime-none blockers lost dependency-chain provenance")
     for blocker in blockers:
@@ -630,7 +661,7 @@ def validate_plans(plans: dict[str, object]) -> None:
 
 
 def validate_package(package: dict[str, object], plans: dict[str, object]) -> None:
-    for name in ("alloc", "array", "bytes", "object", "gc", "string", "io"):
+    for name in ("alloc", "array", "bytes", "object", "gc", "stringScalar", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
@@ -829,7 +860,7 @@ def package_from_snapshots(
     catalog: dict[str, object], plans: dict[str, object]
 ) -> dict[str, object]:
     package: dict[str, object] = {}
-    for name in ("alloc", "array", "bytes", "object", "gc", "string", "io"):
+    for name in ("alloc", "array", "bytes", "object", "gc", "stringScalar", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []
@@ -927,6 +958,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     bytes_package = records(package.get("bytes"), "Bytes package")
     object_package = records(package.get("object"), "object package")
     gc_package = records(package.get("gc"), "gc package")
+    string_scalar = records(package.get("stringScalar"), "string scalar package")
     string = records(package.get("string"), "string package")
     io = records(package.get("io"), "io package")
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-runtime-feature-") as temporary:
@@ -944,6 +976,14 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
                 gc_package,
                 GC_CONSUMER,
                 "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=973\n",
+                family_root,
+            )
+            run_native_case(
+                toolchain,
+                "string-scalar",
+                string_scalar,
+                STRING_SCALAR_CONSUMER,
+                "runtime-feature-string-scalar: OK\n",
                 family_root,
             )
             run_native_case(toolchain, "string", string, STRING_CONSUMER, "runtime-feature-string: OK\n", family_root)

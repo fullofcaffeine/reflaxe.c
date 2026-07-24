@@ -579,6 +579,8 @@ class CProjectEmitter {
 		if (runtimePlan.features.indexOf("string-literal") != -1) {
 			expectedDirectDecisions.push("direct-utf8-string-literals");
 		}
+		if (runtimePlan.features.indexOf("string-scalar") != -1)
+			expectedDirectDecisions.push("allocation-free-unicode-scalar-strings");
 		if (runtimePlan.features.indexOf("array") != -1)
 			expectedDirectDecisions.push("managed-haxe-arrays");
 		if (runtimePlan.features.indexOf("string-map") != -1)
@@ -606,6 +608,7 @@ class CProjectEmitter {
 		for (reason in runtimePlan.rootReasons) {
 			switch reason.featureId {
 				case "string-literal" if (reason.kind == "direct-string-value"):
+				case "string-scalar" if (reason.kind == "runtime-operation" && reason.operationId == "char-at"):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
 				case "string-map" if (reason.kind == "runtime-operation"):

@@ -24,6 +24,7 @@ SOURCES = (
     ROOT / "runtime/hxrt/src/status.c",
     ROOT / "runtime/hxrt/src/allocator.c",
     ROOT / "runtime/hxrt/src/string.c",
+    ROOT / "runtime/hxrt/src/string_scalar.c",
 )
 EXPECTED_TRACE = "1,128512,3,1,2,😀\n"
 TOOLCHAINS = ("gcc", "clang")

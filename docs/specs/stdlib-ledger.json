@@ -1390,6 +1390,40 @@
       "notes": "A checked range creates an independent owned copy; fresh results may bind to locals or cross an owned return boundary, while unsupported nested temporary shapes fail closed."
     },
     {
+      "id": "string-char-at-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "charAt",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(index : Int) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-char-at/generated/Main.hx",
+        "test/differential/string-char-at/run.py"
+      ],
+      "notes": "Ordinary Haxe String.charAt uses ADR 0004 Unicode-scalar indexing and returns a borrowed UTF-8 view of the selected character, or the empty string for a negative or out-of-range index. The focused hosted suite covers ASCII, a non-BMP character, embedded NUL, empty input, generated layouts, runtime planning, strict C11, optimization, and sanitizers; other String methods and environments remain explicit unsupported boundaries."
+    },
+    {
       "id": "std-int-conformant",
       "selector": {
         "module": "Std",
@@ -7731,32 +7765,30 @@
       "kind": "method",
       "signature": "(index : Int) -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-char-at/generated/Main.hx",
+        "test/differential/string-char-at/run.py"
+      ],
+      "notes": "Ordinary Haxe String.charAt uses ADR 0004 Unicode-scalar indexing and returns a borrowed UTF-8 view of the selected character, or the empty string for a negative or out-of-range index. The focused hosted suite covers ASCII, a non-BMP character, embedded NUL, empty input, generated layouts, runtime planning, strict C11, optimization, and sanitizers; other String methods and environments remain explicit unsupported boundaries.",
+      "ruleId": "string-char-at-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:c5b300eabdae31a79a311566e2d7788a59041fd01541347f882d4961b71e2cb8",

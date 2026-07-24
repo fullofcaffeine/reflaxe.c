@@ -1878,6 +1878,8 @@ private class HxcIRValidationState {
 					validateStringMapCall(call, argumentTypes, path, source);
 				} else if (featureId == "bytes") {
 					validateManagedBytesCall(call, argumentTypes, path, source);
+				} else if (featureId == "string-scalar") {
+					validateStringScalarCall(call, argumentTypes, path, source);
 				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
@@ -2080,6 +2082,34 @@ private class HxcIRValidationState {
 				add(path, 'bytes runtime call names unsupported operation `$operationId`', source);
 		}
 		validateCleanupFreeStatusAbort(call.failure, path, source, "managed Bytes operation");
+	}
+
+	/**
+		Validate the allocation-free String operation before C chooses a symbol.
+
+		The receiver and result are immutable UTF-8 views, while the index remains
+		Haxe's signed 32-bit `Int`. `charAt` is total for valid String values, so a
+		failure edge would incorrectly turn normal out-of-range access into abort.
+	**/
+	function validateStringScalarCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("string-scalar", value): value;
+			case _: return;
+		};
+		switch operationId {
+			case "char-at":
+				if (argumentTypes.length != 2
+					|| argumentTypes[0] == null
+					|| argumentTypes[1] == null
+					|| typeKey(argumentTypes[0]) != typeKey(IRTString)
+					|| typeKey(argumentTypes[1]) != typeKey(IRTInt(32, true))
+					|| typeKey(call.returnType) != typeKey(IRTString))
+					add(path, "String.charAt requires String plus Haxe Int and returns String", source);
+			case _:
+				add(path, 'string-scalar runtime call names unsupported operation `$operationId`', source);
+		}
+		if (call.failure != null)
+			add(path, "String.charAt is total for valid String values and must not carry a failure edge", source);
 	}
 
 	function isManagedBytes(type:Null<HxcIRTypeRef>):Bool {

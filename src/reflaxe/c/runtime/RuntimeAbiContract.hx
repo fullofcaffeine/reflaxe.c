@@ -45,7 +45,8 @@ class RuntimeAbiContract {
 		"hxc_string_buffer",
 		"hxc_string_map_ref",
 		"hxc_string_map_value_ops",
-		"hxc_type_descriptor"
+		"hxc_type_descriptor",
+		"hxc_utf8_step"
 	];
 
 	public static function snapshot(definitions:Array<RuntimeFeatureDefinition>):RuntimeAbiContractRecord {

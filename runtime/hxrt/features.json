@@ -673,12 +673,12 @@
           "test/runtime/runtime-feature-graph/run.py"
         ],
         "directAlternative": "Known literals, constant concatenation, and statically decidable string facts should remain direct compiler-owned C data.",
-        "contract": "Implements runtime-value-dependent scalar UTF-8 validation/indexing, owned strings, builders, slicing, hashing, and explicit borrowed or owned CString conversion.",
+        "contract": "Adds owned strings, builders, lossy decoding, concatenation, and explicit borrowed or owned CString conversion above the shared scalar slice.",
         "programLocalAlternative": "Closed call sites should receive specialized local operations when their representation, lifetime, and operation set are statically bounded."
       },
       "dependencies": [
         "alloc",
-        "string-literal"
+        "string-scalar"
       ],
       "id": "string",
       "availability": "native-seed-only",
@@ -693,28 +693,21 @@
         "hxc_string_buffer_finish",
         "hxc_string_buffer_init",
         "hxc_string_buffer_view",
-        "hxc_string_compare",
         "hxc_string_concat",
         "hxc_string_copy",
         "hxc_string_from_utf8_checked",
         "hxc_string_from_utf8_lossy",
-        "hxc_string_hash",
-        "hxc_string_is_valid",
-        "hxc_string_scalar_at",
-        "hxc_string_scalar_length",
-        "hxc_string_slice",
-        "hxc_string_to_cstring_owned",
-        "hxc_utf8_validate"
+        "hxc_string_to_cstring_owned"
       ],
       "artifacts": [
         {
-          "sourceSha256": "16860609c4cdb6e8e81f3b02f212edb40be3da01f053743cc087b897df16ba63",
+          "sourceSha256": "ce5ac5689f7661deaaf954200d6c3f45e968e0cb91889e8bcad17cf5a5ca178c",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "abe937db71f7333d4a915d7b7e222384ceeba8815783e8fafffb1aeaeadfd5d4",
+          "sourceSha256": "c1fd06b27c78e644f3bf77bb8f9733fe7535bf6a0b05e40ebc1670e44422401d",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -722,7 +715,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Valid UTF-8 scalar primitives, owned construction, mutable building, and explicit CString conversion with native evidence.",
+      "summary": "Owned UTF-8 construction, mutable building, and explicit CString conversion with native evidence.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -840,6 +833,76 @@
         "freestanding",
         "hosted"
       ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable ordinary Haxe String.charAt whose receiver or index is known only at run time.",
+            "id": "char-at",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "Selected transitively by a broader String feature that reuses the same validated scalar rules.",
+            "id": "dependency-only",
+            "kind": "transitive-dependency"
+          }
+        ],
+        "runtimeRationale": "Runtime-dependent scalar positions need one shared implementation of ADR 0004 indexing, invalid-input checks, and borrowed slice construction without selecting owned strings or allocation.",
+        "evidence": [
+          "test/differential/string-char-at/run.py",
+          "test/differential/string-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known literal and index may fold directly to another literal-backed String view.",
+        "contract": "Inspects immutable valid-UTF-8 String views with Unicode-scalar indices and no allocation or retained state.",
+        "programLocalAlternative": "One closed program can use a generated local scalar helper, but duplicating the UTF-8 decoder across programs risks semantic drift."
+      },
+      "dependencies": [
+        "status",
+        "string-literal"
+      ],
+      "id": "string-scalar",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_string_char_at",
+        "hxc_string_compare",
+        "hxc_string_hash",
+        "hxc_string_is_valid",
+        "hxc_string_scalar_at",
+        "hxc_string_scalar_length",
+        "hxc_string_slice",
+        "hxc_utf8_validate"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_decode.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_decode.h"
+        },
+        {
+          "sourceSha256": "528b1687cd8e358f7545f82b94ec08e037d594a49cdd0db42d9daae6c06eff87",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_scalar.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_scalar.h"
+        },
+        {
+          "sourceSha256": "41171bfdd476b0862128676b2de23ed33b9533655e0667e86a614d257732c24c",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/string_scalar.c",
+          "sourcePath": "runtime/hxrt/src/string_scalar.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Allocation-free valid-UTF-8 validation, Unicode-scalar indexing, slicing, comparison, and hashing.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
     }
   ],
   "status": "selective-compiler-packaging",
@@ -854,7 +917,8 @@
     "runtime-base",
     "status",
     "string-literal",
-    "string-map"
+    "string-map",
+    "string-scalar"
   ],
   "algorithm": "hxc-runtime-feature-graph-v3",
   "runtimeAbi": {
@@ -891,14 +955,15 @@
         "hxc_string_buffer",
         "hxc_string_map_ref",
         "hxc_string_map_value_ops",
-        "hxc_type_descriptor"
+        "hxc_type_descriptor",
+        "hxc_utf8_step"
       ],
       "exportTypePolicy": "runtime-structs-forbidden"
     },
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "afba5b76ddb13f72ef476cbeeb85b8eeb2a06ea9d8b67877dd329d8e9706c7cd",
+      "sourceSetSha256": "58ba8ca3b8747065c8c79585950aa4e819b2154780a5394ab8c48b038e2ff551",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

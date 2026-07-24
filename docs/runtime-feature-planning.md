@@ -191,12 +191,13 @@ runtime metadata into the project.
 
 The canonical fixture proves an `alloc` native request packages only
 `runtime-base + status + alloc`; an `array` request adds only its header/source;
-and a full `string` native request adds only
-`string-literal` plus the full string header, source, and symbols. Its compiler
-request packages exactly `runtime-base + status + string-literal + io`. It
-compiles and runs all four packages under strict GCC and Clang lanes and
-inspects the alloc-only link for omitted array/string symbols and the array link
-for omitted string symbols. It also covers cycle,
+an allocation-free `string-scalar` request adds only the UTF-8 decoder, literal
+carrier, scalar header, scalar source, and their status dependency; and a full
+native `string` request additionally adds allocation and the owned-string
+header, source, and symbols. Its compiler literal-output request packages
+exactly `runtime-base + status + string-literal + io`. It compiles and runs all
+five packages under strict GCC and Clang lanes and inspects narrower links for
+symbols that belong only to wider features. It also covers cycle,
 unknown-dependency, policy, override, environment, reserved-feature, and
 native-only availability failures.
 
@@ -211,11 +212,14 @@ storage; it is never a direct source root.
 The [UTF-8 scalar string contract](string-runtime.md) defines the E4.T03 valid
 immutable representation, maximal-subpart lossy decoding, scalar-indexed
 operations, builder failure atomicity, allocation accounting, and distinct
-borrowed/owned CString lifetimes. Its exact feature closure is `runtime-base +
-status + alloc + string-literal + string`; required native links reject object,
-GC, reflection, and dynamic symbol families. This evidence does not make full
-`string` compiler-selectable. E2.T07 uses only its independently owned literal
-carrier and therefore does not prove general Haxe `String` lowering.
+borrowed/owned CString lifetimes. The compiler-selectable allocation-free
+closure is `runtime-base + status + string-literal + string-scalar`; ordinary
+Haxe `String.charAt` uses it to return a view of existing bytes rather than
+allocate a copy. The full native-only closure adds `alloc + string` for owned
+values and builders. Required native links reject object, GC, reflection, and
+dynamic symbol families. This evidence proves only the bounded `charAt`
+lowering, not general Haxe `String` support. E2.T07 uses only the independently
+owned literal carrier and likewise does not prove general String lowering.
 
 The [typed resizable-array contract](array-runtime.md) defines the E4.T04
 contiguous unboxed owner, checked deterministic growth, exact-slot alias
@@ -246,6 +250,7 @@ Run the focused evidence with:
 ```sh
 npm run test:runtime-features
 npm run test:array-runtime
+npm run test:string-char-at
 npm run test:string-output
 npm run test:primitive-differential
 npm run test:span-lowering
@@ -255,12 +260,13 @@ npm run test:native
 ```
 
 This evidence proves deterministic reachability reconciliation and no-runtime
-eligibility, selective packaging, the one generated-Haxe literal-output
-selection, its bounded hello product composition, exact runtime source/build
-provenance, and compatible-versus-incompatible internal ABI versions. The
+eligibility, selective packaging, generated-Haxe literal-output and bounded
+`String.charAt` selection, the bounded hello product composition, exact runtime
+source/build provenance, and compatible-versus-incompatible internal ABI
+versions. The
 separate E4.T02/E4.T03/E4.T04/E4.T05 fixtures prove their bounded native
 allocator, string, array, and object-descriptor contracts. None of this proves
-broad `String`/`Array` lowering, general I/O, managed object graphs,
+broad `String`/`Array` lowering, neighboring String methods, general I/O, managed object graphs,
 exceptions, reflection, broad standard-library support, a generated
 public application ABI, or a supported release.
 

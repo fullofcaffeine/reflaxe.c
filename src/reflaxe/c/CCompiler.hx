@@ -376,6 +376,7 @@ class CCompiler {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
 		if (hasRuntimeFeature(runtimeRequirements, "string-literal")
+			|| hasRuntimeFeature(runtimeRequirements, "string-scalar")
 			|| hasRuntimeFeature(runtimeRequirements, "io")
 			|| hasRuntimeFeature(runtimeRequirements, "string-map")
 			|| hasRuntimeFeature(runtimeRequirements, "bytes")) {
@@ -387,6 +388,8 @@ class CCompiler {
 			directDecisions.push("managed-haxe-string-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
 			directDecisions.push("managed-haxe-bytes");
+		if (hasRuntimeFeature(runtimeRequirements, "string-scalar"))
+			directDecisions.push("allocation-free-unicode-scalar-strings");
 		if (hasRuntimeFeature(runtimeRequirements, "gc"))
 			directDecisions.push("exact-traced-haxe-object-graph");
 		var proof = "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls";
@@ -482,7 +485,7 @@ class CCompiler {
 			final module = switch requirement.featureId {
 				case "array": "Array";
 				case "bytes": "haxe.io.Bytes";
-				case "string-literal": "String";
+				case "string-literal" | "string-scalar": "String";
 				case "io" if (requirement.operationId == "trace-literal"): "haxe.Log";
 				case "io": "Sys";
 				case _: requirement.featureId;

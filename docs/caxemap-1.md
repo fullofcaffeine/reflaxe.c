@@ -401,11 +401,13 @@ creates one deterministic closed method body for each concrete
 `ScenarioReadResult<T>` used by the parser; completed issue `haxe_c-djl.10`
 owns that general capability.
 
-The next unrelated boundary is `String.charAt`. Reachability currently
-misclassifies this intrinsic String operation as an ordinary virtual class
-method, although String has a dedicated representation and lowering path.
-Issue `haxe_c-djl.11` owns the shared intrinsic-method classification fix.
-Until it lands, this section is not evidence that the complete CaxeFlow
+The compiler now passes allocation-free `String.charAt` through its dedicated
+String representation and runtime slice; completed issue `haxe_c-djl.11` owns
+that shared intrinsic-method classification and lowering. The next unrelated
+boundary is `haxe.ds.IntMap.exists`: virtual-slot validation cannot yet settle
+the generic standard-library collection operation to a concrete specialization
+or intrinsic collection plan. Issue `haxe_c-c3s.1` owns that general IntMap
+work. Until it lands, this section is not evidence that the complete CaxeFlow
 registry or executor runs in generated C; unrelated DomainProbe output does
 not fill that gap.
 

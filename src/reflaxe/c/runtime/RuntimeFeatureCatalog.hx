@@ -29,6 +29,7 @@ class RuntimeFeatureCatalog {
 		final object = RuntimeFeatureId.parse("object");
 		final gc = RuntimeFeatureId.parse("gc");
 		final stringLiteral = RuntimeFeatureId.parse("string-literal");
+		final stringScalar = RuntimeFeatureId.parse("string-scalar");
 		final string = RuntimeFeatureId.parse("string");
 		final io = RuntimeFeatureId.parse("io");
 		return [
@@ -274,22 +275,40 @@ class RuntimeFeatureCatalog {
 					"The carrier itself is already the program-specific representation; cloning its ABI would make runtime consumers incompatible.",
 					"The header only shares the three-field call-boundary layout needed by selected consumers such as io.", "docs/hxrt.md",
 					["test/string_output/run.py", "test/runtime/runtime-feature-graph/run.py"])),
-			new RuntimeFeatureDefinition(string,
-				"Valid UTF-8 scalar primitives, owned construction, mutable building, and explicit CString conversion with native evidence.", NativeSeedOnly,
-				true, environments, [alloc, stringLiteral], [header("string.h"), source("string.c")], [
-					"hxc_byte_view_from_cstring",
+			new RuntimeFeatureDefinition(stringScalar, "Allocation-free valid-UTF-8 validation, Unicode-scalar indexing, slicing, comparison, and hashing.",
+				CompilerSelectable, true, environments, [status, stringLiteral],
+				[header("string_scalar.h"), header("string_decode.h"), source("string_scalar.c")], [
 					"hxc_utf8_validate",
 					"hxc_string_is_valid",
+					"hxc_string_scalar_length",
+					"hxc_string_scalar_at",
+					"hxc_string_slice",
+					"hxc_string_char_at",
+					"hxc_string_compare",
+					"hxc_string_hash"
+				], [], [],
+				documentation("Inspects immutable valid-UTF-8 String views with Unicode-scalar indices and no allocation or retained state.", [
+					new RuntimeFeatureSelectionRoot("char-at", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.charAt whose receiver or index is known only at run time."),
+					dependencyRoot("Selected transitively by a broader String feature that reuses the same validated scalar rules.")
+				],
+					"A compiler-known literal and index may fold directly to another literal-backed String view.",
+					"One closed program can use a generated local scalar helper, but duplicating the UTF-8 decoder across programs risks semantic drift.",
+					"Runtime-dependent scalar positions need one shared implementation of ADR 0004 indexing, invalid-input checks, and borrowed slice construction without selecting owned strings or allocation.",
+					"docs/hxrt.md",
+					[
+						"test/differential/string-char-at/run.py",
+						"test/differential/string-runtime/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(string, "Owned UTF-8 construction, mutable building, and explicit CString conversion with native evidence.",
+				NativeSeedOnly, true, environments, [alloc, stringScalar], [header("string.h"), source("string.c")], [
+					"hxc_byte_view_from_cstring",
 					"hxc_string_from_utf8_checked",
 					"hxc_string_from_utf8_lossy",
 					"hxc_string_copy",
 					"hxc_string_concat",
 					"hxc_owned_string_dispose",
-					"hxc_string_scalar_length",
-					"hxc_string_scalar_at",
-					"hxc_string_slice",
-					"hxc_string_compare",
-					"hxc_string_hash",
 					"hxc_string_buffer_init",
 					"hxc_string_buffer_view",
 					"hxc_string_buffer_append_utf8_checked",
@@ -301,7 +320,7 @@ class RuntimeFeatureCatalog {
 					"hxc_owned_cstring_dispose"
 				],
 				[], [],
-				documentation("Implements runtime-value-dependent scalar UTF-8 validation/indexing, owned strings, builders, slicing, hashing, and explicit borrowed or owned CString conversion.",
+				documentation("Adds owned strings, builders, lossy decoding, concatenation, and explicit borrowed or owned CString conversion above the shared scalar slice.",
 					[
 						nativeSeedRoot("Requested only by the string differential and selective-package native fixtures; generated Haxe cannot select it yet.")
 					],
@@ -378,9 +397,11 @@ class RuntimeFeatureCatalog {
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "16860609c4cdb6e8e81f3b02f212edb40be3da01f053743cc087b897df16ba63";
+			case "string.h": "ce5ac5689f7661deaaf954200d6c3f45e968e0cb91889e8bcad17cf5a5ca178c";
+			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_literal.h": "0c9c2b70aa847b7e8a6f2a3fcca18e11bdafd03340a4955527446b3a47388e36";
 			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
+			case "string_scalar.h": "528b1687cd8e358f7545f82b94ec08e037d594a49cdd0db42d9daae6c06eff87";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
 		};
 	}
@@ -395,8 +416,9 @@ class RuntimeFeatureCatalog {
 			case "io.c": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "abe937db71f7333d4a915d7b7e222384ceeba8815783e8fafffb1aeaeadfd5d4";
+			case "string.c": "c1fd06b27c78e644f3bf77bb8f9733fe7535bf6a0b05e40ebc1670e44422401d";
 			case "string_map.c": "5ab15280f51ec98b2aa8a1d39deaa256bbee889e5adf881aa4f3fa7b51e6f0b0";
+			case "string_scalar.c": "41171bfdd476b0862128676b2de23ed33b9533655e0667e86a614d257732c24c";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}

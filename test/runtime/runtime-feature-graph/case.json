@@ -29,7 +29,9 @@
     "runtime/hxrt/include/hxrt/status.h",
     "runtime/hxrt/include/hxrt/status_name.h",
     "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/include/hxrt/string_decode.h",
     "runtime/hxrt/include/hxrt/string_literal.h",
+    "runtime/hxrt/include/hxrt/string_scalar.h",
     "runtime/hxrt/src/abi.c",
     "runtime/hxrt/src/allocator.c",
     "runtime/hxrt/src/array.c",
@@ -39,6 +41,7 @@
     "runtime/hxrt/src/object.c",
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/string.c",
+    "runtime/hxrt/src/string_scalar.c",
     "src/reflaxe/c/runtime/RuntimeAbiContract.hx",
     "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
     "test/runtime/runtime-feature-graph/alloc_consumer.c",
@@ -49,7 +52,8 @@
     "runtime/hxrt/test/gc_contract.c",
     "test/runtime/runtime-feature-graph/run.py",
     "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
-    "test/runtime/runtime-feature-graph/string_consumer.c"
+    "test/runtime/runtime-feature-graph/string_consumer.c",
+    "test/runtime/runtime-feature-graph/string_scalar_consumer.c"
   ],
   "runner": {
     "command": [

@@ -58,6 +58,7 @@ import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumCase;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumPayload;
 import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
+import reflaxe.c.lowering.CBodyIntrinsicReceiver.CBodyIntrinsicReceiverFamily;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 import reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap;
@@ -5856,14 +5857,14 @@ private class FunctionBuilder {
 		if (imported != null)
 			return lowerImportCall(expression, call.arguments, imported, materializeResult);
 		final instanceAccess = CBodyDispatchCatalog.instanceAccess(call.callee);
-		if (instanceAccess != null && CBodyArrayRecognition.isCoreArray(instanceAccess.owner))
-			return lowerManagedArrayCall(expression, instanceAccess, call.arguments, materializeResult);
-		if (instanceAccess != null && CBodyStringMapRecognition.isStringMap(instanceAccess.owner))
-			return lowerStringMapCall(expression, instanceAccess, call.arguments, materializeResult);
-		if (instanceAccess != null && CBodyBytesRecognition.isCoreBytes(instanceAccess.owner))
-			return lowerManagedBytesCall(expression, instanceAccess, call.arguments, materializeResult);
 		if (instanceAccess != null)
-			return lowerInstanceCall(expression, instanceAccess, call.arguments, materializeResult);
+			return switch CBodyIntrinsicReceiver.classify(instanceAccess) {
+				case CBIRArray: lowerManagedArrayCall(expression, instanceAccess, call.arguments, materializeResult);
+				case CBIRStringMap: lowerStringMapCall(expression, instanceAccess, call.arguments, materializeResult);
+				case CBIRBytes: lowerManagedBytesCall(expression, instanceAccess, call.arguments, materializeResult);
+				case CBIRString: lowerStringCall(expression, instanceAccess, call.arguments);
+				case CBIROrdinaryClass: lowerInstanceCall(expression, instanceAccess, call.arguments, materializeResult);
+			};
 		if (!isDirectStaticFunctionExpression(call.callee)) {
 			final callableMapping = bodyValueType(call.callee.t, call.callee.pos, "TCall(indirect-callee-type)");
 			if (callableMapping.functionValue() != null)
@@ -6530,6 +6531,46 @@ private class FunctionBuilder {
 				freshManagedOptionalValueIds.set(result.id, true);
 		}
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/**
+		Lower the first allocation-free ordinary Haxe String operation.
+
+		`charAt` returns a view into the receiver's immutable UTF-8 bytes. It does
+		not allocate or copy: the selected scalar runtime finds one Unicode scalar
+		and returns its byte range, while negative or out-of-range indices produce
+		the empty String required by Haxe. The receiver is lowered before the index,
+		preserving Haxe's left-to-right evaluation order.
+	**/
+	function lowerStringCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>):LoweredValue {
+		final method = access.field.get().name;
+		if (method != "charAt")
+			return unsupported(expression, 'TCall(String.$method:not-yet-admitted)');
+		if (arguments.length != 1)
+			return unsupported(expression, 'TCall(String.charAt:argument-count=${arguments.length},expected=1)');
+		final receiverMapping = bodyValueType(access.receiver.t, access.receiver.pos, "TCall(String.charAt:receiver-type)");
+		if (receiverMapping.staticStringIdentity() == null || typeKey(receiverMapping.irType) != typeKey(IRTString))
+			return unsupported(access.receiver, "TCall(String.charAt:receiver-not-immutable-String-view)");
+		final receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, "TCall(String.charAt:receiver)");
+		final indexMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(String.charAt:index-type)");
+		if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(arguments[0], "TCall(String.charAt:index-requires-Haxe-Int)");
+		final index = coerce(lowerValue(arguments[0], indexMapping), indexMapping, arguments[0].pos, "TCall(String.charAt:index)");
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.charAt:result-type)");
+		if (resultMapping.staticStringIdentity() == null || typeKey(resultMapping.irType) != typeKey(IRTString))
+			return unsupported(expression, "TCall(String.charAt:result-not-immutable-String-view)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final result:HxcIRResult = {id: nextValueId(), type: IRTString};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string-scalar", "char-at"),
+			arguments: [receiver.id, index.id],
+			returnType: IRTString,
+			failure: null
+		}), source, "string-char-at");
+		registerValueTemporary(result.id, "string-char-at-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-scalar", "char-at", "ordinary Haxe String.charAt with Unicode-scalar indexing", source,
+			expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 

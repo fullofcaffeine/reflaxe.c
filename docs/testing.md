@@ -57,6 +57,13 @@ and the exact compiler-selected literal-output closure. The string-runtime suite
 adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
 trace. The array-runtime suite adds bounded native primitive/reference growth,
 aliasing, lifecycle, and failure evidence plus a common Eval mutation trace.
+The string-char-at suite adds the first ordinary-Haxe scalar String method. It
+compares ASCII, a non-BMP character, embedded NUL, empty input, and invalid
+indices with Eval; then it checks split/package/unity output, exact
+allocation-free runtime selection, strict optimized C, and sanitizers. Its
+negative case proves that an unsupported neighboring String method stops at
+the String intrinsic boundary instead of being mistaken for a virtual class
+call.
 The enum suite also carries a nominal abstract-over-String literal through
 construction, copy, projection, and content equality. The string-output suite
 adds the narrow generated-Haxe `Sys.println` and default `trace` proof. These

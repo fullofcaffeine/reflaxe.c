@@ -708,9 +708,13 @@ define, library, or symbol in the build. `hxc_runtime=none` instead reports one
 sorted `HXC2000` containing every root operation, typed surface, source span,
 dependency chain, and available alternative before output. E2.T07 adds one exact compiler-selected
 edge: literal-only hosted `Sys.println` and default `trace` request `io`, whose
-closure is `runtime-base + status + string-literal + io`. It packages one C
-source and no allocator, full string operations, objects, collector, dynamic,
-reflection, or exceptions. New semantic lowerings remain responsible for
+closure is `runtime-base + status + string-literal + io`. The bounded
+ordinary-Haxe `String.charAt` lowering requests `string-scalar`; its closure
+adds the shared UTF-8 decoder and allocation-free scalar operations without
+`alloc` or the owned-string source. It returns a view into the receiver's
+existing bytes, so the result cannot outlive that receiver's storage. These
+closures package no allocator, full string operations, objects, collector,
+dynamic, reflection, or exceptions. New semantic lowerings remain responsible for
 supplying typed candidates for any explicit runtime intent and fail internally
 if they do not. The checked-in allocator contract has E4.T02 native evidence for checked
 sizes, over-alignment, failure atomicity, custom freestanding allocation,
@@ -770,8 +774,9 @@ diagnostic. Candidate runtime ownership never selects a feature from an import
 or type mention. The global parity ledger is also distinct from a program's
 `hxc.stdlib-report.json`: the former owns the pinned product surface, while the
 latter reports only reachable operations analyzed in one build. The current
-bounded report does that for the literal `Sys.println` and default `trace`
-capabilities; all other stdlib use remains fail-closed.
+bounded report does that for literal `Sys.println`, default `trace`, and
+ordinary `String.charAt`; neighboring String methods and all other unlisted
+standard-library use remain fail-closed.
 
 ## String and managed-memory model
 
@@ -779,9 +784,13 @@ Portable `String` is a private immutable valid-UTF-8 representation. Every Haxe
 index counts Unicode scalar values, embedded NUL is content, normalization is
 never implicit, and malformed external UTF-8 has distinct lossy and checked
 paths. Binary `Bytes`, NUL-terminated `c.CString`, and exported UTF-8 views keep
-their own units, ownership, and lifetime contracts. The literal carrier is an
-independent allocation-free feature; full String operations remain a separate
-native seed. Neither by itself requires objects, reflection, or the collector.
+their own units, ownership, and lifetime contracts. The literal carrier and
+`string-scalar` operations are independent allocation-free features.
+`String.charAt` can therefore return a borrowed one-character view without
+selecting the allocator; “borrowed” means the result refers to bytes owned by
+the input String rather than owning a copy. Full owned String operations remain
+a separate native seed. None of these slices requires objects, reflection, or
+the collector.
 See [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
 
 When object-graph semantics still require tracing after escape/region analysis,

@@ -42,14 +42,16 @@ show that sharing is better than specialization.
 
 The checked-in runtime is deliberately incomplete. Generated Haxe can select
 the hosted literal-output closure plus bounded ordinary-Haxe Array,
-`Map<String, Bool>`, and `haxe.io.Bytes` closures. These collections select
-allocator-backed storage transitively; StringMap and Bytes also select the
-literal carrier used by their admitted String inputs. The compiler may also select immutable object
+`Map<String, V>`, `haxe.io.Bytes`, and `String.charAt` closures. Collections
+select allocator-backed storage transitively; StringMap and Bytes also select
+the literal carrier used by their admitted String inputs. `String.charAt`
+instead selects an allocation-free scalar-inspection slice. The compiler may
+also select immutable object
 descriptors and the precise collector when a managed-representation plan
 explicitly needs them; ordinary direct classes remain header-free. Full strings, status-name, and
 ABI-query slices remain native-seed-only. This is not a claim that general
 allocation, arbitrary Map key/value families, `Array`, `Bytes`, escaping
-classes, or `String` lowering works.
+classes, or general `String` lowering works.
 
 ## Selection pipeline
 
@@ -393,13 +395,33 @@ Dependency-only, allocation-free carrier for compiler-owned valid UTF-8 literal
 bytes, byte length, and trailing-NUL fact. Embedded NUL remains ordinary String
 content. It is intentionally separate from the full string feature.
 
+<!-- hxrt-feature:string-scalar -->
+### `string-scalar`
+
+Compiler-selectable, allocation-free inspection of immutable valid-UTF-8
+String views. The first ordinary-Haxe root is `String.charAt(index)`. It counts
+Unicode scalar values rather than UTF-8 bytes, returns a borrowed one-scalar
+view when the index exists, and returns the empty String for a negative or
+out-of-range index. “Borrowed” means the result points into the receiver's
+immutable bytes and therefore shares their lifetime; it owns nothing to free.
+
+The slice also owns checked validation, scalar length/access, borrowed slicing,
+comparison, and hashing used by the broader native String seed. A private
+header-only decoder keeps those operations on one UTF-8 implementation without
+creating another link-time feature. Selecting `charAt` packages
+`string_scalar.c`, `string_scalar.h`, `string_decode.h`, `string_literal.h`,
+`status.h`, and `base.h`; it packages neither `allocator.c` nor `string.c`.
+Other ordinary Haxe String methods still fail at the String lowering boundary.
+See [string runtime](string-runtime.md) and
+[ADR 0004](adr/0004-utf8-scalar-string-contract.md).
+
 <!-- hxrt-feature:string -->
 ### `string`
 
-Native-seed-only runtime-value UTF-8 scalar operations, owned construction,
-builders, slicing, hashing, and explicit CString conversion. Literal emission
-does not select it. See [string runtime](string-runtime.md) and
-[ADR 0004](adr/0004-utf8-scalar-string-model.md).
+Native-seed-only owned UTF-8 construction, builders, lossy decoding, and
+explicit CString conversion above `string-scalar`. Literal emission and
+ordinary `charAt` do not select it. See [string runtime](string-runtime.md) and
+[ADR 0004](adr/0004-utf8-scalar-string-contract.md).
 
 <!-- hxrt-feature:io -->
 ### `io`
@@ -452,7 +474,8 @@ them.
 | `include/hxrt/gc.h`, `src/gc.c` | Compiler-selectable precise non-moving collector, exact roots/pins, pressure policy, and observable reports. |
 | `include/hxrt/object.h`, `src/object.c` | Compiler-selectable immutable managed-payload descriptors and exact trace/finalizer dispatch; no allocation or collection. |
 | `include/hxrt/string_literal.h` | Compiler-selectable dependency-only direct literal layout. |
-| `include/hxrt/string.h`, `src/string.c` | Native-seed owned/scalar UTF-8 and CString machinery. |
+| `include/hxrt/string_scalar.h`, `include/hxrt/string_decode.h`, `src/string_scalar.c` | Compiler-selectable allocation-free UTF-8 scalar inspection, including ordinary Haxe `String.charAt`; the decoder header is an internal implementation shared with the broader String seed. |
+| `include/hxrt/string.h`, `src/string.c` | Native-seed owned UTF-8 construction, builders, lossy decoding, and CString machinery. |
 | `include/hxrt/io.h`, `src/io.c` | Hosted compiler-selectable literal output and explicit status. |
 
 Each file begins with a local source contract naming its feature, selection

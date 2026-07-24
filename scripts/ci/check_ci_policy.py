@@ -90,7 +90,9 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/include/hxrt/bytes.h",
     "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/include/hxrt/string_decode.h",
     "runtime/hxrt/include/hxrt/string_literal.h",
+    "runtime/hxrt/include/hxrt/string_scalar.h",
     "runtime/hxrt/src/abi.c",
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/allocator.c",
@@ -99,6 +101,7 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/src/bytes.c",
     "runtime/hxrt/src/io.c",
     "runtime/hxrt/src/string.c",
+    "runtime/hxrt/src/string_scalar.c",
     "runtime/hxrt/features.json",
     "docs/specs/runtime-features.schema.json",
     "docs/hxrt.md",
@@ -122,6 +125,11 @@ REQUIRED_GATE_FILES = (
     "test/differential/string-map/generated/oracle.hxml",
     "test/differential/string-map/run.py",
     "test/differential/string-map/string_map_runtime.c",
+    "test/differential/string-char-at/case.json",
+    "test/differential/string-char-at/generated/Main.hx",
+    "test/differential/string-char-at/generated/oracle.hxml",
+    "test/differential/string-char-at/negative/Main.hx",
+    "test/differential/string-char-at/run.py",
     "test/differential/bytes-runtime/bytes_runtime.c",
     "test/differential/bytes-runtime/case.json",
     "test/differential/bytes-runtime/generated/Main.hx",
@@ -140,6 +148,7 @@ REQUIRED_GATE_FILES = (
     "test/runtime/runtime-feature-graph/array_consumer.c",
     "test/runtime/runtime-feature-graph/io_consumer.c",
     "test/runtime/runtime-feature-graph/string_consumer.c",
+    "test/runtime/runtime-feature-graph/string_scalar_consumer.c",
     "test/runtime/runtime-feature-graph/run.py",
     "scripts/test/c_fixture_harness.py",
     "test/c_ast/ASTFixtureCompiler.hx",
@@ -1093,6 +1102,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:array-runtime entry point")
     if scripts.get("test:string-map") != "python3 test/differential/string-map/run.py":
         errors.append("package.json must retain the test:string-map entry point")
+    if scripts.get("test:string-char-at") != "python3 test/differential/string-char-at/run.py":
+        errors.append("package.json must retain the test:string-char-at entry point")
     if scripts.get("test:bytes-runtime") != "python3 test/differential/bytes-runtime/run.py":
         errors.append("package.json must retain the test:bytes-runtime entry point")
     if scripts.get("test:gc-runtime") != "python3 test/runtime/gc/run.py":
@@ -1249,6 +1260,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:array-runtime")
     if "npm run test:string-map" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-map")
+    if "npm run test:string-char-at" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:string-char-at")
     if "npm run test:bytes-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:bytes-runtime")
     if "npm run test:gc-runtime" not in str(scripts.get("test:toolchain", "")):
@@ -1459,6 +1472,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed array runtime test")
     if "test/differential/string-map/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed StringMap runtime test")
+    if "test/differential/string-char-at/run.py" not in pre_commit:
+        errors.append("pre-commit must run the ordinary String.charAt differential test")
     if "test/differential/bytes-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the fixed-length Bytes runtime test")
     if "test/differential/string-runtime/run.py" not in pre_commit:
@@ -1753,6 +1768,30 @@ def validate() -> list[str]:
             errors.append(
                 "StringMap runner lost typed map/ownership/failure/selective-link evidence: "
                 + required_string_map_contract
+            )
+
+    string_char_at_runner = read_text(
+        ROOT / "test/differential/string-char-at/run.py", errors
+    )
+    for required_string_char_at_contract in (
+        "-std=c11",
+        "-Werror",
+        "-pedantic",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "--toolchain",
+        "run_eval_oracle",
+        "render_server_pair",
+        "-fsanitize=address,undefined",
+        "hxc_string_char_at",
+        "hxc_runtime=none",
+        "toUpperCase:not-yet-admitted",
+        "nm",
+    ):
+        if required_string_char_at_contract not in string_char_at_runner:
+            errors.append(
+                "String.charAt runner lost Eval/layout/runtime-policy/sanitizer evidence: "
+                + required_string_char_at_contract
             )
 
     bytes_runtime_runner = read_text(

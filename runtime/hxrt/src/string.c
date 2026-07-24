@@ -1,124 +1,20 @@
 /*
  * Implementation of native-seed-only feature `string`.
  *
- * String differential and selective-package native fixtures call these UTF-8,
- * ownership, builder, slice, hash, and CString boundaries; generated Haxe
- * cannot select them yet, and literals use the separate allocation-free carrier.
+ * String differential and selective-package native fixtures call these owned
+ * construction, builder, lossy-decoding, and CString boundaries; generated
+ * Haxe cannot select them yet. Allocation-free validation, scalar indexing,
+ * slicing, comparison, and hashing live in the narrower `string-scalar`
+ * dependency so ordinary Haxe `String.charAt` does not pull in an allocator.
  * Owners retain allocator identity, borrowed values never extend lifetime, and
  * fallible functions publish initialized outputs only on success. The slice has
  * no hidden global/thread state and its records remain private internal ABI.
  */
 #include "hxrt/string.h"
-
-typedef struct hxc_utf8_step {
-  size_t consumed;
-  uint32_t scalar;
-  bool valid;
-} hxc_utf8_step;
+#include "hxrt/string_decode.h"
 
 /* Empty owned strings share immutable storage while retaining a zero-size owner. */
 static const uint8_t hxc_empty_string_storage[1] = { UINT8_C(0) };
-
-static bool hxc_byte_view_has_valid_shape(hxc_byte_view source) {
-  return source.data != NULL || source.length == 0u;
-}
-
-static bool hxc_is_continuation(uint8_t value) {
-  return value >= UINT8_C(0x80) && value <= UINT8_C(0xBF);
-}
-
-static hxc_utf8_step hxc_invalid_step(size_t consumed) {
-  hxc_utf8_step step;
-  step.consumed = consumed;
-  step.scalar = UINT32_C(0xFFFD);
-  step.valid = false;
-  return step;
-}
-
-static hxc_utf8_step hxc_valid_step(size_t consumed, uint32_t scalar) {
-  hxc_utf8_step step;
-  step.consumed = consumed;
-  step.scalar = scalar;
-  step.valid = true;
-  return step;
-}
-
-static hxc_utf8_step hxc_utf8_read(const uint8_t *data, size_t length) {
-  const uint8_t first = data[0];
-  uint8_t second;
-  uint8_t third;
-  uint8_t fourth;
-  uint32_t scalar;
-
-  if (first <= UINT8_C(0x7F)) {
-    return hxc_valid_step(1u, (uint32_t)first);
-  }
-
-  if (first >= UINT8_C(0xC2) && first <= UINT8_C(0xDF)) {
-    if (length < 2u || !hxc_is_continuation(data[1])) {
-      return hxc_invalid_step(1u);
-    }
-    second = data[1];
-    scalar = ((uint32_t)(first & UINT8_C(0x1F)) << 6u)
-      | (uint32_t)(second & UINT8_C(0x3F));
-    return hxc_valid_step(2u, scalar);
-  }
-
-  /* Boundary checks reject overlong encodings and UTF-16 surrogate scalars. */
-  if (first >= UINT8_C(0xE0) && first <= UINT8_C(0xEF)) {
-    if (length < 2u) {
-      return hxc_invalid_step(1u);
-    }
-    second = data[1];
-    if ((first == UINT8_C(0xE0)
-        && (second < UINT8_C(0xA0) || second > UINT8_C(0xBF)))
-      || (first == UINT8_C(0xED)
-        && (second < UINT8_C(0x80) || second > UINT8_C(0x9F)))
-      || (first != UINT8_C(0xE0) && first != UINT8_C(0xED)
-        && !hxc_is_continuation(second))) {
-      return hxc_invalid_step(1u);
-    }
-    if (length < 3u || !hxc_is_continuation(data[2])) {
-      return hxc_invalid_step(2u);
-    }
-    third = data[2];
-    scalar = ((uint32_t)(first & UINT8_C(0x0F)) << 12u)
-      | ((uint32_t)(second & UINT8_C(0x3F)) << 6u)
-      | (uint32_t)(third & UINT8_C(0x3F));
-    return hxc_valid_step(3u, scalar);
-  }
-
-  /* F0/F4 bounds keep decoded values within U+10000..U+10FFFF. */
-  if (first >= UINT8_C(0xF0) && first <= UINT8_C(0xF4)) {
-    if (length < 2u) {
-      return hxc_invalid_step(1u);
-    }
-    second = data[1];
-    if ((first == UINT8_C(0xF0)
-        && (second < UINT8_C(0x90) || second > UINT8_C(0xBF)))
-      || (first == UINT8_C(0xF4)
-        && (second < UINT8_C(0x80) || second > UINT8_C(0x8F)))
-      || (first != UINT8_C(0xF0) && first != UINT8_C(0xF4)
-        && !hxc_is_continuation(second))) {
-      return hxc_invalid_step(1u);
-    }
-    if (length < 3u || !hxc_is_continuation(data[2])) {
-      return hxc_invalid_step(2u);
-    }
-    if (length < 4u || !hxc_is_continuation(data[3])) {
-      return hxc_invalid_step(3u);
-    }
-    third = data[2];
-    fourth = data[3];
-    scalar = ((uint32_t)(first & UINT8_C(0x07)) << 18u)
-      | ((uint32_t)(second & UINT8_C(0x3F)) << 12u)
-      | ((uint32_t)(third & UINT8_C(0x3F)) << 6u)
-      | (uint32_t)(fourth & UINT8_C(0x3F));
-    return hxc_valid_step(4u, scalar);
-  }
-
-  return hxc_invalid_step(1u);
-}
 
 static size_t hxc_utf8_encode(uint32_t scalar, uint8_t output[4]) {
   if ((scalar >= UINT32_C(0xD800) && scalar <= UINT32_C(0xDFFF))
@@ -419,43 +315,6 @@ hxc_status hxc_byte_view_from_cstring(
   return HXC_STATUS_OK;
 }
 
-hxc_status hxc_utf8_validate(
-  hxc_byte_view source,
-  size_t *out_scalar_length
-) {
-  size_t byte_index = 0u;
-  size_t scalar_length = 0u;
-  hxc_utf8_step step;
-  if (out_scalar_length == NULL || !hxc_byte_view_has_valid_shape(source)) {
-    return HXC_STATUS_INVALID_ARGUMENT;
-  }
-  while (byte_index < source.length) {
-    step = hxc_utf8_read(source.data + byte_index, source.length - byte_index);
-    if (!step.valid) {
-      return HXC_STATUS_INVALID_UTF8;
-    }
-    byte_index += step.consumed;
-    scalar_length++;
-  }
-  *out_scalar_length = scalar_length;
-  return HXC_STATUS_OK;
-}
-
-bool hxc_string_is_valid(hxc_string value) {
-  hxc_byte_view view;
-  size_t scalar_length;
-  if (value.data == NULL && value.byte_length != 0u) {
-    return false;
-  }
-  if (value.has_trailing_nul
-    && (value.data == NULL || value.data[value.byte_length] != UINT8_C(0))) {
-    return false;
-  }
-  view.data = value.data;
-  view.length = value.byte_length;
-  return hxc_utf8_validate(view, &scalar_length) == HXC_STATUS_OK;
-}
-
 hxc_status hxc_string_from_utf8_checked(
   hxc_byte_view source,
   const hxc_allocator *allocator,
@@ -635,144 +494,6 @@ hxc_status hxc_owned_string_dispose(hxc_owned_string *value) {
     return status;
   }
   hxc_owned_string_clear(value);
-  return HXC_STATUS_OK;
-}
-
-hxc_status hxc_string_scalar_length(
-  hxc_string value,
-  size_t *out_length
-) {
-  hxc_byte_view view;
-  if (out_length == NULL) {
-    return HXC_STATUS_INVALID_ARGUMENT;
-  }
-  if (!hxc_string_is_valid(value)) {
-    return HXC_STATUS_INVALID_UTF8;
-  }
-  view.data = value.data;
-  view.length = value.byte_length;
-  return hxc_utf8_validate(view, out_length);
-}
-
-hxc_status hxc_string_scalar_at(
-  hxc_string value,
-  size_t scalar_index,
-  uint32_t *out_scalar
-) {
-  size_t byte_index = 0u;
-  size_t index = 0u;
-  hxc_utf8_step step;
-  if (out_scalar == NULL || !hxc_string_is_valid(value)) {
-    return out_scalar == NULL ? HXC_STATUS_INVALID_ARGUMENT : HXC_STATUS_INVALID_UTF8;
-  }
-  while (byte_index < value.byte_length) {
-    step = hxc_utf8_read(value.data + byte_index, value.byte_length - byte_index);
-    if (index == scalar_index) {
-      *out_scalar = step.scalar;
-      return HXC_STATUS_OK;
-    }
-    byte_index += step.consumed;
-    index++;
-  }
-  return HXC_STATUS_OUT_OF_RANGE;
-}
-
-hxc_status hxc_string_slice(
-  hxc_string source,
-  size_t scalar_start,
-  size_t scalar_length,
-  hxc_string *out_slice
-) {
-  size_t byte_index = 0u;
-  size_t index = 0u;
-  size_t slice_start;
-  size_t consumed = 0u;
-  hxc_utf8_step step;
-  hxc_string result = HXC_STRING_INITIALIZER;
-  if (out_slice == NULL) {
-    return HXC_STATUS_INVALID_ARGUMENT;
-  }
-  if (!hxc_string_is_valid(source)) {
-    return HXC_STATUS_INVALID_UTF8;
-  }
-  while (index < scalar_start && byte_index < source.byte_length) {
-    step = hxc_utf8_read(source.data + byte_index, source.byte_length - byte_index);
-    byte_index += step.consumed;
-    index++;
-  }
-  if (index != scalar_start) {
-    return HXC_STATUS_OUT_OF_RANGE;
-  }
-  slice_start = byte_index;
-  while (consumed < scalar_length && byte_index < source.byte_length) {
-    step = hxc_utf8_read(source.data + byte_index, source.byte_length - byte_index);
-    byte_index += step.consumed;
-    consumed++;
-  }
-  if (consumed != scalar_length) {
-    return HXC_STATUS_OUT_OF_RANGE;
-  }
-  result.data = source.data == NULL ? NULL : source.data + slice_start;
-  result.byte_length = byte_index - slice_start;
-  result.has_trailing_nul = source.has_trailing_nul
-    && byte_index == source.byte_length;
-  *out_slice = result;
-  return HXC_STATUS_OK;
-}
-
-hxc_status hxc_string_compare(
-  hxc_string left,
-  hxc_string right,
-  int32_t *out_order
-) {
-  size_t common;
-  size_t index;
-  if (out_order == NULL) {
-    return HXC_STATUS_INVALID_ARGUMENT;
-  }
-  if (!hxc_string_is_valid(left) || !hxc_string_is_valid(right)) {
-    return HXC_STATUS_INVALID_UTF8;
-  }
-  common = left.byte_length < right.byte_length
-    ? left.byte_length
-    : right.byte_length;
-  for (index = 0u; index < common; index++) {
-    if (left.data[index] < right.data[index]) {
-      *out_order = -1;
-      return HXC_STATUS_OK;
-    }
-    if (left.data[index] > right.data[index]) {
-      *out_order = 1;
-      return HXC_STATUS_OK;
-    }
-  }
-  if (left.byte_length < right.byte_length) {
-    *out_order = -1;
-  } else if (left.byte_length > right.byte_length) {
-    *out_order = 1;
-  } else {
-    *out_order = 0;
-  }
-  return HXC_STATUS_OK;
-}
-
-hxc_status hxc_string_hash(
-  hxc_string value,
-  uint32_t *out_hash
-) {
-  uint32_t hash = UINT32_C(2166136261);
-  size_t index;
-  if (out_hash == NULL) {
-    return HXC_STATUS_INVALID_ARGUMENT;
-  }
-  if (!hxc_string_is_valid(value)) {
-    return HXC_STATUS_INVALID_UTF8;
-  }
-  for (index = 0u; index < value.byte_length; index++) {
-    hash ^= (uint32_t)value.data[index];
-    hash *= UINT32_C(16777619);
-  }
-  *out_hash = hash;
   return HXC_STATUS_OK;
 }
 

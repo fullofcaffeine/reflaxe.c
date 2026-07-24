@@ -79,6 +79,7 @@ class RuntimeFeatureGraphGolden {
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
 		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
+		final stringScalar = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-scalar", "string-scalar")], []));
 		final stringReason = reason("fixture.string", "string");
 		final ownerAllocationReason = reason("fixture.owner-allocation", "alloc");
 		final stringReasons = [stringReason, ownerAllocationReason];
@@ -102,6 +103,7 @@ class RuntimeFeatureGraphGolden {
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
 		final gcFiles = packager.packageFiles(gc, repositorySource);
+		final stringScalarFiles = packager.packageFiles(stringScalar, repositorySource);
 		final stringFiles = packager.packageFiles(stringPlan, repositorySource);
 		final ioFiles = packager.packageFiles(compilerIo, repositorySource);
 		final emptySource = new CountingRuntimeSource();
@@ -150,6 +152,7 @@ class RuntimeFeatureGraphGolden {
 			bytes: bytes,
 			object: objectPlan,
 			gc: gc,
+			stringScalar: stringScalar,
 			string: stringPlan,
 			minimalString: minimalString,
 			compilerIo: compilerIo,
@@ -193,6 +196,7 @@ class RuntimeFeatureGraphGolden {
 			bytes: packageRecords(bytesFiles),
 			object: packageRecords(objectFiles),
 			gc: packageRecords(gcFiles),
+			stringScalar: packageRecords(stringScalarFiles),
 			string: packageRecords(stringFiles),
 			io: packageRecords(ioFiles)
 		}));

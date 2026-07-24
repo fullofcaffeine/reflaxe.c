@@ -859,9 +859,9 @@ def validate_generated(ledger: dict[str, object]) -> None:
     statuses = {status: 0 for status in STATUSES}
     for entry in entries:
         statuses[str(entry["status"])] += 1
-    if statuses["conformant"] != 1 or statuses["partial"] != 12:
+    if statuses["conformant"] != 1 or statuses["partial"] != 13:
         raise StdlibLedgerFailure(
-            "evidence should mark exactly Std.int conformant plus ten bounded Bytes APIs and literal Sys.println/trace partial; broader stdlib parity is not yet proven"
+            "evidence should mark exactly Std.int conformant plus ten bounded Bytes APIs, bounded String.charAt, and literal Sys.println/trace partial; broader stdlib parity is not yet proven"
         )
 
 

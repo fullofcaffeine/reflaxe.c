@@ -13,17 +13,11 @@
 #define HXRT_STRING_H_INCLUDED
 
 #include "hxrt/allocator.h"
-#include "hxrt/string_literal.h"
+#include "hxrt/string_scalar.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-/** Untrusted or binary bytes. No encoding, ownership, or terminator is implied. */
-typedef struct hxc_byte_view {
-  const uint8_t *data;
-  size_t length;
-} hxc_byte_view;
 
 /** Allocator-owned immutable String storage. Move only by convention. */
 typedef struct hxc_owned_string {
@@ -56,8 +50,6 @@ typedef struct hxc_owned_cstring {
   hxc_allocation storage;
 } hxc_owned_cstring;
 
-#define HXC_BYTE_VIEW_INITIALIZER \
-  { NULL, 0u }
 #define HXC_OWNED_STRING_INITIALIZER \
   { HXC_STRING_INITIALIZER, HXC_ALLOCATION_INITIALIZER }
 #define HXC_STRING_BUFFER_INITIALIZER \
@@ -72,15 +64,6 @@ HXC_API hxc_status hxc_byte_view_from_cstring(
   const char *value,
   hxc_byte_view *out_view
 );
-
-/** Validate shortest-form scalar UTF-8. Scalar output is written only on success. */
-HXC_API hxc_status hxc_utf8_validate(
-  hxc_byte_view source,
-  size_t *out_scalar_length
-);
-
-/** Validate the complete private String invariant. */
-HXC_API bool hxc_string_is_valid(hxc_string value);
 
 /** Checked decode/copy. Malformed input is rejected before allocation. */
 HXC_API hxc_status hxc_string_from_utf8_checked(
@@ -116,43 +99,6 @@ HXC_API hxc_status hxc_string_concat(
 
 /** Release owned String storage through its retained allocator identity. */
 HXC_API hxc_status hxc_owned_string_dispose(hxc_owned_string *value);
-
-/** Count Unicode scalar values; the output is unchanged for invalid input. */
-HXC_API hxc_status hxc_string_scalar_length(
-  hxc_string value,
-  size_t *out_length
-);
-
-/** Read one zero-based Unicode scalar index. */
-HXC_API hxc_status hxc_string_scalar_at(
-  hxc_string value,
-  size_t scalar_index,
-  uint32_t *out_scalar
-);
-
-/**
- * Produce an allocation-free scalar-indexed slice tied to the source lifetime.
- * A suffix retains the trailing-NUL fact; an interior slice does not invent one.
- */
-HXC_API hxc_status hxc_string_slice(
-  hxc_string source,
-  size_t scalar_start,
-  size_t scalar_length,
-  hxc_string *out_slice
-);
-
-/** Byte-wise fast comparison of canonical UTF-8 scalar sequences. */
-HXC_API hxc_status hxc_string_compare(
-  hxc_string left,
-  hxc_string right,
-  int32_t *out_order
-);
-
-/** Stable 32-bit FNV-1a over canonical UTF-8 bytes; embedded NUL is included. */
-HXC_API hxc_status hxc_string_hash(
-  hxc_string value,
-  uint32_t *out_hash
-);
 
 /** Initialize an empty builder without invoking the allocation callback. */
 HXC_API hxc_status hxc_string_buffer_init(

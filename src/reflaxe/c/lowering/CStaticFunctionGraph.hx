@@ -12,11 +12,10 @@ import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyGlobalInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
+import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchCatalog;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
-import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
-import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
-import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
+import reflaxe.c.lowering.CBodyIntrinsicReceiver.CBodyIntrinsicReceiverFamily;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericSpecializationReason;
@@ -158,11 +157,7 @@ class CStaticFunctionGraphCollector {
 					addConstructor(target, constructorsById, pendingConstructors);
 					addConstructorDependency(currentConstructor.id, target.id, expression.pos, constructorDependencies);
 				}
-			case TCall(callee, _)
-				if (CBodyDispatchCatalog.instanceAccess(callee) != null
-					&& !isArrayInstanceCall(callee)
-					&& !isStringMapInstanceCall(callee)
-					&& !isBytesInstanceCall(callee)):
+			case TCall(callee, _) if (isOrdinaryInstanceCall(callee)):
 				final callerId = currentConstructor == null ? CBodyLowering.functionInputId(caller) : currentConstructor.id;
 				for (method in requireDispatchCatalog().collectCall(expression, callerId, caller.sourcePath, caller.specialization,
 					(base, arguments, reason) -> specializedInput(base, requireSpecialization(base, arguments, reason))))
@@ -227,19 +222,16 @@ class CStaticFunctionGraphCollector {
 		};
 	}
 
-	static function isArrayInstanceCall(callee:TypedExpr):Bool {
+	/**
+	 * True only when the shared receiver classifier assigns ordinary dispatch.
+	 *
+	 * Compiler-owned standard-library families remain visible to body lowering,
+	 * but their upstream implementation methods never enter the reachable virtual
+	 * method graph.
+	 */
+	static function isOrdinaryInstanceCall(callee:TypedExpr):Bool {
 		final access = CBodyDispatchCatalog.instanceAccess(callee);
-		return access != null && CBodyArrayRecognition.isCoreArray(access.owner);
-	}
-
-	static function isBytesInstanceCall(callee:TypedExpr):Bool {
-		final access = CBodyDispatchCatalog.instanceAccess(callee);
-		return access != null && CBodyBytesRecognition.isCoreBytes(access.owner);
-	}
-
-	static function isStringMapInstanceCall(callee:TypedExpr):Bool {
-		final access = CBodyDispatchCatalog.instanceAccess(callee);
-		return access != null && CBodyStringMapRecognition.isStringMap(access.owner);
+		return access != null && CBodyIntrinsicReceiver.classify(access) == CBIROrdinaryClass;
 	}
 
 	/**

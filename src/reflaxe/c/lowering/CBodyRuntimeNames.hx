@@ -11,6 +11,7 @@ import reflaxe.c.ast.CAST.CIdentifier;
 **/
 enum CBodyRuntimeName {
 	CBRNStringType;
+	CBRNStringCharAt;
 	CBRNPrintln;
 	CBRNStatusType;
 	CBRNStatusOk;
@@ -73,6 +74,7 @@ class CBodyRuntimeNames {
 	public static function identifier(name:CBodyRuntimeName):CIdentifier {
 		return new CIdentifier(switch name {
 			case CBRNStringType: "hxc_string";
+			case CBRNStringCharAt: "hxc_string_char_at";
 			case CBRNPrintln: "hxc_io_println";
 			case CBRNStatusType: "hxc_status";
 			case CBRNStatusOk: "HXC_STATUS_OK";

@@ -634,20 +634,21 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     )
     if result.returncode == 0:
         return
-    # Full Caxecraft now passes the Bytes value carried by
-    # EditorValidationResult.ValidationPassed, every currently required
-    # StringMap value family, and ScenarioRecordCursor.failAt<T>'s direct
-    # generic instance-method specializations. The next unsupported construct
-    # is String.charAt: graph discovery incorrectly treats this intrinsic String
-    # operation as an ordinary virtual class slot. Naming that exact boundary
-    # proves the compiler traversed the earlier Array, function-value,
-    # StringMap, abstract-record, Bytes-enum, record, enum, integer, and generic
-    # method paths; accepting any later failure would let one regress unnoticed.
-    # haxe_c-djl.11 owns the shared intrinsic-instance dispatch classification.
+    # Full Caxecraft now also passes ScenarioRecordCursor.failAt<T>'s direct
+    # generic instance-method specializations and allocation-free String.charAt.
+    # The next unsupported construct is haxe.ds.IntMap.exists: the virtual-slot
+    # validator does not yet settle this generic standard-library collection
+    # operation to a concrete specialization or intrinsic collection plan.
+    # Naming that exact boundary proves the compiler traversed the earlier
+    # Array, function-value, StringMap, abstract-record, Bytes-enum, record,
+    # enum, integer, generic-method, and String paths; accepting any later
+    # failure would let one of those capabilities regress unnoticed.
+    # haxe_c-c3s.1 owns the general IntMap work.
     if (
-        "std/String.hx:63:" not in result.stderr
-        or "virtual-slot:slot.String.charAt:owner:not-concrete-class"
+        "std/haxe/ds/IntMap.hx:51:" not in result.stderr
+        or "virtual-slot-generic-requires-specialization:slot.haxe.ds.IntMap.exists"
         not in result.stderr
+        or "String.charAt" in result.stderr
         or "CaxeFlowState" in result.stderr
         or "CaxeFlowRulePlanner" in result.stderr
         or "EditorScenarioFactory" in result.stderr
@@ -655,7 +656,7 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
         or "EditorValidationResult" in result.stderr
     ):
         raise ArrayRuntimeFailure(
-            "Caxecraft did not compile past its former Array/Class/StringMap/generic-method boundaries\n"
+            "Caxecraft did not compile past its former Array/Class/StringMap/generic-method/String boundaries\n"
             f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
         )
 

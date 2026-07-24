@@ -195,6 +195,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/hxrt/(alloc
   python3 "$ROOT_DIR/test/differential/string-map/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/hxrt/(base|status|string_decode|string_literal|string_scalar)\.h|src/string_scalar\.c)|src/reflaxe/c/(CCompiler\.hx|emit/CProjectEmitter\.hx|ir/|lowering/|runtime/)|test/differential/string-char-at/|test/runtime/runtime-feature-graph/|docs/(architecture|hxrt|string-runtime|runtime-feature-planning|testing)\.md|docs/specs/(bootstrap-inventory|fixture-taxonomy|stdlib-ledger).*\.(json|csv)|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running ordinary String.charAt differential probes..."
+  python3 "$ROOT_DIR/test/differential/string-char-at/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/hxrt/(abi|io|status|string|string_literal)\.h|src/(io|status|string)\.c|test/(runtime_smoke\.c|public_header_cpp\.cpp))|src/reflaxe/c/runtime/RuntimeFeatureCatalog\.hx|test/differential/string-runtime/|docs/(adr/0004-utf8-scalar-string-contract|string-runtime|runtime-feature-planning|testing)\.md|docs/specs/fixture-taxonomy\.json|package\.json)'; then
   echo "[pre-commit] Running UTF-8 scalar string runtime and CString probes..."
   python3 "$ROOT_DIR/test/differential/string-runtime/run.py"
