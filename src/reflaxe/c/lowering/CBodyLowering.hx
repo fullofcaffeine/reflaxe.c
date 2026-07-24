@@ -8093,10 +8093,12 @@ private class FunctionBuilder {
 	**/
 	function lowerStringCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>):LoweredValue {
 		final method = access.field.get().name;
-		if (method != "charAt" && method != "charCodeAt" && method != "substring")
+		if (method != "charAt" && method != "charCodeAt" && method != "indexOf" && method != "substring")
 			return unsupported(expression, 'TCall(String.$method:not-yet-admitted)');
-		final expectedArgumentCount = method == "substring" ? "1-or-2" : "1";
-		if ((method == "substring" && (arguments.length < 1 || arguments.length > 2)) || (method != "substring" && arguments.length != 1))
+		final takesOptionalSecondArgument = method == "indexOf" || method == "substring";
+		final expectedArgumentCount = takesOptionalSecondArgument ? "1-or-2" : "1";
+		if ((takesOptionalSecondArgument && (arguments.length < 1 || arguments.length > 2))
+			|| (!takesOptionalSecondArgument && arguments.length != 1))
 			return unsupported(expression, 'TCall(String.$method:argument-count=${arguments.length},expected=$expectedArgumentCount)');
 		final receiverMapping = bodyValueType(access.receiver.t, access.receiver.pos, 'TCall(String.$method:receiver-type)');
 		if (!isStringCarrier(receiverMapping.irType))
@@ -8104,6 +8106,8 @@ private class FunctionBuilder {
 		final receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, 'TCall(String.$method:receiver)');
 		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 			HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), 'string-$method-receiver-null-check');
+		if (method == "indexOf")
+			return lowerStringIndexOf(expression, receiver, arguments);
 		final loweredArguments = [receiver.id];
 		for (index => argumentExpression in arguments) {
 			final argumentMapping = bodyValueType(argumentExpression.t, argumentExpression.pos, 'TCall(String.$method:argument-$index-type)');
@@ -8148,6 +8152,55 @@ private class FunctionBuilder {
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: resultMapping};
 		return method == "charAt"
 			|| method == "substring" ? ownBorrowedStringResult(lowered, expression.pos, 'string-$operation') : lowered;
+	}
+
+	/**
+		Lower `String.indexOf` without converting scalar positions to byte offsets.
+
+		The receiver and needle remain immutable String views. The checked runtime
+		compares their canonical UTF-8 bytes only at scalar boundaries and reports
+		a scalar index, so non-ASCII text and embedded NUL behave like the pinned
+		Eval oracle. An omitted start becomes zero before HxcIR; a supplied start
+		stays a signed Haxe `Int`. Negative starts follow the pinned Eval target's
+		observed behavior, which is intentional because the language API leaves
+		that edge unspecified.
+	**/
+	function lowerStringIndexOf(expression:TypedExpr, receiver:LoweredValue, arguments:Array<TypedExpr>):LoweredValue {
+		final needleExpression = arguments[0];
+		final needleMapping = bodyValueType(needleExpression.t, needleExpression.pos, "TCall(String.indexOf:needle-type)");
+		if (!isStringCarrier(needleMapping.irType))
+			return unsupported(needleExpression, "TCall(String.indexOf:needle-not-immutable-String-view)");
+		final needle = coerce(lowerValue(needleExpression, needleMapping), needleMapping, needleExpression.pos, "TCall(String.indexOf:needle)");
+		appendInstruction(null, IRIONullCheck(needle.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+			HaxeSourceSpan.fromPosition(needleExpression.pos, input.sourcePath), "string-index-of-needle-null-check");
+		final loweredArguments = [receiver.id, needle.id];
+		if (arguments.length == 2) {
+			final startExpression = arguments[1];
+			final startMapping = bodyValueType(startExpression.t, startExpression.pos, "TCall(String.indexOf:start-type)");
+			if (typeKey(startMapping.irType) != typeKey(IRTInt(32, true)))
+				return unsupported(startExpression, "TCall(String.indexOf:start-requires-Haxe-Int)");
+			loweredArguments.push(coerce(lowerValue(startExpression, startMapping), startMapping, startExpression.pos, "TCall(String.indexOf:start)").id);
+		} else {
+			final defaultStart:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
+			appendInstruction(defaultStart, IRIOConstant(IRCInt("0")), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
+				"string-index-of-default-start");
+			loweredArguments.push(defaultStart.id);
+		}
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.indexOf:result-type)");
+		if (typeKey(resultMapping.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(expression, "TCall(String.indexOf:result-requires-Haxe-Int)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string-scalar", "index-of"),
+			arguments: loweredArguments,
+			returnType: resultMapping.irType,
+			failure: managedArrayFailure()
+		}), source, "string-index-of");
+		registerValueTemporary(result.id, "string-index-of-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-scalar", "index-of", "ordinary Haxe String.indexOf with Unicode-scalar search indices",
+			source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 
 	/** True for both literal-only and runtime-owned immutable String carriers. */

@@ -103,16 +103,19 @@ static bool hxc_bytes_equal(
 static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   const hxc_string missing = HXC_STRING_INITIALIZER;
   const hxc_string empty = HXC_STRING_EMPTY_INITIALIZER;
+  const hxc_string nul = HXC_STRING_LITERAL("\0");
   const hxc_string emoji = HXC_STRING_LITERAL("\xF0\x9F\x98\x80");
   const hxc_string embedded = HXC_STRING_LITERAL("a\0b");
   const hxc_string composed = HXC_STRING_LITERAL("\xC3\xA9");
   const hxc_string decomposed = HXC_STRING_LITERAL("e\xCC\x81");
   const hxc_string sequence = HXC_STRING_LITERAL("x\xF0\x9F\x98\x80\xC3\xA9");
+  const hxc_string emoji_accent = HXC_STRING_LITERAL("\xF0\x9F\x98\x80\xC3\xA9");
   hxc_string slice = HXC_STRING_INITIALIZER;
   size_t length = 99u;
   size_t allocations = arena->allocation_count;
   uint32_t scalar = UINT32_C(0);
   uint32_t hash = UINT32_C(0);
+  int32_t found = 77;
   int32_t order = 7;
 
   HXC_TEST_CHECK(!hxc_string_is_valid(missing));
@@ -140,6 +143,44 @@ static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
   HXC_TEST_CHECK(hxc_bytes_equal(slice.data, emoji.data, emoji.byte_length));
   HXC_TEST_CHECK(hxc_string_slice(sequence, 2u, 1u, &slice) == HXC_STATUS_OK);
   HXC_TEST_CHECK(slice.byte_length == 2u && slice.has_trailing_nul);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(sequence, emoji, 0, &found) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 1);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(sequence, composed, 2, &found) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 2);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(sequence, emoji_accent, 0, &found) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 1);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(sequence, empty, 99, &found) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 3);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(sequence, empty, -1, &found) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 0);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(sequence, composed, -1, &found) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 2);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(embedded, nul, 0, &found) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(found == 1);
+  found = 77;
+  HXC_TEST_CHECK(
+    hxc_string_index_of(missing, composed, 0, &found)
+      == HXC_STATUS_INVALID_UTF8
+  );
+  HXC_TEST_CHECK(found == 77);
+  HXC_TEST_CHECK(
+    hxc_string_index_of(sequence, composed, 0, NULL)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
   HXC_TEST_CHECK(arena->allocation_count == allocations);
   return 0;
 }

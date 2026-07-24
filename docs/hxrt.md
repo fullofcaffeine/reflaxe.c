@@ -436,28 +436,32 @@ content. It is intentionally separate from the full string feature.
 ### `string-scalar`
 
 Compiler-selectable, allocation-free inspection of immutable valid-UTF-8
-String views. The first ordinary-Haxe root is `String.charAt(index)`. It counts
-Unicode scalar values rather than UTF-8 bytes, returns a borrowed one-scalar
-view when the index exists, and returns the empty String for a negative or
-out-of-range index. “Borrowed” means the result points into the receiver's
-immutable bytes and therefore shares their lifetime; it owns nothing to free.
+String views. Admitted ordinary-Haxe roots are `length`, `charAt`,
+`charCodeAt`, `substring`, and `indexOf`. Every index and result position counts
+Unicode scalar values rather than UTF-8 bytes. `charAt` and `substring` return
+borrowed views into the receiver; “borrowed” means the view shares the
+receiver's immutable byte lifetime and owns nothing to free. `indexOf` allocates
+nothing: canonical UTF-8 lets it compare bytes while advancing only across
+scalar boundaries and returning the corresponding scalar position.
 
 The slice also owns checked validation, scalar length/access, borrowed slicing,
 comparison, and hashing used by the broader native String seed. A private
 header-only decoder keeps those operations on one UTF-8 implementation without
-creating another link-time feature. Selecting `charAt` packages
-`string_scalar.c`, `string_scalar.h`, `string_decode.h`, `string_literal.h`,
-`status.h`, and `base.h`; it packages neither `allocator.c` nor `string.c`.
-Other ordinary Haxe String methods still fail at the String lowering boundary.
+creating another link-time feature. Selecting any admitted scalar operation
+packages `string_scalar.c`, `string_scalar.h`, `string_decode.h`,
+`string_literal.h`, `status.h`, and `base.h`; it packages neither `allocator.c`
+nor `string.c`. Unlisted ordinary Haxe String methods still fail at the String
+lowering boundary.
 See [string runtime](string-runtime.md) and
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
 
 <!-- hxrt-feature:string -->
 ### `string`
 
-Native-seed-only owned UTF-8 construction, builders, lossy decoding, and
-explicit CString conversion above `string-scalar`. Literal emission and
-ordinary `charAt` do not select it. See [string runtime](string-runtime.md) and
+Compiler-selectable owned UTF-8 construction, reference-counted aliases,
+builders, lossy decoding, and explicit CString conversion above
+`string-scalar`. Literal emission and allocation-free scalar operations do not
+select it. See [string runtime](string-runtime.md) and
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
 
 <!-- hxrt-feature:io -->

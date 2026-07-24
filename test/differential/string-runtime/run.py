@@ -415,6 +415,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string",operation="concat")',
         'runtime(feature="string-scalar",operation="char-at")',
         'runtime(feature="string-scalar",operation="char-code-at")',
+        'runtime(feature="string-scalar",operation="index-of")',
         'runtime(feature="string-scalar",operation="length")',
         'runtime(feature="string-scalar",operation="substring")',
         'implementation=runtime("string")',
@@ -459,7 +460,13 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         and reason.get("featureId") == "string-scalar"
         and reason.get("kind") == "runtime-operation"
     }
-    if scalar_operations != {"char-at", "char-code-at", "length", "substring"}:
+    if scalar_operations != {
+        "char-at",
+        "char-code-at",
+        "index-of",
+        "length",
+        "substring",
+    }:
         raise StringRuntimeFailure(
             f"String scalar roots drifted: {sorted(scalar_operations)!r}"
         )
@@ -475,6 +482,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "cleanup-release",
         "concat",
         "from-scalar",
+        "index-of",
         "length",
         "retain",
         "static-value",
@@ -492,6 +500,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_concat_ref(",
         "hxc_string_retain(",
         "hxc_string_release(",
+        "hxc_string_index_of(",
         "hxc_string_substring(",
     ):
         if required not in source_text:
@@ -744,6 +753,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         "hxc_string_concat_ref",
         "hxc_string_retain",
         "hxc_string_release",
+        "hxc_string_index_of",
         "hxc_string_substring",
     ):
         if required not in result.stdout:
@@ -882,7 +892,7 @@ def main(argv: Iterable[str] = ()) -> int:
     )
     print(
         "string-runtime: OK: "
-        f"{families}; {oracle}; checked/lossy UTF-8, scalar indexing, "
+        f"{families}; {oracle}; checked/lossy UTF-8, scalar indexing/search, "
         "owned aliases/fields/containers/returns, split/package/unity "
         "determinism, C11/C++17, sanitizers, and selective symbols passed"
     )

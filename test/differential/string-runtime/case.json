@@ -7,7 +7,8 @@
   "requirements": [
     "HXC-PROD-005",
     "HXC-SEM-006",
-    "HXC-RT-008"
+    "HXC-RT-008",
+    "HXC-STD-002"
   ],
   "sources": [
     "docs/adr/0004-utf8-scalar-string-contract.md",
@@ -38,7 +39,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "string-runtime: OK: .*checked/lossy UTF-8, scalar indexing, owned aliases/fields/containers/returns, split/package/unity determinism, C11/C\\+\\+17, sanitizers, and selective symbols passed$"
+      "value": "string-runtime: OK: .*checked/lossy UTF-8, scalar indexing/search, owned aliases/fields/containers/returns, split/package/unity determinism, C11/C\\+\\+17, sanitizers, and selective symbols passed$"
     },
     "oracle": "test/differential/string-runtime/oracle.hxml",
     "artifacts": [

@@ -932,6 +932,11 @@
             "kind": "transitive-dependency"
           },
           {
+            "description": "A reachable ordinary Haxe String.indexOf whose receiver, needle, or start position is known only at run time.",
+            "id": "index-of",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "A reachable ordinary Haxe String.length whose scalar count is not known at compile time.",
             "id": "length",
             "kind": "hxc-ir-operation"
@@ -964,6 +969,7 @@
         "hxc_string_compare",
         "hxc_string_hash",
         "hxc_string_haxe_length",
+        "hxc_string_index_of",
         "hxc_string_is_valid",
         "hxc_string_scalar_at",
         "hxc_string_scalar_length",
@@ -979,13 +985,13 @@
           "sourcePath": "runtime/hxrt/include/hxrt/string_decode.h"
         },
         {
-          "sourceSha256": "87359eaff01a93c45cd2bee6664020aa1a0835920371cf01d8350f526ce1f2bf",
+          "sourceSha256": "8d218effd4c89727ed865cfe9e431a75294eb5bbf63991528396520e5bacc320",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_scalar.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_scalar.h"
         },
         {
-          "sourceSha256": "944de09c0a63531f725b61967f8bb91d19c5ff6fd428c45ed6cde169995f7f8d",
+          "sourceSha256": "e5583c0bfbec8f1884ba13165b63b3209cd84fc319e685fe7bb3232494113b28",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_scalar.c",
           "sourcePath": "runtime/hxrt/src/string_scalar.c"
@@ -993,7 +999,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Allocation-free valid-UTF-8 validation, Unicode-scalar indexing, slicing, comparison, and hashing.",
+      "summary": "Allocation-free valid-UTF-8 validation, Unicode-scalar indexing, slicing, search, comparison, and hashing.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -1062,7 +1068,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "0bff8824050ac1fcaf4e962b9d9e9b30ad0909e8db57ec70b9c43b781462cbae",
+      "sourceSetSha256": "d529fcab07171729342010b1bcfcb623cd454bb3c537001e469f66d8e9ae5ef5",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

@@ -756,13 +756,15 @@ sorted `HXC2000` containing every root operation, typed surface, source span,
 dependency chain, and available alternative before output. E2.T07 adds one exact compiler-selected
 edge: literal-only hosted `Sys.println` and default `trace` request `io`, whose
 closure is `runtime-base + status + string-literal + io`. The bounded
-ordinary-Haxe `String.charAt` lowering requests `string-scalar`; its closure
-adds the shared UTF-8 decoder and allocation-free scalar operations without
-`alloc` or the owned-string source. It returns a view into the receiver's
-existing bytes, so the result cannot outlive that receiver's storage. These
-closures package no allocator, full string operations, objects, collector,
-dynamic, reflection, or exceptions. New semantic lowerings remain responsible for
-supplying typed candidates for any explicit runtime intent and fail internally
+ordinary-Haxe scalar String operations request `string-scalar`; their closure
+adds the shared UTF-8 decoder and allocation-free inspection without `alloc` or
+the owned-string source. `charAt` and `substring` return views into the
+receiver's existing bytes, so an escaping result keeps that storage alive.
+`indexOf` only observes its receiver and needle, advances at Unicode-scalar
+boundaries, and returns a scalar position. These closures package no allocator,
+full string operations, objects, collector, dynamic, reflection, or exceptions.
+New semantic lowerings remain responsible for supplying typed candidates for
+any explicit runtime intent and fail internally
 if they do not. The checked-in allocator contract has E4.T02 native evidence for checked
 sizes, over-alignment, failure atomicity, custom freestanding allocation,
 cross-boundary identity, and C/C++ layout agreement. The E4.T03 string contract
@@ -822,9 +824,9 @@ diagnostic. Candidate runtime ownership never selects a feature from an import
 or type mention. The global parity ledger is also distinct from a program's
 `hxc.stdlib-report.json`: the former owns the pinned product surface, while the
 latter reports only reachable operations analyzed in one build. The current
-bounded report does that for literal `Sys.println`, default `trace`, and
-ordinary `String.charAt`; neighboring String methods and all other unlisted
-standard-library use remain fail-closed.
+bounded report does that for literal `Sys.println`, default `trace`, and the
+currently admitted scalar String operations; neighboring String methods and
+all other unlisted standard-library use remain fail-closed.
 
 ## String and managed-memory model
 

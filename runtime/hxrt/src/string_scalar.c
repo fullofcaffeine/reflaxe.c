@@ -2,12 +2,14 @@
  * Implementation of compiler-selectable feature `string-scalar`.
  *
  * These operations inspect immutable valid-UTF-8 views without allocation.
- * Checked helpers serve native contracts; hxc_string_char_at implements Haxe's
- * total, scalar-indexed character access and returns a borrow into the source.
+ * Checked helpers serve native contracts; ordinary Haxe character access,
+ * slicing, and search reuse the same Unicode-scalar boundaries instead of
+ * accidentally exposing UTF-8 byte offsets.
  */
 #include "hxrt/string_decode.h"
 
 #include <limits.h>
+#include <string.h>
 
 hxc_status hxc_utf8_validate(
   hxc_byte_view source,
@@ -230,6 +232,78 @@ hxc_status hxc_string_substring(
     end = (int32_t)length;
   }
   return hxc_string_slice(source, (size_t)start, (size_t)(end - start), out_slice);
+}
+
+hxc_status hxc_string_index_of(
+  hxc_string source,
+  hxc_string needle,
+  int32_t start_index,
+  int32_t *out_index
+) {
+  size_t source_length;
+  size_t needle_length;
+  size_t byte_index = 0u;
+  size_t scalar_index = 0u;
+  int64_t normalized_start;
+  hxc_utf8_step step;
+  hxc_status status;
+  if (out_index == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_string_scalar_length(source, &source_length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  status = hxc_string_scalar_length(needle, &needle_length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  if (source_length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  normalized_start = (int64_t)start_index;
+  if (needle_length == 0u) {
+    if (normalized_start < 0) {
+      normalized_start = 0;
+    } else if ((uint64_t)normalized_start > (uint64_t)source_length) {
+      normalized_start = (int64_t)source_length;
+    }
+    *out_index = (int32_t)normalized_start;
+    return HXC_STATUS_OK;
+  }
+  if (normalized_start < 0) {
+    normalized_start += (int64_t)source_length;
+    if (normalized_start < 0) {
+      normalized_start = 0;
+    }
+  }
+  if ((uint64_t)normalized_start >= (uint64_t)source_length) {
+    *out_index = -1;
+    return HXC_STATUS_OK;
+  }
+  while (scalar_index < (size_t)normalized_start) {
+    step = hxc_utf8_read(
+      source.data + byte_index,
+      source.byte_length - byte_index
+    );
+    byte_index += step.consumed;
+    scalar_index++;
+  }
+  while (byte_index < source.byte_length) {
+    if (needle.byte_length <= source.byte_length - byte_index
+      && memcmp(source.data + byte_index, needle.data, needle.byte_length) == 0) {
+      *out_index = (int32_t)scalar_index;
+      return HXC_STATUS_OK;
+    }
+    step = hxc_utf8_read(
+      source.data + byte_index,
+      source.byte_length - byte_index
+    );
+    byte_index += step.consumed;
+    scalar_index++;
+  }
+  *out_index = -1;
+  return HXC_STATUS_OK;
 }
 
 hxc_status hxc_string_compare(

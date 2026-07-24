@@ -20,6 +20,14 @@ final class Main {
 		return output.toString();
 	}
 
+	/** Search without a start argument so omission remains visible to lowering. */
+	static function find(value:String, needle:String):Int
+		return value.indexOf(needle);
+
+	/** Search from one runtime-supplied scalar position. */
+	static function findFrom(value:String, needle:String, start:Int):Int
+		return value.indexOf(needle, start);
+
 	/**
 		Exercise aliases, branches, records, enums, arrays, and borrowed views.
 
@@ -47,7 +55,10 @@ final class Main {
 		final optional:Null<String> = enabled ? payload : null;
 		return built == "Aé😀" && alias.length == 3 && direct == "é😀" && record.right == "é😀" && selected.substring(2, 1) == "é"
 			&& selected.substring(-3, 1) == "A" && selected.substring(99) == "" && selected.charCodeAt(2) == 0x1F600 && values[2] == "😀"
-			&& reassigned == built && optional == "é😀";
+			&& reassigned == built && optional == "é😀" && find(built, "é") == 1 && find(built, fromCode(0x1F600)) == 2 && find(built, "é😀") == 1
+			&& find(built, "missing") == -1 && findFrom(built, "", 99) == 3 && findFrom(built, "", -1) == 0 && findFrom(built, "é", -2) == 1
+			&& findFrom(built, "A", -99) == 0 && findFrom(built, "😀", -1) == 2 && findFrom(built, "é", 2) == -1 && find("A\x00🙂", "\x00") == 1
+			&& find("A\x00🙂", "🙂") == 2 && find("caxecraft:grass", ":") == 9;
 	}
 
 	/** Publish one deterministic literal result for Eval/native comparison. */

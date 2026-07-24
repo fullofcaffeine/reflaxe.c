@@ -1492,6 +1492,40 @@
       "notes": "Ordinary Haxe String.fromCharCode creates one owned UTF-8 String from a valid Unicode scalar. The hosted fixture covers direct calls, StringBuf.addChar expansion, ASCII, non-ASCII, invalid scalar replacement, ownership, generated layouts, strict C11, optimization, and sanitizers."
     },
     {
+      "id": "string-index-of-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "indexOf",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(str : String, ?startIndex : Null<Int>) -> Int"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.indexOf searches immutable UTF-8 views at Unicode-scalar boundaries and returns a scalar index without allocation. The hosted fixture covers omitted, supplied, negative, empty, and out-of-range starts, runtime-created needles, non-BMP text, embedded NUL, generated layouts, runtime planning, strict C11, optimization, and sanitizers. Negative starts follow the pinned Eval target's observed behavior because the language API leaves that edge unspecified."
+    },
+    {
       "id": "string-length-partial",
       "selector": {
         "module": "String",
@@ -8145,32 +8179,30 @@
       "kind": "method",
       "signature": "(str : String, ?startIndex : Null<Int>) -> Int",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.indexOf searches immutable UTF-8 views at Unicode-scalar boundaries and returns a scalar index without allocation. The hosted fixture covers omitted, supplied, negative, empty, and out-of-range starts, runtime-created needles, non-BMP text, embedded NUL, generated layouts, runtime planning, strict C11, optimization, and sanitizers. Negative starts follow the pinned Eval target's observed behavior because the language API leaves that edge unspecified.",
+      "ruleId": "string-index-of-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:5d0caa1c25161f1ad3b50891738fa72de8a31d9cc9c4832d4b3797e7c5c35c95",

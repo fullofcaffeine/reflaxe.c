@@ -3,10 +3,10 @@
  *
  * This allocation-free slice owns valid-UTF-8 inspection and Unicode-scalar
  * indexing for the private hxc_string view. Generated Haxe selects it for
- * ordinary String operations such as charAt without pulling in the allocator,
- * owned strings, mutable builders, or CString conversion. Checked native
- * helpers retain hxc_status results; hxc_string_char_at is total because Haxe
- * defines negative and out-of-range indices as the empty String.
+ * ordinary String operations such as charAt and indexOf without pulling in the
+ * allocator, owned strings, mutable builders, or CString conversion. Checked
+ * native helpers retain hxc_status results; hxc_string_char_at is total because
+ * Haxe defines negative and out-of-range indices as the empty String.
  */
 #ifndef HXRT_STRING_SCALAR_H_INCLUDED
 #define HXRT_STRING_SCALAR_H_INCLUDED
@@ -108,6 +108,23 @@ HXC_API hxc_status hxc_string_substring(
   bool has_end_index,
   int32_t end_index,
   hxc_string *out_slice
+);
+
+/**
+ * Find the first exact String occurrence at or after one scalar index.
+ *
+ * Both values use canonical UTF-8, so the implementation can compare bytes
+ * while it advances only across Unicode-scalar boundaries. The returned index
+ * therefore uses Haxe's character-counting unit rather than a UTF-8 byte
+ * offset. A negative start follows the pinned Eval target: it counts back from
+ * the source end and then clamps at zero. An empty needle clamps the start into
+ * the inclusive range from zero through source length.
+ */
+HXC_API hxc_status hxc_string_index_of(
+  hxc_string source,
+  hxc_string needle,
+  int32_t start_index,
+  int32_t *out_index
 );
 
 /** Byte-wise fast comparison of canonical UTF-8 scalar sequences. */

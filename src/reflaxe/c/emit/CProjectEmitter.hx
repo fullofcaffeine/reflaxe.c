@@ -611,7 +611,7 @@ class CProjectEmitter {
 			switch reason.featureId {
 				case "string-literal" if (reason.kind == "direct-string-value"):
 				case "string-scalar" if (reason.kind == "runtime-operation" && switch reason.operationId {
-						case "char-at" | "char-code-at" | "length" | "substring": true;
+						case "char-at" | "char-code-at" | "index-of" | "length" | "substring": true;
 						case _: false;
 					}):
 				case "string" if (reason.kind == "runtime-operation" && switch reason.operationId {

@@ -4743,6 +4743,9 @@ class CBodyEmitter {
 			case IRCDRuntime("string-scalar", "length"):
 				emitStringLengthCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
+			case IRCDRuntime("string-scalar", "index-of"):
+				emitStringIndexOfCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case IRCDRuntime("string-scalar", "char-code-at"):
 				emitStringCharCodeAtCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, fn);
 				return false;
@@ -5172,6 +5175,34 @@ class CBodyEmitter {
 		addLineDirective(statements, instruction.source, lineDirectives);
 		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringLength)), [
 			requireValue(values, call.arguments[0], fn.id),
+			EUnary(AddressOf, EIdentifier(temporary))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
+	/** Emit allocation-free scalar-indexed String search into one Haxe `Int`. */
+	function emitStringIndexOfCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null || call.arguments.length != 3 || typeKey(result.type) != typeKey(IRTInt(32, true)))
+			return fail('String.indexOf call `${instruction.id}` in `${fn.id}` lost its checked String/String/Int signature');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: null,
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringIndexOf)), [
+			requireValue(values, call.arguments[0], fn.id),
+			requireValue(values, call.arguments[1], fn.id),
+			requireValue(values, call.arguments[2], fn.id),
 			EUnary(AddressOf, EIdentifier(temporary))
 		]), boundsAbortName, instruction.id, fn.id);
 		values.set(result.id, EIdentifier(temporary));
