@@ -294,23 +294,32 @@ class RuntimeFeatureCatalog {
 					],
 					"The literal bytes and length are emitted directly in generated C; Haxe null uses a null data pointer, while every real String including the empty String has a non-null address.",
 					"The carrier itself is already the program-specific representation; cloning its ABI would make runtime consumers incompatible.",
-					"The header only shares the three-field call-boundary layout needed by selected consumers such as io.", "docs/hxrt.md",
-					["test/string_output/run.py", "test/runtime/runtime-feature-graph/run.py"])),
+					"The header shares the value fields plus an opaque optional owner pointer. Literal-only programs keep that pointer null and still allocate nothing.",
+					"docs/hxrt.md", ["test/string_output/run.py", "test/runtime/runtime-feature-graph/run.py"])),
 			new RuntimeFeatureDefinition(stringScalar, "Allocation-free valid-UTF-8 validation, Unicode-scalar indexing, slicing, comparison, and hashing.",
 				CompilerSelectable, true, environments, [status, stringLiteral],
 				[header("string_scalar.h"), header("string_decode.h"), source("string_scalar.c")], [
 					"hxc_utf8_validate",
 					"hxc_string_is_valid",
 					"hxc_string_scalar_length",
+					"hxc_string_haxe_length",
 					"hxc_string_scalar_at",
 					"hxc_string_slice",
 					"hxc_string_char_at",
+					"hxc_string_char_code_at",
+					"hxc_string_substring",
 					"hxc_string_compare",
 					"hxc_string_hash"
 				], [], [],
 				documentation("Inspects immutable valid-UTF-8 String views with Unicode-scalar indices and no allocation or retained state.", [
 					new RuntimeFeatureSelectionRoot("char-at", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"A reachable ordinary Haxe String.charAt whose receiver or index is known only at run time."),
+					new RuntimeFeatureSelectionRoot("char-code-at", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.charCodeAt whose receiver or index is known only at run time."),
+					new RuntimeFeatureSelectionRoot("length", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.length whose scalar count is not known at compile time."),
+					new RuntimeFeatureSelectionRoot("substring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe String.substring whose bounds are known only at run time."),
 					dependencyRoot("Selected transitively by a broader String feature that reuses the same validated scalar rules.")
 				],
 					"A compiler-known literal and index may fold directly to another literal-backed String view.",
@@ -322,8 +331,13 @@ class RuntimeFeatureCatalog {
 						"test/differential/string-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
-			new RuntimeFeatureDefinition(string, "Owned UTF-8 construction, mutable building, and explicit CString conversion with native evidence.",
-				NativeSeedOnly, true, environments, [alloc, stringScalar], [header("string.h"), source("string.c")], [
+			new RuntimeFeatureDefinition(string,
+				"Owned UTF-8 construction, reference-counted Haxe values, mutable building, and explicit CString conversion.", CompilerSelectable, true,
+				environments, [alloc, stringScalar], [header("string.h"), source("string.c")], [
+					"hxc_string_retain",
+					"hxc_string_release",
+					"hxc_string_from_scalar",
+					"hxc_string_concat_ref",
 					"hxc_byte_view_from_cstring",
 					"hxc_string_from_utf8_checked",
 					"hxc_string_from_utf8_lossy",
@@ -341,13 +355,20 @@ class RuntimeFeatureCatalog {
 					"hxc_owned_cstring_dispose"
 				],
 				[], [],
-				documentation("Adds owned strings, builders, lossy decoding, concatenation, and explicit borrowed or owned CString conversion above the shared scalar slice.",
+				documentation("Adds reference-counted ordinary Haxe String values, explicit owned strings, builders, lossy decoding, concatenation, and CString conversion above the shared scalar slice.",
 					[
-						nativeSeedRoot("Requested only by the string differential and selective-package native fixtures; generated Haxe cannot select it yet.")
+						new RuntimeFeatureSelectionRoot("from-scalar", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe String.fromCharCode whose scalar is known only at run time."),
+						new RuntimeFeatureSelectionRoot("concat", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe String concatenation whose result bytes are not compile-time constants."),
+						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable managed String copy must keep its optional backing owner alive."),
+						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable managed String owner must be released when its Haxe lifetime ends.")
 					],
 					"Known literals, constant concatenation, and statically decidable string facts should remain direct compiler-owned C data.",
 					"Closed call sites should receive specialized local operations when their representation, lifetime, and operation set are statically bounded.",
-					"Arbitrary runtime bytes, scalar indexing, ownership transfer, builders, and CString lifetimes need shared validated machinery when future lowering admits them.",
+					"Runtime-created UTF-8 bytes can cross ordinary calls and container boundaries, so their allocator identity and final release need one shared owner contract.",
 					"docs/hxrt.md",
 					[
 						"test/differential/string-runtime/run.py",
@@ -411,7 +432,7 @@ class RuntimeFeatureCatalog {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
 			case "array.h": "5fa277cf34f4b0e01c1a5d3b7152857cf6570d3a9d537cb2a18c41f444db3512";
-			case "base.h": "a31a991d83ff4dd172c256d2fd83fa5b607d938577d1ef2b66fd36eecd0418a7";
+			case "base.h": "72e09e81ff4186d2850957001152e4323af77aa495664d3a5e4394aee3372139";
 			case "bytes.h": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
@@ -419,11 +440,11 @@ class RuntimeFeatureCatalog {
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "ce5ac5689f7661deaaf954200d6c3f45e968e0cb91889e8bcad17cf5a5ca178c";
+			case "string.h": "fcd9a99bb22df6a2173d4570961437baf177f0cbccef26505a0e70266235e121";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
-			case "string_literal.h": "2d3eb0b3382570a0350ea65c426fc27bd9ee43ccf23c990c3fcbaa0df7a7c802";
+			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
 			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
-			case "string_scalar.h": "528b1687cd8e358f7545f82b94ec08e037d594a49cdd0db42d9daae6c06eff87";
+			case "string_scalar.h": "87359eaff01a93c45cd2bee6664020aa1a0835920371cf01d8350f526ce1f2bf";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
 		};
 	}
@@ -439,9 +460,9 @@ class RuntimeFeatureCatalog {
 			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "c1fd06b27c78e644f3bf77bb8f9733fe7535bf6a0b05e40ebc1670e44422401d";
-			case "string_map.c": "5ab15280f51ec98b2aa8a1d39deaa256bbee889e5adf881aa4f3fa7b51e6f0b0";
-			case "string_scalar.c": "ead61426f32caf4620bb6cf6bb447e72cb3b8b772b98671d1b57b13fca0cdf24";
+			case "string.c": "432062278957800ffed153e6b237b4bd22c27906a17e7299c330c4bc9621e0e7";
+			case "string_map.c": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04";
+			case "string_scalar.c": "944de09c0a63531f725b61967f8bb91d19c5ff6fd428c45ed6cde169995f7f8d";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}

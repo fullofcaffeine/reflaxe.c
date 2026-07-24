@@ -739,7 +739,7 @@ artifact read for an empty plan.
 
 The schema-3 feature catalog also owns each feature's semantic contract,
 selection roots, rejected direct/local alternatives, executable evidence,
-internal runtime ABI 0.9.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
+internal runtime ABI 0.10.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
 rechecks those bytes, and the sorted source set has one aggregate digest. Every
 nonempty closure contains `runtime-base`; generated private headers therefore
 emit a structural same-major assertion against `HXC_RUNTIME_ABI_MAJOR`. Empty
@@ -785,7 +785,8 @@ collector context across all three file layouts. The bounded concrete
 exact trace/finalizer descriptors, roots allocation before construction, and
 preserves identity through array operations. Direct classes and primitive
 arrays remain collector-free; broader escaping object shapes still fail
-closed. Full runtime String operations remain `native-seed-only`. See [allocator ownership](allocator-abi.md),
+closed. The bounded owned-String construction and lifetime slice is now
+compiler-selectable; unlisted String methods still fail closed. See [allocator ownership](allocator-abi.md),
 [string runtime](string-runtime.md), [array runtime](array-runtime.md),
 [object and type descriptors](object-descriptors.md),
 [precise non-moving collection](gc-runtime.md), and

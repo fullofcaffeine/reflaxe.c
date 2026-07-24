@@ -1096,7 +1096,7 @@ class CStaticFunctionProjectEmitter {
 				for (parameter in parameters)
 					addDeclarationHeaderDependencies(parameter, dependencies, emitter);
 				addDeclarationHeaderDependencies(result, dependencies, emitter);
-			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTVoid | IRTDynamic:
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTVoid | IRTDynamic:
 		}
 	}
 
@@ -1153,7 +1153,7 @@ class CStaticFunctionProjectEmitter {
 			case IRTPointer(pointee, _) | IRTNullable(pointee, IRNPointer) | IRTSpan(pointee, _):
 				// Struct tags remain soft; native enums still need their owner header.
 				addDeclarationHeaderDependencies(pointee, dependencies, emitter);
-			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTVoid | IRTDynamic:
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTVoid | IRTDynamic:
 		}
 	}
 

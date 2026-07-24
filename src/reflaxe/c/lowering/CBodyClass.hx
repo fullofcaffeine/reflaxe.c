@@ -554,6 +554,11 @@ class CBodyClassRegistry {
 				return true;
 			if (field.type.stringMapValue() != null)
 				return true;
+			// A collector owns the class allocation, but the String field owns a
+			// separate reference-counted UTF-8 allocation. The class finalizer must
+			// release that child when the object becomes unreachable.
+			if (field.type.irType == IRTManagedString)
+				return true;
 			if (field.type.bytesValue() != null)
 				return true;
 			final aggregate = field.type.aggregateValue();

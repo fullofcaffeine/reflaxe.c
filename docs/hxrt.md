@@ -42,14 +42,18 @@ show that sharing is better than specialization.
 
 The checked-in runtime is deliberately incomplete. Generated Haxe can select
 the hosted literal-output closure plus bounded ordinary-Haxe Array,
-`Map<Int, Bool>`, `Map<String, V>`, `haxe.io.Bytes`, and `String.charAt`
-closures. Collections select allocator-backed storage transitively; StringMap and Bytes also select
-the literal carrier used by their admitted String inputs. `String.charAt`
-instead selects an allocation-free scalar-inspection slice. The compiler may
+`Map<Int, Bool>`, `Map<String, V>`, `haxe.io.Bytes`, scalar String inspection,
+and owned String construction/lifetime closures. Collections select
+allocator-backed storage transitively; StringMap and Bytes also select the
+literal carrier used by their admitted String inputs. `String.length`,
+`charAt`, `charCodeAt`, and `substring` use the allocation-free scalar slice.
+`String.fromCharCode`, concatenation, and copies that outlive their source
+select the reference-counted String owner. The compiler may
 also select immutable object
 descriptors and the precise collector when a managed-representation plan
-explicitly needs them; ordinary direct classes remain header-free. Full strings, status-name, and
-ABI-query slices remain native-seed-only. This is not a claim that general
+explicitly needs them; ordinary direct classes remain header-free. Unlisted
+String methods, status-name, and ABI-query slices remain fail-closed or
+native-seed-only. This is not a claim that general
 allocation, arbitrary Map key/value families, `Array`, `Bytes`, escaping
 classes, or general `String` lowering works.
 
@@ -230,7 +234,7 @@ strategy is selected, as required by
 
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.9.0. Generated
+The runtime ABI is internal and versioned, currently 0.10.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no

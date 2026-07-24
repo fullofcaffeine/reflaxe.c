@@ -84,6 +84,7 @@ static hxc_string literal(const char *text) {
   result.data = (const uint8_t *)text;
   result.byte_length = strlen(text);
   result.has_trailing_nul = true;
+  result.owner = NULL;
   return result;
 }
 

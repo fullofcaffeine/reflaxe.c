@@ -1,20 +1,23 @@
 /**
- * Keeps recursive payload enums outside the unmanaged constructor copy rule.
+ * Keeps fresh recursive payload-enum arguments fail-closed until their
+ * caller-side ownership has a complete lifecycle.
  *
- * Recursive enum payloads use owned indirect storage. Passing or retaining one
- * by value requires an explicit deep-copy or borrow contract, so constructor
- * admission must fail before generated C is emitted.
+ * Recursive enum payloads use owned indirect storage. The compiler can now
+ * identify the constructor's enum representation, but passing `Link(End)` by
+ * value still needs an explicit transfer, copy, or release plan. The
+ * function-exit validator rejects the program before C emission instead of
+ * leaking that fresh owner.
  */
 private enum Chain {
 	End;
 	Link(next:Chain);
 }
 
-/** A deliberately unsupported recursive-enum constructor parameter. */
+/** A constructor whose recursive enum still needs call-lifecycle work. */
 private final class ChainOwner {
 	final value:Chain;
 
-	/** Must remain rejected until recursive constructor ownership is proven. */
+	/** Retains the value only after the compiler can plan caller ownership. */
 	public function new(value:Chain) {
 		this.value = value;
 	}

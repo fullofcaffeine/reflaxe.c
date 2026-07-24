@@ -481,6 +481,8 @@ int32_t hxc_EnumFixture_boolOptionValue(struct hxc_Option_ha0e4b5dcc139 hxc_valu
 
 int32_t hxc_EnumFixture_chainValue(struct hxc_Chain hxc_value_h10794fed7059)
 {
+  struct hxc_Chain hxc_next_hcce74b90370b = { 0 };
+  struct hxc_Chain hxc_next_h24eca731d2de = { 0 };
   int32_t hxc_tmp_enum_switch_result_n1 = 0;
   switch (hxc_value_h10794fed7059.hxc_tag) {
     case hxc_Chain_End:
@@ -509,13 +511,13 @@ int32_t hxc_EnumFixture_chainValue(struct hxc_Chain hxc_value_h10794fed7059)
         }
         struct hxc_Chain *hxc_tmp_enum_payload_project_n4 = hxc_value_h10794fed7059.hxc_payload.hxc_Link.hxc_next;
         struct hxc_Chain hxc_tmp_enum_recursive_payload_load_result_n5 = *hxc_tmp_enum_payload_project_n4;
-        struct hxc_Chain hxc_next_hcce74b90370b = hxc_tmp_enum_recursive_payload_load_result_n5;
+        hxc_next_hcce74b90370b = hxc_tmp_enum_recursive_payload_load_result_n5;
         if (hxc_enum_39285fe9_retain(&hxc_next_hcce74b90370b) != HXC_STATUS_OK)
         {
           abort();
         }
         int32_t hxc_item_h6d1bff9ec5ac = hxc_value_hfb282a085de7;
-        struct hxc_Chain hxc_next_h24eca731d2de = hxc_next_hcce74b90370b;
+        hxc_next_h24eca731d2de = hxc_next_hcce74b90370b;
         if (hxc_enum_39285fe9_retain(&hxc_next_h24eca731d2de) != HXC_STATUS_OK)
         {
           abort();
@@ -533,6 +535,7 @@ int32_t hxc_EnumFixture_chainValue(struct hxc_Chain hxc_value_h10794fed7059)
 
 int32_t hxc_EnumFixture_choiceValue(struct hxc_Choices hxc_value)
 {
+  struct hxc_array_ref *hxc_items = { 0 };
   int32_t hxc_tmp_enum_switch_result_n1 = 0;
   switch (hxc_value.hxc_tag) {
     case hxc_Choices_NoChoices:
@@ -548,7 +551,7 @@ int32_t hxc_EnumFixture_choiceValue(struct hxc_Choices hxc_value)
         }
         struct hxc_array_ref *hxc_tmp_enum_payload_project_n0 = hxc_value.hxc_payload.hxc_ChoiceValues.hxc_values;
         struct hxc_array_ref *hxc_values = hxc_tmp_enum_payload_project_n0;
-        struct hxc_array_ref *hxc_items = hxc_values;
+        hxc_items = hxc_values;
         if (hxc_array_ref_retain(hxc_items) != HXC_STATUS_OK)
         {
           abort();
@@ -607,6 +610,8 @@ bool hxc_EnumFixture_envelopeIsWrapped(struct hxc_RuleEnvelope hxc_value)
 
 int32_t hxc_EnumFixture_envelopeValue(struct hxc_RuleEnvelope hxc_value)
 {
+  struct hxc_Rule hxc_rule_h5227d8af703a = { 0 };
+  struct hxc_Rule hxc_rule_hefedbce21b8f = { 0 };
   int32_t hxc_tmp_enum_switch_result_n1 = 0;
   switch (hxc_value.hxc_tag) {
     case hxc_RuleEnvelope_MissingRule:
@@ -621,12 +626,12 @@ int32_t hxc_EnumFixture_envelopeValue(struct hxc_RuleEnvelope hxc_value)
           abort();
         }
         struct hxc_Rule hxc_tmp_enum_payload_project_n0 = hxc_value.hxc_payload.hxc_WrappedRule.hxc_rule;
-        struct hxc_Rule hxc_rule_h5227d8af703a = hxc_tmp_enum_payload_project_n0;
+        hxc_rule_h5227d8af703a = hxc_tmp_enum_payload_project_n0;
         if (hxc_record_9f230b68_retain(&hxc_rule_h5227d8af703a) != HXC_STATUS_OK)
         {
           abort();
         }
-        struct hxc_Rule hxc_rule_hefedbce21b8f = hxc_rule_h5227d8af703a;
+        hxc_rule_hefedbce21b8f = hxc_rule_h5227d8af703a;
         if (hxc_record_9f230b68_retain(&hxc_rule_hefedbce21b8f) != HXC_STATUS_OK)
         {
           abort();
@@ -689,6 +694,8 @@ enum hxc_Mode hxc_EnumFixture_identityMode(enum hxc_Mode hxc_value)
 
 void hxc_EnumFixture_main(void)
 {
+  struct hxc_Chain hxc_tmp_static_call_argument_0_owner_n31 = { 0 };
+  struct hxc_Choices hxc_tmp_static_call_argument_1_owner_n33 = { 0 };
   enum hxc_Mode hxc_mode = hxc_Mode_On;
   int32_t hxc_tmp_call_result_n1 = hxc_EnumFixture_identity(7);
   struct hxc_Option_h95f1c4a28dac hxc_present = (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = hxc_tmp_call_result_n1 };
@@ -874,14 +881,14 @@ void hxc_EnumFixture_main(void)
         abort();
       }
       *hxc_tmp_enum_recursive_payload_owner_n73 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_End, .hxc_payload.hxc_End.hxc_value = 2 };
-      struct hxc_Chain hxc_tmp_static_call_argument_0_owner_n31 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_Link, .hxc_payload.hxc_Link.hxc_value = 1, .hxc_payload.hxc_Link.hxc_next = hxc_tmp_enum_recursive_payload_owner_n73 };
+      hxc_tmp_static_call_argument_0_owner_n31 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_Link, .hxc_payload.hxc_Link.hxc_value = 1, .hxc_payload.hxc_Link.hxc_next = hxc_tmp_enum_recursive_payload_owner_n73 };
       struct hxc_Chain hxc_tmp_static_call_argument_0_borrow_result_n75 = hxc_tmp_static_call_argument_0_owner_n31;
       struct hxc_array_ref *hxc_tmp_enum_payload_0_owner_n32 = hxc_choices;
       if (hxc_array_ref_retain(hxc_tmp_enum_payload_0_owner_n32) != HXC_STATUS_OK)
       {
         abort();
       }
-      struct hxc_Choices hxc_tmp_static_call_argument_1_owner_n33 = (struct hxc_Choices){ .hxc_tag = hxc_Choices_ChoiceValues, .hxc_payload.hxc_ChoiceValues.hxc_values = hxc_tmp_enum_payload_0_owner_n32 };
+      hxc_tmp_static_call_argument_1_owner_n33 = (struct hxc_Choices){ .hxc_tag = hxc_Choices_ChoiceValues, .hxc_payload.hxc_ChoiceValues.hxc_values = hxc_tmp_enum_payload_0_owner_n32 };
       struct hxc_Choices hxc_tmp_static_call_argument_1_borrow_result_n79 = hxc_tmp_static_call_argument_1_owner_n33;
       struct hxc_array_ref *hxc_tmp_load_result_n80 = hxc_actions;
       int32_t hxc_tmp_call_result_n82 = hxc_EnumFixture_ruleLiteralValue(hxc_tmp_static_call_argument_0_borrow_result_n75, hxc_tmp_static_call_argument_1_borrow_result_n79, hxc_tmp_load_result_n80, hxc_copiedRule);
@@ -1051,6 +1058,8 @@ int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_value_h2
 
 int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_value_hffb395be3233)
 {
+  struct hxc_Rule hxc_value_hcf71bd05628a = { 0 };
+  struct hxc_Rule hxc_rule = { 0 };
   int32_t hxc_tmp_enum_switch_result_n1 = 0;
   switch (hxc_value_hffb395be3233.hxc_tag) {
     case hxc_Option_None_hdcfb48028a4b:
@@ -1065,12 +1074,12 @@ int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_va
           abort();
         }
         struct hxc_Rule hxc_tmp_enum_payload_project_n0 = hxc_value_hffb395be3233.hxc_payload.hxc_Some.hxc_value;
-        struct hxc_Rule hxc_value_hcf71bd05628a = hxc_tmp_enum_payload_project_n0;
+        hxc_value_hcf71bd05628a = hxc_tmp_enum_payload_project_n0;
         if (hxc_record_9f230b68_retain(&hxc_value_hcf71bd05628a) != HXC_STATUS_OK)
         {
           abort();
         }
-        struct hxc_Rule hxc_rule = hxc_value_hcf71bd05628a;
+        hxc_rule = hxc_value_hcf71bd05628a;
         if (hxc_record_9f230b68_retain(&hxc_rule) != HXC_STATUS_OK)
         {
           abort();
@@ -1087,6 +1096,8 @@ int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_va
 
 int32_t hxc_EnumFixture_recursiveLocal(void)
 {
+  struct hxc_Chain hxc_next_h07fb61766894 = { 0 };
+  struct hxc_Chain hxc_next_he440e694a9fe = { 0 };
   struct hxc_Chain hxc_tail = (struct hxc_Chain){ .hxc_tag = hxc_Chain_End, .hxc_payload.hxc_End.hxc_value = 2 };
   struct hxc_Chain hxc_tmp_enum_payload_1_owner_n2 = hxc_tail;
   if (hxc_enum_39285fe9_retain(&hxc_tmp_enum_payload_1_owner_n2) != HXC_STATUS_OK)
@@ -1131,13 +1142,13 @@ int32_t hxc_EnumFixture_recursiveLocal(void)
         }
         struct hxc_Chain *hxc_tmp_enum_payload_project_n13 = hxc_head.hxc_payload.hxc_Link.hxc_next;
         struct hxc_Chain hxc_tmp_enum_recursive_payload_load_result_n14 = *hxc_tmp_enum_payload_project_n13;
-        struct hxc_Chain hxc_next_h07fb61766894 = hxc_tmp_enum_recursive_payload_load_result_n14;
+        hxc_next_h07fb61766894 = hxc_tmp_enum_recursive_payload_load_result_n14;
         if (hxc_enum_39285fe9_retain(&hxc_next_h07fb61766894) != HXC_STATUS_OK)
         {
           abort();
         }
         int32_t hxc_value_hba17dd6c799c = hxc_value_h279cf5a91399;
-        struct hxc_Chain hxc_next_he440e694a9fe = hxc_next_h07fb61766894;
+        hxc_next_he440e694a9fe = hxc_next_h07fb61766894;
         if (hxc_enum_39285fe9_retain(&hxc_next_he440e694a9fe) != HXC_STATUS_OK)
         {
           abort();

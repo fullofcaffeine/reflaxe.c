@@ -33,6 +33,9 @@ enum CBodyArrayElementLifecycle {
 	/** One element is directly an owned `haxe.io.Bytes` reference. */
 	CBAELBytes;
 
+	/** One element is an immutable String view that may retain runtime storage. */
+	CBAELString;
+
 	/** One element is directly another shared Haxe `Array` reference. */
 	CBAELArray;
 
@@ -320,6 +323,7 @@ class CBodyArrayRegistry {
 			// The bytes behind this view belong to compiler-emitted static literals.
 			// Copying the three scalar fields cannot outlive or double-free that storage.
 			case CBVKStaticString(_): CBAELTrivial;
+			case CBVKManagedString(_): CBAELString;
 			case CBVKAggregate(aggregate): aggregateLifecycle(aggregate);
 			case CBVKArray(_): CBAELArray;
 			case CBVKBytes(_): CBAELBytes;

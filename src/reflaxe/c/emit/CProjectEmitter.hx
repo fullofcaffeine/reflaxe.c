@@ -610,7 +610,14 @@ class CProjectEmitter {
 		for (reason in runtimePlan.rootReasons) {
 			switch reason.featureId {
 				case "string-literal" if (reason.kind == "direct-string-value"):
-				case "string-scalar" if (reason.kind == "runtime-operation" && reason.operationId == "char-at"):
+				case "string-scalar" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "char-at" | "char-code-at" | "length" | "substring": true;
+						case _: false;
+					}):
+				case "string" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "cleanup-release" | "concat" | "from-scalar" | "retain": true;
+						case _: false;
+					}):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
 				case "int-map" if (reason.kind == "runtime-operation"):

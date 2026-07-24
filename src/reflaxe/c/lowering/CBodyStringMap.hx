@@ -309,8 +309,8 @@ class CBodyStringMapRegistry {
 	**/
 	static function nestedValueIsStorable(value:CBodyValueType):Bool
 		return switch value.kind {
-			case CBVKPrimitive(mapping): mapping.irType != IRTVoid && mapping.irType != IRTString;
-			case CBVKStaticString(_) | CBVKImport(_): true;
+			case CBVKPrimitive(mapping): mapping.irType != IRTVoid && mapping.irType != IRTString && mapping.irType != IRTManagedString;
+			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKImport(_): true;
 			case CBVKAggregate(aggregate): aggregateIsStorable(aggregate);
 			case CBVKArray(array): !array.managedByCollector;
 			case CBVKBytes(_): true;

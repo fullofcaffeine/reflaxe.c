@@ -18,6 +18,9 @@
     "runtime/hxrt/src/string.c",
     "runtime/hxrt/src/string_scalar.c",
     "test/differential/string-runtime/StringRuntimeOracle.hx",
+    "test/differential/string-runtime/generated/Main.hx",
+    "test/differential/string-runtime/generated/oracle.hxml",
+    "test/differential/string-runtime/negative/Main.hx",
     "test/differential/string-runtime/oracle.hxml",
     "test/differential/string-runtime/run.py",
     "test/differential/string-runtime/string_runtime.c"
@@ -35,7 +38,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "string-runtime: OK: .*checked/lossy UTF-8, scalar indexing, allocation, CString lifetime, sanitizers, and selective symbols passed$"
+      "value": "string-runtime: OK: .*checked/lossy UTF-8, scalar indexing, owned aliases/fields/containers/returns, split/package/unity determinism, C11/C\\+\\+17, sanitizers, and selective symbols passed$"
     },
     "oracle": "test/differential/string-runtime/oracle.hxml",
     "artifacts": [

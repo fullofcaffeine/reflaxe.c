@@ -289,6 +289,104 @@ static int hxc_test_concat_and_failure(
   return 0;
 }
 
+/*
+ * Exercise the owner carried by ordinary runtime-created Haxe Strings.
+ *
+ * The explicit hxc_owned_string tests above cover the native move-only API.
+ * This separate path models generated Haxe aliases: a view copies cheaply,
+ * each escaping copy retains the shared bytes, and only the final release frees
+ * the backing allocation.
+ */
+static int hxc_test_reference_owned_strings(
+  hxc_test_arena *arena,
+  hxc_allocator allocator
+) {
+  const hxc_string literal = HXC_STRING_LITERAL("prefix:");
+  const hxc_string suffix = HXC_STRING_LITERAL("ok");
+  const uint8_t replacement[] = {
+    UINT8_C(0xEF), UINT8_C(0xBF), UINT8_C(0xBD)
+  };
+  hxc_string emoji = HXC_STRING_INITIALIZER;
+  hxc_string alias = HXC_STRING_INITIALIZER;
+  hxc_string character = HXC_STRING_INITIALIZER;
+  hxc_string joined = HXC_STRING_INITIALIZER;
+  hxc_string invalid = HXC_STRING_INITIALIZER;
+  hxc_string slice = HXC_STRING_INITIALIZER;
+  hxc_string failed = HXC_STRING_INITIALIZER;
+  size_t allocations = arena->allocation_count;
+  size_t releases = arena->release_count;
+  int32_t scalar = -1;
+  int32_t length = -1;
+
+  HXC_TEST_CHECK(
+    hxc_string_from_scalar(0x1F600, allocator, &emoji) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(arena->allocation_count == allocations + 2u);
+  HXC_TEST_CHECK(emoji.owner != NULL && emoji.byte_length == 4u);
+  HXC_TEST_CHECK(hxc_string_haxe_length(emoji, &length) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(length == 1);
+  HXC_TEST_CHECK(hxc_string_char_code_at(emoji, 0, &scalar));
+  HXC_TEST_CHECK(scalar == 0x1F600);
+  HXC_TEST_CHECK(!hxc_string_char_code_at(emoji, -1, &scalar));
+  HXC_TEST_CHECK(!hxc_string_char_code_at(emoji, 1, &scalar));
+
+  alias = emoji;
+  HXC_TEST_CHECK(hxc_string_retain(alias) == HXC_STATUS_OK);
+  character = hxc_string_char_at(alias, 0);
+  HXC_TEST_CHECK(character.owner == emoji.owner);
+  HXC_TEST_CHECK(hxc_string_retain(character) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_string_substring(alias, 1, false, 0, &slice) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(slice.byte_length == 0u && slice.owner == emoji.owner);
+  HXC_TEST_CHECK(hxc_string_retain(slice) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_string_release(&emoji) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_string_release(&alias) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_string_release(&character) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(arena->release_count == releases);
+  HXC_TEST_CHECK(hxc_string_release(&slice) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(arena->release_count == releases + 2u);
+
+  allocations = arena->allocation_count;
+  releases = arena->release_count;
+  HXC_TEST_CHECK(
+    hxc_string_concat_ref(literal, suffix, allocator, &joined)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(arena->allocation_count == allocations + 2u);
+  HXC_TEST_CHECK(joined.byte_length == 9u);
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(
+      joined.data,
+      (const uint8_t *)"prefix:ok",
+      joined.byte_length
+    )
+  );
+  HXC_TEST_CHECK(hxc_string_release(&joined) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(arena->release_count == releases + 2u);
+
+  HXC_TEST_CHECK(
+    hxc_string_from_scalar(-1, allocator, &invalid) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(invalid.byte_length == sizeof(replacement));
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(invalid.data, replacement, sizeof(replacement))
+  );
+  HXC_TEST_CHECK(hxc_string_release(&invalid) == HXC_STATUS_OK);
+
+  arena->force_failure = true;
+  HXC_TEST_CHECK(
+    hxc_string_from_scalar(65, allocator, &failed) == HXC_STATUS_OUT_OF_MEMORY
+  );
+  arena->force_failure = false;
+  HXC_TEST_CHECK(failed.data == NULL && failed.owner == NULL);
+
+  joined = literal;
+  HXC_TEST_CHECK(hxc_string_release(&joined) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(joined.data == NULL && joined.owner == NULL);
+  return 0;
+}
+
 static int hxc_test_builder(
   hxc_test_arena *arena,
   const hxc_allocator *allocator
@@ -417,6 +515,7 @@ int main(void) {
   HXC_TEST_CHECK(hxc_test_literals_and_scalars(&arena) == 0);
   HXC_TEST_CHECK(hxc_test_checked_and_lossy(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_concat_and_failure(&arena, &allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_reference_owned_strings(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_builder(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_cstrings(&arena, &allocator) == 0);
   HXC_TEST_CHECK(

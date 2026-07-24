@@ -179,6 +179,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "object",
         "runtime-base",
         "status",
+        "string",
         "string-literal",
         "string-map",
         "string-scalar",
@@ -190,7 +191,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     provenance = record(runtime_abi.get("releaseProvenance"), "runtime release provenance")
     if (
         runtime_abi.get("stability") != "internal-versioned"
-        or version != {"major": 0, "minor": 9, "patch": 0}
+        or version != {"major": 0, "minor": 10, "patch": 0}
         or runtime_abi.get("generatedCodeCompatibility") != "same-major"
         or runtime_abi.get("generatedCodeCheck") != "c11-static-assert"
         or runtime_abi.get("runtimeMajorMacro") != "HXC_RUNTIME_ABI_MAJOR"
@@ -268,7 +269,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "object": "compiler-selectable",
         "string-literal": "compiler-selectable",
         "string-scalar": "compiler-selectable",
-        "string": "native-seed-only",
+        "string": "compiler-selectable",
         "io": "compiler-selectable",
     }
     source_records: list[tuple[str, str]] = []

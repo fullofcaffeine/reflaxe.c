@@ -299,7 +299,7 @@ def validate_manifest(manifest: dict[str, object]) -> None:
 
 
 def validate_generated_text(source: str, header: str) -> None:
-    marker = '(hxc_string){ (const uint8_t *)"Hello from hxc", 14, true }'
+    marker = '(hxc_string){ (const uint8_t *)"Hello from hxc", 14, true, NULL }'
     if marker not in source:
         raise HelloFailure("generated hello C omitted its byte-counted String literal")
     if source.count("hxc_io_println(") != 1 or source.count("abort();") != 1:

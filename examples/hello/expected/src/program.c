@@ -2,7 +2,7 @@
 
 void hxc_Main_main(void)
 {
-  if (hxc_io_println((hxc_string){ (const uint8_t *)"Hello from hxc", 14, true }) != HXC_STATUS_OK)
+  if (hxc_io_println((hxc_string){ (const uint8_t *)"Hello from hxc", 14, true, NULL }) != HXC_STATUS_OK)
   {
     abort();
   }

@@ -1159,7 +1159,7 @@ def check_direct_argument_defaults(selected: str | None) -> None:
                 or "int32_t hxc_value;" not in generated_headers
                 or "uint32_t hxc_value;" not in generated_headers
                 or "double hxc_value;" not in generated_headers
-                or 'hxc_Main_acceptText((hxc_string){ (const uint8_t *)"haxe", 4, true })' not in generated_c
+                or 'hxc_Main_acceptText((hxc_string){ (const uint8_t *)"haxe", 4, true, NULL })' not in generated_c
             ):
                 raise FunctionLoweringFailure(
                     "optional primitive/enum omission, false/zero, or presence lost its distinct tagged C value"

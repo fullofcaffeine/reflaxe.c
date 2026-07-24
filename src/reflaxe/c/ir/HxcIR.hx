@@ -78,6 +78,16 @@ enum HxcIRTypeRef {
 	/** Immutable valid UTF-8 with Unicode-scalar Haxe indexing semantics. */
 	IRTString;
 
+	/**
+		An immutable UTF-8 Haxe String whose value may keep runtime storage alive.
+
+		It uses the same C `hxc_string` carrier as `IRTString`, but unlike the
+		literal-only form it participates in retain/release planning. Keeping the
+		distinction in semantic IR prevents a runtime-created value from being
+		silently copied under the immortal-literal lifetime rule.
+	**/
+	IRTManagedString;
+
 	/** Borrowed NUL-terminated bytes backed by stable C string-literal storage. */
 	IRTCString;
 

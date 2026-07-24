@@ -1421,7 +1421,279 @@
         "test/differential/string-char-at/generated/Main.hx",
         "test/differential/string-char-at/run.py"
       ],
-      "notes": "Ordinary Haxe String.charAt uses ADR 0004 Unicode-scalar indexing and returns a borrowed UTF-8 view of the selected character, or the empty string for a negative or out-of-range index. The focused hosted suite covers ASCII, a non-BMP character, embedded NUL, empty input, generated layouts, runtime planning, strict C11, optimization, and sanitizers; other String methods and environments remain explicit unsupported boundaries."
+      "notes": "Ordinary Haxe String.charAt uses ADR 0004 Unicode-scalar indexing and returns a borrowed UTF-8 view of the selected character, or the empty string for a negative or out-of-range index. The focused hosted suite covers ASCII, a non-BMP character, embedded NUL, empty input, generated layouts, runtime planning, strict C11, optimization, and sanitizers; unlisted String methods and environments remain explicit unsupported boundaries."
+    },
+    {
+      "id": "string-char-code-at-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "charCodeAt",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(index : Int) -> Null<Int>"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.charCodeAt uses ADR 0004 Unicode-scalar indexing and returns the selected scalar value. The hosted fixture covers ASCII, a non-BMP value, managed ownership, generated layouts, strict C11, optimization, and sanitizers; unlisted String methods and environments remain unsupported."
+    },
+    {
+      "id": "string-from-char-code-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "fromCharCode",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(code : Int) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.fromCharCode creates one owned UTF-8 String from a valid Unicode scalar. The hosted fixture covers direct calls, StringBuf.addChar expansion, ASCII, non-ASCII, invalid scalar replacement, ownership, generated layouts, strict C11, optimization, and sanitizers."
+    },
+    {
+      "id": "string-length-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "length",
+        "kind": "field",
+        "isStatic": false,
+        "signature": "Int"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.length counts Unicode scalar values, not UTF-8 bytes, under ADR 0004. The hosted fixture proves the distinction with mixed ASCII, accented, and non-BMP text plus generated-layout and sanitizer coverage."
+    },
+    {
+      "id": "string-substring-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "substring",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(startIndex : Int, ?endIndex : Null<Int>) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-scalar"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.substring returns a borrowed scalar-indexed view whose backing owner remains alive with the result. The hosted fixture covers omitted, reversed, negative, and out-of-range bounds together with aggregate ownership and sanitizers."
+    },
+    {
+      "id": "string-buf-type-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": null,
+        "kind": "class",
+        "isStatic": true,
+        "signature": "StringBuf"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf class is admitted for the bounded constructor, addChar, and toString path used by the UTF-8 lexer. It is not a compiler-specific replacement, and unlisted StringBuf members remain unsupported."
+    },
+    {
+      "id": "string-buf-add-char-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": "addChar",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "(c : Int) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The upstream inline StringBuf.addChar method compiles naturally through String.fromCharCode, concatenation, and managed reassignment. The compiler does not recognize StringBuf syntax specially."
+    },
+    {
+      "id": "string-buf-new-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": "new",
+        "kind": "constructor",
+        "isStatic": false,
+        "signature": "() -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary zero-argument StringBuf constructor initializes its managed String field and receives normal generated-class cleanup. The hosted fixture proves stack construction and destruction without a special runtime StringBuf object."
+    },
+    {
+      "id": "string-buf-to-string-partial",
+      "selector": {
+        "module": "StringBuf",
+        "type": "StringBuf",
+        "member": "toString",
+        "kind": "inline-method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The upstream inline StringBuf.toString method returns the built managed String through the compiler's normal owned-return rules. The source API stays ordinary Haxe and does not expose the runtime carrier."
     },
     {
       "id": "std-int-conformant",
@@ -7787,7 +8059,7 @@
         "test/differential/string-char-at/generated/Main.hx",
         "test/differential/string-char-at/run.py"
       ],
-      "notes": "Ordinary Haxe String.charAt uses ADR 0004 Unicode-scalar indexing and returns a borrowed UTF-8 view of the selected character, or the empty string for a negative or out-of-range index. The focused hosted suite covers ASCII, a non-BMP character, embedded NUL, empty input, generated layouts, runtime planning, strict C11, optimization, and sanitizers; other String methods and environments remain explicit unsupported boundaries.",
+      "notes": "Ordinary Haxe String.charAt uses ADR 0004 Unicode-scalar indexing and returns a borrowed UTF-8 view of the selected character, or the empty string for a negative or out-of-range index. The focused hosted suite covers ASCII, a non-BMP character, embedded NUL, empty input, generated layouts, runtime planning, strict C11, optimization, and sanitizers; unlisted String methods and environments remain explicit unsupported boundaries.",
       "ruleId": "string-char-at-partial"
     },
     {
@@ -7801,32 +8073,30 @@
       "kind": "method",
       "signature": "(index : Int) -> Null<Int>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.charCodeAt uses ADR 0004 Unicode-scalar indexing and returns the selected scalar value. The hosted fixture covers ASCII, a non-BMP value, managed ownership, generated layouts, strict C11, optimization, and sanitizers; unlisted String methods and environments remain unsupported.",
+      "ruleId": "string-char-code-at-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:63018eb306a4e0c2ad849b8975a2858db2753d3df909655c000ff230fcc296be",
@@ -7839,32 +8109,30 @@
       "kind": "method",
       "signature": "(code : Int) -> String",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.fromCharCode creates one owned UTF-8 String from a valid Unicode scalar. The hosted fixture covers direct calls, StringBuf.addChar expansion, ASCII, non-ASCII, invalid scalar replacement, ownership, generated layouts, strict C11, optimization, and sanitizers.",
+      "ruleId": "string-from-char-code-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:3f53aa889e4b5971f933017520d798dac77f2a0d6ecae31985b0649f5cc0965e",
@@ -7953,32 +8221,30 @@
       "kind": "field",
       "signature": "Int",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.length counts Unicode scalar values, not UTF-8 bytes, under ADR 0004. The hosted fixture proves the distinction with mixed ASCII, accented, and non-BMP text plus generated-layout and sanitizer coverage.",
+      "ruleId": "string-length-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:f298fb1a06d3edbbe208cf4b11209146dff2b59bb556ea6b971cca4490e95593",
@@ -8105,32 +8371,30 @@
       "kind": "method",
       "signature": "(startIndex : Int, ?endIndex : Null<Int>) -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-scalar"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.substring returns a borrowed scalar-indexed view whose backing owner remains alive with the result. The hosted fixture covers omitted, reversed, negative, and out-of-range bounds together with aggregate ownership and sanitizers.",
+      "ruleId": "string-substring-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:85d092d04698fec43edca34e02b41b743e133f003b7b1daea27f94a336d90a0d",
@@ -8257,32 +8521,30 @@
       "kind": "class",
       "signature": "StringBuf",
       "isStatic": true,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary upstream StringBuf class is admitted for the bounded constructor, addChar, and toString path used by the UTF-8 lexer. It is not a compiler-specific replacement, and unlisted StringBuf members remain unsupported.",
+      "ruleId": "string-buf-type-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:e5a93417f7930a1b13ed806a046bceaf3dc5e4a5f499c147dfee955161c01e10",
@@ -8333,32 +8595,30 @@
       "kind": "inline-method",
       "signature": "(c : Int) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The upstream inline StringBuf.addChar method compiles naturally through String.fromCharCode, concatenation, and managed reassignment. The compiler does not recognize StringBuf syntax specially.",
+      "ruleId": "string-buf-add-char-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:517487696de875fa5b0120ddc373fb4c836c89de20a32d885d6773f792ce92ec",
@@ -8485,32 +8745,30 @@
       "kind": "constructor",
       "signature": "() -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The ordinary zero-argument StringBuf constructor initializes its managed String field and receives normal generated-class cleanup. The hosted fixture proves stack construction and destruction without a special runtime StringBuf object.",
+      "ruleId": "string-buf-new-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:e48a19f68d2306878b5539623fc138453d009ea2bfbc190f54e1928cf6267f63",
@@ -8523,32 +8781,30 @@
       "kind": "inline-method",
       "signature": "() -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "The upstream inline StringBuf.toString method returns the built managed String through the compiler's normal owned-return rules. The source API stays ordinary Haxe and does not expose the runtime carrier.",
+      "ruleId": "string-buf-to-string-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:a84f1bce4d37fae730d762f35b7992e1d0984217a67dd90dc39ebf13e142a334",

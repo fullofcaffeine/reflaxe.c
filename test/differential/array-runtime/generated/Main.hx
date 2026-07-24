@@ -37,6 +37,9 @@ final class Main {
 
 		history.add(sum, before, after, {minimum: 5, maximum: 15});
 
+		final row:Array<Int> = [1];
+		final rows:Array<Array<Int>> = [row];
+		final nestedArrayLength = nestedCopy(rows, true);
 		final arguments:Array<ManagedCommand> = [Number(7)];
 		final scheduled = makeSchedule(arguments);
 		final copied = scheduled;
@@ -68,7 +71,22 @@ final class Main {
 		while (values.length != 3 || labels.length != 1 || labels[0] != "ready" || values[2] != 12 || sum != 42 || history.depth() != 1
 			|| history.lastRevision() != 42 || history.lastAfterByte() != 11 || history.lastMinimum() != 5 || managedPayloadLength != 3
 			|| recordCopy.commands.length != 3 || nestedRecordCommandCount != 3 || nestedEnvelopeCommandCount != 3 || absent != null || present == null
-			|| nullableLength(absent) != -1 || nullableLength(present) != 2) {}
+			|| nullableLength(absent) != -1 || nullableLength(present) != 2 || nestedArrayLength != 1) {}
+	}
+
+	/**
+		Keep a copied inner Array alive while a nested branch borrows it.
+
+		This used to fail closed because the compiler had no path-scoped owner for
+		the copied element. It is positive evidence now: entering the branch owns
+		`selected` until either the early return or the normal branch exit.
+	**/
+	static function nestedCopy(rows:Array<Array<Int>>, enabled:Bool):Int {
+		if (enabled && rows.length > 0) {
+			final selected = rows[0];
+			return selected.length;
+		}
+		return 0;
 	}
 
 	/**

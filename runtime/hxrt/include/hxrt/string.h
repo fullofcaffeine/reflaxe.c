@@ -1,13 +1,17 @@
 /*
- * hxrt feature: string (native-seed-only).
+ * hxrt feature: string (compiler-selectable and independently native-tested).
  *
  * The string differential/native package harness calls this API for runtime
  * UTF-8 validation, Unicode-scalar indexing, owned values, builders, slicing,
- * hashing, and explicit CString conversion. Generated Haxe cannot select it yet;
- * literals use string_literal.h without allocation. Owned records retain their
- * allocator identity and are move-only by convention; borrowed views never
- * extend owner lifetime. Failures use hxc_status and preserve output slots. The
- * slice has no hidden global/thread state and all layouts are internal ABI.
+ * hashing, and explicit CString conversion. Generated Haxe selects the narrow
+ * owner API for runtime `String.fromCharCode`, concatenation, and the ordinary
+ * `StringBuf.addChar` path; literal-only programs still use string_literal.h
+ * without allocation. A runtime-created ordinary Haxe String carries an
+ * optional reference-counted owner inside its immutable view, so aliases,
+ * fields, containers, and returns can share bytes safely.
+ * The explicit hxc_owned_string boundary remains move-only for native callers.
+ * Failures use hxc_status and preserve output slots. The slice has no hidden
+ * global/thread state and all layouts are internal ABI.
  */
 #ifndef HXRT_STRING_H_INCLUDED
 #define HXRT_STRING_H_INCLUDED
@@ -58,6 +62,48 @@ typedef struct hxc_owned_cstring {
   { NULL, 0u, NULL }
 #define HXC_OWNED_CSTRING_INITIALIZER \
   { NULL, 0u, HXC_ALLOCATION_INITIALIZER }
+
+/**
+ * Acquire one logical alias of an ordinary Haxe String.
+ *
+ * Null and compiler-owned literal views have no owner, so retaining either is
+ * an allocation-free no-op. Runtime-created views reject owner-count overflow.
+ */
+HXC_API hxc_status hxc_string_retain(hxc_string value);
+
+/**
+ * Release one ordinary Haxe String alias and reset the caller's slot to null.
+ *
+ * The final runtime-created alias frees its private UTF-8 backing allocation
+ * through the allocator identity captured at construction. Literal views only
+ * reset the slot because their bytes live for the whole program.
+ */
+HXC_API hxc_status hxc_string_release(hxc_string *value);
+
+/**
+ * Construct one valid UTF-8 scalar as an independently owned Haxe String.
+ *
+ * Surrogates, negative values, and values above U+10FFFF become U+FFFD, matching
+ * ADR 0004. The output slot must contain HXC_STRING_INITIALIZER.
+ */
+HXC_API hxc_status hxc_string_from_scalar(
+  int32_t scalar,
+  hxc_allocator allocator,
+  hxc_string *out_string
+);
+
+/**
+ * Concatenate two nullable-checked String values into one owned Haxe String.
+ *
+ * The output slot must contain HXC_STRING_INITIALIZER. Size overflow and
+ * allocation failure leave it unchanged.
+ */
+HXC_API hxc_status hxc_string_concat_ref(
+  hxc_string left,
+  hxc_string right,
+  hxc_allocator allocator,
+  hxc_string *out_string
+);
 
 /** Length-delimited view of a C string; null is rejected. Encoding is unchecked. */
 HXC_API hxc_status hxc_byte_view_from_cstring(

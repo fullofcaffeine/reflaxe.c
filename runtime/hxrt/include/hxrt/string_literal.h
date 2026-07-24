@@ -3,10 +3,12 @@
  *
  * Generated C constructs valid UTF-8 literals directly with this allocation-free
  * private view; a selected consumer such as io adds the header transitively.
- * Non-null values borrow immutable bytes and never allocate. A null data pointer
- * is Haxe `null`, while a real empty String has a non-null zero-length address.
- * The carrier has no mutable/thread state. It is an internal call layout, not a
- * public String ABI and not evidence for the native-seed full string feature.
+ * Literal values borrow immutable bytes and never allocate. Runtime-created
+ * values may use the optional private owner pointer, but the literal-only
+ * feature neither defines nor selects that owner. A null data pointer is Haxe
+ * `null`, while a real empty String has a non-null zero-length address. The
+ * carrier has no mutable/thread state. It is an internal call layout, not a
+ * public String ABI and not evidence for the broader string feature.
  */
 #ifndef HXRT_STRING_LITERAL_H_INCLUDED
 #define HXRT_STRING_LITERAL_H_INCLUDED
@@ -26,14 +28,15 @@ typedef struct hxc_string {
   const uint8_t *data;
   size_t byte_length;
   bool has_trailing_nul;
+  void *owner;
 } hxc_string;
 
 #define HXC_STRING_INITIALIZER \
-  { NULL, 0u, false }
+  { NULL, 0u, false, NULL }
 
 /** A real non-null empty Haxe String backed by compiler-owned static storage. */
 #define HXC_STRING_EMPTY_INITIALIZER \
-  { (const uint8_t *)"", 0u, true }
+  { (const uint8_t *)"", 0u, true, NULL }
 
 /**
  * Compiler-owned direct literal initializer.
@@ -42,6 +45,6 @@ typedef struct hxc_string {
  * Embedded NUL bytes remain content because `sizeof` supplies the byte length.
  */
 #define HXC_STRING_LITERAL(value) \
-  { (const uint8_t *)(value), sizeof(value) - 1u, true }
+  { (const uint8_t *)(value), sizeof(value) - 1u, true, NULL }
 
 #endif /* HXRT_STRING_LITERAL_H_INCLUDED */

@@ -1,9 +1,10 @@
 /*
- * Implementation of native-seed-only feature `string`.
+ * Implementation of the allocator-backed feature `string`.
  *
  * String differential and selective-package native fixtures call these owned
- * construction, builder, lossy-decoding, and CString boundaries; generated
- * Haxe cannot select them yet. Allocation-free validation, scalar indexing,
+ * construction, builder, lossy-decoding, and CString boundaries. Generated
+ * Haxe selects the bounded reference-owned construction operations while the
+ * remaining native surface keeps its explicit move-only ownership. Allocation-free validation, scalar indexing,
  * slicing, comparison, and hashing live in the narrower `string-scalar`
  * dependency so ordinary Haxe `String.charAt` does not pull in an allocator.
  * Owners retain allocator identity, borrowed values never extend lifetime, and
@@ -15,6 +16,20 @@
 
 /* Empty owned strings share immutable storage while retaining a zero-size owner. */
 static const uint8_t hxc_empty_string_storage[1] = { UINT8_C(0) };
+
+/**
+ * Private shared owner for bytes created by ordinary Haxe String operations.
+ *
+ * The view remains small and slice-friendly: a substring can point inside the
+ * same allocation while retaining this owner. Explicit native
+ * `hxc_owned_string` values deliberately keep their older move-only sidecar and
+ * therefore leave `hxc_string.owner` null.
+ */
+typedef struct hxc_string_owner {
+  size_t references;
+  hxc_allocation storage;
+  hxc_allocator allocator;
+} hxc_string_owner;
 
 static size_t hxc_utf8_encode(uint32_t scalar, uint8_t output[4]) {
   if ((scalar >= UINT32_C(0xD800) && scalar <= UINT32_C(0xDFFF))
@@ -50,11 +65,93 @@ static void hxc_copy_bytes(uint8_t *destination, const uint8_t *source, size_t l
   }
 }
 
+static bool hxc_string_slot_is_empty(const hxc_string *value) {
+  return value != NULL
+    && value->data == NULL
+    && value->byte_length == 0u
+    && !value->has_trailing_nul
+    && value->owner == NULL;
+}
+
+static bool hxc_string_owner_is_valid(const hxc_string_owner *owner) {
+  return owner != NULL
+    && owner->references > 0u
+    && hxc_allocator_is_valid(&owner->allocator)
+    && hxc_allocation_is_valid(&owner->storage)
+    && hxc_allocator_same_identity(&owner->allocator, &owner->storage.allocator);
+}
+
+static hxc_status hxc_string_ref_from_valid_segments(
+  const uint8_t *left_data,
+  size_t left_length,
+  const uint8_t *right_data,
+  size_t right_length,
+  hxc_allocator allocator,
+  hxc_string *out_string
+) {
+  hxc_string_owner *owner = NULL;
+  size_t length;
+  size_t allocation_size;
+  uint8_t *destination;
+  hxc_status status;
+  if (!hxc_string_slot_is_empty(out_string)
+    || (left_data == NULL && left_length != 0u)
+    || (right_data == NULL && right_length != 0u)
+    || !hxc_allocator_is_valid(&allocator)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_size_add(left_length, right_length, &length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  status = hxc_alloc(
+    &allocator,
+    sizeof(hxc_string_owner),
+    HXC_ALIGNOF(hxc_string_owner),
+    (void **)&owner
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  owner->references = 1u;
+  owner->storage = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
+  owner->allocator = allocator;
+  status = hxc_size_add(length, 1u, &allocation_size);
+  if (status == HXC_STATUS_OK) {
+    status = hxc_allocation_allocate(
+      &allocator,
+      allocation_size,
+      1u,
+      HXC_ALIGNOF(uint8_t),
+      &owner->storage
+    );
+  }
+  if (status != HXC_STATUS_OK) {
+    (void)hxc_free(
+      &allocator,
+      owner,
+      sizeof(hxc_string_owner),
+      HXC_ALIGNOF(hxc_string_owner)
+    );
+    return status;
+  }
+  destination = (uint8_t *)owner->storage.memory;
+  hxc_copy_bytes(destination, left_data, left_length);
+  hxc_copy_bytes(destination + left_length, right_data, right_length);
+  destination[length] = UINT8_C(0);
+  out_string->data = destination;
+  out_string->byte_length = length;
+  out_string->has_trailing_nul = true;
+  out_string->owner = owner;
+  return HXC_STATUS_OK;
+}
+
 static bool hxc_owned_string_slot_is_empty(const hxc_owned_string *value) {
   return value != NULL
     && value->value.data == NULL
     && value->value.byte_length == 0u
     && !value->value.has_trailing_nul
+    && value->value.owner == NULL
     && value->storage.memory == NULL
     && value->storage.size == 0u
     && value->storage.alignment == 0u
@@ -68,6 +165,7 @@ static void hxc_owned_string_clear(hxc_owned_string *value) {
   value->value.data = NULL;
   value->value.byte_length = 0u;
   value->value.has_trailing_nul = false;
+  value->value.owner = NULL;
   value->storage.memory = NULL;
   value->storage.size = 0u;
   value->storage.alignment = 0u;
@@ -80,6 +178,9 @@ static void hxc_owned_string_clear(hxc_owned_string *value) {
 static bool hxc_owned_string_is_valid(const hxc_owned_string *value) {
   size_t required;
   if (value == NULL || !hxc_allocation_is_valid(&value->storage)) {
+    return false;
+  }
+  if (value->value.owner != NULL) {
     return false;
   }
   if (value->storage.size == 0u) {
@@ -127,6 +228,7 @@ static hxc_status hxc_owned_string_from_valid_bytes(
     value.value.data = hxc_empty_string_storage;
     value.value.byte_length = 0u;
     value.value.has_trailing_nul = true;
+    value.value.owner = NULL;
     *out_string = value;
     return HXC_STATUS_OK;
   }
@@ -151,6 +253,7 @@ static hxc_status hxc_owned_string_from_valid_bytes(
   value.value.data = destination;
   value.value.byte_length = length;
   value.value.has_trailing_nul = true;
+  value.value.owner = NULL;
   *out_string = value;
   return HXC_STATUS_OK;
 }
@@ -299,6 +402,103 @@ static void hxc_owned_cstring_clear(hxc_owned_cstring *value) {
   value->storage.allocator.release = NULL;
 }
 
+hxc_status hxc_string_retain(hxc_string value) {
+  hxc_string_owner *owner;
+  if (value.owner == NULL) {
+    return HXC_STATUS_OK;
+  }
+  owner = (hxc_string_owner *)value.owner;
+  if (!hxc_string_owner_is_valid(owner)
+    || value.data < (const uint8_t *)owner->storage.memory
+    || value.byte_length > owner->storage.size
+    || value.data > (const uint8_t *)owner->storage.memory
+      + owner->storage.size - value.byte_length) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (owner->references == SIZE_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  owner->references++;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_string_release(hxc_string *value) {
+  hxc_string_owner *owner;
+  hxc_allocator allocator;
+  hxc_status status;
+  if (value == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  owner = value->owner;
+  if (owner == NULL) {
+    *value = (hxc_string)HXC_STRING_INITIALIZER;
+    return HXC_STATUS_OK;
+  }
+  if (!hxc_string_owner_is_valid(owner)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  owner->references--;
+  if (owner->references != 0u) {
+    *value = (hxc_string)HXC_STRING_INITIALIZER;
+    return HXC_STATUS_OK;
+  }
+  allocator = owner->allocator;
+  status = hxc_allocation_dispose(&owner->storage);
+  if (status != HXC_STATUS_OK) {
+    owner->references = 1u;
+    return status;
+  }
+  status = hxc_free(
+    &allocator,
+    owner,
+    sizeof(hxc_string_owner),
+    HXC_ALIGNOF(hxc_string_owner)
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  *value = (hxc_string)HXC_STRING_INITIALIZER;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_string_from_scalar(
+  int32_t scalar,
+  hxc_allocator allocator,
+  hxc_string *out_string
+) {
+  uint8_t encoded[4];
+  size_t length = hxc_utf8_encode((uint32_t)scalar, encoded);
+  return hxc_string_ref_from_valid_segments(
+    encoded,
+    length,
+    NULL,
+    0u,
+    allocator,
+    out_string
+  );
+}
+
+hxc_status hxc_string_concat_ref(
+  hxc_string left,
+  hxc_string right,
+  hxc_allocator allocator,
+  hxc_string *out_string
+) {
+  if (!hxc_string_slot_is_empty(out_string)
+    || !hxc_string_is_valid(left)
+    || !hxc_string_is_valid(right)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  return hxc_string_ref_from_valid_segments(
+    left.data,
+    left.byte_length,
+    right.data,
+    right.byte_length,
+    allocator,
+    out_string
+  );
+}
+
 hxc_status hxc_byte_view_from_cstring(
   const char *value,
   hxc_byte_view *out_view
@@ -409,6 +609,7 @@ hxc_status hxc_string_from_utf8_lossy(
   value.value.data = destination;
   value.value.byte_length = output_length;
   value.value.has_trailing_nul = true;
+  value.value.owner = NULL;
   *out_string = value;
   return HXC_STATUS_OK;
 }
@@ -474,6 +675,7 @@ hxc_status hxc_string_concat(
   value.value.data = destination;
   value.value.byte_length = combined_length;
   value.value.has_trailing_nul = true;
+  value.value.owner = NULL;
   *out_string = value;
   return HXC_STATUS_OK;
 }
@@ -533,6 +735,7 @@ hxc_status hxc_string_buffer_view(
     : (const uint8_t *)buffer->storage.memory;
   view.byte_length = buffer->byte_length;
   view.has_trailing_nul = true;
+  view.owner = NULL;
   *out_view = view;
   return HXC_STATUS_OK;
 }
@@ -612,6 +815,7 @@ hxc_status hxc_string_buffer_finish(
     : (const uint8_t *)value.storage.memory;
   value.value.byte_length = buffer->byte_length;
   value.value.has_trailing_nul = true;
+  value.value.owner = NULL;
   buffer->byte_length = 0u;
   *out_string = value;
   return HXC_STATUS_OK;

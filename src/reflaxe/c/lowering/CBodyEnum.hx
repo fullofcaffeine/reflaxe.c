@@ -446,7 +446,7 @@ class CBodyEnumRegistry {
 	 */
 	function validateReferencePayloadPolicy(valueType:CBodyValueType, sourceType:Type, position:Position, fail:(Position, String) -> Void, node:String):Void {
 		switch valueType.kind {
-			case CBVKStaticString(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOwnedClass(_) | CBVKClass(_, _):
+			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOwnedClass(_) | CBVKClass(_, _):
 				return;
 			case CBVKIntMap(_) | CBVKStringMap(_):
 				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
@@ -567,6 +567,8 @@ class CBodyEnumRegistry {
 			for (payload in tagCase.payload) {
 				final array = payload.valueType.arrayValue();
 				if (array != null && !array.managedByCollector || payload.valueType.bytesValue() != null)
+					return true;
+				if (payload.valueType.kind.match(CBVKManagedString(_)))
 					return true;
 				final aggregate = payload.valueType.aggregateValue();
 				if (aggregate != null && aggregate.managedLifetime)

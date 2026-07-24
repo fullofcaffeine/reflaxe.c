@@ -1,19 +1,19 @@
 # UTF-8 scalar string runtime contract
 
-This document records the bounded UTF-8 String runtime and the first
-compiler-selectable E5.T02 operation. It implements the storage and operation
+This document records the bounded UTF-8 String runtime and its current
+compiler-selected E5.T02 operations. It implements the storage and operation
 contract from [ADR 0004](adr/0004-utf8-scalar-string-contract.md), but it does
-not make the full operation slice compiler-selectable, expose the private
-layout as a public ABI, or claim general Haxe `String`/standard-library
-lowering. The compiler can keep a String whose bytes come from a source literal
-as an immutable value:
-it may pass or return that value, store it in a closed record, enum, optional, or
-managed Array, and compare it for content equality. E2.T07 also uses the same
-literal carrier for hosted literal output. E5.T02 owns runtime-created and
-owned Strings plus broader standard-library connections. It now admits
-ordinary `String.charAt` through the allocation-free `string-scalar` feature;
-all other general String operations remain outside this bounded step. E4.T11 established
-the internal same-major runtime contract, and E7 owns any future public ABI.
+not expose the private layout as a public ABI or claim complete Haxe
+`String`/standard-library support.
+
+Literal-backed Strings remain allocation-free. Runtime-created values from
+`String.fromCharCode`, ordinary concatenation, and the upstream
+`StringBuf.addChar` path use a small reference-counted owner. Those values may
+cross calls and returns, aliases, branches, closed records and enums, fixed
+Array literals, `Null<String>`, and class fields without dangling bytes.
+`length`, `charAt`, `charCodeAt`, and `substring` use the shared Unicode-scalar
+rules. Other String methods still fail closed. E4.T11 established the internal
+same-major runtime contract, and E7 owns any future public ABI.
 
 E4.T03 advanced the incompatible native-seed marker from 0.2.0 to 0.3.0.
 E2.T07 added the provisional hosted output API and advanced it to 0.4.0;
@@ -21,16 +21,21 @@ E4.T04's additive array slice advances the internal same-major contract to
 0.5.0, E5.T03's shared Array identity layer advanced it to 0.6.0, E5.T04's
 fixed-length Bytes owner advanced it to 0.7.0, and the separate selected
 collector/root API advanced it to 0.8.0. Preserving Haxe's legacy-nullable
-String identity without changing the three-field layout advances the internal
-semantic contract to 0.9.0. That
-marker does not stabilize the private string layout or application ABI.
+String identity without changing the three-field layout advanced the internal
+semantic contract to 0.9.0. Adding the optional owner pointer needed by
+runtime-created ordinary Haxe values changes that private carrier and advances
+the marker to 0.10.0. That marker does not stabilize the private string layout
+or application ABI.
 
 ## Representation and invariants
 
 `hxc_string` is the private immutable runtime value. It stores a byte pointer,
-logical byte length, and a trusted fact describing whether stable storage has a
-NUL immediately after the logical bytes. The stored logical bytes are always
-shortest-form UTF-8 for Unicode scalar values:
+logical byte length, a trusted fact describing whether stable storage has a
+NUL immediately after the logical bytes, and an optional opaque owner. A null
+owner means the bytes have another proven lifetime, normally static literal
+storage. A non-null owner keeps one allocator-backed immutable byte allocation
+alive through explicit retain/release operations. The stored logical bytes are
+always shortest-form UTF-8 for Unicode scalar values:
 
 - embedded NUL is ordinary content and is included in length, equality, hash,
   slicing, and comparison;
@@ -73,22 +78,20 @@ diagnostics even though its generated C carrier is the same String view.
 Under Haxe's default legacy null safety, both `String` and `Null<String>` are
 the same nullable reference value; `Null` is documentary for a reference type.
 `Null<ScenarioId>` follows the same rule for an abstract over String. The
-three-field view therefore uses its null data pointer for absence, while the
+four-field view therefore uses its null data pointer for absence, while the
 empty literal points at non-null static storage. Equality first handles null
 identity, then compares non-null values by byte length and canonical UTF-8
 content with `memcmp`. It never treats different non-null storage pointers as
 unequal.
 
-This is deliberately smaller than general String support. `String.charAt`
-returns another borrowed view, so it works without creating owned bytes. A
-value created at run time by parsing, input, concatenation, interpolation, or
-another allocating operation needs an owned lifetime plan and remains
-unsupported until E5.T02
-connects that plan. Likewise, `Sys.println(value)` remains unsupported even
-when `value` is literal-backed: the current output API accepts a literal at the
-call site, and broadening that API is a separate standard-library lowering
-decision. These boundaries prevent the no-allocation representation from being
-misapplied to values whose bytes do not live for the whole program.
+This is deliberately smaller than general String support. `String.charAt` and
+`substring` return borrowed views into the receiver's bytes. When such a view
+escapes its immediate expression, generated code retains the same optional
+owner; it does not copy the slice. `String.fromCharCode` and concatenation
+produce fresh owners, while aliases and aggregate/container copies retain them.
+The last cleanup releases the allocation. `Sys.println(value)` remains
+unsupported when the argument is not a literal at the call site: broadening
+that output API is a separate standard-library decision.
 
 `hxc_owned_string` pairs one immutable value with `hxc_allocation`. The complete
 allocator callback/context identity therefore follows owned bytes and disposal
@@ -179,15 +182,16 @@ lowering owner is implemented.
 ## Feature and evidence boundary
 
 The allocation-free `string-scalar` feature is compiler-selectable and depends
-only on `status` plus the `string-literal` carrier. Ordinary Haxe
-`value.charAt(index)` selects this slice when the call remains at run time. It
-returns a borrowed one-scalar view, or the empty String for a negative or
-out-of-range index, without selecting `alloc` or the broader `string` source.
+only on `status` plus the `string-literal` carrier. Ordinary Haxe `length`,
+`charAt`, `charCodeAt`, and `substring` select this slice when their inputs
+remain dynamic. Scalar views borrow the source bytes; literal-only programs
+still avoid `alloc` and the broader `string` source.
 
-The full `string` feature remains `native-seed-only` and depends on `alloc` plus
-`string-scalar`. It has no object, tracing collector, dynamic, reflection,
-exception, thread, or Unicode-table dependency. A generated Haxe program
-cannot request the full feature.
+The `string` feature is compiler-selectable and depends on `alloc` plus
+`string-scalar`. A generated program selects it only for a reachable owned
+operation or lifetime action: `from-scalar`, `concat`, `retain`, or
+`cleanup-release`. It has no object, tracing collector, dynamic, reflection,
+exception, thread, or Unicode-table dependency.
 
 The compiler admits literal-backed String values as the direct
 `string-literal/static-value` capability. A program using only those values
@@ -206,19 +210,22 @@ the admitted fail-stop policy by aborting on any non-OK status.
 or alias. “Runtime” here describes when the expression is selected, not who
 owns its bytes: the value remains the same immutable length-delimited view
 backed by already-admitted storage. The Bytes operation copies those bytes
-synchronously into its own managed allocation, so it does not select the full
-`string` feature or create an owned String. Runtime-created Strings still
-remain outside this boundary.
+synchronously into its own managed allocation, so it does not add another
+String owner. Runtime-created Strings already carry their own owner when
+required.
 
 [`test/differential/string-runtime`](../test/differential/string-runtime)
-compares BMP/non-BMP/embedded-NUL/composed/decomposed scalar behavior with the
-pinned Haxe Eval oracle. Its independent strict-C fixture covers checked and
-maximal-subpart lossy decoding, slicing, comparison, stable hashing, builder
-aliasing and failure atomicity, allocator identity, borrowed/owned CString
-lifetime, and exact allocation counts. Required GCC and Clang lanes run at
-`-O0`, `-O2`, and with AddressSanitizer plus UndefinedBehaviorSanitizer, then
-inspect the link for the string symbols and absence of object/GC/reflection/
-dynamic families.
+has two complementary halves. Its independent strict-C fixture covers checked
+and maximal-subpart lossy decoding, slicing, comparison, stable hashing,
+builder failure atomicity, allocator identity, borrowed/owned CString lifetime,
+reference counts, and exact allocations. Its ordinary-Haxe fixture compares
+Eval with generated C for `String.fromCharCode`, upstream `StringBuf.addChar`,
+concatenation, aliases, branches, records, enums, arrays, reassignment,
+nullable values, calls, returns, and borrowed scalar slices. Generated projects
+are checked in split, package, and unity layouts under cold, reversed, and warm
+compiler-server discovery. Strict C11 `-O0`/`-O2`, C++17 headers,
+AddressSanitizer, UndefinedBehaviorSanitizer, runtime-none rejection, and
+malformed-HxcIR diagnostics keep both behavior and ownership plan honest.
 
 [`test/differential/string-char-at`](../test/differential/string-char-at)
 compares ordinary Haxe `String.charAt` with Eval for ASCII, non-Basic

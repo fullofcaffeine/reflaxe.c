@@ -22,7 +22,6 @@
     "test/differential/array-runtime/generated-class/Main.hx",
     "test/differential/array-runtime/generated-class/ManagedNode.hx",
     "test/differential/array-runtime/negative/managed_element_return/Main.hx",
-    "test/differential/array-runtime/negative/nested_managed_control_flow/Main.hx",
     "test/differential/array-runtime/negative/reassignment/Main.hx",
     "test/differential/array-runtime/oracle.hxml",
     "test/differential/array-runtime/run.py"

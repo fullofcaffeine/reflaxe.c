@@ -16,7 +16,7 @@
 extern "C" void hxc_test_c_allocator_layout(std::size_t *values);
 
 static_assert(HXC_RUNTIME_ABI_MAJOR == 0u, "C++ consumer must see the reviewed runtime ABI major");
-static_assert(HXC_RUNTIME_ABI_MINOR == 9u, "C++ consumer must see the reviewed runtime ABI minor");
+static_assert(HXC_RUNTIME_ABI_MINOR == 10u, "C++ consumer must see the reviewed runtime ABI minor");
 static_assert(
   std::is_same<
     hxc_allocate_fn,

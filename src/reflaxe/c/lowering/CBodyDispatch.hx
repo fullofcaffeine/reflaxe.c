@@ -1200,6 +1200,7 @@ class CBodyDispatchPreparer {
 			case IRTAbiInteger(kind): 'abi:${Std.string(kind)}';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string";
+			case IRTManagedString: "managed-string";
 			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';

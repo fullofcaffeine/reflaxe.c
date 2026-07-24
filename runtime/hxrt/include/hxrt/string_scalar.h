@@ -42,6 +42,17 @@ HXC_API hxc_status hxc_string_scalar_length(
   size_t *out_length
 );
 
+/**
+ * Count Unicode scalars using Haxe's signed Int result.
+ *
+ * This compiler-facing wrapper rejects a theoretical result above INT32_MAX
+ * instead of narrowing size_t in generated C.
+ */
+HXC_API hxc_status hxc_string_haxe_length(
+  hxc_string value,
+  int32_t *out_length
+);
+
 /** Read one zero-based Unicode scalar index. */
 HXC_API hxc_status hxc_string_scalar_at(
   hxc_string value,
@@ -71,6 +82,32 @@ HXC_API hxc_status hxc_string_slice(
 HXC_API hxc_string hxc_string_char_at(
   hxc_string source,
   int32_t scalar_index
+);
+
+/**
+ * Implement Haxe String.charCodeAt.
+ *
+ * Returns true and writes one Unicode scalar when the signed index exists.
+ * Returns false without changing out_scalar for a negative or missing index.
+ */
+HXC_API bool hxc_string_char_code_at(
+  hxc_string source,
+  int32_t scalar_index,
+  int32_t *out_scalar
+);
+
+/**
+ * Apply Haxe String.substring bounds and return a borrowed UTF-8 slice.
+ *
+ * Negative bounds clamp to zero, reversed bounds swap, and an omitted or large
+ * end clamps to the scalar length.
+ */
+HXC_API hxc_status hxc_string_substring(
+  hxc_string source,
+  int32_t start_index,
+  bool has_end_index,
+  int32_t end_index,
+  hxc_string *out_slice
 );
 
 /** Byte-wise fast comparison of canonical UTF-8 scalar sequences. */

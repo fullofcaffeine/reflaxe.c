@@ -412,7 +412,8 @@ server reuse, and strict native execution. `interface_parameter` proves the
 same output and native matrix for a by-value interface pair whose constructor
 performs real interface dispatch; `interface_parameter_escape` proves that the
 pair cannot be retained after the call. `instance_parameter` proves that a
-fieldless enum sharing the `IRTInstance` shape remains rejected.
+fresh payload enum with an owned Array cannot silently cross a constructor call
+before caller-side transfer or cleanup is planned.
 `default_arguments` proves omitted and supplied defaults, explicit `null`, a
 present optional record, exactly-once supplied-argument evaluation, and
 `super()` completion across split/package/unity, reversed discovery, warm
@@ -432,9 +433,13 @@ comparison, final-field storage, and runtime-free output across that matrix.
 `enum_payload_parameter` proves all active unmanaged payload variants,
 by-value tagged-struct passing, final-field storage, exact identity, and
 allocation-free header-only String-literal support. The revised
-`instance_parameter` negative owns an Array payload, while
-`recursive_enum_parameter` owns an indirect recursive payload; both prove that
-the unmanaged admission does not authorize lifecycle-bearing tagged unions.
+`instance_parameter` negative reaches the more precise
+`function-exit:unowned-fresh-managed-enum-value` boundary: the constructor can
+read its admitted payload enum, but the caller cannot yet transfer or release
+the fresh Array owner stored inside it. `recursive_enum_parameter` reaches the
+same caller-cleanup boundary with an indirect recursive payload. Together they
+prove that understanding a managed tagged union's representation does not
+silently authorize an incomplete ownership lifecycle.
 The positive
 semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an

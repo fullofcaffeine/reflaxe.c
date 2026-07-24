@@ -12,6 +12,13 @@ import reflaxe.c.ast.CAST.CIdentifier;
 enum CBodyRuntimeName {
 	CBRNStringType;
 	CBRNStringCharAt;
+	CBRNStringCharCodeAt;
+	CBRNStringLength;
+	CBRNStringSubstring;
+	CBRNStringRetain;
+	CBRNStringRelease;
+	CBRNStringFromScalar;
+	CBRNStringConcat;
 	CBRNPrintln;
 	CBRNStatusType;
 	CBRNStatusOk;
@@ -80,6 +87,13 @@ class CBodyRuntimeNames {
 		return new CIdentifier(switch name {
 			case CBRNStringType: "hxc_string";
 			case CBRNStringCharAt: "hxc_string_char_at";
+			case CBRNStringCharCodeAt: "hxc_string_char_code_at";
+			case CBRNStringLength: "hxc_string_haxe_length";
+			case CBRNStringSubstring: "hxc_string_substring";
+			case CBRNStringRetain: "hxc_string_retain";
+			case CBRNStringRelease: "hxc_string_release";
+			case CBRNStringFromScalar: "hxc_string_from_scalar";
+			case CBRNStringConcat: "hxc_string_concat_ref";
 			case CBRNPrintln: "hxc_io_println";
 			case CBRNStatusType: "hxc_status";
 			case CBRNStatusOk: "HXC_STATUS_OK";

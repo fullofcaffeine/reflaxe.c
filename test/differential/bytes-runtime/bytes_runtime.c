@@ -120,7 +120,7 @@ int main(void) {
   int32_t order = 7;
   const uint8_t shorter_data[] = {UINT8_C(255)};
   const uint8_t text_data[] = {UINT8_C(72), UINT8_C(0), UINT8_C(120)};
-  const hxc_string text_view = {text_data, 3u, true};
+  const hxc_string text_view = {text_data, 3u, true, NULL};
 
   HXC_TEST_CHECK(hxc_bytes_ref_create_zeroed(allocator, 8, &bytes) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_is_valid(bytes));

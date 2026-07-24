@@ -658,7 +658,6 @@ def render_managed_class_pair(root: Path) -> Path:
 def run_generated_negative_cases(root: Path) -> None:
     expected = {
         "managed_element_return": "TReturn(borrowed-managed-Array-element-needs-owner-transfer)",
-        "nested_managed_control_flow": "TArray(managed-element-owner-in-nested-control-flow-not-yet-admitted)",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
     }
     for name, marker in expected.items():
@@ -704,20 +703,25 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
         return
     # Caxecraft now passes the managed Array element copied by
     # EditorScenarioSnapshot.actionsAreRepresentable, the fresh Bytes call
-    # argument, and the runtime String-to-Bytes copy that followed it. The next
-    # reachable boundary is Haxe's legacy-nullable String coercion, owned by
-    # haxe_c-aml.2. Requiring the exact later diagnostic proves this task did not
-    # merely move or hide its former Array failure. Accepting an arbitrary
-    # failure would weaken this product check into "Caxecraft still does not
-    # compile."
+    # argument, the runtime String-to-Bytes copy, legacy-nullable String flow,
+    # optional records, and the StringBuf UTF-8 decoder that followed them. The
+    # next reachable boundary is a temporary class constructed and immediately
+    # called in ScenarioParser. Requiring the exact later diagnostic proves this
+    # task did not merely move or hide its former Array failure. Accepting an
+    # arbitrary failure would weaken this product check into "Caxecraft still
+    # does not compile."
     if (
-        "src/caxecraft/scenario/CaxeFlowValueReader.hx:166:" not in result.stderr
-        or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
+        "src/caxecraft/scenario/ScenarioParser.hx:18:" not in result.stderr
+        or "TNew(stack-construction-requires-direct-local)"
         not in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
         or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
+        or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
+        in result.stderr
+        or "TCall(unavailable-static-target:function.String.fromCharCode)"
+        in result.stderr
     ):
         raise ArrayRuntimeFailure(
             "Caxecraft did not compile past its former managed Array element boundary\n"

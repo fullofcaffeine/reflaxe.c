@@ -312,12 +312,12 @@ def validate_generated_c(output: Path) -> None:
     source = (output / "src/program.c").read_text(encoding="utf-8")
     header = (output / "include/hxc/program.h").read_text(encoding="utf-8")
     markers = (
-        '(hxc_string){ (const uint8_t *)"ASCII", 5, true }',
-        '(hxc_string){ (const uint8_t *)"fallback", 8, true }',
-        '(hxc_string){ (const uint8_t *)"conditional string failure", 26, true }',
-        '(hxc_string){ (const uint8_t *)"\\303\\251\\360\\237\\231\\202", 6, true }',
-        '(hxc_string){ (const uint8_t *)"embedded\\000NUL", 12, true }',
-        '(hxc_string){ (const uint8_t *)"Main.hx:9: traced", 17, true }',
+        '(hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }',
+        '(hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }',
+        '(hxc_string){ (const uint8_t *)"conditional string failure", 26, true, NULL }',
+        '(hxc_string){ (const uint8_t *)"\\303\\251\\360\\237\\231\\202", 6, true, NULL }',
+        '(hxc_string){ (const uint8_t *)"embedded\\000NUL", 12, true, NULL }',
+        '(hxc_string){ (const uint8_t *)"Main.hx:9: traced", 17, true, NULL }',
     )
     for marker in markers:
         if marker not in source:
@@ -669,7 +669,7 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
 
         compatibility_root = build / f"{toolchain.family}-runtime-compatibility"
         compatibility_root.mkdir()
-        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "9u", "999u")
+        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "10u", "999u")
         compatible_build = compatibility_root / "compatible-build"
         compatible_build.mkdir()
         compatible_executable = compile_native(toolchain, compatible, "O0", compatible_build)

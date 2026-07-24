@@ -89,8 +89,8 @@ NEGATIVE_CASES = {
     "escape_return": "TNew(stack-reference-escape:return)",
     "escape_self": "TNew(stack-reference-escape:assignment)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
-    "instance_parameter": "TFunction(constructor-argument:0-type-not-admitted:haxe-enum:",
-    "recursive_enum_parameter": "TFunction(constructor-argument:0-type-not-admitted:haxe-enum:",
+    "instance_parameter": "function-exit:unowned-fresh-managed-enum-value",
+    "recursive_enum_parameter": "function-exit:unowned-fresh-managed-enum-value",
     "interface_parameter_escape": (
         "TFunction(constructor-argument:source:"
         "interface-retention-must-target-this-field)"

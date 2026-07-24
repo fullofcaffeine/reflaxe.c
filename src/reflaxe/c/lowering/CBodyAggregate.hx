@@ -60,6 +60,14 @@ enum CBodyValueKind {
 	**/
 	CBVKStaticString(sourceIdentity:String);
 
+	/**
+		An immutable Haxe String view that may share runtime-owned UTF-8 bytes.
+
+		The carrier remains a direct value, but logical copies must retain its
+		optional backing owner and destruction must release it.
+	**/
+	CBVKManagedString(sourceIdentity:String);
+
 	CBVKFixedArray(element:CPrimitiveTypeMapping, length:Int, witnessId:String);
 	CBVKSpan(element:CPrimitiveTypeMapping, mutable:Bool);
 	CBVKCString;
@@ -94,6 +102,9 @@ class CBodyValueType {
 			case CBVKStaticString(sourceIdentity):
 				this.irType = IRTString;
 				this.cSpelling = 'static-haxe-string-view:$sourceIdentity';
+			case CBVKManagedString(sourceIdentity):
+				this.irType = IRTManagedString;
+				this.cSpelling = 'managed-haxe-string-view:$sourceIdentity';
 			case CBVKFixedArray(element, length, witnessId):
 				this.irType = IRTFixedArray(element.irType, length, witnessId);
 				this.cSpelling = 'fixed-array:$length:$witnessId<${element.cSpelling}>';
@@ -149,6 +160,10 @@ class CBodyValueType {
 	public static function staticString(sourceIdentity:String):CBodyValueType
 		return new CBodyValueType(CBVKStaticString(sourceIdentity));
 
+	/** Preserve source identity while enabling the optional String owner. */
+	public static function managedString(sourceIdentity:String):CBodyValueType
+		return new CBodyValueType(CBVKManagedString(sourceIdentity));
+
 	public static function fixedArray(element:CPrimitiveTypeMapping, length:Int, witnessId:String):CBodyValueType
 		return new CBodyValueType(CBVKFixedArray(element, length, witnessId));
 
@@ -197,16 +212,16 @@ class CBodyValueType {
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
-				CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _): null;
+			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
+				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
+				CBVKOptional(_) | CBVKFunction(_, _): null;
 		};
 	}
 
-	/** Return the nominal Haxe identity carried by a direct literal-backed String. */
+	/** Return the nominal Haxe identity carried by either String lifetime plan. */
 	public function staticStringIdentity():Null<String> {
 		return switch kind {
-			case CBVKStaticString(value): value;
+			case CBVKStaticString(value) | CBVKManagedString(value): value;
 			case _: null;
 		};
 	}
@@ -251,8 +266,9 @@ class CBodyValueType {
 
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKOwnedClass(_) |
-				CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
+				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_,
+					_): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -260,17 +276,18 @@ class CBodyValueType {
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _): null;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
+				CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
+				CBVKOptional(_) | CBVKFunction(_, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
 
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
+				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
+				CBVKFunction(_, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
 		};
 	}
@@ -335,8 +352,9 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKOwnedClass(_): false;
 			case CBVKClass(_, nullable): nullable;
-			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
+				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
+				CBVKFunction(_, _): null;
 		};
 	}
 
@@ -351,7 +369,7 @@ class CBodyValueType {
 	**/
 	public function hasExactNullCarrier():Bool
 		return switch kind {
-			case CBVKStaticString(_) | CBVKClass(_, true) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_): true;
+			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKClass(_, true) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_): true;
 			case _: false;
 		};
 }
@@ -497,6 +515,7 @@ class CLoweredBodyAggregate {
  */
 class CBodyAggregateRegistry {
 	final context:CompilationContext;
+	final runtimeCreatedStrings:Bool;
 	final byShape:Map<String, CPreparedBodyAggregate> = [];
 	final enumRegistry:CBodyEnumRegistry;
 	final classRegistry:CBodyClassRegistry;
@@ -509,8 +528,9 @@ class CBodyAggregateRegistry {
 	final importRegistry:Null<CImportRegistry>;
 	final sourcePathsByModule:Map<String, String> = [];
 
-	public function new(context:CompilationContext, ?program:TypedProgramInput, ?contract:TypedCContractSnapshot) {
+	public function new(context:CompilationContext, ?program:TypedProgramInput, ?contract:TypedCContractSnapshot, runtimeCreatedStrings:Bool = false) {
 		this.context = context;
+		this.runtimeCreatedStrings = runtimeCreatedStrings;
 		if (program != null)
 			for (module in program.modules)
 				sourcePathsByModule.set(module.path, module.sourcePath);
@@ -532,7 +552,7 @@ class CBodyAggregateRegistry {
 			return imported;
 		final stringIdentity = staticStringIdentity(type);
 		if (stringIdentity != null)
-			return CBodyValueType.staticString(stringIdentity);
+			return runtimeCreatedStrings ? CBodyValueType.managedString(stringIdentity) : CBodyValueType.staticString(stringIdentity);
 		final directStringMap = stringMapRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (directStringMap != null)
 			return CBodyValueType.stringMapReference(directStringMap);
@@ -788,7 +808,7 @@ class CBodyAggregateRegistry {
 
 	static function valueHasManagedLifetime(value:CBodyValueType):Bool
 		return switch value.kind {
-			case CBVKArray(_) | CBVKBytes(_): true;
+			case CBVKManagedString(_) | CBVKArray(_) | CBVKBytes(_): true;
 			case CBVKEnum(enumValue): enumValue.managedLifetime;
 			case CBVKAggregate(aggregate): aggregate.managedLifetime;
 			case CBVKOptional(optional): optional.managedLifetime;
@@ -914,7 +934,8 @@ class CBodyAggregateRegistry {
 
 		The returned name is a source identity, not a C type name. Keeping it in
 		plans means diagnostics can still say `LogicalPath` even though C stores the
-		same immutable three-field view as ordinary `String`.
+		same immutable four-field view as ordinary `String`: data, byte length,
+		trailing-NUL knowledge, and an optional backing owner.
 
 		Haxe's default legacy null safety makes reference types nullable already,
 		so `Null<String>` does not introduce a second tagged representation. The
@@ -922,7 +943,7 @@ class CBodyAggregateRegistry {
 		pointer and keeps a real empty String distinct through a non-null
 		zero-length pointer.
 	**/
-	static function staticStringIdentity(type:Type, depth:Int = 0, ?outerIdentity:String):Null<String> {
+	public static function staticStringIdentity(type:Type, depth:Int = 0, ?outerIdentity:String):Null<String> {
 		if (depth > 32)
 			return null;
 		return switch type {

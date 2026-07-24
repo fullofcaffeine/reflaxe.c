@@ -7,6 +7,8 @@
  */
 #include "hxrt/string_decode.h"
 
+#include <limits.h>
+
 hxc_status hxc_utf8_validate(
   hxc_byte_view source,
   size_t *out_scalar_length
@@ -58,6 +60,26 @@ hxc_status hxc_string_scalar_length(
   view.data = value.data;
   view.length = value.byte_length;
   return hxc_utf8_validate(view, out_length);
+}
+
+hxc_status hxc_string_haxe_length(
+  hxc_string value,
+  int32_t *out_length
+) {
+  size_t length;
+  hxc_status status;
+  if (out_length == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_string_scalar_length(value, &length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  if (length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  *out_length = (int32_t)length;
+  return HXC_STATUS_OK;
 }
 
 hxc_status hxc_string_scalar_at(
@@ -130,6 +152,12 @@ hxc_status hxc_string_slice(
   result.byte_length = byte_index - slice_start;
   result.has_trailing_nul = source.has_trailing_nul
     && byte_index == source.byte_length;
+  /*
+   * This operation returns a borrow, so it records the shared owner without
+   * incrementing it. Generated Haxe retains the result if that borrow escapes
+   * the immediate expression.
+   */
+  result.owner = source.owner;
   *out_slice = result;
   return HXC_STATUS_OK;
 }
@@ -147,6 +175,61 @@ hxc_string hxc_string_char_at(
     return result;
   }
   return result;
+}
+
+bool hxc_string_char_code_at(
+  hxc_string source,
+  int32_t scalar_index,
+  int32_t *out_scalar
+) {
+  uint32_t scalar;
+  if (out_scalar == NULL || scalar_index < 0) {
+    return false;
+  }
+  if (hxc_string_scalar_at(source, (size_t)scalar_index, &scalar)
+    != HXC_STATUS_OK) {
+    return false;
+  }
+  *out_scalar = (int32_t)scalar;
+  return true;
+}
+
+hxc_status hxc_string_substring(
+  hxc_string source,
+  int32_t start_index,
+  bool has_end_index,
+  int32_t end_index,
+  hxc_string *out_slice
+) {
+  size_t length;
+  int32_t start;
+  int32_t end;
+  int32_t swap;
+  hxc_status status;
+  if (out_slice == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_string_scalar_length(source, &length);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  if (length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  start = start_index < 0 ? 0 : start_index;
+  end = has_end_index ? (end_index < 0 ? 0 : end_index) : (int32_t)length;
+  if (start > end) {
+    swap = start;
+    start = end;
+    end = swap;
+  }
+  if (start > (int32_t)length) {
+    start = (int32_t)length;
+  }
+  if (end > (int32_t)length) {
+    end = (int32_t)length;
+  }
+  return hxc_string_slice(source, (size_t)start, (size_t)(end - start), out_slice);
 }
 
 hxc_status hxc_string_compare(

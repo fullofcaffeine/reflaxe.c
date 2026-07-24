@@ -99,6 +99,8 @@ class HxcIRGolden {
 				cstringByteLengthMismatch: invalidDiagnostics(cstringByteLengthMismatchProgram()),
 				cstringEmbeddedNul: invalidDiagnostics(cstringEmbeddedNulProgram()),
 				ioFailurePolicy: invalidDiagnostics(ioFailurePolicyProgram()),
+				invalidManagedStringCall: invalidDiagnostics(invalidManagedStringCallProgram()),
+				invalidStringSubstringCall: invalidDiagnostics(invalidStringSubstringCallProgram()),
 				invalidStringMapShape: invalidDiagnostics(invalidStringMapShapeProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
@@ -1981,6 +1983,27 @@ class HxcIRGolden {
 			instruction("bad.string", result("value.string", IRTString), IRIOConstant(IRCString("output", 6)), file, 2),
 			instruction("bad.output", null, IRIOCall(call(IRCDRuntime("io", "sys-println-literal"), ["value.string"], IRTVoid)), file, 3)
 		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	/** Reject a forged allocation-backed String operation before C symbol choice. */
+	static function invalidManagedStringCallProgram():HxcIRProgram {
+		final file = "test/negative/InvalidManagedStringCall.hx";
+		return minimalProgram("invalid.InvalidManagedStringCall", [
+			instruction("bad.string", result("value.string", IRTManagedString), IRIOConstant(IRCString("", 0)), file, 2),
+			instruction("bad.from-scalar", result("value.result", IRTBool), IRIOCall(call(IRCDRuntime("string", "from-scalar"), ["value.string"], IRTBool)),
+				file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	/** Reject a substring call whose typed shape cannot match the runtime ABI. */
+	static function invalidStringSubstringCallProgram():HxcIRProgram {
+		final file = "test/negative/InvalidStringSubstringCall.hx";
+		return minimalProgram("invalid.InvalidStringSubstringCall", [
+			instruction("bad.string", result("value.string", IRTManagedString), IRIOConstant(IRCString("text", 4)), file, 2),
+			instruction("bad.index", result("value.index", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 3),
+			instruction("bad.substring", result("value.result", IRTString),
+				IRIOCall(call(IRCDRuntime("string-scalar", "substring"), ["value.string", "value.index"], IRTString)), file, 4)
+		], terminator(IRTReturn(null, []), file, 5), [], [], file);
 	}
 
 	/**

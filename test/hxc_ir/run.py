@@ -201,6 +201,8 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "invalidFloat32Narrow",
         "invalidFloat32Widen",
         "nullableUnwrapWithoutFailure",
+        "invalidManagedStringCall",
+        "invalidStringSubstringCall",
         "switchCaseTypeMismatch",
         "invalidStringMapShape",
         "uninitializedCarrierRead",

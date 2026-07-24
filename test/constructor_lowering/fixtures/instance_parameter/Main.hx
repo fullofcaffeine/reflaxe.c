@@ -1,19 +1,22 @@
 /**
- * Keeps payload-enum `IRTInstance` constructor parameters fail-closed.
+ * Keeps fresh payload-enum constructor arguments fail-closed until their
+ * ownership transfer has a complete lifecycle.
  *
- * A payload enum is a tagged C union whose copy may need nested ownership work.
- * Admitting a fieldless enum tag must not silently authorize this wider family
- * merely because both values use `IRTInstance` in HxcIR.
+ * The compiler now understands this constructor parameter's tagged-union
+ * representation, but `First([1])` also creates an owned Array. Passing that
+ * fresh value safely requires the call to transfer or release its nested
+ * owner. The function-exit validator rejects the program instead of leaking
+ * the Array or treating a managed enum like a plain integer tag.
  */
 enum Choice {
 	First(values:Array<Int>);
 }
 
-/** A deliberately unsupported constructor parameter family. */
+/** A constructor whose managed enum argument still needs call-lifecycle work. */
 final class EnumConfigured {
 	public final selected:Bool;
 
-	/** This constructor must remain rejected until enum parameters are proven. */
+	/** Reads the payload without claiming ownership of the caller's enum value. */
 	public function new(choice:Choice) {
 		selected = switch choice {
 			case First(values): values[0] == 1;

@@ -290,6 +290,7 @@ class HxcIRDumper {
 			case IRTAbiInteger(kind): 'abi-int(${abiIntegerKind(kind)})';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8";
+			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance(${quote(instanceId)})';

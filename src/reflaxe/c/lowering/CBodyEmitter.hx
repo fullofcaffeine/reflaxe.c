@@ -1093,6 +1093,11 @@ class CBodyEmitter {
 					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [
 						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
 					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORetain(place, IRIRuntime("string")):
+					addLineDirective(statements, instruction.source, state.lineDirectives);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringRetain)), [
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
 				case IRIORetain(place, IRIProgramLocal(implementationId)):
 					final lifecycle = programLocalLifecycle(implementationId, instruction.id, fn.id);
 					addLineDirective(statements, instruction.source, state.lineDirectives);
@@ -1114,6 +1119,10 @@ class CBodyEmitter {
 				case IRIORelease(place, IRIRuntime("bytes")):
 					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRelease)), [
 						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORelease(place, IRIRuntime("string")):
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringRelease)), [
+						EUnary(AddressOf, placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values))
 					]), state.boundsAbortName, instruction.id, fn.id);
 				case IRIORelease(place, IRIProgramLocal(implementationId)):
 					final cleanup = arrayElementCleanups.get(implementationId);
@@ -1930,7 +1939,7 @@ class CBodyEmitter {
 			case IRTNullable(_, IRNTagged):
 				final optional = requireOptional(valueType(fn, valueId));
 				EUnary(LogicalNot, EMember(requireValue(values, valueId, functionId), optional.presenceName, false));
-			case IRTString:
+			case IRTString | IRTManagedString:
 				EBinary(Equal, EMember(requireValue(values, valueId, functionId), new CIdentifier("data"), false), ENull);
 			case _: EBinary(Equal, requireValue(values, valueId, functionId), ENull);
 		};
@@ -2069,6 +2078,9 @@ class CBodyEmitter {
 							case _:
 								fail('Bytes cleanup `${action.id}` in `${fn.id}` does not own a managed Bytes place');
 						}
+					case IRCARelease(place, IRIRuntime("string")):
+						if (placeType(place, fn) != IRTManagedString)
+							fail('String cleanup `${action.id}` in `${fn.id}` does not own a managed String place');
 					case IRCARelease(place, IRIProgramLocal(implementationId)):
 						final cleanup = arrayElementCleanups.get(implementationId);
 						final enumLifecycle = enumArrayLifecycles.get(implementationId);
@@ -2126,6 +2138,10 @@ class CBodyEmitter {
 						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRelease)),
 							[placeExpression(place, fn, localNames, globalNames, spanLengthNames, values)]),
 						boundsAbortName, action.id, fn.id);
+				case IRCARelease(place, IRIRuntime("string")):
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringRelease)), [
+						EUnary(AddressOf, placeExpression(place, fn, localNames, globalNames, spanLengthNames, values))
+					]), boundsAbortName, action.id, fn.id);
 				case IRCARelease(place, IRIProgramLocal(implementationId)):
 					final cleanup = arrayElementCleanups.get(implementationId);
 					if (cleanup != null) {
@@ -2382,7 +2398,7 @@ class CBodyEmitter {
 			case IRTAbiInteger(IRAKUIntPtr): new CType(TNamed(new CIdentifier("uintptr_t")));
 			case IRTFloat(32): new CType(TFloat);
 			case IRTFloat(64): new CType(TDouble);
-			case IRTString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
+			case IRTString | IRTManagedString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
 			case IRTNullable(_, IRNTagged): new CType(TStruct(requireOptional(type).cTag));
 			case IRTInstance(instanceId):
 				if (arrayElementTypes.exists(instanceId))
@@ -2509,7 +2525,7 @@ class CBodyEmitter {
 					case IRIOCall(call) if (isHostedOutputDispatch(call.dispatch)):
 						addUnique(headers, "hxrt/io.h");
 						addUnique(headers, "stdlib.h");
-					case IRIOCall({dispatch: IRCDRuntime("string-scalar", "char-at")}):
+					case IRIOCall({dispatch: IRCDRuntime("string-scalar", _)}):
 						addUnique(headers, "hxrt/string_scalar.h");
 					case IRIOBinary("haxe.string.equal" | "haxe.string.equal.left-non-null" | "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null",
 						_, _, IRIStatic):
@@ -2963,8 +2979,8 @@ class CBodyEmitter {
 		final value = EMember(typed, CBodyRuntimeNames.identifier(CBRNArrayValueMember), true);
 		final storage = EMember(EMember(value, new CIdentifier("storage"), false), new CIdentifier("memory"), false);
 		final element = typedDeclarator(array.prepared.element.irType, DName(null));
-		final elementType = new CType(element.type.spec, element.type.qualifiers.concat([QConst]));
-		final elements = ECast(elementType, DPointer(element.declarator, []), storage);
+		final elementStorage = storagePointerDeclarator(element, true);
+		final elements = ECast(elementStorage.type, elementStorage.declarator, storage);
 		final loop:Array<CStmt> = [];
 		appendManagedTraceStatements(loop, EIndex(elements, EIdentifier(indexName)), array.prepared.element.irType, visitName, contextName);
 		loop.push(SExpr(EUnary(PostIncrement, EIdentifier(indexName))));
@@ -3723,6 +3739,12 @@ class CBodyEmitter {
 
 	function managedValueOperations(value:CExpr, type:HxcIRTypeRef):Array<CBodyEmitterManagedOperation> {
 		return switch type {
+			case IRTManagedString: [
+					{
+						retain: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringRetain)), [value]),
+						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringRelease)), [EUnary(AddressOf, value)])
+					}
+				];
 			case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)): [
 					{
 						retain: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [value]),
@@ -3784,14 +3806,47 @@ class CBodyEmitter {
 
 	function arrayElementStorageValue(array:CLoweredBodyArray, rawPointer:CExpr, readOnly:Bool):CExpr {
 		final element = typedDeclarator(array.prepared.element.irType, DName(null));
-		final baseType = readOnly ? new CType(element.type.spec, element.type.qualifiers.concat([QConst])) : element.type;
-		return EUnary(Dereference, ECast(baseType, DPointer(element.declarator, []), rawPointer));
+		final storage = storagePointerDeclarator(element, readOnly);
+		return EUnary(Dereference, ECast(storage.type, storage.declarator, rawPointer));
 	}
 
 	function stringMapValueStorage(map:CLoweredBodyStringMap, rawPointer:CExpr, readOnly:Bool):CExpr {
 		final value = typedDeclarator(map.prepared.value.irType, DName(null));
-		final baseType = readOnly ? new CType(value.type.spec, value.type.qualifiers.concat([QConst])) : value.type;
-		return EUnary(Dereference, ECast(baseType, DPointer(value.declarator, []), rawPointer));
+		final storage = storagePointerDeclarator(value, readOnly);
+		return EUnary(Dereference, ECast(storage.type, storage.declarator, rawPointer));
+	}
+
+	/**
+		Build the typed pointer used to read or write one erased container slot.
+
+		Runtime callbacks receive storage as `void *` or `const void *`, but the
+		generated helper must recover the exact element type before dereferencing
+		it. For a by-value element such as a record, read-only storage is
+		`const Record *`: the record itself is const. For a pointer-valued element
+		such as `Array<Int>`, it is `ArrayRef * const *`: the stored pointer value
+		is const, not the Array object it points at. Putting `const` on the base
+		struct would instead create `const ArrayRef **`, which both changes the
+		pointee contract and triggers Clang's `-Wcast-qual` diagnostic.
+
+		The extra outer `DPointer` represents the address of the container slot.
+		C declarator qualifiers live on that pointer when the stored value already
+		has pointer shape; direct values keep the qualifier on their base type.
+	**/
+	static function storagePointerDeclarator(value:CTypedDeclarator, readOnly:Bool):CTypedDeclarator {
+		if (!readOnly)
+			return {type: value.type, declarator: DPointer(value.declarator, [])};
+		return switch value.declarator {
+			case DPointer(_, _):
+				{type: value.type, declarator: DPointer(value.declarator, [QConst])};
+			case _:
+				final qualifiers = value.type.qualifiers.copy();
+				if (!qualifiers.contains(QConst))
+					qualifiers.push(QConst);
+				{
+					type: new CType(value.type.spec, qualifiers),
+					declarator: DPointer(value.declarator, [])
+				};
+		};
 	}
 
 	static function arrayLifecycleParameters(names:Array<CIdentifier>, destroy:Bool):Array<CParam> {
@@ -4413,6 +4468,8 @@ class CBodyEmitter {
 				addUnique(headers, "stdint.h");
 			case IRTString:
 				addUnique(headers, "hxrt/string_literal.h");
+			case IRTManagedString:
+				addUnique(headers, "hxrt/string.h");
 			case IRTCString:
 			case IRTInstance(instanceId):
 				if (arrayElementTypes.exists(instanceId)) {
@@ -4521,6 +4578,7 @@ class CBodyEmitter {
 		return switch [value, type] {
 			case [IRCNull, IRTNullable(_, IRNTagged)]: directOptionalNullExpression(type);
 			case [IRCNull, IRTString]: stringNullExpression();
+			case [IRCNull, IRTManagedString]: stringNullExpression();
 			case _: constantExpression(value);
 		};
 	}
@@ -4530,7 +4588,8 @@ class CBodyEmitter {
 		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType))), DName(null), IList([
 			{designators: [DField(new CIdentifier("data"))], value: IExpr(ENull)},
 			{designators: [DField(new CIdentifier("byte_length"))], value: IExpr(EInt(CIntegerLiteral.decimal("0", ISUnsigned)))},
-			{designators: [DField(new CIdentifier("has_trailing_nul"))], value: IExpr(EBool(false))}
+			{designators: [DField(new CIdentifier("has_trailing_nul"))], value: IExpr(EBool(false))},
+			{designators: [DField(new CIdentifier("owner"))], value: IExpr(ENull)}
 		]));
 
 	function directOptionalNullExpression(type:HxcIRTypeRef):CExpr {
@@ -4556,7 +4615,8 @@ class CBodyEmitter {
 				value: IExpr(ECast(new CType(TInt(8, false), [QConst]), DPointer(DName(null), []), EString(text)))
 			},
 			{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal(Std.string(byteLength))))},
-			{designators: [], value: IExpr(EBool(true))}
+			{designators: [], value: IExpr(EBool(true))},
+			{designators: [], value: IExpr(ENull)}
 		]));
 	}
 
@@ -4671,10 +4731,24 @@ class CBodyEmitter {
 			case IRCDRuntime("bytes", _):
 				emitManagedBytesCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
+			case IRCDRuntime("string", _):
+				emitManagedStringCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case IRCDRuntime("string-scalar", "char-at"):
-				if (call.failure != null || call.arguments.length != 2 || call.returnType != IRTString)
+				if (call.failure != null
+					|| call.arguments.length != 2
+					|| (call.returnType != IRTString && call.returnType != IRTManagedString))
 					return fail('String.charAt call `${instruction.id}` in `$functionId` lost its total String/Int signature');
 				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringCharAt)), call.arguments.map(argument -> requireValue(values, argument, functionId)));
+			case IRCDRuntime("string-scalar", "length"):
+				emitStringLengthCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
+			case IRCDRuntime("string-scalar", "char-code-at"):
+				emitStringCharCodeAtCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, fn);
+				return false;
+			case IRCDRuntime("string-scalar", "substring"):
+				emitStringSubstringCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case _: return fail('call `${instruction.id}` in `$functionId` has no admitted static or runtime dispatch');
 		};
 		addLineDirective(statements, instruction.source, lineDirectives);
@@ -5079,6 +5153,100 @@ class CBodyEmitter {
 		values.set(result.id, EIdentifier(temporary));
 	}
 
+	/** Emit checked Unicode-scalar String length into one Haxe `Int` temporary. */
+	function emitStringLengthCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null || call.arguments.length != 1 || typeKey(result.type) != typeKey(IRTInt(32, true)))
+			return fail('String.length call `${instruction.id}` in `${fn.id}` lost its checked String/Int signature');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: null,
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringLength)), [
+			requireValue(values, call.arguments[0], fn.id),
+			EUnary(AddressOf, EIdentifier(temporary))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
+	/** Emit total `charCodeAt` into the compiler's structural `Null<Int>` carrier. */
+	function emitStringCharCodeAtCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null || call.arguments.length != 2)
+			return fail('String.charCodeAt call `${instruction.id}` in `${fn.id}` lost its String/Int signature');
+		final optional = requireOptional(result.type);
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		final target = EIdentifier(temporary);
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IExpr(directOptionalNullExpression(result.type)),
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SExpr(EBinary(Assign, EMember(target, optional.presenceName, false),
+			ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringCharCodeAt)), [
+				requireValue(values, call.arguments[0], fn.id),
+				requireValue(values, call.arguments[1], fn.id),
+				EUnary(AddressOf, EMember(target, optional.payloadName, false))
+			]))));
+		values.set(result.id, target);
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), target)));
+	}
+
+	/**
+		Emit Haxe substring bounds into the allocation-free runtime slicer.
+
+		The result is a small `hxc_string` value that points into the receiver's
+		bytes. Ownership is deliberately not changed here: the lowering layer adds
+		a retain only when a runtime-created view can escape the expression.
+	**/
+	function emitStringSubstringCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null
+			|| call.arguments.length != 4
+			|| (result.type != IRTString && result.type != IRTManagedString)
+			|| call.returnType != result.type)
+			return fail('String.substring call `${instruction.id}` in `${fn.id}` lost its checked String/Int signature');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IExpr(stringNullExpression()),
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringSubstring)), [
+			requireValue(values, call.arguments[0], fn.id),
+			requireValue(values, call.arguments[1], fn.id),
+			requireValue(values, call.arguments[2], fn.id),
+			requireValue(values, call.arguments[3], fn.id),
+			EUnary(AddressOf, EIdentifier(temporary))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
 	/** Emit one validator-approved fixed-length Bytes operation. */
 	function emitManagedBytesCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
 			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
@@ -5137,6 +5305,43 @@ class CBodyEmitter {
 			attributes: []
 		}));
 		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
+	/** Emit one validator-approved allocation-backed String operation. */
+	function emitManagedStringCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final operation = switch call.dispatch {
+			case IRCDRuntime("string", value): value;
+			case _: return fail('managed String emitter received a non-String call in `${fn.id}`');
+		};
+		final result = requireResult(instruction, fn.id);
+		if (result.type != IRTManagedString || call.returnType != IRTManagedString)
+			return fail('managed String call `${instruction.id}` in `${fn.id}` lost its owned result type');
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('managed String call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final runtimeName = switch operation {
+			case "from-scalar": CBRNStringFromScalar;
+			case "concat": CBRNStringConcat;
+			case _: return fail('managed String call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
+		};
+		final arguments = call.arguments.map(valueId -> requireValue(values, valueId, fn.id));
+		arguments.push(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []));
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IExpr(stringNullExpression()),
+			attributes: []
+		}));
+		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
+		addLineDirective(statements, instruction.source, lineDirectives);
 		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
 		values.set(result.id, EIdentifier(temporary));
 		if (!referencedValues.exists(result.id))
@@ -5812,6 +6017,7 @@ class CBodyEmitter {
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
 			case IRTString: "string-utf8";
+			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
@@ -5832,6 +6038,7 @@ class CBodyEmitter {
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
 			case IRTString: "string-utf8";
+			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';

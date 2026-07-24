@@ -1063,6 +1063,8 @@ private class HxcIRValidationState {
 							add(actionPath, "IntMap release cleanup requires a managed Map<Int, Bool> place", action.source);
 						if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, noValues, locals)))
 							add(actionPath, "bytes release cleanup requires a managed Bytes place", action.source);
+						if (isStringRuntimeImplementation(implementation) && knownPlaceType(place, noValues, locals) != IRTManagedString)
+							add(actionPath, "String release cleanup requires a managed String place", action.source);
 						switch implementation {
 							case IRIProgramLocal(helperId):
 								if (StringTools.startsWith(helperId, "array-element-lifecycle:")) {
@@ -1518,7 +1520,7 @@ private class HxcIRValidationState {
 							instruction.source);
 				} else if (operationId == "haxe.string.is-null" || operationId == "haxe.string.is-not-null") {
 					final validResult = instruction.result != null && instruction.result.type == IRTBool;
-					if (operandType != IRTString || implementation != IRIStatic || !validResult)
+					if ((operandType != IRTString && operandType != IRTManagedString) || implementation != IRIStatic || !validResult)
 						add(path, "String null testing requires one String carrier and a static Bool result", instruction.source);
 				}
 			case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
@@ -1587,7 +1589,11 @@ private class HxcIRValidationState {
 				} else if (isStringEqualityOperation(operationId)) {
 					final binaryResult = instruction.result;
 					final hasBoolResult = binaryResult != null && binaryResult.type == IRTBool;
-					if (leftType != IRTString || rightType != IRTString || implementation != IRIStatic || !hasBoolResult)
+					final matchingStrings = leftType != null
+						&& rightType != null
+						&& typeKey(leftType) == typeKey(rightType)
+						&& (leftType == IRTString || leftType == IRTManagedString);
+					if (!matchingStrings || implementation != IRIStatic || !hasBoolResult)
 						add(path, "String equality requires two immutable String views and a static Bool result", instruction.source);
 					if (stringEqualityRequiresLeftNonNull(operationId) && !isStringConstantValue(leftValueId, valueSites))
 						add(path, "String equality's left-non-null proof requires a directly defined String constant", instruction.source);
@@ -1781,6 +1787,8 @@ private class HxcIRValidationState {
 					add(path, "IntMap retain requires a managed Map<Int, Bool> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
 					add(path, "bytes retain requires a managed Bytes place", instruction.source);
+				if (isStringRuntimeImplementation(implementation) && knownPlaceType(place, available, locals) != IRTManagedString)
+					add(path, "String retain requires a managed String place", instruction.source);
 				switch implementation {
 					case IRIProgramLocal(helperId) if (StringTools.startsWith(helperId, "enum-lifecycle:")):
 						final expectedInstanceId = enumArrayLifecycleInstanceId(helperId, "retain");
@@ -1814,6 +1822,8 @@ private class HxcIRValidationState {
 					add(path, "IntMap release requires a managed Map<Int, Bool> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
 					add(path, "bytes release requires a managed Bytes place", instruction.source);
+				if (isStringRuntimeImplementation(implementation) && knownPlaceType(place, available, locals) != IRTManagedString)
+					add(path, "String release requires a managed String place", instruction.source);
 				switch implementation {
 					case IRIProgramLocal(helperId) if (StringTools.startsWith(helperId, "enum-lifecycle:")):
 						final expectedInstanceId = enumArrayLifecycleInstanceId(helperId, "destroy");
@@ -2031,7 +2041,7 @@ private class HxcIRValidationState {
 					switch checkedType {
 						case IRTPointer(IRTInstance(instanceId), true) if (isClassInstance(instanceId)):
 							nullProofs.set(valueId, true);
-						case IRTString:
+						case IRTString | IRTManagedString:
 							nullProofs.set(valueId, true);
 						case value if (isTaggedOptionalType(value)):
 							nullProofs.set(valueId, true);
@@ -2162,10 +2172,16 @@ private class HxcIRValidationState {
 					validateManagedBytesCall(call, argumentTypes, path, source);
 					if (operationId == "of-string-utf8" && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
 						add(path, "Bytes.ofString requires a preceding dominating String null check", source);
+				} else if (featureId == "string") {
+					validateManagedStringCall(call, argumentTypes, path, source);
 				} else if (featureId == "string-scalar") {
 					validateStringScalarCall(call, argumentTypes, path, source);
-					if (operationId == "char-at" && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
-						add(path, "String.charAt requires a preceding dominating receiver null check", source);
+					final requiresReceiverProof = switch operationId {
+						case "char-at" | "char-code-at" | "length" | "substring": true;
+						case _: false;
+					};
+					if (requiresReceiverProof && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
+						add(path, 'String.$operationId requires a preceding dominating receiver null check', source);
 				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
@@ -2393,7 +2409,7 @@ private class HxcIRValidationState {
 				if (argumentTypes.length != 1 || !isInt(0) || !returnsBytes)
 					add(path, "Bytes.alloc requires one Haxe Int and returns managed Bytes", source);
 			case "of-string-utf8":
-				if (argumentTypes.length != 1 || argumentTypes[0] != IRTString || !returnsBytes)
+				if (argumentTypes.length != 1 || (argumentTypes[0] != IRTString && argumentTypes[0] != IRTManagedString) || !returnsBytes)
 					add(path, "Bytes.ofString requires one validated UTF-8 String view and returns managed Bytes", source);
 			case "length":
 				if (argumentTypes.length != 1 || !isBytes(0) || !returnsInt)
@@ -2422,6 +2438,29 @@ private class HxcIRValidationState {
 		validateCleanupFreeStatusAbort(call.failure, path, source, "managed Bytes operation");
 	}
 
+	/** Validate allocation-backed String calls before C symbol selection. */
+	function validateManagedStringCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("string", value): value;
+			case _: return;
+		};
+		switch operationId {
+			case "from-scalar":
+				final argument = argumentTypes.length == 1 ? argumentTypes[0] : null;
+				if (argument == null || typeKey(argument) != typeKey(IRTInt(32, true)) || call.returnType != IRTManagedString)
+					add(path, "String.fromCharCode requires one Haxe Int and returns a managed String", source);
+			case "concat":
+				if (argumentTypes.length != 2
+					|| argumentTypes[0] != IRTManagedString
+					|| argumentTypes[1] != IRTManagedString
+					|| call.returnType != IRTManagedString)
+					add(path, "String concatenation requires two managed String carriers and returns a managed String", source);
+			case _:
+				add(path, 'string runtime call names unsupported operation `$operationId`', source);
+		}
+		validateCleanupFreeStatusAbort(call.failure, path, source, "managed String operation");
+	}
+
 	/**
 		Validate the allocation-free String operation before C chooses a symbol.
 
@@ -2436,18 +2475,61 @@ private class HxcIRValidationState {
 		};
 		switch operationId {
 			case "char-at":
-				if (argumentTypes.length != 2
-					|| argumentTypes[0] == null
-					|| argumentTypes[1] == null
-					|| typeKey(argumentTypes[0]) != typeKey(IRTString)
-					|| typeKey(argumentTypes[1]) != typeKey(IRTInt(32, true))
-					|| typeKey(call.returnType) != typeKey(IRTString))
+				final matchingStringCarrier = argumentTypes.length == 0 ? false : switch argumentTypes[0] {
+					case IRTString: call.returnType == IRTString;
+					case IRTManagedString: call.returnType == IRTManagedString;
+					case _: false;
+				};
+				final hasIntIndex = argumentTypes.length < 2 ? false : switch argumentTypes[1] {
+					case IRTInt(32, true): true;
+					case _: false;
+				};
+				if (argumentTypes.length != 2 || !matchingStringCarrier || !hasIntIndex)
 					add(path, "String.charAt requires String plus Haxe Int and returns String", source);
+				if (call.failure != null)
+					add(path, "String.charAt is total for valid String values and must not carry a failure edge", source);
+			case "char-code-at":
+				final optionalPayload = switch call.returnType {
+					case IRTNullable(payload, IRNTagged): payload;
+					case _: null;
+				};
+				final returnsOptionalInt = switch optionalPayload {
+					case null: false;
+					case payload: typeKey(payload) == typeKey(IRTInt(32, true));
+				};
+				if (argumentTypes.length != 2
+					|| (argumentTypes[0] != IRTString && argumentTypes[0] != IRTManagedString)
+					|| typeKey(argumentTypes[1]) != typeKey(IRTInt(32, true))
+					|| !returnsOptionalInt)
+					add(path, "String.charCodeAt requires String plus Haxe Int and returns Null<Int>", source);
+				if (call.failure != null)
+					add(path, "String.charCodeAt is total for valid String values and must not carry a failure edge", source);
+			case "length":
+				if (argumentTypes.length != 1
+					|| (argumentTypes[0] != IRTString && argumentTypes[0] != IRTManagedString)
+					|| typeKey(call.returnType) != typeKey(IRTInt(32, true)))
+					add(path, "String.length requires one String and returns Haxe Int", source);
+				validateCleanupFreeStatusAbort(call.failure, path, source, "String.length");
+			case "substring":
+				final matchingStringCarrier = argumentTypes.length == 0 ? false : switch argumentTypes[0] {
+					case IRTString: call.returnType == IRTString;
+					case IRTManagedString: call.returnType == IRTManagedString;
+					case _: false;
+				};
+				final hasIntStart = argumentTypes.length < 2 ? false : switch argumentTypes[1] {
+					case IRTInt(32, true): true;
+					case _: false;
+				};
+				final hasIntEnd = argumentTypes.length < 4 ? false : switch argumentTypes[3] {
+					case IRTInt(32, true): true;
+					case _: false;
+				};
+				if (argumentTypes.length != 4 || !matchingStringCarrier || !hasIntStart || argumentTypes[2] != IRTBool || !hasIntEnd)
+					add(path, "String.substring requires String, start Int, end-presence Bool, and end Int, then returns the same String carrier", source);
+				validateCleanupFreeStatusAbort(call.failure, path, source, "String.substring");
 			case _:
 				add(path, 'string-scalar runtime call names unsupported operation `$operationId`', source);
 		}
-		if (call.failure != null)
-			add(path, "String.charAt is total for valid String values and must not carry a failure edge", source);
 	}
 
 	function isManagedBytes(type:Null<HxcIRTypeRef>):Bool {
@@ -2467,6 +2549,12 @@ private class HxcIRValidationState {
 	static function isBytesRuntimeImplementation(implementation:HxcIRImplementation):Bool
 		return switch implementation {
 			case IRIRuntime("bytes"): true;
+			case _: false;
+		};
+
+	static function isStringRuntimeImplementation(implementation:HxcIRImplementation):Bool
+		return switch implementation {
+			case IRIRuntime("string"): true;
 			case _: false;
 		};
 
@@ -3015,7 +3103,7 @@ private class HxcIRValidationState {
 						}
 					}
 				}
-			case IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _) | IRTDynamic:
+			case IRTManagedString | IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _) | IRTDynamic:
 				false;
 		};
 	}
@@ -3419,8 +3507,8 @@ private class HxcIRValidationState {
 				}
 			case IRTNullable(inner, IRNTagged) | IRTFixedArray(inner, _, _):
 				collectDirectLayoutDependencies(inner, result);
-			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTVoid | IRTPointer(_, _) | IRTNullable(_, IRNPointer) |
-				IRTFunction(_, _) | IRTSpan(_, _) | IRTDynamic:
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTVoid | IRTPointer(_, _) |
+				IRTNullable(_, IRNPointer) | IRTFunction(_, _) | IRTSpan(_, _) | IRTDynamic:
 		}
 	}
 
@@ -3823,7 +3911,7 @@ private class HxcIRValidationState {
 
 	function validateTypeRef(type:HxcIRTypeRef, path:String, source:HxcSourceSpan, allowVoid:Bool):Void {
 		switch type {
-			case IRTBool | IRTString | IRTCString | IRTDynamic:
+			case IRTBool | IRTString | IRTManagedString | IRTCString | IRTDynamic:
 			case IRTInt(width, _):
 				if (width != 8 && width != 16 && width != 32 && width != 64) {
 					add(path, 'integer width $width is unsupported; expected 8, 16, 32, or 64', source);
@@ -3848,7 +3936,7 @@ private class HxcIRValidationState {
 				switch inner {
 					case IRTNullable(_, _):
 						add(path, "nested nullable values must be canonicalized to one nullable layer", source);
-					case IRTVoid | IRTFunction(_, _) | IRTString | IRTCString | IRTDynamic:
+					case IRTVoid | IRTFunction(_, _) | IRTString | IRTManagedString | IRTCString | IRTDynamic:
 						add(path, "Void, string views, function, and Dynamic types cannot use a primitive nullable representation", source);
 					case _:
 				}
@@ -3940,7 +4028,7 @@ private class HxcIRValidationState {
 					case _: false;
 				}
 			case IRCBool(_): type == IRTBool;
-			case IRCString(_, _): type == IRTString;
+			case IRCString(_, _): type == IRTString || type == IRTManagedString;
 			case IRCCStringLiteral(_, _): type == IRTCString;
 			case IRCNativeConstant(_): switch type {
 					case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_): true;
@@ -3952,7 +4040,7 @@ private class HxcIRValidationState {
 				};
 			case IRCNull:
 				switch type {
-					case IRTString | IRTPointer(_, true) | IRTNullable(_, _): true;
+					case IRTString | IRTManagedString | IRTPointer(_, true) | IRTNullable(_, _): true;
 					case IRTInstance(_): isManagedArrayReference(type) || isManagedIntBoolMap(type) || isManagedStringMapReference(type);
 					case _: false;
 				}
@@ -4013,6 +4101,7 @@ private class HxcIRValidationState {
 			case IRTAbiInteger(kind): 'abi:${abiIntegerKey(kind)}';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8";
+			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';

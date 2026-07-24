@@ -63,6 +63,7 @@ import reflaxe.c.lowering.CBodyIntrinsicReceiver.CBodyIntrinsicReceiverFamily;
 import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
 import reflaxe.c.lowering.CBodyIntMap.CPreparedBodyIntMap;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
+import reflaxe.c.lowering.CBodyOptional.CPreparedBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 import reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap;
 import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
@@ -318,7 +319,8 @@ class CBodyLowering {
 		final hxcIRConstructionTimer = CPhaseTiming.start(CPHxcIRConstruction);
 		final inputs = inputFunctions.copy();
 		inputs.sort(compareInputs);
-		final aggregateRegistry = new CBodyAggregateRegistry(context, typedProgram, typedContract);
+		final aggregateRegistry = new CBodyAggregateRegistry(context, typedProgram, typedContract,
+			programCreatesStrings(inputFunctions, inputGlobals, inputInitializers, inputConstructors));
 		final prepared:Array<PreparedBodyFunction> = [];
 		final preparedById:Map<String, PreparedBodyFunction> = [];
 		for (input in inputs) {
@@ -921,6 +923,71 @@ class CBodyLowering {
 			}
 		}
 		return leftBytes.length - rightBytes.length;
+	}
+
+	/**
+		Decide once whether this program needs the owner-capable String plan.
+
+		A literal-only program keeps the smaller allocation-free lifecycle: its
+		String views point at compiler-owned bytes and need no cleanup. The first
+		reachable scalar constructor or String concatenation changes the whole
+		program's private String carrier policy because a runtime-created value can
+		later cross an ordinary function, record, enum, optional, or Array boundary.
+		Choosing the policy before type preparation keeps those independently built
+		consumers consistent.
+	**/
+	static function programCreatesStrings(inputFunctions:Array<CBodyFunctionInput>, inputGlobals:Null<Array<CBodyGlobalInput>>,
+			inputInitializers:Null<Array<CBodyInitializerInput>>, inputConstructors:Null<Array<CBodyConstructorInput>>):Bool {
+		for (input in inputFunctions)
+			if (expressionCreatesString(input.expression))
+				return true;
+		if (inputGlobals != null)
+			for (input in inputGlobals)
+				if (input.expression != null && expressionCreatesString(input.expression))
+					return true;
+		if (inputInitializers != null)
+			for (input in inputInitializers)
+				if (expressionCreatesString(input.expression))
+					return true;
+		if (inputConstructors != null)
+			for (input in inputConstructors)
+				if (expressionCreatesString(input.expression))
+					return true;
+		return false;
+	}
+
+	/** Find an ownership-creating String operation in one typed expression tree. */
+	static function expressionCreatesString(root:TypedExpr):Bool {
+		var found = false;
+		function visit(expression:TypedExpr):Void {
+			if (found)
+				return;
+			final creates = switch expression.expr {
+				case TCall(callee, _): isStringFromCharCode(callee);
+				case TBinop(OpAdd, _, _) | TBinop(OpAssignOp(OpAdd), _, _):
+					CBodyAggregateRegistry.staticStringIdentity(expression.t) != null;
+				case _: false;
+			};
+			if (creates) {
+				found = true;
+				return;
+			}
+			TypedExprTools.iter(expression, visit);
+		}
+		visit(root);
+		return found;
+	}
+
+	/** Recognize the pinned standard library's exact static scalar constructor. */
+	public static function isStringFromCharCode(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FStatic(reference, field)): final owner = reference.get(); owner.pack.length == 0 && owner.name == "String" && field.get()
+					.name == "fromCharCode";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isStringFromCharCode(inner);
+			case _:
+				false;
+		};
 	}
 }
 
@@ -1796,6 +1863,7 @@ private class FunctionPreparer {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8-static-view";
+			case IRTManagedString: "string-utf8-managed-view";
 			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${valueTypeKey(element)}>';
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
@@ -1995,6 +2063,14 @@ private class ConstructorPreparer {
 				'array-reference:${array.instanceId}';
 			case CBVKStaticString(sourceIdentity):
 				'string-utf8-static-view:$sourceIdentity';
+			case CBVKManagedString(sourceIdentity):
+				'string-utf8-managed-view:$sourceIdentity';
+			case CBVKBytes(value):
+				'bytes-reference:${CPreparedBodyBytes.INSTANCE_ID}';
+			case CBVKEnum(value) if (value.managedLifetime):
+				'managed-enum:${value.instanceId}';
+			case CBVKOptional(optional) if (optional.managedLifetime):
+				'managed-optional:${optional.planId}';
 			case CBVKEnum(value) if (value.representation == CBERNativeEnum && !value.managedLifetime):
 				'direct-enum:${value.instanceId}';
 			case CBVKEnum(value) if (value.representation == CBERTaggedUnion && !value.managedLifetime):
@@ -2082,6 +2158,8 @@ private class FunctionBuilder {
 	final freshManagedIntMapValueIds:Map<String, Bool> = [];
 	final freshManagedStringMapValueIds:Map<String, Bool> = [];
 	final freshManagedBytesValueIds:Map<String, Bool> = [];
+	final freshManagedStringValueIds:Map<String, Bool> = [];
+	final freshManagedStringValueRoles:Map<String, String> = [];
 	final freshManagedEnumValueIds:Map<String, Bool> = [];
 	final freshManagedAggregateValueIds:Map<String, Bool> = [];
 	final freshManagedOptionalValueIds:Map<String, Bool> = [];
@@ -2090,6 +2168,7 @@ private class FunctionBuilder {
 	final intMapCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final stringMapCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final bytesCleanupActionIdsByCompilerId:Map<Int, String> = [];
+	final stringCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final enumCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final aggregateCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final optionalCleanupActionIdsByCompilerId:Map<Int, String> = [];
@@ -2103,6 +2182,8 @@ private class FunctionBuilder {
 	final initializedOwnedClassFields:Map<String, Bool> = [];
 	final initializedRetainedInterfaceFields:Map<String, Bool> = [];
 	final initializedStaticStringFields:Map<String, Bool> = [];
+	final initializedManagedStringFields:Map<String, Bool> = [];
+	final initializedManagedDirectFields:Map<String, Bool> = [];
 	final initializedUnmanagedEnumFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
 	final initializedManagedStringMapFields:Map<String, Bool> = [];
@@ -2269,6 +2350,13 @@ private class FunctionBuilder {
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-IntMap-value");
 		if (freshManagedBytesValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-Bytes-value");
+		if (freshManagedStringValueIds.keys().hasNext()) {
+			final ids = [for (id in freshManagedStringValueIds.keys()) id];
+			ids.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+			final id = ids[0];
+			final role = freshManagedStringValueRoles.get(id);
+			unsupportedAt(bodyExpression.pos, 'function-exit:unowned-fresh-managed-String-value:$id:${role == null ? "unknown-producer" : role}');
+		}
 		if (freshManagedEnumValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-enum-value");
 		if (freshManagedAggregateValueIds.keys().hasNext())
@@ -2371,6 +2459,12 @@ private class FunctionBuilder {
 				// The immutable view is copied by value. Its bytes come from
 				// compiler-owned literal storage and therefore outlive every object;
 				// no retain, release, or owned-String runtime operation is needed.
+			case TBinop(OpAssign, left, right) if (lowerManagedStringFieldInitializer(left, right)):
+				// The field takes one runtime-created String owner. A borrowed
+				// constructor argument is retained; a fresh expression transfers.
+			case TBinop(OpAssign, left, right) if (lowerManagedDirectFieldInitializer(left, right)):
+				// A managed enum, record, optional, or Bytes value receives one
+				// exact owner through its already prepared lifecycle plan.
 			case TBinop(OpAssign, left, right) if (lowerUnmanagedEnumFieldInitializer(left, right)):
 				// The prepared enum needs no retain, tracing, or destruction. The
 				// first assignment initializes the final field by value.
@@ -2397,6 +2491,8 @@ private class FunctionBuilder {
 					unsupported(expression, "TCall(discarded-fresh-managed-StringMap-needs-owner)");
 				if (result != null && freshManagedBytesValueIds.exists(result.id))
 					unsupported(expression, "TCall(discarded-fresh-managed-Bytes-needs-owner)");
+				if (result != null && freshManagedStringValueIds.exists(result.id))
+					unsupported(expression, "TCall(discarded-fresh-managed-String-needs-owner)");
 				if (result != null && freshManagedEnumValueIds.exists(result.id))
 					unsupported(expression, "TCall(discarded-fresh-managed-enum-needs-owner)");
 				if (result != null && freshManagedAggregateValueIds.exists(result.id))
@@ -2546,12 +2642,78 @@ private class FunctionBuilder {
 			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing String field `$fieldName`');
 		final owner = self.mapping.classValue();
 		final field = owner == null ? null : owner.field(fieldName);
-		if (field == null || field.mutable || field.type.staticStringIdentity() == null)
+		if (field == null || field.mutable || !field.type.kind.match(CBVKStaticString(_)))
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:static-String-initializer)');
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
 			"initialize-static-string-field");
 		initializedStaticStringFields.set(fieldName, true);
+		return true;
+	}
+
+	/** Initialize one final owner-capable String field exactly once. */
+	function lowerManagedStringFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedManagedStringFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing managed String field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		if (field == null || field.mutable || field.type.irType != IRTManagedString)
+			return false;
+		final raw = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-String-initializer)');
+		final value = captureManagedValue(raw, field.type, right.pos, 'TField($fieldName:managed-String-initializer)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-managed-string-field");
+		initializedManagedStringFields.set(fieldName, true);
+		return true;
+	}
+
+	/** Initialize one final managed by-value field through its exact lifecycle. */
+	function lowerManagedDirectFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedManagedDirectFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing managed field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		if (field == null || field.mutable || managedDirectFieldRelease(field.type) == null)
+			return false;
+		final raw = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-field-initializer)');
+		final value = captureManagedValue(raw, field.type, right.pos, 'TField($fieldName:managed-field-initializer)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-managed-field");
+		initializedManagedDirectFields.set(fieldName, true);
 		return true;
 	}
 
@@ -3087,6 +3249,7 @@ private class FunctionBuilder {
 						final result:HxcIRResult = {id: nextValueId(), type: localMapping.irType};
 						appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:flow-carrier)')),
 							source, "flow-carrier-default");
+						registerDefaultStringRequirement(localMapping, source, position);
 						{id: result.id, type: result.type, mapping: localMapping};
 				}
 			case null:
@@ -3181,6 +3344,23 @@ private class FunctionBuilder {
 			normalCleanupActionIds.push(cleanupId);
 			bytesCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "cleanup-release", "ordinary haxe.io.Bytes local lifetime", source, position));
+		}
+		if (localMapping.irType == IRTManagedString) {
+			final transferredFreshOwner = value != null && freshManagedStringValueIds.remove(value.id);
+			if (!transferredFreshOwner) {
+				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("string")), source, "retain-string-alias");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "ordinary Haxe String local alias", source, position));
+			}
+			final cleanupId = 'string-local.$ordinal.release';
+			constructionCleanupActions.push({
+				id: cleanupId,
+				idempotence: IRCExactlyOnce,
+				kind: IRCARelease(IRPLocal(localId), IRIRuntime("string")),
+				source: source
+			});
+			normalCleanupActionIds.push(cleanupId);
+			stringCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, position));
 		}
 		final managedEnum = localMapping.enumValue();
 		if (managedEnum != null && managedEnum.managedLifetime) {
@@ -3410,6 +3590,30 @@ private class FunctionBuilder {
 			normalCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release",
 				'ordinary Haxe StringMap field `${constructedClass.haxePath}.${field.name}` lifetime', source, expression.pos));
+		}
+		for (field in managedStringFields(constructedClass)) {
+			final cleanupId = 'construction.$constructionOrdinal.string-field.${field.name}.release';
+			constructionCleanupActions.push({
+				id: cleanupId,
+				idempotence: IRCExactlyOnce,
+				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("string")),
+				source: source
+			});
+			normalCleanupActionIds.push(cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, expression.pos));
+		}
+		for (field in managedDirectFields(constructedClass)) {
+			final implementation = managedDirectFieldRelease(field.type);
+			if (implementation == null)
+				throw new CBodyEmissionError('managed class field `${constructedClass.haxePath}.${field.name}` lost its release plan');
+			final cleanupId = 'construction.$constructionOrdinal.managed-field.${field.name}.release';
+			constructionCleanupActions.push({
+				id: cleanupId,
+				idempotence: IRCExactlyOnce,
+				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), implementation),
+				source: source
+			});
+			normalCleanupActionIds.push(cleanupId);
 		}
 	}
 
@@ -4120,6 +4324,24 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTReturn(lowered.id, normalCleanupSteps(transferredCleanupId)), source: source};
 			return;
 		}
+		if (prepared.returnMapping.irType == IRTManagedString) {
+			var transferredCleanupId:Null<String> = null;
+			var returnedValueId = lowered.id;
+			if (!freshManagedStringValueIds.remove(lowered.id)) {
+				final returnedLocal = directLocalCompilerId(value);
+				if (returnedLocal != null)
+					transferredCleanupId = stringCleanupActionIdsByCompilerId.get(returnedLocal);
+				if (transferredCleanupId == null) {
+					final ownerLocalId = createFlowLocal(prepared.returnMapping, lowered.id, source, "returned-string-owner");
+					appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("string")), source, "retain-string-return");
+					runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "ordinary Haxe String borrowed return", source, value.pos));
+					returnedValueId = loadPlace({place: IRPLocal(ownerLocalId), mapping: prepared.returnMapping, mutable: false}, value.pos,
+						"returned-string-owned-load").id;
+				}
+			}
+			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			return;
+		}
 		final returnedEnum = prepared.returnMapping.enumValue();
 		if (returnedEnum != null && returnedEnum.managedLifetime) {
 			var transferredCleanupId:Null<String> = null;
@@ -4222,6 +4444,10 @@ private class FunctionBuilder {
 			case TField(receiver, FInstance(owner, _, fieldReference)) if (CBodyBytesRecognition.isCoreBytes(owner)
 				&& fieldReference.get().name == "length"):
 				lowerManagedBytesLength(expression, receiver);
+			case TField(receiver, FInstance(_, _, fieldReference))
+				if (fieldReference.get().name == "length"
+					&& isStringCarrier(bodyValueType(receiver.t, receiver.pos, "TField(String.length:receiver-type)").irType)):
+				lowerStringLength(expression, receiver);
 			case TField(receiver, FInstance(_, _, fieldReference)):
 				final receiverType = bodyValueType(receiver.t, receiver.pos, 'TField(${fieldReference.get().name}:receiver-type)');
 				receiverType.importedStructValue() == null ? lowerClassField(expression, receiver,
@@ -4266,8 +4492,8 @@ private class FunctionBuilder {
 						// construction as an implicit assignment; genuinely dynamic casts
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
-					case CBVKStaticString(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _) |
-						CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _):
+					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
+						CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -4500,6 +4726,14 @@ private class FunctionBuilder {
 	**/
 	function captureManagedValue(value:LoweredValue, mapping:CBodyValueType, position:Position, role:String):LoweredValue {
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		if (mapping.irType == IRTManagedString) {
+			if (freshManagedStringValueIds.remove(value.id))
+				return value;
+			final ownerLocalId = createFlowLocal(mapping, value.id, source, role + "-owner");
+			appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("string")), source, "retain-record-string-field");
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "managed String captured by a closed record", source, position));
+			return loadPlace({place: IRPLocal(ownerLocalId), mapping: mapping, mutable: false}, position, role + "-owned-load");
+		}
 		if (mapping.arrayValue() != null) {
 			final array = mapping.arrayValue();
 			if (array != null && array.managedByCollector)
@@ -4656,17 +4890,26 @@ private class FunctionBuilder {
 	}
 
 	function lowerStatementConditional(expression:TypedExpr, condition:TypedExpr, whenTrue:TypedExpr, whenFalse:Null<TypedExpr>):Void {
+		final conditionCleanupDepth = normalCleanupActionIds.length;
 		final conditionValue = lowerBooleanCondition(condition, "TIf");
+		// The condition's Bool is copied into an IR value before control splits.
+		// Release any managed temporary used to compute it here; neither arm owns
+		// storage declared by the condition expression.
+		appendScopedCleanupInstructions(conditionCleanupDepth);
+		restoreCleanupDepth(conditionCleanupDepth);
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final trueBlock = createGeneratedBlock("if-true", source);
 		if (whenFalse == null) {
 			final joinBlock = createGeneratedBlock("if-join", source);
 			currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(trueBlock.id), edge(joinBlock.id)), source: source};
 			currentBlock = trueBlock;
+			final trueCleanupDepth = normalCleanupActionIds.length;
 			lowerStatement(whenTrue);
 			if (currentBlock.terminator == null) {
+				appendScopedCleanupInstructions(trueCleanupDepth);
 				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 			}
+			restoreCleanupDepth(trueCleanupDepth);
 			currentBlock = joinBlock;
 			return;
 		}
@@ -4677,12 +4920,20 @@ private class FunctionBuilder {
 		dispatchBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(trueBlock.id), edge(falseBlock.id)), source: source};
 
 		currentBlock = trueBlock;
+		final trueCleanupDepth = normalCleanupActionIds.length;
 		lowerStatement(whenTrue);
 		final trueEnd = currentBlock;
+		if (trueEnd.terminator == null)
+			appendScopedCleanupInstructions(trueCleanupDepth);
+		restoreCleanupDepth(trueCleanupDepth);
 
 		currentBlock = falseBlock;
+		final falseCleanupDepth = normalCleanupActionIds.length;
 		lowerStatement(falseExpression);
 		final falseEnd = currentBlock;
+		if (falseEnd.terminator == null)
+			appendScopedCleanupInstructions(falseCleanupDepth);
+		restoreCleanupDepth(falseCleanupDepth);
 
 		if (trueEnd.terminator == null || falseEnd.terminator == null) {
 			final joinBlock = createGeneratedBlock("if-join", source);
@@ -4800,6 +5051,11 @@ private class FunctionBuilder {
 	}
 
 	function lowerStatementSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>):Void {
+		final optionalSubject = bodyValueType(subject.t, subject.pos, "TSwitch(optional-subject-discovery)").optionalValue();
+		if (optionalSubject != null && optionalSubject.payload.primitiveMapping() != null) {
+			lowerStatementOptionalPrimitiveSwitch(expression, subject, optionalSubject, cases, defaultExpression);
+			return;
+		}
 		final enumSubject = enumIndexSubject(subject);
 		if (enumSubject != null) {
 			lowerStatementEnumSwitch(expression, enumSubject, cases, defaultExpression);
@@ -4860,6 +5116,73 @@ private class FunctionBuilder {
 		} else {
 			throw new CBodyEmissionError('switch in `${prepared.irId}` has no continuation block');
 		}
+	}
+
+	/**
+		Lower a switch whose nullable scalar routes absence to the default arm.
+
+		C cannot switch on the generated `{ has_value, value }` record. The
+		presence branch prevents an inactive payload read; only the present path
+		uses C's integer switch, while `null` follows Haxe's ordinary default
+		semantics.
+	**/
+	function lowerStatementOptionalPrimitiveSwitch(expression:TypedExpr, subject:TypedExpr, optional:CPreparedBodyOptional, cases:Array<TypedSwitchArm>,
+			defaultExpression:Null<TypedExpr>):Void {
+		final primitive = optional.payload.primitiveMapping();
+		if (primitive == null)
+			return unsupported(subject, "TSwitch(optional-payload-not-primitive)");
+		final subjectMapping = bodyValueType(subject.t, subject.pos, "TSwitch(optional-subject-type)");
+		final subjectValue = coerce(lowerValue(subject, subjectMapping), subjectMapping, subject.pos, "TSwitch(optional-subject)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final dispatchBlock = currentBlock;
+		final presentBlock = createGeneratedBlock("optional-switch-present", source);
+		final caseBlocks:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length)
+			caseBlocks.push(createGeneratedBlock('optional-switch-case-$index', source));
+		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("optional-switch-default", source);
+		final openEnds:Array<MutableBodyBlock> = [];
+
+		for (index in 0...cases.length) {
+			currentBlock = caseBlocks[index];
+			final cleanupDepth = normalCleanupActionIds.length;
+			lowerStatement(cases[index].expr);
+			if (currentBlock.terminator == null) {
+				appendScopedCleanupInstructions(cleanupDepth);
+				openEnds.push(currentBlock);
+			}
+			restoreCleanupDepth(cleanupDepth);
+		}
+		if (defaultExpression != null && defaultBlock != null) {
+			currentBlock = defaultBlock;
+			final cleanupDepth = normalCleanupActionIds.length;
+			lowerStatement(defaultExpression);
+			if (currentBlock.terminator == null) {
+				appendScopedCleanupInstructions(cleanupDepth);
+				openEnds.push(currentBlock);
+			}
+			restoreCleanupDepth(cleanupDepth);
+		}
+		final needsExit = defaultBlock == null || openEnds.length > 0;
+		final exitBlock = needsExit ? createGeneratedBlock("optional-switch-exit", source) : null;
+		if (exitBlock != null)
+			for (end in openEnds)
+				end.terminator = {kind: IRTJump(edge(exitBlock.id)), source: source};
+		final absentTarget = defaultBlock == null ? requireBlock(exitBlock, "optional switch without default") : defaultBlock;
+
+		currentBlock = presentBlock;
+		appendInstruction(null, IRIONullCheck(subjectValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))), source,
+			"optional-switch-present-proof");
+		final payload:HxcIRResult = {id: nextValueId(), type: optional.payload.irType};
+		appendInstruction(payload, IRIOConvert(subjectValue.id, IRCNullableUnwrap, optional.payload.irType, IRIStatic, null), source, "optional-switch-unwrap");
+		presentBlock.terminator = {
+			kind: IRTSwitch(payload.id, switchCases(cases, caseBlocks, primitive), edge(absentTarget.id)),
+			source: source
+		};
+		currentBlock = dispatchBlock;
+		final present:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(present, IRIOUnary("haxe.direct-optional.is-not-null", subjectValue.id, IRIStatic), source, "optional-switch-has-value");
+		dispatchBlock.terminator = {kind: IRTBranch(present.id, edge(presentBlock.id), edge(absentTarget.id)), source: source};
+		currentBlock = exitBlock == null ? absentTarget : exitBlock;
 	}
 
 	/**
@@ -5010,6 +5333,7 @@ private class FunctionBuilder {
 			case _:
 				final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 				appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch")), source, "switch-default-result");
+				registerDefaultStringRequirement(resultMapping, source, expression.pos);
 				initialResult.id;
 		}
 		final resultLocalId = createFlowLocal(resultMapping, initialResultId, source, "switch-result");
@@ -5075,6 +5399,7 @@ private class FunctionBuilder {
 				final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 				appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch(string)")), source,
 					"string-switch-default-result");
+				registerDefaultStringRequirement(resultMapping, source, expression.pos);
 				initialResult.id;
 		}
 		final resultLocalId = createFlowLocal(resultMapping, initialResultId, source, "string-switch-result");
@@ -5130,6 +5455,7 @@ private class FunctionBuilder {
 		final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 		appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch(enum)")), source,
 			"enum-switch-default-result");
+		registerDefaultStringRequirement(resultMapping, source, expression.pos);
 		final resultLocalId = createFlowLocal(resultMapping, initialResult.id, source, "enum-switch-result");
 		final dispatchBlock = currentBlock;
 		final caseBlocks:Array<MutableBodyBlock> = [];
@@ -5240,7 +5566,8 @@ private class FunctionBuilder {
 	/** Return the preserved String representation when this switch needs text comparison. */
 	function stringSwitchMapping(expression:TypedExpr):Null<CBodyValueType> {
 		final mapping = bodyValueType(expression.t, expression.pos, "TSwitch(subject-type)");
-		return mapping.irType == IRTString && mapping.staticStringIdentity() != null ? mapping : null;
+		return (mapping.irType == IRTString || mapping.irType == IRTManagedString)
+			&& mapping.staticStringIdentity() != null ? mapping : null;
 	}
 
 	/** Flatten source arms while retaining the block shared by comma-separated patterns. */
@@ -5291,7 +5618,7 @@ private class FunctionBuilder {
 					final byteLength = HxcUtf8.byteLength(text);
 					if (byteLength == null)
 						unsupportedAt(item.position, "TSwitch(String-case-malformed-Unicode-literal)");
-					final literal:HxcIRResult = {id: nextValueId(), type: IRTString};
+					final literal:HxcIRResult = {id: nextValueId(), type: subject.mapping.irType};
 					appendInstruction(literal, IRIOConstant(IRCString(text, byteLength)), item.source, "string-switch-literal");
 					runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", subject.mapping.cSpelling, item.source,
 						item.position, "direct-string-value"));
@@ -5431,7 +5758,7 @@ private class FunctionBuilder {
 			final byteLength = HxcUtf8.byteLength(text);
 			if (byteLength == null)
 				return unsupported(expression, "TConst(TString:malformed-Unicode-literal)");
-			final result:HxcIRResult = {id: nextValueId(), type: IRTString};
+			final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 			final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 			appendInstruction(result, IRIOConstant(IRCString(text, byteLength)), source, "static-string-literal");
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", mapping.cSpelling, source, expression.pos,
@@ -5638,6 +5965,18 @@ private class FunctionBuilder {
 			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-optional-assignment-replacement");
 			return replacement;
 		}
+		if (target.mapping.irType == IRTManagedString) {
+			final replacement = captureManagedValue(value, target.mapping, right.pos, "string-assignment-replacement");
+			final sourceSpan = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			// Retain or transfer the replacement before releasing the old target.
+			// This ordering makes `text = text` safe and also preserves the old
+			// value if evaluating the right side produced the same owner.
+			appendInstruction(null, IRIORelease(stableTarget.place, IRIRuntime("string")), sourceSpan, "release-string-assignment-target");
+			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-string-assignment-replacement");
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", sourceSpan,
+				expression.pos));
+			return replacement;
+		}
 		appendInstruction(null, IRIOStore(stableTarget.place, value.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "store");
 		return value;
 	}
@@ -5687,6 +6026,23 @@ private class FunctionBuilder {
 			unsupported(left, "TBinop(OpAssignOp:immutable-place)");
 		}
 		final oldValue = loadPlace(target, left.pos, "compound-load");
+		if (operation == OpAdd && target.mapping.irType == IRTManagedString) {
+			// Preserve the original owner while evaluating the right side. That
+			// expression may call user code and reassign the same place.
+			final stableOldValue = retainManagedStringTemporary(oldValue, left.pos, "compound-string-left");
+			final stagedTarget = stageFlowPlace(target, left.pos, expressionCreatesFlow(right), "compound-string-target");
+			var rightValue = coerce(lowerValue(right, target.mapping), target.mapping, right.pos, "TBinop(OpAssignOp:String-right)");
+			rightValue = stabilizeFreshManagedString(rightValue, right.pos, "compound-string-right");
+			final nextValue = lowerManagedStringConcatValues(expression, stableOldValue, rightValue, target.mapping, "compound-string-concat");
+			final stableTarget = restoreStagedPlace(stagedTarget, "compound-string-target");
+			final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			appendInstruction(null, IRIORelease(stableTarget.place, IRIRuntime("string")), source, "release-compound-string-target");
+			appendInstruction(null, IRIOStore(stableTarget.place, nextValue.id), source, "store-compound-string-result");
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, expression.pos));
+			// The target now owns the fresh concatenation result.
+			freshManagedStringValueIds.remove(nextValue.id);
+			return nextValue;
+		}
 		final rightCreatesFlow = expressionCreatesFlow(right);
 		final stagedTarget = stageFlowPlace(target, left.pos, rightCreatesFlow, "compound-target");
 		final oldValueLocal = rightCreatesFlow ? createFlowLocal(oldValue.mapping, oldValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
@@ -5701,7 +6057,81 @@ private class FunctionBuilder {
 		return stored;
 	}
 
+	/**
+		Lower `String.fromCharCode` to one checked, owned UTF-8 scalar.
+
+		The runtime turns invalid Unicode scalar values into U+FFFD. HxcIR marks
+		the result as a fresh owner so a local, return, or container can move it
+		without an unnecessary retain.
+	**/
+	function lowerStringFromCharCode(expression:TypedExpr, arguments:Array<TypedExpr>):LoweredValue {
+		if (arguments.length != 1)
+			return unsupported(expression, 'TCall(String.fromCharCode:argument-count=${arguments.length},expected=1)');
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.fromCharCode:result-type)");
+		if (resultMapping.irType != IRTManagedString)
+			return unsupported(expression, "TCall(String.fromCharCode:requires-managed-String-plan)");
+		final argumentMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(String.fromCharCode:argument-type)");
+		if (typeKey(argumentMapping.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(arguments[0], "TCall(String.fromCharCode:argument-requires-Haxe-Int)");
+		final scalar = coerce(lowerValue(arguments[0], argumentMapping), argumentMapping, arguments[0].pos, "TCall(String.fromCharCode:argument)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string", "from-scalar"),
+			arguments: [scalar.id],
+			returnType: IRTManagedString,
+			failure: managedArrayFailure()
+		}), source, "string-from-scalar");
+		registerValueTemporary(result.id, "string-from-scalar-result");
+		freshManagedStringValueIds.set(result.id, true);
+		freshManagedStringValueRoles.set(result.id, "String.fromCharCode");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "from-scalar", "ordinary Haxe String.fromCharCode", source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/** Concatenate two immutable String values into one fresh owned result. */
+	function lowerManagedStringConcat(expression:TypedExpr, left:TypedExpr, right:TypedExpr, resultMapping:CBodyValueType):LoweredValue {
+		final leftMapping = bodyValueType(left.t, left.pos, "TBinop(String-concat:left-type)");
+		final rightMapping = bodyValueType(right.t, right.pos, "TBinop(String-concat:right-type)");
+		if (leftMapping.irType != IRTManagedString || rightMapping.irType != IRTManagedString)
+			return unsupported(expression, "TBinop(String-concat:operands-require-managed-String-plan)");
+		var leftValue = coerce(lowerValue(left, leftMapping), leftMapping, left.pos, "TBinop(String-concat:left)");
+		leftValue = stabilizeFreshManagedString(leftValue, left.pos, "string-concat-left");
+		final stableLeftValue = if (expressionCreatesFlow(right)) {
+			final localId = createFlowLocal(leftMapping, leftValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "string-concat-left");
+			loadPlace({place: IRPLocal(localId), mapping: leftMapping, mutable: false}, left.pos, "string-concat-left-load");
+		} else {
+			leftValue;
+		}
+		var rightValue = coerce(lowerValue(right, rightMapping), rightMapping, right.pos, "TBinop(String-concat:right)");
+		rightValue = stabilizeFreshManagedString(rightValue, right.pos, "string-concat-right");
+		return lowerManagedStringConcatValues(expression, stableLeftValue, rightValue, resultMapping, "string-concat");
+	}
+
+	/** Build one owned concatenation after both immutable operands are stable borrows. */
+	function lowerManagedStringConcatValues(expression:TypedExpr, leftValue:LoweredValue, rightValue:LoweredValue, resultMapping:CBodyValueType,
+			role:String):LoweredValue {
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string", "concat"),
+			arguments: [leftValue.id, rightValue.id],
+			returnType: IRTManagedString,
+			failure: managedArrayFailure()
+		}), source, role);
+		registerValueTemporary(result.id, "string-concat-result");
+		freshManagedStringValueIds.set(result.id, true);
+		freshManagedStringValueRoles.set(result.id, role);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "concat", "ordinary Haxe String concatenation", source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
 	function lowerBinary(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
+		if (operation == OpAdd) {
+			final resultMapping = bodyValueType(expression.t, expression.pos, "TBinop(String-concat:result-type)");
+			if (resultMapping.irType == IRTManagedString)
+				return lowerManagedStringConcat(expression, left, right, resultMapping);
+		}
 		if (operation == OpEq || operation == OpNotEq) {
 			final enumIndexComparison = lowerEnumIndexComparison(expression, operation, left, right);
 			if (enumIndexComparison != null)
@@ -5711,7 +6141,9 @@ private class FunctionBuilder {
 			final leftMapping = isNullConstantExpression(left) ? null : nullEqualityValueMapping(left, "TBinop(class-equality:left-type)");
 			final rightMapping = isNullConstantExpression(right) ? null : nullEqualityValueMapping(right, "TBinop(class-equality:right-type)");
 			if (leftMapping != null && leftMapping.optionalValue() != null || rightMapping != null && rightMapping.optionalValue() != null) {
-				return lowerOptionalNullEquality(expression, operation, left, right, leftMapping, rightMapping);
+				return isNullConstantExpression(left)
+					|| isNullConstantExpression(right) ? lowerOptionalNullEquality(expression, operation, left, right, leftMapping,
+						rightMapping) : lowerOptionalScalarEquality(expression, operation, left, right, leftMapping, rightMapping);
 			}
 			if (leftMapping != null && leftMapping.classValue() != null || rightMapping != null && rightMapping.classValue() != null) {
 				return lowerClassEquality(expression, operation, left, right, leftMapping, rightMapping);
@@ -5851,7 +6283,8 @@ private class FunctionBuilder {
 		final rightIsNull = isNullConstantExpression(right);
 		if (leftIsNull != rightIsNull) {
 			final valueExpression = leftIsNull ? right : left;
-			final value = coerce(lowerValue(valueExpression, target), target, valueExpression.pos, "TBinop(String-null-equality:value)");
+			var value = coerce(lowerValue(valueExpression, target), target, valueExpression.pos, "TBinop(String-null-equality:value)");
+			value = stabilizeFreshManagedString(value, valueExpression.pos, "string-null-equality");
 			final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(String-null-equality:result-type)");
 			if (boolMapping.irType != IRTBool)
 				return unsupported(expression, "TBinop(String-null-equality:result-not-Bool)");
@@ -5864,9 +6297,11 @@ private class FunctionBuilder {
 			&& rightMapping != null
 			&& (leftMapping.staticStringIdentity() == null || rightMapping.staticStringIdentity() == null))
 			return unsupported(expression, "TBinop(String-equality-mixed-value-category)");
-		final leftValue = coerce(lowerValue(left, target), target, left.pos, "TBinop(String-equality:left)");
+		var leftValue = coerce(lowerValue(left, target), target, left.pos, "TBinop(String-equality:left)");
+		leftValue = stabilizeFreshManagedString(leftValue, left.pos, "string-equality-left");
 		final stagedLeft = stageFlowValue(leftValue, left, expressionCreatesFlow(right), "string-equality-left");
-		final rightValue = coerce(lowerValue(right, target), target, right.pos, "TBinop(String-equality:right)");
+		var rightValue = coerce(lowerValue(right, target), target, right.pos, "TBinop(String-equality:right)");
+		rightValue = stabilizeFreshManagedString(rightValue, right.pos, "string-equality-right");
 		final stableLeftId = restoreStagedValue(stagedLeft, "string-equality-left");
 		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		// A left operand that crosses right-side control flow is first saved in a
@@ -5912,6 +6347,63 @@ private class FunctionBuilder {
 		appendInstruction(result, IRIOUnary(operation == OpEq ? "haxe.direct-optional.is-null" : "haxe.direct-optional.is-not-null", value.id, IRIStatic),
 			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "direct-optional-null-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
+	}
+
+	/** Compare one present nullable scalar with a non-null scalar value. */
+	function lowerOptionalScalarEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr, leftMapping:Null<CBodyValueType>,
+			rightMapping:Null<CBodyValueType>):LoweredValue {
+		final optionalOnLeft = leftMapping != null && leftMapping.optionalValue() != null;
+		final optionalOnRight = rightMapping != null && rightMapping.optionalValue() != null;
+		if (optionalOnLeft == optionalOnRight)
+			return unsupported(expression, "TBinop(direct-optional-scalar-equality-requires-one-optional)");
+		final optionalMapping = optionalOnLeft ? leftMapping : rightMapping;
+		if (optionalMapping == null)
+			return unsupported(expression, "TBinop(direct-optional-scalar-equality-lost-optional)");
+		final optional = optionalMapping.optionalValue();
+		if (optional == null || optional.payload.primitiveMapping() == null)
+			return unsupported(expression, "TBinop(direct-optional-scalar-equality-payload-not-primitive)");
+		final optionalExpression = optionalOnLeft ? left : right;
+		final scalarExpression = optionalOnLeft ? right : left;
+		final optionalValue = coerce(lowerValue(optionalExpression, optionalMapping), optionalMapping, optionalExpression.pos,
+			"TBinop(direct-optional-scalar-equality:optional)");
+		final scalarValue = coerce(lowerValue(scalarExpression, optional.payload), optional.payload, scalarExpression.pos,
+			"TBinop(direct-optional-scalar-equality:scalar)");
+		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(direct-optional-scalar-equality:result)");
+		if (boolMapping.irType != IRTBool)
+			return unsupported(expression, "TBinop(direct-optional-scalar-equality:result-not-Bool)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		// The comparison below introduces a new control-flow block. Values defined
+		// only in the predecessor do not magically exist in that block, so save
+		// both evaluated operands in locals and load them after taking the
+		// present-value edge. This also keeps the source's left-to-right order.
+		final optionalLocal = createFlowLocal(optionalMapping, optionalValue.id, source, "optional-scalar-equality-optional");
+		final scalarLocal = createFlowLocal(optional.payload, scalarValue.id, source, "optional-scalar-equality-scalar");
+		final absent:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(absent, IRIOConstant(IRCBool(operation == OpNotEq)), source, "optional-scalar-absent-result");
+		final resultLocal = createFlowLocal(boolMapping, absent.id, source, "optional-scalar-equality-result");
+		final present:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		final optionalForPresence = loadPlace({place: IRPLocal(optionalLocal), mapping: optionalMapping, mutable: false}, optionalExpression.pos,
+			"optional-scalar-presence-load");
+		appendInstruction(present, IRIOUnary("haxe.direct-optional.is-not-null", optionalForPresence.id, IRIStatic), source, "optional-scalar-present");
+		final compareBlock = createGeneratedBlock("optional-scalar-compare", source);
+		final joinBlock = createGeneratedBlock("optional-scalar-join", source);
+		currentBlock.terminator = {kind: IRTBranch(present.id, edge(compareBlock.id), edge(joinBlock.id)), source: source};
+		currentBlock = compareBlock;
+		final optionalForCompare = loadPlace({place: IRPLocal(optionalLocal), mapping: optionalMapping, mutable: false}, optionalExpression.pos,
+			"optional-scalar-compare-optional-load");
+		final scalarForCompare = loadPlace({place: IRPLocal(scalarLocal), mapping: optional.payload, mutable: false}, scalarExpression.pos,
+			"optional-scalar-compare-scalar-load");
+		appendInstruction(null, IRIONullCheck(optionalForCompare.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))), source,
+			"optional-scalar-present-proof");
+		final payload:HxcIRResult = {id: nextValueId(), type: optional.payload.irType};
+		appendInstruction(payload, IRIOConvert(optionalForCompare.id, IRCNullableUnwrap, optional.payload.irType, IRIStatic, null), source,
+			"optional-scalar-unwrap");
+		final compared = lowerBinaryValues(expression, operation, {id: payload.id, type: payload.type, mapping: optional.payload}, scalarForCompare,
+			"optional-scalar-compare", boolMapping);
+		appendInstruction(null, IRIOStore(IRPLocal(resultLocal), compared.id), source, "optional-scalar-store");
+		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		currentBlock = joinBlock;
+		return loadPlace({place: IRPLocal(resultLocal), mapping: boolMapping, mutable: true}, expression.pos, "optional-scalar-result-load");
 	}
 
 	/**
@@ -6331,6 +6823,7 @@ private class FunctionBuilder {
 		final branchInitializesResult = conditionalDirectValue(resultMapping);
 		if (resultMapping.primitiveMapping() == null
 			&& !resultMapping.isCString()
+			&& resultMapping.irType != IRTManagedString
 			&& optionalResult == null
 			&& managedEnumResult == null
 			&& !branchInitializesResult)
@@ -6354,6 +6847,7 @@ private class FunctionBuilder {
 		} else {
 			final defaultResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 			appendInstruction(defaultResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TIf")), source, "conditional-default");
+			registerDefaultStringRequirement(resultMapping, source, expression.pos);
 			createFlowLocal(resultMapping, defaultResult.id, source, "conditional-result");
 		}
 		final trueBlock = createGeneratedBlock("conditional-true", source);
@@ -6367,7 +6861,7 @@ private class FunctionBuilder {
 		if (managedEnumResult != null) {
 			appendManagedConditionalAcquire(resultLocalId, trueValue, managedEnumResult, source, "conditional-true-acquire");
 		} else {
-			if (optionalResult != null && optionalResult.managedLifetime)
+			if (resultMapping.irType == IRTManagedString || optionalResult != null && optionalResult.managedLifetime)
 				trueValue = captureManagedValue(trueValue, resultMapping, whenTrue.pos, "conditional-true");
 			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), trueValue.id), source, "conditional-true-store");
 		}
@@ -6381,7 +6875,7 @@ private class FunctionBuilder {
 		if (managedEnumResult != null) {
 			appendManagedConditionalAcquire(resultLocalId, falseValue, managedEnumResult, source, "conditional-false-acquire");
 		} else {
-			if (optionalResult != null && optionalResult.managedLifetime)
+			if (resultMapping.irType == IRTManagedString || optionalResult != null && optionalResult.managedLifetime)
 				falseValue = captureManagedValue(falseValue, resultMapping, falseExpression.pos, "conditional-false");
 			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), falseValue.id), source, "conditional-false-store");
 		}
@@ -6403,6 +6897,10 @@ private class FunctionBuilder {
 		}
 		if (managedEnumResult != null)
 			freshManagedEnumValueIds.set(loaded.id, true);
+		if (resultMapping.irType == IRTManagedString)
+			freshManagedStringValueIds.set(loaded.id, true);
+		if (resultMapping.irType == IRTManagedString)
+			freshManagedStringValueRoles.set(loaded.id, "conditional-result");
 		if (optionalResult != null && optionalResult.managedLifetime)
 			freshManagedOptionalValueIds.set(loaded.id, true);
 		return loaded;
@@ -6609,6 +7107,8 @@ private class FunctionBuilder {
 		final bytesStaticMethod = coreBytesStaticMethod(call.callee);
 		if (bytesStaticMethod != null)
 			return lowerManagedBytesStaticCall(expression, bytesStaticMethod, call.arguments);
+		if (CBodyLowering.isStringFromCharCode(call.callee))
+			return lowerStringFromCharCode(expression, call.arguments);
 		if (isStdInt(call.callee)) {
 			if (call.arguments.length != 1) {
 				return unsupported(expression, 'TCall(Std.int:argument-count=${call.arguments.length})');
@@ -6677,6 +7177,7 @@ private class FunctionBuilder {
 			}
 			final value = lowerValue(argumentExpression, parameter.mapping);
 			var converted = coerce(value, parameter.mapping, argumentExpression.pos, 'TCall(argument:$index,target=$targetId)');
+			converted = stabilizeFreshManagedString(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedBytes(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedEnum(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedAggregate(converted, argumentExpression.pos, 'static-call-argument-$index');
@@ -6685,8 +7186,6 @@ private class FunctionBuilder {
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
-			if (borrowedManagedArrayElementValueIds.exists(converted.id))
-				return unsupported(argumentExpression, 'TCall(borrowed-managed-Array-element-argument:$index,target=$targetId)');
 			if (!parameter.borrowedReference)
 				rejectOwnedClassBorrow(converted, argumentExpression.pos, 'TCall(owned-class-borrow-escape:static-call-argument:$index,target=$targetId)');
 			stagedArguments.push(stageFlowValue(converted, argumentExpression, laterExpressionCreatesFlow(argumentExpressions, index),
@@ -6723,6 +7222,10 @@ private class FunctionBuilder {
 		}
 		if (target.returnMapping.bytesValue() != null)
 			freshManagedBytesValueIds.set(result.id, true);
+		if (target.returnMapping.irType == IRTManagedString)
+			freshManagedStringValueIds.set(result.id, true);
+		if (target.returnMapping.irType == IRTManagedString)
+			freshManagedStringValueRoles.set(result.id, "direct-call-result");
 		final returnedArray = target.returnMapping.arrayValue();
 		if (returnedArray != null && !returnedArray.managedByCollector)
 			freshManagedArrayValueIds.set(result.id, true);
@@ -6758,13 +7261,12 @@ private class FunctionBuilder {
 			if (referencesStackConstructedValue(argumentExpression))
 				return unsupported(argumentExpression, 'TNew(stack-reference-escape:indirect-call-argument:$index)');
 			var argument = coerce(lowerValue(argumentExpression, parameter), parameter, argumentExpression.pos, 'TCall(indirect-argument:$index)');
+			argument = stabilizeFreshManagedString(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedEnum(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedAggregate(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedOptional(argument, argumentExpression.pos, 'indirect-call-argument-$index');
-			if (freshManagedArrayValueIds.exists(argument.id)
-				|| freshManagedStringMapValueIds.exists(argument.id)
-				|| borrowedManagedArrayElementValueIds.exists(argument.id))
+			if (freshManagedArrayValueIds.exists(argument.id) || freshManagedStringMapValueIds.exists(argument.id))
 				return unsupported(argumentExpression, 'TCall(indirect-managed-argument-needs-explicit-ownership:$index)');
 			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TCall(indirect-owned-class-borrow-escape:$index)');
 			stagedArguments.push(stageFlowValue(argument, argumentExpression, laterExpressionCreatesFlow(argumentExpressions, index),
@@ -6793,6 +7295,10 @@ private class FunctionBuilder {
 			registerValueTemporary(result.id, "indirect-call-result");
 		if (signature.result.bytesValue() != null)
 			freshManagedBytesValueIds.set(result.id, true);
+		if (signature.result.irType == IRTManagedString)
+			freshManagedStringValueIds.set(result.id, true);
+		if (signature.result.irType == IRTManagedString)
+			freshManagedStringValueRoles.set(result.id, "indirect-call-result");
 		if (signature.result.stringMapValue() != null)
 			freshManagedStringMapValueIds.set(result.id, true);
 		final returnedEnum = signature.result.enumValue();
@@ -7113,6 +7619,10 @@ private class FunctionBuilder {
 				unsupportedAt(position, 'TConstructor(uninitialized-managed-Array-field:${owner.haxePath}.${field.name})');
 			else if (field.type.stringMapValue() != null && !initializedManagedStringMapFields.exists(field.name))
 				unsupportedAt(position, 'TConstructor(uninitialized-managed-StringMap-field:${owner.haxePath}.${field.name})');
+			else if (field.type.irType == IRTManagedString && !initializedManagedStringFields.exists(field.name))
+				unsupportedAt(position, 'TConstructor(uninitialized-managed-String-field:${owner.haxePath}.${field.name})');
+			else if (managedDirectFieldRelease(field.type) != null && !initializedManagedDirectFields.exists(field.name))
+				unsupportedAt(position, 'TConstructor(uninitialized-managed-field:${owner.haxePath}.${field.name})');
 	}
 
 	/** Base-first list of managed fields destroyed with one constructed object. */
@@ -7131,6 +7641,46 @@ private class FunctionBuilder {
 			if (field.type.stringMapValue() != null)
 				result.push(field);
 		return result;
+	}
+
+	/** Base-first list of reference-counted String fields owned by one class. */
+	static function managedStringFields(owner:CPreparedBodyClass):Array<CPreparedBodyClassField> {
+		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedStringFields(owner.base);
+		for (field in owner.fields)
+			if (field.type.irType == IRTManagedString)
+				result.push(field);
+		return result;
+	}
+
+	/** Base-first list of managed by-value fields owned by one class. */
+	static function managedDirectFields(owner:CPreparedBodyClass):Array<CPreparedBodyClassField> {
+		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedDirectFields(owner.base);
+		for (field in owner.fields)
+			if (managedDirectFieldRelease(field.type) != null)
+				result.push(field);
+		return result;
+	}
+
+	/** Resolve the one release owner for a managed by-value class field. */
+	static function managedDirectFieldRelease(type:CBodyValueType):Null<HxcIRImplementation> {
+		if (type.bytesValue() != null)
+			return IRIRuntime("bytes");
+		final enumValue = type.enumValue();
+		if (enumValue != null && enumValue.managedLifetime) {
+			final id = enumValue.destroyImplementationId();
+			return id == null ? null : IRIProgramLocal(id);
+		}
+		final aggregate = type.aggregateValue();
+		if (aggregate != null && aggregate.managedLifetime) {
+			final id = aggregate.destroyImplementationId();
+			return id == null ? null : IRIProgramLocal(id);
+		}
+		final optional = type.optionalValue();
+		if (optional != null && optional.managedLifetime) {
+			final id = optional.destroyImplementationId();
+			return id == null ? null : IRIProgramLocal(id);
+		}
+		return null;
 	}
 
 	/** Read Array.length through the shared container rather than a class field. */
@@ -7201,7 +7751,10 @@ private class FunctionBuilder {
 	/**
 		Prove that an owned Array element has one structural cleanup boundary.
 
-		An entry or `*-exit` block continues in the function's ordinary lifetime.
+		An entry, `*-join`, or `*-exit` block continues in the function's ordinary
+		lifetime. A join is emitted after its structured `if`/switch rather than
+		inside one arm, so an owner declared there is visible to function-exit
+		cleanup just like an owner declared in the entry block.
 		A `while`/`do` body has a stronger iteration boundary: loop lowering emits
 		every owner added in that body before the back edge, `break`, `continue`, or
 		early function exit. This is exactly where pinned Haxe places the element
@@ -7213,7 +7766,18 @@ private class FunctionBuilder {
 	**/
 	static function managedArrayElementOwnerHasCleanupBoundary(block:MutableBodyBlock):Bool {
 		final role = block.generatedRole;
-		return role == null || StringTools.endsWith(role, "-exit") || role == "while-body" || role == "do-body";
+		return role == null
+			|| StringTools.endsWith(role, "-join")
+			|| StringTools.endsWith(role, "-exit")
+			|| role == "while-body"
+			|| role == "do-body"
+			|| role == "if-true"
+			|| role == "if-false"
+			|| role == "conditional-true"
+			|| role == "conditional-false"
+			|| role == "short-circuit-rhs"
+			|| StringTools.startsWith(role, "string-switch-")
+			|| StringTools.startsWith(role, "enum-switch-");
 	}
 
 	/** Lower the first mutating Array method without entering virtual dispatch. */
@@ -7417,43 +7981,103 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Lower the first allocation-free ordinary Haxe String operation.
+		Lower the admitted allocation-free ordinary Haxe String operations.
 
-		`charAt` returns a view into the receiver's immutable UTF-8 bytes. It does
-		not allocate or copy: the selected scalar runtime finds one Unicode scalar
-		and returns its byte range, while negative or out-of-range indices produce
-		the empty String required by Haxe. The receiver is lowered before the index,
-		preserving Haxe's left-to-right evaluation order.
+		`charAt` and `substring` return views into the receiver's immutable UTF-8
+		bytes instead of copying them. A view is a borrowed value: it is valid only
+		while the receiver's storage stays alive. In programs with runtime-created
+		Strings, `ownBorrowedStringResult` therefore retains that shared storage
+		before the result can escape this call. Literal-only programs need no
+		retain because compiler-owned literal bytes live for the whole process.
+
+		The receiver and arguments are lowered from left to right, preserving Haxe
+		evaluation order. Bounds remain signed Haxe `Int` values until the checked
+		runtime applies the source-language rules.
 	**/
 	function lowerStringCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>):LoweredValue {
 		final method = access.field.get().name;
-		if (method != "charAt")
+		if (method != "charAt" && method != "charCodeAt" && method != "substring")
 			return unsupported(expression, 'TCall(String.$method:not-yet-admitted)');
-		if (arguments.length != 1)
-			return unsupported(expression, 'TCall(String.charAt:argument-count=${arguments.length},expected=1)');
-		final receiverMapping = bodyValueType(access.receiver.t, access.receiver.pos, "TCall(String.charAt:receiver-type)");
-		if (receiverMapping.staticStringIdentity() == null || typeKey(receiverMapping.irType) != typeKey(IRTString))
-			return unsupported(access.receiver, "TCall(String.charAt:receiver-not-immutable-String-view)");
-		final receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, "TCall(String.charAt:receiver)");
+		final expectedArgumentCount = method == "substring" ? "1-or-2" : "1";
+		if ((method == "substring" && (arguments.length < 1 || arguments.length > 2)) || (method != "substring" && arguments.length != 1))
+			return unsupported(expression, 'TCall(String.$method:argument-count=${arguments.length},expected=$expectedArgumentCount)');
+		final receiverMapping = bodyValueType(access.receiver.t, access.receiver.pos, 'TCall(String.$method:receiver-type)');
+		if (!isStringCarrier(receiverMapping.irType))
+			return unsupported(access.receiver, 'TCall(String.$method:receiver-not-immutable-String-view)');
+		final receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, 'TCall(String.$method:receiver)');
 		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-			HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), "string-char-at-receiver-null-check");
-		final indexMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(String.charAt:index-type)");
-		if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
-			return unsupported(arguments[0], "TCall(String.charAt:index-requires-Haxe-Int)");
-		final index = coerce(lowerValue(arguments[0], indexMapping), indexMapping, arguments[0].pos, "TCall(String.charAt:index)");
-		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.charAt:result-type)");
-		if (resultMapping.staticStringIdentity() == null || typeKey(resultMapping.irType) != typeKey(IRTString))
-			return unsupported(expression, "TCall(String.charAt:result-not-immutable-String-view)");
+			HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), 'string-$method-receiver-null-check');
+		final loweredArguments = [receiver.id];
+		for (index => argumentExpression in arguments) {
+			final argumentMapping = bodyValueType(argumentExpression.t, argumentExpression.pos, 'TCall(String.$method:argument-$index-type)');
+			if (typeKey(argumentMapping.irType) != typeKey(IRTInt(32, true)))
+				return unsupported(argumentExpression, 'TCall(String.$method:argument-$index-requires-Haxe-Int)');
+			loweredArguments.push(coerce(lowerValue(argumentExpression, argumentMapping), argumentMapping, argumentExpression.pos,
+				'TCall(String.$method:argument-$index)').id);
+		}
+		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(String.$method:result-type)');
+		if ((method == "charAt" || method == "substring") && typeKey(resultMapping.irType) != typeKey(receiverMapping.irType))
+			return unsupported(expression, 'TCall(String.$method:result-not-immutable-String-view)');
+		final charCodeOptional = resultMapping.optionalValue();
+		if (method == "charCodeAt" && (charCodeOptional == null || typeKey(charCodeOptional.payload.irType) != typeKey(IRTInt(32, true))))
+			return unsupported(expression, "TCall(String.charCodeAt:result-not-Null-Int)");
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
-		final result:HxcIRResult = {id: nextValueId(), type: IRTString};
+		if (method == "substring") {
+			final hasEnd:HxcIRResult = {id: nextValueId(), type: IRTBool};
+			appendInstruction(hasEnd, IRIOConstant(IRCBool(arguments.length == 2)), source, "string-substring-has-end");
+			loweredArguments.insert(2, hasEnd.id);
+			if (arguments.length == 1) {
+				final unusedEnd:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
+				appendInstruction(unusedEnd, IRIOConstant(IRCInt("0")), source, "string-substring-unused-end");
+				loweredArguments.push(unusedEnd.id);
+			}
+		}
+		final operation = switch method {
+			case "charAt": "char-at";
+			case "charCodeAt": "char-code-at";
+			case "substring": "substring";
+			case _: throw new CBodyEmissionError('validated String method `$method` lost its runtime operation');
+		};
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 		appendInstruction(result, IRIOCall({
-			dispatch: IRCDRuntime("string-scalar", "char-at"),
-			arguments: [receiver.id, index.id],
-			returnType: IRTString,
-			failure: null
-		}), source, "string-char-at");
-		registerValueTemporary(result.id, "string-char-at-result");
-		runtimeRequirements.push(new CBodyRuntimeRequirement("string-scalar", "char-at", "ordinary Haxe String.charAt with Unicode-scalar indexing", source,
+			dispatch: IRCDRuntime("string-scalar", operation),
+			arguments: loweredArguments,
+			returnType: resultMapping.irType,
+			failure: method == "substring" ? managedArrayFailure() : null
+		}), source, 'string-$operation');
+		registerValueTemporary(result.id, 'string-$operation-result');
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-scalar", operation, 'ordinary Haxe String.$method with Unicode-scalar indexing', source,
+			expression.pos));
+		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: resultMapping};
+		return method == "charAt"
+			|| method == "substring" ? ownBorrowedStringResult(lowered, expression.pos, 'string-$operation') : lowered;
+	}
+
+	/** True for both literal-only and runtime-owned immutable String carriers. */
+	static function isStringCarrier(type:HxcIRTypeRef):Bool
+		return type == IRTString || type == IRTManagedString;
+
+	/** Count valid UTF-8 scalars and return the checked Haxe `Int` length. */
+	function lowerStringLength(expression:TypedExpr, receiverExpression:TypedExpr):LoweredValue {
+		final receiverMapping = bodyValueType(receiverExpression.t, receiverExpression.pos, "TField(String.length:receiver-type)");
+		if (!isStringCarrier(receiverMapping.irType))
+			return unsupported(receiverExpression, "TField(String.length:receiver-not-String)");
+		final receiver = coerce(lowerValue(receiverExpression, receiverMapping), receiverMapping, receiverExpression.pos, "TField(String.length:receiver)");
+		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+			HaxeSourceSpan.fromPosition(receiverExpression.pos, input.sourcePath), "string-length-receiver-null-check");
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TField(String.length:result-type)");
+		if (typeKey(resultMapping.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(expression, "TField(String.length:result-requires-Haxe-Int)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string-scalar", "length"),
+			arguments: [receiver.id],
+			returnType: resultMapping.irType,
+			failure: managedArrayFailure()
+		}), source, "string-length");
+		registerValueTemporary(result.id, "string-length-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-scalar", "length", "ordinary Haxe String.length with Unicode-scalar indexing", source,
 			expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
@@ -7492,7 +8116,7 @@ private class FunctionBuilder {
 				if (arguments.length == 2 && !isNullExpression(arguments[1]))
 					return unsupported(arguments[1], "TCall(Bytes.ofString:explicit-encoding-not-yet-admitted)");
 				final sourceMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Bytes.ofString:source-type)");
-				if (sourceMapping.staticStringIdentity() == null || typeKey(sourceMapping.irType) != typeKey(IRTString))
+				if (sourceMapping.staticStringIdentity() == null)
 					return unsupported(arguments[0], "TCall(Bytes.ofString:source-not-immutable-String-view)");
 				final sourceValue = coerce(lowerValue(arguments[0], sourceMapping), sourceMapping, arguments[0].pos, "TCall(Bytes.ofString:source)");
 				appendInstruction(null, IRIONullCheck(sourceValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
@@ -7707,6 +8331,7 @@ private class FunctionBuilder {
 				return unsupported(argument, 'TNew(stack-reference-escape:instance-call-argument:$index,target=$targetId)');
 			var value = coerce(lowerValue(argument, explicitMappings[index]), explicitMappings[index], argument.pos,
 				'TCall(instance-argument:$index,target=$targetId)');
+			value = stabilizeFreshManagedString(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedBytes(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedEnum(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedAggregate(value, argument.pos, 'instance-call-argument-$index');
@@ -7715,8 +8340,6 @@ private class FunctionBuilder {
 				return unsupported(argument, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(value.id))
 				return unsupported(argument, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
-			if (borrowedManagedArrayElementValueIds.exists(value.id))
-				return unsupported(argument, 'TCall(borrowed-managed-Array-element-argument:$index,target=$targetId)');
 			if (!explicitBorrowedClasses[index])
 				rejectOwnedClassBorrow(value, argument.pos, 'TCall(owned-class-borrow-escape:instance-call-argument:$index,target=$targetId)');
 			explicitArguments.push(value.id);
@@ -7755,6 +8378,10 @@ private class FunctionBuilder {
 			borrowedClassValueIds.set(result.id, true);
 		if (returnMapping.bytesValue() != null)
 			freshManagedBytesValueIds.set(result.id, true);
+		if (returnMapping.irType == IRTManagedString)
+			freshManagedStringValueIds.set(result.id, true);
+		if (returnMapping.irType == IRTManagedString)
+			freshManagedStringValueRoles.set(result.id, "instance-call-result");
 		if (returnMapping.stringMapValue() != null)
 			freshManagedStringMapValueIds.set(result.id, true);
 		final returnedEnum = returnMapping.enumValue();
@@ -8044,6 +8671,87 @@ private class FunctionBuilder {
 	}
 
 	/**
+		Give a fresh runtime-created String a caller-owned lifetime around a call.
+
+		Haxe passes String values as immutable borrows: the callee may read the
+		bytes for the duration of the call, and it retains a separate owner only
+		if it stores the value. A nested expression such as
+		`consume(String.fromCharCode(code))` has no source local to own the fresh
+		buffer, so this compiler local keeps it alive through the call and releases
+		it afterward. Array element reads already have a scoped owner and therefore
+		pass through without another retain.
+	**/
+	function stabilizeFreshManagedString(value:LoweredValue, position:Position, role:String):LoweredValue {
+		if (value.mapping.irType != IRTManagedString || !freshManagedStringValueIds.remove(value.id))
+			return value;
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
+		final cleanupId = 'string-temporary.$ownerLocalId.release';
+		constructionCleanupActions.push({
+			id: cleanupId,
+			idempotence: IRCExactlyOnce,
+			kind: IRCARelease(IRPLocal(ownerLocalId), IRIRuntime("string")),
+			source: source
+		});
+		normalCleanupActionIds.push(cleanupId);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, position));
+		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
+	}
+
+	/**
+		Turn a borrowed String view into one transferable owner when it can escape.
+
+		`charAt` and `substring` reuse bytes from their receiver. If those bytes
+		belong to a runtime-created String, returning or storing the view without a
+		retain would leave it pointing at freed memory after the receiver is
+		released. This helper copies the small String carrier into a compiler local,
+		retains its shared byte owner once, and marks the loaded value as fresh so
+		the normal local/field/return rules transfer that one owner exactly once.
+		Literal-backed views have no runtime owner, so they stay allocation-free.
+	**/
+	function ownBorrowedStringResult(value:LoweredValue, position:Position, role:String):LoweredValue {
+		if (value.mapping.irType != IRTManagedString)
+			return value;
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
+		appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("string")), source, role + "-retain");
+		final owned = loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-owned-load");
+		freshManagedStringValueIds.set(owned.id, true);
+		freshManagedStringValueRoles.set(owned.id, role + "-borrowed-view");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "borrowed ordinary Haxe String view escaping its receiver expression",
+			source, position));
+		return owned;
+	}
+
+	/**
+		Retain a borrowed String when later evaluation may replace its current owner.
+
+		This differs from `stabilizeFreshManagedString`: a borrowed value does not
+		arrive with an owner the current expression may consume, so the temporary
+		first acquires one retain. Compound assignment uses this to preserve the
+		left value across arbitrary calls on the right.
+	**/
+	function retainManagedStringTemporary(value:LoweredValue, position:Position, role:String):LoweredValue {
+		if (value.mapping.irType != IRTManagedString)
+			return value;
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
+		appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("string")), source, role + "-retain");
+		final cleanupId = 'string-retained-temporary.$ownerLocalId.release';
+		constructionCleanupActions.push({
+			id: cleanupId,
+			idempotence: IRCExactlyOnce,
+			kind: IRCARelease(IRPLocal(ownerLocalId), IRIRuntime("string")),
+			source: source
+		});
+		normalCleanupActionIds.push(cleanupId);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "borrowed ordinary Haxe String preserved across evaluation", source,
+			position));
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, position));
+		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
+	}
+
+	/**
 		Give a fresh Bytes value a caller-owned lifetime while another call borrows it.
 
 		Haxe permits direct nesting such as `inspect(makeBytes())`. The inner call
@@ -8276,6 +8984,7 @@ private class FunctionBuilder {
 			case IRTInt(_, _): IRCInt("0");
 			case IRTFloat(32) | IRTFloat(64): IRCFloat("0.0");
 			case IRTString: IRCString("", 0);
+			case IRTManagedString: IRCString("", 0);
 			case IRTCString: IRCCStringLiteral("", 0);
 			case IRTPointer(IRTInstance(_), true): IRCNull;
 			case IRTNullable(_, IRNTagged): IRCNull;
@@ -8289,11 +8998,31 @@ private class FunctionBuilder {
 			case IRTInt(_, _): IRCInt("0");
 			case IRTFloat(32) | IRTFloat(64): IRCFloat("0.0");
 			case IRTString: IRCString("", 0);
+			case IRTManagedString: IRCString("", 0);
 			case IRTCString: IRCCStringLiteral("", 0);
 			case IRTPointer(IRTInstance(_), true): IRCNull;
 			case IRTNullable(_, IRNTagged): IRCNull;
 			case _: unsupportedAt(position, '$owner(result-type-without-direct-default)');
 		};
+	}
+
+	/**
+		Record the runtime carrier needed by a compiler-created empty String.
+
+		Conditionals and switches sometimes need a safe value before their branches
+		assign the real result. HxcIR represents that defensive value with the same
+		empty UTF-8 String constant used for source literals. The runtime analyzer
+		therefore sees a `string-literal/static-value` intent even though the user did
+		not write a literal at that exact span. Registering the reason here keeps the
+		typed source plan and reachable HxcIR in one-to-one agreement.
+	**/
+	function registerDefaultStringRequirement(mapping:CBodyValueType, source:HxcSourceSpan, position:Position):Void {
+		switch mapping.irType {
+			case IRTString | IRTManagedString:
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", mapping.cSpelling, source, position,
+					"direct-string-value"));
+			case _:
+		}
 	}
 
 	function coerce(value:LoweredValue, target:CBodyValueType, position:Position, node:String):LoweredValue {
@@ -8775,6 +9504,7 @@ private class FunctionBuilder {
 			case IRTAbiInteger(kind): 'abi:$kind';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8";
+			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';

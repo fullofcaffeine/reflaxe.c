@@ -455,6 +455,7 @@ hxc_status hxc_string_map_ref_set_copy(
   slot->key.data = (const uint8_t *)key_storage.memory;
   slot->key.byte_length = key.byte_length;
   slot->key.has_trailing_nul = false;
+  slot->key.owner = NULL;
   slot->state = HXC_STRING_MAP_OCCUPIED;
   map->length++;
   return HXC_STATUS_OK;

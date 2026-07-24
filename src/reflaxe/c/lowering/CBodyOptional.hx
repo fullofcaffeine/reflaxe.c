@@ -185,8 +185,9 @@ class CBodyOptionalRegistry {
 
 	static function isDirectUnmanaged(value:CBodyValueType):Bool {
 		return switch value.kind {
-			case CBVKPrimitive(mapping): mapping.irType != IRTVoid && mapping.irType != IRTString;
+			case CBVKPrimitive(mapping): mapping.irType != IRTVoid && mapping.irType != IRTString && mapping.irType != IRTManagedString;
 			case CBVKStaticString(_): true;
+			case CBVKManagedString(_): false;
 			case CBVKEnum(enumValue): !enumValue.managedLifetime;
 			case CBVKAggregate(aggregate):
 				var direct = aggregate.fields.length > 0;

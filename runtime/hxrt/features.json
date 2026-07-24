@@ -609,7 +609,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "a31a991d83ff4dd172c256d2fd83fa5b607d938577d1ef2b66fd36eecd0418a7",
+          "sourceSha256": "72e09e81ff4186d2850957001152e4323af77aa495664d3a5e4394aee3372139",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -721,18 +721,33 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "Requested only by the string differential and selective-package native fixtures; generated Haxe cannot select it yet.",
-            "id": "native-seed-fixture",
-            "kind": "native-seed-fixture"
+            "description": "A reachable managed String owner must be released when its Haxe lifetime ends.",
+            "id": "cleanup-release",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe String concatenation whose result bytes are not compile-time constants.",
+            "id": "concat",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe String.fromCharCode whose scalar is known only at run time.",
+            "id": "from-scalar",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable managed String copy must keep its optional backing owner alive.",
+            "id": "retain",
+            "kind": "hxc-ir-operation"
           }
         ],
-        "runtimeRationale": "Arbitrary runtime bytes, scalar indexing, ownership transfer, builders, and CString lifetimes need shared validated machinery when future lowering admits them.",
+        "runtimeRationale": "Runtime-created UTF-8 bytes can cross ordinary calls and container boundaries, so their allocator identity and final release need one shared owner contract.",
         "evidence": [
           "test/differential/string-runtime/run.py",
           "test/runtime/runtime-feature-graph/run.py"
         ],
         "directAlternative": "Known literals, constant concatenation, and statically decidable string facts should remain direct compiler-owned C data.",
-        "contract": "Adds owned strings, builders, lossy decoding, concatenation, and explicit borrowed or owned CString conversion above the shared scalar slice.",
+        "contract": "Adds reference-counted ordinary Haxe String values, explicit owned strings, builders, lossy decoding, concatenation, and CString conversion above the shared scalar slice.",
         "programLocalAlternative": "Closed call sites should receive specialized local operations when their representation, lifetime, and operation set are statically bounded."
       },
       "dependencies": [
@@ -740,7 +755,7 @@
         "string-scalar"
       ],
       "id": "string",
-      "availability": "native-seed-only",
+      "availability": "compiler-selectable",
       "symbols": [
         "hxc_byte_view_from_cstring",
         "hxc_owned_cstring_dispose",
@@ -753,20 +768,24 @@
         "hxc_string_buffer_init",
         "hxc_string_buffer_view",
         "hxc_string_concat",
+        "hxc_string_concat_ref",
         "hxc_string_copy",
+        "hxc_string_from_scalar",
         "hxc_string_from_utf8_checked",
         "hxc_string_from_utf8_lossy",
+        "hxc_string_release",
+        "hxc_string_retain",
         "hxc_string_to_cstring_owned"
       ],
       "artifacts": [
         {
-          "sourceSha256": "ce5ac5689f7661deaaf954200d6c3f45e968e0cb91889e8bcad17cf5a5ca178c",
+          "sourceSha256": "fcd9a99bb22df6a2173d4570961437baf177f0cbccef26505a0e70266235e121",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "c1fd06b27c78e644f3bf77bb8f9733fe7535bf6a0b05e40ebc1670e44422401d",
+          "sourceSha256": "432062278957800ffed153e6b237b4bd22c27906a17e7299c330c4bc9621e0e7",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -774,7 +793,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Owned UTF-8 construction, mutable building, and explicit CString conversion with native evidence.",
+      "summary": "Owned UTF-8 construction, reference-counted Haxe values, mutable building, and explicit CString conversion.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -796,7 +815,7 @@
             "kind": "hxc-ir-operation"
           }
         ],
-        "runtimeRationale": "The header only shares the three-field call-boundary layout needed by selected consumers such as io.",
+        "runtimeRationale": "The header shares the value fields plus an opaque optional owner pointer. Literal-only programs keep that pointer null and still allocate nothing.",
         "evidence": [
           "test/runtime/runtime-feature-graph/run.py",
           "test/string_output/run.py"
@@ -813,7 +832,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "2d3eb0b3382570a0350ea65c426fc27bd9ee43ccf23c990c3fcbaa0df7a7c802",
+          "sourceSha256": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_literal.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_literal.h"
@@ -878,7 +897,7 @@
           "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
         },
         {
-          "sourceSha256": "5ab15280f51ec98b2aa8a1d39deaa256bbee889e5adf881aa4f3fa7b51e6f0b0",
+          "sourceSha256": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_map.c",
           "sourcePath": "runtime/hxrt/src/string_map.c"
@@ -903,9 +922,24 @@
             "kind": "hxc-ir-operation"
           },
           {
+            "description": "A reachable ordinary Haxe String.charCodeAt whose receiver or index is known only at run time.",
+            "id": "char-code-at",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "Selected transitively by a broader String feature that reuses the same validated scalar rules.",
             "id": "dependency-only",
             "kind": "transitive-dependency"
+          },
+          {
+            "description": "A reachable ordinary Haxe String.length whose scalar count is not known at compile time.",
+            "id": "length",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe String.substring whose bounds are known only at run time.",
+            "id": "substring",
+            "kind": "hxc-ir-operation"
           }
         ],
         "runtimeRationale": "Runtime-dependent scalar positions need one shared implementation of ADR 0004 indexing, invalid-input checks, and borrowed slice construction without selecting owned strings or allocation.",
@@ -926,12 +960,15 @@
       "availability": "compiler-selectable",
       "symbols": [
         "hxc_string_char_at",
+        "hxc_string_char_code_at",
         "hxc_string_compare",
         "hxc_string_hash",
+        "hxc_string_haxe_length",
         "hxc_string_is_valid",
         "hxc_string_scalar_at",
         "hxc_string_scalar_length",
         "hxc_string_slice",
+        "hxc_string_substring",
         "hxc_utf8_validate"
       ],
       "artifacts": [
@@ -942,13 +979,13 @@
           "sourcePath": "runtime/hxrt/include/hxrt/string_decode.h"
         },
         {
-          "sourceSha256": "528b1687cd8e358f7545f82b94ec08e037d594a49cdd0db42d9daae6c06eff87",
+          "sourceSha256": "87359eaff01a93c45cd2bee6664020aa1a0835920371cf01d8350f526ce1f2bf",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_scalar.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_scalar.h"
         },
         {
-          "sourceSha256": "ead61426f32caf4620bb6cf6bb447e72cb3b8b772b98671d1b57b13fca0cdf24",
+          "sourceSha256": "944de09c0a63531f725b61967f8bb91d19c5ff6fd428c45ed6cde169995f7f8d",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string_scalar.c",
           "sourcePath": "runtime/hxrt/src/string_scalar.c"
@@ -976,6 +1013,7 @@
     "object",
     "runtime-base",
     "status",
+    "string",
     "string-literal",
     "string-map",
     "string-scalar"
@@ -987,7 +1025,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 9
+      "minor": 10
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1024,7 +1062,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "8e732d619d0a746faf509b1b72cdb07d6e08882976fd2b80a5fe63f8616e2293",
+      "sourceSetSha256": "0bff8824050ac1fcaf4e962b9d9e9b30ad0909e8db57ec70b9c43b781462cbae",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",
