@@ -1556,10 +1556,11 @@ def validate() -> list[str]:
         errors.append("pre-commit must check registered snapshot ownership and drift")
     if (
         "npm run test:toolchain:parallel" not in pre_commit
-        or "cross-cutting test infrastructure" not in pre_commit
+        or "high-fanout compiler or test-infrastructure change" not in pre_commit
+        or "scripts/ci/select_pre_commit_route.py" not in pre_commit
     ):
         errors.append(
-            "pre-commit must de-duplicate cross-cutting focused gates through "
+            "pre-commit must de-duplicate high-fanout focused gates through "
             "the bounded parallel toolchain runner"
         )
     if "npm run test:beads-plan" not in pre_commit:

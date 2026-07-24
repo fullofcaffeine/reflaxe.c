@@ -13,6 +13,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNNER = ROOT / "scripts/ci/run_toolchain_shard.py"
+ROUTE_SELECTOR = ROOT / "scripts/ci/select_pre_commit_route.py"
 
 
 def load_runner():
@@ -28,9 +29,64 @@ def load_runner():
     return module
 
 
+def load_route_selector():
+    spec = importlib.util.spec_from_file_location(
+        "pre_commit_route_subject", ROUTE_SELECTOR
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {ROUTE_SELECTOR}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        del sys.modules[spec.name]
+    return module
+
+
 class ToolchainShardTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runner = load_runner()
+        self.route_selector = load_route_selector()
+
+    def test_high_fanout_compiler_and_infrastructure_paths_use_parallel_route(
+        self,
+    ) -> None:
+        for path in (
+            "src/reflaxe/c/ir/HxcIR.hx",
+            "src/reflaxe/c/lowering/CBodyLowering.hx",
+            "src/reflaxe/c/CCompiler.hx",
+            "scripts/ci/run_toolchain_shard.py",
+            "scripts/hooks/pre-commit",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(
+                    self.route_selector.select_route((path,)),
+                    self.route_selector.PARALLEL_EXHAUSTIVE,
+                )
+
+    def test_narrow_paths_keep_focused_route(self) -> None:
+        for path in (
+            "test/differential/string-runtime/generated/Main.hx",
+            "docs/string-runtime.md",
+            "examples/caxecraft/src/caxecraft/domain/Vitals.hx",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(
+                    self.route_selector.select_route((path,)),
+                    self.route_selector.FOCUSED,
+                )
+
+    def test_one_high_fanout_path_dominates_a_mixed_change(self) -> None:
+        self.assertEqual(
+            self.route_selector.select_route(
+                (
+                    "docs/string-runtime.md",
+                    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+                )
+            ),
+            self.route_selector.PARALLEL_EXHAUSTIVE,
+        )
 
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
@@ -659,6 +715,7 @@ class ToolchainShardTests(unittest.TestCase):
         )
         resume = "npm run test:toolchain:parallel -- --resume"
         self.assertIn(resume, hook)
+        self.assertIn("scripts/ci/select_pre_commit_route.py", hook)
         for uncached_check in (
             "Exporting Beads issues",
             "Formatting staged Haxe files",

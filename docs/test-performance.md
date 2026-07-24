@@ -236,11 +236,19 @@ to retain independent evidence even when one fails.
 
 The pre-commit hook uses this exhaustive path once when staged changes touch
 cross-cutting test infrastructure such as `package.json`, the snapshot
-registry, shard runner, CI policy, or their governance tests. That avoids the
-old behavior where the same global file matched nearly every focused condition
-and serialized all owners one by one. It still runs governance and native
-smoke around the exact 45-command partition. Ordinary compiler edits continue
-to select only their narrower focused gates.
+registry, shard runner, CI policy, or their governance tests. It also uses this
+route for central compiler semantic layers such as HxcIR, lowering, CAST,
+emission, naming, and runtime planning. Those paths already match most focused
+owners, so running each matching `if` serially is an exhaustive test run in a
+slower disguise. [`select_pre_commit_route.py`](../scripts/ci/select_pre_commit_route.py)
+keeps this classification explicit and unit-tested. Narrow fixtures,
+target-library surfaces, examples, and focused documentation continue to select
+only their owning gates.
+
+The parallel route still runs governance and native smoke around the complete
+canonical partition. It does not omit evidence or run commands concurrently
+inside a shard. On a busy host it may choose one worker; safe resume then avoids
+discarding completed shards when the same unchanged staged tree is retried.
 
 ### Safe local resume
 
