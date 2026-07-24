@@ -11,8 +11,9 @@ Literal-backed Strings remain allocation-free. Runtime-created values from
 `StringBuf.addChar` path use a small reference-counted owner. Those values may
 cross calls and returns, aliases, branches, closed records and enums, fixed
 Array literals, `Null<String>`, and class fields without dangling bytes.
-`length`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, and `substring` use
-the shared Unicode-scalar rules. Other String methods still fail closed.
+`length`, `charAt`, `charCodeAt`, `indexOf`, `lastIndexOf`, `substring`, and
+`split` use the shared Unicode-scalar rules. Other String methods still fail
+closed.
 E4.T11 established the internal same-major runtime contract, and E7 owns any
 future public ABI.
 
@@ -145,6 +146,7 @@ The core operations have these costs and ownership effects:
 | Scalar length/access | None; scans UTF-8 from known boundaries |
 | Borrowed scalar slice | None; lifetime remains tied to the source |
 | Forward/reverse substring search | None; compares UTF-8 bytes only at scalar boundaries |
+| Split | One managed result Array; its String elements borrow and retain the source owner |
 | Compare/equality basis | None; lexicographic canonical UTF-8 bytes |
 | Stable hash | None; 32-bit FNV-1a over all logical bytes |
 | Checked or lossy owned decode | Zero callbacks for empty, otherwise one exact allocation |
@@ -206,6 +208,29 @@ operation or lifetime action: `from-scalar`, `concat`, `retain`, or
 `cleanup-release`. It has no object, tracing collector, dynamic, reflection,
 exception, thread, or Unicode-table dependency.
 
+<!-- hxrt-feature:string-split -->
+### Split composition
+
+`String.split` has a separate compiler-selectable `string-split` feature. It
+depends on both `array` and `string`, because its result is a growable managed
+`Array<String>`. Keeping this feature separate means an application that only
+concatenates Strings does not pay for Array code, and an application that only
+uses Arrays does not pay for String construction.
+
+The runtime finds delimiter matches only at valid Unicode-scalar boundaries.
+An empty delimiter returns one element for every scalar, so `"A😀".split("")`
+has two elements rather than five UTF-8 byte fragments. A nonempty delimiter
+preserves empty leading, trailing, and adjacent pieces. The empty source has no
+pieces for an empty delimiter and one empty piece for a nonempty delimiter,
+matching the pinned Haxe Eval target.
+
+Each result element is a borrowed view into the source bytes. “Borrowed” avoids
+copying each substring, but it does not leave a dangling pointer: the compiler
+supplies the exact `Array<String>` copy, assignment, and destruction callbacks,
+and those callbacks retain and release the source owner. If allocation or an
+element copy fails, the runtime destroys the partial Array and leaves the
+caller's output unchanged.
+
 The compiler admits literal-backed String values as the direct
 `string-literal/static-value` capability. A program using only those values
 selects `runtime-base + string-literal`; this packages the private carrier
@@ -232,10 +257,11 @@ has two complementary halves. Its independent strict-C fixture covers checked
 and maximal-subpart lossy decoding, slicing, scalar-indexed search, comparison,
 stable hashing, builder failure atomicity, allocator identity, borrowed/owned
 CString lifetime, reference counts, and exact allocations. Its ordinary-Haxe
-fixture compares Eval with generated C for `String.fromCharCode`, upstream
+fixture compares Eval with generated C for `String.fromCharCode`, `split`, upstream
 `StringBuf.addChar`, concatenation, aliases, branches, records, enums, arrays,
 reassignment, nullable values, calls, returns, borrowed scalar slices, and
-forward and reverse search over literal and owned Strings, repeated and
+forward and reverse search over literal and owned Strings, split ownership and
+empty/adjacent/Unicode delimiters, repeated and
 overlapping matches, non-Basic Multilingual Plane and combining text, embedded
 NUL, empty needles, omitted/supplied starts, and the pinned negative-start
 behavior. Generated projects are checked in split, package, and unity layouts

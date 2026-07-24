@@ -465,6 +465,17 @@ builders, lossy decoding, and explicit CString conversion above
 select it. See [string runtime](string-runtime.md) and
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
 
+<!-- hxrt-feature:string-split -->
+### `string-split`
+
+Compiler-selectable composition for ordinary Haxe `String.split`. It depends
+on `array` and `string`, scans only valid Unicode-scalar boundaries, and stores
+borrowed substring views in a managed `Array<String>`. Compiler-generated
+element callbacks retain the source owner for every stored view and release it
+when the Array element is destroyed. Partial allocation failure destroys the
+partly built Array before returning an error. The separate feature keeps Array
+support out of String programs that never split.
+
 <!-- hxrt-feature:io -->
 ### `io`
 
@@ -518,6 +529,7 @@ them.
 | `include/hxrt/object.h`, `src/object.c` | Compiler-selectable immutable managed-payload descriptors and exact trace/finalizer dispatch; no allocation or collection. |
 | `include/hxrt/string_literal.h` | Compiler-selectable dependency-only direct literal layout. |
 | `include/hxrt/string_scalar.h`, `include/hxrt/string_decode.h`, `src/string_scalar.c` | Compiler-selectable allocation-free UTF-8 scalar inspection, including ordinary Haxe `String.charAt`; the decoder header is an internal implementation shared with the broader String seed. |
+| `include/hxrt/string_split.h`, `src/string_split.c` | Compiler-selectable Unicode-scalar `String.split` composition over managed Array storage and retained String slices. |
 | `include/hxrt/string.h`, `src/string.c` | Native-seed owned UTF-8 construction, builders, lossy decoding, and CString machinery. |
 | `include/hxrt/io.h`, `src/io.c` | Hosted compiler-selectable literal output and explicit status. |
 

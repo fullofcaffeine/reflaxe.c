@@ -704,15 +704,16 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     # Caxecraft now passes the managed Array element copied by
     # EditorScenarioSnapshot.actionsAreRepresentable, the fresh Bytes call
     # argument, the runtime String-to-Bytes copy, legacy-nullable String flow,
-    # optional records, and the StringBuf UTF-8 decoder that followed them. The
-    # next reachable boundary is a temporary class constructed and immediately
-    # called in ScenarioParser. Requiring the exact later diagnostic proves this
+    # optional records, the StringBuf UTF-8 decoder, class construction, String
+    # search, and String splitting that followed them. The next reachable
+    # boundary is Bool conversion through Std.string during ordinary
+    # interpolation in ScenarioWriter. Requiring the exact later diagnostic proves this
     # task did not merely move or hide its former Array failure. Accepting an
     # arbitrary failure would weaken this product check into "Caxecraft still
     # does not compile."
     if (
-        "src/caxecraft/scenario/ScenarioParser.hx:18:" not in result.stderr
-        or "TNew(stack-construction-requires-direct-local)"
+        "src/caxecraft/scenario/ScenarioWriter.hx:331:" not in result.stderr
+        or "TCall(unavailable-static-target:function.Std.string)"
         not in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr

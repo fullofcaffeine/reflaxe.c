@@ -1011,6 +1011,57 @@
         "freestanding",
         "hosted"
       ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/string-runtime.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable ordinary Haxe String.split has runtime-dependent input or delimiter bytes.",
+            "id": "split",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Runtime-sized results need checked Array growth, partial-failure rollback, Unicode-scalar boundaries, and retained String owners. Keeping this composition separate prevents unrelated String programs from selecting Array support.",
+        "evidence": [
+          "test/differential/string-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known source and delimiter may fold to a direct literal Array when bounded compile-time work is cheaper.",
+        "contract": "Composes immutable String slices with the compiler-generated Array<String> lifecycle callbacks.",
+        "programLocalAlternative": "A closed program may specialize a local splitter when its delimiter and storage limits prove a smaller implementation."
+      },
+      "dependencies": [
+        "array",
+        "string"
+      ],
+      "id": "string-split",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_string_split"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "a17c9cd6c31cfdb8da2cf4955b980090c144e68ee1ae4f1d0f0b543f4b6eb3eb",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_split.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_split.h"
+        },
+        {
+          "sourceSha256": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/string_split.c",
+          "sourcePath": "runtime/hxrt/src/string_split.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Unicode-scalar String splitting into an element-specialized managed Array<String>.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
     }
   ],
   "status": "selective-compiler-packaging",
@@ -1028,7 +1079,8 @@
     "string",
     "string-literal",
     "string-map",
-    "string-scalar"
+    "string-scalar",
+    "string-split"
   ],
   "algorithm": "hxc-runtime-feature-graph-v3",
   "runtimeAbi": {
@@ -1074,7 +1126,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "413bbefaea68346cb719e70c08a70801f8193d9e901568e517eee98f6b97742b",
+      "sourceSetSha256": "13cb592c1311c7bca935b6f1ea55f0627d9be61c106112d6fc2a8525eecb75f7",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

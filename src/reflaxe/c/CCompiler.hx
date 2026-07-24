@@ -377,12 +377,13 @@ class CCompiler {
 		}
 		if (hasRuntimeFeature(runtimeRequirements, "string-literal")
 			|| hasRuntimeFeature(runtimeRequirements, "string-scalar")
+			|| hasRuntimeFeature(runtimeRequirements, "string-split")
 			|| hasRuntimeFeature(runtimeRequirements, "io")
 			|| hasRuntimeFeature(runtimeRequirements, "string-map")
 			|| hasRuntimeFeature(runtimeRequirements, "bytes")) {
 			directDecisions.push("direct-utf8-string-literals");
 		}
-		if (hasRuntimeFeature(runtimeRequirements, "array"))
+		if (hasRuntimeFeature(runtimeRequirements, "array") || hasRuntimeFeature(runtimeRequirements, "string-split"))
 			directDecisions.push("managed-haxe-arrays");
 		if (hasRuntimeFeature(runtimeRequirements, "string-map"))
 			directDecisions.push("managed-haxe-string-maps");
@@ -390,7 +391,7 @@ class CCompiler {
 			directDecisions.push("managed-haxe-int-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
 			directDecisions.push("managed-haxe-bytes");
-		if (hasRuntimeFeature(runtimeRequirements, "string-scalar"))
+		if (hasRuntimeFeature(runtimeRequirements, "string-scalar") || hasRuntimeFeature(runtimeRequirements, "string-split"))
 			directDecisions.push("allocation-free-unicode-scalar-strings");
 		if (hasRuntimeFeature(runtimeRequirements, "gc"))
 			directDecisions.push("exact-traced-haxe-object-graph");
@@ -487,7 +488,7 @@ class CCompiler {
 			final module = switch requirement.featureId {
 				case "array": "Array";
 				case "bytes": "haxe.io.Bytes";
-				case "string-literal" | "string-scalar": "String";
+				case "string-literal" | "string-scalar" | "string-split": "String";
 				case "io" if (requirement.operationId == "trace-literal"): "haxe.Log";
 				case "io": "Sys";
 				case _: requirement.featureId;

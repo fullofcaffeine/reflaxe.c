@@ -183,6 +183,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-literal",
         "string-map",
         "string-scalar",
+        "string-split",
     ]:
         raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
     runtime_abi = record(catalog.get("runtimeAbi"), "runtime ABI contract")
@@ -229,6 +230,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array",
         "int-map",
         "string-map",
+        "string-split",
         "bytes",
         "gc",
         "object",
@@ -247,6 +249,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array": ["alloc"],
         "int-map": ["alloc"],
         "string-map": ["alloc", "string-literal"],
+        "string-split": ["array", "string"],
         "bytes": ["alloc", "string-literal"],
         "gc": ["alloc", "object"],
         "object": ["runtime-base"],
@@ -264,6 +267,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array": "compiler-selectable",
         "int-map": "compiler-selectable",
         "string-map": "compiler-selectable",
+        "string-split": "compiler-selectable",
         "bytes": "compiler-selectable",
         "gc": "compiler-selectable",
         "object": "compiler-selectable",
@@ -502,6 +506,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     array = record(plans.get("array"), "array plan")
     int_map = record(plans.get("intMap"), "IntMap plan")
     string_map = record(plans.get("stringMap"), "StringMap plan")
+    string_split = record(plans.get("stringSplit"), "String split plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
@@ -523,6 +528,17 @@ def validate_plans(plans: dict[str, object]) -> None:
         "string-map",
     ]:
         raise RuntimeFeatureFailure("StringMap closure is incomplete or nondeterministic")
+    if string_split.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "string-literal",
+        "string-scalar",
+        "string",
+        "string-split",
+    ]:
+        raise RuntimeFeatureFailure("String.split closure is incomplete or nondeterministic")
     if bytes_plan.get("features") != ["runtime-base", "status", "alloc", "string-literal", "bytes"]:
         raise RuntimeFeatureFailure("Bytes closure is incomplete or nondeterministic")
     if object_plan.get("features") != ["runtime-base", "object"]:
@@ -549,6 +565,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(array, "array")
     validate_selected_reasons(int_map, "IntMap")
     validate_selected_reasons(string_map, "StringMap")
+    validate_selected_reasons(string_split, "String.split")
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
@@ -673,7 +690,7 @@ def validate_plans(plans: dict[str, object]) -> None:
 
 
 def validate_package(package: dict[str, object], plans: dict[str, object]) -> None:
-    for name in ("alloc", "array", "intMap", "stringMap", "bytes", "object", "gc", "stringScalar", "string", "io"):
+    for name in ("alloc", "array", "intMap", "stringMap", "stringSplit", "bytes", "object", "gc", "stringScalar", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
@@ -872,7 +889,7 @@ def package_from_snapshots(
     catalog: dict[str, object], plans: dict[str, object]
 ) -> dict[str, object]:
     package: dict[str, object] = {}
-    for name in ("alloc", "array", "intMap", "stringMap", "bytes", "object", "gc", "stringScalar", "string", "io"):
+    for name in ("alloc", "array", "intMap", "stringMap", "stringSplit", "bytes", "object", "gc", "stringScalar", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []

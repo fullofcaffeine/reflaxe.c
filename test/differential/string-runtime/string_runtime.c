@@ -1,4 +1,4 @@
-#include "hxrt/string.h"
+#include "hxrt/string_split.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -17,6 +17,8 @@ typedef struct hxc_test_arena {
   size_t allocation_count;
   size_t release_count;
   bool force_failure;
+  bool bounded_failure;
+  size_t allocations_before_failure;
 } hxc_test_arena;
 
 typedef struct hxc_lossy_case {
@@ -43,6 +45,12 @@ static hxc_status hxc_test_allocate(
   }
   if (arena->force_failure) {
     return HXC_STATUS_OUT_OF_MEMORY;
+  }
+  if (arena->bounded_failure) {
+    if (arena->allocations_before_failure == 0u) {
+      return HXC_STATUS_OUT_OF_MEMORY;
+    }
+    arena->allocations_before_failure--;
   }
   address = (uintptr_t)(arena->storage + arena->cursor);
   remainder = (size_t)(address % (uintptr_t)alignment);
@@ -98,6 +106,168 @@ static bool hxc_bytes_equal(
     }
   }
   return true;
+}
+
+static hxc_status hxc_test_string_copy(
+  void *context,
+  void *destination,
+  const void *source
+) {
+  hxc_string *target = (hxc_string *)destination;
+  hxc_status status;
+  (void)context;
+  *target = *(const hxc_string *)source;
+  status = hxc_string_retain(*target);
+  if (status != HXC_STATUS_OK) {
+    *target = (hxc_string)HXC_STRING_INITIALIZER;
+    return status;
+  }
+  return HXC_STATUS_OK;
+}
+
+static hxc_status hxc_test_string_assign(
+  void *context,
+  void *destination,
+  const void *source
+) {
+  hxc_string replacement = *(const hxc_string *)source;
+  hxc_string *target = (hxc_string *)destination;
+  hxc_status status;
+  (void)context;
+  if (destination == source) {
+    return HXC_STATUS_OK;
+  }
+  status = hxc_string_retain(replacement);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  status = hxc_string_release(target);
+  if (status != HXC_STATUS_OK) {
+    (void)hxc_string_release(&replacement);
+    return status;
+  }
+  *target = replacement;
+  return HXC_STATUS_OK;
+}
+
+static void hxc_test_string_destroy(void *context, void *element) {
+  hxc_string *value = (hxc_string *)element;
+  (void)context;
+  (void)hxc_string_release(value);
+}
+
+static hxc_array_element_ops hxc_test_string_elements(void) {
+  hxc_array_element_ops elements;
+  elements.size = sizeof(hxc_string);
+  elements.alignment = HXC_ALIGNOF(hxc_string);
+  elements.context = NULL;
+  elements.copy = hxc_test_string_copy;
+  elements.assign = hxc_test_string_assign;
+  elements.destroy = hxc_test_string_destroy;
+  return elements;
+}
+
+static bool hxc_test_string_equals(hxc_string actual, hxc_string expected) {
+  int32_t order = 1;
+  return hxc_string_compare(actual, expected, &order) == HXC_STATUS_OK
+    && order == 0;
+}
+
+static int hxc_test_split(
+  hxc_test_arena *arena,
+  hxc_allocator allocator
+) {
+  const hxc_string source = HXC_STRING_LITERAL("::A::::\xF0\x9F\x98\x80::");
+  const hxc_string delimiter = HXC_STRING_LITERAL("::");
+  const hxc_string scalar_source = HXC_STRING_LITERAL("\xC3\xA9\xF0\x9F\x98\x80");
+  const hxc_string empty = HXC_STRING_LITERAL("");
+  const hxc_string ascii_a = HXC_STRING_LITERAL("A");
+  const hxc_string emoji = HXC_STRING_LITERAL("\xF0\x9F\x98\x80");
+  hxc_array_ref *parts = NULL;
+  hxc_array_ref *scalars = NULL;
+  hxc_array_ref *empty_parts = NULL;
+  hxc_array_ref *failed = NULL;
+  hxc_string part = HXC_STRING_INITIALIZER;
+  int32_t length = -1;
+  size_t releases;
+
+  HXC_TEST_CHECK(
+    hxc_string_split(
+      source,
+      delimiter,
+      allocator,
+      hxc_test_string_elements(),
+      &parts
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_ref_length(parts, &length) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(length == 5);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(parts, 0u, &part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_test_string_equals(part, empty));
+  HXC_TEST_CHECK(hxc_string_release(&part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(parts, 1u, &part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_test_string_equals(part, ascii_a));
+  HXC_TEST_CHECK(hxc_string_release(&part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(parts, 2u, &part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_test_string_equals(part, empty));
+  HXC_TEST_CHECK(hxc_string_release(&part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(parts, 3u, &part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_test_string_equals(part, emoji)
+  );
+  HXC_TEST_CHECK(hxc_string_release(&part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(parts, 4u, &part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_test_string_equals(part, empty));
+  HXC_TEST_CHECK(hxc_string_release(&part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_release(parts) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_string_split(
+      scalar_source,
+      empty,
+      allocator,
+      hxc_test_string_elements(),
+      &scalars
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_ref_length(scalars, &length) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(length == 2);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(scalars, 1u, &part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_test_string_equals(part, emoji)
+  );
+  HXC_TEST_CHECK(hxc_string_release(&part) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_release(scalars) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_string_split(
+      empty,
+      empty,
+      allocator,
+      hxc_test_string_elements(),
+      &empty_parts
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_ref_length(empty_parts, &length) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(length == 0);
+  HXC_TEST_CHECK(hxc_array_ref_release(empty_parts) == HXC_STATUS_OK);
+
+  releases = arena->release_count;
+  arena->bounded_failure = true;
+  arena->allocations_before_failure = 1u;
+  HXC_TEST_CHECK(
+    hxc_string_split(
+      source,
+      delimiter,
+      allocator,
+      hxc_test_string_elements(),
+      &failed
+    ) == HXC_STATUS_OUT_OF_MEMORY
+  );
+  arena->bounded_failure = false;
+  HXC_TEST_CHECK(failed == NULL);
+  HXC_TEST_CHECK(arena->release_count == releases + 1u);
+  return 0;
 }
 
 static int hxc_test_literals_and_scalars(hxc_test_arena *arena) {
@@ -668,6 +838,7 @@ int main(void) {
   HXC_TEST_CHECK(hxc_test_checked_and_lossy(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_concat_and_failure(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_reference_owned_strings(&arena, allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_split(&arena, allocator) == 0);
   HXC_TEST_CHECK(hxc_test_builder(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_cstrings(&arena, &allocator) == 0);
   HXC_TEST_CHECK(

@@ -37,6 +37,43 @@ final class Main {
 		return value.lastIndexOf(needle, start);
 
 	/**
+		Split runtime-created text and then replace the source alias.
+
+		The returned parts must keep the original shared bytes alive themselves;
+		the test would expose a dangling borrowed slice if Array<String> copied only
+		the small view and forgot to retain its optional owner.
+	**/
+	static function splitContractHolds():Bool {
+		var owned = build(0xE9, 0x1F600);
+		final aroundAccent = owned.split("é");
+		final scalars = owned.split("");
+		owned = "replaced";
+		final adjacent = "::A::::😀::".split("::");
+		final embedded = "A\x00🙂\x00".split("\x00");
+		return aroundAccent.length == 2
+			&& aroundAccent[0] == "A"
+			&& aroundAccent[1] == "😀"
+			&& scalars.length == 3
+			&& scalars[0] == "A"
+			&& scalars[1] == "é"
+			&& scalars[2] == "😀"
+			&& adjacent.length == 5
+			&& adjacent[0] == ""
+			&& adjacent[1] == "A"
+			&& adjacent[2] == ""
+			&& adjacent[3] == "😀"
+			&& adjacent[4] == ""
+			&& embedded.length == 3
+			&& embedded[0] == "A"
+			&& embedded[1] == "🙂"
+			&& embedded[2] == ""
+			&& "".split("").length == 0
+			&& "".split(":").length == 1
+			&& "".split(":")[0] == ""
+			&& "caxecraft/scenario/token".split("/").length == 3;
+	}
+
+	/**
 		Exercise aliases, branches, records, enums, arrays, and borrowed views.
 
 		Each aggregate stores a logical String copy. Generated C may copy the small
@@ -63,6 +100,7 @@ final class Main {
 		}
 		final optional:Null<String> = enabled ? payload : null;
 		return built == "Aé😀"
+			&& splitContractHolds()
 			&& alias.length == 3
 			&& direct == "é😀"
 			&& record.right == "é😀"

@@ -135,7 +135,7 @@ class CPreparedBodyArray {
 	**/
 	public function destroyImplementationId():Null<String> {
 		switch lifecycle {
-			case CBAELTrivial | CBAELManagedClass(_):
+			case CBAELTrivial | CBAELString | CBAELManagedClass(_):
 				return null;
 			case _:
 		}
@@ -148,6 +148,27 @@ class CPreparedBodyArray {
 				'array-element-lifecycle:${optional.planId}:destroy';
 			case _:
 				throw new CBodyEmissionError('managed Array `${semanticKey}` has a non-instance element type');
+		};
+	}
+
+	/**
+		Name how an owned element copy is released after checked Array indexing.
+
+		Most compound elements use the Array specialization's generated destroy
+		callback. A String is already a first-class managed HxcIR carrier, so its
+		copy uses the shared typed String release operation instead of pretending
+		that String has a nominal instance ID. Trivial and collector references do
+		not add a local cleanup owner here.
+	**/
+	public function elementCleanupImplementation():Null<HxcIRImplementation> {
+		return switch lifecycle {
+			case CBAELTrivial | CBAELManagedClass(_): null;
+			case CBAELString: IRIRuntime("string");
+			case _:
+				final destroy = destroyImplementationId();
+				if (destroy == null)
+					throw new CBodyEmissionError('managed Array `${semanticKey}` lost its element destroy plan');
+				IRIProgramLocal(destroy);
 		};
 	}
 
@@ -310,12 +331,12 @@ class CBodyArrayRegistry {
 	/**
 		Choose the smallest complete lifetime rule for one element type.
 
-		Plain scalars need no callbacks. Bytes and closed records containing Bytes
-		use typed copy/assign/destroy callbacks so each logical copy retains its
-		managed fields and each destruction releases them once. Another Array, a
-		class reference, owned String storage, or another unsupported managed field still
-		fails here: admitting those shapes requires their own proven lifetime and
-		cycle policy, not a byte copy or a generic boxed fallback.
+		Plain scalars need no callbacks. Managed String, Bytes, Array, admitted class,
+		and closed aggregate elements use their exact copy/assign/destroy callbacks,
+		so each logical copy retains its owned storage and each destruction releases
+		it once. A shape whose nested lifetime is not modeled still fails here:
+		admitting it requires a proven ownership and cycle policy, not a byte copy or
+		a generic boxed fallback.
 	**/
 	static function elementLifecycle(element:CBodyValueType):Null<CBodyArrayElementLifecycle>
 		return switch element.kind {

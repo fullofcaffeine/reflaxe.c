@@ -28,8 +28,10 @@ SOURCES = (
     ROOT / "runtime/hxrt/src/abi.c",
     ROOT / "runtime/hxrt/src/status.c",
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/array.c",
     ROOT / "runtime/hxrt/src/string.c",
     ROOT / "runtime/hxrt/src/string_scalar.c",
+    ROOT / "runtime/hxrt/src/string_split.c",
 )
 EXPECTED_TRACE = "1,128512,3,1,2,😀\n"
 EXPECTED_GENERATED_STDOUT = "string-owned: OK\n"
@@ -39,13 +41,16 @@ EXPECTED_GENERATED_FEATURES = [
     "runtime-base",
     "status",
     "alloc",
+    "array",
     "string-literal",
     "io",
     "string-scalar",
     "string",
+    "string-split",
 ]
 EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/array.h",
     "runtime/include/hxrt/base.h",
     "runtime/include/hxrt/io.h",
     "runtime/include/hxrt/status.h",
@@ -53,10 +58,13 @@ EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/string_decode.h",
     "runtime/include/hxrt/string_literal.h",
     "runtime/include/hxrt/string_scalar.h",
+    "runtime/include/hxrt/string_split.h",
     "runtime/src/allocator.c",
+    "runtime/src/array.c",
     "runtime/src/io.c",
     "runtime/src/string.c",
     "runtime/src/string_scalar.c",
+    "runtime/src/string_split.c",
 ]
 TOOLCHAINS = ("gcc", "clang")
 STRICT_FLAGS = (
@@ -419,6 +427,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string-scalar",operation="last-index-of")',
         'runtime(feature="string-scalar",operation="length")',
         'runtime(feature="string-scalar",operation="substring")',
+        'runtime(feature="string-split",operation="split")',
         'implementation=runtime("string")',
     ):
         if operation not in hxcir:
@@ -472,27 +481,47 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure(
             f"String scalar roots drifted: {sorted(scalar_operations)!r}"
         )
+    split_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict)
+        and reason.get("featureId") == "string-split"
+        and reason.get("kind") == "runtime-operation"
+    }
+    if split_operations != {"split"}:
+        raise StringRuntimeFailure(
+            f"String split roots drifted: {sorted(split_operations)!r}"
+        )
 
     stdlib = json.loads(
         (output / "hxc.stdlib-report.json").read_text(encoding="utf-8")
     )
-    if stdlib.get("modules") != ["String", "Sys", "string"] or stdlib.get(
-        "capabilities"
-    ) != [
+    expected_modules = ["Array", "String", "Sys", "string"]
+    expected_capabilities = [
         "char-at",
         "char-code-at",
         "cleanup-release",
         "concat",
         "from-scalar",
+        "get-checked",
         "index-of",
         "last-index-of",
         "length",
+        "managed-type-representation",
         "retain",
+        "split",
         "static-value",
         "substring",
         "sys-println-literal",
-    ]:
-        raise StringRuntimeFailure("managed String standard-library report drifted")
+    ]
+    if stdlib.get("modules") != expected_modules or stdlib.get(
+        "capabilities"
+    ) != expected_capabilities:
+        raise StringRuntimeFailure(
+            "managed String standard-library report drifted: "
+            f"modules={stdlib.get('modules')!r} "
+            f"capabilities={stdlib.get('capabilities')!r}"
+        )
 
     source_text = "\n".join(
         path.read_text(encoding="utf-8")
@@ -505,6 +534,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_string_release(",
         "hxc_string_index_of(",
         "hxc_string_last_index_of(",
+        "hxc_string_split(",
         "hxc_string_substring(",
     ):
         if required not in source_text:
@@ -759,6 +789,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         "hxc_string_release",
         "hxc_string_index_of",
         "hxc_string_last_index_of",
+        "hxc_string_split",
         "hxc_string_substring",
     ):
         if required not in result.stdout:

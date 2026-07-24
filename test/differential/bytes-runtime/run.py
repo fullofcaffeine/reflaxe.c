@@ -394,14 +394,15 @@ def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
         return
     # Runtime String parameters now reach Bytes.ofString as immutable UTF-8
     # views; legacy-nullable String flow, the String-backed action switch,
-    # contextually typed optional records, and the StringBuf UTF-8 decoder also
-    # lower. The next reachable boundary is a temporary class constructed and
-    # immediately called in ScenarioParser. Requiring that exact later
+    # contextually typed optional records, the StringBuf UTF-8 decoder, class
+    # construction, String search, and String splitting also lower. The next
+    # reachable boundary is Bool conversion through Std.string during ordinary
+    # interpolation in ScenarioWriter. Requiring that exact later
     # diagnostic proves this lane passed every prior boundary rather than
     # accepting an arbitrary failure.
     if (
-        "src/caxecraft/scenario/ScenarioParser.hx:18:" not in result.stderr
-        or "TNew(stack-construction-requires-direct-local)"
+        "src/caxecraft/scenario/ScenarioWriter.hx:331:" not in result.stderr
+        or "TCall(unavailable-static-target:function.Std.string)"
         not in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
         or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr

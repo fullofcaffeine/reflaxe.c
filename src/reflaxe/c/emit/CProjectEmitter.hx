@@ -618,6 +618,7 @@ class CProjectEmitter {
 						case "cleanup-release" | "concat" | "from-scalar" | "retain": true;
 						case _: false;
 					}):
+				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
 				case "int-map" if (reason.kind == "runtime-operation"):

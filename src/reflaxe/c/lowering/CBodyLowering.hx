@@ -7802,7 +7802,8 @@ private class FunctionBuilder {
 		final array = mapping.arrayValue();
 		if (array == null)
 			return unsupported(expression, "TArray(managed-identity-lost)");
-		final receiver = coerce(lowerValue(collection, mapping), mapping, collection.pos, "TArray(receiver)");
+		final receiver = stabilizeFreshManagedArray(coerce(lowerValue(collection, mapping), mapping, collection.pos, "TArray(receiver)"), collection.pos,
+			"array-index-receiver");
 		final indexType = CBodyValueType.primitive(primitiveMapping(index.t, index.pos, "TArray(index-type)"));
 		switch indexType.irType {
 			case IRTInt(32, true):
@@ -7820,8 +7821,8 @@ private class FunctionBuilder {
 		}), source, "array-get-checked");
 		registerValueTemporary(result.id, "array-get-result");
 		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "get-checked", "ordinary Haxe Array indexing", source, expression.pos));
-		final destroyImplementationId = array.destroyImplementationId();
-		if (destroyImplementationId == null)
+		final cleanupImplementation = array.elementCleanupImplementation();
+		if (cleanupImplementation == null)
 			return {id: result.id, type: result.type, mapping: array.element};
 		if (!managedArrayElementOwnerHasCleanupBoundary(currentBlock))
 			return unsupported(expression, "TArray(managed-element-owner-in-nested-control-flow-not-yet-admitted)");
@@ -7836,10 +7837,16 @@ private class FunctionBuilder {
 		constructionCleanupActions.push({
 			id: cleanupId,
 			idempotence: IRCExactlyOnce,
-			kind: IRCARelease(IRPLocal(ownerLocalId), IRIProgramLocal(destroyImplementationId)),
+			kind: IRCARelease(IRPLocal(ownerLocalId), cleanupImplementation),
 			source: source
 		});
 		normalCleanupActionIds.push(cleanupId);
+		switch cleanupImplementation {
+			case IRIRuntime("string"):
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release",
+					"owned String copy returned by ordinary Haxe Array indexing", source, expression.pos));
+			case _:
+		}
 		final borrowed = loadPlace({place: IRPLocal(ownerLocalId), mapping: array.element, mutable: false}, expression.pos, "array-element-borrow");
 		borrowedManagedArrayElementValueIds.set(borrowed.id, true);
 		return borrowed;
@@ -7914,7 +7921,8 @@ private class FunctionBuilder {
 		final mapping = bodyValueType(expression.t, expression.pos, 'Array.$operation:receiver-type');
 		if (mapping.arrayValue() == null)
 			return unsupported(expression, 'Array.$operation:receiver-not-Array');
-		return coerce(lowerValue(expression, mapping), mapping, expression.pos, 'Array.$operation:receiver');
+		final receiver = coerce(lowerValue(expression, mapping), mapping, expression.pos, 'Array.$operation:receiver');
+		return stabilizeFreshManagedArray(receiver, expression.pos, 'array-$operation-receiver');
 	}
 
 	static function managedArrayFailure():HxcIRFailureEdge
@@ -8093,7 +8101,7 @@ private class FunctionBuilder {
 	**/
 	function lowerStringCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>):LoweredValue {
 		final method = access.field.get().name;
-		if (method != "charAt" && method != "charCodeAt" && method != "indexOf" && method != "lastIndexOf" && method != "substring")
+		if (method != "charAt" && method != "charCodeAt" && method != "indexOf" && method != "lastIndexOf" && method != "split" && method != "substring")
 			return unsupported(expression, 'TCall(String.$method:not-yet-admitted)');
 		final takesOptionalSecondArgument = method == "indexOf" || method == "lastIndexOf" || method == "substring";
 		final expectedArgumentCount = takesOptionalSecondArgument ? "1-or-2" : "1";
@@ -8108,6 +8116,8 @@ private class FunctionBuilder {
 			HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), 'string-$method-receiver-null-check');
 		if (method == "indexOf" || method == "lastIndexOf")
 			return lowerStringSearch(expression, receiver, arguments, method);
+		if (method == "split")
+			return lowerStringSplit(expression, receiver, arguments[0]);
 		final loweredArguments = [receiver.id];
 		for (index => argumentExpression in arguments) {
 			final argumentMapping = bodyValueType(argumentExpression.t, argumentExpression.pos, 'TCall(String.$method:argument-$index-type)');
@@ -8208,6 +8218,42 @@ private class FunctionBuilder {
 		registerValueTemporary(result.id, 'string-$operation-result');
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-scalar", operation, 'ordinary Haxe String.$method with Unicode-scalar search indices',
 			source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/**
+		Build the managed `Array<String>` returned by ordinary Haxe `String.split`.
+
+		The runtime produces borrowed slices into the receiver, while the existing
+		element-specialized Array callbacks retain each slice's optional String
+		owner. This keeps literals allocation-free and keeps runtime-created source
+		bytes alive until the last returned part is released. The complete result
+		is one fresh Array owner; a failed allocation or retain rolls back the
+		partially constructed container before this call reports failure.
+	**/
+	function lowerStringSplit(expression:TypedExpr, receiver:LoweredValue, delimiterExpression:TypedExpr):LoweredValue {
+		final delimiterMapping = bodyValueType(delimiterExpression.t, delimiterExpression.pos, "TCall(String.split:delimiter-type)");
+		if (!isStringCarrier(delimiterMapping.irType))
+			return unsupported(delimiterExpression, "TCall(String.split:delimiter-not-immutable-String-view)");
+		final delimiter = coerce(lowerValue(delimiterExpression, delimiterMapping), delimiterMapping, delimiterExpression.pos, "TCall(String.split:delimiter)");
+		appendInstruction(null, IRIONullCheck(delimiter.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+			HaxeSourceSpan.fromPosition(delimiterExpression.pos, input.sourcePath), "string-split-delimiter-null-check");
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.split:result-type)");
+		final array = resultMapping.arrayValue();
+		if (array == null || array.managedByCollector || array.element.irType != IRTManagedString)
+			return unsupported(expression, 'TCall(String.split:result-not-managed-Array-String:${resultMapping.cSpelling})');
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string-split", "split"),
+			arguments: [receiver.id, delimiter.id],
+			returnType: result.type,
+			failure: managedArrayFailure()
+		}), source, "string-split");
+		registerValueTemporary(result.id, "string-split-result");
+		freshManagedArrayValueIds.set(result.id, true);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-split", "split",
+			"ordinary Haxe String.split with Unicode-scalar slices and managed Array ownership", source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 

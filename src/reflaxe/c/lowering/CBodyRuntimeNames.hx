@@ -16,6 +16,7 @@ enum CBodyRuntimeName {
 	CBRNStringLength;
 	CBRNStringIndexOf;
 	CBRNStringLastIndexOf;
+	CBRNStringSplit;
 	CBRNStringSubstring;
 	CBRNStringRetain;
 	CBRNStringRelease;
@@ -93,6 +94,7 @@ class CBodyRuntimeNames {
 			case CBRNStringLength: "hxc_string_haxe_length";
 			case CBRNStringIndexOf: "hxc_string_index_of";
 			case CBRNStringLastIndexOf: "hxc_string_last_index_of";
+			case CBRNStringSplit: "hxc_string_split";
 			case CBRNStringSubstring: "hxc_string_substring";
 			case CBRNStringRetain: "hxc_string_retain";
 			case CBRNStringRelease: "hxc_string_release";

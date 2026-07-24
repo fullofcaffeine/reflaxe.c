@@ -2527,6 +2527,8 @@ class CBodyEmitter {
 						addUnique(headers, "stdlib.h");
 					case IRIOCall({dispatch: IRCDRuntime("string-scalar", _)}):
 						addUnique(headers, "hxrt/string_scalar.h");
+					case IRIOCall({dispatch: IRCDRuntime("string-split", "split")}):
+						addUnique(headers, "hxrt/string_split.h");
 					case IRIOBinary("haxe.string.equal" | "haxe.string.equal.left-non-null" | "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null",
 						_, _, IRIStatic):
 						addUnique(headers, "string.h");
@@ -4734,6 +4736,9 @@ class CBodyEmitter {
 			case IRCDRuntime("string", _):
 				emitManagedStringCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
+			case IRCDRuntime("string-split", "split"):
+				emitStringSplitCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case IRCDRuntime("string-scalar", "char-at"):
 				if (call.failure != null
 					|| call.arguments.length != 2
@@ -5159,6 +5164,64 @@ class CBodyEmitter {
 		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
 		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
 		values.set(result.id, EIdentifier(temporary));
+	}
+
+	/**
+	 * Emit the composition boundary that returns one managed `Array<String>`.
+	 *
+	 * HxcIR carries only the two source-language String arguments and the exact
+	 * result specialization. This target-aware step supplies the default
+	 * allocator and the compiler-generated String element lifecycle callbacks;
+	 * the printer still receives an ordinary structural C call.
+	 */
+	function emitStringSplitCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		if (call.arguments.length != 2)
+			return fail('String.split call `${instruction.id}` in `${fn.id}` lost its receiver/delimiter signature');
+		final instanceId = requireArrayInstanceId(result.type, instruction.id, fn.id);
+		final elementType = requireArrayElementType(instanceId);
+		if (elementType != IRTManagedString)
+			return fail('String.split call `${instruction.id}` in `${fn.id}` does not return managed Array<String>');
+		final arrayPlan = requireArrayPlan(instanceId);
+		if (arrayPlan.prepared.managedByCollector
+			|| arrayPlan.copyName == null
+			|| arrayPlan.assignName == null
+			|| arrayPlan.destroyName == null) {
+			return fail('String.split Array<String> `$instanceId` lost its reference-counted String lifecycle plan');
+		}
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('String.split call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final resultDeclaration = typedDeclarator(result.type, DName(temporary));
+		final elementDeclaration = typedDeclarator(elementType, DName(null));
+		final elementOperations = ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNArrayElementOpsType))), DName(null), IList([
+			{designators: [], value: IExpr(ESizeOfType(elementDeclaration.type, elementDeclaration.declarator))},
+			{designators: [], value: IExpr(EAlignOfType(elementDeclaration.type, elementDeclaration.declarator))},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(EIdentifier(arrayPlan.copyName))},
+			{designators: [], value: IExpr(EIdentifier(arrayPlan.assignName))},
+			{designators: [], value: IExpr(EIdentifier(arrayPlan.destroyName))}
+		]));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: resultDeclaration.type,
+			declarator: resultDeclaration.declarator,
+			initializer: IExpr(ENull),
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringSplit)), [
+			requireValue(values, call.arguments[0], fn.id),
+			requireValue(values, call.arguments[1], fn.id),
+			ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+			elementOperations,
+			EUnary(AddressOf, EIdentifier(temporary))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
 	}
 
 	/** Emit checked Unicode-scalar String length into one Haxe `Int` temporary. */

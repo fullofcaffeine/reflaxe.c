@@ -77,6 +77,7 @@ class RuntimeFeatureGraphGolden {
 		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
 		final intMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.int-map", "int-map")], []));
 		final stringMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-map", "string-map")], []));
+		final stringSplit = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-split", "string-split")], []));
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
 		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
@@ -102,6 +103,7 @@ class RuntimeFeatureGraphGolden {
 		final arrayFiles = packager.packageFiles(array, repositorySource);
 		final intMapFiles = packager.packageFiles(intMap, repositorySource);
 		final stringMapFiles = packager.packageFiles(stringMap, repositorySource);
+		final stringSplitFiles = packager.packageFiles(stringSplit, repositorySource);
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
 		final gcFiles = packager.packageFiles(gc, repositorySource);
@@ -152,6 +154,7 @@ class RuntimeFeatureGraphGolden {
 			array: array,
 			intMap: intMap,
 			stringMap: stringMap,
+			stringSplit: stringSplit,
 			bytes: bytes,
 			object: objectPlan,
 			gc: gc,
@@ -197,6 +200,7 @@ class RuntimeFeatureGraphGolden {
 			array: packageRecords(arrayFiles),
 			intMap: packageRecords(intMapFiles),
 			stringMap: packageRecords(stringMapFiles),
+			stringSplit: packageRecords(stringSplitFiles),
 			bytes: packageRecords(bytesFiles),
 			object: packageRecords(objectFiles),
 			gc: packageRecords(gcFiles),

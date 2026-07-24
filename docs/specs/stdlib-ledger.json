@@ -1594,6 +1594,40 @@
       "notes": "Ordinary Haxe String.length counts Unicode scalar values, not UTF-8 bytes, under ADR 0004. The hosted fixture proves the distinction with mixed ASCII, accented, and non-BMP text plus generated-layout and sanitizer coverage."
     },
     {
+      "id": "string-split-partial",
+      "selector": {
+        "module": "String",
+        "type": "String",
+        "member": "split",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(delimiter : String) -> Array<String>"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "string-split"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T02",
+      "testOwnerBeads": "E5.T02",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.split returns an owned Array of borrowed UTF-8 String views. The Array element callbacks retain the source owner, so results remain valid after the source variable changes. Matching occurs only at Unicode-scalar boundaries; an empty delimiter yields one element per scalar, while leading, trailing, and adjacent nonempty delimiters preserve empty pieces. The hosted fixture covers those rules, embedded NUL, temporary Array consumers, allocation-failure rollback, generated layouts, strict C11, optimization, and sanitizers."
+    },
+    {
       "id": "string-substring-partial",
       "selector": {
         "module": "String",
@@ -8359,32 +8393,30 @@
       "kind": "method",
       "signature": "(delimiter : String) -> Array<String>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "string",
-        "unicode"
+        "string-split"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T02",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T02",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "ADR 0004 scalar-indexed UTF-8 applies. ASCII/direct paths and compiler-built constants precede local helpers and narrow string or Unicode slices.",
-      "ruleId": "strings-and-unicode"
+      "tests": [
+        "test/differential/string-runtime/generated/Main.hx",
+        "test/differential/string-runtime/run.py"
+      ],
+      "notes": "Ordinary Haxe String.split returns an owned Array of borrowed UTF-8 String views. The Array element callbacks retain the source owner, so results remain valid after the source variable changes. Matching occurs only at Unicode-scalar boundaries; an empty delimiter yields one element per scalar, while leading, trailing, and adjacent nonempty delimiters preserve empty pieces. The hosted fixture covers those rules, embedded NUL, temporary Array consumers, allocation-failure rollback, generated layouts, strict C11, optimization, and sanitizers.",
+      "ruleId": "string-split-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:385dba2ac434ccbf5a31cc5baf9ed34e3526a155c692ce7896cd5d4fb6fd5c09",

@@ -2186,6 +2186,12 @@ private class HxcIRValidationState {
 						&& call.arguments.length > 1
 						&& !nullProofs.exists(call.arguments[1]))
 						add(path, 'String.$operationId requires a preceding dominating needle null check', source);
+				} else if (featureId == "string-split") {
+					validateStringSplitCall(call, argumentTypes, path, source);
+					if (call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
+						add(path, "String.split requires a preceding dominating receiver null check", source);
+					if (call.arguments.length > 1 && !nullProofs.exists(call.arguments[1]))
+						add(path, "String.split requires a preceding dominating delimiter null check", source);
 				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
@@ -2242,6 +2248,22 @@ private class HxcIRValidationState {
 				add(path, 'array runtime call names unsupported operation `$operationId`', source);
 		}
 		validateCleanupFreeStatusAbort(call.failure, path, source, "managed Array operation");
+	}
+
+	function validateStringSplitCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("string-split", value): value;
+			case _: return;
+		};
+		final resultElement = managedArrayElement(call.returnType);
+		if (operationId != "split"
+			|| argumentTypes.length != 2
+			|| (argumentTypes[0] != IRTString && argumentTypes[0] != IRTManagedString)
+			|| (argumentTypes[1] != IRTString && argumentTypes[1] != IRTManagedString)
+			|| resultElement != IRTManagedString) {
+			add(path, "String.split requires receiver + delimiter Strings and returns managed Array<String>", source);
+		}
+		validateCleanupFreeStatusAbort(call.failure, path, source, "String.split operation");
 	}
 
 	function managedArrayElement(type:Null<HxcIRTypeRef>):Null<HxcIRTypeRef> {

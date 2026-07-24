@@ -764,6 +764,11 @@ receiver's existing bytes, so an escaping result keeps that storage alive.
 Unicode-scalar boundaries, and return scalar positions. These closures package
 no allocator, full string operations, objects, collector, dynamic, reflection,
 or exceptions.
+`String.split` instead requests the separate `string-split` composition. Its
+closure adds managed Array growth and owned String lifetime support, while
+compiler-generated `Array<String>` element callbacks retain each borrowed
+piece's source owner. Keeping that composition separate means unrelated String
+programs do not select Array support.
 New semantic lowerings remain responsible for supplying typed candidates for
 any explicit runtime intent and fail internally
 if they do not. The checked-in allocator contract has E4.T02 native evidence for checked

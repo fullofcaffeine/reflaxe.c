@@ -1140,7 +1140,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "The bounded native string slice enforces valid UTF-8, scalar indexing, allocation-aware ownership, and explicit CString lifetimes.",
-      "scope": "Strict C11 native evidence covers literal, checked/lossy decode, concat, slice, scalar-indexed forward/reverse search, compare, hash, builder, and borrowed/owned CString primitives. Generated ordinary Haxe evidence additionally covers runtime-created scalar Strings, concatenation, indexOf and lastIndexOf over literal and owned values, ownership across admitted aggregates, and the bounded StringBuf.addChar path.",
+      "scope": "Strict C11 native evidence covers literal, checked/lossy decode, concat, slice, scalar-indexed forward/reverse search, split with failure rollback, compare, hash, builder, and borrowed/owned CString primitives. Generated ordinary Haxe evidence additionally covers runtime-created scalar Strings, concatenation, indexOf, lastIndexOf, and split over literal and owned values, split ownership through managed Array<String>, ownership across admitted aggregates, and the bounded StringBuf.addChar path.",
       "evidence": [
         "docs/adr/0004-utf8-scalar-string-contract.md",
         "docs/string-runtime.md",
@@ -1166,7 +1166,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe standard-library parity is not implemented.",
-      "scope": "Only exact compiler-recognized slices are covered: Std.int; compiler-known literal Sys.println and default trace in hosted builds; bounded haxe.io.Bytes alloc, ofString, length, get, set, sub, blit, fill, and compare; String charAt, charCodeAt, fromCharCode, indexOf, lastIndexOf, length, and substring; and the StringBuf type, constructor, addChar, and toString path.",
+      "scope": "Only exact compiler-recognized slices are covered: Std.int; compiler-known literal Sys.println and default trace in hosted builds; bounded haxe.io.Bytes alloc, ofString, length, get, set, sub, blit, fill, and compare; String charAt, charCodeAt, fromCharCode, indexOf, lastIndexOf, length, split, and substring; and the StringBuf type, constructor, addChar, and toString path.",
       "evidence": [
         "docs/specs/stdlib-ledger.json",
         "test/arithmetic_semantics/run.py",
