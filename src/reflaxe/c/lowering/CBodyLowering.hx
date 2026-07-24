@@ -5435,6 +5435,11 @@ private class FunctionBuilder {
 
 	function lowerBinary(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
 		if (operation == OpEq || operation == OpNotEq) {
+			final enumIndexComparison = lowerEnumIndexComparison(expression, operation, left, right);
+			if (enumIndexComparison != null)
+				return enumIndexComparison;
+		}
+		if (operation == OpEq || operation == OpNotEq) {
 			final leftMapping = isNullConstantExpression(left) ? null : nullEqualityValueMapping(left, "TBinop(class-equality:left-type)");
 			final rightMapping = isNullConstantExpression(right) ? null : nullEqualityValueMapping(right, "TBinop(class-equality:right-type)");
 			if (leftMapping != null && leftMapping.optionalValue() != null || rightMapping != null && rightMapping.optionalValue() != null) {
@@ -5469,6 +5474,52 @@ private class FunctionBuilder {
 		final stableLeftValue = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: leftValue.mapping, mutable: true},
 			left.pos, "binary-left-load");
 		return lowerBinaryValues(expression, operation, stableLeftValue, rightValue, "binary");
+	}
+
+	/**
+		Lower Haxe's internal `enumIndex value == tag` pattern as a nominal tag test.
+
+		The Haxe optimizer rewrites a source switch with one interesting enum case
+		and a wildcard into an integer-looking comparison. `TEnumIndex` is not an
+		ordinary source-level Int operation: it is a compiler-only view of the
+		enum's discriminant. Recover the original enum and named constructor here,
+		then reuse HxcIR's checked tag-match operation. This keeps payload enums
+		type-safe and lets generated C compare the readable discriminant field.
+
+		Only equality or inequality against a compiler-provided constant tag is
+		admitted. Other uses remain unsupported instead of exposing raw tag numbers
+		as a general Haxe or C API.
+	**/
+	function lowerEnumIndexComparison(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):Null<LoweredValue> {
+		var subject = enumIndexSubject(left);
+		var tagExpression = right;
+		if (subject == null) {
+			subject = enumIndexSubject(right);
+			tagExpression = left;
+		}
+		if (subject == null)
+			return null;
+		if (enumIndexSubject(tagExpression) != null)
+			return unsupported(expression, "TBinop(enum-index-comparison-requires-one-constant-tag)");
+
+		final subjectValue = lowerEnumSwitchSubject(subject);
+		final enumValue = subjectValue.mapping.enumValue();
+		if (enumValue == null)
+			return unsupported(subject, "TBinop(enum-index-subject-lost)");
+		final tagCase = enumSwitchCase(tagExpression, enumValue);
+		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(enum-index-result-type)");
+		if (boolMapping.irType != IRTBool)
+			return unsupported(expression, "TBinop(enum-index-result-not-Bool)");
+
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(matched, IRIOMatchTag(subjectValue.id, tagCase.name), source, "enum-index-match");
+		if (operation == OpEq)
+			return {id: matched.id, type: matched.type, mapping: boolMapping};
+
+		final negated:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(negated, IRIOUnary("haxe.bool.not", matched.id, IRIStatic), source, "enum-index-not-match");
+		return {id: negated.id, type: negated.type, mapping: boolMapping};
 	}
 
 	/**

@@ -409,11 +409,14 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if not hxcir.startswith("hxcir schema=19\n") or hxcir.count(" representation=tagged ") != 6:
         raise EnumLoweringFailure("schema-19 tagged-union HxcIR inventory drifted")
     option_section = function_section(hxcir, "optionValue")
+    option_single_case_section = function_section(hxcir, "optionHasPositiveValue")
     recursive_section = function_section(hxcir, "recursiveLocal")
     main_section = function_section(hxcir, "main")
     mode_equality_section = function_section(hxcir, "modeEquality")
+    mode_single_case_section = function_section(hxcir, "modeIsOn")
     wrap_rule_section = function_section(hxcir, "wrapRule")
     envelope_value_section = function_section(hxcir, "envelopeValue")
+    envelope_single_case_section = function_section(hxcir, "envelopeIsWrapped")
     apply_option_section = function_section(hxcir, "applyOption")
     constructor_value_section = function_section(hxcir, "constructorValue")
     rule_literal_section = function_section(hxcir, "ruleLiteralValue")
@@ -434,6 +437,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "enum-recursive-payload-load" not in recursive_section
         or 'binary operation="haxe.enum-tag.equal"' not in mode_equality_section
         or 'binary operation="haxe.enum-tag.not-equal"' not in mode_equality_section
+        or 'match-tag value="parameter.0" tag="On"' not in mode_single_case_section
+        or 'match-tag value="parameter.0" tag="Some"' not in option_single_case_section
+        or 'project-tag value="parameter.0" tag="Some"' not in option_single_case_section
+        or 'match-tag value="parameter.0" tag="WrappedRule"' not in envelope_single_case_section
         or identity_call == -1
         or identity_result_constructor == -1
         or identity_call > identity_result_constructor

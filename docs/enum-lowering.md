@@ -30,6 +30,15 @@ left-to-right order. Payload-enum equality remains fail-closed because comparing
 the generated outer C structs would be invalid C and would not define equality
 for their nested values.
 
+Pinned Haxe sometimes simplifies a source switch with one constructor and a
+wildcard into an internal `enumIndex value == number` test. The number is not
+part of the program's source API; it is how the Haxe compiler temporarily views
+the constructor tag. haxe.c recovers the original nominal enum instance and
+named constructor before creating HxcIR. The generated C therefore compares a
+readable native enum value or tagged-union discriminant, and a following payload
+projection remains guarded by the same checked named tag. Arbitrary arithmetic
+or other source-visible uses of an enum index stay unsupported.
+
 An enum with any payload uses four structural layers:
 
 - one C enum for readable discriminants;

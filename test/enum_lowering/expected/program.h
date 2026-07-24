@@ -211,6 +211,8 @@ struct hxc_RuleEnvelope hxc_EnumFixture_copyEnvelope(struct hxc_RuleEnvelope hxc
 
 struct hxc_Rule hxc_EnumFixture_copyRule(struct hxc_Rule hxc_value);
 
+bool hxc_EnumFixture_envelopeIsWrapped(struct hxc_RuleEnvelope hxc_value);
+
 int32_t hxc_EnumFixture_envelopeValue(struct hxc_RuleEnvelope hxc_value);
 
 int32_t hxc_EnumFixture_guardedValue(struct hxc_Option_h95f1c4a28dac hxc_value_ha201421511a7);
@@ -225,7 +227,11 @@ struct hxc_Rule hxc_EnumFixture_makeRule(struct hxc_Chain hxc_chain, struct hxc_
 
 bool hxc_EnumFixture_modeEquality(void);
 
+bool hxc_EnumFixture_modeIsOn(enum hxc_Mode hxc_value);
+
 int32_t hxc_EnumFixture_modeValue(enum hxc_Mode hxc_value);
+
+bool hxc_EnumFixture_optionHasPositiveValue(struct hxc_Option_h95f1c4a28dac hxc_value_he8fa941d9290);
 
 int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_value_h2c5c76013588);
 

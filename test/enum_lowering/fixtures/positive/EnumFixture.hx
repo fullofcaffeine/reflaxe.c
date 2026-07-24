@@ -55,11 +55,41 @@ class EnumFixture {
 		};
 	}
 
+	/**
+		Exercise Haxe's optimized one-case switch for a payload-free enum.
+
+		The source remains a normal nominal enum match. Pinned Haxe may turn this
+		shape into its internal `enumIndex == tag` form before haxe.c sees it.
+	**/
+	static function modeIsOn(value:Mode):Bool {
+		switch value {
+			case On:
+				return true;
+			case _:
+		}
+		return false;
+	}
+
 	static function optionValue(value:Option<Int>):Int {
 		return switch value {
 			case None: 0;
 			case Some(payload): payload;
 		};
+	}
+
+	/**
+		Keep payload projection behind an optimized generic-enum tag test.
+
+		This proves the reconstructed named tag match still guards the active union
+		member before haxe.c reads the constructor payload.
+	**/
+	static function optionHasPositiveValue(value:Option<Int>):Bool {
+		switch value {
+			case Some(payload):
+				return payload > 0;
+			case _:
+		}
+		return false;
 	}
 
 	static function applyOption(value:Int, constructor:Int->Option<Int>):Option<Int>
@@ -135,6 +165,21 @@ class EnumFixture {
 			case WrappedRule(rule): ruleValue(rule);
 		};
 
+	/**
+		Exercise the same optimized tag test on an enum with managed payload data.
+
+		The wildcard does not inspect the payload; matching must therefore compare
+		only the readable discriminant and preserve the enum's existing owner.
+	**/
+	static function envelopeIsWrapped(value:RuleEnvelope):Bool {
+		switch value {
+			case WrappedRule(_):
+				return true;
+			case _:
+		}
+		return false;
+	}
+
 	static function optionalRuleValue(value:Option<Rule>):Int
 		return switch value {
 			case None: 0;
@@ -173,8 +218,10 @@ class EnumFixture {
 		var envelopes:Array<RuleEnvelope> = [];
 		envelopes.push(copiedEnvelope);
 		while (!(modeValue(mode) == 1
+			&& modeIsOn(mode)
 			&& modeEquality()
 			&& optionValue(present) == 7
+			&& optionHasPositiveValue(present)
 			&& optionValue(absent) == 0
 			&& constructorValue() == 9
 			&& guardedValue(present) == 7
@@ -182,6 +229,7 @@ class EnumFixture {
 			&& recursiveLocal() == 3
 			&& ruleValue(copiedRule) == 10
 			&& envelopeValue(copiedEnvelope) == 10
+			&& envelopeIsWrapped(copiedEnvelope)
 			&& optionalRuleValue(optionalRule) == 10
 			&& ruleLiteralValue(Link(1, End(2)), ChoiceValues(choices), actions, copiedRule) == 12
 			&& envelopes.length == 1
