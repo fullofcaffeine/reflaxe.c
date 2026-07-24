@@ -1,4 +1,4 @@
-hxcir schema=18
+hxcir schema=19
 module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-175:2
   type "type.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871" name="_EvaluationFixture.EvaluationChoiceRecord" kind=aggregate @"test/evaluation_order/fixtures/EvaluationFixture.hx":172:9-175:2
     field "amount" type=i32 mutable=false @"test/evaluation_order/fixtures/EvaluationFixture.hx":173:2-173:19

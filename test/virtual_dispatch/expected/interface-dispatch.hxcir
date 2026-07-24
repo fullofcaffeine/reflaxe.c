@@ -1,4 +1,4 @@
-hxcir schema=18
+hxcir schema=19
 dispatch
   layout "itable.layout.CounterView" root="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" slots=["interface-slot.CounterView.doubled","interface-slot.CounterView.read"] @"CounterView.hx":6:1-8:2
   layout "itable.layout.ResetView" root="instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34" slots=["interface-slot.ResetView.resetValue"] @"ResetView.hx":2:1-4:2

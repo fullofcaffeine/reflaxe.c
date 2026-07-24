@@ -5,6 +5,9 @@
   "cstringByteLengthMismatch": [
     "HXC9000 error [profile=portable] test/negative/CStringByteLengthMismatch.hx:2:1-2:2 [module:invalid.CStringByteLengthMismatch.function:invalid.CStringByteLengthMismatch.main.block:entry.instruction:0:bad.cstring.constant] Invalid HxcIR: C string literal records UTF-8 byte length 3 but encodes to 6 byte(s) Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "managedCarrierLifecycleMismatch": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:48:1-48:2 [module:invalid.ManagedCarrierLifecycleMismatch.function:fn.coverage.managed-carrier.block:entry.instruction:0:managed.declare] Invalid HxcIR: managed carrier enum and destroy plan differ Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "nonDominatingBoundsProof": [
     "HXC9000 error [profile=portable] test/negative/NonDominatingBoundsProof.hx:6:1-6:2 [module:invalid.NonDominatingBoundsProof.function:invalid.NonDominatingBoundsProof.main.block:join.instruction:0:bad.load] Invalid HxcIR: fixed-array/span access requires a preceding bounds policy for the same collection and index Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -35,6 +38,9 @@
   "nonDominatingNullProof": [
     "HXC9000 error [profile=portable] test/negative/NonDominatingNullProof.hx:6:1-6:2 [module:invalid.NonDominatingNullProof.function:invalid.NonDominatingNullProof.main.block:join.instruction:0:bad.load.place.base] Invalid HxcIR: nullable pointer `value.object` requires a preceding dominating null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "managedCarrierBorrowMovedAsFresh": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:50:1-50:2 [module:invalid.ManagedCarrierBorrowMovedAsFresh.function:fn.coverage.managed-carrier.block:borrowed.instruction:0:managed.acquire-borrowed] Invalid HxcIR: move-fresh acquisition requires a newly constructed enum, an owned call result, or another managed-carrier move Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "mismatchedFunctionReference": [
     "HXC9000 error [profile=portable] test/negative/MismatchedFunctionReference.hx:2:1-2:2 [module:invalid.MismatchedFunctionReference.function:invalid.MismatchedFunctionReference.main.block:entry.instruction:0:bad.function-reference] Invalid HxcIR: function reference target `function.target` has a different parameter count Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -46,6 +52,9 @@
   ],
   "borrowedInterfaceStore": [
     "HXC9000 error [profile=portable] test/negative/BorrowedInterfaceStore.hx:2:1-2:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:0:bad.interface-store] Invalid HxcIR: borrowed reference value `value.interface-parameter` escapes through an initializer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "managedCarrierMissingAcquire": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:48:1-48:2 [module:invalid.ManagedCarrierMissingAcquire.function:fn.coverage.managed-carrier.block:entry.instruction:0:managed.declare] Invalid HxcIR: managed carrier must acquire exactly one owner on every normal path before moving it once Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "defaultInitializationType": [
     "HXC9000 error [profile=portable] test/negative/DefaultInitializationType.hx:2:1-2:2 [module:invalid.DefaultInitializationType.function:invalid.DefaultInitializationType.main.block:entry.instruction:0:bad.default] Invalid HxcIR: default initialization requires a direct record or concrete-class place Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

@@ -889,6 +889,16 @@ class CBodyEmitter {
 				case IRIODeclareUninitialized(IRPLocal(localId)):
 					emitUninitializedDeclaration(statements, state.declared, state.referencedLocals, instruction, localId, fn, state.localNames,
 						state.lineDirectives);
+				case IRIODeclareManagedCarrier(IRPLocal(localId), _):
+					emitUninitializedDeclaration(statements, state.declared, state.referencedLocals, instruction, localId, fn, state.localNames,
+						state.lineDirectives);
+				case IRIOAcquireManagedCarrier(place, valueId, acquisition):
+					emitManagedCarrierAcquisition(statements, state.values, instruction, place, valueId, acquisition, fn, state.localNames, state.globalNames,
+						state.spanLengthNames, state.boundsAbortName, state.lineDirectives);
+				case IRIOMoveManagedCarrier(place):
+					emitLoad(statements, state.values, state.referencedValues, instruction,
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values), state.temporaryNames,
+						state.lineDirectives, fn.id, false);
 				case IRIODefaultInitialize(IRPLocal(localId), from, to):
 					emitDefaultInitialize(statements, state.declared, state.referencedLocals, instruction, localId, from, to, fn, state.localNames,
 						state.lineDirectives);
@@ -1191,7 +1201,8 @@ class CBodyEmitter {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
 					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIOBoundsCheck(place, _, _) |
-						IRIODeclareUninitialized(place) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
+						IRIODeclareUninitialized(place) | IRIODeclareManagedCarrier(place, _) | IRIOAcquireManagedCarrier(place, _, _) |
+						IRIOMoveManagedCarrier(place) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
 						markReferencedLocals(place, referenced);
 					case IRIOInitializeSpan(place, sourceArray, _, _):
 						markReferencedLocals(place, referenced);
@@ -1645,6 +1656,31 @@ class CBodyEmitter {
 		declared.set(localId, true);
 		if (!referencedLocals.exists(localId)) {
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(requireLocalName(localNames, localId, fn.id)))));
+		}
+	}
+
+	/**
+	 * Assign one selected enum value and acquire exactly one owner for the join.
+	 *
+	 * Moving a fresh value needs only the structural C assignment. Copying a
+	 * borrowed value immediately calls the enum's active-tag retain helper, so
+	 * later branch cleanup cannot invalidate the joined payload.
+	 */
+	function emitManagedCarrierAcquisition(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, place:HxcIRPlace, valueId:String,
+			acquisition:HxcIRManagedCarrierAcquisition, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+			spanLengthNames:Map<String, CIdentifier>, boundsAbortName:Null<CIdentifier>, lineDirectives:Bool):Void {
+		if (instruction.result != null)
+			fail('managed carrier acquisition `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+		final target = placeExpression(place, fn, localNames, globalNames, spanLengthNames, values);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SExpr(EBinary(Assign, target, requireValue(values, valueId, fn.id))));
+		switch acquisition {
+			case IRMCAMoveFresh:
+			case IRMCARetainBorrowed(IRIProgramLocal(implementationId)):
+				final lifecycle = programLocalLifecycle(implementationId, instruction.id, fn.id);
+				emitStatusAbort(statements, ECall(EIdentifier(lifecycle.retainName), [EUnary(AddressOf, target)]), boundsAbortName, instruction.id, fn.id);
+			case IRMCARetainBorrowed(_):
+				fail('managed carrier acquisition `${instruction.id}` in `${fn.id}` has no program-local retain plan');
 		}
 	}
 

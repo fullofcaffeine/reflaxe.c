@@ -691,7 +691,7 @@
         "ordinary overridable calls through a base reference use one deterministic hierarchy slot, while final methods, final receiver classes, private methods, super calls, and @:nonVirtual methods remain direct with an explicit reason",
         "only constructed dynamic classes receive tables, only reachable virtual methods receive slots, the root alone owns the table pointer, and typed self adapters preserve exact implementation receiver types",
         "ordinary interface values lower to compact object-pointer plus table-pointer C structs; inherited methods retain the child interface identity, one concrete class may provide multiple interface tables, and an unused interface emits no table",
-        "schema-18 HxcIR retains root header intent, table binding, direct and indirect call choices, exact receiver values, and representation-identical override signatures before structural strict C emission",
+        "schema-19 HxcIR retains root header intent, table binding, direct and indirect call choices, exact receiver values, and representation-identical override signatures before structural strict C emission",
         "covariant return and contravariant argument overrides admitted by pinned Haxe fail closed at their source positions when their C representations differ, with HXC1001 and no generated artifact",
         "schema-2 hxc.dispatch.json explains every reachable class or interface instance call and is byte-identical across repeated roots, reversed modules, locale changes, portable/metal profiles, and runtime-none policy where configuration fields do not apply",
         "the dispatch slice selects no hxrt feature, exports no public ABI, and passes identity-verified GCC and Clang O0/O2 C11 execution plus strict C++17 private-header consumption"
@@ -715,6 +715,7 @@
         "fieldless concrete enums use private native C enums, while payload enums use readable discriminant enums, per-constructor payload structs, payload unions, and outer value structs",
         "closed primitive generic instances specialize deterministically under the shared E3.T03 key, reason, budget, and report contract, while recursive values use allocator-backed uniquely owned tree edges",
         "constructor evaluation, checked payload projection, and exhaustive source-ordered tag switches remain first-class validated HxcIR before structural C emission",
+        "managed enum conditional joins distinguish fresh moves from borrowed retains, execute the condition and only the selected arm once in source order, and transfer one owner through local, argument, return, and nested positions",
         "cycle-capable recursion, unsupported reference payloads, and non-exhaustive source matches fail closed at source positions with no generated artifact",
         "unmanaged programs remain runtime-free; managed programs select only dependency-closed Array/allocator features; normal, reversed, cold, and warm-server output is deterministic across unity, split, and package layouts; GCC/Clang O0/O2 C11, sanitizers, and paired C/C++17 consumers prove matching tags, size, alignment, offsets, construction, ownership, and recursive layout"
       ]
@@ -851,7 +852,7 @@
         "typed nonempty CArray literals and positive compiler-known CArray.zero products lower to structural automatic C arrays, with zero storage emitted as a C11 aggregate initializer and no allocation or memset",
         "the shared fixed-array policy admits exact-size integer, binary32, or binary64 elements up to 65536 bytes per zero-initialized array and rejects invalid, unknown, overflowing, over-budget, or unsupported storage at exact source spans",
         "Span or ConstSpan borrows lower to typed pointer-and-length views without iterator objects; reached direct static parameters and nested forwarding retain one semantic HxcIR span argument plus an explicit callee borrow while strict C11 receives correctly qualified pointer-and-size_t parameters with no wrapper",
-        "compile-time and loop-guarded bounds proofs remain explicit in schema-18 HxcIR, statically out-of-range indexes fail before C emission, and dynamic local or parameter indexing emits a signed and size_t fail-stop check against the exact local or forwarded element count in every profile and build mode",
+        "compile-time and loop-guarded bounds proofs remain explicit in schema-19 HxcIR, statically out-of-range indexes fail before C emission, and dynamic local or parameter indexing emits a signed and size_t fail-stop check against the exact local or forwarded element count in every profile and build mode",
         "ordinary-Haxe 32 by 16 by 32 linearization, repeated UInt8 mutation, and exact-width span iteration compile to element-scaled guarded access whose generated C is byte-identical across profile and build mode",
         "borrowed returns, field or global storage, instance or virtual dispatch, callbacks, recursion, and other language-level span escapes fail with source-positioned HXC1001, while exported or native ABI boundaries fail with source-positioned HXC3000; neither family leaves a plausible artifact",
         "portable and metal runtime-none projects carry a structured reachable-program proof and compile and execute as strict C11 under required GCC and Clang O0, O2, and sanitizer lanes with no allocation or hxrt artifact, include, library, or symbol",
@@ -1003,7 +1004,7 @@
       ],
       "status": "active",
       "assertions": [
-        "real typed String literals lower through schema-18 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
+        "real typed String literals lower through schema-19 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
         "literal Sys.println and default literal trace select only the dependency-closed runtime-base, status, string-literal, and io feature graph while allocator, full string operations, object, GC, dynamic, reflection, and exception machinery remains absent",
         "portable auto and metal minimal builds emit source-rooted runtime diagnostics; runtime none reports all four sorted operation/surface/source blockers with both dependency chains before output; freestanding and neighboring unsupported surfaces fail closed",
         "generated portable and metal projects are deterministic across output roots and caller working directories and compile and run under strict GCC and Clang at O0 and O2",

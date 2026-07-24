@@ -2,7 +2,7 @@
 
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
 complete object lifetime is proven inside one generated C function. The
-compiler lowers the real pinned-Haxe `TypedExpr` through schema-18 HxcIR and
+compiler lowers the real pinned-Haxe `TypedExpr` through schema-19 HxcIR and
 structural C AST nodes. The direct scalar/class slice does not allocate or
 select `hxrt`; an independently admitted managed parameter or field selects
 only its dependency-closed runtime features. No path uses C++ constructor

@@ -406,8 +406,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     for label, value in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in value or "\\" in value:
             raise EnumLoweringFailure(f"{label} leaked a host path")
-    if not hxcir.startswith("hxcir schema=18\n") or hxcir.count(" representation=tagged ") != 6:
-        raise EnumLoweringFailure("schema-18 tagged-union HxcIR inventory drifted")
+    if not hxcir.startswith("hxcir schema=19\n") or hxcir.count(" representation=tagged ") != 6:
+        raise EnumLoweringFailure("schema-19 tagged-union HxcIR inventory drifted")
     option_section = function_section(hxcir, "optionValue")
     recursive_section = function_section(hxcir, "recursiveLocal")
     main_section = function_section(hxcir, "main")
@@ -1096,6 +1096,10 @@ def check_negative_cases() -> None:
             "HXC1001",
             "recursive-enum-with-collector-payload:ManagedChain",
         ),
+        "recursive_conditional": (
+            "HXC1001",
+            "TIf(result-type:haxe-enum:",
+        ),
         "unsupported_reference_payload": (
             "HXC1001",
             "UnsupportedValue.values:reference-policy-not-admitted:haxe-string-map-reference:",
@@ -1498,6 +1502,10 @@ def check_bytes_payload(*, requested_toolchain: str) -> None:
             'implementation=runtime("bytes")',
             'runtime(feature="bytes",operation="get")',
             'runtime(feature="bytes",operation="set")',
+            "declare-managed-carrier",
+            "ownership=move-fresh",
+            "ownership=retain-borrowed(program-local(",
+            "move-managed-carrier",
         ):
             if marker not in hxcir:
                 raise EnumLoweringFailure(

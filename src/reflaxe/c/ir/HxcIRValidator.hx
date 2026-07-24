@@ -16,6 +16,18 @@ private typedef HxcIRCarrierFlowState = {
 	final assigned:Bool;
 }
 
+private enum HxcIRManagedCarrierPhase {
+	IRMCEmpty;
+	IRMCOwned;
+	IRMCMoved;
+}
+
+/** One path state used to prove exactly one managed owner crosses a join. */
+private typedef HxcIRManagedCarrierFlowState = {
+	final blockId:String;
+	final phase:HxcIRManagedCarrierPhase;
+}
+
 /** Safety checks that are guaranteed to run before another basic block. */
 private typedef HxcIRDominanceProofs = {
 	final controlFlow:HxcIRControlFlowFacts;
@@ -31,7 +43,7 @@ private enum HxcIRDispatchLayoutKind {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 18;
+	public static inline final SCHEMA_VERSION = 19;
 
 	public function new() {}
 
@@ -902,7 +914,7 @@ private class HxcIRValidationState {
 	/**
 		Prove that every function root names one exact collector-managed value.
 
-		Block parameters are deliberately rejected in schema 18. Their value changes
+		Block parameters are deliberately rejected in schema 19. Their value changes
 		on incoming edges, so they need an edge-owned root update rather than the
 		simpler "store immediately after definition" rule used for parameters and
 		instruction results.
@@ -910,7 +922,7 @@ private class HxcIRValidationState {
 	function validateManagedRoots(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, parameters:Map<String, HxcIRParameter>,
 			valueSites:Map<String, HxcIRInstructionSite>, blockParameterIds:Map<String, Bool>):Void {
 		if (fn.managedRoots == null) {
-			add('$path.managedRoots', "function has no explicit managed-root plan for schema 18", fn.source);
+			add('$path.managedRoots', "function has no explicit managed-root plan for schema 19", fn.source);
 			return;
 		}
 		final rootIds:Map<String, Bool> = [];
@@ -1131,6 +1143,44 @@ private class HxcIRValidationState {
 		return result == "" ? null : result;
 	}
 
+	/** Require one private tagged enum; lifecycle helpers make its managed policy explicit. */
+	function requireManagedTaggedEnum(type:HxcIRTypeRef, path:String, source:HxcSourceSpan):Null<String> {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _:
+				add(path, "managed carrier requires one tagged enum instance", source);
+				return null;
+		};
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		if (instance == null || declaration == null || instance.representation != IRRTagged) {
+			add(path, "managed carrier requires one tagged enum instance", source);
+			return null;
+		}
+		return switch declaration.kind {
+			case IRTKTaggedUnion(_): instanceId;
+			case _:
+				add(path, "managed carrier requires one tagged enum instance", source);
+				null;
+		};
+	}
+
+	/** Match a managed carrier's retain/destroy helper to its exact enum instance. */
+	function requireManagedEnumLifecycle(type:HxcIRTypeRef, selected:HxcIRImplementation, operation:String, path:String, source:HxcSourceSpan):Null<String> {
+		final instanceId = requireManagedTaggedEnum(type, path, source);
+		final plannedId = switch selected {
+			case IRIProgramLocal(helperId): enumArrayLifecycleInstanceId(helperId, operation);
+			case _:
+				add(path, 'managed carrier $operation requires one program-local enum lifecycle plan', source);
+				null;
+		};
+		if (plannedId == null)
+			add(path, 'managed carrier has a malformed enum $operation plan', source);
+		else if (instanceId != null && plannedId != instanceId)
+			add(path, 'managed carrier enum and $operation plan differ', source);
+		return instanceId == null || plannedId != instanceId ? null : instanceId;
+	}
+
 	/** Extract the closed-record instance named by a typed ownership plan. */
 	static function aggregateLifecycleInstanceId(helperId:String, operation:String):Null<String> {
 		final prefix = "aggregate-lifecycle:";
@@ -1239,8 +1289,9 @@ private class HxcIRValidationState {
 					add(path, "borrowed class storage cannot acquire a local ownership lifetime", instruction.source);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOUnary(_, _, _) |
 				IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
-				IRIOAllocate(_, _, _, _) | IRIODeclareUninitialized(_) | IRIODefaultInitialize(_, _, _) | IRIOZeroInitializeFixedArray(_, _, _) |
-				IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _):
+				IRIOAllocate(_, _, _, _) | IRIODeclareUninitialized(_) | IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) |
+				IRIOMoveManagedCarrier(_) | IRIODefaultInitialize(_, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
+				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _):
 		}
 	}
 
@@ -1785,6 +1836,64 @@ private class HxcIRValidationState {
 					case _:
 						add(path, "uninitialized declaration requires an automatic local place", instruction.source);
 				}
+			case IRIODeclareManagedCarrier(place, destroyImplementation):
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				validateImplementation(destroyImplementation, '$path.destroyImplementation', instruction.source);
+				switch place {
+					case IRPLocal(localId):
+						final local = locals.get(localId);
+						if (local != null && local.initialState != IRISUninitialized)
+							add(path, "managed carrier declaration requires an initially uninitialized local", instruction.source);
+						if (local != null && isUnmanagedDirectCarrier(local.type))
+							add(path, "managed carrier declaration requires a value with managed lifetime", instruction.source);
+						if (local != null)
+							requireManagedEnumLifecycle(local.type, destroyImplementation, "destroy", path, instruction.source);
+						if (managedCarrierDeclarationCount(localId, blocks) != 1)
+							add(path, "managed carrier storage must have exactly one declaration", instruction.source);
+						validateManagedCarrierFlow(localId, block, blocks, path, instruction.source);
+					case _:
+						add(path, "managed carrier declaration requires an automatic local place", instruction.source);
+				}
+			case IRIOAcquireManagedCarrier(place, valueId, acquisition):
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				switch place {
+					case IRPLocal(localId):
+						if (managedCarrierDeclarationCount(localId,
+							blocks) != 1) add(path, "managed carrier acquisition requires exactly one matching declaration", instruction.source);
+					case _:
+						add(path, "managed carrier acquisition requires an automatic local place", instruction.source);
+				}
+				final placeType = knownPlaceType(place, available, locals);
+				final valueType = requireValue(valueId, '$path.value', instruction.source, available);
+				if (placeType != null && valueType != null && typeKey(placeType) != typeKey(valueType))
+					add(path, "managed carrier acquisition value does not match its carrier type", instruction.source);
+				if (placeType != null)
+					switch acquisition {
+						case IRMCAMoveFresh:
+							requireManagedTaggedEnum(placeType, path, instruction.source);
+							final freshOwner = isFreshManagedCarrierValue(valueId, valueSites);
+							if (!freshOwner) add(path,
+								"move-fresh acquisition requires a newly constructed enum, an owned call result, or another managed-carrier move",
+								instruction.source);
+						case IRMCARetainBorrowed(retainImplementation):
+							validateImplementation(retainImplementation, '$path.acquisition.implementation', instruction.source);
+							requireManagedEnumLifecycle(placeType, retainImplementation, "retain", path, instruction.source);
+					}
+			case IRIOMoveManagedCarrier(place):
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				switch place {
+					case IRPLocal(localId):
+						if (managedCarrierDeclarationCount(localId,
+							blocks) != 1) add(path, "managed carrier move requires exactly one matching declaration", instruction.source);
+					case _:
+						add(path, "managed carrier move requires an automatic local place", instruction.source);
+				}
+				final placeType = knownPlaceType(place, available, locals);
+				if (placeType != null) {
+					requireManagedTaggedEnum(placeType, path, instruction.source);
+					if (instruction.result != null && typeKey(instruction.result.type) != typeKey(placeType))
+						add(path, "managed carrier move result does not match its carrier type", instruction.source);
+				}
 			case IRIODefaultInitialize(place, from, to):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final initializedType = knownPlaceType(place, available, locals);
@@ -1932,14 +2041,14 @@ private class HxcIRValidationState {
 		return switch kind {
 			case IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOUnary(_, _, _) |
 				IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOConstructAggregate(_, _) | IRIOConstructInterface(_, _, _) | IRIOProject(_, _) |
-				IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _):
+				IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIOMoveManagedCarrier(_):
 				true;
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) |
-				IRIODeclareUninitialized(_) | IRIODefaultInitialize(_, _, _) | IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) |
-				IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) |
-				IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
+				IRIODeclareUninitialized(_) | IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) | IRIODefaultInitialize(_, _, _) |
+				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
+				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
 				false;
 		}
 	}
@@ -2993,13 +3102,141 @@ private class HxcIRValidationState {
 			add(path, "uninitialized conditional carrier must be assigned on every path before its first read", source);
 	}
 
+	/**
+	 * Prove that a managed join has one acquired owner on every path that moves it.
+	 *
+	 * Branches may either move a fresh result or retain a borrowed value. Both
+	 * become the same `owned` state. The join consumes that state exactly once;
+	 * ordinary loads, stores, retain/release calls, and a second move are rejected
+	 * so ownership cannot be duplicated or silently lost in C syntax.
+	 */
+	function validateManagedCarrierFlow(localId:String, declarationBlock:HxcIRBlock, blocks:Map<String, HxcIRBlock>, path:String, source:HxcSourceSpan):Void {
+		var sawDeclaration = false;
+		for (instruction in declarationBlock.instructions) {
+			if (!sawDeclaration) {
+				sawDeclaration = switch instruction.kind {
+					case IRIODeclareManagedCarrier(IRPLocal(declaredId), _) if (declaredId == localId): true;
+					case _: false;
+				};
+			} else if (instructionTouchesLocalPlace(instruction.kind, localId)) {
+				add(path, "managed carrier declaration must be the last operation that mentions its storage before the branch", source);
+				return;
+			}
+		}
+		final starts:Array<HxcIRManagedCarrierFlowState> = switch declarationBlock.terminator == null ? null : declarationBlock.terminator.kind {
+			case IRTBranch(_, whenTrue, whenFalse): [
+					{blockId: whenTrue.targetBlockId, phase: IRMCEmpty},
+					{blockId: whenFalse.targetBlockId, phase: IRMCEmpty}
+				];
+			case _: [];
+		};
+		if (starts.length != 2) {
+			add(path, "managed carrier declaration must immediately feed a structured two-way branch", source);
+			return;
+		}
+		final pending = starts.copy();
+		final visited:Map<String, Bool> = [];
+		var sawAcquire = false;
+		var sawMove = false;
+		var invalidFlow = false;
+		while (pending.length > 0) {
+			final state = pending.pop();
+			if (state == null)
+				continue;
+			final stateKey = state.blockId + ":" + managedCarrierPhaseKey(state.phase);
+			if (visited.exists(stateKey))
+				continue;
+			visited.set(stateKey, true);
+			final current = blocks.get(state.blockId);
+			if (current == null)
+				continue;
+			var phase = state.phase;
+			for (instruction in current.instructions) {
+				switch instruction.kind {
+					case IRIOAcquireManagedCarrier(IRPLocal(targetId), _, _) if (targetId == localId):
+						if (phase != IRMCEmpty)
+							invalidFlow = true;
+						phase = IRMCOwned;
+						sawAcquire = true;
+					case IRIOMoveManagedCarrier(IRPLocal(targetId)) if (targetId == localId):
+						if (phase != IRMCOwned)
+							invalidFlow = true;
+						phase = IRMCMoved;
+						sawMove = true;
+					case _:
+						if (instructionTouchesLocalPlace(instruction.kind, localId))
+							invalidFlow = true;
+				}
+			}
+			final successors:Array<String> = if (current.terminator == null) {
+				[];
+			} else switch current.terminator.kind {
+				case IRTJump(edge): [edge.targetBlockId];
+				case IRTBranch(_, whenTrue, whenFalse): [whenTrue.targetBlockId, whenFalse.targetBlockId];
+				case IRTSwitch(_, cases, defaultEdge): cases.map(item -> item.edge.targetBlockId).concat([defaultEdge.targetBlockId]);
+				case IRTTagSwitch(_, cases, defaultEdge):
+					final result = cases.map(item -> item.edge.targetBlockId);
+					if (defaultEdge != null)
+						result.push(defaultEdge.targetBlockId);
+					result;
+				case IRTReturn(_, _) | IRTThrow(_, _) | IRTUnreachable: [];
+			};
+			if (successors.length == 0 && phase == IRMCOwned)
+				invalidFlow = true;
+			for (successor in successors)
+				pending.push({blockId: successor, phase: phase});
+		}
+		if (!sawAcquire || !sawMove || invalidFlow)
+			add(path, "managed carrier must acquire exactly one owner on every normal path before moving it once", source);
+	}
+
+	static function managedCarrierPhaseKey(phase:HxcIRManagedCarrierPhase):String
+		return switch phase {
+			case IRMCEmpty: "empty";
+			case IRMCOwned: "owned";
+			case IRMCMoved: "moved";
+		};
+
+	/** Count the declaration that gives one carrier operation its ownership context. */
+	static function managedCarrierDeclarationCount(localId:String, blocks:Map<String, HxcIRBlock>):Int {
+		var count = 0;
+		for (block in blocks)
+			for (instruction in block.instructions)
+				switch instruction.kind {
+					case IRIODeclareManagedCarrier(IRPLocal(declaredId), _) if (declaredId == localId):
+						count++;
+					case _:
+				}
+		return count;
+	}
+
+	/**
+	 * Check the ownership source claimed by `move-fresh`.
+	 *
+	 * A move is safe only when the value-producing instruction gives its caller
+	 * the one owner. Managed enum construction, a call returning that enum, and
+	 * a nested carrier move have that contract. A load does not: it borrows the
+	 * owner still held by a local or parameter and must use retain-borrowed.
+	 */
+	static function isFreshManagedCarrierValue(valueId:String, valueSites:Map<String, HxcIRInstructionSite>):Bool {
+		final site = valueSites.get(valueId);
+		if (site == null)
+			return false;
+		return switch site.instruction.kind {
+			case IRIOConstructTag(_, _, _) | IRIOCall(_) | IRIOMoveManagedCarrier(_): true;
+			case _:
+				false;
+		};
+	}
+
 	/** Finds every instruction whose typed place payload can observe or alter one local's storage. */
 	static function instructionTouchesLocalPlace(kind:HxcIRInstructionKind, localId:String):Bool
 		return switch kind {
 			case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
-				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODefaultInitialize(place, _, _) |
-				IRIOInitialize(place, _, _, _) | IRIOInitializeFixedArray(place, _, _, _) | IRIOZeroInitializeFixedArray(place, _, _) |
-				IRIOBindVirtualTable(place, _) | IRIOBoundsCheck(place, _, _) | IRIOLifetime(place, _, _, _):
+				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODeclareManagedCarrier(place, _) |
+				IRIOAcquireManagedCarrier(place, _, _) | IRIOMoveManagedCarrier(place) | IRIODefaultInitialize(place, _, _) | IRIOInitialize(place, _, _, _) |
+				IRIOInitializeFixedArray(place, _, _, _) | IRIOZeroInitializeFixedArray(place, _, _) | IRIOBindVirtualTable(place, _) |
+				IRIOBoundsCheck(place, _, _) | IRIOLifetime(place, _, _, _):
 				placeContainsLocal(place, localId);
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeContainsLocal(place, localId) || placeContainsLocal(sourceArray, localId);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |

@@ -164,6 +164,11 @@ class HxcIRDumper {
 			case IRIORelease(place, selected): 'release place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIOTrace(place, selected): 'trace place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIODeclareUninitialized(place): 'declare-uninitialized place=${renderPlace(place)}';
+			case IRIODeclareManagedCarrier(place, destroy):
+				'declare-managed-carrier place=${renderPlace(place)} destroy=${implementation(destroy)}';
+			case IRIOAcquireManagedCarrier(place, valueId, acquisition):
+				'acquire-managed-carrier place=${renderPlace(place)} value=${quote(valueId)} ownership=${managedCarrierAcquisition(acquisition)}';
+			case IRIOMoveManagedCarrier(place): 'move-managed-carrier place=${renderPlace(place)}';
 			case IRIODefaultInitialize(place, from, to):
 				'default-initialize place=${renderPlace(place)} transition=${state(from)}->${state(to)}';
 			case IRIOInitialize(place, valueId, from, to):
@@ -182,6 +187,12 @@ class HxcIRDumper {
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
 	}
+
+	function managedCarrierAcquisition(acquisition:HxcIRManagedCarrierAcquisition):String
+		return switch acquisition {
+			case IRMCAMoveFresh: "move-fresh";
+			case IRMCARetainBorrowed(selected): 'retain-borrowed(${implementation(selected)})';
+		};
 
 	function functionFailure(value:HxcIRFunctionFailureConvention):String {
 		return switch value {

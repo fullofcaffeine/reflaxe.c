@@ -24,6 +24,9 @@ enum ValidationResult {
  * validation boundary.
  */
 final class Main {
+	/** Small observable trace used only to prove conditional evaluation order. */
+	static var order:Int = 0;
+
 	/** Build a successful result and transfer the fresh buffer into its payload. */
 	static function validate():ValidationResult {
 		final canonical = Bytes.alloc(3);
@@ -36,6 +39,58 @@ final class Main {
 	/** Return another owning enum value while preserving shared `Bytes` identity. */
 	static function copy(value:ValidationResult):ValidationResult
 		return value;
+
+	/**
+	 * Join a fresh result and a caller-owned result through one local.
+	 *
+	 * The generated C must move the fresh branch but retain the borrowed branch;
+	 * treating both branches alike would either leak or free shared bytes early.
+	 */
+	static function choose(useFresh:Bool, borrowed:ValidationResult):ValidationResult {
+		final selected = useFresh ? validate() : borrowed;
+		return selected;
+	}
+
+	/** Exercise the same ownership join when the conditional is a call argument. */
+	static function chooseArgument(useFresh:Bool, borrowed:ValidationResult):ValidationResult
+		return copy(useFresh ? validate() : borrowed);
+
+	/** Prove nested joins preserve one owner without flattening branch order. */
+	static function chooseNested(outer:Bool, inner:Bool, borrowed:ValidationResult):ValidationResult {
+		final selected = outer ? (inner ? validate() : borrowed) : ValidationFailed;
+		return selected;
+	}
+
+	/** Record condition evaluation before returning its Boolean result. */
+	static function conditionWithOrder(value:Bool):Bool {
+		order = 9;
+		return value;
+	}
+
+	/** Record the fresh arm and then construct its one owned result. */
+	static function freshWithOrder():ValidationResult {
+		order = order * 10 + 1;
+		return validate();
+	}
+
+	/** Record the borrowed arm and return the caller-owned value unchanged. */
+	static function borrowedWithOrder(borrowed:ValidationResult):ValidationResult {
+		order = order * 10 + 2;
+		return borrowed;
+	}
+
+	/**
+	 * Make condition and selected-arm evaluation observable without printing.
+	 *
+	 * A wrong eager or reordered lowering produces a different byte and
+	 * deliberately loops, so both Eval and native executions detect it.
+	 */
+	static function chooseWithOrder(useFresh:Bool, borrowed:ValidationResult):ValidationResult {
+		final selected = conditionWithOrder(useFresh) ? freshWithOrder() : borrowedWithOrder(borrowed);
+		final expectedOrder = useFresh ? 91 : 92;
+		while (order != expectedOrder) {}
+		return selected;
+	}
 
 	/** Mutate the projected shared buffer without reading an inactive union arm. */
 	static function improve(value:ValidationResult):Void {
@@ -57,10 +112,18 @@ final class Main {
 	static function main():Void {
 		final original = validate();
 		final copied = copy(original);
-		// Keep the fieldless value named so this payload-focused fixture does not
-		// also depend on the temporary short-circuit cleanup work in haxe_c-djl.6.
+		final borrowedJoin = choose(false, original);
+		final freshJoin = choose(true, original);
+		final argumentJoin = chooseArgument(false, original);
+		final nestedBorrowed = chooseNested(true, false, original);
+		final nestedFresh = chooseNested(true, true, original);
+		final nestedFailed = chooseNested(false, true, original);
+		final orderedBorrowed = chooseWithOrder(false, original);
+		final orderedFresh = chooseWithOrder(true, original);
 		final failed = ValidationFailed;
 		improve(copied);
-		while (score(original) != 19 || score(copied) != 19 || score(failed) != -1) {}
+		while (score(original) != 19 || score(copied) != 19 || score(borrowedJoin) != 19 || score(freshJoin) != 15 || score(argumentJoin) != 19
+			|| score(nestedBorrowed) != 19 || score(nestedFresh) != 15 || score(nestedFailed) != -1 || score(orderedBorrowed) != 19
+			|| score(orderedFresh) != 15 || score(failed) != -1) {}
 	}
 }

@@ -387,10 +387,10 @@ class CBodyValueCoalescingPlanner {
 		switch kind {
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_):
 			case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
-				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODefaultInitialize(place, _, _) |
-				IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
+				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODeclareManagedCarrier(place, _) |
+				IRIOMoveManagedCarrier(place) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
 				collectPlaceUses(place, site);
-			case IRIOStore(place, valueId) | IRIOInitialize(place, valueId, _, _):
+			case IRIOStore(place, valueId) | IRIOInitialize(place, valueId, _, _) | IRIOAcquireManagedCarrier(place, valueId, _):
 				collectPlaceUses(place, site);
 				addUse(valueId, site);
 			case IRIOUnary(_, valueId, _):

@@ -264,7 +264,7 @@ complete rationale, direct-lowering alternative, sibling comparison, extraction
 criteria, and implementation-language analysis are in [the HxcIR semantic
 contract](hxc-ir.md#why-a-second-ir-when-haxe-already-has-one).
 
-The schema-18 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-19 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -277,6 +277,12 @@ C syntax. Closed records compose field lifetimes in one typed helper plan;
 recursive enums use uniquely owned allocator-backed tree links. Copies clone a
 recursive tree, cleanup destroys it, and graphs that require cycle collection
 remain rejected.
+Schema 19 also gives managed enum conditionals an explicit three-step
+ownership protocol. HxcIR declares one empty join carrier, records whether the
+chosen arm moves a fresh owner or retains a borrowed value, and then moves the
+single joined owner onward. Validation proves this protocol before CAST emits a
+plain C local and structured `if`/`else`; the C printer never guesses whether a
+copy needs retaining.
 An embedded class-field borrow is distinct from an ordinary address. A named
 automatic borrow alias may reload that pointer in a later control-flow block,
 but cannot be reassigned, returned, stored as an owner, or forwarded without a

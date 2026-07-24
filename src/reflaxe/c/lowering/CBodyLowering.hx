@@ -5968,10 +5968,19 @@ private class FunctionBuilder {
 		final conditionValue = lowerBooleanCondition(condition, "TIf");
 		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TIf(result-type)") : expectedMapping;
 		final optionalResult = resultMapping.optionalValue();
+		final managedEnumResult = switch resultMapping.enumValue() {
+			case null: null;
+			// Recursive enums deep-copy owned child links during retain. That work
+			// can fail and therefore needs an explicit failure edge on carrier
+			// acquisition before it can share this infallible join protocol.
+			case value if (value.managedLifetime && !value.recursive): value;
+			case _: null;
+		};
 		final branchInitializesResult = conditionalDirectValue(resultMapping);
 		if (resultMapping.primitiveMapping() == null
 			&& !resultMapping.isCString()
 			&& optionalResult == null
+			&& managedEnumResult == null
 			&& !branchInitializesResult)
 			return unsupported(expression, 'TIf(result-type:${resultMapping.cSpelling})');
 		if (resultMapping.irType == IRTVoid) {
@@ -5979,7 +5988,14 @@ private class FunctionBuilder {
 				'TIf(Void-as-value:${expectedMapping == null ? "typed-expression" : "contextual"}:function-return=${prepared.returnMapping.cSpelling})');
 		}
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
-		final resultLocalId = if (branchInitializesResult) {
+		final resultLocalId = if (managedEnumResult != null) {
+			final destroyId = managedEnumResult.destroyImplementationId();
+			if (destroyId == null)
+				throw new CBodyEmissionError('managed enum `${managedEnumResult.instanceId}` lost its destroy plan');
+			final localId = declareFlowLocal(resultMapping, source, "conditional-managed-result");
+			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), IRIProgramLocal(destroyId)), source, "conditional-managed-result-declare");
+			localId;
+		} else if (branchInitializesResult) {
 			final localId = declareFlowLocal(resultMapping, source, "conditional-result");
 			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source, "conditional-result-declare");
 			localId;
@@ -5996,9 +6012,13 @@ private class FunctionBuilder {
 		currentBlock = trueBlock;
 		final trueCleanupDepth = normalCleanupActionIds.length;
 		var trueValue = coerce(lowerValue(whenTrue, resultMapping), resultMapping, whenTrue.pos, "TIf(true-value)");
-		if (optionalResult != null && optionalResult.managedLifetime)
-			trueValue = captureManagedValue(trueValue, resultMapping, whenTrue.pos, "conditional-true");
-		appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), trueValue.id), source, "conditional-true-store");
+		if (managedEnumResult != null) {
+			appendManagedConditionalAcquire(resultLocalId, trueValue, managedEnumResult, source, "conditional-true-acquire");
+		} else {
+			if (optionalResult != null && optionalResult.managedLifetime)
+				trueValue = captureManagedValue(trueValue, resultMapping, whenTrue.pos, "conditional-true");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), trueValue.id), source, "conditional-true-store");
+		}
 		appendScopedCleanupInstructions(trueCleanupDepth, source);
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		restoreCleanupDepth(trueCleanupDepth);
@@ -6006,18 +6026,53 @@ private class FunctionBuilder {
 		currentBlock = falseBlock;
 		final falseCleanupDepth = normalCleanupActionIds.length;
 		var falseValue = coerce(lowerValue(falseExpression, resultMapping), resultMapping, falseExpression.pos, "TIf(false-value)");
-		if (optionalResult != null && optionalResult.managedLifetime)
-			falseValue = captureManagedValue(falseValue, resultMapping, falseExpression.pos, "conditional-false");
-		appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), falseValue.id), source, "conditional-false-store");
+		if (managedEnumResult != null) {
+			appendManagedConditionalAcquire(resultLocalId, falseValue, managedEnumResult, source, "conditional-false-acquire");
+		} else {
+			if (optionalResult != null && optionalResult.managedLifetime)
+				falseValue = captureManagedValue(falseValue, resultMapping, falseExpression.pos, "conditional-false");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), falseValue.id), source, "conditional-false-store");
+		}
 		appendScopedCleanupInstructions(falseCleanupDepth, source);
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		restoreCleanupDepth(falseCleanupDepth);
 
 		currentBlock = joinBlock;
-		final loaded = loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "conditional-load");
+		final loaded:LoweredValue = if (managedEnumResult == null) {
+			loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "conditional-load");
+		} else {
+			final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+			appendInstruction(result, IRIOMoveManagedCarrier(IRPLocal(resultLocalId)), source, "conditional-managed-move");
+			// The carrier itself already owns the `conditional-managed-result`
+			// symbol. The moved value needs a distinct semantic name so C cannot
+			// accidentally redeclare the carrier as `T carrier = carrier`.
+			registerValueTemporary(result.id, "conditional-managed-move-result");
+			({id: result.id, type: result.type, mapping: resultMapping} : LoweredValue);
+		}
+		if (managedEnumResult != null)
+			freshManagedEnumValueIds.set(loaded.id, true);
 		if (optionalResult != null && optionalResult.managedLifetime)
 			freshManagedOptionalValueIds.set(loaded.id, true);
 		return loaded;
+	}
+
+	/**
+	 * Give one managed conditional arm to its outer join carrier.
+	 *
+	 * Fresh constructors and owned call results move directly. Parameters,
+	 * locals, and other borrowed values are copied and retained through the
+	 * enum's active-tag helper before branch-local cleanup runs.
+	 */
+	function appendManagedConditionalAcquire(localId:String, value:LoweredValue, managed:CPreparedBodyEnumInstance, source:HxcSourceSpan, role:String):Void {
+		final acquisition = if (freshManagedEnumValueIds.remove(value.id)) {
+			IRMCAMoveFresh;
+		} else {
+			final retainId = managed.retainImplementationId();
+			if (retainId == null)
+				throw new CBodyEmissionError('managed enum `${managed.instanceId}` lost its retain plan');
+			IRMCARetainBorrowed(IRIProgramLocal(retainId));
+		}
+		appendInstruction(null, IRIOAcquireManagedCarrier(IRPLocal(localId), value.id, acquisition), source, role);
 	}
 
 	/**

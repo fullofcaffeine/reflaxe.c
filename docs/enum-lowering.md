@@ -1,7 +1,7 @@
 # Haxe enum lowering
 
 E3.T02 adds a bounded production path for Haxe algebraic enums. Concrete enum
-values lower from pinned-Haxe `TypedExpr` through schema-18 HxcIR and the HxcIR
+values lower from pinned-Haxe `TypedExpr` through schema-19 HxcIR and the HxcIR
 validator before structural strict C11 is selected. The emitted definitions are
 private compiler implementation details in both `portable` and `metal`; this
 work does not establish a public C ABI or support broader generic classes and
@@ -84,6 +84,17 @@ from the enum for the duration of the arm. Pattern-projected Bytes values use
 the same rule: the enum remains the owner while the switch arm reads or mutates
 the shared byte buffer, so the short-lived local does not retain and release a
 redundant second owner.
+
+Conditional expressions use the same ownership facts. For
+`condition ? freshResult() : existingResult`, HxcIR declares one empty carrier
+before testing the condition. The selected arm moves an owned constructor or
+call result into that carrier, or copies and retains a borrowed parameter or
+local. The join then moves exactly one owner to the surrounding local,
+argument, nested conditional, or return. This is deliberately not a plain C
+struct copy: the validator rejects missing or repeated acquisition, a borrowed
+value mislabeled as fresh, the wrong enum lifecycle helper, and a second move.
+The emitted C remains a normal local plus `if`/`else`, while ownership stays
+explicit and independently checked.
 
 Array-backed paths select the existing `array` runtime slice. Bytes-backed paths
 select the existing `bytes` slice and its allocator, status, base, and
@@ -214,10 +225,13 @@ AddressSanitizer and UndefinedBehaviorSanitizer.
 
 The narrower `test:enum-lowering:bytes` lane compares the same ordinary Haxe
 program under Eval and generated C. It constructs, returns, copies, matches,
-mutates, and destroys an enum that owns one shared Bytes buffer. The lane checks
-the HxcIR ownership operations, exact runtime slice, active-tag retain/destroy
-helpers, cold/repeated/reversed/server determinism, unity/split/package layouts,
-strict native execution, sanitizers, and the source-positioned rejection of a
+mutates, conditionally joins, and destroys an enum that owns one shared Bytes
+buffer. Fresh and borrowed arms run in both orders and in local, argument,
+return, and nested positions; an observable trace checks that the condition and
+only the selected arm run in source order. The lane checks the HxcIR ownership
+operations, exact runtime slice, active-tag retain/destroy helpers,
+cold/repeated/reversed/server determinism, unity/split/package layouts, strict
+native execution, sanitizers, and the source-positioned rejection of a
 StringMap payload. It is the fast diagnostic for this rule; the complete enum
 runner retains the integrated proof.
 

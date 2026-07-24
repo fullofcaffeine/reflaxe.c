@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 18
+the structural C AST. Its schema is internal to the compiler: schema version 19
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
 
@@ -114,6 +114,17 @@ handwritten shape `T selected; if (condition) selected = left; else selected =
 right;` without fabricating a zero value. Managed conditional joins remain a
 separate ownership problem because selecting a branch may require retain,
 transfer, and cleanup.
+Schema version 19 solves that separate problem for managed tagged enums. It
+declares one initially empty carrier before the branch, then records how the
+selected arm gives that carrier exactly one owner. A newly constructed enum or
+owned call result moves into the carrier; a parameter, local, or other borrowed
+value is copied and retained through the enum family's exact active-payload
+helper. The join moves the one owner out. Validation rejects an unowned branch,
+two acquisitions, a borrowed value mislabeled as fresh, ordinary loads or
+stores of the carrier, a second move, or a path that abandons an acquired owner.
+This lets C emission use an ordinary local plus structured `if`/`else` while
+keeping retain, cleanup, and transfer decisions explicit before C syntax is
+chosen.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by

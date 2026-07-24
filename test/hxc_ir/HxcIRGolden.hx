@@ -103,6 +103,9 @@ class HxcIRGolden {
 				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
 				uninitializedCarrierReadBeforeBranch: invalidDiagnostics(uninitializedCarrierReadBeforeBranchProgram()),
 				managedUninitializedCarrier: invalidDiagnostics(managedUninitializedCarrierProgram()),
+				managedCarrierBorrowMovedAsFresh: invalidDiagnostics(managedCarrierBorrowMovedAsFreshProgram()),
+				managedCarrierMissingAcquire: invalidDiagnostics(managedCarrierMissingAcquireProgram()),
+				managedCarrierLifecycleMismatch: invalidDiagnostics(managedCarrierLifecycleMismatchProgram()),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
 				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
 				throwWithoutStatus: invalidDiagnostics(throwWithoutStatusProgram()),
@@ -360,6 +363,33 @@ class HxcIRGolden {
 			]),
 			source: span(COVERAGE_SOURCE, 4, 7)
 		};
+		final bytesType:HxcIRTypeDeclaration = {
+			id: "type.managed-bytes",
+			displayName: "haxe.io.Bytes",
+			kind: IRTKReference,
+			source: span(COVERAGE_SOURCE, 7)
+		};
+		final managedChoiceType:HxcIRTypeDeclaration = {
+			id: "type.managed-choice",
+			displayName: "coverage.ManagedChoice",
+			kind: IRTKTaggedUnion([
+				{
+					name: "Text",
+					tagValue: 0,
+					payload: [
+						{name: "value", type: IRTInstance("instance.managed-bytes"), source: span(COVERAGE_SOURCE, 7)}
+					],
+					source: span(COVERAGE_SOURCE, 7)
+				},
+				{
+					name: "Empty",
+					tagValue: 1,
+					payload: [],
+					source: span(COVERAGE_SOURCE, 7)
+				}
+			]),
+			source: span(COVERAGE_SOURCE, 7)
+		};
 		final objectType:HxcIRTypeDeclaration = {
 			id: "type.object",
 			displayName: "coverage.Object",
@@ -392,6 +422,20 @@ class HxcIRGolden {
 				arguments: [],
 				representation: IRRTagged,
 				source: span(COVERAGE_SOURCE, 4, 7)
+			},
+			{
+				id: "instance.managed-choice",
+				declarationId: "type.managed-choice",
+				arguments: [],
+				representation: IRRTagged,
+				source: span(COVERAGE_SOURCE, 7)
+			},
+			{
+				id: "instance.managed-bytes",
+				declarationId: "type.managed-bytes",
+				arguments: [],
+				representation: IRRManaged("bytes"),
+				source: span(COVERAGE_SOURCE, 7)
 			},
 			{
 				id: "instance.object",
@@ -468,7 +512,15 @@ class HxcIRGolden {
 			modules: [
 				{
 					id: "coverage.IR",
-					types: [recordType, optionType, objectType, interfaceType, constructedType],
+					types: [
+						recordType,
+						optionType,
+						bytesType,
+						managedChoiceType,
+						objectType,
+						interfaceType,
+						constructedType
+					],
 					typeInstances: instances,
 					globals: [],
 					functions: [
@@ -476,7 +528,8 @@ class HxcIRGolden {
 						coverageVirtualTarget(),
 						coverageThrowFunction(),
 						coverageFunction(),
-						coverageTagSwitchFunction()
+						coverageTagSwitchFunction(),
+						managedCarrierFunction()
 					],
 					source: span(COVERAGE_SOURCE, 1, 80)
 				}
@@ -485,7 +538,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-18 exact-root contract without involving C emission.
+		Exercise the schema-19 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -864,6 +917,66 @@ class HxcIRGolden {
 			],
 			cleanupRegions: [],
 			source: span(COVERAGE_SOURCE, 42, 45)
+		};
+	}
+
+	/**
+	 * Exercise both legal ways to fill one managed conditional carrier.
+	 *
+	 * The true arm constructs and moves a fresh owner. The false arm receives a
+	 * caller-owned value, so it copies and retains that borrow. The join then
+	 * moves exactly one owner to the return value.
+	 */
+	static function managedCarrierFunction():HxcIRFunction {
+		return buildManagedCarrierFunction(IRMCARetainBorrowed(IRIProgramLocal("enum-lifecycle:instance.managed-choice:retain")), true,
+			"enum-lifecycle:instance.managed-choice:destroy");
+	}
+
+	/** Build one carrier fixture so negative cases can alter policy without mutating final fields. */
+	static function buildManagedCarrierFunction(borrowedAcquisition:HxcIRManagedCarrierAcquisition, includeBorrowedAcquire:Bool,
+			destroyHelperId:String):HxcIRFunction {
+		final file = COVERAGE_SOURCE;
+		final choiceType = IRTInstance("instance.managed-choice");
+		final borrowedInstructions = if (includeBorrowedAcquire) [
+			instruction("managed.acquire-borrowed", null, IRIOAcquireManagedCarrier(IRPLocal("local.managed-result"), "value.borrowed", borrowedAcquisition),
+				file, 50)
+		] else [];
+		return {
+			id: "fn.coverage.managed-carrier",
+			displayName: "coverage.IR.managedCarrier",
+			parameters: [
+				parameter("value.condition", IRTBool, file, 47),
+				parameter("value.borrowed", choiceType, file, 47),
+				parameter("value.bytes", IRTInstance("instance.managed-bytes"), file, 47)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [
+				local("local.managed-result", choiceType, IRLSAutomatic, IRISUninitialized, file, 48)
+			],
+			returnType: choiceType,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				block("entry", [
+					instruction("managed.declare", null, IRIODeclareManagedCarrier(IRPLocal("local.managed-result"), IRIProgramLocal(destroyHelperId)), file,
+						48)
+				], IRTBranch("value.condition", edge("fresh"), edge("borrowed")), file,
+					48),
+				block("fresh", [
+					instruction("managed.construct", result("value.fresh", choiceType), IRIOConstructTag("instance.managed-choice", "Text", ["value.bytes"]),
+						file, 49),
+					instruction("managed.acquire-fresh", null, IRIOAcquireManagedCarrier(IRPLocal("local.managed-result"), "value.fresh", IRMCAMoveFresh),
+						file, 49)
+				], IRTJump(edge("join")), file, 49),
+				block("borrowed", borrowedInstructions, IRTJump(edge("join")), file, 50),
+				block("join", [
+					instruction("managed.move", result("value.joined", choiceType), IRIOMoveManagedCarrier(IRPLocal("local.managed-result")), file, 51)
+				], IRTReturn("value.joined", []), file, 51)
+			],
+			cleanupRegions: [],
+			source: span(file, 47, 51)
 		};
 	}
 
@@ -1988,6 +2101,85 @@ class HxcIRGolden {
 			instruction("join.load", result("value.result", managedType), IRIOLoad(IRPLocal("local.result")), file, 5)
 		], IRTReturn(null, []), file, 5));
 		return program;
+	}
+
+	/** Reject a borrowed parameter falsely labeled as a fresh owner. */
+	static function managedCarrierBorrowMovedAsFreshProgram():HxcIRProgram {
+		return managedCarrierValidationProgram("invalid.ManagedCarrierBorrowMovedAsFresh", IRMCAMoveFresh, true,
+			"enum-lifecycle:instance.managed-choice:destroy");
+	}
+
+	/** Reject a normal conditional arm that reaches the join without an owner. */
+	static function managedCarrierMissingAcquireProgram():HxcIRProgram {
+		return managedCarrierValidationProgram("invalid.ManagedCarrierMissingAcquire",
+			IRMCARetainBorrowed(IRIProgramLocal("enum-lifecycle:instance.managed-choice:retain")), false, "enum-lifecycle:instance.managed-choice:destroy");
+	}
+
+	/** Reject lifecycle helpers belonging to a different enum specialization. */
+	static function managedCarrierLifecycleMismatchProgram():HxcIRProgram {
+		return managedCarrierValidationProgram("invalid.ManagedCarrierLifecycleMismatch",
+			IRMCARetainBorrowed(IRIProgramLocal("enum-lifecycle:instance.managed-choice:retain")), true, "enum-lifecycle:instance.other:destroy");
+	}
+
+	/** Build the valid managed carrier protocol used by focused negative mutations. */
+	static function managedCarrierValidationProgram(moduleId:String, borrowedAcquisition:HxcIRManagedCarrierAcquisition, includeBorrowedAcquire:Bool,
+			destroyHelperId:String):HxcIRProgram {
+		final fn = buildManagedCarrierFunction(borrowedAcquisition, includeBorrowedAcquire, destroyHelperId);
+		final managedType:HxcIRTypeDeclaration = {
+			id: "type.managed-choice",
+			displayName: "coverage.ManagedChoice",
+			kind: IRTKTaggedUnion([
+				{
+					name: "Text",
+					tagValue: 0,
+					payload: [
+						{name: "value", type: IRTInstance("instance.managed-bytes"), source: span(COVERAGE_SOURCE, 7)}
+					],
+					source: span(COVERAGE_SOURCE, 7)
+				},
+				{
+					name: "Empty",
+					tagValue: 1,
+					payload: [],
+					source: span(COVERAGE_SOURCE, 7)
+				}
+			]),
+			source: span(COVERAGE_SOURCE, 7)
+		};
+		final managedInstance:HxcIRTypeInstance = {
+			id: "instance.managed-choice",
+			declarationId: managedType.id,
+			arguments: [],
+			representation: IRRTagged,
+			source: span(COVERAGE_SOURCE, 7)
+		};
+		final bytesType:HxcIRTypeDeclaration = {
+			id: "type.managed-bytes",
+			displayName: "haxe.io.Bytes",
+			kind: IRTKReference,
+			source: span(COVERAGE_SOURCE, 7)
+		};
+		final bytesInstance:HxcIRTypeInstance = {
+			id: "instance.managed-bytes",
+			declarationId: bytesType.id,
+			arguments: [],
+			representation: IRRManaged("bytes"),
+			source: span(COVERAGE_SOURCE, 7)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: moduleId,
+					types: [bytesType, managedType],
+					typeInstances: [bytesInstance, managedInstance],
+					globals: [],
+					functions: [fn],
+					source: span(COVERAGE_SOURCE, 7, 51)
+				}
+			]
+		};
 	}
 
 	static function statusConventionReturnTypeProgram():HxcIRProgram {

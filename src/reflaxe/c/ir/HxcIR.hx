@@ -340,6 +340,19 @@ typedef HxcIRResult = {
 }
 
 /**
+	How one managed carrier acquires the owner selected by a control-flow arm.
+
+	A fresh result already owns its active payload and can move that owner. A
+	borrowed value must retain one independent copy before its original owner may
+	leave scope. The distinction stays in semantic IR so C emission never guesses
+	ownership from syntax.
+**/
+enum HxcIRManagedCarrierAcquisition {
+	IRMCAMoveFresh;
+	IRMCARetainBorrowed(implementation:HxcIRImplementation);
+}
+
+/**
 	Instruction array order is semantic evaluation order. No emitter may compact
 	two side-effecting instructions into a C expression with weaker ordering.
  */
@@ -392,6 +405,21 @@ enum HxcIRInstructionKind {
 		conditional join become ordinary C such as `Point selected; if (...)`.
 	**/
 	IRIODeclareUninitialized(place:HxcIRPlace);
+
+	/**
+		Declare the one owner that all normal paths into a managed-value join fill.
+
+		The destroy plan identifies the exact managed tagged-enum family. A
+		matching acquire operation initializes the carrier on each selected path,
+		and one move operation transfers that owner out at the join.
+	**/
+	IRIODeclareManagedCarrier(place:HxcIRPlace, destroyImplementation:HxcIRImplementation);
+
+	/** Move or retain one selected branch value into a declared managed carrier. */
+	IRIOAcquireManagedCarrier(place:HxcIRPlace, valueId:String, acquisition:HxcIRManagedCarrierAcquisition);
+
+	/** Consume a managed carrier's one owner and produce the joined value. */
+	IRIOMoveManagedCarrier(place:HxcIRPlace);
 
 	IRIODefaultInitialize(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);

@@ -1,4 +1,4 @@
-hxcir schema=18
+hxcir schema=19
 module "Main" @"Main.hx":2:30-19:3
   function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-10:3
     local "local.0" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:7-3:71

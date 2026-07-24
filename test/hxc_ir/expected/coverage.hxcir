@@ -1,4 +1,4 @@
-hxcir schema=18
+hxcir schema=19
 dispatch
   layout "itable.layout.coverage.Interface" root="instance.interface" slots=["slot.measure"] @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
   layout "vtable.layout.coverage.Object" root="instance.object" slots=["slot.render"] @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
@@ -13,6 +13,10 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
   type "type.constructed" name="coverage.Constructed" kind=class @"test/hxc_ir/fixtures/IRCoverage.hx":10:1-10:2
     class-layout base=none header=none
   type "type.interface" name="coverage.Interface" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
+  type "type.managed-bytes" name="haxe.io.Bytes" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":7:1-7:2
+  type "type.managed-choice" name="coverage.ManagedChoice" kind=tagged-union @"test/hxc_ir/fixtures/IRCoverage.hx":7:1-7:2
+    case "Text" value=0 payload=["value":instance("instance.managed-bytes")] @"test/hxc_ir/fixtures/IRCoverage.hx":7:1-7:2
+    case "Empty" value=1 payload=[] @"test/hxc_ir/fixtures/IRCoverage.hx":7:1-7:2
   type "type.object" name="coverage.Object" kind=class @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
     class-layout base=none header=virtual("vtable.layout.coverage.Object")
   type "type.option" name="coverage.Option" kind=tagged-union @"test/hxc_ir/fixtures/IRCoverage.hx":4:1-7:2
@@ -22,6 +26,8 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
     field "x" type=i32 mutable=true @"test/hxc_ir/fixtures/IRCoverage.hx":2:1-2:2
   instance "instance.constructed" declaration="type.constructed" arguments=[] representation=direct @"test/hxc_ir/fixtures/IRCoverage.hx":10:1-10:2
   instance "instance.interface" declaration="type.interface" arguments=[] representation=direct @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
+  instance "instance.managed-bytes" declaration="type.managed-bytes" arguments=[] representation=managed("bytes") @"test/hxc_ir/fixtures/IRCoverage.hx":7:1-7:2
+  instance "instance.managed-choice" declaration="type.managed-choice" arguments=[] representation=tagged @"test/hxc_ir/fixtures/IRCoverage.hx":7:1-7:2
   instance "instance.object" declaration="type.object" arguments=[] representation=direct @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
   instance "instance.option" declaration="type.option" arguments=[] representation=tagged @"test/hxc_ir/fixtures/IRCoverage.hx":4:1-7:2
   instance "instance.record" declaration="type.record" arguments=[] representation=direct @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-3:2
@@ -103,6 +109,29 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
       terminator return value=none cleanup=[] @"test/hxc_ir/fixtures/IRCoverage.hx":39:1-39:2
     end block "success"
   end function "fn.coverage"
+  function "fn.coverage.managed-carrier" name="coverage.IR.managedCarrier" returns=instance("instance.managed-choice") failure=infallible entry="entry" @"test/hxc_ir/fixtures/IRCoverage.hx":47:1-51:2
+    parameter "value.condition" type=bool ownership=owned-or-value @"test/hxc_ir/fixtures/IRCoverage.hx":47:1-47:2
+    parameter "value.borrowed" type=instance("instance.managed-choice") ownership=owned-or-value @"test/hxc_ir/fixtures/IRCoverage.hx":47:1-47:2
+    parameter "value.bytes" type=instance("instance.managed-bytes") ownership=owned-or-value @"test/hxc_ir/fixtures/IRCoverage.hx":47:1-47:2
+    local "local.managed-result" type=instance("instance.managed-choice") ownership=owned-or-value storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":48:1-48:2
+    block "entry" @"test/hxc_ir/fixtures/IRCoverage.hx":48:1-48:2
+      instruction "managed.declare" result=- declare-managed-carrier place=local("local.managed-result") destroy=program-local("enum-lifecycle:instance.managed-choice:destroy") @"test/hxc_ir/fixtures/IRCoverage.hx":48:1-48:2
+      terminator branch condition="value.condition" true=edge(target="fresh",arguments=[],cleanup=[]) false=edge(target="borrowed",arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":48:1-48:2
+    end block "entry"
+    block "borrowed" @"test/hxc_ir/fixtures/IRCoverage.hx":50:1-50:2
+      instruction "managed.acquire-borrowed" result=- acquire-managed-carrier place=local("local.managed-result") value="value.borrowed" ownership=retain-borrowed(program-local("enum-lifecycle:instance.managed-choice:retain")) @"test/hxc_ir/fixtures/IRCoverage.hx":50:1-50:2
+      terminator jump edge(target="join",arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":50:1-50:2
+    end block "borrowed"
+    block "fresh" @"test/hxc_ir/fixtures/IRCoverage.hx":49:1-49:2
+      instruction "managed.construct" result="value.fresh":instance("instance.managed-choice") construct-tag instance="instance.managed-choice" tag="Text" payload=["value.bytes"] @"test/hxc_ir/fixtures/IRCoverage.hx":49:1-49:2
+      instruction "managed.acquire-fresh" result=- acquire-managed-carrier place=local("local.managed-result") value="value.fresh" ownership=move-fresh @"test/hxc_ir/fixtures/IRCoverage.hx":49:1-49:2
+      terminator jump edge(target="join",arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":49:1-49:2
+    end block "fresh"
+    block "join" @"test/hxc_ir/fixtures/IRCoverage.hx":51:1-51:2
+      instruction "managed.move" result="value.joined":instance("instance.managed-choice") move-managed-carrier place=local("local.managed-result") @"test/hxc_ir/fixtures/IRCoverage.hx":51:1-51:2
+      terminator return value="value.joined" cleanup=[] @"test/hxc_ir/fixtures/IRCoverage.hx":51:1-51:2
+    end block "join"
+  end function "fn.coverage.managed-carrier"
   function "fn.coverage.render" name="coverage.Object.render" returns=i32 failure=infallible entry="entry" @"test/hxc_ir/fixtures/IRCoverage.hx":12:1-12:2
     parameter "parameter.self" type=pointer(nullable,instance("instance.object")) ownership=borrowed-class @"test/hxc_ir/fixtures/IRCoverage.hx":12:1-12:2
     parameter "parameter.value" type=i32 ownership=owned-or-value @"test/hxc_ir/fixtures/IRCoverage.hx":12:1-12:2

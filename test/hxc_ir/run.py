@@ -206,6 +206,9 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "uninitializedCarrierRead",
         "uninitializedCarrierReadBeforeBranch",
         "managedUninitializedCarrier",
+        "managedCarrierBorrowMovedAsFresh",
+        "managedCarrierMissingAcquire",
+        "managedCarrierLifecycleMismatch",
     ):
         if diagnostic_key not in actual:
             raise HxcIRFailure(f"negative fixtures lost {diagnostic_key} validation")

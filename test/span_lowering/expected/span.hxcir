@@ -1,4 +1,4 @@
-hxcir schema=18
+hxcir schema=19
 module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":45:35-186:3
   function "function.SpanFixture.checkedAt" name="SpanFixture.checkedAt" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":66:43-70:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/span_lowering/fixtures/SpanFixture.hx":66:43-70:3
