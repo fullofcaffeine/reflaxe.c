@@ -315,7 +315,14 @@ tagged record optionals participate in this bounded path; managed or callable
 families still require their own ownership contract.
 Constructor symbol planning also retains the prepared Haxe value family. A
 closed record parameter uses its validated by-value aggregate identity. An
-interface parameter uses its exact nominal interface identity only when the
+immutable literal-backed String parameter uses the exact nominal source
+identity of an abstract such as `ScenarioId(String)`, even though HxcIR and C
+carry the value as the same by-value UTF-8 view. The first initialization of
+the constructing object's own final String field copies that view without
+retain or release because compiler-owned literal bytes live for the whole
+program. This does not admit runtime-created Strings; those require a separate
+owned-storage and cleanup plan under E5.T02. An interface parameter uses its
+exact nominal interface identity only when the
 constructor body proves that the copied object/table pair remains a
 call-bounded borrow; HxcIR records and validates that interface borrow
 separately from a class-pointer borrow. An admitted `Array<T>` constructor

@@ -334,8 +334,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Concrete non-generic Haxe classes support bounded stack or collector construction, final inline child ownership, by-value closed-record arguments, and call-only or retained interface arguments with exact order and cleanup.",
-      "scope": "Unconditional entry-block local new expressions lower through schema-17 HxcIR to default-initialized automatic storage and ordinary private C constructor functions. A proven nonescaping parent may directly own an exact final child initialized with an infallible constructor; HxcIR retains by-value ownership, child definitions precede parents, and child references remain nonescaping borrows. Haxe-generated inline-method receiver aliases use an explicit non-owning automatic local, so they can be reloaded after lazy Boolean control flow without creating a second owner or extending the parent lifetime. Known ordinary Haxe functions and methods may use caller-owned class parameters during one direct call. Constructors may receive a validated closed record by value or an exact two-pointer interface value. A call-only interface remains an explicit HxcIR borrow and allocation-free; the first initialization of the constructing object's own interface field instead selects exact collector storage for the owner and reachable concrete implementations, traces the stored object pointer, and preserves later interface dispatch across collection. HxcIR rejects alias reassignment, return, throw, unrelated storage, constructor capture, block-edge forwarding, and calls without a proven borrow or retained-field plan. Super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup remain native-verified.",
+      "summary": "Concrete non-generic Haxe classes support bounded stack or collector construction, final inline child ownership, by-value closed-record and literal-backed nominal String arguments, and call-only or retained interface arguments with exact order and cleanup.",
+      "scope": "Unconditional entry-block local new expressions lower through schema-17 HxcIR to default-initialized automatic storage and ordinary private C constructor functions. A proven nonescaping parent may directly own an exact final child initialized with an infallible constructor; HxcIR retains by-value ownership, child definitions precede parents, and child references remain nonescaping borrows. Haxe-generated inline-method receiver aliases use an explicit non-owning automatic local, so they can be reloaded after lazy Boolean control flow without creating a second owner or extending the parent lifetime. Known ordinary Haxe functions and methods may use caller-owned class parameters during one direct call. Constructors may receive a validated closed record, an immutable literal-backed String view with exact nominal abstract identity, or an exact two-pointer interface value. A first final String-field initialization copies its program-long literal view without retain or release; runtime-created Strings remain outside this contract. A call-only interface remains an explicit HxcIR borrow and allocation-free; the first initialization of the constructing object's own interface field instead selects exact collector storage for the owner and reachable concrete implementations, traces the stored object pointer, and preserves later interface dispatch across collection. HxcIR rejects alias reassignment, return, throw, unrelated storage, constructor capture, block-edge forwarding, and calls without a proven borrow or retained-field plan. Super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup remain native-verified.",
       "evidence": [
         "docs/constructor-lowering.md",
         "src/reflaxe/c/lowering/CBodyConstructor.hx",
@@ -343,6 +343,7 @@
         "test/constructor_lowering/expected/program.h",
         "test/constructor_lowering/expected/program.c",
         "test/constructor_lowering/run.py",
+        "test/constructor_lowering/fixtures/string_parameter/Main.hx",
         "examples/caxecraft/src/caxecraft/domain/GameSession.hx",
         "examples/caxecraft/run_haxe_c_test.py"
       ],
@@ -638,11 +639,13 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Immutable Haxe String values backed by source literals can flow through direct typed values without allocation.",
-      "scope": "Validated UTF-8 literal-backed Strings and nominal abstracts over them pass through parameters, returns, closed records, tagged enums, tagged optionals, and managed Arrays; equality compares byte length and content in deterministic strict C11.",
+      "scope": "Validated UTF-8 literal-backed Strings and nominal abstracts over them pass through parameters, returns, constructor parameters and final construction-time fields, closed records, tagged enums, tagged optionals, and managed Arrays; equality compares byte length and content in deterministic strict C11.",
       "evidence": [
         "docs/string-runtime.md",
         "test/enum_lowering/fixtures/string_payload/Main.hx",
         "test/enum_lowering/run.py",
+        "test/constructor_lowering/fixtures/string_parameter/Main.hx",
+        "test/constructor_lowering/run.py",
         "test/differential/array-runtime/generated/Main.hx",
         "test/differential/array-runtime/run.py",
         "test/string_output/run.py"

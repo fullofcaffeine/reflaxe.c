@@ -32,6 +32,7 @@ INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
 DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
 ARRAY_PARAMETER = FIXTURES / "array_parameter"
+STRING_PARAMETER = FIXTURES / "string_parameter"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -153,6 +154,15 @@ ARRAY_PARAMETER_NATIVE_COVERAGE = frozenset(
         "constructor-array-parameter-fresh-owner",
         "constructor-array-parameter-retained-field",
         "constructor-array-parameter-shared-identity",
+    }
+)
+STRING_PARAMETER_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-nominal-string-parameter",
+        "constructor-nominal-string-identity",
+        "constructor-static-string-call-borrow",
+        "constructor-static-string-retained-field",
+        "constructor-static-string-allocation-free",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -596,6 +606,75 @@ def validate_array_parameter_project(output: Path) -> None:
         if forbidden in source:
             raise ConstructorLoweringFailure(
                 f"Array-parameter application module emitted forbidden shape {forbidden!r}"
+            )
+
+
+def validate_string_parameter_project(output: Path) -> None:
+    """Prove nominal literal String views stay exact, by-value, and allocation-free."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    constructors = [
+        symbol
+        for symbol in symbols.get("symbols", [])
+        if isinstance(symbol, dict)
+        and symbol.get("kind") == "method"
+        and str(symbol.get("sourceSymbol", "")).startswith("compiler.constructor.")
+        and (
+            ".BorrowedScenarioReader(" in str(symbol.get("sourceSymbol", ""))
+            or ".RetainedScenarioReader(" in str(symbol.get("sourceSymbol", ""))
+        )
+    ]
+    nominal_constructors = [
+        symbol
+        for symbol in constructors
+        if isinstance(symbol.get("overloadSignature"), list)
+        and any(
+            str(value).startswith("string-utf8-static-view:")
+            and str(value).endswith(".ScenarioId")
+            for value in symbol["overloadSignature"]
+        )
+    ]
+    if len(nominal_constructors) != 2:
+        raise ConstructorLoweringFailure(
+            "nominal String fixture lost its two exact constructor symbol identities"
+        )
+    parameter_spelling = "hxc_string hxc_id"
+    if (
+        source.count(parameter_spelling) < 2
+        or parameter_spelling not in headers
+        or "memcmp(" not in source
+        or "(*hxc_self).hxc_id = hxc_id;" not in source
+    ):
+        raise ConstructorLoweringFailure(
+            "nominal String constructor lost its by-value call, retained field, or comparison"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != ["runtime-base", "string-literal"]
+        or plan.get("symbols") != []
+        or "direct-utf8-string-literals" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "literal-backed nominal String constructor lost its header-only runtime plan"
+        )
+    for forbidden in (
+        "malloc(",
+        "calloc(",
+        "realloc(",
+        "retain(",
+        "release(",
+        "goto ",
+    ):
+        if forbidden in source.lower():
+            raise ConstructorLoweringFailure(
+                f"nominal String constructor emitted forbidden shape {forbidden!r}"
             )
 
 
@@ -1279,12 +1358,20 @@ def check_native(
                 coverage=ARRAY_PARAMETER_NATIVE_COVERAGE,
                 validate_project=validate_array_parameter_project,
             )
+            string_parameter_projects = render_parameter_projects(
+                fixture_root,
+                fixture=STRING_PARAMETER,
+                slug="string-parameter",
+                coverage=STRING_PARAMETER_NATIVE_COVERAGE,
+                validate_project=validate_string_parameter_project,
+            )
             parameter_projects = (
                 record_projects
                 + interface_projects
                 + retained_interface_projects
                 + default_argument_projects
                 + array_parameter_projects
+                + string_parameter_projects
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1309,6 +1396,7 @@ def check_native(
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
+                    | STRING_PARAMETER_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1351,6 +1439,7 @@ def check_native(
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
                     | ARRAY_PARAMETER_NATIVE_COVERAGE
+                    | STRING_PARAMETER_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
@@ -1365,6 +1454,7 @@ def check_eval_oracle() -> None:
         ("interface-parameter oracle", INTERFACE_PARAMETER),
         ("default-argument oracle", DEFAULT_ARGUMENTS),
         ("array-parameter oracle", ARRAY_PARAMETER),
+        ("string-parameter oracle", STRING_PARAMETER),
     ):
         result = subprocess.run(
             [
@@ -1507,6 +1597,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "status cleanup, direct caller-owned class and closed-record parameters, "
         "call-bounded and collector-retained interface parameters and dispatch, "
         "borrowed and field-retained Array parameters, "
+        "nominal literal-backed String parameters and final fields, "
         "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
         "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
         "edges passed"

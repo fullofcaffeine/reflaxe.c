@@ -1972,6 +1972,8 @@ private class ConstructorPreparer {
 				'closed-record:${aggregate.instanceId}';
 			case CBVKArray(array):
 				'array-reference:${array.instanceId}';
+			case CBVKStaticString(sourceIdentity):
+				'string-utf8-static-view:$sourceIdentity';
 			case CBVKOptional(optional) if (!optional.managedLifetime):
 				'direct-optional:${optional.planId}';
 			case CBVKInterface(interfaceValue):
@@ -2075,6 +2077,7 @@ private class FunctionBuilder {
 	final initializedOwnedFixedArrayFields:Map<String, Bool> = [];
 	final initializedOwnedClassFields:Map<String, Bool> = [];
 	final initializedRetainedInterfaceFields:Map<String, Bool> = [];
+	final initializedStaticStringFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
 	final initializedManagedStringMapFields:Map<String, Bool> = [];
 	var selfValue:Null<LoweredValue> = null;
@@ -2338,6 +2341,10 @@ private class FunctionBuilder {
 				// The interface value copies a concrete object pointer and its exact
 				// table into the newly allocated owner. The owner's trace callback
 				// follows that object pointer for the rest of the field's lifetime.
+			case TBinop(OpAssign, left, right) if (lowerStaticStringFieldInitializer(left, right)):
+				// The immutable view is copied by value. Its bytes come from
+				// compiler-owned literal storage and therefore outlive every object;
+				// no retain, release, or owned-String runtime operation is needed.
 			case TBinop(OpAssign, left, right) if (lowerManagedArrayFieldInitializer(left, right)):
 				// A final Haxe Array field receives the one newly allocated shared
 				// container. Later local aliases retain that identity; the enclosing
@@ -2469,6 +2476,53 @@ private class FunctionBuilder {
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
 			"initialize-retained-interface-field");
 		initializedRetainedInterfaceFields.set(fieldName, true);
+		return true;
+	}
+
+	/**
+	 * Initialize one final literal-backed String field during construction.
+	 *
+	 * The currently admitted Haxe String representation is a small immutable
+	 * `(bytes, length)` view into compiler-owned literal storage. Copying that
+	 * view into a field preserves the source value, and the bytes remain valid
+	 * for the complete program. This rule therefore emits one by-value store
+	 * without selecting the owned-String runtime or inventing reference counting.
+	 *
+	 * Haxe types the first `this.field = value` for a final field as an ordinary
+	 * assignment. Normal assignment must reject immutable destinations, so this
+	 * constructor-only owner recognizes exactly the first assignment to the
+	 * prepared final String field. Any later assignment falls through and fails
+	 * closed. Future runtime-created Strings need a separate owned-storage plan;
+	 * this literal-backed rule must not be widened to cover them implicitly.
+	 */
+	function lowerStaticStringFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedStaticStringFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing String field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		if (field == null || field.mutable || field.type.staticStringIdentity() == null)
+			return false;
+		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:static-String-initializer)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-static-string-field");
+		initializedStaticStringFields.set(fieldName, true);
 		return true;
 	}
 

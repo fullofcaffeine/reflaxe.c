@@ -166,6 +166,38 @@ families remain closed for the same reason. HxcIR receives only the completed
 argument list, then independently verifies its count and exact type against the
 direct constructor function before CAST selects C syntax.
 
+### Literal-backed nominal String parameters
+
+A Haxe abstract such as `ScenarioId(String)` gives an ordinary String a
+distinct source type without adding a wrapper object. For the currently
+admitted literal-backed String slice, generated C passes the immutable
+`hxc_string` view by value:
+
+```c
+void hxc_compiler_constructor_RuleState(
+  struct hxc_RuleState *self,
+  hxc_string id
+);
+```
+
+The constructor's semantic symbol key retains the full nominal Haxe identity,
+such as `caxecraft.scenario.ScenarioId`, even though its C carrier is the same
+two-field String view. This prevents two application ID types from becoming
+the same compiler symbol merely because their generated C representation
+matches.
+
+The first `this.id = id` assignment to the constructed object's own `final`
+field copies that view by value. Its bytes come from compiler-owned literal
+storage and remain valid for the whole program, so the field needs no
+allocation, retain, release, or tracing. Later writes still fail as writes to
+an immutable field.
+
+This is deliberately not a general owned-String rule. Parsing, concatenation,
+input, and other runtime-created Strings remain unsupported until E5.T02 gives
+their byte storage an explicit owner and cleanup contract. A future owned
+String must not inherit this program-long lifetime merely because it uses a
+similar C view.
+
 ### Shared Array parameters
 
 An ordinary Haxe `Array<T>` has shared identity: two variables can name the
@@ -354,6 +386,10 @@ reference-counted allocation pressure, exact runtime selection, and balanced
 cleanup across the same layout/order/server/native/sanitizer matrix.
 `array_parameter_escape` keeps storage through another object's existing Array
 field fail-closed. The positive
+`string_parameter` fixture proves nominal constructor identity, by-value
+literal-backed borrowing, final-field storage, header-only runtime selection,
+and Eval/native/sanitizer parity across the same deterministic layouts.
+The positive
 semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an
 inner temporary, empty-constructor elision, a same-function stack alias, and a
