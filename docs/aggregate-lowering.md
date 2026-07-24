@@ -117,6 +117,18 @@ managed records, HxcIR records explicit retain/release work: fresh values may
 transfer ownership, borrowed copies retain, and lexical cleanup destroys the
 owned value exactly once.
 
+An `Array<Record>` literal uses the Array specialization's same typed
+copy/assign/destroy callbacks. Before the runtime copies a freshly constructed
+managed record into a slot, lowering saves that one owner in an automatic
+temporary. The successful copy gives the slot an independent owner; normal
+cleanup then destroys the temporary exactly once. A borrowed record is passed
+to the same copy callback without pretending that the caller's owner moved.
+This slightly longer sequence is deliberate: the current Array runtime exposes
+a checked copy operation, not a move operation, and allocation or element-copy
+failure remains the target's documented fail-stop boundary. Generated C shows
+the ordinary local, checked copy, Array release, and record destroy in their
+real order.
+
 Field access keeps value and place operations distinct:
 
 - projecting from a parameter or immutable temporary uses
@@ -241,8 +253,9 @@ the generated runtime-free split, package, and unity projects, and verifies a
 bounded payload-enum record through construction, by-value copy, exhaustive
 matching, and checked payload projection. The enum-lowering suite owns the
 managed-record fixture because it exercises the enum and record lifecycle as
-one feature: construction, copies, calls, returns, Array elements, rollback,
-cleanup, cold/warm-server determinism, all layouts, and sanitizers. It also
+one feature: construction, copies, calls, returns, fresh and borrowed Array
+literal elements, rollback, cleanup, cold/warm-server determinism, all layouts,
+and sanitizers. It also
 covers exact absent/present managed optional behavior, Eval parity, strict
 native C in unity/split/package layouts, normal/reversed and cold/warm-server
 byte determinism, AddressSanitizer/UndefinedBehaviorSanitizer, and fail-closed

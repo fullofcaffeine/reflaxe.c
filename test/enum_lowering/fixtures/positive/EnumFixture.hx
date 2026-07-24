@@ -141,6 +141,21 @@ class EnumFixture {
 			case Some(rule): ruleValue(rule);
 		};
 
+	/**
+		Build an Array from one fresh managed record and one borrowed record.
+
+		The literal must give each slot its own managed-field ownership. The fresh
+		record already owns its fields; `borrowed` remains owned by its caller and
+		therefore needs an independent retained copy inside the Array.
+	**/
+	static function ruleLiteralValue(chain:Chain<Int>, choices:Choices, actions:Array<Int>, borrowed:Rule):Int {
+		final rules:Array<Rule> = [{chain: chain, choices: choices, actions: actions}, borrowed];
+		// Array destruction still visits both managed records; the length keeps
+		// this fixture focused on construction ownership rather than the separate
+		// borrowed-managed-element call boundary.
+		return rules.length + ruleValue(borrowed);
+	}
+
 	static function main():Void {
 		var mode = On;
 		var present:Option<Int> = Some(identity(7));
@@ -168,6 +183,7 @@ class EnumFixture {
 			&& ruleValue(copiedRule) == 10
 			&& envelopeValue(copiedEnvelope) == 10
 			&& optionalRuleValue(optionalRule) == 10
+			&& ruleLiteralValue(Link(1, End(2)), ChoiceValues(choices), actions, copiedRule) == 12
 			&& envelopes.length == 1
 			&& rules.length == 1)) {}
 	}

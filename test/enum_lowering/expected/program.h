@@ -233,6 +233,8 @@ int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_va
 
 int32_t hxc_EnumFixture_recursiveLocal(void);
 
+int32_t hxc_EnumFixture_ruleLiteralValue(struct hxc_Chain hxc_chain, struct hxc_Choices hxc_choices, struct hxc_array_ref *hxc_actions, struct hxc_Rule hxc_borrowed);
+
 int32_t hxc_EnumFixture_ruleValue(struct hxc_Rule hxc_value);
 
 int32_t hxc_EnumFixture_tailValue(struct hxc_Chain hxc_value_h43dc2cb9ec11);

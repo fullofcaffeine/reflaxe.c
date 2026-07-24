@@ -6727,7 +6727,12 @@ private class FunctionBuilder {
 		final arguments:Array<String> = [];
 		for (index in 0...elements.length) {
 			final element = elements[index];
-			arguments.push(coerce(lowerValue(element, array.element), array.element, element.pos, 'TArrayDecl(element:$index)').id);
+			var loweredElement = coerce(lowerValue(element, array.element), array.element, element.pos, 'TArrayDecl(element:$index)');
+			// The runtime copy callback gives the new Array slot its own owner. A
+			// fresh record still needs a caller-owned lifetime until that copy
+			// succeeds, just like a fresh record passed to `Array.push`.
+			loweredElement = stabilizeFreshManagedAggregate(loweredElement, element.pos, 'array-literal-element-$index');
+			arguments.push(loweredElement.id);
 		}
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
@@ -7705,7 +7710,13 @@ private class FunctionBuilder {
 		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
 	}
 
-	/** Keep a fresh managed record alive while a call borrows its by-value copy. */
+	/**
+		Keep a fresh managed record alive while another operation copies it.
+
+		The automatic local owns the fresh value until normal cleanup. Calls and
+		Array insertion borrow that stable C value and acquire their own owner
+		through the record's typed retain plan.
+	**/
 	function stabilizeFreshManagedAggregate(value:LoweredValue, position:Position, role:String):LoweredValue {
 		final managed = value.mapping.aggregateValue();
 		if (managed == null || !managed.managedLifetime || !freshManagedAggregateValueIds.remove(value.id))

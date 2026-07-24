@@ -73,6 +73,13 @@ union bytes are never interpreted as a live value. For a managed record
 payload, the active enum arm delegates to the record's existing retain/destroy
 helpers. The enum does not duplicate or reinterpret the record's field policy.
 
+Managed records use the same callbacks when they appear directly in an Array
+literal. A fresh record first receives one automatic owner; the Array's typed
+copy callback then acquires the slot's independent owner. Borrowed record
+elements go through the same callback without transferring their caller's
+owner. Normal cleanup releases the Array and the fresh temporary exactly once,
+in reverse ownership order.
+
 The same helper is used when an enum is stored inside an Array element. This
 keeps the value unboxed and supports nested shapes such as Caxecraft's
 `FlowAction.Schedule(Array<FlowArgument>)` and

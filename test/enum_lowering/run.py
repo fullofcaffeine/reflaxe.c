@@ -416,6 +416,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     envelope_value_section = function_section(hxcir, "envelopeValue")
     apply_option_section = function_section(hxcir, "applyOption")
     constructor_value_section = function_section(hxcir, "constructorValue")
+    rule_literal_section = function_section(hxcir, "ruleLiteralValue")
     option_int_instance = required_identifier(option_int, "instanceId")
     identity_call = main_section.find(
         'call dispatch=direct("function.EnumFixture.identity")'
@@ -445,6 +446,23 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or 'instruction "instruction.0.construct-enum-adapter"' not in hxcir
     ):
         raise EnumLoweringFailure("enum construction, checking, switch, or recursive HxcIR drifted")
+    literal_owner = rule_literal_section.find(
+        "array-literal-element-0-owner-initialize"
+    )
+    literal_copy = rule_literal_section.find(
+        'dispatch=runtime(feature="array",operation="create-literal")'
+    )
+    if (
+        literal_owner == -1
+        or literal_copy == -1
+        or literal_owner > literal_copy
+        or 'action "record-temporary.' not in rule_literal_section
+        or 'implementation=program-local("aggregate-lifecycle:' not in rule_literal_section
+        or '"parameter.3"] returns=instance("instance.haxe-array.' not in rule_literal_section
+    ):
+        raise EnumLoweringFailure(
+            "fresh and borrowed managed-record Array elements lost their ownership plan"
+        )
     if (
         f"enum {names['mode_tag']} {{" not in header
         or f"struct {names['option_int_tag']} {{" not in header
