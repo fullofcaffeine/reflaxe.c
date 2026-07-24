@@ -1,4 +1,4 @@
-hxcir schema=17
+hxcir schema=18
 dispatch
   layout "vtable.layout.CounterOwner" root="instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20" slots=["slot.CounterOwner.run"] @"Main.hx":83:1-100:2
   layout "vtable.layout.OwnedCounter" root="instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7" slots=["slot.OwnedCounter.add"] @"Main.hx":59:1-80:2

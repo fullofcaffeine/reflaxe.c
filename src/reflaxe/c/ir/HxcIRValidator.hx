@@ -10,6 +10,12 @@ private typedef HxcIRInstructionSite = {
 	final block:HxcIRBlock;
 }
 
+/** One path state used to prove a branch-assigned local before its first read. */
+private typedef HxcIRCarrierFlowState = {
+	final blockId:String;
+	final assigned:Bool;
+}
+
 /** Safety checks that are guaranteed to run before another basic block. */
 private typedef HxcIRDominanceProofs = {
 	final controlFlow:HxcIRControlFlowFacts;
@@ -25,7 +31,7 @@ private enum HxcIRDispatchLayoutKind {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 17;
+	public static inline final SCHEMA_VERSION = 18;
 
 	public function new() {}
 
@@ -896,7 +902,7 @@ private class HxcIRValidationState {
 	/**
 		Prove that every function root names one exact collector-managed value.
 
-		Block parameters are deliberately rejected in schema 17. Their value changes
+		Block parameters are deliberately rejected in schema 18. Their value changes
 		on incoming edges, so they need an edge-owned root update rather than the
 		simpler "store immediately after definition" rule used for parameters and
 		instruction results.
@@ -904,7 +910,7 @@ private class HxcIRValidationState {
 	function validateManagedRoots(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, parameters:Map<String, HxcIRParameter>,
 			valueSites:Map<String, HxcIRInstructionSite>, blockParameterIds:Map<String, Bool>):Void {
 		if (fn.managedRoots == null) {
-			add('$path.managedRoots', "function has no explicit managed-root plan for schema 17", fn.source);
+			add('$path.managedRoots', "function has no explicit managed-root plan for schema 18", fn.source);
 			return;
 		}
 		final rootIds:Map<String, Bool> = [];
@@ -1233,8 +1239,8 @@ private class HxcIRValidationState {
 					add(path, "borrowed class storage cannot acquire a local ownership lifetime", instruction.source);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOUnary(_, _, _) |
 				IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
-				IRIOAllocate(_, _, _, _) | IRIODefaultInitialize(_, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
-				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _):
+				IRIOAllocate(_, _, _, _) | IRIODeclareUninitialized(_) | IRIODefaultInitialize(_, _, _) | IRIOZeroInitializeFixedArray(_, _, _) |
+				IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _):
 		}
 	}
 
@@ -1766,6 +1772,19 @@ private class HxcIRValidationState {
 						}
 					case _:
 				}
+			case IRIODeclareUninitialized(place):
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				switch place {
+					case IRPLocal(localId):
+						final local = locals.get(localId);
+						if (local != null && local.initialState != IRISUninitialized)
+							add(path, "uninitialized declaration requires an initially uninitialized local", instruction.source);
+						if (local != null && !isUnmanagedDirectCarrier(local.type))
+							add(path, "uninitialized declaration requires an unmanaged direct-value local", instruction.source);
+						validateConditionalCarrierFlow(localId, block, blocks, path, instruction.source);
+					case _:
+						add(path, "uninitialized declaration requires an automatic local place", instruction.source);
+				}
 			case IRIODefaultInitialize(place, from, to):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final initializedType = knownPlaceType(place, available, locals);
@@ -1918,8 +1937,9 @@ private class HxcIRValidationState {
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) |
-				IRIODefaultInitialize(_, _, _) | IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOZeroInitializeFixedArray(_, _, _) |
-				IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
+				IRIODeclareUninitialized(_) | IRIODefaultInitialize(_, _, _) | IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) |
+				IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) |
+				IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
 				false;
 		}
 	}
@@ -2823,6 +2843,177 @@ private class HxcIRValidationState {
 			case _: false;
 		};
 	}
+
+	/**
+	 * Whether a value has a complete by-value representation and no cleanup.
+	 *
+	 * This recursive check is deliberately conservative. A managed, opaque,
+	 * reference, class, or recursive representation cannot use an uninitialized
+	 * branch carrier because choosing a branch may require ownership work.
+	 */
+	function isUnmanagedDirectCarrier(type:HxcIRTypeRef):Bool
+		return isUnmanagedDirectCarrierInner(type, []);
+
+	function isUnmanagedDirectCarrierInner(type:HxcIRTypeRef, visiting:Map<String, Bool>):Bool {
+		return switch type {
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString: true;
+			case IRTInstance(instanceId):
+				if (visiting.exists(instanceId)) {
+					false;
+				} else {
+					final instance = typeInstances.get(instanceId);
+					final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+					if (instance == null || declaration == null) {
+						false;
+					} else {
+						final direct = switch instance.representation {
+							case IRRDirect | IRRTagged: true;
+							case IRROpaqueHandle | IRRManaged(_): false;
+						};
+						if (!direct) {
+							false;
+						} else {
+							visiting.set(instanceId, true);
+							final unmanaged = switch declaration.kind {
+								case IRTKAggregate(fields):
+									allTypeFieldsUnmanaged(fields, visiting);
+								case IRTKTaggedUnion(cases):
+									var result = true;
+									for (tagCase in cases)
+										for (payload in tagCase.payload)
+											if (!isUnmanagedDirectCarrierInner(payload.type, visiting))
+												result = false;
+									result;
+								case IRTKExtern | IRTKPrimitive: true;
+								case IRTKClass(_) | IRTKReference | IRTKFunction: false;
+							};
+							visiting.remove(instanceId);
+							unmanaged;
+						}
+					}
+				}
+			case IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _) | IRTDynamic:
+				false;
+		};
+	}
+
+	function allTypeFieldsUnmanaged(fields:Array<HxcIRTypeField>, visiting:Map<String, Bool>):Bool {
+		for (field in fields)
+			if (!isUnmanagedDirectCarrierInner(field.type, visiting))
+				return false;
+		return true;
+	}
+
+	/**
+	 * Prove that every reachable read follows an assignment on that path.
+	 *
+	 * The declaration must end in a real two-way branch. Walking `(block,
+	 * assigned)` pairs then checks nested conditionals and joins without assuming
+	 * that visiting one branch first changes the other branch's state.
+	 */
+	function validateConditionalCarrierFlow(localId:String, declarationBlock:HxcIRBlock, blocks:Map<String, HxcIRBlock>, path:String,
+			source:HxcSourceSpan):Void {
+		var sawDeclaration = false;
+		for (instruction in declarationBlock.instructions) {
+			if (!sawDeclaration) {
+				sawDeclaration = switch instruction.kind {
+					case IRIODeclareUninitialized(IRPLocal(declaredId)) if (declaredId == localId): true;
+					case _: false;
+				};
+			} else if (instructionTouchesLocalPlace(instruction.kind, localId)) {
+				add(path, "uninitialized declaration must be the last operation that mentions its carrier before the branch", source);
+				return;
+			}
+		}
+		final starts:Array<HxcIRCarrierFlowState> = switch declarationBlock.terminator == null ? null : declarationBlock.terminator.kind {
+			case IRTBranch(_, whenTrue, whenFalse): [
+					{blockId: whenTrue.targetBlockId, assigned: false},
+					{blockId: whenFalse.targetBlockId, assigned: false}
+				];
+			case _: [];
+		};
+		if (starts.length != 2) {
+			add(path, "uninitialized declaration must immediately feed a structured two-way branch", source);
+			return;
+		}
+		final pending = starts.copy();
+		final visited:Map<String, Bool> = [];
+		var sawStore = false;
+		var sawLoad = false;
+		var unsafeRead = false;
+		while (pending.length > 0) {
+			final state = pending.pop();
+			if (state == null)
+				continue;
+			final stateKey = state.blockId + (state.assigned ? ":assigned" : ":unassigned");
+			if (visited.exists(stateKey))
+				continue;
+			visited.set(stateKey, true);
+			final current = blocks.get(state.blockId);
+			if (current == null)
+				continue;
+			var assigned = state.assigned;
+			for (instruction in current.instructions) {
+				switch instruction.kind {
+					case IRIOStore(IRPLocal(targetId), _) if (targetId == localId):
+						assigned = true;
+						sawStore = true;
+					case IRIOLoad(IRPLocal(targetId)) if (targetId == localId):
+						sawLoad = true;
+						if (!assigned)
+							unsafeRead = true;
+					case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) if (placeContainsLocal(place, localId)):
+						if (!assigned)
+							unsafeRead = true;
+					case IRIOStore(place, _) if (placeContainsLocal(place, localId)):
+						if (!assigned)
+							unsafeRead = true;
+					case _:
+						if (!assigned && instructionTouchesLocalPlace(instruction.kind, localId))
+							unsafeRead = true;
+				}
+			}
+			if (current.terminator != null) {
+				final successors:Array<String> = switch current.terminator.kind {
+					case IRTJump(edge): [edge.targetBlockId];
+					case IRTBranch(_, whenTrue, whenFalse): [whenTrue.targetBlockId, whenFalse.targetBlockId];
+					case IRTSwitch(_, cases, defaultEdge): cases.map(item -> item.edge.targetBlockId).concat([defaultEdge.targetBlockId]);
+					case IRTTagSwitch(_, cases, defaultEdge):
+						final result = cases.map(item -> item.edge.targetBlockId);
+						if (defaultEdge != null)
+							result.push(defaultEdge.targetBlockId);
+						result;
+					case IRTReturn(_, _) | IRTThrow(_, _) | IRTUnreachable: [];
+				};
+				for (successor in successors)
+					pending.push({blockId: successor, assigned: assigned});
+			}
+		}
+		if (!sawStore || !sawLoad || unsafeRead)
+			add(path, "uninitialized conditional carrier must be assigned on every path before its first read", source);
+	}
+
+	/** Finds every instruction whose typed place payload can observe or alter one local's storage. */
+	static function instructionTouchesLocalPlace(kind:HxcIRInstructionKind, localId:String):Bool
+		return switch kind {
+			case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
+				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODefaultInitialize(place, _, _) |
+				IRIOInitialize(place, _, _, _) | IRIOInitializeFixedArray(place, _, _, _) | IRIOZeroInitializeFixedArray(place, _, _) |
+				IRIOBindVirtualTable(place, _) | IRIOBoundsCheck(place, _, _) | IRIOLifetime(place, _, _, _):
+				placeContainsLocal(place, localId);
+			case IRIOInitializeSpan(place, sourceArray, _, _): placeContainsLocal(place, localId) || placeContainsLocal(sourceArray, localId);
+			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |
+				IRIOCall(_) | IRIOConstructAggregate(_, _) | IRIOConstructInterface(_, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) |
+				IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIONullCheck(_, _):
+				false;
+		};
+
+	static function placeContainsLocal(place:HxcIRPlace, localId:String):Bool
+		return switch place {
+			case IRPLocal(value): value == localId;
+			case IRPField(base, _) | IRPIndex(base, _): placeContainsLocal(base, localId);
+			case IRPGlobal(_) | IRPDereference(_): false;
+		};
 
 	/** True when an instance can live directly inside `{ has_value, value }`. */
 	function isTaggedOptionalPayloadInstance(instanceId:String):Bool {

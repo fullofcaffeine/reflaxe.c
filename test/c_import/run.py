@@ -370,6 +370,7 @@ def validate_positive(project: RenderedProject) -> None:
         "struct pointlib_point hxc_pointAlias",
         "double hxc_widened",
         "struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_y, bool hxc_useY)",
+        "struct pointlib_point hxc_Main_selectPoint(bool hxc_useLeft, struct pointlib_point hxc_left, struct pointlib_point hxc_right)",
         "pointlib_coord hxc_tmp = hxc_tmp_native_call_result",
         "pointlib_coord hxc_tmp_load_result",
         ".x = hxc_tmp_load_result",
@@ -380,6 +381,21 @@ def validate_positive(project: RenderedProject) -> None:
             raise CImportFailure(
                 f"generated C omitted structural imported-field/enum evidence {spelling!r}"
             )
+    select_point_start = source.find(
+        "struct pointlib_point hxc_Main_selectPoint("
+    )
+    select_point_end = source.find("\nvoid hxc_init_", select_point_start)
+    select_point = source[select_point_start:select_point_end]
+    if (
+        select_point_start == -1
+        or select_point_end == -1
+        or "struct pointlib_point hxc_tmp_conditional_result" not in select_point
+        or select_point.count("hxc_tmp_conditional_result") < 4
+        or "(struct pointlib_point){0}" in select_point
+    ):
+        raise CImportFailure(
+            "imported struct conditional lost its uninitialized carrier and two branch assignments"
+        )
     if "StructInit" in header + source:
         raise CImportFailure("typed imported-struct construction leaked an intrinsic symbol")
 

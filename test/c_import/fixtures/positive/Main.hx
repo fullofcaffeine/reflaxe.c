@@ -41,11 +41,22 @@ class Main {
 	static function pointResources(point:Point):PointResources
 		return {point: point, ready: true};
 
+	/**
+	 * Select one header-owned struct by value.
+	 *
+	 * The imported header proves that `Point` is a complete C struct, so the
+	 * conditional can use one automatic carrier without allocation or cleanup.
+	 */
+	static function selectPoint(useLeft:Bool, left:Point, right:Point):Point {
+		var selected = useLeft ? left : right;
+		return selected;
+	}
+
 	static function main():Void {
 		PointLib.pointlib_build_fact_probe();
 		var left = PointLib.make(PointLib.one, PointLib.negativeThree);
 		var resources = pointResources(localPoint(PointLib.seven, true));
-		var right = resources.point;
+		var right = selectPoint(false, left, resources.point);
 		left.x = PointLib.one;
 		var delta = left.x;
 		left = PointLib.translate(left, delta, PointLib.five);

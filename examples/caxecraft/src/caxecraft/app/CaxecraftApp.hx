@@ -1171,13 +1171,7 @@ final class CaxecraftApp {
 					CaxecraftAtlas.drawHotbarFrame(hudTexture, HotbarFrame.Normal, x, y, slotSize);
 			} else {
 				Raylib.DrawRectangle(x, y, slotSize, slotSize, CaxecraftPalette.hudPanel());
-				// Keep the aggregate-valued Color choice in the call branches. The
-				// general compiler gap for aggregate conditional expressions is
-				// tracked by haxe_c-djl.1 rather than hidden in this renderer.
-				if (slot == inventory.selected)
-					Raylib.DrawRectangleLines(x, y, slotSize, slotSize, CaxecraftPalette.selection());
-				else
-					Raylib.DrawRectangleLines(x, y, slotSize, slotSize, CaxecraftPalette.hudText());
+				Raylib.DrawRectangleLines(x, y, slotSize, slotSize, slot == inventory.selected ? CaxecraftPalette.selection() : CaxecraftPalette.hudText());
 			}
 			if (itemTextureReady)
 				CaxecraftAtlas.drawItem(itemTexture, Inventory.itemAt(slot), x + 6, y + 4, slotSize - 12);

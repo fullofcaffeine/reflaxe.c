@@ -1,7 +1,7 @@
 # Haxe enum lowering
 
 E3.T02 adds a bounded production path for Haxe algebraic enums. Concrete enum
-values lower from pinned-Haxe `TypedExpr` through schema-17 HxcIR and the HxcIR
+values lower from pinned-Haxe `TypedExpr` through schema-18 HxcIR and the HxcIR
 validator before structural strict C11 is selected. The emitted definitions are
 private compiler implementation details in both `portable` and `metal`; this
 work does not establish a public C ABI or support broader generic classes and

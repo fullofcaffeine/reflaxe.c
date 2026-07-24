@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 17
+the structural C AST. Its schema is internal to the compiler: schema version 18
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
 
@@ -103,6 +103,17 @@ constructors used as values receive deterministic HxcIR adapter functions, so
 constructing the enum remains visible to validation rather than becoming a
 printer repair. Capturing closures and managed or recursive constructor
 payload adapters remain explicit unsupported boundaries.
+Schema version 18 adds an explicitly uninitialized local carrier for
+conditional results that are complete unmanaged values, such as a closed Haxe
+record, an unmanaged tagged enum, or a header-owned C struct. This is not a
+general permission to read uninitialized storage. The validator requires an
+automatic direct-value local, rejects managed or recursive representations, and
+walks both branches plus nested joins to prove that every reachable read follows
+an assignment on that path. C lowering can therefore emit the familiar
+handwritten shape `T selected; if (condition) selected = left; else selected =
+right;` without fabricating a zero value. Managed conditional joins remain a
+separate ownership problem because selecting a branch may require retain,
+transfer, and cleanup.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by

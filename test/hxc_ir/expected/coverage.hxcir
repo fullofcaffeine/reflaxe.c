@@ -1,4 +1,4 @@
-hxcir schema=17
+hxcir schema=18
 dispatch
   layout "itable.layout.coverage.Interface" root="instance.interface" slots=["slot.measure"] @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
   layout "vtable.layout.coverage.Object" root="instance.object" slots=["slot.render"] @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2

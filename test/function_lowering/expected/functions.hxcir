@@ -1,4 +1,4 @@
-hxcir schema=17
+hxcir schema=18
 module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":2:45-70:3
   function "function.FunctionFixture.apply" name="FunctionFixture.apply" returns=i32 failure=infallible entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:59-34:3
     parameter "parameter.0" type=i32 ownership=owned-or-value @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:59-34:3

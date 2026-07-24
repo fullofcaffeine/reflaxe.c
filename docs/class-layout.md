@@ -1,7 +1,7 @@
 # Concrete class instance layouts
 
 E3.T04 adds a bounded production representation for ordinary non-generic Haxe
-classes. Reachable class declarations lower through schema-17 HxcIR to private
+classes. Reachable class declarations lower through schema-18 HxcIR to private
 concrete C structs, while Haxe class values remain nullable references to that
 storage. A class proven not to escape keeps this direct, runtime-free form. The
 bounded `Array<Class>` graph path and retained-interface-field path instead

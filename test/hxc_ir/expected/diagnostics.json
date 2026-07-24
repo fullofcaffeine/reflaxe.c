@@ -41,6 +41,9 @@
   "zeroFixedArrayNonAutomatic": [
     "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayNonAutomatic.hx:2:1-2:2 [module:invalid.ZeroFixedArrayNonAutomatic.function:invalid.ZeroFixedArrayNonAutomatic.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage must be an automatic local Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "uninitializedCarrierReadBeforeBranch": [
+    "HXC9000 error [profile=portable] test/negative/UninitializedCarrierReadBeforeBranch.hx:2:1-2:2 [module:invalid.UninitializedCarrierReadBeforeBranch.function:invalid.UninitializedCarrierReadBeforeBranch.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized declaration must be the last operation that mentions its carrier before the branch Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "borrowedInterfaceStore": [
     "HXC9000 error [profile=portable] test/negative/BorrowedInterfaceStore.hx:2:1-2:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:0:bad.interface-store] Invalid HxcIR: borrowed reference value `value.interface-parameter` escapes through an initializer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -64,6 +67,9 @@
   ],
   "voidReturnWithValue": [
     "HXC9000 error [profile=portable] test/negative/VoidReturnWithValue.hx:3:1-3:2 [module:invalid.VoidReturnWithValue.function:invalid.VoidReturnWithValue.main.block:entry.terminator] Invalid HxcIR: void function return carries a value Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "uninitializedCarrierRead": [
+    "HXC9000 error [profile=portable] test/negative/UninitializedCarrierRead.hx:2:1-2:2 [module:invalid.UninitializedCarrierRead.function:invalid.UninitializedCarrierRead.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized conditional carrier must be assigned on every path before its first read Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "invalidStringMapShape": [
     "HXC9000 error [profile=portable] test/negative/InvalidStringMapShape.hx:3:1-3:2 [module:invalid.InvalidStringMapShape.function:invalid.InvalidStringMapShape.main.block:entry.instruction:1:bad.equal] Invalid HxcIR: StringMap-reference equality requires matching managed Map<String, V> pointer operands Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
@@ -168,6 +174,9 @@
   ],
   "unsafeClassUpcast": [
     "HXC9000 error [profile=portable] test/negative/UnsafeClassUpcast.hx:3:1-3:2 [module:invalid.UnsafeClassUpcast.function:invalid.UnsafeClassUpcast.main.block:entry.instruction:0:bad.convert] Invalid HxcIR: direct representation conversion requires a null-preserving concrete-class upcast Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "managedUninitializedCarrier": [
+    "HXC9000 error [profile=portable] test/negative/ManagedUninitializedCarrier.hx:2:1-2:2 [module:invalid.ManagedUninitializedCarrier.function:invalid.ManagedUninitializedCarrier.main.block:entry.instruction:0:bad.declare] Invalid HxcIR: uninitialized declaration requires an unmanaged direct-value local Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "fixedArrayInitializerMismatch": [
     "HXC9000 error [profile=portable] test/negative/FixedArrayInitializerMismatch.hx:3:1-3:2 [module:invalid.FixedArrayInitializerMismatch.function:invalid.FixedArrayInitializerMismatch.main.block:entry.instruction:1:bad.initialize] Invalid HxcIR: fixed-array initializer provides 1 values for length 2 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

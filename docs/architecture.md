@@ -264,7 +264,7 @@ complete rationale, direct-lowering alternative, sibling comparison, extraction
 criteria, and implementation-language analysis are in [the HxcIR semantic
 contract](hxc-ir.md#why-a-second-ir-when-haxe-already-has-one).
 
-The schema-17 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-18 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block

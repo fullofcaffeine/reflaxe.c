@@ -1,16 +1,70 @@
-hxcir schema=17
-module "Main" @"Main.hx":2:30-7:3
-  function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-7:3
-    block "entry" @"Main.hx":2:30-7:3
-      instruction "instruction.0.string-literal" result="value.0":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":3:3-3:23
-      instruction "instruction.1.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.0"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":3:3-3:23
-      instruction "instruction.2.string-literal" result="value.1":string-utf8 constant value=string-utf8(bytes=6,value="é🙂") @"Main.hx":4:3-4:20
-      instruction "instruction.3.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.1"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":4:3-4:20
-      instruction "instruction.4.string-literal" result="value.2":string-utf8 constant value=string-utf8(bytes=12,value="embedded\u0000NUL") @"Main.hx":5:3-5:33
-      instruction "instruction.5.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.2"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":5:3-5:33
-      instruction "instruction.6.string-literal" result="value.3":string-utf8 constant value=string-utf8(bytes=17,value="Main.hx:6: traced") @"Main.hx":6:3-6:8
-      instruction "instruction.7.hosted-output" result=- call dispatch=runtime(feature="io",operation="trace-literal") arguments=["value.3"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":6:3-6:8
-      terminator return value=none cleanup=[] @"Main.hx":2:30-7:3
+hxcir schema=18
+module "Main" @"Main.hx":2:30-19:3
+  function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-10:3
+    local "local.0" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:7-3:71
+    block "entry" @"Main.hx":2:30-10:3
+      instruction "instruction.0.constant" result="value.0":bool constant value=bool(true) @"Main.hx":3:19-3:23
+      instruction "instruction.1.call" result="value.1":string-utf8 call dispatch=direct("function.Main.selectLabel") arguments=["value.0"] returns=string-utf8 failure=none @"Main.hx":3:7-3:24
+      instruction "instruction.2.static-string-literal" result="value.2":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":3:28-3:35
+      instruction "instruction.3.string-equality" result="value.3":bool binary operation="haxe.string.equal" left="value.1" right="value.2" implementation=static @"Main.hx":3:7-3:35
+      instruction "instruction.4.short-circuit-result-initialize" result=- initialize place=local("local.0") value="value.3" transition=uninitialized->initialized @"Main.hx":3:7-3:71
+      terminator branch condition="value.3" true=edge(target="block.0.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":3:7-3:71
     end block "entry"
+    block "block.0.short-circuit-rhs" @"Main.hx":3:7-3:71
+      instruction "instruction.5.constant" result="value.4":bool constant value=bool(false) @"Main.hx":3:51-3:56
+      instruction "instruction.6.call" result="value.5":string-utf8 call dispatch=direct("function.Main.selectLabel") arguments=["value.4"] returns=string-utf8 failure=none @"Main.hx":3:39-3:57
+      instruction "instruction.7.static-string-literal" result="value.6":string-utf8 constant value=string-utf8(bytes=8,value="fallback") @"Main.hx":3:61-3:71
+      instruction "instruction.8.string-equality" result="value.7":bool binary operation="haxe.string.equal" left="value.5" right="value.6" implementation=static @"Main.hx":3:39-3:71
+      instruction "instruction.9.short-circuit-store" result=- store place=local("local.0") value="value.7" @"Main.hx":3:7-3:71
+      terminator jump edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":3:7-3:71
+    end block "block.0.short-circuit-rhs"
+    block "block.1.short-circuit-join" @"Main.hx":3:7-3:71
+      instruction "instruction.10.short-circuit-load" result="value.8":bool load place=local("local.0") @"Main.hx":3:7-3:71
+      terminator branch condition="value.8" true=edge(target="block.2.if-true",arguments=[],cleanup=[]) false=edge(target="block.3.if-false",arguments=[],cleanup=[]) @"Main.hx":3:3-6:45
+    end block "block.1.short-circuit-join"
+    block "block.2.if-true" @"Main.hx":3:3-6:45
+      instruction "instruction.11.string-literal" result="value.9":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":4:4-4:24
+      instruction "instruction.12.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.9"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":4:4-4:24
+      terminator jump edge(target="block.4.if-join",arguments=[],cleanup=[]) @"Main.hx":3:3-6:45
+    end block "block.2.if-true"
+    block "block.3.if-false" @"Main.hx":3:3-6:45
+      instruction "instruction.13.string-literal" result="value.10":string-utf8 constant value=string-utf8(bytes=26,value="conditional string failure") @"Main.hx":6:4-6:45
+      instruction "instruction.14.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.10"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":6:4-6:45
+      terminator jump edge(target="block.4.if-join",arguments=[],cleanup=[]) @"Main.hx":3:3-6:45
+    end block "block.3.if-false"
+    block "block.4.if-join" @"Main.hx":3:3-6:45
+      instruction "instruction.15.string-literal" result="value.11":string-utf8 constant value=string-utf8(bytes=6,value="é🙂") @"Main.hx":7:3-7:20
+      instruction "instruction.16.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.11"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":7:3-7:20
+      instruction "instruction.17.string-literal" result="value.12":string-utf8 constant value=string-utf8(bytes=12,value="embedded\u0000NUL") @"Main.hx":8:3-8:33
+      instruction "instruction.18.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.12"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":8:3-8:33
+      instruction "instruction.19.string-literal" result="value.13":string-utf8 constant value=string-utf8(bytes=17,value="Main.hx:9: traced") @"Main.hx":9:3-9:8
+      instruction "instruction.20.hosted-output" result=- call dispatch=runtime(feature="io",operation="trace-literal") arguments=["value.13"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":9:3-9:8
+      terminator return value=none cleanup=[] @"Main.hx":2:30-10:3
+    end block "block.4.if-join"
   end function "function.Main.main"
+  function "function.Main.selectLabel" name="Main.selectLabel" returns=string-utf8 failure=infallible entry="entry" @"Main.hx":16:51-19:3
+    parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":16:51-19:3
+    local "local.1" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":17:3-17:51
+    local "local.2" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":17:20-17:50
+    block "entry" @"Main.hx":16:51-19:3
+      instruction "instruction.0.conditional-result-declare" result=- declare-uninitialized place=local("local.2") @"Main.hx":17:20-17:50
+      terminator branch condition="parameter.0" true=edge(target="block.0.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.1.conditional-false",arguments=[],cleanup=[]) @"Main.hx":17:20-17:50
+    end block "entry"
+    block "block.0.conditional-true" @"Main.hx":17:20-17:50
+      instruction "instruction.1.static-string-literal" result="value.0":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":17:30-17:37
+      instruction "instruction.2.conditional-true-store" result=- store place=local("local.2") value="value.0" @"Main.hx":17:20-17:50
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"Main.hx":17:20-17:50
+    end block "block.0.conditional-true"
+    block "block.1.conditional-false" @"Main.hx":17:20-17:50
+      instruction "instruction.3.static-string-literal" result="value.1":string-utf8 constant value=string-utf8(bytes=8,value="fallback") @"Main.hx":17:40-17:50
+      instruction "instruction.4.conditional-false-store" result=- store place=local("local.2") value="value.1" @"Main.hx":17:20-17:50
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"Main.hx":17:20-17:50
+    end block "block.1.conditional-false"
+    block "block.2.conditional-join" @"Main.hx":17:20-17:50
+      instruction "instruction.5.conditional-load" result="value.2":string-utf8 load place=local("local.2") @"Main.hx":17:20-17:50
+      instruction "instruction.6.initialize" result=- initialize place=local("local.1") value="value.2" transition=uninitialized->initialized @"Main.hx":17:3-17:51
+      instruction "instruction.7.load" result="value.3":string-utf8 load place=local("local.1") @"Main.hx":18:10-18:18
+      terminator return value="value.3" cleanup=[] @"Main.hx":18:3-18:18
+    end block "block.2.conditional-join"
+  end function "function.Main.selectLabel"
 end module "Main"

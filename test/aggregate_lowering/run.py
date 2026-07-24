@@ -237,9 +237,9 @@ def aggregate_records(report: dict[str, object]) -> list[dict[str, object]]:
 
 def aggregate_names(report: dict[str, object]) -> dict[str, str]:
     records = aggregate_records(report)
-    if len(records) != 6:
+    if len(records) != 7:
         raise AggregateLoweringFailure(
-            "OrderA/OrderB did not deduplicate beside the envelope, optional envelope, flow, enum-abstract, and ordinary-enum records"
+            "OrderA/OrderB did not deduplicate beside the envelope, optional envelope, flow, conditional, enum-abstract, and ordinary-enum records"
         )
     by_fields = {
         tuple(field.get("semanticName") for field in record.get("fields", [])): record
@@ -249,23 +249,34 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
     envelope = by_fields.get(("enabled", "point"))
     optional_envelope = by_fields.get(("point",))
     flow_record = by_fields.get(("first", "order", "second", "third"))
+    conditional_record = by_fields.get(("order", "value"))
     switch_record = by_fields.get(("state",))
     actor_record = by_fields.get(("phase",))
     if not all(
         isinstance(record, dict)
-        for record in (pair, envelope, optional_envelope, flow_record, switch_record, actor_record)
+        for record in (
+            pair,
+            envelope,
+            optional_envelope,
+            flow_record,
+            conditional_record,
+            switch_record,
+            actor_record,
+        )
     ):
         raise AggregateLoweringFailure("aggregate records lost their five closed structural shapes")
     assert isinstance(pair, dict)
     assert isinstance(envelope, dict)
     assert isinstance(optional_envelope, dict)
     assert isinstance(flow_record, dict)
+    assert isinstance(conditional_record, dict)
     assert isinstance(switch_record, dict)
     assert isinstance(actor_record, dict)
     pair_fields = pair.get("fields")
     envelope_fields = envelope.get("fields")
     optional_envelope_fields = optional_envelope.get("fields")
     flow_fields = flow_record.get("fields")
+    conditional_fields = conditional_record.get("fields")
     switch_fields = switch_record.get("fields")
     actor_fields = actor_record.get("fields")
     if (
@@ -275,6 +286,8 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
         or not all(isinstance(field, dict) for field in envelope_fields)
         or not isinstance(flow_fields, list)
         or not all(isinstance(field, dict) for field in flow_fields)
+        or not isinstance(conditional_fields, list)
+        or not all(isinstance(field, dict) for field in conditional_fields)
         or not isinstance(switch_fields, list)
         or not all(isinstance(field, dict) for field in switch_fields)
         or not isinstance(actor_fields, list)
@@ -299,6 +312,15 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
     ):
         raise AggregateLoweringFailure(
             "flow record fields lost their canonical direct-Int shape"
+        )
+    if (
+        [field.get("semanticName") for field in conditional_fields]
+        != ["order", "value"]
+        or conditional_fields[0].get("type") != "i32"
+        or conditional_fields[1].get("type") != f"instance:{pair.get('instanceId')}"
+    ):
+        raise AggregateLoweringFailure(
+            "conditional record lost its order marker or selected direct value"
         )
     if (
         [field.get("semanticName") for field in optional_envelope_fields] != ["point"]
@@ -430,7 +452,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if hxcir.find(pair_type) == -1 or hxcir.find(pair_type) > hxcir.find(envelope_type):
         raise AggregateLoweringFailure("nested HxcIR declarations are not dependency-first")
     if (
-        hxcir.count(" representation=direct ") != 6
+        hxcir.count(" representation=direct ") != 7
         or hxcir.count(" representation=tagged ") != 1
     ):
         raise AggregateLoweringFailure(
@@ -505,6 +527,22 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise AggregateLoweringFailure(
             "record fields were not preserved and reloaded around later control flow"
         )
+    select_record = function_section(hxcir, "selectRecord")
+    select_phase = function_section(hxcir, "selectPhase")
+    for label, section in (
+        ("record", select_record),
+        ("unmanaged payload enum", select_phase),
+    ):
+        if (
+            section.count("declare-uninitialized place=local") != 1
+            or section.count("conditional-true-store") != 1
+            or section.count("conditional-false-store") != 1
+            or section.count("conditional-load") != 1
+            or "conditional-default" in section
+        ):
+            raise AggregateLoweringFailure(
+                f"{label} conditional lost its branch-assigned direct-value carrier"
+            )
 
     pair_definition = f"struct {names['pair_tag']} {{"
     envelope_definition = f"struct {names['envelope_tag']} {{"
@@ -553,13 +591,19 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise AggregateLoweringFailure("private dependency-first struct header drifted")
     if (
-        source.count("_Static_assert(") != 36
+        source.count("_Static_assert(") != 41
         or source.count("offsetof(") < 20
         or f"(struct {names['pair_tag']}){{" not in source
         or f"(struct {names['envelope_tag']}){{" not in source
         or f"(struct {names['flow_tag']}){{" not in source
         or f"(struct {names['switch_tag']}){{" not in source
         or f"(struct {names['actor_tag']}){{" not in source
+        or "struct hxc_OrderA hxc_tmp_conditional_result_n5;" not in source
+        or "struct hxc_ActorPhase hxc_tmp_conditional_result_n2;" not in source
+        or "hxc_tmp_conditional_result_n5 = hxc_first;" not in source
+        or "hxc_tmp_conditional_result_n5 = hxc_second;" not in source
+        or ".hxc_tag = hxc_ActorPhase_Moving" not in source
+        or ".hxc_tag = hxc_ActorPhase_Waiting" not in source
         or "(struct hxc_optional_OrderA){ .hxc_has_value = false }" not in source
         or "(struct hxc_optional_OrderA){ .hxc_has_value = true, .hxc_value = " not in source
         or ".hxc_has_value" not in source
@@ -986,7 +1030,7 @@ def validate_production(root: Path, *, layout: str, profile: str, policy: str) -
         or proof.get("status") != "eligible"
         or proof.get("directDecisions") != runtime_plan.get("directDecisions")
         or reachability is None
-        or reachability.get("typeInstances") != 7
+        or reachability.get("typeInstances") != 8
         or reachability.get("runtimeIntents") != 0
     ):
         raise AggregateLoweringFailure(

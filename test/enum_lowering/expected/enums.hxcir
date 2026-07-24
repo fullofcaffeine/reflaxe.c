@@ -1,4 +1,4 @@
-hxcir schema=17
+hxcir schema=18
 module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-173:3
   type "type.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a" name="Rule" kind=aggregate @"test/enum_lowering/fixtures/positive/EnumFixture.hx":22:1-26:2
     field "actions" type=instance("instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c") mutable=false @"test/enum_lowering/fixtures/positive/EnumFixture.hx":25:2-25:27

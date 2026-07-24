@@ -5968,16 +5968,26 @@ private class FunctionBuilder {
 		final conditionValue = lowerBooleanCondition(condition, "TIf");
 		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TIf(result-type)") : expectedMapping;
 		final optionalResult = resultMapping.optionalValue();
-		if (resultMapping.primitiveMapping() == null && !resultMapping.isCString() && optionalResult == null)
+		final branchInitializesResult = conditionalDirectValue(resultMapping);
+		if (resultMapping.primitiveMapping() == null
+			&& !resultMapping.isCString()
+			&& optionalResult == null
+			&& !branchInitializesResult)
 			return unsupported(expression, 'TIf(result-type:${resultMapping.cSpelling})');
 		if (resultMapping.irType == IRTVoid) {
 			return unsupported(expression,
 				'TIf(Void-as-value:${expectedMapping == null ? "typed-expression" : "contextual"}:function-return=${prepared.returnMapping.cSpelling})');
 		}
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
-		final defaultResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-		appendInstruction(defaultResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TIf")), source, "conditional-default");
-		final resultLocalId = createFlowLocal(resultMapping, defaultResult.id, source, "conditional-result");
+		final resultLocalId = if (branchInitializesResult) {
+			final localId = declareFlowLocal(resultMapping, source, "conditional-result");
+			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source, "conditional-result-declare");
+			localId;
+		} else {
+			final defaultResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+			appendInstruction(defaultResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TIf")), source, "conditional-default");
+			createFlowLocal(resultMapping, defaultResult.id, source, "conditional-result");
+		}
 		final trueBlock = createGeneratedBlock("conditional-true", source);
 		final falseBlock = createGeneratedBlock("conditional-false", source);
 		final joinBlock = createGeneratedBlock("conditional-join", source);
@@ -6008,6 +6018,24 @@ private class FunctionBuilder {
 		if (optionalResult != null && optionalResult.managedLifetime)
 			freshManagedOptionalValueIds.set(loaded.id, true);
 		return loaded;
+	}
+
+	/**
+	 * Whether both conditional branches can initialize one direct value carrier.
+	 *
+	 * These families copy their complete representation without ownership work.
+	 * Managed records/enums are excluded because selecting one branch would also
+	 * need active-branch transfer and join cleanup. A direct imported struct is
+	 * admitted only when its authoritative C header proves by-value storage.
+	 */
+	static function conditionalDirectValue(mapping:CBodyValueType):Bool {
+		return switch mapping.kind {
+			case CBVKStaticString(_): true;
+			case CBVKAggregate(aggregate): !aggregate.managedLifetime;
+			case CBVKEnum(value): !value.managedLifetime;
+			case CBVKImport(value): value.directStructTarget() != null;
+			case _: false;
+		};
 	}
 
 	function lowerPlace(expression:TypedExpr):LoweredPlace {
@@ -7674,6 +7702,29 @@ private class FunctionBuilder {
 	 * length name because their C representation is a pointer plus a length.
 	 */
 	function createFlowLocal(mapping:CBodyValueType, initialValueId:Null<String>, source:HxcSourceSpan, role:String):String {
+		final localId = declareFlowLocal(mapping, source, role);
+		if (initialValueId == null) {
+			switch mapping.kind {
+				case CBVKAggregate(_):
+					appendInstruction(null, IRIODefaultInitialize(IRPLocal(localId), IRISUninitialized, IRISInitialized), source, role
+						+ "-default-initialize");
+				case _:
+					throw new CBodyEmissionError('flow local `$localId` in `${prepared.irId}` omitted a required initial value');
+			}
+		} else {
+			appendInstruction(null, IRIOInitialize(IRPLocal(localId), initialValueId, IRISUninitialized, IRISInitialized), source, role + "-initialize");
+		}
+		return localId;
+	}
+
+	/**
+	 * Declare an automatic flow carrier without choosing its initial value.
+	 *
+	 * Most callers immediately initialize the local in the current block through
+	 * `createFlowLocal`. A conditional direct value instead emits the narrow
+	 * uninitialized-declaration operation, then assigns it in both branches.
+	 */
+	function declareFlowLocal(mapping:CBodyValueType, source:HxcSourceSpan, role:String):String {
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
 		locals.push({
@@ -7698,17 +7749,6 @@ private class FunctionBuilder {
 				context.symbols.register(lengthRequest);
 				spanLengthRequests.set(localId, lengthRequest);
 			case _:
-		}
-		if (initialValueId == null) {
-			switch mapping.kind {
-				case CBVKAggregate(_):
-					appendInstruction(null, IRIODefaultInitialize(IRPLocal(localId), IRISUninitialized, IRISInitialized), source, role
-						+ "-default-initialize");
-				case _:
-					throw new CBodyEmissionError('flow local `$localId` in `${prepared.irId}` omitted a required initial value');
-			}
-		} else {
-			appendInstruction(null, IRIOInitialize(IRPLocal(localId), initialValueId, IRISUninitialized, IRISInitialized), source, role + "-initialize");
 		}
 		return localId;
 	}

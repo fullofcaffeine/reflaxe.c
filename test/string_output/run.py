@@ -24,7 +24,7 @@ EXPECTED = CASE / "expected"
 RUNTIME_CATALOG = ROOT / "runtime/hxrt/features.json"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 TOOLCHAINS = ("gcc", "clang")
-EXPECTED_STDOUT = b"ASCII\n" + "é🙂\n".encode() + b"embedded\x00NUL\nMain.hx:6: traced\n"
+EXPECTED_STDOUT = b"ASCII\n" + "é🙂\n".encode() + b"embedded\x00NUL\nMain.hx:9: traced\n"
 EXPECTED_FEATURES = ["runtime-base", "status", "string-literal", "io"]
 EXPECTED_RUNTIME_ARTIFACTS = [
     "runtime/include/hxrt/base.h",
@@ -157,11 +157,13 @@ def extract_hxcir(result: subprocess.CompletedProcess[str], label: str) -> str:
 
 def validate_hxcir(hxcir: str) -> None:
     required = (
-        "hxcir schema=17",
+        "hxcir schema=18",
         'string-utf8(bytes=5,value="ASCII")',
         'string-utf8(bytes=6,value="é🙂")',
         'string-utf8(bytes=12,value="embedded\\u0000NUL")',
-        'string-utf8(bytes=17,value="Main.hx:6: traced")',
+        'string-utf8(bytes=8,value="fallback")',
+        'string-utf8(bytes=17,value="Main.hx:9: traced")',
+        "declare-uninitialized",
         'runtime(feature="io",operation="sys-println-literal")',
         'runtime(feature="io",operation="trace-literal")',
         "failure(kind=native-status,target=abort,arguments=[],cleanup=[])",
@@ -169,9 +171,9 @@ def validate_hxcir(hxcir: str) -> None:
     for marker in required:
         if marker not in hxcir:
             raise StringOutputFailure(f"literal-output HxcIR omitted {marker!r}")
-    if hxcir.count('runtime(feature="io",operation=') != 4:
-        raise StringOutputFailure("literal-output HxcIR must retain exactly four output roots")
-    if hxcir.count("failure(kind=native-status,target=abort") != 4:
+    if hxcir.count('runtime(feature="io",operation=') != 5:
+        raise StringOutputFailure("literal-output HxcIR must retain exactly five output roots")
+    if hxcir.count("failure(kind=native-status,target=abort") != 5:
         raise StringOutputFailure("every literal output call must retain its fail-stop edge")
     for forbidden in ("dynamic", 'runtime(feature="object"', 'runtime(feature="gc"', 'runtime(feature="reflection"'):
         if forbidden in hxcir:
@@ -201,19 +203,25 @@ def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str)
     if text_list(plan.get("artifacts"), "runtime artifacts") != EXPECTED_RUNTIME_ARTIFACTS:
         raise StringOutputFailure("literal output did not package the exact dependency-closed runtime artifacts")
     reasons = plan.get("rootReasons")
-    if not isinstance(reasons, list) or len(reasons) != 8:
-        raise StringOutputFailure("literal output must retain four output and four String-storage reasons")
+    if not isinstance(reasons, list) or len(reasons) != 14:
+        raise StringOutputFailure("literal output must retain five output and nine String-storage reasons")
     expected_ids = [
         "runtime.io.sys-println-literal.0",
         "runtime.io.sys-println-literal.1",
         "runtime.io.sys-println-literal.2",
-        "runtime.io.trace-literal.3",
-        "runtime.string-literal.static-value.4",
+        "runtime.io.sys-println-literal.3",
+        "runtime.io.trace-literal.4",
+        "runtime.string-literal.static-value.10",
+        "runtime.string-literal.static-value.11",
+        "runtime.string-literal.static-value.12",
+        "runtime.string-literal.static-value.13",
         "runtime.string-literal.static-value.5",
         "runtime.string-literal.static-value.6",
         "runtime.string-literal.static-value.7",
+        "runtime.string-literal.static-value.8",
+        "runtime.string-literal.static-value.9",
     ]
-    expected_operations = ["sys-println-literal"] * 3 + ["trace-literal"] + ["static-value"] * 4
+    expected_operations = ["sys-println-literal"] * 4 + ["trace-literal"] + ["static-value"] * 9
     actual_ids: list[str] = []
     for index, value in enumerate(reasons):
         if not isinstance(value, dict):
@@ -221,8 +229,8 @@ def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str)
         source = value.get("source")
         if not isinstance(source, dict) or source.get("file") != "Main.hx":
             raise StringOutputFailure("runtime root reason lost its stable logical source")
-        expected_feature = "io" if index < 4 else "string-literal"
-        expected_kind = "hosted-output" if index < 4 else "direct-string-value"
+        expected_feature = "io" if index < 5 else "string-literal"
+        expected_kind = "hosted-output" if index < 5 else "direct-string-value"
         if (
             value.get("featureId") != expected_feature
             or value.get("kind") != expected_kind
@@ -305,14 +313,16 @@ def validate_generated_c(output: Path) -> None:
     header = (output / "include/hxc/program.h").read_text(encoding="utf-8")
     markers = (
         '(hxc_string){ (const uint8_t *)"ASCII", 5, true }',
+        '(hxc_string){ (const uint8_t *)"fallback", 8, true }',
+        '(hxc_string){ (const uint8_t *)"conditional string failure", 26, true }',
         '(hxc_string){ (const uint8_t *)"\\303\\251\\360\\237\\231\\202", 6, true }',
         '(hxc_string){ (const uint8_t *)"embedded\\000NUL", 12, true }',
-        '(hxc_string){ (const uint8_t *)"Main.hx:6: traced", 17, true }',
+        '(hxc_string){ (const uint8_t *)"Main.hx:9: traced", 17, true }',
     )
     for marker in markers:
         if marker not in source:
             raise StringOutputFailure(f"generated C omitted literal representation {marker!r}")
-    if source.count("hxc_io_println(") != 4 or source.count("abort();") != 4:
+    if source.count("hxc_io_println(") != 5 or source.count("abort();") != 5:
         raise StringOutputFailure("generated C lost explicit output status handling")
     if '#include <hxrt/io.h>' not in header or "<stdlib.h>" not in header:
         raise StringOutputFailure("generated private header omitted selected typed dependencies")
@@ -406,7 +416,7 @@ def validate_default_diagnostics(root: Path) -> None:
     if summary.returncode != 0 or summary.stderr or summary.stdout.count("HXC2001:") != 1 or "[INFO]" not in summary.stdout:
         raise StringOutputFailure(f"portable default runtime summary drifted: {summary.stdout!r}")
     metal = compile_target(POSITIVE, root / "metal-warn", profile="metal", diagnostics=None)
-    if metal.returncode != 0 or metal.stdout or metal.stderr.count("HXC2001:") != 8 or metal.stderr.count("[WARNING]") != 8:
+    if metal.returncode != 0 or metal.stdout or metal.stderr.count("HXC2001:") != 14 or metal.stderr.count("[WARNING]") != 14:
         raise StringOutputFailure(f"metal default runtime root warnings drifted: {metal.stderr!r}")
     quiet = compile_target(POSITIVE, root / "quiet", diagnostics="off")
     if quiet.returncode != 0 or quiet.stdout or quiet.stderr:
@@ -445,33 +455,40 @@ def validate_fail_closed(root: Path) -> None:
         "runtime.io.sys-println-literal.0",
         "runtime.io.sys-println-literal.1",
         "runtime.io.sys-println-literal.2",
-        "runtime.io.trace-literal.3",
-        "runtime.string-literal.static-value.4",
+        "runtime.io.sys-println-literal.3",
+        "runtime.io.trace-literal.4",
+        "runtime.string-literal.static-value.10",
+        "runtime.string-literal.static-value.11",
+        "runtime.string-literal.static-value.12",
+        "runtime.string-literal.static-value.13",
         "runtime.string-literal.static-value.5",
         "runtime.string-literal.static-value.6",
         "runtime.string-literal.static-value.7",
+        "runtime.string-literal.static-value.8",
+        "runtime.string-literal.static-value.9",
     ]
     blocker_positions = [none.stderr.find(identifier) for identifier in blocker_ids]
-    expected_sources = ["Main.hx:3:3-3:23", "Main.hx:4:3-4:20", "Main.hx:5:3-5:33", "Main.hx:6:3-6:8"]
+    expected_sources = ["Main.hx:4:4-4:24", "Main.hx:6:4-6:45", "Main.hx:7:3-7:20", "Main.hx:8:3-8:33", "Main.hx:9:3-9:8"]
     if (
         none.returncode == 0
         or "HXC2000:" not in none.stderr
-        or "found 8 deduplicated runtime blocker(s)" not in none.stderr
+        or "found 14 deduplicated runtime blocker(s)" not in none.stderr
         or any(position < 0 for position in blocker_positions)
         or blocker_positions != sorted(blocker_positions)
         or any(source not in none.stderr for source in expected_sources)
-        or none.stderr.count("kind=hosted-output") != 4
-        or none.stderr.count("kind=direct-string-value") != 4
+        or none.stderr.count("kind=hosted-output") != 5
+        or none.stderr.count("kind=direct-string-value") != 9
         # Each call owns two different requirements: the hosted output itself
         # and the immutable String value that carries the UTF-8 bytes. Keeping
         # both records makes runtime-policy failures explain both decisions.
-        or none.stderr.count("surface=`Sys.println(String literal)`") != 6
+        or none.stderr.count("surface=`Sys.println(String literal)`") != 8
         or none.stderr.count("surface=`trace(String literal)`") != 2
+        or none.stderr.count("surface=`static-haxe-string-view:String`") != 4
         or none.stderr.count(
             "dependency-chains=[io -> status -> runtime-base; io -> string-literal -> runtime-base]"
         )
-        != 4
-        or none.stderr.count("dependency-chains=[string-literal -> runtime-base]") != 4
+        != 5
+        or none.stderr.count("dependency-chains=[string-literal -> runtime-base]") != 9
     ):
         raise StringOutputFailure(f"runtime-none output policy did not fail closed: {none.stderr!r}")
     if plausible_output_exists(none_output):

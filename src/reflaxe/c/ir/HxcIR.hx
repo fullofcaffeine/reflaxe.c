@@ -383,6 +383,16 @@ enum HxcIRInstructionKind {
 	IRIORelease(place:HxcIRPlace, implementation:HxcIRImplementation);
 
 	IRIOTrace(place:HxcIRPlace, implementation:HxcIRImplementation);
+
+	/**
+		Declare storage without fabricating a source-language value.
+
+		Validation admits this only for unmanaged direct values whose structured
+		control flow assigns every path before the first load. It lets a
+		conditional join become ordinary C such as `Point selected; if (...)`.
+	**/
+	IRIODeclareUninitialized(place:HxcIRPlace);
+
 	IRIODefaultInitialize(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeFixedArray(place:HxcIRPlace, values:Array<String>, from:HxcIRInitializationState, to:HxcIRInitializationState);

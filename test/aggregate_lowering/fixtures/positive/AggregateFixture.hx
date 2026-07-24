@@ -43,6 +43,12 @@ typedef FlowRecord = {
 	final order:Int;
 }
 
+/** Records which branch built a direct record and preserves that value. */
+typedef ConditionalRecord = {
+	final value:OrderA;
+	final order:Int;
+}
+
 class AggregateFixture {
 	static function identity(value:Int):Int {
 		return value;
@@ -138,6 +144,36 @@ class AggregateFixture {
 		};
 	}
 
+	/**
+	 * Select one complete by-value record without inventing a default record.
+	 *
+	 * Each branch also changes `order`, proving that haxe.c evaluates only the
+	 * selected branch before it joins control flow and returns the chosen value.
+	 */
+	static function selectRecord(chooseFirst:Bool, first:OrderA, second:OrderA):ConditionalRecord {
+		var order = 0;
+		var selected:OrderA = chooseFirst ? {
+			order = order * 10 + 1;
+			first;
+		} : {
+			order = order * 10 + 2;
+			second;
+			};
+		return {value: selected, order: order};
+	}
+
+	/** Exercise a direct record conditional as a function argument. */
+	static function conditionalRecordSum(chooseFirst:Bool, first:OrderA, second:OrderA):Int
+		return sum(chooseFirst ? first : second);
+
+	/** Exercise nested direct-value joins without evaluating an unused branch. */
+	static function nestedRecord(chooseOuter:Bool, chooseInner:Bool, first:OrderA, second:OrderA):OrderA
+		return chooseOuter ? (chooseInner ? first : second) : {z: 20, a: 22};
+
+	/** Select an unmanaged payload enum by value and preserve its active case. */
+	static function selectPhase(moving:Bool, speed:Int):ActorPhase
+		return moving ? ActorPhase.Moving(speed) : ActorPhase.Waiting;
+
 	static function main():Void {
 		var first:OrderA = make(3, 4);
 		var copied:OrderB = copy(first);
@@ -145,6 +181,8 @@ class AggregateFixture {
 		var absent = optionalEnvelope(noPoint());
 		var present = optionalEnvelope(somePoint(copied));
 		var flow = makeFlowRecord(-8, 9, -10);
+		var selectedFirst = selectRecord(true, first, {z: 30, a: 40});
+		var selectedSecond = selectRecord(false, first, {z: 30, a: 40});
 		while (!(sum(copied) == 7
 			&& localSum(5, 6) == 11
 			&& envelopeSum(nested) == 7
@@ -160,6 +198,22 @@ class AggregateFixture {
 			&& flow.first == 8
 			&& flow.second == 9
 			&& flow.third == 10
-			&& flow.order == 123)) {}
+			&& flow.order == 123
+			&& selectedFirst.value.z == 3
+			&& selectedFirst.value.a == 4
+			&& selectedFirst.order == 1
+			&& selectedSecond.value.z == 30
+			&& selectedSecond.value.a == 40
+			&& selectedSecond.order == 2
+			&& conditionalRecordSum(true, first,
+				{
+					z: 30,
+					a: 40
+				}) == 7
+			&& conditionalRecordSum(false, first, {z: 30, a: 40}) == 70
+			&& sum(nestedRecord(true, false, first, {z: 30, a: 40})) == 70
+			&& sum(nestedRecord(false, true, first, {z: 30, a: 40})) == 42
+			&& actorSpeed(makeActor(selectPhase(true, 9))) == 9
+			&& actorSpeed(makeActor(selectPhase(false, 9))) == 0)) {}
 	}
 }

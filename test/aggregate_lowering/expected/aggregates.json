@@ -68,6 +68,36 @@
     "digest": "9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
   },
   {
+    "instanceId": "instance.closed-record.840d047eb355663f884164459c1fe9a161891ec244fd0f8c980490a3a0569c1b",
+    "cTag": "hxc_ConditionalRecord",
+    "fields": [
+      {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
+        "semanticName": "order",
+        "cName": "hxc_order",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
+        "type": "i32"
+      },
+      {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
+        "semanticName": "value",
+        "cName": "hxc_value",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
+        "type": "instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
+      }
+    ],
+    "declarationId": "type.closed-record.840d047eb355663f884164459c1fe9a161891ec244fd0f8c980490a3a0569c1b",
+    "digest": "840d047eb355663f884164459c1fe9a161891ec244fd0f8c980490a3a0569c1b"
+  },
+  {
     "instanceId": "instance.closed-record.a6e9a54a91b748a3add7c25a17f8fcebf0095023e207b32730239cc1461466b7",
     "cTag": "hxc_FlowRecord",
     "fields": [

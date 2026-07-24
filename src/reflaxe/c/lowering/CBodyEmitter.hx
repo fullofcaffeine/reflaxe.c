@@ -886,6 +886,9 @@ class CBodyEmitter {
 				case IRIOProjectTag(valueId, tagName, payloadIndex, IRTCPCheckedAbort(_, _)):
 					emitEnumProjection(statements, state.values, state.referencedValues, instruction, valueId, tagName, payloadIndex, fn,
 						state.temporaryNames, state.boundsAbortName, state.lineDirectives);
+				case IRIODeclareUninitialized(IRPLocal(localId)):
+					emitUninitializedDeclaration(statements, state.declared, state.referencedLocals, instruction, localId, fn, state.localNames,
+						state.lineDirectives);
 				case IRIODefaultInitialize(IRPLocal(localId), from, to):
 					emitDefaultInitialize(statements, state.declared, state.referencedLocals, instruction, localId, from, to, fn, state.localNames,
 						state.lineDirectives);
@@ -1188,7 +1191,7 @@ class CBodyEmitter {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
 					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIOBoundsCheck(place, _, _) |
-						IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
+						IRIODeclareUninitialized(place) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
 						markReferencedLocals(place, referenced);
 					case IRIOInitializeSpan(place, sourceArray, _, _):
 						markReferencedLocals(place, referenced);
@@ -1608,6 +1611,35 @@ class CBodyEmitter {
 			type: declaration.type,
 			declarator: declaration.declarator,
 			initializer: IExpr(requireValue(values, valueId, fn.id)),
+			attributes: []
+		}));
+		declared.set(localId, true);
+		if (!referencedLocals.exists(localId)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(requireLocalName(localNames, localId, fn.id)))));
+		}
+	}
+
+	/**
+	 * Emit storage for a proven direct-value join without creating a fake value.
+	 *
+	 * HxcIR validation establishes that structured control flow assigns the
+	 * carrier before it is read. The C declaration therefore intentionally has
+	 * no initializer; each conditional arm emits one ordinary assignment.
+	 */
+	function emitUninitializedDeclaration(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
+			instruction:HxcIRInstruction, localId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		if (instruction.result != null || declared.exists(localId)) {
+			fail('uninitialized declaration `${instruction.id}` in `${fn.id}` has invalid declaration state');
+		}
+		final local = requireLocal(fn, localId);
+		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: null,
 			attributes: []
 		}));
 		declared.set(localId, true);

@@ -74,6 +74,8 @@ void hxc_Main_main(void);
 
 struct hxc_PointResources hxc_Main_pointResources(struct pointlib_point hxc_point);
 
+struct pointlib_point hxc_Main_selectPoint(bool hxc_useLeft, struct pointlib_point hxc_left, struct pointlib_point hxc_right);
+
 void hxc_init_compiler_static_initialization_InlineFloat32Probe_static_field_sideEffectCount(void);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

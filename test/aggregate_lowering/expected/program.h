@@ -52,6 +52,11 @@ struct hxc_SwitchRecord {
   int32_t hxc_state;
 };
 
+struct hxc_ConditionalRecord {
+  int32_t hxc_order;
+  struct hxc_OrderA hxc_value;
+};
+
 struct hxc_FlowRecord {
   int32_t hxc_first;
   int32_t hxc_order;
@@ -90,6 +95,8 @@ int32_t hxc_AggregateFixture_actorSpeed(struct hxc_ActorRecord hxc_value);
 
 int32_t hxc_AggregateFixture_checkedField(int32_t hxc_value);
 
+int32_t hxc_AggregateFixture_conditionalRecordSum(bool hxc_chooseFirst, struct hxc_OrderA hxc_first, struct hxc_OrderA hxc_second);
+
 struct hxc_OrderA hxc_AggregateFixture_copy(struct hxc_OrderA hxc_value);
 
 struct hxc_Envelope hxc_AggregateFixture_envelope(struct hxc_OrderA hxc_value);
@@ -110,11 +117,17 @@ struct hxc_FlowRecord hxc_AggregateFixture_makeFlowRecord(int32_t hxc_first, int
 
 struct hxc_SwitchRecord hxc_AggregateFixture_makeSwitch(int32_t hxc_state);
 
+struct hxc_OrderA hxc_AggregateFixture_nestedRecord(bool hxc_chooseOuter, bool hxc_chooseInner, struct hxc_OrderA hxc_first, struct hxc_OrderA hxc_second);
+
 struct hxc_optional_OrderA hxc_AggregateFixture_noPoint(void);
 
 struct hxc_OptionalEnvelope hxc_AggregateFixture_optionalEnvelope(struct hxc_optional_OrderA hxc_value);
 
 int32_t hxc_AggregateFixture_optionalSum(struct hxc_optional_OrderA hxc_value);
+
+struct hxc_ActorPhase hxc_AggregateFixture_selectPhase(bool hxc_moving, int32_t hxc_speed);
+
+struct hxc_ConditionalRecord hxc_AggregateFixture_selectRecord(bool hxc_chooseFirst, struct hxc_OrderA hxc_first, struct hxc_OrderA hxc_second);
 
 struct hxc_optional_OrderA hxc_AggregateFixture_somePoint(struct hxc_OrderA hxc_value);
 

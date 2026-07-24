@@ -163,6 +163,7 @@ class HxcIRDumper {
 			case IRIORetain(place, selected): 'retain place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIORelease(place, selected): 'release place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIOTrace(place, selected): 'trace place=${renderPlace(place)} implementation=${implementation(selected)}';
+			case IRIODeclareUninitialized(place): 'declare-uninitialized place=${renderPlace(place)}';
 			case IRIODefaultInitialize(place, from, to):
 				'default-initialize place=${renderPlace(place)} transition=${state(from)}->${state(to)}';
 			case IRIOInitialize(place, valueId, from, to):

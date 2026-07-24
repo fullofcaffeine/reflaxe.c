@@ -100,6 +100,9 @@ class HxcIRGolden {
 				ioFailurePolicy: invalidDiagnostics(ioFailurePolicyProgram()),
 				invalidStringMapShape: invalidDiagnostics(invalidStringMapShapeProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
+				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
+				uninitializedCarrierReadBeforeBranch: invalidDiagnostics(uninitializedCarrierReadBeforeBranchProgram()),
+				managedUninitializedCarrier: invalidDiagnostics(managedUninitializedCarrierProgram()),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
 				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
 				throwWithoutStatus: invalidDiagnostics(throwWithoutStatusProgram()),
@@ -482,7 +485,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-17 exact-root contract without involving C emission.
+		Exercise the schema-18 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -1899,6 +1902,94 @@ class HxcIRGolden {
 		], [], file);
 	}
 
+	/** Reject a direct carrier when one conditional path reaches its load unwritten. */
+	static function uninitializedCarrierReadProgram():HxcIRProgram {
+		final file = "test/negative/UninitializedCarrierRead.hx";
+		final program = aggregateProgram(file, [
+			instruction("bad.declare", null, IRIODeclareUninitialized(IRPLocal("local.result")), file, 2)
+		], [
+			local("local.result", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, file, 1)
+		], "invalid.UninitializedCarrierRead");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.condition", IRTBool, file, 1));
+		fn.parameters.push(parameter("value.record", IRTInstance("instance.record"), file, 1));
+		fn.blocks.splice(0, 1);
+		fn.blocks.push(block("entry", [
+			instruction("bad.declare", null, IRIODeclareUninitialized(IRPLocal("local.result")), file, 2)
+		], IRTBranch("value.condition", edge("true"), edge("false")), file, 2));
+		fn.blocks.push(block("true", [
+			instruction("true.store", null, IRIOStore(IRPLocal("local.result"), "value.record"), file, 3)
+		], IRTJump(edge("join")), file, 3));
+		fn.blocks.push(block("false", [], IRTJump(edge("join")), file, 4));
+		fn.blocks.push(block("join", [
+			instruction("bad.load", result("value.result", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 5)
+		], IRTReturn(null, []), file, 5));
+		return program;
+	}
+
+	/** Reject a carrier read placed between its no-value declaration and conditional branch. */
+	static function uninitializedCarrierReadBeforeBranchProgram():HxcIRProgram {
+		final file = "test/negative/UninitializedCarrierReadBeforeBranch.hx";
+		final program = aggregateProgram(file, [], [
+			local("local.result", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, file, 1)
+		], "invalid.UninitializedCarrierReadBeforeBranch");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.condition", IRTBool, file, 1));
+		fn.parameters.push(parameter("value.record", IRTInstance("instance.record"), file, 1));
+		fn.blocks.splice(0, 1);
+		fn.blocks.push(block("entry", [
+			instruction("bad.declare", null, IRIODeclareUninitialized(IRPLocal("local.result")), file, 2),
+			instruction("bad.early-load", result("value.early", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 2)
+		], IRTBranch("value.condition", edge("true"), edge("false")), file, 2));
+		fn.blocks.push(block("true", [
+			instruction("true.store", null, IRIOStore(IRPLocal("local.result"), "value.record"), file, 3)
+		], IRTJump(edge("join")), file, 3));
+		fn.blocks.push(block("false", [
+			instruction("false.store", null, IRIOStore(IRPLocal("local.result"), "value.record"), file, 4)
+		], IRTJump(edge("join")), file, 4));
+		fn.blocks.push(block("join", [
+			instruction("join.load", result("value.result", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 5)
+		], IRTReturn(null, []), file, 5));
+		return program;
+	}
+
+	/** Reject the no-initial-value carrier for a reference-counted value. */
+	static function managedUninitializedCarrierProgram():HxcIRProgram {
+		final file = "test/negative/ManagedUninitializedCarrier.hx";
+		final managedType = IRTInstance("instance.managed");
+		final program = minimalProgram("invalid.ManagedUninitializedCarrier", [
+			instruction("bad.declare", null, IRIODeclareUninitialized(IRPLocal("local.result")), file, 2)
+		],
+			terminator(IRTBranch("value.condition", edge("true"), edge("false")), file, 2),
+			[local("local.result", managedType, IRLSAutomatic, IRISUninitialized, file, 1)], [], file);
+		program.modules[0].types.push({
+			id: "type.managed",
+			displayName: "invalid.Managed",
+			kind: IRTKReference,
+			source: span(file, 1)
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.managed",
+			declarationId: "type.managed",
+			arguments: [],
+			representation: IRRManaged("managed-test"),
+			source: span(file, 1)
+		});
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.condition", IRTBool, file, 1));
+		fn.parameters.push(parameter("value.managed", managedType, file, 1));
+		fn.blocks.push(block("true", [
+			instruction("true.store", null, IRIOStore(IRPLocal("local.result"), "value.managed"), file, 3)
+		], IRTJump(edge("join")), file, 3));
+		fn.blocks.push(block("false", [
+			instruction("false.store", null, IRIOStore(IRPLocal("local.result"), "value.managed"), file, 4)
+		], IRTJump(edge("join")), file, 4));
+		fn.blocks.push(block("join", [
+			instruction("join.load", result("value.result", managedType), IRIOLoad(IRPLocal("local.result")), file, 5)
+		], IRTReturn(null, []), file, 5));
+		return program;
+	}
+
 	static function statusConventionReturnTypeProgram():HxcIRProgram {
 		final file = "test/negative/StatusConventionReturnType.hx";
 		final program = minimalProgram("invalid.StatusConventionReturnType", [
@@ -2055,6 +2146,18 @@ class HxcIRGolden {
 			id: id,
 			idempotence: IRCExactlyOnce,
 			kind: kind,
+			source: span(file, line)
+		};
+
+	static function edge(targetBlockId:String):HxcIRBlockEdge
+		return {targetBlockId: targetBlockId, arguments: [], cleanup: []};
+
+	static function block(id:String, instructions:Array<HxcIRInstruction>, kind:HxcIRTerminatorKind, file:String, line:Int):HxcIRBlock
+		return {
+			id: id,
+			parameters: [],
+			instructions: instructions,
+			terminator: terminator(kind, file, line),
 			source: span(file, line)
 		};
 
