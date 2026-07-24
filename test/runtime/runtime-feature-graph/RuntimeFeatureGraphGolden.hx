@@ -75,6 +75,7 @@ class RuntimeFeatureGraphGolden {
 		final empty = planner.plan(emptyRequest());
 		final alloc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.alloc", "alloc")], []));
 		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
+		final intMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.int-map", "int-map")], []));
 		final stringMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-map", "string-map")], []));
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
@@ -99,6 +100,7 @@ class RuntimeFeatureGraphGolden {
 		final packager = new RuntimeFeaturePackager(registry);
 		final allocFiles = packager.packageFiles(alloc, repositorySource);
 		final arrayFiles = packager.packageFiles(array, repositorySource);
+		final intMapFiles = packager.packageFiles(intMap, repositorySource);
 		final stringMapFiles = packager.packageFiles(stringMap, repositorySource);
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
@@ -148,6 +150,7 @@ class RuntimeFeatureGraphGolden {
 			empty: empty,
 			alloc: alloc,
 			array: array,
+			intMap: intMap,
 			stringMap: stringMap,
 			bytes: bytes,
 			object: objectPlan,
@@ -192,6 +195,7 @@ class RuntimeFeatureGraphGolden {
 		Sys.println(PACKAGE_PREFIX + Json.stringify({
 			alloc: packageRecords(allocFiles),
 			array: packageRecords(arrayFiles),
+			intMap: packageRecords(intMapFiles),
 			stringMap: packageRecords(stringMapFiles),
 			bytes: packageRecords(bytesFiles),
 			object: packageRecords(objectFiles),

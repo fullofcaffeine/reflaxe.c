@@ -6,6 +6,7 @@ import haxe.macro.Type.Ref;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
 import reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess;
+import reflaxe.c.lowering.CBodyIntMap.CBodyIntMapRecognition;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 
 /**
@@ -18,6 +19,7 @@ import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 **/
 enum CBodyIntrinsicReceiverFamily {
 	CBIRArray;
+	CBIRIntMap;
 	CBIRStringMap;
 	CBIRBytes;
 	CBIRString;
@@ -39,6 +41,8 @@ class CBodyIntrinsicReceiver {
 	public static function classify(access:CBodyInstanceCallAccess):CBodyIntrinsicReceiverFamily {
 		if (CBodyArrayRecognition.isCoreArray(access.owner))
 			return CBIRArray;
+		if (CBodyIntMapRecognition.isIntMap(access.owner))
+			return CBIRIntMap;
 		if (CBodyStringMapRecognition.isStringMap(access.owner))
 			return CBIRStringMap;
 		if (CBodyBytesRecognition.isCoreBytes(access.owner))

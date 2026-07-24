@@ -27,6 +27,7 @@ CATALOG_SCHEMA = ROOT / "docs/specs/runtime-features.schema.json"
 RUNTIME_SOURCE_ROOT = ROOT / "runtime/hxrt"
 ALLOC_CONSUMER = CASE / "alloc_consumer.c"
 ARRAY_CONSUMER = CASE / "array_consumer.c"
+INT_MAP_CONSUMER = ROOT / "test/differential/int-map/int_map_runtime.c"
 STRING_MAP_CONSUMER = ROOT / "test/differential/string-map/string_map_runtime.c"
 BYTES_CONSUMER = CASE / "bytes_consumer.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
@@ -173,6 +174,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array",
         "bytes",
         "gc",
+        "int-map",
         "io",
         "object",
         "runtime-base",
@@ -224,6 +226,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name",
         "alloc",
         "array",
+        "int-map",
         "string-map",
         "bytes",
         "gc",
@@ -241,6 +244,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name": ["status"],
         "alloc": ["status"],
         "array": ["alloc"],
+        "int-map": ["alloc"],
         "string-map": ["alloc", "string-literal"],
         "bytes": ["alloc", "string-literal"],
         "gc": ["alloc", "object"],
@@ -257,6 +261,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name": "native-seed-only",
         "alloc": "compiler-selectable",
         "array": "compiler-selectable",
+        "int-map": "compiler-selectable",
         "string-map": "compiler-selectable",
         "bytes": "compiler-selectable",
         "gc": "compiler-selectable",
@@ -494,6 +499,7 @@ def validate_plans(plans: dict[str, object]) -> None:
 
     alloc = record(plans.get("alloc"), "alloc plan")
     array = record(plans.get("array"), "array plan")
+    int_map = record(plans.get("intMap"), "IntMap plan")
     string_map = record(plans.get("stringMap"), "StringMap plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     object_plan = record(plans.get("object"), "object plan")
@@ -506,6 +512,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc closure is incomplete or nondeterministic")
     if array.get("features") != ["runtime-base", "status", "alloc", "array"]:
         raise RuntimeFeatureFailure("array closure is incomplete or nondeterministic")
+    if int_map.get("features") != ["runtime-base", "status", "alloc", "int-map"]:
+        raise RuntimeFeatureFailure("IntMap closure is incomplete or nondeterministic")
     if string_map.get("features") != [
         "runtime-base",
         "status",
@@ -538,6 +546,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("string closure is incomplete or nondeterministic")
     validate_selected_reasons(alloc, "alloc")
     validate_selected_reasons(array, "array")
+    validate_selected_reasons(int_map, "IntMap")
     validate_selected_reasons(string_map, "StringMap")
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(object_plan, "object")
@@ -572,6 +581,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("string scalar plan did not remain allocation-free and independently packageable")
     if "runtime/src/array.c" not in text_list(array.get("artifacts"), "array artifacts"):
         raise RuntimeFeatureFailure("array build plan omitted its selected source")
+    if "runtime/src/int_map.c" not in text_list(int_map.get("artifacts"), "IntMap artifacts"):
+        raise RuntimeFeatureFailure("IntMap build plan omitted its selected source")
     if "runtime/src/string_map.c" not in text_list(
         string_map.get("artifacts"), "StringMap artifacts"
     ):
@@ -661,7 +672,7 @@ def validate_plans(plans: dict[str, object]) -> None:
 
 
 def validate_package(package: dict[str, object], plans: dict[str, object]) -> None:
-    for name in ("alloc", "array", "bytes", "object", "gc", "stringScalar", "string", "io"):
+    for name in ("alloc", "array", "intMap", "stringMap", "bytes", "object", "gc", "stringScalar", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
@@ -860,7 +871,7 @@ def package_from_snapshots(
     catalog: dict[str, object], plans: dict[str, object]
 ) -> dict[str, object]:
     package: dict[str, object] = {}
-    for name in ("alloc", "array", "bytes", "object", "gc", "stringScalar", "string", "io"):
+    for name in ("alloc", "array", "intMap", "stringMap", "bytes", "object", "gc", "stringScalar", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []
@@ -954,6 +965,7 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
 def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     alloc = records(package.get("alloc"), "alloc package")
     array = records(package.get("array"), "array package")
+    int_map = records(package.get("intMap"), "IntMap package")
     string_map = records(package.get("stringMap"), "StringMap package")
     bytes_package = records(package.get("bytes"), "Bytes package")
     object_package = records(package.get("object"), "object package")
@@ -967,6 +979,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
             family_root = root / toolchain.family
             run_native_case(toolchain, "alloc", alloc, ALLOC_CONSUMER, "runtime-feature-alloc: OK\n", family_root)
             run_native_case(toolchain, "array", array, ARRAY_CONSUMER, "runtime-feature-array: OK\n", family_root)
+            run_native_case(toolchain, "int-map", int_map, INT_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "string-map", string_map, STRING_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "bytes", bytes_package, BYTES_CONSUMER, "runtime-feature-bytes: OK\n", family_root)
             run_native_case(toolchain, "object", object_package, OBJECT_CONSUMER, "runtime-feature-object: OK\n", family_root)

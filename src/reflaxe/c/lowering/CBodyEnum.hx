@@ -448,7 +448,7 @@ class CBodyEnumRegistry {
 		switch valueType.kind {
 			case CBVKStaticString(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOwnedClass(_) | CBVKClass(_, _):
 				return;
-			case CBVKStringMap(_):
+			case CBVKIntMap(_) | CBVKStringMap(_):
 				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
 			case CBVKInterface(_):
 				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');

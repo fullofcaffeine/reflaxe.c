@@ -17,6 +17,7 @@
 #include "hxrt/array.h"
 #include "hxrt/bytes.h"
 #include "hxrt/gc.h"
+#include "hxrt/int_map.h"
 #include "hxrt/io.h"
 #include "hxrt/object.h"
 #include "hxrt/status_name.h"

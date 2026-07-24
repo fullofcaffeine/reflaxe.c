@@ -22,6 +22,7 @@ import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
+import reflaxe.c.lowering.CBodyIntMap.CPreparedBodyIntMap;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowCompletion;
@@ -193,6 +194,7 @@ class CBodyEmitter {
 	final managedDescriptorNames:Map<String, CIdentifier> = [];
 	final arrayElementTypes:Map<String, HxcIRTypeRef> = [];
 	final arraysByInstance:Map<String, CLoweredBodyArray> = [];
+	final intMapInstanceIds:Map<String, Bool> = [];
 	final stringMapValueTypes:Map<String, HxcIRTypeRef> = [];
 	final stringMapsByInstance:Map<String, CLoweredBodyStringMap> = [];
 	final arrayElementCleanups:Map<String, CBodyEmitterArrayElementCleanup> = [];
@@ -213,7 +215,7 @@ class CBodyEmitter {
 
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
-			?arrays:Array<CLoweredBodyArray>, ?stringMaps:Array<CLoweredBodyStringMap>, ?bytes:Array<CPreparedBodyBytes>,
+			?arrays:Array<CLoweredBodyArray>, ?intMaps:Array<CPreparedBodyIntMap>, ?stringMaps:Array<CLoweredBodyStringMap>, ?bytes:Array<CPreparedBodyBytes>,
 			?optionals:Array<CLoweredBodyOptional>, ?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
 		this.imports = imports == null ? CLoweredImports.empty() : imports;
 		this.managedProgram = managedProgram;
@@ -368,6 +370,9 @@ class CBodyEmitter {
 				stringMapsByInstance.set(value.prepared.instanceId, value);
 				stringMapValueTypes.set(value.prepared.instanceId, value.prepared.value.irType);
 			}
+		if (intMaps != null)
+			for (value in intMaps)
+				intMapInstanceIds.set(value.instanceId, true);
 		if (bytes != null)
 			for (_ in bytes)
 				bytesInstanceIds.set(CPreparedBodyBytes.INSTANCE_ID, true);
@@ -1010,6 +1015,11 @@ class CBodyEmitter {
 					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapRetain)), [
 						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
 					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORetain(place, IRIRuntime("int-map")):
+					addLineDirective(statements, instruction.source, state.lineDirectives);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapRetain)), [
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
 				case IRIORetain(place, IRIRuntime("bytes")):
 					addLineDirective(statements, instruction.source, state.lineDirectives);
 					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [
@@ -1027,6 +1037,10 @@ class CBodyEmitter {
 					]), state.boundsAbortName, instruction.id, fn.id);
 				case IRIORelease(place, IRIRuntime("string-map")):
 					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapRelease)), [
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORelease(place, IRIRuntime("int-map")):
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapRelease)), [
 						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
 					]), state.boundsAbortName, instruction.id, fn.id);
 				case IRIORelease(place, IRIRuntime("bytes")):
@@ -1900,6 +1914,12 @@ class CBodyEmitter {
 							case _:
 								fail('StringMap cleanup `${action.id}` in `${fn.id}` does not own a managed StringMap place');
 						}
+					case IRCARelease(place, IRIRuntime("int-map")):
+						switch placeType(place, fn) {
+							case IRTInstance(instanceId) if (intMapInstanceIds.exists(instanceId)):
+							case _:
+								fail('IntMap cleanup `${action.id}` in `${fn.id}` does not own a managed IntMap place');
+						}
 					case IRCARelease(place, IRIRuntime("bytes")):
 						switch placeType(place, fn) {
 							case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)):
@@ -1951,6 +1971,11 @@ class CBodyEmitter {
 				case IRCARelease(place, IRIRuntime("string-map")):
 					emitStatusAbort(statements,
 						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapRelease)),
+							[placeExpression(place, fn, localNames, globalNames, spanLengthNames, values)]),
+						boundsAbortName, action.id, fn.id);
+				case IRCARelease(place, IRIRuntime("int-map")):
+					emitStatusAbort(statements,
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapRelease)),
 							[placeExpression(place, fn, localNames, globalNames, spanLengthNames, values)]),
 						boundsAbortName, action.id, fn.id);
 				case IRCARelease(place, IRIRuntime("bytes")):
@@ -2200,6 +2225,8 @@ class CBodyEmitter {
 			case IRTInstance(instanceId):
 				if (arrayElementTypes.exists(instanceId))
 					throw new CBodyEmissionError('managed Array instance `$instanceId` requires pointer declarator context');
+				if (intMapInstanceIds.exists(instanceId))
+					throw new CBodyEmissionError('managed IntMap instance `$instanceId` requires pointer declarator context');
 				if (stringMapValueTypes.exists(instanceId))
 					throw new CBodyEmissionError('managed StringMap instance `$instanceId` requires pointer declarator context');
 				if (bytesInstanceIds.exists(instanceId))
@@ -2244,6 +2271,8 @@ class CBodyEmitter {
 		return switch type {
 			case IRTInstance(instanceId) if (arrayElementTypes.exists(instanceId)):
 				{type: new CType(TStruct(new CIdentifier("hxc_array_ref"))), declarator: DPointer(inner, [])};
+			case IRTInstance(instanceId) if (intMapInstanceIds.exists(instanceId)):
+				{type: new CType(TStruct(new CIdentifier("hxc_int_bool_map_ref"))), declarator: DPointer(inner, [])};
 			case IRTInstance(instanceId) if (stringMapValueTypes.exists(instanceId)):
 				{type: new CType(TStruct(new CIdentifier("hxc_string_map_ref"))), declarator: DPointer(inner, [])};
 			case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)):
@@ -3537,6 +3566,12 @@ class CBodyEmitter {
 						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapRelease)), [value])
 					}
 				];
+			case IRTInstance(instanceId) if (intMapInstanceIds.exists(instanceId)): [
+					{
+						retain: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapRetain)), [value]),
+						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapRelease)), [value])
+					}
+				];
 			case IRTInstance(instanceId) if (enumRepresentations.get(instanceId) == CBECNative): [];
 			case IRTInstance(instanceId) if (enumsByInstance.exists(instanceId)):
 				final nested = enumsByInstance.get(instanceId);
@@ -4208,6 +4243,10 @@ class CBodyEmitter {
 					addTypeHeaders(headers, requireArrayElementType(instanceId), visited);
 					return;
 				}
+				if (intMapInstanceIds.exists(instanceId)) {
+					addUnique(headers, "hxrt/int_map.h");
+					return;
+				}
 				final stringMapValueType = stringMapValueTypes.get(instanceId);
 				if (stringMapValueType != null) {
 					addUnique(headers, "hxrt/string_map.h");
@@ -4437,6 +4476,9 @@ class CBodyEmitter {
 			case IRCDRuntime("array", _):
 				emitManagedArrayCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
+			case IRCDRuntime("int-map", _):
+				emitIntMapCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case IRCDRuntime("string-map", _):
 				emitStringMapCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
@@ -4500,6 +4542,68 @@ class CBodyEmitter {
 		}));
 		values.set(result.id, EIdentifier(temporaryName));
 		return doesNotReturn;
+	}
+
+	/** Emit the validator-approved `Map<Int, Bool>` operation family. */
+	function emitIntMapCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final operation = switch call.dispatch {
+			case IRCDRuntime("int-map", value): value;
+			case _: return fail('IntMap emitter received a non-IntMap call in `${fn.id}`');
+		};
+		addLineDirective(statements, instruction.source, lineDirectives);
+		switch operation {
+			case "create":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TStruct(new CIdentifier("hxc_int_bool_map_ref"))),
+					declarator: DPointer(DName(temporary), []),
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapCreate)), [
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+			case "set":
+				if (call.arguments.length != 3 || call.returnType != IRTVoid || instruction.result != null)
+					return fail('IntMap set `${instruction.id}` in `${fn.id}` lost its map/key/value signature');
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapSet)), [
+					requireValue(values, call.arguments[0], fn.id),
+					requireValue(values, call.arguments[1], fn.id),
+					requireValue(values, call.arguments[2], fn.id)
+				]), boundsAbortName, instruction.id, fn.id);
+			case "exists":
+				final result = requireResult(instruction, fn.id);
+				final temporary = requireIntMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TBool),
+					declarator: DName(temporary),
+					initializer: null,
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNIntMapExists)), [
+					requireValue(values, call.arguments[0], fn.id),
+					requireValue(values, call.arguments[1], fn.id),
+					EUnary(AddressOf, EIdentifier(temporary))
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
+			case _:
+				fail('IntMap call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
+		}
+	}
+
+	static function requireIntMapTemporary(temporaryNames:Map<String, CIdentifier>, resultId:String, instructionId:String, functionId:String):CIdentifier {
+		final temporary = temporaryNames.get(resultId);
+		if (temporary == null)
+			return fail('IntMap call `$instructionId` in `$functionId` has no finalized result temporary');
+		return temporary;
 	}
 
 	/** Emit one validator-approved Map<String, V> operation through exact unboxed storage. */

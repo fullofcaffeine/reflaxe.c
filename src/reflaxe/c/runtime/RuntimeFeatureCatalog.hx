@@ -24,6 +24,7 @@ class RuntimeFeatureCatalog {
 		final statusName = RuntimeFeatureId.parse("status-name");
 		final alloc = RuntimeFeatureId.parse("alloc");
 		final array = RuntimeFeatureId.parse("array");
+		final intMap = RuntimeFeatureId.parse("int-map");
 		final stringMap = RuntimeFeatureId.parse("string-map");
 		final bytes = RuntimeFeatureId.parse("bytes");
 		final object = RuntimeFeatureId.parse("object");
@@ -184,6 +185,26 @@ class RuntimeFeatureCatalog {
 						"test/differential/string-map/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(intMap, "Integer-keyed shared Map<Int, Bool> identity with exact unboxed storage.", CompilerSelectable, true,
+				environments, [alloc], [header("int_map.h"), source("int_map.c")], [
+					"hxc_int_bool_map_ref_create",
+					"hxc_int_bool_map_ref_retain",
+					"hxc_int_bool_map_ref_release",
+					"hxc_int_bool_map_ref_set",
+					"hxc_int_bool_map_ref_exists"
+				],
+				[], [],
+				documentation("Preserves ordinary Map<Int, Bool> alias identity and key presence while storing both key and value in their exact C scalar forms.",
+					[
+					new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe Map<Int, Bool> whose contents and shared identity change at run time."),
+					new RuntimeFeatureSelectionRoot("int-map-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable admitted construction, insertion, or membership operation.")
+				],
+					"A compiler-known immutable integer lookup table can remain direct const C data when mutation and alias identity are unobservable.",
+					"A closed bounded key range can use a program-local bitset or table when the compiler can prove that range and preserve Map identity.",
+					"General run-time keys need mutable shared storage. This first Bool specialization avoids Dynamic values and boxing while leaving unproved IntMap methods unsupported.",
+					"docs/hxrt.md", ["test/differential/int-map/run.py", "test/runtime/runtime-feature-graph/run.py"])),
 			new RuntimeFeatureDefinition(bytes, "Fixed-length mutable binary storage with checked ranges and shared Haxe identity.", CompilerSelectable, true,
 				environments, [alloc, stringLiteral], [header("bytes.h"), source("bytes.c")], [
 					"hxc_bytes_ref_create_zeroed",
@@ -394,6 +415,7 @@ class RuntimeFeatureCatalog {
 			case "bytes.h": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
+			case "int_map.h": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
@@ -414,6 +436,7 @@ class RuntimeFeatureCatalog {
 			case "bytes.c": "4db5d3ddcaf32684e900abe7d81ffe3a008edc53806573aaebe84089c0c6a787";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c";
+			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "c1fd06b27c78e644f3bf77bb8f9733fe7535bf6a0b05e40ebc1670e44422401d";

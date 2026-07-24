@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "int-map",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-008",
+    "HXC-RT-008",
+    "HXC-RT-009"
+  ],
+  "sources": [
+    "docs/hxrt.md",
+    "runtime/hxrt/include/hxrt/int_map.h",
+    "runtime/hxrt/src/int_map.c",
+    "test/differential/int-map/generated/Main.hx",
+    "test/differential/int-map/generated/oracle.hxml",
+    "test/differential/int-map/int_map_runtime.c",
+    "test/differential/int-map/negative/get/Main.hx",
+    "test/differential/int-map/negative/value_type/Main.hx",
+    "test/differential/int-map/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/int-map",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "int-map: OK: .*Eval and generated Map<Int, Bool> construction, set, exists, aliases, growth rollback, layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed$"
+    },
+    "oracle": "test/differential/int-map/generated/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/int_map.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

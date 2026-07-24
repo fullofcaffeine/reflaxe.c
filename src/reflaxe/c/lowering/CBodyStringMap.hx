@@ -213,7 +213,7 @@ class CBodyStringMapRegistry {
 		if (parameters.length != 2)
 			return rejected(fail, position, '$node:StringMap-arity:${parameters.length}');
 		if (!isString(parameters[0]))
-			return rejected(fail, position, '$node:StringMap-key-not-String');
+			return null;
 		final value = resolveValue(parameters[1], position, ownerModule, sourcePath, fail, '$node.StringMap-value');
 		final lifecycle = valueLifecycle(value);
 		if (lifecycle == null)

@@ -920,6 +920,8 @@ private class HxcIRValidationState {
 						if (isStringMapRuntimeImplementation(implementation)
 							&& managedStringMapValue(knownPlaceType(place, noValues, locals)) == null)
 							add(actionPath, "StringMap release cleanup requires a managed Map<String, V> place", action.source);
+						if (isIntMapRuntimeImplementation(implementation) && !isManagedIntBoolMap(knownPlaceType(place, noValues, locals)))
+							add(actionPath, "IntMap release cleanup requires a managed Map<Int, Bool> place", action.source);
 						if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, noValues, locals)))
 							add(actionPath, "bytes release cleanup requires a managed Bytes place", action.source);
 						switch implementation {
@@ -1575,6 +1577,8 @@ private class HxcIRValidationState {
 				if (isStringMapRuntimeImplementation(implementation)
 					&& managedStringMapValue(knownPlaceType(place, available, locals)) == null)
 					add(path, "StringMap retain requires a managed Map<String, V> place", instruction.source);
+				if (isIntMapRuntimeImplementation(implementation) && !isManagedIntBoolMap(knownPlaceType(place, available, locals)))
+					add(path, "IntMap retain requires a managed Map<Int, Bool> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
 					add(path, "bytes retain requires a managed Bytes place", instruction.source);
 				switch implementation {
@@ -1606,6 +1610,8 @@ private class HxcIRValidationState {
 				if (isStringMapRuntimeImplementation(implementation)
 					&& managedStringMapValue(knownPlaceType(place, available, locals)) == null)
 					add(path, "StringMap release requires a managed Map<String, V> place", instruction.source);
+				if (isIntMapRuntimeImplementation(implementation) && !isManagedIntBoolMap(knownPlaceType(place, available, locals)))
+					add(path, "IntMap release requires a managed Map<Int, Bool> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
 					add(path, "bytes release requires a managed Bytes place", instruction.source);
 				switch implementation {
@@ -1876,6 +1882,8 @@ private class HxcIRValidationState {
 					validateManagedArrayCall(call, argumentTypes, path, source);
 				} else if (featureId == "string-map") {
 					validateStringMapCall(call, argumentTypes, path, source);
+				} else if (featureId == "int-map") {
+					validateIntMapCall(call, argumentTypes, path, source);
 				} else if (featureId == "bytes") {
 					validateManagedBytesCall(call, argumentTypes, path, source);
 				} else if (featureId == "string-scalar") {
@@ -2032,6 +2040,58 @@ private class HxcIRValidationState {
 	static function isStringMapRuntimeImplementation(implementation:HxcIRImplementation):Bool
 		return switch implementation {
 			case IRIRuntime("string-map"): true;
+			case _: false;
+		};
+
+	/** Validate the bounded `Map<Int, Bool>` runtime family. */
+	function validateIntMapCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("int-map", value): value;
+			case _: return;
+		};
+		final receiver = argumentTypes.length == 0 ? null : argumentTypes[0];
+		final hasReceiver = isManagedIntBoolMap(receiver);
+		final keyType = argumentTypes.length > 1 ? argumentTypes[1] : null;
+		final hasIntKey = keyType != null && typeKey(keyType) == typeKey(IRTInt(32, true));
+		switch operationId {
+			case "create":
+				if (argumentTypes.length != 0 || !isManagedIntBoolMap(call.returnType))
+					add(path, "IntMap creation takes no arguments and returns Map<Int, Bool>", source);
+			case "set":
+				if (argumentTypes.length != 3 || !hasReceiver || !hasIntKey || argumentTypes[2] != IRTBool || call.returnType != IRTVoid)
+					add(path, "IntMap.set requires Map<Int, Bool> + Int + Bool and returns Void", source);
+			case "exists":
+				if (argumentTypes.length != 2 || !hasReceiver || !hasIntKey || call.returnType != IRTBool)
+					add(path, "IntMap.exists requires Map<Int, Bool> + Int and returns Bool", source);
+			case _:
+				add(path, 'int-map runtime call names unsupported operation `$operationId`', source);
+		}
+		validateCleanupFreeStatusAbort(call.failure, path, source, "managed IntMap operation");
+	}
+
+	/** True only for the exact managed Int/Bool specialization admitted here. */
+	function isManagedIntBoolMap(type:Null<HxcIRTypeRef>):Bool {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _: return false;
+		};
+		final instance = typeInstances.get(instanceId);
+		if (instance == null || instance.arguments.length != 2 || instance.arguments[1] != IRTBool)
+			return false;
+		switch instance.representation {
+			case IRRManaged("int-map"):
+			case _:
+				return false;
+		}
+		return switch instance.arguments[0] {
+			case IRTInt(32, true): true;
+			case _: false;
+		};
+	}
+
+	static function isIntMapRuntimeImplementation(implementation:HxcIRImplementation):Bool
+		return switch implementation {
+			case IRIRuntime("int-map"): true;
 			case _: false;
 		};
 
@@ -3259,7 +3319,7 @@ private class HxcIRValidationState {
 			case IRCNull:
 				switch type {
 					case IRTPointer(_, true) | IRTNullable(_, _): true;
-					case IRTInstance(_): isManagedArrayReference(type) || isManagedStringMapReference(type);
+					case IRTInstance(_): isManagedArrayReference(type) || isManagedIntBoolMap(type) || isManagedStringMapReference(type);
 					case _: false;
 				}
 		};

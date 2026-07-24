@@ -120,6 +120,13 @@ REQUIRED_GATE_FILES = (
     "test/differential/array-runtime/case.json",
     "test/differential/array-runtime/oracle.hxml",
     "test/differential/array-runtime/run.py",
+    "test/differential/int-map/case.json",
+    "test/differential/int-map/generated/Main.hx",
+    "test/differential/int-map/generated/oracle.hxml",
+    "test/differential/int-map/int_map_runtime.c",
+    "test/differential/int-map/negative/get/Main.hx",
+    "test/differential/int-map/negative/value_type/Main.hx",
+    "test/differential/int-map/run.py",
     "test/differential/string-map/case.json",
     "test/differential/string-map/generated/Main.hx",
     "test/differential/string-map/generated/oracle.hxml",
@@ -1100,6 +1107,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:runtime-features entry point")
     if scripts.get("test:array-runtime") != "python3 test/differential/array-runtime/run.py":
         errors.append("package.json must retain the test:array-runtime entry point")
+    if scripts.get("test:int-map") != "python3 test/differential/int-map/run.py":
+        errors.append("package.json must retain the test:int-map entry point")
     if scripts.get("test:string-map") != "python3 test/differential/string-map/run.py":
         errors.append("package.json must retain the test:string-map entry point")
     if scripts.get("test:string-char-at") != "python3 test/differential/string-char-at/run.py":
@@ -1258,6 +1267,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:runtime-features")
     if "npm run test:array-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:array-runtime")
+    if "npm run test:int-map" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:int-map")
     if "npm run test:string-map" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-map")
     if "npm run test:string-char-at" not in str(scripts.get("test:toolchain", "")):
@@ -1470,6 +1481,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the selective runtime feature test")
     if "test/differential/array-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed array runtime test")
+    if "test/differential/int-map/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed IntMap runtime test")
     if "test/differential/string-map/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed StringMap runtime test")
     if "test/differential/string-char-at/run.py" not in pre_commit:
@@ -1618,6 +1631,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
     if "array-runtime-contract" not in runner or "ARRAY_RUNTIME" not in runner:
         errors.append("native smoke runner must execute the typed array contract in each toolchain lane")
+    if "int-map-runtime-contract" not in runner or "INT_MAP" not in runner:
+        errors.append("native smoke runner must execute the typed IntMap contract in each toolchain lane")
     if "string-map-runtime-contract" not in runner or "STRING_MAP" not in runner:
         errors.append("native smoke runner must execute the typed StringMap contract in each toolchain lane")
     if "bytes-runtime-contract" not in runner or "BYTES_RUNTIME" not in runner:
@@ -1768,6 +1783,31 @@ def validate() -> list[str]:
             errors.append(
                 "StringMap runner lost typed map/ownership/failure/selective-link evidence: "
                 + required_string_map_contract
+            )
+
+    int_map_runner = read_text(
+        ROOT / "test/differential/int-map/run.py", errors
+    )
+    for required_int_map_contract in (
+        "-std=c11",
+        "-Werror",
+        "-pedantic",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "--toolchain",
+        "--native-only",
+        "run_eval_oracle",
+        "render_server_pair",
+        "-fsanitize=address,undefined",
+        "hxc_int_bool_map_ref_exists",
+        "runtime-none",
+        "IntMap.get:not-yet-admitted",
+        "nm",
+    ):
+        if required_int_map_contract not in int_map_runner:
+            errors.append(
+                "IntMap runner lost typed map/ownership/failure/selective-link evidence: "
+                + required_int_map_contract
             )
 
     string_char_at_runner = read_text(

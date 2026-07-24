@@ -42,8 +42,8 @@ show that sharing is better than specialization.
 
 The checked-in runtime is deliberately incomplete. Generated Haxe can select
 the hosted literal-output closure plus bounded ordinary-Haxe Array,
-`Map<String, V>`, `haxe.io.Bytes`, and `String.charAt` closures. Collections
-select allocator-backed storage transitively; StringMap and Bytes also select
+`Map<Int, Bool>`, `Map<String, V>`, `haxe.io.Bytes`, and `String.charAt`
+closures. Collections select allocator-backed storage transitively; StringMap and Bytes also select
 the literal carrier used by their admitted String inputs. `String.charAt`
 instead selects an allocation-free scalar-inspection slice. The compiler may
 also select immutable object
@@ -315,6 +315,39 @@ additionally proves alias-safe insert/resize paths that generated Haxe does not
 yet expose. Fixed arrays and spans stay direct and runtime-free. See
 [array runtime](array-runtime.md).
 
+<!-- hxrt-feature:int-map -->
+### `int-map`
+
+Compiler-selectable shared storage for the first ordinary-Haxe
+`Map<Int, Bool>` specialization. Haxe presents that source type as
+`haxe.ds.IntMap<Bool>` in the typed program. Haxe.c recognizes both identities
+as one closed family before the generic `haxe.IMap` interface can erase the
+exact key and value types.
+
+The generated representation is a private `struct hxc_int_bool_map_ref *`.
+Keys remain signed 32-bit Haxe `Int` values, Bool values remain native C
+`bool`, and a separate occupied flag distinguishes “stored false” from
+“missing key.” Assigning the map to a new local retains the same mutable table,
+so changes through either alias are visible through the other. Construction,
+`set(Int, Bool)`, and `exists(Int)` are the complete current method set.
+`get`, removal, iteration, and other value types still stop with a
+source-positioned IntMap diagnostic; the compiler does not guess nullable,
+iterator, or ownership semantics for them.
+
+The table uses open addressing: it hashes a key to a slot and checks later
+slots after a collision. Capacity is always a power of two and the table keeps
+an empty slot, which guarantees that lookup terminates. Growth allocates and
+rehashes replacement storage before publishing it. If allocation fails, every
+existing key and every alias still observes the old valid table.
+
+This runtime slice is selected only for a mutable, run-time-sized map whose
+shared identity is observable. A compiler-known immutable lookup can remain
+direct constant C, while a proven small key range may later use a
+program-local bitset or table. The independent C fixture forces allocation
+failure at the private ABI; the ordinary-Haxe fixture separately compares Eval
+with generated strict C, so the runtime and compiler are not merely checking
+matching assumptions.
+
 <!-- hxrt-feature:string-map -->
 ### `string-map`
 
@@ -469,6 +502,7 @@ them.
 | `include/hxrt/status_name.h`, `src/status.c` | Native-seed status-name evidence helper. |
 | `include/hxrt/allocator.h`, `src/allocator.c` | Dependency-only allocator callbacks, owner lifecycle, checked arithmetic, and aligned hosted implementation; selected transitively by managed collections. |
 | `include/hxrt/array.h`, `src/array.c` | Compiler-selectable resizable typed storage, shared Array identity, and element lifecycle. |
+| `include/hxrt/int_map.h`, `src/int_map.c` | Compiler-selectable Int-keyed shared `Map<Int, Bool>` storage with exact unboxed keys, values, and membership. |
 | `include/hxrt/string_map.h`, `src/string_map.c` | Compiler-selectable String-keyed shared map storage with copied keys and exact unboxed values. |
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
 | `include/hxrt/gc.h`, `src/gc.c` | Compiler-selectable precise non-moving collector, exact roots/pins, pressure policy, and observable reports. |

@@ -56,7 +56,7 @@ class GeneratedRootFrameProbe {
 		rootArrays.set(failure.id, new CIdentifier("hxc_failure_roots"));
 		rootFrames.set(failure.id, new CIdentifier("hxc_failure_frame"));
 		final names = new CManagedProgramNames(new CIdentifier("hxc_program_gc"), new CIdentifier("hxc_program_thread"), rootArrays, rootFrames);
-		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, names);
+		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, names);
 		final unit = new CTranslationUnit();
 		for (header in ["stdbool.h", "stddef.h", "stdlib.h", "hxrt/gc.h"])
 			unit.includes.push({path: header, kind: System});
@@ -103,7 +103,7 @@ class GeneratedRootFrameProbe {
 		final rootArrays:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_roots")];
 		final rootFrames:Map<String, CIdentifier> = [root.id => new CIdentifier("hxc_project_frame")];
 		final names = new CManagedProgramNames(new CIdentifier("hxc_project_gc"), new CIdentifier("hxc_project_thread"), rootArrays, rootFrames);
-		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, names);
+		final emitter = new CBodyEmitter(null, null, null, null, null, null, null, null, null, null, names);
 		final rootNames:Map<String, CIdentifier> = ["value.object" => new CIdentifier("value_object")];
 		final loweredRoot = loweredFunction(emitter, root, "fixture.ManagedRoots", new CIdentifier("hxc_project_root"), rootNames);
 		final loweredEntry = loweredFunction(emitter, entry, "fixture.ManagedRoots", new CIdentifier("hxc_project_entry"), []);
@@ -123,8 +123,8 @@ class GeneratedRootFrameProbe {
 				}
 			]
 		};
-		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], [], dispatch, CLoweredImports.empty(),
-			[], [], {
+		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], [], [], dispatch,
+			CLoweredImports.empty(), [], [], {
 				schemaVersion: 1,
 				algorithm: "synthetic-root-frame",
 				symbols: [],

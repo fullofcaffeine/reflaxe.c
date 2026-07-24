@@ -148,8 +148,8 @@ class CGenericSpecializationReportBuilder {
 			definitionsById.set(definition.functionId, definition);
 		}
 		final callTargets = directCallTargets(lowered.functions);
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.stringMaps, lowered.bytes,
-			lowered.optionals, lowered.dispatch);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.intMaps, lowered.stringMaps,
+			lowered.bytes, lowered.optionals, lowered.dispatch);
 		final printer = new CASTPrinter();
 		final functionRecords:Array<CGenericFunctionSpecializationSnapshot> = [];
 		var specializedFunctionBytes = 0;

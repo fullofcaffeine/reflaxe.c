@@ -365,6 +365,65 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
+            "description": "A reachable admitted construction, insertion, or membership operation.",
+            "id": "int-map-operation",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe Map<Int, Bool> whose contents and shared identity change at run time.",
+            "id": "managed-type-representation",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "General run-time keys need mutable shared storage. This first Bool specialization avoids Dynamic values and boxing while leaving unproved IntMap methods unsupported.",
+        "evidence": [
+          "test/differential/int-map/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known immutable integer lookup table can remain direct const C data when mutation and alias identity are unobservable.",
+        "contract": "Preserves ordinary Map<Int, Bool> alias identity and key presence while storing both key and value in their exact C scalar forms.",
+        "programLocalAlternative": "A closed bounded key range can use a program-local bitset or table when the compiler can prove that range and preserve Map identity."
+      },
+      "dependencies": [
+        "alloc"
+      ],
+      "id": "int-map",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_int_bool_map_ref_create",
+        "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_release",
+        "hxc_int_bool_map_ref_retain",
+        "hxc_int_bool_map_ref_set"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/int_map.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/int_map.h"
+        },
+        {
+          "sourceSha256": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/int_map.c",
+          "sourcePath": "runtime/hxrt/src/int_map.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Integer-keyed shared Map<Int, Bool> identity with exact unboxed storage.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
             "description": "Reachable Sys.println with a compiler-owned String literal.",
             "id": "sys-println-literal",
             "kind": "hxc-ir-operation"
@@ -912,6 +971,7 @@
     "array",
     "bytes",
     "gc",
+    "int-map",
     "io",
     "object",
     "runtime-base",
@@ -948,6 +1008,7 @@
         "hxc_gc_root_table",
         "hxc_gc_stats",
         "hxc_gc_thread",
+        "hxc_int_bool_map_ref",
         "hxc_object_header",
         "hxc_owned_cstring",
         "hxc_owned_string",
@@ -963,7 +1024,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "58ba8ca3b8747065c8c79585950aa4e819b2154780a5394ab8c48b038e2ff551",
+      "sourceSetSha256": "018e7a8577784c07bd62b53232811d51464f3bc9ba6946586eb537ed29c168b5",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

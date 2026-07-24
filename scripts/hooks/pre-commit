@@ -190,6 +190,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/(hxc_runtim
   python3 "$ROOT_DIR/test/differential/array-runtime/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/hxrt/(allocator|base|int_map|status)\.h|src/(allocator|int_map)\.c)|src/reflaxe/c/(CCompiler\.hx|emit/CProjectEmitter\.hx|ir/|lowering/|runtime/)|test/differential/int-map/|test/runtime/runtime-feature-graph/|docs/(hxrt|runtime-feature-planning|testing)\.md|docs/specs/(bootstrap-inventory|fixture-taxonomy|stdlib-ledger).*\.(json|csv)|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running typed IntMap lowering and runtime probes..."
+  python3 "$ROOT_DIR/test/differential/int-map/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/hxrt/(allocator|base|status|string_literal|string_map)\.h|src/(allocator|string_map)\.c)|src/reflaxe/c/(CCompiler\.hx|emit/CProjectEmitter\.hx|ir/|lowering/|runtime/)|test/differential/string-map/|test/runtime/runtime-feature-graph/|docs/(hxrt|runtime-feature-planning|testing)\.md|docs/specs/(bootstrap-inventory|fixture-taxonomy|stdlib-ledger).*\.(json|csv)|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running typed StringMap lowering and runtime probes..."
   python3 "$ROOT_DIR/test/differential/string-map/run.py"
@@ -305,7 +310,7 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/feat
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --catalog-check
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|differential/(array-runtime|bytes-runtime|string-map)|primitive_differential|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization|string_output)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/ast/c-ast-roundtrip/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/(ci/(check_ci_policy|runtime_smoke)\.py|test/c_fixture_harness\.py)|\.github/workflows/governance\.yml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|differential/(array-runtime|bytes-runtime|int-map|string-map)|primitive_differential|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization|string_output)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/ast/c-ast-roundtrip/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/(ci/(check_ci_policy|runtime_smoke)\.py|test/c_fixture_harness\.py)|\.github/workflows/governance\.yml|package\.json)'; then
   echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
   python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
   python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"

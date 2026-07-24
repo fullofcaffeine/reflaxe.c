@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove exact scalar, fieldless-enum, and managed-record StringMap contracts."""
+"""Prove the bounded ordinary-Haxe Map<Int, Bool> compiler/runtime contract."""
 
 from __future__ import annotations
 
@@ -21,11 +21,11 @@ ROOT = Path(__file__).resolve().parents[3]
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
 NEGATIVE = CASE / "negative"
-FIXTURE = CASE / "string_map_runtime.c"
-INCLUDE = ROOT / "runtime/hxrt/include"
+NATIVE_FIXTURE = CASE / "int_map_runtime.c"
+RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
-    ROOT / "runtime/hxrt/src/string_map.c",
+    ROOT / "runtime/hxrt/src/int_map.c",
 )
 TOOLCHAINS = ("gcc", "clang")
 LAYOUTS = ("split", "package", "unity")
@@ -56,8 +56,8 @@ SANITIZER_FLAGS = (
 )
 
 
-class StringMapFailure(RuntimeError):
-    pass
+class IntMapFailure(RuntimeError):
+    """One bounded IntMap contract failed."""
 
 
 @dataclass(frozen=True)
@@ -87,8 +87,8 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
         compiler = shutil.which(family)
         if compiler is None:
             if selected != "auto":
-                raise StringMapFailure(f"required C compiler is missing: {family}")
-            print(f"string-map: SKIP optional {family}: missing command")
+                raise IntMapFailure(f"required C compiler is missing: {family}")
+            print(f"int-map: SKIP optional {family}: missing command")
             continue
         identity = subprocess.run(
             [compiler, "--version"],
@@ -102,12 +102,12 @@ def resolve_toolchains(selected: str) -> list[Toolchain]:
         actual = "clang" if "clang" in text else "gcc" if "gcc" in text else "unknown"
         if identity.returncode != 0 or actual != family:
             if selected != "auto":
-                raise StringMapFailure(f"{family} command identifies as {actual}")
-            print(f"string-map: SKIP optional {family}: command identifies as {actual}")
+                raise IntMapFailure(f"{family} command identifies as {actual}")
+            print(f"int-map: SKIP optional {family}: command identifies as {actual}")
             continue
         result.append(Toolchain(family, compiler))
     if not result:
-        raise StringMapFailure("no strict C11 compiler is available")
+        raise IntMapFailure("no strict C11 compiler is available")
     return result
 
 
@@ -125,7 +125,7 @@ def run_eval_oracle() -> None:
         )
         results.append((execution.returncode, execution.stdout, execution.stderr))
     if results != [(0, "", ""), (0, "", "")]:
-        raise StringMapFailure(f"pinned Eval StringMap oracle drifted: {results!r}")
+        raise IntMapFailure(f"pinned Eval IntMap oracle drifted: {results!r}")
 
 
 def compile_haxe(
@@ -186,124 +186,93 @@ def extract_hxcir(result: subprocess.CompletedProcess[str]) -> str:
         if line.startswith(REPORT_PREFIX)
     ]
     if len(reports) != 1:
-        raise StringMapFailure("generated compile omitted its one HxcIR report")
+        raise IntMapFailure("generated compile omitted its one HxcIR report")
     report = json.loads(reports[0])
     hxcir = report.get("hxcir") if isinstance(report, dict) else None
     if not isinstance(hxcir, str) or not hxcir:
-        raise StringMapFailure("generated compile omitted validated HxcIR text")
+        raise IntMapFailure("generated compile omitted validated HxcIR text")
     return hxcir
 
 
 def validate_generated_project(output: Path, hxcir: str) -> None:
     for marker in (
-        'representation=managed("string-map")',
-        'arguments=[string-utf8,bool]',
-        'arguments=[string-utf8,i32]',
-        'arguments=[string-utf8,instance("instance.enum.',
-        'arguments=[string-utf8,instance("instance.closed-record.',
-        'runtime(feature="string-map",operation="create")',
-        'runtime(feature="string-map",operation="set")',
-        'runtime(feature="string-map",operation="get")',
-        'runtime(feature="string-map",operation="remove")',
-        'binary operation="haxe.string-map-reference.equal"',
-        'binary operation="haxe.string-map-reference.not-equal"',
-        'retain place=local(',
-        'release place=local(',
+        'representation=managed("int-map")',
+        "arguments=[i32,bool]",
+        'runtime(feature="int-map",operation="create")',
+        'runtime(feature="int-map",operation="set")',
+        'runtime(feature="int-map",operation="exists")',
+        "retain place=local(",
+        "release place=local(",
     ):
         if marker not in hxcir:
-            raise StringMapFailure(f"validated HxcIR omitted {marker}")
+            raise IntMapFailure(f"validated HxcIR omitted {marker}")
     if " raw" in hxcir or str(ROOT) in hxcir:
-        raise StringMapFailure("StringMap HxcIR used raw syntax or leaked the checkout path")
+        raise IntMapFailure("IntMap HxcIR used raw syntax or leaked the checkout path")
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
-    if plan.get("features") != [
-        "runtime-base",
-        "status",
-        "alloc",
-        "array",
-        "string-literal",
-        "string-map",
-    ]:
-        raise StringMapFailure("generated StringMap program selected the wrong runtime closure")
+    if plan.get("features") != ["runtime-base", "status", "alloc", "int-map"]:
+        raise IntMapFailure("generated IntMap program selected the wrong runtime closure")
     operations = {
         reason.get("operationId")
         for reason in plan.get("rootReasons", [])
-        if isinstance(reason, dict) and reason.get("featureId") == "string-map"
+        if isinstance(reason, dict) and reason.get("featureId") == "int-map"
     }
-    expected = {
+    if operations != {
         "cleanup-release",
-        "clear",
         "create",
         "exists",
-        "get",
         "managed-type-representation",
-        "remove",
         "retain",
         "set",
-    }
-    if operations != expected:
-        raise StringMapFailure(
-            f"generated StringMap operations drifted: {sorted(operations)!r}"
-        )
-    if "managed-haxe-string-maps" not in plan.get("directDecisions", []):
-        raise StringMapFailure("runtime plan omitted the exact StringMap representation decision")
-    if "managed-haxe-arrays" not in plan.get("directDecisions", []):
-        raise StringMapFailure("managed record fixture omitted its nested Array representation")
+    }:
+        raise IntMapFailure(f"generated IntMap operations drifted: {sorted(operations)!r}")
+    decisions = plan.get("directDecisions", [])
+    if "managed-haxe-int-maps" not in decisions:
+        raise IntMapFailure("runtime plan omitted the IntMap representation decision")
+    if any(
+        decision.startswith("managed-haxe-") and decision != "managed-haxe-int-maps"
+        for decision in decisions
+    ):
+        raise IntMapFailure("runtime plan selected an unrelated managed Haxe family")
+    stdlib = json.loads((output / "hxc.stdlib-report.json").read_text(encoding="utf-8"))
+    if (
+        stdlib.get("modules") != ["int-map"]
+        or stdlib.get("capabilities")
+        != [
+            "cleanup-release",
+            "create",
+            "exists",
+            "managed-type-representation",
+            "retain",
+            "set",
+        ]
+    ):
+        raise IntMapFailure("stdlib report did not name the exact admitted IntMap closure")
 
     sources = "\n".join(
         path.read_text(encoding="utf-8")
         for path in sorted((output / "src").rglob("*.c"))
     )
     for marker in (
-        "struct hxc_string_map_ref *",
-        "hxc_string_map_ref_create",
-        "hxc_string_map_ref_create_with_ops",
-        "hxc_string_map_value_ops",
-        "hxc_string_map_ref_set_copy",
-        "hxc_string_map_ref_get_copy",
-        "hxc_string_map_ref_retain",
-        "hxc_string_map_ref_release",
-        "sizeof(bool)",
-        "_Alignof(bool)",
-        "value_copy",
-        "value_assign",
-        "value_destroy",
-        "hxc_array_ref_retain",
-        "hxc_array_ref_release",
-        "sizeof(int32_t)",
+        "struct hxc_int_bool_map_ref *",
+        "hxc_int_bool_map_ref_create",
+        "hxc_int_bool_map_ref_set",
+        "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_retain",
+        "hxc_int_bool_map_ref_release",
+        "hxc_default_allocator()",
     ):
         if marker not in sources:
-            raise StringMapFailure(f"generated C omitted {marker}")
-    # Lifecycle callbacks use typed casts behind an ABI-required `void *`
-    # boundary. That boundary is not Haxe `Dynamic`: the callback is generated
-    # for one exact record type, and the checks above prove its complete
-    # copy/assign/destroy family. Reject the actual dynamic runtime family
-    # instead of rejecting every well-typed opaque callback parameter.
-    for forbidden in ("hxc_dynamic", "goto "):
+            raise IntMapFailure(f"generated C omitted {marker}")
+    for forbidden in ("hxc_string_map", "hxc_dynamic", "goto "):
         if forbidden in sources:
-            raise StringMapFailure(f"generated C retained forbidden shape {forbidden!r}")
+            raise IntMapFailure(f"generated C retained forbidden shape {forbidden!r}")
 
 
 def available_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
         candidate.bind(("127.0.0.1", 0))
         return int(candidate.getsockname()[1])
-
-
-def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
-    deadline = time.monotonic() + 10.0
-    while time.monotonic() < deadline:
-        if server.poll() is not None:
-            stdout, stderr = server.communicate()
-            raise StringMapFailure(
-                f"Haxe server exited before determinism requests: {stdout!r} {stderr!r}"
-            )
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
-                return
-        except OSError:
-            time.sleep(0.05)
-    raise StringMapFailure("Haxe server did not accept determinism requests")
 
 
 def render_server_pair(root: Path) -> tuple[Path, Path]:
@@ -318,12 +287,26 @@ def render_server_pair(root: Path) -> tuple[Path, Path]:
         text=True,
     )
     try:
-        wait_for_server(server, port)
+        deadline = time.monotonic() + 10.0
+        while time.monotonic() < deadline:
+            if server.poll() is not None:
+                stdout, stderr = server.communicate()
+                raise IntMapFailure(
+                    f"Haxe server exited before determinism requests: {stdout!r} {stderr!r}"
+                )
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                    break
+            except OSError:
+                time.sleep(0.05)
+        else:
+            raise IntMapFailure("Haxe server did not accept determinism requests")
+
         outputs = (root / "server-first", root / "server-second")
         for label, output in zip(("first", "second"), outputs):
             result = compile_haxe(GENERATED, output, connect=endpoint)
             if result.returncode != 0:
-                raise StringMapFailure(
+                raise IntMapFailure(
                     f"{label} warm-server compile failed: {result.stdout!r} {result.stderr!r}"
                 )
         return outputs
@@ -345,11 +328,11 @@ def render_projects(root: Path) -> dict[str, Path]:
         second = compile_haxe(GENERATED, reverse, layout=layout, reverse=True)
         for label, result in ((f"{layout}-normal", first), (f"{layout}-reverse", second)):
             if result.returncode != 0:
-                raise StringMapFailure(
+                raise IntMapFailure(
                     f"{label} compile failed\nstdout={result.stdout!r}\nstderr={result.stderr!r}"
                 )
         if generated_tree(normal) != generated_tree(reverse):
-            raise StringMapFailure(f"{layout} output changed under reversed discovery")
+            raise IntMapFailure(f"{layout} output changed under reversed discovery")
         projects[layout] = normal
         if layout == "split":
             validate_generated_project(normal, extract_hxcir(first))
@@ -357,33 +340,29 @@ def render_projects(root: Path) -> dict[str, Path]:
     server_first, server_second = render_server_pair(root)
     split_tree = generated_tree(projects["split"])
     if generated_tree(server_first) != split_tree or generated_tree(server_second) != split_tree:
-        raise StringMapFailure("split output changed under warm compiler-server reuse")
+        raise IntMapFailure("split output changed under warm compiler-server reuse")
     return projects
 
 
 def run_negative_cases(root: Path) -> None:
     expected = {
-        "value_type": "StringMap-value-not-yet-admitted:double",
-        "class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
-        "payload_enum_value": "StringMap-value-not-yet-admitted:haxe-enum:",
-        "key_type": "virtual-slot-generic-requires-specialization:slot.haxe.ds.ObjectMap.set",
-        "iteration": "TVar(value:type).field:hasNext:method",
-        "reassignment": "TBinop(OpAssign:managed-StringMap-reassignment-not-admitted)",
+        "value_type": "IntMap-value-not-yet-admitted:int32_t",
+        "get": "TCall(IntMap.get:not-yet-admitted)",
     }
     for name, marker in expected.items():
         output = root / f"negative-{name}"
         result = compile_haxe(NEGATIVE / name, output)
         if result.returncode == 0 or "HXC1001" not in result.stderr or marker not in result.stderr:
-            raise StringMapFailure(f"negative case {name} drifted: {result.stderr!r}")
+            raise IntMapFailure(f"negative case {name} drifted: {result.stderr!r}")
         if output.exists() and any(output.rglob("*")):
-            raise StringMapFailure(f"negative case {name} left plausible generated output")
+            raise IntMapFailure(f"negative case {name} left plausible generated output")
 
     output = root / "runtime-none"
     rejected = compile_haxe(GENERATED, output, defines=("hxc_runtime=none",))
     if rejected.returncode == 0 or "runtime policy `none`" not in rejected.stderr:
-        raise StringMapFailure("runtime policy none did not reject managed StringMap")
+        raise IntMapFailure("runtime policy none did not reject managed IntMap")
     if output.exists() and any(output.rglob("*")):
-        raise StringMapFailure("runtime-policy rejection left plausible output")
+        raise IntMapFailure("runtime-policy rejection left plausible output")
 
 
 def compile_and_run(
@@ -392,13 +371,11 @@ def compile_and_run(
     include_roots: list[Path],
     executable: Path,
     flags: tuple[str, ...],
-    defines: tuple[str, ...] = (),
 ) -> None:
     command = [
         compiler,
         *STRICT_FLAGS,
         *flags,
-        *(f"-D{define}" for define in defines),
         *(f"-I{root}" for root in include_roots),
         *(str(source) for source in sources),
         "-o",
@@ -413,7 +390,7 @@ def compile_and_run(
         timeout=60,
     )
     if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
-        raise StringMapFailure(
+        raise IntMapFailure(
             f"strict native compile failed\ncommand={command!r}\n"
             f"stdout={compiled.stdout!r}\nstderr={compiled.stderr!r}"
         )
@@ -426,61 +403,40 @@ def compile_and_run(
         timeout=30,
     )
     if executed.returncode != 0 or executed.stdout or executed.stderr:
-        raise StringMapFailure(
+        raise IntMapFailure(
             f"native execution drifted: exit={executed.returncode} "
             f"stdout={executed.stdout!r} stderr={executed.stderr!r}"
         )
 
 
-def validate_cpp_headers(project: Path, family: str, root: Path) -> None:
-    compiler = shutil.which("clang++" if family == "clang" else "g++")
-    if compiler is None:
-        raise StringMapFailure(f"{family} evidence requires its C++ compiler")
-    source = root / f"{family}-headers.cpp"
-    source.write_text('#include "hxc/program.h"\nint main() { return 0; }\n', encoding="utf-8")
-    command = [
-        compiler,
-        "-std=c++17",
-        "-Wall",
-        "-Wextra",
-        "-Werror",
-        "-pedantic",
-        f"-I{project / 'include'}",
-        f"-I{project / 'runtime/include'}",
-        "-fsyntax-only",
-        str(source),
-    ]
-    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
-    if result.returncode != 0 or result.stdout or result.stderr:
-        raise StringMapFailure(f"{family} C++ private-header check failed: {result.stderr!r}")
-
-
-def inspect_symbols(executable: Path, family: str, *, allow_array: bool = False) -> None:
+def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
-        raise StringMapFailure(f"{family} StringMap evidence requires nm")
-    result = subprocess.run([nm, str(executable)], check=False, capture_output=True, text=True, timeout=20)
+        raise IntMapFailure(f"{family} IntMap evidence requires nm")
+    result = subprocess.run(
+        [nm, str(executable)],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
     if result.returncode != 0:
-        raise StringMapFailure(f"{family} could not inspect StringMap symbols")
+        raise IntMapFailure(f"{family} could not inspect IntMap symbols")
     for required in (
-        "hxc_string_map_ref_create",
-        "hxc_string_map_ref_create_with_ops",
-        "hxc_string_map_ref_get_copy",
-        "hxc_string_map_ref_release",
-        "hxc_string_map_value_ops_is_valid",
+        "hxc_int_bool_map_ref_create",
+        "hxc_int_bool_map_ref_set",
+        "hxc_int_bool_map_ref_exists",
+        "hxc_int_bool_map_ref_release",
     ):
         if required not in result.stdout:
-            raise StringMapFailure(f"{family} omitted required symbol {required}")
-    forbidden_families = ["hxc_bytes", "hxc_gc", "hxc_dynamic"]
-    if not allow_array:
-        forbidden_families.append("hxc_array")
-    for forbidden in forbidden_families:
+            raise IntMapFailure(f"{family} omitted required symbol {required}")
+    for forbidden in ("hxc_string_map", "hxc_bytes", "hxc_gc", "hxc_dynamic"):
         if forbidden in result.stdout:
-            raise StringMapFailure(f"{family} retained unrelated symbol family {forbidden}")
+            raise IntMapFailure(f"{family} retained unrelated symbol family {forbidden}")
 
 
 def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
-    with tempfile.TemporaryDirectory(prefix="reflaxe-c-string-map-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-int-map-") as temporary:
         root = Path(temporary)
         projects = render_projects(root) if generated_haxe else {}
         if generated_haxe:
@@ -491,39 +447,38 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
             native = build / "native-o0"
             compile_and_run(
                 toolchain.compiler,
-                [*RUNTIME_SOURCES, FIXTURE],
-                [INCLUDE],
+                [*RUNTIME_SOURCES, NATIVE_FIXTURE],
+                [RUNTIME_INCLUDE],
                 native,
                 ("-O0",),
             )
+            inspect_symbols(native, toolchain.family)
             compile_and_run(
                 toolchain.compiler,
-                [*RUNTIME_SOURCES, FIXTURE],
-                [INCLUDE],
+                [*RUNTIME_SOURCES, NATIVE_FIXTURE],
+                [RUNTIME_INCLUDE],
                 build / "native-o2",
                 ("-O2",),
             )
-            inspect_symbols(native, toolchain.family)
             if generated_haxe:
                 for layout, project in projects.items():
                     sources = sorted((project / "runtime/src").glob("*.c")) + sorted(
                         (project / "src").rglob("*.c")
                     )
-                    generated_executable = build / f"generated-{layout}"
+                    executable = build / f"generated-{layout}"
                     compile_and_run(
                         toolchain.compiler,
                         sources,
                         [project / "include", project / "runtime/include"],
-                        generated_executable,
+                        executable,
                         ("-O2" if layout == "unity" else "-O0",),
                     )
-                    inspect_symbols(generated_executable, toolchain.family, allow_array=True)
-                validate_cpp_headers(projects["split"], toolchain.family, build)
+                    inspect_symbols(executable, toolchain.family)
             if toolchain.family == "clang":
                 compile_and_run(
                     toolchain.compiler,
-                    [*RUNTIME_SOURCES, FIXTURE],
-                    [INCLUDE],
+                    [*RUNTIME_SOURCES, NATIVE_FIXTURE],
+                    [RUNTIME_INCLUDE],
                     build / "native-sanitized",
                     SANITIZER_FLAGS,
                 )
@@ -556,21 +511,20 @@ def main(argv: Iterable[str] = ()) -> int:
             run_eval_oracle()
         run_native(toolchains, generated_haxe=not args.native_only)
     except (
-        StringMapFailure,
+        IntMapFailure,
         OSError,
         UnicodeError,
         json.JSONDecodeError,
         subprocess.TimeoutExpired,
     ) as error:
-        print(f"string-map: ERROR: {error}", file=sys.stderr)
+        print(f"int-map: ERROR: {error}", file=sys.stderr)
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
-    mode = "native contract" if args.native_only else "Eval plus generated Bool/Int/fieldless-enum/managed-record StringMaps"
+    mode = "native contract" if args.native_only else "Eval and generated Map<Int, Bool>"
     print(
-        "string-map: OK: "
-        f"{families}; {mode}; missing-vs-false, replacement, removal, clear, aliases, "
-        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, unsupported-class/payload-enum rejection, "
-        "malformed-call rejection, layouts, determinism, sanitizers, C++ headers, runtime-none, and selective symbols passed"
+        "int-map: OK: "
+        f"{families}; {mode} construction, set, exists, aliases, growth rollback, "
+        "layouts, determinism, sanitizers, runtime-none, negative diagnostics, and selective symbols passed"
     )
     return 0
 
