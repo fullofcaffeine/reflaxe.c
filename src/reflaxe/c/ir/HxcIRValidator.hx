@@ -1522,6 +1522,11 @@ private class HxcIRValidationState {
 					final validResult = instruction.result != null && instruction.result.type == IRTBool;
 					if ((operandType != IRTString && operandType != IRTManagedString) || implementation != IRIStatic || !validResult)
 						add(path, "String null testing requires one String carrier and a static Bool result", instruction.source);
+				} else if (operationId == "haxe.std.string.bool") {
+					final validResult = instruction.result != null
+						&& (instruction.result.type == IRTString || instruction.result.type == IRTManagedString);
+					if (operandType != IRTBool || implementation != IRIStatic || !validResult)
+						add(path, "Std.string(Bool) requires one Bool operand and a static String result", instruction.source);
 				}
 			case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
 				validateStableId(operationId, '$path.operation', instruction.source);

@@ -7,6 +7,35 @@
 	program checks the same natural Haxe path that Caxecraft's UTF-8 lexer uses.
 **/
 final class Main {
+	/** Counts source evaluations so conversion cannot accidentally duplicate work. */
+	static var boolEvaluations:Int = 0;
+
+	/** Return one observable Boolean while recording that its source ran once. */
+	static function observedBool(value:Bool):Bool {
+		boolEvaluations += 1;
+		return value;
+	}
+
+	/** Keep a Boolean parameter and converted String return visible across a call. */
+	static function renderBool(value:Bool):String
+		return Std.string(value);
+
+	/**
+		Exercise the statically typed Boolean slice of Haxe's general conversion.
+
+		`Std.string` accepts `Dynamic` at its public boundary, but Haxe's typed
+		expression still records that these arguments are Boolean. haxe.c uses
+		that fact to select the immutable Haxe spellings without boxing or a
+		generic reflection helper.
+	**/
+	static function boolStringContractHolds():Bool {
+		boolEvaluations = 0;
+		final direct = Std.string(observedBool(true));
+		final interpolated = 'flag=${observedBool(false)}';
+		final selected = observedBool(true) ? renderBool(false) : renderBool(true);
+		return direct == "true" && interpolated == "flag=false" && selected == "false" && boolEvaluations == 3;
+	}
+
 	/** Keep direct `String.fromCharCode` observable across a normal Haxe call. */
 	static function fromCode(code:Int):String
 		return String.fromCharCode(code);
@@ -100,6 +129,7 @@ final class Main {
 		}
 		final optional:Null<String> = enabled ? payload : null;
 		return built == "Aé😀"
+			&& boolStringContractHolds()
 			&& splitContractHolds()
 			&& alias.length == 3
 			&& direct == "é😀"

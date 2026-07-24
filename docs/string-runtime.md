@@ -244,6 +244,16 @@ the output helper writes by length, adds a newline, flushes, and returns
 `HXC_STATUS_IO_ERROR` on write or flush failure. The generated caller follows
 the admitted fail-stop policy by aborting on any non-OK status.
 
+The same static representation now covers `Std.string(value)` when `value` is
+statically typed as `Bool`. Although Haxe declares `Std.string` with a
+`Dynamic` parameter, the typed compiler tree still records the concrete
+argument type. haxe.c evaluates that Boolean exactly once and selects the
+immutable `"true"` or `"false"` view with a C conditional expression. It does
+not box the value, allocate text, use reflection, or add a generic conversion
+runtime. This is deliberately a narrow slice: integer, floating-point, object,
+enum, and genuinely `Dynamic` inputs still fail at the `Std.string` boundary
+until their separate formatting and representation contracts are implemented.
+
 `Bytes.ofString(value)` may also consume an admitted String parameter, local,
 or alias. “Runtime” here describes when the expression is selected, not who
 owns its bytes: the value remains the same immutable length-delimited view
@@ -258,7 +268,8 @@ and maximal-subpart lossy decoding, slicing, scalar-indexed search, comparison,
 stable hashing, builder failure atomicity, allocator identity, borrowed/owned
 CString lifetime, reference counts, and exact allocations. Its ordinary-Haxe
 fixture compares Eval with generated C for `String.fromCharCode`, `split`, upstream
-`StringBuf.addChar`, concatenation, aliases, branches, records, enums, arrays,
+`StringBuf.addChar`, `Std.string(Bool)` including interpolation and
+single-evaluation, concatenation, aliases, branches, records, enums, arrays,
 reassignment, nullable values, calls, returns, borrowed scalar slices, and
 forward and reverse search over literal and owned Strings, split ownership and
 empty/adjacent/Unicode delimiters, repeated and

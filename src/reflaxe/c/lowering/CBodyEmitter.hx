@@ -1006,6 +1006,8 @@ class CBodyEmitter {
 					} else if (operationId == "haxe.string.is-null" || operationId == "haxe.string.is-not-null") {
 						final data = EMember(requireValue(state.values, valueId, fn.id), new CIdentifier("data"), false);
 						EBinary(operationId == "haxe.string.is-null" ? Equal : NotEqual, data, ENull);
+					} else if (operationId == "haxe.std.string.bool") {
+						EConditional(requireValue(state.values, valueId, fn.id), stringLiteralExpression("true", 4), stringLiteralExpression("false", 5));
 					} else {
 						operationExpression(operationId, implementation, [requireValue(state.values, valueId, fn.id)], state.helperNames, instruction.id,
 							fn.id);

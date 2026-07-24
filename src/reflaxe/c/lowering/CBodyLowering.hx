@@ -7234,6 +7234,8 @@ private class FunctionBuilder {
 				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "std-int");
 			return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(target)};
 		}
+		if (isStdString(call.callee))
+			return lowerStdString(expression, call.arguments);
 		final imported = aggregateRegistry.importFunction(call.callee, expression.pos, input.sourcePath);
 		if (imported != null)
 			return lowerImportCall(expression, call.arguments, imported, materializeResult);
@@ -8808,6 +8810,41 @@ private class FunctionBuilder {
 			case TField(_, FStatic(classReference, fieldReference)): final owner = classReference.get(); owner.pack.length == 0 && owner.name == "Std" && fieldReference.get()
 					.name == "int";
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isStdInt(inner);
+			case _: false;
+		};
+	}
+
+	/**
+		Lower the currently admitted primitive slice of `Std.string`.
+
+		The public Haxe signature accepts `Dynamic`, but the typed call still
+		retains the concrete source type. For `Bool`, haxe.c can therefore choose
+		the two immutable Haxe spellings directly without introducing a Dynamic
+		box, allocation, or generic reflection path. Every other source type keeps
+		failing at this boundary until its own representation and semantics are
+		proven.
+	**/
+	function lowerStdString(expression:TypedExpr, arguments:Array<TypedExpr>):LoweredValue {
+		if (arguments.length != 1)
+			return unsupported(expression, 'TCall(Std.string:argument-count=${arguments.length})');
+		final argumentMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Std.string:argument-type)");
+		if (argumentMapping.irType != IRTBool)
+			return unsupported(arguments[0], 'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})');
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Std.string:result-type)");
+		if (resultMapping.staticStringIdentity() == null)
+			return unsupported(expression, 'TCall(Std.string:result-not-String:${resultMapping.cSpelling})');
+		final argument = coerce(lowerValue(arguments[0], argumentMapping), argumentMapping, arguments[0].pos, "TCall(Std.string:Bool-argument)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOUnary("haxe.std.string.bool", argument.id, IRIStatic), source, "std-string-bool");
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	function isStdString(callee:TypedExpr):Bool {
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): final owner = classReference.get(); owner.pack.length == 0 && owner.name == "Std" && fieldReference.get()
+					.name == "string";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isStdString(inner);
 			case _: false;
 		};
 	}

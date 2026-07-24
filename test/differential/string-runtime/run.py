@@ -428,6 +428,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="string-scalar",operation="length")',
         'runtime(feature="string-scalar",operation="substring")',
         'runtime(feature="string-split",operation="split")',
+        'unary operation="haxe.std.string.bool"',
         'implementation=runtime("string")',
     ):
         if operation not in hxcir:
@@ -647,21 +648,21 @@ def plausible_output_exists(output: Path) -> bool:
 
 
 def validate_generated_failures(root: Path) -> None:
-    unsupported_output = root / "unsupported-method"
+    unsupported_output = root / "unsupported-std-string-source"
     unsupported = compile_haxe(NEGATIVE, unsupported_output)
-    expected = "TCall(String.toUpperCase:not-yet-admitted)"
+    expected = "TCall(Std.string:source-not-yet-admitted:int32_t)"
     if (
         unsupported.returncode == 0
         or "HXC1001:" not in unsupported.stderr
         or expected not in unsupported.stderr
     ):
         raise StringRuntimeFailure(
-            "unsupported String method did not fail at its intrinsic owner: "
+            "unsupported Std.string source did not fail at its intrinsic owner: "
             f"{unsupported.stderr!r}"
         )
     if plausible_output_exists(unsupported_output):
         raise StringRuntimeFailure(
-            "unsupported String method left plausible generated output"
+            "unsupported Std.string source left plausible generated output"
         )
 
     none_output = root / "runtime-none"

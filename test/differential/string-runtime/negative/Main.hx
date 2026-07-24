@@ -1,14 +1,17 @@
 /**
-	Proves that an unimplemented ordinary String method still fails at its owner.
+	Proves that an unimplemented `Std.string` source family fails at its owner.
 
-	The positive fixture admits a precise subset of String construction and
-	inspection. This nearby negative case prevents that subset from accidentally
-	turning every String method into a guessed runtime or virtual call.
+	The positive fixture admits statically typed Boolean conversion only. This
+	nearby negative case prevents that narrow fact from silently becoming a
+	generic Dynamic conversion, guessed integer formatter, or reflection path.
 **/
 final class Main {
-	/** Keep the unsupported receiver and result observable without C-specific code. */
+	/** Preserve the integer source type at the conversion boundary. */
+	static function render(value:Int):String
+		return Std.string(value);
+
+	/** Keep the unsupported integer source and String result observable. */
 	static function main():Void {
-		final value = "not yet".toUpperCase();
-		Sys.println(value);
+		render(42);
 	}
 }
