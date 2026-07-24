@@ -68,9 +68,12 @@ The string-null suite proves Haxe's default reference-null behavior rather
 than treating explicit `Null<String>` as a separate wrapper. It checks that
 plain and explicitly nullable Strings cross calls and returns with one carrier,
 that null remains different from the empty String, and that nominal abstracts
-keep the same semantics. Eval, HxcIR, strict C11, C++17 header consumers,
-layout/discovery determinism, and sanitizers cover the positive path; a nearby
-unsupported String-producing method remains fail-closed.
+keep the same semantics. It also switches over a String-backed enum abstract
+stored in a record, proving one-time subject evaluation, ordered content
+comparison, a default branch, and a fail-stop edge for forged values in a
+default-free exhaustive switch. Eval, HxcIR, strict C11, C++17 header
+consumers, layout/discovery determinism, and sanitizers cover the positive
+path; a nearby unsupported String-producing method remains fail-closed.
 The enum suite also carries a nominal abstract-over-String literal through
 construction, copy, projection, and content equality. The string-output suite
 adds the narrow generated-Haxe `Sys.println` and default `trace` proof. These

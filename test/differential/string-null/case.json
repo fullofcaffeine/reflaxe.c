@@ -35,7 +35,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "string-null: OK: .*Eval parity, null/empty/content identity, calls, aliases, nominal abstracts, early returns, HxcIR, layouts, determinism, C11, C\\+\\+17 headers, sanitizers, and negative diagnostics passed$"
+      "value": "string-null: OK: .*Eval parity, null/empty/content identity, calls, aliases, nominal abstracts, String switches, early returns, HxcIR, layouts, determinism, C11, C\\+\\+17 headers, sanitizers, and negative diagnostics passed$"
     },
     "oracle": "test/differential/string-null/generated/oracle.hxml",
     "artifacts": [

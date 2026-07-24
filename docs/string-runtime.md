@@ -230,9 +230,15 @@ strict C across split, package, and unity layouts. This is evidence for
 [`test/differential/string-null`](../test/differential/string-null) compares
 the pinned Eval and generated-C behavior for plain and explicit nullable
 Strings. It covers calls, returns, early control flow, aliases, a nominal
-String abstract, null-versus-empty equality, HxcIR null identity, strict C/C++
-consumption, deterministic layouts, and sanitizers. Its negative fixture keeps
-runtime-created String operations outside this bounded capability.
+String abstract, null-versus-empty equality, and a record-carried,
+String-backed enum-abstract switch. C cannot use a String as the subject of its
+native `switch` statement, so haxe.c evaluates the Haxe subject once and lowers
+the cases to ordered String-content comparisons in HxcIR. The generated C is
+then ordinary structured `if`/`else` control flow; it never compares String
+data pointers as if pointer identity meant equal text. The suite checks that
+semantic shape, default and exhaustive behavior, HxcIR null identity, strict
+C/C++ consumption, deterministic layouts, and sanitizers. Its negative fixture
+keeps runtime-created String operations outside this bounded capability.
 
 [`test/enum_lowering`](../test/enum_lowering) proves that a nominal
 abstract-over-String literal can be constructed, copied, passed, returned,

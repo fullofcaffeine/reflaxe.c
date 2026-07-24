@@ -6,6 +6,23 @@
 **/
 abstract Label(String) from String to String {}
 
+/** A closed String-backed domain matching Caxecraft's action identifiers. */
+enum abstract CommandId(String) from String {
+	var Start = "start";
+	var Stop = "stop";
+}
+
+/**
+	Places a nominal String abstract inside a closed record.
+
+	This is the exact shape that exposed the String-switch gap in Caxecraft:
+	field projection must keep `CommandId`, then C lowering must compare String
+	values because C's native `switch` statement accepts only integral values.
+**/
+typedef CommandDescriptor = {
+	final id:CommandId;
+}
+
 /**
 	Exercises Haxe's default, legacy-nullable String contract.
 
@@ -39,6 +56,52 @@ class Main {
 		return value;
 	}
 
+	/** Select one record-carried command with an explicit unknown-value fallback. */
+	static function commandValue(descriptor:CommandDescriptor):Int {
+		return switch descriptor.id {
+			case Start: 1;
+			case Stop: 2;
+			case _: -1;
+		};
+	}
+
+	/** Exercise the same String dispatch when the switch controls statements. */
+	static function commandStatement(descriptor:CommandDescriptor):Int {
+		var result = 0;
+		switch descriptor.id {
+			case Start:
+				result = 4;
+			case Stop:
+				result = 5;
+			case _:
+				result = 6;
+		}
+		return result;
+	}
+
+	/**
+		Exercise Haxe's closed enum-abstract proof without an authored default.
+
+		The generated C still contains a fail-stop path for a forged underlying
+		String, but normal values need only the two declared text comparisons.
+	**/
+	static function exhaustiveCommandValue(value:CommandId):Int {
+		return switch value {
+			case Start: 10;
+			case Stop: 20;
+		};
+	}
+
+	/** Keep a nullable String-backed abstract distinct from every real text value. */
+	static function nullableCommandValue(value:Null<CommandId>):Int {
+		return switch value {
+			case null: -1;
+			case Start: 1;
+			case Stop: 2;
+			case _: 3;
+		};
+	}
+
 	/** Prove the complete bounded contract without relying on pointer identity. */
 	static function contractHolds():Bool {
 		final missing:String = null;
@@ -46,9 +109,32 @@ class Main {
 		final alias = choose(false);
 		final named:Label = "chosen";
 		final missingLabel:Null<Label> = null;
-		return classify(choose(false)) == -1 && classify(choose(true)) == 1 && classify(missing) == -1 && classify(empty) == 0 && identity(alias) == null
-			&& nullableIdentity(missing) == null && missingLabel == null && missing == null && null == missing && missing != empty && empty != null
-			&& choose(true) == named;
+		final unknown:CommandId = "unknown";
+		return classify(choose(false)) == -1
+			&& classify(choose(true)) == 1
+			&& classify(missing) == -1
+			&& classify(empty) == 0
+			&& identity(alias) == null
+			&& nullableIdentity(missing) == null
+			&& missingLabel == null
+			&& missing == null
+			&& null == missing
+			&& missing != empty
+			&& empty != null
+			&& choose(true) == named
+			&& commandValue({
+				id: Start
+			}) == 1
+			&& commandValue({id: Stop}) == 2
+			&& commandValue({id: unknown}) == -1
+			&& commandStatement({id: Start}) == 4
+			&& commandStatement({id: Stop}) == 5
+			&& commandStatement({id: unknown}) == 6
+			&& exhaustiveCommandValue(Start) == 10
+			&& exhaustiveCommandValue(Stop) == 20
+			&& nullableCommandValue(null) == -1
+			&& nullableCommandValue(Start) == 1
+			&& nullableCommandValue(unknown) == 3;
 	}
 
 	/** Publish one deterministic line for Eval/native differential comparison. */

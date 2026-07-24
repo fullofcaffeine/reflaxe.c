@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove legacy-nullable Haxe String semantics against Eval and generated C."""
+"""Prove nullable and switch-based Haxe String semantics against Eval and C."""
 
 from __future__ import annotations
 
@@ -205,6 +205,30 @@ def extract_hxcir(result: subprocess.CompletedProcess[str]) -> str:
     return hxcir
 
 
+def hxcir_function(hxcir: str, function_id: str) -> str:
+    """Return one printed HxcIR function so structural checks stay local."""
+    marker = f'function "{function_id}"'
+    start = hxcir.find(marker)
+    if start < 0:
+        raise StringNullFailure(f"validated HxcIR omitted {function_id}")
+    end = hxcir.find(f'end function "{function_id}"', start)
+    if end < 0:
+        raise StringNullFailure(f"validated HxcIR truncated {function_id}")
+    return hxcir[start:end]
+
+
+def generated_c_function(source: str, function_name: str) -> str:
+    """Return one generated C function body for focused syntax assertions."""
+    marker = f"int32_t hxc_Main_{function_name}("
+    start = source.find(marker)
+    if start < 0:
+        raise StringNullFailure(f"generated C omitted {function_name}")
+    end = source.find("\n}\n", start)
+    if end < 0:
+        raise StringNullFailure(f"generated C truncated {function_name}")
+    return source[start : end + 3]
+
+
 def validate_project(output: Path, hxcir: str) -> None:
     for required in (
         'function "function.Main.choose"',
@@ -214,6 +238,12 @@ def validate_project(output: Path, hxcir: str) -> None:
         'parameter "parameter.0" type=string-utf8',
         'operation="haxe.string.equal"',
         'operation="haxe.string.not-equal"',
+        'function "function.Main.commandValue"',
+        'function "function.Main.commandStatement"',
+        'function "function.Main.exhaustiveCommandValue"',
+        'operation="haxe.string.equal.right-non-null"',
+        'string-utf8(bytes=5,value="start")',
+        'string-utf8(bytes=4,value="stop")',
         'string-utf8(bytes=0,value="")',
     ):
         if required not in hxcir:
@@ -237,6 +267,36 @@ def validate_project(output: Path, hxcir: str) -> None:
         raise StringNullFailure("nullable String C lost structural equality or added goto")
     if ".data == NULL" not in source or ".data != NULL" not in source:
         raise StringNullFailure("generated C does not keep null distinct from empty")
+    command_ir = hxcir_function(hxcir, "function.Main.commandValue")
+    if (
+        command_ir.count("record-field-project") != 1
+        or command_ir.count('operation="haxe.string.equal.right-non-null"') != 2
+        or "terminator switch value=" in command_ir
+    ):
+        raise StringNullFailure(
+            "record-carried String switch lost one-time evaluation or equality-branch lowering"
+        )
+    exhaustive_ir = hxcir_function(
+        hxcir, "function.Main.exhaustiveCommandValue"
+    )
+    if "terminator unreachable" not in exhaustive_ir:
+        raise StringNullFailure(
+            "default-free String enum abstract lost its forged-value fail-stop"
+        )
+    command_c = generated_c_function(source, "commandValue")
+    if (
+        command_c.count("memcmp(") != 2
+        or "switch (" in command_c
+        or "goto " in command_c
+    ):
+        raise StringNullFailure(
+            "String switch did not become two readable content-comparison branches"
+        )
+    statement_c = generated_c_function(source, "commandStatement")
+    if statement_c.count("memcmp(") != 2 or "switch (" in statement_c:
+        raise StringNullFailure(
+            "statement String switch did not use the shared content-comparison lowering"
+        )
 
 
 def render_projects(root: Path) -> dict[str, Path]:
@@ -433,8 +493,9 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "string-null: OK: "
         f"{families}; Eval parity, null/empty/content identity, calls, aliases, "
-        "nominal abstracts, early returns, HxcIR, layouts, determinism, C11, "
-        "C++17 headers, sanitizers, and negative diagnostics passed"
+        "nominal abstracts, String switches, early returns, HxcIR, layouts, "
+        "determinism, C11, C++17 headers, sanitizers, and negative diagnostics "
+        "passed"
     )
     return 0
 

@@ -116,6 +116,20 @@ enum CBodyInitializerKind {
 	CBIStaticField(globalId:String);
 }
 
+/** One constant pattern admitted by a String-valued Haxe switch. */
+private enum CBodyStringSwitchConstant {
+	CBSSCNull;
+	CBSSCText(value:String);
+}
+
+/** One source pattern and the HxcIR block that owns its matching arm. */
+private typedef CBodyStringSwitchDispatchCase = {
+	final value:CBodyStringSwitchConstant;
+	final targetBlockId:String;
+	final source:HxcSourceSpan;
+	final position:Position;
+}
+
 /** Stable coordinates plus one real typed initializer expression. */
 typedef CBodyInitializerInput = {
 	final id:String;
@@ -3930,13 +3944,13 @@ private class FunctionBuilder {
 	/**
 	 * Prove that a default-free value switch covers a closed enum abstract.
 	 *
-	 * An enum abstract is stored as its underlying integer or Boolean, but Haxe
-	 * still treats its declared `var` values as a finite set during exhaustiveness
-	 * checking. The typed switch no longer carries that proof explicitly, so this
-	 * compiler boundary rebuilds it from the abstract's `@:enum` fields. This is
-	 * deliberately narrower than asking whether all visible integer literals
-	 * happen to be present: ordinary integers are open-ended and must retain a
-	 * real default or fall-through path.
+	 * An enum abstract keeps the runtime representation of its underlying value,
+	 * but Haxe still treats its declared `var` values as a finite set during
+	 * exhaustiveness checking. The typed switch no longer carries that proof
+	 * explicitly, so this compiler boundary rebuilds it from the abstract's
+	 * `@:enum` fields. This is deliberately narrower than asking whether all
+	 * visible literals happen to be present: ordinary integers and Strings are
+	 * open-ended and must retain a real default or fall-through path.
 	 */
 	function isExhaustiveEnumAbstractSwitch(subject:TypedExpr, cases:Array<TypedSwitchArm>):Bool {
 		final expected = enumAbstractConstantKeys(subject.t);
@@ -4001,7 +4015,7 @@ private class FunctionBuilder {
 		};
 	}
 
-	/** Read only the integral constant forms that strict C switches can own. */
+	/** Read the closed constant forms admitted for enum-abstract exhaustiveness. */
 	static function typedSwitchConstantKey(expression:TypedExpr, depth:Int = 0):Null<String> {
 		if (depth > 8) {
 			return null;
@@ -4009,6 +4023,8 @@ private class FunctionBuilder {
 		return switch expression.expr {
 			case TConst(TInt(value)): 'int:$value';
 			case TConst(TBool(value)): 'bool:${value ? "true" : "false"}';
+			case TConst(TString(value)): 'string:$value';
+			case TConst(TNull): "null";
 			case TUnop(OpNeg, _, inner): final value = constantInt(inner); value == null || value == -2147483648 ? null : 'int:${- value}';
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): typedSwitchConstantKey(inner, depth + 1);
 			case TField(_, FStatic(_, field)):
@@ -4767,6 +4783,11 @@ private class FunctionBuilder {
 			lowerStatementEnumSwitch(expression, enumSubject, cases, defaultExpression);
 			return;
 		}
+		final stringMapping = stringSwitchMapping(subject);
+		if (stringMapping != null) {
+			lowerStatementStringSwitch(expression, subject, stringMapping, cases, defaultExpression);
+			return;
+		}
 		final subjectValue = lowerSwitchSubject(subject);
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final dispatchBlock = currentBlock;
@@ -4816,6 +4837,69 @@ private class FunctionBuilder {
 			currentBlock = caseBlocks[caseBlocks.length - 1];
 		} else {
 			throw new CBodyEmissionError('switch in `${prepared.irId}` has no continuation block');
+		}
+	}
+
+	/**
+		Lower a statement switch over String values as ordered equality tests.
+
+		C's native `switch` accepts integers, not strings. Haxe String switches
+		compare text values in source order, so the semantic IR evaluates the
+		subject once and branches through exact Haxe String comparisons. The later
+		control-flow planner may render that graph as readable `if`/`else` C.
+	**/
+	function lowerStatementStringSwitch(expression:TypedExpr, subject:TypedExpr, subjectMapping:CBodyValueType, cases:Array<TypedSwitchArm>,
+			defaultExpression:Null<TypedExpr>):Void {
+		final subjectValue = coerce(lowerValue(subject, subjectMapping), subjectMapping, subject.pos, "TSwitch(string-subject)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final dispatchBlock = currentBlock;
+		final caseBlocks:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length)
+			caseBlocks.push(createGeneratedBlock('string-switch-case-$index', source));
+		final exhaustiveEnumAbstract = defaultExpression == null && isExhaustiveEnumAbstractSwitch(subject, cases);
+		final defaultBlock = defaultExpression == null
+			&& !exhaustiveEnumAbstract ? null : createGeneratedBlock("string-switch-default", source);
+		final openEnds:Array<MutableBodyBlock> = [];
+
+		for (index in 0...cases.length) {
+			currentBlock = caseBlocks[index];
+			final cleanupDepth = normalCleanupActionIds.length;
+			lowerStatement(cases[index].expr);
+			if (currentBlock.terminator == null) {
+				openEnds.push(currentBlock);
+				appendScopedCleanupInstructions(cleanupDepth);
+			}
+			restoreCleanupDepth(cleanupDepth);
+		}
+		if (defaultExpression != null && defaultBlock != null) {
+			currentBlock = defaultBlock;
+			final cleanupDepth = normalCleanupActionIds.length;
+			lowerStatement(defaultExpression);
+			if (currentBlock.terminator == null) {
+				openEnds.push(currentBlock);
+				appendScopedCleanupInstructions(cleanupDepth);
+			}
+			restoreCleanupDepth(cleanupDepth);
+		} else if (exhaustiveEnumAbstract && defaultBlock != null) {
+			defaultBlock.terminator = {kind: IRTUnreachable, source: source};
+		}
+
+		final needsExit = defaultExpression == null && !exhaustiveEnumAbstract || openEnds.length > 0;
+		final exitBlock = needsExit ? createGeneratedBlock("string-switch-exit", source) : null;
+		if (exitBlock != null)
+			for (end in openEnds)
+				end.terminator = {kind: IRTJump(edge(exitBlock.id)), source: source};
+		final defaultTarget = defaultBlock != null ? defaultBlock.id : requireBlock(exitBlock, "string switch without default").id;
+		currentBlock = dispatchBlock;
+		lowerStringSwitchDispatch(subjectValue, stringSwitchCases(cases, caseBlocks), defaultTarget, source);
+		if (exitBlock != null) {
+			currentBlock = exitBlock;
+		} else if (defaultBlock != null) {
+			currentBlock = defaultBlock;
+		} else if (caseBlocks.length > 0) {
+			currentBlock = caseBlocks[caseBlocks.length - 1];
+		} else {
+			throw new CBodyEmissionError('String switch in `${prepared.irId}` has no continuation block');
 		}
 	}
 
@@ -4880,6 +4964,10 @@ private class FunctionBuilder {
 		if (enumSubject != null) {
 			return lowerValueEnumSwitch(expression, enumSubject, cases, defaultExpression, expectedMapping);
 		}
+		final stringMapping = stringSwitchMapping(subject);
+		if (stringMapping != null) {
+			return lowerValueStringSwitch(expression, subject, stringMapping, cases, defaultExpression, expectedMapping);
+		}
 		final exhaustiveEnumAbstract = defaultExpression == null && isExhaustiveEnumAbstractSwitch(subject, cases);
 		if (defaultExpression == null && !exhaustiveEnumAbstract) {
 			return unsupported(expression, "TSwitch(value-without-default)");
@@ -4934,6 +5022,73 @@ private class FunctionBuilder {
 		};
 		currentBlock = joinBlock;
 		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "switch-result-load");
+	}
+
+	/**
+		Lower a value-producing String switch without selecting C syntax early.
+
+		Each arm stores into one result local and rejoins after an ordered String
+		comparison chain. A default-free enum-abstract switch is accepted only when
+		the declared String constants prove it exhaustive; forged values still
+		reach an explicit unreachable edge rather than acquiring an invented value.
+	**/
+	function lowerValueStringSwitch(expression:TypedExpr, subject:TypedExpr, subjectMapping:CBodyValueType, cases:Array<TypedSwitchArm>,
+			defaultExpression:Null<TypedExpr>, expectedMapping:Null<CBodyValueType>):LoweredValue {
+		final exhaustiveEnumAbstract = defaultExpression == null && isExhaustiveEnumAbstractSwitch(subject, cases);
+		if (defaultExpression == null && !exhaustiveEnumAbstract)
+			return unsupported(expression, "TSwitch(string-value-without-default)");
+		final subjectValue = coerce(lowerValue(subject, subjectMapping), subjectMapping, subject.pos, "TSwitch(string-subject)");
+		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TSwitch(string-result-type)") : expectedMapping;
+		switch resultMapping.kind {
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKCString | CBVKAggregate(_):
+			case _:
+				return unsupported(expression, 'TSwitch(string-result-type:${resultMapping.cSpelling})');
+		}
+		if (resultMapping.irType == IRTVoid)
+			return unsupported(expression, "TSwitch(string-Void-as-value)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final initialResultId:Null<String> = switch resultMapping.kind {
+			case CBVKAggregate(_): null;
+			case _:
+				final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+				appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch(string)")), source,
+					"string-switch-default-result");
+				initialResult.id;
+		}
+		final resultLocalId = createFlowLocal(resultMapping, initialResultId, source, "string-switch-result");
+		final dispatchBlock = currentBlock;
+		final caseBlocks:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length)
+			caseBlocks.push(createGeneratedBlock('string-switch-value-case-$index', source));
+		final defaultBlock = createGeneratedBlock("string-switch-value-default", source);
+		final joinBlock = createGeneratedBlock("string-switch-value-join", source);
+
+		for (index in 0...cases.length) {
+			currentBlock = caseBlocks[index];
+			final cleanupDepth = normalCleanupActionIds.length;
+			final value = coerce(lowerValue(cases[index].expr, resultMapping), resultMapping, cases[index].expr.pos, "TSwitch(string-case-value)");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), value.id), source, "string-switch-case-store");
+			appendScopedCleanupInstructions(cleanupDepth);
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			restoreCleanupDepth(cleanupDepth);
+		}
+
+		currentBlock = defaultBlock;
+		if (defaultExpression == null) {
+			currentBlock.terminator = {kind: IRTUnreachable, source: source};
+		} else {
+			final cleanupDepth = normalCleanupActionIds.length;
+			final defaultValue = coerce(lowerValue(defaultExpression, resultMapping), resultMapping, defaultExpression.pos, "TSwitch(string-default-value)");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "string-switch-default-store");
+			appendScopedCleanupInstructions(cleanupDepth);
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			restoreCleanupDepth(cleanupDepth);
+		}
+
+		currentBlock = dispatchBlock;
+		lowerStringSwitchDispatch(subjectValue, stringSwitchCases(cases, caseBlocks), defaultBlock.id, source);
+		currentBlock = joinBlock;
+		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "string-switch-result-load");
 	}
 
 	function lowerValueEnumSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>,
@@ -5057,6 +5212,91 @@ private class FunctionBuilder {
 			case TEnumIndex(value): value;
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): enumIndexSubject(inner);
 			case _: null;
+		};
+	}
+
+	/** Return the preserved String representation when this switch needs text comparison. */
+	function stringSwitchMapping(expression:TypedExpr):Null<CBodyValueType> {
+		final mapping = bodyValueType(expression.t, expression.pos, "TSwitch(subject-type)");
+		return mapping.irType == IRTString && mapping.staticStringIdentity() != null ? mapping : null;
+	}
+
+	/** Flatten source arms while retaining the block shared by comma-separated patterns. */
+	function stringSwitchCases(cases:Array<TypedSwitchArm>, blocks:Array<MutableBodyBlock>):Array<CBodyStringSwitchDispatchCase> {
+		final result:Array<CBodyStringSwitchDispatchCase> = [];
+		for (index in 0...cases.length) {
+			for (value in cases[index].values) {
+				result.push({
+					value: stringSwitchConstant(value),
+					targetBlockId: blocks[index].id,
+					source: HaxeSourceSpan.fromPosition(value.pos, input.sourcePath),
+					position: value.pos
+				});
+			}
+		}
+		return result;
+	}
+
+	/**
+		Build the ordered comparison chain shared by statement and value switches.
+
+		The subject is already an HxcIR value, so it is evaluated exactly once.
+		Each String literal carries the existing non-null proof used by ordinary
+		String equality. A `null` pattern instead asks the nullable String carrier
+		whether it is missing; neither path compares C pointers.
+	**/
+	function lowerStringSwitchDispatch(subject:LoweredValue, cases:Array<CBodyStringSwitchDispatchCase>, defaultTarget:String, source:HxcSourceSpan):Void {
+		if (cases.length == 0) {
+			currentBlock.terminator = {kind: IRTJump(edge(defaultTarget)), source: source};
+			return;
+		}
+		// HxcIR values are block-local. Keep the once-evaluated subject in one
+		// automatic local so every later comparison block performs an ordinary
+		// validated load instead of reaching across a control-flow boundary.
+		final subjectLocalId = createFlowLocal(subject.mapping, subject.id, source, "string-switch-subject");
+		for (index in 0...cases.length) {
+			final item = cases[index];
+			final comparisonSubject = loadPlace({
+				place: IRPLocal(subjectLocalId),
+				mapping: subject.mapping,
+				mutable: false
+			}, item.position, "string-switch-subject-load");
+			final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
+			switch item.value {
+				case CBSSCNull:
+					appendInstruction(matched, IRIOUnary("haxe.string.is-null", comparisonSubject.id, IRIStatic), item.source, "string-switch-null-match");
+				case CBSSCText(text):
+					final byteLength = HxcUtf8.byteLength(text);
+					if (byteLength == null)
+						unsupportedAt(item.position, "TSwitch(String-case-malformed-Unicode-literal)");
+					final literal:HxcIRResult = {id: nextValueId(), type: IRTString};
+					appendInstruction(literal, IRIOConstant(IRCString(text, byteLength)), item.source, "string-switch-literal");
+					runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", subject.mapping.cSpelling, item.source,
+						item.position, "direct-string-value"));
+					appendInstruction(matched, IRIOBinary("haxe.string.equal.right-non-null", comparisonSubject.id, literal.id, IRIStatic), item.source,
+						"string-switch-text-match");
+			}
+			registerValueTemporary(matched.id, "string-switch-match");
+			final nextBlock = index == cases.length - 1 ? null : createGeneratedBlock('string-switch-compare-${index + 1}', source);
+			final nextTarget = nextBlock == null ? defaultTarget : nextBlock.id;
+			currentBlock.terminator = {kind: IRTBranch(matched.id, edge(item.targetBlockId), edge(nextTarget)), source: item.source};
+			if (nextBlock != null)
+				currentBlock = nextBlock;
+		}
+	}
+
+	/** Read one compile-time String or null pattern without erasing nominal aliases. */
+	function stringSwitchConstant(expression:TypedExpr, depth:Int = 0):CBodyStringSwitchConstant {
+		if (depth > 8)
+			return unsupported(expression, "TSwitch(String-case-alias-depth)");
+		return switch expression.expr {
+			case TConst(TString(value)): CBSSCText(value);
+			case TConst(TNull): CBSSCNull;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): stringSwitchConstant(inner, depth + 1);
+			case TField(_, FStatic(_, field)):
+				final value = field.get().expr();
+				value == null ? unsupported(expression, "TSwitch(String-case-static-without-value)") : stringSwitchConstant(value, depth + 1);
+			case _: unsupported(expression, 'TSwitch(String-case=${nodeName(expression)}:requires-typed-constant)');
 		};
 	}
 
