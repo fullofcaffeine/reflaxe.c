@@ -318,9 +318,19 @@ closed record parameter uses its validated by-value aggregate identity. An
 interface parameter uses its exact nominal interface identity only when the
 constructor body proves that the copied object/table pair remains a
 call-bounded borrow; HxcIR records and validates that interface borrow
-separately from a class-pointer borrow. Enums, collections, and other managed
-values that share the `IRTInstance` IR constructor remain closed until their
-own call and lifetime contracts are proven.
+separately from a class-pointer borrow. An admitted `Array<T>` constructor
+parameter uses its exact prepared Array instance identity and remains borrowed
+for the call. A first `this.field = parameter` initialization retains one field
+owner for reference-counted Arrays, while collector-backed specializations use
+the existing exact root-and-trace plan. Fresh literal arguments receive a
+caller-owned cleanup slot so a constructor never consumes an ownerless
+temporary. Other collections remain closed at this boundary.
+
+HxcIR classifies interfaces from their dispatch-layout roots, not merely from
+`IRTKReference`. Arrays, maps, Bytes, and interfaces are all reference-shaped
+semantic types, but only an interface carries an `{ object, table }` dispatch
+pair. This distinction prevents an Array-valued class field from being checked
+as though it were a retained interface.
 Closed-world class dispatch adds a request-local reachable call catalog,
 hierarchy-root table layouts, representation-checked slots, typed receiver
 adapters, and explicit table binding. Direct calls stay direct, unused

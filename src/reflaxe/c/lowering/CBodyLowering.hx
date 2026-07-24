@@ -1970,6 +1970,8 @@ private class ConstructorPreparer {
 				'class-reference:${nullable ? "nullable" : "nonnull"}:${classValue.instanceId}';
 			case CBVKAggregate(aggregate):
 				'closed-record:${aggregate.instanceId}';
+			case CBVKArray(array):
+				'array-reference:${array.instanceId}';
 			case CBVKOptional(optional) if (!optional.managedLifetime):
 				'direct-optional:${optional.planId}';
 			case CBVKInterface(interfaceValue):
@@ -2470,7 +2472,20 @@ private class FunctionBuilder {
 		return true;
 	}
 
-	/** Initialize one final Array field emitted by Haxe before the constructor body. */
+	/**
+		Initialize one final Array field emitted by Haxe before the constructor body.
+
+		Haxe gives Array values shared identity: assigning an existing Array to a
+		field must keep that same container alive, not clone its elements. A fresh
+		reference-counted literal transfers its first owner directly into the field;
+		an existing reference gains a field owner through one retain. Arrays whose
+		elements can reach collector-managed objects need neither operation because
+		the constructed object's trace callback follows the field instead.
+
+		This remains a construction-only rule. The first typed assignment to the
+		final field establishes its lifetime; later whole-Array replacement still
+		falls through to ordinary assignment lowering and fails closed.
+	**/
 	function lowerManagedArrayFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
 		switch prepared.role {
 			case PBRConstructor(_):
@@ -2494,18 +2509,19 @@ private class FunctionBuilder {
 		final field = owner == null ? null : owner.field(fieldName);
 		if (field == null || field.type.arrayValue() == null)
 			return false;
-		final elements = switch unwrapExpression(right).expr {
-			case TArrayDecl(values): values;
-			case _: return false;
-		};
-		final value = lowerManagedArrayLiteral(right, elements, field.type);
+		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:Array-initializer)');
 		final array = field.type.arrayValue();
 		if (array == null)
 			throw new CBodyEmissionError('Array field `$fieldName` lost its prepared specialization');
-		if (!array.managedByCollector && !freshManagedArrayValueIds.remove(value.id))
-			throw new CBodyEmissionError('Array field `$fieldName` did not receive a fresh container owner');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-array-field");
+		final source = HaxeSourceSpan.fromPosition(left.pos, input.sourcePath);
+		final fieldPlace = IRPField(IRPDereference(self.id), fieldName);
+		final transferredFreshOwner = !array.managedByCollector && freshManagedArrayValueIds.remove(value.id);
+		appendInstruction(null, IRIOStore(fieldPlace, value.id), source, "initialize-array-field");
+		if (!array.managedByCollector && !transferredFreshOwner) {
+			appendInstruction(null, IRIORetain(fieldPlace, IRIRuntime("array")), source, "retain-array-field-owner");
+			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "retain",
+				'ordinary Haxe Array field `${owner.haxePath}.$fieldName` retained from constructor input', source, right.pos));
+		}
 		initializedManagedArrayFields.set(fieldName, true);
 		return true;
 	}
@@ -3145,8 +3161,9 @@ private class FunctionBuilder {
 			if (referencesStackConstructedValue(argumentExpression) && !signature.arguments[index].borrowedReference) {
 				unsupported(argumentExpression, 'TNew(stack-reference-escape:constructor-argument:$index)');
 			}
-			final argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
+			var argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
 				argumentExpression.pos, 'TNew(argument:$index,target=$targetId)');
+			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'constructor-argument-$index');
 			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
 			arguments.push(argument.id);
 		}
@@ -3298,8 +3315,9 @@ private class FunctionBuilder {
 		final arguments:Array<String> = [];
 		for (index in 0...argumentExpressions.length) {
 			final sourceArgument = argumentExpressions[index];
-			final argument = coerce(lowerValue(sourceArgument, signature.arguments[index].mapping), signature.arguments[index].mapping, sourceArgument.pos,
+			var argument = coerce(lowerValue(sourceArgument, signature.arguments[index].mapping), signature.arguments[index].mapping, sourceArgument.pos,
 				'TNew(managed-argument:$index,target=$targetId)');
+			argument = stabilizeFreshManagedArray(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			rejectOwnedClassBorrow(argument, sourceArgument.pos, 'TNew(owned-class-borrow-escape:managed-constructor-argument:$index)');
 			arguments.push(argument.id);
 		}
@@ -3352,8 +3370,9 @@ private class FunctionBuilder {
 			final argument = argumentExpressions[index];
 			if (referencesStackConstructedValue(argument))
 				unsupported(argument, 'TNew(stack-reference-escape:super-argument:$index)');
-			final converted = coerce(lowerValue(argument, target.arguments[index].mapping), target.arguments[index].mapping, argument.pos,
+			var converted = coerce(lowerValue(argument, target.arguments[index].mapping), target.arguments[index].mapping, argument.pos,
 				'TCall(super:argument:$index,target=$baseId)');
+			converted = stabilizeFreshManagedArray(converted, argument.pos, 'super-constructor-argument-$index');
 			rejectOwnedClassBorrow(converted, argument.pos, 'TCall(owned-class-borrow-escape:super-argument:$index)');
 			arguments.push(converted.id);
 		}
@@ -7429,6 +7448,35 @@ private class FunctionBuilder {
 	function carryOwnedClassBorrow(sourceId:String, resultId:String):Void {
 		if (borrowedClassValueIds.exists(sourceId))
 			borrowedClassValueIds.set(resultId, true);
+	}
+
+	/**
+		Give a fresh reference-counted Array a caller-owned lifetime around a call.
+
+		Constructor parameters borrow their Array value. If the callee stores that
+		value, its field takes a separate retain; it cannot consume an otherwise
+		ownerless literal from the caller. This temporary local owns the literal
+		until normal or failure cleanup, making both call-only and retained
+		constructor uses obey the same rule. Collector-managed Arrays already have
+		an exact root and therefore need no reference-count operation.
+	**/
+	function stabilizeFreshManagedArray(value:LoweredValue, position:Position, role:String):LoweredValue {
+		final managed = value.mapping.arrayValue();
+		if (managed == null || managed.managedByCollector || !freshManagedArrayValueIds.remove(value.id))
+			return value;
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
+		final cleanupId = 'array-temporary.$ownerLocalId.release';
+		constructionCleanupActions.push({
+			id: cleanupId,
+			idempotence: IRCExactlyOnce,
+			kind: IRCARelease(IRPLocal(ownerLocalId), IRIRuntime("array")),
+			source: source
+		});
+		normalCleanupActionIds.push(cleanupId);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "fresh ordinary Haxe Array constructor argument lifetime", source,
+			position));
+		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
 	}
 
 	/**

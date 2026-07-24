@@ -634,29 +634,25 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     )
     if result.returncode == 0:
         return
-    # Full Caxecraft now also passes ScenarioRecordCursor.failAt<T>'s direct
-    # generic instance-method specializations and allocation-free String.charAt.
-    # The next unsupported construct is haxe.ds.IntMap.exists: the virtual-slot
-    # validator does not yet settle this generic standard-library collection
-    # operation to a concrete specialization or intrinsic collection plan.
-    # Naming that exact boundary proves the compiler traversed the earlier
-    # Array, function-value, StringMap, abstract-record, Bytes-enum, record,
-    # enum, integer, generic-method, and String paths; accepting any later
-    # failure would let one of those capabilities regress unnoticed.
-    # haxe_c-c3s.1 owns the general IntMap work.
+    # Caxecraft now passes ScenarioDocumentReader's retained
+    # Array<ScenarioLexRecord> constructor parameter. The next reachable
+    # boundary is CaxeFlowRuleState.new(id:ScenarioId): constructor signature
+    # planning has not yet admitted the nominal abstract over Haxe String.
+    # Requiring that exact diagnostic proves this Array task did not merely
+    # move or hide its former failure. haxe_c-h2b.3 owns the String constructor
+    # contract; accepting an arbitrary later failure would weaken this product
+    # regression into a generic "Caxecraft still does not compile" check.
     if (
-        "std/haxe/ds/IntMap.hx:51:" not in result.stderr
-        or "virtual-slot-generic-requires-specialization:slot.haxe.ds.IntMap.exists"
+        "src/caxecraft/scenario/CaxeFlowRulePlanner.hx:17:" not in result.stderr
+        or (
+            "TFunction(constructor-argument:0-type-not-admitted:"
+            "static-haxe-string-view:caxecraft.scenario.ScenarioId)"
+        )
         not in result.stderr
-        or "String.charAt" in result.stderr
-        or "CaxeFlowState" in result.stderr
-        or "CaxeFlowRulePlanner" in result.stderr
-        or "EditorScenarioFactory" in result.stderr
-        or "ScenarioMessageValidator" in result.stderr
-        or "EditorValidationResult" in result.stderr
+        or "ScenarioDocumentReader" in result.stderr
     ):
         raise ArrayRuntimeFailure(
-            "Caxecraft did not compile past its former Array/Class/StringMap/generic-method/String boundaries\n"
+            "Caxecraft did not compile past its former constructor Array boundary\n"
             f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
         )
 

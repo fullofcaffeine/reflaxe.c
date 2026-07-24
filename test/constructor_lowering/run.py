@@ -31,6 +31,7 @@ RECORD_PARAMETER = FIXTURES / "record_parameter"
 INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
 DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
+ARRAY_PARAMETER = FIXTURES / "array_parameter"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -77,7 +78,10 @@ NEGATIVE_CASES = {
     ),
     "conditional": "TNew(stack-construction-requires-unconditional-entry-block)",
     "cycle": "TNew(constructor-cycle:CycleA -> CycleB -> CycleA)",
-    "default_callable": "TFunction(constructor-argument:0-type-not-admitted:",
+    "default_callable": (
+        "TFunction(constructor-argument:callback):"
+        "payload-requires-direct-unmanaged-value:direct-function:()->int32_t"
+    ),
     "escape_alias": "TNew(stack-reference-escape:assignment)",
     "escape_return": "TNew(stack-reference-escape:return)",
     "escape_self": "TNew(stack-reference-escape:assignment)",
@@ -87,6 +91,7 @@ NEGATIVE_CASES = {
         "TFunction(constructor-argument:source:"
         "interface-retention-must-target-this-field)"
     ),
+    "array_parameter_escape": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
     "owned_fallible": "TNew(owned-field-fallible-construction-not-admitted:constructor.Child)",
     "owned_mutable": "field:child:owned-class-field-must-be-final",
@@ -139,6 +144,15 @@ DEFAULT_ARGUMENT_NATIVE_COVERAGE = frozenset(
         "constructor-explicit-null-argument",
         "constructor-optional-record-argument",
         "super-constructor-default-argument",
+    }
+)
+ARRAY_PARAMETER_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-array-parameter",
+        "constructor-array-parameter-call-borrow",
+        "constructor-array-parameter-fresh-owner",
+        "constructor-array-parameter-retained-field",
+        "constructor-array-parameter-shared-identity",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -461,9 +475,8 @@ def validate_default_argument_project(output: Path) -> None:
         for symbol in symbols.get("symbols", [])
         if isinstance(symbol, dict)
         and symbol.get("kind") == "method"
-        and str(symbol.get("sourceSymbol", "")).startswith(
-            "compiler.constructor.Main.DefaultedRecord("
-        )
+        and str(symbol.get("sourceSymbol", "")).startswith("compiler.constructor.")
+        and ".DefaultedRecord(" in str(symbol.get("sourceSymbol", ""))
     ]
     if len(constructors) != 1:
         raise ConstructorLoweringFailure(
@@ -503,6 +516,86 @@ def validate_default_argument_project(output: Path) -> None:
         if forbidden in (sources + headers).lower():
             raise ConstructorLoweringFailure(
                 f"default-argument constructor emitted forbidden shape {forbidden!r}"
+            )
+
+
+def validate_array_parameter_project(output: Path) -> None:
+    """Prove constructor Array values borrow calls and retain stored identity."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    symbols = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    constructors = [
+        symbol
+        for symbol in symbols.get("symbols", [])
+        if isinstance(symbol, dict)
+        and symbol.get("kind") == "method"
+        and str(symbol.get("sourceSymbol", "")).startswith("compiler.constructor.")
+        and (
+            ".BorrowedArrayReader(" in str(symbol.get("sourceSymbol", ""))
+            or ".RetainedArrayReader(" in str(symbol.get("sourceSymbol", ""))
+        )
+    ]
+    array_constructors = [
+        symbol
+        for symbol in constructors
+        if isinstance(symbol.get("overloadSignature"), list)
+        and any(
+            str(value).startswith("array-reference:instance.haxe-array.")
+            for value in symbol["overloadSignature"]
+        )
+    ]
+    if len(array_constructors) != 2:
+        raise ConstructorLoweringFailure(
+            "Array-parameter fixture lost its two family-specific constructor symbols"
+        )
+    parameter_spelling = "struct hxc_array_ref *hxc_values"
+    retained_start = source.find(
+        "hxc_compiler_constructor_Main_RetainedArrayReader("
+    )
+    retained_end = source.find("\n}\n", retained_start)
+    borrowed_start = source.find(
+        "hxc_compiler_constructor_Main_BorrowedArrayReader("
+    )
+    borrowed_end = source.find("\n}\n", borrowed_start)
+    if min(retained_start, retained_end, borrowed_start, borrowed_end) < 0:
+        raise ConstructorLoweringFailure(
+            "Array-parameter fixture omitted a constructor definition"
+        )
+    retained_body = source[retained_start:retained_end]
+    borrowed_body = source[borrowed_start:borrowed_end]
+    if (
+        parameter_spelling not in retained_body
+        or parameter_spelling not in borrowed_body
+        or parameter_spelling not in headers
+        or retained_body.count("hxc_array_ref_retain(") != 1
+        or "hxc_array_ref_retain(" in borrowed_body
+        or "hxc_array_ref_get_copy(" not in borrowed_body
+        or "hxc_array_ref_length(" not in borrowed_body
+        or "constructor_argument_0_owner" not in source
+        or source.count("hxc_array_ref_release(") < 4
+    ):
+        raise ConstructorLoweringFailure(
+            "Array constructor borrow, retained field, fresh owner, or cleanup drifted"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != ["runtime-base", "status", "alloc", "array"]
+        or "managed-haxe-arrays" not in plan.get("directDecisions", [])
+        or "bounded-stack-construction" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "Array-parameter constructor lost its exact dependency-closed runtime plan"
+        )
+    for forbidden in ("goto ", "malloc(", "calloc(", "realloc("):
+        if forbidden in source:
+            raise ConstructorLoweringFailure(
+                f"Array-parameter application module emitted forbidden shape {forbidden!r}"
             )
 
 
@@ -1179,11 +1272,19 @@ def check_native(
                 coverage=DEFAULT_ARGUMENT_NATIVE_COVERAGE,
                 validate_project=validate_default_argument_project,
             )
+            array_parameter_projects = render_parameter_projects(
+                fixture_root,
+                fixture=ARRAY_PARAMETER,
+                slug="array-parameter",
+                coverage=ARRAY_PARAMETER_NATIVE_COVERAGE,
+                validate_project=validate_array_parameter_project,
+            )
             parameter_projects = (
                 record_projects
                 + interface_projects
                 + retained_interface_projects
                 + default_argument_projects
+                + array_parameter_projects
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1207,6 +1308,7 @@ def check_native(
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
+                    | ARRAY_PARAMETER_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1246,7 +1348,9 @@ def check_native(
                 required_coverage=(
                     RECORD_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
+                    | RETAINED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
+                    | ARRAY_PARAMETER_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
@@ -1260,6 +1364,7 @@ def check_eval_oracle() -> None:
         ("record-parameter oracle", RECORD_PARAMETER),
         ("interface-parameter oracle", INTERFACE_PARAMETER),
         ("default-argument oracle", DEFAULT_ARGUMENTS),
+        ("array-parameter oracle", ARRAY_PARAMETER),
     ):
         result = subprocess.run(
             [
@@ -1401,6 +1506,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "constructor-lowering: OK: pinned super/field/body order, default storage, "
         "status cleanup, direct caller-owned class and closed-record parameters, "
         "call-bounded and collector-retained interface parameters and dispatch, "
+        "borrowed and field-retained Array parameters, "
         "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
         "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
         "edges passed"

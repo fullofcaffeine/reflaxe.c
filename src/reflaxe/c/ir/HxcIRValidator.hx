@@ -298,12 +298,19 @@ private class HxcIRValidationState {
 		object member without guessing lifetime from C syntax.
 	**/
 	function validateRetainedInterfaceGraphs():Void {
+		final dispatchRoots:Map<String, Bool> = [];
+		for (layout in program.dispatch.layouts)
+			dispatchRoots.set(layout.rootInstanceId, true);
 		final interfaceInstances:Map<String, Bool> = [];
 		for (instance in typeInstances) {
 			final declaration = typeDeclarations.get(instance.declarationId);
 			if (declaration != null)
 				switch declaration.kind {
-					case IRTKReference:
+					// Arrays, maps, and Bytes are reference-shaped too. Only a
+					// reference instance that owns a dispatch layout is a Haxe
+					// interface whose `{ object, table }` field needs this graph
+					// proof.
+					case IRTKReference if (dispatchRoots.exists(instance.id)):
 						interfaceInstances.set(instance.id, true);
 					case _:
 				}

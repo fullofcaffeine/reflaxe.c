@@ -3,8 +3,10 @@
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
 complete object lifetime is proven inside one generated C function. The
 compiler lowers the real pinned-Haxe `TypedExpr` through schema-17 HxcIR and
-structural C AST nodes. It does not allocate, select `hxrt`, use C++ constructor
-syntax, or establish a public C ABI.
+structural C AST nodes. The direct scalar/class slice does not allocate or
+select `hxrt`; an independently admitted managed parameter or field selects
+only its dependency-closed runtime features. No path uses C++ constructor
+syntax or establishes a public C ABI.
 
 This is deliberately a useful but narrow construction model. A direct local
 initializer such as `var item = new Item(7)` receives automatic C storage when
@@ -164,6 +166,45 @@ families remain closed for the same reason. HxcIR receives only the completed
 argument list, then independently verifies its count and exact type against the
 direct constructor function before CAST selects C syntax.
 
+### Shared Array parameters
+
+An ordinary Haxe `Array<T>` has shared identity: two variables can name the
+same mutable container. A constructor therefore receives the prepared Array
+reference by value, which is a borrow for the duration of that call. It may
+read the Array or pass it to another proven direct call without copying its
+elements.
+
+If the first constructor assignment stores the parameter in the object being
+built, `this.values = values`, that field becomes a separate owner. For a
+reference-counted specialization such as `Array<Int>`, generated C stores the
+same pointer and retains it once:
+
+```c
+self->values = values;
+hxc_array_ref_retain(self->values);
+```
+
+The constructed object's cleanup releases that field exactly once. A fresh
+literal argument first receives a short-lived caller owner because a borrowed
+parameter cannot consume an ownerless value. The field takes its retain, and
+the caller releases the temporary on its normal or failure cleanup path. An
+Array whose elements can reach collector-managed objects instead uses the
+existing exact root-and-trace graph, so that specialization needs no
+reference-count retain.
+
+This preserves identity rather than cloning the Array. The fixture mutates the
+caller's Array after construction and observes the change through the stored
+field. It also applies repeated allocation/release pressure to `Array<Int>`.
+A tracing-collector stress loop would test the wrong lifetime mechanism for
+that reference-counted specialization.
+
+The owning boundary remains narrow. The first typed initialization of the
+constructed object's own final Array field is admitted. Replacing a managed
+Array field later or storing the parameter through another object still fails
+until general assignment can retain the new owner and release the old owner
+exactly once. HxcIR validates the constructor's exact Array instance type
+before CAST chooses its C pointer spelling.
+
 The independently proven interface-dispatch family also has a bounded
 constructor contract. A Haxe interface value becomes a small C value containing
 two pointers: `object` points at the concrete instance and `table` points at the
@@ -203,7 +244,8 @@ source-positioned failures unless another ownership rule proves them. The
 source fixture forces a collection and then calls the retained interface,
 showing that the dispatch pair did not become a dangling pointer.
 
-Enums, unrelated collections, and every other `IRTInstance` family remain
+Enums, collections other than the admitted Array slice, and every other
+`IRTInstance` family remain
 source-positioned `HXC1001` failures until their own call, copy, ownership, and
 lifetime contracts are proven.
 
@@ -263,6 +305,8 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
   contract, even when the family shares the generic `IRTInstance` IR shape;
 - managed optional, callable, or other constructor parameters whose copy and
   lifetime contract has not yet been admitted;
+- replacement of an existing managed Array field, or storage of an Array
+  parameter through an object other than the one being constructed;
 - an interface constructor parameter that is stored, returned, thrown,
   captured, or otherwise allowed to outlive its call; and
 - broader exceptions, runtime-checked interface casts, dynamic/generic
@@ -304,7 +348,12 @@ present optional record, exactly-once supplied-argument evaluation, and
 `super()` completion across split/package/unity, reversed discovery, warm
 server reuse, Eval, strict C11, and sanitizer lanes. `default_callable` proves
 that valid Haxe with an unproven callable representation still fails before any
-C is emitted. The positive
+C is emitted. `array_parameter` proves call-only borrowing, shared identity,
+one retained final-field owner, a caller-owned fresh literal, repeated
+reference-counted allocation pressure, exact runtime selection, and balanced
+cleanup across the same layout/order/server/native/sanitizer matrix.
+`array_parameter_escape` keeps storage through another object's existing Array
+field fail-closed. The positive
 semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an
 inner temporary, empty-constructor elision, a same-function stack alias, and a
