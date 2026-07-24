@@ -44,6 +44,21 @@ STRICT_FLAGS = (
     "-Wcast-align",
     "-Wcast-qual",
 )
+CPP_STRICT_FLAGS = (
+    "-std=c++17",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-pedantic",
+    "-Wshadow",
+    "-Wconversion",
+    "-Wsign-conversion",
+    "-Wundef",
+    "-Wformat=2",
+    "-Wimplicit-fallthrough",
+    "-Wcast-align",
+    "-Wcast-qual",
+)
 SANITIZER_FLAGS = (
     "-O1",
     "-g",
@@ -182,6 +197,19 @@ def extract_hxcir(result: subprocess.CompletedProcess[str]) -> str:
     return hxcir
 
 
+def hxcir_function(hxcir: str, function_id: str) -> str:
+    """Return one complete function section from the deterministic text dump."""
+    start_marker = f'  function "{function_id}"'
+    end_marker = f'  end function "{function_id}"'
+    start = hxcir.find(start_marker)
+    if start < 0:
+        raise BytesRuntimeFailure(f"validated HxcIR omitted {function_id}")
+    end = hxcir.find(end_marker, start)
+    if end < 0:
+        raise BytesRuntimeFailure(f"validated HxcIR did not close {function_id}")
+    return hxcir[start : end + len(end_marker)]
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     for marker in (
         'representation=managed("bytes")',
@@ -189,6 +217,11 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         'runtime(feature="bytes",operation="of-string-utf8")',
         'runtime(feature="bytes",operation="blit")',
         'runtime(feature="bytes",operation="compare")',
+        "bytes-temporary.local.",
+        "static-call-argument-0-owner-initialize",
+        "static-call-argument-0-borrow",
+        "bytes-compare-argument-owner-initialize",
+        "bytes-get-receiver-owner-initialize",
         'retain place=local(',
         'release place=local(',
     ):
@@ -196,6 +229,48 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
             raise BytesRuntimeFailure(f"validated HxcIR omitted {marker}")
     if " raw" in hxcir or str(ROOT) in hxcir:
         raise BytesRuntimeFailure("Bytes HxcIR used raw syntax or leaked the checkout path")
+
+    early_return = hxcir_function(hxcir, "function.Main.readFreshText")
+    if (
+        "bytes-temporary.local." not in early_return
+        or "terminator return" not in early_return
+        or "bytes-temporary.local." not in next(
+            (
+                line
+                for line in early_return.splitlines()
+                if "terminator return" in line and "bytes-temporary.local." in line
+            ),
+            "",
+        )
+    ):
+        raise BytesRuntimeFailure(
+            "fresh Bytes early return lost its caller-owned cleanup"
+        )
+
+    main = hxcir_function(hxcir, "function.Main.main")
+    owner_actions = [
+        line.split('"', 2)[1]
+        for line in main.splitlines()
+        if " action " in line and '"bytes-temporary.' in line
+    ]
+    if len(owner_actions) < 5:
+        raise BytesRuntimeFailure(
+            "nested fresh Bytes calls did not create their exact caller owners"
+        )
+    return_lines = [
+        line
+        for line in main.splitlines()
+        if "terminator return" in line
+        and all(f'"{action}"' in line for action in owner_actions)
+    ]
+    if not return_lines or any(
+        return_lines[0].index(f'"{later}"')
+        >= return_lines[0].index(f'"{earlier}"')
+        for earlier, later in zip(owner_actions, owner_actions[1:])
+    ):
+        raise BytesRuntimeFailure(
+            "fresh Bytes argument owners lost reverse cleanup order"
+        )
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if plan.get("features") != ["runtime-base", "status", "alloc", "string-literal", "bytes"]:
@@ -256,7 +331,6 @@ def render_generated_pair(root: Path) -> Path:
 
 def run_negative_cases(root: Path) -> None:
     expected = {
-        "nested_temporary": "Bytes.compare:fresh-argument-needs-owner",
         "return_escape": "TReturn(managed-Bytes-borrowed-return-needs-retain)",
         "unsupported_method": "TCall(Bytes.getInt32:not-yet-admitted)",
     }
@@ -273,6 +347,40 @@ def run_negative_cases(root: Path) -> None:
         raise BytesRuntimeFailure("managed Bytes did not fail closed under runtime policy none")
     if output.exists() and any(output.rglob("*")):
         raise BytesRuntimeFailure("runtime-policy rejection left plausible output")
+
+
+def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
+    """Keep Caxecraft beyond the fresh Bytes call argument that found this work."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "examples/caxecraft/play.py"),
+            "--compile-only",
+            "--output-root",
+            str(root / "caxecraft-compile-boundary"),
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    if result.returncode == 0:
+        return
+    # The next reachable boundary is Bytes.ofString(runtimeString), owned by
+    # haxe_c-aml.1. Requiring that exact later diagnostic proves the caller-owner
+    # fix did not merely move or hide the EditorScenarioSnapshot failure.
+    if (
+        "src/caxecraft/scenario/CaxeFlowRulePlanner.hx:169:" not in result.stderr
+        or "TCall(Bytes.ofString:non-literal-String-not-yet-admitted)"
+        not in result.stderr
+        or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
+    ):
+        raise BytesRuntimeFailure(
+            "Caxecraft did not compile past its former fresh Bytes argument boundary\n"
+            f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
+        )
 
 
 def compile_and_run(
@@ -319,6 +427,69 @@ def compile_and_run(
         )
 
 
+def validate_cpp_header(
+    family: str,
+    project: Path,
+    build: Path,
+    flags: tuple[str, ...],
+) -> None:
+    """Compile and run an independent C++17 consumer of generated C headers.
+
+    haxe.c emits strict C11 implementation files; it does not promise that a
+    C++ compiler can parse those `.c` files as C++. The interoperability
+    contract is instead that C++ can include the generated C declarations and
+    link to C-compiled objects. This small consumer proves the first half here;
+    shared native ABI lanes own cross-language layout and linkage evidence.
+    """
+    compiler = shutil.which("clang++" if family == "clang" else "g++")
+    if compiler is None:
+        raise BytesRuntimeFailure(f"{family} evidence requires its C++ compiler")
+    optimization = flags[0][1:].lower()
+    source = build / f"bytes-header-{optimization}.cpp"
+    executable = build / f"bytes-header-{optimization}"
+    source.write_text(
+        '#include "hxc/program.h"\n'
+        "int main() { return 0; }\n",
+        encoding="utf-8",
+    )
+    command = [
+        compiler,
+        *CPP_STRICT_FLAGS,
+        *flags,
+        f"-I{project / 'include'}",
+        f"-I{project / 'runtime/include'}",
+        str(source),
+        "-o",
+        str(executable),
+    ]
+    compilation = subprocess.run(
+        command,
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if compilation.returncode != 0 or compilation.stdout or compilation.stderr:
+        raise BytesRuntimeFailure(
+            "strict C++17 generated-header consumer failed\n"
+            f"command={command!r}\nstdout={compilation.stdout!r}\nstderr={compilation.stderr!r}"
+        )
+    execution = subprocess.run(
+        [str(executable)],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if execution.returncode != 0 or execution.stdout or execution.stderr:
+        raise BytesRuntimeFailure(
+            "C++17 generated-header consumer execution drifted: "
+            f"exit={execution.returncode} stdout={execution.stdout!r} stderr={execution.stderr!r}"
+        )
+
+
 def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
@@ -340,6 +511,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
         generated = render_generated_pair(root) if generated_haxe else None
         if generated_haxe:
             run_negative_cases(root)
+            prove_caxecraft_bytes_argument_boundary(root)
         for toolchain in toolchains:
             build = root / toolchain.family
             build.mkdir()
@@ -352,18 +524,33 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                 ("-O0",),
                 ("HXC_FREESTANDING=1",),
             )
+            compile_and_run(
+                toolchain.compiler,
+                [*RUNTIME_SOURCES, FIXTURE],
+                [INCLUDE],
+                build / "bytes-native-o2",
+                ("-O2",),
+                ("HXC_FREESTANDING=1",),
+            )
             inspect_symbols(native, toolchain.family)
             if generated is not None:
                 generated_sources = sorted((generated / "runtime/src").glob("*.c")) + sorted(
                     (generated / "src").rglob("*.c")
                 )
-                compile_and_run(
-                    toolchain.compiler,
-                    generated_sources,
-                    [generated / "include", generated / "runtime/include"],
-                    build / "bytes-generated",
-                    ("-O0",),
-                )
+                for optimization in ("-O0", "-O2"):
+                    compile_and_run(
+                        toolchain.compiler,
+                        generated_sources,
+                        [generated / "include", generated / "runtime/include"],
+                        build / f"bytes-generated-{optimization[1:].lower()}",
+                        (optimization,),
+                    )
+                    validate_cpp_header(
+                        toolchain.family,
+                        generated,
+                        build,
+                        (optimization,),
+                    )
             if toolchain.family == "clang":
                 compile_and_run(
                     toolchain.compiler,
@@ -396,7 +583,7 @@ def main(argv: Iterable[str] = ()) -> int:
     mode = "native contract" if args.native_only else "Eval plus generated ordinary-Haxe Bytes"
     print(
         "bytes-runtime: OK: "
-        f"{families}; {mode}; aliasing, overlap, bounds, allocation rollback, ownership, sanitizers, and selective symbols passed"
+        f"{families}; {mode}; C11 O0/O2 and C++17 header consumers, aliasing, overlap, bounds, allocation rollback, ownership, sanitizers, and selective symbols passed"
     )
     return 0
 

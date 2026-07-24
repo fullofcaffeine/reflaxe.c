@@ -136,6 +136,7 @@ private typedef CBodyEmissionState = {
 	final referencedValues:Map<String, Bool>;
 	final referencedLocals:Map<String, Bool>;
 	final referencedSpanLengths:Map<String, Bool>;
+	final hoistedLocals:Map<String, Bool>;
 	final parameterNames:Map<String, CIdentifier>;
 	final localNames:Map<String, CIdentifier>;
 	final temporaryNames:Map<String, CIdentifier>;
@@ -487,6 +488,7 @@ class CBodyEmitter {
 			referencedValues: referencedValueIds(fn),
 			referencedLocals: referencedLocalIds(fn),
 			referencedSpanLengths: referencedSpanLengthIds(fn),
+			hoistedLocals: [],
 			parameterNames: parameterNames,
 			localNames: localNames,
 			temporaryNames: temporaryNames,
@@ -507,6 +509,7 @@ class CBodyEmitter {
 			terminatedByTailLoop: false
 		};
 		prepareManagedRootFrame(statements, state, fn);
+		prepareHoistedCleanupLocals(statements, state, fn);
 		for (parameter in fn.parameters) {
 			final name = requireParameterName(parameterNames, parameter.id, fn.id);
 			state.values.set(parameter.id, EIdentifier(name));
@@ -546,6 +549,55 @@ class CBodyEmitter {
 			return SBlock([SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(statements))]);
 		}
 		return SBlock(statements);
+	}
+
+	/**
+		Hoist a cleanup-owned local whose initializer lives below the entry block.
+
+		HxcIR locals belong to the whole function even when structured C places an
+		`if`, switch, or loop around their initializing instruction. A return or
+		failure edge inside that region may run the typed cleanup action. Declaring
+		the C local only inside the nested block would then make shared cleanup code
+		name an out-of-scope identifier. Hoisting only those cleanup-owned locals
+		keeps ordinary locals narrow while giving every legal cleanup edge one C
+		declaration. The inert `{0}` initializer keeps strict C/C++ definite-use
+		analysis honest on sibling paths; HxcIR still decides whether a cleanup step
+		runs, and every admitted runtime/lifecycle release treats that zero state as
+		empty. The source initializer becomes an assignment at its original position.
+	**/
+	function prepareHoistedCleanupLocals(statements:Array<CStmt>, state:CBodyEmissionState, fn:HxcIRFunction):Void {
+		final initializedOutsideEntry:Map<String, Bool> = [];
+		for (block in fn.blocks) {
+			if (block.id == fn.entryBlockId)
+				continue;
+			for (instruction in block.instructions)
+				switch instruction.kind {
+					case IRIOInitialize(IRPLocal(localId), _, IRISUninitialized, IRISInitialized):
+						initializedOutsideEntry.set(localId, true);
+					case _:
+				}
+		}
+		final cleanupLocals = cleanupReferencedLocalIds(fn);
+		final candidates:Array<String> = [];
+		for (localId in cleanupLocals.keys())
+			if (initializedOutsideEntry.exists(localId))
+				candidates.push(localId);
+		candidates.sort(compareUtf8);
+		for (localId in candidates) {
+			final local = requireLocal(fn, localId);
+			final declaration = typedDeclarator(local.type, DName(requireLocalName(state.localNames, localId, fn.id)));
+			addLineDirective(statements, local.source, state.lineDirectives);
+			statements.push(SDecl({
+				storage: [],
+				alignments: [],
+				type: declaration.type,
+				declarator: declaration.declarator,
+				initializer: IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]),
+				attributes: []
+			}));
+			state.declared.set(localId, true);
+			state.hoistedLocals.set(localId, true);
+		}
 	}
 
 	/**
@@ -911,8 +963,8 @@ class CBodyEmitter {
 							emitSpanValueInitialize(statements, state.values, state.spanValueLengths, state.declared, state.referencedLocals,
 								state.referencedSpanLengths, instruction, localId, valueId, fn, state.localNames, state.spanLengthNames, state.lineDirectives);
 						case _:
-							emitInitialize(statements, state.values, state.declared, state.referencedLocals, instruction, localId, valueId, fn,
-								state.localNames, state.lineDirectives);
+							emitInitialize(statements, state.values, state.declared, state.referencedLocals, state.hoistedLocals, instruction, localId,
+								valueId, fn, state.localNames, state.lineDirectives);
 					}
 				case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
 					if (instruction.result != null)
@@ -1220,6 +1272,19 @@ class CBodyEmitter {
 				}
 			}
 		}
+		return referenced;
+	}
+
+	/** Local storage named by a typed cleanup action, independent of ordinary uses. */
+	static function cleanupReferencedLocalIds(fn:HxcIRFunction):Map<String, Bool> {
+		final referenced:Map<String, Bool> = [];
+		for (region in fn.cleanupRegions)
+			for (action in region.actions)
+				switch action.kind {
+					case IRCADestroy(place, _, _) | IRCARelease(place, _) | IRCADeallocate(place, _):
+						markReferencedLocals(place, referenced);
+					case IRCAFinally(_):
+				}
 		return referenced;
 	}
 
@@ -1606,12 +1671,17 @@ class CBodyEmitter {
 	}
 
 	function emitInitialize(statements:Array<CStmt>, values:Map<String, CExpr>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
-			instruction:HxcIRInstruction, localId:String, valueId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+			hoistedLocals:Map<String, Bool>, instruction:HxcIRInstruction, localId:String, valueId:String, fn:HxcIRFunction,
+			localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
 		if (instruction.result != null) {
 			fail('initializer `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
 		}
 		if (declared.exists(localId)) {
-			fail('local `$localId` in `${fn.id}` is initialized more than once');
+			if (!hoistedLocals.exists(localId))
+				fail('local `$localId` in `${fn.id}` is initialized more than once');
+			addLineDirective(statements, instruction.source, lineDirectives);
+			statements.push(SExpr(EBinary(Assign, EIdentifier(requireLocalName(localNames, localId, fn.id)), requireValue(values, valueId, fn.id))));
+			return;
 		}
 		final local = requireLocal(fn, localId);
 		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));

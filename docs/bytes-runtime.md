@@ -79,18 +79,32 @@ value, and the callee would need to create a new owner with `retain`. That
 borrowed-return path still fails closed until its ownership operation is
 represented explicitly; it is not silently treated as a transfer.
 
+An ordinary call may borrow a fresh result directly. For example,
+`firstByte(makeText())`, `left.compare(right.sub(0, 4))`, and a fresh Bytes
+receiver all receive a hidden caller-owned local. Haxe still evaluates nested
+expressions from left to right. The outer call borrows each stable local, and
+the caller releases the owners in reverse order on normal completion, early
+return, or an admitted failure edge. Passing an existing local or parameter
+does not add another retain because that value already has an owner.
+
+When such an owner is created only inside an `if`, switch, or loop region,
+HxcIR still gives it function-level identity. Generated C therefore declares
+the cleanup-owned carrier at function scope with an inert zero value, then
+assigns the real owner at the original expression. This is not a nullable Haxe
+value or a second runtime object: it only gives every structured cleanup edge a
+legal C identifier. Path-specific HxcIR cleanup still decides whether release
+runs.
+
 The selected C representation is private `hxc_bytes_ref *`. Generated public C
 interfaces must not expose it as a stable application ABI. The runtime feature
 depends on the checked allocator and status slices. String-literal support is
 selected because the admitted `Bytes.ofString` boundary copies a validated
 UTF-8 view; the Bytes storage itself is still untyped binary data.
 
-Fresh Bytes results used only as nested expressions are currently rejected.
-For example, `a.compare(b.sub(0, 4))` needs a compiler-owned temporary lifetime
-that releases the `sub` result after `compare`. Naming the result first gives it
-an explicit owner and is supported. This is a fail-closed ownership boundary,
-not permission to leak the temporary; a later expression-temporary plan can
-remove the limitation without changing source semantics.
+Fresh Bytes results are admitted at compiler-known direct, indirect, instance,
+constructor, super-constructor, and supported Bytes-operation borrow
+boundaries. Unknown calls and APIs still fail closed rather than guessing
+whether a callee borrows, retains, or consumes its argument.
 
 ## Why the suite has both Haxe and direct C
 

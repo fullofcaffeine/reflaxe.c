@@ -16,6 +16,27 @@ final class Main {
 	static function makeText():Bytes
 		return Bytes.ofString("Haxe");
 
+	/** Borrow a Bytes argument without taking or extending its ownership. */
+	static function firstByte(value:Bytes):Int
+		return value.get(0);
+
+	/** Borrow two Bytes arguments after Haxe evaluates them from left to right. */
+	static function sameBytes(left:Bytes, right:Bytes):Bool
+		return left.compare(right) == 0;
+
+	/**
+		Return early after passing a fresh managed result directly into another call.
+
+		The caller must own `makeText()` across `firstByte(...)`, then release that
+		temporary before this function returns. The false path proves no uncreated
+		owner is included in cleanup.
+	**/
+	static function readFreshText(enabled:Bool):Int {
+		if (enabled)
+			return firstByte(makeText());
+		return -1;
+	}
+
 	static function main():Void {
 		final bytes = makeBuffer();
 		final alias = bytes;
@@ -35,6 +56,11 @@ final class Main {
 		final lexicographicShort = Bytes.alloc(1);
 		lexicographicShort.set(0, 0xff);
 		final lexicographicLong = Bytes.alloc(2);
+		final nestedCompare = bytes.compare(bytes.sub(0, 8));
+		final directFreshByte = firstByte(makeText());
+		final twoFreshArguments = sameBytes(makeText(), Bytes.ofString("Haxe"));
+		final freshReceiverByte = Bytes.ofString("Haxe").get(0);
+		final earlyFreshByte = readFreshText(true);
 
 		while (bytes.length != 8
 			|| bytes.get(0) != 0x41
@@ -48,6 +74,11 @@ final class Main {
 			|| text.get(3) != 0x65
 			|| expected.compare(compared) != 0 // The pinned implementation compares shared content before length:
 				// [0xff] sorts after [0x00, 0x00] even though it is shorter.
-			|| lexicographicShort.compare(lexicographicLong) <= 0) {}
+			|| lexicographicShort.compare(lexicographicLong) <= 0
+			|| nestedCompare != 0
+			|| directFreshByte != 0x48
+			|| !twoFreshArguments
+			|| freshReceiverByte != 0x48
+			|| earlyFreshByte != 0x48) {}
 	}
 }

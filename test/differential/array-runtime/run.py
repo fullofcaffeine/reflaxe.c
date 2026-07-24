@@ -703,20 +703,20 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     if result.returncode == 0:
         return
     # Caxecraft now passes the managed Array element copied by
-    # EditorScenarioSnapshot.actionsAreRepresentable. The next reachable
-    # boundary is a fresh Bytes result passed directly into restore(...): call
-    # lowering has not yet given that temporary a caller-owned lifetime.
-    # Requiring the exact later diagnostic proves this task did not merely move
-    # or hide its former Array failure. haxe_c-djl.17 owns the Bytes
-    # call-argument contract; accepting an arbitrary failure would weaken this
-    # product check into "Caxecraft still does not compile."
+    # EditorScenarioSnapshot.actionsAreRepresentable and the fresh Bytes call
+    # argument that followed it. The next reachable boundary converts an
+    # already-computed String into Bytes; haxe_c-aml.1 owns that distinct
+    # runtime-String encoding contract. Requiring the exact later diagnostic
+    # proves this task did not merely move or hide its former Array failure.
+    # Accepting an arbitrary failure would weaken this product check into
+    # "Caxecraft still does not compile."
     if (
-        "src/caxecraft/editor/EditorScenarioSnapshot.hx:50:" not in result.stderr
-        or "TCall(fresh-managed-Bytes-argument-needs-owner:0,"
-        "target=function.caxecraft.editor.EditorScenarioSnapshot.restore)"
+        "src/caxecraft/scenario/CaxeFlowRulePlanner.hx:169:" not in result.stderr
+        or "TCall(Bytes.ofString:non-literal-String-not-yet-admitted)"
         not in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
+        or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
     ):
         raise ArrayRuntimeFailure(
             "Caxecraft did not compile past its former managed Array element boundary\n"

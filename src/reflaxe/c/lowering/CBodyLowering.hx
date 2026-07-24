@@ -3279,6 +3279,7 @@ private class FunctionBuilder {
 			var argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
 				argumentExpression.pos, 'TNew(argument:$index,target=$targetId)');
 			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'constructor-argument-$index');
+			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'constructor-argument-$index');
 			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
 			arguments.push(argument.id);
 		}
@@ -3433,6 +3434,7 @@ private class FunctionBuilder {
 			var argument = coerce(lowerValue(sourceArgument, signature.arguments[index].mapping), signature.arguments[index].mapping, sourceArgument.pos,
 				'TNew(managed-argument:$index,target=$targetId)');
 			argument = stabilizeFreshManagedArray(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
+			argument = stabilizeFreshManagedBytes(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			rejectOwnedClassBorrow(argument, sourceArgument.pos, 'TNew(owned-class-borrow-escape:managed-constructor-argument:$index)');
 			arguments.push(argument.id);
 		}
@@ -3488,6 +3490,7 @@ private class FunctionBuilder {
 			var converted = coerce(lowerValue(argument, target.arguments[index].mapping), target.arguments[index].mapping, argument.pos,
 				'TCall(super:argument:$index,target=$baseId)');
 			converted = stabilizeFreshManagedArray(converted, argument.pos, 'super-constructor-argument-$index');
+			converted = stabilizeFreshManagedBytes(converted, argument.pos, 'super-constructor-argument-$index');
 			rejectOwnedClassBorrow(converted, argument.pos, 'TCall(owned-class-borrow-escape:super-argument:$index)');
 			arguments.push(converted.id);
 		}
@@ -6379,6 +6382,7 @@ private class FunctionBuilder {
 			}
 			final value = lowerValue(argumentExpression, parameter.mapping);
 			var converted = coerce(value, parameter.mapping, argumentExpression.pos, 'TCall(argument:$index,target=$targetId)');
+			converted = stabilizeFreshManagedBytes(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedEnum(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedAggregate(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedOptional(converted, argumentExpression.pos, 'static-call-argument-$index');
@@ -6386,8 +6390,6 @@ private class FunctionBuilder {
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
-			if (freshManagedBytesValueIds.exists(converted.id))
-				return unsupported(argumentExpression, 'TCall(fresh-managed-Bytes-argument-needs-owner:$index,target=$targetId)');
 			if (borrowedManagedArrayElementValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(borrowed-managed-Array-element-argument:$index,target=$targetId)');
 			if (!parameter.borrowedReference)
@@ -6461,12 +6463,12 @@ private class FunctionBuilder {
 			if (referencesStackConstructedValue(argumentExpression))
 				return unsupported(argumentExpression, 'TNew(stack-reference-escape:indirect-call-argument:$index)');
 			var argument = coerce(lowerValue(argumentExpression, parameter), parameter, argumentExpression.pos, 'TCall(indirect-argument:$index)');
+			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedEnum(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedAggregate(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedOptional(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(argument.id)
 				|| freshManagedStringMapValueIds.exists(argument.id)
-				|| freshManagedBytesValueIds.exists(argument.id)
 				|| borrowedManagedArrayElementValueIds.exists(argument.id))
 				return unsupported(argumentExpression, 'TCall(indirect-managed-argument-needs-explicit-ownership:$index)');
 			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TCall(indirect-owned-class-borrow-escape:$index)');
@@ -7250,9 +7252,8 @@ private class FunctionBuilder {
 				final otherMapping = bodyValueType(arguments[0].t, arguments[0].pos, "Bytes.compare:other-type");
 				if (otherMapping.bytesValue() == null)
 					return unsupported(arguments[0], "TCall(Bytes.compare:other-not-Bytes)");
-				final other = coerce(lowerValue(arguments[0], otherMapping), otherMapping, arguments[0].pos, "Bytes.compare:other");
-				if (freshManagedBytesValueIds.exists(other.id))
-					return unsupported(arguments[0], "Bytes.compare:fresh-argument-needs-owner");
+				var other = coerce(lowerValue(arguments[0], otherMapping), otherMapping, arguments[0].pos, "Bytes.compare:other");
+				other = stabilizeFreshManagedBytes(other, arguments[0].pos, "bytes-compare-argument");
 				loweredArguments.push(other.id);
 			case "blit":
 				if (arguments.length != 4)
@@ -7261,9 +7262,8 @@ private class FunctionBuilder {
 				final sourceMapping = bodyValueType(arguments[1].t, arguments[1].pos, "Bytes.blit:source-type");
 				if (sourceMapping.bytesValue() == null)
 					return unsupported(arguments[1], "TCall(Bytes.blit:source-not-Bytes)");
-				final sourceValue = coerce(lowerValue(arguments[1], sourceMapping), sourceMapping, arguments[1].pos, "Bytes.blit:source");
-				if (freshManagedBytesValueIds.exists(sourceValue.id))
-					return unsupported(arguments[1], "Bytes.blit:fresh-source-needs-owner");
+				var sourceValue = coerce(lowerValue(arguments[1], sourceMapping), sourceMapping, arguments[1].pos, "Bytes.blit:source");
+				sourceValue = stabilizeFreshManagedBytes(sourceValue, arguments[1].pos, "bytes-blit-source");
 				loweredArguments.push(sourceValue.id);
 				loweredArguments.push(lowerBytesIntArgument(arguments[2], "Bytes.blit:source-position").id);
 				loweredArguments.push(lowerBytesIntArgument(arguments[3], "Bytes.blit:length").id);
@@ -7307,9 +7307,7 @@ private class FunctionBuilder {
 		if (mapping.bytesValue() == null)
 			return unsupported(expression, 'Bytes.$operation:receiver-not-Bytes');
 		final receiver = coerce(lowerValue(expression, mapping), mapping, expression.pos, 'Bytes.$operation:receiver');
-		if (freshManagedBytesValueIds.exists(receiver.id))
-			return unsupported(expression, 'Bytes.$operation:fresh-receiver-needs-owner');
-		return receiver;
+		return stabilizeFreshManagedBytes(receiver, expression.pos, 'bytes-$operation-receiver');
 	}
 
 	function lowerBytesIntArgument(expression:TypedExpr, role:String):LoweredValue {
@@ -7417,6 +7415,7 @@ private class FunctionBuilder {
 				return unsupported(argument, 'TNew(stack-reference-escape:instance-call-argument:$index,target=$targetId)');
 			var value = coerce(lowerValue(argument, explicitMappings[index]), explicitMappings[index], argument.pos,
 				'TCall(instance-argument:$index,target=$targetId)');
+			value = stabilizeFreshManagedBytes(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedEnum(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedAggregate(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedOptional(value, argument.pos, 'instance-call-argument-$index');
@@ -7424,8 +7423,6 @@ private class FunctionBuilder {
 				return unsupported(argument, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(value.id))
 				return unsupported(argument, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
-			if (freshManagedBytesValueIds.exists(value.id))
-				return unsupported(argument, 'TCall(fresh-managed-Bytes-argument-needs-owner:$index,target=$targetId)');
 			if (borrowedManagedArrayElementValueIds.exists(value.id))
 				return unsupported(argument, 'TCall(borrowed-managed-Array-element-argument:$index,target=$targetId)');
 			if (!explicitBorrowedClasses[index])
@@ -7751,6 +7748,33 @@ private class FunctionBuilder {
 		normalCleanupActionIds.push(cleanupId);
 		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "fresh ordinary Haxe Array constructor argument lifetime", source,
 			position));
+		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
+	}
+
+	/**
+		Give a fresh Bytes value a caller-owned lifetime while another call borrows it.
+
+		Haxe permits direct nesting such as `inspect(makeBytes())`. The inner call
+		returns one owned Bytes reference, while the outer parameter is only a
+		borrow and cannot consume that owner. This automatic local keeps the value
+		alive through the outer call and releases it exactly once on every later
+		normal or failure exit. Existing aliases already have an owner and pass
+		through unchanged, so ordinary calls do not add a redundant retain.
+	**/
+	function stabilizeFreshManagedBytes(value:LoweredValue, position:Position, role:String):LoweredValue {
+		if (value.mapping.bytesValue() == null || !freshManagedBytesValueIds.remove(value.id))
+			return value;
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
+		final cleanupId = 'bytes-temporary.$ownerLocalId.release';
+		constructionCleanupActions.push({
+			id: cleanupId,
+			idempotence: IRCExactlyOnce,
+			kind: IRCARelease(IRPLocal(ownerLocalId), IRIRuntime("bytes")),
+			source: source
+		});
+		normalCleanupActionIds.push(cleanupId);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "cleanup-release", "fresh haxe.io.Bytes call argument lifetime", source, position));
 		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
 	}
 
