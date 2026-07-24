@@ -196,6 +196,7 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "borrowedClassStore",
         "borrowedClassReturn",
         "borrowedInterfaceStore",
+        "unmanagedRetainedInterface",
         "primitiveRuntimeConversion",
         "invalidFloat32Narrow",
         "invalidFloat32Widen",

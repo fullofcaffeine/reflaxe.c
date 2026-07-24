@@ -142,17 +142,33 @@ void hxc_compiler_constructor_ConfiguredScore(
 );
 ```
 
-Copying the pair does **not** copy or own the object. The object can be a local
-whose storage belongs to the caller, so the constructor parameter is a
-call-bounded borrow: it may inspect the object or call through the interface,
-but it may not store, return, throw, or capture the interface value. Constructor
-preparation checks the typed Haxe body for that no-escape contract. HxcIR then
-records the parameter as `ownership=borrowed-interface` and independently
-rejects a later operation that would let the borrow escape. This keeps the
-generated code allocation-free without turning a short-lived pointer into a
-dangling one.
+Copying the pair does **not** copy the object. The compiler therefore chooses
+one of two lifetime plans from the typed constructor body:
 
-Enums, collections, managed values, and every other `IRTInstance` family remain
+- If the constructor only reads the parameter or calls its methods, the object
+  can remain a caller-owned local. HxcIR records
+  `ownership=borrowed-interface` and rejects storage, return, throw, capture, or
+  unproved forwarding. This path stays allocation-free.
+- If the constructor assigns the value to one of its own interface fields, the
+  pair is retained beyond the call. The enclosing class and each reachable
+  concrete implementation use collector-managed storage. The enclosing
+  object's exact trace function visits the field's `object` pointer; the
+  separate `table` pointer is immutable program data and needs no tracing.
+
+Because a C struct field stored by value needs its full type definition—not
+only a forward declaration—the project planner emits the interface pair before
+class definitions. Split and package layouts put it in the shared private type
+header; unity output uses the same dependency order in `hxc/program.h`.
+
+The retained slice is deliberately narrow: the only admitted escape is the
+first typed `this.field = parameter` initialization. The compiler does not
+weaken a borrow after seeing a generic assignment. Alias storage, returns,
+throws, closure capture, and storage through another object remain
+source-positioned failures unless another ownership rule proves them. The
+source fixture forces a collection and then calls the retained interface,
+showing that the dispatch pair did not become a dangling pointer.
+
+Enums, unrelated collections, and every other `IRTInstance` family remain
 source-positioned `HXC1001` failures until their own call, copy, ownership, and
 lifetime contracts are proven.
 

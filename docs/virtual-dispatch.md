@@ -87,6 +87,18 @@ another checked borrow contract is rejected. See
 [bounded constructor lowering](constructor-lowering.md#c-function-and-elision-model)
 for the lifetime reason and generated-C example.
 
+A constructor may also retain the pair in its own interface field. This is a
+different ownership plan, not a longer borrow. The owner and every reachable
+concrete implementation for that interface become collector-managed; the
+owner's generated trace callback visits `field.object`, while `field.table`
+continues to point at immutable program-local data. Interface dispatch accepts
+both direct call-only implementations and `managed(gc)` retained
+implementations because the method table and thunk signatures are identical.
+The first implementation is conservative: once an interface field is retained,
+all reachable concrete tables for that interface select managed storage.
+Finer per-construction escape analysis can reduce allocations later without
+changing the interface value or tracing contract.
+
 ## Override representation boundary
 
 The pinned Haxe compiler may admit source-level covariant returns or

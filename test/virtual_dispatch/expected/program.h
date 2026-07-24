@@ -30,6 +30,10 @@ struct hxc_LeafWorker;
 
 struct hxc_FinalWorker;
 
+struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout {
+  int32_t (*hxc_slot_BaseWorker_value)(struct hxc_BaseWorker *, int32_t);
+};
+
 struct hxc_BaseWorker {
   const struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout *hxc_vtable;
   int32_t hxc_seed;
@@ -45,10 +49,6 @@ struct hxc_LeafWorker {
 
 struct hxc_FinalWorker {
   int32_t hxc_seed;
-};
-
-struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout {
-  int32_t (*hxc_slot_BaseWorker_value)(struct hxc_BaseWorker *, int32_t);
 };
 
 extern const struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout hxc_vtable_compiler_virtual_dispatch_LeafWorker;

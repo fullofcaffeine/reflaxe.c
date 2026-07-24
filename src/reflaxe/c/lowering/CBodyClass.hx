@@ -12,6 +12,7 @@ import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
+import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 
@@ -22,6 +23,28 @@ class CBodyClass {
 
 typedef CBodyClassValueResolver = (type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 	node:String) -> CBodyValueType;
+
+/**
+	One reachable concrete class that can inhabit one interface value.
+
+	The dispatch planner already proves this pair when it builds the interface
+	table. Reusing that proof lets the lifetime planner make the concrete object
+	collector-owned without rediscovering Haxe's implementation hierarchy or
+	guessing from matching method names.
+**/
+class CBodyInterfaceImplementation {
+	/** The interface value whose table preserves the exact dispatch contract. */
+	public final interfaceValue:CPreparedBodyInterface;
+
+	/** The concrete class whose object pointer can be stored beside that table. */
+	public final classValue:CPreparedBodyClass;
+
+	/** Records one dispatch-proven pair without deciding its storage lifetime. */
+	public function new(interfaceValue:CPreparedBodyInterface, classValue:CPreparedBodyClass) {
+		this.interfaceValue = interfaceValue;
+		this.classValue = classValue;
+	}
+}
 
 /** One source-order storage field owned by a single class declaration. */
 class CPreparedBodyClassField {
@@ -379,14 +402,15 @@ class CBodyClassRegistry {
 	/**
 		Close the collector representation after every reachable type is known.
 
-		An `Array<Class>` or enum case carrying a class is an escaping graph: its
-		pointer must remain stable and may point back through another managed field.
-		Marking is a fixed point because a managed class can expose a second class
-		through one of its fields or inheritance prefix. Direct classes that never
-		enter such a graph remain unchanged and descriptor-free.
+		An `Array<Class>`, enum case carrying a class, or retained interface field
+		is an escaping graph: its pointer must remain stable and may point back
+		through another managed field. Marking is a fixed point because a managed
+		class can expose a second class through one of its fields or inheritance
+		prefix. Direct classes that never enter such a graph remain unchanged and
+		descriptor-free.
 	**/
 	public function completeManagedRepresentations(arrays:Array<reflaxe.c.lowering.CBodyArray.CPreparedBodyArray>,
-			enums:Array<reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance>):Void {
+			enums:Array<reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance>, interfaceImplementations:Array<CBodyInterfaceImplementation>):Void {
 		var changed = true;
 		while (changed) {
 			changed = false;
@@ -398,6 +422,28 @@ class CBodyClassRegistry {
 					for (payload in tagCase.payload)
 						if (markCollectorClasses(payload.valueType, []))
 							changed = true;
+			for (value in canonicalClasses())
+				for (field in value.fields) {
+					final interfaceValue = field.type.interfaceValue();
+					if (interfaceValue == null)
+						continue;
+
+					// An interface C value contains a pointer to its concrete object
+					// plus the exact dispatch table. Once a class retains that value,
+					// both the owner and every reachable concrete implementation need
+					// stable collector storage. The owner's trace callback follows the
+					// object pointer; the object header then selects its exact layout.
+					if (!value.managedByCollector) {
+						value.managedByCollector = true;
+						changed = true;
+					}
+					for (implementation in interfaceImplementations)
+						if (implementation.interfaceValue.instanceId == interfaceValue.instanceId
+							&& !implementation.classValue.managedByCollector) {
+							implementation.classValue.managedByCollector = true;
+							changed = true;
+						}
+				}
 			for (value in canonicalClasses()) {
 				if (!value.managedByCollector)
 					continue;
@@ -418,6 +464,21 @@ class CBodyClassRegistry {
 				}
 			}
 		}
+		for (value in canonicalClasses())
+			for (field in value.fields) {
+				final interfaceValue = field.type.interfaceValue();
+				if (interfaceValue == null)
+					continue;
+				var matched = false;
+				for (implementation in interfaceImplementations)
+					if (implementation.interfaceValue.instanceId == interfaceValue.instanceId) {
+						matched = true;
+						if (!implementation.classValue.managedByCollector)
+							throw new CBodyEmissionError('retained interface `${interfaceValue.haxePath}` left `${implementation.classValue.haxePath}` outside collector ownership');
+					}
+				if (!matched)
+					throw new CBodyEmissionError('retained interface field `${value.haxePath}.${field.name}` has no reachable concrete dispatch table');
+			}
 		for (value in canonicalClasses())
 			if (value.managedByCollector)
 				registerManagedNames(value);
@@ -512,6 +573,8 @@ class CBodyClassRegistry {
 		final classValue = value.classValue();
 		if (classValue != null)
 			return classValue.managedByCollector;
+		if (value.interfaceValue() != null)
+			return true;
 		final arrayValue = value.arrayValue();
 		if (arrayValue != null)
 			return arrayValue.managedByCollector;

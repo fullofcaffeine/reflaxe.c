@@ -29,6 +29,7 @@ FAILURE_RUNTIME = FIXTURES / "failure_runtime"
 DEFAULT_RUNTIME = FIXTURES / "default_runtime"
 RECORD_PARAMETER = FIXTURES / "record_parameter"
 INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
+RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -82,7 +83,7 @@ NEGATIVE_CASES = {
     "instance_parameter": "TFunction(constructor-argument:0-type-not-admitted:haxe-enum:",
     "interface_parameter_escape": (
         "TFunction(constructor-argument:source:"
-        "interface-value-must-remain-call-bounded)"
+        "interface-retention-must-target-this-field)"
     ),
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
     "owned_fallible": "TNew(owned-field-fallible-construction-not-admitted:constructor.Child)",
@@ -120,6 +121,22 @@ INTERFACE_NATIVE_COVERAGE = frozenset(
         "constructor-interface-parameter-dispatch",
     }
 )
+RETAINED_INTERFACE_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-retained-interface-field",
+        "constructor-retained-interface-managed-owner",
+        "constructor-retained-interface-managed-implementation",
+        "constructor-retained-interface-trace",
+        "constructor-retained-interface-dispatch-after-collection",
+    }
+)
+RETAINED_INTERFACE_RUNTIME_FEATURES = [
+    "runtime-base",
+    "status",
+    "alloc",
+    "object",
+    "gc",
+]
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -188,6 +205,7 @@ def custom_target(
     report: bool = False,
     layout: str = "unity",
     connect: str | None = None,
+    runtime_diagnostics: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     command = [development_tool("haxe")]
     if connect is not None:
@@ -212,6 +230,8 @@ def custom_target(
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if report:
         command.extend(["-D", "reflaxe_c_constructor_lowering_report"])
+    if runtime_diagnostics is not None:
+        command.extend(["-D", f"hxc_runtime_diagnostics={runtime_diagnostics}"])
     command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
@@ -382,6 +402,38 @@ def validate_interface_parameter_project(output: Path) -> None:
             )
 
 
+def validate_retained_interface_project(output: Path) -> None:
+    """Prove a retained interface traces its collector-owned concrete object."""
+
+    sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    interface_value = "struct hxc_compiler_interface_dispatch_ScoreSource_value"
+    if (
+        plan.get("features") != RETAINED_INTERFACE_RUNTIME_FEATURES
+        or f"{interface_value} hxc_source" not in sources
+        or f"{interface_value} hxc_source" not in headers
+        or f"{interface_value} *hxc_source" in sources
+        or f"{interface_value} *hxc_source" in headers
+    ):
+        raise ConstructorLoweringFailure(
+            "retained interface fixture lost its by-value field or collector plan"
+        )
+    if (
+        "hxc_source.object" not in sources
+        or "table->hxc_interface_slot_ScoreSource_score(" not in sources
+        or "hxc_trace_visit_fn" not in sources
+    ):
+        raise ConstructorLoweringFailure(
+            "retained interface fixture lost exact object tracing or later dispatch"
+        )
+
+
 def render_parameter_server_pair(
     root: Path, fixture: Path, slug: str
 ) -> tuple[Path, Path]:
@@ -416,7 +468,13 @@ def render_parameter_server_pair(
 
         outputs = (root / f"{slug}-server-first", root / f"{slug}-server-second")
         for label, output in zip(("first", "second"), outputs):
-            result = custom_target(fixture, output, layout="split", connect=endpoint)
+            result = custom_target(
+                fixture,
+                output,
+                layout="split",
+                connect=endpoint,
+                runtime_diagnostics="off",
+            )
             if result.returncode != 0 or result.stdout or result.stderr:
                 raise ConstructorLoweringFailure(
                     f"{label} warm-server {slug} constructor compile failed\n"
@@ -448,11 +506,19 @@ def render_parameter_projects(
         for label, result in (
             (
                 f"{layout} {slug} constructor",
-                custom_target(fixture, normal, layout=layout),
+                custom_target(
+                    fixture, normal, layout=layout, runtime_diagnostics="off"
+                ),
             ),
             (
                 f"{layout} reversed {slug} constructor",
-                custom_target(fixture, reverse, layout=layout, reverse=True),
+                custom_target(
+                    fixture,
+                    reverse,
+                    layout=layout,
+                    reverse=True,
+                    runtime_diagnostics="off",
+                ),
             ),
         ):
             if result.returncode != 0 or result.stdout or result.stderr:
@@ -472,13 +538,20 @@ def render_parameter_projects(
                 f"constructor-{slug}-{layout}",
                 tuple(
                     path.relative_to(fixture_root).as_posix()
-                    for path in sorted((normal / "src").rglob("*.c"))
+                    for path in sorted(normal.rglob("*.c"))
                 ),
                 tuple(
                     path.relative_to(fixture_root).as_posix()
                     for path in sorted((normal / "include").rglob("*.h"))
                 ),
-                ((normal / "include").relative_to(fixture_root).as_posix(),),
+                tuple(
+                    path.relative_to(fixture_root).as_posix()
+                    for path in (
+                        normal / "include",
+                        normal / "runtime" / "include",
+                    )
+                    if path.is_dir()
+                ),
                 "",
                 tuple(sorted((*coverage, "strict-c11"))),
             )
@@ -1020,7 +1093,16 @@ def check_native(
                 coverage=INTERFACE_NATIVE_COVERAGE,
                 validate_project=validate_interface_parameter_project,
             )
-            parameter_projects = record_projects + interface_projects
+            retained_interface_projects = render_parameter_projects(
+                fixture_root,
+                fixture=RETAINED_INTERFACE_PARAMETER,
+                slug="retained-interface-parameter",
+                coverage=RETAINED_INTERFACE_NATIVE_COVERAGE,
+                validate_project=validate_retained_interface_project,
+            )
+            parameter_projects = (
+                record_projects + interface_projects + retained_interface_projects
+            )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
             sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
@@ -1041,6 +1123,7 @@ def check_native(
                     required_coverage
                     | RECORD_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
+                    | RETAINED_INTERFACE_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1231,7 +1314,7 @@ def main(arguments: Iterable[str] = ()) -> int:
     print(
         "constructor-lowering: OK: pinned super/field/body order, default storage, "
         "status cleanup, direct caller-owned class and closed-record parameters, "
-        "call-bounded interface parameters and interface dispatch, "
+        "call-bounded and collector-retained interface parameters and dispatch, "
         "trivial elision, runtime-free strict C11/C++17 consumers, determinism, "
         "and fail-closed borrow/escape/cycle/native-layout/generic/instance-family "
         "edges passed"

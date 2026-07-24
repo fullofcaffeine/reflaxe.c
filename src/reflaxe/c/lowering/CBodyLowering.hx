@@ -42,6 +42,7 @@ import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CPreparedBodyBytes;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
+import reflaxe.c.lowering.CBodyClass.CBodyInterfaceImplementation;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClassField;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
@@ -373,7 +374,13 @@ class CBodyLowering {
 		// the same class as an Array element.
 		for (builder in builders)
 			builder.discoverManagedRepresentations();
-		aggregateRegistry.completeManagedRepresentations();
+		final interfaceImplementations:Array<CBodyInterfaceImplementation> = [];
+		for (table in preparedDispatch.tables) {
+			final interfaceValue = table.layout.rootInterface;
+			if (interfaceValue != null)
+				interfaceImplementations.push(new CBodyInterfaceImplementation(interfaceValue, table.classValue));
+		}
+		aggregateRegistry.completeManagedRepresentations(interfaceImplementations);
 		for (builder in builders)
 			builder.completeManagedRepresentations();
 		final built:Array<BuiltBodyFunction> = [];
@@ -1669,6 +1676,70 @@ private class FunctionPreparer {
 		return safe;
 	}
 
+	/**
+		Prove that every escaping use of an interface parameter is `this.field = value`.
+
+		A self-field store gives the representation planner one concrete ownership
+		boundary: the constructed object traces the interface's object pointer.
+		Aliases, returns, throws, closures, and storage through another object do not
+		have that proof and remain rejected. Ordinary reads, receiver calls, and
+		forwarding to a separately checked direct call stay permitted.
+	**/
+	public static function parameterRetainedOnlyBySelfField(body:TypedExpr, compilerId:Int):Bool {
+		var safe = true;
+		var retained = false;
+		function visit(expression:TypedExpr):Void {
+			if (!safe)
+				return;
+			switch expression.expr {
+				case TVar(_, initializer) if (initializer != null && isDirectParameterValue(initializer, compilerId)):
+					safe = false;
+				case TBinop(OpAssign, left, right) if (isDirectParameterValue(right, compilerId)):
+					if (isThisInstanceField(left)) {
+						retained = true;
+						visit(left);
+					} else {
+						safe = false;
+					}
+					return;
+				case TReturn(value) if (value != null && isDirectParameterValue(value, compilerId)):
+					safe = false;
+				case TThrow(value) if (isDirectParameterValue(value, compilerId)):
+					safe = false;
+				case TNew(_, _, arguments):
+					for (argument in arguments)
+						if (isDirectParameterValue(argument, compilerId)) {
+							safe = false;
+							break;
+						}
+				case TFunction(_) if (referencesParameter(expression, compilerId)):
+					safe = false;
+				case _:
+			}
+			if (safe)
+				TypedExprTools.iter(expression, visit);
+		}
+		visit(body);
+		return safe && retained;
+	}
+
+	/** Recognize the typed left side of an assignment to the object being built. */
+	static function isThisInstanceField(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(owner, FInstance(_, _, _)): isThisValue(owner);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isThisInstanceField(inner);
+			case _: false;
+		};
+	}
+
+	static function isThisValue(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TConst(TThis): true;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isThisValue(inner);
+			case _: false;
+		};
+	}
+
 	/** True when this expression's value is the parameter itself, not a field/call result. */
 	static function isDirectParameterValue(expression:TypedExpr, compilerId:Int):Bool {
 		return switch expression.expr {
@@ -1771,8 +1842,13 @@ private class ConstructorPreparer {
 			if (mapping.spanElement() != null)
 				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:borrowed-span-constructor-not-admitted)');
 			final borrowedInterface = mapping.interfaceValue() != null;
-			if (borrowedInterface && !FunctionPreparer.parameterCanBorrow(functionValue.expr, argument.v.id))
-				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:interface-value-must-remain-call-bounded)');
+			final interfaceRemainsCallBounded = borrowedInterface
+				&& FunctionPreparer.parameterCanBorrow(functionValue.expr, argument.v.id);
+			final interfaceRetainedBySelf = borrowedInterface
+				&& !interfaceRemainsCallBounded
+				&& FunctionPreparer.parameterRetainedOnlyBySelfField(functionValue.expr, argument.v.id);
+			if (borrowedInterface && !interfaceRemainsCallBounded && !interfaceRetainedBySelf)
+				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:interface-retention-must-target-this-field)');
 			arguments.push({
 				compilerId: argument.v.id,
 				ir: {
@@ -1781,7 +1857,10 @@ private class ConstructorPreparer {
 					source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)
 				},
 				mapping: mapping,
-				borrowedReference: borrowedInterface,
+				// A call-bounded interface may still point at caller-owned stack
+				// storage. A `this.field` capture instead enters the collector graph
+				// settled before this body is lowered.
+				borrowedReference: interfaceRemainsCallBounded,
 				defaultValue: null
 			});
 		}
@@ -1991,6 +2070,7 @@ private class FunctionBuilder {
 	final borrowedClassValueIds:Map<String, Bool> = [];
 	final initializedOwnedFixedArrayFields:Map<String, Bool> = [];
 	final initializedOwnedClassFields:Map<String, Bool> = [];
+	final initializedRetainedInterfaceFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
 	final initializedManagedStringMapFields:Map<String, Bool> = [];
 	var selfValue:Null<LoweredValue> = null;
@@ -2250,6 +2330,10 @@ private class FunctionBuilder {
 				// The enclosing object was structurally zero-initialized before its
 				// constructor call. The exact source field initializer is therefore
 				// already satisfied without an illegal C whole-array assignment.
+			case TBinop(OpAssign, left, right) if (lowerRetainedInterfaceFieldInitializer(left, right)):
+				// The interface value copies a concrete object pointer and its exact
+				// table into the newly allocated owner. The owner's trace callback
+				// follows that object pointer for the rest of the field's lifetime.
 			case TBinop(OpAssign, left, right) if (lowerManagedArrayFieldInitializer(left, right)):
 				// A final Haxe Array field receives the one newly allocated shared
 				// container. Later local aliases retain that identity; the enclosing
@@ -2339,6 +2423,48 @@ private class FunctionBuilder {
 		if (length != fixed.length)
 			unsupported(right, 'TField(${access.name}:fixed-array-length-mismatch:planned=${fixed.length},constructor=$length)');
 		initializedOwnedFixedArrayFields.set(access.name, true);
+		return true;
+	}
+
+	/**
+		Initialize one interface field retained by the object under construction.
+
+		Haxe emits final-field constructor assignments as ordinary typed `=` nodes.
+		Normal assignment rejects a final destination, so this owner recognizes only
+		the first `this.field = value` for an interface field. Whole-program planning
+		has already selected collector storage for the owner and every reachable
+		concrete implementation; a stack-backed interface therefore cannot enter
+		this store.
+	**/
+	function lowerRetainedInterfaceFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedRetainedInterfaceFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing interface field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		if (field == null || field.type.interfaceValue() == null)
+			return false;
+		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:retained-interface-initializer)');
+		rejectOwnedClassBorrow(value, right.pos, 'TField($fieldName:retained-interface-stack-escape)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-retained-interface-field");
+		initializedRetainedInterfaceFields.set(fieldName, true);
 		return true;
 	}
 
@@ -3149,8 +3275,12 @@ private class FunctionBuilder {
 		managed object without losing the object that is still being initialized.
 	**/
 	function lowerManagedConstructedValue(expression:TypedExpr, construction:BodyNewExpression, expectedMapping:Null<CBodyValueType>):LoweredValue {
-		final mapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TNew(managed-result-type)") : expectedMapping;
-		final classValue = mapping.classValue();
+		// Select allocation from the `new ConcreteClass(...)` expression itself.
+		// Its surrounding context may expect an interface value; using that fat
+		// interface type as the allocation type would lose the concrete descriptor
+		// and dispatch table needed below.
+		final sourceMapping = bodyValueType(expression.t, expression.pos, "TNew(managed-result-type)");
+		final classValue = sourceMapping.classValue();
 		if (classValue == null || !classValue.managedByCollector)
 			return unsupported(expression, "TNew(stack-construction-requires-direct-local)");
 		final classPath = CBodyConstructor.classPath(construction.classReference);
@@ -3197,7 +3327,8 @@ private class FunctionBuilder {
 				failure: null
 			}), source, "managed-constructor-call");
 		}
-		return coerce(self, mapping, expression.pos, 'TNew(managed-result:$targetId)');
+		final target = expectedMapping == null ? sourceMapping : expectedMapping;
+		return coerce(self, target, expression.pos, 'TNew(managed-result:$targetId)');
 	}
 
 	function lowerSuperCall(expression:TypedExpr, callArguments:Array<TypedExpr>):Void {

@@ -66,6 +66,7 @@ private class HxcIRValidationState {
 		indexProgram();
 		validateProgramContents();
 		validateDispatchPlan();
+		validateRetainedInterfaceGraphs();
 		validateFiniteDirectLayouts();
 		diagnostics.sort(compareDiagnostics);
 		return diagnostics;
@@ -230,8 +231,11 @@ private class HxcIRValidationState {
 			final path = 'dispatch.table:${table.id}';
 			validateSpan(table.source, '$path.source');
 			final layout = virtualLayouts.get(table.layoutId);
-			final tableClass = requireDirectClassInstance(table.classInstanceId, '$path.classInstanceId', table.source);
 			final layoutKind = layoutKinds.get(table.layoutId);
+			final tableClass = switch layoutKind {
+				case IRDLInterface(_): requireInterfaceTableClassInstance(table.classInstanceId, '$path.classInstanceId', table.source);
+				case IRDLVirtual(_) | null: requireDirectClassInstance(table.classInstanceId, '$path.classInstanceId', table.source);
+			};
 			if (layout == null) {
 				add(path, 'dispatch table `${table.id}` refers to unknown layout `${table.layoutId}`', table.source);
 				continue;
@@ -283,6 +287,67 @@ private class HxcIRValidationState {
 			}
 		}
 	}
+
+	/**
+		Validate the collector graph implied by an interface-valued class field.
+
+		An interface field contains an object pointer that survives its constructor
+		call. HxcIR therefore requires both the field owner and every concrete class
+		named by that interface's reachable tables to use the exact `managed(gc)`
+		representation. CAST lowering may then emit one trace edge from the field's
+		object member without guessing lifetime from C syntax.
+	**/
+	function validateRetainedInterfaceGraphs():Void {
+		final interfaceInstances:Map<String, Bool> = [];
+		for (instance in typeInstances) {
+			final declaration = typeDeclarations.get(instance.declarationId);
+			if (declaration != null)
+				switch declaration.kind {
+					case IRTKReference:
+						interfaceInstances.set(instance.id, true);
+					case _:
+				}
+		}
+		for (owner in typeInstances) {
+			final declaration = typeDeclarations.get(owner.declarationId);
+			if (declaration == null)
+				continue;
+			final fields = switch declaration.kind {
+				case IRTKClass(layout): layout.fields;
+				case _: continue;
+			};
+			for (field in fields) {
+				final interfaceInstanceId = switch field.type {
+					case IRTInstance(instanceId) if (interfaceInstances.exists(instanceId)): instanceId;
+					case _: continue;
+				};
+				if (!isGcManaged(owner.representation))
+					add('retained-interface:${owner.id}.${field.name}',
+						'class `${owner.id}` retains interface `$interfaceInstanceId` without managed(gc) ownership', field.source);
+				var matched = false;
+				for (table in program.dispatch.tables) {
+					final layout = virtualLayouts.get(table.layoutId);
+					if (layout == null || layout.rootInstanceId != interfaceInstanceId)
+						continue;
+					matched = true;
+					final implementation = typeInstances.get(table.classInstanceId);
+					if (implementation == null || !isGcManaged(implementation.representation))
+						add('retained-interface:${owner.id}.${field.name}',
+							'interface `$interfaceInstanceId` table `${table.id}` has non-managed concrete object `${table.classInstanceId}`', table.source);
+				}
+				if (!matched)
+					add('retained-interface:${owner.id}.${field.name}',
+						'interface `$interfaceInstanceId` has no reachable concrete table for retained field `${field.name}`', field.source);
+			}
+		}
+	}
+
+	/** Matches the collector representation without relying on unsafe enum equality. */
+	function isGcManaged(representation:HxcIRRepresentation):Bool
+		return switch representation {
+			case IRRManaged("gc"): true;
+			case _: false;
+		};
 
 	/** Names the dispatch mechanism in diagnostics without conflating interface tables with class virtual tables. */
 	function dispatchFamily(kind:Null<HxcIRDispatchLayoutKind>):String {
@@ -373,6 +438,34 @@ private class HxcIRValidationState {
 				add(path, 'dispatch instance `$instanceId` is not a class', source);
 				return null;
 		}
+	}
+
+	/**
+		Accept the concrete object behind an interface table.
+
+		Call-only interface values may point at a direct stack class. A retained
+		interface instead points at a `managed(gc)` class whose exact descriptor
+		keeps it alive. Both representations use the same interface table and
+		implementation thunks; rejecting the managed form would make the lifetime
+		upgrade invalidate an otherwise identical dispatch proof.
+	**/
+	function requireInterfaceTableClassInstance(instanceId:String, path:String, source:HxcSourceSpan):Null<HxcIRTypeInstance> {
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		final validRepresentation = instance != null && switch instance.representation {
+			case IRRDirect | IRRManaged("gc"): true;
+			case _: false;
+		};
+		if (!validRepresentation || instance == null || declaration == null) {
+			add(path, 'interface dispatch refers to unknown direct-or-managed class instance `$instanceId`', source);
+			return null;
+		}
+		return switch declaration.kind {
+			case IRTKClass(_): instance;
+			case _:
+				add(path, 'interface dispatch instance `$instanceId` is not a class', source);
+				null;
+		};
 	}
 
 	function requireDirectReferenceInstance(instanceId:String, path:String, source:HxcSourceSpan):Null<HxcIRTypeInstance> {

@@ -567,8 +567,12 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(headerUnit, semantic.optionalForwards);
 		appendDeclarations(headerUnit, semantic.virtualForwards);
 		appendDeclarations(headerUnit, semantic.classForwards);
-		appendTypeDeclarations(headerUnit, semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.enumTypes).concat(semantic.classTypes));
+		appendTypeDeclarations(headerUnit, semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.enumTypes));
+		// A class may contain an interface pair by value, so the pair must be
+		// complete before class definitions in unity output too. Split/package
+		// layouts establish the same ordering in their shared private type header.
 		appendDeclarations(headerUnit, semantic.virtualDefinitions);
+		appendTypeDeclarations(headerUnit, semantic.classTypes);
 		appendDeclarations(headerUnit, semantic.virtualObjectDeclarations);
 		for (global in semantic.globalDeclarations)
 			headerUnit.declarations.push(global.declaration);
@@ -618,6 +622,11 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(typesUnit, semantic.enumForwards);
 		appendDeclarations(typesUnit, semantic.virtualForwards);
 		appendDeclarations(typesUnit, semantic.classForwards);
+		// Interface values are stored by value in ordinary class fields. Their
+		// two-pointer struct must therefore be complete before a module header can
+		// define its owning class. Table layouts use only forward-declared object
+		// pointers, so the shared private type header is the earliest valid home.
+		appendDeclarations(typesUnit, semantic.virtualDefinitions);
 		appendDeclarations(typesUnit, semantic.virtualObjectDeclarations);
 		headers.push({
 			path: CProjectLayoutPlan.TYPES_HEADER_PATH,
@@ -649,7 +658,6 @@ class CStaticFunctionProjectEmitter {
 		for (module in dependencyOrderedModules(layout, semantic.moduleDependencies)) {
 			umbrella.includes.push({path: module.headerInclude, kind: Local});
 		}
-		appendDeclarations(umbrella, semantic.virtualDefinitions);
 		headers.push({
 			path: HEADER_PATH,
 			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)
@@ -726,6 +734,7 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(typesUnit, semantic.enumForwards);
 		appendDeclarations(typesUnit, semantic.virtualForwards);
 		appendDeclarations(typesUnit, semantic.classForwards);
+		appendDeclarations(typesUnit, semantic.virtualDefinitions);
 		appendDeclarations(typesUnit, semantic.virtualObjectDeclarations);
 		headers.push({
 			path: CProjectLayoutPlan.TYPES_HEADER_PATH,
@@ -760,7 +769,6 @@ class CStaticFunctionProjectEmitter {
 		}
 		for (pack in dependencyOrderedPackages(layout, packageDependencies))
 			umbrella.includes.push({path: pack.headerInclude, kind: Local});
-		appendDeclarations(umbrella, semantic.virtualDefinitions);
 		headers.push({
 			path: HEADER_PATH,
 			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)

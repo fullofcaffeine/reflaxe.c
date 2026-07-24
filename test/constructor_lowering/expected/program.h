@@ -45,6 +45,14 @@ struct hxc_EmptyBase;
 
 struct hxc_EmptyLeaf;
 
+struct hxc_compiler_virtual_dispatch_CounterOwner_table_layout {
+  int32_t (*hxc_slot_CounterOwner_run)(struct hxc_CounterOwner *, int32_t);
+};
+
+struct hxc_compiler_virtual_dispatch_OwnedCounter_table_layout {
+  int32_t (*hxc_slot_OwnedCounter_add)(struct hxc_OwnedCounter *, int32_t);
+};
+
 struct hxc_BaseRecord {
   int32_t hxc_defaulted;
   int32_t hxc_baseField;
@@ -81,14 +89,6 @@ struct hxc_LeafRecord {
   struct hxc_BaseRecord hxc_base;
   int32_t hxc_firstLeafField;
   int32_t hxc_secondLeafField;
-};
-
-struct hxc_compiler_virtual_dispatch_CounterOwner_table_layout {
-  int32_t (*hxc_slot_CounterOwner_run)(struct hxc_CounterOwner *, int32_t);
-};
-
-struct hxc_compiler_virtual_dispatch_OwnedCounter_table_layout {
-  int32_t (*hxc_slot_OwnedCounter_add)(struct hxc_OwnedCounter *, int32_t);
 };
 
 extern const struct hxc_compiler_virtual_dispatch_CounterOwner_table_layout hxc_vtable_compiler_virtual_dispatch_CounterOwner;

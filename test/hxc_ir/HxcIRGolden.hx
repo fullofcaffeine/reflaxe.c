@@ -55,6 +55,7 @@ class HxcIRGolden {
 				mismatchedInterfaceTable: invalidDiagnostics(mismatchedInterfaceTableProgram()),
 				mismatchedInterfaceObject: invalidDiagnostics(mismatchedInterfaceObjectProgram()),
 				mismatchedInterfaceReceiver: invalidDiagnostics(mismatchedInterfaceReceiverProgram()),
+				unmanagedRetainedInterface: invalidDiagnostics(unmanagedRetainedInterfaceProgram()),
 				mismatchedVirtualTableBind: invalidDiagnostics(mismatchedVirtualTableBindProgram()),
 				uncheckedVirtualCall: invalidDiagnostics(uncheckedVirtualCallProgram()),
 				nonExhaustiveTagSwitch: invalidDiagnostics(nonExhaustiveTagSwitchProgram()),
@@ -1087,6 +1088,37 @@ class HxcIRGolden {
 			return program;
 		}
 		throw "coverage interface call is missing";
+	}
+
+	/**
+		Proves that HxcIR rejects a retained interface before C syntax is built.
+
+		The normal coverage object and its interface implementation both use
+		direct storage, which is safe while the interface stays inside one call.
+		Adding an interface field makes the object pointer outlive that call. The
+		validator must now require collector-managed storage for the field owner
+		and for every concrete object that can be stored behind the interface.
+	**/
+	static function unmanagedRetainedInterfaceProgram():HxcIRProgram {
+		final file = "test/negative/UnmanagedRetainedInterface.hx";
+		final program = coverageProgram();
+		for (type in program.modules[0].types) {
+			if (type.id != "type.object")
+				continue;
+			switch type.kind {
+				case IRTKClass(layout):
+					layout.fields.push({
+						name: "retained",
+						type: IRTInstance("instance.interface"),
+						mutable: false,
+						source: span(file, 1)
+					});
+					return program;
+				case _:
+					throw "coverage object is not a class";
+			}
+		}
+		throw "coverage object type is missing";
 	}
 
 	static function mismatchedVirtualTableBindProgram():HxcIRProgram {

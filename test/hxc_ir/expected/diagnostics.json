@@ -84,6 +84,10 @@
   "missingTerminator": [
     "HXC9000 error [profile=portable] test/negative/MissingTerminator.hx:1:1-8:2 [module:invalid.MissingTerminator.function:invalid.MissingTerminator.main.block:entry] Invalid HxcIR: basic block `entry` has no terminator Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "unmanagedRetainedInterface": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:9:1-9:2 [retained-interface:instance.object.retained] Invalid HxcIR: interface `instance.interface` table `itable.coverage.Object` has non-managed concrete object `instance.object` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/UnmanagedRetainedInterface.hx:1:1-1:2 [retained-interface:instance.object.retained] Invalid HxcIR: class `instance.object` retains interface `instance.interface` without managed(gc) ownership Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "valueReturnWithoutValue": [
     "HXC9000 error [profile=portable] test/negative/ValueReturnWithoutValue.hx:2:1-2:2 [module:invalid.ValueReturnWithoutValue.function:invalid.ValueReturnWithoutValue.main.block:entry.terminator] Invalid HxcIR: non-void function return omits its value Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

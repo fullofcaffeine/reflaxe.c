@@ -21,6 +21,7 @@ import reflaxe.c.lowering.CBodyArray.CPreparedBodyArray;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRegistry;
 import reflaxe.c.lowering.CBodyBytes.CPreparedBodyBytes;
 import reflaxe.c.lowering.CBodyClass.CBodyClassRegistry;
+import reflaxe.c.lowering.CBodyClass.CBodyInterfaceImplementation;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRegistry;
@@ -716,8 +717,8 @@ class CBodyAggregateRegistry {
 		classRegistry.completeLayouts();
 
 	/** Settle the selective GC graph before any function chooses stack or heap construction. */
-	public function completeManagedRepresentations():Void
-		classRegistry.completeManagedRepresentations(arrayRegistry.canonicalArrays(), enumRegistry.canonicalEnums());
+	public function completeManagedRepresentations(interfaceImplementations:Array<CBodyInterfaceImplementation>):Void
+		classRegistry.completeManagedRepresentations(arrayRegistry.canonicalArrays(), enumRegistry.canonicalEnums(), interfaceImplementations);
 
 	public function canonicalAggregates():Array<CPreparedBodyAggregate> {
 		final values = [for (aggregate in byShape) aggregate];

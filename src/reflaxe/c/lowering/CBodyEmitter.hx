@@ -2748,6 +2748,16 @@ class CBodyEmitter {
 			statements.push(SIf(EBinary(NotEqual, value, ENull), SExpr(ECall(EIdentifier(visitName), [EIdentifier(contextName), value])), null));
 			return;
 		}
+		final interfaceInstanceId = switch type {
+			case IRTInstance(instanceId) if (interfaceLayoutsByInstance.exists(instanceId)): instanceId;
+			case _: null;
+		};
+		if (interfaceInstanceId != null) {
+			final layout = requireInterfaceLayout(interfaceInstanceId);
+			final object = EMember(value, requireInterfaceObjectMember(layout), false);
+			statements.push(SIf(EBinary(NotEqual, object, ENull), SExpr(ECall(EIdentifier(visitName), [EIdentifier(contextName), object])), null));
+			return;
+		}
 		switch type {
 			case IRTInstance(instanceId) if (aggregateFieldOrder.exists(instanceId)):
 				for (fieldName in requireAggregateFieldOrder(instanceId))
@@ -2866,7 +2876,11 @@ class CBodyEmitter {
 				case IRTPointer(IRTInstance(target), _) | IRTInstance(target): managedDescriptorNames.exists(target);
 				case _: false;
 			};
-			if (managedByCollector)
+			final interfaceReference = switch type {
+				case IRTInstance(target): interfaceLayoutsByInstance.exists(target);
+				case _: false;
+			};
+			if (managedByCollector || interfaceReference)
 				continue;
 			final field = EMember(object, requireClassFieldName(instanceId, fieldName), false);
 			appendManagedReleases(statements, managedValueOperations(field, type));

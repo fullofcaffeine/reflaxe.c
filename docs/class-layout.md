@@ -4,9 +4,9 @@ E3.T04 adds a bounded production representation for ordinary non-generic Haxe
 classes. Reachable class declarations lower through schema-17 HxcIR to private
 concrete C structs, while Haxe class values remain nullable references to that
 storage. A class proven not to escape keeps this direct, runtime-free form. The
-bounded `Array<Class>` graph path instead gives the same payload an exact
-traced representation backed by the selective collector. Neither form
-establishes a public C ABI.
+bounded `Array<Class>` graph path and retained-interface-field path instead
+give the same payload an exact traced representation backed by the selective
+collector. Neither form establishes a public C ABI.
 
 This task defines storage and reference operations. E3.T05 separately adds a
 bounded `new` path for unconditional, nonescaping local objects, including
@@ -86,9 +86,12 @@ comparison.
 The compiler settles representation from the reachable program rather than
 from a class declaration in isolation. If a concrete class is used as the
 element of a reachable `Array<Class>`, that array can hold aliases and cycles,
-so reference counting alone is insufficient. The class and that array then use
-`IRRManaged("gc")`; a direct class that never enters such a graph remains
-ordinary C storage and keeps the collector out of the program.
+so reference counting alone is insufficient. A class that retains an
+interface value has the same lifetime pressure: the interface stores an object
+pointer for later dispatch, and a caller-owned stack object could disappear
+first. The array graph, a retained-interface owner, and the reachable concrete
+implementations therefore use `IRRManaged("gc")`. A class that enters neither
+graph remains ordinary C storage and keeps the collector out of the program.
 
 A managed `new` allocates the exact class payload through `hxc_gc_allocate`.
 Generated HxcIR publishes the returned pointer in an exact root slot before it
@@ -101,10 +104,12 @@ visits each live pointer slot and disposes only its backing element buffer when
 the array payload itself is swept.
 
 This is deliberately a bounded graph path, not a claim of general heap-class
-support. Managed virtual headers, inline owned-class fields, interfaces,
-generic classes, and other unproved escape shapes still fail with a
-source-positioned diagnostic. They must gain their own representation and
-lifetime evidence rather than inheriting this result by accident.
+support. A retained interface is admitted only as the first initialization of
+the constructing object's own field. Managed class-virtual headers, inline
+owned-class fields, generic classes, and other unproved escape shapes still
+fail with a source-positioned diagnostic. They must gain their own
+representation and lifetime evidence rather than inheriting this result by
+accident.
 
 ## Layout and ABI boundary
 
@@ -126,12 +131,12 @@ is stable across compiler versions.
 
 Ordinary reachable instance methods and minimal closed-world virtual dispatch
 are admitted by E3.T06; see [closed-world virtual
-dispatch](virtual-dispatch.md). Interfaces remain E3.T07, and the object
-descriptor/header contract is supplied by E4.T05. E4.T06 owns managed
-allocation, explicit roots, tracing, and collection; `haxe_c-53k.2.1.2`
-connects that backend to the bounded concrete `Array<Class>` graph described
-above. Constructors are admitted
-only through E3.T05's bounded nonescaping stack model. Generic class
+dispatch](virtual-dispatch.md). E3.T07 owns the bounded call-only and retained
+interface paths. The object descriptor/header contract comes from E4.T05, and
+E4.T06 owns managed allocation, explicit roots, tracing, and collection;
+`haxe_c-53k.2.1.2` first connected that backend to the bounded concrete
+`Array<Class>` graph. E3.T05 constructors now select either direct stack
+storage or the already-settled collector representation. Generic class
 specialization, dynamic methods, reflection, dynamic casts/type tests, broader
 escaping ownership, and public class ABI remain fail-closed.
 
