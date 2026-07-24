@@ -11,6 +11,19 @@ private enum ManagedChoice {
 	HasValues(values:Array<Int>);
 }
 
+/** A recursive managed enum matching the Caxecraft parser's record payload. */
+private enum RecursiveChoice {
+	Done;
+	Many(values:Array<RecursiveChoice>);
+	Negated(value:RecursiveChoice);
+}
+
+/** One parser-style cursor result returned through a direct optional record. */
+private typedef ParsedChoice = {
+	final value:RecursiveChoice;
+	final next:Int;
+}
+
 class Main {
 	static function maybe(value:ManagedRecord):Null<ManagedRecord>
 		return value;
@@ -33,6 +46,13 @@ class Main {
 			case HasValues(values): values.length;
 		};
 
+	/** Construct the declared optional payload directly from an object literal. */
+	static function parsedChoice(value:Null<RecursiveChoice>, next:Int):Null<ParsedChoice> {
+		if (value == null)
+			return null;
+		return {value: value, next: next};
+	}
+
 	static function main():Void {
 		final value:ManagedRecord = {bytes: Bytes.alloc(1)};
 		final absent:Null<ManagedRecord> = null;
@@ -54,5 +74,8 @@ class Main {
 		while (choiceByteLength(selectedChoice) != 0) {}
 		selectedChoice = null;
 		while (selectedChoice != null) {}
+
+		final parsed = parsedChoice(Done, 7);
+		while (parsed == null || parsed.next != 7) {}
 	}
 }

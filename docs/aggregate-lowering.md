@@ -167,6 +167,32 @@ static function maybePoint(found:Bool):Null<Point>
 	return found ? {x: 3, y: 4} : null;
 ```
 
+A record literal is built as its declared destination when Haxe has already
+checked that destination. This matters after a flow check:
+
+```haxe
+typedef ParsedChoice = {
+	final value:Choice;
+	final next:Int;
+}
+
+static function parsed(value:Null<Choice>, next:Int):Null<ParsedChoice> {
+	if (value == null)
+		return null;
+	return {value: value, next: next};
+}
+```
+
+The Haxe typed tree can still describe the local expression `value` as
+`Null<Choice>` even though the earlier return proves that this route is
+non-null. If haxe.c first invented a temporary record from those expression
+types, it would create a different C layout with an optional `value` field and
+then try to convert that whole record to `ParsedChoice`. Instead, it constructs
+the already checked `ParsedChoice` payload directly and applies the required
+checked unwrap to the individual field. Field names, missing and extra fields,
+and every field conversion are still validated; contextual typing is not a
+structural cast between unrelated records.
+
 A C pointer would be a tempting translation, but it would introduce questions
 that do not exist in this Haxe value: who allocated the record, who frees it,
 and how long does the pointed-to storage live? Instead, haxe.c keeps the value

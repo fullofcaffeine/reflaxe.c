@@ -381,7 +381,13 @@ pretending a borrowed view is an owned aggregate or runtime object.
 `IRTInstance` names a validated concrete HxcIR instance rather than a C tag.
 For closed records, the declaration owns canonical ordered fields and the
 instance records direct representation; C naming and layout remain later
-emission decisions.
+emission decisions. When Haxe contextually types an object literal as a
+declared record—or as the payload of `Null<Record>`—lowering constructs that
+record instance directly. It does not derive a second instance from wider
+typed-tree field expressions left behind after a control-flow proof. Each field
+is still lowered and converted against the declared field type, so a nullable
+local proven non-null becomes an explicit checked unwrap rather than a
+different record layout.
 `IRTNullable(value, IRNTagged)` keeps a `Null<Record>` or `Null<Enum>`
 distinction that the selected C value cannot express by itself.
 `IRCNullableInject` names the present case,

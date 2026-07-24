@@ -393,20 +393,22 @@ def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
     if result.returncode == 0:
         return
     # Runtime String parameters now reach Bytes.ofString as immutable UTF-8
-    # views; legacy-nullable String flow and the following String-backed action
-    # switch also lower. The next reachable boundary is the contextually typed
-    # optional-record literal owned by haxe_c-aml.4. Requiring that exact later
-    # diagnostic proves this lane passed every prior boundary rather than
-    # accepting an arbitrary Caxecraft failure.
+    # views; legacy-nullable String flow, the String-backed action switch, and
+    # the contextually typed optional-record result also lower. The next
+    # reachable boundary is String.fromCharCode inside StringBuf.addChar, owned
+    # by haxe_c-aml.5. Requiring that exact later diagnostic proves this lane
+    # passed every prior boundary rather than accepting an arbitrary failure.
     if (
-        "src/caxecraft/scenario/CaxeFlowValueReader.hx:159:" not in result.stderr
-        or "TObjectDecl(contextual-type):optional-payload:incompatible-closed-record-shapes"
+        "src/caxecraft/scenario/ScenarioLexer.hx:58:" not in result.stderr
+        or "TCall(unavailable-static-target:function.String.fromCharCode)"
         not in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
         or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
         or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
         in result.stderr
         or "TSwitch(subject-type):closed-record-not-admitted-in-primitive-operation"
+        in result.stderr
+        or "TObjectDecl(contextual-type):optional-payload:incompatible-closed-record-shapes"
         in result.stderr
     ):
         raise BytesRuntimeFailure(

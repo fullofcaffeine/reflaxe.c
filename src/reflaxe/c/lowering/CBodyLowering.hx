@@ -4432,7 +4432,8 @@ private class FunctionBuilder {
 	}
 
 	function lowerAggregateLiteral(expression:TypedExpr, fields:Array<{name:String, expr:TypedExpr}>, expectedMapping:Null<CBodyValueType>):LoweredValue {
-		final mapping = bodyValueType(expression.t, expression.pos, "TObjectDecl(type)");
+		final contextualMapping = contextualAggregateLiteralMapping(expectedMapping);
+		final mapping = contextualMapping == null ? bodyValueType(expression.t, expression.pos, "TObjectDecl(type)") : contextualMapping;
 		final aggregate = mapping.aggregateValue();
 		if (aggregate == null) {
 			return unsupported(expression, "TObjectDecl(non-aggregate-type)");
@@ -4466,6 +4467,27 @@ private class FunctionBuilder {
 			freshManagedAggregateValueIds.set(result.id, true);
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
 		return expectedMapping == null ? lowered : coerce(lowered, expectedMapping, expression.pos, "TObjectDecl(contextual-type)");
+	}
+
+	/**
+		Choose the declared record payload that Haxe already assigned to a literal.
+
+		A field expression may retain a wider typed-tree value after source flow
+		has proved it safe. For example, `value` can still be typed
+		`Null<Choice>` after an earlier null-return guard even though the literal's
+		declared `ParsedChoice.value` field is `Choice`. Building a temporary
+		anonymous layout from those wider field types invents a second,
+		incompatible C struct. The contextual aggregate is the real destination;
+		`lowerAggregateLiteral` still validates every field and `coerce` emits the
+		checked unwrap or other required field conversion.
+	**/
+	static function contextualAggregateLiteralMapping(expected:Null<CBodyValueType>):Null<CBodyValueType> {
+		if (expected == null)
+			return null;
+		if (expected.aggregateValue() != null)
+			return expected;
+		final optional = expected.optionalValue();
+		return optional != null && optional.payload.aggregateValue() != null ? optional.payload : null;
 	}
 
 	/**

@@ -404,12 +404,17 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
 
 
 def function_section(hxcir: str, field: str) -> str:
-    start_marker = f'  function "function.AggregateFixture.{field}"'
-    end_marker = f'  end function "function.AggregateFixture.{field}"'
+    return named_function_section(hxcir, "AggregateFixture", field)
+
+
+def named_function_section(hxcir: str, module: str, field: str) -> str:
+    """Return one complete function so checks cannot pass on a neighboring body."""
+    start_marker = f'  function "function.{module}.{field}"'
+    end_marker = f'  end function "function.{module}.{field}"'
     start = hxcir.find(start_marker)
     end = hxcir.find(end_marker, start)
     if start == -1 or end == -1:
-        raise AggregateLoweringFailure(f"HxcIR omitted function {field}")
+        raise AggregateLoweringFailure(f"HxcIR omitted function {module}.{field}")
     return hxcir[start : end + len(end_marker)]
 
 
@@ -1231,6 +1236,29 @@ def check_negative_cases() -> None:
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
 
+        # A contextual object literal with the wrong shape is rejected by the
+        # Haxe typer before haxe.c receives TypedExpr. This separate assertion
+        # keeps the source-positioned boundary honest without manufacturing an
+        # impossible malformed TypedExpr through casts or untyped source.
+        contextual_output = root / "contextual-mismatch"
+        contextual = custom_target(
+            FIXTURES / "contextual_mismatch", contextual_output, main="Main"
+        )
+        contextual_combined = (contextual.stdout + contextual.stderr).replace(
+            "\\", "/"
+        )
+        if (
+            contextual.returncode == 0
+            or "fixtures/contextual_mismatch/Main.hx:" not in contextual_combined
+            or "has no field y" not in contextual_combined
+            or generated_files(contextual_output)
+        ):
+            raise AggregateLoweringFailure(
+                "contextually typed record mismatch did not fail in the Haxe "
+                "front end with a source position and no output\n"
+                f"stdout:\n{contextual.stdout}\nstderr:\n{contextual.stderr}"
+            )
+
         metal_output = root / "metal-packed-struct"
         metal = custom_target(
             ROOT / "test/typed_c/fixtures/metal_packed_struct",
@@ -1304,6 +1332,19 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
                     raise AggregateLoweringFailure(
                         f"{label} managed optional C omitted lifecycle marker {marker!r}"
                     )
+            generated_headers = b"\n".join(
+                path.read_bytes() for path in sorted(output.rglob("*.h"))
+            )
+            parsed_choice_declaration = (
+                b"struct hxc_Main_ParsedChoice {\n"
+                b"  int32_t hxc_next;\n"
+                b"  struct hxc_Main_RecursiveChoice hxc_value;\n"
+                b"};"
+            )
+            if generated_headers.count(parsed_choice_declaration) != 1:
+                raise AggregateLoweringFailure(
+                    f"{label} did not emit exactly one readable ParsedChoice layout"
+                )
 
         matrix = (
             ("first", "unity", False),
@@ -1337,6 +1378,30 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
                     if marker not in hxcir:
                         raise AggregateLoweringFailure(
                             f"managed optional HxcIR omitted {marker!r}"
+                        )
+                parsed_choice = named_function_section(
+                    hxcir, "Main", "parsedChoice"
+                )
+                record_ids = set(
+                    re.findall(r'instance\.closed-record\.[0-9a-f]+', parsed_choice)
+                )
+                if len(record_ids) != 1:
+                    raise AggregateLoweringFailure(
+                        "contextually typed optional record literal did not keep one "
+                        f"record identity: {sorted(record_ids)!r}"
+                    )
+                record_id = next(iter(record_ids))
+                for marker in (
+                    "direct-optional-null-check",
+                    "direct-optional-unwrap",
+                    "retain-record-enum-field",
+                    f'construct-aggregate instance="{record_id}"',
+                    f"target=nullable(tagged,instance(\"{record_id}\"))",
+                ):
+                    if marker not in parsed_choice:
+                        raise AggregateLoweringFailure(
+                            "contextually typed optional record HxcIR omitted "
+                            f"{marker!r}"
                         )
             else:
                 require_compile_success(result, f"{name} managed optional compile")
