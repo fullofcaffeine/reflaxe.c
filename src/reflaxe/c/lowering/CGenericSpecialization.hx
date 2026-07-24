@@ -457,6 +457,17 @@ class CGenericCallResolver {
 			]:
 				matchNominal(basePath(leftReference.get()), basePath(rightReference.get()), leftParameters, rightParameters, parameters, bindings, caller,
 					profile, position, fail, node);
+			case [TAbstract(leftReference, [leftValue]), _] if (isNullAbstract(leftReference.get())):
+				/*
+					A non-null value is valid wherever Haxe accepts `Null<T>`.
+
+					The typed front end has already proved that the call is legal. This
+					resolver's narrower job is to recover closed generic arguments, so
+					it must compare the nullable parameter's payload with the concrete
+					argument rather than demanding identical wrappers. Body lowering
+					still emits the explicit nullable injection required by HxcIR and C.
+				**/
+				match(leftValue, right, parameters, bindings, caller, profile, position, fail, '$node:nullable-value');
 			case [TInst(leftReference, leftParameters), TInst(rightReference, rightParameters)]:
 				matchNominal(basePath(leftReference.get()), basePath(rightReference.get()), leftParameters, rightParameters, parameters, bindings, caller,
 					profile, position, fail, node);
@@ -552,6 +563,9 @@ class CGenericCallResolver {
 
 	static function basePath(definition:BaseType):String
 		return definition.pack.concat([definition.name]).join(".");
+
+	static function isNullAbstract(definition:AbstractType):Bool
+		return definition.pack.length == 0 && definition.name == "Null";
 
 	static function rejected<T>(fail:(Position, String) -> Void, position:Position, node:String):T {
 		fail(position, node);

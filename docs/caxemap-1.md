@@ -396,13 +396,18 @@ value-lifecycle callbacks. Completed issues `haxe_c-djl.8` and `haxe_c-djl.9`
 own those additions.
 
 The complete Caxecraft compile now passes every StringMap boundary above and
-stops at the unrelated generic instance method
-`ScenarioRecordCursor.failAt<T>`. Each call supplies a concrete
-`ScenarioReadResult<T>`, but haxe.c does not yet specialize that instance method
-into a closed C signature. Issue `haxe_c-djl.10` owns the general method
-specialization. Until it lands, this section is not evidence that the complete
-CaxeFlow registry or executor runs in generated C; unrelated DomainProbe output
-does not fill that gap.
+the direct generic instance method `ScenarioRecordCursor.failAt<T>`. haxe.c
+creates one deterministic closed method body for each concrete
+`ScenarioReadResult<T>` used by the parser; completed issue `haxe_c-djl.10`
+owns that general capability.
+
+The next unrelated boundary is `String.charAt`. Reachability currently
+misclassifies this intrinsic String operation as an ordinary virtual class
+method, although String has a dedicated representation and lowering path.
+Issue `haxe_c-djl.11` owns the shared intrinsic-method classification fix.
+Until it lands, this section is not evidence that the complete CaxeFlow
+registry or executor runs in generated C; unrelated DomainProbe output does
+not fill that gap.
 
 Arguments are `value flag <bool>`, `value counter <int>`, `value state
 <content-id>`, or `variable <variable-id>`. CAXEMAP 1 does not admit an object

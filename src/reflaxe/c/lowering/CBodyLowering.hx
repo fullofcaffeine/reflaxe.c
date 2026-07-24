@@ -851,8 +851,8 @@ class CBodyLowering {
 		return 'method.$declarationPath.$fieldName';
 
 	public static function functionInputId(input:CBodyFunctionInput):String
-		return input.instanceOwner != null ? methodId(input.declarationPath,
-			input.fieldName) : input.specialization == null ? functionId(input.declarationPath, input.fieldName) : input.specialization.instanceId;
+		return input.specialization != null ? input.specialization.instanceId : input.instanceOwner != null ? methodId(input.declarationPath,
+			input.fieldName) : functionId(input.declarationPath, input.fieldName);
 
 	public static function functionInputDisplayName(input:CBodyFunctionInput):String
 		return input.specialization == null ? input.fieldName : input.specialization.displayName;
@@ -6708,23 +6708,27 @@ private class FunctionBuilder {
 			materializeResult:Bool):Null<LoweredValue> {
 		final declaration = CBodyDispatchCatalog.declaringClass(access.owner, access.field);
 		final field = access.field.get();
-		final targetId = CBodyDispatchCatalog.methodIdForAccess(access.owner, access.field);
+		final baseTargetId = CBodyDispatchCatalog.methodIdForAccess(access.owner, access.field);
 		final interfaceCall = declaration.get().isInterface;
 		final ownerMapping = bodyValueType(interfaceCall ? access.receiver.t : TInst(declaration, []), access.receiver.pos,
-			'TCall(instance:$targetId:receiver-type)');
+			'TCall(instance:$baseTargetId:receiver-type)');
 		if (!interfaceCall && ownerMapping.classValue() == null)
-			return unsupported(expression, 'TCall(instance:$targetId:receiver-not-concrete-class)');
+			return unsupported(expression, 'TCall(instance:$baseTargetId:receiver-not-concrete-class)');
 		if (interfaceCall && ownerMapping.interfaceValue() == null)
-			return unsupported(expression, 'TCall(instance:$targetId:receiver-not-interface)');
+			return unsupported(expression, 'TCall(instance:$baseTargetId:receiver-not-interface)');
 		var receiver = if (CBodyDispatchCatalog.isSuperReceiver(access.receiver)) {
 			final self = selfValue;
-			self == null ? unsupported(access.receiver, 'TCall(super-method:outside-instance-method:$targetId)') : self;
+			self == null ? unsupported(access.receiver, 'TCall(super-method:outside-instance-method:$baseTargetId)') : self;
 		} else {
 			lowerValue(access.receiver);
 		};
-		receiver = coerce(receiver, ownerMapping, access.receiver.pos, 'TCall(instance:$targetId:receiver)');
+		receiver = coerce(receiver, ownerMapping, access.receiver.pos, 'TCall(instance:$baseTargetId:receiver)');
 
 		final directReason = interfaceCall ? null : CBodyDispatchCatalog.directReason(access.receiver, declaration, field);
+		final targetId = directReason != null
+			&& field.params.length != 0 ? CGenericCallResolver.resolve(baseTargetId, field.type, field.params, access.calleeType,
+				argumentExpressions.map(argument -> argument.t), input.specialization, context.profile, expression.pos, unsupportedAt)
+				.instanceId() : baseTargetId;
 		final explicitMappings:Array<CBodyValueType> = [];
 		final explicitBorrowedClasses:Array<Bool> = [];
 		var returnMapping:CBodyValueType;

@@ -177,6 +177,7 @@ def read_artifacts(output: Path) -> dict[str, bytes]:
 def render_positive(
     output: Path,
     *,
+    layout: str = "unity",
     reverse: bool = False,
     locale: str = "C",
     connect: str | None = None,
@@ -186,6 +187,7 @@ def render_positive(
     result = compile_fixture(
         "positive",
         output,
+        layout=layout,
         reverse=reverse,
         locale=locale,
         connect=connect,
@@ -314,10 +316,10 @@ def validate_positive(project: RenderedProject) -> None:
     summary = require_dict(report.get("summary"), "specialization summary")
     limits = require_dict(report.get("limits"), "specialization limits")
     if (
-        len(functions) != 10
-        or len(types) != 2
-        or summary.get("functionSpecializations") != 10
-        or summary.get("typeSpecializations") != 2
+        len(functions) != 16
+        or len(types) != 3
+        or summary.get("functionSpecializations") != 16
+        or summary.get("typeSpecializations") != 3
         or limits.get("maxFunctionSpecializations") != 64
         or limits.get("maxTypeSpecializations") != 64
         or limits.get("maxEstimatedSpecializationCBytes") != 524288
@@ -402,6 +404,21 @@ def validate_positive(project: RenderedProject) -> None:
         ("function.Main.choose", ("i32", "f64"))
     )
     recursive_int = by_base_and_arguments.get(("function.Main.recursive", ("i32",)))
+    method_echo_int = by_base_and_arguments.get(
+        ("method.GenericCursor.echo", ("i32",))
+    )
+    method_echo_bool = by_base_and_arguments.get(
+        ("method.GenericCursor.echo", ("bool",))
+    )
+    method_empty_int = by_base_and_arguments.get(
+        ("method.GenericCursor.empty", ("i32",))
+    )
+    method_empty_float = by_base_and_arguments.get(
+        ("method.GenericCursor.empty", ("f64",))
+    )
+    method_empty_at_int = by_base_and_arguments.get(
+        ("method.GenericCursor.emptyAt", ("i32",))
+    )
     if (
         identity_int is None
         or len(require_list(identity_int.get("reasons"), "identity<Int> reasons")) != 3
@@ -417,7 +434,7 @@ def validate_positive(project: RenderedProject) -> None:
             )
         ]
         != ["A", "B"]
-        or len(identity_enums) != 2
+        or len(identity_enums) != 3
         or any(
             require_dict(
                 require_list(record.get("arguments"), "identity<enum> arguments")[0],
@@ -428,10 +445,16 @@ def validate_positive(project: RenderedProject) -> None:
         )
         or recursive_int is None
         or recursive_int.get("recursive") is not True
-        or len(by_base_and_arguments) != 10
+        or method_echo_int is None
+        or method_echo_bool is None
+        or method_empty_int is None
+        or method_empty_float is None
+        or method_empty_at_int is None
+        or len(by_base_and_arguments) != 16
     ):
         raise GenericSpecializationFailure(
-            "alias sharing, distinct primitive instances, or recursive closure drifted"
+            "alias sharing, static/instance specialization, distinct primitive "
+            "instances, or recursive closure drifted"
         )
 
     type_keys: list[str] = []
@@ -482,7 +505,8 @@ def validate_positive(project: RenderedProject) -> None:
         or len(set(type_keys)) != len(type_keys)
         or "i32" not in types_by_argument
         or len(nested_type_arguments) != 1
-        or len(types_by_argument) != 2
+        or "f64" not in types_by_argument
+        or len(types_by_argument) != 3
     ):
         raise GenericSpecializationFailure(
             "finite nested generic enum specialization did not remain distinct"
@@ -618,6 +642,10 @@ NEGATIVE_EXPECTATIONS = {
     "code_size": (
         "Main.hx:6: lines 6-8",
         "generic-specialization-code-size-budget:68-over-1",
+    ),
+    "virtual_method": (
+        "Main.hx:4: lines 4-6",
+        "virtual-slot-generic-requires-specialization:method.GenericBase.echo",
     ),
 }
 
@@ -994,57 +1022,61 @@ def check_native(requested_toolchain: str) -> list[str]:
     compilers = native_compilers(requested_toolchain)
     with tempfile.TemporaryDirectory(prefix="hxc-generic-native-") as temporary:
         root = Path(temporary)
-        output = root / "generated"
-        project = render_positive(output)
-        build = require_dict(project.manifest.get("build"), "manifest build plan")
-        sources = [
-            output / require_text(value, "build source")
-            for value in require_list(build.get("sources"), "build sources")
-        ]
-        includes = [
-            output / require_text(value, "include directory")
-            for value in require_list(
-                build.get("includeDirectories"), "include directories"
+        for layout in ("split", "package", "unity"):
+            output = root / layout
+            project = render_positive(output, layout=layout)
+            build = require_dict(
+                project.manifest.get("build"), f"{layout} manifest build plan"
             )
-        ]
-        for family, compiler in compilers:
-            for optimization in ("O0", "O2"):
-                executable = root / f"program-{family}-{optimization}"
-                command = [
-                    compiler,
-                    *STRICT_FLAGS,
-                    f"-{optimization}",
-                    *(f"-I{path}" for path in includes),
-                    *(str(path) for path in sources),
-                    "-o",
-                    str(executable),
-                ]
-                compiled = subprocess.run(
-                    command,
-                    cwd=ROOT,
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
+            sources = [
+                output / require_text(value, f"{layout} build source")
+                for value in require_list(build.get("sources"), f"{layout} build sources")
+            ]
+            includes = [
+                output / require_text(value, f"{layout} include directory")
+                for value in require_list(
+                    build.get("includeDirectories"),
+                    f"{layout} include directories",
                 )
-                if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
-                    raise GenericSpecializationFailure(
-                        f"{family} {optimization} rejected generated generic C\n"
-                        f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
+            ]
+            for family, compiler in compilers:
+                for optimization in ("O0", "O2"):
+                    executable = root / f"program-{layout}-{family}-{optimization}"
+                    command = [
+                        compiler,
+                        *STRICT_FLAGS,
+                        f"-{optimization}",
+                        *(f"-I{path}" for path in includes),
+                        *(str(path) for path in sources),
+                        "-o",
+                        str(executable),
+                    ]
+                    compiled = subprocess.run(
+                        command,
+                        cwd=ROOT,
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
                     )
-                executed = subprocess.run(
-                    [str(executable)],
-                    cwd=ROOT,
-                    check=False,
-                    capture_output=True,
-                    timeout=10,
-                )
-                if executed.returncode != 0 or executed.stdout or executed.stderr:
-                    raise GenericSpecializationFailure(
-                        f"{family} {optimization} generic executable drifted: "
-                        f"exit={executed.returncode}, stdout={executed.stdout!r}, "
-                        f"stderr={executed.stderr!r}"
+                    if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+                        raise GenericSpecializationFailure(
+                            f"{family} {optimization} rejected {layout} generated generic C\n"
+                            f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
+                        )
+                    executed = subprocess.run(
+                        [str(executable)],
+                        cwd=ROOT,
+                        check=False,
+                        capture_output=True,
+                        timeout=10,
                     )
+                    if executed.returncode != 0 or executed.stdout or executed.stderr:
+                        raise GenericSpecializationFailure(
+                            f"{family} {optimization} {layout} generic executable drifted: "
+                            f"exit={executed.returncode}, stdout={executed.stdout!r}, "
+                            f"stderr={executed.stderr!r}"
+                        )
     return [family for family, _ in compilers]
 
 

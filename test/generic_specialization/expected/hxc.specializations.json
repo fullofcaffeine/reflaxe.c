@@ -6,10 +6,10 @@
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 44,
+            "startLine": 71,
             "file": "Main.hx",
             "startColumn": 22,
-            "endLine": 44,
+            "endLine": 71,
             "endColumn": 40
           }
         }
@@ -48,10 +48,10 @@
         {
           "callerInstanceId": "function.specialization.c26381eaa7608af4f23df396b9ee4cfe9b312ced96722f149549fecf22f33b53",
           "source": {
-            "startLine": 30,
+            "startLine": 56,
             "file": "Main.hx",
             "startColumn": 10,
-            "endLine": 30,
+            "endLine": 56,
             "endColumn": 24
           }
         }
@@ -84,10 +84,10 @@
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 48,
+            "startLine": 75,
             "file": "Main.hx",
             "startColumn": 24,
-            "endLine": 48,
+            "endLine": 75,
             "endColumn": 62
           }
         }
@@ -115,16 +115,72 @@
       "semanticDigestSha256": "c26381eaa7608af4f23df396b9ee4cfe9b312ced96722f149549fecf22f33b53"
     },
     {
+      "instanceId": "function.specialization.06e6a1db24dde2a490252e12571c9d513fe5d57a879210bda9159f23f7b9b446",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 91,
+            "file": "Main.hx",
+            "startColumn": 4,
+            "endLine": 91,
+            "endColumn": 24
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(22:function.Main.identity1:26:enum(10:GenericBox1:3:f64))",
+      "arguments": [
+        {
+          "representation": "direct-enum",
+          "key": "enum(10:GenericBox1:3:f64)",
+          "parameter": "T",
+          "displayName": "GenericBox<Float>"
+        }
+      ],
+      "cName": "hxc_Main_identity_h9c14f7dfbb57",
+      "displayName": "identity<GenericBox<Float>>",
+      "codeSize": {
+        "definitionSha256": "f168f784e4fae795b8c1c8aca1fb172c92099db466c9e32984ba1c11efa244fe",
+        "definitionBytes": 138,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.identity",
+      "semanticDigestSha256": "06e6a1db24dde2a490252e12571c9d513fe5d57a879210bda9159f23f7b9b446"
+    },
+    {
       "instanceId": "function.specialization.64f8f3d9b51363e9ae52690e11fc2086cd5d1b751bf3063ff9466bd78d9115e1",
       "reasons": [
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 50,
+            "startLine": 77,
             "file": "Main.hx",
             "startColumn": 34,
-            "endLine": 50,
+            "endLine": 77,
             "endColumn": 49
+          }
+        },
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 90,
+            "file": "Main.hx",
+            "startColumn": 4,
+            "endLine": 90,
+            "endColumn": 22
+          }
+        },
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 92,
+            "file": "Main.hx",
+            "startColumn": 4,
+            "endLine": 92,
+            "endColumn": 24
           }
         }
       ],
@@ -156,30 +212,30 @@
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 43,
+            "startLine": 70,
             "file": "Main.hx",
             "startColumn": 25,
-            "endLine": 43,
+            "endLine": 70,
             "endColumn": 38
           }
         },
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 56,
+            "startLine": 89,
             "file": "Main.hx",
             "startColumn": 4,
-            "endLine": 56,
+            "endLine": 89,
             "endColumn": 21
           }
         },
         {
           "callerInstanceId": "function.specialization.7144fbd75777c746113870e78d4be848e3aff7b96f8b315cba222f1c284cc65e",
           "source": {
-            "startLine": 14,
+            "startLine": 40,
             "file": "Main.hx",
             "startColumn": 3,
-            "endLine": 14,
+            "endLine": 40,
             "endColumn": 19
           }
         }
@@ -212,30 +268,30 @@
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 41,
+            "startLine": 68,
             "file": "Main.hx",
             "startColumn": 21,
-            "endLine": 41,
+            "endLine": 68,
             "endColumn": 32
           }
         },
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 42,
+            "startLine": 69,
             "file": "Main.hx",
             "startColumn": 26,
-            "endLine": 42,
+            "endLine": 69,
             "endColumn": 37
           }
         },
         {
           "callerInstanceId": "function.specialization.bb037e38edd8d20445999f7284295e2d8052d82e8b4be7b0e14141054046b2e8",
           "source": {
-            "startLine": 19,
+            "startLine": 45,
             "file": "Main.hx",
             "startColumn": 10,
-            "endLine": 19,
+            "endLine": 45,
             "endColumn": 25
           }
         }
@@ -268,20 +324,20 @@
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 47,
+            "startLine": 74,
             "file": "Main.hx",
             "startColumn": 21,
-            "endLine": 47,
+            "endLine": 74,
             "endColumn": 43
           }
         },
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 55,
+            "startLine": 88,
             "file": "Main.hx",
             "startColumn": 4,
-            "endLine": 55,
+            "endLine": 88,
             "endColumn": 18
           }
         }
@@ -314,10 +370,10 @@
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 45,
+            "startLine": 72,
             "file": "Main.hx",
             "startColumn": 21,
-            "endLine": 45,
+            "endLine": 72,
             "endColumn": 35
           }
         }
@@ -350,10 +406,10 @@
         {
           "callerInstanceId": "function.Main.main",
           "source": {
-            "startLine": 52,
+            "startLine": 79,
             "file": "Main.hx",
             "startColumn": 3,
-            "endLine": 52,
+            "endLine": 79,
             "endColumn": 19
           }
         }
@@ -386,20 +442,20 @@
         {
           "callerInstanceId": "function.specialization.b2856c63292b7ed3ff4f1c78a3a75f74793fdd041524c93a39d4bdf43e7f7744",
           "source": {
-            "startLine": 23,
+            "startLine": 49,
             "file": "Main.hx",
             "startColumn": 10,
-            "endLine": 23,
+            "endLine": 49,
             "endColumn": 26
           }
         },
         {
           "callerInstanceId": "function.specialization.c26381eaa7608af4f23df396b9ee4cfe9b312ced96722f149549fecf22f33b53",
           "source": {
-            "startLine": 28,
+            "startLine": 54,
             "file": "Main.hx",
             "startColumn": 11,
-            "endLine": 28,
+            "endLine": 54,
             "endColumn": 27
           }
         }
@@ -425,6 +481,186 @@
       },
       "baseFunctionId": "function.Main.recursive",
       "semanticDigestSha256": "b2856c63292b7ed3ff4f1c78a3a75f74793fdd041524c93a39d4bdf43e7f7744"
+    },
+    {
+      "instanceId": "function.specialization.378569f9a04d62ba1eb03f61ab0afb17cb3d41f89b6d1c7ed1a156ff33446301",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 80,
+            "file": "Main.hx",
+            "startColumn": 25,
+            "endLine": 80,
+            "endColumn": 40
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(25:method.GenericCursor.echo1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_GenericCursor_echo_haaef745b4b9b",
+      "displayName": "echo<Int>",
+      "codeSize": {
+        "definitionSha256": "8912de799c9968bb81d5380b23b57f6f04ce0819d82317cd0df9eddc99f663ef",
+        "definitionBytes": 141,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "method.GenericCursor.echo",
+      "semanticDigestSha256": "378569f9a04d62ba1eb03f61ab0afb17cb3d41f89b6d1c7ed1a156ff33446301"
+    },
+    {
+      "instanceId": "function.specialization.5c10e6de42a67c828827c4466f24776ebb3f000180991a8f5be7d4f696b3ffb2",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 81,
+            "file": "Main.hx",
+            "startColumn": 27,
+            "endLine": 81,
+            "endColumn": 45
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(25:method.GenericCursor.echo1:4:bool)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "bool",
+          "parameter": "T",
+          "displayName": "Bool"
+        }
+      ],
+      "cName": "hxc_GenericCursor_echo_h795c670d817f",
+      "displayName": "echo<Bool>",
+      "codeSize": {
+        "definitionSha256": "d8cf81151ff67a49b8270fe5940c0d40e6e1ab401a43ca2ce07614f1be384aa3",
+        "definitionBytes": 135,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "method.GenericCursor.echo",
+      "semanticDigestSha256": "5c10e6de42a67c828827c4466f24776ebb3f000180991a8f5be7d4f696b3ffb2"
+    },
+    {
+      "instanceId": "function.specialization.1467a5539e7c67c4db56495a7763187fec585dcb8dbc715fd135ea6285463066",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 83,
+            "file": "Main.hx",
+            "startColumn": 40,
+            "endLine": 83,
+            "endColumn": 54
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(26:method.GenericCursor.empty1:3:f64)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "f64",
+          "parameter": "T",
+          "displayName": "Float"
+        }
+      ],
+      "cName": "hxc_GenericCursor_empty_hd69866324f00",
+      "displayName": "empty<Float>",
+      "codeSize": {
+        "definitionSha256": "5e463d7ea98ed1b1698be5891c4a6a6e7854a9e9ac93dcbdd5af0298015180d4",
+        "definitionBytes": 228,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 1,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "method.GenericCursor.empty",
+      "semanticDigestSha256": "1467a5539e7c67c4db56495a7763187fec585dcb8dbc715fd135ea6285463066"
+    },
+    {
+      "instanceId": "function.specialization.e1238113659e67d87bd9fdcee597ed17828f375ac60b7bce4f510f554d800f49",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 82,
+            "file": "Main.hx",
+            "startColumn": 36,
+            "endLine": 82,
+            "endColumn": 50
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(26:method.GenericCursor.empty1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_GenericCursor_empty_h704fd570bfe7",
+      "displayName": "empty<Int>",
+      "codeSize": {
+        "definitionSha256": "601665b8c3183040d9e9f6540d48a2f562e5cc11fbf0fa18a0dc2aab29971ef4",
+        "definitionBytes": 228,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 1,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "method.GenericCursor.empty",
+      "semanticDigestSha256": "e1238113659e67d87bd9fdcee597ed17828f375ac60b7bce4f510f554d800f49"
+    },
+    {
+      "instanceId": "function.specialization.7233650df2b9f1441445e9b14bdfcc7c15ce5e841f3b657121fb03fc48f2f4a6",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 85,
+            "file": "Main.hx",
+            "startColumn": 38,
+            "endLine": 85,
+            "endColumn": 60
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(28:method.GenericCursor.emptyAt1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_GenericCursor_emptyAt",
+      "displayName": "emptyAt<Int>",
+      "codeSize": {
+        "definitionSha256": "24453222a899b454fd77a61ce44c4298308d02f5e7ca17dd0ed6b4d3cc8c72e6",
+        "definitionBytes": 275,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 1,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "method.GenericCursor.emptyAt",
+      "semanticDigestSha256": "7233650df2b9f1441445e9b14bdfcc7c15ce5e841f3b657121fb03fc48f2f4a6"
     }
   ],
   "compactNameDigest": "sha256-with-full-key-collision-check",
@@ -438,25 +674,25 @@
       "instanceId": "instance.enum.05ad2ddb427eac20ba432aac33d6e575f7bb4485d6a4f922c2665a451e82ad86",
       "reasons": [
         {
-          "startLine": 51,
+          "startLine": 35,
+          "file": "Main.hx",
+          "startColumn": 41,
+          "endLine": 37,
+          "endColumn": 3
+        },
+        {
+          "startLine": 78,
           "file": "Main.hx",
           "startColumn": 3,
-          "endLine": 51,
+          "endLine": 78,
           "endColumn": 59
         },
         {
-          "startLine": 51,
+          "startLine": 78,
           "file": "Main.hx",
           "startColumn": 46,
-          "endLine": 51,
+          "endLine": 78,
           "endColumn": 58
-        },
-        {
-          "startLine": 9,
-          "file": "Main.hx",
-          "startColumn": 41,
-          "endLine": 11,
-          "endColumn": 3
         }
       ],
       "representation": "tagged-union",
@@ -483,63 +719,160 @@
       "haxePath": "GenericBox"
     },
     {
-      "instanceId": "instance.enum.a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8",
+      "instanceId": "instance.enum.48b43d40f00027f7d24bcf94198f1ad2b5db90a0d09f36a639d648fb255e0201",
       "reasons": [
         {
-          "startLine": 33,
+          "startLine": 25,
           "file": "Main.hx",
-          "startColumn": 51,
-          "endLine": 38,
+          "startColumn": 43,
+          "endLine": 27,
           "endColumn": 3
         },
         {
-          "startLine": 34,
+          "startLine": 26,
+          "file": "Main.hx",
+          "startColumn": 10,
+          "endLine": 26,
+          "endColumn": 15
+        },
+        {
+          "startLine": 35,
+          "file": "Main.hx",
+          "startColumn": 41,
+          "endLine": 37,
+          "endColumn": 3
+        },
+        {
+          "startLine": 83,
+          "file": "Main.hx",
+          "startColumn": 3,
+          "endLine": 83,
+          "endColumn": 55
+        }
+      ],
+      "representation": "tagged-union",
+      "recursive": false,
+      "specializationKey": "haxe-enum-v1(10:GenericBox1:3:f64)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "f64",
+          "parameter": "T",
+          "displayName": "Float"
+        }
+      ],
+      "cName": "hxc_GenericBox_h2db4dd870e4d",
+      "declarationId": "type.enum.48b43d40f00027f7d24bcf94198f1ad2b5db90a0d09f36a639d648fb255e0201",
+      "displayName": "GenericBox<f64>",
+      "codeSize": {
+        "payloadFieldCount": 1,
+        "metric": "typed-enum-layout-structural-units",
+        "structuralUnits": 4,
+        "constructorCount": 2
+      },
+      "semanticDigestSha256": "48b43d40f00027f7d24bcf94198f1ad2b5db90a0d09f36a639d648fb255e0201",
+      "haxePath": "GenericBox"
+    },
+    {
+      "instanceId": "instance.enum.a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8",
+      "reasons": [
+        {
+          "startLine": 25,
+          "file": "Main.hx",
+          "startColumn": 43,
+          "endLine": 27,
+          "endColumn": 3
+        },
+        {
+          "startLine": 26,
+          "file": "Main.hx",
+          "startColumn": 10,
+          "endLine": 26,
+          "endColumn": 15
+        },
+        {
+          "startLine": 29,
+          "file": "Main.hx",
+          "startColumn": 64,
+          "endLine": 31,
+          "endColumn": 3
+        },
+        {
+          "startLine": 30,
+          "file": "Main.hx",
+          "startColumn": 10,
+          "endLine": 30,
+          "endColumn": 15
+        },
+        {
+          "startLine": 35,
+          "file": "Main.hx",
+          "startColumn": 41,
+          "endLine": 37,
+          "endColumn": 3
+        },
+        {
+          "startLine": 59,
+          "file": "Main.hx",
+          "startColumn": 51,
+          "endLine": 64,
+          "endColumn": 3
+        },
+        {
+          "startLine": 60,
           "file": "Main.hx",
           "startColumn": 17,
-          "endLine": 34,
+          "endLine": 60,
           "endColumn": 22
         },
         {
-          "startLine": 36,
+          "startLine": 62,
           "file": "Main.hx",
           "startColumn": 15,
-          "endLine": 36,
+          "endLine": 62,
           "endColumn": 20
         },
         {
-          "startLine": 49,
+          "startLine": 76,
           "file": "Main.hx",
           "startColumn": 3,
-          "endLine": 49,
+          "endLine": 76,
           "endColumn": 49
         },
         {
-          "startLine": 49,
+          "startLine": 76,
           "file": "Main.hx",
           "startColumn": 33,
-          "endLine": 49,
+          "endLine": 76,
           "endColumn": 48
         },
         {
-          "startLine": 50,
+          "startLine": 77,
           "file": "Main.hx",
           "startColumn": 3,
-          "endLine": 50,
+          "endLine": 77,
           "endColumn": 50
         },
         {
-          "startLine": 5,
+          "startLine": 82,
           "file": "Main.hx",
-          "startColumn": 2,
-          "endLine": 5,
-          "endColumn": 17
+          "startColumn": 3,
+          "endLine": 82,
+          "endColumn": 51
+        },
+        {
+          "startLine": 85,
+          "file": "Main.hx",
+          "startColumn": 3,
+          "endLine": 85,
+          "endColumn": 61
         },
         {
           "startLine": 9,
           "file": "Main.hx",
-          "startColumn": 41,
-          "endLine": 11,
-          "endColumn": 3
+          "startColumn": 2,
+          "endLine": 9,
+          "endColumn": 17
         }
       ],
       "representation": "tagged-union",
@@ -572,15 +905,15 @@
   "codeSizeAttribution": "function definitions are isolated; enum bytes conservatively include the dependency-closed emitted enum block",
   "summary": {
     "recursiveSpecializations": 1,
-    "functionSpecializations": 10,
-    "typeSpecializations": 2,
+    "functionSpecializations": 16,
+    "typeSpecializations": 3,
     "generatedPayloadArtifacts": 3,
-    "specializedFunctionDefinitionBytes": 1313,
-    "mergedTypeReasons": 11,
-    "generatedPayloadBytes": 9400,
-    "dependencyClosedEnumDefinitionBytes": 3867,
-    "mergedFunctionReasons": 16,
-    "estimatedSpecializationCBytes": 5180
+    "specializedFunctionDefinitionBytes": 2458,
+    "mergedTypeReasons": 21,
+    "generatedPayloadBytes": 16605,
+    "dependencyClosedEnumDefinitionBytes": 5771,
+    "mergedFunctionReasons": 24,
+    "estimatedSpecializationCBytes": 8229
   },
   "algorithm": "hxc-generic-specialization-v1"
 }

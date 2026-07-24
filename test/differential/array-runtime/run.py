@@ -635,18 +635,18 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     if result.returncode == 0:
         return
     # Full Caxecraft now passes the Bytes value carried by
-    # EditorValidationResult.ValidationPassed and every currently required
-    # StringMap value family: Bool, managed FlowSequence records, the fieldless
-    # FlowValueKind enum, and Int depth caches. The next unsupported construct
-    # is ScenarioRecordCursor.failAt<T>, whose concrete calls require generic
-    # instance-method specialization. Naming that exact boundary proves the
-    # compiler traversed the earlier Array, function-value, StringMap,
-    # abstract-record, Bytes-enum, record, enum, and integer paths; accepting
-    # any later failure would let one of those regressions pass unnoticed.
-    # haxe_c-djl.10 owns the general generic-instance-method capability.
+    # EditorValidationResult.ValidationPassed, every currently required
+    # StringMap value family, and ScenarioRecordCursor.failAt<T>'s direct
+    # generic instance-method specializations. The next unsupported construct
+    # is String.charAt: graph discovery incorrectly treats this intrinsic String
+    # operation as an ordinary virtual class slot. Naming that exact boundary
+    # proves the compiler traversed the earlier Array, function-value,
+    # StringMap, abstract-record, Bytes-enum, record, enum, integer, and generic
+    # method paths; accepting any later failure would let one regress unnoticed.
+    # haxe_c-djl.11 owns the shared intrinsic-instance dispatch classification.
     if (
-        "ScenarioRecordCursor.hx:52:" not in result.stderr
-        or "TFunction(return-type).type-argument:open-type-argument:failAt.T"
+        "std/String.hx:63:" not in result.stderr
+        or "virtual-slot:slot.String.charAt:owner:not-concrete-class"
         not in result.stderr
         or "CaxeFlowState" in result.stderr
         or "CaxeFlowRulePlanner" in result.stderr
@@ -655,7 +655,7 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
         or "EditorValidationResult" in result.stderr
     ):
         raise ArrayRuntimeFailure(
-            "Caxecraft did not compile past its former Array/Class/StringMap/nominal-abstract boundaries\n"
+            "Caxecraft did not compile past its former Array/Class/StringMap/generic-method boundaries\n"
             f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
         )
 

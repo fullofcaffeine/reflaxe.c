@@ -16,6 +16,10 @@ import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
 import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericSpecializationReason;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeArgument;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 
@@ -29,7 +33,11 @@ typedef CBodyInstanceCallAccess = {
 	final receiver:TypedExpr;
 	final owner:Ref<ClassType>;
 	final field:Ref<ClassField>;
+	final calleeType:Type;
 }
+
+/** Joins direct instance-call discovery with the shared specialization owner. */
+typedef CBodyInstanceMethodSpecializer = (CBodyFunctionInput, Array<CGenericTypeArgument>, CGenericSpecializationReason) -> CBodyFunctionInput;
 
 enum CBodyDispatchCallKind {
 	CBDDirect(targetFunctionId:String, reason:String);
@@ -148,27 +156,40 @@ class CBodyDispatchCatalog {
 		return selectedImplementations();
 	}
 
-	public function collectCall(expression:TypedExpr, callerFunctionId:String, callerSourcePath:String):Array<CBodyFunctionInput> {
+	public function collectCall(expression:TypedExpr, callerFunctionId:String, callerSourcePath:String,
+			callerSpecialization:Null<CGenericFunctionSpecialization>, specialize:CBodyInstanceMethodSpecializer):Array<CBodyFunctionInput> {
 		final call = switch expression.expr {
-			case TCall(callee, _): instanceAccess(callee);
+			case TCall(callee, arguments):
+				final access = instanceAccess(callee);
+				access == null ? null : {access: access, arguments: arguments};
 			case _: null;
 		};
 		if (call == null)
 			return [];
-		final declaration = declaringClass(call.owner, call.field);
-		final field = call.field.get();
+		final access = call.access;
+		final declaration = declaringClass(access.owner, access.field);
+		final field = access.field.get();
 		final methodId = CBodyLowering.methodId(classPath(declaration.get()), field.name);
-		final staticReceiver = receiverClass(call.receiver);
+		final staticReceiver = receiverClass(access.receiver);
 		final receiverPath = staticReceiver == null ? classPath(declaration.get()) : classPath(staticReceiver.get());
 		final source = HaxeSourceSpan.fromPosition(expression.pos, callerSourcePath);
-		final directReason = directReason(call.receiver, declaration, field);
+		final directReason = directReason(access.receiver, declaration, field);
 		if (directReason != null) {
-			final target = methodsById.get(methodId);
+			var target = methodsById.get(methodId);
 			if (target == null)
 				unsupportedAt(field.pos, sourcePath(declaration), 'TCall(unavailable-instance-target:$methodId)');
-			calls.push(new CBodyDispatchCallInput(callerFunctionId, methodId, receiverPath, CBDDirect(methodId, directReason), source));
+			if (target != null && field.params.length != 0) {
+				final resolved = CGenericCallResolver.resolve(methodId, field.type, field.params, access.calleeType,
+					call.arguments.map(argument -> argument.t), callerSpecialization, context.profile, expression.pos,
+					(position, node) -> unsupportedAt(position, callerSourcePath, node));
+				target = specialize(target, resolved.arguments, new CGenericSpecializationReason(callerFunctionId, source, expression.pos));
+			}
+			final targetId = target == null ? methodId : CBodyLowering.functionInputId(target);
+			calls.push(new CBodyDispatchCallInput(callerFunctionId, targetId, receiverPath, CBDDirect(targetId, directReason), source));
 			return target == null ? [] : [target];
 		}
+		if (field.params.length != 0)
+			unsupportedAt(field.pos, sourcePath(declaration), 'virtual-slot-generic-requires-specialization:$methodId');
 		switch field.kind {
 			case FMethod(MethDynamic):
 				unsupportedAt(field.pos, sourcePath(declaration), 'TCall(dynamic-instance-method-requires-E3.T08:$methodId)');
@@ -185,7 +206,7 @@ class CBodyDispatchCatalog {
 			calls.push(new CBodyDispatchCallInput(callerFunctionId, methodId, receiverPath, CBDInterface(slot.id, "ordinary-interface-method"), source));
 			return selectedImplementations();
 		}
-		final slot = requireSlot(declaration, call.field);
+		final slot = requireSlot(declaration, access.field);
 		slotsByMethodId.set(methodId, slot);
 		calls.push(new CBodyDispatchCallInput(callerFunctionId, methodId, receiverPath, CBDVirtual(slot.id, "ordinary-overridable-instance-method"), source));
 		return selectedImplementations();
@@ -442,7 +463,12 @@ class CBodyDispatchCatalog {
 
 	public static function instanceAccess(callee:TypedExpr):Null<CBodyInstanceCallAccess> {
 		return switch callee.expr {
-			case TField(receiver, FInstance(owner, _, field)): {receiver: receiver, owner: owner, field: field};
+			case TField(receiver, FInstance(owner, _, field)): {
+					receiver: receiver,
+					owner: owner,
+					field: field,
+					calleeType: callee.t
+				};
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): instanceAccess(inner);
 			case _: null;
 		};

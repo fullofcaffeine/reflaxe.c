@@ -164,7 +164,8 @@ class CStaticFunctionGraphCollector {
 					&& !isStringMapInstanceCall(callee)
 					&& !isBytesInstanceCall(callee)):
 				final callerId = currentConstructor == null ? CBodyLowering.functionInputId(caller) : currentConstructor.id;
-				for (method in requireDispatchCatalog().collectCall(expression, callerId, caller.sourcePath))
+				for (method in requireDispatchCatalog().collectCall(expression, callerId, caller.sourcePath, caller.specialization,
+					(base, arguments, reason) -> specializedInput(base, requireSpecialization(base, arguments, reason))))
 					add(method, byId, pending);
 			case TCall(callee, arguments)
 				if (!isCompilerIntrinsicCall(callee)
@@ -336,7 +337,7 @@ class CStaticFunctionGraphCollector {
 
 	function requireSpecialization(base:CBodyFunctionInput, arguments:Array<CGenericTypeArgument>,
 			reason:CGenericSpecializationReason):CGenericFunctionSpecialization {
-		final baseId = CBodyLowering.functionId(base.declarationPath, base.fieldName);
+		final baseId = CBodyLowering.functionInputId(base);
 		final key = CGenericTypeCanonicalizer.functionKey(baseId, arguments);
 		final existing = specializationsByKey.get(key);
 		if (existing != null) {
@@ -370,7 +371,8 @@ class CStaticFunctionGraphCollector {
 			fieldType: base.fieldType,
 			expression: base.expression,
 			typeParameters: typeParameters(base),
-			specialization: specialization
+			specialization: specialization,
+			instanceOwner: base.instanceOwner
 		};
 
 	static function typeParameters(input:CBodyFunctionInput):Array<TypeParameter>

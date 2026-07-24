@@ -1,11 +1,13 @@
 # Deterministic generic specialization
 
-E3.T03 adds a bounded production path for closed generic static functions and
-the already admitted generic enum values. Reachability is discovered from the
-real pinned-Haxe typed call graph, each closed instance is lowered through
-validated HxcIR, and equivalent instances share one structural strict-C11
-definition. This is program-local monomorphization, not a public generic ABI or
-general support for generic classes and containers.
+E3.T03 adds a bounded production path for closed generic functions and the
+already admitted generic enum values. It covers static calls and instance calls
+whose exact method body is known, such as a method on a `final` class.
+Reachability is discovered from the real pinned-Haxe typed call graph, each
+closed instance is lowered through validated HxcIR, and equivalent instances
+share one structural strict-C11 definition. This is program-local
+monomorphization, not a public generic ABI or general support for generic
+classes and containers.
 
 ## Closed input boundary
 
@@ -40,6 +42,22 @@ call is accepted only when every omitted declaration argument is optional; the
 function layer then supplies its typed default. Repeated occurrences of the
 same type parameter must resolve to the same canonical type. Rest, indirect,
 and unresolved virtual or interface omission retain fail-closed boundaries.
+
+The resolver also preserves Haxe's ordinary non-null-to-nullable argument rule.
+For example, a `Marker` value can be passed to a parameter declared as
+`Null<Marker>`. The generic resolver compares `Marker` with the nullable
+parameter's payload while HxcIR body lowering still emits the explicit
+nullable injection. This division matters: the resolver recovers type
+arguments from a call Haxe has already accepted; it does not erase the
+representation step required by C.
+
+An instance method is specialized only when dispatch is statically direct:
+the compiler must know that the call cannot select an override at runtime.
+Each specialization keeps the receiver parameter and uses the same full
+semantic key, worklist, recursion budget, code-size budget, and collision
+checks as a static function. Generic virtual and interface methods remain
+fail-closed because specializing their dispatch-table slots needs a separate
+ABI design; this slice does not guess one.
 
 ## Semantic identity and sharing
 
@@ -152,9 +170,13 @@ npm run snapshots:check
 The focused suite proves alias sharing, distinct `Bool`/`Int`/`UInt`/`Float`
 instances, an ordered two-parameter key, nested generic calls and enum
 arguments, a finite same-key recursive function instance, shared inner and
-outer generic enum layouts, and a runtime-free executable. A separate ordinary
-Haxe fixture carries `LogicalPath(String)` in a closed record through a generic
-identity call. It runs on Eval, compiles through validated HxcIR, repeats
+outer generic enum layouts, and a runtime-free executable. The same source
+uses a final class to prove direct generic instance methods at several concrete
+types, including a type inferred only from the expected return type. It also
+passes a non-null record to a nullable method parameter, proving that
+specialization and body conversion agree. A separate ordinary Haxe fixture
+carries `LogicalPath(String)` in a closed record through a generic identity
+call. It runs on Eval, compiles through validated HxcIR, repeats
 byte-identically, emits readable `hxc_AssetRecord`/`hxc_assetPack` C in split,
 package, and unity layouts, and executes as warning-clean strict C11. A paired
 abstract-over-class-reference record fails at the field and leaves no

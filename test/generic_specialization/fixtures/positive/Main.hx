@@ -1,8 +1,34 @@
 typedef AliasInt = Int;
 
+typedef Marker = {
+	final code:Int;
+}
+
 enum GenericBox<T> {
 	Empty;
 	Value(value:T);
+}
+
+/**
+ * Proves that a direct instance call receives the same bounded specialization
+ * as a static call. The class is `final`, so the compiler knows the exact
+ * method body; an overridable generic method needs a separate dispatch-table
+ * design and remains fail-closed.
+ */
+final class GenericCursor {
+	public function new() {}
+
+	public function echo<T>(value:T):T {
+		return value;
+	}
+
+	public function empty<T>():GenericBox<T> {
+		return Empty;
+	}
+
+	public function emptyAt<T>(marker:Null<Marker>):GenericBox<T> {
+		return Empty;
+	}
 }
 
 class Main {
@@ -38,6 +64,7 @@ class Main {
 	}
 
 	static function main():Void {
+		final cursor = new GenericCursor();
 		final first:Int = identity(7);
 		final alias:AliasInt = identity(8);
 		final decimal:Float = identity(2.5);
@@ -50,10 +77,19 @@ class Main {
 		final echoed:GenericBox<Int> = identity(boxed);
 		final nested:GenericBox<GenericBox<Int>> = Value(boxed);
 		identity(nested);
+		final methodInt:Int = cursor.echo(11);
+		final methodBool:Bool = cursor.echo(false);
+		final emptyInt:GenericBox<Int> = cursor.empty();
+		final emptyFloat:GenericBox<Float> = cursor.empty();
+		final marker:Marker = {code: 1};
+		final emptyAtInt:GenericBox<Int> = cursor.emptyAt(marker);
 		final result = unbox(echoed);
-		if (flag && result == 0) {
+		if (flag && methodBool && result + methodInt == 0) {
 			identity(bits);
 			identity(decimal);
+			identity(emptyInt);
+			identity(emptyFloat);
+			identity(emptyAtInt);
 		}
 	}
 }
