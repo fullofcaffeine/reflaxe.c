@@ -53,6 +53,8 @@ final class Main {
 		records.push({commands: arguments});
 		final recordCopy = records[0];
 		recordCopy.commands.push(Number(11));
+		final nestedRecordCommandCount = countFirstEnabledRecord(records, true);
+		final nestedEnvelopeCommandCount = countFirstScheduledCommands(envelopes, true);
 		switch scheduled {
 			case Schedule(projected):
 				managedPayloadLength = projected.length;
@@ -65,8 +67,63 @@ final class Main {
 		final present = maybeValues(true);
 		while (values.length != 3 || labels.length != 1 || labels[0] != "ready" || values[2] != 12 || sum != 42 || history.depth() != 1
 			|| history.lastRevision() != 42 || history.lastAfterByte() != 11 || history.lastMinimum() != 5 || managedPayloadLength != 3
-			|| recordCopy.commands.length != 3 || absent != null || present == null || nullableLength(absent) != -1 || nullableLength(present) != 2) {}
+			|| recordCopy.commands.length != 3 || nestedRecordCommandCount != 3 || nestedEnvelopeCommandCount != 3 || absent != null || present == null
+			|| nullableLength(absent) != -1 || nullableLength(present) != 2) {}
 	}
+
+	/**
+		Read an owned managed-record copy for one generated `for`-loop iteration.
+
+		The outer Array read copies and owns the record until that iteration exits.
+		A nested loop may borrow its `commands` field, while `continue`, normal
+		iteration, and the early return must all release the record copy exactly
+		once. Passing the field to `commandCount` proves the owned local—not the
+		Array slot—keeps the nested Array alive across the call.
+	**/
+	static function countFirstEnabledRecord(records:Array<ManagedRecord>, enabled:Bool):Int {
+		for (record in records) {
+			if (!enabled)
+				continue;
+			var visited = 0;
+			for (_ in record.commands)
+				visited++;
+			if (visited > 0)
+				return commandCount(record.commands);
+		}
+		return 0;
+	}
+
+	/**
+		Read an owned managed-enum copy through nested loop and switch control flow.
+
+		Only `Schedule` owns an Array payload. The element destructor must inspect
+		the active tag, preserve the projected Array while the nested loop and call
+		borrow it, and release that payload on `continue`, early return, and normal
+		iteration. `Idle` proves the inactive union arm is never released.
+	**/
+	static function countFirstScheduledCommands(envelopes:Array<ManagedEnvelope>, enabled:Bool):Int {
+		for (envelope in envelopes) {
+			if (!enabled)
+				continue;
+			var result = 0;
+			switch envelope {
+				case Schedule(commands):
+					var visited = 0;
+					for (_ in commands)
+						visited++;
+					if (visited > 0)
+						result = commandCount(commands);
+				case Idle:
+			}
+			if (result > 0)
+				return result;
+		}
+		return 0;
+	}
+
+	/** Read one borrowed Array during a direct call without retaining a new alias. */
+	static function commandCount(commands:Array<ManagedCommand>):Int
+		return commands.length;
 
 	/** Return transfers the newly constructed enum owner to the caller. */
 	static function makeSchedule(arguments:Array<ManagedCommand>):ManagedEnvelope

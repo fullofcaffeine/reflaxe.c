@@ -188,13 +188,23 @@ still rejected before C is emitted. Those operations need an explicit transfer
 of ownership; accepting them without that rule would either leak the copy or
 destroy it while another user still refers to it.
 
+An ordinary Haxe `for (item in array)` is represented by the pinned Haxe
+compiler as a checked indexed read inside a `while` body. That body is now an
+explicit ownership boundary for managed record and managed enum elements.
+Each iteration owns its copied element, nested loops and calls may borrow from
+that owner, and the compiler releases it exactly once before a back edge,
+`continue`, `break`, or early function return. The release keeps the source span
+of the expression that created the owner; the loop decides when cleanup runs,
+but it is not a new reason for selecting a runtime operation.
+
 An enum-pattern binding such as `case Schedule(arguments)` is different: the
 binding borrows the Array from the still-live enum owner for that switch arm.
 The compiler therefore does not retain it merely because Haxe gives the payload
 a local name. This keeps the generated C cleanup in the correct lexical scope.
-Checked indexing that creates an owned managed-element copy inside nested
-control flow remains fail-closed until scoped cleanup regions can represent
-that shorter lifetime.
+An owned managed-element copy created only inside an `if` or switch arm remains
+fail-closed. Those sibling paths do not yet have independent typed cleanup
+scopes, so adding the arm-local owner to the function-wide cleanup list could
+release an uninitialized value on the other path.
 
 ## Feature and capability boundary
 

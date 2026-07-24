@@ -234,6 +234,21 @@ def extract_hxcir(result: subprocess.CompletedProcess[str]) -> str:
     return hxcir
 
 
+def hxcir_function(hxcir: str, function_id: str) -> str:
+    """Return one complete function section from the deterministic text dump."""
+    start_marker = f'  function "{function_id}"'
+    end_marker = f'  end function "{function_id}"'
+    start = hxcir.find(start_marker)
+    if start < 0:
+        raise ArrayRuntimeFailure(f"generated Array HxcIR omitted {function_id}")
+    end = hxcir.find(end_marker, start)
+    if end < 0:
+        raise ArrayRuntimeFailure(
+            f"generated Array HxcIR did not close {function_id}"
+        )
+    return hxcir[start : end + len(end_marker)]
+
+
 def validate_generated_hxcir(hxcir: str) -> None:
     """Prove Array ownership before C syntax is selected."""
     for marker in (
@@ -295,6 +310,59 @@ def validate_generated_hxcir(hxcir: str) -> None:
             raise ArrayRuntimeFailure(
                 "generated Array HxcIR lost managed element-copy cleanup"
             )
+
+    record_loop = hxcir_function(
+        hxcir, "function.Main.countFirstEnabledRecord"
+    )
+    enum_loop = hxcir_function(
+        hxcir, "function.Main.countFirstScheduledCommands"
+    )
+    for label, section, element_owner, local_owner in (
+        (
+            "managed-record loop",
+            record_loop,
+            'array-element-lifecycle:instance.closed-record.',
+            "record-local.",
+        ),
+        (
+            "managed-enum loop",
+            enum_loop,
+            'array-element-lifecycle:instance.enum.',
+            "enum-local.",
+        ),
+    ):
+        for marker in (
+            element_owner,
+            local_owner,
+            "release-branch-local-owner",
+            "terminator return",
+            "terminator jump",
+        ):
+            if marker not in section:
+                raise ArrayRuntimeFailure(
+                    f"generated {label} HxcIR omitted {marker}"
+                )
+
+    # A synthesized loop-edge release must keep the span of the expression that
+    # created its owner. The enclosing loop decides when it runs, but replacing
+    # the action span with the loop span breaks exact runtime provenance.
+    cleanup_action_sources = {
+        line.rsplit(" @", 1)[1]
+        for line in hxcir.splitlines()
+        if " action " in line and " release place=" in line and " @" in line
+    }
+    loop_release_sources = [
+        line.rsplit(" @", 1)[1]
+        for section in (record_loop, enum_loop)
+        for line in section.splitlines()
+        if "release-branch-local-owner" in line and " @" in line
+    ]
+    if not loop_release_sources or any(
+        source not in cleanup_action_sources for source in loop_release_sources
+    ):
+        raise ArrayRuntimeFailure(
+            "generated loop cleanup lost its original owner source span"
+        )
 
 
 def available_port() -> int:
@@ -634,25 +702,24 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     )
     if result.returncode == 0:
         return
-    # Caxecraft now passes ScenarioDocumentReader's retained
-    # Array<ScenarioLexRecord> constructor parameter. The next reachable
-    # boundary is CaxeFlowRuleState.new(id:ScenarioId): constructor signature
-    # planning has not yet admitted the nominal abstract over Haxe String.
-    # Requiring that exact diagnostic proves this Array task did not merely
-    # move or hide its former failure. haxe_c-h2b.3 owns the String constructor
-    # contract; accepting an arbitrary later failure would weaken this product
-    # regression into a generic "Caxecraft still does not compile" check.
+    # Caxecraft now passes the managed Array element copied by
+    # EditorScenarioSnapshot.actionsAreRepresentable. The next reachable
+    # boundary is a fresh Bytes result passed directly into restore(...): call
+    # lowering has not yet given that temporary a caller-owned lifetime.
+    # Requiring the exact later diagnostic proves this task did not merely move
+    # or hide its former Array failure. haxe_c-djl.17 owns the Bytes
+    # call-argument contract; accepting an arbitrary failure would weaken this
+    # product check into "Caxecraft still does not compile."
     if (
-        "src/caxecraft/scenario/CaxeFlowRulePlanner.hx:17:" not in result.stderr
-        or (
-            "TFunction(constructor-argument:0-type-not-admitted:"
-            "static-haxe-string-view:caxecraft.scenario.ScenarioId)"
-        )
+        "src/caxecraft/editor/EditorScenarioSnapshot.hx:50:" not in result.stderr
+        or "TCall(fresh-managed-Bytes-argument-needs-owner:0,"
+        "target=function.caxecraft.editor.EditorScenarioSnapshot.restore)"
         not in result.stderr
-        or "ScenarioDocumentReader" in result.stderr
+        or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
+        in result.stderr
     ):
         raise ArrayRuntimeFailure(
-            "Caxecraft did not compile past its former constructor Array boundary\n"
+            "Caxecraft did not compile past its former managed Array element boundary\n"
             f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
         )
 

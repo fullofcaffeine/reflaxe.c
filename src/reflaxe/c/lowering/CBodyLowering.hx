@@ -2980,7 +2980,7 @@ private class FunctionBuilder {
 		if (needsIncrement) {
 			activateGeneratedBlock(incrementBlock);
 			if (bodyEnd.terminator == null) {
-				appendScopedCleanupInstructions(bodyCleanupDepth, source);
+				appendScopedCleanupInstructions(bodyCleanupDepth);
 				bodyEnd.terminator = {kind: IRTJump(edge(incrementBlock.id)), source: source};
 			}
 			restoreCleanupDepth(bodyCleanupDepth);
@@ -3544,7 +3544,7 @@ private class FunctionBuilder {
 	}
 
 	/** Emit branch-local releases before leaving the C lexical scope that owns them. */
-	function appendScopedCleanupInstructions(depth:Int, source:HxcSourceSpan):Void {
+	function appendScopedCleanupInstructions(depth:Int):Void {
 		var index = normalCleanupActionIds.length;
 		while (index > depth) {
 			final actionId = normalCleanupActionIds[--index];
@@ -3556,7 +3556,10 @@ private class FunctionBuilder {
 				throw new CBodyEmissionError('branch-local cleanup `$actionId` in `${prepared.irId}` lost its typed action');
 			switch found.kind {
 				case IRCARelease(place, implementation):
-					appendInstruction(null, IRIORelease(place, implementation), source, "release-branch-local-owner");
+					// The surrounding boundary decides when cleanup runs, but the
+					// original owner expression remains the reason it exists.
+					// Runtime provenance is matched by exact source span.
+					appendInstruction(null, IRIORelease(place, implementation), found.source, "release-branch-local-owner");
 				case _:
 					throw new CBodyEmissionError('branch-local cleanup `$actionId` in `${prepared.irId}` is not a managed release');
 			}
@@ -4677,7 +4680,7 @@ private class FunctionBuilder {
 		// A call in the condition can return a fresh managed value. Release that
 		// iteration-local owner before either edge leaves the condition block; a
 		// function-exit cleanup would name C storage outside its lexical scope.
-		appendScopedCleanupInstructions(conditionCleanupDepth, source);
+		appendScopedCleanupInstructions(conditionCleanupDepth);
 		restoreCleanupDepth(conditionCleanupDepth);
 		currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(bodyBlock.id), edge(exitBlock.id)), source: source};
 
@@ -4688,7 +4691,7 @@ private class FunctionBuilder {
 		lowerStatement(body);
 		loopControlStack.pop();
 		if (currentBlock.terminator == null) {
-			appendScopedCleanupInstructions(bodyCleanupDepth, source);
+			appendScopedCleanupInstructions(bodyCleanupDepth);
 			currentBlock.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
 		}
 		restoreCleanupDepth(bodyCleanupDepth);
@@ -4711,7 +4714,7 @@ private class FunctionBuilder {
 		final bodyEnd = currentBlock;
 		final reachesCondition = bodyEnd.terminator == null || control.usedContinue;
 		if (bodyEnd.terminator == null) {
-			appendScopedCleanupInstructions(bodyCleanupDepth, source);
+			appendScopedCleanupInstructions(bodyCleanupDepth);
 			bodyEnd.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
 		}
 		restoreCleanupDepth(bodyCleanupDepth);
@@ -4722,7 +4725,7 @@ private class FunctionBuilder {
 			currentBlock = conditionBlock;
 			final conditionCleanupDepth = normalCleanupActionIds.length;
 			final conditionValue = lowerBooleanCondition(condition, "TWhile");
-			appendScopedCleanupInstructions(conditionCleanupDepth, source);
+			appendScopedCleanupInstructions(conditionCleanupDepth);
 			restoreCleanupDepth(conditionCleanupDepth);
 			currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(bodyBlock.id), edge(exitBlock.id)), source: source};
 			currentBlock = exitBlock;
@@ -4748,7 +4751,7 @@ private class FunctionBuilder {
 		}
 		final target = isBreak ? control.breakTargetBlockId : control.continueTargetBlockId;
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
-		appendScopedCleanupInstructions(control.cleanupDepth, source);
+		appendScopedCleanupInstructions(control.cleanupDepth);
 		currentBlock.terminator = {
 			kind: IRTJump(edge(target)),
 			source: source
@@ -4834,7 +4837,7 @@ private class FunctionBuilder {
 			lowerStatement(cases[index].expr);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
-				appendScopedCleanupInstructions(cleanupDepth, source);
+				appendScopedCleanupInstructions(cleanupDepth);
 			}
 			restoreCleanupDepth(cleanupDepth);
 		}
@@ -4844,7 +4847,7 @@ private class FunctionBuilder {
 			lowerStatement(defaultExpression);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
-				appendScopedCleanupInstructions(cleanupDepth, source);
+				appendScopedCleanupInstructions(cleanupDepth);
 			}
 			restoreCleanupDepth(cleanupDepth);
 		}
@@ -4959,7 +4962,7 @@ private class FunctionBuilder {
 			final cleanupDepth = normalCleanupActionIds.length;
 			final value = coerce(lowerValue(cases[index].expr, resultMapping), resultMapping, cases[index].expr.pos, "TSwitch(enum-case-value)");
 			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), value.id), source, "enum-switch-case-store");
-			appendScopedCleanupInstructions(cleanupDepth, source);
+			appendScopedCleanupInstructions(cleanupDepth);
 			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 			restoreCleanupDepth(cleanupDepth);
 		}
@@ -4968,7 +4971,7 @@ private class FunctionBuilder {
 			final cleanupDepth = normalCleanupActionIds.length;
 			final defaultValue = coerce(lowerValue(defaultExpression, resultMapping), resultMapping, defaultExpression.pos, "TSwitch(enum-default-value)");
 			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "enum-switch-default-store");
-			appendScopedCleanupInstructions(cleanupDepth, source);
+			appendScopedCleanupInstructions(cleanupDepth);
 			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 			restoreCleanupDepth(cleanupDepth);
 		}
@@ -6003,7 +6006,7 @@ private class FunctionBuilder {
 		// block before jumping to the join. Registering those owners for ordinary
 		// function-exit cleanup would emit a C reference outside their lexical
 		// scope and would skip cleanup whenever short-circuiting bypasses the block.
-		appendScopedCleanupInstructions(rhsCleanupDepth, source);
+		appendScopedCleanupInstructions(rhsCleanupDepth);
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		restoreCleanupDepth(rhsCleanupDepth);
 		currentBlock = joinBlock;
@@ -6070,7 +6073,7 @@ private class FunctionBuilder {
 				trueValue = captureManagedValue(trueValue, resultMapping, whenTrue.pos, "conditional-true");
 			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), trueValue.id), source, "conditional-true-store");
 		}
-		appendScopedCleanupInstructions(trueCleanupDepth, source);
+		appendScopedCleanupInstructions(trueCleanupDepth);
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		restoreCleanupDepth(trueCleanupDepth);
 
@@ -6084,7 +6087,7 @@ private class FunctionBuilder {
 				falseValue = captureManagedValue(falseValue, resultMapping, falseExpression.pos, "conditional-false");
 			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), falseValue.id), source, "conditional-false-store");
 		}
-		appendScopedCleanupInstructions(falseCleanupDepth, source);
+		appendScopedCleanupInstructions(falseCleanupDepth);
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		restoreCleanupDepth(falseCleanupDepth);
 
@@ -6876,7 +6879,7 @@ private class FunctionBuilder {
 		final destroyImplementationId = array.destroyImplementationId();
 		if (destroyImplementationId == null)
 			return {id: result.id, type: result.type, mapping: array.element};
-		if (currentBlock.generatedRole != null && !StringTools.endsWith(currentBlock.generatedRole, "-exit"))
+		if (!managedArrayElementOwnerHasCleanupBoundary(currentBlock))
 			return unsupported(expression, "TArray(managed-element-owner-in-nested-control-flow-not-yet-admitted)");
 
 		// `get_copy` has constructed a new owned element. Give that value a stable
@@ -6896,6 +6899,24 @@ private class FunctionBuilder {
 		final borrowed = loadPlace({place: IRPLocal(ownerLocalId), mapping: array.element, mutable: false}, expression.pos, "array-element-borrow");
 		borrowedManagedArrayElementValueIds.set(borrowed.id, true);
 		return borrowed;
+	}
+
+	/**
+		Prove that an owned Array element has one structural cleanup boundary.
+
+		An entry or `*-exit` block continues in the function's ordinary lifetime.
+		A `while`/`do` body has a stronger iteration boundary: loop lowering emits
+		every owner added in that body before the back edge, `break`, `continue`, or
+		early function exit. This is exactly where pinned Haxe places the element
+		copy for an ordinary `for (item in array)` loop.
+
+		Other generated blocks remain rejected. In particular, an owner created in
+		only one `if` or switch arm cannot be added to sibling-path cleanup until
+		that branch has its own typed ownership scope.
+	**/
+	static function managedArrayElementOwnerHasCleanupBoundary(block:MutableBodyBlock):Bool {
+		final role = block.generatedRole;
+		return role == null || StringTools.endsWith(role, "-exit") || role == "while-body" || role == "do-body";
 	}
 
 	/** Lower the first mutating Array method without entering virtual dispatch. */

@@ -947,7 +947,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "The bounded array slice provides checked native storage plus a first compiler-selected ordinary-Haxe Array path.",
-      "scope": "Strict C11 evidence covers unboxed primitive and reference lifecycle operations in the native layer. Generated-Haxe evidence covers scalars, Bytes, nested Arrays, closed records, fresh and borrowed managed-record Array-literal elements, and tagged enums whose active payload owns an admitted Array, plus shared aliases, length, checked indexing, push, source-order iteration, class-owned fields, borrowed constructor parameters, constructor-retained final fields and fresh argument owners, tag-aware reverse cleanup, exact runtime selection, and cold/reversed/warm-server determinism.",
+      "scope": "Strict C11 evidence covers unboxed primitive and reference lifecycle operations in the native layer. Generated-Haxe evidence covers scalars, Bytes, nested Arrays, closed records, fresh and borrowed managed-record Array-literal elements, and tagged enums whose active payload owns an admitted Array, plus shared aliases, length, checked indexing, push, source-order iteration, managed record and enum element ownership across nested for-loop control flow, calls, continue, and early return, class-owned fields, borrowed constructor parameters, constructor-retained final fields and fresh argument owners, tag-aware reverse cleanup, exact runtime selection, and cold/reversed/warm-server determinism.",
       "evidence": [
         "docs/aggregate-lowering.md",
         "docs/array-runtime.md",
