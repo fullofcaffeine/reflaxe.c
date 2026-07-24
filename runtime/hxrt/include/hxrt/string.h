@@ -93,6 +93,19 @@ HXC_API hxc_status hxc_string_from_scalar(
 );
 
 /**
+ * Format one Haxe Int as an independently owned decimal String.
+ *
+ * The spelling is locale-independent, uses no leading plus sign or zeroes, and
+ * handles INT32_MIN without overflowing its signed source value. The output
+ * slot must contain HXC_STRING_INITIALIZER.
+ */
+HXC_API hxc_status hxc_string_from_int32(
+  int32_t value,
+  hxc_allocator allocator,
+  hxc_string *out_string
+);
+
+/**
  * Concatenate two nullable-checked String values into one owned Haxe String.
  *
  * The output slot must contain HXC_STRING_INITIALIZER. Size overflow and

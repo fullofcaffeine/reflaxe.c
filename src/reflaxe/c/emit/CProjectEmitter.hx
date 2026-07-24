@@ -615,7 +615,7 @@ class CProjectEmitter {
 						case _: false;
 					}):
 				case "string" if (reason.kind == "runtime-operation" && switch reason.operationId {
-						case "cleanup-release" | "concat" | "from-scalar" | "retain": true;
+						case "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
 						case _: false;
 					}):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):

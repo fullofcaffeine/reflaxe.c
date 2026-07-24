@@ -146,6 +146,51 @@ static hxc_status hxc_string_ref_from_valid_segments(
   return HXC_STATUS_OK;
 }
 
+HXC_API hxc_status hxc_string_from_int32(
+  int32_t value,
+  hxc_allocator allocator,
+  hxc_string *out_string
+) {
+  uint8_t reversed[10];
+  uint8_t decimal[11];
+  size_t digit_count = 0u;
+  size_t output_length = 0u;
+  uint32_t magnitude;
+  size_t index;
+
+  if (value < 0) {
+    /*
+     * Negating INT32_MIN is undefined in C. Moving one step toward zero before
+     * negation keeps the signed operation representable; the final unsigned
+     * increment reconstructs the exact magnitude 2147483648.
+     */
+    magnitude = (uint32_t)(-(value + INT32_C(1))) + UINT32_C(1);
+    decimal[output_length] = (uint8_t)'-';
+    output_length += 1u;
+  } else {
+    magnitude = (uint32_t)value;
+  }
+  do {
+    reversed[digit_count] = (uint8_t)(
+      (uint8_t)'0' + (uint8_t)(magnitude % UINT32_C(10))
+    );
+    digit_count += 1u;
+    magnitude /= UINT32_C(10);
+  } while (magnitude != 0u);
+  for (index = 0u; index < digit_count; index++) {
+    decimal[output_length + index] = reversed[digit_count - index - 1u];
+  }
+  output_length += digit_count;
+  return hxc_string_ref_from_valid_segments(
+    decimal,
+    output_length,
+    NULL,
+    0u,
+    allocator,
+    out_string
+  );
+}
+
 static bool hxc_owned_string_slot_is_empty(const hxc_owned_string *value) {
   return value != NULL
     && value->value.data == NULL

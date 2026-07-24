@@ -21,6 +21,7 @@ enum CBodyRuntimeName {
 	CBRNStringRetain;
 	CBRNStringRelease;
 	CBRNStringFromScalar;
+	CBRNStringFromInt;
 	CBRNStringConcat;
 	CBRNPrintln;
 	CBRNStatusType;
@@ -99,6 +100,7 @@ class CBodyRuntimeNames {
 			case CBRNStringRetain: "hxc_string_retain";
 			case CBRNStringRelease: "hxc_string_release";
 			case CBRNStringFromScalar: "hxc_string_from_scalar";
+			case CBRNStringFromInt: "hxc_string_from_int32";
 			case CBRNStringConcat: "hxc_string_concat_ref";
 			case CBRNPrintln: "hxc_io_println";
 			case CBRNStatusType: "hxc_status";

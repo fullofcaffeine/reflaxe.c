@@ -320,7 +320,7 @@ class CBodyLowering {
 		final inputs = inputFunctions.copy();
 		inputs.sort(compareInputs);
 		final aggregateRegistry = new CBodyAggregateRegistry(context, typedProgram, typedContract,
-			programCreatesStrings(inputFunctions, inputGlobals, inputInitializers, inputConstructors));
+			programCreatesStrings(inputFunctions, inputGlobals, inputInitializers, inputConstructors, context.profile));
 		final prepared:Array<PreparedBodyFunction> = [];
 		final preparedById:Map<String, PreparedBodyFunction> = [];
 		for (input in inputs) {
@@ -937,33 +937,41 @@ class CBodyLowering {
 		consumers consistent.
 	**/
 	static function programCreatesStrings(inputFunctions:Array<CBodyFunctionInput>, inputGlobals:Null<Array<CBodyGlobalInput>>,
-			inputInitializers:Null<Array<CBodyInitializerInput>>, inputConstructors:Null<Array<CBodyConstructorInput>>):Bool {
+			inputInitializers:Null<Array<CBodyInitializerInput>>, inputConstructors:Null<Array<CBodyConstructorInput>>, profile:CProfile):Bool {
 		for (input in inputFunctions)
-			if (expressionCreatesString(input.expression))
+			if (expressionCreatesString(input.expression, profile))
 				return true;
 		if (inputGlobals != null)
 			for (input in inputGlobals)
-				if (input.expression != null && expressionCreatesString(input.expression))
+				if (input.expression != null && expressionCreatesString(input.expression, profile))
 					return true;
 		if (inputInitializers != null)
 			for (input in inputInitializers)
-				if (expressionCreatesString(input.expression))
+				if (expressionCreatesString(input.expression, profile))
 					return true;
 		if (inputConstructors != null)
 			for (input in inputConstructors)
-				if (expressionCreatesString(input.expression))
+				if (expressionCreatesString(input.expression, profile))
 					return true;
 		return false;
 	}
 
 	/** Find an ownership-creating String operation in one typed expression tree. */
-	static function expressionCreatesString(root:TypedExpr):Bool {
+	static function expressionCreatesString(root:TypedExpr, profile:CProfile):Bool {
 		var found = false;
 		function visit(expression:TypedExpr):Void {
 			if (found)
 				return;
 			final creates = switch expression.expr {
-				case TCall(callee, _): isStringFromCharCode(callee);
+				case TCall(callee, arguments):
+					isStringFromCharCode(callee)
+					|| (arguments.length == 1
+							&& isStdStringCall(callee)
+							&& switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
+							case CTPrimitive(mapping):
+								mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
+							case _: false;
+						});
 				case TBinop(OpAdd, _, _) | TBinop(OpAssignOp(OpAdd), _, _):
 					CBodyAggregateRegistry.staticStringIdentity(expression.t) != null;
 				case _: false;
@@ -985,6 +993,19 @@ class CBodyLowering {
 					.name == "fromCharCode";
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				isStringFromCharCode(inner);
+			case _:
+				false;
+		};
+	}
+
+	/** Recognize the pinned standard library's exact general string conversion. */
+	static function isStdStringCall(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FStatic(reference, field)):
+				final owner = reference.get();
+				owner.pack.length == 0 && owner.name == "Std" && field.get().name == "string";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isStdStringCall(inner);
 			case _:
 				false;
 		};
@@ -6190,9 +6211,7 @@ private class FunctionBuilder {
 	function lowerManagedStringConcat(expression:TypedExpr, left:TypedExpr, right:TypedExpr, resultMapping:CBodyValueType):LoweredValue {
 		final leftMapping = bodyValueType(left.t, left.pos, "TBinop(String-concat:left-type)");
 		final rightMapping = bodyValueType(right.t, right.pos, "TBinop(String-concat:right-type)");
-		if (leftMapping.irType != IRTManagedString || rightMapping.irType != IRTManagedString)
-			return unsupported(expression, "TBinop(String-concat:operands-require-managed-String-plan)");
-		var leftValue = coerce(lowerValue(left, leftMapping), leftMapping, left.pos, "TBinop(String-concat:left)");
+		var leftValue = lowerStringConcatOperand(left, leftMapping, resultMapping, "TBinop(String-concat:left)");
 		leftValue = stabilizeFreshManagedString(leftValue, left.pos, "string-concat-left");
 		final stableLeftValue = if (expressionCreatesFlow(right)) {
 			final localId = createFlowLocal(leftMapping, leftValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "string-concat-left");
@@ -6200,9 +6219,22 @@ private class FunctionBuilder {
 		} else {
 			leftValue;
 		}
-		var rightValue = coerce(lowerValue(right, rightMapping), rightMapping, right.pos, "TBinop(String-concat:right)");
+		var rightValue = lowerStringConcatOperand(right, rightMapping, resultMapping, "TBinop(String-concat:right)");
 		rightValue = stabilizeFreshManagedString(rightValue, right.pos, "string-concat-right");
 		return lowerManagedStringConcatValues(expression, stableLeftValue, rightValue, resultMapping, "string-concat");
+	}
+
+	/**
+		Convert one operand according to Haxe's typed String-concatenation rule.
+
+		Haxe permits `String + value` and inserts the value's language-defined
+		spelling. Keeping that conversion here preserves left-to-right evaluation
+		and gives each admitted source family one explicit semantic owner.
+	**/
+	function lowerStringConcatOperand(expression:TypedExpr, mapping:CBodyValueType, resultMapping:CBodyValueType, role:String):LoweredValue {
+		if (mapping.irType == IRTManagedString)
+			return coerce(lowerValue(expression, mapping), mapping, expression.pos, role);
+		return lowerStdStringValue(expression, mapping, resultMapping, role);
 	}
 
 	/** Build one owned concatenation after both immutable operands are stable borrows. */
@@ -8828,16 +8860,40 @@ private class FunctionBuilder {
 		if (arguments.length != 1)
 			return unsupported(expression, 'TCall(Std.string:argument-count=${arguments.length})');
 		final argumentMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Std.string:argument-type)");
-		if (argumentMapping.irType != IRTBool)
-			return unsupported(arguments[0], 'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})');
 		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Std.string:result-type)");
 		if (resultMapping.staticStringIdentity() == null)
 			return unsupported(expression, 'TCall(Std.string:result-not-String:${resultMapping.cSpelling})');
-		final argument = coerce(lowerValue(arguments[0], argumentMapping), argumentMapping, arguments[0].pos, "TCall(Std.string:Bool-argument)");
+		return lowerStdStringValue(arguments[0], argumentMapping, resultMapping, "TCall(Std.string)");
+	}
+
+	/** Lower one statically known `Std.string` source without Dynamic boxing. */
+	function lowerStdStringValue(expression:TypedExpr, argumentMapping:CBodyValueType, resultMapping:CBodyValueType, role:String):LoweredValue {
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
-		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-		appendInstruction(result, IRIOUnary("haxe.std.string.bool", argument.id, IRIStatic), source, "std-string-bool");
-		return {id: result.id, type: result.type, mapping: resultMapping};
+		return switch argumentMapping.irType {
+			case IRTBool:
+				final argument = coerce(lowerValue(expression, argumentMapping), argumentMapping, expression.pos, '$role:argument');
+				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+				appendInstruction(result, IRIOUnary("haxe.std.string.bool", argument.id, IRIStatic), source, "std-string-bool");
+				{id: result.id, type: result.type, mapping: resultMapping};
+			case IRTInt(32, true):
+				if (resultMapping.irType != IRTManagedString)
+					unsupported(expression, 'TCall(Std.string:Int-result-requires-managed-String-plan)');
+				final argument = coerce(lowerValue(expression, argumentMapping), argumentMapping, expression.pos, '$role:argument');
+				final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+				appendInstruction(result, IRIOCall({
+					dispatch: IRCDRuntime("string", "from-int"),
+					arguments: [argument.id],
+					returnType: IRTManagedString,
+					failure: managedArrayFailure()
+				}), source, "std-string-int");
+				registerValueTemporary(result.id, "std-string-int-result");
+				freshManagedStringValueIds.set(result.id, true);
+				freshManagedStringValueRoles.set(result.id, role);
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string", "from-int", "ordinary Haxe Std.string(Int)", source, expression.pos));
+				{id: result.id, type: result.type, mapping: resultMapping};
+			case _:
+				unsupported(expression, 'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})');
+		};
 	}
 
 	function isStdString(callee:TypedExpr):Bool {

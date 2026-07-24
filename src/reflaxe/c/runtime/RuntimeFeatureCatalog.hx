@@ -344,6 +344,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_retain",
 					"hxc_string_release",
 					"hxc_string_from_scalar",
+					"hxc_string_from_int32",
 					"hxc_string_concat_ref",
 					"hxc_byte_view_from_cstring",
 					"hxc_string_from_utf8_checked",
@@ -366,6 +367,8 @@ class RuntimeFeatureCatalog {
 					[
 						new RuntimeFeatureSelectionRoot("from-scalar", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe String.fromCharCode whose scalar is known only at run time."),
+						new RuntimeFeatureSelectionRoot("from-int", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Std.string(Int) whose decimal spelling depends on a run-time value."),
 						new RuntimeFeatureSelectionRoot("concat", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe String concatenation whose result bytes are not compile-time constants."),
 						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
@@ -461,7 +464,7 @@ class RuntimeFeatureCatalog {
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "fcd9a99bb22df6a2173d4570961437baf177f0cbccef26505a0e70266235e121";
+			case "string.h": "52cf1f149208bbd666ec5ed33cfe5855fb8a8a286921ecefe8e0d58eff65e512";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
 			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
@@ -482,7 +485,7 @@ class RuntimeFeatureCatalog {
 			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "432062278957800ffed153e6b237b4bd22c27906a17e7299c330c4bc9621e0e7";
+			case "string.c": "bc647cc6085815a883df2b91722f37ade02bf69c2883ee6b2ad8f8a73d8a7fe3";
 			case "string_map.c": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04";
 			case "string_scalar.c": "1df11e7045ccdd0c64503478477425ca3a55b71e9ac7f18e1cd623d9f17581b3";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";

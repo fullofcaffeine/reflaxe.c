@@ -2480,6 +2480,10 @@ private class HxcIRValidationState {
 				final argument = argumentTypes.length == 1 ? argumentTypes[0] : null;
 				if (argument == null || typeKey(argument) != typeKey(IRTInt(32, true)) || call.returnType != IRTManagedString)
 					add(path, "String.fromCharCode requires one Haxe Int and returns a managed String", source);
+			case "from-int":
+				final argument = argumentTypes.length == 1 ? argumentTypes[0] : null;
+				if (argument == null || typeKey(argument) != typeKey(IRTInt(32, true)) || call.returnType != IRTManagedString)
+					add(path, "Std.string(Int) requires one Haxe Int and returns a managed String", source);
 			case "concat":
 				if (argumentTypes.length != 2
 					|| argumentTypes[0] != IRTManagedString

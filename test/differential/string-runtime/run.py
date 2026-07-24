@@ -460,7 +460,13 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         for reason in reasons
         if reason.get("kind") == "runtime-operation"
     }
-    if operations != {"cleanup-release", "concat", "from-scalar", "retain"}:
+    if operations != {
+        "cleanup-release",
+        "concat",
+        "from-int",
+        "from-scalar",
+        "retain",
+    }:
         raise StringRuntimeFailure(
             f"managed String roots lost typed provenance: {sorted(operations)!r}"
         )
@@ -503,6 +509,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "char-code-at",
         "cleanup-release",
         "concat",
+        "from-int",
         "from-scalar",
         "get-checked",
         "index-of",
@@ -530,6 +537,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     )
     for required in (
         "hxc_string_from_scalar(",
+        "hxc_string_from_int32(",
         "hxc_string_concat_ref(",
         "hxc_string_retain(",
         "hxc_string_release(",
@@ -650,7 +658,7 @@ def plausible_output_exists(output: Path) -> bool:
 def validate_generated_failures(root: Path) -> None:
     unsupported_output = root / "unsupported-std-string-source"
     unsupported = compile_haxe(NEGATIVE, unsupported_output)
-    expected = "TCall(Std.string:source-not-yet-admitted:int32_t)"
+    expected = "TCall(Std.string:source-not-yet-admitted:double)"
     if (
         unsupported.returncode == 0
         or "HXC1001:" not in unsupported.stderr
@@ -785,6 +793,7 @@ def inspect_generated_symbols(executable: Path, family: str) -> None:
         )
     for required in (
         "hxc_string_from_scalar",
+        "hxc_string_from_int32",
         "hxc_string_concat_ref",
         "hxc_string_retain",
         "hxc_string_release",

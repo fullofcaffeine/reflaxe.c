@@ -1040,7 +1040,7 @@
   ],
   "apiOverrides": [
     {
-      "id": "std-string-bool-partial",
+      "id": "std-string-bool-int-partial",
       "selector": {
         "module": "Std",
         "type": "Std",
@@ -1051,7 +1051,8 @@
       },
       "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "string-literal"
+        "string-literal",
+        "string"
       ],
       "profiles": [
         "portable",
@@ -1072,7 +1073,7 @@
         "test/differential/string-runtime/negative/Main.hx",
         "test/differential/string-runtime/run.py"
       ],
-      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. The public Dynamic signature does not broaden this evidence: every other source family remains fail-closed until its own representation and formatting rules are proven."
+      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. The public Dynamic signature does not broaden this evidence: every other source family remains fail-closed until its own representation and formatting rules are proven."
     },
     {
       "id": "bytes-type-partial",
@@ -7473,7 +7474,8 @@
       "isStatic": true,
       "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "string-literal"
+        "string-literal",
+        "string"
       ],
       "profiles": [
         "portable",
@@ -7494,8 +7496,8 @@
         "test/differential/string-runtime/negative/Main.hx",
         "test/differential/string-runtime/run.py"
       ],
-      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. The public Dynamic signature does not broaden this evidence: every other source family remains fail-closed until its own representation and formatting rules are proven.",
-      "ruleId": "std-string-bool-partial"
+      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. The public Dynamic signature does not broaden this evidence: every other source family remains fail-closed until its own representation and formatting rules are proven.",
+      "ruleId": "std-string-bool-int-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:cc7e4ab3022c4281bdb71e021c3f6f6c50a931a4303bfe528b49081d5a914535",

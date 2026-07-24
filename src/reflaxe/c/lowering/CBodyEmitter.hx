@@ -5425,6 +5425,7 @@ class CBodyEmitter {
 			return fail('managed String call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
 		final runtimeName = switch operation {
 			case "from-scalar": CBRNStringFromScalar;
+			case "from-int": CBRNStringFromInt;
 			case "concat": CBRNStringConcat;
 			case _: return fail('managed String call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
 		};

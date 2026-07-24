@@ -633,6 +633,7 @@ static int hxc_test_reference_owned_strings(
   hxc_string character = HXC_STRING_INITIALIZER;
   hxc_string joined = HXC_STRING_INITIALIZER;
   hxc_string invalid = HXC_STRING_INITIALIZER;
+  hxc_string integer = HXC_STRING_INITIALIZER;
   hxc_string slice = HXC_STRING_INITIALIZER;
   hxc_string failed = HXC_STRING_INITIALIZER;
   size_t allocations = arena->allocation_count;
@@ -696,9 +697,40 @@ static int hxc_test_reference_owned_strings(
   );
   HXC_TEST_CHECK(hxc_string_release(&invalid) == HXC_STATUS_OK);
 
+  HXC_TEST_CHECK(
+    hxc_string_from_int32(INT32_MIN, allocator, &integer) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(integer.byte_length == 11u);
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(
+      integer.data,
+      (const uint8_t *)"-2147483648",
+      integer.byte_length
+    )
+  );
+  HXC_TEST_CHECK(hxc_string_release(&integer) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_string_from_int32(INT32_MAX, allocator, &integer) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(integer.byte_length == 10u);
+  HXC_TEST_CHECK(
+    hxc_bytes_equal(
+      integer.data,
+      (const uint8_t *)"2147483647",
+      integer.byte_length
+    )
+  );
+  HXC_TEST_CHECK(hxc_string_release(&integer) == HXC_STATUS_OK);
+
   arena->force_failure = true;
   HXC_TEST_CHECK(
     hxc_string_from_scalar(65, allocator, &failed) == HXC_STATUS_OUT_OF_MEMORY
+  );
+  arena->force_failure = false;
+  HXC_TEST_CHECK(failed.data == NULL && failed.owner == NULL);
+  arena->force_failure = true;
+  HXC_TEST_CHECK(
+    hxc_string_from_int32(42, allocator, &failed) == HXC_STATUS_OUT_OF_MEMORY
   );
   arena->force_failure = false;
   HXC_TEST_CHECK(failed.data == NULL && failed.owner == NULL);

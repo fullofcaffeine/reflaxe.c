@@ -731,6 +731,11 @@
             "kind": "hxc-ir-operation"
           },
           {
+            "description": "A reachable Std.string(Int) whose decimal spelling depends on a run-time value.",
+            "id": "from-int",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "A reachable ordinary Haxe String.fromCharCode whose scalar is known only at run time.",
             "id": "from-scalar",
             "kind": "hxc-ir-operation"
@@ -770,6 +775,7 @@
         "hxc_string_concat",
         "hxc_string_concat_ref",
         "hxc_string_copy",
+        "hxc_string_from_int32",
         "hxc_string_from_scalar",
         "hxc_string_from_utf8_checked",
         "hxc_string_from_utf8_lossy",
@@ -779,13 +785,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "fcd9a99bb22df6a2173d4570961437baf177f0cbccef26505a0e70266235e121",
+          "sourceSha256": "52cf1f149208bbd666ec5ed33cfe5855fb8a8a286921ecefe8e0d58eff65e512",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "432062278957800ffed153e6b237b4bd22c27906a17e7299c330c4bc9621e0e7",
+          "sourceSha256": "bc647cc6085815a883df2b91722f37ade02bf69c2883ee6b2ad8f8a73d8a7fe3",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -1126,7 +1132,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "13cb592c1311c7bca935b6f1ea55f0627d9be61c106112d6fc2a8525eecb75f7",
+      "sourceSetSha256": "aabd48b17f820319ec9da7a3ef0c4533a400800a9d2aed6282cb5a0bf3892861",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

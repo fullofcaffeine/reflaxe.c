@@ -9,12 +9,23 @@
 final class Main {
 	/** Counts source evaluations so conversion cannot accidentally duplicate work. */
 	static var boolEvaluations:Int = 0;
+	static var intEvaluations:Int = 0;
 
 	/** Return one observable Boolean while recording that its source ran once. */
 	static function observedBool(value:Bool):Bool {
 		boolEvaluations += 1;
 		return value;
 	}
+
+	/** Return one observable Int while recording that its source ran once. */
+	static function observedInt(value:Int):Int {
+		intEvaluations += 1;
+		return value;
+	}
+
+	/** Keep an Int parameter and converted String return visible across a call. */
+	static function renderInt(value:Int):String
+		return Std.string(value);
 
 	/** Keep a Boolean parameter and converted String return visible across a call. */
 	static function renderBool(value:Bool):String
@@ -34,6 +45,28 @@ final class Main {
 		final interpolated = 'flag=${observedBool(false)}';
 		final selected = observedBool(true) ? renderBool(false) : renderBool(true);
 		return direct == "true" && interpolated == "flag=false" && selected == "false" && boolEvaluations == 3;
+	}
+
+	/**
+		Exercise exact signed decimal spelling and implicit interpolation.
+
+		The minimum value is especially important: directly negating it would
+		overflow a signed 32-bit C integer, so the runtime must compute its
+		magnitude without invoking undefined behavior.
+	**/
+	static function intStringContractHolds():Bool {
+		intEvaluations = 0;
+		final direct = Std.string(observedInt(0));
+		final positive = renderInt(2147483647);
+		final negative = renderInt(-2147483647 - 1);
+		final interpolated = 'value=${observedInt(-42)}';
+		final selected = observedInt(7) > 0 ? renderInt(19) : renderInt(20);
+		return direct == "0"
+			&& positive == "2147483647"
+			&& negative == "-2147483648"
+			&& interpolated == "value=-42"
+			&& selected == "19"
+			&& intEvaluations == 3;
 	}
 
 	/** Keep direct `String.fromCharCode` observable across a normal Haxe call. */
@@ -130,6 +163,7 @@ final class Main {
 		final optional:Null<String> = enabled ? payload : null;
 		return built == "Aé😀"
 			&& boolStringContractHolds()
+			&& intStringContractHolds()
 			&& splitContractHolds()
 			&& alias.length == 3
 			&& direct == "é😀"
