@@ -500,7 +500,7 @@ class CBodyAggregateRegistry {
 		this.classRegistry = new CBodyClassRegistry(context, valueType);
 		this.interfaceRegistry = new CBodyInterfaceRegistry(program);
 		this.arrayRegistry = new CBodyArrayRegistry(context, valueType);
-		this.stringMapRegistry = new CBodyStringMapRegistry(valueType);
+		this.stringMapRegistry = new CBodyStringMapRegistry(context, valueType);
 		this.bytesRegistry = new CBodyBytesRegistry();
 		this.optionalRegistry = new CBodyOptionalRegistry(context);
 		this.importRegistry = program == null || contract == null ? null : new CImportRegistry(context, program, contract, valueType);
@@ -659,6 +659,9 @@ class CBodyAggregateRegistry {
 
 	public function canonicalStringMaps():Array<CPreparedBodyStringMap>
 		return stringMapRegistry.canonicalMaps();
+
+	public function finalizeStringMaps(symbols:CSymbolRegistry):Array<reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap>
+		return stringMapRegistry.finalize(symbols);
 
 	public function finalizeArrays(symbols:CSymbolRegistry):Array<reflaxe.c.lowering.CBodyArray.CLoweredBodyArray>
 		return arrayRegistry.finalize(symbols);

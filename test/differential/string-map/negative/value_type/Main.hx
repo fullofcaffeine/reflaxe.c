@@ -3,7 +3,7 @@
 /** Unsupported value specialization must fail before any C artifact is saved. */
 final class Main {
 	static function main():Void {
-		final values:Map<String, Int> = [];
-		values.set("answer", 42);
+		final values:Map<String, Float> = [];
+		values.set("answer", 42.0);
 	}
 }

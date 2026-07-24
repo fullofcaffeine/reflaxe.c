@@ -60,6 +60,7 @@ import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumPayload;
 import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
+import reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap;
 import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
@@ -235,7 +236,7 @@ class CBodyLoweringResult {
 	public final enums:Array<CLoweredBodyEnum>;
 	public final classes:Array<CLoweredBodyClass>;
 	public final arrays:Array<CLoweredBodyArray>;
-	public final stringMaps:Array<CPreparedBodyStringMap>;
+	public final stringMaps:Array<CLoweredBodyStringMap>;
 	public final bytes:Array<CPreparedBodyBytes>;
 	public final optionals:Array<CLoweredBodyOptional>;
 	public final constructors:Array<CLoweredBodyConstructor>;
@@ -250,7 +251,7 @@ class CBodyLoweringResult {
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
-			stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>,
+			stringMaps:Array<CLoweredBodyStringMap>, bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>,
 			constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports, helpers:Array<CPrimitiveHelperPlan>,
 			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>) {
@@ -404,6 +405,7 @@ class CBodyLowering {
 		final loweredEnums = aggregateRegistry.finalizeEnums(context.symbols);
 		final loweredClasses = aggregateRegistry.finalizeClasses(context.symbols);
 		final loweredArrays = aggregateRegistry.finalizeArrays(context.symbols);
+		final loweredStringMaps = aggregateRegistry.finalizeStringMaps(context.symbols);
 		final loweredOptionals = aggregateRegistry.finalizeOptionals(context.symbols);
 		final loweredDispatch = preparedDispatch.finalize(context.symbols);
 		final loweredImports = aggregateRegistry.finalizeImports(context.symbols);
@@ -437,7 +439,7 @@ class CBodyLowering {
 		}
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
-		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedStringMaps, preparedBytes, loweredOptionals,
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, loweredStringMaps, preparedBytes, loweredOptionals,
 			loweredDispatch, loweredImports, managedProgram);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
@@ -508,7 +510,7 @@ class CBodyLowering {
 					runtimeRequirements.push(new CBodyRuntimeRequirement("gc", "root-frame", "compiler-emitted exact managed root frame", root.source, null));
 			}
 		runtimeRequirements.sort(compareRuntimeRequirements);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedStringMaps,
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, loweredStringMaps,
 			preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
 			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram);
 	}
@@ -1930,6 +1932,7 @@ private class FunctionBuilder {
 	final initializedOwnedFixedArrayFields:Map<String, Bool> = [];
 	final initializedOwnedClassFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
+	final initializedManagedStringMapFields:Map<String, Bool> = [];
 	var selfValue:Null<LoweredValue> = null;
 	var localOrdinal = 0;
 	var temporaryOrdinal = 0;
@@ -2084,7 +2087,7 @@ private class FunctionBuilder {
 				appendInstruction(null, IRIOInitialize(IRPGlobal(global.ir.id), value.id, IRISUninitialized, IRISInitialized),
 					HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath), "initialize-global");
 		}
-		validateConstructorManagedArrayFields(bodyExpression.pos);
+		validateConstructorManagedFields(bodyExpression.pos);
 		if (freshManagedArrayValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-Array-value");
 		if (freshManagedStringMapValueIds.keys().hasNext())
@@ -2186,6 +2189,10 @@ private class FunctionBuilder {
 				// A final Haxe Array field receives the one newly allocated shared
 				// container. Later local aliases retain that identity; the enclosing
 				// class cleanup releases this owning field exactly once.
+			case TBinop(OpAssign, left, right) if (lowerManagedStringMapFieldInitializer(left, right)):
+				// A final Haxe Map field receives the fresh table created by its
+				// source initializer. The field owns that reference until its class
+				// instance is destroyed.
 			case TBinop(OpAssign, left, right) if (lowerOwnedClassInitializer(left, right)):
 				// The child occupies an inline subobject of the parent. Its own
 				// constructor runs against that stable address exactly once.
@@ -2307,6 +2314,49 @@ private class FunctionBuilder {
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
 			"initialize-array-field");
 		initializedManagedArrayFields.set(fieldName, true);
+		return true;
+	}
+
+	/**
+		Transfer Haxe's lowered `=[]` initializer into one final StringMap field.
+
+		Haxe places field initializers at the start of the constructor body. This
+		recognizer accepts only the first assignment of a freshly constructed
+		StringMap to the matching prepared field; later whole-map reassignment keeps
+		failing through the ordinary assignment rule.
+	**/
+	function lowerManagedStringMapFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _: return false;
+		};
+		if (initializedManagedStringMapFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing StringMap field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		if (field == null || field.type.stringMapValue() == null)
+			return false;
+		final construction = newExpression(right);
+		if (construction == null || !CBodyStringMapRecognition.isStringMap(construction.classReference))
+			return false;
+		final value = lowerStringMapConstruction(right, construction.arguments, field.type);
+		if (!freshManagedStringMapValueIds.remove(value.id))
+			throw new CBodyEmissionError('StringMap field `$fieldName` did not receive a fresh table owner');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-string-map-field");
+		initializedManagedStringMapFields.set(fieldName, true);
 		return true;
 	}
 
@@ -2991,6 +3041,18 @@ private class FunctionBuilder {
 			normalCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release",
 				'ordinary Haxe Array field `${constructedClass.haxePath}.${field.name}` lifetime', source, expression.pos));
+		}
+		for (field in managedStringMapFields(constructedClass)) {
+			final cleanupId = 'construction.$constructionOrdinal.string-map-field.${field.name}.release';
+			constructionCleanupActions.push({
+				id: cleanupId,
+				idempotence: IRCExactlyOnce,
+				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("string-map")),
+				source: source
+			});
+			normalCleanupActionIds.push(cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release",
+				'ordinary Haxe StringMap field `${constructedClass.haxePath}.${field.name}` lifetime', source, expression.pos));
 		}
 	}
 
@@ -3803,6 +3865,11 @@ private class FunctionBuilder {
 			case TParenthesis(inner): lowerValue(inner, expectedMapping);
 			case TMeta(_, inner): lowerValue(inner, expectedMapping);
 			case TBlock(expressions): lowerValueBlock(expression, expressions, expectedMapping);
+			case TCast(inner, _) if (CBodyStringMapRecognition.isIMapType(expression.t)):
+				final innerMapping = bodyValueType(inner.t, inner.pos, "TCast(StringMap-interface-view:inner-type)");
+				if (innerMapping.stringMapValue() == null)
+					unsupported(expression, "TCast(StringMap-interface-view:inner-not-StringMap)");
+				lowerValue(inner, expectedMapping == null ? innerMapping : expectedMapping);
 			case TCast(inner, _):
 				final typedTarget = bodyValueType(expression.t, expression.pos, "TCast(target-type)");
 				// Haxe can insert an intermediate `Null<Int>` cast while typing a
@@ -5526,9 +5593,18 @@ private class FunctionBuilder {
 			source: source
 		};
 		currentBlock = rhsBlock;
+		final rhsCleanupDepth = normalCleanupActionIds.length;
 		final rightValue = coerce(lowerValue(right), boolType, right.pos, "TBinop(short-circuit:right)");
 		appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), rightValue.id), source, "short-circuit-store");
+		// The right side runs in its own C block. A call there may return a
+		// managed temporary, such as `map.get(key) != null`. Copy the resulting
+		// Bool into the outer flow local, then destroy every owner created in this
+		// block before jumping to the join. Registering those owners for ordinary
+		// function-exit cleanup would emit a C reference outside their lexical
+		// scope and would skip cleanup whenever short-circuiting bypasses the block.
+		appendScopedCleanupInstructions(rhsCleanupDepth, source);
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		restoreCleanupDepth(rhsCleanupDepth);
 		currentBlock = joinBlock;
 		return loadPlace({place: IRPLocal(resultLocalId), mapping: boolType, mutable: true}, expression.pos, "short-circuit-load");
 	}
@@ -6235,7 +6311,7 @@ private class FunctionBuilder {
 	}
 
 	/** Every admitted non-null managed field must own a real container on return. */
-	function validateConstructorManagedArrayFields(position:Position):Void {
+	function validateConstructorManagedFields(position:Position):Void {
 		final owner = switch prepared.role {
 			case PBRConstructor(signature): signature.selfMapping.classValue();
 			case _: null;
@@ -6245,6 +6321,8 @@ private class FunctionBuilder {
 		for (field in owner.fields)
 			if (field.type.arrayValue() != null && !initializedManagedArrayFields.exists(field.name))
 				unsupportedAt(position, 'TConstructor(uninitialized-managed-Array-field:${owner.haxePath}.${field.name})');
+			else if (field.type.stringMapValue() != null && !initializedManagedStringMapFields.exists(field.name))
+				unsupportedAt(position, 'TConstructor(uninitialized-managed-StringMap-field:${owner.haxePath}.${field.name})');
 	}
 
 	/** Base-first list of managed fields destroyed with one constructed object. */
@@ -6252,6 +6330,15 @@ private class FunctionBuilder {
 		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedArrayFields(owner.base);
 		for (field in owner.fields)
 			if (field.type.arrayValue() != null && field.type.arrayValue().managedByCollector == false)
+				result.push(field);
+		return result;
+	}
+
+	/** Base-first list of reference-counted StringMap fields owned by one class. */
+	static function managedStringMapFields(owner:CPreparedBodyClass):Array<CPreparedBodyClassField> {
+		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedStringMapFields(owner.base);
+		for (field in owner.fields)
+			if (field.type.stringMapValue() != null)
 				result.push(field);
 		return result;
 	}
@@ -6437,6 +6524,11 @@ private class FunctionBuilder {
 			failure: managedArrayFailure()
 		}), source, 'string-map-$method');
 		registerValueTemporary(result.id, 'string-map-$method-result');
+		if (method == "get") {
+			final optional = resultMapping.optionalValue();
+			if (optional != null && optional.managedLifetime)
+				freshManagedOptionalValueIds.set(result.id, true);
+		}
 		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}

@@ -316,31 +316,64 @@ yet expose. Fixed arrays and spans stay direct and runtime-free. See
 <!-- hxrt-feature:string-map -->
 ### `string-map`
 
-Compiler-selectable shared storage for the first ordinary-Haxe
-`Map<String, Bool>` slice. The compiler records both `String` and `Bool` in
-HxcIR, emits a typed `struct hxc_string_map_ref *`, and passes `sizeof(bool)`
-plus `_Alignof(bool)` when it creates the table. The runtime therefore copies
-exact, unboxed values; it is not a `Dynamic` or universal `void *` map.
+Compiler-selectable shared storage for admitted ordinary-Haxe
+`Map<String, V>` specializations. `V` is not erased: the compiler records the
+exact key and value types in HxcIR and emits a typed
+`struct hxc_string_map_ref *`. The runtime stores each value directly at its
+proven `sizeof(V)` and `_Alignof(V)`; it is not a `Dynamic` map and does not box
+every value behind a separately allocated pointer.
+
+The currently generated value families are `Bool`, Haxe `Int`, payload-free
+Haxe enums, and finite closed records. The first three have no owned children,
+so the compiler uses the original size-and-alignment constructor and the
+runtime copies their bytes directly. Their types are still exact: `Int` is the
+validated signed `int32_t` mapping, and each fieldless Haxe enum remains its own
+nominal native C enum rather than becoming a generic integer.
+
+A record may contain other admitted direct values, including nested Arrays,
+Bytes, tagged optionals, and finite enums, as long as none of them needs
+collector tracing. If the record owns a reference-counted child, the compiler
+generates one type-specific copy/assign/destroy callback trio and creates the
+map with `hxc_string_map_ref_create_with_ops`. These callbacks retain a new
+owner before publishing it, roll back earlier retains if a later retain fails,
+and release owned fields in reverse order. The runtime knows only when to call
+the policy; the program-local generated functions know the exact record type.
+
+Keeping `hxc_string_map_ref_create(allocator, size, alignment, out_map)` is an
+intentional compatibility decision. Previously generated trivial maps continue
+to compile against the same-major runtime ABI. The additive
+`create_with_ops` entry point is selected only when the stored value really
+needs lifetime work.
 
 Keys are compared by canonical UTF-8 contents and copied into table-owned
 storage, so a temporary String view cannot leave a dangling pointer.
 Initializing another local from a map retains the same mutable table; replacing
 an already-owning local is not admitted yet. An explicit
-`Null<Map<String, Bool>>` uses the same pointer carrier: `NULL` is absence, map
+`Null<Map<String, V>>` uses the same pointer carrier: `NULL` is absence, map
 identity equality compares pointers, and retain/release treat `NULL` as a
 successful no-op so ordinary cleanup needs no special branch. Operations that
-need a table still reject `NULL`. `get` returns a tagged nullable Bool so a
-stored `false` differs from a missing key, and the final owner releases keys and
-slots. Empty keys are valid String values and are stored without inventing a
-sentinel key.
+need a table still reject `NULL`. `get` returns a tagged nullable value so an
+absent key is distinct from every valid stored value, including `false`. A
+present managed record result owns its copied nested values until the generated
+optional cleanup releases them. Empty keys are valid String values and are
+stored without inventing a sentinel key.
 
-Growth and insertion are checked and failure-atomic: an allocation failure does
-not publish a partial entry. The Haxe fixture proves language semantics through
-generated C; the separate handwritten-C native fixture injects allocator
-failure and malformed calls directly so code generation and hxrt cannot
-accidentally validate the same bug together. Other key/value specializations,
-iteration, and owner-replacing assignment remain explicitly unsupported until
-they receive complete typed lifetime contracts.
+Growth and insertion are checked and failure-atomic: an allocation or value-copy
+failure does not publish a partial entry, and a failed replacement preserves the
+old value. Rehashing relocates the table's existing bytes without logically
+copying or destroying their owners; it is the same ownership move a
+handwritten C table performs when replacing its slot block.
+
+Tagged payload enums remain unsupported as top-level map values because their
+active union member needs a typed ownership policy; Float and unrelated
+reference families remain outside this intentionally bounded specialization.
+
+The Haxe fixture proves language semantics through generated C. The separate
+handwritten-C native fixture injects allocator and callback failures directly,
+so code generation and hxrt cannot accidentally validate the same bug
+together. Other key/value specializations, iteration, collector-traced values,
+and owner-replacing map assignment remain explicitly unsupported until they
+receive complete typed lifetime contracts.
 
 <!-- hxrt-feature:bytes -->
 ### `bytes`

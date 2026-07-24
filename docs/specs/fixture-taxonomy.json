@@ -958,11 +958,11 @@
       ],
       "status": "active",
       "assertions": [
-        "ordinary Haxe Map<String, Bool> preserves shared mutation, exact String content keys, stored false versus absence, replacement, removal, clear, parameters, and returned owners under Eval and generated native C",
-        "validated HxcIR retains String and Bool specialization identity, nullable lookup, ownership, failure, and string-map runtime intent before C syntax is selected",
-        "generated C uses one typed hxc_string_map_ref pointer plus exact sizeof(bool)/_Alignof(bool) storage without Dynamic or universal boxing",
-        "key copying, growth, replacement, injected allocation failure, and malformed native calls preserve logical contents and balance allocator ownership under strict and sanitizer lanes",
-        "unsupported key/value types, iteration, and owner-replacing assignment fail before output rather than emitting incomplete collection or pointer-lifetime semantics",
+        "ordinary Haxe Map<String, Bool>, Map<String, Int>, Map<String, FieldlessEnum>, and Map<String, ClosedRecord> preserve shared mutation, exact String content keys, stored zero/false versus absence, replacement, removal, clear, parameters, returned owners, and nested Array aliases under Eval and generated native C",
+        "validated HxcIR retains String plus exact Bool, signed Int, nominal enum, or closed-record specialization identity, nullable lookup, ownership, failure, and string-map runtime intent before C syntax is selected",
+        "generated C uses one typed hxc_string_map_ref pointer per map specialization, exact sizeof/_Alignof storage, byte copies for Bool, signed int32_t, and native enums, plus a complete type-specific copy/assign/destroy callback trio for records with managed children, without Dynamic or universal boxing",
+        "key copying, growth, replacement, injected allocation/callback failure, absent lookup, and malformed native calls preserve logical contents and balance allocator/value ownership under strict and sanitizer lanes",
+        "unsupported key/value families including Float, classes, and tagged payload enums, plus iteration and owner-replacing assignment, fail before output rather than emitting incomplete collection or pointer-lifetime semantics",
         "split, package, unity, reversed discovery, warm compiler-server, C++ private headers, runtime-none diagnostics, and selective symbols remain deterministic and fail closed"
       ]
     },

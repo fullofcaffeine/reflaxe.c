@@ -596,7 +596,7 @@ def check_expected_snapshot() -> None:
 
 NEGATIVE_EXPECTATIONS = {
     "abstract_unsupported": (
-        "Main.hx:21: characters 2-26",
+        "Main.hx:22: characters 2-26",
         "TCall(generic-specialization:function.Main.identity:type-argument:T).field:value.abstract-carrier:class-type-argument:UnsupportedCarrier",
     ),
     "dynamic": (

@@ -1362,7 +1362,7 @@ private class HxcIRValidationState {
 						|| rightType == null
 						|| typeKey(leftType) != typeKey(rightType)
 						|| !isManagedStringMapReference(leftType)) {
-						add(path, "StringMap-reference equality requires matching managed Map<String, Bool> pointer operands", instruction.source);
+						add(path, "StringMap-reference equality requires matching managed Map<String, V> pointer operands", instruction.source);
 					}
 					final binaryResult = instruction.result;
 					final hasBoolResult = switch binaryResult {
@@ -2015,10 +2015,7 @@ private class HxcIRValidationState {
 			case _: return null;
 		};
 		final instance = typeInstances.get(instanceId);
-		if (instance == null
-			|| instance.arguments.length != 2
-			|| instance.arguments[0] != IRTString
-			|| instance.arguments[1] != IRTBool)
+		if (instance == null || instance.arguments.length != 2 || instance.arguments[0] != IRTString)
 			return null;
 		return switch instance.representation {
 			case IRRManaged("string-map"): instance.arguments[1];
@@ -2026,7 +2023,7 @@ private class HxcIRValidationState {
 		};
 	}
 
-	/** True only for the exact managed pointer carrier of Map<String, Bool>. */
+	/** True only for an exact validated managed `Map<String, V>` carrier. */
 	function isManagedStringMapReference(type:HxcIRTypeRef):Bool
 		return managedStringMapValue(type) != null;
 

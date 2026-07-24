@@ -47,6 +47,8 @@ enum CBodyRuntimeName {
 	CBRNArrayStoragePushCopy;
 	CBRNArrayValueMember;
 	CBRNStringMapCreate;
+	CBRNStringMapCreateWithOps;
+	CBRNStringMapValueOpsType;
 	CBRNStringMapRetain;
 	CBRNStringMapRelease;
 	CBRNStringMapSetCopy;
@@ -107,6 +109,8 @@ class CBodyRuntimeNames {
 			case CBRNArrayStoragePushCopy: "hxc_array_push_copy";
 			case CBRNArrayValueMember: "value";
 			case CBRNStringMapCreate: "hxc_string_map_ref_create";
+			case CBRNStringMapCreateWithOps: "hxc_string_map_ref_create_with_ops";
+			case CBRNStringMapValueOpsType: "hxc_string_map_value_ops";
 			case CBRNStringMapRetain: "hxc_string_map_ref_retain";
 			case CBRNStringMapRelease: "hxc_string_map_ref_release";
 			case CBRNStringMapSetCopy: "hxc_string_map_ref_set_copy";

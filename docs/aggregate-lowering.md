@@ -64,6 +64,26 @@ in reverse order. Enum fields delegate to a tag-aware helper, so only the active
 union arm is inspected. Recursive enum links use unique tree ownership and
 deep copy; cycle-capable graphs still require the future tracing collector.
 
+An admitted closed record can also be the value in an ordinary
+`Map<String, Record>`. The map stores the record directly rather than boxing it.
+For an unmanaged record, its proven size and alignment are enough. For a record
+that owns Arrays, Bytes, managed optionals, or other admitted direct children,
+the StringMap plan generates a complete copy/assign/destroy callback trio from
+this same aggregate lifecycle plan. Lookup returns an owning tagged optional;
+replacement retains the new record before releasing the old one; removal and
+final map cleanup destroy every live record exactly once. Collector-traced
+graphs remain rejected before map storage can erase their lifetime needs. The
+focused generated-Haxe and independent native evidence lives in
+[`test/differential/string-map`](../test/differential/string-map/).
+
+That same StringMap evidence covers three callback-free direct values: `Bool`,
+Haxe `Int`, and a payload-free Haxe enum. The compiler keeps each value's exact
+HxcIR type, then gives the runtime its proven C size and alignment. `Int`
+becomes signed `int32_t`; a payload-free enum becomes its nominal native C enum.
+They are not erased to one generic integer type. Tagged enums remain rejected
+because copying their active union payload may require ownership or tracing
+work that a byte copy cannot provide.
+
 Haxe evaluates record fields from left to right, but one field may contain an
 `if`, `switch`, or another expression that creates separate control-flow paths.
 An HxcIR value belongs to the path where it was computed, so the compiler saves

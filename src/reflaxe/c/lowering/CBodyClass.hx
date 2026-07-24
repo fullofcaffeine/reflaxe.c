@@ -491,6 +491,8 @@ class CBodyClassRegistry {
 			final array = field.type.arrayValue();
 			if (array != null && !array.managedByCollector)
 				return true;
+			if (field.type.stringMapValue() != null)
+				return true;
 			if (field.type.bytesValue() != null)
 				return true;
 			final aggregate = field.type.aggregateValue();

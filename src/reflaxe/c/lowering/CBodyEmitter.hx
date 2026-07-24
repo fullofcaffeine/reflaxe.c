@@ -23,7 +23,7 @@ import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
-import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
+import reflaxe.c.lowering.CBodyStringMap.CLoweredBodyStringMap;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowCompletion;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowNode;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlan;
@@ -194,6 +194,7 @@ class CBodyEmitter {
 	final arrayElementTypes:Map<String, HxcIRTypeRef> = [];
 	final arraysByInstance:Map<String, CLoweredBodyArray> = [];
 	final stringMapValueTypes:Map<String, HxcIRTypeRef> = [];
+	final stringMapsByInstance:Map<String, CLoweredBodyStringMap> = [];
 	final arrayElementCleanups:Map<String, CBodyEmitterArrayElementCleanup> = [];
 	final bytesInstanceIds:Map<String, Bool> = [];
 	final optionalsByType:Map<String, CLoweredBodyOptional> = [];
@@ -212,7 +213,7 @@ class CBodyEmitter {
 
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
-			?arrays:Array<CLoweredBodyArray>, ?stringMaps:Array<CPreparedBodyStringMap>, ?bytes:Array<CPreparedBodyBytes>,
+			?arrays:Array<CLoweredBodyArray>, ?stringMaps:Array<CLoweredBodyStringMap>, ?bytes:Array<CPreparedBodyBytes>,
 			?optionals:Array<CLoweredBodyOptional>, ?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
 		this.imports = imports == null ? CLoweredImports.empty() : imports;
 		this.managedProgram = managedProgram;
@@ -363,8 +364,10 @@ class CBodyEmitter {
 				}
 			}
 		if (stringMaps != null)
-			for (value in stringMaps)
-				stringMapValueTypes.set(value.instanceId, value.value.irType);
+			for (value in stringMaps) {
+				stringMapsByInstance.set(value.prepared.instanceId, value);
+				stringMapValueTypes.set(value.prepared.instanceId, value.prepared.value.irType);
+			}
 		if (bytes != null)
 			for (_ in bytes)
 				bytesInstanceIds.set(CPreparedBodyBytes.INSTANCE_ID, true);
@@ -2558,6 +2561,11 @@ class CBodyEmitter {
 			result.push(arrayLifecyclePrototype(requireArrayCallbackName(array.assignName, array, "assign"), array.assignParameterNames, false));
 			result.push(arrayLifecyclePrototype(requireArrayCallbackName(array.destroyName, array, "destroy"), array.destroyParameterNames, true));
 		}
+		for (map in canonicalManagedStringMaps()) {
+			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.copyName, map, "copy"), map.copyParameterNames, false));
+			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.assignName, map, "assign"), map.assignParameterNames, false));
+			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.destroyName, map, "destroy"), map.destroyParameterNames, true));
+		}
 		return result;
 	}
 
@@ -2584,6 +2592,11 @@ class CBodyEmitter {
 			result.push(arrayCopyDefinition(array));
 			result.push(arrayAssignDefinition(array));
 			result.push(arrayDestroyDefinition(array));
+		}
+		for (map in canonicalManagedStringMaps()) {
+			result.push(stringMapCopyDefinition(map));
+			result.push(stringMapAssignDefinition(map));
+			result.push(stringMapDestroyDefinition(map));
 		}
 		return result;
 	}
@@ -3367,6 +3380,90 @@ class CBodyEmitter {
 		});
 	}
 
+	/** Construct one owned StringMap slot or lookup result from a borrowed value. */
+	function stringMapCopyDefinition(map:CLoweredBodyStringMap):CDecl {
+		final name = requireStringMapCallbackName(map.copyName, map, "copy");
+		final parameters = requireStringMapCallbackParameters(map.copyParameterNames, 3, map, "copy");
+		final statusName = requireStringMapStatusName(map.copyStatusName, map, "copy");
+		final source = stringMapValueStorage(map, EIdentifier(parameters[2]), true);
+		final destination = stringMapValueStorage(map, EIdentifier(parameters[1]), false);
+		final statements:Array<CStmt> = [
+			ignoreExpression(EIdentifier(parameters[0])),
+			statusDeclaration(statusName),
+			SExpr(EBinary(Assign, destination, source))
+		];
+		appendManagedRetains(statements, managedValueOperations(destination, map.prepared.value.irType), statusName);
+		statements.push(SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))));
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype(arrayLifecycleParameters(parameters, false), false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	/**
+		Replace one StringMap slot only after a complete retained copy exists.
+
+		The temporary is important when old and new records share a nested Array:
+		retaining first prevents release of the old slot from destroying storage
+		that the replacement still needs.
+	**/
+	function stringMapAssignDefinition(map:CLoweredBodyStringMap):CDecl {
+		final name = requireStringMapCallbackName(map.assignName, map, "assign");
+		final parameters = requireStringMapCallbackParameters(map.assignParameterNames, 3, map, "assign");
+		final statusName = requireStringMapStatusName(map.assignStatusName, map, "assign");
+		final source = stringMapValueStorage(map, EIdentifier(parameters[2]), true);
+		final destination = stringMapValueStorage(map, EIdentifier(parameters[1]), false);
+		final replacementName = derivedLifecycleName(name, "replacement");
+		final replacement = EIdentifier(replacementName);
+		final replacementType = typedDeclarator(map.prepared.value.irType, DName(replacementName));
+		final statements:Array<CStmt> = [
+			ignoreExpression(EIdentifier(parameters[0])),
+			SIf(EBinary(Equal, EIdentifier(parameters[1]), EIdentifier(parameters[2])), SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), null),
+			statusDeclaration(statusName),
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: replacementType.type,
+				declarator: replacementType.declarator,
+				initializer: IExpr(source),
+				attributes: []
+			})
+		];
+		appendManagedRetains(statements, managedValueOperations(replacement, map.prepared.value.irType), statusName);
+		appendManagedReleases(statements, managedValueOperations(destination, map.prepared.value.irType));
+		statements.push(SExpr(EBinary(Assign, destination, replacement)));
+		statements.push(SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))));
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype(arrayLifecycleParameters(parameters, false), false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	/** Release every managed field owned by one live StringMap value slot. */
+	function stringMapDestroyDefinition(map:CLoweredBodyStringMap):CDecl {
+		final name = requireStringMapCallbackName(map.destroyName, map, "destroy");
+		final parameters = requireStringMapCallbackParameters(map.destroyParameterNames, 2, map, "destroy");
+		final value = stringMapValueStorage(map, EIdentifier(parameters[1]), false);
+		final statements:Array<CStmt> = [ignoreExpression(EIdentifier(parameters[0]))];
+		appendManagedReleases(statements, managedValueOperations(value, map.prepared.value.irType));
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype(arrayLifecycleParameters(parameters, true), false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
 	function appendManagedRetains(statements:Array<CStmt>, operations:Array<CBodyEmitterManagedOperation>, statusName:CIdentifier):Void {
 		for (index in 0...operations.length) {
 			statements.push(SExpr(EBinary(Assign, EIdentifier(statusName), operations[index].retain)));
@@ -3432,6 +3529,12 @@ class CBodyEmitter {
 						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayRelease)), [value])
 					}
 				];
+			case IRTInstance(instanceId) if (stringMapValueTypes.exists(instanceId)): [
+					{
+						retain: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapRetain)), [value]),
+						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapRelease)), [value])
+					}
+				];
 			case IRTInstance(instanceId) if (enumRepresentations.get(instanceId) == CBECNative): [];
 			case IRTInstance(instanceId) if (enumsByInstance.exists(instanceId)):
 				final nested = enumsByInstance.get(instanceId);
@@ -3471,6 +3574,12 @@ class CBodyEmitter {
 		return EUnary(Dereference, ECast(baseType, DPointer(element.declarator, []), rawPointer));
 	}
 
+	function stringMapValueStorage(map:CLoweredBodyStringMap, rawPointer:CExpr, readOnly:Bool):CExpr {
+		final value = typedDeclarator(map.prepared.value.irType, DName(null));
+		final baseType = readOnly ? new CType(value.type.spec, value.type.qualifiers.concat([QConst])) : value.type;
+		return EUnary(Dereference, ECast(baseType, DPointer(value.declarator, []), rawPointer));
+	}
+
 	static function arrayLifecycleParameters(names:Array<CIdentifier>, destroy:Bool):Array<CParam> {
 		final expected = destroy ? 2 : 3;
 		if (names.length != expected)
@@ -3499,6 +3608,12 @@ class CBodyEmitter {
 
 	function canonicalManagedArrays():Array<CLoweredBodyArray> {
 		final result = [for (value in arraysByInstance) if (value.hasLifecycle()) value];
+		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
+		return result;
+	}
+
+	function canonicalManagedStringMaps():Array<CLoweredBodyStringMap> {
+		final result = [for (value in stringMapsByInstance) if (value.hasLifecycle()) value];
 		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
 		return result;
 	}
@@ -3619,6 +3734,24 @@ class CBodyEmitter {
 	static function requireArrayStatusName(name:Null<CIdentifier>, array:CLoweredBodyArray, operation:String):CIdentifier {
 		if (name == null)
 			throw new CBodyEmissionError('managed Array `${array.prepared.semanticKey}` lost its $operation callback status local');
+		return name;
+	}
+
+	static function requireStringMapCallbackName(name:Null<CIdentifier>, map:CLoweredBodyStringMap, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed StringMap `${map.prepared.semanticKey}` lost its $operation callback name');
+		return name;
+	}
+
+	static function requireStringMapCallbackParameters(names:Array<CIdentifier>, expected:Int, map:CLoweredBodyStringMap, operation:String):Array<CIdentifier> {
+		if (names.length != expected)
+			throw new CBodyEmissionError('managed StringMap `${map.prepared.semanticKey}` lost its $operation callback parameters');
+		return names;
+	}
+
+	static function requireStringMapStatusName(name:Null<CIdentifier>, map:CLoweredBodyStringMap, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed StringMap `${map.prepared.semanticKey}` lost its $operation callback status local');
 		return name;
 	}
 
@@ -4376,6 +4509,7 @@ class CBodyEmitter {
 				final result = requireResult(instruction, fn.id);
 				final temporary = requireStringMapTemporary(temporaryNames, result.id, instruction.id, fn.id);
 				final valueType = requireStringMapValueType(result.type, instruction.id, fn.id);
+				final mapPlan = requireStringMapPlan(result.type, instruction.id, fn.id);
 				final valueDeclaration = typedDeclarator(valueType, DName(null));
 				final resultDeclaration = typedDeclarator(result.type, DName(temporary));
 				statements.push(SDecl({
@@ -4386,12 +4520,25 @@ class CBodyEmitter {
 					initializer: IExpr(ENull),
 					attributes: []
 				}));
-				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCreate)), [
+				final valueOperations = ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringMapValueOpsType))), DName(null), IList([
+					{designators: [], value: IExpr(ESizeOfType(valueDeclaration.type, valueDeclaration.declarator))},
+					{designators: [], value: IExpr(EAlignOfType(valueDeclaration.type, valueDeclaration.declarator))},
+					{designators: [], value: IExpr(ENull)},
+					{designators: [], value: IExpr(mapPlan.copyName == null ? ENull : EIdentifier(mapPlan.copyName))},
+					{designators: [], value: IExpr(mapPlan.assignName == null ? ENull : EIdentifier(mapPlan.assignName))},
+					{designators: [], value: IExpr(mapPlan.destroyName == null ? ENull : EIdentifier(mapPlan.destroyName))}
+				]));
+				final createCall = if (mapPlan.hasLifecycle()) ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCreateWithOps)), [
+					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+					valueOperations,
+					EUnary(AddressOf, EIdentifier(temporary))
+				]) else ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringMapCreate)), [
 					ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
 					ESizeOfType(valueDeclaration.type, valueDeclaration.declarator),
 					EAlignOfType(valueDeclaration.type, valueDeclaration.declarator),
 					EUnary(AddressOf, EIdentifier(temporary))
-				]), boundsAbortName, instruction.id, fn.id);
+				]);
+				emitStatusAbort(statements, createCall, boundsAbortName, instruction.id, fn.id);
 				values.set(result.id, EIdentifier(temporary));
 				if (!referencedValues.exists(result.id))
 					statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
@@ -4469,6 +4616,22 @@ class CBodyEmitter {
 			case _:
 				fail('StringMap operation `$instructionId` in `$functionId` lost its specialized instance type');
 		};
+	}
+
+	function requireStringMapPlan(type:HxcIRTypeRef, instructionId:String, functionId:String):CLoweredBodyStringMap {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _:
+				return fail('StringMap operation `$instructionId` in `$functionId` lost its specialized instance type');
+		};
+		final plan = stringMapsByInstance.get(instanceId);
+		if (plan == null)
+			return fail('StringMap operation `$instructionId` in `$functionId` has no finalized value-lifecycle plan');
+		if (plan.hasLifecycle() && (plan.copyName == null || plan.assignName == null || plan.destroyName == null))
+			return fail('managed StringMap `$instanceId` lost its complete value callback trio');
+		if (!plan.hasLifecycle() && (plan.copyName != null || plan.assignName != null || plan.destroyName != null))
+			return fail('trivial StringMap `$instanceId` unexpectedly received value callbacks');
+		return plan;
 	}
 
 	static function requireStringMapTemporary(temporaryNames:Map<String, CIdentifier>, resultId:String, instructionId:String, functionId:String):CIdentifier {

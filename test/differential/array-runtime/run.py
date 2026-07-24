@@ -635,16 +635,18 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     if result.returncode == 0:
         return
     # Full Caxecraft now passes the Bytes value carried by
-    # EditorValidationResult.ValidationPassed. The next unsupported construct is
-    # ScenarioValidationContext.sequenceTable: a StringMap stored in a class
-    # field whose values are closed FlowSequence records. Naming that exact next
-    # boundary proves the compiler traversed the earlier Array, function-value,
-    # StringMap, abstract-record, and Bytes-enum paths; accepting any later
-    # failure would let one of those regressions pass unnoticed. haxe_c-djl.7
-    # owns the general StringMap record-value capability.
+    # EditorValidationResult.ValidationPassed and every currently required
+    # StringMap value family: Bool, managed FlowSequence records, the fieldless
+    # FlowValueKind enum, and Int depth caches. The next unsupported construct
+    # is ScenarioRecordCursor.failAt<T>, whose concrete calls require generic
+    # instance-method specialization. Naming that exact boundary proves the
+    # compiler traversed the earlier Array, function-value, StringMap,
+    # abstract-record, Bytes-enum, record, enum, and integer paths; accepting
+    # any later failure would let one of those regressions pass unnoticed.
+    # haxe_c-djl.10 owns the general generic-instance-method capability.
     if (
-        "ScenarioValidationContext.hx:41:" not in result.stderr
-        or "sequenceTable:StringMap-value-not-yet-admitted:closed-record:"
+        "ScenarioRecordCursor.hx:52:" not in result.stderr
+        or "TFunction(return-type).type-argument:open-type-argument:failAt.T"
         not in result.stderr
         or "CaxeFlowState" in result.stderr
         or "CaxeFlowRulePlanner" in result.stderr

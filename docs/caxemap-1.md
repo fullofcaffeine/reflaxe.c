@@ -382,13 +382,27 @@ visual editor rather than a shipped UI claim.
 
 The current catalog, parser/writer parity, validator/executor guards, and editor
 palette are executable under the pinned Eval oracle. haxe.c now admits the
-nominal String IDs and managed Arrays carried by `FlowAction`; the complete
-Caxecraft compile passes those former boundaries. It currently stops later at
-`ScenarioValidationContext.sequenceTable`, where an ordinary Haxe StringMap
-stored in a class field needs to own closed `FlowSequence` record values.
-`haxe_c-djl.7` owns that general compiler capability. Until it lands, this
-section is not evidence that the complete CaxeFlow registry or executor runs in
-generated C; unrelated DomainProbe output does not fill that gap.
+nominal String IDs and managed Arrays carried by `FlowAction`, as well as the
+closed `FlowSequence` records stored in
+`ScenarioValidationContext.sequenceTable`. The StringMap implementation keeps
+each record unboxed and supplies exact generated copy/assign/destroy callbacks
+when its nested Arrays need ownership work; the focused compiler and runtime
+evidence is owned by completed issue `haxe_c-djl.7`.
+
+The same focused StringMap evidence now covers two more direct value families:
+fieldless Haxe enums such as `FlowValueKind`, represented as native C enums,
+and Haxe `Int`, represented as signed `int32_t`. Both stay unboxed and need no
+value-lifecycle callbacks. Completed issues `haxe_c-djl.8` and `haxe_c-djl.9`
+own those additions.
+
+The complete Caxecraft compile now passes every StringMap boundary above and
+stops at the unrelated generic instance method
+`ScenarioRecordCursor.failAt<T>`. Each call supplies a concrete
+`ScenarioReadResult<T>`, but haxe.c does not yet specialize that instance method
+into a closed C signature. Issue `haxe_c-djl.10` owns the general method
+specialization. Until it lands, this section is not evidence that the complete
+CaxeFlow registry or executor runs in generated C; unrelated DomainProbe output
+does not fill that gap.
 
 Arguments are `value flag <bool>`, `value counter <int>`, `value state
 <content-id>`, or `variable <variable-id>`. CAXEMAP 1 does not admit an object

@@ -2,8 +2,9 @@
  * hxrt feature `string-map`: open-addressed UTF-8 storage for Map<String, V>.
  *
  * Slot storage and every key retain allocator identity. Rehashing moves owned
- * key records and copies unboxed value bytes only after the replacement slot
- * block exists, so failure leaves all observable entries unchanged.
+ * key records and relocates unboxed value bytes only after the replacement
+ * slot block exists. Relocation does not create a new logical owner; insertion,
+ * replacement, lookup, removal, and clear use the exact value callbacks.
  */
 #include "hxrt/string_map.h"
 
@@ -29,8 +30,7 @@ struct hxc_string_map_ref {
   size_t capacity;
   size_t stride;
   size_t value_offset;
-  size_t value_size;
-  size_t value_alignment;
+  hxc_string_map_value_ops values;
   hxc_allocator allocator;
   hxc_allocation slots;
 };
@@ -102,8 +102,7 @@ static bool hxc_string_map_key_equal(
 static bool hxc_string_map_is_valid(const hxc_string_map_ref *map) {
   return map != NULL
     && map->references > 0u
-    && map->value_size > 0u
-    && hxc_string_map_power_of_two(map->value_alignment)
+    && hxc_string_map_value_ops_is_valid(&map->values)
     && hxc_allocator_is_valid(&map->allocator)
     && ((map->capacity == 0u
         && map->slots.memory == NULL
@@ -114,6 +113,45 @@ static bool hxc_string_map_is_valid(const hxc_string_map_ref *map) {
         && hxc_allocation_is_valid(&map->slots)))
     && map->length <= map->capacity
     && map->tombstones <= map->capacity - map->length;
+}
+
+static bool hxc_string_map_has_lifecycle(
+  const hxc_string_map_value_ops *values
+) {
+  return values->copy != NULL;
+}
+
+static hxc_status hxc_string_map_value_construct(
+  const hxc_string_map_ref *map,
+  void *destination,
+  const void *source
+) {
+  if (hxc_string_map_has_lifecycle(&map->values)) {
+    return map->values.copy(map->values.context, destination, source);
+  }
+  memcpy(destination, source, map->values.size);
+  return HXC_STATUS_OK;
+}
+
+static hxc_status hxc_string_map_value_assign(
+  const hxc_string_map_ref *map,
+  void *destination,
+  const void *source
+) {
+  if (hxc_string_map_has_lifecycle(&map->values)) {
+    return map->values.assign(map->values.context, destination, source);
+  }
+  memcpy(destination, source, map->values.size);
+  return HXC_STATUS_OK;
+}
+
+static void hxc_string_map_value_destroy(
+  const hxc_string_map_ref *map,
+  void *value
+) {
+  if (hxc_string_map_has_lifecycle(&map->values)) {
+    map->values.destroy(map->values.context, value);
+  }
 }
 
 static size_t hxc_string_map_find_slot(
@@ -167,8 +205,8 @@ static hxc_status hxc_string_map_reserve(
     &map->allocator,
     capacity,
     map->stride,
-    map->value_alignment > HXC_ALIGNOF(hxc_string_map_slot)
-      ? map->value_alignment
+    map->values.alignment > HXC_ALIGNOF(hxc_string_map_slot)
+      ? map->values.alignment
       : HXC_ALIGNOF(hxc_string_map_slot),
     &replacement
   );
@@ -199,7 +237,7 @@ static hxc_status hxc_string_map_reserve(
         memcpy(
           hxc_string_map_value_at(map, destination),
           (uint8_t *)prior.memory + (index * map->stride) + map->value_offset,
-          map->value_size
+          map->values.size
         );
       }
     }
@@ -211,10 +249,49 @@ static hxc_status hxc_string_map_reserve(
   return HXC_STATUS_OK;
 }
 
+bool hxc_string_map_value_ops_is_valid(
+  const hxc_string_map_value_ops *values
+) {
+  bool has_copy;
+  bool has_assign;
+  bool has_destroy;
+  if (values == NULL
+    || values->size == 0u
+    || !hxc_string_map_power_of_two(values->alignment)) {
+    return false;
+  }
+#if SIZE_MAX > UINTPTR_MAX
+  if (values->alignment > (size_t)UINTPTR_MAX) {
+    return false;
+  }
+#endif
+  has_copy = values->copy != NULL;
+  has_assign = values->assign != NULL;
+  has_destroy = values->destroy != NULL;
+  return (has_copy && has_assign && has_destroy)
+    || (!has_copy && !has_assign && !has_destroy);
+}
+
 hxc_status hxc_string_map_ref_create(
   hxc_allocator allocator,
   size_t value_size,
   size_t value_alignment,
+  hxc_string_map_ref **out_map
+) {
+  hxc_string_map_value_ops values = {
+    value_size,
+    value_alignment,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+  };
+  return hxc_string_map_ref_create_with_ops(allocator, values, out_map);
+}
+
+hxc_status hxc_string_map_ref_create_with_ops(
+  hxc_allocator allocator,
+  hxc_string_map_value_ops values,
   hxc_string_map_ref **out_map
 ) {
   hxc_string_map_ref *map = NULL;
@@ -222,25 +299,25 @@ hxc_status hxc_string_map_ref_create(
   size_t value_offset;
   size_t stride;
   size_t storage_alignment;
-  if (out_map == NULL || *out_map != NULL || value_size == 0u
-    || !hxc_string_map_power_of_two(value_alignment)
+  if (out_map == NULL || *out_map != NULL
+    || !hxc_string_map_value_ops_is_valid(&values)
     || !hxc_allocator_is_valid(&allocator)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   status = hxc_string_map_align_up(
     sizeof(hxc_string_map_slot),
-    value_alignment,
+    values.alignment,
     &value_offset
   );
   if (status != HXC_STATUS_OK) {
     return status;
   }
-  status = hxc_size_add(value_offset, value_size, &stride);
+  status = hxc_size_add(value_offset, values.size, &stride);
   if (status != HXC_STATUS_OK) {
     return status;
   }
-  storage_alignment = value_alignment > HXC_ALIGNOF(hxc_string_map_slot)
-    ? value_alignment
+  storage_alignment = values.alignment > HXC_ALIGNOF(hxc_string_map_slot)
+    ? values.alignment
     : HXC_ALIGNOF(hxc_string_map_slot);
   status = hxc_string_map_align_up(stride, storage_alignment, &stride);
   if (status != HXC_STATUS_OK) {
@@ -259,8 +336,7 @@ hxc_status hxc_string_map_ref_create(
   map->references = 1u;
   map->stride = stride;
   map->value_offset = value_offset;
-  map->value_size = value_size;
-  map->value_alignment = value_alignment;
+  map->values = values;
   map->allocator = allocator;
   map->slots = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
   *out_map = map;
@@ -314,6 +390,7 @@ hxc_status hxc_string_map_ref_set_copy(
   const void *value
 ) {
   hxc_allocation key_storage = HXC_ALLOCATION_INITIALIZER;
+  hxc_status cleanup_status;
   hxc_string_map_slot *slot;
   uint32_t hash;
   size_t index;
@@ -341,8 +418,11 @@ hxc_status hxc_string_map_ref_set_copy(
   }
   index = hxc_string_map_find_slot(map, key, hash, &found);
   if (found) {
-    memcpy(hxc_string_map_value_at(map, index), value, map->value_size);
-    return HXC_STATUS_OK;
+    return hxc_string_map_value_assign(
+      map,
+      hxc_string_map_value_at(map, index),
+      value
+    );
   }
   status = hxc_allocation_allocate(
     &map->allocator,
@@ -357,6 +437,15 @@ hxc_status hxc_string_map_ref_set_copy(
   if (key.byte_length > 0u) {
     memcpy(key_storage.memory, key.data, key.byte_length);
   }
+  status = hxc_string_map_value_construct(
+    map,
+    hxc_string_map_value_at(map, index),
+    value
+  );
+  if (status != HXC_STATUS_OK) {
+    cleanup_status = hxc_allocation_dispose(&key_storage);
+    return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+  }
   slot = hxc_string_map_slot_at(map, index);
   if (slot->state == HXC_STRING_MAP_TOMBSTONE) {
     map->tombstones--;
@@ -366,7 +455,6 @@ hxc_status hxc_string_map_ref_set_copy(
   slot->key.data = (const uint8_t *)key_storage.memory;
   slot->key.byte_length = key.byte_length;
   slot->key.has_trailing_nul = false;
-  memcpy(hxc_string_map_value_at(map, index), value, map->value_size);
   slot->state = HXC_STRING_MAP_OCCUPIED;
   map->length++;
   return HXC_STATUS_OK;
@@ -415,7 +503,14 @@ hxc_status hxc_string_map_ref_get_copy(
     index = hxc_string_map_find_slot(map, key, hash, &found);
   }
   if (found) {
-    memcpy(out_value, hxc_string_map_value_at(map, index), map->value_size);
+    status = hxc_string_map_value_construct(
+      map,
+      out_value,
+      hxc_string_map_value_at(map, index)
+    );
+    if (status != HXC_STATUS_OK) {
+      return status;
+    }
   }
   *out_found = found;
   return HXC_STATUS_OK;
@@ -450,6 +545,7 @@ hxc_status hxc_string_map_ref_remove(
   if (status != HXC_STATUS_OK) {
     return status;
   }
+  hxc_string_map_value_destroy(map, hxc_string_map_value_at(map, index));
   slot->key = (hxc_string)HXC_STRING_INITIALIZER;
   slot->state = HXC_STRING_MAP_TOMBSTONE;
   map->length--;
@@ -471,6 +567,7 @@ hxc_status hxc_string_map_ref_clear(hxc_string_map_ref *map) {
       if (status != HXC_STATUS_OK) {
         return status;
       }
+      hxc_string_map_value_destroy(map, hxc_string_map_value_at(map, index));
     }
   }
   if (map->slots.memory != NULL) {

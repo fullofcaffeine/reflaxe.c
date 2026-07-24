@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove ordinary Haxe Map<String, Bool> lowering and its native runtime contract."""
+"""Prove exact scalar, fieldless-enum, and managed-record StringMap contracts."""
 
 from __future__ import annotations
 
@@ -198,6 +198,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     for marker in (
         'representation=managed("string-map")',
         'arguments=[string-utf8,bool]',
+        'arguments=[string-utf8,i32]',
+        'arguments=[string-utf8,instance("instance.enum.',
+        'arguments=[string-utf8,instance("instance.closed-record.',
         'runtime(feature="string-map",operation="create")',
         'runtime(feature="string-map",operation="set")',
         'runtime(feature="string-map",operation="get")',
@@ -217,6 +220,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "runtime-base",
         "status",
         "alloc",
+        "array",
         "string-literal",
         "string-map",
     ]:
@@ -243,6 +247,8 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         )
     if "managed-haxe-string-maps" not in plan.get("directDecisions", []):
         raise StringMapFailure("runtime plan omitted the exact StringMap representation decision")
+    if "managed-haxe-arrays" not in plan.get("directDecisions", []):
+        raise StringMapFailure("managed record fixture omitted its nested Array representation")
 
     sources = "\n".join(
         path.read_text(encoding="utf-8")
@@ -251,16 +257,29 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     for marker in (
         "struct hxc_string_map_ref *",
         "hxc_string_map_ref_create",
+        "hxc_string_map_ref_create_with_ops",
+        "hxc_string_map_value_ops",
         "hxc_string_map_ref_set_copy",
         "hxc_string_map_ref_get_copy",
         "hxc_string_map_ref_retain",
         "hxc_string_map_ref_release",
         "sizeof(bool)",
         "_Alignof(bool)",
+        "value_copy",
+        "value_assign",
+        "value_destroy",
+        "hxc_array_ref_retain",
+        "hxc_array_ref_release",
+        "sizeof(int32_t)",
     ):
         if marker not in sources:
             raise StringMapFailure(f"generated C omitted {marker}")
-    for forbidden in ("hxc_dynamic", "void *hxc_value", "goto "):
+    # Lifecycle callbacks use typed casts behind an ABI-required `void *`
+    # boundary. That boundary is not Haxe `Dynamic`: the callback is generated
+    # for one exact record type, and the checks above prove its complete
+    # copy/assign/destroy family. Reject the actual dynamic runtime family
+    # instead of rejecting every well-typed opaque callback parameter.
+    for forbidden in ("hxc_dynamic", "goto "):
         if forbidden in sources:
             raise StringMapFailure(f"generated C retained forbidden shape {forbidden!r}")
 
@@ -344,7 +363,9 @@ def render_projects(root: Path) -> dict[str, Path]:
 
 def run_negative_cases(root: Path) -> None:
     expected = {
-        "value_type": "StringMap-value-not-yet-admitted:int32_t",
+        "value_type": "StringMap-value-not-yet-admitted:double",
+        "class_value": "StringMap-value-not-yet-admitted:haxe-class-reference:",
+        "payload_enum_value": "StringMap-value-not-yet-admitted:haxe-enum:",
         "key_type": "virtual-slot-generic-requires-specialization:slot.haxe.ds.IntMap.set",
         "iteration": "TVar(value:type).field:hasNext:method",
         "reassignment": "TBinop(OpAssign:managed-StringMap-reassignment-not-admitted)",
@@ -434,7 +455,7 @@ def validate_cpp_headers(project: Path, family: str, root: Path) -> None:
         raise StringMapFailure(f"{family} C++ private-header check failed: {result.stderr!r}")
 
 
-def inspect_symbols(executable: Path, family: str) -> None:
+def inspect_symbols(executable: Path, family: str, *, allow_array: bool = False) -> None:
     nm = shutil.which("nm")
     if nm is None:
         raise StringMapFailure(f"{family} StringMap evidence requires nm")
@@ -443,12 +464,17 @@ def inspect_symbols(executable: Path, family: str) -> None:
         raise StringMapFailure(f"{family} could not inspect StringMap symbols")
     for required in (
         "hxc_string_map_ref_create",
+        "hxc_string_map_ref_create_with_ops",
         "hxc_string_map_ref_get_copy",
         "hxc_string_map_ref_release",
+        "hxc_string_map_value_ops_is_valid",
     ):
         if required not in result.stdout:
             raise StringMapFailure(f"{family} omitted required symbol {required}")
-    for forbidden in ("hxc_array", "hxc_bytes", "hxc_gc", "hxc_dynamic"):
+    forbidden_families = ["hxc_bytes", "hxc_gc", "hxc_dynamic"]
+    if not allow_array:
+        forbidden_families.append("hxc_array")
+    for forbidden in forbidden_families:
         if forbidden in result.stdout:
             raise StringMapFailure(f"{family} retained unrelated symbol family {forbidden}")
 
@@ -491,7 +517,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         generated_executable,
                         ("-O2" if layout == "unity" else "-O0",),
                     )
-                    inspect_symbols(generated_executable, toolchain.family)
+                    inspect_symbols(generated_executable, toolchain.family, allow_array=True)
                 validate_cpp_headers(projects["split"], toolchain.family, build)
             if toolchain.family == "clang":
                 compile_and_run(
@@ -539,12 +565,12 @@ def main(argv: Iterable[str] = ()) -> int:
         print(f"string-map: ERROR: {error}", file=sys.stderr)
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
-    mode = "native contract" if args.native_only else "Eval plus generated Map<String, Bool>"
+    mode = "native contract" if args.native_only else "Eval plus generated Bool/Int/fieldless-enum/managed-record StringMaps"
     print(
         "string-map: OK: "
         f"{families}; {mode}; missing-vs-false, replacement, removal, clear, aliases, "
-        "nullable identity, empty keys, growth, allocation rollback, malformed-call rejection, layouts, determinism, "
-        "sanitizers, C++ headers, runtime-none, and selective symbols passed"
+        "nullable identity, empty keys, growth, allocation rollback, value-callback rollback, unsupported-class/payload-enum rejection, "
+        "malformed-call rejection, layouts, determinism, sanitizers, C++ headers, runtime-none, and selective symbols passed"
     )
     return 0
 

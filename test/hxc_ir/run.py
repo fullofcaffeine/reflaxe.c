@@ -200,7 +200,7 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "invalidFloat32Widen",
         "nullableUnwrapWithoutFailure",
         "switchCaseTypeMismatch",
-        "invalidStringMapValue",
+        "invalidStringMapShape",
     ):
         if diagnostic_key not in actual:
             raise HxcIRFailure(f"negative fixtures lost {diagnostic_key} validation")

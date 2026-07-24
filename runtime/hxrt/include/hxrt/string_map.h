@@ -5,7 +5,8 @@
  * compiler keeps V exact and unboxed. Keys are copied as canonical UTF-8 bytes,
  * so a table never borrows temporary String storage. Mutations are fail-atomic:
  * allocation failure may reserve spare capacity but never changes visible
- * entries. The first compiler slice admits trivially copied Bool values.
+ * entries. Plain values copy as bytes; managed direct values provide one
+ * complete copy/assign/destroy strategy so every table slot owns its contents.
  */
 #ifndef HXRT_STRING_MAP_H_INCLUDED
 #define HXRT_STRING_MAP_H_INCLUDED
@@ -19,11 +20,69 @@ extern "C" {
 
 typedef struct hxc_string_map_ref hxc_string_map_ref;
 
-/** Create one empty shared table for an exact unboxed value layout. */
+/**
+ * Construct one value in uninitialized slot or lookup-result storage.
+ *
+ * On failure no live value remains at the destination and the source is
+ * unchanged.
+ */
+typedef hxc_status (*hxc_string_map_value_copy_fn)(
+  void *context,
+  void *destination,
+  const void *source
+);
+
+/**
+ * Replace one live slot without changing either value on failure.
+ *
+ * Reference-like implementations retain the source before destroying the old
+ * destination, including when both values contain the same nested owner.
+ */
+typedef hxc_status (*hxc_string_map_value_assign_fn)(
+  void *context,
+  void *destination,
+  const void *source
+);
+
+/** Destroy one live stored or copied value. Destruction cannot fail. */
+typedef void (*hxc_string_map_value_destroy_fn)(
+  void *context,
+  void *value
+);
+
+/**
+ * Exact unboxed storage and lifetime policy for one Map<String, V>.
+ *
+ * Trivial byte-relocatable values use three null callbacks. Managed direct
+ * values use all three callbacks. Context and callback code must outlive the
+ * map, and callbacks must not re-enter or mutate that map.
+ */
+typedef struct hxc_string_map_value_ops {
+  size_t size;
+  size_t alignment;
+  void *context;
+  hxc_string_map_value_copy_fn copy;
+  hxc_string_map_value_assign_fn assign;
+  hxc_string_map_value_destroy_fn destroy;
+} hxc_string_map_value_ops;
+
+/** Accept a non-zero layout and either zero or three lifecycle callbacks. */
+HXC_API bool hxc_string_map_value_ops_is_valid(
+  const hxc_string_map_value_ops *values
+);
+
+/** Create one empty shared table for a trivial exact unboxed value layout. */
 HXC_API hxc_status hxc_string_map_ref_create(
   hxc_allocator allocator,
   size_t value_size,
   size_t value_alignment,
+  hxc_string_map_ref **out_map
+);
+
+/** Create one empty shared table with a complete managed value policy. */
+HXC_API hxc_status hxc_string_map_ref_create_with_ops(
+  hxc_allocator allocator,
+  hxc_string_map_value_ops values,
   hxc_string_map_ref **out_map
 );
 
@@ -37,7 +96,12 @@ HXC_API hxc_status hxc_string_map_ref_create(
 HXC_API hxc_status hxc_string_map_ref_retain(hxc_string_map_ref *map);
 HXC_API hxc_status hxc_string_map_ref_release(hxc_string_map_ref *map);
 
-/** Insert or replace one key after copying its UTF-8 bytes. */
+/**
+ * Insert or replace one key after copying its UTF-8 bytes and value.
+ *
+ * A failed key allocation or value callback leaves every visible entry
+ * unchanged. Capacity may grow before the later operation fails.
+ */
 HXC_API hxc_status hxc_string_map_ref_set_copy(
   hxc_string_map_ref *map,
   hxc_string key,
@@ -51,7 +115,12 @@ HXC_API hxc_status hxc_string_map_ref_exists(
   bool *out_exists
 );
 
-/** Copy a value only when present and report presence through a separate flag. */
+/**
+ * Copy-construct a value only when present and report presence separately.
+ *
+ * Present output is a new owner that the caller must eventually destroy with
+ * the same value policy. On callback failure neither output is changed.
+ */
 HXC_API hxc_status hxc_string_map_ref_get_copy(
   const hxc_string_map_ref *map,
   hxc_string key,

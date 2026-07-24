@@ -157,16 +157,18 @@ class RuntimeFeatureCatalog {
 			new RuntimeFeatureDefinition(stringMap, "String-keyed shared Haxe Map identity with copied UTF-8 keys and exact unboxed value storage.",
 				CompilerSelectable, true, environments, [alloc, stringLiteral], [header("string_map.h"), source("string_map.c")], [
 					"hxc_string_map_ref_create",
+					"hxc_string_map_ref_create_with_ops",
 					"hxc_string_map_ref_retain",
 					"hxc_string_map_ref_release",
 					"hxc_string_map_ref_set_copy",
 					"hxc_string_map_ref_exists",
 					"hxc_string_map_ref_get_copy",
 					"hxc_string_map_ref_remove",
-					"hxc_string_map_ref_clear"
+					"hxc_string_map_ref_clear",
+					"hxc_string_map_value_ops_is_valid"
 				],
 				[], [],
-				documentation("Preserves ordinary Map<String, V> alias identity while copying canonical UTF-8 keys and keeping each admitted V specialization exact and unboxed.",
+				documentation("Preserves ordinary Map<String, V> alias identity while copying canonical UTF-8 keys and keeping each admitted V specialization exact and unboxed; trivial values copy as bytes, while managed direct records use a complete compiler-generated copy/assign/destroy policy.",
 					[
 						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Map<String, V> whose keys, contents, and shared identity change at run time."),
@@ -378,7 +380,7 @@ class RuntimeFeatureCatalog {
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
 			case "string.h": "16860609c4cdb6e8e81f3b02f212edb40be3da01f053743cc087b897df16ba63";
 			case "string_literal.h": "0c9c2b70aa847b7e8a6f2a3fcca18e11bdafd03340a4955527446b3a47388e36";
-			case "string_map.h": "4e2512f07b5c23b243acbf1d2c61d91359ad8a0b06f7cfadec34fb5eeab55473";
+			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
 			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
 		};
 	}
@@ -394,7 +396,7 @@ class RuntimeFeatureCatalog {
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "abe937db71f7333d4a915d7b7e222384ceeba8815783e8fafffb1aeaeadfd5d4";
-			case "string_map.c": "d847e5ecd0af2609e3c897ebcafbb49e654f830f5f9bb4d89d3e6e66105327bf";
+			case "string_map.c": "5ab15280f51ec98b2aa8a1d39deaa256bbee889e5adf881aa4f3fa7b51e6f0b0";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
 		};
 	}

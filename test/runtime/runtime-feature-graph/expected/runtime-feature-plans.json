@@ -354,12 +354,14 @@
         "symbols": [
           "hxc_string_map_ref_clear",
           "hxc_string_map_ref_create",
+          "hxc_string_map_ref_create_with_ops",
           "hxc_string_map_ref_exists",
           "hxc_string_map_ref_get_copy",
           "hxc_string_map_ref_release",
           "hxc_string_map_ref_remove",
           "hxc_string_map_ref_retain",
-          "hxc_string_map_ref_set_copy"
+          "hxc_string_map_ref_set_copy",
+          "hxc_string_map_value_ops_is_valid"
         ],
         "artifacts": [
           "runtime/include/hxrt/string_map.h",
@@ -485,12 +487,14 @@
       "hxc_size_mul",
       "hxc_string_map_ref_clear",
       "hxc_string_map_ref_create",
+      "hxc_string_map_ref_create_with_ops",
       "hxc_string_map_ref_exists",
       "hxc_string_map_ref_get_copy",
       "hxc_string_map_ref_release",
       "hxc_string_map_ref_remove",
       "hxc_string_map_ref_retain",
-      "hxc_string_map_ref_set_copy"
+      "hxc_string_map_ref_set_copy",
+      "hxc_string_map_value_ops_is_valid"
     ],
     "diagnosticMode": "off",
     "resolvedPolicy": "auto",

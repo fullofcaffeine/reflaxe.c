@@ -96,7 +96,7 @@ class HxcIRGolden {
 				cstringByteLengthMismatch: invalidDiagnostics(cstringByteLengthMismatchProgram()),
 				cstringEmbeddedNul: invalidDiagnostics(cstringEmbeddedNulProgram()),
 				ioFailurePolicy: invalidDiagnostics(ioFailurePolicyProgram()),
-				invalidStringMapValue: invalidDiagnostics(invalidStringMapValueProgram()),
+				invalidStringMapShape: invalidDiagnostics(invalidStringMapShapeProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
 				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
@@ -1803,29 +1803,29 @@ class HxcIRGolden {
 	}
 
 	/**
-		Reject a runtime family label that lies about its admitted value type.
+		Reject a runtime family label whose generic shape is not String-keyed.
 
-		The compiler currently constructs only `Map<String, Bool>` instances, but
-		HxcIR validation is an independent safety boundary. A malformed producer
-		must not turn the generic native byte-storage ABI into claimed language
-		support for `Map<String, Int>`.
+		Source lowering decides which exact `V` families have complete Map
+		lifetimes; HxcIR independently proves the structural runtime contract
+		`Map<String, V>`. A malformed producer must not attach the StringMap
+		runtime family to `Map<Int, Bool>`, even though Bool itself is admitted.
 	**/
-	static function invalidStringMapValueProgram():HxcIRProgram {
-		final file = "test/negative/InvalidStringMapValue.hx";
+	static function invalidStringMapShapeProgram():HxcIRProgram {
+		final file = "test/negative/InvalidStringMapShape.hx";
 		final mapType:HxcIRTypeDeclaration = {
 			id: "type.invalid-string-map",
-			displayName: "Map<String, Int>",
+			displayName: "Map<Int, Bool>",
 			kind: IRTKReference,
 			source: span(file, 1)
 		};
 		final mapInstance:HxcIRTypeInstance = {
 			id: "instance.invalid-string-map",
 			declarationId: mapType.id,
-			arguments: [IRTString, IRTInt(32, true)],
+			arguments: [IRTInt(32, true), IRTBool],
 			representation: IRRManaged("string-map"),
 			source: span(file, 1)
 		};
-		final program = minimalProgram("invalid.InvalidStringMapValue", [
+		final program = minimalProgram("invalid.InvalidStringMapShape", [
 			instruction("value.key", result("value.key", IRTString), IRIOConstant(IRCString("key", 3)), file, 2),
 			instruction("bad.equal", result("value.equal", IRTBool), IRIOBinary("haxe.string-map-reference.equal", "value.map", "value.map", IRIStatic), file,
 				3),
