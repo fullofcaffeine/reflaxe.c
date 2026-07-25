@@ -113,11 +113,24 @@ introduce reflection, a generic box, or a tracing collector.
 An exact managed String is admitted as an Array element when the reachable
 program has selected managed String representation. Its specialized element
 callbacks retain, assign, and release the immutable shared owner just like a
-normal Haxe String local. The narrower `Array<String>.join` method reads those
-owned elements, appends every element and separator to one checked UTF-8
-builder, then moves that allocation into one fresh managed String owner. This
-makes runtime work linear in the output bytes and preserves embedded NUL bytes
-without repeated whole-result copying. Other unsupported managed values remain rejected. A
+normal Haxe String local.
+
+Array construction and `push` use those callbacks for both ordinary source
+syntax and comprehensions. Haxe represents a comprehension as a loop that
+pushes each produced value, so it does not need a compiler-only collection
+operation. A borrowed String can be passed directly because the callback
+retains a new owner for the slot before the borrow ends. A fresh String, such
+as the result of `String.fromCharCode`, first enters a hidden caller-owned
+temporary. The callback copies and retains it into the slot; the caller then
+releases its temporary. This short-lived owner is necessary because allocation
+or element copying can fail: without it, either the new String could leak or
+its bytes could be released before the Array owns them.
+
+The narrower `Array<String>.join` method reads those owned elements, appends
+every element and separator to one checked UTF-8 builder, then moves that
+allocation into one fresh managed String owner. This makes runtime work linear
+in the output bytes and preserves embedded NUL bytes without repeated
+whole-result copying. Other unsupported managed values remain rejected. A
 class element is admitted only through the exact traced representation: direct
 nonescaping classes remain stack-shaped C values, while every class reachable
 from the admitted `Array<Class>` graph receives stable collector storage and a

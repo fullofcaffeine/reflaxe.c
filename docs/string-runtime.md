@@ -285,8 +285,15 @@ forward and reverse search over literal and owned Strings, split ownership and
 empty/adjacent/Unicode delimiters, repeated and
 overlapping matches, non-Basic Multilingual Plane and combining text, embedded
 NUL, empty needles, omitted/supplied starts, and the pinned negative-start
-behavior. Generated projects are checked in split, package, and unity layouts
-under cold, reversed, and warm compiler-server discovery. Strict C11
+behavior. It also covers value-producing switches over Int, String, enum, and
+String-backed enum-abstract subjects. Each switch mixes a literal borrow, a
+caller-owned borrow, a fresh runtime-created String, and a terminating `throw`
+arm. The HxcIR report proves that normal arms retain or move exactly one owner,
+the throwing arm does not invent one, and the join moves the selected owner
+once.
+
+Generated projects are checked in split, package, and unity layouts under cold,
+reversed, and warm compiler-server discovery. Strict C11
 `-O0`/`-O2`, C++17 headers, AddressSanitizer, UndefinedBehaviorSanitizer,
 runtime-none rejection, and malformed-HxcIR diagnostics keep both behavior and
 ownership plan honest.

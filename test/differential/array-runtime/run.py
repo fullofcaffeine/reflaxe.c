@@ -340,6 +340,18 @@ def validate_generated_hxcir(hxcir: str) -> None:
     enum_loop = hxcir_function(
         hxcir, "function.Main.countFirstScheduledCommands"
     )
+    entry = hxcir_function(hxcir, "function.Main.main")
+    if (
+        'string-temporary.' not in entry
+        or 'array-push-element-owner-initialize' not in entry
+        or not re.search(
+            r'array-push-element-borrow" result="[^"]+":managed-string-utf8',
+            entry,
+        )
+    ):
+        raise ArrayRuntimeFailure(
+            "generated Array<String> comprehension lost its fresh element owner"
+        )
     for label, section, element_owner, local_owner in (
         (
             "managed-record loop",
@@ -743,15 +755,17 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     # argument, the runtime String-to-Bytes copy, legacy-nullable String flow,
     # optional records, the StringBuf UTF-8 decoder, class construction, String
     # search, String splitting, Bool conversion through Std.string, typed Int
-    # interpolation, and Array<String>.join that followed them. The next
-    # reachable boundary is Haxe `throw` in ScenarioWriter. Requiring that exact
-    # later diagnostic proves this
-    # task did not merely move or hide its former Array failure. Accepting an
-    # arbitrary failure would weaken this product check into "Caxecraft still
-    # does not compile."
+    # interpolation, Array<String>.join, uncaught throw, managed String
+    # value-switch joins, and fresh String insertion into the Array
+    # comprehension that followed them. The next reachable boundary is
+    # `Std.string` over a managed String view in ScenarioWriter. Requiring that
+    # exact later diagnostic proves this task did not merely move or hide its
+    # former Array failure. Accepting an arbitrary failure would weaken this
+    # product check into "Caxecraft still does not compile."
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:349:" not in result.stderr
-        or "Unsupported typed Haxe node `TThrow`" not in result.stderr
+        "src/caxecraft/scenario/ScenarioWriter.hx:377:" not in result.stderr
+        or "TCall(Std.string:source-not-yet-admitted:managed-haxe-string-view:String)"
+        not in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
@@ -760,6 +774,7 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
         in result.stderr
         or "TCall(unavailable-static-target:function.String.fromCharCode)"
         in result.stderr
+        or "function-exit:unowned-fresh-managed-String-value" in result.stderr
     ):
         raise ArrayRuntimeFailure(
             "Caxecraft did not compile past its former managed Array element boundary\n"

@@ -122,6 +122,12 @@ class RuntimeRequirementAnalyzer {
 				collectImplementation(implementation, "deallocation", instruction.source, observations);
 			case IRIORetain(_, implementation):
 				collectImplementation(implementation, "retain", instruction.source, observations);
+			case IRIOAcquireManagedCarrier(_, _, IRMCARetainBorrowed(implementation)):
+				// A borrowed branch result becomes the join's owner by retaining
+				// through the same lifecycle operation as an ordinary alias. The
+				// carrier node makes the control-flow transfer explicit, so runtime
+				// selection must observe it instead of relying on emitter details.
+				collectImplementation(implementation, "retain", instruction.source, observations);
 			case IRIORelease(_, implementation):
 				// This instruction is the in-block form of an owned cleanup action.
 				// Keep the same runtime-plan operation ID used by edge cleanup so moving

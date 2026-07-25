@@ -26,6 +26,10 @@ final class Main {
 		return value;
 	}
 
+	/** Build one fresh managed String so Array insertion must transfer ownership. */
+	static function fromCode(code:Int):String
+		return String.fromCharCode(code);
+
 	static function main():Void {
 		final values:Array<Int> = [10, 20];
 		// Build this through the ordinary managed Array operations so the test
@@ -44,6 +48,10 @@ final class Main {
 		final after = Bytes.alloc(1);
 		before.set(0, 7);
 		after.set(0, 9);
+		final mixedLiteral = ["literal", labels[0], fromCode(0x1F600), labels[1].substring(1)];
+		final scalarCodes = [65, 0x1F600];
+		final freshComprehension = [for (code in scalarCodes) fromCode(code)];
+		final borrowedComprehension = [for (label in labels) label];
 		alias.push(12);
 		var sum = 0;
 		for (value in values)
@@ -82,11 +90,40 @@ final class Main {
 		after.set(0, 11);
 		final absent = maybeValues(false);
 		final present = maybeValues(true);
-		while (values.length != 3 || labels.length != 3 || labels[0] != "ready" || values[2] != 12 || joined != "ready|café|a\u0000b" || emptyJoined != ""
-			|| singletonJoined != "solo" || joinSeparatorEvaluations != 1 || sum != 42 || history.depth() != 1 || history.lastRevision() != 42
-			|| history.lastAfterByte() != 11 || history.lastMinimum() != 5 || managedPayloadLength != 3 || recordCopy.commands.length != 3
-			|| nestedRecordCommandCount != 3 || nestedEnvelopeCommandCount != 3 || absent != null || present == null || nullableLength(absent) != -1
-			|| nullableLength(present) != 2 || nestedArrayLength != 1) {}
+		while (values.length != 3
+			|| labels.length != 3
+			|| labels[0] != "ready"
+			|| values[2] != 12
+			|| joined != "ready|café|a\u0000b"
+			|| emptyJoined != ""
+			|| singletonJoined != "solo"
+			|| mixedLiteral.length != 4
+			|| mixedLiteral[0] != "literal"
+			|| mixedLiteral[1] != "ready"
+			|| mixedLiteral[2] != "😀"
+			|| mixedLiteral[3] != "afé"
+			|| freshComprehension.length != 2
+			|| freshComprehension[0] != "A"
+			|| freshComprehension[1] != "😀"
+			|| borrowedComprehension.length != 3
+			|| borrowedComprehension[0] != "ready"
+			|| borrowedComprehension[1] != "café"
+			|| borrowedComprehension[2] != "a\u0000b"
+			|| joinSeparatorEvaluations != 1
+			|| sum != 42
+			|| history.depth() != 1
+			|| history.lastRevision() != 42
+			|| history.lastAfterByte() != 11
+			|| history.lastMinimum() != 5
+			|| managedPayloadLength != 3
+			|| recordCopy.commands.length != 3
+			|| nestedRecordCommandCount != 3
+			|| nestedEnvelopeCommandCount != 3
+			|| absent != null
+			|| present == null
+			|| nullableLength(absent) != -1
+			|| nullableLength(present) != 2
+			|| nestedArrayLength != 1) {}
 	}
 
 	/**

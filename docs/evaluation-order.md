@@ -62,12 +62,22 @@ missing `else`, an open-ended switch without a default, or an arm that does not
 assign the exact local remains the source-positioned `HXC1001`
 uninitialized-local error.
 
-The local receives a defensive type-correct default before its exhaustive
-branches. That value cannot be observed on an admitted path because each branch
-overwrites it, but it also means emitted C never contains uninitialized storage
-if a later compiler pass changes the structure incorrectly. Validation and the
-ordinary short-circuit blocks still decide whether the right-hand helper runs;
-the printer does not repair or rediscover this rule.
+For unmanaged values such as integers and direct records, the local receives a
+defensive type-correct default before its exhaustive branches. That value
+cannot be observed on an admitted path because each branch overwrites it, but
+it also means emitted C never contains uninitialized storage if a later
+compiler pass changes the structure incorrectly. Validation and the ordinary
+short-circuit blocks still decide whether the right-hand helper runs; the
+printer does not repair or rediscover this rule.
+
+Managed values cannot use that shortcut. A default managed String would itself
+be an owner whose replacement and cleanup had to be tracked. HxcIR instead
+declares an explicitly empty ownership carrier. Every normal branch or switch
+arm moves a fresh value into it or retains a borrowed one. An arm that throws
+or returns does not reach the join, so it does not write the carrier. At the
+join, one move transfers the selected owner to the surrounding call, store, or
+return. The validator checks this protocol before C syntax is selected; the C
+printer never guesses which path owns the bytes.
 
 ### Closed enum-abstract switches
 

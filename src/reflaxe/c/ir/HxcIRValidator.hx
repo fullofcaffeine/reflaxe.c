@@ -1183,6 +1183,33 @@ private class HxcIRValidationState {
 		return instanceId == null || plannedId != instanceId ? null : instanceId;
 	}
 
+	/**
+	 * Match a join carrier with the lifecycle implementation for its exact type.
+	 *
+	 * Managed Strings use the shared `string` runtime retain/release operations.
+	 * Tagged enums instead use one generated, type-specific lifecycle helper
+	 * because the active payload decides what must be retained or destroyed.
+	 * Keeping this check at the HxcIR boundary prevents a generic-looking carrier
+	 * from pairing a value with the wrong ownership protocol.
+	 */
+	function requireManagedCarrierLifecycle(type:HxcIRTypeRef, selected:HxcIRImplementation, operation:String, path:String, source:HxcSourceSpan):Bool {
+		if (type == IRTManagedString) {
+			if (!isStringRuntimeImplementation(selected)) {
+				add(path, 'managed String carrier $operation requires the string runtime lifecycle', source);
+				return false;
+			}
+			return true;
+		}
+		return requireManagedEnumLifecycle(type, selected, operation, path, source) != null;
+	}
+
+	/** Require a type that the managed join-carrier protocol currently owns. */
+	function requireManagedCarrierType(type:HxcIRTypeRef, path:String, source:HxcSourceSpan):Bool {
+		if (type == IRTManagedString)
+			return true;
+		return requireManagedTaggedEnum(type, path, source) != null;
+	}
+
 	/** Extract the closed-record instance named by a typed ownership plan. */
 	static function aggregateLifecycleInstanceId(helperId:String, operation:String):Null<String> {
 		final prefix = "aggregate-lifecycle:";
@@ -1870,7 +1897,7 @@ private class HxcIRValidationState {
 						if (local != null && isUnmanagedDirectCarrier(local.type))
 							add(path, "managed carrier declaration requires a value with managed lifetime", instruction.source);
 						if (local != null)
-							requireManagedEnumLifecycle(local.type, destroyImplementation, "destroy", path, instruction.source);
+							requireManagedCarrierLifecycle(local.type, destroyImplementation, "destroy", path, instruction.source);
 						if (managedCarrierDeclarationCount(localId, blocks) != 1)
 							add(path, "managed carrier storage must have exactly one declaration", instruction.source);
 						validateManagedCarrierFlow(localId, block, blocks, path, instruction.source);
@@ -1893,14 +1920,14 @@ private class HxcIRValidationState {
 				if (placeType != null)
 					switch acquisition {
 						case IRMCAMoveFresh:
-							requireManagedTaggedEnum(placeType, path, instruction.source);
+							requireManagedCarrierType(placeType, path, instruction.source);
 							final freshOwner = isFreshManagedCarrierValue(valueId, valueSites);
 							if (!freshOwner) add(path,
-								"move-fresh acquisition requires a newly constructed enum, an owned call result, or another managed-carrier move",
+								"move-fresh acquisition requires a newly constructed managed value, an owned call result, or another managed-carrier move",
 								instruction.source);
 						case IRMCARetainBorrowed(retainImplementation):
 							validateImplementation(retainImplementation, '$path.acquisition.implementation', instruction.source);
-							requireManagedEnumLifecycle(placeType, retainImplementation, "retain", path, instruction.source);
+							requireManagedCarrierLifecycle(placeType, retainImplementation, "retain", path, instruction.source);
 					}
 			case IRIOMoveManagedCarrier(place):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
@@ -1913,7 +1940,7 @@ private class HxcIRValidationState {
 				}
 				final placeType = knownPlaceType(place, available, locals);
 				if (placeType != null) {
-					requireManagedTaggedEnum(placeType, path, instruction.source);
+					requireManagedCarrierType(placeType, path, instruction.source);
 					if (instruction.result != null && typeKey(instruction.result.type) != typeKey(placeType))
 						add(path, "managed carrier move result does not match its carrier type", instruction.source);
 				}
@@ -3302,10 +3329,18 @@ private class HxcIRValidationState {
 					{blockId: whenTrue.targetBlockId, phase: IRMCEmpty},
 					{blockId: whenFalse.targetBlockId, phase: IRMCEmpty}
 				];
+			case IRTSwitch(_, cases, defaultEdge):
+				cases.map(item -> ({blockId: item.edge.targetBlockId, phase: IRMCEmpty} : HxcIRManagedCarrierFlowState))
+					.concat([{blockId: defaultEdge.targetBlockId, phase: IRMCEmpty}]);
+			case IRTTagSwitch(_, cases, defaultEdge):
+				final result = cases.map(item -> ({blockId: item.edge.targetBlockId, phase: IRMCEmpty} : HxcIRManagedCarrierFlowState));
+				if (defaultEdge != null)
+					result.push({blockId: defaultEdge.targetBlockId, phase: IRMCEmpty});
+				result;
 			case _: [];
 		};
-		if (starts.length != 2) {
-			add(path, "managed carrier declaration must immediately feed a structured two-way branch", source);
+		if (starts.length == 0) {
+			add(path, "managed carrier declaration must immediately feed a structured branch or switch", source);
 			return;
 		}
 		final pending = starts.copy();
@@ -3388,9 +3423,10 @@ private class HxcIRValidationState {
 	 * Check the ownership source claimed by `move-fresh`.
 	 *
 	 * A move is safe only when the value-producing instruction gives its caller
-	 * the one owner. Managed enum construction, a call returning that enum, and
-	 * a nested carrier move have that contract. A load does not: it borrows the
-	 * owner still held by a local or parameter and must use retain-borrowed.
+	 * the one owner. Managed enum construction, an owned call result (including
+	 * a managed String), and a nested carrier move have that contract. A load
+	 * does not: it borrows the owner still held by a local or parameter and must
+	 * use retain-borrowed.
 	 */
 	static function isFreshManagedCarrierValue(valueId:String, valueSites:Map<String, HxcIRInstructionSite>):Bool {
 		final site = valueSites.get(valueId);

@@ -249,16 +249,18 @@ def is_current_compiler_boundary(message: str) -> bool:
 
     Caxecraft is a compiler-development workload, so "the game failed to
     compile" is not an acceptable success condition. Until Beads issue
-    `haxe_c-018u.1` transfers managed String owners through value-switch joins,
-    callers that intentionally test product progress may accept only this
+    `haxe_c-c3s.5` defines `Std.string` over an already-managed String value,
+    callers that intentionally test product progress may accept only this exact
     source-positioned HXC1001 diagnostic. Any earlier, later, or differently
-    shaped failure remains an error. Once the join owns its selected String,
-    this predicate naturally returns false and snapshot validation resumes
-    against newly generated playable artifacts.
+    shaped failure remains an error. Once that typed identity conversion is
+    admitted, this predicate naturally returns false and snapshot validation
+    resumes against newly generated playable artifacts.
     """
     return (
-        "ScenarioWriter.action" in message
-        and "function-exit:unowned-fresh-managed-String-value" in message
+        "src/caxecraft/scenario/ScenarioWriter.hx:377:" in message
+        and "ScenarioWriter.quoted" in message
+        and "TCall(Std.string:source-not-yet-admitted:managed-haxe-string-view:String)"
+        in message
     )
 
 

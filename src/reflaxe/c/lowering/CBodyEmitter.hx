@@ -1744,11 +1744,12 @@ class CBodyEmitter {
 	}
 
 	/**
-	 * Assign one selected enum value and acquire exactly one owner for the join.
+	 * Assign one selected managed value and acquire exactly one owner for the join.
 	 *
 	 * Moving a fresh value needs only the structural C assignment. Copying a
-	 * borrowed value immediately calls the enum's active-tag retain helper, so
-	 * later branch cleanup cannot invalidate the joined payload.
+	 * borrowed value immediately calls either the String runtime retain operation
+	 * or an enum's active-tag retain helper, so later branch cleanup cannot
+	 * invalidate the joined payload.
 	 */
 	function emitManagedCarrierAcquisition(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, place:HxcIRPlace, valueId:String,
 			acquisition:HxcIRManagedCarrierAcquisition, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
@@ -1760,6 +1761,9 @@ class CBodyEmitter {
 		statements.push(SExpr(EBinary(Assign, target, requireValue(values, valueId, fn.id))));
 		switch acquisition {
 			case IRMCAMoveFresh:
+			case IRMCARetainBorrowed(IRIRuntime("string")):
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringRetain)), [target]), boundsAbortName, instruction.id,
+					fn.id);
 			case IRMCARetainBorrowed(IRIProgramLocal(implementationId)):
 				final lifecycle = programLocalLifecycle(implementationId, instruction.id, fn.id);
 				emitStatusAbort(statements, ECall(EIdentifier(lifecycle.retainName), [EUnary(AddressOf, target)]), boundsAbortName, instruction.id, fn.id);

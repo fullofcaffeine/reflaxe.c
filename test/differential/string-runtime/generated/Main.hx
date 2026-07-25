@@ -9,6 +9,7 @@
 final class Main {
 	/** Counts source evaluations so conversion cannot accidentally duplicate work. */
 	static var boolEvaluations:Int = 0;
+
 	static var intEvaluations:Int = 0;
 
 	/** Return one observable Boolean while recording that its source ran once. */
@@ -61,17 +62,16 @@ final class Main {
 		final negative = renderInt(-2147483647 - 1);
 		final interpolated = 'value=${observedInt(-42)}';
 		final selected = observedInt(7) > 0 ? renderInt(19) : renderInt(20);
-		return direct == "0"
-			&& positive == "2147483647"
-			&& negative == "-2147483648"
-			&& interpolated == "value=-42"
-			&& selected == "19"
-			&& intEvaluations == 3;
+		return direct == "0" && positive == "2147483647" && negative == "-2147483648" && interpolated == "value=-42" && selected == "19" && intEvaluations == 3;
 	}
 
 	/** Keep direct `String.fromCharCode` observable across a normal Haxe call. */
 	static function fromCode(code:Int):String
 		return String.fromCharCode(code);
+
+	/** Keep a value-switch result in expression position across one normal call. */
+	static function keep(value:String):String
+		return value;
 
 	/** Build one mixed ASCII/Unicode value through the upstream StringBuf API. */
 	static function build(accent:Int, emoji:Int):String {
@@ -136,6 +136,58 @@ final class Main {
 	}
 
 	/**
+		Exercise managed String ownership at four kinds of value-switch join.
+
+		Each switch deliberately mixes a static literal, a borrowed parameter, a
+		fresh runtime allocation, and a terminating `throw` arm. Calls below avoid
+		the throwing arm at runtime, but its compiled edge still proves that a path
+		which never reaches the join is not required to invent or release an owner.
+	**/
+	static function switchJoinContractHolds(borrowed:String):Bool {
+		final fromInt = selectInt(2, borrowed);
+		final fromString = selectString("borrowed", borrowed);
+		final fromEnum = selectEnum(Fresh, borrowed);
+		final fromAbstract = selectAbstract(SwitchKey.Borrowed, borrowed);
+		return fromInt == "😀" && fromString == borrowed && fromEnum == "é😀" && fromAbstract == borrowed;
+	}
+
+	/** Return an Int-subject switch result across a separate call boundary. */
+	static function selectInt(choice:Int, borrowed:String):String
+		return keep(switch choice {
+			case 0: "literal-int";
+			case 1: borrowed;
+			case 2: fromCode(0x1F600);
+			default: throw "unreachable-int";
+		});
+
+	/** Return a String-subject switch result across a separate call boundary. */
+	static function selectString(choice:String, borrowed:String):String
+		return keep(switch choice {
+			case "literal": "literal-string";
+			case "borrowed": borrowed;
+			case "fresh": fromCode(0xE9);
+			default: throw "unreachable-string";
+		});
+
+	/** Return an enum-subject switch result across a separate call boundary. */
+	static function selectEnum(choice:SwitchChoice, borrowed:String):String
+		return keep(switch choice {
+			case Literal: "literal-enum";
+			case Borrowed: borrowed;
+			case Fresh: fromCode(0xE9) + fromCode(0x1F600);
+			case Explode: throw "unreachable-enum";
+		});
+
+	/** Return a String-backed enum-abstract switch result across a call boundary. */
+	static function selectAbstract(choice:SwitchKey, borrowed:String):String
+		return keep(switch choice {
+			case SwitchKey.Literal: "literal-abstract";
+			case SwitchKey.Borrowed: borrowed;
+			case SwitchKey.Fresh: fromCode(0x1F600);
+			default: throw "unreachable-abstract";
+		});
+
+	/**
 		Exercise aliases, branches, records, enums, arrays, and borrowed views.
 
 		Each aggregate stores a logical String copy. Generated C may copy the small
@@ -165,6 +217,7 @@ final class Main {
 			&& boolStringContractHolds()
 			&& intStringContractHolds()
 			&& splitContractHolds()
+			&& switchJoinContractHolds(alias)
 			&& alias.length == 3
 			&& direct == "é😀"
 			&& record.right == "é😀"
@@ -225,4 +278,20 @@ final class Main {
 enum TextChoice {
 	Text(value:String);
 	Empty;
+}
+
+/** Names the four ownership shapes selected by the enum-subject switch. */
+enum SwitchChoice {
+	Literal;
+	Borrowed;
+	Fresh;
+	Explode;
+}
+
+/** Keeps a String-backed enum-abstract subject distinct in the typed fixture. */
+enum abstract SwitchKey(String) {
+	final Literal = "literal";
+	final Borrowed = "borrowed";
+	final Fresh = "fresh";
+	final Explode = "explode";
 }

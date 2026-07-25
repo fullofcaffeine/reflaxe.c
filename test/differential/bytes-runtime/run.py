@@ -396,13 +396,16 @@ def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
     # views; legacy-nullable String flow, the String-backed action switch,
     # contextually typed optional records, the StringBuf UTF-8 decoder, class
     # construction, String search, String splitting, Bool conversion through
-    # Std.string, typed Int interpolation, and Array<String>.join also lower.
-    # The next reachable boundary is Haxe `throw` in ScenarioWriter. Requiring
-    # that exact later diagnostic proves this lane passed every prior boundary
-    # rather than accepting an arbitrary failure.
+    # Std.string, typed Int interpolation, Array<String>.join, uncaught throw,
+    # managed String switch joins, and fresh String Array insertion also lower.
+    # The next reachable boundary is Std.string over an already-managed String
+    # view in ScenarioWriter. Requiring that exact later diagnostic proves this
+    # lane passed every prior boundary rather than accepting an arbitrary
+    # failure.
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:349:" not in result.stderr
-        or "Unsupported typed Haxe node `TThrow`" not in result.stderr
+        "src/caxecraft/scenario/ScenarioWriter.hx:377:" not in result.stderr
+        or "TCall(Std.string:source-not-yet-admitted:managed-haxe-string-view:String)"
+        not in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
         or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
         or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"

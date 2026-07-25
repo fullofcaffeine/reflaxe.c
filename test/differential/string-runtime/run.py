@@ -416,6 +416,50 @@ def string_list(value: object, label: str) -> list[str]:
     return list(value)
 
 
+def hxcir_function(hxcir: str, display_name: str) -> str:
+    """Return one complete function from the deterministic HxcIR text report."""
+    start_marker = f'name="{display_name}"'
+    start = hxcir.find(start_marker)
+    if start < 0:
+        raise StringRuntimeFailure(
+            f"managed String HxcIR omitted function {display_name}"
+        )
+    start = hxcir.rfind("\n  function ", 0, start)
+    end_marker = "\n  end function "
+    end = hxcir.find(end_marker, start)
+    if start < 0 or end < 0:
+        raise StringRuntimeFailure(
+            f"managed String HxcIR malformed function {display_name}"
+        )
+    line_end = hxcir.find("\n", end + len(end_marker))
+    return hxcir[start : len(hxcir) if line_end < 0 else line_end + 1]
+
+
+def validate_switch_join_ownership(hxcir: str) -> None:
+    """Prove each source switch has one explicit, balanced String owner join."""
+    for display_name in (
+        "Main.selectInt",
+        "Main.selectString",
+        "Main.selectEnum",
+        "Main.selectAbstract",
+    ):
+        function = hxcir_function(hxcir, display_name)
+        expected_counts = {
+            "declare-managed-carrier": 1,
+            "ownership=retain-borrowed(runtime(\"string\"))": 2,
+            "ownership=move-fresh": 1,
+            "move-managed-carrier": 1,
+            "terminator throw": 1,
+        }
+        for operation, expected in expected_counts.items():
+            actual = function.count(operation)
+            if actual != expected:
+                raise StringRuntimeFailure(
+                    f"{display_name} HxcIR has {actual} {operation!r} "
+                    f"operation(s); expected {expected}"
+                )
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     """Check semantic intent, exact runtime closure, and recognizable C calls."""
     for operation in (
@@ -437,6 +481,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
             )
     if str(ROOT) in hxcir:
         raise StringRuntimeFailure("managed String HxcIR leaked the checkout path")
+    validate_switch_join_ownership(hxcir)
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (

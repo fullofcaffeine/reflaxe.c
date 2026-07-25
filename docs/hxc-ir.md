@@ -114,17 +114,22 @@ handwritten shape `T selected; if (condition) selected = left; else selected =
 right;` without fabricating a zero value. Managed conditional joins remain a
 separate ownership problem because selecting a branch may require retain,
 transfer, and cleanup.
-Schema version 19 solves that separate problem for managed tagged enums. It
-declares one initially empty carrier before the branch, then records how the
-selected arm gives that carrier exactly one owner. A newly constructed enum or
-owned call result moves into the carrier; a parameter, local, or other borrowed
-value is copied and retained through the enum family's exact active-payload
-helper. The join moves the one owner out. Validation rejects an unowned branch,
-two acquisitions, a borrowed value mislabeled as fresh, ordinary loads or
-stores of the carrier, a second move, or a path that abandons an acquired owner.
-This lets C emission use an ordinary local plus structured `if`/`else` while
-keeping retain, cleanup, and transfer decisions explicit before C syntax is
-chosen.
+Schema version 19 solves that separate problem for managed tagged enums and
+managed Strings. It declares one initially empty carrier before a branch or
+value switch, then records how each normal arm gives that carrier exactly one
+owner. A newly constructed value or owned call result moves into the carrier;
+a parameter, local, static String literal, or other borrowed value is copied
+and retained. Strings use the shared String runtime lifecycle. An enum uses its
+generated, type-specific helper because the active case decides which payload
+needs ownership work. A `throw`, `return`, or unreachable arm ends before the
+join and therefore neither acquires nor invents an owner.
+
+The join moves the one owner out. Validation rejects an unowned normal arm, two
+acquisitions, a borrowed value mislabeled as fresh, a String paired with an
+enum helper, ordinary loads or stores of the carrier, a second move, or a path
+that abandons an acquired owner. This lets C emission use an ordinary local
+plus structured `if`/`else` or `switch` while keeping retain, cleanup, and
+transfer decisions explicit before C syntax is chosen.
 The same schema's existing `IRTThrow` and `HxcIRFailureEdge` now have a bounded
 ordinary-function producer. When reachability contains no admitted `TTry`, the
 frontend knows the throw cannot be caught: it evaluates the payload once,

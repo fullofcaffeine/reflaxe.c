@@ -109,6 +109,7 @@ class HxcIRGolden {
 				managedCarrierBorrowMovedAsFresh: invalidDiagnostics(managedCarrierBorrowMovedAsFreshProgram()),
 				managedCarrierMissingAcquire: invalidDiagnostics(managedCarrierMissingAcquireProgram()),
 				managedCarrierLifecycleMismatch: invalidDiagnostics(managedCarrierLifecycleMismatchProgram()),
+				managedStringCarrierLifecycleMismatch: invalidDiagnostics(managedStringCarrierLifecycleMismatchProgram()),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
 				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
 				throwWithoutStatus: invalidDiagnostics(throwWithoutStatusProgram()),
@@ -2160,6 +2161,69 @@ class HxcIRGolden {
 	static function managedCarrierLifecycleMismatchProgram():HxcIRProgram {
 		return managedCarrierValidationProgram("invalid.ManagedCarrierLifecycleMismatch",
 			IRMCARetainBorrowed(IRIProgramLocal("enum-lifecycle:instance.managed-choice:retain")), true, "enum-lifecycle:instance.other:destroy");
+	}
+
+	/**
+	 * Reject enum helpers accidentally paired with a managed String carrier.
+	 *
+	 * Both branches otherwise follow the valid carrier protocol. Keeping that
+	 * flow valid isolates the exact lifecycle mismatch: String ownership must
+	 * use the shared String runtime, never an unrelated generated enum helper.
+	 */
+	static function managedStringCarrierLifecycleMismatchProgram():HxcIRProgram {
+		final file = "test/negative/ManagedStringCarrierLifecycleMismatch.hx";
+		final parameterSource = span(file, 1);
+		final carrierPlace = IRPLocal("local.result");
+		final functionPlan:HxcIRFunction = {
+			id: "fn.invalid.managed-string-carrier",
+			displayName: "invalid.ManagedStringCarrierLifecycleMismatch.main",
+			parameters: [
+				{id: "value.condition", type: IRTBool, source: parameterSource},
+				{id: "value.borrowed", type: IRTManagedString, source: parameterSource}
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [
+				local("local.result", IRTManagedString, IRLSAutomatic, IRISUninitialized, file, 2)
+			],
+			returnType: IRTManagedString,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				block("entry", [
+					instruction("managed.declare", null, IRIODeclareManagedCarrier(carrierPlace, IRIProgramLocal("enum-lifecycle:instance.other:destroy")),
+						file, 2)
+				], IRTBranch("value.condition", edge("true"), edge("false")), file, 2),
+				block("true", [
+					instruction("managed.acquire-true", null,
+						IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(IRIRuntime("string"))), file, 3)
+				], IRTJump(edge("join")), file, 3),
+				block("false", [
+					instruction("managed.acquire-false", null,
+						IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(IRIRuntime("string"))), file, 4)
+				], IRTJump(edge("join")), file, 4),
+				block("join", [
+					instruction("managed.move", result("value.result", IRTManagedString), IRIOMoveManagedCarrier(carrierPlace), file, 5)
+				], IRTReturn("value.result", []), file, 5)
+			],
+			cleanupRegions: [],
+			source: span(file, 1, 5)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: "invalid.ManagedStringCarrierLifecycleMismatch",
+					types: [],
+					typeInstances: [],
+					globals: [],
+					functions: [functionPlan],
+					source: span(file, 1, 5)
+				}
+			]
+		};
 	}
 
 	/** Build the valid managed carrier protocol used by focused negative mutations. */
