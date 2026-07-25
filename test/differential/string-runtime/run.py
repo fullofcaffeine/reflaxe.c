@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -460,6 +461,64 @@ def validate_switch_join_ownership(hxcir: str) -> None:
                 )
 
 
+def validate_std_string_identity_ownership(hxcir: str) -> None:
+    """Prove String identity preserves, rather than invents, ownership work."""
+    borrowed_return = hxcir_function(hxcir, "Main.renderString")
+    if (
+        borrowed_return.count("retain-string-return") != 1
+        or "std-string" in borrowed_return
+    ):
+        raise StringRuntimeFailure(
+            "Std.string over a borrowed String lost its ordinary return ownership"
+        )
+
+    fresh_return = hxcir_function(hxcir, "Main.renderFreshString")
+    if (
+        fresh_return.count('call dispatch=direct("function.Main.fromCode")') != 1
+        or " retain " in fresh_return
+        or " release " in fresh_return
+        or "std-string" in fresh_return
+    ):
+        raise StringRuntimeFailure(
+            "Std.string over a fresh String must transfer the existing owner "
+            "without conversion, retain, or release"
+        )
+
+    borrowed_view_return = hxcir_function(hxcir, "Main.renderStringView")
+    if (
+        borrowed_view_return.count(
+            'runtime(feature="string-scalar",operation="substring")'
+        )
+        != 1
+        or borrowed_view_return.count("string-substring-retain") != 1
+        or "std-string" in borrowed_view_return
+    ):
+        raise StringRuntimeFailure(
+            "Std.string over a borrowed String view changed its existing "
+            "substring ownership plan"
+        )
+
+    consumers = hxcir_function(hxcir, "Main.stringIdentityContractHolds")
+    owner = re.search(
+        r'string-length-receiver-owner-initialize".*place=local\("([^"]+)"\)',
+        consumers,
+    )
+    cleanup_id = (
+        None if owner is None else f"string-temporary.{owner.group(1)}.release"
+    )
+    if (
+        consumers.count("string-length-receiver-owner-initialize") != 1
+        or consumers.count("string-length-receiver-borrow") != 1
+        or cleanup_id is None
+        or consumers.count(cleanup_id) != 2
+        or "std-string" in consumers
+    ):
+        raise StringRuntimeFailure(
+            "a directly consumed fresh Std.string(String) result did not retain "
+            "one balanced receiver lifetime"
+        )
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     """Check semantic intent, exact runtime closure, and recognizable C calls."""
     for operation in (
@@ -482,6 +541,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     if str(ROOT) in hxcir:
         raise StringRuntimeFailure("managed String HxcIR leaked the checkout path")
     validate_switch_join_ownership(hxcir)
+    validate_std_string_identity_ownership(hxcir)
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (

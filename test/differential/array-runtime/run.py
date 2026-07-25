@@ -756,16 +756,16 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     # optional records, the StringBuf UTF-8 decoder, class construction, String
     # search, String splitting, Bool conversion through Std.string, typed Int
     # interpolation, Array<String>.join, uncaught throw, managed String
-    # value-switch joins, and fresh String insertion into the Array
-    # comprehension that followed them. The next reachable boundary is
-    # `Std.string` over a managed String view in ScenarioWriter. Requiring that
-    # exact later diagnostic proves this task did not merely move or hide its
-    # former Array failure. Accepting an arbitrary failure would weaken this
-    # product check into "Caxecraft still does not compile."
+    # value-switch joins, fresh String insertion into the Array comprehension,
+    # and ownership-preserving Std.string(String) identity that followed them.
+    # The next reachable boundary is the shallow `Array.copy` used by
+    # ScenarioWriter. Requiring that exact later diagnostic proves this task did
+    # not merely move or hide its former Array failure. Accepting an arbitrary
+    # failure would weaken this product check into "Caxecraft still does not
+    # compile."
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:377:" not in result.stderr
-        or "TCall(Std.string:source-not-yet-admitted:managed-haxe-string-view:String)"
-        not in result.stderr
+        "src/caxecraft/scenario/ScenarioWriter.hx:33:" not in result.stderr
+        or "TCall(Array.copy:not-yet-admitted)" not in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
@@ -775,6 +775,7 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
         or "TCall(unavailable-static-target:function.String.fromCharCode)"
         in result.stderr
         or "function-exit:unowned-fresh-managed-String-value" in result.stderr
+        or "TCall(Std.string:source-not-yet-admitted" in result.stderr
     ):
         raise ArrayRuntimeFailure(
             "Caxecraft did not compile past its former managed Array element boundary\n"

@@ -861,7 +861,7 @@ def validate_generated(ledger: dict[str, object]) -> None:
         statuses[str(entry["status"])] += 1
     if statuses["conformant"] != 1 or statuses["partial"] != 26:
         raise StdlibLedgerFailure(
-            "evidence should mark exactly Std.int conformant plus the bounded Array<String>.join, Std.string(Bool/Int), ten Bytes, eight String, four StringBuf, and literal Sys.println/trace slices partial; broader stdlib parity is not yet proven"
+            "evidence should mark exactly Std.int conformant plus the bounded Array<String>.join, Std.string(Bool/Int/String identity), ten Bytes, eight String, four StringBuf, and literal Sys.println/trace slices partial; broader stdlib parity is not yet proven"
         )
 
 

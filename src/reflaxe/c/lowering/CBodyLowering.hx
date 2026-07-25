@@ -8446,7 +8446,10 @@ private class FunctionBuilder {
 
 		The receiver and arguments are lowered from left to right, preserving Haxe
 		evaluation order. Bounds remain signed Haxe `Int` values until the checked
-		runtime applies the source-language rules.
+		runtime applies the source-language rules. If evaluating the receiver
+		creates a fresh managed String, a compiler local owns that value across the
+		read-only runtime call and releases it on every later exit. Existing static
+		or caller-owned receivers remain simple borrows and add no retain.
 	**/
 	function lowerStringCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>):LoweredValue {
 		final method = access.field.get().name;
@@ -8460,7 +8463,8 @@ private class FunctionBuilder {
 		final receiverMapping = bodyValueType(access.receiver.t, access.receiver.pos, 'TCall(String.$method:receiver-type)');
 		if (!isStringCarrier(receiverMapping.irType))
 			return unsupported(access.receiver, 'TCall(String.$method:receiver-not-immutable-String-view)');
-		final receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, 'TCall(String.$method:receiver)');
+		var receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, 'TCall(String.$method:receiver)');
+		receiver = stabilizeFreshManagedString(receiver, access.receiver.pos, 'string-$method-receiver');
 		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 			HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), 'string-$method-receiver-null-check');
 		if (method == "indexOf" || method == "lastIndexOf")
@@ -8523,7 +8527,10 @@ private class FunctionBuilder {
 		preserves omission with a Boolean because its default depends on both
 		String lengths. A supplied start stays a signed Haxe `Int`; negative starts
 		follow the pinned Eval target's observed behavior because the language API
-		leaves that edge unspecified.
+		leaves that edge unspecified. A freshly created needle receives the same
+		short-lived owner as a fresh receiver: the search borrows it, then cleanup
+		releases it once. This avoids leaking nested expressions such as
+		`text.indexOf(String.fromCharCode(code))`.
 	**/
 	function lowerStringSearch(expression:TypedExpr, receiver:LoweredValue, arguments:Array<TypedExpr>, method:String):LoweredValue {
 		final operation = method == "indexOf" ? "index-of" : "last-index-of";
@@ -8531,7 +8538,8 @@ private class FunctionBuilder {
 		final needleMapping = bodyValueType(needleExpression.t, needleExpression.pos, 'TCall(String.$method:needle-type)');
 		if (!isStringCarrier(needleMapping.irType))
 			return unsupported(needleExpression, 'TCall(String.$method:needle-not-immutable-String-view)');
-		final needle = coerce(lowerValue(needleExpression, needleMapping), needleMapping, needleExpression.pos, 'TCall(String.$method:needle)');
+		var needle = coerce(lowerValue(needleExpression, needleMapping), needleMapping, needleExpression.pos, 'TCall(String.$method:needle)');
+		needle = stabilizeFreshManagedString(needle, needleExpression.pos, 'string-$method-needle');
 		appendInstruction(null, IRIONullCheck(needle.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 			HaxeSourceSpan.fromPosition(needleExpression.pos, input.sourcePath), 'string-$operation-needle-null-check');
 		final loweredArguments = [receiver.id, needle.id];
@@ -8579,12 +8587,17 @@ private class FunctionBuilder {
 		bytes alive until the last returned part is released. The complete result
 		is one fresh Array owner; a failed allocation or retain rolls back the
 		partially constructed container before this call reports failure.
+
+		A fresh delimiter is stabilized only for this call and released later;
+		the returned Array elements retain the receiver whose bytes they actually
+		view, not the delimiter used to find their boundaries.
 	**/
 	function lowerStringSplit(expression:TypedExpr, receiver:LoweredValue, delimiterExpression:TypedExpr):LoweredValue {
 		final delimiterMapping = bodyValueType(delimiterExpression.t, delimiterExpression.pos, "TCall(String.split:delimiter-type)");
 		if (!isStringCarrier(delimiterMapping.irType))
 			return unsupported(delimiterExpression, "TCall(String.split:delimiter-not-immutable-String-view)");
-		final delimiter = coerce(lowerValue(delimiterExpression, delimiterMapping), delimiterMapping, delimiterExpression.pos, "TCall(String.split:delimiter)");
+		var delimiter = coerce(lowerValue(delimiterExpression, delimiterMapping), delimiterMapping, delimiterExpression.pos, "TCall(String.split:delimiter)");
+		delimiter = stabilizeFreshManagedString(delimiter, delimiterExpression.pos, "string-split-delimiter");
 		appendInstruction(null, IRIONullCheck(delimiter.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 			HaxeSourceSpan.fromPosition(delimiterExpression.pos, input.sourcePath), "string-split-delimiter-null-check");
 		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.split:result-type)");
@@ -8610,12 +8623,21 @@ private class FunctionBuilder {
 	static function isStringCarrier(type:HxcIRTypeRef):Bool
 		return type == IRTString || type == IRTManagedString;
 
-	/** Count valid UTF-8 scalars and return the checked Haxe `Int` length. */
+	/**
+		Count valid UTF-8 scalars and return the checked Haxe `Int` length.
+
+		Length only borrows its String receiver. When receiver evaluation creates a
+		fresh managed value, `stabilizeFreshManagedString` gives that existing owner
+		a compiler local so the runtime can read it and normal or failure cleanup can
+		release it exactly once. Static and already-owned receivers add no lifetime
+		work.
+	**/
 	function lowerStringLength(expression:TypedExpr, receiverExpression:TypedExpr):LoweredValue {
 		final receiverMapping = bodyValueType(receiverExpression.t, receiverExpression.pos, "TField(String.length:receiver-type)");
 		if (!isStringCarrier(receiverMapping.irType))
 			return unsupported(receiverExpression, "TField(String.length:receiver-not-String)");
-		final receiver = coerce(lowerValue(receiverExpression, receiverMapping), receiverMapping, receiverExpression.pos, "TField(String.length:receiver)");
+		var receiver = coerce(lowerValue(receiverExpression, receiverMapping), receiverMapping, receiverExpression.pos, "TField(String.length:receiver)");
+		receiver = stabilizeFreshManagedString(receiver, receiverExpression.pos, "string-length-receiver");
 		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 			HaxeSourceSpan.fromPosition(receiverExpression.pos, input.sourcePath), "string-length-receiver-null-check");
 		final resultMapping = bodyValueType(expression.t, expression.pos, "TField(String.length:result-type)");
@@ -9162,14 +9184,17 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Lower the currently admitted primitive slice of `Std.string`.
+		Lower statically known `Std.string` inputs without Dynamic boxing.
 
 		The public Haxe signature accepts `Dynamic`, but the typed call still
-		retains the concrete source type. For `Bool`, haxe.c can therefore choose
-		the two immutable Haxe spellings directly without introducing a Dynamic
-		box, allocation, or generic reflection path. Every other source type keeps
-		failing at this boundary until its own representation and semantics are
-		proven.
+		retains the concrete source type. haxe.c uses that fact to select a narrow
+		typed operation: `Bool` chooses one of two immutable spellings, `Int`
+		formats through the checked String runtime, and an input already typed as
+		`String` is returned unchanged. The String identity case emits no HxcIR
+		conversion and allocates no new text; keeping the same value ID also keeps
+		its existing borrowed-or-fresh ownership fact available to the surrounding
+		store, return, or consumer. Other source types keep failing here until their
+		representation and conversion semantics are proven.
 	**/
 	function lowerStdString(expression:TypedExpr, arguments:Array<TypedExpr>):LoweredValue {
 		if (arguments.length != 1)
@@ -9185,6 +9210,8 @@ private class FunctionBuilder {
 	function lowerStdStringValue(expression:TypedExpr, argumentMapping:CBodyValueType, resultMapping:CBodyValueType, role:String):LoweredValue {
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		return switch argumentMapping.irType {
+			case IRTString | IRTManagedString:
+				coerce(lowerValue(expression, argumentMapping), resultMapping, expression.pos, '$role:String-identity');
 			case IRTBool:
 				final argument = coerce(lowerValue(expression, argumentMapping), argumentMapping, expression.pos, '$role:argument');
 				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};

@@ -12,9 +12,14 @@ class Main {
 	/**
 		Select one immutable Haxe String through ordinary expression-valued control
 		flow. Both calls are observed so the native oracle executes each branch.
+
+		`Std.string` receives an already-typed String here. The call is deliberately
+		kept in this literal-only fixture so its generated plan proves that the
+		conversion preserves the static view without allocation or a String runtime
+		operation.
 	**/
 	static function selectLabel(primary:Bool):String {
 		final selected = primary ? "ASCII" : "fallback";
-		return selected;
+		return Std.string(selected);
 	}
 }

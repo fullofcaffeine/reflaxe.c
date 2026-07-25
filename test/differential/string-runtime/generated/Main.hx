@@ -33,6 +33,29 @@ final class Main {
 		return Std.string(value);
 
 	/**
+		Return an already-typed String through Haxe's general conversion API.
+
+		This should not allocate or copy text: `Std.string` receives a value that is
+		already a String. The separate call boundary still matters because a
+		borrowed parameter must become a caller-owned return when it escapes.
+	**/
+	static function renderString(value:String):String
+		return Std.string(value);
+
+	/** Return one fresh String through `Std.string` and a normal call boundary. */
+	static function renderFreshString(code:Int):String
+		return Std.string(fromCode(code));
+
+	/**
+		Return a borrowed substring through `Std.string`.
+
+		The substring view may share its source allocation. Returning it must keep
+		that allocation alive after the callee and original source are gone.
+	**/
+	static function renderStringView(value:String):String
+		return Std.string(value.substring(1));
+
+	/**
 		Exercise the statically typed Boolean slice of Haxe's general conversion.
 
 		`Std.string` accepts `Dynamic` at its public boundary, but Haxe's typed
@@ -68,6 +91,28 @@ final class Main {
 	/** Keep direct `String.fromCharCode` observable across a normal Haxe call. */
 	static function fromCode(code:Int):String
 		return String.fromCharCode(code);
+
+	/**
+		Prove that `Std.string(String)` is an ownership-preserving identity.
+
+		The cases deliberately place the same semantic no-op at different lifetime
+		boundaries. Fresh inputs may transfer their existing allocation; borrowed
+		inputs must be retained only when the result escapes into a return, local, or
+		Array. Replacing `source` afterward makes a missing retained owner observable
+		under the native sanitizers instead of letting a dangling view pass by luck.
+	**/
+	static function stringIdentityContractHolds():Bool {
+		var source = build(0xE9, 0x1F600);
+		final returnedBorrowed = renderString(source);
+		final directLength = Std.string(fromCode(0x1F600)).length;
+		final storedFresh = Std.string(fromCode(0xE9) + fromCode(0x1F600));
+		final returnedFresh = renderFreshString(0x1F600);
+		final returnedView = renderStringView(source);
+		final values = [Std.string(fromCode(0xE9)), Std.string(source), Std.string("literal")];
+		source = "replaced";
+		return returnedBorrowed == "Aé😀" && directLength == 1 && storedFresh == "é😀" && returnedFresh == "😀" && returnedView == "é😀"
+			&& values.length == 3 && values[0] == "é" && values[1] == "Aé😀" && values[2] == "literal";
+	}
 
 	/** Keep a value-switch result in expression position across one normal call. */
 	static function keep(value:String):String
@@ -216,6 +261,7 @@ final class Main {
 		return built == "Aé😀"
 			&& boolStringContractHolds()
 			&& intStringContractHolds()
+			&& stringIdentityContractHolds()
 			&& splitContractHolds()
 			&& switchJoinContractHolds(alias)
 			&& alias.length == 3

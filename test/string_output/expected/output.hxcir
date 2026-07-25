@@ -1,5 +1,5 @@
 hxcir schema=19
-module "Main" @"Main.hx":2:30-19:3
+module "Main" @"Main.hx":2:30-24:3
   function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-10:3
     local "local.0" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:7-3:71
     block "entry" @"Main.hx":2:30-10:3
@@ -42,29 +42,29 @@ module "Main" @"Main.hx":2:30-19:3
       terminator return value=none cleanup=[] @"Main.hx":2:30-10:3
     end block "block.4.if-join"
   end function "function.Main.main"
-  function "function.Main.selectLabel" name="Main.selectLabel" returns=string-utf8 failure=infallible entry="entry" @"Main.hx":16:51-19:3
-    parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":16:51-19:3
-    local "local.1" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":17:3-17:51
-    local "local.2" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":17:20-17:50
-    block "entry" @"Main.hx":16:51-19:3
-      instruction "instruction.0.conditional-result-declare" result=- declare-uninitialized place=local("local.2") @"Main.hx":17:20-17:50
-      terminator branch condition="parameter.0" true=edge(target="block.0.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.1.conditional-false",arguments=[],cleanup=[]) @"Main.hx":17:20-17:50
+  function "function.Main.selectLabel" name="Main.selectLabel" returns=string-utf8 failure=infallible entry="entry" @"Main.hx":21:51-24:3
+    parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":21:51-24:3
+    local "local.1" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":22:3-22:51
+    local "local.2" type=string-utf8 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":22:20-22:50
+    block "entry" @"Main.hx":21:51-24:3
+      instruction "instruction.0.conditional-result-declare" result=- declare-uninitialized place=local("local.2") @"Main.hx":22:20-22:50
+      terminator branch condition="parameter.0" true=edge(target="block.0.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.1.conditional-false",arguments=[],cleanup=[]) @"Main.hx":22:20-22:50
     end block "entry"
-    block "block.0.conditional-true" @"Main.hx":17:20-17:50
-      instruction "instruction.1.static-string-literal" result="value.0":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":17:30-17:37
-      instruction "instruction.2.conditional-true-store" result=- store place=local("local.2") value="value.0" @"Main.hx":17:20-17:50
-      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"Main.hx":17:20-17:50
+    block "block.0.conditional-true" @"Main.hx":22:20-22:50
+      instruction "instruction.1.static-string-literal" result="value.0":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":22:30-22:37
+      instruction "instruction.2.conditional-true-store" result=- store place=local("local.2") value="value.0" @"Main.hx":22:20-22:50
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"Main.hx":22:20-22:50
     end block "block.0.conditional-true"
-    block "block.1.conditional-false" @"Main.hx":17:20-17:50
-      instruction "instruction.3.static-string-literal" result="value.1":string-utf8 constant value=string-utf8(bytes=8,value="fallback") @"Main.hx":17:40-17:50
-      instruction "instruction.4.conditional-false-store" result=- store place=local("local.2") value="value.1" @"Main.hx":17:20-17:50
-      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"Main.hx":17:20-17:50
+    block "block.1.conditional-false" @"Main.hx":22:20-22:50
+      instruction "instruction.3.static-string-literal" result="value.1":string-utf8 constant value=string-utf8(bytes=8,value="fallback") @"Main.hx":22:40-22:50
+      instruction "instruction.4.conditional-false-store" result=- store place=local("local.2") value="value.1" @"Main.hx":22:20-22:50
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"Main.hx":22:20-22:50
     end block "block.1.conditional-false"
-    block "block.2.conditional-join" @"Main.hx":17:20-17:50
-      instruction "instruction.5.conditional-load" result="value.2":string-utf8 load place=local("local.2") @"Main.hx":17:20-17:50
-      instruction "instruction.6.initialize" result=- initialize place=local("local.1") value="value.2" transition=uninitialized->initialized @"Main.hx":17:3-17:51
-      instruction "instruction.7.load" result="value.3":string-utf8 load place=local("local.1") @"Main.hx":18:10-18:18
-      terminator return value="value.3" cleanup=[] @"Main.hx":18:3-18:18
+    block "block.2.conditional-join" @"Main.hx":22:20-22:50
+      instruction "instruction.5.conditional-load" result="value.2":string-utf8 load place=local("local.2") @"Main.hx":22:20-22:50
+      instruction "instruction.6.initialize" result=- initialize place=local("local.1") value="value.2" transition=uninitialized->initialized @"Main.hx":22:3-22:51
+      instruction "instruction.7.load" result="value.3":string-utf8 load place=local("local.1") @"Main.hx":23:21-23:29
+      terminator return value="value.3" cleanup=[] @"Main.hx":23:3-23:30
     end block "block.2.conditional-join"
   end function "function.Main.selectLabel"
 end module "Main"

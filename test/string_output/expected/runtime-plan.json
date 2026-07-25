@@ -410,11 +410,11 @@
       "source": {
         "file": "Main.hx",
         "end": {
-          "line": 17,
+          "line": 22,
           "column": 37
         },
         "start": {
-          "line": 17,
+          "line": 22,
           "column": 30
         }
       }
@@ -429,11 +429,11 @@
       "source": {
         "file": "Main.hx",
         "end": {
-          "line": 17,
+          "line": 22,
           "column": 50
         },
         "start": {
-          "line": 17,
+          "line": 22,
           "column": 40
         }
       }

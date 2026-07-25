@@ -246,7 +246,7 @@ the admitted fail-stop policy by aborting on any non-OK status.
 
 The typed compiler tree retains the concrete source type even though Haxe
 declares `Std.string` with a `Dynamic` parameter. haxe.c currently uses that
-fact for two bounded conversions:
+fact for three bounded cases:
 
 - `Bool` evaluates once and selects the immutable `"true"` or `"false"` view.
   It needs no allocation, boxing, reflection, or generic conversion runtime.
@@ -254,14 +254,25 @@ fact for two bounded conversions:
   32-bit decimal formatter. The formatter is independent of the host locale,
   emits no leading plus sign or zeroes, and handles `-2147483648` without
   performing the undefined C operation of negating that value directly.
+- `String` evaluates once and returns the same String value. This is an identity
+  conversion: the text is already in the requested form, so the compiler emits
+  no formatting call and allocates no replacement buffer. The surrounding
+  operation still owns the lifetime decision. For example, returning a borrowed
+  parameter retains its shared bytes for the caller, while returning a fresh
+  `String.fromCharCode` result transfers that existing owner instead of retaining
+  or copying it again.
 
 String interpolation uses the same typed conversions before managed
 concatenation, so it does not maintain a second formatting policy. Integer
 formatting allocates only because its bytes depend on the run-time value; the
 result then follows the existing String owner, failure, and cleanup plan.
-Floating-point, object, enum, and genuinely `Dynamic` inputs still fail at the
-`Std.string` boundary until their separate formatting and representation
-contracts are implemented.
+A fresh String used only by a read operation, such as
+`Std.string(makeText()).length`, receives one short-lived compiler-owned local:
+the read borrows that local's bytes, then normal or failure cleanup releases the
+original owner exactly once. Existing borrowed or static Strings do not acquire
+that temporary. Floating-point, object, enum, and genuinely `Dynamic` inputs
+still fail at the `Std.string` boundary until their separate formatting and
+representation contracts are implemented.
 
 `Bytes.ofString(value)` may also consume an admitted String parameter, local,
 or alias. “Runtime” here describes when the expression is selected, not who
@@ -276,10 +287,11 @@ has two complementary halves. Its independent strict-C fixture covers checked
 and maximal-subpart lossy decoding, slicing, scalar-indexed search, comparison,
 stable hashing, builder failure atomicity, allocator identity, borrowed/owned
 CString lifetime, reference counts, and exact allocations. Its ordinary-Haxe
-fixture compares Eval with generated C for `String.fromCharCode`, `split`, upstream
-`StringBuf.addChar`, `Std.string(Bool)`, `Std.string(Int)`, integer
-interpolation, signed boundaries, single evaluation, concatenation, aliases,
-branches, records, enums, arrays,
+fixture compares Eval with generated C for `String.fromCharCode`, `split`,
+upstream `StringBuf.addChar`, `Std.string(Bool)`, `Std.string(Int)`,
+`Std.string(String)` across static, borrowed, viewed, fresh, stored, returned,
+and directly consumed values, integer interpolation, signed boundaries, single
+evaluation, concatenation, aliases, branches, records, enums, arrays,
 reassignment, nullable values, calls, returns, borrowed scalar slices, and
 forward and reverse search over literal and owned Strings, split ownership and
 empty/adjacent/Unicode delimiters, repeated and

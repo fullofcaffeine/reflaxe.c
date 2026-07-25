@@ -685,12 +685,16 @@ flow through `IRTString` values without allocation. Its `string-literal`
 requirement records the private carrier needed by generated C; it does not
 select the full String runtime. `haxe.string.equal` and
 `haxe.string.not-equal` compare the canonical byte length and bytes, never the
-storage pointer. Observable hosted output separately requests `io`. An output
-program's exact closure is `runtime-base + status + string-literal + io`; it
-contains no allocator, full string operations, object, collector, dynamic,
-reflection, or exception machinery. Each semantic requirement is a root reason,
-and transitive dependencies remain plan evidence rather than duplicate
-warnings.
+storage pointer. `Std.string` over either `IRTString` or `IRTManagedString`
+returns the same HxcIR value ID because an already-typed String needs no
+conversion. Reusing the ID is also semantically important: a managed value
+keeps its existing fresh-or-borrowed ownership fact so the surrounding return,
+store, container, or read operation remains its one lifetime owner. Observable
+hosted output separately requests `io`. An output program's exact closure is
+`runtime-base + status + string-literal + io`; it contains no allocator, full
+string operations, object, collector, dynamic, reflection, or exception
+machinery. Each semantic requirement is a root reason, and transitive
+dependencies remain plan evidence rather than duplicate warnings.
 
 Portable and metal share this IR. Later analyses decide whether a representation
 is legal under the resolved profile and runtime policy. The IR must preserve the

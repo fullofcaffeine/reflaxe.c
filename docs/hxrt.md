@@ -481,8 +481,10 @@ builders, lossy decoding, locale-independent signed 32-bit decimal formatting,
 and explicit CString conversion above `string-scalar`. The integer formatter
 is selected by the `from-int` HxcIR root used for `Std.string(Int)` and integer
 interpolation; it preserves the existing allocator, failure-atomic output, and
-owned String lifetime contracts. Literal emission, `Std.string(Bool)`, and
-allocation-free scalar operations do not select it. See
+owned String lifetime contracts. Literal emission, `Std.string(Bool)`,
+`Std.string(String)`, and allocation-free scalar operations do not select it.
+The String-to-String case reuses its input carrier and existing ownership plan;
+it is a compiler identity operation, not an `hxrt` call. See
 [string runtime](string-runtime.md) and
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
 
