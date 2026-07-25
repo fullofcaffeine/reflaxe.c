@@ -1,9 +1,14 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorCommandReducer.EditorReductionResult;
+import caxecraft.editor.EditorCommandReducer.apply as reduceCommand;
 import caxecraft.editor.EditorHistory.EditorHistoryEntry;
+import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
+import caxecraft.editor.EditorPolicy.validate as validateEditorSettings;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImageResult;
+import caxecraft.editor.EditorScenarioSnapshot.capture as captureScenario;
+import caxecraft.editor.EditorScenarioSnapshot.restore as restoreScenario;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorEditResult;
@@ -48,11 +53,11 @@ final class EditorSession {
 
 	/** Open even a semantically invalid draft so the editor can repair it. */
 	public static function open(initial:Scenario, registry:ScenarioContentRegistry, ?requested:EditorSettings):EditorOpenResult {
-		final settings = requested == null ? EditorPolicy.defaults() : requested;
-		final invalidSetting = EditorPolicy.validate(settings);
+		final settings = requested == null ? defaultEditorSettings() : requested;
+		final invalidSetting = validateEditorSettings(settings);
 		if (invalidSetting != null)
 			return EditorOpenRejected(invalidSetting);
-		return switch EditorScenarioSnapshot.capture(initial) {
+		return switch captureScenario(initial) {
 			case ImageRejected(error): EditorOpenRejected(error);
 			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings));
 		}
@@ -61,7 +66,7 @@ final class EditorSession {
 	public function apply(command:EditorCommand):EditorEditResult {
 		if (activeTestPlay != null)
 			return EditRejected(NotEditing);
-		return switch EditorScenarioSnapshot.capture(draft) {
+		return switch captureScenario(draft) {
 			case ImageRejected(error): EditRejected(error);
 			case ImageReady(before): applyToImage(before, command);
 		}
@@ -73,10 +78,10 @@ final class EditorSession {
 				return restorePlayable(before);
 			case _:
 		}
-		return switch EditorCommandReducer.apply(before.parsed.candidate, selection, command, settings) {
+		return switch reduceCommand(before.parsed.candidate, selection, command, settings) {
 			case ReductionRejected(error): EditRejected(error);
 			case ReductionReady(reduction):
-				switch EditorScenarioSnapshot.capture(reduction.scenario) {
+				switch captureScenario(reduction.scenario) {
 					case ImageRejected(error): EditRejected(error);
 					case ImageReady(after): accept(before, selection, after, reduction.selection, reduction.family);
 				}
@@ -89,7 +94,7 @@ final class EditorSession {
 		final entry = history.takeUndo();
 		if (entry == null)
 			return HistoryRejected(NothingToUndo);
-		return switch EditorScenarioSnapshot.restore(entry.before) {
+		return switch restoreScenario(entry.before) {
 			case ImageRejected(error):
 				history.takeRedo();
 				HistoryRejected(error);
@@ -106,7 +111,7 @@ final class EditorSession {
 		final entry = history.takeRedo();
 		if (entry == null)
 			return HistoryRejected(NothingToRedo);
-		return switch EditorScenarioSnapshot.restore(entry.after) {
+		return switch restoreScenario(entry.after) {
 			case ImageRejected(error):
 				history.takeUndo();
 				HistoryRejected(error);
@@ -119,7 +124,7 @@ final class EditorSession {
 
 	/** Validate the draft and update the separate last-known-playable snapshot. */
 	public function validate():EditorValidationResult {
-		return switch EditorScenarioSnapshot.capture(draft) {
+		return switch captureScenario(draft) {
 			case ImageRejected(error): ValidationBlocked(error);
 			case ImageReady(image):
 				switch ScenarioValidator.validate(image.parsed, registry) {
@@ -178,7 +183,7 @@ final class EditorSession {
 		a playable or persistable map.
 	**/
 	public function canonicalDraft():Bytes {
-		return switch EditorScenarioSnapshot.capture(draft) {
+		return switch captureScenario(draft) {
 			case ImageReady(image): image.bytes.sub(0, image.bytes.length);
 			case ImageRejected(_): throw "editor draft became unreadable";
 		}
@@ -202,7 +207,7 @@ final class EditorSession {
 	function restorePlayable(before:EditorScenarioImage):EditorEditResult {
 		if (lastPlayable == null)
 			return EditRejected(NoPlayableScenario);
-		return switch EditorScenarioSnapshot.capture(lastPlayable) {
+		return switch captureScenario(lastPlayable) {
 			case ImageRejected(error): EditRejected(error);
 			case ImageReady(after): accept(before, selection, after, null, Recovery);
 		}
@@ -239,7 +244,7 @@ final class EditorSession {
 	static function cloneScenario(scenario:Null<Scenario>):Null<Scenario> {
 		if (scenario == null)
 			return null;
-		return switch EditorScenarioSnapshot.capture(scenario) {
+		return switch captureScenario(scenario) {
 			case ImageReady(image): image.parsed.candidate;
 			case ImageRejected(_): null;
 		}

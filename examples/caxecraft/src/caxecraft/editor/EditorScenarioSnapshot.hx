@@ -37,51 +37,57 @@ enum EditorScenarioImageResult {
 	also ensuring every editor-produced draft remains representable by the public
 	file format. It performs no filesystem work.
 
-	`@:noCompletion` marks this cross-file collaborator as internal editor
-	machinery. Application code should use `EditorSession`.
+	The codec round trip is a stateless operation over caller-owned values, so
+	module functions are clearer than a class containing only static methods.
+	They must remain module-public because `EditorSession` and `EditorTestPlay`
+	import them from other source files. `@:noCompletion` removes the annotated
+	functions from ordinary IDE suggestions so application authors are guided
+	toward `EditorSession`, the supported stateful API. It does not make the
+	functions private, weaken type checking, or change generated C; explicit
+	internal imports continue to work normally.
 **/
 @:noCompletion
-final class EditorScenarioSnapshot {
-	public static function capture(scenario:Scenario):EditorScenarioImageResult {
-		if (scenario.formatVersion != ScenarioWriter.FORMAT_VERSION)
-			return ImageRejected(UnsupportedFormatVersion(scenario.formatVersion, ScenarioWriter.FORMAT_VERSION));
-		if (containsNestedChoice(scenario))
-			return ImageRejected(NestedChoiceIsNotRepresentable);
-		return restore(ScenarioWriter.write(scenario));
-	}
+function capture(scenario:Scenario):EditorScenarioImageResult {
+	if (scenario.formatVersion != ScenarioWriter.FORMAT_VERSION)
+		return ImageRejected(UnsupportedFormatVersion(scenario.formatVersion, ScenarioWriter.FORMAT_VERSION));
+	if (containsNestedChoice(scenario))
+		return ImageRejected(NestedChoiceIsNotRepresentable);
+	return restore(ScenarioWriter.write(scenario));
+}
 
-	public static function restore(bytes:Bytes):EditorScenarioImageResult {
-		return switch ScenarioLexer.read(bytes) {
-			case ReadError(diagnostics): ImageRejected(SnapshotRejected(diagnostics));
-			case ReadOk(records):
-				switch ScenarioParser.parse(records) {
-					case ReadError(diagnostics): ImageRejected(SnapshotRejected(diagnostics));
-					case ReadOk(parsed): ImageReady({bytes: bytes.sub(0, bytes.length), parsed: parsed});
-				}
-		}
-	}
-
-	static function containsNestedChoice(scenario:Scenario):Bool {
-		for (sequence in scenario.flow.sequences)
-			if (!actionsAreRepresentable(sequence.actions, false))
-				return true;
-		for (rule in scenario.flow.rules)
-			if (!actionsAreRepresentable(rule.actions, false))
-				return true;
-		return false;
-	}
-
-	static function actionsAreRepresentable(actions:Array<FlowAction>, insideChoice:Bool):Bool {
-		for (action in actions)
-			switch action {
-				case ChooseSeeded(_, choices):
-					if (insideChoice)
-						return false;
-					for (choice in choices)
-						if (!actionsAreRepresentable(choice.actions, true))
-							return false;
-				case _:
+/** Restore an isolated editor image from canonical in-memory CAXEMAP bytes. */
+@:noCompletion
+function restore(bytes:Bytes):EditorScenarioImageResult {
+	return switch ScenarioLexer.read(bytes) {
+		case ReadError(diagnostics): ImageRejected(SnapshotRejected(diagnostics));
+		case ReadOk(records):
+			switch ScenarioParser.parse(records) {
+				case ReadError(diagnostics): ImageRejected(SnapshotRejected(diagnostics));
+				case ReadOk(parsed): ImageReady({bytes: bytes.sub(0, bytes.length), parsed: parsed});
 			}
-		return true;
 	}
+}
+
+private function containsNestedChoice(scenario:Scenario):Bool {
+	for (sequence in scenario.flow.sequences)
+		if (!actionsAreRepresentable(sequence.actions, false))
+			return true;
+	for (rule in scenario.flow.rules)
+		if (!actionsAreRepresentable(rule.actions, false))
+			return true;
+	return false;
+}
+
+private function actionsAreRepresentable(actions:Array<FlowAction>, insideChoice:Bool):Bool {
+	for (action in actions)
+		switch action {
+			case ChooseSeeded(_, choices):
+				if (insideChoice)
+					return false;
+				for (choice in choices)
+					if (!actionsAreRepresentable(choice.actions, true))
+						return false;
+			case _:
+		}
+	return true;
 }

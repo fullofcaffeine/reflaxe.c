@@ -302,6 +302,12 @@ performance, packaging, and developer experience together.
   allocation/runtime selection, and source-module ownership. Until that
   evidence exists, track the blocked cleanup rather than adding more static-only
   classes by habit or disguising unsupported module fields with raw C.
+  When changing a Haxe subsystem whose module-field shapes already have that
+  evidence, inspect its neighboring static-only classes as part of the same
+  ownership review. Migrate the clear stateless cases in that verified slice
+  instead of preserving redundant wrappers by inertia. Keep material,
+  unrelated migrations in a follow-up Beads issue rather than turning a local
+  change into a mechanical repository-wide rewrite.
 - Treat ordinary Haxe classes as a source-language contract, not as syntax that
   application authors must manually translate into C-shaped records. Preserve
   construction, initialization, identity, mutation, inheritance, interfaces,

@@ -1,8 +1,9 @@
 package caxecraft.qa;
 
-import caxecraft.editor.EditorPolicy;
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
-import caxecraft.editor.EditorScenarioFactory;
+import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
+import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
+import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -69,7 +70,7 @@ final class EditorProbe {
 
 	static function main():Void {
 		checkActionPalette();
-		final session = open(EditorPolicy.defaults());
+		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, ResizeWorld({width: 4, height: 2, depth: 4}), WorldShape);
 		commandChecks += roundTrip(session, PutFluid({
@@ -276,12 +277,12 @@ final class EditorProbe {
 		require(tiny.canonicalDraft().compare(before) == 0, "rejected history entry changed the draft");
 
 		final invalidSettings:EditorSettings = {
-			historyEntries: EditorPolicy.MAX_HISTORY_ENTRIES + 1,
+			historyEntries: MAX_HISTORY_ENTRIES + 1,
 			historyBytes: 1,
 			selectionCells: 1
 		};
 		switch EditorSession.open(baseScenario(), new Registry(), invalidSettings) {
-			case EditorOpenRejected(InvalidSetting(HistoryEntries, 1, EditorPolicy.MAX_HISTORY_ENTRIES)):
+			case EditorOpenRejected(InvalidSetting(HistoryEntries, 1, MAX_HISTORY_ENTRIES)):
 			case _:
 				throw "editor accepted settings above the hard history-entry bound";
 		}
@@ -295,7 +296,7 @@ final class EditorProbe {
 				throw "editor silently normalized an unsupported CAXEMAP version";
 		}
 
-		final session = open(EditorPolicy.defaults());
+		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(PutObject({id: id("narrator"), tags: [], placement: Checkpoint(transform(0, 0, 0))})), Placement,
 			"place narrator-named speaker");
 		expectApplied(session.apply(PutDialogue({
@@ -308,7 +309,7 @@ final class EditorProbe {
 	}
 
 	static function checkHistoryStateChanges():Void {
-		final session = open(EditorPolicy.defaults());
+		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 2, height: 1, depth: 1})), WorldShape, "history accounting edit");
 		final recordedBytes = session.historyBytes();
 		require(recordedBytes > 0 && session.historyEntries() == 1, "accepted edit was not counted in history");
@@ -328,7 +329,7 @@ final class EditorProbe {
 	}
 
 	static function checkTestPlayLocksEditing():Void {
-		final session = open(EditorPolicy.defaults());
+		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 2, height: 1, depth: 1})), WorldShape, "pre-test-play edit");
 		requireTestStarted(session.enterTestPlay(), "editing lock test play");
 		expectRejected(session.apply(SetPaletteEntry(1, STONE)), error -> switch error {
@@ -507,7 +508,7 @@ final class EditorProbe {
 	}
 
 	static function baseScenario():Scenario
-		return EditorScenarioFactory.create(id("editor.qa"), new LogicalPath("packs/caxecraft/base"), Message(TITLE_MESSAGE), Creative, AIR, PLAYER,
+		return createEditorScenario(id("editor.qa"), new LogicalPath("packs/caxecraft/base"), Message(TITLE_MESSAGE), Creative, AIR, PLAYER,
 			EmbeddedMessageCatalog({
 				defaultLocale: EN,
 				locales: [

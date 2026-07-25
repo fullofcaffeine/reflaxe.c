@@ -1,5 +1,6 @@
 package caxecraft.editor;
 
+import caxecraft.editor.EditorScenarioSnapshot.capture as captureScenario;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowExecutor;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
@@ -55,7 +56,7 @@ final class EditorTestPlay {
 		return executor.checkpoint();
 
 	public function scenarioSnapshot():Scenario {
-		return switch EditorScenarioSnapshot.capture(scenario) {
+		return switch captureScenario(scenario) {
 			case ImageReady(image): image.parsed.candidate;
 			case ImageRejected(_): throw "validated editor test-play snapshot became unreadable";
 		}

@@ -141,7 +141,11 @@ not a general runtime loader, dependency system, or mod marketplace.
   Prefer composition and registered behavior over a subclass per character.
   Do not create a class merely because an authored entity is a noun, and do not
   use a static-only class as a substitute for either module functions or a real
-  stateful instance.
+  stateful instance. When changing one Caxecraft subsystem, inspect its
+  neighboring static-only wrappers too: migrate the clear stateless cases in
+  the same tested ownership slice, keep classes that own state, identity, or a
+  lifetime, and track a material unrelated cleanup instead of performing an
+  unreviewed whole-game rewrite.
 - Character personality is authored data: localized dialogue, presentation
   profile, interests or tags, relationship and quest state, and selected
   registered behaviors. General algorithms remain Haxe. The data format never

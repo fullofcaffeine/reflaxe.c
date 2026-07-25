@@ -2,7 +2,7 @@ package caxecraft.app;
 
 #if c
 import caxecraft.content.BaseContentPack.BaseContentRegistry;
-import caxecraft.editor.EditorScenarioFactory;
+import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorHistoryResult;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
@@ -163,7 +163,7 @@ final class CaxecraftEditorScreen {
 
 	/** Create the built-in blank draft without teaching the generic editor a pack ID. */
 	static function openNewWorld():Null<EditorSession> {
-		final draft = EditorScenarioFactory.create(new ScenarioId("editor.new-world"), new LogicalPath("packs/caxecraft/base"),
+		final draft = createEditorScenario(new ScenarioId("editor.new-world"), new LogicalPath("packs/caxecraft/base"),
 			ScenarioText.Literal("Untitled world"), ScenarioMode.Creative, new ContentId("caxecraft:air"), new ScenarioId("player.spawn"));
 		return switch EditorSession.open(draft, new BaseContentRegistry()) {
 			case EditorOpened(value): value;
