@@ -18,12 +18,26 @@ typedef ManagedRecord = {
 
 /** Ordinary-Haxe executable for typed managed-record Array elements. */
 final class Main {
+	static var joinSeparatorEvaluations:Int = 0;
+
+	/** Return one separator while proving `Array.join` evaluates it once. */
+	static function observedSeparator(value:String):String {
+		joinSeparatorEvaluations += 1;
+		return value;
+	}
+
 	static function main():Void {
 		final values:Array<Int> = [10, 20];
 		// Build this through the ordinary managed Array operations so the test
 		// cannot be reduced to a constant expression before haxe.c sees it.
 		final labels:Array<String> = [];
 		labels.push("ready");
+		labels.push("café");
+		labels.push("a\u0000b");
+		joinSeparatorEvaluations = 0;
+		final joined = labels.join(observedSeparator("|"));
+		final emptyJoined = ([] : Array<String>).join("");
+		final singletonJoined = ["solo"].join("ignored");
 		final alias = values;
 		final history = new History();
 		final before = Bytes.alloc(1);
@@ -68,10 +82,11 @@ final class Main {
 		after.set(0, 11);
 		final absent = maybeValues(false);
 		final present = maybeValues(true);
-		while (values.length != 3 || labels.length != 1 || labels[0] != "ready" || values[2] != 12 || sum != 42 || history.depth() != 1
-			|| history.lastRevision() != 42 || history.lastAfterByte() != 11 || history.lastMinimum() != 5 || managedPayloadLength != 3
-			|| recordCopy.commands.length != 3 || nestedRecordCommandCount != 3 || nestedEnvelopeCommandCount != 3 || absent != null || present == null
-			|| nullableLength(absent) != -1 || nullableLength(present) != 2 || nestedArrayLength != 1) {}
+		while (values.length != 3 || labels.length != 3 || labels[0] != "ready" || values[2] != 12 || joined != "ready|café|a\u0000b" || emptyJoined != ""
+			|| singletonJoined != "solo" || joinSeparatorEvaluations != 1 || sum != 42 || history.depth() != 1 || history.lastRevision() != 42
+			|| history.lastAfterByte() != 11 || history.lastMinimum() != 5 || managedPayloadLength != 3 || recordCopy.commands.length != 3
+			|| nestedRecordCommandCount != 3 || nestedEnvelopeCommandCount != 3 || absent != null || present == null || nullableLength(absent) != -1
+			|| nullableLength(present) != 2 || nestedArrayLength != 1) {}
 	}
 
 	/**

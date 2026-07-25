@@ -192,14 +192,26 @@ ordinary Haxe arrays provide the same semantic surface for differential tests.
 health, commit order, and the deterministic completed-step clock; callers no
 longer pass world storage or an authoritative tick number into the tick.
 
-`CaxecraftApp` is the application composition root. Haxe's `@:allow`
-friend-access rule lets it create scoped views while loading and rendering;
-those views cannot be returned or stored, and the annotation emits no C
-ownership or runtime mechanism. The runtime `LevelLoader` and read-only
-`GameView` will replace that migration seam. The session now owns the shipped
-`localPlayer` binding and deterministic completed-tick clock. It resolves the
-binding internally and advances the clock only after a successful commit;
-`view()` now publishes the first immutable local-character/clock snapshot.
+`CaxecraftApp` is the application composition root and the one type named by
+`GameSession`'s class-level `@:allow` metadata. During Haxe type checking, that
+metadata lets this exact collaborator read or call otherwise-private
+`GameSession` members; unrelated types still receive the usual private-access
+error. Class-level placement means the grant covers the class's private members,
+so it is broader than putting `@:allow` on one field even though the receiving
+type remains exact. This temporary friendship lets the composition root create
+the short-lived read/write views still needed by loading and rendering without
+publishing mutable session storage to every caller.
+
+After Haxe accepts an access, haxe.c lowers it like an access written inside
+`GameSession`: ordinary direct C field or method code, with no runtime
+permission branch, capability object, ownership transfer, or public C ABI
+expansion. The separate span-lifetime analysis—not `@:allow`—rejects returning
+or storing those borrowed views. The runtime `LevelLoader` and read-only
+`GameView` will replace and remove this migration seam. The session now owns
+the shipped `localPlayer` binding and deterministic completed-tick clock. It
+resolves the binding internally and advances the clock only after a successful
+commit; `view()` now publishes the first immutable local-character/clock
+snapshot.
 The first presentation-owned `HudView` is also shipped: `CaxecraftApp` constructs it
 from committed values after fixed updates, and HUD drawing receives that value
 instead of a long positional parameter list. It is still a migration seam, not

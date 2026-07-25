@@ -866,6 +866,50 @@ hxc_status hxc_string_buffer_finish(
   return HXC_STATUS_OK;
 }
 
+hxc_status hxc_string_buffer_finish_ref(
+  hxc_string_buffer *buffer,
+  hxc_string *out_string
+) {
+  hxc_string_owner *owner = NULL;
+  hxc_allocator allocator;
+  hxc_status status;
+  if (!hxc_string_buffer_is_valid(buffer)
+    || !hxc_string_slot_is_empty(out_string)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  allocator = buffer->storage.allocator;
+  status = hxc_alloc(
+    &allocator,
+    sizeof(hxc_string_owner),
+    HXC_ALIGNOF(hxc_string_owner),
+    (void **)&owner
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  owner->references = 1u;
+  owner->storage = (hxc_allocation)HXC_ALLOCATION_INITIALIZER;
+  owner->allocator = allocator;
+  status = hxc_allocation_move(&buffer->storage, &owner->storage);
+  if (status != HXC_STATUS_OK) {
+    (void)hxc_free(
+      &allocator,
+      owner,
+      sizeof(hxc_string_owner),
+      HXC_ALIGNOF(hxc_string_owner)
+    );
+    return status;
+  }
+  out_string->data = owner->storage.size == 0u
+    ? hxc_empty_string_storage
+    : (const uint8_t *)owner->storage.memory;
+  out_string->byte_length = buffer->byte_length;
+  out_string->has_trailing_nul = true;
+  out_string->owner = owner;
+  buffer->byte_length = 0u;
+  return HXC_STATUS_OK;
+}
+
 hxc_status hxc_string_buffer_dispose(hxc_string_buffer *buffer) {
   hxc_status status;
   if (buffer == NULL) {

@@ -1040,6 +1040,40 @@
   ],
   "apiOverrides": [
     {
+      "id": "array-string-join-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "join",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(sep : String) -> String"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array-join"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted specialization is an exact managed Array<String> with one explicit String separator. It evaluates the receiver and separator once, preserves embedded NUL and valid UTF-8 bytes, and builds one fresh managed String in linear time. Other element representations and an omitted separator remain fail-closed until their formatting and ownership rules have focused evidence."
+    },
+    {
       "id": "std-string-bool-int-partial",
       "selector": {
         "module": "Std",
@@ -2325,33 +2359,30 @@
       "kind": "method",
       "signature": "(sep : String) -> String",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array-join"
       ],
       "profiles": [
         "portable",
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted specialization is an exact managed Array<String> with one explicit String separator. It evaluates the receiver and separator once, preserves embedded NUL and valid UTF-8 bytes, and builds one fresh managed String in linear time. Other element representations and an omitted separator remain fail-closed until their formatting and ownership rules have focused evidence.",
+      "ruleId": "array-string-join-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:52b4aafb0f456d769c777ff840088ffa0ec4569c76853307bdc1298337d7897b",

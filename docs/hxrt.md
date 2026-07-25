@@ -319,6 +319,23 @@ additionally proves alias-safe insert/resize paths that generated Haxe does not
 yet expose. Fixed arrays and spans stay direct and runtime-free. See
 [array runtime](array-runtime.md).
 
+<!-- hxrt-feature:array-join -->
+### `array-join`
+
+Compiler-selectable composition for ordinary `Array<String>.join(separator)`.
+It depends on the exact managed `array` and `string` slices, reads both the
+elements and separator as immutable borrows, and appends their valid UTF-8 bytes
+to one checked builder in source order. Completion transfers that builder
+allocation into a fresh reference-counted Haxe String, avoiding the quadratic
+copying caused by repeatedly concatenating an ever-growing prefix.
+
+The feature is separate because neither ordinary Array storage nor unrelated
+String construction needs this cross-feature operation. Allocation failure
+disposes the private partial builder and leaves the output unpublished. Current
+compiler admission is deliberately limited to managed `Array<String>` with an
+explicit non-null String separator; other element families still fail at the
+`Array.join` owner.
+
 <!-- hxrt-feature:int-map -->
 ### `int-map`
 

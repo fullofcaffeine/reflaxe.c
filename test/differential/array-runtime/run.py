@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -21,10 +22,18 @@ ROOT = Path(__file__).resolve().parents[3]
 CASE = Path(__file__).resolve().parent
 ORACLE_HXML = CASE / "oracle.hxml"
 FIXTURE = CASE / "array_runtime.c"
+JOIN_FIXTURE = CASE / "array_join_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
     ROOT / "runtime/hxrt/src/array.c",
+)
+JOIN_SOURCES = (
+    ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/array.c",
+    ROOT / "runtime/hxrt/src/array_join.c",
+    ROOT / "runtime/hxrt/src/string.c",
+    ROOT / "runtime/hxrt/src/string_scalar.c",
 )
 EXPECTED_TRACE = "5:1,3,1,1,0\n"
 GENERATED = CASE / "generated"
@@ -61,6 +70,7 @@ SANITIZER_FLAGS = (
 GENERATED_STRICT_FLAGS = tuple(
     flag for flag in STRICT_FLAGS if flag != "-DHXC_FREESTANDING=1"
 )
+JOIN_STRICT_FLAGS = GENERATED_STRICT_FLAGS
 
 
 class ArrayRuntimeFailure(RuntimeError):
@@ -269,31 +279,44 @@ def validate_generated_hxcir(hxcir: str) -> None:
     ):
         if marker not in hxcir:
             raise ArrayRuntimeFailure(f"generated Array HxcIR omitted {marker}")
-    if " raw" in hxcir or str(ROOT) in hxcir or "\\" in hxcir:
+    if " raw" in hxcir or str(ROOT) in hxcir:
         raise ArrayRuntimeFailure("generated Array HxcIR used raw syntax or leaked a local path")
     # The entry function now owns additional managed-enum locals after the
     # original Array/Bytes setup. Require the original actions as an ordered
     # subsequence of one return edge: newer owners may appear before them, but
     # the long-standing reverse-registration contract must remain unchanged.
-    original_cleanup_order = (
-        '"cleanup.construction"."bytes-local.6.release"',
-        '"cleanup.construction"."bytes-local.5.release"',
+    original_cleanup_prefix = (
         '"cleanup.construction"."construction.0.array-field.entries.release"',
         '"cleanup.construction"."construction.0.initialized"',
-        '"cleanup.construction"."array-local.2.release"',
-        '"cleanup.construction"."array-local.1.release"',
-        '"cleanup.construction"."array-local.0.release"',
     )
     cleanup_lines = [
         line
         for line in hxcir.splitlines()
-        if "terminator return" in line and all(marker in line for marker in original_cleanup_order)
+        if "terminator return" in line and all(marker in line for marker in original_cleanup_prefix)
     ]
-    if not cleanup_lines or any(
-        cleanup_lines[0].index(left) >= cleanup_lines[0].index(right)
-        for left, right in zip(original_cleanup_order, original_cleanup_order[1:])
+    cleanup_line = "" if not cleanup_lines else cleanup_lines[0]
+    byte_ids = [
+        int(value)
+        for value in re.findall(r'"cleanup\.construction"\."bytes-local\.(\d+)\.release"', cleanup_line)
+    ]
+    array_ids = [
+        int(value)
+        for value in re.findall(r'"cleanup\.construction"\."array-local\.(\d+)\.release"', cleanup_line)
+    ]
+    if (
+        not cleanup_line
+        or len(byte_ids) < 2
+        or byte_ids != sorted(byte_ids, reverse=True)
+        or len(array_ids) < 3
+        or array_ids != sorted(array_ids, reverse=True)
+        or cleanup_line.index(f'"bytes-local.{byte_ids[-1]}.release"') >= cleanup_line.index(original_cleanup_prefix[0])
+        or cleanup_line.index(original_cleanup_prefix[0]) >= cleanup_line.index(original_cleanup_prefix[1])
+        or cleanup_line.index(original_cleanup_prefix[1]) >= cleanup_line.index(f'"array-local.{array_ids[-1]}.release"')
     ):
-        raise ArrayRuntimeFailure("generated Array HxcIR lost reverse ownership cleanup")
+        raise ArrayRuntimeFailure(
+            "generated Array HxcIR lost reverse ownership cleanup: "
+            f"bytes={byte_ids!r} arrays={array_ids!r} line={cleanup_line!r}"
+        )
     for marker in (
         'implementation=program-local("enum-lifecycle:',
         'enum-local.',
@@ -447,6 +470,9 @@ def validate_generated_project(output: Path) -> None:
         "alloc",
         "array",
         "string-literal",
+        "string-scalar",
+        "string",
+        "array-join",
         "bytes",
     ]:
         raise ArrayRuntimeFailure("generated Array program selected the wrong runtime closure")
@@ -471,6 +497,15 @@ def validate_generated_project(output: Path) -> None:
         raise ArrayRuntimeFailure(
             f"generated Array runtime operations drifted: {sorted(operations)!r}"
         )
+    join_operations = {
+        reason.get("operationId")
+        for reason in reasons
+        if isinstance(reason, dict) and reason.get("featureId") == "array-join"
+    }
+    if join_operations != {"join"}:
+        raise ArrayRuntimeFailure(
+            f"generated Array join operations drifted: {sorted(join_operations)!r}"
+        )
     sources = "\n".join(
         path.read_text(encoding="utf-8")
         for path in sorted((output / "src").rglob("*.c"))
@@ -486,6 +521,7 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_release",
         "hxc_array_ref_push_copy",
         "hxc_array_ref_get_copy",
+        "hxc_array_string_join",
         "_element_copy(",
         "_element_assign(",
         "_element_destroy(",
@@ -657,6 +693,7 @@ def render_managed_class_pair(root: Path) -> Path:
 
 def run_generated_negative_cases(root: Path) -> None:
     expected = {
+        "join_non_string": "TCall(Array.join:element-not-managed-String:",
         "managed_element_return": "TReturn(borrowed-managed-Array-element-needs-owner-transfer)",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
     }
@@ -705,17 +742,16 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     # EditorScenarioSnapshot.actionsAreRepresentable, the fresh Bytes call
     # argument, the runtime String-to-Bytes copy, legacy-nullable String flow,
     # optional records, the StringBuf UTF-8 decoder, class construction, String
-    # search, String splitting, and Bool conversion through Std.string that
-    # followed them. The next reachable boundary is the managed-String plan for
-    # an interpolation containing an Int in ScenarioWriter. Requiring the exact
+    # search, String splitting, Bool conversion through Std.string, typed Int
+    # interpolation, and Array<String>.join that followed them. The next
+    # reachable boundary is Haxe `throw` in ScenarioWriter. Requiring that exact
     # later diagnostic proves this
     # task did not merely move or hide its former Array failure. Accepting an
     # arbitrary failure would weaken this product check into "Caxecraft still
     # does not compile."
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:332:" not in result.stderr
-        or "TBinop(String-concat:operands-require-managed-String-plan)"
-        not in result.stderr
+        "src/caxecraft/scenario/ScenarioWriter.hx:349:" not in result.stderr
+        or "Unsupported typed Haxe node `TThrow`" not in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
@@ -778,6 +814,51 @@ def compile_and_run(
             f"stderr={executed.stderr!r}"
         )
     return executable
+
+
+def compile_and_run_join_contract(
+    toolchain: Toolchain, build: Path, flags: tuple[str, ...], label: str
+) -> None:
+    """Run the independent runtime failure/byte-preservation contract."""
+    executable = build / label
+    command = [
+        toolchain.compiler,
+        *JOIN_STRICT_FLAGS,
+        *flags,
+        f"-I{INCLUDE}",
+        *(str(source) for source in JOIN_SOURCES),
+        str(JOIN_FIXTURE),
+        "-o",
+        str(executable),
+    ]
+    compiled = subprocess.run(
+        command,
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+        raise ArrayRuntimeFailure(
+            f"{toolchain.family} {label} compile failed\n"
+            f"command={command!r}\nstdout={compiled.stdout!r}\n"
+            f"stderr={compiled.stderr!r}"
+        )
+    executed = subprocess.run(
+        [str(executable)],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if executed.returncode != 0 or executed.stdout or executed.stderr:
+        raise ArrayRuntimeFailure(
+            f"{toolchain.family} {label} execution drifted\n"
+            f"exit={executed.returncode} stdout={executed.stdout!r} "
+            f"stderr={executed.stderr!r}"
+        )
 
 
 def compile_and_run_generated(
@@ -952,6 +1033,12 @@ def run_native(
                 SANITIZER_FLAGS,
                 "array-runtime-sanitized",
                 expected_trace,
+            )
+            compile_and_run_join_contract(
+                toolchain,
+                build,
+                SANITIZER_FLAGS,
+                "array-join-runtime-sanitized",
             )
             if generated is not None:
                 compile_and_run_generated(

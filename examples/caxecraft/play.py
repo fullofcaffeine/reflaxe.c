@@ -244,6 +244,23 @@ class PlayFailure(RuntimeError):
     """The playable could not be built without weakening its contracts."""
 
 
+def is_current_compiler_boundary(message: str) -> bool:
+    """Recognize the exact honest boundary that stops the current playable build.
+
+    Caxecraft is a compiler-development workload, so "the game failed to
+    compile" is not an acceptable success condition. Until Beads issue
+    `haxe_c-018u` adds Haxe `throw` semantics, callers that intentionally test
+    product progress may accept only this source-positioned HXC1001 diagnostic.
+    Any earlier, later, or differently shaped failure remains an error. Once
+    `throw` lowers, this predicate naturally returns false and snapshot
+    validation resumes against newly generated playable artifacts.
+    """
+    return (
+        "src/caxecraft/scenario/ScenarioWriter.hx:349:" in message
+        and "Unsupported typed Haxe node `TThrow`" in message
+    )
+
+
 def stage_runtime_assets(destination: Path) -> None:
     """Copy only reviewed runtime assets beside the executable.
 

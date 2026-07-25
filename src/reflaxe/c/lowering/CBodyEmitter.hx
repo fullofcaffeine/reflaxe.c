@@ -2531,6 +2531,8 @@ class CBodyEmitter {
 						addUnique(headers, "hxrt/string_scalar.h");
 					case IRIOCall({dispatch: IRCDRuntime("string-split", "split")}):
 						addUnique(headers, "hxrt/string_split.h");
+					case IRIOCall({dispatch: IRCDRuntime("array-join", "join")}):
+						addUnique(headers, "hxrt/array_join.h");
 					case IRIOBinary("haxe.string.equal" | "haxe.string.equal.left-non-null" | "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null",
 						_, _, IRIStatic):
 						addUnique(headers, "string.h");
@@ -4741,6 +4743,9 @@ class CBodyEmitter {
 			case IRCDRuntime("string-split", "split"):
 				emitStringSplitCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
+			case IRCDRuntime("array-join", "join"):
+				emitArrayJoinCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case IRCDRuntime("string-scalar", "char-at"):
 				if (call.failure != null
 					|| call.arguments.length != 2
@@ -5226,6 +5231,46 @@ class CBodyEmitter {
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
 	}
 
+	/** Emit one exact managed Array<String> composition call. */
+	function emitArrayJoinCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		final receiverType = call.arguments.length == 0 ? null : valueType(fn, call.arguments[0]);
+		final instanceId = receiverType == null ? null : switch receiverType {
+			case IRTInstance(value): value;
+			case _: null;
+		};
+		if (call.arguments.length != 2
+			|| result.type != IRTManagedString
+			|| call.returnType != IRTManagedString
+			|| instanceId == null
+			|| requireArrayElementType(instanceId) != IRTManagedString) {
+			return fail('Array.join call `${instruction.id}` in `${fn.id}` lost its managed Array<String>/String signature');
+		}
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('Array.join call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IExpr(stringNullExpression()),
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayStringJoin)), [
+			requireValue(values, call.arguments[0], fn.id),
+			requireValue(values, call.arguments[1], fn.id),
+			ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+			EUnary(AddressOf, EIdentifier(temporary))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
 	/** Emit checked Unicode-scalar String length into one Haxe `Int` temporary. */
 	function emitStringLengthCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
 			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
@@ -5460,7 +5505,7 @@ class CBodyEmitter {
 	**/
 	function arrayElementPointer(value:CExpr, type:HxcIRTypeRef, declaration:CTypedDeclarator):CExpr {
 		switch type {
-			case IRTString | IRTNullable(_, IRNTagged):
+			case IRTString | IRTManagedString | IRTNullable(_, IRNTagged):
 				return EUnary(AddressOf, value);
 			case IRTInstance(instanceId):
 				if (aggregateTags.exists(instanceId))

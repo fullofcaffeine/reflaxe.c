@@ -2197,6 +2197,10 @@ private class HxcIRValidationState {
 						add(path, "String.split requires a preceding dominating receiver null check", source);
 					if (call.arguments.length > 1 && !nullProofs.exists(call.arguments[1]))
 						add(path, "String.split requires a preceding dominating delimiter null check", source);
+				} else if (featureId == "array-join") {
+					validateArrayJoinCall(call, argumentTypes, path, source);
+					if (call.arguments.length > 1 && !nullProofs.exists(call.arguments[1]))
+						add(path, "Array.join requires a preceding dominating separator null check", source);
 				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
@@ -2269,6 +2273,22 @@ private class HxcIRValidationState {
 			add(path, "String.split requires receiver + delimiter Strings and returns managed Array<String>", source);
 		}
 		validateCleanupFreeStatusAbort(call.failure, path, source, "String.split operation");
+	}
+
+	function validateArrayJoinCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("array-join", value): value;
+			case _: return;
+		};
+		final receiverElement = argumentTypes.length == 0 ? null : managedArrayElement(argumentTypes[0]);
+		if (operationId != "join"
+			|| argumentTypes.length != 2
+			|| receiverElement != IRTManagedString
+			|| (argumentTypes[1] != IRTString && argumentTypes[1] != IRTManagedString)
+			|| call.returnType != IRTManagedString) {
+			add(path, "Array.join requires managed Array<String> + separator String and returns managed String", source);
+		}
+		validateCleanupFreeStatusAbort(call.failure, path, source, "Array.join operation");
 	}
 
 	function managedArrayElement(type:Null<HxcIRTypeRef>):Null<HxcIRTypeRef> {

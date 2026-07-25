@@ -531,6 +531,18 @@ contract. Use it only when ordinary Haxe cannot express the same fact, keep its
 authority narrow, and explain the practical effect locally. Redundant metadata
 is noise, while unexplained metadata is hidden architecture.
 
+An explanation of authority-like metadata is incomplete if it only lists what
+the metadata *does not* do. State the positive operational contract first:
+which compiler or tool reads it, which declaration or collaborator receives
+the authority, exactly what operation becomes legal or changes, during which
+phase and declaration scope, why the ordinary rule is insufficient, and what a
+developer can observe in diagnostics or generated code. Then name important
+non-effects and the separate mechanism that owns them. For example, access,
+visibility, lifetime, ownership, validation, and runtime permission are
+different contracts even when one annotation sits beside all of them. If the
+metadata is a migration seam, also name the implemented or planned replacement
+and the condition that removes it.
+
 ## Abstract classes and interfaces
 
 These terms are easy to confuse with Haxe abstracts:

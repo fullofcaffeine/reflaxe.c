@@ -33,6 +33,7 @@ class RuntimeFeatureCatalog {
 		final stringScalar = RuntimeFeatureId.parse("string-scalar");
 		final string = RuntimeFeatureId.parse("string");
 		final stringSplit = RuntimeFeatureId.parse("string-split");
+		final arrayJoin = RuntimeFeatureId.parse("array-join");
 		final io = RuntimeFeatureId.parse("io");
 		return [
 			new RuntimeFeatureDefinition(runtimeBase, "Shared C types, internal ABI version, and visibility/alignment macros for selected runtime slices.",
@@ -357,6 +358,7 @@ class RuntimeFeatureCatalog {
 					"hxc_string_buffer_append_utf8_checked",
 					"hxc_string_buffer_append_scalar",
 					"hxc_string_buffer_finish",
+					"hxc_string_buffer_finish_ref",
 					"hxc_string_buffer_dispose",
 					"hxc_string_borrow_cstring",
 					"hxc_string_to_cstring_owned",
@@ -396,6 +398,21 @@ class RuntimeFeatureCatalog {
 					"docs/string-runtime.md",
 					[
 						"test/differential/string-runtime/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(arrayJoin, "Linear managed Array<String> joining through one failure-atomic UTF-8 builder.", CompilerSelectable,
+				true, environments, [array, string], [header("array_join.h"), source("array_join.c")], ["hxc_array_string_join"], [], [],
+				documentation("Composes one exact managed Array<String> and immutable separator into a fresh managed String without repeated concatenation.", [
+					new RuntimeFeatureSelectionRoot("join", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Haxe Array<String>.join has runtime-dependent elements or separator bytes.")
+				],
+					"A compiler-known bounded literal Array and separator may fold directly when compile-time work and output size remain reasonable.",
+					"A closed fixed-capacity program may use a smaller program-local joiner when whole-program bounds prove it sufficient.",
+					"Runtime-sized Array contents need checked growth, ordered separator insertion, one final String owner, and partial-allocation cleanup. A separate composition feature keeps ordinary Array and String programs independent.",
+					"docs/hxrt.md",
+					[
+						"test/differential/array-runtime/array_join_runtime.c",
+						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
 			new RuntimeFeatureDefinition(io, "Minimal hosted length-delimited literal output with explicit write and flush failure status.",
@@ -456,6 +473,7 @@ class RuntimeFeatureCatalog {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
 			case "array.h": "5fa277cf34f4b0e01c1a5d3b7152857cf6570d3a9d537cb2a18c41f444db3512";
+			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "72e09e81ff4186d2850957001152e4323af77aa495664d3a5e4394aee3372139";
 			case "bytes.h": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
@@ -464,7 +482,7 @@ class RuntimeFeatureCatalog {
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
-			case "string.h": "52cf1f149208bbd666ec5ed33cfe5855fb8a8a286921ecefe8e0d58eff65e512";
+			case "string.h": "0ed1be29fb80b5bbbc2248874d214cc7126da20e6139d02711516c1b131480ca";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
 			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
@@ -479,13 +497,14 @@ class RuntimeFeatureCatalog {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
 			case "array.c": "79e25b048ee656e4c98675a2c9e5bf30b5687764519d1c06883b524f07f05a2d";
+			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "4db5d3ddcaf32684e900abe7d81ffe3a008edc53806573aaebe84089c0c6a787";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c";
 			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
-			case "string.c": "bc647cc6085815a883df2b91722f37ade02bf69c2883ee6b2ad8f8a73d8a7fe3";
+			case "string.c": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736";
 			case "string_map.c": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04";
 			case "string_scalar.c": "1df11e7045ccdd0c64503478477425ca3a55b71e9ac7f18e1cd623d9f17581b3";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";

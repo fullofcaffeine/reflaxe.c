@@ -963,13 +963,10 @@ class CBodyLowering {
 			if (found)
 				return;
 			final creates = switch expression.expr {
-				case TCall(callee, arguments):
-					isStringFromCharCode(callee)
-					|| (arguments.length == 1
-							&& isStdStringCall(callee)
-							&& switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
-							case CTPrimitive(mapping):
-								mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
+				case TCall(callee, arguments): isStringFromCharCode(callee) || isArrayJoinCall(callee) || (arguments.length == 1
+						&& isStdStringCall(callee)
+						&& switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
+							case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
 							case _: false;
 						});
 				case TBinop(OpAdd, _, _) | TBinop(OpAssignOp(OpAdd), _, _):
@@ -984,6 +981,18 @@ class CBodyLowering {
 		}
 		visit(root);
 		return found;
+	}
+
+	/** Recognize the pinned core `Array.join` instance method. */
+	static function isArrayJoinCall(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FInstance(reference, _, field)): final owner = reference.get(); owner.pack.length == 0 && owner.name == "Array" && field.get()
+					.name == "join";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isArrayJoinCall(inner);
+			case _:
+				false;
+		};
 	}
 
 	/** Recognize the pinned standard library's exact static scalar constructor. */
@@ -1001,9 +1010,8 @@ class CBodyLowering {
 	/** Recognize the pinned standard library's exact general string conversion. */
 	static function isStdStringCall(expression:TypedExpr):Bool {
 		return switch expression.expr {
-			case TField(_, FStatic(reference, field)):
-				final owner = reference.get();
-				owner.pack.length == 0 && owner.name == "Std" && field.get().name == "string";
+			case TField(_, FStatic(reference, field)): final owner = reference.get(); owner.pack.length == 0 && owner.name == "Std" && field.get()
+					.name == "string";
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				isStdStringCall(inner);
 			case _:
@@ -7927,6 +7935,39 @@ private class FunctionBuilder {
 		if (array == null)
 			return unsupported(expression, 'TCall(Array.$method:receiver-identity-lost)');
 		return switch method {
+			case "join":
+				if (arguments.length != 1)
+					return unsupported(expression, 'TCall(Array.join:argument-count=${arguments.length})');
+				if (array.managedByCollector || array.element.irType != IRTManagedString)
+					return unsupported(expression, 'TCall(Array.join:element-not-managed-String:${array.element.cSpelling})');
+				final separatorMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Array.join:separator-type)");
+				if (!isStringCarrier(separatorMapping.irType))
+					return unsupported(arguments[0], 'TCall(Array.join:separator-not-String:${separatorMapping.cSpelling})');
+				var separator = coerce(lowerValue(arguments[0], separatorMapping), separatorMapping, arguments[0].pos, "TCall(Array.join:separator)");
+				// `join` only borrows the separator while composing the result. A
+				// call such as `values.join(makeSeparator())` therefore needs a
+				// compiler-owned local to keep that fresh String alive through the
+				// runtime call and release it on every function exit.
+				separator = stabilizeFreshManagedString(separator, arguments[0].pos, "array-join-separator");
+				appendInstruction(null, IRIONullCheck(separator.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+					HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath), "array-join-separator-null-check");
+				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.join:result-type)");
+				if (resultMapping.irType != IRTManagedString)
+					return unsupported(expression, 'TCall(Array.join:result-requires-managed-String:${resultMapping.cSpelling})');
+				final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				appendInstruction(result, IRIOCall({
+					dispatch: IRCDRuntime("array-join", "join"),
+					arguments: [receiver.id, separator.id],
+					returnType: IRTManagedString,
+					failure: managedArrayFailure()
+				}), source, "array-string-join");
+				registerValueTemporary(result.id, "array-string-join-result");
+				freshManagedStringValueIds.set(result.id, true);
+				freshManagedStringValueRoles.set(result.id, "Array.join result");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array-join", "join",
+					"ordinary Haxe Array<String>.join with ordered managed String composition", source, expression.pos));
+				{id: result.id, type: result.type, mapping: resultMapping};
 			case "push":
 				if (arguments.length != 1)
 					return unsupported(expression, 'TCall(Array.push:argument-count=${arguments.length})');

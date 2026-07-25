@@ -63,11 +63,21 @@ typedef GameTickResult = {
 	at compile time; simulation methods below are shared. A world span is created
 	only inside the operation that consumes it and is never returned or stored.
 **/
-// `CaxecraftApp` is the application composition root and still needs scoped
-// read/write views for rendering and level assembly. `@:allow` is Haxe's
-// compile-time friend-access rule: it emits no target check and grants no
-// ownership. The views still cannot be returned or stored. `GameView` and the
-// runtime level loader will replace this narrow migration seam.
+// `CaxecraftApp` is the one named collaborator allowed to access
+// `GameSession`'s private members. During Haxe type checking, this class-level
+// `@:allow(...)` makes otherwise-private fields and methods visible to that
+// exact type; every other caller still receives Haxe's normal private-access
+// error. The friendship is deliberately temporary: the application composition
+// root must currently create short-lived read/write world views while loading
+// and rendering, but those mutable session details should not become public API.
+//
+// Once Haxe accepts the access, haxe.c emits the same direct C field or method
+// operation it would emit for code inside `GameSession`. The metadata creates
+// no runtime permission check, permission object, ownership transfer, or wider
+// C ABI. It also does not make a borrowed view safe to keep: haxe.c's separate
+// span-lifetime analysis rejects returning or storing these short-lived views.
+// Runtime `LevelLoader` and read-only `GameView` APIs will remove this migration
+// seam once they own loading and presentation.
 
 @:allow(caxecraft.app.CaxecraftApp)
 final class GameSession {

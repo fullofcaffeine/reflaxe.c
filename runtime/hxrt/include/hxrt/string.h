@@ -189,6 +189,18 @@ HXC_API hxc_status hxc_string_buffer_finish(
   hxc_owned_string *out_string
 );
 
+/**
+ * Transfer a builder into the reference-counted carrier used by Haxe String.
+ *
+ * The output slot must contain HXC_STRING_INITIALIZER. This is the efficient
+ * completion path for composition features such as Array<String>.join: it
+ * moves the completed byte allocation instead of copying it a second time.
+ */
+HXC_API hxc_status hxc_string_buffer_finish_ref(
+  hxc_string_buffer *buffer,
+  hxc_string *out_string
+);
+
 /** Dispose an unfinished builder through its retained allocator. */
 HXC_API hxc_status hxc_string_buffer_dispose(hxc_string_buffer *buffer);
 

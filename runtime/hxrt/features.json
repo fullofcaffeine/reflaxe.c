@@ -227,6 +227,58 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
+            "description": "A reachable ordinary Haxe Array<String>.join has runtime-dependent elements or separator bytes.",
+            "id": "join",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Runtime-sized Array contents need checked growth, ordered separator insertion, one final String owner, and partial-allocation cleanup. A separate composition feature keeps ordinary Array and String programs independent.",
+        "evidence": [
+          "test/differential/array-runtime/array_join_runtime.c",
+          "test/differential/array-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known bounded literal Array and separator may fold directly when compile-time work and output size remain reasonable.",
+        "contract": "Composes one exact managed Array<String> and immutable separator into a fresh managed String without repeated concatenation.",
+        "programLocalAlternative": "A closed fixed-capacity program may use a smaller program-local joiner when whole-program bounds prove it sufficient."
+      },
+      "dependencies": [
+        "array",
+        "string"
+      ],
+      "id": "array-join",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_array_string_join"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/array_join.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/array_join.h"
+        },
+        {
+          "sourceSha256": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/array_join.c",
+          "sourcePath": "runtime/hxrt/src/array_join.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Linear managed Array<String> joining through one failure-atomic UTF-8 builder.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
             "description": "A reachable admitted Bytes allocation, range, copy, comparison, or mutation operation.",
             "id": "binary-operation",
             "kind": "hxc-ir-operation"
@@ -770,6 +822,7 @@
         "hxc_string_buffer_append_utf8_checked",
         "hxc_string_buffer_dispose",
         "hxc_string_buffer_finish",
+        "hxc_string_buffer_finish_ref",
         "hxc_string_buffer_init",
         "hxc_string_buffer_view",
         "hxc_string_concat",
@@ -785,13 +838,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "52cf1f149208bbd666ec5ed33cfe5855fb8a8a286921ecefe8e0d58eff65e512",
+          "sourceSha256": "0ed1be29fb80b5bbbc2248874d214cc7126da20e6139d02711516c1b131480ca",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "bc647cc6085815a883df2b91722f37ade02bf69c2883ee6b2ad8f8a73d8a7fe3",
+          "sourceSha256": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -1075,6 +1128,7 @@
   "compilerSelectableFeatures": [
     "alloc",
     "array",
+    "array-join",
     "bytes",
     "gc",
     "int-map",
@@ -1132,7 +1186,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "aabd48b17f820319ec9da7a3ef0c4533a400800a9d2aed6282cb5a0bf3892861",
+      "sourceSetSha256": "f1a06b4e2e837afabb804f22ccb1883373c5e6f6be3abacb64d98260ea365800",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

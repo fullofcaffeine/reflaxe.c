@@ -4,7 +4,9 @@ This document records both the bounded E4.T04 native `hxrt` array storage and
 the first E5.T03 ordinary-Haxe lowering that selects it. A program can now use
 empty or nonempty `Array<T>` literals, aliases, `length`, checked indexing,
 `push`, and source-order iteration for the admitted element types described
-below. Elements may now be plain direct values, `haxe.io.Bytes`, another
+below. An exact managed `Array<String>` also supports `join(separator)` with
+one explicit String separator. Elements may now be plain direct values,
+`haxe.io.Bytes`, another
 managed Array, a tagged enum with managed Array payloads, a closed record
 that recursively contains those values, or a concrete mutable class reference.
 Such a record may also contain
@@ -108,7 +110,14 @@ is important: reading every union member would inspect inactive storage and
 could release a pointer that was never constructed. The callbacks do not
 introduce reflection, a generic box, or a tracing collector.
 
-An owned String or another unsupported managed value is still rejected. A
+An exact managed String is admitted as an Array element when the reachable
+program has selected managed String representation. Its specialized element
+callbacks retain, assign, and release the immutable shared owner just like a
+normal Haxe String local. The narrower `Array<String>.join` method reads those
+owned elements, appends every element and separator to one checked UTF-8
+builder, then moves that allocation into one fresh managed String owner. This
+makes runtime work linear in the output bytes and preserves embedded NUL bytes
+without repeated whole-result copying. Other unsupported managed values remain rejected. A
 class element is admitted only through the exact traced representation: direct
 nonescaping classes remain stack-shaped C values, while every class reachable
 from the admitted `Array<Class>` graph receives stable collector storage and a
