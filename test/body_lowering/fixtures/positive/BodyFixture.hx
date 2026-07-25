@@ -42,6 +42,18 @@ class BodyFixture {
 		return value;
 	}
 
+	static function throwPayload():Int {
+		return 99;
+	}
+
+	static function chooseOrThrow(choice:Int):Int {
+		return switch choice {
+			case 0: 41;
+			case 1: throw throwPayload();
+			default: 43;
+		}
+	}
+
 	static function main():Void {
 		return;
 	}

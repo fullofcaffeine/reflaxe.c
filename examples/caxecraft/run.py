@@ -1796,7 +1796,9 @@ def validate_snapshots(
     except PlayFailure as error:
         if not is_current_compiler_boundary(str(error)):
             raise
-        progress("playable snapshots deferred at exact TThrow compiler boundary")
+        progress(
+            "playable snapshots deferred at exact managed-String switch-join boundary"
+        )
         # The domain program below is fully generated and compared. The wider
         # playable application is intentionally checked only up to its exact
         # current compiler boundary; copying old generated files into `actual`

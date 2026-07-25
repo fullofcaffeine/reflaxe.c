@@ -76,8 +76,10 @@ the stable-value and control-flow proof.
   enum values, distinct concrete primitive generic instances, exhaustive
   source `switch` patterns, and recursive enum values whose indirect backing
   storage remains within the constructing function;
-- nested primitive blocks and parentheses; and
-- explicit value/void returns or an implicit final void return.
+- nested primitive blocks and parentheses;
+- explicit value/void returns or an implicit final void return; and
+- a bounded, statically uncaught `throw`, including a terminating arm of an
+  otherwise value-producing integer, string, or enum switch.
 
 The lowering preserves each typed instruction in Haxe evaluation order. Nested
 lexical blocks may share a semantic block only while they introduce no edge;
@@ -119,7 +121,8 @@ Haxe arrays, escaping spans, string/Float switches, guarded
 patterns outside the admitted enum form, recursive enum parameters/returns,
 reference or aggregate enum payloads, payload enums embedded in direct records,
 mutable/open/reflective records, record identity/equality or payload-enum
-equality, strings, closures, general allocation, exceptions, cleanup, ABI-width
+equality, strings, closures, general allocation, caught exceptions,
+`try`/`catch`/`finally`, exception-payload transport, ABI-width
 integer conversions, checked conversions, and signed-target
 integer conversions that require reconstruction helpers remain outside this
 primitive slice. `exact` also rejects a non-contained source range, while
@@ -141,6 +144,39 @@ still runs the complete active cleanup list. This matters because the later C
 temporary is lexically inside the loop: postponing its release until function
 exit would both retain it too long and generate a reference outside its C
 scope.
+
+## Bounded uncaught `throw`
+
+This stage supports the case where the complete reachable Haxe graph contains
+no `try` expression, so every admitted `throw` is known at compile time to be
+uncaught. “Uncaught” means no Haxe code can receive the thrown value and
+continue. The generated program therefore:
+
+1. evaluates the payload exactly once, preserving any calls or other observable
+   work in that expression;
+2. releases every active owned value in reverse cleanup order, including a
+   fresh managed payload that must be stabilized before cleanup; and
+3. calls ISO C `abort()` to stop the process.
+
+For example, `return switch choice { case 0: 41; case 1: throw payload(); }`
+keeps the ordinary `Int` return type. The throwing arm calls `payload()` and
+then stops; it does not invent an `Int`, store a switch result, or jump to the
+value join. Other arms still produce and return their normal values.
+
+HxcIR records this as `IRTThrow` with an exception failure edge whose target is
+`IRFTAbort`. The edge carries the cleanup plan, so the C emitter follows an
+already-validated decision rather than discovering exception behavior while
+printing. Constructor lowering keeps its earlier `IRFTPropagate` status path
+because a constructor caller already owns that explicit failure contract.
+
+This is deliberately not full exception support. A program with
+`try`/`catch`/`finally` still fails with source-positioned `HXC1001`, and this
+stage does not transport a payload between functions or add hidden status
+returns to ordinary Haxe signatures. General exception frames, caught payloads,
+and `finally` completion remain owned by E4.T09. The focused cleanup fixture
+creates an owned Haxe array, throws after reading it, and proves under strict C
+and AddressSanitizer/UndefinedBehaviorSanitizer builds that the array is
+released before the final fail-stop.
 
 ## Names, source mapping, and C shape
 

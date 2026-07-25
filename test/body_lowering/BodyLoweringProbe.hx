@@ -57,11 +57,13 @@ class BodyLoweringProbe {
 		};
 		final selected = [
 			"booleanValue",
+			"chooseOrThrow",
 			"directInteger",
 			"explicitVoid",
 			"floatingValue",
 			"implicitVoid",
 			"integerValue",
+			"throwPayload",
 			"unsignedValue"
 		];
 		final inputs:Array<CBodyFunctionInput> = [];
@@ -203,6 +205,16 @@ class BodyLoweringProbe {
 			unit.includes.push({path: header, kind: System});
 		}
 		final emitter = new CBodyEmitter();
+		/*
+		 * This focused test prints every retained function into one translation
+		 * unit without the private header used by the real split-project
+		 * emitter. Declare the complete function graph first so a source-order
+		 * forward call is still strict C11, just as it is in production.
+		 */
+		for (fn in result.functions) {
+			unit.declarations.push(DPrototype([SStatic], [], emitter.cType(fn.ir.returnType),
+				DFunction(DName(fn.cName), FPPrototype(emitter.parameters(fn.ir, fn.parameterNames), false)), []));
+		}
 		for (fn in result.functions) {
 			final body = if (lineDirectives) {
 				switch fn.lineMappedBody {

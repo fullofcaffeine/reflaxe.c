@@ -1,6 +1,9 @@
 class Main {
 	static function main():Void {
-		var value:Int = 1;
-		throw value;
+		try {
+			trace("not admitted");
+		} catch (error:String) {
+			trace(error);
+		}
 	}
 }

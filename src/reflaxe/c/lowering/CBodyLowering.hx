@@ -3846,20 +3846,43 @@ private class FunctionBuilder {
 	}
 
 	function lowerThrow(expression:TypedExpr, valueExpression:TypedExpr):Void {
-		final canFail = switch prepared.role {
-			case PBRConstructor(signature): signature.input.canFail;
-			case _: false;
-		};
-		if (!canFail)
-			unsupported(expression, "TThrow");
 		if (referencesStackConstructedValue(valueExpression))
 			unsupported(valueExpression, "TNew(stack-reference-escape:throw-payload)");
-		final value = lowerValue(valueExpression);
+		var value = lowerValue(valueExpression);
+		// An uncaught payload is observed only through its evaluation before the
+		// process stops, but evaluating it may create an owned value. Move every
+		// admitted fresh owner into the normal cleanup list so fail-stop releases
+		// it exactly once instead of leaking merely because no catch consumes it.
+		value = stabilizeFreshManagedArray(value, valueExpression.pos, "throw-payload");
+		value = stabilizeFreshManagedString(value, valueExpression.pos, "throw-payload");
+		value = stabilizeFreshManagedBytes(value, valueExpression.pos, "throw-payload");
+		value = stabilizeFreshManagedEnum(value, valueExpression.pos, "throw-payload");
+		value = stabilizeFreshManagedAggregate(value, valueExpression.pos, "throw-payload");
+		value = stabilizeFreshManagedOptional(value, valueExpression.pos, "throw-payload");
 		rejectOwnedClassBorrow(value, valueExpression.pos, "TThrow(owned-class-borrow-escape)");
+		switch value.mapping.kind {
+			// A managed String literal is still a non-owning view of
+			// compiler-owned bytes. It needs no payload transport because this
+			// bounded uncaught-throw path terminates after evaluating it.
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKCString:
+			case CBVKAggregate(aggregate) if (!aggregate.managedLifetime):
+			case CBVKEnum(enumValue) if (!enumValue.managedLifetime):
+			case _:
+				unsupported(valueExpression, 'TThrow(managed-payload-requires-exception-owner:${value.mapping.cSpelling})');
+		}
+		final target = switch prepared.role {
+			case PBRConstructor(signature) if (signature.input.canFail): IRFTPropagate;
+			case _:
+				// No catch/finally node is admitted in this bounded stage. An
+				// ordinary function's throw is therefore known to be uncaught in
+				// the complete reachable graph and can use the established
+				// fail-stop policy without changing its C return signature.
+				IRFTAbort;
+		};
 		currentBlock.terminator = {
 			kind: IRTThrow(value.id, {
 				kind: IRFException,
-				target: IRFTPropagate,
+				target: target,
 				arguments: [],
 				cleanup: normalCleanupSteps()
 			}),
@@ -4376,6 +4399,10 @@ private class FunctionBuilder {
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
 		if (value == null) {
 			currentBlock.terminator = {kind: IRTReturn(null, normalCleanupSteps()), source: source};
+			return;
+		}
+		if (isTerminalThrowExpression(value)) {
+			lowerValueOrThrow(value, prepared.returnMapping, "TReturn(value)");
 			return;
 		}
 		if (referencesStackConstructedValue(value))
@@ -5470,21 +5497,36 @@ private class FunctionBuilder {
 		}
 		final defaultBlock = createGeneratedBlock("switch-value-default", source);
 		final joinBlock = createGeneratedBlock("switch-value-join", source);
+		var reachesJoin = false;
 
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
-			final value = coerce(lowerValue(cases[index].expr, resultMapping), resultMapping, cases[index].expr.pos, "TSwitch(case-value)");
-			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), value.id), source, "switch-case-store");
-			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			final cleanupDepth = normalCleanupActionIds.length;
+			final value = lowerValueOrThrow(cases[index].expr, resultMapping, "TSwitch(case-value)");
+			if (value != null) {
+				final coerced = coerce(value, resultMapping, cases[index].expr.pos, "TSwitch(case-value)");
+				appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), coerced.id), source, "switch-case-store");
+				appendScopedCleanupInstructions(cleanupDepth);
+				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+				reachesJoin = true;
+			}
+			restoreCleanupDepth(cleanupDepth);
 		}
 
 		currentBlock = defaultBlock;
 		if (defaultExpression == null) {
 			currentBlock.terminator = {kind: IRTUnreachable, source: source};
 		} else {
-			final defaultValue = coerce(lowerValue(defaultExpression, resultMapping), resultMapping, defaultExpression.pos, "TSwitch(default-value)");
-			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "switch-default-store");
-			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			final cleanupDepth = normalCleanupActionIds.length;
+			final defaultValue = lowerValueOrThrow(defaultExpression, resultMapping, "TSwitch(default-value)");
+			if (defaultValue != null) {
+				final coerced = coerce(defaultValue, resultMapping, defaultExpression.pos, "TSwitch(default-value)");
+				appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), coerced.id), source, "switch-default-store");
+				appendScopedCleanupInstructions(cleanupDepth);
+				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+				reachesJoin = true;
+			}
+			restoreCleanupDepth(cleanupDepth);
 		}
 
 		dispatchBlock.terminator = {
@@ -5492,6 +5534,8 @@ private class FunctionBuilder {
 				edge(defaultBlock.id)),
 			source: source
 		};
+		if (!reachesJoin)
+			return unsupported(expression, "TSwitch(value-all-arms-terminate)");
 		currentBlock = joinBlock;
 		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "switch-result-load");
 	}
@@ -5535,14 +5579,19 @@ private class FunctionBuilder {
 			caseBlocks.push(createGeneratedBlock('string-switch-value-case-$index', source));
 		final defaultBlock = createGeneratedBlock("string-switch-value-default", source);
 		final joinBlock = createGeneratedBlock("string-switch-value-join", source);
+		var reachesJoin = false;
 
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
 			final cleanupDepth = normalCleanupActionIds.length;
-			final value = coerce(lowerValue(cases[index].expr, resultMapping), resultMapping, cases[index].expr.pos, "TSwitch(string-case-value)");
-			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), value.id), source, "string-switch-case-store");
-			appendScopedCleanupInstructions(cleanupDepth);
-			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			final value = lowerValueOrThrow(cases[index].expr, resultMapping, "TSwitch(string-case-value)");
+			if (value != null) {
+				final coerced = coerce(value, resultMapping, cases[index].expr.pos, "TSwitch(string-case-value)");
+				appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), coerced.id), source, "string-switch-case-store");
+				appendScopedCleanupInstructions(cleanupDepth);
+				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+				reachesJoin = true;
+			}
 			restoreCleanupDepth(cleanupDepth);
 		}
 
@@ -5551,15 +5600,21 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTUnreachable, source: source};
 		} else {
 			final cleanupDepth = normalCleanupActionIds.length;
-			final defaultValue = coerce(lowerValue(defaultExpression, resultMapping), resultMapping, defaultExpression.pos, "TSwitch(string-default-value)");
-			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "string-switch-default-store");
-			appendScopedCleanupInstructions(cleanupDepth);
-			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			final defaultValue = lowerValueOrThrow(defaultExpression, resultMapping, "TSwitch(string-default-value)");
+			if (defaultValue != null) {
+				final coerced = coerce(defaultValue, resultMapping, defaultExpression.pos, "TSwitch(string-default-value)");
+				appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), coerced.id), source, "string-switch-default-store");
+				appendScopedCleanupInstructions(cleanupDepth);
+				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+				reachesJoin = true;
+			}
 			restoreCleanupDepth(cleanupDepth);
 		}
 
 		currentBlock = dispatchBlock;
 		lowerStringSwitchDispatch(subjectValue, stringSwitchCases(cases, caseBlocks), defaultBlock.id, source);
+		if (!reachesJoin)
+			return unsupported(expression, "TSwitch(string-value-all-arms-terminate)");
 		currentBlock = joinBlock;
 		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "string-switch-result-load");
 	}
@@ -5589,28 +5644,39 @@ private class FunctionBuilder {
 			caseBlocks.push(createGeneratedBlock('enum-switch-value-case-$index', source));
 		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("enum-switch-value-default", source);
 		final joinBlock = createGeneratedBlock("enum-switch-value-join", source);
+		var reachesJoin = false;
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
 			final cleanupDepth = normalCleanupActionIds.length;
-			final value = coerce(lowerValue(cases[index].expr, resultMapping), resultMapping, cases[index].expr.pos, "TSwitch(enum-case-value)");
-			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), value.id), source, "enum-switch-case-store");
-			appendScopedCleanupInstructions(cleanupDepth);
-			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			final value = lowerValueOrThrow(cases[index].expr, resultMapping, "TSwitch(enum-case-value)");
+			if (value != null) {
+				final coerced = coerce(value, resultMapping, cases[index].expr.pos, "TSwitch(enum-case-value)");
+				appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), coerced.id), source, "enum-switch-case-store");
+				appendScopedCleanupInstructions(cleanupDepth);
+				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+				reachesJoin = true;
+			}
 			restoreCleanupDepth(cleanupDepth);
 		}
 		if (defaultExpression != null && defaultBlock != null) {
 			currentBlock = defaultBlock;
 			final cleanupDepth = normalCleanupActionIds.length;
-			final defaultValue = coerce(lowerValue(defaultExpression, resultMapping), resultMapping, defaultExpression.pos, "TSwitch(enum-default-value)");
-			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "enum-switch-default-store");
-			appendScopedCleanupInstructions(cleanupDepth);
-			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			final defaultValue = lowerValueOrThrow(defaultExpression, resultMapping, "TSwitch(enum-default-value)");
+			if (defaultValue != null) {
+				final coerced = coerce(defaultValue, resultMapping, defaultExpression.pos, "TSwitch(enum-default-value)");
+				appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), coerced.id), source, "enum-switch-default-store");
+				appendScopedCleanupInstructions(cleanupDepth);
+				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+				reachesJoin = true;
+			}
 			restoreCleanupDepth(cleanupDepth);
 		}
 		dispatchBlock.terminator = {
 			kind: IRTTagSwitch(subjectValue.id, enumSwitchCases(cases, caseBlocks, enumValue), defaultBlock == null ? null : edge(defaultBlock.id)),
 			source: source
 		};
+		if (!reachesJoin)
+			return unsupported(expression, "TSwitch(enum-value-all-arms-terminate)");
 		currentBlock = joinBlock;
 		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "enum-switch-result-load");
 	}
@@ -5846,6 +5912,45 @@ private class FunctionBuilder {
 		final lastIndex = expressions.length - 1;
 		lowerStatementSequence(expressions, lastIndex);
 		return lowerValue(expressions[lastIndex], expectedMapping);
+	}
+
+	/**
+		Lower one value-producing branch that may instead end in an uncaught throw.
+
+		A Haxe `throw` has the bottom type: it can appear where any value was
+		expected because control never reaches that value's consumer. Returning
+		`null` here means the current HxcIR block already has a throw terminator;
+		the enclosing `if` or `switch` must therefore omit its result store and
+		join edge. This is control-flow state, not a nullable Haxe value.
+	**/
+	function lowerValueOrThrow(expression:TypedExpr, expectedMapping:CBodyValueType, owner:String):Null<LoweredValue> {
+		if (!isTerminalThrowExpression(expression))
+			return lowerValue(expression, expectedMapping);
+		switch expression.expr {
+			case TThrow(value):
+				lowerThrow(expression, value);
+				return null;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				return lowerValueOrThrow(inner, expectedMapping, owner);
+			case TBlock(expressions):
+				if (expressions.length == 0)
+					return unsupported(expression, '$owner:empty-terminating-block');
+				final lastIndex = expressions.length - 1;
+				lowerStatementSequence(expressions, lastIndex);
+				return lowerValueOrThrow(expressions[lastIndex], expectedMapping, owner);
+			case _:
+				return unsupported(expression, '$owner:terminal-throw-shape-lost');
+		}
+	}
+
+	/** Recognize wrappers and value blocks whose final operation is `throw`. */
+	static function isTerminalThrowExpression(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TThrow(_): true;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isTerminalThrowExpression(inner);
+			case TBlock(expressions): expressions.length > 0 && isTerminalThrowExpression(expressions[expressions.length - 1]);
+			case _: false;
+		};
 	}
 
 	function lowerConstant(expression:TypedExpr, constant:TConstant, expectedMapping:Null<CBodyValueType>):LoweredValue {

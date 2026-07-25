@@ -125,6 +125,15 @@ stores of the carrier, a second move, or a path that abandons an acquired owner.
 This lets C emission use an ordinary local plus structured `if`/`else` while
 keeping retain, cleanup, and transfer decisions explicit before C syntax is
 chosen.
+The same schema's existing `IRTThrow` and `HxcIRFailureEdge` now have a bounded
+ordinary-function producer. When reachability contains no admitted `TTry`, the
+frontend knows the throw cannot be caught: it evaluates the payload once,
+stabilizes any fresh admitted owner, records the active cleanup list, and
+selects `IRFTAbort`. A terminating value-switch arm therefore has no result
+store or join edge. Constructor functions retain `IRFTPropagate`, because their
+callers already use the separate explicit status convention. This adds no
+catch, `finally`, payload-transport, or general exception-frame semantics; those
+remain a later exception capability rather than printer behavior.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by

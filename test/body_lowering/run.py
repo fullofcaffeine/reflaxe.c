@@ -21,16 +21,19 @@ ROOT = Path(__file__).resolve().parents[2]
 HXML = Path(__file__).with_name("body_lowering.hxml")
 POSITIVE = Path(__file__).with_name("fixtures") / "positive"
 UNSUPPORTED = Path(__file__).with_name("fixtures") / "unsupported"
+THROW_CLEANUP = Path(__file__).with_name("fixtures") / "throw_cleanup"
 EXPECTED = Path(__file__).with_name("expected")
 MAINTAINABILITY_POLICY = ROOT / "docs/specs/generated-c-maintainability-policy.json"
 REPORT_PREFIX = "HXC_BODY_LOWERING="
 FIELDS = {
     "booleanValue",
+    "chooseOrThrow",
     "directInteger",
     "explicitVoid",
     "floatingValue",
     "implicitVoid",
     "integerValue",
+    "throwPayload",
     "unsignedValue",
 }
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -204,6 +207,24 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     positions = [integer_body.find(marker) for marker in ordered]
     if integer_start == -1 or integer_end == -1 or -1 in positions or positions != sorted(positions):
         raise BodyLoweringFailure("HxcIR lost source evaluation order for nested shadowing")
+    throw_start = hxcir.find('function "function.BodyFixture.chooseOrThrow"')
+    throw_end = hxcir.find('end function "function.BodyFixture.chooseOrThrow"')
+    throw_body = hxcir[throw_start:throw_end]
+    throw_markers = (
+        'call dispatch=direct("function.BodyFixture.throwPayload")',
+        "terminator throw",
+        "failure(kind=exception,target=abort,arguments=[],cleanup=[])",
+    )
+    throw_positions = [throw_body.find(marker) for marker in throw_markers]
+    if (
+        throw_start == -1
+        or throw_end == -1
+        or -1 in throw_positions
+        or throw_positions != sorted(throw_positions)
+    ):
+        raise BodyLoweringFailure(
+            "uncaught throw did not evaluate its payload before the explicit fail-stop edge"
+        )
     for source_marker in (
         'BodyFixture.hx":3:3-3:22',
         'BodyFixture.hx":6:4-6:23',
@@ -218,6 +239,17 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise BodyLoweringFailure("optional structured #line mode drifted")
     if "#include <stdint.h>" not in c_source or "#include <stdbool.h>" not in c_source:
         raise BodyLoweringFailure("primitive body C omitted its exact standard headers")
+    throw_call = "int32_t hxc_tmp_call_result_n0 = hxc_BodyFixture_throwPayload();"
+    throw_abort = "abort();"
+    if (
+        "static int32_t hxc_BodyFixture_chooseOrThrow(int32_t hxc_choice);" not in c_source
+        or "static int32_t hxc_BodyFixture_throwPayload(void);" not in c_source
+        or c_source.find(throw_call) == -1
+        or c_source.find(throw_abort) < c_source.find(throw_call)
+    ):
+        raise BodyLoweringFailure(
+            "generated C lost strict prototypes or payload-before-abort ordering"
+        )
 
     symbols = report.get("symbols")
     if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
@@ -485,8 +517,23 @@ def function_names(report: dict[str, object]) -> dict[str, str]:
     return names
 
 
-def native_harness(report: dict[str, object]) -> str:
+def native_harness(report: dict[str, object], *, fail: bool = False) -> str:
     names = function_names(report)
+    if fail:
+        return f"""
+int main(void)
+{{
+  (void)&{names['booleanValue']};
+  (void)&{names['directInteger']};
+  (void)&{names['explicitVoid']};
+  (void)&{names['floatingValue']};
+  (void)&{names['implicitVoid']};
+  (void)&{names['integerValue']};
+  (void)&{names['unsignedValue']};
+  (void){names['chooseOrThrow']}(INT32_C(1));
+  return 0;
+}}
+"""
     return f"""
 int main(void)
 {{
@@ -497,6 +544,8 @@ int main(void)
   if ({names['unsignedValue']}() != UINT32_C(29)) return 3;
   if ({names['floatingValue']}() != 1.5) return 4;
   if ({names['booleanValue']}() != true) return 5;
+  if ({names['chooseOrThrow']}(INT32_C(0)) != INT32_C(41)) return 6;
+  if ({names['chooseOrThrow']}(INT32_C(2)) != INT32_C(43)) return 7;
   return 0;
 }}
 """
@@ -566,7 +615,6 @@ def available_compilers(selected: str | None = None) -> list[BodyToolchain]:
 
 def check_native(report: dict[str, object], selected: str | None = None) -> None:
     compilers = available_compilers(selected)
-    harness = native_harness(report)
     with tempfile.TemporaryDirectory(prefix="hxc-body-lowering-native-") as temporary:
         root = Path(temporary)
         for source_key in ("cSource", "lineMappedCSource"):
@@ -575,50 +623,72 @@ def check_native(report: dict[str, object], selected: str | None = None) -> None
                 raise BodyLoweringFailure(
                     f"body-lowering native source {source_key} is not text"
                 )
-            c_file = root / f"{source_key}.c"
-            c_file.write_text(source + harness, encoding="utf-8", newline="\n")
-            for toolchain in compilers:
-                for optimization in ("-O0", "-O2"):
-                    executable = root / f"{source_key}-{toolchain.family}-{optimization[1:]}"
-                    compile_result = subprocess.run(
-                        [
-                            toolchain.compiler,
-                            "-std=c11",
-                            "-Wall",
-                            "-Wextra",
-                            "-Werror",
-                            "-Wconversion",
-                            "-Wsign-conversion",
-                            "-pedantic-errors",
-                            optimization,
-                            str(c_file),
-                            "-o",
-                            str(executable),
-                        ],
-                        cwd=ROOT,
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
-                    )
-                    if compile_result.returncode != 0 or compile_result.stdout or compile_result.stderr:
-                        raise BodyLoweringFailure(
-                            f"{toolchain.family} {optimization} rejected {source_key}\n"
-                            f"stdout:\n{compile_result.stdout}\nstderr:\n{compile_result.stderr}"
+            for mode in ("normal", "throw"):
+                c_file = root / f"{source_key}-{mode}.c"
+                c_file.write_text(
+                    source + native_harness(report, fail=mode == "throw"),
+                    encoding="utf-8",
+                    newline="\n",
+                )
+                for toolchain in compilers:
+                    for optimization in ("-O0", "-O2"):
+                        executable = (
+                            root
+                            / f"{source_key}-{mode}-{toolchain.family}-{optimization[1:]}"
                         )
-                    run_result = subprocess.run(
-                        [str(executable)],
-                        cwd=ROOT,
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                    )
-                    if run_result.returncode != 0 or run_result.stdout or run_result.stderr:
-                        raise BodyLoweringFailure(
-                            f"{toolchain.family} {optimization} {source_key} behavior failed: "
-                            f"exit={run_result.returncode} stdout={run_result.stdout!r} stderr={run_result.stderr!r}"
+                        compile_result = subprocess.run(
+                            [
+                                toolchain.compiler,
+                                "-std=c11",
+                                "-Wall",
+                                "-Wextra",
+                                "-Werror",
+                                "-Wconversion",
+                                "-Wsign-conversion",
+                                "-pedantic-errors",
+                                optimization,
+                                str(c_file),
+                                "-o",
+                                str(executable),
+                            ],
+                            cwd=ROOT,
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
                         )
+                        if (
+                            compile_result.returncode != 0
+                            or compile_result.stdout
+                            or compile_result.stderr
+                        ):
+                            raise BodyLoweringFailure(
+                                f"{toolchain.family} {optimization} rejected "
+                                f"{source_key}/{mode}\n"
+                                f"stdout:\n{compile_result.stdout}"
+                                f"stderr:\n{compile_result.stderr}"
+                            )
+                        run_result = subprocess.run(
+                            [str(executable)],
+                            cwd=ROOT,
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                            timeout=10,
+                        )
+                        expected_failure = mode == "throw"
+                        if (
+                            (run_result.returncode == 0) == expected_failure
+                            or run_result.stdout
+                            or run_result.stderr
+                        ):
+                            raise BodyLoweringFailure(
+                                f"{toolchain.family} {optimization} "
+                                f"{source_key}/{mode} behavior failed: "
+                                f"exit={run_result.returncode} "
+                                f"stdout={run_result.stdout!r} "
+                                f"stderr={run_result.stderr!r}"
+                            )
 
 
 def custom_target(
@@ -658,6 +728,87 @@ def assert_no_output(root: Path, label: str) -> None:
         )
 
 
+def check_throw_cleanup(root: Path) -> None:
+    output = root / "throw-cleanup"
+    generated = custom_target(THROW_CLEANUP, "Main", output)
+    if generated.returncode != 0 or generated.stderr:
+        raise BodyLoweringFailure(
+            "ordinary uncaught throw cleanup fixture did not compile\n"
+            f"stdout:\n{generated.stdout}\nstderr:\n{generated.stderr}"
+        )
+    source_path = output / "src/program.c"
+    source = source_path.read_text(encoding="utf-8")
+    release = source.find("hxc_array_ref_release(hxc_values)")
+    fail_stop = source.rfind("abort();", 0, source.find("void hxc_Main_main"))
+    if release == -1 or fail_stop < release:
+        raise BodyLoweringFailure(
+            "ordinary uncaught throw did not release its active array owner before abort"
+        )
+
+    runtime_sources = sorted(
+        (output / "runtime/src").glob("*.c"),
+        key=lambda path: path.as_posix().encode("utf-8"),
+    )
+    for toolchain in available_compilers():
+        for mode, flags in (
+            ("O0", ["-O0"]),
+            ("O2", ["-O2"]),
+            (
+                "sanitized",
+                [
+                    "-O1",
+                    "-fno-omit-frame-pointer",
+                    "-fsanitize=address,undefined",
+                ],
+            ),
+        ):
+            executable = root / f"throw-cleanup-{toolchain.family}-{mode}"
+            compiled = subprocess.run(
+                [
+                    toolchain.compiler,
+                    "-std=c11",
+                    "-Wall",
+                    "-Wextra",
+                    "-Werror",
+                    "-Wconversion",
+                    "-Wsign-conversion",
+                    "-pedantic-errors",
+                    *flags,
+                    "-I",
+                    str(output / "include"),
+                    "-I",
+                    str(output / "runtime/include"),
+                    str(source_path),
+                    *(str(path) for path in runtime_sources),
+                    "-o",
+                    str(executable),
+                ],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+                raise BodyLoweringFailure(
+                    f"{toolchain.family} {mode} rejected throw cleanup fixture\n"
+                    f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
+                )
+            ran = subprocess.run(
+                [str(executable)],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if ran.returncode == 0 or ran.stdout or ran.stderr:
+                raise BodyLoweringFailure(
+                    f"{toolchain.family} {mode} throw cleanup did not fail-stop silently: "
+                    f"exit={ran.returncode} stdout={ran.stdout!r} stderr={ran.stderr!r}"
+                )
+
+
 def check_production_boundaries() -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-body-lowering-boundary-") as temporary:
         root = Path(temporary)
@@ -670,8 +821,8 @@ def check_production_boundaries() -> None:
             if (
                 unsupported.returncode != 1
                 or "HXC1001" not in combined
-                or "Unsupported typed Haxe node `TThrow`" not in combined
-                or "Main.hx:4: characters 3-8" not in combined
+                or "Unsupported typed Haxe node `TTry`" not in combined
+                or "Main.hx:3: lines 3-7" not in combined
                 or f"[profile={profile}]" not in combined
             ):
                 raise BodyLoweringFailure(
@@ -679,6 +830,8 @@ def check_production_boundaries() -> None:
                     f"stdout:\n{unsupported.stdout}\nstderr:\n{unsupported.stderr}"
                 )
             assert_no_output(unsupported_output, f"{profile} HXC1001")
+
+        check_throw_cleanup(root)
 
         supported_output = root / "supported"
         supported = custom_target(POSITIVE, "BodyFixture", supported_output)
@@ -884,9 +1037,9 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
 
     print(
-        "body-lowering: OK: typed constants/locals/blocks/returns, shadow-safe names, "
-        "exact HXC1001 spans, optional #line mapping, runtime-free production and "
-        "GCC/Clang behavior"
+        "body-lowering: OK: typed values/returns and uncaught throw cleanup, "
+        "shadow-safe names, exact HXC1001 spans, optional #line mapping, "
+        "runtime-free production and GCC/Clang behavior"
     )
     return 0
 

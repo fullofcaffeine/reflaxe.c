@@ -38,48 +38,54 @@
         "maxOccurrences": 0
       }
     ],
-    "fileOverrides": [],
+    "fileOverrides": [
+      {
+        "path": "body-lines.c",
+        "maxFileLines": 160,
+        "reason": "The focused source-mapping artifact intentionally pairs one structured #line directive with each emitted source region; the ordinary generated body remains under the corpus-wide limit."
+      }
+    ],
     "functionOverrides": [],
-    "sha256": "fad49a1fa2e418f31ec6ad412e52c362d4aeaff0976d378d96219939f8a27513"
+    "sha256": "d14ae6816dde507b0b017fbfe05284dfde80dc3b18cde8f8fc6d69a5793d2f9c"
   },
   "inputs": [
     {
       "path": "body-lines.c",
-      "sha256": "a64bc53136243a4961aed99fa6d8cfe6eaa014985599b18cd348b3142d8974bf"
+      "sha256": "34b710b24134e72248c03a5175f74c564a898fe7b39c5b3aa6303a74cef4e285"
     },
     {
       "path": "body.c",
-      "sha256": "aa2856a9986db516e98490c62a328fdc78e34d850985ed79cb00831184546984"
+      "sha256": "db25b204655732a8ccd0a02559d96797d13c75e7e576a16cedeb2507c4091af9"
     }
   ],
   "summary": {
     "artifactCount": 2,
-    "physicalLineCount": 132,
-    "codeLineCount": 118,
-    "lineDirectiveCount": 26,
+    "physicalLineCount": 238,
+    "codeLineCount": 202,
+    "lineDirectiveCount": 36,
     "mappedPathCount": 1,
     "mappedPaths": [
       "test/body_lowering/fixtures/positive/BodyFixture.hx"
     ],
-    "functionCount": 14,
-    "functionIdentityMappedCount": 14,
+    "functionCount": 18,
+    "functionIdentityMappedCount": 18,
     "functionIdentityMappedBasisPoints": 10000,
-    "sourceSpanMappedFunctionCount": 14,
+    "sourceSpanMappedFunctionCount": 18,
     "sourceSpanMappedFunctionBasisPoints": 10000,
-    "lineMappedFunctionCount": 7,
+    "lineMappedFunctionCount": 9,
     "lineMappedFunctionBasisPoints": 5000,
     "ownerMappedArtifactCount": 2,
     "ownerMappedArtifactBasisPoints": 10000,
-    "branchCount": 0,
-    "temporaryDeclarationCount": 8,
-    "temporaryReferenceCount": 8,
-    "temporaryDeclarationsPerKFunctionCodeLines": 75,
+    "branchCount": 8,
+    "temporaryDeclarationCount": 12,
+    "temporaryReferenceCount": 16,
+    "temporaryDeclarationsPerKFunctionCodeLines": 72,
     "maxIdentifier": {
-      "name": "hxc_BodyFixture_directInteger",
+      "name": "hxc_BodyFixture_chooseOrThrow",
       "bytes": 29,
       "coordinate": {
         "path": "body-lines.c",
-        "line": 14,
+        "line": 7,
         "column": 16,
         "functionId": null
       }
@@ -123,7 +129,7 @@
       "collisionResolved": true,
       "coordinate": {
         "path": "body-lines.c",
-        "line": 62,
+        "line": 113,
         "column": 11,
         "functionId": null
       }
@@ -140,7 +146,7 @@
       "collisionResolved": true,
       "coordinate": {
         "path": "body-lines.c",
-        "line": 67,
+        "line": 118,
         "column": 11,
         "functionId": null
       }
@@ -150,160 +156,210 @@
   "files": [
     {
       "path": "body-lines.c",
-      "sha256": "a64bc53136243a4961aed99fa6d8cfe6eaa014985599b18cd348b3142d8974bf",
+      "sha256": "34b710b24134e72248c03a5175f74c564a898fe7b39c5b3aa6303a74cef4e285",
       "owner": {
         "kind": "source-module",
         "modulePath": "BodyFixture",
         "source": null
       },
-      "physicalLineCount": 79,
-      "codeLineCount": 72,
-      "lineDirectiveCount": 26,
+      "physicalLineCount": 137,
+      "codeLineCount": 119,
+      "lineDirectiveCount": 36,
       "mappedPathCount": 1,
       "mappedPaths": [
         "test/body_lowering/fixtures/positive/BodyFixture.hx"
       ],
       "lineDirectives": [
         {
-          "physicalLine": 4,
+          "physicalLine": 23,
           "mappedLine": 20,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 7,
+          "physicalLine": 26,
           "mappedLine": 21,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 9,
+          "physicalLine": 28,
           "mappedLine": 22,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 13,
-          "mappedLine": 11,
+          "physicalLine": 32,
+          "mappedLine": 49,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 16,
-          "mappedLine": 12,
-          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
-        },
-        {
-          "physicalLine": 20,
-          "mappedLine": 25,
-          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
-        },
-        {
-          "physicalLine": 23,
-          "mappedLine": 26,
-          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
-        },
-        {
-          "physicalLine": 25,
-          "mappedLine": 27,
-          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
-        },
-        {
-          "physicalLine": 28,
-          "mappedLine": 29,
-          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
-        },
-        {
-          "physicalLine": 30,
-          "mappedLine": 30,
-          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
-        },
-        {
-          "physicalLine": 33,
-          "mappedLine": 32,
+          "physicalLine": 35,
+          "mappedLine": 50,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
           "physicalLine": 37,
-          "mappedLine": 15,
+          "mappedLine": 50,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 40,
-          "mappedLine": 16,
+          "physicalLine": 41,
+          "mappedLine": 50,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 42,
-          "mappedLine": 17,
-          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
-        },
-        {
-          "physicalLine": 46,
-          "mappedLine": 35,
+          "physicalLine": 47,
+          "mappedLine": 52,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
           "physicalLine": 49,
-          "mappedLine": 36,
+          "mappedLine": 52,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 51,
-          "mappedLine": 37,
+          "physicalLine": 55,
+          "mappedLine": 50,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 54,
+          "physicalLine": 60,
+          "mappedLine": 50,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 64,
+          "mappedLine": 11,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 67,
+          "mappedLine": 12,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 71,
+          "mappedLine": 25,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 74,
+          "mappedLine": 26,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 76,
+          "mappedLine": 27,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 79,
+          "mappedLine": 29,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 81,
+          "mappedLine": 30,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 84,
+          "mappedLine": 32,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 88,
+          "mappedLine": 15,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 91,
+          "mappedLine": 16,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 93,
+          "mappedLine": 17,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 97,
           "mappedLine": 35,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 58,
+          "physicalLine": 100,
+          "mappedLine": 36,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 102,
+          "mappedLine": 37,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 105,
+          "mappedLine": 35,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 109,
           "mappedLine": 2,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 61,
+          "physicalLine": 112,
           "mappedLine": 3,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 63,
+          "physicalLine": 114,
           "mappedLine": 4,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 66,
+          "physicalLine": 117,
           "mappedLine": 6,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 68,
+          "physicalLine": 119,
           "mappedLine": 7,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 72,
+          "physicalLine": 123,
+          "mappedLine": 45,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 126,
+          "mappedLine": 46,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 130,
           "mappedLine": 40,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 75,
+          "physicalLine": 133,
           "mappedLine": 41,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         },
         {
-          "physicalLine": 77,
+          "physicalLine": 135,
           "mappedLine": 42,
           "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
         }
       ],
-      "identifierCount": 109,
+      "identifierCount": 188,
       "maxIdentifier": {
-        "name": "hxc_BodyFixture_directInteger",
+        "name": "hxc_BodyFixture_chooseOrThrow",
         "bytes": 29,
-        "line": 14,
+        "line": 7,
         "column": 16
       },
-      "temporaryDeclarationCount": 4,
-      "temporaryReferenceCount": 4,
+      "temporaryDeclarationCount": 6,
+      "temporaryReferenceCount": 8,
       "functions": [
         {
           "functionId": "body-lines.c:function.BodyFixture.booleanValue",
@@ -327,8 +383,8 @@
             "endLine": 23,
             "endColumn": 3
           },
-          "startLine": 5,
-          "endLine": 11,
+          "startLine": 24,
+          "endLine": 30,
           "physicalLineCount": 7,
           "codeLineCount": 7,
           "bodyCodeLineCount": 4,
@@ -341,6 +397,43 @@
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
           "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.chooseOrThrow",
+          "cName": "hxc_BodyFixture_chooseOrThrow",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 49,
+              "startColumn": 48,
+              "endLine": 55,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 49,
+            "startColumn": 48,
+            "endLine": 55,
+            "endColumn": 3
+          },
+          "startLine": 33,
+          "endLine": 62,
+          "physicalLineCount": 30,
+          "codeLineCount": 30,
+          "bodyCodeLineCount": 27,
+          "mappedBodyLineCount": 8,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 4,
+          "maxNestingDepth": 2,
+          "temporaryDeclarationCount": 2,
+          "temporaryReferenceCount": 4,
+          "temporaryDeclarationsPerKCodeLines": 67
         },
         {
           "functionId": "body-lines.c:function.BodyFixture.directInteger",
@@ -364,8 +457,8 @@
             "endLine": 13,
             "endColumn": 3
           },
-          "startLine": 14,
-          "endLine": 18,
+          "startLine": 65,
+          "endLine": 69,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -401,8 +494,8 @@
             "endLine": 33,
             "endColumn": 3
           },
-          "startLine": 21,
-          "endLine": 35,
+          "startLine": 72,
+          "endLine": 86,
           "physicalLineCount": 15,
           "codeLineCount": 15,
           "bodyCodeLineCount": 12,
@@ -438,8 +531,8 @@
             "endLine": 18,
             "endColumn": 3
           },
-          "startLine": 38,
-          "endLine": 44,
+          "startLine": 89,
+          "endLine": 95,
           "physicalLineCount": 7,
           "codeLineCount": 7,
           "bodyCodeLineCount": 4,
@@ -475,8 +568,8 @@
             "endLine": 38,
             "endColumn": 3
           },
-          "startLine": 47,
-          "endLine": 56,
+          "startLine": 98,
+          "endLine": 107,
           "physicalLineCount": 10,
           "codeLineCount": 10,
           "bodyCodeLineCount": 7,
@@ -512,8 +605,8 @@
             "endLine": 9,
             "endColumn": 3
           },
-          "startLine": 59,
-          "endLine": 70,
+          "startLine": 110,
+          "endLine": 121,
           "physicalLineCount": 12,
           "codeLineCount": 12,
           "bodyCodeLineCount": 9,
@@ -526,6 +619,43 @@
           "temporaryDeclarationCount": 1,
           "temporaryReferenceCount": 1,
           "temporaryDeclarationsPerKCodeLines": 84
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.throwPayload",
+          "cName": "hxc_BodyFixture_throwPayload",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 45,
+              "startColumn": 37,
+              "endLine": 47,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 45,
+            "startColumn": 37,
+            "endLine": 47,
+            "endColumn": 3
+          },
+          "startLine": 124,
+          "endLine": 128,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 2,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body-lines.c:function.BodyFixture.unsignedValue",
@@ -549,8 +679,8 @@
             "endLine": 43,
             "endColumn": 3
           },
-          "startLine": 73,
-          "endLine": 79,
+          "startLine": 131,
+          "endLine": 137,
           "physicalLineCount": 7,
           "codeLineCount": 7,
           "bodyCodeLineCount": 4,
@@ -568,27 +698,27 @@
     },
     {
       "path": "body.c",
-      "sha256": "aa2856a9986db516e98490c62a328fdc78e34d850985ed79cb00831184546984",
+      "sha256": "db25b204655732a8ccd0a02559d96797d13c75e7e576a16cedeb2507c4091af9",
       "owner": {
         "kind": "source-module",
         "modulePath": "BodyFixture",
         "source": null
       },
-      "physicalLineCount": 53,
-      "codeLineCount": 46,
+      "physicalLineCount": 101,
+      "codeLineCount": 83,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 83,
+      "identifierCount": 152,
       "maxIdentifier": {
-        "name": "hxc_BodyFixture_directInteger",
+        "name": "hxc_BodyFixture_chooseOrThrow",
         "bytes": 29,
-        "line": 10,
+        "line": 7,
         "column": 16
       },
-      "temporaryDeclarationCount": 4,
-      "temporaryReferenceCount": 4,
+      "temporaryDeclarationCount": 6,
+      "temporaryReferenceCount": 8,
       "functions": [
         {
           "functionId": "body.c:function.BodyFixture.booleanValue",
@@ -612,8 +742,8 @@
             "endLine": 23,
             "endColumn": 3
           },
-          "startLine": 4,
-          "endLine": 8,
+          "startLine": 23,
+          "endLine": 27,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -624,6 +754,41 @@
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
           "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.chooseOrThrow",
+          "cName": "hxc_BodyFixture_chooseOrThrow",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 49,
+              "startColumn": 48,
+              "endLine": 55,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 49,
+            "startColumn": 48,
+            "endLine": 55,
+            "endColumn": 3
+          },
+          "startLine": 29,
+          "endLine": 51,
+          "physicalLineCount": 23,
+          "codeLineCount": 23,
+          "bodyCodeLineCount": 20,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 4,
+          "maxNestingDepth": 2,
+          "temporaryDeclarationCount": 2,
+          "temporaryReferenceCount": 4,
+          "temporaryDeclarationsPerKCodeLines": 87
         },
         {
           "functionId": "body.c:function.BodyFixture.directInteger",
@@ -647,8 +812,8 @@
             "endLine": 13,
             "endColumn": 3
           },
-          "startLine": 10,
-          "endLine": 13,
+          "startLine": 53,
+          "endLine": 56,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -682,8 +847,8 @@
             "endLine": 33,
             "endColumn": 3
           },
-          "startLine": 15,
-          "endLine": 24,
+          "startLine": 58,
+          "endLine": 67,
           "physicalLineCount": 10,
           "codeLineCount": 10,
           "bodyCodeLineCount": 7,
@@ -717,8 +882,8 @@
             "endLine": 18,
             "endColumn": 3
           },
-          "startLine": 26,
-          "endLine": 30,
+          "startLine": 69,
+          "endLine": 73,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -752,8 +917,8 @@
             "endLine": 38,
             "endColumn": 3
           },
-          "startLine": 32,
-          "endLine": 38,
+          "startLine": 75,
+          "endLine": 81,
           "physicalLineCount": 7,
           "codeLineCount": 7,
           "bodyCodeLineCount": 4,
@@ -787,8 +952,8 @@
             "endLine": 9,
             "endColumn": 3
           },
-          "startLine": 40,
-          "endLine": 47,
+          "startLine": 83,
+          "endLine": 90,
           "physicalLineCount": 8,
           "codeLineCount": 8,
           "bodyCodeLineCount": 5,
@@ -799,6 +964,41 @@
           "temporaryDeclarationCount": 1,
           "temporaryReferenceCount": 1,
           "temporaryDeclarationsPerKCodeLines": 125
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.throwPayload",
+          "cName": "hxc_BodyFixture_throwPayload",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 45,
+              "startColumn": 37,
+              "endLine": 47,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 45,
+            "startColumn": 37,
+            "endLine": 47,
+            "endColumn": 3
+          },
+          "startLine": 92,
+          "endLine": 95,
+          "physicalLineCount": 4,
+          "codeLineCount": 4,
+          "bodyCodeLineCount": 1,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body.c:function.BodyFixture.unsignedValue",
@@ -822,8 +1022,8 @@
             "endLine": 43,
             "endColumn": 3
           },
-          "startLine": 49,
-          "endLine": 53,
+          "startLine": 97,
+          "endLine": 101,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,

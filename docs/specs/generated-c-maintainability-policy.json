@@ -40,7 +40,13 @@
           "maxOccurrences": 0
         }
       ],
-      "fileOverrides": [],
+      "fileOverrides": [
+        {
+          "path": "body-lines.c",
+          "maxFileLines": 160,
+          "reason": "The focused source-mapping artifact intentionally pairs one structured #line directive with each emitted source region; the ordinary generated body remains under the corpus-wide limit."
+        }
+      ],
       "functionOverrides": []
     },
     {

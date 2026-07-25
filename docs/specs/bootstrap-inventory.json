@@ -19,7 +19,7 @@
     "profiles": "This manifest describes evidence only and does not change portable or metal semantics.",
     "runtimePolicy": "This manifest selects no hxrt feature and does not change auto, minimal, or none resolution.",
     "environments": "Native fixture evidence is not a supported environment or platform tuple; no support matrix is claimed.",
-    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters, closed anonymous-record (including unmanaged bounded payload-enum fields), bounded direct-value enum, compiler-known literal/output and managed String operations, managed Array, and haxe.io.Bytes slices have generated-C evidence; the broader Caxecraft application still reaches unsupported Haxe throw lowering.",
+    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters, closed anonymous-record (including unmanaged bounded payload-enum fields), bounded direct-value enum, compiler-known literal/output and managed String operations, managed Array, and haxe.io.Bytes slices have generated-C evidence. Statically uncaught ordinary Haxe throw now evaluates its payload, runs active cleanup, and fail-stops without changing the function signature; caught exceptions remain unsupported. The broader Caxecraft application now reaches the separately tracked managed-String value-switch ownership boundary.",
     "publicAbi": "The target-facing vocabulary is provisional and no generated public C ABI is stable or supported."
   },
   "claimGates": [
