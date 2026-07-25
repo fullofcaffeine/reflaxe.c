@@ -202,16 +202,31 @@ type remains exact. This temporary friendship lets the composition root create
 the short-lived read/write views still needed by loading and rendering without
 publishing mutable session storage to every caller.
 
+That makes the current code safer than public mutable fields, but it does not
+make it good steady-state architecture. `CaxecraftApp` can still borrow the
+world and authored-item buffers and call `WaterSimulation` directly. The outer
+application layer therefore knows the simulation's storage representation and
+can bypass session-owned mutation rules. `@:allow` is not a cast--Haxe keeps
+normal types and does not reinterpret memory--but it is an encapsulation escape
+hatch, much like a narrowly named `friend` in C++.
+
 After Haxe accepts an access, haxe.c lowers it like an access written inside
 `GameSession`: ordinary direct C field or method code, with no runtime
 permission branch, capability object, ownership transfer, or public C ABI
 expansion. The separate span-lifetime analysis—not `@:allow`—rejects returning
-or storing those borrowed views. The runtime `LevelLoader` and read-only
-`GameView` will replace and remove this migration seam. The session now owns
-the shipped `localPlayer` binding and deterministic completed-tick clock. It
-resolves the binding internally and advances the clock only after a successful
-commit; `view()` now publishes the first immutable local-character/clock
-snapshot.
+or storing those borrowed views. The shipped `GameView` already removes direct
+character and clock reads, but it does not yet expose a renderable world.
+P1 task `haxe_c-xge.20.4.2.6` owns the complete repair: mutation becomes typed
+session commands or fixed-tick intent, rendering receives a zero-copy read-only
+world view tied to the session lifetime, and the class-level `@:allow` is
+deleted. If that natural borrow exposes a compiler limitation, the task must
+reduce and fix the general haxe.c rule instead of preserving friendship,
+copying the world, or moving Raylib into `GameSession`.
+
+The session now owns the shipped `localPlayer` binding and deterministic
+completed-tick clock. It resolves the binding internally and advances the clock
+only after a successful commit; `view()` publishes the first immutable
+local-character/clock snapshot.
 The first presentation-owned `HudView` is also shipped: `CaxecraftApp` constructs it
 from committed values after fixed updates, and HUD drawing receives that value
 instead of a long positional parameter list. It is still a migration seam, not

@@ -317,6 +317,23 @@ performance, packaging, and developer experience together.
   hand-written C baselines. Current bounded class support is a capability stage,
   not the design ceiling; track missing general semantics instead of forcing
   Caxecraft or another flagship into an unnatural low-level source model.
+- Treat friendship and private-access overrides--for example Haxe `@:allow`,
+  C++ `friend`, privileged test hooks, or reflection used to reach non-public
+  state--as explicit authority, not as harmless syntax. They remain type
+  checked and are not casts, but they can still couple one owner to another
+  owner's representation and let invariants be bypassed. Admit narrow friend
+  access only when the collaborator is genuinely part of the same cohesive
+  abstraction, or as a bounded migration seam with a named Beads owner and
+  removal condition. Name the grantor, recipient, exact accessible operation
+  or member set, phase, invariant, and generated/runtime consequence. Prefer a
+  typed command for mutation and a minimal read-only capability or borrowed
+  view for observation. Never use friendship across application, presentation,
+  simulation, storage, compiler-layer, or runtime-layer boundaries merely to
+  avoid designing that API; moving class-level friendship onto individual
+  fields narrows risk but does not repair crossed ownership. If the natural
+  safe boundary is blocked by haxe.c, add the focused compiler fixture and lift
+  the general limitation rather than making privileged access the product
+  architecture.
 - Preserve the accepted architecture and policy hierarchy while improving the
   workload: typed source and plans, HxcIR where C semantic gaps require it,
   structural CAST, explicit ownership/runtime decisions, formatting-only

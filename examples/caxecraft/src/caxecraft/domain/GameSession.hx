@@ -67,17 +67,20 @@ typedef GameTickResult = {
 // `GameSession`'s private members. During Haxe type checking, this class-level
 // `@:allow(...)` makes otherwise-private fields and methods visible to that
 // exact type; every other caller still receives Haxe's normal private-access
-// error. The friendship is deliberately temporary: the application composition
-// root must currently create short-lived read/write world views while loading
-// and rendering, but those mutable session details should not become public API.
+// error. This is acknowledged architectural debt, not the desired public
+// boundary: the application composition root still creates short-lived
+// read/write world views for interaction and rendering, which couples it to the
+// session's storage representation and lets it bypass session-owned commands.
 //
 // Once Haxe accepts the access, haxe.c emits the same direct C field or method
 // operation it would emit for code inside `GameSession`. The metadata creates
 // no runtime permission check, permission object, ownership transfer, or wider
 // C ABI. It also does not make a borrowed view safe to keep: haxe.c's separate
 // span-lifetime analysis rejects returning or storing these short-lived views.
-// Runtime `LevelLoader` and read-only `GameView` APIs will remove this migration
-// seam once they own loading and presentation.
+// The existing `GameView` already publishes committed character/time state but
+// does not cover the voxel world. Beads task `haxe_c-xge.20.4.2.6` removes this
+// seam by moving mutation behind typed session commands and giving rendering a
+// zero-copy read-only world view whose lifetime remains tied to this session.
 
 @:allow(caxecraft.app.CaxecraftApp)
 final class GameSession {

@@ -41,6 +41,19 @@ dynamic component bag, or
 string event bus without the measured admission evidence required by that
 architecture record.
 
+Do not use `@:allow`, another private-access override, or an internal mutable
+buffer as the permanent bridge between `CaxecraftApp`, presentation, and
+`GameSession`. The application shell may translate input into typed intent or
+commands and may render a bounded read-only view; only the session and its
+systems mutate simulation state. The current class-level `GameSession`
+friendship is acknowledged migration debt owned by
+`haxe_c-xge.20.4.2.6`. Do not broaden it, build new mechanics on it, or call a
+field-level version a completed fix. Remove it through the typed command and
+zero-copy read-only-view boundary required by that task. If haxe.c cannot
+express the view's owner-tied lifetime, switch to compiler work instead of
+exposing storage, copying the world, adding raw C, or moving rendering into the
+simulation.
+
 Keep this rule evidence-bounded. CAXEMAP 1 already stores an `asset-pack`
 logical path, `packs/caxecraft/base/content.json` is the strict schema-2 content
 manifest, and its generated `BaseContentRegistry` is the typed validation

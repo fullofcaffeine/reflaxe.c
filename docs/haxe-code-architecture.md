@@ -543,6 +543,19 @@ different contracts even when one annotation sits beside all of them. If the
 metadata is a migration seam, also name the implemented or planned replacement
 and the condition that removes it.
 
+Friend access deserves an additional ownership test. Haxe `@:allow` changes
+private-access checking for a named path; it does not cast a value or reinterpret
+memory. That can be appropriate when two types are implementation pieces of one
+cohesive abstraction and making the member public would grant more authority.
+It becomes an anti-pattern when an outer layer uses friendship to reach another
+layer's mutable representation, perform mutations outside its commands, or
+avoid a missing read-only API. In that case, replace mutation with typed
+commands and observation with the smallest read-only capability or owner-tied
+borrow. Field-level friendship is narrower than class-level friendship, but it
+does not by itself repair a crossed ownership boundary. A temporary exception
+must name its Beads owner and removal condition; a compiler limitation calls for
+a focused compiler fix, not a permanent friend-shaped application API.
+
 ## Abstract classes and interfaces
 
 These terms are easy to confuse with Haxe abstracts:
