@@ -45,6 +45,46 @@ Packing remains unavailable until a target-ABI probe and structural packed C
 declaration can prove it. This does not affect E3.T01's ordinary private closed
 anonymous records, which use strict C11 layout and no typed-C metadata.
 
+## Choosing Haxe or C-shaped semantics
+
+`portable` and `metal` use one compiler pipeline. A profile changes which
+representations and fallbacks are allowed; it does not silently redefine an
+ordinary Haxe operation. For example, `Array<T>` keeps Haxe's shared identity
+on assignment in both profiles, and `Array.copy()` means a shallow copy into a
+different Array in both profiles. The compiler may select more direct C when it
+can prove that doing so preserves those observations, but it may not turn the
+copy into a pointer alias merely because the build selected `metal`.
+
+The source type is how a developer asks for genuinely C-shaped behavior:
+
+| Intent | Haxe-facing type | Observable contract |
+| --- | --- | --- |
+| Familiar growable Haxe collection | `Array<T>` | Assignment aliases the same Array; `copy()` creates a different Array while shallow-copying its elements; the compiler owns the required lifetime work. |
+| Fixed inline C storage | `c.CArray<T, N>` | The compile-time length is part of the type and admitted values lower to direct C array storage without a resizable-Array runtime object. |
+| Mutable borrowed view | `c.Span<T>` | A pointer and element count allow bounded access to caller-owned storage; the span does not extend the storage lifetime. |
+| Read-only borrowed view | `c.ConstSpan<T>` | The same bounded borrow without mutation through the view. |
+| Foreign C declarations and calls | typed externs plus `@:c.*` metadata | The authoritative C header owns the ABI; haxe.c validates and calls that declared surface instead of recreating it as raw text. |
+
+“Borrowed” means the view may use storage during a proven lifetime but does not
+own or free it. “Shallow copy” means the new collection receives copied element
+values without recursively cloning objects or nested collections. For a
+reference-like element, both collections may therefore still refer to the same
+object even though resizing or destroying one collection cannot invalidate the
+other.
+
+This gives application code two complementary styles:
+
+1. Start with ordinary Haxe and let the compiler choose readable, efficient C
+   that preserves Haxe behavior.
+2. Choose a typed `c.*` carrier at a focused boundary when fixed layout,
+   borrowing, explicit ownership, or a foreign ABI is itself part of the
+   program's meaning.
+
+The second style is explicit rather than inferred from performance folklore.
+Current production evidence admits only the bounded `CArray`, span, exact-width
+integer, and extern surfaces described in this document. Other low-level forms
+remain fail-closed until their typed lowering and lifetime checks exist.
+
 ## Declaration planning boundary
 
 `CDeclarationPlanner` consumes the snapshot without consulting filesystem,

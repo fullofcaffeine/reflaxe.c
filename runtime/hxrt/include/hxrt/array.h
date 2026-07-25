@@ -222,6 +222,24 @@ HXC_API hxc_status hxc_array_ref_init_in_place(
 );
 
 /**
+ * Shallow-copy one Array into zeroed caller-owned outer storage.
+ *
+ * The destination receives its own backing allocation and copies live elements
+ * in source order through the source specialization's element-copy callback.
+ * Reference-like elements therefore acquire their own retain while still
+ * referring to the same logical object. On failure, every copied destination
+ * element and allocation is released, `out_array` is zeroed again, and the
+ * source remains unchanged.
+ *
+ * This form is used when another owner, such as the precise collector, already
+ * allocated the outer `hxc_array_ref`.
+ */
+HXC_API hxc_status hxc_array_ref_copy_in_place(
+  const hxc_array_ref *source,
+  hxc_array_ref *out_array
+);
+
+/**
  * Dispose only the backing buffer and clear caller-owned outer storage.
  *
  * This is the matching collector finalizer operation: it never frees `array`
@@ -235,6 +253,19 @@ HXC_API hxc_status hxc_array_ref_create_trivial(
   hxc_allocator allocator,
   size_t element_size,
   size_t element_alignment,
+  hxc_array_ref **out_array
+);
+
+/**
+ * Allocate and shallow-copy one independently owned Array container.
+ *
+ * The returned Array has distinct outer and backing storage. Its elements use
+ * the same typed copy rules as insertion, so nested references are retained
+ * rather than recursively cloned. Failure leaves `*out_array` null and releases
+ * every partial allocation and copied element.
+ */
+HXC_API hxc_status hxc_array_ref_copy(
+  const hxc_array_ref *source,
   hxc_array_ref **out_array
 );
 

@@ -2255,6 +2255,18 @@ private class HxcIRValidationState {
 						if (argumentType != null && typeKey(argumentType) != typeKey(resultElement))
 							add(path, 'Array literal element $index does not match its managed element type', source);
 				}
+			case "copy":
+				if (argumentTypes.length != 1 || receiverElement == null) {
+					add(path, "Array.copy requires one managed Array and returns the same exact Array specialization", source);
+				} else {
+					switch argumentTypes[0] {
+						case null:
+							add(path, "Array.copy requires one managed Array and returns the same exact Array specialization", source);
+						case sourceType:
+							if (typeKey(call.returnType) != typeKey(sourceType)) add(path,
+								"Array.copy requires one managed Array and returns the same exact Array specialization", source);
+					}
+				}
 			case "length":
 				if (argumentTypes.length != 1 || receiverElement == null || typeKey(call.returnType) != typeKey(IRTInt(32, true)))
 					add(path, "Array.length requires one managed Array argument and returns Haxe Int", source);

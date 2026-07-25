@@ -38,11 +38,26 @@ why that design uses records, nominal abstracts, enums, module functions, and
 real class instances in different places, with TypeScript comparisons and
 simplified examples of the C that haxe.c selects.
 
-The core is ordinary Haxe. Only `WorldCells` and `WorldStorage` know that the C
-build uses a stack-backed `CArray<UInt8>`/`Span<UInt8>` while Eval uses
-`Array<Int>`. That narrow seam keeps gameplay readable and gives the compiler a
-realistic, allocation-free C workload without hiding C behind a portability
-framework.
+The core is ordinary Haxe by design. This is the default for gameplay,
+simulation, content, localization, and editor code: haxe.c should preserve the
+familiar Haxe operation and select efficient C, rather than make application
+code imitate C manually. Typed low-level APIs belong at focused boundaries
+where representation really matters, such as Raylib interop, fixed hot-path
+buffers, borrowed views, or measured performance-sensitive world storage.
+
+Today, `WorldCells` and `WorldStorage` form the main-world storage boundary:
+the C build uses a stack-backed `CArray<UInt8>`/`Span<UInt8>` while Eval uses
+`Array<Int>`. The water scheduler uses the same focused pattern for its fixed
+pending-work buffer. Those narrow adapters keep gameplay readable and give the
+compiler realistic, allocation-free C workloads without hiding C behind a
+portability framework. The Raylib-facing application modules separately use
+target conditionals where the foreign ABI requires C-specific value types.
+Choosing the `metal` profile does not change ordinary Haxe semantics:
+`Array.copy()`, for example, must still produce a distinct shallow-copied Array.
+The source chooses a visible typed `c.*` carrier when it genuinely wants
+C-shaped storage or borrowing. The broader rule and current admitted surfaces
+are documented in
+[the typed C authoring contract](../../docs/typed-c-authoring.md#choosing-haxe-or-c-shaped-semantics).
 
 Reusable content now has one checked-in source of truth:
 [`packs/caxecraft/base/content.json`](packs/caxecraft/base/content.json). It

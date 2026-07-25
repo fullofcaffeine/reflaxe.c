@@ -2373,8 +2373,14 @@ private class FunctionBuilder {
 					HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath), "initialize-global");
 		}
 		validateConstructorManagedFields(bodyExpression.pos);
-		if (freshManagedArrayValueIds.keys().hasNext())
-			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-Array-value");
+		if (freshManagedArrayValueIds.keys().hasNext()) {
+			final ids = [for (id in freshManagedArrayValueIds.keys()) id];
+			ids.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+			final id = ids[0];
+			final producerSource = valueProducerSource(id);
+			unsupportedAt(bodyExpression.pos,
+				'function-exit:unowned-fresh-managed-Array-value:$id:${producerSource == null ? "unknown-source" : producerSource.display()}');
+		}
 		if (freshManagedStringMapValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-StringMap-value");
 		if (freshManagedIntMapValueIds.keys().hasNext())
@@ -7997,9 +8003,11 @@ private class FunctionBuilder {
 			final element = elements[index];
 			var loweredElement = coerce(lowerValue(element, array.element), array.element, element.pos, 'TArrayDecl(element:$index)');
 			// The runtime copy callback gives the new Array slot its own owner. A
-			// fresh String or record still needs a caller-owned lifetime until
-			// that copy succeeds, just like the same value passed to `Array.push`.
+			// fresh managed value still needs a caller-owned lifetime until that
+			// copy succeeds, just like the same value passed to `Array.push`.
 			loweredElement = stabilizeFreshManagedString(loweredElement, element.pos, 'array-literal-element-$index');
+			loweredElement = stabilizeFreshManagedArray(loweredElement, element.pos, 'array-literal-element-$index');
+			loweredElement = stabilizeFreshManagedBytes(loweredElement, element.pos, 'array-literal-element-$index');
 			loweredElement = stabilizeFreshManagedAggregate(loweredElement, element.pos, 'array-literal-element-$index');
 			arguments.push(loweredElement.id);
 		}
@@ -8208,6 +8216,27 @@ private class FunctionBuilder {
 		if (array == null)
 			return unsupported(expression, 'TCall(Array.$method:receiver-identity-lost)');
 		return switch method {
+			case "copy":
+				if (arguments.length != 0)
+					return unsupported(expression, 'TCall(Array.copy:argument-count=${arguments.length})');
+				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.copy:result-type)");
+				final resultArray = resultMapping.arrayValue();
+				if (resultArray == null || resultArray.semanticKey != array.semanticKey)
+					return unsupported(expression, 'TCall(Array.copy:result-specialization-mismatch:${resultMapping.cSpelling})');
+				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				appendInstruction(result, IRIOCall({
+					dispatch: IRCDRuntime("array", "copy"),
+					arguments: [receiver.id],
+					returnType: result.type,
+					failure: managedArrayFailure()
+				}), source, "array-copy");
+				registerValueTemporary(result.id, "array-copy-result");
+				if (!array.managedByCollector)
+					freshManagedArrayValueIds.set(result.id, true);
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "copy", "ordinary Haxe Array.copy shallow collection copy", source,
+					expression.pos));
+				{id: result.id, type: result.type, mapping: resultMapping};
 			case "join":
 				if (arguments.length != 1)
 					return unsupported(expression, 'TCall(Array.join:argument-count=${arguments.length})');
@@ -8246,6 +8275,8 @@ private class FunctionBuilder {
 					return unsupported(expression, 'TCall(Array.push:argument-count=${arguments.length})');
 				var element = coerce(lowerValue(arguments[0], array.element), array.element, arguments[0].pos, "TCall(Array.push:element)");
 				element = stabilizeFreshManagedString(element, arguments[0].pos, "array-push-element");
+				element = stabilizeFreshManagedArray(element, arguments[0].pos, "array-push-element");
+				element = stabilizeFreshManagedBytes(element, arguments[0].pos, "array-push-element");
 				element = stabilizeFreshManagedEnum(element, arguments[0].pos, "array-push-element");
 				element = stabilizeFreshManagedAggregate(element, arguments[0].pos, "array-push-element");
 				element = stabilizeFreshManagedOptional(element, arguments[0].pos, "array-push-element");

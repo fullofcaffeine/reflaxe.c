@@ -49,6 +49,8 @@ enum CBodyRuntimeName {
 	CBRNArrayCreate;
 	CBRNArrayCreateTrivial;
 	CBRNArrayInitInPlace;
+	CBRNArrayCopy;
+	CBRNArrayCopyInPlace;
 	CBRNArrayDisposeInPlace;
 	CBRNArrayElementOpsType;
 	CBRNArrayGetCopy;
@@ -129,6 +131,8 @@ class CBodyRuntimeNames {
 			case CBRNArrayCreate: "hxc_array_ref_create";
 			case CBRNArrayCreateTrivial: "hxc_array_ref_create_trivial";
 			case CBRNArrayInitInPlace: "hxc_array_ref_init_in_place";
+			case CBRNArrayCopy: "hxc_array_ref_copy";
+			case CBRNArrayCopyInPlace: "hxc_array_ref_copy_in_place";
 			case CBRNArrayDisposeInPlace: "hxc_array_ref_dispose_in_place";
 			case CBRNArrayElementOpsType: "hxc_array_element_ops";
 			case CBRNArrayGetCopy: "hxc_array_ref_get_copy";

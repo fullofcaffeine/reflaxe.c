@@ -1040,6 +1040,42 @@
   ],
   "apiOverrides": [
     {
+      "id": "array-copy-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "copy",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Array<Array.T>"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/generated-class/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted element specializations create distinct Array storage and shallow-copy slots in source order through their exact copy or retain operation. Primitive, String, Bytes, nested Array, managed enum/record, and traced class-reference evidence covers independent outer mutation, shared element identity, returns, allocation failure, and partial-copy rollback. Unsupported element representations remain fail-closed."
+    },
+    {
       "id": "array-string-join-partial",
       "selector": {
         "module": "Array",
@@ -2166,12 +2202,9 @@
       "kind": "method",
       "signature": "() -> Array<Array.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -2179,20 +2212,22 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/generated-class/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted element specializations create distinct Array storage and shallow-copy slots in source order through their exact copy or retain operation. Primitive, String, Bytes, nested Array, managed enum/record, and traced class-reference evidence covers independent outer mutation, shared element identity, returns, allocation failure, and partial-copy rollback. Unsupported element representations remain fail-closed.",
+      "ruleId": "array-copy-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:7504ac2dc8996d45e6577965a9d8f3f1c7c06a6d485a1f67574852dce2c0f033",

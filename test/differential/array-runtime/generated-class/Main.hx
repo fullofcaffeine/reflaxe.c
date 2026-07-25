@@ -9,6 +9,9 @@ final class Main {
 		nodes.push(first);
 		nodes.push(second);
 		nodes.push(null);
+		final copied = nodes.copy();
+		copied[0] = second;
+		copied.push(first);
 		// Cross both the Array growth boundary and the collector's deterministic
 		// one-mebibyte pressure threshold. The final assertions then prove that a
 		// collection traced the live Array slots and the first<->second cycle rather
@@ -22,8 +25,9 @@ final class Main {
 		second.connect(first);
 		nodes[1] = first;
 
-		while (nodes.length != 40003 || nodes[0].value != 15 || nodes[1] != first || nodes[2] != null || first.value != 15 || first.linkCount() != 1
-			|| second.linkCount() != 1 || first.sampleCount() != 1 || absent != null || present == null || present.length != 1 || present[0] != first) {}
+		while (nodes.length != 40003 || copied.length != 4 || copied[0] != second || copied[3] != first || nodes[0].value != 15 || nodes[1] != first
+			|| nodes[2] != null || first.value != 15 || first.linkCount() != 1 || second.linkCount() != 1 || first.sampleCount() != 1 || absent != null
+			|| present == null || present.length != 1 || present[0] != first) {}
 	}
 
 	/**

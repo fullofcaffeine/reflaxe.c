@@ -573,6 +573,56 @@ hxc_status hxc_array_ref_init_in_place(
   return HXC_STATUS_OK;
 }
 
+hxc_status hxc_array_ref_copy_in_place(
+  const hxc_array_ref *source,
+  hxc_array_ref *out_array
+) {
+  hxc_status cleanup_status;
+  hxc_status status;
+  size_t index;
+
+  if (!hxc_array_ref_is_valid(source)
+      || out_array == NULL
+      || source == out_array
+      || out_array->references != 0u
+      || out_array->value.storage.memory != NULL
+      || out_array->value.storage.size != 0u
+      || out_array->value.length != 0u
+      || out_array->value.capacity != 0u) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_array_ref_init_in_place(
+    source->allocator,
+    source->value.elements,
+    out_array
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  status = hxc_array_reserve(&out_array->value, source->value.length);
+  if (status == HXC_STATUS_OK) {
+    for (index = 0u; index < source->value.length; index++) {
+      status = hxc_array_push_copy(
+        &out_array->value,
+        hxc_array_slot_const(&source->value, index)
+      );
+      if (status != HXC_STATUS_OK) {
+        break;
+      }
+    }
+  }
+  if (status == HXC_STATUS_OK) {
+    return HXC_STATUS_OK;
+  }
+
+  /*
+   * `push_copy` increments length only after constructing one complete element,
+   * so dispose destroys exactly the successful prefix in reverse order.
+   */
+  cleanup_status = hxc_array_ref_dispose_in_place(out_array);
+  return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+}
+
 hxc_status hxc_array_ref_dispose_in_place(hxc_array_ref *array) {
   hxc_status status;
   if (array == NULL) {
@@ -612,6 +662,43 @@ hxc_status hxc_array_ref_create_trivial(
   elements.assign = NULL;
   elements.destroy = NULL;
   return hxc_array_ref_create(allocator, elements, out_array);
+}
+
+hxc_status hxc_array_ref_copy(
+  const hxc_array_ref *source,
+  hxc_array_ref **out_array
+) {
+  hxc_array_ref *copy = NULL;
+  hxc_status cleanup_status;
+  hxc_status status;
+
+  if (!hxc_array_ref_is_valid(source)
+      || out_array == NULL
+      || *out_array != NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_alloc(
+    &source->allocator,
+    sizeof(hxc_array_ref),
+    HXC_ALIGNOF(hxc_array_ref),
+    (void **)&copy
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  *copy = (hxc_array_ref){0};
+  status = hxc_array_ref_copy_in_place(source, copy);
+  if (status != HXC_STATUS_OK) {
+    cleanup_status = hxc_free(
+      &source->allocator,
+      copy,
+      sizeof(hxc_array_ref),
+      HXC_ALIGNOF(hxc_array_ref)
+    );
+    return cleanup_status == HXC_STATUS_OK ? status : cleanup_status;
+  }
+  *out_array = copy;
+  return HXC_STATUS_OK;
 }
 
 bool hxc_array_ref_is_valid(const hxc_array_ref *array) {

@@ -12,7 +12,7 @@
   } while (0)
 
 #define HXC_TEST_BANK_SIZE 4096u
-#define HXC_TEST_BANK_COUNT 3u
+#define HXC_TEST_BANK_COUNT 8u
 
 typedef union hxc_test_bank {
   max_align_t alignment;
@@ -517,7 +517,9 @@ static int hxc_test_shared_array(
   const hxc_allocator *allocator
 ) {
   hxc_array_ref *array = NULL;
+  hxc_array_ref *array_copy = NULL;
   hxc_array_ref *managed = NULL;
+  hxc_array_ref *managed_copy = NULL;
   hxc_array_ref embedded = {0};
   hxc_test_lifecycle lifecycle = {0};
   hxc_test_object first_object = {7, 1u};
@@ -532,6 +534,7 @@ static int hxc_test_shared_array(
   int32_t first = 7;
   int32_t second = 11;
   int32_t output = -1;
+  int32_t copy_output = -1;
   int32_t length = -1;
   int32_t pushed_length = -1;
 
@@ -595,6 +598,33 @@ static int hxc_test_shared_array(
   HXC_TEST_CHECK(hxc_array_ref_set_copy(array, 0u, &second) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_array_ref_get_copy(array, 0u, &output) == HXC_STATUS_OK);
   HXC_TEST_CHECK(output == second);
+  HXC_TEST_CHECK(
+    hxc_array_ref_copy_in_place(array, &embedded) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_ref_copy(array, &array_copy) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    array_copy != NULL
+    && array_copy != array
+    && array_copy->value.storage.memory != array->value.storage.memory
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_set_copy(array_copy, 0u, &first) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_get_copy(array, 0u, &output) == HXC_STATUS_OK
+    && output == second
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_get_copy(array_copy, 0u, &copy_output) == HXC_STATUS_OK
+    && copy_output == first
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_get_copy(&embedded, 0u, &copy_output) == HXC_STATUS_OK
+    && copy_output == second
+  );
+  HXC_TEST_CHECK(hxc_array_ref_dispose_in_place(&embedded) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_release(array_copy) == HXC_STATUS_OK);
+  array_copy = NULL;
   output = -1;
   HXC_TEST_CHECK(
     hxc_array_ref_get_copy(array, 1u, &output) == HXC_STATUS_OUT_OF_RANGE
@@ -620,6 +650,56 @@ static int hxc_test_shared_array(
   );
   HXC_TEST_CHECK(first_object.references == 2u && pushed_length == 1);
   HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &second_object_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    first_object.references == 2u
+    && second_object.references == 2u
+    && pushed_length == 2
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_copy(managed, &managed_copy) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    managed_copy != NULL
+    && managed_copy != managed
+    && first_object.references == 3u
+    && second_object.references == 3u
+  );
+  HXC_TEST_CHECK(hxc_array_ref_release(managed_copy) == HXC_STATUS_OK);
+  managed_copy = NULL;
+  HXC_TEST_CHECK(
+    first_object.references == 2u && second_object.references == 2u
+  );
+
+  /*
+   * Fail on the second element copy. The first destination retain must be
+   * rolled back, all clone allocations must be released, and the source must
+   * remain unchanged.
+   */
+  lifecycle.copy_failure_armed = true;
+  lifecycle.copies_before_failure = 1u;
+  HXC_TEST_CHECK(
+    hxc_array_ref_copy(managed, &managed_copy) == HXC_STATUS_OUT_OF_MEMORY
+  );
+  lifecycle.copy_failure_armed = false;
+  HXC_TEST_CHECK(
+    managed_copy == NULL
+    && first_object.references == 2u
+    && second_object.references == 2u
+    && managed->value.length == 2u
+  );
+
+  /* An outer-allocation failure must likewise leave no partial result. */
+  arena->force_failure = true;
+  HXC_TEST_CHECK(
+    hxc_array_ref_copy(managed, &managed_copy) == HXC_STATUS_OUT_OF_MEMORY
+  );
+  arena->force_failure = false;
+  HXC_TEST_CHECK(managed_copy == NULL && managed->value.length == 2u);
+
+  HXC_TEST_CHECK(
     hxc_array_ref_get_copy(managed, 0u, &managed_output) == HXC_STATUS_OK
   );
   HXC_TEST_CHECK(
@@ -632,7 +712,7 @@ static int hxc_test_shared_array(
       == HXC_STATUS_OK
   );
   HXC_TEST_CHECK(
-    first_object.references == 1u && second_object.references == 2u
+    first_object.references == 1u && second_object.references == 3u
   );
   HXC_TEST_CHECK(hxc_array_ref_release(managed) == HXC_STATUS_OK);
   HXC_TEST_CHECK(

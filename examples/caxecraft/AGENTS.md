@@ -3,6 +3,34 @@
 The repository-root `AGENTS.md` remains authoritative. These additional rules
 apply to every file under `examples/caxecraft`.
 
+## Haxe-First, C-Close Boundaries
+
+Caxecraft is primarily a showcase of ordinary, idiomatic Haxe. Start gameplay,
+simulation, content, localization, editor, and test APIs in the natural Haxe
+shape a Haxe or TypeScript developer would expect. Let haxe.c choose efficient
+C while preserving those source semantics. Selecting the `metal` profile is
+not permission to reinterpret an ordinary Haxe operation as pointer aliasing,
+unchecked memory access, or another C-only behavior.
+
+Use a typed `c.*` API only at a focused boundary where C representation is part
+of the real requirement: Raylib and other foreign-library ABI adapters, fixed
+hot-path storage, borrowed views, or a measured performance-sensitive world
+buffer. Keep that detail behind a small typed adapter; document the concrete
+layout, lifetime, allocation, interoperability, or measured performance reason;
+and keep reusable gameplay unaware of it. Prefer `c.CArray`, `c.Span`,
+`c.ConstSpan`, exact-width values, and validated externs over raw C. Do not add
+a low-level carrier based only on an assumption that it will be faster.
+
+Ordinary Haxe collections retain ordinary Haxe behavior in either profile. For
+example, `Array.copy()` must create a distinct Array while shallow-copying its
+elements; Caxecraft must not replace it with a shared pointer or a hand-written
+loop merely because the compiler does not yet lower it. A compiler limitation
+switches work to the reusable compiler lane under the repository flagship
+rule. See
+[`docs/typed-c-authoring.md`](../../docs/typed-c-authoring.md#choosing-haxe-or-c-shaped-semantics)
+and [`docs/array-runtime.md`](../../docs/array-runtime.md) for the exact current
+boundaries.
+
 ## Engine Mechanics and Authored Content
 
 Caxecraft engine code implements reusable mechanics. Validated levels and their

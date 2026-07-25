@@ -264,6 +264,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
     for marker in (
         'representation=managed("array")',
         'runtime(feature="array",operation="create-literal")',
+        'runtime(feature="array",operation="copy")',
         'runtime(feature="array",operation="length")',
         'runtime(feature="array",operation="get-checked")',
         'runtime(feature="array",operation="push")',
@@ -498,12 +499,14 @@ def validate_generated_project(output: Path) -> None:
     }
     expected = {
         "cleanup-release",
+        "copy",
         "create-literal",
         "get-checked",
         "length",
         "managed-type-representation",
         "push",
         "retain",
+        "set",
     }
     if operations != expected:
         raise ArrayRuntimeFailure(
@@ -529,6 +532,7 @@ def validate_generated_project(output: Path) -> None:
     for marker in (
         "hxc_array_ref_create(",
         "hxc_array_ref_create_trivial",
+        "hxc_array_ref_copy(",
         "hxc_array_ref_retain",
         "hxc_array_ref_release",
         "hxc_array_ref_push_copy",
@@ -650,6 +654,7 @@ def render_managed_class_pair(root: Path) -> Path:
         'representation=managed("gc")',
         'allocate type=instance("instance.class.',
         'implementation=runtime("gc")',
+        'runtime(feature="array",operation="copy")',
         'runtime(feature="array",operation="set")',
         'haxe.array-reference.equal',
         'haxe.array-reference.not-equal',
@@ -677,6 +682,7 @@ def render_managed_class_pair(root: Path) -> Path:
     )
     for marker in (
         "hxc_gc_allocate",
+        "hxc_array_ref_copy_in_place",
         "hxc_array_ref_init_in_place",
         "hxc_array_ref_set_copy",
         "HXC_TYPE_DESCRIPTOR_HAS_TRACE",
@@ -758,14 +764,15 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     # interpolation, Array<String>.join, uncaught throw, managed String
     # value-switch joins, fresh String insertion into the Array comprehension,
     # and ownership-preserving Std.string(String) identity that followed them.
-    # The next reachable boundary is the shallow `Array.copy` used by
-    # ScenarioWriter. Requiring that exact later diagnostic proves this task did
-    # not merely move or hide its former Array failure. Accepting an arbitrary
-    # failure would weaken this product check into "Caxecraft still does not
-    # compile."
+    # The shallow `Array.copy` in ScenarioWriter now lowers. The next reachable
+    # boundary is its comparison-based `Array.sort`. Requiring that exact later
+    # diagnostic proves this task did not merely move or hide the former copy
+    # failure. Accepting an arbitrary failure would weaken this product check
+    # into "Caxecraft still does not compile."
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:33:" not in result.stderr
-        or "TCall(Array.copy:not-yet-admitted)" not in result.stderr
+        "src/caxecraft/scenario/ScenarioWriter.hx:35:" not in result.stderr
+        or "TCall(Array.sort:not-yet-admitted)" not in result.stderr
+        or "TCall(Array.copy:not-yet-admitted)" in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr

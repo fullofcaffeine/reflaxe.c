@@ -5121,6 +5121,39 @@ class CBodyEmitter {
 					]), boundsAbortName, instruction.id, fn.id);
 				}
 				values.set(result.id, EIdentifier(temporary));
+			case "copy":
+				if (call.arguments.length != 1)
+					return fail('Array copy `${instruction.id}` in `${fn.id}` lost its receiver');
+				final instanceId = requireArrayInstanceId(result.type, instruction.id, fn.id);
+				final arrayPlan = requireArrayPlan(instanceId);
+				final receiver = requireValue(values, call.arguments[0], fn.id);
+				final resultDeclaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: resultDeclaration.type,
+					declarator: resultDeclaration.declarator,
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				if (arrayPlan.prepared.managedByCollector) {
+					final descriptor = arrayPlan.descriptorName;
+					final program = managedProgram;
+					if (descriptor == null || program == null)
+						return fail('collector-managed Array copy `$instanceId` lost its descriptor or program context');
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+						EUnary(AddressOf, EIdentifier(program.collector)),
+						EUnary(AddressOf, EIdentifier(descriptor)),
+						ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+					]), boundsAbortName, instruction.id, fn.id);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayCopyInPlace)), [receiver, EIdentifier(temporary)]),
+						boundsAbortName, instruction.id, fn.id);
+				} else {
+					emitStatusAbort(statements,
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayCopy)), [receiver, EUnary(AddressOf, EIdentifier(temporary))]),
+						boundsAbortName, instruction.id, fn.id);
+				}
+				values.set(result.id, EIdentifier(temporary));
 			case "length":
 				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayLength, boundsAbortName, fn);
 			case "get-checked":

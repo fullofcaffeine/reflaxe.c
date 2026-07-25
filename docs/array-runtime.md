@@ -3,9 +3,10 @@
 This document records both the bounded E4.T04 native `hxrt` array storage and
 the first E5.T03 ordinary-Haxe lowering that selects it. A program can now use
 empty or nonempty `Array<T>` literals, aliases, `length`, checked indexing,
-`push`, and source-order iteration for the admitted element types described
-below. An exact managed `Array<String>` also supports `join(separator)` with
-one explicit String separator. Elements may now be plain direct values,
+`push`, `copy`, and source-order iteration for the admitted element types
+described below. An exact managed `Array<String>` also supports
+`join(separator)` with one explicit String separator. Elements may now be
+plain direct values,
 `haxe.io.Bytes`, another
 managed Array, a tagged enum with managed Array payloads, a closed record
 that recursively contains those values, or a concrete mutable class reference.
@@ -17,10 +18,13 @@ other managed element families, and broad standard-library behavior still fail
 before C is written. `Array<Class>` is deliberately different from the earlier
 acyclic value families: it uses the precise collector and can reclaim cycles.
 
-The original typed storage advanced the provisional same-major runtime ABI from
-0.4.0 to 0.5.0. Adding the compiler-used shared-identity container advances it
-to 0.6.0. These are internal compatibility markers, not a stable application
-ABI or supported-release promise.
+The original typed storage advanced the provisional same-major runtime
+Application Binary Interface (ABI) from 0.4.0 to 0.5.0. Adding the
+compiler-used shared-identity container advanced it to 0.6.0. The two public
+copy entry points added by this slice advance the current internal marker from
+0.10.0 to 0.11.0; the intervening additions are recorded in their owning
+runtime documents. These are internal compatibility markers, not a stable
+application ABI or supported-release promise.
 
 ## Representation and specialization boundary
 
@@ -38,14 +42,42 @@ and should omit `hxrt` entirely for bounded/static arrays. The shared slice is
 only the last step in the required direct-C, specialized-helper, selective-
 runtime order.
 
-An ordinary Haxe Array has shared identity: after `alias = values`, a `push`
-through either name must be visible through both. The compiler therefore emits
-an `hxc_array_ref *`, not a by-value copy of `hxc_array`. `hxc_array_ref` owns
-the one move-only buffer plus a local reference count. Assigning an admitted
-local alias retains that container; leaving its scope releases it; the final
-release destroys the elements and frees both storage layers. The current
-evidence covers acyclic graphs, where this small ownership mechanism is
-sufficient.
+The starting rule is Haxe behavior, not a preference internal to this
+repository. An ordinary Haxe Array has shared identity: after
+`alias = values`, a `push` through either name must be visible through both.
+`values.copy()`, by contrast, creates a different Array whose later `push`,
+indexed assignment, or resize does not change `values`. The copy is *shallow*:
+it copies the element values but does not recursively clone an object, nested
+Array, or other reference stored in a slot.
+
+For example:
+
+```haxe
+final original = [player];
+final copied = original.copy();
+
+copied.push(enemy);       // changes only `copied`
+copied[0].health -= 10;   // both Arrays still refer to the same `player`
+```
+
+This distinction determines the C ownership plan. Assignment keeps one shared
+Array container alive. `Array.copy()` must instead allocate a distinct
+container and backing buffer, then shallow-copy each slot using that element
+type's checked copy or retain rule. Resizing or destroying either container
+must not invalidate the other. If a slot copy fails, the compiler/runtime must
+destroy the successfully copied prefix and leave the source unchanged. The
+compiler and runtime implement that contract for the exact element families
+listed below. The focused ordinary-Haxe, direct-runtime, native-compiler, and
+sanitizer evidence is described under
+[Executable evidence](#executable-evidence). Other element families remain
+unsupported rather than receiving a weaker copy.
+
+The compiler therefore represents an admitted ordinary alias as an
+`hxc_array_ref *`, not a by-value copy of `hxc_array`. `hxc_array_ref` owns the
+one move-only buffer plus a local reference count. Assigning an admitted local
+alias retains that container; leaving its scope releases it; the final release
+destroys the elements and frees both storage layers. The current evidence
+covers acyclic graphs, where this small ownership mechanism is sufficient.
 
 Haxe's explicit `Null<Array<T>>` spelling uses that same `hxc_array_ref *`
 carrier. A present value points at the shared container and an absent value is
@@ -86,6 +118,16 @@ structs. The schema-3 ABI manifest explicitly forbids all three in generated
 application exports. Fixed
 `c.CArray<T>`, `c.Span<T>`, and `c.ConstSpan<T>` remain separate direct,
 non-owning representations and select no array feature.
+
+That separation is intentional in both compiler profiles. Choosing `metal`
+does not silently change the meaning of ordinary Haxe `Array<T>` assignment or
+`Array.copy()`: the same source operation keeps its Haxe behavior. A developer
+who wants fixed storage or a borrowed pointer-and-length view chooses the
+visible typed `c.CArray<T>`, `c.Span<T>`, or `c.ConstSpan<T>` API instead.
+This keeps low-level lifetime decisions explicit in the source while allowing
+ordinary Haxe code to remain portable. The currently admitted forms and their
+fail-closed limits are listed in
+[the typed C authoring contract](typed-c-authoring.md#choosing-haxe-or-c-shaped-semantics).
 
 The compiler-used element plan currently admits non-string scalar values,
 `haxe.io.Bytes`, managed Arrays, tag-aware managed enums, and closed records
@@ -267,9 +309,13 @@ The fixture proves:
 
 - primitive `int32_t` growth, indexing, push, insert, assignment, removal,
   resize, owner move, and overflow rejection;
+- distinct primitive-copy storage, independent mutation, and the in-place copy
+  used when the collector owns the destination Array container;
 - exact-slot aliasing across both relocation and suffix shifts;
-- reference-element retain-before-release assignment and balanced destruction;
-- rollback after insertion and partial resize lifecycle failures;
+- reference-element shallow-copy retain counts, retain-before-release
+  assignment, and balanced destruction;
+- rollback after copy, insertion, and partial resize lifecycle failures,
+  including an injected failure after the first copied reference;
 - unchanged logical contents after allocation failure; and
 - absence of string, object, GC, reflection, and dynamic symbol families.
 
@@ -290,7 +336,8 @@ Haxe compilation server byte-for-byte, checks the exact dependency-closed
 runtime feature set and source reasons, compiles the emitted project as
 warning-clean C11,
 runs it under sanitizers, and rejects unsupported ownership or element shapes
-without leaving output. The fixture includes both `Array<Int>` and an unboxed
+without leaving output. The fixture includes empty and populated copies of
+`Array<Int>`, managed `Array<String>`, nested Arrays, and an unboxed
 Array-owning tagged enum whose payload is `Array<enum>`, a closed record
 containing another Array, and a closed record containing two shared Bytes
 references and a direct optional bounds record in a class-owned Array. It
@@ -303,9 +350,11 @@ counters and sanitizers prove balanced success, replacement, rollback, and
 reverse destruction.
 
 A second ordinary-Haxe program in the same suite stores mutable
-`ManagedNode` instances in `Array<ManagedNode>`. It grows the Array, reads and
-replaces elements, retains a null slot, mutates through an alias, and connects
-two nodes into a cycle. It crosses the deterministic collector-pressure threshold and then
+`ManagedNode` instances in `Array<ManagedNode>`. It grows and shallow-copies
+the Array, proves that the two outer Arrays mutate independently while both
+retain the same class instances, reads and replaces elements, retains a null
+slot, mutates through an alias, and connects two nodes into a cycle. It crosses
+the deterministic collector-pressure threshold and then
 reads the live graph, so a missing class or Array trace edge becomes an
 observable native failure. Structural assertions require managed HxcIR
 allocations, exact root slots, class and Array descriptors, node-to-Array and

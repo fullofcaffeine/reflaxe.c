@@ -183,6 +183,8 @@
         "hxc_array_is_valid",
         "hxc_array_move",
         "hxc_array_push_copy",
+        "hxc_array_ref_copy",
+        "hxc_array_ref_copy_in_place",
         "hxc_array_ref_create",
         "hxc_array_ref_create_trivial",
         "hxc_array_ref_dispose_in_place",
@@ -201,13 +203,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "5fa277cf34f4b0e01c1a5d3b7152857cf6570d3a9d537cb2a18c41f444db3512",
+          "sourceSha256": "5bd329b6373b6913e78df137cb878c8e391f3656b4ba28f9943f4910d9ed821c",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "79e25b048ee656e4c98675a2c9e5bf30b5687764519d1c06883b524f07f05a2d",
+          "sourceSha256": "de8602192e729a349b4c4a4d301a17094397f56cc75ebe25fdb7c0871e36da4a",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -661,7 +663,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "72e09e81ff4186d2850957001152e4323af77aa495664d3a5e4394aee3372139",
+          "sourceSha256": "d5a02c9e411bdef2a8b62e7ab8400433488ae0e9125820d8d9673d5239a60b9c",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -1149,7 +1151,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 10
+      "minor": 11
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1186,7 +1188,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "f1a06b4e2e837afabb804f22ccb1883373c5e6f6be3abacb64d98260ea365800",
+      "sourceSetSha256": "0488c4078ff00ec731b275dba6e78fdde48481386e814923b58073f44b579adf",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

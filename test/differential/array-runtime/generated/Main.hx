@@ -32,12 +32,19 @@ final class Main {
 
 	static function main():Void {
 		final values:Array<Int> = [10, 20];
+		final emptyCopy = ([] : Array<Int>).copy();
+		final valuesCopy = values.copy();
+		valuesCopy[0] = 99;
+		valuesCopy.push(30);
+		final returnedCopy = copyAndAppend(values);
 		// Build this through the ordinary managed Array operations so the test
 		// cannot be reduced to a constant expression before haxe.c sees it.
 		final labels:Array<String> = [];
 		labels.push("ready");
 		labels.push("café");
 		labels.push("a\u0000b");
+		final labelsCopy = labels.copy();
+		labelsCopy.push(fromCode(0x1F680));
 		joinSeparatorEvaluations = 0;
 		final joined = labels.join(observedSeparator("|"));
 		final emptyJoined = ([] : Array<String>).join("");
@@ -61,6 +68,9 @@ final class Main {
 
 		final row:Array<Int> = [1];
 		final rows:Array<Array<Int>> = [row];
+		final rowsCopy = rows.copy();
+		rowsCopy[0].push(2);
+		rowsCopy.push([3]);
 		final nestedArrayLength = nestedCopy(rows, true);
 		final arguments:Array<ManagedCommand> = [Number(7)];
 		final scheduled = makeSchedule(arguments);
@@ -91,7 +101,16 @@ final class Main {
 		final absent = maybeValues(false);
 		final present = maybeValues(true);
 		while (values.length != 3
+			|| emptyCopy.length != 0
+			|| valuesCopy.length != 3
+			|| valuesCopy[0] != 99
+			|| values[0] != 10
+			|| returnedCopy.length != 3
+			|| returnedCopy[2] != 77
 			|| labels.length != 3
+			|| labelsCopy.length != 4
+			|| labelsCopy[0] != labels[0]
+			|| labelsCopy[3] != "🚀"
 			|| labels[0] != "ready"
 			|| values[2] != 12
 			|| joined != "ready|café|a\u0000b"
@@ -123,7 +142,22 @@ final class Main {
 			|| present == null
 			|| nullableLength(absent) != -1
 			|| nullableLength(present) != 2
-			|| nestedArrayLength != 1) {}
+			|| rows.length != 1
+			|| rowsCopy.length != 2
+			|| row.length != 2
+			|| nestedArrayLength != 2) {}
+	}
+
+	/**
+		Return a fresh shallow copy after changing only its outer Array.
+
+		This proves `Array.copy()` can cross a normal return boundary as one owned
+		Array. Appending to the result must not change the borrowed source.
+	**/
+	static function copyAndAppend(values:Array<Int>):Array<Int> {
+		final copied = values.copy();
+		copied.push(77);
+		return copied;
 	}
 
 	/**
