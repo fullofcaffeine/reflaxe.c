@@ -9605,7 +9605,19 @@ private class FunctionBuilder {
 		return {id: result.id, type: result.type, mapping: mapping};
 	}
 
-	/** Lower the admitted static constructors without entering class dispatch. */
+	/**
+		Lower admitted `Bytes` constructors without entering class dispatch.
+
+		`Bytes.ofString` copies a length-delimited UTF-8 view immediately; the new
+		Bytes never points into or owns its source String. When evaluating that
+		source creates a managed String, however, someone must still own the String
+		until the fallible copy finishes. The existing String temporary protocol
+		gives that one fresh owner a compiler local and releases it on every path
+		that returns normally. The current native-status failure is a checked
+		terminal abort, so it cannot resume with live state; a future recoverable
+		policy would also need to carry this cleanup. Literal and already-borrowed
+		Strings pass through without a retain or redundant owner.
+	**/
 	function lowerManagedBytesStaticCall(expression:TypedExpr, method:String, arguments:Array<TypedExpr>):LoweredValue {
 		final mapping = bodyValueType(expression.t, expression.pos, 'TCall(Bytes.$method:result-type)');
 		if (mapping.bytesValue() == null)
@@ -9624,7 +9636,8 @@ private class FunctionBuilder {
 				final sourceMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Bytes.ofString:source-type)");
 				if (sourceMapping.staticStringIdentity() == null)
 					return unsupported(arguments[0], "TCall(Bytes.ofString:source-not-immutable-String-view)");
-				final sourceValue = coerce(lowerValue(arguments[0], sourceMapping), sourceMapping, arguments[0].pos, "TCall(Bytes.ofString:source)");
+				var sourceValue = coerce(lowerValue(arguments[0], sourceMapping), sourceMapping, arguments[0].pos, "TCall(Bytes.ofString:source)");
+				sourceValue = stabilizeFreshManagedString(sourceValue, arguments[0].pos, "bytes-of-string-source");
 				appendInstruction(null, IRIONullCheck(sourceValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 					HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath), "bytes-of-string-source-null-check");
 				loweredArguments.push(sourceValue.id);

@@ -13,12 +13,15 @@ Primitive, fixed-array/span, aggregate, bounded enum, concrete-class, and
 bounded nonescaping constructor programs remain runtime-free. E2.T07
 additionally admits compiler-known String literals passed to hosted
 `Sys.println` or default `trace`; that edge selects only the literal carrier and
-minimal output closure. The allocator, full string-operation, and resizable-
-array storage began as native-only evidence. The first bounded ordinary-Haxe
-Array lowering now selects `array` and its transitive `alloc` dependency. The
-bounded `haxe.io.Bytes` slice selects `bytes` plus `alloc` and the literal
-carrier used by `Bytes.ofString`; full string operations remain
-`native-seed-only`. E2.T10 composes exactly the output edge in
+minimal output closure. The allocator, managed String, and resizable-Array
+storage began as native-only evidence and now have separately bounded
+ordinary-Haxe slices. The first ordinary-Haxe Array lowering selects `array`
+and its transitive `alloc` dependency. A literal-backed `Bytes.ofString`
+selects `bytes`, `alloc`, and the literal carrier. If its source expression
+creates a String through an admitted operation such as concatenation or
+`Array<String>.join`, that source operation also selects only its exact String
+or Array dependencies; the Bytes copy does not request a generic text runtime
+itself. E2.T10 composes exactly the output edge in
 `examples/hello`, while the Array and Bytes fixtures independently prove their
 managed-storage closures without broadening those capabilities. E4.T05 adds a
 collector-neutral `object` slice for immutable payload descriptors and exact

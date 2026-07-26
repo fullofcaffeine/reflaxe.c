@@ -23,6 +23,8 @@ FIXTURE = CASE / "bytes_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = (
     ROOT / "runtime/hxrt/src/allocator.c",
+    ROOT / "runtime/hxrt/src/string_scalar.c",
+    ROOT / "runtime/hxrt/src/string.c",
     ROOT / "runtime/hxrt/src/bytes.c",
 )
 TOOLCHAINS = ("gcc", "clang")
@@ -212,6 +214,78 @@ def hxcir_function(hxcir: str, function_id: str) -> str:
     return hxcir[start : end + len(end_marker)]
 
 
+def validate_fresh_string_copy_ownership(
+    hxcir: str, function_id: str, expected_string_temporaries: int
+) -> None:
+    """Prove one fresh Bytes source has one owner until its copy completes.
+
+    The generated profile treats allocation failure as a terminal checked abort,
+    so a failed runtime call cannot resume and observe leaked state. Normal
+    returns do resume; their cleanup list must release the Bytes source first,
+    followed by any earlier String or Array temporaries in reverse construction
+    order.
+    """
+    function = hxcir_function(hxcir, function_id)
+    owner_lines = [
+        line
+        for line in function.splitlines()
+        if "bytes-of-string-source-owner-initialize" in line
+    ]
+    if len(owner_lines) != 1 or 'place=local("' not in owner_lines[0]:
+        raise BytesRuntimeFailure(
+            f"{function_id} did not create exactly one fresh String source owner"
+        )
+    owner_local = owner_lines[0].split('place=local("', 1)[1].split('"', 1)[0]
+    cleanup_id = f"string-temporary.{owner_local}.release"
+    action_lines = [
+        line
+        for line in function.splitlines()
+        if " action " in line and '"string-temporary.' in line
+    ]
+    if (
+        len(action_lines) != expected_string_temporaries
+        or function.count(f'action "{cleanup_id}"') != 1
+        or function.count("bytes-of-string-source-borrow") != 1
+    ):
+        raise BytesRuntimeFailure(
+            f"{function_id} has the wrong managed String temporary lifecycle"
+        )
+    copy_calls = [
+        line
+        for line in function.splitlines()
+        if 'runtime(feature="bytes",operation="of-string-utf8")' in line
+    ]
+    if len(copy_calls) != 1 or "target=abort" not in copy_calls[0]:
+        raise BytesRuntimeFailure(
+            f"{function_id} lost its explicit terminal allocation-failure policy"
+        )
+    return_lines = [
+        line
+        for line in function.splitlines()
+        if "terminator return" in line and f'"{cleanup_id}"' in line
+    ]
+    all_action_ids = [
+        line.split('"', 2)[1]
+        for line in function.splitlines()
+        if " action " in line
+    ]
+    expected_return_order = list(reversed(all_action_ids))
+    if (
+        len(return_lines) != 1
+        or any(f'"{action}"' not in return_lines[0] for action in expected_return_order)
+        or any(
+            return_lines[0].index(f'"{earlier}"')
+            >= return_lines[0].index(f'"{later}"')
+            for earlier, later in zip(
+                expected_return_order, expected_return_order[1:]
+            )
+        )
+    ):
+        raise BytesRuntimeFailure(
+            f"{function_id} normal return lost reverse temporary cleanup"
+        )
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     for marker in (
         'representation=managed("bytes")',
@@ -251,7 +325,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
 
     runtime_string_copy = hxcir_function(hxcir, "function.Main.copyText")
     for marker in (
-        'parameter "parameter.0" type=string-utf8',
+        'parameter "parameter.0" type=managed-string-utf8',
         'runtime(feature="bytes",operation="of-string-utf8") arguments=["parameter.0"]',
         'terminator return value="value.0"',
     ):
@@ -263,6 +337,23 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise BytesRuntimeFailure(
             "runtime String-to-Bytes copy unnecessarily selected owned String operations"
         )
+    for function_id in ("function.Main.copyText", "function.Main.makeText"):
+        function = hxcir_function(hxcir, function_id)
+        if (
+            "string-temporary." in function
+            or " retain " in function
+            or " release " in function
+        ):
+            raise BytesRuntimeFailure(
+                f"{function_id} added ownership work for a borrowed or static String"
+            )
+
+    validate_fresh_string_copy_ownership(
+        hxcir, "function.Main.copyFreshText", expected_string_temporaries=3
+    )
+    validate_fresh_string_copy_ownership(
+        hxcir, "function.Main.copyJoinedLines", expected_string_temporaries=2
+    )
 
     main = hxcir_function(hxcir, "function.Main.main")
     owner_actions = [
@@ -290,7 +381,17 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         )
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
-    if plan.get("features") != ["runtime-base", "status", "alloc", "string-literal", "bytes"]:
+    if plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "array",
+        "string-literal",
+        "string-scalar",
+        "string",
+        "array-join",
+        "bytes",
+    ]:
         raise BytesRuntimeFailure("generated Bytes program selected the wrong runtime closure")
     operations = {
         reason.get("operationId")
@@ -313,6 +414,27 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     }
     if operations != expected:
         raise BytesRuntimeFailure(f"generated Bytes operations drifted: {sorted(operations)!r}")
+    neighboring_operations = {
+        feature: {
+            reason.get("operationId")
+            for reason in plan.get("rootReasons", [])
+            if isinstance(reason, dict) and reason.get("featureId") == feature
+        }
+        for feature in ("array", "array-join", "string")
+    }
+    if neighboring_operations != {
+        "array": {
+            "cleanup-release",
+            "create-literal",
+            "managed-type-representation",
+        },
+        "array-join": {"join"},
+        "string": {"cleanup-release", "concat", "retain"},
+    }:
+        raise BytesRuntimeFailure(
+            "fresh String-to-Bytes fixture selected the wrong neighboring operations: "
+            f"{neighboring_operations!r}"
+        )
     sources = "\n".join(
         path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
     )
@@ -323,6 +445,9 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "hxc_bytes_ref_compare",
         "hxc_bytes_ref_retain",
         "hxc_bytes_ref_release",
+        "hxc_array_string_join",
+        "hxc_string_concat_ref",
+        "hxc_string_release",
     ):
         if marker not in sources:
             raise BytesRuntimeFailure(f"generated C omitted {marker}")
@@ -374,7 +499,7 @@ def run_negative_cases(root: Path) -> None:
 
 
 def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
-    """Keep Caxecraft beyond the fresh Bytes argument that exposed this rule."""
+    """Keep Caxecraft beyond the fresh String-to-Bytes copy that exposed this rule."""
     result = subprocess.run(
         [
             sys.executable,
@@ -392,22 +517,20 @@ def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
     )
     if result.returncode == 0:
         return
-    # Runtime String parameters now reach Bytes.ofString as immutable UTF-8
-    # views; legacy-nullable String flow, the String-backed action switch,
-    # contextually typed optional records, the StringBuf UTF-8 decoder, class
-    # construction, String search, String splitting, Bool conversion through
-    # Std.string, typed Int interpolation, Array<String>.join, uncaught throw,
-    # managed String switch joins, fresh String Array insertion, and
-    # ownership-preserving Std.string(String) identity, shallow Array.copy,
-    # exact Array.sort comparators, capturing predicates, and enum-constructor
-    # callbacks also lower. The next reachable boundary is ScenarioWriter's final
-    # managed String, whose ownership has not yet been transferred into the
-    # returned Bytes value.
-    # Requiring that exact later diagnostic proves this lane passed every prior
-    # boundary rather than accepting an arbitrary failure.
+    # Fresh concatenation and Array<String>.join results now reach Bytes.ofString
+    # through one cleanup-owned temporary, and ScenarioWriter therefore compiles.
+    # The next reachable boundary is separately owned by haxe_c-djl.13: pinned
+    # Haxe rewrites a managed-enum switch result into an initially empty flow
+    # carrier, and haxe.c must validate branch acquisition instead of inventing a
+    # default enum value. Requiring that exact later diagnostic proves this Bytes
+    # lane advanced the real product rather than accepting an arbitrary failure.
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:29:" not in result.stderr
-        or "function-exit:unowned-fresh-managed-String-value" not in result.stderr
+        "src/caxecraft/scenario/CaxeFlowActionRegistry.hx:179:" not in result.stderr
+        or "caxecraft.scenario._CaxeFlowActionRegistry.CaxeFlowActionRegistry_Fields_.flowActionDescriptorById body"
+        not in result.stderr
+        or "TVar(family:flow-carrier)(result-type-without-direct-default)"
+        not in result.stderr
+        or "function-exit:unowned-fresh-managed-String-value" in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
         or "TCall(Array.copy:not-yet-admitted)" in result.stderr
         or "TCall(Array.sort:not-yet-admitted)" in result.stderr

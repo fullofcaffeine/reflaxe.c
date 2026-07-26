@@ -1,4 +1,5 @@
 #include "hxrt/bytes.h"
+#include "hxrt/string.h"
 
 #include <stdio.h>
 
@@ -116,11 +117,14 @@ int main(void) {
   hxc_bytes_ref *shorter = NULL;
   hxc_bytes_ref *text = NULL;
   hxc_bytes_ref *failed = NULL;
+  hxc_string owned_source = HXC_STRING_INITIALIZER;
   int32_t value = -1;
   int32_t order = 7;
   const uint8_t shorter_data[] = {UINT8_C(255)};
   const uint8_t text_data[] = {UINT8_C(72), UINT8_C(0), UINT8_C(120)};
   const hxc_string text_view = {text_data, 3u, true, NULL};
+  const hxc_string source_left = HXC_STRING_LITERAL("fresh:");
+  const hxc_string source_right = HXC_STRING_LITERAL("source");
 
   HXC_TEST_CHECK(hxc_bytes_ref_create_zeroed(allocator, 8, &bytes) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_is_valid(bytes));
@@ -183,6 +187,36 @@ int main(void) {
   HXC_TEST_CHECK(hxc_bytes_ref_release(shorter) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(copy) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(bytes) == HXC_STATUS_OK);
+
+  /*
+   * A failed Bytes copy must neither consume nor retain its managed String
+   * source. The caller can inspect and release its original owner afterward;
+   * matching allocation/release totals also prove that Bytes rolled back the
+   * partial allocation made before the injected failure.
+   */
+  HXC_TEST_CHECK(
+    hxc_string_concat_ref(
+      source_left,
+      source_right,
+      allocator,
+      &owned_source
+    ) == HXC_STATUS_OK
+  );
+  arena.failure_armed = true;
+  arena.successful_allocations_before_failure = 1u;
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_create_utf8_copy(allocator, owned_source, &failed)
+      == HXC_STATUS_OUT_OF_MEMORY
+  );
+  HXC_TEST_CHECK(
+    failed == NULL
+      && hxc_string_is_valid(owned_source)
+      && owned_source.byte_length == 12u
+  );
+  arena.failure_armed = false;
+  HXC_TEST_CHECK(hxc_string_release(&owned_source) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(owned_source.data == NULL && owned_source.owner == NULL);
+
   HXC_TEST_CHECK(!arena.invalid_release);
   HXC_TEST_CHECK(arena.allocation_count == arena.release_count);
   return 0;

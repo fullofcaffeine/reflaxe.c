@@ -274,13 +274,14 @@ that temporary. Floating-point, object, enum, and genuinely `Dynamic` inputs
 still fail at the `Std.string` boundary until their separate formatting and
 representation contracts are implemented.
 
-`Bytes.ofString(value)` may also consume an admitted String parameter, local,
-or alias. “Runtime” here describes when the expression is selected, not who
-owns its bytes: the value remains the same immutable length-delimited view
-backed by already-admitted storage. The Bytes operation copies those bytes
-synchronously into its own managed allocation, so it does not add another
-String owner. Runtime-created Strings already carry their own owner when
-required.
+`Bytes.ofString(value)` may also consume an admitted String literal, parameter,
+local, alias, or fresh expression. The Bytes operation copies the
+length-delimited bytes synchronously into its own managed allocation; it never
+retains or points into the String. A literal or borrowed value therefore adds
+no String ownership work. A fresh expression already has one owner, so HxcIR
+moves that owner into a hidden local, borrows it for the copy, and releases it
+afterward. See [the Bytes ownership walkthrough](bytes-runtime.md#how-it-becomes-c)
+for the generated-C and allocation-failure evidence.
 
 [`test/differential/string-runtime`](../test/differential/string-runtime)
 has two complementary halves. Its independent strict-C fixture covers checked

@@ -1462,7 +1462,7 @@
         "test/differential/bytes-runtime/generated/Main.hx",
         "test/differential/bytes-runtime/run.py"
       ],
-      "notes": "An admitted immutable UTF-8 String view with absent or null encoding is copied exactly, including non-ASCII scalars and embedded NUL. The expression may be a literal, local, alias, or parameter; runtime-created owned Strings and explicit encodings remain unsupported."
+      "notes": "An admitted immutable UTF-8 String view with absent or null encoding is copied exactly, including non-ASCII scalars and embedded NUL. The expression may be a literal, local, alias, parameter, or freshly owned result of a separately admitted String operation; fresh sources receive one cleanup-owned temporary while the Bytes copy borrows them. Explicit encodings and unadmitted String producers remain unsupported."
     },
     {
       "id": "bytes-set-partial",
@@ -40347,7 +40347,7 @@
         "test/differential/bytes-runtime/generated/Main.hx",
         "test/differential/bytes-runtime/run.py"
       ],
-      "notes": "An admitted immutable UTF-8 String view with absent or null encoding is copied exactly, including non-ASCII scalars and embedded NUL. The expression may be a literal, local, alias, or parameter; runtime-created owned Strings and explicit encodings remain unsupported.",
+      "notes": "An admitted immutable UTF-8 String view with absent or null encoding is copied exactly, including non-ASCII scalars and embedded NUL. The expression may be a literal, local, alias, parameter, or freshly owned result of a separately admitted String operation; fresh sources receive one cleanup-owned temporary while the Bytes copy borrows them. Explicit encodings and unadmitted String producers remain unsupported.",
       "ruleId": "bytes-of-string-partial"
     },
     {

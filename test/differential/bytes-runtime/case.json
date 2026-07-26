@@ -13,7 +13,11 @@
   "sources": [
     "docs/bytes-runtime.md",
     "runtime/hxrt/include/hxrt/bytes.h",
+    "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/include/hxrt/string_scalar.h",
     "runtime/hxrt/src/bytes.c",
+    "runtime/hxrt/src/string.c",
+    "runtime/hxrt/src/string_scalar.c",
     "std/c/_std/haxe/io/Bytes.hx",
     "test/differential/bytes-runtime/bytes_runtime.c",
     "test/differential/bytes-runtime/generated/Main.hx",

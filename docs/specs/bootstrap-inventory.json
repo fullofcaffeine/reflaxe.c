@@ -19,7 +19,7 @@
     "profiles": "This manifest describes evidence only and does not change portable or metal semantics.",
     "runtimePolicy": "This manifest selects no hxrt feature and does not change auto, minimal, or none resolution.",
     "environments": "Native fixture evidence is not a supported environment or platform tuple; no support matrix is claimed.",
-    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters, closed anonymous-record (including unmanaged bounded payload-enum fields), bounded direct-value enum, compiler-known literal/output and managed String operations, managed Array, and haxe.io.Bytes slices have generated-C evidence. Statically uncaught ordinary Haxe throw now evaluates its payload, runs active cleanup, and fail-stops without changing the function signature; caught exceptions remain unsupported. The broader Caxecraft application now reaches the separately tracked managed-String value-switch ownership boundary.",
+    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters, closed anonymous-record (including unmanaged bounded payload-enum fields), bounded direct-value enum, compiler-known literal/output and managed String operations, managed Array, and haxe.io.Bytes slices have generated-C evidence. Statically uncaught ordinary Haxe throw now evaluates its payload, runs active cleanup, and fail-stops without changing the function signature; caught exceptions remain unsupported. The broader Caxecraft application now reaches the separately tracked managed-enum compiler-generated flow-carrier boundary.",
     "publicAbi": "The target-facing vocabulary is provisional and no generated public C ABI is stable or supported."
   },
   "claimGates": [
@@ -982,7 +982,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage and compiler-owned lifetimes.",
-      "scope": "Bytes.alloc, Bytes.ofString from literal-backed immutable String expressions including parameters and aliases, length, get, set, sub, blit, fill, compare, owned returns, fresh results borrowed by compiler-known calls and Bytes operations, and private tagged-enum payload ownership lower through validated HxcIR into an exact allocator/string-literal/bytes closure. Strict C11 and Eval evidence cover non-ASCII and embedded-NUL runtime String copies, byte masking, copy independence, overlap, bounds, allocation rollback, left-to-right nested calls, early-return and reverse temporary cleanup, shared mutation through an enum projection, active-tag retain/destroy behavior, deterministic output, and cleanup.",
+      "scope": "Bytes.alloc, Bytes.ofString from literal, borrowed, or freshly created admitted immutable String expressions, length, get, set, sub, blit, fill, compare, owned returns, fresh results borrowed by compiler-known calls and Bytes operations, and private tagged-enum payload ownership lower through validated HxcIR into the exact dependency closure required by the source expression and Bytes copy. Strict C11 and Eval evidence cover fresh concatenation and Array<String>.join sources, non-ASCII and embedded-NUL copies, byte masking, copy independence, overlap, bounds, allocation rollback, left-to-right nested calls, early-return and reverse temporary cleanup, shared mutation through an enum projection, active-tag retain/destroy behavior, deterministic output, and cleanup.",
       "evidence": [
         "docs/bytes-runtime.md",
         "docs/enum-lowering.md",
@@ -1001,7 +1001,7 @@
         "E5.T04"
       ],
       "limitations": [
-        "Runtime-created owned String inputs, explicit encodings, numeric/endian methods, BytesData, BytesBuffer, Input, Output, borrowed returns, whole-reference reassignment, unknown call-ownership boundaries, and managed aggregate or Array elements remain unsupported.",
+        "String-producing operations outside the separately admitted String slice, explicit encodings, numeric/endian methods, BytesData, BytesBuffer, Input, Output, borrowed returns, whole-reference reassignment, unknown call-ownership boundaries, and managed aggregate or Array elements remain unsupported.",
         "The private hxc_bytes_ref layout is versioned internal ABI and cannot cross a generated public application export."
       ]
     },

@@ -8,6 +8,9 @@ import haxe.io.Bytes;
  * comparison all agree with the pinned Haxe implementation.
  */
 final class Main {
+	/** Records the order in which the fresh String source evaluates. */
+	static var stringSourceEvaluations:Int = 0;
+
 	static function makeBuffer():Bytes {
 		final result = Bytes.alloc(8);
 		return result;
@@ -33,6 +36,39 @@ final class Main {
 	**/
 	static function copyText(value:String):Bytes
 		return Bytes.ofString(value);
+
+	/**
+		Copy a newly concatenated String after evaluating both sides once.
+
+		The helper returns borrowed inputs so the concatenation remains an ordinary
+		runtime-created String rather than a compiler-folded literal. A mismatched
+		order changes the bytes as well as the counter, while reading the returned
+		Bytes after this function exits proves that it owns an independent copy.
+	**/
+	static function copyFreshText():Bytes {
+		stringSourceEvaluations = 0;
+		return Bytes.ofString(orderedText(0, "hé") + orderedText(1, "\x00🙂"));
+	}
+
+	/**
+		Reproduce the serializer shape that first exposed the lifetime boundary.
+
+		`join` creates one owned String and concatenating the final newline creates
+		another. `Bytes.ofString` borrows the latter only long enough to copy it, so
+		both temporary String owners must be released after the copy.
+	**/
+	static function copyJoinedLines():Bytes {
+		final lines = ["Caxe", "craft"];
+		return Bytes.ofString(lines.join("\n") + "\n");
+	}
+
+	/** Return one input while making its left-to-right source order observable. */
+	static function orderedText(expected:Int, value:String):String {
+		if (stringSourceEvaluations != expected)
+			return "wrong-order";
+		stringSourceEvaluations += 1;
+		return value;
+	}
 
 	/**
 		Return early after passing a fresh managed result directly into another call.
@@ -76,6 +112,8 @@ final class Main {
 		final runtimeCopy = copyText(runtimeAlias);
 		final repeatedCopy = copyText(runtimeText);
 		final emptyCopy = copyText("");
+		final freshCopy = copyFreshText();
+		final joinedCopy = copyJoinedLines();
 
 		while (bytes.length != 8
 			|| bytes.get(0) != 0x41
@@ -103,6 +141,11 @@ final class Main {
 			|| runtimeCopy.get(4) != 0xf0
 			|| runtimeCopy.get(7) != 0x82
 			|| repeatedCopy.compare(runtimeCopy) != 0
-			|| emptyCopy.length != 0) {}
+			|| emptyCopy.length != 0
+			|| stringSourceEvaluations != 2
+			|| freshCopy.compare(runtimeCopy) != 0
+			|| joinedCopy.length != 11
+			|| joinedCopy.get(4) != 0x0a
+			|| joinedCopy.get(10) != 0x0a) {}
 	}
 }

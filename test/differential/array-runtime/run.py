@@ -761,25 +761,23 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     )
     if result.returncode == 0:
         return
-    # Caxecraft now passes the managed Array element copied by
-    # EditorScenarioSnapshot.actionsAreRepresentable, the fresh Bytes call
-    # argument, the runtime String-to-Bytes copy, legacy-nullable String flow,
-    # optional records, the StringBuf UTF-8 decoder, class construction, String
-    # search, String splitting, Bool conversion through Std.string, typed Int
-    # interpolation, Array<String>.join, uncaught throw, managed String
-    # value-switch joins, fresh String insertion into the Array comprehension,
-    # and ownership-preserving Std.string(String) identity that followed them.
-    # ScenarioWriter's shallow copies and comparisons now lower, as do the
-    # capturing predicates and enum-constructor callbacks that follow them. The
-    # next reachable boundary is the final managed String assembled by
-    # ScenarioWriter.write: ownership has not yet been transferred into its
-    # returned Bytes value. Requiring that exact later diagnostic proves
-    # Array.sort and the intervening closure support were implemented instead of
-    # skipped or hidden. Accepting an arbitrary failure would weaken this product
-    # check into "Caxecraft still does not compile."
+    # Caxecraft now passes the managed Array element, exact Array.sort
+    # comparators, capturing predicates, enum-constructor callbacks, and the
+    # fresh String copied by ScenarioWriter into returned Bytes. The next
+    # reachable boundary is separately owned by haxe_c-djl.13: pinned Haxe
+    # rewrites a managed-enum switch result into an initially empty flow carrier,
+    # which needs typed branch-acquisition ownership rather than a fabricated
+    # default enum. Requiring that exact later diagnostic proves the Array lane
+    # was implemented instead of skipped or hidden. Accepting an arbitrary
+    # failure would weaken this product check into "Caxecraft still does not
+    # compile."
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:29:" not in result.stderr
-        or "function-exit:unowned-fresh-managed-String-value" not in result.stderr
+        "src/caxecraft/scenario/CaxeFlowActionRegistry.hx:179:" not in result.stderr
+        or "caxecraft.scenario._CaxeFlowActionRegistry.CaxeFlowActionRegistry_Fields_.flowActionDescriptorById body"
+        not in result.stderr
+        or "TVar(family:flow-carrier)(result-type-without-direct-default)"
+        not in result.stderr
+        or "function-exit:unowned-fresh-managed-String-value" in result.stderr
         or "TCall(Array.sort:not-yet-admitted)" in result.stderr
         or "TCall(Array.copy:not-yet-admitted)" in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"

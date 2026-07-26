@@ -439,8 +439,10 @@ Compiler-selectable fixed-length binary storage for ordinary
 and range, and releases storage after the final owner. `sub` creates an
 independent copy, while overlapping `blit` behaves as if the source bytes were
 saved before the destination changes. The slice depends on `alloc` for
-run-time-sized ownership and on `string-literal` only for admitted
-`Bytes.ofString` literals. See [Bytes runtime](bytes-runtime.md).
+run-time-sized ownership and on `string-literal` for the immutable String
+carrier consumed by `Bytes.ofString`. Runtime-created sources select their own
+construction and cleanup features independently. See
+[Bytes runtime](bytes-runtime.md).
 
 <!-- hxrt-feature:string-literal -->
 ### `string-literal`

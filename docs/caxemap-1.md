@@ -401,15 +401,16 @@ creates one deterministic closed method body for each concrete
 `ScenarioReadResult<T>` used by the parser; completed issue `haxe_c-djl.10`
 owns that general capability.
 
-The compiler now passes allocation-free `String.charAt` through its dedicated
-String representation and runtime slice; completed issue `haxe_c-djl.11` owns
-that shared intrinsic-method classification and lowering. The next unrelated
-boundary is `haxe.ds.IntMap.exists`: virtual-slot validation cannot yet settle
-the generic standard-library collection operation to a concrete specialization
-or intrinsic collection plan. Issue `haxe_c-c3s.1` owns that general IntMap
-work. Until it lands, this section is not evidence that the complete CaxeFlow
-registry or executor runs in generated C; unrelated DomainProbe output does
-not fill that gap.
+The compiler now also passes allocation-free `String.charAt`, the bounded
+`IntMap<Int, Bool>` operations used by validation, and the canonical
+`ScenarioWriter` String-to-Bytes copy. The current full compile reaches
+`flowActionDescriptorById`, where pinned Haxe represents the managed-enum switch
+result as a compiler-created **flow carrier**: an initially empty local that
+each switch arm assigns. Issue `haxe_c-djl.13` owns the general rule for
+acquiring that carrier without inventing an invalid zero enum. Until it lands,
+this section is not evidence that the complete CaxeFlow registry or executor
+runs in generated C; the exact compile-only product check rejects every earlier
+or differently shaped failure.
 
 Arguments are `value flag <bool>`, `value counter <int>`, `value state
 <content-id>`, or `variable <variable-id>`. CAXEMAP 1 does not admit an object

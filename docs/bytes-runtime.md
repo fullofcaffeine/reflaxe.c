@@ -16,8 +16,8 @@ The first haxe.c slice supports ordinary Haxe calls to:
 - `sub`, `blit`, `fill`, and `compare`;
 - `Bytes.ofString` when its input is an admitted immutable Haxe String view and
   the optional encoding is absent or `null`. The expression may be a source
-  literal, local, alias, or parameter; runtime-created owned Strings remain a
-  separate unsupported capability.
+  literal, local, alias, parameter, or an admitted operation that creates a
+  fresh String, including concatenation and `Array<String>.join`.
 
 Assignment shares the same mutable Bytes value. `sub` is different: it creates
 an independent copy. `set` and `fill` keep the low eight bits of the supplied
@@ -98,16 +98,30 @@ legal C identifier. Path-specific HxcIR cleanup still decides whether release
 runs.
 
 The selected C representation is private `hxc_bytes_ref *`. Generated public C
-interfaces must not expose it as a stable application ABI. The runtime feature
-depends on the checked allocator and status slices. String-literal support is
-selected because every currently admitted String view ultimately borrows
-validated UTF-8 storage from a compiler-owned literal. `Bytes.ofString` accepts
-that length-delimited view by value and copies its logical bytes immediately,
-so it preserves non-ASCII scalars, empty text, and embedded NUL without needing
-a C-string terminator or extending the String's lifetime. The resulting Bytes
-storage is independent mutable binary data. This use of a runtime parameter is
-not evidence for parsing, concatenation, interpolation, input, or another
-operation that creates owned String storage at runtime.
+interfaces must not expose it as a stable application ABI. The Bytes runtime
+feature depends on the checked allocator, status, and String-view carrier
+slices. Operations that build a runtime String select their own narrow String
+dependencies; `Bytes.ofString` does not select a generic text runtime merely
+because it receives a String.
+
+`Bytes.ofString` accepts the length-delimited String view by value and copies
+its logical bytes immediately. It therefore preserves non-ASCII scalars, empty
+text, and embedded NUL without needing a C-string terminator. The resulting
+Bytes storage is independent mutable binary data and never retains or points
+into the String.
+
+That copy and the source lifetime are separate decisions. A literal, local,
+alias, or parameter already has storage that outlives the call, so the compiler
+adds no String retain or temporary owner. A fresh expression such as
+`Bytes.ofString(left + right)` already owns its newly allocated String but has
+no source local to hold that owner. HxcIR moves it into one hidden
+cleanup-capable local, lets the Bytes call borrow the local, and releases the
+String exactly once after a successful copy. The generated profile's
+allocation-failure policy is a checked terminal abort; the independent C
+contract additionally forces a recoverable Bytes allocation failure and proves
+that the caller's managed String remains valid and independently releasable.
+This admission does not imply support for an unrelated String producer:
+`value.toUpperCase()` still fails at its own unimplemented String boundary.
 
 Fresh Bytes results are admitted at compiler-known direct, indirect, instance,
 constructor, super-constructor, and supported Bytes-operation borrow
@@ -136,8 +150,9 @@ The direct C is therefore independent runtime evidence, not application code or
 a workaround for a missing compiler feature.
 
 The runner also checks reversed typed-module discovery independently for split
-and unity projects, HxcIR ownership markers, the exact runtime feature closure,
-strict C11 execution at `-O0` and `-O2`, C++17 header consumption,
-AddressSanitizer and UndefinedBehaviorSanitizer on both the direct runtime
-contract and generated split project where Clang is available, selective
-linked symbols, negative diagnostics, and `hxc_runtime=none` rejection.
+and unity projects, HxcIR ownership markers for borrowed and fresh String
+sources, the exact runtime feature closure, strict C11 execution at `-O0` and
+`-O2`, C++17 header consumption, AddressSanitizer and UndefinedBehaviorSanitizer
+on both the direct runtime contract and generated split project where Clang is
+available, selective linked symbols, forced allocation rollback, negative
+diagnostics, and `hxc_runtime=none` rejection.
