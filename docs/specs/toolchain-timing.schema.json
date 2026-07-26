@@ -277,11 +277,12 @@
         "jobs",
         "workerSelection",
         "executedShards",
-        "reusedShards"
+        "reusedShards",
+        "snapshotOnlyReruns"
       ],
       "properties": {
         "schemaVersion": {
-          "const": 2
+          "const": 3
         },
         "outcome": {
           "$ref": "#/$defs/outcome"
@@ -356,6 +357,37 @@
               "evidenceKey": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        "snapshotOnlyReruns": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "shard",
+              "scripts",
+              "priorEvidenceAgeSeconds"
+            ],
+            "properties": {
+              "shard": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scripts": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "priorEvidenceAgeSeconds": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }

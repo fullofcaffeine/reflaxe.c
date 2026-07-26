@@ -297,6 +297,7 @@ class ToolchainShardTests(unittest.TestCase):
             "runnerDigest": "f" * 64 + suffix,
             "hookDigest": "0" * 64 + suffix,
             "hostDigest": "1" * 64 + suffix,
+            f"snapshotContent:test:sample-{shard}": "2" * 64 + suffix,
         }
 
     def successful_report(self, shard: str) -> dict[str, object]:
@@ -442,6 +443,8 @@ class ToolchainShardTests(unittest.TestCase):
         expired = dict(record)
         failed = dict(record)
         failed["outcome"] = "failed"
+        malformed_basis = dict(record)
+        malformed_basis["basis"] = {"kind": "snapshot-refresh", "scripts": []}
         future = self.runner.evidence_record("contracts", inputs, now=500)
 
         self.assertFalse(
@@ -464,12 +467,17 @@ class ToolchainShardTests(unittest.TestCase):
         )
         self.assertFalse(
             self.runner.validate_reusable_evidence(
+                malformed_basis, "contracts", inputs, now=101
+            )[0]
+        )
+        self.assertFalse(
+            self.runner.validate_reusable_evidence(
                 future, "contracts", inputs, now=101
             )[0]
         )
 
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+            root = Path(temporary).resolve()
             target = root / "target.json"
             target.write_text(json.dumps(record), encoding="utf-8")
             link = root / "contracts.json"
@@ -502,6 +510,233 @@ class ToolchainShardTests(unittest.TestCase):
         )
         self.assertEqual(tuple(rejected), (failed_shard,))
         self.assertEqual(self.runner.pending_shards(reused), (failed_shard,))
+
+    def test_snapshot_content_change_invalidates_only_its_owning_shard(self) -> None:
+        inputs = {
+            shard: self.sample_inputs(shard) for shard in self.runner.SHARD_ORDER
+        }
+        changed = {shard: dict(values) for shard, values in inputs.items()}
+        changed["lowering-objects"][
+            "snapshotContent:test:sample-lowering-objects"
+        ] = "changed"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for shard in self.runner.SHARD_ORDER:
+                self.runner.write_timing_report(
+                    root / f"{shard}.json",
+                    self.runner.evidence_record(shard, inputs[shard], now=100),
+                )
+            reused, rejected = self.runner.classify_reusable_evidence(
+                root, changed, now=101
+            )
+
+        self.assertEqual(
+            tuple(reused),
+            ("contracts", "lowering-semantics", "caxecraft"),
+        )
+        self.assertEqual(tuple(rejected), ("lowering-objects",))
+
+    def test_snapshot_only_resume_runs_just_the_focused_owner(self) -> None:
+        scripts = self.runner.load_scripts()
+        baseline = {
+            shard: self.sample_inputs(shard) for shard in self.runner.SHARD_ORDER
+        }
+        snapshot_field = (
+            self.runner.SNAPSHOT_CONTENT_PREFIX + "test:generic-specialization"
+        )
+        baseline["lowering-objects"][snapshot_field] = "old"
+        current = {
+            shard: dict(values) for shard, values in baseline.items()
+        }
+        current["lowering-objects"][snapshot_field] = "new"
+        calls: list[tuple[str, tuple[str, ...] | None]] = []
+
+        def fake_run_shard(
+            shard,
+            scripts,
+            *,
+            timing_report=None,
+            stream=None,
+            selected_commands=None,
+        ):
+            calls.append((shard, selected_commands))
+            selected = (
+                self.runner.SHARDS[shard]
+                if selected_commands is None
+                else selected_commands
+            )
+            report = self.successful_report(shard)
+            report["commands"] = [
+                command
+                for command in report["commands"]
+                if command["script"] in selected
+            ]
+            report["durationMs"] = len(report["commands"])
+            self.runner.write_timing_report(timing_report, report)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            evidence_dir = root / "evidence"
+            timing_dir = root / "timing"
+            self.runner.prepare_evidence_directory(evidence_dir)
+            for shard in self.runner.SHARD_ORDER:
+                self.runner.write_timing_report(
+                    evidence_dir / f"{shard}.json",
+                    self.runner.evidence_record(shard, baseline[shard], now=100),
+                )
+            with (
+                mock.patch.object(
+                    self.runner,
+                    "collect_evidence_inputs",
+                    side_effect=(current, current),
+                ),
+                mock.patch.object(
+                    self.runner, "run_shard", side_effect=fake_run_shard
+                ),
+                mock.patch("sys.stdout", new=io.StringIO()),
+                mock.patch.object(self.runner.time, "time", return_value=101),
+            ):
+                self.runner.run_all_shards(
+                    scripts,
+                    jobs=1,
+                    resume=True,
+                    evidence_dir=evidence_dir,
+                    timing_dir=timing_dir,
+                )
+            summary = json.loads(
+                (timing_dir / "toolchain-parallel-summary.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            refreshed = json.loads(
+                (evidence_dir / "lowering-objects.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "lowering-objects",
+                    ("test:generic-specialization",),
+                )
+            ],
+        )
+        self.assertEqual(
+            summary["snapshotOnlyReruns"],
+            [
+                {
+                    "shard": "lowering-objects",
+                    "scripts": ["test:generic-specialization"],
+                    "priorEvidenceAgeSeconds": 1,
+                }
+            ],
+        )
+        self.assertEqual(
+            refreshed["basis"],
+            {
+                "kind": "snapshot-refresh",
+                "priorEvidenceKey": self.runner.evidence_key(
+                    baseline["lowering-objects"]
+                ),
+                "scripts": ["test:generic-specialization"],
+            },
+        )
+
+    def test_catalog_assigns_generic_snapshot_bytes_to_object_lowering(self) -> None:
+        scripts = self.runner.load_scripts()
+        outputs = self.runner.load_snapshot_outputs(scripts)
+        generic = [
+            output
+            for output in outputs
+            if output.root
+            == Path("test/generic_specialization/expected/hxc.specializations.json")
+        ]
+        self.assertEqual(len(generic), 1)
+        self.assertEqual(generic[0].owner_script, "test:generic-specialization")
+        self.assertIn(generic[0].owner_script, self.runner.SHARDS["lowering-objects"])
+        self.assertNotIn(generic[0].owner_script, self.runner.SHARDS["contracts"])
+
+    def test_snapshot_content_digest_changes_only_for_the_selected_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            expected = root / "test/sample/expected/value.json"
+            expected.parent.mkdir(parents=True)
+            expected.write_text('{"value":1}\n', encoding="utf-8")
+            output = self.runner.SnapshotOutput(
+                root=Path("test/sample/expected/value.json"),
+                owner_script="test:sample",
+                directory=False,
+            )
+            with mock.patch.object(self.runner, "ROOT", root):
+                owner_before = self.runner.snapshot_content_digest(
+                    (output,), ("test:sample",)
+                )
+                unrelated_before = self.runner.snapshot_content_digest(
+                    (output,), ("test:other",)
+                )
+                expected.write_text('{"value":2}\n', encoding="utf-8")
+                owner_after = self.runner.snapshot_content_digest(
+                    (output,), ("test:sample",)
+                )
+                unrelated_after = self.runner.snapshot_content_digest(
+                    (output,), ("test:other",)
+                )
+
+        self.assertNotEqual(owner_before, owner_after)
+        self.assertEqual(unrelated_before, unrelated_after)
+
+    def test_common_staged_identity_ignores_only_owned_snapshot_bytes(self) -> None:
+        output = self.runner.SnapshotOutput(
+            root=Path("test/sample/expected/value.json"),
+            owner_script="test:sample",
+            directory=False,
+        )
+
+        def identity(snapshot_blob: bytes, *, mode: bytes = b"100644") -> str:
+            listing = (
+                mode
+                + b" "
+                + snapshot_blob
+                + b" 0\ttest/sample/expected/value.json\0"
+                + b"100644 "
+                + b"c" * 40
+                + b" 0\tsrc/Compiler.hx\0"
+            )
+            with mock.patch.object(self.runner, "git_bytes", return_value=listing):
+                return self.runner.staged_tree_identity((output,))
+
+        self.assertEqual(identity(b"a" * 40), identity(b"b" * 40))
+        self.assertNotEqual(identity(b"a" * 40), identity(b"a" * 40, mode=b"100755"))
+
+        baseline = (
+            b"100644 "
+            + b"a" * 40
+            + b" 0\ttest/sample/expected/value.json\0"
+        )
+        added = baseline + (
+            b"100644 "
+            + b"d" * 40
+            + b" 0\ttest/sample/expected/added.json\0"
+        )
+        directory_output = self.runner.SnapshotOutput(
+            root=Path("test/sample/expected"),
+            owner_script="test:sample",
+            directory=True,
+        )
+        with mock.patch.object(self.runner, "git_bytes", return_value=baseline):
+            before = self.runner.staged_tree_identity((directory_output,))
+        with mock.patch.object(self.runner, "git_bytes", return_value=added):
+            after = self.runner.staged_tree_identity((directory_output,))
+        self.assertNotEqual(before, after)
+
+        def ordinary_identity(blob: bytes) -> str:
+            listing = b"100644 " + blob + b" 0\tsrc/Compiler.hx\0"
+            with mock.patch.object(self.runner, "git_bytes", return_value=listing):
+                return self.runner.staged_tree_identity((output,))
+
+        self.assertNotEqual(ordinary_identity(b"a" * 40), ordinary_identity(b"b" * 40))
 
     def test_pending_shards_remain_in_canonical_order(self) -> None:
         self.assertEqual(
@@ -599,7 +834,14 @@ class ToolchainShardTests(unittest.TestCase):
             for shard in self.runner.SHARD_ORDER
         }
 
-        def fake_run_shard(shard, scripts, *, timing_report=None, stream=None):
+        def fake_run_shard(
+            shard,
+            scripts,
+            *,
+            timing_report=None,
+            stream=None,
+            selected_commands=None,
+        ):
             self.runner.write_timing_report(timing_report, self.successful_report(shard))
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -637,7 +879,14 @@ class ToolchainShardTests(unittest.TestCase):
         attempts: list[tuple[int, str]] = []
         round_number = 1
 
-        def fake_run_shard(shard, scripts, *, timing_report=None, stream=None):
+        def fake_run_shard(
+            shard,
+            scripts,
+            *,
+            timing_report=None,
+            stream=None,
+            selected_commands=None,
+        ):
             attempts.append((round_number, shard))
             if round_number == 1 and shard == failed_shard:
                 report = self.successful_report(shard)
@@ -700,7 +949,7 @@ class ToolchainShardTests(unittest.TestCase):
             tuple(shard for attempt, shard in attempts if attempt == 2),
             (failed_shard,),
         )
-        self.assertEqual(summary["schemaVersion"], 2)
+        self.assertEqual(summary["schemaVersion"], 3)
         self.assertEqual(
             [report["shard"] for report in summary["executedShards"]],
             [failed_shard],
@@ -751,7 +1000,12 @@ class ToolchainShardTests(unittest.TestCase):
                         active -= 1
 
                 def fake_run_shard(
-                    shard, scripts, *, timing_report=None, stream=None
+                    shard,
+                    scripts,
+                    *,
+                    timing_report=None,
+                    stream=None,
+                    selected_commands=None,
                 ):
                     enter_work()
                     self.runner.write_timing_report(
@@ -792,7 +1046,14 @@ class ToolchainShardTests(unittest.TestCase):
     ) -> None:
         scripts = self.runner.load_scripts()
 
-        def fake_run_shard(shard, scripts, *, timing_report=None, stream=None):
+        def fake_run_shard(
+            shard,
+            scripts,
+            *,
+            timing_report=None,
+            stream=None,
+            selected_commands=None,
+        ):
             self.runner.write_timing_report(
                 timing_report, self.successful_report(shard)
             )
@@ -821,7 +1082,14 @@ class ToolchainShardTests(unittest.TestCase):
     def test_native_lane_is_visible_in_parallel_timing_report(self) -> None:
         scripts = self.runner.load_scripts()
 
-        def fake_run_shard(shard, scripts, *, timing_report=None, stream=None):
+        def fake_run_shard(
+            shard,
+            scripts,
+            *,
+            timing_report=None,
+            stream=None,
+            selected_commands=None,
+        ):
             self.runner.write_timing_report(
                 timing_report, self.successful_report(shard)
             )

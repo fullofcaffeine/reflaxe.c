@@ -10,6 +10,7 @@ import json
 import math
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,7 @@ from typing import Iterable, TextIO
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = ROOT / "package.json"
+SNAPSHOT_CATALOG = ROOT / "docs/specs/fixture-taxonomy.json"
 
 # Keep these as contiguous slices of package.json's canonical test:toolchain
 # sequence. validate_partition() rejects missing, duplicated, unknown, or
@@ -118,18 +120,21 @@ LOCAL_PARALLEL_ISOLATION: dict[str, str] = {
 }
 
 MAX_LOCAL_JOBS = len(SHARD_ORDER)
-EVIDENCE_SCHEMA_VERSION = 1
+EVIDENCE_SCHEMA_VERSION = 2
+EVIDENCE_MARKER_SCHEMA_VERSION = 1
+PARALLEL_REPORT_SCHEMA_VERSION = 3
 EVIDENCE_TTL_SECONDS = 24 * 60 * 60
 DEFAULT_EVIDENCE_DIR = ROOT / ".cache" / "toolchain-shards"
 EVIDENCE_MARKER = ".hxc-toolchain-evidence.json"
 EVIDENCE_MARKER_PAYLOAD = {
-    "schemaVersion": EVIDENCE_SCHEMA_VERSION,
+    "schemaVersion": EVIDENCE_MARKER_SCHEMA_VERSION,
     "owner": "reflaxe.c-local-toolchain-shards",
 }
 CAXECRAFT_SCRIPT = "test:caxecraft-domain:full"
 NATIVE_LANE = "native"
 NATIVE_SCRIPT = "test:native"
 CAXECRAFT_TIMING_ENV = "HXC_CAXECRAFT_TIMING_REPORT"
+SNAPSHOT_CONTENT_PREFIX = "snapshotContent:"
 CAXECRAFT_FULL_PHASES = (
     ("asset-contracts", 0),
     ("eval-oracle", 1),
@@ -211,6 +216,32 @@ class JobSelection:
     reason: str
 
 
+@dataclass(frozen=True)
+class SnapshotOutput:
+    """One catalog-owned expected-output root and its focused npm owner.
+
+    Expected bytes are inputs to the suite that compares them, but they are
+    not compiler inputs to unrelated suites. Keeping that distinction explicit
+    lets a reviewed snapshot correction invalidate its owner without throwing
+    away independent Caxecraft or compiler-shard evidence. Path inventory
+    and file modes remain common inputs, so additions, deletions, renames, and
+    symlinks still fail closed across the complete catalog.
+    """
+
+    root: Path
+    owner_script: str
+    directory: bool
+
+
+@dataclass(frozen=True)
+class SnapshotRerun:
+    """The exact focused work that can refresh one prior shard receipt."""
+
+    scripts: tuple[str, ...]
+    prior_evidence_age_seconds: int
+    prior_evidence_key: str
+
+
 class ToolchainShardFailure(Exception):
     """Raised when the shard contract or one of its commands fails."""
 
@@ -265,13 +296,64 @@ def git_bytes(arguments: list[str]) -> bytes:
     return result.stdout
 
 
-def staged_tree_identity() -> str:
-    tree = git_bytes(["write-tree"]).decode("ascii", errors="strict").strip()
-    if len(tree) not in (40, 64) or any(
-        character not in "0123456789abcdef" for character in tree
-    ):
-        raise ToolchainShardFailure(f"git write-tree returned invalid identity {tree!r}")
-    return tree
+def path_is_below(relative: Path, root: Path, *, directory: bool) -> bool:
+    if relative == root:
+        return True
+    if not directory:
+        return False
+    try:
+        relative.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def snapshot_output_for_path(
+    relative: Path, outputs: Iterable[SnapshotOutput]
+) -> SnapshotOutput | None:
+    for output in outputs:
+        if path_is_below(relative, output.root, directory=output.directory):
+            return output
+    return None
+
+
+def staged_tree_identity(outputs: Iterable[SnapshotOutput] = ()) -> str:
+    """Hash the staged execution state without cross-owning snapshot bytes.
+
+    Git's ordinary tree identity is deliberately too broad for reusable test
+    evidence: changing one expected JSON byte changes every shard key. For a
+    catalog-owned expected output, this digest retains the index mode, stage,
+    and path but delegates content bytes to the owning shard's separate
+    ``snapshotContentDigest``. Every other staged blob remains exact.
+    """
+
+    selected_outputs = tuple(outputs)
+    records = git_bytes(["ls-files", "--stage", "-z", "--"]).split(b"\0")
+    digest = hashlib.sha256()
+    for record in records:
+        if not record:
+            continue
+        try:
+            metadata, encoded_name = record.split(b"\t", 1)
+            relative = Path(encoded_name.decode("utf-8", errors="strict"))
+        except (ValueError, UnicodeDecodeError) as error:
+            raise ToolchainShardFailure(
+                "git ls-files returned a malformed staged entry"
+            ) from error
+        output = snapshot_output_for_path(relative, selected_outputs)
+        selected_metadata = metadata
+        if output is not None:
+            fields = metadata.split(b" ")
+            if len(fields) != 3:
+                raise ToolchainShardFailure(
+                    f"staged snapshot entry is malformed: {relative.as_posix()}"
+                )
+            selected_metadata = b"snapshot-output " + fields[0] + b" " + fields[2]
+        digest.update(len(selected_metadata).to_bytes(8, "big"))
+        digest.update(selected_metadata)
+        digest.update(len(encoded_name).to_bytes(8, "big"))
+        digest.update(encoded_name)
+    return digest.hexdigest()
 
 
 def is_reviewed_instruction_link(name: str, tracked_names: set[str]) -> bool:
@@ -302,7 +384,7 @@ def is_reviewed_instruction_link(name: str, tracked_names: set[str]) -> bool:
         return False
 
 
-def relevant_worktree_digest() -> str:
+def relevant_worktree_digest(outputs: Iterable[SnapshotOutput] = ()) -> str:
     """Hash execution inputs that are not represented by the staged tree.
 
     Pre-commit runs against the working checkout, so an unstaged compiler edit
@@ -330,9 +412,52 @@ def relevant_worktree_digest() -> str:
             raise ToolchainShardFailure(
                 f"relevant tracked input must not be a symlink: {name}"
             )
-    tracked_diff = git_bytes(["diff", "--binary", "--no-ext-diff", "--", "."])
-    digest.update(len(tracked_diff).to_bytes(8, "big"))
-    digest.update(tracked_diff)
+    selected_outputs = tuple(outputs)
+    changed = git_bytes(["diff", "--name-only", "-z", "--", "."])
+    changed_names = sorted(
+        (name for name in changed.split(b"\0") if name),
+        key=lambda item: item,
+    )
+    for encoded_name in changed_names:
+        try:
+            name = encoded_name.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as error:
+            raise ToolchainShardFailure(
+                "relevant changed input path is not valid UTF-8"
+            ) from error
+        relative = Path(name)
+        path = ROOT / relative
+        output = snapshot_output_for_path(relative, selected_outputs)
+        digest.update(len(encoded_name).to_bytes(8, "big"))
+        digest.update(encoded_name)
+        if not path.exists() and not path.is_symlink():
+            digest.update(b"missing")
+            continue
+        try:
+            mode = path.lstat().st_mode
+            digest.update(mode.to_bytes(8, "big"))
+            if output is not None:
+                digest.update(b"snapshot-output")
+                continue
+            if path.is_symlink():
+                if not is_reviewed_instruction_link(name, tracked_names):
+                    raise ToolchainShardFailure(
+                        f"relevant tracked input must not be a symlink: {name}"
+                    )
+                payload = os.readlink(path).encode("utf-8")
+                kind = b"symlink"
+            else:
+                payload = path.read_bytes()
+                kind = b"file"
+        except ToolchainShardFailure:
+            raise
+        except (OSError, UnicodeError) as error:
+            raise ToolchainShardFailure(
+                f"cannot hash relevant changed input {name}: {error}"
+            ) from error
+        digest.update(kind)
+        digest.update(len(payload).to_bytes(8, "big"))
+        digest.update(payload)
 
     untracked = git_bytes(
         [
@@ -356,12 +481,15 @@ def relevant_worktree_digest() -> str:
                 "relevant untracked input path is not valid UTF-8"
             ) from error
         path = ROOT / name
+        relative = Path(name)
         try:
             if path.is_symlink():
                 raise ToolchainShardFailure(
                     f"relevant untracked input must not be a symlink: {name}"
                 )
-            payload = path.read_bytes()
+            output = snapshot_output_for_path(relative, selected_outputs)
+            payload = b"" if output is not None else path.read_bytes()
+            mode = path.lstat().st_mode
             kind = b"file"
         except ToolchainShardFailure:
             raise
@@ -371,6 +499,9 @@ def relevant_worktree_digest() -> str:
             ) from error
         digest.update(len(encoded_name).to_bytes(8, "big"))
         digest.update(encoded_name)
+        digest.update(mode.to_bytes(8, "big"))
+        if output is not None:
+            digest.update(b"snapshot-output")
         digest.update(kind)
         digest.update(len(payload).to_bytes(8, "big"))
         digest.update(payload)
@@ -508,6 +639,160 @@ def command_definition_digest(shard: str, scripts: dict[str, str]) -> str:
     )
 
 
+def is_expected_output_root(relative: Path) -> bool:
+    """Return whether a catalog root is only reviewed expected output.
+
+    Snapshot generators also own source bindings and ledgers. Those are real
+    inputs to multiple suites and must remain in the common fingerprint. Only
+    conventional ``expected`` paths receive owner-scoped content treatment.
+    """
+
+    return any(part == "expected" for part in relative.parts)
+
+
+def load_snapshot_outputs(scripts: dict[str, str]) -> tuple[SnapshotOutput, ...]:
+    """Load exact expected-output ownership from the validated catalog."""
+
+    try:
+        catalog = json.loads(SNAPSHOT_CATALOG.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ToolchainShardFailure(f"cannot read snapshot catalog: {error}") from error
+    if not isinstance(catalog, dict):
+        raise ToolchainShardFailure("snapshot catalog must be a JSON object")
+    raw_suites = catalog.get("suites")
+    policy = catalog.get("snapshotPolicy")
+    if not isinstance(raw_suites, list) or not isinstance(policy, dict):
+        raise ToolchainShardFailure("snapshot catalog ownership sections are malformed")
+    suite_runners: dict[str, tuple[str, ...]] = {}
+    for suite in raw_suites:
+        if not isinstance(suite, dict):
+            raise ToolchainShardFailure("snapshot catalog contains a malformed suite")
+        identifier = suite.get("id")
+        runner = suite.get("runner")
+        if (
+            isinstance(identifier, str)
+            and isinstance(runner, list)
+            and runner
+            and all(isinstance(part, str) and part for part in runner)
+        ):
+            suite_runners[identifier] = tuple(runner)
+    managed = policy.get("managedSuites")
+    if not isinstance(managed, list):
+        raise ToolchainShardFailure("snapshot catalog has no managed suite list")
+    outputs: list[SnapshotOutput] = []
+    for entry in managed:
+        if not isinstance(entry, dict) or not isinstance(entry.get("id"), str):
+            raise ToolchainShardFailure("snapshot catalog has a malformed managed suite")
+        identifier = entry["id"]
+        runner = suite_runners.get(identifier)
+        if runner is None:
+            raise ToolchainShardFailure(
+                f"snapshot suite {identifier} has no exact validation runner"
+            )
+        owners = [
+            script
+            for script, command in scripts.items()
+            if parse_package_command(command, script) == runner
+        ]
+        if len(owners) != 1:
+            raise ToolchainShardFailure(
+                f"snapshot suite {identifier} must have one package owner; "
+                f"found {owners!r}"
+            )
+        roots = entry.get("expectedRoots")
+        if not isinstance(roots, list) or not roots:
+            raise ToolchainShardFailure(
+                f"snapshot suite {identifier} has no expected roots"
+            )
+        for value in roots:
+            if not isinstance(value, str) or "\\" in value:
+                raise ToolchainShardFailure(
+                    f"snapshot suite {identifier} has an invalid expected root"
+                )
+            relative = Path(value)
+            if relative.is_absolute() or any(
+                part in ("", ".", "..") for part in relative.parts
+            ):
+                raise ToolchainShardFailure(
+                    f"snapshot suite {identifier} expected root escapes the repository"
+                )
+            if not is_expected_output_root(relative):
+                continue
+            path = ROOT / relative
+            outputs.append(
+                SnapshotOutput(
+                    root=relative,
+                    owner_script=owners[0],
+                    directory=path.is_dir(),
+                )
+            )
+    return tuple(
+        sorted(
+            outputs,
+            key=lambda item: (
+                item.root.as_posix().encode("utf-8"),
+                item.owner_script,
+            ),
+        )
+    )
+
+
+def parse_package_command(command: str, script: str) -> tuple[str, ...]:
+    """Parse one package command with an actionable fail-closed diagnostic."""
+
+    try:
+        return tuple(shlex.split(command))
+    except ValueError as error:
+        raise ToolchainShardFailure(
+            f"package script {script} cannot be parsed for snapshot ownership: {error}"
+        ) from error
+
+
+def snapshot_content_digest(
+    outputs: Iterable[SnapshotOutput], owner_scripts: Iterable[str]
+) -> str:
+    """Hash expected bytes only for the focused owners in one shard."""
+
+    selected_scripts = set(owner_scripts)
+    digest = hashlib.sha256()
+    for output in outputs:
+        if output.owner_script not in selected_scripts:
+            continue
+        root = ROOT / output.root
+        if output.directory:
+            paths = (
+                sorted(
+                    (path for path in root.rglob("*") if path.is_file()),
+                    key=lambda path: path.relative_to(ROOT).as_posix().encode("utf-8"),
+                )
+                if root.is_dir()
+                else []
+            )
+        else:
+            paths = [root] if root.is_file() else []
+        if not paths:
+            encoded = output.root.as_posix().encode("utf-8")
+            digest.update(len(encoded).to_bytes(8, "big"))
+            digest.update(encoded)
+            digest.update(b"missing")
+            continue
+        for path in paths:
+            if path.is_symlink():
+                raise ToolchainShardFailure(
+                    "snapshot expected output must not be a symlink: "
+                    + path.relative_to(ROOT).as_posix()
+                )
+            relative = path.relative_to(ROOT)
+            payload = path.read_bytes()
+            encoded = relative.as_posix().encode("utf-8")
+            digest.update(len(encoded).to_bytes(8, "big"))
+            digest.update(encoded)
+            digest.update(path.lstat().st_mode.to_bytes(8, "big"))
+            digest.update(len(payload).to_bytes(8, "big"))
+            digest.update(payload)
+    return digest.hexdigest()
+
+
 def build_evidence_inputs(
     shard: str,
     scripts: dict[str, str],
@@ -520,8 +805,9 @@ def build_evidence_inputs(
     runner_digest: str,
     hook_digest: str,
     host_digest: str,
+    snapshot_digests: Mapping[str, str],
 ) -> dict[str, str]:
-    return {
+    inputs = {
         "stagedTree": staged_tree,
         "worktreeDigest": worktree_digest,
         "commandDigest": command_definition_digest(shard, scripts),
@@ -532,6 +818,9 @@ def build_evidence_inputs(
         "hookDigest": hook_digest,
         "hostDigest": host_digest,
     }
+    for script, digest in sorted(snapshot_digests.items()):
+        inputs[SNAPSHOT_CONTENT_PREFIX + script] = digest
+    return inputs
 
 
 def evidence_key(inputs: dict[str, str]) -> str:
@@ -648,9 +937,10 @@ def write_timing_report(path: Path, payload: dict[str, object]) -> None:
 def collect_evidence_inputs(
     scripts: dict[str, str],
 ) -> dict[str, dict[str, str]]:
+    snapshot_outputs = load_snapshot_outputs(scripts)
     common = {
-        "staged_tree": staged_tree_identity(),
-        "worktree_digest": relevant_worktree_digest(),
+        "staged_tree": staged_tree_identity(snapshot_outputs),
+        "worktree_digest": relevant_worktree_digest(snapshot_outputs),
         "locks_digest": digest_files(EVIDENCE_LOCK_PATHS),
         "tools_digest": tool_identity_digest(),
         "env_digest": environment_digest(os.environ),
@@ -658,10 +948,21 @@ def collect_evidence_inputs(
         "hook_digest": sha256_bytes((ROOT / "scripts/hooks/pre-commit").read_bytes()),
         "host_digest": host_identity_digest(),
     }
-    return {
-        shard: build_evidence_inputs(shard, scripts, **common)
-        for shard in SHARD_ORDER
-    }
+    inputs: dict[str, dict[str, str]] = {}
+    snapshot_owner_scripts = {output.owner_script for output in snapshot_outputs}
+    for shard in SHARD_ORDER:
+        per_owner = {
+            script: snapshot_content_digest(snapshot_outputs, (script,))
+            for script in SHARDS[shard]
+            if script in snapshot_owner_scripts
+        }
+        inputs[shard] = build_evidence_inputs(
+            shard,
+            scripts,
+            snapshot_digests=per_owner,
+            **common,
+        )
+    return inputs
 
 
 def evidence_record(
@@ -670,13 +971,16 @@ def evidence_record(
     *,
     now: int,
     report_digest: str = "0" * 64,
+    basis: dict[str, object] | None = None,
 ) -> dict[str, object]:
+    selected_basis = {"kind": "full"} if basis is None else basis
     return {
         "schemaVersion": EVIDENCE_SCHEMA_VERSION,
         "shard": shard,
         "outcome": "passed",
         "key": evidence_key(inputs),
         "reportDigest": report_digest,
+        "basis": selected_basis,
         "createdAtUnix": now,
         "expiresAtUnix": now + EVIDENCE_TTL_SECONDS,
         "inputs": inputs,
@@ -698,6 +1002,7 @@ def validate_reusable_evidence(
         "outcome",
         "key",
         "reportDigest",
+        "basis",
         "createdAtUnix",
         "expiresAtUnix",
         "inputs",
@@ -734,6 +1039,30 @@ def validate_reusable_evidence(
         or any(character not in "0123456789abcdef" for character in report_digest)
     ):
         return False, "record report digest is malformed", None
+    basis = payload.get("basis")
+    if not isinstance(basis, dict):
+        return False, "record basis is malformed", None
+    kind = basis.get("kind")
+    if kind == "full":
+        if set(basis) != {"kind"}:
+            return False, "full record basis has unexpected fields", None
+    elif kind == "snapshot-refresh":
+        if set(basis) != {"kind", "priorEvidenceKey", "scripts"}:
+            return False, "snapshot-refresh basis fields are malformed", None
+        prior_key = basis.get("priorEvidenceKey")
+        scripts = basis.get("scripts")
+        if (
+            not isinstance(prior_key, str)
+            or len(prior_key) != 64
+            or any(character not in "0123456789abcdef" for character in prior_key)
+            or not isinstance(scripts, list)
+            or not scripts
+            or not all(isinstance(script, str) and script for script in scripts)
+            or len(set(scripts)) != len(scripts)
+        ):
+            return False, "snapshot-refresh basis is malformed", None
+    else:
+        return False, "record basis kind is unknown", None
     return True, "exact passing evidence is reusable", now - created
 
 
@@ -755,6 +1084,73 @@ def read_reusable_evidence(
     return validate_reusable_evidence(payload, shard, inputs, now=now)
 
 
+def read_snapshot_only_rerun(
+    path: Path,
+    shard: str,
+    inputs: dict[str, str],
+    *,
+    now: int,
+) -> tuple[SnapshotRerun | None, str]:
+    """Admit a prior shard receipt when only owned expected bytes changed.
+
+    The stored record is first validated against its own inputs, including its
+    cryptographic key and lifetime. We then compare it with the current inputs.
+    A partial rerun is legal only when every difference is an existing
+    ``snapshotContent:<script>`` field owned by this shard. New or removed
+    owners, compiler changes, fixture changes, path inventory drift, or any
+    other difference reject the shortcut.
+    """
+
+    if path.is_symlink():
+        return None, "record path is a symlink"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None, "record is missing"
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        return None, f"record cannot be read: {error}"
+    if not isinstance(payload, dict) or not isinstance(payload.get("inputs"), dict):
+        return None, "record has no closed input map"
+    stored_inputs = payload["inputs"]
+    if not all(
+        isinstance(name, str) and isinstance(value, str)
+        for name, value in stored_inputs.items()
+    ):
+        return None, "record input map is malformed"
+    valid, reason, age = validate_reusable_evidence(
+        payload, shard, stored_inputs, now=now
+    )
+    if not valid:
+        return None, reason
+    if set(stored_inputs) != set(inputs):
+        return None, "snapshot owner inventory changed"
+    changed_fields = tuple(
+        name
+        for name in sorted(inputs)
+        if stored_inputs[name] != inputs[name]
+    )
+    if not changed_fields or any(
+        not name.startswith(SNAPSHOT_CONTENT_PREFIX) for name in changed_fields
+    ):
+        return None, "changes are not limited to owned snapshot bytes"
+    scripts = tuple(
+        name[len(SNAPSHOT_CONTENT_PREFIX) :] for name in changed_fields
+    )
+    if any(script not in SHARDS[shard] for script in scripts):
+        return None, "snapshot owner is outside this shard"
+    assert age is not None
+    prior_key = payload.get("key")
+    assert isinstance(prior_key, str)
+    return (
+        SnapshotRerun(
+            scripts=scripts,
+            prior_evidence_age_seconds=age,
+            prior_evidence_key=prior_key,
+        ),
+        "only owned snapshot bytes changed",
+    )
+
+
 def write_success_evidence(
     path: Path,
     shard: str,
@@ -762,10 +1158,17 @@ def write_success_evidence(
     *,
     now: int,
     report_digest: str,
+    basis: dict[str, object] | None = None,
 ) -> None:
     write_timing_report(
         path,
-        evidence_record(shard, inputs, now=now, report_digest=report_digest),
+        evidence_record(
+            shard,
+            inputs,
+            now=now,
+            report_digest=report_digest,
+            basis=basis,
+        ),
     )
 
 
@@ -837,6 +1240,50 @@ def classify_reusable_evidence(
         else:
             rejected[shard] = reason
     return reused, rejected
+
+
+def classify_resume_evidence(
+    evidence_dir: Path,
+    inputs_by_shard: dict[str, dict[str, str]],
+    *,
+    now: int,
+) -> tuple[
+    dict[str, tuple[int, str]],
+    dict[str, SnapshotRerun],
+    dict[str, str],
+]:
+    """Classify full reuse, snapshot-owner reruns, and full shard reruns."""
+
+    reused: dict[str, tuple[int, str]] = {}
+    snapshot_reruns: dict[str, SnapshotRerun] = {}
+    rejected: dict[str, str] = {}
+    for shard in SHARD_ORDER:
+        path = evidence_dir / f"{shard}.json"
+        reusable, reason, age = read_reusable_evidence(
+            path,
+            shard,
+            inputs_by_shard[shard],
+            now=now,
+        )
+        if reusable:
+            assert age is not None
+            reused[shard] = (age, evidence_key(inputs_by_shard[shard]))
+            continue
+        snapshot_rerun, snapshot_reason = read_snapshot_only_rerun(
+            path,
+            shard,
+            inputs_by_shard[shard],
+            now=now,
+        )
+        if snapshot_rerun is not None:
+            snapshot_reruns[shard] = snapshot_rerun
+        else:
+            rejected[shard] = (
+                reason
+                if snapshot_reason == "changes are not limited to owned snapshot bytes"
+                else snapshot_reason
+            )
+    return reused, snapshot_reruns, rejected
 
 
 def pending_shards(reused: Iterable[str]) -> tuple[str, ...]:
@@ -945,12 +1392,23 @@ def run_shard(
     *,
     timing_report: Path | None = None,
     stream: TextIO | None = None,
+    selected_commands: tuple[str, ...] | None = None,
 ) -> None:
     if shard not in SHARDS:
         raise ToolchainShardFailure(
             f"unknown shard {shard!r}; choose one of: {', '.join(SHARD_ORDER)}"
         )
-    commands = SHARDS[shard]
+    registered_commands = SHARDS[shard]
+    commands = registered_commands if selected_commands is None else selected_commands
+    if (
+        not commands
+        or any(script not in registered_commands for script in commands)
+        or tuple(script for script in registered_commands if script in commands)
+        != commands
+    ):
+        raise ToolchainShardFailure(
+            f"selected commands do not form a canonical subset of shard {shard}"
+        )
     shard_start = time.monotonic_ns()
     records: list[dict[str, object]] = []
     failure: ToolchainShardFailure | None = None
@@ -1162,6 +1620,7 @@ def requested_jobs(value: int | None) -> int:
 def validate_successful_shard_report(
     payload: object,
     shard: str,
+    expected_scripts: tuple[str, ...] | None = None,
 ) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise ToolchainShardFailure(f"{shard} timing report is not a JSON object")
@@ -1180,13 +1639,14 @@ def validate_successful_shard_report(
         raise ToolchainShardFailure(
             f"{shard} timing report does not describe a complete passing shard"
         )
+    selected_scripts = SHARDS[shard] if expected_scripts is None else expected_scripts
     commands = payload.get("commands")
-    if not isinstance(commands, list) or len(commands) != len(SHARDS[shard]):
+    if not isinstance(commands, list) or len(commands) != len(selected_scripts):
         raise ToolchainShardFailure(
             f"{shard} timing report does not contain every expected command"
         )
     command_fields = {"script", "outcome", "exitCode", "durationMs"}
-    for expected_script, command in zip(SHARDS[shard], commands):
+    for expected_script, command in zip(selected_scripts, commands):
         expected_command_fields = (
             command_fields | {"phaseTiming"}
             if expected_script == CAXECRAFT_SCRIPT
@@ -1243,11 +1703,12 @@ def run_all_shards(
     auxiliary_records: dict[str, dict[str, object]] = {}
     initial_evidence_inputs: dict[str, dict[str, str]] = {}
     reused: dict[str, tuple[int, str]] = {}
+    snapshot_reruns: dict[str, SnapshotRerun] = {}
     selected_evidence_dir = evidence_dir or DEFAULT_EVIDENCE_DIR
     if resume:
         prepare_evidence_directory(selected_evidence_dir)
         initial_evidence_inputs = collect_evidence_inputs(scripts)
-        reused, rejected = classify_reusable_evidence(
+        reused, snapshot_reruns, rejected = classify_resume_evidence(
             selected_evidence_dir,
             initial_evidence_inputs,
             now=int(time.time()),
@@ -1258,6 +1719,15 @@ def run_all_shards(
                 print(
                     f"toolchain-parallel: {shard}: reused exact passing evidence "
                     f"({age}s old)",
+                    flush=True,
+                )
+            elif shard in snapshot_reruns:
+                snapshot_rerun = snapshot_reruns[shard]
+                print(
+                    f"toolchain-parallel: {shard}: will rerun only changed "
+                    f"snapshot owner(s) {', '.join(snapshot_rerun.scripts)} "
+                    f"({snapshot_rerun.prior_evidence_age_seconds}s-old "
+                    "shard evidence)",
                     flush=True,
                 )
             else:
@@ -1315,6 +1785,11 @@ def run_all_shards(
                             scripts,
                             timing_report=report_paths[shard],
                             stream=log,
+                            selected_commands=(
+                                snapshot_reruns[shard].scripts
+                                if shard in snapshot_reruns
+                                else None
+                            ),
                         )
                 return None
             except (ToolchainShardFailure, OSError) as error:
@@ -1377,7 +1852,15 @@ def run_all_shards(
                     reports.append(report)
                     if shard not in failures:
                         try:
-                            validated = validate_successful_shard_report(report, shard)
+                            validated = validate_successful_shard_report(
+                                report,
+                                shard,
+                                (
+                                    snapshot_reruns[shard].scripts
+                                    if shard in snapshot_reruns
+                                    else None
+                                ),
+                            )
                         except ToolchainShardFailure as error:
                             failures[shard] = str(error)
                         else:
@@ -1419,13 +1902,24 @@ def run_all_shards(
                         initial_evidence_inputs[shard],
                         now=evidence_now,
                         report_digest=report_digests[shard],
+                        basis=(
+                            {
+                                "kind": "snapshot-refresh",
+                                "priorEvidenceKey": snapshot_reruns[
+                                    shard
+                                ].prior_evidence_key,
+                                "scripts": list(snapshot_reruns[shard].scripts),
+                            }
+                            if shard in snapshot_reruns
+                            else None
+                        ),
                     )
 
         if timing_dir is not None:
             write_timing_report(
                 timing_dir / "toolchain-parallel-summary.json",
                 {
-                    "schemaVersion": 2,
+                    "schemaVersion": PARALLEL_REPORT_SCHEMA_VERSION,
                     "outcome": "failed" if failures else "passed",
                     "durationMs": elapsed_milliseconds(parallel_start),
                     "jobs": jobs,
@@ -1444,6 +1938,17 @@ def run_all_shards(
                         }
                         for shard in SHARD_ORDER
                         if shard in reused
+                    ],
+                    "snapshotOnlyReruns": [
+                        {
+                            "shard": shard,
+                            "scripts": list(snapshot_reruns[shard].scripts),
+                            "priorEvidenceAgeSeconds": snapshot_reruns[
+                                shard
+                            ].prior_evidence_age_seconds,
+                        }
+                        for shard in SHARD_ORDER
+                        if shard in snapshot_reruns
                     ],
                     "auxiliaryLanes": [
                         auxiliary_records[lane]

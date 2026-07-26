@@ -271,8 +271,14 @@ exact set of inputs, and it expires after 24 hours.
 
 The receipt key includes:
 
-- the staged Git tree plus unstaged tracked changes and relevant untracked
-  files under compiler, runtime, test, script, specification, and example roots;
+- the staged Git execution state plus unstaged tracked changes and relevant
+  untracked files under compiler, runtime, test, script, specification, and
+  example roots;
+- catalog-owned `expected` output bytes only for the shard whose focused suite
+  compares those bytes. Other shards still hash the expected-file path and mode,
+  so adding, deleting, renaming, or replacing an output with a symlink
+  invalidates the shared state, while a reviewed content-only snapshot
+  correction does not discard unrelated Caxecraft or compiler-shard evidence;
 - the complete canonical command sequence, four-shard registry, command bodies,
   and isolation declarations;
 - the reviewed Haxe/Reflaxe, npm, and Raylib lock files;
@@ -290,9 +296,24 @@ cause execution. The runner recomputes the input identity after the run and
 refuses to write reusable evidence if the checkout or environment changed while
 tests were active.
 
+There is one narrower, fail-closed retry. If a prior shard receipt validates
+against its own key and lifetime, every ordinary input is unchanged, the
+snapshot-owner inventory is unchanged, and the only differing fields are the
+content digests of existing catalog-owned `expected` outputs, the runner invokes
+only those outputs' focused package-script owners. A successful focused rerun
+then seals a new full-shard receipt: the unchanged commands are justified by the
+old receipt, and the changed owners by the new run. The new receipt records that
+`snapshot-refresh` basis, the prior evidence key, and the executed script IDs so
+the combined proof is inspectable instead of looking like a fresh full run. A
+fixture edit, compiler
+edit, expected-file addition/deletion/rename/mode change, catalog edit, tool
+change, environment change, corrupt receipt, or unknown owner always falls back
+to the complete shard.
+
 Receipts live under ignored `.cache/toolchain-shards/`. Logs still appear in
 canonical order, and timing summaries distinguish `executedShards` from
-`reusedShards`; a historical duration is never presented as current work.
+`reusedShards`. `snapshotOnlyReruns` names each focused owner backed partly by
+prior evidence; a historical duration is never presented as current work.
 Beads export, formatting, local-path and whitespace checks, staged secret
 scanning, governance, and the native smoke lane remain outside this mechanism
 and run on every applicable hook invocation. GitHub runs `--run <shard>` in a

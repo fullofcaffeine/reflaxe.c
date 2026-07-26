@@ -304,6 +304,12 @@ class CaxecraftTimingTests(unittest.TestCase):
             )
         )
         timing = schema["$defs"]["caxecraftTiming"]
+        self.assertEqual(
+            schema["$defs"]["parallelReport"]["properties"]["schemaVersion"][
+                "const"
+            ],
+            toolchain.PARALLEL_REPORT_SCHEMA_VERSION,
+        )
         references = timing["properties"]["phases"]["prefixItems"]
         observed = []
         for reference in references:
