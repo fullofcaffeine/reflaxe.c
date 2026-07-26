@@ -16,7 +16,13 @@ enum Chain {
 final class Main {
 	/** The borrowed arm would require a fallible deep retain. */
 	static function choose(condition:Bool, existing:Chain):Chain {
-		final selected = condition ? End(1) : existing;
+		final selected = if (condition) {
+			final freshValue = 1;
+			End(freshValue);
+		} else {
+			final borrowed = existing;
+			borrowed;
+		};
 		return selected;
 	}
 

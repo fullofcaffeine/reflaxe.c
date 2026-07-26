@@ -3,7 +3,7 @@
 This document records both the bounded E4.T04 native `hxrt` array storage and
 the first E5.T03 ordinary-Haxe lowering that selects it. A program can now use
 empty or nonempty `Array<T>` literals, aliases, `length`, checked indexing,
-`push`, `copy`, in-place `sort`, and source-order iteration for the admitted element types
+`push`, `pop`, `copy`, in-place `sort`, and source-order iteration for the admitted element types
 described below. An exact managed `Array<String>` also supports
 `join(separator)` with one explicit String separator. Elements may now be
 plain direct values,
@@ -23,7 +23,8 @@ Application Binary Interface (ABI) from 0.4.0 to 0.5.0. Adding the
 compiler-used shared-identity container advanced it to 0.6.0. The two public
 copy entry points advanced the internal marker from 0.10.0 to 0.11.0. Adding
 the compiler-used in-place sort entry point advances the current marker to
-0.12.0; the intervening additions are recorded in their owning runtime
+0.12.0. Adding the ownership-transferring pop entry points advances it to
+0.13.0; the intervening additions are recorded in their owning runtime
 documents. These are internal compatibility markers, not a stable application
 ABI or supported-release promise.
 
@@ -266,6 +267,24 @@ logical source order. Exact existing-slot sources are supported:
   retain the replacement before releasing the prior destination; and
 - remove destroys exactly the removed element and relocates the suffix left.
 
+The compiler-used `pop` operation is deliberately a move, not a copy followed
+by removal. A nonempty pop byte-relocates the last live element into separate,
+correctly aligned output storage, shortens the Array, and does not call the
+element copy, assignment, or destruction callbacks. The output becomes the
+one owner of that value. This matters for a record that contains `Bytes`,
+another Array, or a managed enum: copying and then destroying the slot would
+perform extra retain/release work, while merely returning a pointer into the
+slot would leave a dangling reference after later Array growth or destruction.
+
+An empty pop leaves the output payload untouched and reports absence. HxcIR
+keeps that result shape explicit before C is selected: value-shaped elements
+use a tagged optional `{ present, value }`, while a managed pointer carrier may
+use its exact null value. The generated caller initializes the tagged optional
+as absent, passes its payload and presence fields to
+`hxc_array_ref_pop_move`, and owns the result only when the operation reports a
+present element. Aliases still observe the shortened shared Array because pop
+mutates the existing container rather than creating a copy.
+
 A lifecycle copy constructs into uninitialized storage. On failure it must
 leave no live destination. Assignment operates on one live destination and is
 failure-atomic: a non-OK result leaves source and destination unchanged.
@@ -357,12 +376,13 @@ on growth and injects allocation failure without libc allocation dependencies.
 The fixture proves:
 
 - primitive `int32_t` growth, indexing, push, insert, assignment, removal,
-  resize, owner move, and overflow rejection;
+  pop, resize, owner move, and overflow rejection;
 - distinct primitive-copy storage, independent mutation, and the in-place copy
   used when the collector owns the destination Array container;
 - exact-slot aliasing across both relocation and suffix shifts;
 - reference-element shallow-copy retain counts, retain-before-release
-  assignment, and balanced destruction;
+  assignment, ownership-transferring pop with no lifecycle callbacks, and
+  balanced destruction;
 - rollback after copy, insertion, and partial resize lifecycle failures,
   including an injected failure after the first copied reference;
 - unchanged logical contents after allocation failure; and
@@ -390,7 +410,8 @@ without leaving output. The fixture includes empty and populated copies of
 Array-owning tagged enum whose payload is `Array<enum>`, a closed record
 containing another Array, and a closed record containing two shared Bytes
 references and a direct optional bounds record in a class-owned Array. It
-copies, matches, projects, and mutates the managed enum and nested-record paths,
+copies, pops, matches, projects, and mutates the managed enum and
+nested-record paths,
 then mutates a Bytes value through the
 original alias, observes that change through a copied Array element, and reads
 the guarded optional payload. Structural checks require the typed callbacks
@@ -417,8 +438,9 @@ both paths. The same source also runs under the pinned Haxe Eval oracle, while
 split, package, and unity projects compare repeated/reversed discovery bytes
 and the split project compares two requests to one warm Haxe compilation
 server. Finally, the suite invokes Caxecraft's real compile-only path and
-requires it to reach the later `FlowRuntimeDiagnostic` boundary, proving the
-former `CaxeFlowState` Array failure has not returned.
+requires it to reach the later escaping `EditorTestPlay` class-lifetime
+boundary, proving the former editor-history `Array.pop` failure has not
+returned.
 
 Run the focused evidence with:
 

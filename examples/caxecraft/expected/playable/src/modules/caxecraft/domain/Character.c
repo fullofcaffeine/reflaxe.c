@@ -50,27 +50,27 @@ struct hxc_caxecraft_domain_CharacterStep hxc_caxecraft_domain_Character_step(ui
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
-  if (!(hxc_original.hxc_vitals.hxc_health <= 0))
+  if (hxc_original.hxc_vitals.hxc_health <= 0)
   {
-    struct hxc_caxecraft_domain_AquaticStep hxc_tmp_call_result_n8 = hxc_caxecraft_domain_Aquatics_step(hxc_cells, hxc_length, hxc_original.hxc_body, hxc_original.hxc_aquatic, hxc_intent, hxc_original.hxc_aquaticProfile);
-    struct hxc_caxecraft_domain_AquaticStep hxc_aquaticStep = hxc_tmp_call_result_n8;
-    struct hxc_caxecraft_domain_VitalsState hxc_vitals = hxc_original.hxc_vitals;
-    if (hxc_damagePolicy == 1)
-    {
-      struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n11 = hxc_caxecraft_domain_Vitals_step(hxc_vitals);
-      hxc_vitals = hxc_tmp_call_result_n11;
-      struct hxc_caxecraft_domain_VitalsState hxc_tmp_load_result_n12 = hxc_vitals;
-      struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n14 = hxc_caxecraft_domain_Vitals_applyAttack(hxc_tmp_load_result_n12, hxc_aquaticStep.hxc_drowningDamage > 0);
-      hxc_vitals = hxc_tmp_call_result_n14;
-    }
-    struct hxc_caxecraft_domain_CharacterBody hxc_tmp_record_field_load_result_n16 = hxc_aquaticStep.hxc_body;
-    struct hxc_caxecraft_domain_AquaticState hxc_tmp_record_field_load_result_n17 = hxc_aquaticStep.hxc_aquatic;
-    struct hxc_caxecraft_domain_VitalsState hxc_tmp_load_result_n19 = hxc_vitals;
-    struct hxc_caxecraft_domain_Immersion hxc_tmp_record_field_load_result_n21 = hxc_aquaticStep.hxc_immersion;
-    return (struct hxc_caxecraft_domain_CharacterStep){ .hxc_character = (struct hxc_caxecraft_domain_Character){ .hxc_aquatic = hxc_tmp_record_field_load_result_n17, .hxc_aquaticProfile = hxc_original.hxc_aquaticProfile, .hxc_body = hxc_tmp_record_field_load_result_n16, .hxc_id = hxc_original.hxc_id, .hxc_vitals = hxc_tmp_load_result_n19 }, .hxc_drowningDamage = hxc_aquaticStep.hxc_drowningDamage, .hxc_immersion = hxc_tmp_record_field_load_result_n21 };
+    struct hxc_caxecraft_domain_Immersion hxc_tmp_call_result_n3 = hxc_caxecraft_domain_Aquatics_observe(hxc_cells, hxc_length, hxc_original.hxc_body);
+    return (struct hxc_caxecraft_domain_CharacterStep){ .hxc_character = hxc_original, .hxc_drowningDamage = 0, .hxc_immersion = hxc_tmp_call_result_n3 };
   }
-  struct hxc_caxecraft_domain_Immersion hxc_tmp_call_result_n3 = hxc_caxecraft_domain_Aquatics_observe(hxc_cells, hxc_length, hxc_original.hxc_body);
-  return (struct hxc_caxecraft_domain_CharacterStep){ .hxc_character = hxc_original, .hxc_drowningDamage = 0, .hxc_immersion = hxc_tmp_call_result_n3 };
+  struct hxc_caxecraft_domain_AquaticStep hxc_tmp_call_result_n8 = hxc_caxecraft_domain_Aquatics_step(hxc_cells, hxc_length, hxc_original.hxc_body, hxc_original.hxc_aquatic, hxc_intent, hxc_original.hxc_aquaticProfile);
+  struct hxc_caxecraft_domain_AquaticStep hxc_aquaticStep = hxc_tmp_call_result_n8;
+  struct hxc_caxecraft_domain_VitalsState hxc_vitals = hxc_original.hxc_vitals;
+  if (hxc_damagePolicy == 1)
+  {
+    struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n11 = hxc_caxecraft_domain_Vitals_step(hxc_vitals);
+    hxc_vitals = hxc_tmp_call_result_n11;
+    struct hxc_caxecraft_domain_VitalsState hxc_tmp_load_result_n12 = hxc_vitals;
+    struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n14 = hxc_caxecraft_domain_Vitals_applyAttack(hxc_tmp_load_result_n12, hxc_aquaticStep.hxc_drowningDamage > 0);
+    hxc_vitals = hxc_tmp_call_result_n14;
+  }
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_record_field_load_result_n16 = hxc_aquaticStep.hxc_body;
+  struct hxc_caxecraft_domain_AquaticState hxc_tmp_record_field_load_result_n17 = hxc_aquaticStep.hxc_aquatic;
+  struct hxc_caxecraft_domain_VitalsState hxc_tmp_load_result_n19 = hxc_vitals;
+  struct hxc_caxecraft_domain_Immersion hxc_tmp_record_field_load_result_n21 = hxc_aquaticStep.hxc_immersion;
+  return (struct hxc_caxecraft_domain_CharacterStep){ .hxc_character = (struct hxc_caxecraft_domain_Character){ .hxc_aquatic = hxc_tmp_record_field_load_result_n17, .hxc_aquaticProfile = hxc_original.hxc_aquaticProfile, .hxc_body = hxc_tmp_record_field_load_result_n16, .hxc_id = hxc_original.hxc_id, .hxc_vitals = hxc_tmp_load_result_n19 }, .hxc_drowningDamage = hxc_aquaticStep.hxc_drowningDamage, .hxc_immersion = hxc_tmp_record_field_load_result_n21 };
 }
 
 struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_withVitals(struct hxc_caxecraft_domain_Character hxc_original, struct hxc_caxecraft_domain_VitalsState hxc_vitals)

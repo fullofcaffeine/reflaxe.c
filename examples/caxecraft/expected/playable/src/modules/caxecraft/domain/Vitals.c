@@ -60,14 +60,14 @@ struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_domain_Vitals_recover(stru
 
 struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_domain_Vitals_step(struct hxc_caxecraft_domain_VitalsState hxc_state)
 {
-  if (!(hxc_state.hxc_health <= 0))
+  if (hxc_state.hxc_health <= 0)
   {
-    if (!(hxc_state.hxc_safeTicks > 0))
-    {
-      return hxc_state;
-    }
-    struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n4 = hxc_caxecraft_domain_Vitals_make(hxc_state.hxc_health, hxc_i32_subtract_wrapping(hxc_state.hxc_safeTicks, 1));
-    return hxc_tmp_call_result_n4;
+    return hxc_state;
   }
-  return hxc_state;
+  if (!(hxc_state.hxc_safeTicks > 0))
+  {
+    return hxc_state;
+  }
+  struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n4 = hxc_caxecraft_domain_Vitals_make(hxc_state.hxc_health, hxc_i32_subtract_wrapping(hxc_state.hxc_safeTicks, 1));
+  return hxc_tmp_call_result_n4;
 }

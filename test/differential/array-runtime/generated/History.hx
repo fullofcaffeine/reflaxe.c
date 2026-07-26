@@ -20,6 +20,21 @@ final class History {
 			bounds: bounds
 		});
 
+	/**
+		Remove and return the newest complete history record.
+
+		This is deliberately the same ordinary `Array.pop()` shape used by
+		Caxecraft's undo/redo stacks. An empty history returns `null`; a present
+		record transfers its two `Bytes` owners out of the Array without changing
+		the shared identity observed by aliases.
+	**/
+	public function takeNewest():Null<HistoryEntry>
+		return entries.pop();
+
+	/** Put one previously removed record back under this history's ownership. */
+	public function restore(entry:HistoryEntry):Void
+		entries.push(entry);
+
 	public function depth():Int
 		return entries.length;
 

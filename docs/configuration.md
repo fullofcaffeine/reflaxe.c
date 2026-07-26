@@ -170,12 +170,22 @@ The canonical expert/debug defines are:
 -D reflaxe_c_profile=portable|metal
 -D hxc_runtime=auto|minimal|none
 -D hxc_runtime_diagnostics=off|summary|warn
+-D hxc_symbol_report=full|summary
 -D hxc_environment=hosted|freestanding|wasi|emscripten
 -D hxc_c_standard=c11|c17|c23
 -D hxc_project_layout=split|package|unity
 -D hxc_c_extensions=none|gnu|msvc
 -D hxc_build=debug|release|minsizerel
 ```
+
+`hxc_symbol_report` controls emitted audit detail, not naming semantics or
+runtime behavior. `full` is the default and records every finalized symbol;
+`summary` retains total counts and every real collision group while omitting
+collision-free per-symbol rows. Large interactive applications may use the
+summary to shorten serialization and output-ownership work, but required audit
+lanes keep the full report. This expert reporting switch is intentionally not a
+portable `hxc.json` project setting: changing a shared project file should not
+silently weaken repository evidence.
 
 `projectLayout` changes only compiler-owned file assignment after HxcIR,
 representation, symbol, and declaration planning are finalized:

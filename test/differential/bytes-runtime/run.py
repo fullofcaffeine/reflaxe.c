@@ -498,59 +498,6 @@ def run_negative_cases(root: Path) -> None:
         raise BytesRuntimeFailure("runtime-policy rejection left plausible output")
 
 
-def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
-    """Keep Caxecraft beyond the fresh String-to-Bytes copy that exposed this rule."""
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "examples/caxecraft/play.py"),
-            "--compile-only",
-            "--output-root",
-            str(root / "caxecraft-compile-boundary"),
-        ],
-        cwd=ROOT,
-        env=haxe_environment(),
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=90,
-    )
-    if result.returncode == 0:
-        return
-    # Fresh concatenation and Array<String>.join results now reach Bytes.ofString
-    # through one cleanup-owned temporary, and ScenarioWriter therefore compiles.
-    # The next reachable boundary is separately owned by haxe_c-djl.13: pinned
-    # Haxe rewrites a managed-enum switch result into an initially empty flow
-    # carrier, and haxe.c must validate branch acquisition instead of inventing a
-    # default enum value. Requiring that exact later diagnostic proves this Bytes
-    # lane advanced the real product rather than accepting an arbitrary failure.
-    if (
-        "src/caxecraft/scenario/CaxeFlowActionRegistry.hx:179:" not in result.stderr
-        or "caxecraft.scenario._CaxeFlowActionRegistry.CaxeFlowActionRegistry_Fields_.flowActionDescriptorById body"
-        not in result.stderr
-        or "TVar(family:flow-carrier)(result-type-without-direct-default)"
-        not in result.stderr
-        or "function-exit:unowned-fresh-managed-String-value" in result.stderr
-        or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
-        or "TCall(Array.copy:not-yet-admitted)" in result.stderr
-        or "TCall(Array.sort:not-yet-admitted)" in result.stderr
-        or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
-        or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
-        in result.stderr
-        or "TSwitch(subject-type):closed-record-not-admitted-in-primitive-operation"
-        in result.stderr
-        or "TObjectDecl(contextual-type):optional-payload:incompatible-closed-record-shapes"
-        in result.stderr
-        or "TCall(unavailable-static-target:function.String.fromCharCode)"
-        in result.stderr
-        or "TCall(Std.string:source-not-yet-admitted" in result.stderr
-    ):
-        raise BytesRuntimeFailure(
-            "Caxecraft did not compile past its former fresh Bytes argument boundary\n"
-            f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
-        )
-
-
 def compile_and_run(
     compiler: str,
     sources: list[Path],
@@ -679,7 +626,6 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
         projects = render_generated_projects(root) if generated_haxe else {}
         if generated_haxe:
             run_negative_cases(root)
-            prove_caxecraft_bytes_argument_boundary(root)
         for toolchain in toolchains:
             build = root / toolchain.family
             build.mkdir()

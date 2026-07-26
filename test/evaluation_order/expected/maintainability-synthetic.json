@@ -45,7 +45,7 @@
   "inputs": [
     {
       "path": "synthetic-control-flow.c",
-      "sha256": "e53bd511cb392a80390db14e8b8da335b6e838b0d2c70524eaa1d73056fa0813"
+      "sha256": "aa27fb90e1f2ff1aa804698d57bfc046e9b9add2c5477cec645d97a88ff26107"
     }
   ],
   "summary": {
@@ -187,7 +187,7 @@
   "files": [
     {
       "path": "synthetic-control-flow.c",
-      "sha256": "e53bd511cb392a80390db14e8b8da335b6e838b0d2c70524eaa1d73056fa0813",
+      "sha256": "aa27fb90e1f2ff1aa804698d57bfc046e9b9add2c5477cec645d97a88ff26107",
       "owner": {
         "kind": "synthetic-fixture",
         "modulePath": null,

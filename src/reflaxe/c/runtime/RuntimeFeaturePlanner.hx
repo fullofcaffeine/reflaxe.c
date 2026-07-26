@@ -26,7 +26,19 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeSelectedFeatureRecord;
 private typedef MutableDependencyEdge = {
 	final featureId:String;
 	final dependencyId:String;
-	final reasonIds:Array<String>;
+	final reasons:MutableReasonSet;
+}
+
+/**
+	A deterministically ordered list with constant-time membership checks.
+
+	Runtime reasons arrive in canonical ID order, so `values` retains the exact
+	report order. `seen` prevents dependency diamonds from repeatedly scanning
+	and walking thousands of already-propagated reasons.
+**/
+private typedef MutableReasonSet = {
+	final values:Array<String>;
+	final seen:Map<String, Bool>;
 }
 
 /** Resolves source-rooted requests into one policy-checked exact feature closure. */
@@ -58,7 +70,7 @@ class RuntimeFeaturePlanner {
 
 		final selected:Map<String, Bool> = [];
 		final rootFeatures:Map<String, Bool> = [];
-		final reasonIdsByFeature:Map<String, Array<String>> = [];
+		final reasonIdsByFeature:Map<String, MutableReasonSet> = [];
 		final edgesByKey:Map<String, MutableDependencyEdge> = [];
 		for (reason in reasons) {
 			final featureId = reason.featureId.text();
@@ -151,22 +163,28 @@ class RuntimeFeaturePlanner {
 	}
 
 	function select(featureId:String, reasonId:String, request:RuntimePlanningRequest, selected:Map<String, Bool>,
-			reasonIdsByFeature:Map<String, Array<String>>, edgesByKey:Map<String, MutableDependencyEdge>):Void {
+			reasonIdsByFeature:Map<String, MutableReasonSet>, edgesByKey:Map<String, MutableDependencyEdge>):Void {
+		// The first visit for this feature/reason pair also visits every
+		// dependency. A later visit can only be a dependency diamond, so walking
+		// it again would add no information.
+		if (!appendUniqueValue(reasonIdsByFeature, featureId, reasonId))
+			return;
 		final definition = selectableDefinition(featureId, request);
 		selected.set(featureId, true);
-		appendUniqueValue(reasonIdsByFeature, featureId, reasonId);
 		final dependencies = definition.dependencies.map(dependency -> dependency.text());
 		dependencies.sort(RuntimeFeatureRegistry.compareUtf8);
 		for (dependencyId in dependencies) {
 			final key = edgeKey(featureId, dependencyId);
 			var edge = edgesByKey.get(key);
 			if (edge == null) {
-				edge = {featureId: featureId, dependencyId: dependencyId, reasonIds: []};
+				edge = {
+					featureId: featureId,
+					dependencyId: dependencyId,
+					reasons: {values: [], seen: []}
+				};
 				edgesByKey.set(key, edge);
 			}
-			if (edge.reasonIds.indexOf(reasonId) == -1) {
-				edge.reasonIds.push(reasonId);
-			}
+			appendReason(edge.reasons, reasonId);
 			select(dependencyId, reasonId, request, selected, reasonIdsByFeature, edgesByKey);
 		}
 	}
@@ -227,8 +245,8 @@ class RuntimeFeaturePlanner {
 		final result:Array<RuntimeDependencyEdgeRecord> = [];
 		for (key in keys) {
 			final edge = requiredEdge(edgesByKey, key);
-			edge.reasonIds.sort(RuntimeFeatureRegistry.compareUtf8);
-			result.push({featureId: edge.featureId, dependencyId: edge.dependencyId, reasonIds: edge.reasonIds.copy()});
+			edge.reasons.values.sort(RuntimeFeatureRegistry.compareUtf8);
+			result.push({featureId: edge.featureId, dependencyId: edge.dependencyId, reasonIds: edge.reasons.values.copy()});
 		}
 		return result;
 	}
@@ -380,21 +398,27 @@ class RuntimeFeaturePlanner {
 		}
 	}
 
-	static function appendUniqueValue(valuesByKey:Map<String, Array<String>>, key:String, value:String):Void {
-		var values = valuesByKey.get(key);
-		if (values == null) {
-			values = [];
-			valuesByKey.set(key, values);
+	static function appendUniqueValue(valuesByKey:Map<String, MutableReasonSet>, key:String, value:String):Bool {
+		var reasons = valuesByKey.get(key);
+		if (reasons == null) {
+			reasons = {values: [], seen: []};
+			valuesByKey.set(key, reasons);
 		}
-		if (values.indexOf(value) == -1) {
-			values.push(value);
-		}
+		return appendReason(reasons, value);
 	}
 
-	static function requiredReasonIds(valuesByKey:Map<String, Array<String>>, featureId:String):Array<String> {
-		for (key => values in valuesByKey) {
+	static function appendReason(reasons:MutableReasonSet, value:String):Bool {
+		if (reasons.seen.exists(value))
+			return false;
+		reasons.seen.set(value, true);
+		reasons.values.push(value);
+		return true;
+	}
+
+	static function requiredReasonIds(valuesByKey:Map<String, MutableReasonSet>, featureId:String):Array<String> {
+		for (key => reasons in valuesByKey) {
 			if (key == featureId) {
-				return values;
+				return reasons.values;
 			}
 		}
 		return internal('selected runtime feature `$featureId` has no propagated source reason', [featureId]);

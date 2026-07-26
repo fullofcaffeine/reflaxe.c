@@ -75,7 +75,7 @@ module "Main" @"Main.hx":2:2-128:3
   function "constructor.FailableBase" name="FailableBase.new" returns=void failure=status(exception) entry="entry" @"Main.hx":43:2-48:3
     parameter "parameter.self" type=pointer(nonnull,instance("instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb")) ownership=owned-or-value @"Main.hx":43:2-48:3
     parameter "parameter.0" type=bool ownership=owned-or-value @"Main.hx":43:2-48:3
-    local "local.2" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":44:3-44:35
+    local "local.2" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":44:3-44:35
     local "local.3" type=instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":44:3-44:35
     local "local.4" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":45:7-45:38
     cleanup "cleanup.construction" parent=none registration-order @"Main.hx":43:2-48:3
@@ -173,7 +173,7 @@ module "Main" @"Main.hx":2:2-128:3
     end block "entry"
   end function "function.Main.drive"
   function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":108:30-128:3
-    local "local.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":110:3-110:55
+    local "local.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":110:3-110:55
     local "local.1" type=instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":110:3-110:55
     local "local.10" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":118:12-119:26
     local "local.11" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":118:12-120:26
@@ -184,13 +184,13 @@ module "Main" @"Main.hx":2:2-128:3
     local "local.16" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":118:12-125:35
     local "local.17" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":118:12-126:24
     local "local.18" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":118:11-127:21
-    local "local.2" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":111:3-111:31
+    local "local.2" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":111:3-111:31
     local "local.3" type=instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":111:3-111:31
-    local "local.4" type=pointer(nullable,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":112:3-112:42
+    local "local.4" type=pointer(nullable,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":112:3-112:42
     local "local.5" type=instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":112:3-112:42
-    local "local.6" type=pointer(nullable,instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":113:3-113:34
+    local "local.6" type=pointer(nullable,instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":113:3-113:34
     local "local.7" type=instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":113:3-113:34
-    local "local.8" type=pointer(nullable,instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":116:3-116:26
+    local "local.8" type=pointer(nullable,instance("instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":116:3-116:26
     local "local.9" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":117:3-117:42
     cleanup "cleanup.construction" parent=none registration-order @"Main.hx":108:30-128:3
       action "construction.0.partial" idempotence=exactly-once destroy place=local("local.1") transition=initializing->destroyed @"Main.hx":110:3-110:55

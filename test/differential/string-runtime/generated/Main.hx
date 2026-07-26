@@ -191,9 +191,11 @@ final class Main {
 	static function switchJoinContractHolds(borrowed:String):Bool {
 		final fromInt = selectInt(2, borrowed);
 		final fromString = selectString("borrowed", borrowed);
+		final fromGroupedString = selectGroupedString("alias", borrowed);
 		final fromEnum = selectEnum(Fresh, borrowed);
 		final fromAbstract = selectAbstract(SwitchKey.Borrowed, borrowed);
-		return fromInt == "😀" && fromString == borrowed && fromEnum == "é😀" && fromAbstract == borrowed;
+		return fromInt == "😀" && fromString == borrowed && fromGroupedString == borrowed && classifyGroupedString("all") == 1
+			&& classifyGroupedString("any") == 1 && classifyGroupedString("other") == 2 && fromEnum == "é😀" && fromAbstract == borrowed;
 	}
 
 	/** Return an Int-subject switch result across a separate call boundary. */
@@ -213,6 +215,36 @@ final class Main {
 			case "fresh": fromCode(0xE9);
 			default: throw "unreachable-string";
 		});
+
+	/**
+		Return one value arm selected by either of two comma-separated patterns.
+
+		The two patterns share one source body. Generated C must keep that body
+		single-owned while preserving the ordinary Haxe value-switch result.
+	**/
+	static function selectGroupedString(choice:String, borrowed:String):String
+		return keep(switch choice {
+			case "borrowed", "alias": borrowed;
+			case "fresh": fromCode(0xE9);
+			default: throw "unreachable-grouped-string";
+		});
+
+	/**
+		Exercise the statement form that first exposed the shared-target graph.
+
+		Both successful spellings mutate the same local through one switch arm; the
+		fallback remains separate and then rejoins the common return.
+	**/
+	static function classifyGroupedString(choice:String):Int {
+		var result = 0;
+		switch choice {
+			case "all", "any":
+				result = 1;
+			case _:
+				result = 2;
+		}
+		return result;
+	}
 
 	/** Return an enum-subject switch result across a separate call boundary. */
 	static function selectEnum(choice:SwitchChoice, borrowed:String):String

@@ -45,7 +45,17 @@ COMMON_FILES = {
     "hxc.stdlib-report.json",
     "hxc.symbols.json",
     "meson.build",
+    "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/gc.h",
+    "runtime/include/hxrt/object.h",
+    "runtime/include/hxrt/status.h",
 }
+RUNTIME_SOURCES = (
+    "runtime/src/allocator.c",
+    "runtime/src/gc.c",
+    "runtime/src/object.c",
+)
 SPLIT_HEADERS = (
     "include/hxc/detail/program_types.h",
     "include/hxc/modules/layout/Main.h",
@@ -65,8 +75,6 @@ SPLIT_SOURCES = (
     "src/hxc/support.c",
     "src/modules/layout/Main.c",
     "src/modules/layout/math/Numbers.c",
-    "src/modules/layout/model/Left.c",
-    "src/modules/layout/model/Right.c",
     "src/modules/layout/model/SoftRecord.c",
     "src/modules/layout/model/State.c",
     "src/modules/layout/platform/Device.c",
@@ -94,9 +102,9 @@ HEADERS_BY_LAYOUT = {
     "unity": ("include/hxc/program.h",),
 }
 SOURCES_BY_LAYOUT = {
-    "split": SPLIT_SOURCES,
-    "package": PACKAGE_SOURCES,
-    "unity": ("src/program.c",),
+    "split": RUNTIME_SOURCES + SPLIT_SOURCES,
+    "package": RUNTIME_SOURCES + PACKAGE_SOURCES,
+    "unity": RUNTIME_SOURCES + ("src/program.c",),
 }
 EXPECTED_FILES = {
     layout: COMMON_FILES | set(HEADERS_BY_LAYOUT[layout]) | set(SOURCES_BY_LAYOUT[layout])
@@ -283,8 +291,15 @@ def render(
     ):
         raise LayoutFailure(f"{label} manifest does not exactly describe {layout}")
     runtime_plan = load_object(output / "hxc.runtime-plan.json", f"{label} runtime")
-    if runtime_plan.get("status") != "analyzed-runtime-free":
-        raise LayoutFailure(f"{label} unexpectedly selected runtime support")
+    if (
+        runtime_plan.get("status") != "analyzed-runtime-features"
+        or runtime_plan.get("features")
+        != ["runtime-base", "status", "alloc", "object", "gc"]
+    ):
+        raise LayoutFailure(
+            f"{label} lost the exact precise-GC feature closure required by "
+            "its mutually referential class declarations"
+        )
     if layout in ("split", "package"):
         check_type_dependencies(output, label, layout)
     return Rendered(
@@ -321,11 +336,11 @@ def check_type_dependencies(output: Path, label: str, layout: str) -> None:
     has_point_definition = f"struct {point_tag} {{" in point
     numbers_has_point_definition = f"struct {point_tag} {{" in numbers
     if (
-        phase_include not in numbers
+        phase_include in numbers
         or "model/Point.h" in numbers
-        or phase_include not in state
-        or "hxc_layout_model_Phase_Ready" not in phase
-        or "hxc_layout_model_Phase_Ready" in common
+        or phase_include in state
+        or "hxc_layout_model_Phase_Ready" in phase
+        or "hxc_layout_model_Phase_Ready" not in common
         or not has_point_definition
         or numbers_has_point_definition
         or f"struct {point_tag} " not in numbers
@@ -363,11 +378,11 @@ def check_package_type_dependencies(output: Path, label: str) -> None:
     soft_definition = model.find(f"struct {soft_record_tag} {{")
     hard_definition = model.find(f"struct {hard_record_tag} {{")
     if (
-        model_include not in numbers
+        model_include in numbers
         or f"struct {point_tag} {{" in numbers
         or f"struct {point_tag} {{" not in model
-        or "hxc_layout_model_Phase_Ready" not in model
-        or "hxc_layout_model_Phase_Ready" in common
+        or "hxc_layout_model_Phase_Ready" in model
+        or "hxc_layout_model_Phase_Ready" not in common
         or model_include in model
         or soft_definition == -1
         or hard_definition == -1
@@ -381,8 +396,8 @@ def check_package_type_dependencies(output: Path, label: str) -> None:
         or "zx" in "\n".join((numbers, model, common))
     ):
         raise LayoutFailure(
-            f"{label} lost package-local type order, cross-package hard edges, "
-            "or soft declaration forwards"
+            f"{label} lost package-local type order, shared native-enum "
+            "ownership, or soft declaration forwards"
         )
 
 
@@ -525,6 +540,7 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
         f"generated/{path}" for path in HEADERS_BY_LAYOUT[rendered.layout]
     )
     include = fixture / "generated/include"
+    runtime_include = fixture / "generated/runtime/include"
     for toolchain in resolve_toolchains(requested, repository_root=ROOT):
         for header in HEADERS_BY_LAYOUT[rendered.layout]:
             check = subprocess.run(
@@ -533,6 +549,8 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
                     *STRICT_FLAGS,
                     "-I",
                     str(include),
+                    "-I",
+                    str(runtime_include),
                     "-x",
                     "c",
                     "-fsyntax-only",
@@ -558,7 +576,7 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
             f"project-layout-{rendered.layout}-entry",
             sources,
             headers,
-            ("generated/include",),
+            ("generated/include", "generated/runtime/include"),
             "",
             (f"{rendered.layout}-layout", "generated-entry", "strict-c11"),
         )
@@ -582,7 +600,7 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
             f"project-layout-{rendered.layout}-oracle",
             (*sources, "native/harness.c"),
             (*headers, "native/entry.h", "native/method_symbols.h"),
-            ("generated/include", "native"),
+            ("generated/include", "generated/runtime/include", "native"),
             oracle,
             (f"{rendered.layout}-layout", "eval-differential", "strict-c11"),
         )
@@ -641,37 +659,50 @@ def planner_probe() -> None:
         )
 
 
-def check_invalid_layout(output: Path) -> None:
-    result = subprocess.run(
-        [
-            tool("haxe"),
-            "--cwd",
-            str(CASE),
-            BUILD_HXML.name,
-            "-D",
+def check_invalid_direct_defines(root: Path) -> None:
+    fixtures = (
+        (
+            "project-layout",
             "hxc_project_layout=invalid",
-            "--custom-target",
-            f"c={output}",
-        ],
-        cwd=ROOT,
-        env=environment("C", server=False),
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=60,
+            "invalid hxc_project_layout `invalid`; expected split, package, or unity",
+        ),
+        (
+            "symbol-report",
+            "hxc_symbol_report=invalid",
+            "invalid hxc_symbol_report `invalid`; expected full or summary",
+        ),
     )
-    combined = result.stdout + result.stderr
-    if (
-        result.returncode != 1
-        or "HXC0003" not in combined
-        or "invalid hxc_project_layout `invalid`; expected split, package, or unity"
-        not in combined
-        or list(output.rglob("*"))
-    ):
-        raise LayoutFailure(
-            "invalid project-layout define did not fail closed without output\n"
-            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    for label, define, expected in fixtures:
+        output = root / label
+        result = subprocess.run(
+            [
+                tool("haxe"),
+                "--cwd",
+                str(CASE),
+                BUILD_HXML.name,
+                "-D",
+                define,
+                "--custom-target",
+                f"c={output}",
+            ],
+            cwd=ROOT,
+            env=environment("C", server=False),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
+        combined = result.stdout + result.stderr
+        if (
+            result.returncode != 1
+            or "HXC0003" not in combined
+            or expected not in combined
+            or list(output.rglob("*"))
+        ):
+            raise LayoutFailure(
+                f"invalid {label} define did not fail closed without output\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
 
 
 def main() -> int:
@@ -682,7 +713,7 @@ def main() -> int:
         planner_probe()
         with tempfile.TemporaryDirectory(prefix="hxc-project-layout-") as temporary:
             root = Path(temporary)
-            check_invalid_layout(root / "invalid")
+            check_invalid_direct_defines(root / "invalid")
             expected = oracle()
             first = {
                 layout: render(root / layout, layout, f"first {layout} render")

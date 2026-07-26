@@ -311,9 +311,11 @@ validated partial/initialized cleanup edges. A nonescaping parent may also own
 a `final` child object directly in its C struct: HxcIR records the child as a
 by-value instance, definition planning emits the child first, and uses of its
 address remain parent-bound borrows. Locals and owned children select no
-runtime, while aliases, escapes, reassignment, recursive direct layouts, and
-fallible child construction remain fail-closed; see [bounded constructor
-lowering](constructor-lowering.md).
+runtime, while aliases, escapes, reassignment, and recursive direct layouts
+remain fail-closed. A fallible inline child propagates the constructor status
+and participates in recursive partial-parent cleanup. Persistent concrete-class
+fields instead promote their object graph to exact collector storage; see
+[bounded constructor lowering](constructor-lowering.md).
 Direct constructor and `super` calls also settle omitted trailing defaults
 before HxcIR. The validator therefore sees only one fixed-arity direct call and
 can reject a missing or mistyped value before CAST chooses C syntax. Non-managed
@@ -739,7 +741,7 @@ artifact read for an empty plan.
 
 The schema-3 feature catalog also owns each feature's semantic contract,
 selection roots, rejected direct/local alternatives, executable evidence,
-internal runtime ABI 0.12.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
+internal runtime ABI 0.13.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
 rechecks those bytes, and the sorted source set has one aggregate digest. Every
 nonempty closure contains `runtime-base`; generated private headers therefore
 emit a structural same-major assertion against `HXC_RUNTIME_ABI_MAJOR`. Empty

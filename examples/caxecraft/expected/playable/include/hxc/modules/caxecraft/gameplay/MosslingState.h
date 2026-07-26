@@ -2,7 +2,6 @@
 #define HXC_CAXECRAFT_GAMEPLAY_MOSSLING_STATE_H_INCLUDED
 
 #include "hxc/detail/program_types.h"
-#include "hxc/modules/caxecraft/gameplay/MosslingMode.h"
 
 struct hxc_caxecraft_gameplay_MosslingState {
   int32_t hxc_health;

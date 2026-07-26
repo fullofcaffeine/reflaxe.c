@@ -1,10 +1,23 @@
 #ifndef HXC_PROGRAM_H_INCLUDED
 #define HXC_PROGRAM_H_INCLUDED
 
+#include <hxrt/gc.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+typedef char hxc_runtime_abi_major_must_match[HXC_RUNTIME_ABI_MAJOR == 0U ? 1 : -1];
+
+extern struct hxc_gc hxc_program_gc;
+
+extern struct hxc_gc_thread hxc_program_gc_thread;
+
+extern const struct hxc_type_descriptor hxc_MiddleRecord_descriptor;
+
+extern const struct hxc_type_descriptor hxc_LeafRecord_descriptor;
+
+extern const struct hxc_type_descriptor hxc_RootRecord_descriptor;
 
 static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {

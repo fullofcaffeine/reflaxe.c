@@ -19,7 +19,6 @@
     "test/constructor_lowering/fixtures/borrowed_return/Main.hx",
     "test/constructor_lowering/fixtures/escape_alias/Main.hx",
     "test/constructor_lowering/fixtures/escape_return/Main.hx",
-    "test/constructor_lowering/fixtures/escape_self/Main.hx",
     "test/constructor_lowering/fixtures/generic/Main.hx",
     "test/constructor_lowering/fixtures/native_layout/Main.hx",
     "test/constructor_lowering/fixtures/owned_fallible/Main.hx",

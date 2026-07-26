@@ -120,6 +120,26 @@ PLAYABLE_SNAPSHOT_FORMATS = {
 }
 RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items", "adventure-items", "adventure-terrain", "entities", "terrain")
 RUNTIME_ASSET_REPORT = "caxecraft-runtime-assets.json"
+# Caxecraft deliberately uses ordinary Haxe Array, String, Map, enum, and
+# escaping-class APIs. The compiler must therefore select this exact
+# dependency-closed hxrt slice under `hxc_runtime=auto`; the separate metal
+# fixtures retain the zero-runtime proof.
+EXPECTED_PLAY_RUNTIME_FEATURES = (
+    "runtime-base",
+    "status",
+    "alloc",
+    "array",
+    "string-literal",
+    "string-scalar",
+    "string",
+    "array-join",
+    "bytes",
+    "object",
+    "gc",
+    "int-map",
+    "string-map",
+    "string-split",
+)
 RUNTIME_CONTENT_FILES = (
     "locales/ui.json",
     "packs/caxecraft/base/content.json",
@@ -417,11 +437,21 @@ def verify_level_adapter_provenance() -> None:
 
 
 def run(arguments: list[str], *, cwd: Path, timeout: int, label: str) -> subprocess.CompletedProcess[str]:
+    """Run one checked tool without changing the developer's Haxe-server policy.
+
+    In particular, the interactive play path must not force
+    ``HAXE_NO_SERVER=1``. The local HaxeShim can reuse its pinned compilation
+    server, which avoids paying the complete Haxe frontend startup cost after
+    every game edit. Cold-process and warm-server parity remain separate,
+    explicitly isolated test lanes; this launcher respects an explicit
+    ``HAXE_NO_SERVER`` value when a developer supplies one.
+    """
+
     try:
         result = subprocess.run(
             arguments,
             cwd=cwd,
-            env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
+            env={**os.environ, "LC_ALL": "C"},
             check=False,
             capture_output=True,
             text=True,
@@ -1143,7 +1173,28 @@ def compile_haxe(
         arguments.extend(["-D", "caxecraft_pilot", "-D", pilot_define])
     arguments.extend(["--custom-target", f"c={generated}"])
     run(arguments, cwd=ROOT, timeout=120, label="Caxecraft Haxe-to-C compile")
+    return validate_compiled_haxe(
+        generated,
+        layout=layout,
+        pilot=pilot,
+        renderer=renderer,
+    )
 
+
+def validate_compiled_haxe(
+    generated: Path,
+    *,
+    layout: str,
+    pilot: str | None,
+    renderer: str,
+) -> dict[str, object]:
+    """Validate a complete generated project without invoking Haxe again.
+
+    Normal play calls this immediately after compilation. The explicit
+    ``--build-only`` path also uses it before native compilation, which makes
+    generated-project reuse fail closed without turning a C-link iteration
+    into another expensive Haxe compiler run.
+    """
     manifest = load_object(generated / "hxc.manifest.json", "generated Caxecraft manifest")
     runtime_plan = load_object(generated / "hxc.runtime-plan.json", "generated Caxecraft runtime plan")
     configuration = manifest.get("configuration")
@@ -1156,8 +1207,39 @@ def compile_haxe(
         or build.get("artifact") != {"targetName": "hxc_program", "kind": "executable"}
     ):
         raise PlayFailure("generated Caxecraft manifest does not describe a direct executable")
-    if runtime_plan.get("selectedFeatures") != [] or runtime_plan.get("artifacts") != []:
-        raise PlayFailure("Caxecraft unexpectedly selected hxrt")
+    selected = runtime_plan.get("selectedFeatures")
+    selected_ids = (
+        [item.get("id") for item in selected if isinstance(item, dict)]
+        if isinstance(selected, list)
+        else []
+    )
+    selected_well_formed = isinstance(selected, list) and len(selected_ids) == len(selected)
+    if (
+        runtime_plan.get("schemaVersion") != 2
+        or runtime_plan.get("algorithm") != "hxc-runtime-plan-v2"
+        or runtime_plan.get("status") != "analyzed-runtime-features"
+        or runtime_plan.get("planPurpose") != "compiler-program"
+        or runtime_plan.get("requestedPolicy") != "auto"
+        or runtime_plan.get("resolvedPolicy") != "auto"
+        or runtime_plan.get("policyProvenance") != "direct-define:hxc_runtime"
+        or runtime_plan.get("noRuntimeProof") is not None
+        or runtime_plan.get("features") != list(EXPECTED_PLAY_RUNTIME_FEATURES)
+        or selected_ids != list(EXPECTED_PLAY_RUNTIME_FEATURES)
+        or not selected_well_formed
+    ):
+        raise PlayFailure(
+            "generated Caxecraft runtime plan lost its reviewed ordinary-Haxe feature closure"
+        )
+    runtime_artifacts = runtime_plan.get("artifacts")
+    if (
+        not isinstance(runtime_artifacts, list)
+        or not runtime_artifacts
+        or any(
+            not isinstance(path, str) or not path.startswith("runtime/")
+            for path in runtime_artifacts
+        )
+    ):
+        raise PlayFailure("generated Caxecraft runtime plan omitted its owned hxrt artifacts")
     validate_generated_playable(generated, layout=layout, pilot=pilot, renderer=renderer)
     return manifest
 
@@ -1186,13 +1268,35 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         entry = entry_path.read_text(encoding="utf-8")
         if "InitWindow(" in entry or "WindowShouldClose(" in entry:
             raise PlayFailure("generated Caxecraft Main regained native application lifetime")
-        if len(entry.splitlines()) > 30:
-            raise PlayFailure("generated Caxecraft Main is no longer a small executable handoff")
-        for required in ("CaxecraftApp", "_run("):
-            if required not in entry:
-                raise PlayFailure(
-                    f"generated Caxecraft Main omitted application handoff {required!r}"
-                )
+        constructor = "hxc_compiler_constructor_caxecraft_app_CaxecraftApp("
+        run_method = "hxc_caxecraft_app_CaxecraftApp_run("
+        if entry.count(constructor) != 1 or entry.count(run_method) != 1:
+            raise PlayFailure(
+                "generated Caxecraft Main must construct one application and hand off to run once"
+            )
+        # A managed application needs compiler-owned allocation and exact-root
+        # bookkeeping before and after the handoff. Line count therefore is not
+        # a useful measure of whether Main has absorbed gameplay. Instead, admit
+        # only the entry point and CaxecraftApp identities here; another
+        # Caxecraft type would prove that application work leaked back into Main.
+        application_symbols = set(
+            re.findall(r"\bhxc_(?:compiler_constructor_)?caxecraft_[A-Za-z0-9_]+", entry)
+        )
+        allowed_application_symbols = {
+            "hxc_caxecraft_app_Main_main",
+            "hxc_caxecraft_app_CaxecraftApp",
+            "hxc_caxecraft_app_CaxecraftApp_descriptor",
+            "hxc_caxecraft_app_CaxecraftApp_run",
+            "hxc_compiler_constructor_caxecraft_app_CaxecraftApp",
+        }
+        unexpected_application_symbols = sorted(
+            application_symbols - allowed_application_symbols
+        )
+        if unexpected_application_symbols:
+            raise PlayFailure(
+                "generated Caxecraft Main absorbed application work through "
+                + ", ".join(unexpected_application_symbols)
+            )
         app_header_relative = "include/hxc/modules/caxecraft/app/CaxecraftApp.h"
         app_header_path = generated / app_header_relative
         if not app_header_path.is_file():
@@ -1417,7 +1521,11 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         raise PlayFailure(
             f"generated Caxecraft sources contain {billboard_count} direct DrawBillboardRec call sites; expected three typed atlas borrows"
         )
-    for forbidden in (r"\bgoto\b", r"\bmalloc\s*\(", r"\bcalloc\s*\(", r"\brealloc\s*\(", r"\bfree\s*\(", r"\bhxrt_"):
+    # Application code may call the exact compiler-selected `hxrt_*` API for
+    # ordinary Haxe semantics. It must not bypass that typed ownership boundary
+    # with direct allocation, and structured Haxe control flow must remain
+    # structured C rather than becoming compiler-generated `goto`.
+    for forbidden in (r"\bgoto\b", r"\bmalloc\s*\(", r"\bcalloc\s*\(", r"\brealloc\s*\(", r"\bfree\s*\("):
         if re.search(forbidden, combined):
             raise PlayFailure(f"generated Caxecraft sources contain forbidden pattern {forbidden}")
 
@@ -1756,6 +1864,17 @@ def compile_native(
     if not isinstance(build, dict):
         raise PlayFailure("generated Caxecraft manifest omitted its build plan")
     source_values = text_array(build.get("sources"), "generated Caxecraft sources")
+    include_values = text_array(
+        build.get("includeDirectories"),
+        "generated Caxecraft include directories",
+    )
+    generated_include_directories: list[Path] = []
+    for index, include_value in enumerate(include_values):
+        relative = validated_relative(include_value, f"generated include directory {index}")
+        directory = generated.joinpath(*relative.parts)
+        if not directory.is_dir():
+            raise PlayFailure(f"generated include directory is missing: {include_value}")
+        generated_include_directories.append(directory)
     object_root = output.parent / "obj"
     if object_root.exists():
         shutil.rmtree(object_root)
@@ -1772,13 +1891,17 @@ def compile_native(
             *STRICT_FLAGS,
             f"-O{optimization}",
             *native_sanitizer_flags,
-            "-I",
-            str(generated / "include"),
-            "-I",
-            str(include_directory),
-            "-I",
-            str(raygui_include_directory),
         ]
+        for generated_include_directory in generated_include_directories:
+            compile_arguments.extend(["-I", str(generated_include_directory)])
+        compile_arguments.extend(
+            [
+                "-I",
+                str(include_directory),
+                "-I",
+                str(raygui_include_directory),
+            ]
+        )
         compile_arguments.extend(
             [
                 "-c",
@@ -1936,18 +2059,28 @@ def main(argv: list[str]) -> int:
         )
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
-        manifest = compile_haxe(
-            generated,
-            layout=args.layout,
-            platform_name=platform_name,
-            raylib_configuration=args.raylib_configuration,
-            pilot=selected_pilot,
-            renderer=args.renderer,
-            benchmark_renderer=args.benchmark_renderer,
-        )
-        print(f"caxecraft: generated {args.layout} C project at {generated}")
+        if args.build_only:
+            verify_level_adapter_provenance()
+            manifest = validate_compiled_haxe(
+                generated,
+                layout=args.layout,
+                pilot=selected_pilot,
+                renderer=args.renderer,
+            )
+            print(f"caxecraft: reusing validated {args.layout} C project at {generated}")
+        else:
+            manifest = compile_haxe(
+                generated,
+                layout=args.layout,
+                platform_name=platform_name,
+                raylib_configuration=args.raylib_configuration,
+                pilot=selected_pilot,
+                renderer=args.renderer,
+                benchmark_renderer=args.benchmark_renderer,
+            )
+            print(f"caxecraft: generated {args.layout} C project at {generated}")
         if args.compile_only:
-            print("caxecraft: compile-only proof passed (direct C, empty hxrt plan)")
+            print("caxecraft: compile-only proof passed (direct C with reviewed selective hxrt plan)")
             return 0
 
         prebuilt_values = (args.prebuilt_raylib_cache, args.prebuilt_raylib_build, args.prebuilt_raylib_report)

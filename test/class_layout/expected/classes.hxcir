@@ -5,20 +5,20 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
   type "type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" name="EmptyLeaf" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":2:1-2:37
     class-layout base="instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" header=none
   type "type.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" name="MiddleRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":8:1-10:2
-    class-layout base="instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" header=none
+    class-layout base="instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" header=runtime("gc")
     field "enabled" type=bool mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":9:2-9:26
   type "type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" name="LeafRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":12:1-15:2
-    class-layout base="instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" header=none
+    class-layout base="instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" header=runtime("gc")
     field "score" type=f64 mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":13:2-13:25
     field "peer" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":14:2-14:29
   type "type.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" name="RootRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":4:1-6:2
-    class-layout base=none header=none
+    class-layout base=none header=runtime("gc")
     field "rootValue" type=i32 mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":5:2-5:27
   instance "instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" declaration="type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-1:19
   instance "instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" declaration="type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":2:1-2:37
-  instance "instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" declaration="type.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":8:1-10:2
-  instance "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" declaration="type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":12:1-15:2
-  instance "instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" declaration="type.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":4:1-6:2
+  instance "instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" declaration="type.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":8:1-10:2
+  instance "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" declaration="type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":12:1-15:2
+  instance "instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" declaration="type.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":4:1-6:2
   function "function.ClassLayoutFixture.asEmptyBase" name="ClassLayoutFixture.asEmptyBase" returns=pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":80:57-82:3
     parameter "parameter.0" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":80:57-82:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":80:57-82:3
@@ -27,6 +27,8 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.asEmptyBase"
   function "function.ClassLayoutFixture.asMiddle" name="ClassLayoutFixture.asMiddle" returns=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":72:58-74:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":72:58-74:3
+    managed-root "root.1" value="value.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":73:10-73:15
     parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":72:58-74:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":72:58-74:3
       instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) convert value="parameter.0" kind=representation target=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) implementation=static failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":73:10-73:15
@@ -34,6 +36,8 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.asMiddle"
   function "function.ClassLayoutFixture.asRoot" name="ClassLayoutFixture.asRoot" returns=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":76:54-78:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":76:54-78:3
+    managed-root "root.1" value="value.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":77:10-77:15
     parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":76:54-78:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":76:54-78:3
       instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) convert value="parameter.0" kind=representation target=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) implementation=static failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":77:10-77:15
@@ -41,8 +45,10 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.asRoot"
   function "function.ClassLayoutFixture.branchProofDoesNotEscape" name="ClassLayoutFixture.branchProofDoesNotEscape" returns=i32 failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
-    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
+    managed-root "root.1" value="parameter.1" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
+    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
     parameter "parameter.2" type=bool ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
     local "local.3" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":64:3-64:18
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":63:98-70:3
@@ -74,15 +80,19 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "block.2.if-join"
   end function "function.ClassLayoutFixture.branchProofDoesNotEscape"
   function "function.ClassLayoutFixture.different" name="ClassLayoutFixture.different" returns=bool failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
-    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
+    managed-root "root.1" value="parameter.1" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
+    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":88:68-90:3
       instruction "instruction.0.class-reference-equality" result="value.0":bool binary operation="haxe.class-reference.not-equal" left="parameter.0" right="parameter.1" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":89:10-89:23
       terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":89:3-89:23
     end block "entry"
   end function "function.ClassLayoutFixture.different"
   function "function.ClassLayoutFixture.isNull" name="ClassLayoutFixture.isNull" returns=bool failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":92:48-94:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":92:48-94:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":92:48-94:3
+    managed-root "root.1" value="value.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":93:19-93:23
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":92:48-94:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":92:48-94:3
       instruction "instruction.0.null-reference" result="value.0":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":93:19-93:23
       instruction "instruction.1.class-reference-equality" result="value.1":bool binary operation="haxe.class-reference.equal" left="parameter.0" right="value.0" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":93:10-93:23
@@ -90,6 +100,20 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.isNull"
   function "function.ClassLayoutFixture.main" name="ClassLayoutFixture.main" returns=void failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":96:30-103:3
+    managed-root "root.0" value="value.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":97:25-97:29
+    managed-root "root.1" value="value.1" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":98:32-98:36
+    managed-root "root.2" value="value.2" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":98:25-98:37
+    managed-root "root.3" value="value.3" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":99:38-99:42
+    managed-root "root.4" value="value.4" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":99:29-99:43
+    managed-root "root.5" value="value.8" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:12-102:16
+    managed-root "root.6" value="value.9" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:20-102:24
+    managed-root "root.7" value="value.11" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:28-102:34
+    managed-root "root.8" value="value.12" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:38-102:42
+    managed-root "root.9" value="value.19" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:72-102:76
+    managed-root "root.10" value="value.20" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:78-102:82
+    managed-root "root.11" value="value.23" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:98-102:102
+    managed-root "root.12" value="value.24" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:104-102:108
+    managed-root "root.13" value="value.28" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:120-102:124
     local "local.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":97:3-97:30
     local "local.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":98:3-98:38
     local "local.2" type=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":99:3-99:44
@@ -191,7 +215,8 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "block.9.short-circuit-rhs"
   end function "function.ClassLayoutFixture.main"
   function "function.ClassLayoutFixture.readInherited" name="ClassLayoutFixture.readInherited" returns=i32 failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":23:10-23:15
       instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.0"),"rootValue") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":23:10-23:25
@@ -199,7 +224,9 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.readInherited"
   function "function.ClassLayoutFixture.readPeer" name="ClassLayoutFixture.readPeer" returns=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
+    managed-root "root.1" value="value.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":36:10-36:20
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":36:10-36:15
       instruction "instruction.1.class-field-load" result="value.0":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) load place=field(dereference("parameter.0"),"peer") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":36:10-36:20
@@ -207,7 +234,8 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.readPeer"
   function "function.ClassLayoutFixture.readRoot" name="ClassLayoutFixture.readRoot" returns=i32 failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":19:10-19:15
       instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.0"),"rootValue") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":19:10-19:25
@@ -215,7 +243,8 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.readRoot"
   function "function.ClassLayoutFixture.readScore" name="ClassLayoutFixture.readScore" returns=f64 failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":32:10-32:15
       instruction "instruction.1.class-field-load" result="value.0":f64 load place=field(dereference("parameter.0"),"score") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":32:10-32:21
@@ -223,15 +252,18 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.readScore"
   function "function.ClassLayoutFixture.same" name="ClassLayoutFixture.same" returns=bool failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
-    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
+    managed-root "root.1" value="parameter.1" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
+    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":84:63-86:3
       instruction "instruction.0.class-reference-equality" result="value.0":bool binary operation="haxe.class-reference.equal" left="parameter.0" right="parameter.1" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":85:10-85:23
       terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":85:3-85:23
     end block "entry"
   end function "function.ClassLayoutFixture.same"
   function "function.ClassLayoutFixture.sumAcrossBranch" name="ClassLayoutFixture.sumAcrossBranch" returns=f64 failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:73-54:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:73-54:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:73-54:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:73-54:3
     parameter "parameter.1" type=bool ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:73-54:3
     local "local.2" type=f64 ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":50:3-50:37
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:73-54:3
@@ -257,7 +289,8 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "block.1.if-join"
   end function "function.ClassLayoutFixture.sumAcrossBranch"
   function "function.ClassLayoutFixture.writeInherited" name="ClassLayoutFixture.writeInherited" returns=i32 failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
     parameter "parameter.1" type=i32 ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":27:3-27:8
@@ -267,7 +300,10 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     end block "entry"
   end function "function.ClassLayoutFixture.writeInherited"
   function "function.ClassLayoutFixture.writePeer" name="ClassLayoutFixture.writePeer" returns=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
-    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=borrowed-class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
+    managed-root "root.1" value="parameter.1" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
+    managed-root "root.2" value="value.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":41:10-41:20
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
     parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":40:3-40:8

@@ -202,6 +202,31 @@ HXC_API hxc_status hxc_array_set_copy(
 /** Destroy one element and shift its suffix left without allocation. */
 HXC_API hxc_status hxc_array_remove_at(hxc_array *array, size_t index);
 
+/**
+ * Move the last live element into uninitialized caller-owned storage.
+ *
+ * An empty valid Array is not an error: it leaves `out_element` unchanged and
+ * writes `false` to `out_present` when that pointer is supplied. A non-empty
+ * Array copies the last element's representation bytes into `out_element`,
+ * shortens the Array, and then writes `true`. It deliberately does not call the
+ * element copy or destroy callbacks. The caller receives the existing logical
+ * owner instead of creating a second owner and destroying the first one.
+ *
+ * This byte move is safe because every admitted Array element representation
+ * is required to remain valid when moved to another correctly aligned address.
+ * `out_element` must name separate, correctly aligned, uninitialized storage
+ * large enough for one element. It must not point at live Array storage.
+ *
+ * `out_present` may be null when the element representation itself has an
+ * exact absent value, such as a null pointer. Generated code initializes that
+ * output to the correct Haxe absent value before calling this function.
+ */
+HXC_API hxc_status hxc_array_pop_move(
+  hxc_array *array,
+  void *out_element,
+  bool *out_present
+);
+
 /** Transfer a valid owner and reset the source to `HXC_ARRAY_INITIALIZER`. */
 HXC_API hxc_status hxc_array_move(
   hxc_array *source,
@@ -320,6 +345,19 @@ HXC_API hxc_status hxc_array_ref_get_copy(
   const hxc_array_ref *array,
   size_t index,
   void *out_element
+);
+
+/**
+ * Remove the last element from one shared Haxe Array identity.
+ *
+ * This is the reference-wrapper form of `hxc_array_pop_move`. Aliases observe
+ * the shorter length, and a present element moves into the caller's output
+ * without an extra retain, copy, release, or allocation.
+ */
+HXC_API hxc_status hxc_array_ref_pop_move(
+  hxc_array_ref *array,
+  void *out_element,
+  bool *out_present
 );
 
 /** Append one trivial element and return the new Haxe Int length. */

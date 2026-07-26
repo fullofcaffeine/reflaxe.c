@@ -444,9 +444,9 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise EvaluationOrderFailure("value-coalescing adversarial proof drifted")
     control_flow_proof = required_text(report, "controlFlowPlanProof")
     if control_flow_proof != (
-        "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
+        "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
         "maximal-and-nested-irreducible-fallback;"
-        "overlapping-normal-join-malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected"
+        "malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected"
     ):
         raise EvaluationOrderFailure("control-flow plan proof contract drifted")
     goto_provenance = control_flow_goto_provenance(report)

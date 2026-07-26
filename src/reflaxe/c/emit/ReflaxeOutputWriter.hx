@@ -40,7 +40,11 @@ class ReflaxeOutputWriter {
 		files.sort(compareFiles);
 		var previous:Null<String> = null;
 		for (file in files) {
-			file.verifyIntegrity();
+			// `GeneratedFile` validates and hashes its final String in the
+			// constructor. Both fields are immutable, so hashing the complete
+			// content again here cannot discover an intervening typed mutation.
+			// Avoiding that duplicate pass matters for large audit sidecars while
+			// preserving the exact content address used by the manifest below.
 			if (previous == file.relativePath) {
 				fail('duplicate generated artifact path `${file.relativePath}`', [file.relativePath]);
 			}

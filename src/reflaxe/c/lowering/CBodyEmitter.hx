@@ -190,6 +190,10 @@ class CBodyEmitter {
 	final classEmptyAnchors:Map<String, CIdentifier> = [];
 	final classFieldNames:Map<String, CIdentifier> = [];
 	final classFieldTypes:Map<String, HxcIRTypeRef> = [];
+
+	/** Exact by-value class child for fields whose lifetime is the parent's. */
+	final classOwnedFieldInstances:Map<String, String> = [];
+
 	final classFieldOrder:Map<String, Array<String>> = [];
 	final classInstanceOrder:Array<String> = [];
 	final classesByInstance:Map<String, CLoweredBodyClass> = [];
@@ -346,8 +350,12 @@ class CBodyEmitter {
 				final order:Array<String> = [];
 				for (field in value.fields) {
 					order.push(field.prepared.name);
-					classFieldNames.set(classFieldKey(instanceId, field.prepared.name), field.cName);
-					classFieldTypes.set(classFieldKey(instanceId, field.prepared.name), field.prepared.type.irType);
+					final key = classFieldKey(instanceId, field.prepared.name);
+					classFieldNames.set(key, field.cName);
+					classFieldTypes.set(key, field.prepared.type.irType);
+					final ownedChild = field.prepared.type.ownedClassValue();
+					if (ownedChild != null)
+						classOwnedFieldInstances.set(key, ownedChild.instanceId);
 				}
 				classFieldOrder.set(instanceId, order);
 			}
@@ -486,6 +494,9 @@ class CBodyEmitter {
 		validateConstructionCleanupRegions(fn);
 		final resolvedSpanLengthNames:Map<String, CIdentifier> = spanLengthNames == null ? [] : spanLengthNames;
 		final coalescing = new CBodyValueCoalescingPlanner().plan(fn);
+		final controlFlowTimer = CPhaseTiming.startDetail(CDTBodyControlFlowPlanning);
+		final plan = new CBodyControlFlowPlanner().plan(fn);
+		CPhaseTiming.stopDetail(controlFlowTimer);
 		final statements:Array<CStmt> = [];
 		final state:CBodyEmissionState = {
 			values: [],
@@ -515,7 +526,7 @@ class CBodyEmitter {
 			terminatedByTailLoop: false
 		};
 		prepareManagedRootFrame(statements, state, fn);
-		prepareHoistedCleanupLocals(statements, state, fn);
+		prepareHoistedCleanupLocals(statements, state, fn, plan);
 		for (parameter in fn.parameters) {
 			final name = requireParameterName(parameterNames, parameter.id, fn.id);
 			state.values.set(parameter.id, EIdentifier(name));
@@ -533,9 +544,6 @@ class CBodyEmitter {
 			}
 		}
 		CPhaseTiming.stopDetail(setupTimer);
-		final controlFlowTimer = CPhaseTiming.startDetail(CDTBodyControlFlowPlanning);
-		final plan = new CBodyControlFlowPlanner().plan(fn);
-		CPhaseTiming.stopDetail(controlFlowTimer);
 		final emissionTimer = CPhaseTiming.startDetail(CDTBodyCASTEmission);
 		switch plan {
 			case CCFStructured(root, labeledTargets):
@@ -558,20 +566,25 @@ class CBodyEmitter {
 	}
 
 	/**
-		Hoist a cleanup-owned local whose initializer lives below the entry block.
+		Hoist a local whose lifetime or shared abrupt tail crosses a C block.
 
 		HxcIR locals belong to the whole function even when structured C places an
 		`if`, switch, or loop around their initializing instruction. A return or
 		failure edge inside that region may run the typed cleanup action. Declaring
 		the C local only inside the nested block would then make shared cleanup code
-		name an out-of-scope identifier. Hoisting only those cleanup-owned locals
-		keeps ordinary locals narrow while giving every legal cleanup edge one C
-		declaration. The inert `{0}` initializer keeps strict C/C++ definite-use
-		analysis honest on sibling paths; HxcIR still decides whether a cleanup step
-		runs, and every admitted runtime/lifecycle release treats that zero state as
-		empty. The source initializer becomes an assignment at its original position.
+		name an out-of-scope identifier. A merged abrupt tail has a second reason:
+		structured C repeats that return/throw tail at each exclusive incoming edge,
+		so its locals also need one function-owned declaration and one assignment per
+		rendered path.
+
+		Hoisting only cleanup-owned locals and locals initialized by a
+		multiple-predecessor abrupt block keeps ordinary locals narrow. The inert
+		`{0}` initializer keeps strict C/C++ definite-use analysis honest on sibling
+		paths; HxcIR still decides whether a cleanup step runs, and every admitted
+		runtime/lifecycle release treats that zero state as empty. The source
+		initializer becomes an assignment at its original position.
 	**/
-	function prepareHoistedCleanupLocals(statements:Array<CStmt>, state:CBodyEmissionState, fn:HxcIRFunction):Void {
+	function prepareHoistedCleanupLocals(statements:Array<CStmt>, state:CBodyEmissionState, fn:HxcIRFunction, plan:CBodyControlFlowPlan):Void {
 		final initializedOutsideEntry:Map<String, Bool> = [];
 		for (block in fn.blocks) {
 			if (block.id == fn.entryBlockId)
@@ -584,10 +597,11 @@ class CBodyEmitter {
 				}
 		}
 		final cleanupLocals = cleanupReferencedLocalIds(fn);
+		final sharedAbruptLocals = sharedAbruptInitializedLocalIds(fn, plan);
 		final candidates:Array<String> = [];
-		for (localId in cleanupLocals.keys())
-			if (initializedOutsideEntry.exists(localId))
-				candidates.push(localId);
+		for (local in fn.locals)
+			if (initializedOutsideEntry.exists(local.id) && (cleanupLocals.exists(local.id) || sharedAbruptLocals.exists(local.id)))
+				candidates.push(local.id);
 		candidates.sort(compareUtf8);
 		for (localId in candidates) {
 			final local = requireLocal(fn, localId);
@@ -604,6 +618,65 @@ class CBodyEmitter {
 			state.declared.set(localId, true);
 			state.hoistedLocals.set(localId, true);
 		}
+	}
+
+	/**
+		Find locals initialized by a return/throw/unreachable block with several predecessors.
+
+		Such a block is one semantic HxcIR tail but may be rendered in several
+		mutually exclusive structured-C branches. The returned set lets the normal
+		hoisting path declare each local once before those copies are emitted.
+	**/
+	static function sharedAbruptInitializedLocalIds(fn:HxcIRFunction, plan:CBodyControlFlowPlan):Map<String, Bool> {
+		final sharedTargets:Map<String, Bool> = [];
+		function visitRegion(region:CBodyControlFlowRegion):Void {
+			switch region.completion {
+				case CFCSharedAbrupt(_, targetBlockId):
+					sharedTargets.set(targetBlockId, true);
+				case _:
+			}
+			for (node in region.nodes)
+				switch node {
+					case CFNBlock(_):
+					case CFNIf(_, _, whenTrue, whenFalse, _):
+						visitRegion(whenTrue);
+						visitRegion(whenFalse);
+					case CFNWhile(_, _, _, _, condition, body, _):
+						visitRegion(condition);
+						visitRegion(body);
+					case CFNDoWhile(_, _, _, _, body, condition, _):
+						visitRegion(body);
+						visitRegion(condition);
+					case CFNSwitch(_, _, arms, _) | CFNTagSwitch(_, _, arms, _):
+						for (arm in arms)
+							visitRegion(arm.body);
+				}
+		}
+		switch plan {
+			case CCFStructured(root, _):
+				visitRegion(root);
+			case CCFLegacyIrreducible(_):
+		}
+
+		final result:Map<String, Bool> = [];
+		for (block in fn.blocks) {
+			if (!sharedTargets.exists(block.id))
+				continue;
+			final terminator = block.terminator;
+			if (terminator == null)
+				fail('shared abrupt target `${block.id}` in `${fn.id}` lost its terminator');
+			switch terminator.kind {
+				case IRTReturn(_, _) | IRTThrow(_, _) | IRTUnreachable:
+					for (instruction in block.instructions)
+						switch instruction.kind {
+							case IRIOInitialize(IRPLocal(localId), _, IRISUninitialized, IRISInitialized):
+								result.set(localId, true);
+							case _:
+						}
+				case _:
+			}
+		}
+		return result;
 	}
 
 	/**
@@ -756,27 +829,31 @@ class CBodyEmitter {
 		for (block in fn.blocks) {
 			if (block.terminator == null)
 				continue;
-			final targets:Array<String> = switch block.terminator.kind {
-				case IRTJump(edge): [edge.targetBlockId];
-				case IRTBranch(_, whenTrue, whenFalse): [whenTrue.targetBlockId, whenFalse.targetBlockId];
-				case IRTSwitch(_, cases, defaultEdge): cases.map(item -> item.edge.targetBlockId).concat([defaultEdge.targetBlockId]);
-				case IRTTagSwitch(_, cases, defaultEdge):
-					final values = cases.map(item -> item.edge.targetBlockId);
-					if (defaultEdge != null)
-						values.push(defaultEdge.targetBlockId);
-					values;
-				case IRTThrow(_, failure):
-					switch failure.target {
-						case IRFTBlock(target): [target];
-						case IRFTPropagate | IRFTAbort: [];
-					}
-				case IRTReturn(_, _) | IRTUnreachable: [];
-			};
+			final targets = terminatorTargetIds(block.terminator.kind);
 			if (targets.indexOf(targetBlockId) != -1)
 				return true;
 		}
 		return false;
 	}
+
+	/** Return the explicit block edges owned by one validated HxcIR terminator. */
+	static function terminatorTargetIds(kind:HxcIRTerminatorKind):Array<String>
+		return switch kind {
+			case IRTJump(edge): [edge.targetBlockId];
+			case IRTBranch(_, whenTrue, whenFalse): [whenTrue.targetBlockId, whenFalse.targetBlockId];
+			case IRTSwitch(_, cases, defaultEdge): cases.map(item -> item.edge.targetBlockId).concat([defaultEdge.targetBlockId]);
+			case IRTTagSwitch(_, cases, defaultEdge):
+				final values = cases.map(item -> item.edge.targetBlockId);
+				if (defaultEdge != null)
+					values.push(defaultEdge.targetBlockId);
+				values;
+			case IRTThrow(_, failure):
+				switch failure.target {
+					case IRFTBlock(target): [target];
+					case IRFTPropagate | IRFTAbort: [];
+				}
+			case IRTReturn(_, _) | IRTUnreachable: [];
+		};
 
 	/** Emit one already-validated structural region without rediscovering CFG facts. */
 	function emitRegion(statements:Array<CStmt>, region:CBodyControlFlowRegion, state:CBodyEmissionState, fn:HxcIRFunction):Bool {
@@ -893,6 +970,18 @@ class CBodyEmitter {
 			case CFCContinue(ownerBlockId, _):
 				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
 				statements.push(SContinue);
+			case CFCSharedAbrupt(_, targetBlockId):
+				final target = requireBlock(fn, targetBlockId);
+				// The control-flow validator admits only return/throw/unreachable
+				// targets here. Re-emitting that bounded tail keeps reducible Haxe
+				// flow as ordinary structured C instead of manufacturing a goto.
+				final terminatedByCall = emitBlockInstructions(statements, target, state, fn, false);
+				if (!terminatedByCall) {
+					final terminator = requireTerminator(target.terminator, fn.id);
+					addLineDirective(statements, terminator.source, state.lineDirectives);
+					emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName, state.localNames, state.globalNames,
+						state.spanLengthNames);
+				}
 			case CFCGoto(ownerBlockId, targetBlockId, _):
 				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
 				statements.push(SGoto(requireLabelName(state.labelNames, targetBlockId, fn.id)));
@@ -2931,7 +3020,11 @@ class CBodyEmitter {
 		for (fieldName in requireClassFieldOrder(instanceId)) {
 			final type = requireClassFieldType(instanceId, fieldName);
 			final field = EMember(object, requireClassFieldName(instanceId, fieldName), false);
-			appendManagedTraceStatements(statements, field, type, visitName, contextName);
+			final ownedChild = classOwnedFieldInstances.get(classFieldKey(instanceId, fieldName));
+			if (ownedChild == null)
+				appendManagedTraceStatements(statements, field, type, visitName, contextName);
+			else
+				appendClassTraceStatements(statements, ownedChild, field, visitName, contextName);
 		}
 	}
 
@@ -3076,6 +3169,12 @@ class CBodyEmitter {
 			appendClassFinalizerStatements(statements, base, EMember(object, requireClassBaseMember(instanceId), false));
 		for (fieldName in requireClassFieldOrder(instanceId)) {
 			final type = requireClassFieldType(instanceId, fieldName);
+			final field = EMember(object, requireClassFieldName(instanceId, fieldName), false);
+			final ownedChild = classOwnedFieldInstances.get(classFieldKey(instanceId, fieldName));
+			if (ownedChild != null) {
+				appendClassFinalizerStatements(statements, ownedChild, field);
+				continue;
+			}
 			final managedByCollector = switch type {
 				case IRTPointer(IRTInstance(target), _) | IRTInstance(target): managedDescriptorNames.exists(target);
 				case _: false;
@@ -3086,7 +3185,6 @@ class CBodyEmitter {
 			};
 			if (managedByCollector || interfaceReference)
 				continue;
-			final field = EMember(object, requireClassFieldName(instanceId, fieldName), false);
 			appendManagedReleases(statements, managedValueOperations(field, type));
 		}
 	}
@@ -5266,6 +5364,45 @@ class CBodyEmitter {
 				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayLength, boundsAbortName, fn);
 			case "get-checked":
 				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayGetCopy, boundsAbortName, fn);
+			case "pop":
+				if (call.arguments.length != 1)
+					return fail('Array pop `${instruction.id}` in `${fn.id}` lost its receiver');
+				final receiverType = valueType(fn, call.arguments[0]);
+				final elementType = receiverType == null ? null : switch receiverType {
+					case IRTInstance(instanceId): arrayElementTypes.get(instanceId);
+					case _: null;
+				};
+				if (elementType == null)
+					return fail('Array pop `${instruction.id}` in `${fn.id}` lost its exact element type');
+				final declaration = typedDeclarator(result.type, DName(temporary));
+				final popOutputs:{output:CExpr, presence:CExpr} = switch result.type {
+					case IRTNullable(payload, IRNTagged):
+						if (exactTypeKey(payload) != exactTypeKey(elementType))
+							return fail('Array pop `${instruction.id}` in `${fn.id}` has a mismatched optional payload');
+						final optional = requireOptional(result.type);
+						{
+							output: EUnary(AddressOf, EMember(EIdentifier(temporary), optional.payloadName, false)),
+							presence: EUnary(AddressOf, EMember(EIdentifier(temporary), optional.presenceName, false))
+						};
+					case exact if (exactTypeKey(exact) == exactTypeKey(elementType)):
+						{output: EUnary(AddressOf, EIdentifier(temporary)), presence: ENull};
+					case _:
+						return fail('Array pop `${instruction.id}` in `${fn.id}` has a non-nullable result carrier');
+				}
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: IExpr(constantExpressionForType(IRCNull, result.type)),
+					attributes: []
+				}));
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayPopMove)), [
+					requireValue(values, call.arguments[0], fn.id),
+					popOutputs.output,
+					popOutputs.presence
+				]), boundsAbortName, instruction.id, fn.id);
+				values.set(result.id, EIdentifier(temporary));
 			case "push":
 				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayPushCopy, boundsAbortName, fn);
 			case "set":

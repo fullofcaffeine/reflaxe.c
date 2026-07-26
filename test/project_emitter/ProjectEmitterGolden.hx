@@ -14,6 +14,7 @@ import reflaxe.c.emit.CProjectEmitter.CProjectEnvironment;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimeDiagnostics;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimePolicy;
 import reflaxe.c.emit.CProjectEmitter.CProjectStandard;
+import reflaxe.c.emit.CProjectEmitter.CProjectSymbolReportDetail;
 import reflaxe.c.emit.CProjectLayout;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
@@ -52,6 +53,9 @@ class ProjectEmitterGolden {
 	public static function run(mode:String, outputDirectory:String):Void {
 		final files = switch mode {
 			case "full": new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
+			case "summary":
+				new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal,
+					CProjectSymbolReportDetail.Summary));
 			case "reverse": new CProjectEmitter().emit(plan(true, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
 			case "trimmed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
 			case "renamed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVRenamed));
@@ -135,7 +139,8 @@ class ProjectEmitterGolden {
 		Sys.println("project-emitter-macro: OK");
 	}
 
-	static function plan(reverse:Bool, trimmed:Bool, compilationStatus:CProjectCompilationStatus, variant:ProjectFixtureVariant):CProjectEmissionPlan {
+	static function plan(reverse:Bool, trimmed:Bool, compilationStatus:CProjectCompilationStatus, variant:ProjectFixtureVariant,
+			?symbolReportDetail:CProjectSymbolReportDetail):CProjectEmissionPlan {
 		final identity = fixtureIdentity(variant);
 		final registry = new CSymbolRegistry();
 		final exportRequest = new CSymbolRequest(CSymbolKind.CSKExport, ["fixture", identity.apiType, identity.apiField],
@@ -213,6 +218,7 @@ class ProjectEmitterGolden {
 			projectLayout: CProjectLayout.Unity,
 			runtimePolicy: CProjectRuntimePolicy.None,
 			runtimeDiagnostics: CProjectRuntimeDiagnostics.Off,
+			symbolReportDetail: symbolReportDetail,
 			units: units,
 			buildFacts: buildFacts,
 			symbolTable: symbolTable

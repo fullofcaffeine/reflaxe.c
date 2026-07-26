@@ -340,53 +340,46 @@ struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(u
       }
     }
     hxc_visited = hxc_i32_add_wrapping(hxc_visited, 1);
-    if (!(hxc_distance > hxc_maximumDistance))
+    if (hxc_distance > hxc_maximumDistance)
     {
-      int32_t hxc_tmp_load_result_n118 = hxc_cellX;
-      int32_t hxc_tmp_load_result_n119 = hxc_cellY;
-      struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n121 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n118, hxc_tmp_load_result_n119, hxc_cellZ);
-      struct hxc_caxecraft_domain_BlockCoord hxc_coord = hxc_tmp_call_result_n121;
-      bool hxc_tmp_call_result_n123 = hxc_caxecraft_domain_World_contains(hxc_coord);
-      if (!hxc_tmp_call_result_n123)
-      {
-        int32_t hxc_tmp_load_result_n124 = hxc_previousX;
-        int32_t hxc_tmp_load_result_n125 = hxc_previousY;
-        int32_t hxc_tmp_load_result_n126 = hxc_previousZ;
-        double hxc_tmp_load_result_n127 = hxc_distance;
-        struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n129 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n124, hxc_tmp_load_result_n125, hxc_tmp_load_result_n126, hxc_tmp_load_result_n127, hxc_visited);
-        return hxc_tmp_call_result_n129;
-      }
-      else
-      {
-        enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n131 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
-        bool hxc_tmp_call_result_n132 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n131);
-        if (hxc_tmp_call_result_n132)
-        {
-          int32_t hxc_tmp_load_result_n133 = hxc_cellX;
-          int32_t hxc_tmp_load_result_n134 = hxc_cellY;
-          int32_t hxc_tmp_load_result_n135 = hxc_cellZ;
-          int32_t hxc_tmp_load_result_n136 = hxc_previousX;
-          int32_t hxc_tmp_load_result_n137 = hxc_previousY;
-          int32_t hxc_tmp_load_result_n138 = hxc_previousZ;
-          int32_t hxc_tmp_load_result_n139 = hxc_normalX;
-          int32_t hxc_tmp_load_result_n140 = hxc_normalY;
-          int32_t hxc_tmp_load_result_n141 = hxc_normalZ;
-          double hxc_tmp_load_result_n142 = hxc_distance;
-          struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n144 = hxc_caxecraft_domain_VoxelRaycast_hit(hxc_tmp_load_result_n133, hxc_tmp_load_result_n134, hxc_tmp_load_result_n135, hxc_tmp_load_result_n136, hxc_tmp_load_result_n137, hxc_tmp_load_result_n138, hxc_tmp_load_result_n139, hxc_tmp_load_result_n140, hxc_tmp_load_result_n141, hxc_tmp_load_result_n142, hxc_visited);
-          return hxc_tmp_call_result_n144;
-        }
-        else
-        {
-          continue;
-        }
-      }
+      int32_t hxc_tmp_load_result_n112 = hxc_previousX;
+      int32_t hxc_tmp_load_result_n113 = hxc_previousY;
+      int32_t hxc_tmp_load_result_n114 = hxc_previousZ;
+      double hxc_tmp_load_result_n115 = hxc_distance;
+      struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n117 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n112, hxc_tmp_load_result_n113, hxc_tmp_load_result_n114, hxc_tmp_load_result_n115, hxc_visited);
+      return hxc_tmp_call_result_n117;
     }
-    int32_t hxc_tmp_load_result_n112 = hxc_previousX;
-    int32_t hxc_tmp_load_result_n113 = hxc_previousY;
-    int32_t hxc_tmp_load_result_n114 = hxc_previousZ;
-    double hxc_tmp_load_result_n115 = hxc_distance;
-    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n117 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n112, hxc_tmp_load_result_n113, hxc_tmp_load_result_n114, hxc_tmp_load_result_n115, hxc_visited);
-    return hxc_tmp_call_result_n117;
+    int32_t hxc_tmp_load_result_n118 = hxc_cellX;
+    int32_t hxc_tmp_load_result_n119 = hxc_cellY;
+    struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n121 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n118, hxc_tmp_load_result_n119, hxc_cellZ);
+    struct hxc_caxecraft_domain_BlockCoord hxc_coord = hxc_tmp_call_result_n121;
+    bool hxc_tmp_call_result_n123 = hxc_caxecraft_domain_World_contains(hxc_coord);
+    if (!hxc_tmp_call_result_n123)
+    {
+      int32_t hxc_tmp_load_result_n124 = hxc_previousX;
+      int32_t hxc_tmp_load_result_n125 = hxc_previousY;
+      int32_t hxc_tmp_load_result_n126 = hxc_previousZ;
+      double hxc_tmp_load_result_n127 = hxc_distance;
+      struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n129 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n124, hxc_tmp_load_result_n125, hxc_tmp_load_result_n126, hxc_tmp_load_result_n127, hxc_visited);
+      return hxc_tmp_call_result_n129;
+    }
+    enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n131 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
+    bool hxc_tmp_call_result_n132 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n131);
+    if (hxc_tmp_call_result_n132)
+    {
+      int32_t hxc_tmp_load_result_n133 = hxc_cellX;
+      int32_t hxc_tmp_load_result_n134 = hxc_cellY;
+      int32_t hxc_tmp_load_result_n135 = hxc_cellZ;
+      int32_t hxc_tmp_load_result_n136 = hxc_previousX;
+      int32_t hxc_tmp_load_result_n137 = hxc_previousY;
+      int32_t hxc_tmp_load_result_n138 = hxc_previousZ;
+      int32_t hxc_tmp_load_result_n139 = hxc_normalX;
+      int32_t hxc_tmp_load_result_n140 = hxc_normalY;
+      int32_t hxc_tmp_load_result_n141 = hxc_normalZ;
+      double hxc_tmp_load_result_n142 = hxc_distance;
+      struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n144 = hxc_caxecraft_domain_VoxelRaycast_hit(hxc_tmp_load_result_n133, hxc_tmp_load_result_n134, hxc_tmp_load_result_n135, hxc_tmp_load_result_n136, hxc_tmp_load_result_n137, hxc_tmp_load_result_n138, hxc_tmp_load_result_n139, hxc_tmp_load_result_n140, hxc_tmp_load_result_n141, hxc_tmp_load_result_n142, hxc_visited);
+      return hxc_tmp_call_result_n144;
+    }
   }
   int32_t hxc_tmp_load_result_n145 = hxc_previousX;
   int32_t hxc_tmp_load_result_n146 = hxc_previousY;

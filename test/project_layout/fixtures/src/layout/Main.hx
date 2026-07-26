@@ -16,15 +16,20 @@ class Main {
 			});
 	}
 
-	static function touchMutualTypes():Void {
-		var left = new Left();
+	/**
+		Keep both sides of the nullable class cycle reachable without allocating.
+
+		This fixture owns header topology, not managed-class runtime selection.
+		Nullable parameters force both pointer-shaped declarations into the C plan
+		while `null` arguments keep the independent layout proof runtime-free.
+	**/
+	static function touchMutualTypes(left:Null<Left>, right:Null<Right>):Void {
 		left;
-		var right = new Right();
 		right;
 	}
 
 	static function main():Void {
-		touchMutualTypes();
+		touchMutualTypes(null, null);
 		trace();
 	}
 }

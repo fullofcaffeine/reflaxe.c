@@ -623,8 +623,8 @@ private class HxcIRValidationState {
 					validateStableId(layout.baseInstanceId, '$path.baseInstanceId', declaration.source);
 					final base = typeInstances.get(layout.baseInstanceId);
 					final baseDeclaration = base == null ? null : typeDeclarations.get(base.declarationId);
-					if (base == null || base.representation != IRRDirect || baseDeclaration == null) {
-						add(path, 'class base `${layout.baseInstanceId}` is not a known direct type instance', declaration.source);
+					if (base == null || baseDeclaration == null) {
+						add(path, 'class base `${layout.baseInstanceId}` is not a known type instance', declaration.source);
 					} else {
 						switch baseDeclaration.kind {
 							case IRTKClass(_):
@@ -676,6 +676,27 @@ private class HxcIRValidationState {
 						add(path,
 							'class instance `${instance.id}` must pair direct storage with a direct/virtual header or managed(gc) storage with a runtime(gc) header',
 							instance.source);
+					if (layout.baseInstanceId != null) {
+						final base = typeInstances.get(layout.baseInstanceId);
+						if (base != null) {
+							/*
+								A derived C struct embeds its base struct as its first
+								subobject. Both therefore need the same lifetime model:
+								either both are direct values, or both are stable objects
+								owned by the precise collector. Mixing the two would make
+								upcasts disagree about whether a value or a GC pointer is
+								being passed.
+							 */
+							final compatibleInheritanceStorage = switch [instance.representation, base.representation] {
+								case [IRRDirect, IRRDirect] | [IRRManaged("gc"), IRRManaged("gc")]: true;
+								case _: false;
+							};
+							if (!compatibleInheritanceStorage)
+								add(path,
+									'class instance `${instance.id}` and base `${layout.baseInstanceId}` must use the same direct or managed(gc) storage model',
+									instance.source);
+						}
+					}
 				case IRTKAggregate(fields):
 					switch instance.representation {
 						case IRRStackClosure(parameters, result):
@@ -868,6 +889,34 @@ private class HxcIRValidationState {
 			if (local.initialState != IRISUninitialized)
 				add(borrowPath, 'borrowed class local `$localId` must begin uninitialized', local.source);
 		}
+		final borrowedInterfaceLocalIds = fn.borrowedInterfaceLocalIds == null ? [] : fn.borrowedInterfaceLocalIds;
+		for (index => localId in borrowedInterfaceLocalIds) {
+			final borrowPath = '$path.borrowedInterfaceLocal:$index';
+			validateStableId(localId, borrowPath, fn.source);
+			if (borrowedLocalIds.exists(localId)) {
+				add(borrowPath, 'duplicate borrowed reference local `$localId`', fn.source);
+				continue;
+			}
+			borrowedLocalIds.set(localId, true);
+			final local = locals.get(localId);
+			if (local == null) {
+				add(borrowPath, 'borrowed interface local `$localId` is not a function local', fn.source);
+				continue;
+			}
+			switch local.type {
+				case IRTInstance(instanceId):
+					requireDirectReferenceInstance(instanceId, '$borrowPath.type', local.source);
+				case _:
+					add(borrowPath, 'borrowed interface local `$localId` must be a direct interface value', local.source);
+			}
+			switch local.storage {
+				case IRLSAutomatic:
+				case IRLSStatic | IRLSFrame | IRLSRegion(_):
+					add(borrowPath, 'borrowed interface local `$localId` must use automatic function storage', local.source);
+			}
+			if (local.initialState != IRISUninitialized)
+				add(borrowPath, 'borrowed interface local `$localId` must begin uninitialized', local.source);
+		}
 
 		final blocks:Map<String, HxcIRBlock> = [];
 		final instructionIds:Map<String, Bool> = [];
@@ -1032,6 +1081,14 @@ private class HxcIRValidationState {
 								proofs.set(key, true);
 						case IRIONullCheck(valueId, _):
 							nullProofs.set(valueId, true);
+						case IRIOInitialize(IRPLocal(localId), valueId, _, _) | IRIOStore(IRPLocal(localId), valueId):
+							final key = nonNullLocalProofKey(localId);
+							if (nullProofs.exists(valueId))
+								nullProofs.set(key, true);
+							else
+								nullProofs.remove(key);
+						case IRIODefaultInitialize(IRPLocal(localId), _, _):
+							nullProofs.remove(nonNullLocalProofKey(localId));
 						case _:
 					}
 				}
@@ -1251,19 +1308,19 @@ private class HxcIRValidationState {
 		return result == "" ? null : result;
 	}
 
-	function validateBlock(fn:HxcIRFunction, block:HxcIRBlock, path:String, locals:Map<String, HxcIRLocal>, borrowedClassLocals:Map<String, Bool>,
+	function validateBlock(fn:HxcIRFunction, block:HxcIRBlock, path:String, locals:Map<String, HxcIRLocal>, borrowedReferenceLocals:Map<String, Bool>,
 			blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>, instructionSites:Map<String, HxcIRInstructionSite>,
 			valueSites:Map<String, HxcIRInstructionSite>, dominanceProofs:HxcIRDominanceProofs):Void {
 		final available:Map<String, HxcIRTypeRef> = [];
-		final borrowedClassValues:Map<String, Bool> = [];
+		final borrowedReferenceValues:Map<String, Bool> = [];
 		for (parameter in fn.parameters) {
 			available.set(parameter.id, parameter.type);
 		}
 		for (parameterId in fn.borrowedClassParameterIds)
-			borrowedClassValues.set(parameterId, true);
+			borrowedReferenceValues.set(parameterId, true);
 		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
 		for (parameterId in borrowedInterfaceParameterIds)
-			borrowedClassValues.set(parameterId, true);
+			borrowedReferenceValues.set(parameterId, true);
 		for (parameter in block.parameters) {
 			available.set(parameter.id, parameter.type);
 		}
@@ -1280,11 +1337,11 @@ private class HxcIRValidationState {
 			final instructionPath = '$path.instruction:$index:${instruction.id}';
 			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs,
 				nullProofs, dominanceProofs);
-			validateBorrowedClassInstruction(instruction, instructionPath, borrowedClassValues, borrowedClassLocals);
+			validateBorrowedReferenceInstruction(instruction, instructionPath, borrowedReferenceValues, borrowedReferenceLocals);
 			if (instruction.result != null) {
 				available.set(instruction.result.id, instruction.result.type);
-				if (instructionResultBorrowsClass(instruction, borrowedClassValues, borrowedClassLocals))
-					borrowedClassValues.set(instruction.result.id, true);
+				if (instructionResultBorrowsReference(instruction, borrowedReferenceValues, borrowedReferenceLocals))
+					borrowedReferenceValues.set(instruction.result.id, true);
 			}
 		}
 
@@ -1293,7 +1350,7 @@ private class HxcIRValidationState {
 			return;
 		}
 		validateSpan(block.terminator.source, '$path.terminator.source');
-		validateBorrowedClassTerminator(block.terminator.kind, '$path.terminator', block.terminator.source, borrowedClassValues);
+		validateBorrowedReferenceTerminator(block.terminator.kind, '$path.terminator', block.terminator.source, borrowedReferenceValues);
 		validateTerminator(fn, block.terminator.kind, '$path.terminator', block.terminator.source, available, blocks, regions);
 	}
 
@@ -1306,7 +1363,8 @@ private class HxcIRValidationState {
 		another owner, returning it, or handing it to a callee without the same
 		checked contract is not.
 	**/
-	function validateBorrowedClassInstruction(instruction:HxcIRInstruction, path:String, borrowed:Map<String, Bool>, borrowedLocals:Map<String, Bool>):Void {
+	function validateBorrowedReferenceInstruction(instruction:HxcIRInstruction, path:String, borrowed:Map<String, Bool>,
+			borrowedLocals:Map<String, Bool>):Void {
 		function rejectValue(valueId:String, role:String):Void {
 			if (borrowed.exists(valueId))
 				add(path, 'borrowed reference value `$valueId` escapes through $role', instruction.source);
@@ -1319,12 +1377,12 @@ private class HxcIRValidationState {
 
 		switch instruction.kind {
 			case IRIOStore(IRPLocal(localId), _) if (borrowedLocals.exists(localId)):
-				add(path, 'borrowed class local `$localId` cannot be reassigned', instruction.source);
+				add(path, 'borrowed reference local `$localId` cannot be reassigned', instruction.source);
 			case IRIOStore(_, valueId):
 				rejectValue(valueId, "a store");
 			case IRIOInitialize(IRPLocal(localId), valueId, _, _) if (borrowedLocals.exists(localId)):
 				if (!borrowed.exists(valueId))
-					add(path, 'borrowed class local `$localId` must be initialized from a borrowed class value', instruction.source);
+					add(path, 'borrowed reference local `$localId` must be initialized from a borrowed reference value', instruction.source);
 			case IRIOInitialize(_, valueId, _, _):
 				rejectValue(valueId, "an initializer");
 			case IRIOInitializeFixedArray(_, values, _, _):
@@ -1338,15 +1396,15 @@ private class HxcIRValidationState {
 			case IRIOConstructTag(_, tagName, payload):
 				rejectValues(payload, 'tag `$tagName` payload');
 			case IRIOCall(call):
-				validateBorrowedClassCall(call, path, instruction.source, borrowed);
+				validateBorrowedReferenceCall(call, path, instruction.source, borrowed);
 				if (call.failure != null)
 					rejectValues(call.failure.arguments, "failure-edge argument");
 			case IRIODeallocate(place, _) | IRIORetain(place, _) | IRIORelease(place, _) | IRIOTrace(place, _):
-				if (placeUsesBorrowedClass(place, borrowed))
-					add(path, "borrowed class storage cannot be deallocated, retained, or traced as owned storage", instruction.source);
+				if (placeUsesBorrowedReference(place, borrowed))
+					add(path, "borrowed reference storage cannot be deallocated, retained, or traced as owned storage", instruction.source);
 			case IRIOLifetime(place, _, _, _):
-				if (placeUsesBorrowedClass(place, borrowed))
-					add(path, "borrowed class storage cannot acquire a local ownership lifetime", instruction.source);
+				if (placeUsesBorrowedReference(place, borrowed))
+					add(path, "borrowed reference storage cannot acquire a local ownership lifetime", instruction.source);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOUnary(_, _, _) |
 				IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
 				IRIOAllocate(_, _, _, _) | IRIODeclareUninitialized(_) | IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) |
@@ -1356,7 +1414,7 @@ private class HxcIRValidationState {
 	}
 
 	/** Permit a borrow only at a direct target parameter that declares it. */
-	function validateBorrowedClassCall(call:HxcIRCall, path:String, source:HxcSourceSpan, borrowed:Map<String, Bool>):Void {
+	function validateBorrowedReferenceCall(call:HxcIRCall, path:String, source:HxcSourceSpan, borrowed:Map<String, Bool>):Void {
 		for (index => valueId in call.arguments) {
 			if (!borrowed.exists(valueId))
 				continue;
@@ -1381,6 +1439,11 @@ private class HxcIRValidationState {
 
 	/** Check one direct-call parameter against both admitted borrow carriers. */
 	function directTargetBorrowsArgument(functionId:String, argumentIndex:Int):Bool {
+		// A constructor's first argument is the address of storage allocated and
+		// owned by its caller. The constructor initializes through that pointer
+		// for this call; it does not acquire ownership of the pointer itself.
+		if (argumentIndex == 0 && StringTools.startsWith(functionId, "constructor."))
+			return true;
 		final target = functions.get(functionId);
 		if (target == null || argumentIndex >= target.parameters.length)
 			return false;
@@ -1397,20 +1460,26 @@ private class HxcIRValidationState {
 		};
 	}
 
-	/** Track class pointers and interface wrappers whose lifetime remains tied to borrowed storage. */
-	function instructionResultBorrowsClass(instruction:HxcIRInstruction, borrowed:Map<String, Bool>, borrowedLocals:Map<String, Bool>):Bool {
+	/** Track class pointers and interface pairs whose lifetime remains tied to borrowed storage. */
+	function instructionResultBorrowsReference(instruction:HxcIRInstruction, borrowed:Map<String, Bool>, borrowedLocals:Map<String, Bool>):Bool {
 		final result = instruction.result;
 		if (result == null)
 			return false;
 		return switch instruction.kind {
-			case IRIOLoad(IRPLocal(localId)): isConcreteClassReference(result.type) && borrowedLocals.exists(localId);
+			case IRIOLoad(IRPLocal(localId)): isBorrowedReferenceCarrier(result.type) && borrowedLocals.exists(localId);
 			case IRIOBorrowClassField(_):
 				isConcreteClassReference(result.type);
-			case IRIOAddress(place): isConcreteClassReference(result.type) && placeUsesBorrowedClass(place, borrowed);
-			case IRIOConvert(valueId, _, _, _, _): isConcreteClassReference(result.type) && borrowed.exists(valueId);
+			case IRIOAddress(_):
+				// A concrete-class pointer produced by taking an address refers to
+				// direct storage owned by a local, field, or caller. The pointer is
+				// therefore a borrow even when the storage place is itself owned.
+				// Collector-managed references are already pointer values and use a
+				// load rather than taking the address of their pointer slot.
+				isConcreteClassReference(result.type);
+			case IRIOConvert(valueId, _, _, _, _): isBorrowedReferenceCarrier(result.type) && borrowed.exists(valueId);
 			case IRIOConstructInterface(_, objectValueId, _):
 				borrowed.exists(objectValueId);
-			case IRIOCall(call): isConcreteClassReference(result.type) && switch call.dispatch {
+			case IRIOCall(call): isBorrowedReferenceCarrier(result.type) && switch call.dispatch {
 					case IRCDDirect(functionId): StringTools.startsWith(functionId,
 							"method.") && call.arguments.length > 0 && borrowed.exists(call.arguments[0]);
 					case IRCDVirtual(_, receiverValueId):
@@ -1425,7 +1494,7 @@ private class HxcIRValidationState {
 		};
 	}
 
-	function validateBorrowedClassTerminator(kind:HxcIRTerminatorKind, path:String, source:HxcSourceSpan, borrowed:Map<String, Bool>):Void {
+	function validateBorrowedReferenceTerminator(kind:HxcIRTerminatorKind, path:String, source:HxcSourceSpan, borrowed:Map<String, Bool>):Void {
 		function rejectValue(valueId:String, role:String):Void {
 			if (borrowed.exists(valueId))
 				add(path, 'borrowed reference value `$valueId` escapes through $role', source);
@@ -1462,10 +1531,10 @@ private class HxcIRValidationState {
 		}
 	}
 
-	function placeUsesBorrowedClass(place:HxcIRPlace, borrowed:Map<String, Bool>):Bool {
+	function placeUsesBorrowedReference(place:HxcIRPlace, borrowed:Map<String, Bool>):Bool {
 		return switch place {
 			case IRPDereference(pointerValueId): borrowed.exists(pointerValueId);
-			case IRPField(base, _) | IRPIndex(base, _): placeUsesBorrowedClass(base, borrowed);
+			case IRPField(base, _) | IRPIndex(base, _): placeUsesBorrowedReference(base, borrowed);
 			case IRPLocal(_) | IRPGlobal(_): false;
 		};
 	}
@@ -1473,6 +1542,30 @@ private class HxcIRValidationState {
 	function isConcreteClassReference(type:HxcIRTypeRef):Bool {
 		return switch type {
 			case IRTPointer(IRTInstance(instanceId), _): isClassInstance(instanceId);
+			case _: false;
+		};
+	}
+
+	/** True for either admitted non-owning reference carrier in function-local storage. */
+	function isBorrowedReferenceCarrier(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTPointer(IRTInstance(instanceId), _):
+				isClassInstance(instanceId);
+			case IRTInstance(instanceId):
+				isDirectInterfaceReference(instanceId);
+			case _:
+				false;
+		};
+	}
+
+	/** Recognize the by-value object-pointer/table-pointer pair used for one interface. */
+	function isDirectInterfaceReference(instanceId:String):Bool {
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		if (instance == null || instance.representation != IRRDirect || declaration == null)
+			return false;
+		return switch declaration.kind {
+			case IRTKReference: true;
 			case _: false;
 		};
 	}
@@ -1525,6 +1618,11 @@ private class HxcIRValidationState {
 				if (instruction.result != null && loadedType != null && typeKey(instruction.result.type) != typeKey(loadedType)) {
 					add(path, "load result type does not match its place type", instruction.source);
 				}
+				switch place {
+					case IRPLocal(localId) if (instruction.result != null && nullProofs.exists(nonNullLocalProofKey(localId))):
+						nullProofs.set(instruction.result.id, true);
+					case _:
+				}
 			case IRIOAddress(place):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals, block.id, dominanceProofs);
@@ -1565,6 +1663,12 @@ private class HxcIRValidationState {
 				}
 				if (storedType != null && storePlaceType != null && typeKey(storedType) != typeKey(storePlaceType)) {
 					add(path, "stored value type does not match its place type", instruction.source);
+				}
+				switch place {
+					case IRPLocal(localId):
+						final key = nonNullLocalProofKey(localId);
+						if (nullProofs.exists(valueId)) nullProofs.set(key, true); else nullProofs.remove(key);
+					case _:
 				}
 			case IRIOUnary(operationId, valueId, implementation):
 				validateStableId(operationId, '$path.operation', instruction.source);
@@ -1998,6 +2102,12 @@ private class HxcIRValidationState {
 				if (to != IRISInitialized) {
 					add(path, "initialize instruction must end in initialized state", instruction.source);
 				}
+				switch place {
+					case IRPLocal(localId):
+						final key = nonNullLocalProofKey(localId);
+						if (nullProofs.exists(valueId)) nullProofs.set(key, true); else nullProofs.remove(key);
+					case _:
+				}
 			case IRIOInitializeFixedArray(place, values, from, to):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final arrayType = knownPlaceType(place, available, locals);
@@ -2303,6 +2413,22 @@ private class HxcIRValidationState {
 			case "length":
 				if (argumentTypes.length != 1 || receiverElement == null || typeKey(call.returnType) != typeKey(IRTInt(32, true)))
 					add(path, "Array.length requires one managed Array argument and returns Haxe Int", source);
+			case "pop":
+				final taggedPayload = switch call.returnType {
+					case IRTNullable(payload, IRNTagged): payload;
+					case _: null;
+				};
+				final returnsTaggedElement = receiverElement != null
+					&& taggedPayload != null
+					&& typeKey(taggedPayload) == typeKey(receiverElement);
+				final returnsExactNullableElement = receiverElement != null
+					&& typeKey(call.returnType) == typeKey(receiverElement)
+					&& hasExactNullCarrier(receiverElement);
+				if (argumentTypes.length != 1 || receiverElement == null || (!returnsTaggedElement && !returnsExactNullableElement)) {
+					add(path,
+						"Array.pop requires one managed Array and returns either a tagged optional element or the same element carrier when that carrier represents null exactly",
+						source);
+				}
 			case "get-checked":
 				if (argumentTypes.length != 2 || receiverElement == null || secondArgumentType == null) {
 					add(path, "checked Array indexing requires managed Array + Haxe Int and returns its element type", source);
@@ -2390,6 +2516,19 @@ private class HxcIRValidationState {
 		};
 	}
 
+	/** Whether this validated IR carrier can represent Haxe null without a tag. */
+	function hasExactNullCarrier(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTString | IRTManagedString | IRTPointer(_, true): true;
+			case IRTInstance(instanceId): final instance = typeInstances.get(instanceId); instance != null && switch instance.representation {
+					case IRRManaged(_): true;
+					case _: false;
+				};
+			case _:
+				false;
+		};
+	}
+
 	/** True when an HxcIR instance is the managed pointer carrier for Array<T>. */
 	function isManagedArrayReference(type:HxcIRTypeRef):Bool
 		return managedArrayElement(type) != null;
@@ -2407,7 +2546,11 @@ private class HxcIRValidationState {
 			case _: return;
 		};
 		final receiverValue = argumentTypes.length == 0 ? null : managedStringMapValue(argumentTypes[0]);
-		final hasStringKey = argumentTypes.length > 1 && argumentTypes[1] == IRTString;
+		// A map key may be a compile-time-backed String view (`IRTString`) or
+		// a runtime-owned String (`IRTManagedString`). Both carry the same
+		// immutable Haxe String value; ownership changes how long its bytes
+		// live, not whether StringMap may hash and compare it.
+		final hasStringKey = argumentTypes.length > 1 && (argumentTypes[1] == IRTString || argumentTypes[1] == IRTManagedString);
 		final returnsBool = call.returnType == IRTBool;
 		switch operationId {
 			case "create":
@@ -3303,9 +3446,10 @@ private class HxcIRValidationState {
 	/**
 	 * Prove that every reachable read follows an assignment on that path.
 	 *
-	 * The declaration must end in a real two-way branch. Walking `(block,
-	 * assigned)` pairs then checks nested conditionals and joins without assuming
-	 * that visiting one branch first changes the other branch's state.
+	 * The declaration must end in a real branch or value switch. Walking
+	 * `(block, assigned)` pairs then checks nested conditionals, switch arms, and
+	 * joins without assuming that visiting one path first changes another path's
+	 * state.
 	 */
 	function validateConditionalCarrierFlow(localId:String, declarationBlock:HxcIRBlock, blocks:Map<String, HxcIRBlock>, path:String,
 			source:HxcSourceSpan):Void {
@@ -3326,10 +3470,18 @@ private class HxcIRValidationState {
 					{blockId: whenTrue.targetBlockId, assigned: false},
 					{blockId: whenFalse.targetBlockId, assigned: false}
 				];
+			case IRTSwitch(_, cases, defaultEdge):
+				cases.map(item -> ({blockId: item.edge.targetBlockId, assigned: false} : HxcIRCarrierFlowState))
+					.concat([{blockId: defaultEdge.targetBlockId, assigned: false}]);
+			case IRTTagSwitch(_, cases, defaultEdge):
+				final result = cases.map(item -> ({blockId: item.edge.targetBlockId, assigned: false} : HxcIRCarrierFlowState));
+				if (defaultEdge != null)
+					result.push({blockId: defaultEdge.targetBlockId, assigned: false});
+				result;
 			case _: [];
 		};
-		if (starts.length != 2) {
-			add(path, "uninitialized declaration must immediately feed a structured two-way branch", source);
+		if (starts.length == 0) {
+			add(path, "uninitialized declaration must immediately feed a structured branch or switch", source);
 			return;
 		}
 		final pending = starts.copy();
@@ -3448,6 +3600,16 @@ private class HxcIRValidationState {
 			var phase = state.phase;
 			for (instruction in current.instructions) {
 				switch instruction.kind {
+					case IRIODeclareManagedCarrier(IRPLocal(targetId), _) if (targetId == localId):
+						// A carrier declared inside a loop is the same static IR
+						// local on every visit, but each dynamic iteration starts
+						// a new ownership protocol. Re-entry is safe only after the
+						// previous iteration moved its owner out. Seeing the
+						// declaration while empty would be a duplicate declaration;
+						// seeing it while owned would abandon that owner.
+						if (current.id != declarationBlock.id || phase != IRMCMoved)
+							invalidFlow = true;
+						phase = IRMCEmpty;
 					case IRIOAcquireManagedCarrier(IRPLocal(targetId), _, _) if (targetId == localId):
 						if (phase != IRMCEmpty)
 							invalidFlow = true;
@@ -3948,6 +4110,20 @@ private class HxcIRValidationState {
 		final place = collectionPlaceProofKey(collection);
 		return place == null ? null : '$place\x00$indexValueId';
 	}
+
+	/**
+	 * Name the proof that one local currently contains a checked non-null value.
+	 *
+	 * HxcIR value IDs exist only in the block that computes them. A compiler
+	 * staging local can carry that immutable pointer through argument-created
+	 * branches, but the load in the join block receives a fresh value ID. This
+	 * separate key lets dominance analysis transfer the earlier null check
+	 * through the local without emitting a redundant second runtime check.
+	 * Any later store replaces or removes the proof according to the stored
+	 * value, so mutable locals cannot keep a stale non-null claim.
+	 */
+	static inline function nonNullLocalProofKey(localId:String):String
+		return 'checked-local\x00$localId';
 
 	/**
 		Give one stable in-block collection place an exact proof identity.

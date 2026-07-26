@@ -2,10 +2,8 @@
 #define HXC_CAXECRAFT_APP_TERRAIN_CHUNK_LAYOUT_H_INCLUDED
 
 #include "hxc/detail/program_types.h"
-#include "hxc/modules/caxecraft/app/TerrainAtlas.h"
-#include "hxc/modules/caxecraft/domain/BlockKind.h"
 
-int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkFor(struct hxc_caxecraft_domain_BlockCoord hxc_coord);
+int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkFor(struct hxc_caxecraft_scenario_VoxelPoint hxc_coord);
 
 int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkOriginX(int32_t hxc_chunk);
 

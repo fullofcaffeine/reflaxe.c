@@ -98,8 +98,15 @@ class HxcIRDumper {
 			};
 			line('    parameter ${quote(parameter.id)} type=${typeRef(parameter.type)} ownership=$ownership ${source(parameter.source)}');
 		}
+		final borrowedInterfaceLocalIds = fn.borrowedInterfaceLocalIds == null ? [] : fn.borrowedInterfaceLocalIds;
 		for (local in sorted(fn.locals, item -> item.id)) {
-			final ownership = fn.borrowedClassLocalIds.indexOf(local.id) < 0 ? "owned-or-value" : "borrowed-class";
+			final ownership = if (fn.borrowedClassLocalIds.indexOf(local.id) >= 0) {
+				"borrowed-class";
+			} else if (borrowedInterfaceLocalIds.indexOf(local.id) >= 0) {
+				"borrowed-interface";
+			} else {
+				"owned-or-value";
+			};
 			line('    local ${quote(local.id)} type=${typeRef(local.type)} ownership=$ownership storage=${localStorage(local.storage)} state=${state(local.initialState)} ${source(local.source)}');
 		}
 		for (region in sorted(fn.cleanupRegions, item -> item.id)) {

@@ -76,6 +76,14 @@ class CSymbolRequest {
 	**/
 	public final readableName:Array<String>;
 
+	// Haxe null safety requires every field to have a value before `validate()`
+	// can inspect the instance. The constructor replaces these private seeds
+	// once, after all semantic coordinates have been copied and checked.
+	var stableKeyValue:String = "";
+	var namingFingerprintValue:String = "";
+	var sourceSymbolValue:String = "";
+	var stableOrderValue:Bytes = Bytes.alloc(0);
+
 	public function new(kind:CSymbolKind, qualifiedName:Array<String>, namespace:CSymbolNamespace, ?visibility:CSymbolVisibility, ?explicitName:String,
 			?overloadSignature:Array<String>, ?specializationArguments:Array<String>, ?sourceOrdinal:Int, ?readableName:Array<String>) {
 		this.kind = kind;
@@ -88,9 +96,30 @@ class CSymbolRequest {
 		this.sourceOrdinal = sourceOrdinal;
 		this.readableName = readableName == null ? [] : readableName.copy();
 		validate();
+		this.stableKeyValue = buildStableKey();
+		this.sourceSymbolValue = buildSourceSymbol();
+		this.namingFingerprintValue = stableKeyValue
+			+ "|"
+			+ canonicalPart(visibilityName(this.visibility))
+			+ "|"
+			+ canonicalPart(this.explicitName == null ? "" : this.explicitName)
+			+ "|"
+			+ canonicalArray(this.readableName);
+		this.stableOrderValue = Bytes.ofString(sourceSymbolValue + "\x00" + kindName(kind) + "\x00" + namespaceKey(namespace) + "\x00" + stableKeyValue);
 	}
 
-	public function stableKey():String {
+	/**
+		Return this request's canonical semantic identity.
+
+		A compiler build can consult one request thousands of times while sorting,
+		deduplicating, hashing, and emitting reports. The value is computed once
+		because the constructor defensively copies and then treats every coordinate
+		array as immutable compiler data.
+	**/
+	public inline function stableKey():String
+		return stableKeyValue;
+
+	function buildStableKey():String {
 		return [
 			canonicalPart(kindName(kind)),
 			canonicalPart(namespaceKey(namespace)),
@@ -101,12 +130,15 @@ class CSymbolRequest {
 		].join("|");
 	}
 
-	public function namingFingerprint():String {
-		return stableKey() + "|" + canonicalPart(visibilityName(visibility)) + "|" + canonicalPart(explicitName == null ? "" : explicitName) + "|"
-			+ canonicalArray(readableName);
-	}
+	/** Return the cached identity plus its independently validated display policy. */
+	public inline function namingFingerprint():String
+		return namingFingerprintValue;
 
-	public function sourceSymbol():String {
+	/** Return the stable, human-facing source spelling used in diagnostics. */
+	public inline function sourceSymbol():String
+		return sourceSymbolValue;
+
+	function buildSourceSymbol():String {
 		var display = qualifiedName.join(".");
 		if (overloadSignature.length > 0) {
 			display += "(" + overloadSignature.join(", ") + ")";
@@ -118,6 +150,25 @@ class CSymbolRequest {
 			display += "#" + sourceOrdinal;
 		}
 		return display;
+	}
+
+	/**
+		Compare two requests by the registry's deterministic UTF-8 tuple order.
+
+		The cached byte sequence preserves the prior
+		`source/kind/namespace/identity` ordering while avoiding fresh UTF-8
+		conversions for every comparison in an `O(n log n)` sort.
+	**/
+	public static function compareStableOrder(left:CSymbolRequest, right:CSymbolRequest):Int {
+		final leftBytes = left.stableOrderValue;
+		final rightBytes = right.stableOrderValue;
+		final length = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
+		for (index in 0...length) {
+			final difference = leftBytes.get(index) - rightBytes.get(index);
+			if (difference != 0)
+				return difference;
+		}
+		return leftBytes.length - rightBytes.length;
 	}
 
 	public static function kindName(kind:CSymbolKind):String {

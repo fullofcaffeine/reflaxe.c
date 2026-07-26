@@ -7,16 +7,16 @@ struct hxc_caxecraft_gameplay_BerryDropState hxc_caxecraft_gameplay_BerryDrop_co
   {
     hxc_tmp_short_circuit_result_n2 = hxc_amount <= 0;
   }
-  if (!hxc_tmp_short_circuit_result_n2)
+  if (hxc_tmp_short_circuit_result_n2)
   {
-    int32_t hxc_remaining = hxc_i32_subtract_wrapping(hxc_state.hxc_amount, hxc_amount);
-    if (!(hxc_remaining <= 0))
-    {
-      return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = true, .hxc_amount = hxc_remaining, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_state.hxc_y, .hxc_z = hxc_state.hxc_z };
-    }
-    return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_state.hxc_y, .hxc_z = hxc_state.hxc_z };
+    return hxc_state;
   }
-  return hxc_state;
+  int32_t hxc_remaining = hxc_i32_subtract_wrapping(hxc_state.hxc_amount, hxc_amount);
+  if (!(hxc_remaining <= 0))
+  {
+    return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = true, .hxc_amount = hxc_remaining, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_state.hxc_y, .hxc_z = hxc_state.hxc_z };
+  }
+  return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_state.hxc_y, .hxc_z = hxc_state.hxc_z };
 }
 
 struct hxc_caxecraft_gameplay_BerryDropState hxc_caxecraft_gameplay_BerryDrop_fromDefeatedMossling(struct hxc_caxecraft_gameplay_MosslingState hxc_state)
@@ -26,11 +26,14 @@ struct hxc_caxecraft_gameplay_BerryDropState hxc_caxecraft_gameplay_BerryDrop_fr
 
 bool hxc_caxecraft_gameplay_BerryDrop_isInRange(struct hxc_caxecraft_gameplay_BerryDropState hxc_state, double hxc_playerX, double hxc_playerY, double hxc_playerZ)
 {
+  double hxc_dx = { 0 };
+  double hxc_dy = { 0 };
+  double hxc_dz = { 0 };
   if (!!hxc_state.hxc_active)
   {
-    double hxc_dx = hxc_state.hxc_x - hxc_playerX;
-    double hxc_dy = hxc_state.hxc_y - hxc_playerY;
-    double hxc_dz = hxc_state.hxc_z - hxc_playerZ;
+    hxc_dx = hxc_state.hxc_x - hxc_playerX;
+    hxc_dy = hxc_state.hxc_y - hxc_playerY;
+    hxc_dz = hxc_state.hxc_z - hxc_playerZ;
     double hxc_tmp_load_result_n4 = hxc_dx;
     double hxc_tmp_load_result_n5 = hxc_dx;
     double hxc_tmp_load_result_n6 = hxc_dy;

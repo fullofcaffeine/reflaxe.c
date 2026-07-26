@@ -587,6 +587,16 @@ typedef HxcIRFunction = {
 	final borrowedClassLocalIds:Array<String>;
 
 	/**
+		Automatic interface-value locals whose object pointer remains caller-owned.
+
+		The interface pair itself is copied into the local, but that copy does not
+		extend the lifetime of the concrete object behind it. This optional field
+		keeps older hand-built HxcIR fixtures compatible; compiler-produced
+		functions always supply it, including an empty list.
+	**/
+	final ?borrowedInterfaceLocalIds:Array<String>;
+
+	/**
 		Exact managed parameters and instruction results kept alive until return.
 
 		This field is optional only so older hand-built test/program adapters fail

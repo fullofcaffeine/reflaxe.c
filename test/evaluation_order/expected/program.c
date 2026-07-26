@@ -269,28 +269,25 @@ uint32_t hxc_EvaluationFixture_run(void)
       {
         break;
       }
-      else
-      {
-        switch (hxc_inner) {
-          case 1:
-            {
-              int32_t hxc_tmp_compound_load_result_n43 = hxc_total;
-              hxc_total = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n43, hxc_outer);
-              break;
-            }
-          case 2:
-          case 3:
-            {
-              int32_t hxc_tmp_compound_load_result_n45 = hxc_total;
-              hxc_total = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n45, hxc_inner);
-              break;
-            }
-          default:
-            {
-              hxc_total = hxc_i32_add_wrapping(hxc_total, 9);
-              break;
-            }
-        }
+      switch (hxc_inner) {
+        case 1:
+          {
+            int32_t hxc_tmp_compound_load_result_n43 = hxc_total;
+            hxc_total = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n43, hxc_outer);
+            break;
+          }
+        case 2:
+        case 3:
+          {
+            int32_t hxc_tmp_compound_load_result_n45 = hxc_total;
+            hxc_total = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n45, hxc_inner);
+            break;
+          }
+        default:
+          {
+            hxc_total = hxc_i32_add_wrapping(hxc_total, 9);
+            break;
+          }
       }
       if (!(hxc_inner < 3))
       {

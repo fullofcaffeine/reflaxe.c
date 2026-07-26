@@ -36,8 +36,32 @@ PRODUCTION_FILES = {
     "hxc.symbols.json",
     "include/hxc/program.h",
     "meson.build",
+    "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/gc.h",
+    "runtime/include/hxrt/object.h",
+    "runtime/include/hxrt/status.h",
+    "runtime/src/allocator.c",
+    "runtime/src/gc.c",
+    "runtime/src/object.c",
     "src/program.c",
 }
+RUNTIME_FEATURES = ["runtime-base", "status", "alloc", "object", "gc"]
+RUNTIME_ARTIFACTS = [
+    "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/gc.h",
+    "runtime/include/hxrt/object.h",
+    "runtime/include/hxrt/status.h",
+    "runtime/src/allocator.c",
+    "runtime/src/gc.c",
+    "runtime/src/object.c",
+]
+RUNTIME_SOURCES = (
+    "runtime/src/allocator.c",
+    "runtime/src/gc.c",
+    "runtime/src/object.c",
+)
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -87,7 +111,7 @@ REQUIRED_COVERAGE = frozenset(
         "null-preserving-upcast",
         "null-receiver-abort",
         "private-layout",
-        "runtime-free",
+        "precise-gc",
     }
 )
 
@@ -344,10 +368,10 @@ def c_function_section(source: str, c_name: str) -> str:
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
         report.get("schemaVersion") != 1
-        or report.get("status") != "concrete-private-class-layouts-direct-runtime-free"
+        or report.get("status") != "concrete-private-class-layouts-with-precise-managed-graph"
         or report.get("profile") != profile
-        or report.get("runtimeFeatures") != []
-        or report.get("runtimeArtifacts") != []
+        or report.get("runtimeFeatures") != RUNTIME_FEATURES
+        or report.get("runtimeArtifacts") != RUNTIME_ARTIFACTS
     ):
         raise ClassLayoutFailure(f"class-layout report contract drifted for {profile}")
     names = contract_names(report)
@@ -358,10 +382,20 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise ClassLayoutFailure(f"class-layout source partition drifted: {sorted(sources)!r}")
     source = sources["src/program.c"]
     for label, value in (("HxcIR", hxcir), ("header", header), ("source", source)):
-        if str(ROOT) in value or "\\" in value or "hxrt" in value.lower():
-            raise ClassLayoutFailure(f"{label} leaked a host path or runtime dependency")
-    if hxcir.count(" kind=class ") != 5 or hxcir.count(" header=none") != 5 or hxcir.count(" representation=direct ") != 5:
-        raise ClassLayoutFailure("HxcIR class declarations lost bounded direct representation")
+        if str(ROOT) in value or "\\" in value:
+            raise ClassLayoutFailure(f"{label} leaked a host path")
+    if (
+        hxcir.count(" kind=class ") != 5
+        or hxcir.count(' header=runtime("gc")') != 3
+        or hxcir.count(' representation=managed("gc") ') != 3
+        or hxcir.count(" header=none") != 2
+        or hxcir.count(" representation=direct ") != 2
+    ):
+        raise ClassLayoutFailure(
+            "HxcIR lost the precise managed retained graph or unrelated direct classes"
+        )
+    if "#include <hxrt/gc.h>" not in header:
+        raise ClassLayoutFailure("managed class header omitted its exact GC contract")
     inherited = function_section(hxcir, "readInherited")
     if (
         inherited.find("null-check") == -1
@@ -415,9 +449,11 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise ClassLayoutFailure("structural class CAST emission/layout assertions drifted")
     for key in ("fn_writeInherited", "fn_writePeer", "fn_sumAcrossBranch"):
-        if c_function_section(source, names[key]).count("abort();") != 1:
-            raise ClassLayoutFailure(f"generated C did not retain exactly one dominating guard in {key}")
-    if c_function_section(source, names["fn_branchProofDoesNotEscape"]).count("abort();") != 4:
+        if c_function_section(source, names[key]).count("== NULL") != 1:
+            raise ClassLayoutFailure(
+                f"generated C did not retain exactly one dominating null guard in {key}"
+            )
+    if c_function_section(source, names["fn_branchProofDoesNotEscape"]).count("== NULL") != 4:
         raise ClassLayoutFailure("generated C incorrectly reused a branch-local receiver guard")
     symbols = report.get("symbols")
     if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
@@ -525,6 +561,13 @@ def write_native_fixture(report: dict[str, object], root: Path) -> None:
     source.write_text(source_records(report)["src/program.c"], encoding="utf-8", newline="\n")
     shutil.copyfile(NATIVE / "behavior_consumer.c", native)
     shutil.copyfile(NATIVE / "null_consumer.c", null_native)
+    for relative in RUNTIME_ARTIFACTS:
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source_path = ROOT / relative.replace(
+            "runtime/include", "runtime/hxrt/include"
+        ).replace("runtime/src", "runtime/hxrt/src")
+        shutil.copyfile(source_path, destination)
 
 
 def run_harness_matrix(
@@ -535,9 +578,9 @@ def run_harness_matrix(
     projects = (
         CFixtureProject(
             "class-behavior",
-            ("native/behavior_consumer.c",),
-            ("include/hxc/program.h", "src/program.c"),
-            ("include",),
+            ("native/behavior_consumer.c", *RUNTIME_SOURCES),
+            ("include/hxc/program.h", "src/program.c", *RUNTIME_ARTIFACTS[:5]),
+            ("include", "runtime/include"),
             "",
             (
                 "base-prefix-layout",
@@ -548,21 +591,22 @@ def run_harness_matrix(
                 "empty-class-layout",
                 "null-preserving-upcast",
                 "private-layout",
+                "precise-gc",
             ),
         ),
         CFixtureProject(
             "generated-program",
-            ("src/program.c",),
-            ("include/hxc/program.h",),
-            ("include",),
+            ("src/program.c", *RUNTIME_SOURCES),
+            ("include/hxc/program.h", *RUNTIME_ARTIFACTS[:5]),
+            ("include", "runtime/include"),
             "",
-            ("generated-executable", "runtime-free"),
+            ("generated-executable", "precise-gc"),
         ),
         CFixtureProject(
             "null-receiver",
-            ("native/null_consumer.c",),
-            ("include/hxc/program.h", "src/program.c"),
-            ("include",),
+            ("native/null_consumer.c", *RUNTIME_SOURCES),
+            ("include/hxc/program.h", "src/program.c", *RUNTIME_ARTIFACTS[:5]),
+            ("include", "runtime/include"),
             "",
             ("null-receiver-abort",),
             expected_exit=-signal.SIGABRT,
@@ -706,6 +750,7 @@ def check_cpp_layout(
                     optimization,
                     *definitions,
                     f"-I{root / 'fixture/include'}",
+                    f"-I{root / 'fixture/runtime/include'}",
                     "-c",
                     str(NATIVE / "layout_provider.c"),
                     "-o",
@@ -720,6 +765,7 @@ def check_cpp_layout(
                     optimization,
                     *definitions,
                     f"-I{root / 'fixture/include'}",
+                    f"-I{root / 'fixture/runtime/include'}",
                     "-c",
                     str(NATIVE / "layout_consumer.cpp"),
                     "-o",
@@ -797,7 +843,17 @@ def generated_files(root: Path) -> set[str]:
 
 
 def require_compile_success(result: subprocess.CompletedProcess[str], label: str) -> None:
-    if result.returncode != 0 or result.stdout or result.stderr:
+    expected_runtime_summary = (
+        "HXC2001: hxrt selected 5 dependency-closed feature(s) for 30 typed "
+        "runtime root(s): runtime-base, status, alloc, object, gc."
+    )
+    if (
+        result.returncode != 0
+        or result.stderr
+        or result.stdout.count("HXC2001:") != 1
+        or expected_runtime_summary not in result.stdout
+        or "[ERROR]" in result.stdout
+    ):
         raise ClassLayoutFailure(
             f"{label} failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
@@ -811,8 +867,6 @@ def validate_production(root: Path, *, profile: str, policy: str) -> None:
     manifest = json.loads((root / "hxc.manifest.json").read_text(encoding="utf-8"))
     runtime_plan = json.loads((root / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     abi = json.loads((root / "hxc.abi.json").read_text(encoding="utf-8"))
-    proof = runtime_plan.get("noRuntimeProof")
-    reachability = proof.get("reachability") if isinstance(proof, dict) else None
     build = manifest.get("build")
     if (
         manifest.get("compilationStatus") != "lowered-direct-value-executable"
@@ -824,27 +878,15 @@ def validate_production(root: Path, *, profile: str, policy: str) -> None:
         or abi.get("types") != []
         or abi.get("exports") != []
         or runtime_plan.get("schemaVersion") != 2
-        or runtime_plan.get("status") != "analyzed-runtime-free"
+        or runtime_plan.get("status") != "analyzed-runtime-features"
         or runtime_plan.get("profile") != profile
         or runtime_plan.get("resolvedPolicy") != policy
-        or runtime_plan.get("features") != []
-        or runtime_plan.get("artifacts") != []
-        or "concrete-class-reference-layouts" not in runtime_plan.get("directDecisions", [])
-        or not isinstance(proof, dict)
-        or proof.get("status") != "eligible"
-        or proof.get("directDecisions") != runtime_plan.get("directDecisions")
-        or not isinstance(reachability, dict)
-        or reachability.get("typeInstances") != 5
-        or reachability.get("runtimeIntents") != 0
+        or runtime_plan.get("features") != RUNTIME_FEATURES
+        or runtime_plan.get("artifacts") != RUNTIME_ARTIFACTS
+        or build.get("sources") != [*RUNTIME_SOURCES, "src/program.c"]
+        or build.get("includeDirectories") != ["include", "runtime/include"]
     ):
-        raise ClassLayoutFailure(f"{profile}/{policy} lost its private runtime-free class proof")
-    combined = b"\n".join(
-        path.read_bytes()
-        for path in root.rglob("*")
-        if path.is_file() and path.suffix in {".c", ".h"}
-    ).lower()
-    if b"hxrt" in combined or b"hxc_runtime" in combined:
-        raise ClassLayoutFailure("class-layout production project selected runtime code")
+        raise ClassLayoutFailure(f"{profile}/{policy} lost its exact managed class runtime proof")
 
 
 def check_production() -> None:
@@ -853,8 +895,6 @@ def check_production() -> None:
         matrix = (
             ("first", "portable", None, "auto"),
             ("repeat", "portable", None, "auto"),
-            ("none", "portable", "none", "none"),
-            ("metal", "metal", None, "minimal"),
         )
         for name, profile, runtime, policy in matrix:
             output = root / name
@@ -867,11 +907,24 @@ def check_production() -> None:
             )
             require_compile_success(result, f"{name} class-layout production compile")
             validate_production(output, profile=profile, policy=policy)
+        none_output = root / "none"
+        none = custom_target(
+            POSITIVE,
+            none_output,
+            main="ClassLayoutFixture",
+            runtime="none",
+        )
+        if (
+            none.returncode != 1
+            or "HXC2000" not in none.stderr
+            or "runtime policy `none`" not in none.stderr
+            or generated_files(none_output)
+        ):
+            raise ClassLayoutFailure(
+                "runtime-none did not reject the retained class graph with no output"
+            )
         if generated_tree(root / "first") != generated_tree(root / "repeat"):
             raise ClassLayoutFailure("two class-layout production roots were not byte-identical")
-        for relative in ("include/hxc/program.h", "src/program.c"):
-            if (root / "first" / relative).read_bytes() != (root / "metal" / relative).read_bytes():
-                raise ClassLayoutFailure(f"portable and metal changed private class artifact {relative}")
 
 
 def check_negative_cases() -> None:
@@ -902,7 +955,7 @@ def check_negative_cases() -> None:
 def snapshot_report() -> dict[str, object]:
     return {
         "schemaVersion": 1,
-        "status": "concrete-private-class-layouts-direct-runtime-free",
+        "status": "concrete-private-class-layouts-with-precise-managed-graph",
         "profile": "portable",
         "hxcir": (EXPECTED / "classes.hxcir").read_text(encoding="utf-8"),
         "header": (EXPECTED / "program.h").read_text(encoding="utf-8"),
@@ -915,8 +968,8 @@ def snapshot_report() -> dict[str, object]:
         "classes": json.loads((EXPECTED / "classes.json").read_text(encoding="utf-8")),
         "functions": json.loads((EXPECTED / "functions.json").read_text(encoding="utf-8")),
         "symbols": json.loads((EXPECTED / "symbols.json").read_text(encoding="utf-8")),
-        "runtimeFeatures": [],
-        "runtimeArtifacts": [],
+        "runtimeFeatures": RUNTIME_FEATURES,
+        "runtimeArtifacts": RUNTIME_ARTIFACTS,
     }
 
 
@@ -969,7 +1022,7 @@ def main(arguments: Iterable[str] = ()) -> int:
     print(
         "class-layout: OK: private base-prefix structs, checked inherited fields, "
         "dominating receiver guards, null-preserving upcasts, identity equality, "
-        "strict C11 and C++17 layout agreement, runtime-free production artifacts, "
+        "strict C11 and C++17 layout agreement, exact precise-GC production artifacts, "
         "and fail-closed future edges passed"
     )
     return 0

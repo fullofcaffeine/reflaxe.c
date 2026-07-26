@@ -2,106 +2,106 @@
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidDepth(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
-    return 1;
+    return 4;
   }
-  return 4;
+  if (!(hxc_index == 1))
+  {
+    return -1;
+  }
+  return 1;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidHeight(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
     return 1;
+  }
+  if (!(hxc_index == 1))
+  {
+    return -1;
   }
   return 1;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidKind(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
-    return 1;
+    return 0;
   }
-  return 0;
+  if (!(hxc_index == 1))
+  {
+    return -1;
+  }
+  return 1;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidPresentationCell(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
     return 5;
+  }
+  if (!(hxc_index == 1))
+  {
+    return -1;
   }
   return 5;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidWidth(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
-    return 1;
+    return 4;
   }
-  return 4;
+  if (!(hxc_index == 1))
+  {
+    return -1;
+  }
+  return 1;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidX(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
-    return 3;
+    return 2;
   }
-  return 2;
+  if (!(hxc_index == 1))
+  {
+    return -1;
+  }
+  return 3;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidY(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
     return 4;
+  }
+  if (!(hxc_index == 1))
+  {
+    return -1;
   }
   return 4;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidZ(int32_t hxc_index)
 {
-  if (!(hxc_index == 0))
+  if (hxc_index == 0)
   {
-    if (!(hxc_index == 1))
-    {
-      return -1;
-    }
-    return 3;
+    return 2;
   }
-  return 2;
+  if (!(hxc_index == 1))
+  {
+    return -1;
+  }
+  return 3;
 }
 
 int32_t hxc_caxecraft_content_FirstPlayableLevel_itemQuantity(int32_t hxc_index)

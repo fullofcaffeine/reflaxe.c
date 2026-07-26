@@ -29,7 +29,10 @@ class HxcIRGolden {
 		validator.requireValid(coverage, PROFILE);
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
+		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
 		validator.requireValid(managedRootProgram(false), PROFILE);
+		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
+		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
 		final coverageDump = dumper.dump(coverage);
 
@@ -56,6 +59,7 @@ class HxcIRGolden {
 				mismatchedInterfaceObject: invalidDiagnostics(mismatchedInterfaceObjectProgram()),
 				mismatchedInterfaceReceiver: invalidDiagnostics(mismatchedInterfaceReceiverProgram()),
 				unmanagedRetainedInterface: invalidDiagnostics(unmanagedRetainedInterfaceProgram()),
+				mismatchedClassInheritanceStorage: invalidDiagnostics(managedClassInheritanceProgram(true)),
 				mismatchedVirtualTableBind: invalidDiagnostics(mismatchedVirtualTableBindProgram()),
 				uncheckedVirtualCall: invalidDiagnostics(uncheckedVirtualCallProgram()),
 				nonExhaustiveTagSwitch: invalidDiagnostics(nonExhaustiveTagSwitchProgram()),
@@ -74,6 +78,7 @@ class HxcIRGolden {
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
 				borrowedClassStore: invalidDiagnostics(borrowedClassStoreProgram()),
 				borrowedClassAliasEscape: invalidDiagnostics(borrowedClassAliasEscapeProgram()),
+				borrowedInterfaceAliasEscape: invalidDiagnostics(borrowedInterfaceAliasEscapeProgram()),
 				borrowedClassReturn: invalidDiagnostics(borrowedClassReturnProgram()),
 				borrowedInterfaceStore: invalidDiagnostics(borrowedInterfaceStoreProgram()),
 				invalidManagedRoot: invalidDiagnostics(managedRootProgram(true)),
@@ -103,12 +108,15 @@ class HxcIRGolden {
 				invalidManagedStringCall: invalidDiagnostics(invalidManagedStringCallProgram()),
 				invalidStringSubstringCall: invalidDiagnostics(invalidStringSubstringCallProgram()),
 				invalidStringMapShape: invalidDiagnostics(invalidStringMapShapeProgram()),
+				invalidArrayPopShape: invalidDiagnostics(invalidArrayPopShapeProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
 				uninitializedCarrierReadBeforeBranch: invalidDiagnostics(uninitializedCarrierReadBeforeBranchProgram()),
+				uninitializedSwitchCarrierRead: invalidDiagnostics(uninitializedSwitchCarrierReadProgram()),
 				managedUninitializedCarrier: invalidDiagnostics(managedUninitializedCarrierProgram()),
 				managedCarrierBorrowMovedAsFresh: invalidDiagnostics(managedCarrierBorrowMovedAsFreshProgram()),
 				managedCarrierMissingAcquire: invalidDiagnostics(managedCarrierMissingAcquireProgram()),
+				managedSwitchCarrierMissingAcquire: invalidDiagnostics(managedSwitchCarrierMissingAcquireProgram()),
 				managedCarrierLifecycleMismatch: invalidDiagnostics(managedCarrierLifecycleMismatchProgram()),
 				managedStringCarrierLifecycleMismatch: invalidDiagnostics(managedStringCarrierLifecycleMismatchProgram()),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
@@ -719,6 +727,7 @@ class HxcIRGolden {
 			borrowedClassParameterIds: [],
 			borrowedInterfaceParameterIds: ["value.interface-parameter"],
 			borrowedClassLocalIds: [],
+			borrowedInterfaceLocalIds: [],
 			managedRoots: [],
 			locals: [
 				local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "coverage.Length2"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
@@ -937,9 +946,77 @@ class HxcIRGolden {
 			"enum-lifecycle:instance.managed-choice:destroy");
 	}
 
+	/**
+	 * Prove that one lexical carrier can safely serve successive loop iterations.
+	 *
+	 * Each visit acquires exactly one borrowed String owner, moves it into an
+	 * ordinary iteration-local owner, and releases that owner before returning to
+	 * the declaration. Re-entering while the carrier is empty or still owned would
+	 * remain invalid: only a completed move starts the next dynamic protocol.
+	 */
+	static function managedCarrierLoopProgram():HxcIRProgram {
+		final file = COVERAGE_SOURCE;
+		final carrierPlace = IRPLocal("local.loop-carrier");
+		final ownerPlace = IRPLocal("local.loop-owner");
+		final fn:HxcIRFunction = {
+			id: "fn.coverage.managed-carrier-loop",
+			displayName: "coverage.IR.managedCarrierLoop",
+			parameters: [
+				parameter("value.condition", IRTBool, file, 53),
+				parameter("value.borrowed", IRTManagedString, file, 53)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [
+				local("local.loop-carrier", IRTManagedString, IRLSAutomatic, IRISUninitialized, file, 54),
+				local("local.loop-owner", IRTManagedString, IRLSAutomatic, IRISUninitialized, file, 54)
+			],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "declare",
+			blocks: [
+				block("declare", [
+					instruction("loop.declare", null, IRIODeclareManagedCarrier(carrierPlace, IRIRuntime("string")), file, 54)
+				], IRTBranch("value.condition", edge("true"), edge("false")), file, 54),
+				block("true", [
+					instruction("loop.acquire-true", null,
+						IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(IRIRuntime("string"))), file, 55)
+				], IRTJump(edge("join")), file, 55),
+				block("false", [
+					instruction("loop.acquire-false", null,
+						IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(IRIRuntime("string"))), file, 56)
+				], IRTJump(edge("join")), file, 56),
+				block("join", [
+					instruction("loop.move", result("value.loop-owner", IRTManagedString), IRIOMoveManagedCarrier(carrierPlace), file, 57),
+					instruction("loop.owner-initialize", null, IRIOInitialize(ownerPlace, "value.loop-owner", IRISUninitialized, IRISInitialized), file, 57),
+					instruction("loop.owner-release", null, IRIORelease(ownerPlace, IRIRuntime("string")), file, 57)
+				],
+					IRTBranch("value.condition", edge("declare"), edge("exit")), file, 57),
+				block("exit", [], IRTReturn(null, []), file, 58)
+			],
+			cleanupRegions: [],
+			source: span(file, 53, 58)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: "coverage.ManagedCarrierLoop",
+					types: [],
+					typeInstances: [],
+					globals: [],
+					functions: [fn],
+					source: span(file, 53, 58)
+				}
+			]
+		};
+	}
+
 	/** Build one carrier fixture so negative cases can alter policy without mutating final fields. */
-	static function buildManagedCarrierFunction(borrowedAcquisition:HxcIRManagedCarrierAcquisition, includeBorrowedAcquire:Bool,
-			destroyHelperId:String):HxcIRFunction {
+	static function buildManagedCarrierFunction(borrowedAcquisition:HxcIRManagedCarrierAcquisition, includeBorrowedAcquire:Bool, destroyHelperId:String,
+			switchDispatch:Bool = false):HxcIRFunction {
 		final file = COVERAGE_SOURCE;
 		final choiceType = IRTInstance("instance.managed-choice");
 		final borrowedInstructions = if (includeBorrowedAcquire) [
@@ -967,8 +1044,13 @@ class HxcIRGolden {
 				block("entry", [
 					instruction("managed.declare", null, IRIODeclareManagedCarrier(IRPLocal("local.managed-result"), IRIProgramLocal(destroyHelperId)), file,
 						48)
-				], IRTBranch("value.condition", edge("fresh"), edge("borrowed")), file,
-					48),
+				], switchDispatch ? IRTSwitch("value.condition", [
+					{
+						value: IRCBool(true),
+						edge: edge("fresh")
+					}
+					],
+					edge("borrowed")) : IRTBranch("value.condition", edge("fresh"), edge("borrowed")), file, 48),
 				block("fresh", [
 					instruction("managed.construct", result("value.fresh", choiceType), IRIOConstructTag("instance.managed-choice", "Text", ["value.bytes"]),
 						file, 49),
@@ -1571,6 +1653,57 @@ class HxcIRGolden {
 		return program;
 	}
 
+	/**
+		Build a managed base/derived pair, or deliberately mix lifetime models.
+
+		The valid form proves collector promotion may include an inheritance
+		chain. The invalid form keeps the derived class direct while its base is
+		managed, which would make an upcast ambiguous at the C ABI boundary.
+	**/
+	static function managedClassInheritanceProgram(invalid:Bool):HxcIRProgram {
+		final file = invalid ? "test/negative/MismatchedClassInheritanceStorage.hx" : "test/positive/ManagedClassInheritance.hx";
+		final program = classProgram(file, [], invalid ? "invalid.MismatchedClassInheritanceStorage" : "valid.ManagedClassInheritance");
+		final rootDeclaration = program.modules[0].types[0];
+		program.modules[0].types[0] = switch rootDeclaration.kind {
+			case IRTKClass(layout): {
+					id: rootDeclaration.id,
+					displayName: rootDeclaration.displayName,
+					kind: IRTKClass({baseInstanceId: layout.baseInstanceId, fields: layout.fields, header: IRCHRuntime("gc")}),
+					source: rootDeclaration.source
+				};
+			case _: throw "managed inheritance fixture root must remain a class";
+		};
+		final rootInstance = program.modules[0].typeInstances[0];
+		program.modules[0].typeInstances[0] = {
+			id: rootInstance.id,
+			declarationId: rootInstance.declarationId,
+			arguments: rootInstance.arguments,
+			representation: IRRManaged("gc"),
+			source: rootInstance.source
+		};
+		if (!invalid) {
+			final leafDeclaration = program.modules[0].types[1];
+			program.modules[0].types[1] = switch leafDeclaration.kind {
+				case IRTKClass(layout): {
+						id: leafDeclaration.id,
+						displayName: leafDeclaration.displayName,
+						kind: IRTKClass({baseInstanceId: layout.baseInstanceId, fields: layout.fields, header: IRCHRuntime("gc")}),
+						source: leafDeclaration.source
+					};
+				case _: throw "managed inheritance fixture leaf must remain a class";
+			};
+			final leafInstance = program.modules[0].typeInstances[1];
+			program.modules[0].typeInstances[1] = {
+				id: leafInstance.id,
+				declarationId: leafInstance.declarationId,
+				arguments: leafInstance.arguments,
+				representation: IRRManaged("gc"),
+				source: leafInstance.source
+			};
+		}
+		return program;
+	}
+
 	static function taggedUnionProgram(file:String, instructions:Array<HxcIRInstruction>, terminatorValue:HxcIRTerminator, moduleId:String):HxcIRProgram {
 		final program = minimalProgram(moduleId, instructions, terminatorValue, [], [], file);
 		program.modules[0].types.push({
@@ -1687,6 +1820,50 @@ class HxcIRGolden {
 		fn.borrowedClassLocalIds.push("local.alias");
 		fn.locals.push(local("local.alias", classReference, IRLSAutomatic, IRISUninitialized, file, 2));
 		fn.locals.push(local("local.saved", classReference, IRLSAutomatic, IRISUninitialized, file, 2));
+		return program;
+	}
+
+	/** A copied interface pair may rename its caller-owned object for this function. */
+	static function borrowedInterfaceAliasProgram():HxcIRProgram {
+		final file = "test/positive/BorrowedInterfaceAlias.hx";
+		final interfaceType = IRTInstance("instance.interface");
+		final program = coverageProgram();
+		final fn = program.modules[0].functions.filter(candidate -> candidate.id == "fn.coverage")[0];
+		final interfaceLocals = fn.borrowedInterfaceLocalIds;
+		if (interfaceLocals == null)
+			throw "coverage HxcIR omitted compiler-produced borrowed interface locals";
+		interfaceLocals.push("local.interface-alias");
+		fn.locals.push(local("local.interface-alias", interfaceType, IRLSAutomatic, IRISUninitialized, file, 1));
+		final instructions = coverageEntryInstructions(program);
+		instructions.insert(0,
+			instruction("interface-alias.load", result("value.interface-reloaded", interfaceType), IRIOLoad(IRPLocal("local.interface-alias")), file, 3));
+		instructions.insert(0,
+			instruction("interface-alias.initialize", null,
+				IRIOInitialize(IRPLocal("local.interface-alias"), "value.interface-parameter", IRISUninitialized, IRISInitialized), file, 2));
+		return program;
+	}
+
+	/** Reloading a borrowed interface alias must not turn it into owned storage. */
+	static function borrowedInterfaceAliasEscapeProgram():HxcIRProgram {
+		final file = "test/negative/BorrowedInterfaceAliasEscape.hx";
+		final interfaceType = IRTInstance("instance.interface");
+		final program = coverageProgram();
+		final fn = program.modules[0].functions.filter(candidate -> candidate.id == "fn.coverage")[0];
+		final interfaceLocals = fn.borrowedInterfaceLocalIds;
+		if (interfaceLocals == null)
+			throw "coverage HxcIR omitted compiler-produced borrowed interface locals";
+		interfaceLocals.push("local.interface-alias");
+		fn.locals.push(local("local.interface-alias", interfaceType, IRLSAutomatic, IRISUninitialized, file, 1));
+		fn.locals.push(local("local.saved-interface", interfaceType, IRLSAutomatic, IRISUninitialized, file, 1));
+		final instructions = coverageEntryInstructions(program);
+		instructions.insert(0,
+			instruction("bad.interface-alias-save", null,
+				IRIOInitialize(IRPLocal("local.saved-interface"), "value.interface-reloaded", IRISUninitialized, IRISInitialized), file, 4));
+		instructions.insert(0,
+			instruction("interface-alias.load", result("value.interface-reloaded", interfaceType), IRIOLoad(IRPLocal("local.interface-alias")), file, 3));
+		instructions.insert(0,
+			instruction("interface-alias.initialize", null,
+				IRIOInitialize(IRPLocal("local.interface-alias"), "value.interface-parameter", IRISUninitialized, IRISInitialized), file, 2));
 		return program;
 	}
 
@@ -2067,6 +2244,44 @@ class HxcIRGolden {
 		return program;
 	}
 
+	/**
+		Reject an Array.pop operation whose result cannot represent Haxe null.
+
+		A nonempty pop moves one element out of the Array, while an empty pop
+		returns `null`. The semantic IR must therefore name either a tagged
+		optional of the exact element type or an exact element carrier, such as a
+		managed pointer, whose null value already represents absence. Accepting
+		plain `Bool` here would erase the empty-array case before C is selected.
+	**/
+	static function invalidArrayPopShapeProgram():HxcIRProgram {
+		final file = "test/negative/InvalidArrayPopShape.hx";
+		final arrayType:HxcIRTypeDeclaration = {
+			id: "type.invalid-array-pop",
+			displayName: "Array<Int>",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final arrayInstance:HxcIRTypeInstance = {
+			id: "instance.invalid-array-pop",
+			declarationId: arrayType.id,
+			arguments: [IRTInt(32, true)],
+			representation: IRRManaged("array"),
+			source: span(file, 1)
+		};
+		final program = minimalProgram("invalid.InvalidArrayPopShape", [
+			instruction("bad.pop", result("value.result", IRTBool), IRIOCall(call(IRCDRuntime("array", "pop"), ["value.array"], IRTBool, {
+				kind: IRFNativeStatus,
+				target: IRFTAbort,
+				arguments: [],
+				cleanup: []
+			})), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		program.modules[0].types.push(arrayType);
+		program.modules[0].typeInstances.push(arrayInstance);
+		program.modules[0].functions[0].parameters.push(parameter("value.array", IRTInstance(arrayInstance.id), file, 1));
+		return program;
+	}
+
 	static function defaultInitializationTypeProgram():HxcIRProgram {
 		final file = "test/negative/DefaultInitializationType.hx";
 		return minimalProgram("invalid.DefaultInitializationType", [
@@ -2127,6 +2342,34 @@ class HxcIRGolden {
 		return program;
 	}
 
+	/** Reject a switch carrier when its default path reaches the join unwritten. */
+	static function uninitializedSwitchCarrierReadProgram():HxcIRProgram {
+		final file = "test/negative/UninitializedSwitchCarrierRead.hx";
+		final program = aggregateProgram(file, [], [
+			local("local.result", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, file, 1)
+		], "invalid.UninitializedSwitchCarrierRead");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.subject", IRTInt(32, true), file, 1));
+		fn.parameters.push(parameter("value.record", IRTInstance("instance.record"), file, 1));
+		fn.blocks.splice(0, 1);
+		fn.blocks.push(block("entry", [
+			instruction("bad.declare", null, IRIODeclareUninitialized(IRPLocal("local.result")), file, 2)
+		], IRTSwitch("value.subject", [
+			{
+				value: IRCInt("0"),
+				edge: edge("case")
+			}
+			], edge("default")), file, 2));
+		fn.blocks.push(block("case", [
+			instruction("case.store", null, IRIOStore(IRPLocal("local.result"), "value.record"), file, 3)
+		], IRTJump(edge("join")), file, 3));
+		fn.blocks.push(block("default", [], IRTJump(edge("join")), file, 4));
+		fn.blocks.push(block("join", [
+			instruction("bad.load", result("value.result", IRTInstance("instance.record")), IRIOLoad(IRPLocal("local.result")), file, 5)
+		], IRTReturn(null, []), file, 5));
+		return program;
+	}
+
 	/** Reject the no-initial-value carrier for a reference-counted value. */
 	static function managedUninitializedCarrierProgram():HxcIRProgram {
 		final file = "test/negative/ManagedUninitializedCarrier.hx";
@@ -2174,6 +2417,13 @@ class HxcIRGolden {
 	static function managedCarrierMissingAcquireProgram():HxcIRProgram {
 		return managedCarrierValidationProgram("invalid.ManagedCarrierMissingAcquire",
 			IRMCARetainBorrowed(IRIProgramLocal("enum-lifecycle:instance.managed-choice:retain")), false, "enum-lifecycle:instance.managed-choice:destroy");
+	}
+
+	/** Reject a managed switch when its default path reaches the move without an owner. */
+	static function managedSwitchCarrierMissingAcquireProgram():HxcIRProgram {
+		return managedCarrierValidationProgram("invalid.ManagedSwitchCarrierMissingAcquire",
+			IRMCARetainBorrowed(IRIProgramLocal("enum-lifecycle:instance.managed-choice:retain")), false, "enum-lifecycle:instance.managed-choice:destroy",
+			true);
 	}
 
 	/** Reject lifecycle helpers belonging to a different enum specialization. */
@@ -2247,8 +2497,8 @@ class HxcIRGolden {
 
 	/** Build the valid managed carrier protocol used by focused negative mutations. */
 	static function managedCarrierValidationProgram(moduleId:String, borrowedAcquisition:HxcIRManagedCarrierAcquisition, includeBorrowedAcquire:Bool,
-			destroyHelperId:String):HxcIRProgram {
-		final fn = buildManagedCarrierFunction(borrowedAcquisition, includeBorrowedAcquire, destroyHelperId);
+			destroyHelperId:String, switchDispatch:Bool = false):HxcIRProgram {
+		final fn = buildManagedCarrierFunction(borrowedAcquisition, includeBorrowedAcquire, destroyHelperId, switchDispatch);
 		final managedType:HxcIRTypeDeclaration = {
 			id: "type.managed-choice",
 			displayName: "coverage.ManagedChoice",

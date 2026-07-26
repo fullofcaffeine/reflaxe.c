@@ -34,6 +34,15 @@ class Main {
 	static function byteLength(value:Null<ManagedRecord>):Int
 		return value == null ? -1 : value.bytes.length;
 
+	/**
+	 * Return either one owned optional record or absence for discard testing.
+	 *
+	 * The caller intentionally ignores both results. Generated C must still
+	 * destroy a present Bytes owner and safely do nothing for the absent value.
+	 */
+	static function discardCandidate(include:Bool, value:ManagedRecord):Null<ManagedRecord>
+		return include ? value : null;
+
 	static function maybeChoice(value:ManagedChoice):Null<ManagedChoice>
 		return value;
 
@@ -63,6 +72,8 @@ class Main {
 		while (maybe(value) == null || selected == null || byteLength(selected) != 1) {}
 		selected = null;
 		while (selected != null) {}
+		discardCandidate(true, value);
+		discardCandidate(false, value);
 
 		final choice = HasValues([1, 2]);
 		var selectedChoice:Null<ManagedChoice> = null;

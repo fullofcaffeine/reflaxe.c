@@ -116,16 +116,16 @@ module "LeafWorker" @"LeafWorker.hx":1:1-9:2
 end module "LeafWorker"
 module "Main" @"Main.hx":2:30-9:3
   function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-9:3
-    local "local.0" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:3-3:43
+    local "local.0" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":3:3-3:43
     local "local.1" type=instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:3-3:43
     local "local.10" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:113
     local "local.11" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:137
     local "local.12" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:11-8:31
-    local "local.2" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:47
+    local "local.2" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":4:3-4:47
     local "local.3" type=instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:47
-    local "local.4" type=pointer(nullable,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":5:3-5:34
+    local "local.4" type=pointer(nullable,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":5:3-5:34
     local "local.5" type=instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":5:3-5:34
-    local "local.6" type=pointer(nullable,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":6:3-6:35
+    local "local.6" type=pointer(nullable,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":6:3-6:35
     local "local.7" type=instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":6:3-6:35
     local "local.8" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:57
     local "local.9" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:84

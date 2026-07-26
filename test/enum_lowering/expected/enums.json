@@ -201,6 +201,38 @@
     "discriminantTag": "hxc_Mode"
   },
   {
+    "instanceId": "instance.enum.90067feeae250351e945e88054e8cb3515e5001ca66040369347bba26ed2cdb0",
+    "representation": "native-enum",
+    "recursive": false,
+    "declarationId": "type.enum.90067feeae250351e945e88054e8cb3515e5001ca66040369347bba26ed2cdb0",
+    "displayName": "IdentityKind",
+    "digest": "90067feeae250351e945e88054e8cb3515e5001ca66040369347bba26ed2cdb0",
+    "scopedLifetime": false,
+    "payloadUnionTag": null,
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "FirstIdentity",
+        "discriminant": "hxc_IdentityKind_FirstIdentity",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": null,
+        "semanticName": "SecondIdentity",
+        "discriminant": "hxc_IdentityKind_SecondIdentity",
+        "payload": [],
+        "payloadStructTag": null
+      }
+    ],
+    "valueTag": "hxc_IdentityKind",
+    "tagMember": null,
+    "payloadMember": null,
+    "discriminantTag": "hxc_IdentityKind"
+  },
+  {
     "instanceId": "instance.enum.d215f6115399f1aee252ec00f591b14438842533b70cc7cb0061b31863d2d2ce",
     "representation": "tagged-union",
     "recursive": false,
@@ -238,6 +270,52 @@
     "tagMember": "hxc_tag",
     "payloadMember": "hxc_payload",
     "discriminantTag": "hxc_Choices_tag"
+  },
+  {
+    "instanceId": "instance.enum.e2848feab5ae75da1ce6c11518f9de806c195da3f465ce1926acbd94526cda8e",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.e2848feab5ae75da1ce6c11518f9de806c195da3f465ce1926acbd94526cda8e",
+    "displayName": "IdentityValue",
+    "digest": "e2848feab5ae75da1ce6c11518f9de806c195da3f465ce1926acbd94526cda8e",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_IdentityValue_payload",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": "hxc_FirstValue",
+        "semanticName": "FirstValue",
+        "discriminant": "hxc_IdentityValue_FirstValue",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_value",
+            "indirect": false,
+            "type": "i32"
+          }
+        ],
+        "payloadStructTag": "hxc_IdentityValue_FirstValue_payload"
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_SecondValue",
+        "semanticName": "SecondValue",
+        "discriminant": "hxc_IdentityValue_SecondValue",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_value",
+            "indirect": false,
+            "type": "i32"
+          }
+        ],
+        "payloadStructTag": "hxc_IdentityValue_SecondValue_payload"
+      }
+    ],
+    "valueTag": "hxc_IdentityValue",
+    "tagMember": "hxc_tag",
+    "payloadMember": "hxc_payload",
+    "discriminantTag": "hxc_IdentityValue_tag"
   },
   {
     "instanceId": "instance.enum.ffce8027b64408d579f9f82d3436423417f0e58c7d5f11b904e00528130b979e",

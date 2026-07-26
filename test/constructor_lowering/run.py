@@ -38,6 +38,7 @@ ENUM_PAYLOAD_PARAMETER = FIXTURES / "enum_payload_parameter"
 DIRECT_RECEIVER = FIXTURES / "direct_receiver"
 DIRECT_RECEIVER_FAILURE = FIXTURES / "direct_receiver_failure"
 DIRECT_RECEIVER_ESCAPE = FIXTURES / "direct_receiver_escape"
+OWNED_FALLIBLE = FIXTURES / "owned_fallible"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -91,7 +92,6 @@ NEGATIVE_CASES = {
     "direct_receiver_escape": "TVar(escaped:owned-class-borrow-escape)",
     "escape_alias": "TNew(stack-reference-escape:assignment)",
     "escape_return": "TNew(stack-reference-escape:return)",
-    "escape_self": "TNew(stack-reference-escape:assignment)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
     "instance_parameter": "function-exit:unowned-fresh-managed-enum-value",
     "recursive_enum_parameter": "function-exit:unowned-fresh-managed-enum-value",
@@ -101,14 +101,14 @@ NEGATIVE_CASES = {
     ),
     "array_parameter_escape": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
-    "owned_fallible": "TNew(owned-field-fallible-construction-not-admitted:constructor.Child)",
     "owned_mutable": "field:child:owned-class-field-must-be-final",
-    "owned_return": "TReturn(owned-class-borrow-escape)",
+    "owned_return": "TVar(escaped:owned-class-borrow-escape)",
 }
 REQUIRED_NATIVE_COVERAGE = frozenset(
     {
         "constructor-cleanup-failure",
         "constructor-default-field-values",
+        "constructor-default-retained-reference-gc",
         "constructor-generated-executable",
         "constructor-runtime-free",
         "field-initialization-order",
@@ -143,6 +143,10 @@ RETAINED_INTERFACE_NATIVE_COVERAGE = frozenset(
         "constructor-retained-interface-managed-implementation",
         "constructor-retained-interface-trace",
         "constructor-retained-interface-dispatch-after-collection",
+        "constructor-final-direct-record-field",
+        "constructor-managed-record-field-initialization",
+        "constructor-managed-record-field-replacement",
+        "constructor-managed-record-alias-safe-replacement",
     }
 )
 DEFAULT_ARGUMENT_NATIVE_COVERAGE = frozenset(
@@ -196,6 +200,7 @@ DIRECT_RECEIVER_NATIVE_COVERAGE = frozenset(
         "constructor-direct-receiver-automatic-storage",
         "constructor-direct-receiver-managed-cleanup",
         "constructor-direct-receiver-nested-argument",
+        "constructor-direct-receiver-argument-flow-staging",
         "constructor-direct-receiver-result-transfer",
     }
 )
@@ -205,13 +210,46 @@ DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE = frozenset(
         "constructor-direct-receiver-throw",
     }
 )
+OWNED_FALLIBLE_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-fallible-inline-child",
+        "constructor-inline-child-recursive-cleanup",
+        "constructor-managed-parent-inline-child",
+        "constructor-managed-parent-retained-after-call",
+        "constructor-self-reference-cycle",
+        "constructor-self-reference-trace",
+    }
+)
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
+    "runtime-base",
+    "status",
+    "alloc",
+    "array",
+    "object",
+    "gc",
+]
+DEFAULT_REFERENCE_RUNTIME_FEATURES = [
     "runtime-base",
     "status",
     "alloc",
     "object",
     "gc",
 ]
+DEFAULT_REFERENCE_RUNTIME_ARTIFACTS = [
+    "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/gc.h",
+    "runtime/include/hxrt/object.h",
+    "runtime/include/hxrt/status.h",
+    "runtime/src/allocator.c",
+    "runtime/src/gc.c",
+    "runtime/src/object.c",
+]
+DEFAULT_REFERENCE_RUNTIME_SOURCES = (
+    "defaults/runtime/src/allocator.c",
+    "defaults/runtime/src/gc.c",
+    "defaults/runtime/src/object.c",
+)
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -507,6 +545,17 @@ def validate_retained_interface_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "retained interface fixture lost exact object tracing or later dispatch"
         )
+    if (
+        ".hxc_settings = (struct hxc_Main_ScoreSettings)" not in sources
+        or ".hxc_draft = (struct hxc_Main_ScoreDraft)" not in sources
+        or "record_assignment_replacement_owned" not in sources
+        or sources.count("hxc_record_") < 4
+        or "hxc_array_ref_retain(" not in sources
+        or "hxc_array_ref_release(" not in sources
+    ):
+        raise ConstructorLoweringFailure(
+            "retained interface fixture lost direct-record initialization or alias-safe managed-record replacement"
+        )
 
 
 def validate_default_argument_project(output: Path) -> None:
@@ -660,29 +709,57 @@ def validate_direct_receiver_project(output: Path) -> None:
         for path in sorted((output / "include").rglob("*.h"))
     )
     parse_start = source.find("struct hxc_array_ref *hxc_Main_parse(")
+    conditional_start = source.find(
+        "struct hxc_array_ref *hxc_Main_parseConditional("
+    )
     fresh_start = source.find("struct hxc_array_ref *hxc_Main_parseFresh(")
+    nested_start = source.find(
+        "struct hxc_array_ref *hxc_Main_parseNestedConditional("
+    )
     values_start = source.find("struct hxc_array_ref *hxc_Main_valuesFrom(")
-    if min(parse_start, fresh_start, values_start) < 0:
+    if min(parse_start, conditional_start, fresh_start, nested_start, values_start) < 0:
         raise ConstructorLoweringFailure(
-            "direct-receiver fixture omitted parse, nested parse, or argument producer"
+            "direct-receiver fixture omitted its plain, conditional, nested, or argument-producing path"
         )
-    parse_body = source[parse_start:fresh_start]
-    fresh_body = source[fresh_start:values_start]
+    parse_body = source[parse_start:conditional_start]
+    conditional_body = source[conditional_start:fresh_start]
+    fresh_body = source[fresh_start:nested_start]
+    nested_body = source[nested_start:values_start]
     if (
-        source.count("struct hxc_NumberReader hxc_tmp_object_storage_") != 2
-        or source.count(" = { 0 };") < 2
-        or source.count("hxc_compiler_constructor_NumberReader(") < 3
+        source.count("struct hxc_NumberReader hxc_tmp_object_storage_") != 4
+        or source.count(" = { 0 };") < 4
+        or source.count("hxc_compiler_constructor_NumberReader(") < 4
         or source.count("hxc_NumberReader_read(") < 3
+        or source.count("hxc_NumberReader_readOffset(") < 2
         or "hxc_array_ref_release(hxc_tmp_object_storage_" not in parse_body
+        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in conditional_body
         or "hxc_array_ref_release(hxc_tmp_object_storage_" not in fresh_body
+        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in nested_body
+        or "instance_call_receiver_" not in conditional_body
+        or "instance_call_receiver_load_result_" not in conditional_body
+        or "instance_call_argument_0_" not in conditional_body
+        or conditional_body.find("instance_call_receiver_")
+        >= conditional_body.find("conditional_result_")
+        or conditional_body.find("instance_call_argument_0_")
+        >= conditional_body.find("conditional_result_")
+        or conditional_body.find("instance_call_receiver_load_result_")
+        <= conditional_body.find("conditional_load_result_")
         or "constructed_receiver_argument_0_owner" not in fresh_body
         or "constructed_receiver_argument_0_borrow_result" not in fresh_body
+        or nested_body.find("instance_call_receiver_")
+        >= nested_body.find("conditional_result_")
+        or nested_body.find("array_index_receiver_")
+        >= nested_body.find("conditional_result_")
+        or nested_body.find("hxc_NumberReader_readOffset(")
+        <= nested_body.find("array_get_result_")
         or "hxc_array_ref_retain(" in parse_body
+        or "hxc_array_ref_retain(" in conditional_body
         or "hxc_array_ref_retain(" in fresh_body
+        or "hxc_array_ref_retain(" in nested_body
         or "struct hxc_NumberReader" not in headers
     ):
         raise ConstructorLoweringFailure(
-            "direct receiver lost automatic storage, nested ownership, cleanup, or result transfer"
+            "direct receiver lost automatic storage, argument-flow staging, nested ownership, cleanup, or result transfer"
         )
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (
@@ -724,6 +801,78 @@ def validate_direct_receiver_failure_project(output: Path) -> None:
     ):
         raise ConstructorLoweringFailure(
             "throwing direct receiver did not release its initialized field and nested argument before abort"
+        )
+
+
+def validate_owned_fallible_project(output: Path) -> None:
+    """Prove a managed parent recursively owns its fallible inline child."""
+
+    sources = tuple(sorted((output / "src").rglob("*.c")))
+    source = "\n".join(path.read_text(encoding="utf-8") for path in sources)
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    manifest = json.loads((output / "hxc.manifest.json").read_text(encoding="utf-8"))
+    configuration = manifest.get("configuration")
+    layout = (
+        configuration.get("projectLayout")
+        if isinstance(configuration, dict)
+        else None
+    )
+    support_path = output / "src/hxc/support.c"
+    if layout == "unity":
+        # Unity layout deliberately folds declarations, functions, and support
+        # helpers into its one `src/program.c` translation unit. Split and
+        # package layouts keep the same support definitions in their dedicated
+        # source so ordinary native build tools can compile them separately.
+        if len(sources) != 1 or sources[0].relative_to(output).as_posix() != "src/program.c":
+            raise ConstructorLoweringFailure(
+                "owned-fallible unity project lost its single-source ownership"
+            )
+        support = source
+    elif layout in ("split", "package") and support_path.is_file():
+        support = support_path.read_text(encoding="utf-8")
+    else:
+        raise ConstructorLoweringFailure(
+            f"owned-fallible project has unsupported support ownership for layout {layout!r}"
+        )
+    pressure_call = source.find("hxc_Main_pressure();")
+    self_check_call = source.find(
+        "hxc_SelfReference_pointsToSelf(", pressure_call
+    )
+    if (
+        "struct hxc_Child hxc_child;" not in headers
+        or "struct hxc_Child *hxc_child;" in headers
+        or "struct hxc_SelfReference *hxc_peer;" not in headers
+        or "if (!hxc_compiler_constructor_Child(" not in source
+        or "hxc_gc_allocate(&hxc_program_gc, &hxc_Parent_descriptor" not in source
+        or "hxc_gc_allocate(&hxc_program_gc, &hxc_SelfReference_descriptor" not in source
+        or "(*hxc_self).hxc_peer = hxc_self;" not in source
+        or "hxc_Holder_install(" not in source
+        or min(pressure_call, self_check_call) < 0
+        or self_check_call <= pressure_call
+        or "hxc_Parent_finalize" not in support
+        or "hxc_child.hxc_values" not in support
+        or "hxc_array_ref_release(" not in support
+        or "HXC_TYPE_DESCRIPTOR_HAS_FINALIZER" not in support
+        or "hxc_SelfReference_trace_visit" not in support
+        or "(*hxc_SelfReference_trace_typed).hxc_peer" not in support
+        or "HXC_TYPE_DESCRIPTOR_HAS_TRACE" not in support
+    ):
+        raise ConstructorLoweringFailure(
+            "fallible inline child or self-reference lost checked construction, exact tracing, collector storage, or recursive finalization"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features")
+        != ["runtime-base", "status", "alloc", "array", "object", "gc"]
+        or "exact-traced-haxe-object-graph" not in plan.get("directDecisions", [])
+        or "managed-haxe-arrays" not in plan.get("directDecisions", [])
+        or "concrete-class-reference-layouts" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "fallible inline child lost its dependency-closed Array/GC runtime plan"
         )
 
 
@@ -1548,7 +1697,17 @@ def compile_failure_fixture(destination: Path) -> None:
 
 def compile_default_fixture(destination: Path) -> None:
     result = custom_target(DEFAULT_RUNTIME, destination)
-    if result.returncode != 0 or result.stdout or result.stderr:
+    expected_summary = (
+        "HXC2001: hxrt selected 5 dependency-closed feature(s) for 14 typed "
+        "runtime root(s): runtime-base, status, alloc, object, gc."
+    )
+    if (
+        result.returncode != 0
+        or result.stderr
+        or result.stdout.count("HXC2001:") != 1
+        or expected_summary not in result.stdout
+        or "[ERROR]" in result.stdout
+    ):
         raise ConstructorLoweringFailure(
             "default-field runtime fixture did not compile cleanly\n"
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
@@ -1556,10 +1715,11 @@ def compile_default_fixture(destination: Path) -> None:
     plan = json.loads((destination / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (
         "bounded-stack-construction" not in plan.get("directDecisions", [])
-        or plan.get("features") != []
+        or plan.get("features") != DEFAULT_REFERENCE_RUNTIME_FEATURES
+        or plan.get("artifacts") != DEFAULT_REFERENCE_RUNTIME_ARTIFACTS
     ):
         raise ConstructorLoweringFailure(
-            "default-field runtime fixture lost its direct runtime-free plan"
+            "default-field runtime fixture lost its exact retained-reference collector plan"
         )
 
 
@@ -1649,11 +1809,21 @@ def check_native(
         projects = [
             CFixtureProject(
                 "constructor-default-fields",
-                ("defaults/src/program.c",),
-                ("defaults/include/hxc/program.h",),
-                ("defaults/include",),
+                ("defaults/src/program.c", *DEFAULT_REFERENCE_RUNTIME_SOURCES),
+                (
+                    "defaults/include/hxc/program.h",
+                    *(
+                        f"defaults/{artifact}"
+                        for artifact in DEFAULT_REFERENCE_RUNTIME_ARTIFACTS[:5]
+                    ),
+                ),
+                ("defaults/include", "defaults/runtime/include"),
                 "",
-                ("constructor-default-field-values", "strict-c11"),
+                (
+                    "constructor-default-field-values",
+                    "constructor-default-retained-reference-gc",
+                    "strict-c11",
+                ),
             ),
             CFixtureProject(
                 "constructor-failure",
@@ -1751,6 +1921,13 @@ def check_native(
             direct_receiver_failure_project = (
                 render_direct_receiver_failure_project(fixture_root)
             )
+            owned_fallible_projects = render_parameter_projects(
+                fixture_root,
+                fixture=OWNED_FALLIBLE,
+                slug="owned-fallible",
+                coverage=OWNED_FALLIBLE_NATIVE_COVERAGE,
+                validate_project=validate_owned_fallible_project,
+            )
             parameter_projects = (
                 record_projects
                 + interface_projects
@@ -1762,6 +1939,7 @@ def check_native(
                 + enum_payload_parameter_projects
                 + direct_receiver_projects
                 + (direct_receiver_failure_project,)
+                + owned_fallible_projects
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1791,6 +1969,7 @@ def check_native(
                     | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
+                    | OWNED_FALLIBLE_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -1838,6 +2017,7 @@ def check_native(
                     | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
+                    | OWNED_FALLIBLE_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
@@ -1906,6 +2086,7 @@ def check_eval_oracle() -> None:
         ("string-parameter oracle", STRING_PARAMETER),
         ("enum-parameter oracle", ENUM_PARAMETER),
         ("enum-payload-parameter oracle", ENUM_PAYLOAD_PARAMETER),
+        ("fallible-inline-child oracle", OWNED_FALLIBLE),
     ):
         result = subprocess.run(
             [
@@ -2023,6 +2204,62 @@ def check_direct_receiver_only(*, requested_toolchain: str) -> None:
             )
 
 
+def check_owned_fallible_only(*, requested_toolchain: str) -> None:
+    """Run the retained parent and fallible inline-child slice by itself."""
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-owned-fallible-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        projects = render_parameter_projects(
+            fixture_root,
+            fixture=OWNED_FALLIBLE,
+            slug="owned-fallible",
+            coverage=OWNED_FALLIBLE_NATIVE_COVERAGE,
+            validate_project=validate_owned_fallible_project,
+        )
+        ordered_projects = tuple(
+            sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
+        )
+        required_coverage = OWNED_FALLIBLE_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-owned-fallible-{optimization[1:].lower()}",
+                projects=ordered_projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in ordered_projects
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-owned-fallible-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required_coverage)
+
+
 def check_minimal_example() -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-constructor-minimal-") as temporary:
         output = Path(temporary) / "generated"
@@ -2084,6 +2321,8 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--direct-receiver-only", action="store_true")
+    parser.add_argument("--owned-fallible-only", action="store_true")
+    parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -2107,6 +2346,20 @@ def main(arguments: Iterable[str] = ()) -> int:
             print(
                 "constructor-lowering: OK: direct fresh receiver Eval/C11/C++17/"
                 "sanitizer/determinism/escape matrix passed"
+            )
+            return 0
+        if args.owned_fallible_only:
+            check_owned_fallible_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: fallible inline child and retained "
+                "collector parent layout/determinism/native/sanitizer matrix passed"
+            )
+            return 0
+        if args.negative_only:
+            check_negative_cases()
+            print(
+                "constructor-lowering: OK: unsupported constructor ownership, "
+                "escape, cycle, native-layout, and generic cases failed closed"
             )
             return 0
 

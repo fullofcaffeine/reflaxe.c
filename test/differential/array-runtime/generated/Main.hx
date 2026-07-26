@@ -33,6 +33,8 @@ final class Main {
 
 	static function main():Void {
 		final values:Array<Int> = [10, 20];
+		final firstConditionalValue = conditionalIndex(values, true);
+		final secondConditionalValue = conditionalIndex(values, false);
 		final emptyCopy = ([] : Array<Int>).copy();
 		final valuesCopy = values.copy();
 		valuesCopy[0] = 99;
@@ -44,6 +46,9 @@ final class Main {
 		labels.push("ready");
 		labels.push("café");
 		labels.push("a\u0000b");
+		final conditionalLabels:Array<String> = [];
+		pushConditional(conditionalLabels, true);
+		pushConditional(conditionalLabels, false);
 		final labelsCopy = labels.copy();
 		labelsCopy.push(fromCode(0x1F680));
 		final emptySorted:Array<Int> = [];
@@ -70,6 +75,7 @@ final class Main {
 		final singletonJoined = ["solo"].join("ignored");
 		final alias = values;
 		final history = new History();
+		final absentHistory = history.takeNewest();
 		final before = Bytes.alloc(1);
 		final after = Bytes.alloc(1);
 		before.set(0, 7);
@@ -84,6 +90,15 @@ final class Main {
 			sum += value;
 
 		history.add(sum, before, after, {minimum: 5, maximum: 15});
+		final poppedHistory = history.takeNewest();
+		if (poppedHistory != null)
+			history.restore(poppedHistory);
+
+		final poppedIntegers = [4, 5];
+		final poppedIntegersAlias = poppedIntegers;
+		final poppedFive = poppedIntegers.pop();
+		final poppedFour = poppedIntegers.pop();
+		final poppedEmpty = poppedIntegers.pop();
 
 		final row:Array<Int> = [1];
 		final rows:Array<Array<Int>> = [row];
@@ -94,6 +109,7 @@ final class Main {
 		final arguments:Array<ManagedCommand> = [Number(7)];
 		final scheduled = makeSchedule(arguments);
 		final copied = scheduled;
+		final returnedRecord = returnedManagedRecord();
 		final envelopes:Array<ManagedEnvelope> = [];
 		envelopes.push(Idle);
 		envelopes.push(copied);
@@ -120,6 +136,8 @@ final class Main {
 		final absent = maybeValues(false);
 		final present = maybeValues(true);
 		while (values.length != 3
+			|| firstConditionalValue != 10
+			|| secondConditionalValue != 20
 			|| emptyCopy.length != 0
 			|| valuesCopy.length != 3
 			|| valuesCopy[0] != 99
@@ -127,6 +145,9 @@ final class Main {
 			|| returnedCopy.length != 3
 			|| returnedCopy[2] != 77
 			|| labels.length != 3
+			|| conditionalLabels.length != 2
+			|| conditionalLabels[0] != "narrator"
+			|| conditionalLabels[1] != "speaker"
 			|| labelsCopy.length != 4
 			|| labelsCopy[0] != "🚀"
 			|| labelsCopy[1] != "a\u0000b"
@@ -171,10 +192,19 @@ final class Main {
 			|| history.lastRevision() != 42
 			|| history.lastAfterByte() != 11
 			|| history.lastMinimum() != 5
+			|| poppedHistory == null
+			|| poppedHistory.revision != 42
+			|| poppedHistory.after.get(0) != 11
+			|| absentHistory != null
+			|| poppedFive != 5
+			|| poppedFour != 4
+			|| poppedEmpty != null
+			|| poppedIntegersAlias.length != 0
 			|| managedPayloadLength != 3
 			|| recordCopy.commands.length != 3
 			|| nestedRecordCommandCount != 3
 			|| nestedEnvelopeCommandCount != 3
+			|| returnedRecord.commands.length != 1
 			|| absent != null
 			|| present == null
 			|| nullableLength(absent) != -1
@@ -184,6 +214,29 @@ final class Main {
 			|| row.length != 2
 			|| nestedArrayLength != 2) {}
 	}
+
+	/**
+		Read an Array element after a conditional chooses its index.
+
+		Haxe evaluates `values` before it evaluates the conditional index. The
+		conditional creates separate compiler control-flow blocks, so haxe.c must
+		save the already evaluated Array reference and reload it where those
+		branches meet. The saved reference is only a short-lived borrow: this
+		operation does not retain or allocate another Array.
+	**/
+	static function conditionalIndex(values:Array<Int>, first:Bool):Int
+		return values[first ? 0 : 1];
+
+	/**
+		Push a managed String chosen by a conditional into an existing Array.
+
+		Haxe evaluates `target` before choosing the argument. Because that choice
+		creates separate HxcIR blocks, the compiler saves the borrowed Array
+		reference and reloads it at the join before calling `push`. The Array slot
+		then receives its own retained String owner in the ordinary way.
+	**/
+	static function pushConditional(target:Array<String>, narrator:Bool):Void
+		target.push(narrator ? "narrator" : "speaker");
 
 	/**
 		Return a fresh shallow copy after changing only its outer Array.
@@ -265,6 +318,19 @@ final class Main {
 	/** Read one borrowed Array during a direct call without retaining a new alias. */
 	static function commandCount(commands:Array<ManagedCommand>):Int
 		return commands.length;
+
+	/**
+	 * Return a managed record copied from an Array whose local owners then end.
+	 *
+	 * Checked indexing already creates one independent record owner. The return
+	 * moves that owner to the caller; it must not destroy the nested `commands`
+	 * Array during this function's cleanup or retain a redundant second copy.
+	 */
+	static function returnedManagedRecord():ManagedRecord {
+		final commands:Array<ManagedCommand> = [Number(13)];
+		final records:Array<ManagedRecord> = [{commands: commands}];
+		return records[0];
+	}
 
 	/** Return transfers the newly constructed enum owner to the caller. */
 	static function makeSchedule(arguments:Array<ManagedCommand>):ManagedEnvelope

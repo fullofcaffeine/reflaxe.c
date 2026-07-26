@@ -42,6 +42,18 @@ typedef CProjectStandard = CBuildStandard;
 typedef CProjectRuntimePolicy = CRuntimePolicy;
 typedef CProjectRuntimeDiagnostics = CRuntimeDiagnostics;
 
+/**
+	Controls how much naming evidence is serialized after full validation.
+
+	Both modes finalize and validate every symbol before C emission. `Summary`
+	only avoids serializing tens of thousands of per-local audit records during a
+	fast interactive build; `Full` remains the default and exhaustive evidence.
+**/
+enum abstract CProjectSymbolReportDetail(String) to String {
+	var Full = "full";
+	var Summary = "summary";
+}
+
 /** Complete logical input to deterministic project packaging; it contains no output root. */
 typedef CProjectEmissionPlan = {
 	final schemaVersion:Int;
@@ -55,6 +67,7 @@ typedef CProjectEmissionPlan = {
 	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
 	final ?runtimePolicyProvenance:String;
 	final ?runtimeDiagnosticsProvenance:String;
+	final ?symbolReportDetail:CProjectSymbolReportDetail;
 	final units:Array<GeneratedFile>;
 	final buildFacts:Array<TypedCBuildFact>;
 	final ?primitiveHelperIds:Array<String>;
@@ -176,6 +189,18 @@ private typedef StdlibResolved = {
 	final capabilities:Array<String>;
 }
 
+private typedef SymbolTableSummary = {
+	final schemaVersion:Int;
+	final algorithm:String;
+	final detail:CProjectSymbolReportDetail;
+	final sourceSchemaVersion:Int;
+	final sourceAlgorithm:String;
+	final symbolCount:Int;
+	final collisionGroupCount:Int;
+	final collisionSymbolCount:Int;
+	final collisions:Array<reflaxe.c.naming.CSymbolRegistry.CSymbolCollisionRecord>;
+}
+
 /** Pure schema-1 project emitter. Filesystem ownership is handled separately. */
 class CProjectEmitter {
 	public static inline final SCHEMA_VERSION = 1;
@@ -201,7 +226,12 @@ class CProjectEmitter {
 		final buildPlan = new CBuildPlanBuilder().build(plan.projectName, plan.cStandard, units, plan.buildFacts);
 		final files = units.copy();
 
-		files.push(jsonFile("hxc.symbols.json", GeneratedFileKind.SymbolTable, plan.symbolTable));
+		switch symbolReportDetail(plan) {
+			case Full:
+				files.push(jsonFile("hxc.symbols.json", GeneratedFileKind.SymbolTable, plan.symbolTable));
+			case Summary:
+				files.push(jsonFile("hxc.symbols.json", GeneratedFileKind.SymbolTable, symbolTableSummary(plan.symbolTable)));
+		}
 		switch plan.compilationStatus {
 			case StructuralFixture:
 				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanPlaceholder(plan)));
@@ -303,6 +333,11 @@ class CProjectEmitter {
 			case CProjectRuntimeDiagnostics.Off | CProjectRuntimeDiagnostics.Summary | CProjectRuntimeDiagnostics.Warn:
 			case _:
 				fail('unknown project runtime diagnostic mode `${Std.string(plan.runtimeDiagnostics)}`');
+		}
+		switch symbolReportDetail(plan) {
+			case Full | Summary:
+			case _:
+				fail('unknown project symbol-report detail `${Std.string(plan.symbolReportDetail)}`');
 		}
 		if (plan.symbolTable.schemaVersion != CSymbolRegistry.SCHEMA_VERSION || plan.symbolTable.algorithm != CSymbolRegistry.ALGORITHM) {
 			fail('project emission requires the finalized schema-${CSymbolRegistry.SCHEMA_VERSION} ${CSymbolRegistry.ALGORITHM} symbol table');
@@ -1132,6 +1167,26 @@ class CProjectEmitter {
 
 	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile
 		return new GeneratedFile(path, Json.stringify(value, null, "  ") + "\n", kind);
+
+	static function symbolReportDetail(plan:CProjectEmissionPlan):CProjectSymbolReportDetail
+		return plan.symbolReportDetail == null ? CProjectSymbolReportDetail.Full : plan.symbolReportDetail;
+
+	static function symbolTableSummary(symbols:CSymbolTableSnapshot):SymbolTableSummary {
+		var collisionSymbolCount = 0;
+		for (collision in symbols.collisions)
+			collisionSymbolCount += collision.symbols.length;
+		return {
+			schemaVersion: 1,
+			algorithm: "hxc-c-symbol-summary-v1",
+			detail: CProjectSymbolReportDetail.Summary,
+			sourceSchemaVersion: symbols.schemaVersion,
+			sourceAlgorithm: symbols.algorithm,
+			symbolCount: symbols.symbols.length,
+			collisionGroupCount: symbols.collisions.length,
+			collisionSymbolCount: collisionSymbolCount,
+			collisions: symbols.collisions
+		};
+	}
 
 	function validateLogicalText(value:String, label:String):Void {
 		if (StringTools.trim(value) == "" || value.indexOf("\x00") != -1 || value.indexOf("\r") != -1 || value.indexOf("\n") != -1) {

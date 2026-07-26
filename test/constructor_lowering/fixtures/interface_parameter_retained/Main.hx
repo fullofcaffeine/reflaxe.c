@@ -4,6 +4,17 @@ interface ScoreSource {
 	function score(seed:Int):Int;
 }
 
+/** Small ownership-free record stored directly in `RetainedScore`. */
+private typedef ScoreSettings = {
+	final offset:Int;
+	final enabled:Bool;
+}
+
+/** Managed record whose Array owner must survive safe field replacement. */
+private typedef ScoreDraft = {
+	final values:Array<Int>;
+}
+
 /**
  * Concrete score state whose lifetime is hidden behind `ScoreSource`.
  *
@@ -25,6 +36,35 @@ final class FixedScore implements ScoreSource {
 }
 
 /**
+ * Concrete child retained through a nullable class field.
+ *
+ * This type does not implement `ScoreSource`, so it enters the collector graph
+ * only because the already-managed `RetainedScore` stores it. That distinction
+ * proves representation planning follows the real object graph instead of
+ * marking every class in this fixture as managed.
+ */
+final class DirectScore {
+	var base:Int;
+
+	/**
+	 * Stores the state read after the creating method has returned.
+	 *
+	 * The negative branch makes this constructor genuinely fallible. Normal
+	 * fixture calls stay on the successful path while generated HxcIR must still
+	 * carry the explicit uncaught-exception edge.
+	 */
+	public function new(base:Int) {
+		if (base < 0)
+			throw 99;
+		this.base = base;
+	}
+
+	/** Returns the caller's seed plus this child's stored base. */
+	public function score(seed:Int):Int
+		return base + seed;
+}
+
+/**
  * Owns one interface value beyond the constructor call that supplied it.
  *
  * Generated C stores the interface's object/table pair by value. The object is
@@ -33,6 +73,18 @@ final class FixedScore implements ScoreSource {
  */
 final class RetainedScore {
 	final source:ScoreSource;
+	final settings:ScoreSettings;
+	var draft:ScoreDraft;
+	var direct:Null<DirectScore> = null;
+
+	/**
+	 * Counts calls to `advance` while exposing only a public getter.
+	 *
+	 * In Haxe, `(default, null)` means callers may read this value but only this
+	 * declaring class may write it. It is not a `final` field. The compiler must
+	 * preserve that distinction even when `advance` is inlined into its caller.
+	 */
+	public var advances(default, null):Int = 0;
 
 	/**
 	 * Retains an interface past this constructor call.
@@ -42,11 +94,61 @@ final class RetainedScore {
 	 */
 	public function new(source:ScoreSource) {
 		this.source = source;
+		settings = {offset: 2, enabled: true};
+		draft = {values: [40]};
 	}
 
 	/** Dispatches through the retained interface after construction has ended. */
 	public function read(seed:Int):Int
 		return source.score(seed);
+
+	/** Read both direct-record and managed-record constructor fields. */
+	public function readDraft():Int
+		return settings.enabled ? draft.values[0] + settings.offset : -1;
+
+	/**
+	 * Replace the managed record through capture-before-release ownership.
+	 *
+	 * The new record becomes the field owner before the old Array is released,
+	 * so aliasing and allocation failure cannot leave the field dangling.
+	 */
+	public function replaceDraft(value:Int):Void
+		draft = {values: [value]};
+
+	/** Store one caller-owned record after acquiring its nested Array owner. */
+	function assignDraft(next:ScoreDraft):Void
+		draft = next;
+
+	/** Exercise an alias-preserving replacement without source-level `x = x`. */
+	public function keepDraft():Void
+		assignDraft(draft);
+
+	/**
+	 * Replace the optional child with one fresh collector-managed instance.
+	 *
+	 * The child outlives this method, so generated C must allocate stable traced
+	 * storage rather than retain the address of an automatic local.
+	 */
+	public function installDirect(base:Int):Void
+		direct = new DirectScore(base);
+
+	/** Remove the graph edge without manually freeing collector-owned storage. */
+	public function clearDirect():Void
+		direct = null;
+
+	/** Read the retained child, or `-1` when the nullable field is empty. */
+	public function readDirect(seed:Int):Int
+		return direct == null ? -1 : direct.score(seed);
+
+	/**
+	 * Mutates private-set storage through a method that Haxe may inline.
+	 *
+	 * This mirrors the cursor operation that Caxecraft used to expose the
+	 * compiler bug: access control is checked before inlining, while the emitted
+	 * C field must remain writable for this already-approved operation.
+	 */
+	public inline function advance():Void
+		advances++;
 }
 
 /** Exercises delayed interface dispatch after deterministic collection pressure. */
@@ -64,7 +166,20 @@ final class Main {
 	/** Keeps the process alive only when delayed interface dispatch returns 42. */
 	static function main():Void {
 		final value = build();
+		value.advance();
+		value.advance();
+		value.installDirect(40);
 		forceCollectionPressure();
-		while (value.read(2) != 42) {}
+		while (value.advances != 2 || value.read(2) != 42 || value.readDirect(2) != 42 || value.readDraft() != 42) {}
+		value.keepDraft();
+		value.replaceDraft(39);
+		forceCollectionPressure();
+		while (value.readDraft() != 41) {}
+		value.installDirect(39);
+		forceCollectionPressure();
+		while (value.readDirect(3) != 42) {}
+		value.clearDirect();
+		forceCollectionPressure();
+		while (value.readDirect(2) != -1) {}
 	}
 }

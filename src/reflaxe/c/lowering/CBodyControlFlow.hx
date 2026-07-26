@@ -54,6 +54,23 @@ enum CBodyControlFlowCompletion {
 	CFCContinue(ownerBlockId:String, targetBlockId:String);
 
 	/**
+		One structured edge into a shared abrupt tail.
+
+		Haxe may merge identical `return`, `throw`, or unreachable cleanup tails
+		from mutually exclusive source paths. C has no expression that names such
+		a tail without `goto`; repeating the validated tail at each exit is the
+		clear handwritten-C shape. The planner ranks a valid continuing join ahead
+		of an abrupt join; otherwise a sequence of guard clauses would become a
+		deeply nested `if (!condition) { ... }` chain. A shared abrupt join remains
+		valid when every arm only computes the value returned by that one tail, as
+		in a value-producing switch. This completion owns the remaining abrupt-only
+		arm or a loop-local early exit without inventing a label. It never admits a
+		normally continuing target, so it cannot duplicate later work or change
+		evaluation order.
+	**/
+	CFCSharedAbrupt(ownerBlockId:String, targetBlockId:String);
+
+	/**
 		A bounded structural escape that C cannot spell with the nearest `break`.
 
 		The current admitted use is a loop break nested inside a generated C
@@ -119,6 +136,17 @@ enum CBodyControlFlowPlan {
 private typedef CBodyLoopContext = {
 	final headerBlockId:String;
 	final breakTargetBlockId:String;
+
+	/**
+		The block that ends this structural iteration for join analysis.
+
+		For `while`, this is also the C `continue` target. For `do ... while`, it
+		is the trailing condition block: structured emission reaches that code by
+		fallthrough because a literal C `continue` would skip the synthesized
+		condition statements.
+	**/
+	final iterationBoundaryBlockId:String;
+
 	final continueTargetBlockId:Null<String>;
 }
 
@@ -144,6 +172,7 @@ private typedef CBodyLoopDecision = {
 
 private typedef CBodyNormalJoinCandidate = {
 	final blockId:String;
+	final abrupt:Bool;
 	final reachCount:Int;
 	final maximumDistance:Int;
 	final totalDistance:Int;
@@ -265,9 +294,15 @@ private class CBodyControlFlowBuilder {
 			if (current == stopBlockId)
 				return new CBodyControlFlowRegion(nodes, CFCFallthrough);
 			if (!allowed.exists(current))
-				fail('structural sequence in `${fn.id}` escaped its admitted region through `$current`');
-			if (planned.exists(current))
-				fail('structural sequence in `${fn.id}` would emit block `$current` more than once');
+				fail('structural sequence in `${fn.id}` escaped its admitted region through `$current`'
+					+ ' [start=$startBlockId, stop=${stopBlockId == null ? "none" : stopBlockId}, loop=${loop == null ? "none" : loop.headerBlockId}]');
+			if (planned.exists(current)) {
+				final predecessors = analysis.predecessorIds(current);
+				predecessors.sort(analysis.compareBlockIds);
+				fail('structural sequence in `${fn.id}` would emit block `$current` more than once'
+					+ ' [start=$startBlockId, stop=${stopBlockId == null ? "none" : stopBlockId}, loop=${loop == null ? "none" : loop.headerBlockId}, '
+					+ 'predecessors=${predecessors.join(",")}]');
+			}
 
 			final naturalLoop = analysis.loopsByHeader.get(current);
 			if (naturalLoop != null && current != suppressedLoopHeader && loopFits(naturalLoop, allowed)) {
@@ -352,8 +387,14 @@ private class CBodyControlFlowBuilder {
 		final node:CBodyControlFlowNode;
 		final continuationBlockId:Null<String>;
 	} {
-		final provenJoin = analysis.immediatePostDominator(block.id);
-		if (provenJoin != null && allowed.exists(provenJoin) && provenJoin != loopBreakTarget(loop) && provenJoin != loopContinueTarget(loop)) {
+		// A whole-function post-dominator can sit in a later loop iteration.
+		// Inside a loop, use the iteration-bounded normal-join proof below so a
+		// continue/header edge cannot make that future block look local.
+		final provenJoin = loop == null ? analysis.immediatePostDominator(block.id) : null;
+		if (provenJoin != null
+			&& allowed.exists(provenJoin)
+			&& provenJoin != loopBreakTarget(loop)
+			&& provenJoin != loopIterationBoundaryTarget(loop)) {
 			final trueRegion = trueTarget == provenJoin ? CBodyControlFlowRegion.empty() : buildSequence(trueTarget, provenJoin, loop, breakIsDirect, allowed,
 				suppressedLoopHeader);
 			final falseRegion = falseTarget == provenJoin ? CBodyControlFlowRegion.empty() : buildSequence(falseTarget, provenJoin, loop, breakIsDirect,
@@ -397,8 +438,8 @@ private class CBodyControlFlowBuilder {
 			};
 		}
 
-		var join = analysis.immediatePostDominator(block.id);
-		if (join != null && (!allowed.exists(join) || join == loopBreakTarget(loop) || join == loopContinueTarget(loop)))
+		var join = loop == null ? analysis.immediatePostDominator(block.id) : null;
+		if (join != null && (!allowed.exists(join) || join == loopBreakTarget(loop) || join == loopIterationBoundaryTarget(loop)))
 			join = null;
 		if (join == null) {
 			final trueRegion = buildSequence(trueTarget, null, loop, breakIsDirect, allowed, suppressedLoopHeader);
@@ -434,7 +475,9 @@ private class CBodyControlFlowBuilder {
 		final node:CBodyControlFlowNode;
 		final continuationBlockId:Null<String>;
 	} {
-		var join = analysis.immediatePostDominator(block.id);
+		// See the branch rule above: loop-local switch joins must not cross a
+		// continue edge into a later iteration.
+		var join = loop == null ? analysis.immediatePostDominator(block.id) : null;
 		var proof:CBodySwitchProof = join == null ? CSPClosed : CSPPostDominator(join);
 		if (join != null && (!allowed.exists(join) || join == loopBreakTarget(loop)))
 			join = null;
@@ -468,8 +511,7 @@ private class CBodyControlFlowBuilder {
 		final escapeTargets:Map<String, Bool> = [];
 		if (loop != null) {
 			escapeTargets.set(loop.breakTargetBlockId, true);
-			if (loop.continueTargetBlockId != null)
-				escapeTargets.set(loop.continueTargetBlockId, true);
+			escapeTargets.set(loop.iterationBoundaryBlockId, true);
 		}
 		return analysis.normalJoin(starts, allowed, escapeTargets, planned, preferredCandidate);
 	}
@@ -479,6 +521,9 @@ private class CBodyControlFlowBuilder {
 		final context:CBodyLoopContext = {
 			headerBlockId: loop.headerBlockId,
 			breakTargetBlockId: decision.exitBlockId,
+			iterationBoundaryBlockId: decision.postTest ? decision.blockId : loop.headerBlockId,
+			// A post-test source `continue` is structuralized as fallthrough to
+			// the separately emitted trailing condition; see the context contract.
 			continueTargetBlockId: decision.postTest ? null : loop.headerBlockId
 		};
 		if (decision.postTest) {
@@ -565,28 +610,71 @@ private class CBodyControlFlowBuilder {
 		if (candidates.length != 1)
 			fail('natural loop `${loop.headerBlockId}` in `${fn.id}` has ${candidates.length} structural decisions; expected one');
 		final result = candidates[0];
-		absorbLinearEscapeArms(loop, result.exitBlockId);
+		absorbAcyclicEscapeRegions(loop, result.exitBlockId);
 		final exits:Map<String, Bool> = [];
 		for (blockId in loop.nodes.keys())
 			for (target in analysis.successors(blockId))
-				if (!loop.nodes.exists(target))
+				if (!loop.nodes.exists(target) && target != result.exitBlockId && !isAbruptTarget(target))
 					exits.set(target, true);
 		final exitIds = [for (id in exits.keys()) id];
 		exitIds.sort(analysis.compareBlockIds);
-		if (exitIds.length != 1 || exitIds[0] != result.exitBlockId)
-			fail('natural loop `${loop.headerBlockId}` in `${fn.id}` has unowned exits [${exitIds.join(", ")}], expected `${result.exitBlockId}`');
+		if (exitIds.length != 0) {
+			final details = exitIds.map(id -> describeUnownedExit(loop, id));
+			fail('natural loop `${loop.headerBlockId}` in `${fn.id}` has unowned exits [${exitIds.join(", ")}], expected only '
+				+ '`${result.exitBlockId}` or explicit abrupt tails; ${details.join("; ")}');
+		}
 		return result;
 	}
 
 	/**
-		Natural-loop sets omit acyclic break and terminal arms.
+		Describe why one edge left a natural loop without guessing its meaning.
 
-		Absorb only header-dominated linear chains that either reach the proven
-		loop exit or end in an explicit HxcIR return/throw/unreachable. This lets
-		the region builder own an early break/return exactly once without treating
-		an arbitrary second loop exit as structured.
+		A block name alone does not tell a contributor whether the edge represents
+		a `break`, an early `return`, or an unrelated continuation. The diagnostic
+		reports which loop blocks enter the target and the target's exact HxcIR
+		terminator shape. This evidence guides a structural fix; it does not make
+		the edge legal by itself.
 	**/
-	function absorbLinearEscapeArms(loop:CBodyNaturalLoop, exitBlockId:String):Void {
+	function describeUnownedExit(loop:CBodyNaturalLoop, targetBlockId:String):String {
+		final owners = analysis.predecessorIds(targetBlockId).filter(id -> loop.nodes.exists(id));
+		owners.sort(analysis.compareBlockIds);
+		final terminator = requireTerminator(analysis.requireBlock(targetBlockId));
+		final shape = switch terminator.kind {
+			case IRTJump(edge):
+				'jump->${edge.targetBlockId}';
+			case IRTBranch(_, whenTrue, whenFalse):
+				'branch->${whenTrue.targetBlockId},${whenFalse.targetBlockId}';
+			case IRTSwitch(_, cases, defaultEdge):
+				final targets = cases.map(item -> item.edge.targetBlockId);
+				targets.push(defaultEdge.targetBlockId);
+				'switch->[${targets.join(",")}]';
+			case IRTTagSwitch(_, cases, defaultEdge):
+				final targets = cases.map(item -> item.edge.targetBlockId);
+				if (defaultEdge != null)
+					targets.push(defaultEdge.targetBlockId);
+				'tag-switch->[${targets.join(",")}]';
+			case IRTReturn(_, _):
+				"return";
+			case IRTThrow(_, _):
+				"throw";
+			case IRTUnreachable:
+				"unreachable";
+		};
+		return '$targetBlockId from [${owners.join(",")}] is $shape';
+	}
+
+	/**
+		Natural-loop sets omit acyclic break and abrupt-return regions.
+
+		Haxe may compute an early return value with branches before reaching its
+		`return`, so requiring a straight-line chain rejects ordinary source code.
+		Absorb a region only when the loop header dominates it, it has no cycle,
+		and every path reaches the one proven loop exit or an explicit
+		return/throw/unreachable terminator. The structural builder can then own
+		the complete `if`/switch-shaped escape without treating an arbitrary second
+		loop exit as legal.
+	**/
+	function absorbAcyclicEscapeRegions(loop:CBodyNaturalLoop, exitBlockId:String):Void {
 		final absorbed:Map<String, Bool> = [];
 		var changed = true;
 		while (changed) {
@@ -599,12 +687,10 @@ private class CBodyControlFlowBuilder {
 				for (target in targets) {
 					if (target == exitBlockId || loop.nodes.exists(target))
 						continue;
-					var chain = linearChainToExit(target, exitBlockId, loop, absorbed);
-					if (chain == null)
-						chain = linearChainToTerminal(target, loop, absorbed);
-					if (chain == null)
+					final region = acyclicEscapeRegion(target, exitBlockId, loop, absorbed);
+					if (region == null)
 						continue;
-					for (blockId in chain) {
+					for (blockId in region) {
 						if (!loop.nodes.exists(blockId)) {
 							loop.nodes.set(blockId, true);
 							absorbed.set(blockId, true);
@@ -616,49 +702,56 @@ private class CBodyControlFlowBuilder {
 		}
 	}
 
-	function linearChainToExit(startBlockId:String, exitBlockId:String, loop:CBodyNaturalLoop, absorbed:Map<String, Bool>):Null<Array<String>> {
-		final result:Array<String> = [];
-		final seen:Map<String, Bool> = [];
-		var current = startBlockId;
-		while (current != exitBlockId) {
-			if (absorbed.exists(current))
-				return result;
-			if (seen.exists(current) || loop.nodes.exists(current) || !analysis.dominates(loop.headerBlockId, current))
-				return null;
-			seen.set(current, true);
-			result.push(current);
-			final block = analysis.requireBlock(current);
-			final terminator = requireTerminator(block);
-			current = switch terminator.kind {
-				case IRTJump(edge): edge.targetBlockId;
-				case _: return null;
-			};
-		}
-		return result;
-	}
+	/**
+		Return the complete bounded escape region rooted at `startBlockId`.
 
-	function linearChainToTerminal(startBlockId:String, loop:CBodyNaturalLoop, absorbed:Map<String, Bool>):Null<Array<String>> {
+		`null` means at least one path cycles, re-enters the natural loop, escapes
+		to another destination, or is not owned by this loop header. Already
+		absorbed nodes are valid shared tails; they were proven by the same rule in
+		an earlier deterministic iteration.
+	**/
+	function acyclicEscapeRegion(startBlockId:String, exitBlockId:String, loop:CBodyNaturalLoop, absorbed:Map<String, Bool>):Null<Array<String>> {
 		final result:Array<String> = [];
-		final seen:Map<String, Bool> = [];
-		var current = startBlockId;
-		while (true) {
-			if (absorbed.exists(current))
-				return result;
-			if (seen.exists(current) || loop.nodes.exists(current) || !analysis.dominates(loop.headerBlockId, current))
-				return null;
-			seen.set(current, true);
-			result.push(current);
-			final block = analysis.requireBlock(current);
+		final visiting:Map<String, Bool> = [];
+		final complete:Map<String, Bool> = [];
+
+		function visit(blockId:String):Bool {
+			if (blockId == exitBlockId || absorbed.exists(blockId))
+				return true;
+			if (loop.nodes.exists(blockId) || visiting.exists(blockId) || !analysis.dominates(loop.headerBlockId, blockId))
+				return false;
+			if (complete.exists(blockId))
+				return true;
+
+			visiting.set(blockId, true);
+			final block = analysis.requireBlock(blockId);
 			final terminator = requireTerminator(block);
-			switch terminator.kind {
-				case IRTJump(edge):
-					current = edge.targetBlockId;
+			final bounded = switch terminator.kind {
 				case IRTReturn(_, _) | IRTThrow(_, _) | IRTUnreachable:
-					return result;
+					true;
 				case _:
-					return null;
-			}
+					final targets = analysis.successors(blockId);
+					if (targets.length == 0) {
+						false;
+					} else {
+						var allBounded = true;
+						for (target in targets)
+							if (!visit(target)) {
+								allBounded = false;
+								break;
+							}
+						allBounded;
+					}
+			};
+			visiting.remove(blockId);
+			if (!bounded)
+				return false;
+			complete.set(blockId, true);
+			result.push(blockId);
+			return true;
 		}
+
+		return visit(startBlockId) ? result : null;
 	}
 
 	function dominatesBackedges(blockId:String, loop:CBodyNaturalLoop):Bool {
@@ -676,16 +769,21 @@ private class CBodyControlFlowBuilder {
 	}
 
 	function edgeCompletion(ownerBlockId:String, targetBlockId:String, loop:Null<CBodyLoopContext>, breakIsDirect:Bool):Null<CBodyControlFlowCompletion> {
-		if (loop == null)
-			return null;
-		if (targetBlockId == loop.breakTargetBlockId) {
-			if (breakIsDirect)
-				return CFCBreak(ownerBlockId, targetBlockId);
-			labeledTargets.set(targetBlockId, true);
-			return CFCGoto(ownerBlockId, targetBlockId, CBGRLoopBreakThroughSwitch);
+		if (loop != null) {
+			if (targetBlockId == loop.breakTargetBlockId) {
+				if (breakIsDirect)
+					return CFCBreak(ownerBlockId, targetBlockId);
+				labeledTargets.set(targetBlockId, true);
+				return CFCGoto(ownerBlockId, targetBlockId, CBGRLoopBreakThroughSwitch);
+			}
+			if (loop.continueTargetBlockId != null && targetBlockId == loop.continueTargetBlockId)
+				return CFCContinue(ownerBlockId, targetBlockId);
 		}
-		if (loop.continueTargetBlockId != null && targetBlockId == loop.continueTargetBlockId)
-			return CFCContinue(ownerBlockId, targetBlockId);
+		if (isAbruptTarget(targetBlockId)) {
+			if (!planned.exists(targetBlockId))
+				claim(targetBlockId);
+			return CFCSharedAbrupt(ownerBlockId, targetBlockId);
+		}
 		return null;
 	}
 
@@ -700,6 +798,15 @@ private class CBodyControlFlowBuilder {
 		var current = startBlockId;
 		final seen:Map<String, Bool> = [];
 		while (true) {
+			/*
+				A return, throw, or unreachable block is a valid branch escape
+				even when it sits just outside the active natural-loop set. Test
+				that semantic boundary before rejecting unrelated out-of-region
+				blocks; otherwise a direct early return is mistaken for a normal
+				continuation.
+			 */
+			if (isAbruptTarget(current))
+				return CLETerminal;
 			if (current == forbiddenBlockId || current == stopBlockId || seen.exists(current) || planned.exists(current) || !allowed.exists(current))
 				return null;
 			seen.set(current, true);
@@ -746,8 +853,8 @@ private class CBodyControlFlowBuilder {
 	static function loopBreakTarget(loop:Null<CBodyLoopContext>):Null<String>
 		return loop == null ? null : loop.breakTargetBlockId;
 
-	static function loopContinueTarget(loop:Null<CBodyLoopContext>):Null<String>
-		return loop == null ? null : loop.continueTargetBlockId;
+	static function loopIterationBoundaryTarget(loop:Null<CBodyLoopContext>):Null<String>
+		return loop == null ? null : loop.iterationBoundaryBlockId;
 
 	static function fallsThrough(completion:CBodyControlFlowCompletion):Bool
 		return completion == CFCFallthrough;
@@ -760,6 +867,12 @@ private class CBodyControlFlowBuilder {
 
 	static function fail<T>(detail:String):T
 		throw new CBodyEmissionError(detail);
+
+	function isAbruptTarget(blockId:String):Bool
+		return switch requireTerminator(analysis.requireBlock(blockId)).kind {
+			case IRTReturn(_, _) | IRTThrow(_, _) | IRTUnreachable: true;
+			case _: false;
+		};
 }
 
 private class CBodyControlFlowPlanValidator {
@@ -768,6 +881,7 @@ private class CBodyControlFlowPlanValidator {
 	final counts:Map<String, Int> = [];
 	final labeled:Map<String, Bool> = [];
 	final usedLabels:Map<String, Bool> = [];
+	final sharedAbruptTargets:Map<String, Bool> = [];
 
 	public function new(fn:HxcIRFunction, analysis:CBodyControlFlowAnalysis) {
 		this.fn = fn;
@@ -840,7 +954,7 @@ private class CBodyControlFlowPlanValidator {
 						requireRegionFallthrough(whenTrue, joinBlockId, blockId);
 						requireRegionFallthrough(whenFalse, joinBlockId, blockId);
 					case CBPNormalJoin(joinBlockId):
-						if (!analysis.isNormalJoin(joinBlockId, [targets.whenTrue, targets.whenFalse], analysis.reachable, escapeTargets(loop)))
+						if (!isNormalOrBoundaryJoin(joinBlockId, [targets.whenTrue, targets.whenFalse], loop))
 							fail('if region `$blockId` in `${fn.id}` lost normal join `$joinBlockId`');
 						requireRegionEntry(whenTrue, targets.whenTrue, blockId, joinBlockId);
 						requireRegionEntry(whenFalse, targets.whenFalse, blockId, joinBlockId);
@@ -900,6 +1014,7 @@ private class CBodyControlFlowPlanValidator {
 		final context:CBodyLoopContext = {
 			headerBlockId: headerBlockId,
 			breakTargetBlockId: exitBlockId,
+			iterationBoundaryBlockId: postTest ? decisionBlockId : headerBlockId,
 			continueTargetBlockId: postTest ? null : headerBlockId
 		};
 		validateRegion(condition, context, true);
@@ -953,7 +1068,7 @@ private class CBodyControlFlowPlanValidator {
 					fail('switch region `$blockId` in `${fn.id}` lost post-dominator `$joinBlockId`');
 				join = joinBlockId;
 			case CSPNormalJoin(joinBlockId):
-				if (!analysis.isNormalJoin(joinBlockId, arms.map(arm -> arm.targetBlockId), analysis.reachable, escapeTargets(loop)))
+				if (!isNormalOrBoundaryJoin(joinBlockId, arms.map(arm -> arm.targetBlockId), loop))
 					fail('switch region `$blockId` in `${fn.id}` lost normal join `$joinBlockId`');
 				join = joinBlockId;
 			case CSPClosed:
@@ -991,6 +1106,20 @@ private class CBodyControlFlowPlanValidator {
 				if (loop == null || loop.continueTargetBlockId == null || loop.continueTargetBlockId != targetBlockId)
 					fail('structured continue `$ownerBlockId` -> `$targetBlockId` in `${fn.id}` is outside its proven loop');
 				requireEdgeCompletion(ownerBlockId, targetBlockId);
+			case CFCSharedAbrupt(ownerBlockId, targetBlockId):
+				requireEdgeCompletion(ownerBlockId, targetBlockId);
+				switch requireTerminator(analysis.requireBlock(targetBlockId)).kind {
+					case IRTReturn(_, _) | IRTThrow(_, _) | IRTUnreachable:
+					case _:
+						fail('shared abrupt completion `$ownerBlockId` -> `$targetBlockId` in `${fn.id}` reaches a normally continuing target');
+				}
+				// Several mutually exclusive completions may render the same
+				// abrupt tail, but it remains one HxcIR block with one semantic
+				// owner for coverage and diagnostics.
+				if (!sharedAbruptTargets.exists(targetBlockId)) {
+					sharedAbruptTargets.set(targetBlockId, true);
+					count(targetBlockId);
+				}
 			case CFCGoto(ownerBlockId, targetBlockId, reason):
 				if (reason != CBGRLoopBreakThroughSwitch
 					|| loop == null
@@ -1007,10 +1136,17 @@ private class CBodyControlFlowPlanValidator {
 		final result:Map<String, Bool> = [];
 		if (loop != null) {
 			result.set(loop.breakTargetBlockId, true);
-			if (loop.continueTargetBlockId != null)
-				result.set(loop.continueTargetBlockId, true);
+			result.set(loop.iterationBoundaryBlockId, true);
 		}
 		return result;
+	}
+
+	/** Recheck the exact ordinary-join or enclosing-iteration-boundary proof. */
+	function isNormalOrBoundaryJoin(candidate:String, starts:Array<String>, loop:Null<CBodyLoopContext>):Bool {
+		final escapes = escapeTargets(loop);
+		return loop != null
+			&& candidate == loop.iterationBoundaryBlockId ? analysis.isBoundaryJoin(candidate, starts, analysis.reachable,
+				escapes) : analysis.isNormalJoin(candidate, starts, analysis.reachable, escapes);
 	}
 
 	function requireRegionEntry(region:CBodyControlFlowRegion, expectedBlockId:String, ownerBlockId:String, fallthroughTarget:Null<String>):Void {
@@ -1021,7 +1157,7 @@ private class CBodyControlFlowPlanValidator {
 		}
 		final matches = switch region.completion {
 			case CFCFallthrough: fallthroughTarget != null && expectedBlockId == fallthroughTarget;
-			case CFCBreak(owner, target) | CFCContinue(owner, target) | CFCGoto(owner, target, _): owner == ownerBlockId && target == expectedBlockId;
+			case CFCBreak(owner, target) | CFCContinue(owner, target) | CFCSharedAbrupt(owner, target) | CFCGoto(owner, target, _): owner == ownerBlockId && target == expectedBlockId;
 			case _: false;
 		};
 		if (!matches)
@@ -1045,7 +1181,8 @@ private class CBodyControlFlowPlanValidator {
 					fail('closed structured region in `${fn.id}` retains a normal continuation');
 			case CFCReturn(ownerBlockId) | CFCThrow(ownerBlockId) | CFCUnreachable(ownerBlockId):
 				requireLastBlockOwner(last, ownerBlockId);
-			case CFCBreak(ownerBlockId, targetBlockId) | CFCContinue(ownerBlockId, targetBlockId) | CFCGoto(ownerBlockId, targetBlockId, _):
+			case CFCBreak(ownerBlockId, targetBlockId) | CFCContinue(ownerBlockId, targetBlockId) | CFCSharedAbrupt(ownerBlockId, targetBlockId) |
+				CFCGoto(ownerBlockId, targetBlockId, _):
 				requireLastBlockOwner(last, ownerBlockId);
 				requireNodeContinuation(last, targetBlockId);
 		}
@@ -1276,6 +1413,10 @@ private class CBodyControlFlowAnalysis {
 		return result;
 	}
 
+	/** Return a defensive copy of the blocks with an edge into `blockId`. */
+	public function predecessorIds(blockId:String):Array<String>
+		return requirePredecessors(blockId).copy();
+
 	function collectSuccessors(block:HxcIRBlock):Array<String> {
 		final result:Array<String> = [];
 		if (block.terminator == null)
@@ -1376,7 +1517,12 @@ private class CBodyControlFlowAnalysis {
 	public function normalJoin(starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>, unavailable:Map<String, Bool>,
 			preferredCandidate:Null<String>):Null<String> {
 		normalJoinSearches++;
-		final distances = distancesForStarts(starts, allowed);
+		if (preferredCandidate != null
+			&& escapeTargets.exists(preferredCandidate)
+			&& !unavailable.exists(preferredCandidate)
+			&& isBoundaryJoinWithAvailability(preferredCandidate, starts, allowed, escapeTargets, unavailable))
+			return preferredCandidate;
+		final distances = distancesForStarts(starts, allowed, escapeTargets);
 		if (preferredCandidate != null
 			&& allowed.exists(preferredCandidate)
 			&& !escapeTargets.exists(preferredCandidate)
@@ -1402,6 +1548,7 @@ private class CBodyControlFlowAnalysis {
 			}
 			candidates.push({
 				blockId: candidate,
+				abrupt: isAbruptTerminal(requireBlock(candidate)),
 				reachCount: reachCount,
 				maximumDistance: maximum,
 				totalDistance: total
@@ -1411,6 +1558,8 @@ private class CBodyControlFlowAnalysis {
 		// first is semantics-preserving: the first valid candidate has the same
 		// score and source block-order tie break as the former retained minimum.
 		candidates.sort((left, right) -> {
+			if (left.abrupt != right.abrupt)
+				return left.abrupt ? 1 : -1;
 			if (left.reachCount != right.reachCount)
 				return right.reachCount - left.reachCount;
 			if (left.maximumDistance != right.maximumDistance)
@@ -1427,7 +1576,32 @@ private class CBodyControlFlowAnalysis {
 
 	public function isNormalJoin(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Bool {
 		final unavailable:Map<String, Bool> = [];
-		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable, distancesForStarts(starts, allowed));
+		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable, distancesForStarts(starts, allowed, escapeTargets));
+	}
+
+	/**
+		Prove that every normal arm reaches the enclosing loop-iteration boundary.
+
+		The boundary is intentionally an escape target for ordinary join ranking,
+		because searching through it would inspect a future iteration. For the exact
+		enclosing stop, however, reaching it means ordinary structural fallthrough.
+		Remove only that candidate from the escape set, then reuse the complete
+		disjoint-prefix and completion proof.
+	**/
+	public function isBoundaryJoin(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Bool {
+		final unavailable:Map<String, Bool> = [];
+		return isBoundaryJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable);
+	}
+
+	function isBoundaryJoinWithAvailability(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
+			unavailable:Map<String, Bool>):Bool {
+		if (!escapeTargets.exists(candidate) || !allowed.exists(candidate))
+			return false;
+		final remainingEscapes:Map<String, Bool> = [];
+		for (target in escapeTargets.keys())
+			if (target != candidate)
+				remainingEscapes.set(target, true);
+		return isNormalJoinWithAvailability(candidate, starts, allowed, remainingEscapes, unavailable, distancesForStarts(starts, allowed, remainingEscapes));
 	}
 
 	function isNormalJoinWithAvailability(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
@@ -1435,6 +1609,12 @@ private class CBodyControlFlowAnalysis {
 		normalJoinCandidateProofs++;
 		if (!allowed.exists(candidate) || escapeTargets.exists(candidate))
 			return false;
+		if (isLinearEscapePrefix(candidate, allowed, escapeTargets)) {
+			final abrupt = abruptCompletionSet(allowed);
+			for (index => distance in distances)
+				if (!distance.exists(candidate) && !abrupt.exists(starts[index]))
+					return false;
+		}
 		final completing = completionSet(candidate, allowed, escapeTargets);
 		var hasContinuingPath = false;
 		for (index => start in starts) {
@@ -1443,7 +1623,8 @@ private class CBodyControlFlowAnalysis {
 			if (!escapeTargets.exists(start) && !completing.exists(start))
 				return false;
 		}
-		return hasContinuingPath && prefixesAreDisjoint(candidate, starts, allowed, escapeTargets, unavailable);
+		final disjoint = prefixesAreDisjoint(candidate, starts, allowed, escapeTargets, unavailable);
+		return hasContinuingPath && disjoint;
 	}
 
 	function completionSet(candidate:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Map<String, Bool> {
@@ -1478,6 +1659,76 @@ private class CBodyControlFlowAnalysis {
 					changed = true;
 				}
 			}
+			// A natural loop is one structural unit. Its internal backedge means
+			// the ordinary one-block-at-a-time fixed point cannot prove the header
+			// complete, even when every actual loop exit already reaches this
+			// candidate or an admitted abrupt boundary. Mark the complete group
+			// together; an infinite iteration is non-fallthrough, not a second
+			// route around the candidate.
+			for (loop in loopsByHeader) {
+				var admitted = true;
+				var hasExit = false;
+				for (blockId in loop.nodes.keys()) {
+					if (!allowed.exists(blockId)) {
+						admitted = false;
+						break;
+					}
+					for (target in successors(blockId)) {
+						if (loop.nodes.exists(target))
+							continue;
+						hasExit = true;
+						if (!escapeTargets.exists(target) && target != candidate && !result.exists(target)) {
+							admitted = false;
+							break;
+						}
+					}
+					if (!admitted)
+						break;
+				}
+				if (admitted && hasExit)
+					for (blockId in loop.nodes.keys())
+						if (!result.exists(blockId)) {
+							result.set(blockId, true);
+							changed = true;
+						}
+			}
+		}
+		return result;
+	}
+
+	/**
+		Find blocks whose every path ends in an explicit abrupt terminator.
+
+		This intentionally does not count a loop break/continue boundary as
+		abrupt. That distinction lets a return-only switch arm sit beside a shared
+		normal join while preventing one case-specific `continue` prefix from being
+		moved after a sibling that owns different work.
+	**/
+	function abruptCompletionSet(allowed:Map<String, Bool>):Map<String, Bool> {
+		final result:Map<String, Bool> = [];
+		for (blockId in orderedReachable)
+			if (allowed.exists(blockId) && isAbruptTerminal(requireBlock(blockId)))
+				result.set(blockId, true);
+		var changed = true;
+		while (changed) {
+			changed = false;
+			for (blockId in orderedReachable) {
+				if (!allowed.exists(blockId) || result.exists(blockId))
+					continue;
+				final outgoing = successors(blockId);
+				if (outgoing.length == 0)
+					continue;
+				var allAbrupt = true;
+				for (target in outgoing)
+					if (!allowed.exists(target) || !result.exists(target)) {
+						allAbrupt = false;
+						break;
+					}
+				if (allAbrupt) {
+					result.set(blockId, true);
+					changed = true;
+				}
+			}
 		}
 		return result;
 	}
@@ -1485,6 +1736,11 @@ private class CBodyControlFlowAnalysis {
 	function prefixesAreDisjoint(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
 			unavailable:Map<String, Bool>):Bool {
 		final ownerByBlock:Map<String, Int> = [];
+		// A block reached after the candidate belongs to the shared continuation.
+		// If another arm reaches that same block before the candidate (for
+		// example, by continuing the loop), choosing this candidate would place
+		// the block both inside that arm and after the structured branch.
+		final continuation = forwardReachable(candidate, allowed, escapeTargets);
 		for (armIndex => start in starts) {
 			if (start == candidate || escapeTargets.exists(start))
 				continue;
@@ -1495,7 +1751,17 @@ private class CBodyControlFlowAnalysis {
 				final current = pending[index++];
 				if (current == candidate || escapeTargets.exists(current) || seen.exists(current))
 					continue;
+				/*
+					A return/throw/unreachable target is a shared completion, not
+					part of either arm's normally continuing prefix. Its dedicated
+					CFCSharedAbrupt owner accounts for the block once even when
+					several mutually exclusive paths reach it.
+				 */
+				if (isAbruptTerminal(requireBlock(current)))
+					continue;
 				if (!allowed.exists(current) || unavailable.exists(current))
+					return false;
+				if (continuation.exists(current))
 					return false;
 				seen.set(current, true);
 				final owner = ownerByBlock.get(current);
@@ -1526,18 +1792,51 @@ private class CBodyControlFlowAnalysis {
 		return result;
 	}
 
-	function distancesForStarts(starts:Array<String>, allowed:Map<String, Bool>):Array<Map<String, Int>> {
+	/**
+		Recognize a straight-line arm that ends only by leaving the active loop iteration.
+
+		Its blocks belong inside that branch even when another arm eventually
+		reaches the same break/continue boundary. Selecting one as a normal join
+		would move the escape after its sibling and can make planning walk into a
+		later iteration.
+	**/
+	function isLinearEscapePrefix(start:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Bool {
+		var current = start;
+		final seen:Map<String, Bool> = [];
+		while (true) {
+			if (escapeTargets.exists(current))
+				return true;
+			if (!allowed.exists(current) || seen.exists(current))
+				return false;
+			seen.set(current, true);
+			final outgoing = successors(current);
+			if (outgoing.length != 1)
+				return false;
+			current = outgoing[0];
+		}
+	}
+
+	/**
+		Measure paths that remain inside the current structural region.
+
+		A loop's break and continue targets end the current iteration. Walking
+		through `continue` and back into the header would rank blocks from a future
+		iteration as possible joins for the current branch. The later join proof
+		already treats these targets as completion boundaries; distance ranking
+		must use the same boundary or it can prefer a valid-but-wrong candidate.
+	**/
+	function distancesForStarts(starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Array<Map<String, Int>> {
 		final result:Array<Map<String, Int>> = [];
 		for (start in starts) {
 			normalJoinDistanceSearches++;
-			result.push(distancesFromStart(start, allowed));
+			result.push(distancesFromStart(start, allowed, escapeTargets));
 		}
 		return result;
 	}
 
-	function distancesFromStart(start:String, allowed:Map<String, Bool>):Map<String, Int> {
+	function distancesFromStart(start:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Map<String, Int> {
 		final distances:Map<String, Int> = [];
-		if (!allowed.exists(start))
+		if (!allowed.exists(start) || escapeTargets.exists(start))
 			return distances;
 		final pending:Array<String> = [start];
 		distances.set(start, 0);
@@ -1548,7 +1847,7 @@ private class CBodyControlFlowAnalysis {
 			if (distance == null)
 				return fail('normal-join distance in `${fn.id}` lost block `$current`');
 			for (target in successors(current)) {
-				if (allowed.exists(target) && !distances.exists(target)) {
+				if (allowed.exists(target) && !escapeTargets.exists(target) && !distances.exists(target)) {
 					distances.set(target, distance + 1);
 					pending.push(target);
 				}

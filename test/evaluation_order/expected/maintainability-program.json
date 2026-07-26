@@ -45,13 +45,13 @@
   "inputs": [
     {
       "path": "program.c",
-      "sha256": "545c76febb8fd529fbfe0e140a988b4b1b92193437e81f87b0ca3b90c3b090e2"
+      "sha256": "42efef4ba12ee563e1c81d3b640385fd4bcf8c7e1e690e6dc21d5eb4edd1b979"
     }
   ],
   "summary": {
     "artifactCount": 1,
-    "physicalLineCount": 419,
-    "codeLineCount": 394,
+    "physicalLineCount": 416,
+    "codeLineCount": 391,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -67,7 +67,7 @@
     "branchCount": 49,
     "temporaryDeclarationCount": 60,
     "temporaryReferenceCount": 91,
-    "temporaryDeclarationsPerKFunctionCodeLines": 158,
+    "temporaryDeclarationsPerKFunctionCodeLines": 159,
     "maxIdentifier": {
       "name": "hxc_EvaluationFixture_exhaustiveAbstractRecord",
       "bytes": 46,
@@ -120,7 +120,7 @@
       "collisionResolved": true,
       "coordinate": {
         "path": "program.c",
-        "line": 305,
+        "line": 302,
         "column": 11,
         "functionId": null
       }
@@ -140,7 +140,7 @@
       "collisionResolved": true,
       "coordinate": {
         "path": "program.c",
-        "line": 321,
+        "line": 318,
         "column": 11,
         "functionId": null
       }
@@ -160,7 +160,7 @@
       "collisionResolved": true,
       "coordinate": {
         "path": "program.c",
-        "line": 304,
+        "line": 301,
         "column": 11,
         "functionId": null
       }
@@ -170,19 +170,19 @@
   "files": [
     {
       "path": "program.c",
-      "sha256": "545c76febb8fd529fbfe0e140a988b4b1b92193437e81f87b0ca3b90c3b090e2",
+      "sha256": "42efef4ba12ee563e1c81d3b640385fd4bcf8c7e1e690e6dc21d5eb4edd1b979",
       "owner": {
         "kind": "amalgamation",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 419,
-      "codeLineCount": 394,
+      "physicalLineCount": 416,
+      "codeLineCount": 391,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 635,
+      "identifierCount": 634,
       "maxIdentifier": {
         "name": "hxc_EvaluationFixture_exhaustiveAbstractRecord",
         "bytes": 46,
@@ -495,17 +495,17 @@
             "endColumn": 3
           },
           "startLine": 121,
-          "endLine": 388,
-          "physicalLineCount": 268,
-          "codeLineCount": 268,
-          "bodyCodeLineCount": 265,
+          "endLine": 385,
+          "physicalLineCount": 265,
+          "codeLineCount": 265,
+          "bodyCodeLineCount": 262,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
           "branchCount": 38,
-          "maxNestingDepth": 5,
+          "maxNestingDepth": 4,
           "temporaryDeclarationCount": 55,
           "temporaryReferenceCount": 79,
-          "temporaryDeclarationsPerKCodeLines": 206
+          "temporaryDeclarationsPerKCodeLines": 208
         },
         {
           "functionId": "function.EvaluationFixture.setCallFlag",
@@ -529,8 +529,8 @@
             "endLine": 12,
             "endColumn": 3
           },
-          "startLine": 390,
-          "endLine": 394,
+          "startLine": 387,
+          "endLine": 391,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -564,8 +564,8 @@
             "endLine": 21,
             "endColumn": 3
           },
-          "startLine": 396,
-          "endLine": 400,
+          "startLine": 393,
+          "endLine": 397,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -599,8 +599,8 @@
             "endLine": 30,
             "endColumn": 3
           },
-          "startLine": 402,
-          "endLine": 406,
+          "startLine": 399,
+          "endLine": 403,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -634,8 +634,8 @@
             "endLine": 39,
             "endColumn": 3
           },
-          "startLine": 408,
-          "endLine": 413,
+          "startLine": 405,
+          "endLine": 410,
           "physicalLineCount": 6,
           "codeLineCount": 6,
           "bodyCodeLineCount": 3,
@@ -657,8 +657,8 @@
             "source": null
           },
           "source": null,
-          "startLine": 415,
-          "endLine": 419,
+          "startLine": 412,
+          "endLine": 416,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,

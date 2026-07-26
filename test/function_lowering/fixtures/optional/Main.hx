@@ -90,6 +90,26 @@ class Main {
 		return present ? 0.0 : null;
 	}
 
+	/**
+		Match a copied optional scalar through a statement switch.
+
+		The named `escape` local is deliberate: its load occurs before the switch
+		branches, while the payload may be unwrapped only inside the present-value
+		branch. HxcIR therefore has to carry the value through an explicit local
+		instead of reusing a block-local result ID.
+	**/
+	static function optionalStatementSwitch(value:Null<Int>):Int {
+		final escape = value;
+		switch escape {
+			case 34:
+				return 1;
+			case 92:
+				return 2;
+			case _:
+				return 0;
+		}
+	}
+
 	/** Read every primitive optional from one ordinary immutable record. */
 	static function recordScore(value:PrimitiveRecord):Int {
 		return (value.flag == null ? -8 : value.flag ? 8 : 0) + (value.count == null ? -4 : value.count) + (value.code == null ? -2 : Std.int(value.code))
@@ -180,6 +200,10 @@ class Main {
 			|| optionalUInt(maybeUInt(true)) != 0
 			|| maybeFloat(false) != null
 			|| optionalFloat(maybeFloat(true)) != 0
+			|| optionalStatementSwitch(null) != 0
+			|| optionalStatementSwitch(34) != 1
+			|| optionalStatementSwitch(92) != 2
+			|| optionalStatementSwitch(7) != 0
 			|| recordScore(missingRecord) != -15
 			|| recordScore(zeroRecord) != 0
 			|| packetScore(Flag(null)) != -8

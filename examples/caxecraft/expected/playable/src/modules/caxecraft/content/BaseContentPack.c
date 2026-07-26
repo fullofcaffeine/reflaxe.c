@@ -255,43 +255,43 @@ int32_t hxc_caxecraft_content_BaseContentPack_itemAquaticProfile(int32_t hxc_val
 
 int32_t hxc_caxecraft_content_BaseContentPack_itemFromValidatedStorageCode(int32_t hxc_code)
 {
-  if (!(hxc_code == 0))
+  if (hxc_code == 0)
   {
-    if (!(hxc_code == 1))
-    {
-      if (!(hxc_code == 2))
-      {
-        if (!(hxc_code == 3))
-        {
-          if (!(hxc_code == 4))
-          {
-            if (!(hxc_code == 5))
-            {
-              if (!(hxc_code == 6))
-              {
-                if (!(hxc_code == 7))
-                {
-                  if (!(hxc_code == 8))
-                  {
-                    return 0;
-                  }
-                  return 8;
-                }
-                return 7;
-              }
-              return 6;
-            }
-            return 5;
-          }
-          return 4;
-        }
-        return 3;
-      }
-      return 2;
-    }
+    return 0;
+  }
+  if (hxc_code == 1)
+  {
     return 1;
   }
-  return 0;
+  if (hxc_code == 2)
+  {
+    return 2;
+  }
+  if (hxc_code == 3)
+  {
+    return 3;
+  }
+  if (hxc_code == 4)
+  {
+    return 4;
+  }
+  if (hxc_code == 5)
+  {
+    return 5;
+  }
+  if (hxc_code == 6)
+  {
+    return 6;
+  }
+  if (hxc_code == 7)
+  {
+    return 7;
+  }
+  if (!(hxc_code == 8))
+  {
+    return 0;
+  }
+  return 8;
 }
 
 struct hxc_caxecraft_content_ContentPresentation hxc_caxecraft_content_BaseContentPack_itemIcon(int32_t hxc_value)
@@ -433,4 +433,467 @@ int32_t hxc_caxecraft_content_BaseContentPack_itemUseProfile(int32_t hxc_value)
       }
   }
   return 0;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasBlock(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:air", 13, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:air", 13, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:ash", 13, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:ash", 13, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:bedrock", 17, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:bedrock", 17, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:dirt", 14, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:dirt", 14, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:grass", 15, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:grass", 15, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:leaves", 16, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:leaves", 16, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:sand", 14, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:sand", 14, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:snow", 14, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:snow", 14, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:stone", 15, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:stone", 15, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:wood", 14, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:wood", 14, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return false;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return true;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasEffect(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:berry-pickup", 22, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:berry-pickup", 22, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:copper-strike", 23, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:copper-strike", 23, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return false;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return true;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasEntity(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:mossling", 18, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:mossling", 18, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return false;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return true;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasFluid(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:water", 15, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:water", 15, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return false;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return true;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasItem(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:berries", 17, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:berries", 17, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:bread", 15, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:bread", 15, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:copper-sword", 22, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:copper-sword", 22, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:dirt-block", 20, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:dirt-block", 20, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:grass-block", 21, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:grass-block", 21, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:haxeforge", 19, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:haxeforge", 19, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:lantern", 17, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:lantern", 17, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:stone-block", 21, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:stone-block", 21, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return true;
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:tideweave-suit", 24, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:tideweave-suit", 24, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return false;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return true;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasNpc(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:nia", 13, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:nia", 13, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return false;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return true;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasPrefab(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  (void)hxc_id;
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return false;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasSignal(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  (void)hxc_id;
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return false;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasState(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  (void)hxc_id;
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return false;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_hasStatefulObject(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  (void)hxc_id;
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return false;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_isAirBlock(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:air", 13, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:air", 13, true, NULL }.data, hxc_id.byte_length) == 0));
+}
+
+int32_t hxc_caxecraft_content_BaseContentRegistry_maximumItemQuantity(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:berries", 17, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:berries", 17, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 64;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:bread", 15, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:bread", 15, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 64;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:copper-sword", 22, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:copper-sword", 22, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 1;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:dirt-block", 20, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:dirt-block", 20, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 64;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:grass-block", 21, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:grass-block", 21, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 64;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:haxeforge", 19, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:haxeforge", 19, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 1;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:lantern", 17, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:lantern", 17, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 64;
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:stone-block", 21, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:stone-block", 21, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 64;
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:tideweave-suit", 24, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:tideweave-suit", 24, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return 0;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return 1;
+}
+
+bool hxc_caxecraft_content_BaseContentRegistry_supportsFeature(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:core", 14, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:core", 14, true, NULL }.data, hxc_id.byte_length) == 0));
 }

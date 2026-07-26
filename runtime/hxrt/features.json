@@ -144,7 +144,7 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "A reachable ordinary Haxe Array length, checked indexing, or push operation.",
+            "description": "A reachable ordinary Haxe Array length, checked indexing, push, or pop operation.",
             "id": "collection-operation",
             "kind": "hxc-ir-operation"
           },
@@ -187,6 +187,7 @@
         "hxc_array_insert_copy",
         "hxc_array_is_valid",
         "hxc_array_move",
+        "hxc_array_pop_move",
         "hxc_array_push_copy",
         "hxc_array_ref_copy",
         "hxc_array_ref_copy_in_place",
@@ -197,6 +198,7 @@
         "hxc_array_ref_init_in_place",
         "hxc_array_ref_is_valid",
         "hxc_array_ref_length",
+        "hxc_array_ref_pop_move",
         "hxc_array_ref_push_copy",
         "hxc_array_ref_release",
         "hxc_array_ref_retain",
@@ -209,13 +211,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "a3d345c10c1764a6348c3252170023f332d11e997e8c590ce5fea856ff3a58c2",
+          "sourceSha256": "9fe9bde12296c7cdbe00c7b68076027da371f7bb3488aae4f248241ab5c3b040",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "f9f7c80021897ea33d3c6b4a7422cb5d7bd16cfe2c5d22011e90d776b12487d8",
+          "sourceSha256": "5d93d31a817070722b7f437c2ad898a108f8d3c595bfa541bbd3c2e2cd54d064",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -669,7 +671,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "d5a02c9e411bdef2a8b62e7ab8400433488ae0e9125820d8d9673d5239a60b9c",
+          "sourceSha256": "996bb3ef9546d3b921cca8ba43a80b0a45b3320e5e69308245591bdeeeab91db",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -1157,7 +1159,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 12
+      "minor": 13
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1194,7 +1196,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "cfe12528853fef2a3c0b3582eb4fd6870656b6dd325364bb23d37a4c2b0f609b",
+      "sourceSetSha256": "2a06df668ff4f499d40d2a6fbcc3df95258f6787c59319a001025b5a9112fb20",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

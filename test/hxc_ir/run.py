@@ -207,9 +207,11 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "invalidStringMapShape",
         "uninitializedCarrierRead",
         "uninitializedCarrierReadBeforeBranch",
+        "uninitializedSwitchCarrierRead",
         "managedUninitializedCarrier",
         "managedCarrierBorrowMovedAsFresh",
         "managedCarrierMissingAcquire",
+        "managedSwitchCarrierMissingAcquire",
         "managedCarrierLifecycleMismatch",
         "managedStringCarrierLifecycleMismatch",
     ):

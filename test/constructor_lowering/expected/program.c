@@ -313,6 +313,7 @@ void hxc_init_compiler_static_initialization_ConstructorTrace_static_field_value
 
 int32_t hxc_CounterOwner_run(struct hxc_CounterOwner *hxc_self, int32_t hxc_delta)
 {
+  struct hxc_OwnedCounter *hxc_this_he0144d812e27 = { 0 };
   if (hxc_self == NULL)
   {
     abort();
@@ -339,7 +340,7 @@ int32_t hxc_CounterOwner_run(struct hxc_CounterOwner *hxc_self, int32_t hxc_delt
   if (!!hxc_tmp_short_circuit_result_n3)
   {
     struct hxc_OwnedCounter *hxc_tmp_owned_class_field_address_n6 = &(*hxc_self).hxc_child;
-    struct hxc_OwnedCounter *hxc_this_he0144d812e27 = hxc_tmp_owned_class_field_address_n6;
+    hxc_this_he0144d812e27 = hxc_tmp_owned_class_field_address_n6;
     struct hxc_OwnedCounter *hxc_tmp_load_result_n7 = hxc_this_he0144d812e27;
     if (hxc_tmp_load_result_n7 == NULL)
     {

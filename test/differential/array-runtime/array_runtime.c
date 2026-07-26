@@ -706,6 +706,150 @@ static int hxc_test_sort(
   return 0;
 }
 
+/**
+ * Prove that Array.pop transfers one existing element owner.
+ *
+ * The primitive case checks empty results and shared identity. The managed
+ * case records every lifecycle callback around the pop: removing the final
+ * element must not copy, retain, assign, or destroy it. The caller receives
+ * that exact owner and destroys it once after use.
+ */
+static int hxc_test_pop(
+  hxc_test_arena *arena,
+  const hxc_allocator *allocator
+) {
+  hxc_array_ref *values = NULL;
+  hxc_array_ref *alias = NULL;
+  hxc_array_ref *managed = NULL;
+  hxc_test_lifecycle lifecycle = {0};
+  hxc_test_object first = {17, 1u};
+  hxc_test_object second = {23, 1u};
+  hxc_test_object *first_value = &first;
+  hxc_test_object *second_value = &second;
+  hxc_test_object *managed_output = NULL;
+  hxc_array_element_ops managed_elements = hxc_test_ref_ops(&lifecycle);
+  int32_t seven = 7;
+  int32_t eleven = 11;
+  int32_t output = -1;
+  int32_t pushed_length = -1;
+  bool present = true;
+  size_t copies;
+  size_t assignments;
+  size_t destructions;
+  void *live_slot = NULL;
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_pop_move(NULL, &output, &present)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(output == -1 && present);
+  HXC_TEST_CHECK(
+    hxc_array_ref_create_trivial(
+      *allocator,
+      sizeof(int32_t),
+      HXC_ALIGNOF(int32_t),
+      &values
+    ) == HXC_STATUS_OK
+  );
+  alias = values;
+  HXC_TEST_CHECK(
+    hxc_array_ref_pop_move(values, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == -1 && !present && alias->value.length == 0u);
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &seven, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &eleven, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_at(&values->value, 1u, &live_slot) == HXC_STATUS_OK
+  );
+  present = false;
+  HXC_TEST_CHECK(
+    hxc_array_ref_pop_move(values, live_slot, &present)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(!present && alias->value.length == 2u);
+  HXC_TEST_CHECK(
+    hxc_array_ref_pop_move(values, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == 11 && present && alias->value.length == 1u);
+  output = -1;
+  present = false;
+  HXC_TEST_CHECK(
+    hxc_array_ref_pop_move(alias, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == 7 && present && values->value.length == 0u);
+  output = -1;
+  present = true;
+  HXC_TEST_CHECK(
+    hxc_array_ref_pop_move(alias, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == -1 && !present);
+  HXC_TEST_CHECK(hxc_array_ref_release(values) == HXC_STATUS_OK);
+  values = NULL;
+  alias = NULL;
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_create(*allocator, managed_elements, &managed)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &first_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &second_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  copies = lifecycle.copies;
+  assignments = lifecycle.assignments;
+  destructions = lifecycle.destructions;
+  /*
+   * A pointer element carries its own absent value, so generated code may omit
+   * a separate presence output. It initializes managed_output to NULL; a
+   * successful non-empty pop replaces it with the moved owner.
+   */
+  HXC_TEST_CHECK(
+    hxc_array_ref_pop_move(managed, &managed_output, NULL)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    managed_output == &second
+    && managed->value.length == 1u
+    && lifecycle.copies == copies
+    && lifecycle.assignments == assignments
+    && lifecycle.destructions == destructions
+    && first.references == 2u
+    && second.references == 2u
+  );
+  HXC_TEST_CHECK(hxc_array_ref_release(managed) == HXC_STATUS_OK);
+  managed = NULL;
+  HXC_TEST_CHECK(
+    first.references == 1u
+    && second.references == 2u
+    && lifecycle.destructions == destructions + 1u
+  );
+  managed_elements.destroy(managed_elements.context, &managed_output);
+  HXC_TEST_CHECK(
+    managed_output == NULL
+    && second.references == 1u
+    && lifecycle.destructions == destructions + 2u
+  );
+  hxc_test_drop(&lifecycle, &first);
+  hxc_test_drop(&lifecycle, &second);
+  HXC_TEST_CHECK(
+    first.references == 0u
+    && second.references == 0u
+    && !lifecycle.invalid_release
+    && !arena->invalid_release
+  );
+  return 0;
+}
+
 /** Exercise the shared identity wrapper selected by generated Haxe Array<T>. */
 static int hxc_test_shared_array(
   hxc_test_arena *arena,
@@ -950,6 +1094,7 @@ int main(void) {
   HXC_TEST_CHECK(hxc_array_dispose(&values) == HXC_STATUS_OK);
 
   HXC_TEST_CHECK(hxc_test_sort(&arena, &allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_pop(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_shared_array(&arena, &allocator) == 0);
   HXC_TEST_CHECK(!arena.invalid_release);
   HXC_TEST_CHECK(arena.allocation_count == arena.release_count);

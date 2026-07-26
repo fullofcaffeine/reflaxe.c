@@ -11,6 +11,7 @@ import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CDeclarationPlanner;
+import reflaxe.c.runtime.RuntimeAbiContract;
 
 typedef ClassFieldRecord = {
 	final semanticName:String;
@@ -98,7 +99,7 @@ class ClassLayoutProbe {
 		context.symbols.register(guardRequest);
 		final lowered = new CBodyLowering(context).lower(inputs);
 		final project = new CStaticFunctionProjectEmitter().plan(lowered, entryId, context.symbols.identifierFor(entryRequest),
-			context.symbols.identifierFor(guardRequest));
+			context.symbols.identifierFor(guardRequest), null, null, RuntimeAbiContract.MAJOR);
 		final records:Array<ClassRecord> = [];
 		for (value in lowered.classes) {
 			records.push({
@@ -124,7 +125,7 @@ class ClassLayoutProbe {
 			sources.push({path: source.path, content: printer.printTranslationUnit(source.unit)});
 		final report:ClassLayoutReport = {
 			schemaVersion: 1,
-			status: "concrete-private-class-layouts-direct-runtime-free",
+			status: "concrete-private-class-layouts-with-precise-managed-graph",
 			profile: Std.string(profile),
 			hxcir: new HxcIRDumper().dump(lowered.program),
 			header: printer.printHeader(project.header),
@@ -135,8 +136,17 @@ class ClassLayoutProbe {
 				cName: fn.cName.value
 			}),
 			symbols: lowered.symbolTable,
-			runtimeFeatures: [],
-			runtimeArtifacts: []
+			runtimeFeatures: ["runtime-base", "status", "alloc", "object", "gc"],
+			runtimeArtifacts: [
+				"runtime/include/hxrt/allocator.h",
+				"runtime/include/hxrt/base.h",
+				"runtime/include/hxrt/gc.h",
+				"runtime/include/hxrt/object.h",
+				"runtime/include/hxrt/status.h",
+				"runtime/src/allocator.c",
+				"runtime/src/gc.c",
+				"runtime/src/object.c"
+			]
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(report));
 	}

@@ -33,6 +33,17 @@ private enum StoredKind {
 }
 
 /**
+	A key transported through a managed enum payload instead of a literal.
+
+	The payload forces the generated program to pass a runtime-owned String view
+	to `Map.exists`. StringMap must hash that ordinary Haxe value exactly like a
+	literal-backed String while leaving ownership with the enum.
+**/
+private enum LookupKey {
+	Lookup(value:String);
+}
+
+/**
 	Owns a fieldless-enum map through an ordinary Haxe class field.
 
 	This mirrors the Caxecraft validation table that exposed the compiler gap.
@@ -117,6 +128,12 @@ final class Main {
 		return value == null ? fallback : value;
 	}
 
+	/** Look up a String borrowed from a managed enum payload. */
+	static function hasLookup(values:Map<String, Int>, key:LookupKey):Bool
+		return switch key {
+			case Lookup(value): values.exists(value);
+		};
+
 	/**
 		Exercise direct integer slots through aliases and all core mutations.
 
@@ -129,7 +146,8 @@ final class Main {
 		final alias = values;
 		values.set("zero", 0);
 		values.set("depth", 3);
-		if (!alias.exists("zero") || intValue(alias, "zero", -1) != 0 || intValue(alias, "missing", -1) != -1)
+		if (!alias.exists("zero") || !hasLookup(alias, Lookup("zero")) || hasLookup(alias, Lookup("missing")) || intValue(alias, "zero", -1) != 0
+			|| intValue(alias, "missing", -1) != -1)
 			return false;
 
 		alias.set("depth", 7);

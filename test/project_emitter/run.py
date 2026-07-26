@@ -1065,6 +1065,29 @@ def check_stale_and_user_ownership() -> None:
             raise ProjectEmitterFailure("trimmed ownership set retained stale/user paths")
 
 
+def check_concise_symbol_report() -> None:
+    """Prove the fast report remains typed, bounded, and collision-aware."""
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-project-symbol-summary-") as temporary:
+        output = Path(temporary) / "project"
+        run_emitter("summary", output, label="concise symbol-report render")
+        symbols = json_value(output / "hxc.symbols.json")
+        expected = {
+            "schemaVersion": 1,
+            "algorithm": "hxc-c-symbol-summary-v1",
+            "detail": "summary",
+            "sourceSchemaVersion": 2,
+            "sourceAlgorithm": "hxc-c-symbol-v2",
+            "symbolCount": 2,
+            "collisionGroupCount": 0,
+            "collisionSymbolCount": 0,
+            "collisions": [],
+        }
+        if symbols != expected:
+            raise ProjectEmitterFailure(
+                f"concise symbol report drifted: {symbols!r}"
+            )
+
+
 def check_renamed_symbol_and_module_cleanup() -> None:
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-project-rename-") as temporary:
         root = Path(temporary)
@@ -1488,6 +1511,7 @@ def main() -> int:
         check_cross_root_order_locale_and_line_endings()
         check_unchanged_write_skip()
         check_stale_and_user_ownership()
+        check_concise_symbol_report()
         check_renamed_symbol_and_module_cleanup()
         check_compiler_server_determinism()
         check_negative_guards()
@@ -1507,7 +1531,8 @@ def main() -> int:
     print(
         "project-emitter: OK: precise byte-difference reports, isolated-root/order/"
         "locale/CRLF/server determinism, renamed-symbol stale ownership, skipped "
-        "writes, path/build-language guards, strict placeholders, neutral manifest, "
+        "writes, concise/full symbol evidence, path/build-language guards, "
+        "strict placeholders, neutral manifest, "
         f"CMake/Meson seeds ({','.join(adapter_lanes) if adapter_lanes else 'native execution disabled'}), "
         "and exact HXC1001 no-output passed"
     )

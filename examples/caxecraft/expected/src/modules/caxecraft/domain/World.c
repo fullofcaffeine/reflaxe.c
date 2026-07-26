@@ -283,31 +283,31 @@ bool hxc_caxecraft_domain_World_place(uint8_t *hxc_cells, size_t hxc_length, str
   (void)hxc_borrow;
   (void)hxc_tmp_length_n3;
   bool hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_isPlaceable(hxc_kind);
-  if (!!hxc_tmp_call_result_n0)
+  if (!hxc_tmp_call_result_n0)
   {
-    enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n1 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
-    switch (hxc_tmp_call_result_n1) {
-      case hxc_caxecraft_domain_BlockKind_Air:
-        {
-          break;
-        }
-      case hxc_caxecraft_domain_BlockKind_Grass:
-      case hxc_caxecraft_domain_BlockKind_Dirt:
-      case hxc_caxecraft_domain_BlockKind_Stone:
-      case hxc_caxecraft_domain_BlockKind_Bedrock:
-      case hxc_caxecraft_domain_BlockKind_Sand:
-      case hxc_caxecraft_domain_BlockKind_Wood:
-      case hxc_caxecraft_domain_BlockKind_Leaves:
-      case hxc_caxecraft_domain_BlockKind_Snow:
-      case hxc_caxecraft_domain_BlockKind_Ash:
-        {
-          return false;
-        }
-    }
-    bool hxc_tmp_call_result_n2 = hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_coord, hxc_kind);
-    return hxc_tmp_call_result_n2;
+    return false;
   }
-  return false;
+  enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n1 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
+  switch (hxc_tmp_call_result_n1) {
+    case hxc_caxecraft_domain_BlockKind_Air:
+      {
+        break;
+      }
+    case hxc_caxecraft_domain_BlockKind_Grass:
+    case hxc_caxecraft_domain_BlockKind_Dirt:
+    case hxc_caxecraft_domain_BlockKind_Stone:
+    case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
+      {
+        return false;
+      }
+  }
+  bool hxc_tmp_call_result_n2 = hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_coord, hxc_kind);
+  return hxc_tmp_call_result_n2;
 }
 
 enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_query(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_BlockCoord hxc_coord)

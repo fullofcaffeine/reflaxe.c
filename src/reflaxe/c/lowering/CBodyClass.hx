@@ -46,10 +46,29 @@ class CBodyInterfaceImplementation {
 	}
 }
 
-/** One source-order storage field owned by a single class declaration. */
+/**
+ * One source-order storage field owned by a single class declaration.
+ *
+ * `mutable` describes the physical value after Haxe has approved an access; it
+ * does not repeat Haxe's public getter/setter policy. For example,
+ * `value(default, null)` has no public setter, but its declaring class may
+ * still change the stored value. A `final` field is the distinct case whose
+ * completed value cannot change.
+ */
 class CPreparedBodyClassField {
 	public final name:String;
-	public final type:CBodyValueType;
+
+	/**
+	 * The finalized storage representation for this Haxe field.
+	 *
+	 * Preparation may first select an inline owned child for `final child = new
+	 * Child()`. Whole-program escape discovery can later prove that `Child` is
+	 * retained through another object, at which point this field becomes a typed
+	 * managed pointer before HxcIR declarations are built. No emitted declaration
+	 * observes the provisional form.
+	 */
+	public var type:CBodyValueType;
+
 	public final mutable:Bool;
 	public final source:HxcSourceSpan;
 	public final request:CSymbolRequest;
@@ -275,15 +294,22 @@ class CBodyClassRegistry {
 				return rejected(fail, field.pos, '$node:unsupported-instance-field:${field.name}');
 			if (prepared.base != null && prepared.base.field(field.name) != null)
 				return rejected(fail, field.pos, '$node:inherited-storage-field-shadowing:${field.name}');
-			final mutable = switch field.kind {
-				case FVar(_, write): isDirectWrite(write);
-				case FMethod(_): false;
-			};
+			/*
+				Haxe has already rejected writes made from the wrong source context.
+				The C representation therefore records whether the storage can ever
+				change, not whether arbitrary callers have public setter access.
+
+				In particular, the `null` write accessor in
+				`var position(default, null)` means "only this class may write." It
+				does not make `position` a final value. `ClassField.isFinal` is the
+				authoritative distinction and remains false for that property.
+			 */
+			final mutable = !field.isFinal;
 			final fixedArray = CBodyFixedArray.shape(field.type, context.profile, field.pos, fail, '$node.field:${field.name}');
 			final fieldType = if (fixedArray == null) {
 				final resolved = resolveValue(field.type, field.pos, definition.module, sourcePath, fail, '$node.field:${field.name}');
 				final child = resolved.classValue();
-				final initializer = child == null ? null : fieldInitializer(definition, field, fail, '$node.field:${field.name}');
+				final initializer = child == null ? null : fieldInitializer(definition, field, fail, '$node.field:${field.name}', field.isFinal);
 				if (child != null && initializer != null && initializedClassPath(initializer) == child.haxePath) {
 					if (mutable)
 						return rejected(fail, field.pos, '$node.field:${field.name}:owned-class-field-must-be-final');
@@ -314,14 +340,21 @@ class CBodyClassRegistry {
 	}
 
 	/**
-		Recover Haxe's typed field-initializer assignment from the constructor.
+		Recover one typed field-initializer assignment from the constructor.
 
 		After dead-code elimination, Haxe moves instance field initializers into the
 		constructor and clears `ClassField.expr()`. The initializer's source range is
 		still inside the field declaration, which distinguishes it from an ordinary
 		assignment written in the constructor body.
+
+		A final class field may instead be assigned explicitly by its constructor.
+		Haxe has already proved that constructor-only write legal and records the
+		declaration as `ClassField.isFinal`. When the caller opts into that exact
+		case, one direct `this.field = value` is also the field's initializer.
+		Multiple assignment sites remain ambiguous and fail closed.
 	**/
-	static function fieldInitializer(definition:ClassType, field:ClassField, fail:(Position, String) -> Void, node:String):Null<TypedExpr> {
+	static function fieldInitializer(definition:ClassType, field:ClassField, fail:(Position, String) -> Void, node:String,
+			allowConstructorAssignment:Bool = false):Null<TypedExpr> {
 		if (definition.constructor == null)
 			return null;
 		final constructorExpression = definition.constructor.get().expr();
@@ -332,18 +365,19 @@ class CBodyClassRegistry {
 			case _: constructorExpression;
 		};
 		final matches:Array<TypedExpr> = [];
-		collectFieldInitializers(body, field, matches);
+		collectFieldInitializers(body, field, allowConstructorAssignment, matches);
 		if (matches.length > 1)
 			return rejected(fail, field.pos, '$node:ambiguous-lowered-initializer:${matches.length}');
 		return matches.length == 1 ? matches[0] : null;
 	}
 
-	static function collectFieldInitializers(expression:TypedExpr, field:ClassField, matches:Array<TypedExpr>):Void {
+	static function collectFieldInitializers(expression:TypedExpr, field:ClassField, allowConstructorAssignment:Bool, matches:Array<TypedExpr>):Void {
 		switch expression.expr {
 			case TBinop(OpAssign, left, right):
 				switch left.expr {
 					case TField({expr: TConst(TThis)}, FInstance(_, _, fieldReference))
-						if (fieldReference.get().name == field.name && positionInside(right.pos, field.pos)):
+						if (fieldReference.get().name == field.name
+							&& (positionInside(right.pos, field.pos) || allowConstructorAssignment)):
 						matches.push(right);
 					case _:
 				}
@@ -351,7 +385,7 @@ class CBodyClassRegistry {
 				return;
 			case _:
 		}
-		TypedExprTools.iter(expression, child -> collectFieldInitializers(child, field, matches));
+		TypedExprTools.iter(expression, child -> collectFieldInitializers(child, field, allowConstructorAssignment, matches));
 	}
 
 	static function initializedClassPath(expression:TypedExpr):Null<String> {
@@ -402,12 +436,18 @@ class CBodyClassRegistry {
 	/**
 		Close the collector representation after every reachable type is known.
 
-		An `Array<Class>`, enum case carrying a class, or retained interface field
-		is an escaping graph: its pointer must remain stable and may point back
-		through another managed field. Marking is a fixed point because a managed
-		class can expose a second class through one of its fields or inheritance
-		prefix. Direct classes that never enter such a graph remain unchanged and
-		descriptor-free.
+		An `Array<Class>`, enum case carrying a class, retained interface, or
+		concrete class-reference field is an escaping graph: its pointer must remain
+		stable and may point back through another managed field. Marking is a fixed
+		point because a managed class can expose a second class through one of its
+		fields or inheritance prefix.
+
+		A `final child = new Child()` field starts as an inline candidate. If the
+		same child class later enters a retained-reference graph, the fixed point
+		replaces that candidate with a non-null managed pointer before HxcIR is
+		built. This conservative baseline preserves ordinary Haxe identity and
+		lifetime semantics. A later escape analysis may recover inline storage when
+		it proves every retained reference stays inside the same parent lifetime.
 	**/
 	public function completeManagedRepresentations(arrays:Array<reflaxe.c.lowering.CBodyArray.CPreparedBodyArray>,
 			enums:Array<reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance>, interfaceImplementations:Array<CBodyInterfaceImplementation>):Void {
@@ -422,8 +462,45 @@ class CBodyClassRegistry {
 					for (payload in tagCase.payload)
 						if (markCollectorClasses(payload.valueType, []))
 							changed = true;
+			for (value in canonicalClasses()) {
+				if (value.base != null && value.base.managedByCollector && !value.managedByCollector) {
+					value.managedByCollector = true;
+					changed = true;
+				}
+				for (field in value.fields) {
+					final ownedChild = field.type.ownedClassValue();
+					if (ownedChild != null && ownedChild.managedByCollector) {
+						// Ordinary Haxe class references remain nullable even when
+						// this initializer supplies a non-null `new` value. Preserve
+						// that source-visible field type while changing only storage
+						// ownership from inline bytes to a traced pointer.
+						field.type = CBodyValueType.classReference(ownedChild, true);
+						changed = true;
+					}
+				}
+			}
 			for (value in canonicalClasses())
 				for (field in value.fields) {
+					// `classValue()` intentionally exposes both pointer-backed and
+					// inline-owned class identities to general type consumers. This
+					// loop is specifically about a retained pointer, so exclude the
+					// owned form before deciding that the graph escapes.
+					final retainedClass = field.type.ownedClassValue() == null ? field.type.classValue() : null;
+					if (retainedClass != null) {
+						// A pointer stored in an object field outlives the constructor
+						// call that supplied it. Give both ends exact collector
+						// lifetimes; the owner's generated trace function follows the
+						// field after the constructor's temporary roots disappear.
+						if (!value.managedByCollector) {
+							value.managedByCollector = true;
+							changed = true;
+						}
+						if (!retainedClass.managedByCollector) {
+							retainedClass.managedByCollector = true;
+							changed = true;
+						}
+						continue;
+					}
 					final interfaceValue = field.type.interfaceValue();
 					if (interfaceValue == null)
 						continue;
@@ -454,8 +531,17 @@ class CBodyClassRegistry {
 					changed = true;
 				}
 				for (field in value.fields) {
-					if (field.type.ownedClassValue() != null)
-						throw new CBodyEmissionError('managed class `${value.haxePath}` cannot yet contain an inline owned class `${field.name}`');
+					// A final child with the parent's exact lifetime remains a
+					// by-value C subobject. It is not a second collector allocation,
+					// but references reachable through its fields still belong to
+					// the parent's object graph and must participate in this fixed
+					// point.
+					final ownedChild = field.type.ownedClassValue();
+					if (ownedChild != null) {
+						if (markCollectorClassesInOwnedLayout(ownedChild, [], []))
+							changed = true;
+						continue;
+					}
 					final target = field.type.classValue();
 					if (target != null && !target.managedByCollector) {
 						target.managedByCollector = true;
@@ -485,7 +571,11 @@ class CBodyClassRegistry {
 	}
 
 	/** Mark every class reference reachable through one finite direct value. */
-	function markCollectorClasses(type:CBodyValueType, visitedEnums:Map<String, Bool>):Bool {
+	function markCollectorClasses(type:CBodyValueType, visitedEnums:Map<String, Bool>, ?visitedOwnedClasses:Map<String, Bool>):Bool {
+		final ownedClasses = visitedOwnedClasses == null ? new Map<String, Bool>() : visitedOwnedClasses;
+		final ownedChild = type.ownedClassValue();
+		if (ownedChild != null)
+			return markCollectorClassesInOwnedLayout(ownedChild, visitedEnums, ownedClasses);
 		final classValue = type.classValue();
 		if (classValue != null) {
 			if (classValue.managedByCollector)
@@ -500,21 +590,42 @@ class CBodyClassRegistry {
 		final aggregate = type.aggregateValue();
 		if (aggregate != null) {
 			for (field in aggregate.fields)
-				if (markCollectorClasses(field.type, visitedEnums))
+				if (markCollectorClasses(field.type, visitedEnums, ownedClasses))
 					changed = true;
 			return changed;
 		}
 		final optional = type.optionalValue();
 		if (optional != null)
-			return markCollectorClasses(optional.payload, visitedEnums);
+			return markCollectorClasses(optional.payload, visitedEnums, ownedClasses);
 		final enumValue = type.enumValue();
 		if (enumValue == null || visitedEnums.exists(enumValue.instanceId))
 			return false;
 		visitedEnums.set(enumValue.instanceId, true);
 		for (tagCase in enumValue.cases)
 			for (payload in tagCase.payload)
-				if (!payload.indirect && markCollectorClasses(payload.valueType, visitedEnums))
+				if (!payload.indirect && markCollectorClasses(payload.valueType, visitedEnums, ownedClasses))
 					changed = true;
+		return changed;
+	}
+
+	/**
+		Follow one inline-owned class without turning the child into a GC pointer.
+
+		The parent allocation physically contains this child, so the child's own
+		fields are the next part of the same finite C layout. The visited set is a
+		fail-safe against a malformed by-value cycle; normal class preparation has
+		already rejected layouts whose size would be recursive.
+	**/
+	function markCollectorClassesInOwnedLayout(value:CPreparedBodyClass, visitedEnums:Map<String, Bool>, visitedOwnedClasses:Map<String, Bool>):Bool {
+		if (visitedOwnedClasses.exists(value.instanceId))
+			return false;
+		visitedOwnedClasses.set(value.instanceId, true);
+		var changed = false;
+		if (value.base != null && markCollectorClassesInOwnedLayout(value.base, visitedEnums, visitedOwnedClasses))
+			changed = true;
+		for (field in value.fields)
+			if (markCollectorClasses(field.type, visitedEnums, visitedOwnedClasses))
+				changed = true;
 		return changed;
 	}
 
@@ -536,19 +647,35 @@ class CBodyClassRegistry {
 		}
 	}
 
-	static function classNeedsTrace(value:CPreparedBodyClass):Bool {
-		if (value.base != null && classNeedsTrace(value.base))
+	static function classNeedsTrace(value:CPreparedBodyClass, ?visited:Map<String, Bool>):Bool {
+		final seen = visited == null ? new Map<String, Bool>() : visited;
+		if (seen.exists(value.instanceId))
+			return false;
+		seen.set(value.instanceId, true);
+		if (value.base != null && classNeedsTrace(value.base, seen))
 			return true;
-		for (field in value.fields)
-			if (containsManagedReference(field.type, []))
+		for (field in value.fields) {
+			final ownedChild = field.type.ownedClassValue();
+			if (ownedChild != null ? classNeedsTrace(ownedChild, seen) : containsManagedReference(field.type, []))
 				return true;
+		}
 		return false;
 	}
 
-	static function classNeedsFinalizer(value:CPreparedBodyClass):Bool {
-		if (value.base != null && classNeedsFinalizer(value.base))
+	static function classNeedsFinalizer(value:CPreparedBodyClass, ?visited:Map<String, Bool>):Bool {
+		final seen = visited == null ? new Map<String, Bool>() : visited;
+		if (seen.exists(value.instanceId))
+			return false;
+		seen.set(value.instanceId, true);
+		if (value.base != null && classNeedsFinalizer(value.base, seen))
 			return true;
 		for (field in value.fields) {
+			final ownedChild = field.type.ownedClassValue();
+			if (ownedChild != null) {
+				if (classNeedsFinalizer(ownedChild, seen))
+					return true;
+				continue;
+			}
 			final array = field.type.arrayValue();
 			if (array != null && !array.managedByCollector)
 				return true;
@@ -636,16 +763,6 @@ class CBodyClassRegistry {
 
 	static function hasDirectStorage(read:VarAccess, write:VarAccess):Bool
 		return isDirectAccess(read) || isDirectAccess(write);
-
-	static function isDirectWrite(write:VarAccess):Bool {
-		return switch write {
-			// `AccCtor` is Haxe's constructor-only write permission for a final
-			// field. It permits initialization, but it does not make the completed
-			// object's field mutable.
-			case AccNormal: true;
-			case _: false;
-		};
-	}
 
 	static function isDirectAccess(access:VarAccess):Bool {
 		return switch access {

@@ -16,7 +16,6 @@ struct hxc_caxecraft_domain_GameSession {
   int32_t hxc_completedTicks;
   struct hxc_caxecraft_domain_WaterSimulation hxc_water;
   uint8_t hxc_worldStorage[16384];
-  uint8_t hxc_pendingWaterStorage[16384];
   int32_t hxc_authoredItemStorage[256];
 };
 
@@ -41,9 +40,9 @@ bool hxc_caxecraft_domain_GameSession_activateAuthoredItemDuringLoad(struct hxc_
 
 bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_Character hxc_character);
 
-bool hxc_caxecraft_domain_GameSession_placeInitialWaterVolume(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_BlockCoord hxc_origin, int32_t hxc_width, int32_t hxc_height, int32_t hxc_depth);
+bool hxc_caxecraft_domain_GameSession_placeInitialWaterVolume(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_origin, int32_t hxc_width, int32_t hxc_height, int32_t hxc_depth);
 
-bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_BlockCoord hxc_coord);
+bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord);
 
 void hxc_caxecraft_domain_GameSession_resetEmptyWorld(struct hxc_caxecraft_domain_GameSession *hxc_self);
 

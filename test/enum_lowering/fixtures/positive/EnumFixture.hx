@@ -18,6 +18,18 @@ enum Choices {
 	ChoiceValues(values:Array<Int>);
 }
 
+/** Closed selector used to exercise Haxe's paired-pattern expansion. */
+enum IdentityKind {
+	FirstIdentity;
+	SecondIdentity;
+}
+
+/** Closed payload whose constructor must agree with `IdentityKind`. */
+enum IdentityValue {
+	FirstValue(value:Int);
+	SecondValue(value:Int);
+}
+
 /** One FlowRule-shaped value used to prove composed record ownership. */
 typedef Rule = {
 	final chain:Chain<Int>;
@@ -112,6 +124,22 @@ class EnumFixture {
 			case Some(payload): payload ? 1 : 0;
 		};
 	}
+
+	/**
+		Match two closed enums while retaining a useful wildcard result.
+
+		Haxe expands this paired pattern into an outer switch that covers both
+		`IdentityKind` tags, then checks `IdentityValue` inside each case. The
+		wildcard still handles a mismatched pair, but no unknown outer enum tag
+		exists; haxe.c must not emit an unreachable default on the exhaustive
+		HxcIR tag switch.
+	**/
+	static function pairedIdentityValue(kind:IdentityKind, value:IdentityValue):Int
+		return switch [kind, value] {
+			case [FirstIdentity, FirstValue(item)]: item;
+			case [SecondIdentity, SecondValue(item)]: item;
+			case _: -1;
+		};
 
 	static function recursiveLocal():Int {
 		var tail:Chain<Int> = End(2);
@@ -226,6 +254,9 @@ class EnumFixture {
 			&& constructorValue() == 9
 			&& guardedValue(present) == 7
 			&& boolOptionValue(truth) == 1
+			&& pairedIdentityValue(FirstIdentity, FirstValue(12)) == 12
+			&& pairedIdentityValue(FirstIdentity, SecondValue(12)) == -1
+			&& pairedIdentityValue(SecondIdentity, SecondValue(14)) == 14
 			&& recursiveLocal() == 3
 			&& ruleValue(copiedRule) == 10
 			&& envelopeValue(copiedEnvelope) == 10

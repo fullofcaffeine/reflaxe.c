@@ -62,22 +62,42 @@ missing `else`, an open-ended switch without a default, or an arm that does not
 assign the exact local remains the source-positioned `HXC1001`
 uninitialized-local error.
 
-For unmanaged values such as integers and direct records, the local receives a
-defensive type-correct default before its exhaustive branches. That value
-cannot be observed on an admitted path because each branch overwrites it, but
-it also means emitted C never contains uninitialized storage if a later
-compiler pass changes the structure incorrectly. Validation and the ordinary
-short-circuit blocks still decide whether the right-hand helper runs; the
-printer does not repair or rediscover this rule.
+Primitive scalar carriers such as integers may receive a defensive
+type-correct default before their exhaustive branches. Complete unmanaged
+values—currently direct records, unmanaged enums, and admitted header-owned C
+structs—use a more C-like form instead:
 
-Managed values cannot use that shortcut. A default managed String would itself
-be an owner whose replacement and cleanup had to be tracked. HxcIR instead
-declares an explicitly empty ownership carrier. Every normal branch or switch
+```c
+ValidationFamily family;
+switch (choice) {
+	case CHOOSE_FRESH: family = FRESH_FAMILY; break;
+	/* every other admitted arm assigns family too */
+}
+```
+
+HxcIR calls this an **uninitialized direct carrier**. “Uninitialized” describes
+only its starting storage; it is not permission to read arbitrary unwritten C
+memory. The validator follows every branch and switch edge and rejects the
+program unless every path that reaches the read assigned the exact carrier
+first. This lets generated C resemble a careful handwritten program without
+inventing a zero record or enum value. The printer receives the completed
+proof; it does not repair or rediscover the rule.
+
+Managed values need a second protocol because selecting a value can transfer
+ownership. A **fresh** value is a newly created result whose owner can be moved;
+a **borrowed** value is still owned by a parameter or local and must first be
+copied and retained. HxcIR declares an explicitly empty ownership carrier for
+managed Strings and nonrecursive managed enums. Every normal branch or switch
 arm moves a fresh value into it or retains a borrowed one. An arm that throws
 or returns does not reach the join, so it does not write the carrier. At the
-join, one move transfers the selected owner to the surrounding call, store, or
-return. The validator checks this protocol before C syntax is selected; the C
-printer never guesses which path owns the bytes.
+join, one move transfers the selected owner to the surrounding local, call, or
+return. The validator rejects missing acquisition, repeated acquisition, and a
+second move before C syntax is selected.
+
+A recursive enum is not yet admitted through this carrier. Retaining its owned
+child can allocate while deep-copying and therefore fail; the current carrier
+operation has no failure edge on which to report that error. Haxe.c stops with
+source-positioned `HXC1001` rather than pretending the copy cannot fail.
 
 ### Closed enum-abstract switches
 
@@ -97,8 +117,10 @@ checking that the switch covers every distinct stored value. It applies this
 rule only to an actual enum abstract; seeing a convenient set of cases on an
 ordinary `Int` is not proof because more integers remain possible.
 
-Primitive and direct-record results use a defensive initialized C local before
-the switch. Every valid Haxe value overwrites that local. The generated C also
+Primitive results use a defensive initialized C local before the switch.
+Complete direct records and enums instead use the independently verified
+uninitialized carrier described above. Every valid Haxe value assigns that
+local. The generated C also
 contains `default: abort();`: this is a fail-stop check for a value forged
 outside the closed Haxe domain, not a source-level fallback result. `abort()` is
 the ISO C library operation, requires no `hxrt` runtime, and prevents a forged

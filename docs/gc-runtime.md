@@ -118,6 +118,63 @@ collector cannot portably observe fragmentation inside an arbitrary external
 allocator, so it reports its own live payload and internal overhead instead of
 inventing a misleading heap-fragmentation percentage.
 
+## Design quality and present performance boundary
+
+The collector uses established compiler/runtime techniques rather than a
+repository-specific memory trick:
+
+- generated descriptors state exactly which object fields contain managed
+  references;
+- explicit shadow-stack frames and global tables state exactly which references
+  are roots at a collection point;
+- allocation and function calls are explicit **safepoints**, meaning places
+  where the compiler has made every live managed reference visible to the
+  collector;
+- a non-moving heap keeps an object's base address stable for typed C borrows
+  and foreign-function calls; and
+- the mark worklist reuses links stored in allocation metadata, so collection
+  does not need another allocation while memory is already under pressure.
+
+Those are sound modern foundations. LLVM's
+[garbage-collection guide](https://llvm.org/docs/GarbageCollection.html)
+describes the same compiler responsibilities: identify every live root,
+describe managed layouts, and make collection points explicit. The
+[MMTk glossary](https://docs.mmtk.io/glossary.html#gc-safe-point) gives the
+corresponding safepoint contract. V8's
+[cppgc/Oilpan design](https://chromium.googlesource.com/v8/v8.git/+/HEAD/include/cppgc/README.md)
+is a useful production comparison: it also traces from roots through
+type-specific fields, while adding incremental/concurrent work and selective
+compaction that this baseline does not yet claim.
+
+“Modern foundation” does not mean “already optimized for a large heap.” Let
+`N` be the number of live collector allocations, `R` the number of non-null
+root references inspected, and `E` the number of managed object edges reported
+by descriptors. The current exact-base check walks the allocation list for
+every root and edge. One collection can therefore spend
+`O((R + E) * N)` time validating pointers, followed by the ordinary `O(N)`
+sweep. Each object also uses one call to the configured allocator instead of a
+page, region, size-class, or bump-allocation fast path. These choices keep the
+first implementation small, deterministic, freestanding-compatible, and easy
+to validate, but they are not suitable evidence for high allocation throughput
+or bounded game-frame pauses.
+
+The current backend also performs a complete stop-the-world collection. It has
+no generations, write barrier, remembered set, incremental marking, concurrent
+marking/sweeping, compaction, or region allocator. None of those mechanisms
+should be added merely to make the collector sound more sophisticated: each
+adds compiler barriers, runtime state, and new correctness obligations. Add one
+only when reproducible application-shaped measurements show that the simpler
+backend misses an accepted pause, throughput, or memory target.
+
+The first planned scaling step is Beads issue `haxe_c-53k.3`: replace the
+per-reference list scan with a request-local exact-base index while preserving
+safe rejection of interior, foreign, and freed pointers. Its acceptance gate
+requires representative graph measurements, index memory overhead, strict
+hosted/freestanding builds, and sanitizer evidence. After that evidence exists,
+reassess allocation regions and generational or incremental collection
+independently. Until then, describe this collector as a verified
+correctness-first backend, not a high-performance or low-latency collector.
+
 ## Current compiler boundary
 
 E4.T06 owns the backend, exact root/pin contracts, pressure behavior, reports,

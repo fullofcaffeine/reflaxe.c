@@ -132,6 +132,7 @@ class RuntimeFeatureCatalog {
 					"hxc_array_ref_init_in_place",
 					"hxc_array_ref_is_valid",
 					"hxc_array_ref_length",
+					"hxc_array_ref_pop_move",
 					"hxc_array_ref_push_copy",
 					"hxc_array_ref_release",
 					"hxc_array_ref_retain",
@@ -140,6 +141,7 @@ class RuntimeFeatureCatalog {
 					"hxc_array_insert_copy",
 					"hxc_array_set_copy",
 					"hxc_array_remove_at",
+					"hxc_array_pop_move",
 					"hxc_array_move",
 					"hxc_array_dispose"
 				],
@@ -151,7 +153,7 @@ class RuntimeFeatureCatalog {
 						new RuntimeFeatureSelectionRoot("create-literal", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Array literal for an admitted unboxed element representation."),
 						new RuntimeFeatureSelectionRoot("collection-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-							"A reachable ordinary Haxe Array length, checked indexing, or push operation."),
+							"A reachable ordinary Haxe Array length, checked indexing, push, or pop operation."),
 						new RuntimeFeatureSelectionRoot("sort", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe Array.sort call with an admitted exact typed comparator.")
 					],
@@ -477,9 +479,9 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
-			case "array.h": "a3d345c10c1764a6348c3252170023f332d11e997e8c590ce5fea856ff3a58c2";
+			case "array.h": "9fe9bde12296c7cdbe00c7b68076027da371f7bb3488aae4f248241ab5c3b040";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
-			case "base.h": "d5a02c9e411bdef2a8b62e7ab8400433488ae0e9125820d8d9673d5239a60b9c";
+			case "base.h": "996bb3ef9546d3b921cca8ba43a80b0a45b3320e5e69308245591bdeeeab91db";
 			case "bytes.h": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
@@ -501,7 +503,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
-			case "array.c": "f9f7c80021897ea33d3c6b4a7422cb5d7bd16cfe2c5d22011e90d776b12487d8";
+			case "array.c": "5d93d31a817070722b7f437c2ad898a108f8d3c595bfa541bbd3c2e2cd54d064";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "4db5d3ddcaf32684e900abe7d81ffe3a008edc53806573aaebe84089c0c6a787";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";

@@ -339,6 +339,42 @@ def function_section(hxcir: str, field: str) -> str:
     return hxcir[start : end + len(end_marker)]
 
 
+def main_function_section(hxcir: str, field: str) -> str:
+    """Return one exact `Main` function so nearby features cannot satisfy its checks."""
+    start_marker = f'  function "function.Main.{field}"'
+    end_marker = f'  end function "function.Main.{field}"'
+    start = hxcir.find(start_marker)
+    end = hxcir.find(end_marker, start)
+    if start == -1 or end == -1:
+        raise EnumLoweringFailure(f"HxcIR omitted Main.{field}")
+    return hxcir[start : end + len(end_marker)]
+
+
+def c_function_section(source: str, c_name: str) -> str:
+    """Return one generated C definition so shape checks stay function-local."""
+    cursor = 0
+    while True:
+        name = source.find(c_name + "(", cursor)
+        if name == -1:
+            raise EnumLoweringFailure(f"generated C omitted function {c_name}")
+        opening = source.find("{", name)
+        semicolon = source.find(";", name)
+        if opening != -1 and (semicolon == -1 or opening < semicolon):
+            depth = 0
+            for index in range(opening, len(source)):
+                if source[index] == "{":
+                    depth += 1
+                elif source[index] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        start = source.rfind("\n", 0, name) + 1
+                        return source[start : index + 1]
+            raise EnumLoweringFailure(
+                f"generated C function {c_name} has no closing brace"
+            )
+        cursor = name + len(c_name) + 1
+
+
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
         report.get("schemaVersion") != 1
@@ -349,21 +385,43 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise EnumLoweringFailure(f"enum report contract drifted for {profile}")
     records = enum_records(report)
-    if len(records) != 7:
-        raise EnumLoweringFailure(f"expected seven concrete enum instances, found {len(records)}")
+    display_names = [record.get("displayName") for record in records]
+    if not all(isinstance(name, str) for name in display_names):
+        raise EnumLoweringFailure("enum report contains a non-text display name")
+    option_rule_names = [
+        str(name)
+        for name in display_names
+        if str(name).startswith("Option<closed-record(")
+    ]
+    if len(option_rule_names) != 1:
+        raise EnumLoweringFailure("expected one generic Option specialization for Rule")
+    expected_display_names = sorted(
+        [
+            "Chain<i32>",
+            "Choices",
+            "IdentityKind",
+            "IdentityValue",
+            "Mode",
+            "Option<bool>",
+            "Option<i32>",
+            "RuleEnvelope",
+            option_rule_names[0],
+        ]
+    )
+    if sorted(str(name) for name in display_names) != expected_display_names:
+        raise EnumLoweringFailure(
+            "enum instance inventory drifted\n"
+            f"expected={expected_display_names!r}\n"
+            f"actual={sorted(str(name) for name in display_names)!r}"
+        )
     names = enum_names(report)
     mode = enum_by_name(report, "Mode")
     option_int = enum_by_name(report, "Option<i32>")
     option_bool = enum_by_name(report, "Option<bool>")
-    option_rule_candidates = [
-        record
-        for record in records
-        if str(record.get("displayName", "")).startswith("Option<closed-record(")
-    ]
-    if len(option_rule_candidates) != 1:
-        raise EnumLoweringFailure("expected one generic Option specialization for Rule")
-    option_rule = option_rule_candidates[0]
+    option_rule = enum_by_name(report, option_rule_names[0])
     chain = enum_by_name(report, "Chain<i32>")
+    identity_kind = enum_by_name(report, "IdentityKind")
+    identity_value = enum_by_name(report, "IdentityValue")
     rule_envelope = enum_by_name(report, "RuleEnvelope")
     if (
         mode.get("representation") != "native-enum"
@@ -375,6 +433,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or chain.get("representation") != "tagged-union"
         or chain.get("recursive") is not True
         or chain.get("scopedLifetime") is not True
+        or identity_kind.get("representation") != "native-enum"
+        or identity_value.get("representation") != "tagged-union"
         or rule_envelope.get("representation") != "tagged-union"
         or rule_envelope.get("recursive") is not False
         or rule_envelope.get("scopedLifetime") is not False
@@ -406,7 +466,13 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     for label, value in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in value or "\\" in value:
             raise EnumLoweringFailure(f"{label} leaked a host path")
-    if not hxcir.startswith("hxcir schema=19\n") or hxcir.count(" representation=tagged ") != 6:
+    tagged_instance_count = sum(
+        record.get("representation") == "tagged-union" for record in records
+    )
+    if (
+        not hxcir.startswith("hxcir schema=19\n")
+        or hxcir.count(" representation=tagged ") != tagged_instance_count
+    ):
         raise EnumLoweringFailure("schema-19 tagged-union HxcIR inventory drifted")
     option_section = function_section(hxcir, "optionValue")
     option_single_case_section = function_section(hxcir, "optionHasPositiveValue")
@@ -1136,7 +1202,7 @@ def check_negative_cases() -> None:
         ),
         "recursive_conditional": (
             "HXC1001",
-            "TIf(result-type:haxe-enum:",
+            "TVar(selected:managed-flow-carrier-fallible-retain-not-admitted)",
         ),
         "unsupported_reference_payload": (
             "HXC1001",
@@ -1549,6 +1615,146 @@ def check_bytes_payload(*, requested_toolchain: str) -> None:
                 raise EnumLoweringFailure(
                     f"Bytes-payload enum HxcIR omitted {marker!r}"
                 )
+
+        block_sections = {
+            field: main_function_section(hxcir, field)
+            for field in (
+                "chooseBlockLocal",
+                "chooseBlockArgument",
+                "chooseBlockReturn",
+                "chooseBlockNested",
+                "chooseBlockSwitch",
+            )
+        }
+        for field in ("chooseBlockLocal", "chooseBlockArgument", "chooseBlockSwitch"):
+            section = block_sections[field]
+            if (
+                "declare-managed-carrier" not in section
+                or "move-managed-carrier" not in section
+                or "ownership=move-fresh" not in section
+                or "ownership=retain-borrowed(program-local(" not in section
+                or "flow-carrier-default" in section
+            ):
+                raise EnumLoweringFailure(
+                    f"Main.{field} lost its exact managed-owner carrier protocol"
+                )
+        for field in ("chooseBlockReturn", "chooseBlockNested"):
+            if "flow-carrier-default" in block_sections[field]:
+                raise EnumLoweringFailure(
+                    f"Main.{field} acquired a fabricated default while lowering its direct control flow"
+                )
+        switch_section = block_sections["chooseBlockSwitch"]
+        if (
+            switch_section.count("acquire-managed-carrier") != 3
+            or switch_section.count("ownership=move-fresh") != 2
+            or switch_section.count("ownership=retain-borrowed(program-local(") != 1
+        ):
+            raise EnumLoweringFailure(
+                "Main.chooseBlockSwitch no longer acquires one exact owner per switch arm"
+            )
+        scoped_subject_sections = {
+            field: main_function_section(hxcir, field)
+            for field in (
+                "scoreIgnoredFreshSwitchSubject",
+                "scoreWideFreshSwitchSubject",
+                "scoreWideFreshValueSwitchSubject",
+                "scoreWideFreshSwitchSubjectEarly",
+                "freshSwitchSubjectPassed",
+            )
+        }
+        for field in (
+            "scoreIgnoredFreshSwitchSubject",
+            "scoreWideFreshSwitchSubject",
+            "scoreWideFreshValueSwitchSubject",
+        ):
+            section = scoped_subject_sections[field]
+            owner = section.find("enum-switch-subject-owner-initialize")
+            dispatch = section.find("terminator tag-switch")
+            release = section.find("release-branch-local-owner")
+            returned = section.find("terminator return", release)
+            if (
+                owner == -1
+                or dispatch == -1
+                or release == -1
+                or returned == -1
+                or not owner < dispatch < release < returned
+                or 'action "enum-temporary.' not in section
+                or "cleanup=[]" not in section[returned:]
+            ):
+                raise EnumLoweringFailure(
+                    f"Main.{field} lost its bounded fresh enum switch-subject owner"
+                )
+        early_section = scoped_subject_sections["scoreWideFreshSwitchSubjectEarly"]
+        if (
+            early_section.count("terminator return") != 3
+            or early_section.count(
+                'cleanup=["cleanup.construction"."enum-temporary.'
+            )
+            != 3
+            or early_section.count("release-branch-local-owner") != 0
+            or early_section.count("enum-switch-subject-owner-initialize") != 1
+        ):
+            raise EnumLoweringFailure(
+                "Main.scoreWideFreshSwitchSubjectEarly lost exact per-return subject cleanup"
+            )
+        tag_test_section = scoped_subject_sections["freshSwitchSubjectPassed"]
+        owner = tag_test_section.find("enum-index-subject-owner-initialize")
+        match = tag_test_section.find("enum-index-match")
+        release = tag_test_section.find("release-branch-local-owner")
+        returned = tag_test_section.find("terminator return", release)
+        if (
+            owner == -1
+            or match == -1
+            or release == -1
+            or returned == -1
+            or not owner < match < release < returned
+            or tag_test_section.count('action "enum-temporary.') != 1
+            or "cleanup=[]" not in tag_test_section[returned:]
+        ):
+            raise EnumLoweringFailure(
+                "Main.freshSwitchSubjectPassed lost its bounded optimized tag-test owner"
+            )
+        family_section = main_function_section(hxcir, "familyForChoice")
+        if (
+            family_section.count("declare-uninitialized") != 1
+            or "flow-carrier-direct-declare" not in family_section
+            or "flow-carrier-default" in family_section
+            or "default-initialize" in family_section
+        ):
+            raise EnumLoweringFailure(
+                "Main.familyForChoice fabricated an enum default instead of using the verified direct carrier"
+            )
+        symbol_table = json.loads(
+            (outputs["unity"] / "hxc.symbols.json").read_text(encoding="utf-8")
+        )
+        family_symbols = [
+            item
+            for item in symbol_table.get("symbols", [])
+            if isinstance(item, dict)
+            and item.get("kind") == "method"
+            and item.get("readableName") == ["Main", "familyForChoice"]
+        ]
+        if len(family_symbols) != 1 or not isinstance(
+            family_symbols[0].get("cName"), str
+        ):
+            raise EnumLoweringFailure(
+                "symbol report omitted the exact Main.familyForChoice C function"
+            )
+        generated_source = (outputs["unity"] / "src/program.c").read_text(
+            encoding="utf-8"
+        )
+        family_c = c_function_section(
+            generated_source, str(family_symbols[0]["cName"])
+        )
+        before_switch = family_c[: family_c.find("switch")]
+        if (
+            "switch" not in family_c
+            or "=" in before_switch
+            or "{0}" in before_switch
+        ):
+            raise EnumLoweringFailure(
+                "Main.familyForChoice C declaration gained a fabricated initializer"
+            )
         if " raw" in hxcir or str(ROOT) in hxcir:
             raise EnumLoweringFailure(
                 "Bytes-payload enum HxcIR used raw syntax or leaked the checkout path"

@@ -1,3 +1,16 @@
+/*
+ * This file is an independent C consumer, not input to haxe.c. It includes the
+ * generated private program so the test can check the exact C layout and call
+ * convention from the viewpoint of ordinary C code. Writing this boundary in
+ * Haxe would compile both sides with haxe.c and could let the same compiler bug
+ * make producer and consumer agree incorrectly.
+ *
+ * The retained LeafRecord.peer reference makes part of this fixture a
+ * collector-managed class graph. Generated managed methods publish exact root
+ * frames, so this consumer starts the generated program's collector before it
+ * calls those methods. The objects below still use caller-owned automatic
+ * storage; collector startup tests the generated call protocol, not allocation.
+ */
 #define main hxc_class_layout_generated_main
 int main(void);
 #include "../src/program.c"
@@ -9,6 +22,15 @@ int main(void);
 
 int main(void)
 {
+  if (hxc_gc_init(&(struct hxc_gc_config){
+        hxc_default_allocator(),
+        1048576U,
+        NULL,
+        NULL,
+      }, &hxc_program_gc) != HXC_STATUS_OK ||
+      hxc_gc_thread_register(&hxc_program_gc, &hxc_program_gc_thread) != HXC_STATUS_OK) {
+    return 10;
+  }
   struct HXC_ROOT_TAG root = {
     .HXC_ROOT_VALUE = INT32_C(7),
   };
@@ -58,6 +80,10 @@ int main(void)
       HXC_FN_BRANCH_PROOF_DOES_NOT_ESCAPE(&leaf.HXC_LEAF_BASE.HXC_MIDDLE_BASE, &root, true) != INT32_C(29) ||
       HXC_FN_BRANCH_PROOF_DOES_NOT_ESCAPE(&leaf.HXC_LEAF_BASE.HXC_MIDDLE_BASE, &root, false) != INT32_C(25)) {
     return 5;
+  }
+  if (hxc_gc_thread_unregister(&hxc_program_gc_thread) != HXC_STATUS_OK ||
+      hxc_gc_dispose(&hxc_program_gc) != HXC_STATUS_OK) {
+    return 11;
   }
   return 0;
 }

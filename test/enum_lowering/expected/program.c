@@ -102,6 +102,10 @@ _Static_assert(hxc_Mode_Off == 0, "enum hxc_Mode case Off retains its Haxe discr
 
 _Static_assert(hxc_Mode_On == 1, "enum hxc_Mode case On retains its Haxe discriminant");
 
+_Static_assert(hxc_IdentityKind_FirstIdentity == 0, "enum hxc_IdentityKind case FirstIdentity retains its Haxe discriminant");
+
+_Static_assert(hxc_IdentityKind_SecondIdentity == 1, "enum hxc_IdentityKind case SecondIdentity retains its Haxe discriminant");
+
 _Static_assert(hxc_Choices_NoChoices == 0, "enum hxc_Choices case NoChoices retains its Haxe discriminant");
 
 _Static_assert(hxc_Choices_ChoiceValues == 1, "enum hxc_Choices case ChoiceValues retains its Haxe discriminant");
@@ -117,6 +121,28 @@ _Static_assert(offsetof(union hxc_Choices_payload, hxc_ChoiceValues) == 0, "tagg
 _Static_assert(offsetof(struct hxc_Choices_ChoiceValues_payload, hxc_values) == 0, "tagged enum hxc_Choices case ChoiceValues first payload begins at zero");
 
 _Static_assert(_Alignof(struct hxc_Choices_ChoiceValues_payload) >= _Alignof(struct hxc_array_ref *), "tagged enum hxc_Choices case ChoiceValues admits payload 0 alignment");
+
+_Static_assert(hxc_IdentityValue_FirstValue == 0, "enum hxc_IdentityValue case FirstValue retains its Haxe discriminant");
+
+_Static_assert(hxc_IdentityValue_SecondValue == 1, "enum hxc_IdentityValue case SecondValue retains its Haxe discriminant");
+
+_Static_assert(offsetof(struct hxc_IdentityValue, hxc_tag) == 0, "tagged enum hxc_IdentityValue begins with its discriminant");
+
+_Static_assert(offsetof(struct hxc_IdentityValue, hxc_payload) >= sizeof(enum hxc_IdentityValue_tag), "tagged enum hxc_IdentityValue payload follows its discriminant");
+
+_Static_assert(sizeof(struct hxc_IdentityValue) >= offsetof(struct hxc_IdentityValue, hxc_payload) + sizeof(union hxc_IdentityValue_payload), "tagged enum hxc_IdentityValue contains its payload union");
+
+_Static_assert(offsetof(union hxc_IdentityValue_payload, hxc_FirstValue) == 0, "tagged enum hxc_IdentityValue case FirstValue begins at union offset zero");
+
+_Static_assert(offsetof(struct hxc_IdentityValue_FirstValue_payload, hxc_value) == 0, "tagged enum hxc_IdentityValue case FirstValue first payload begins at zero");
+
+_Static_assert(_Alignof(struct hxc_IdentityValue_FirstValue_payload) >= _Alignof(int32_t), "tagged enum hxc_IdentityValue case FirstValue admits payload 0 alignment");
+
+_Static_assert(offsetof(union hxc_IdentityValue_payload, hxc_SecondValue) == 0, "tagged enum hxc_IdentityValue case SecondValue begins at union offset zero");
+
+_Static_assert(offsetof(struct hxc_IdentityValue_SecondValue_payload, hxc_value) == 0, "tagged enum hxc_IdentityValue case SecondValue first payload begins at zero");
+
+_Static_assert(_Alignof(struct hxc_IdentityValue_SecondValue_payload) >= _Alignof(int32_t), "tagged enum hxc_IdentityValue case SecondValue admits payload 0 alignment");
 
 _Static_assert(hxc_RuleEnvelope_MissingRule == 0, "enum hxc_RuleEnvelope case MissingRule retains its Haxe discriminant");
 
@@ -611,11 +637,11 @@ struct hxc_Rule hxc_EnumFixture_copyRule(struct hxc_Rule hxc_value)
 
 bool hxc_EnumFixture_envelopeIsWrapped(struct hxc_RuleEnvelope hxc_value)
 {
-  if (!(hxc_value.hxc_tag == hxc_RuleEnvelope_WrappedRule))
+  if (hxc_value.hxc_tag == hxc_RuleEnvelope_WrappedRule)
   {
-    return false;
+    return true;
   }
-  return true;
+  return false;
 }
 
 int32_t hxc_EnumFixture_envelopeValue(struct hxc_RuleEnvelope hxc_value)
@@ -704,8 +730,8 @@ enum hxc_Mode hxc_EnumFixture_identityMode(enum hxc_Mode hxc_value)
 
 void hxc_EnumFixture_main(void)
 {
-  struct hxc_Chain hxc_tmp_static_call_argument_0_owner_n31 = { 0 };
-  struct hxc_Choices hxc_tmp_static_call_argument_1_owner_n33 = { 0 };
+  struct hxc_Chain hxc_tmp_static_call_argument_0_owner_n34 = { 0 };
+  struct hxc_Choices hxc_tmp_static_call_argument_1_owner_n36 = { 0 };
   enum hxc_Mode hxc_mode = hxc_Mode_On;
   int32_t hxc_tmp_call_result_n1 = hxc_EnumFixture_identity(7);
   struct hxc_Option_h95f1c4a28dac hxc_present = (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = hxc_tmp_call_result_n1 };
@@ -849,86 +875,107 @@ void hxc_EnumFixture_main(void)
     bool hxc_tmp_short_circuit_result_n25 = hxc_tmp_short_circuit_load_result_n57;
     if (hxc_tmp_short_circuit_load_result_n57)
     {
-      int32_t hxc_tmp_call_result_n58 = hxc_EnumFixture_recursiveLocal();
-      hxc_tmp_short_circuit_result_n25 = hxc_tmp_call_result_n58 == 3;
+      int32_t hxc_tmp_call_result_n60 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_FirstIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_FirstValue, .hxc_payload.hxc_FirstValue.hxc_value = 12 });
+      hxc_tmp_short_circuit_result_n25 = hxc_tmp_call_result_n60 == 12;
     }
-    bool hxc_tmp_short_circuit_load_result_n59 = hxc_tmp_short_circuit_result_n25;
-    bool hxc_tmp_short_circuit_result_n26 = hxc_tmp_short_circuit_load_result_n59;
-    if (hxc_tmp_short_circuit_load_result_n59)
+    bool hxc_tmp_short_circuit_load_result_n61 = hxc_tmp_short_circuit_result_n25;
+    bool hxc_tmp_short_circuit_result_n26 = hxc_tmp_short_circuit_load_result_n61;
+    if (hxc_tmp_short_circuit_load_result_n61)
     {
-      int32_t hxc_tmp_call_result_n61 = hxc_EnumFixture_ruleValue(hxc_copiedRule);
-      hxc_tmp_short_circuit_result_n26 = hxc_tmp_call_result_n61 == 10;
+      int32_t hxc_tmp_call_result_n64 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_FirstIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_SecondValue, .hxc_payload.hxc_SecondValue.hxc_value = 12 });
+      hxc_tmp_short_circuit_result_n26 = hxc_tmp_call_result_n64 == -1;
     }
-    bool hxc_tmp_short_circuit_load_result_n62 = hxc_tmp_short_circuit_result_n26;
-    bool hxc_tmp_short_circuit_result_n27 = hxc_tmp_short_circuit_load_result_n62;
-    if (hxc_tmp_short_circuit_load_result_n62)
-    {
-      int32_t hxc_tmp_call_result_n64 = hxc_EnumFixture_envelopeValue(hxc_copiedEnvelope);
-      hxc_tmp_short_circuit_result_n27 = hxc_tmp_call_result_n64 == 10;
-    }
-    bool hxc_tmp_short_circuit_load_result_n65 = hxc_tmp_short_circuit_result_n27;
-    bool hxc_tmp_short_circuit_result_n28 = hxc_tmp_short_circuit_load_result_n65;
+    bool hxc_tmp_short_circuit_load_result_n65 = hxc_tmp_short_circuit_result_n26;
+    bool hxc_tmp_short_circuit_result_n27 = hxc_tmp_short_circuit_load_result_n65;
     if (hxc_tmp_short_circuit_load_result_n65)
     {
-      bool hxc_tmp_call_result_n67 = hxc_EnumFixture_envelopeIsWrapped(hxc_copiedEnvelope);
-      hxc_tmp_short_circuit_result_n28 = hxc_tmp_call_result_n67;
+      int32_t hxc_tmp_call_result_n68 = hxc_EnumFixture_pairedIdentityValue(hxc_IdentityKind_SecondIdentity, (struct hxc_IdentityValue){ .hxc_tag = hxc_IdentityValue_SecondValue, .hxc_payload.hxc_SecondValue.hxc_value = 14 });
+      hxc_tmp_short_circuit_result_n27 = hxc_tmp_call_result_n68 == 14;
     }
-    bool hxc_tmp_short_circuit_load_result_n68 = hxc_tmp_short_circuit_result_n28;
-    bool hxc_tmp_short_circuit_result_n29 = hxc_tmp_short_circuit_load_result_n68;
-    if (hxc_tmp_short_circuit_load_result_n68)
+    bool hxc_tmp_short_circuit_load_result_n69 = hxc_tmp_short_circuit_result_n27;
+    bool hxc_tmp_short_circuit_result_n28 = hxc_tmp_short_circuit_load_result_n69;
+    if (hxc_tmp_short_circuit_load_result_n69)
     {
-      int32_t hxc_tmp_call_result_n70 = hxc_EnumFixture_optionalRuleValue(hxc_optionalRule);
-      hxc_tmp_short_circuit_result_n29 = hxc_tmp_call_result_n70 == 10;
+      int32_t hxc_tmp_call_result_n70 = hxc_EnumFixture_recursiveLocal();
+      hxc_tmp_short_circuit_result_n28 = hxc_tmp_call_result_n70 == 3;
     }
-    bool hxc_tmp_short_circuit_load_result_n71 = hxc_tmp_short_circuit_result_n29;
-    bool hxc_tmp_short_circuit_result_n30 = hxc_tmp_short_circuit_load_result_n71;
+    bool hxc_tmp_short_circuit_load_result_n71 = hxc_tmp_short_circuit_result_n28;
+    bool hxc_tmp_short_circuit_result_n29 = hxc_tmp_short_circuit_load_result_n71;
     if (hxc_tmp_short_circuit_load_result_n71)
     {
-      struct hxc_Chain *hxc_tmp_enum_recursive_payload_owner_n73 = NULL;
-      hxc_allocator hxc_tmp_enum_recursive_payload_owner_n73_allocator = hxc_default_allocator();
-      if (hxc_alloc(&hxc_tmp_enum_recursive_payload_owner_n73_allocator, sizeof(struct hxc_Chain), _Alignof(struct hxc_Chain), (void **)&hxc_tmp_enum_recursive_payload_owner_n73) != HXC_STATUS_OK)
-      {
-        abort();
-      }
-      *hxc_tmp_enum_recursive_payload_owner_n73 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_End, .hxc_payload.hxc_End.hxc_value = 2 };
-      hxc_tmp_static_call_argument_0_owner_n31 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_Link, .hxc_payload.hxc_Link.hxc_value = 1, .hxc_payload.hxc_Link.hxc_next = hxc_tmp_enum_recursive_payload_owner_n73 };
-      struct hxc_Chain hxc_tmp_static_call_argument_0_borrow_result_n75 = hxc_tmp_static_call_argument_0_owner_n31;
-      struct hxc_array_ref *hxc_tmp_enum_payload_0_owner_n32 = hxc_choices;
-      if (hxc_array_ref_retain(hxc_tmp_enum_payload_0_owner_n32) != HXC_STATUS_OK)
-      {
-        abort();
-      }
-      hxc_tmp_static_call_argument_1_owner_n33 = (struct hxc_Choices){ .hxc_tag = hxc_Choices_ChoiceValues, .hxc_payload.hxc_ChoiceValues.hxc_values = hxc_tmp_enum_payload_0_owner_n32 };
-      struct hxc_Choices hxc_tmp_static_call_argument_1_borrow_result_n79 = hxc_tmp_static_call_argument_1_owner_n33;
-      struct hxc_array_ref *hxc_tmp_load_result_n80 = hxc_actions;
-      int32_t hxc_tmp_call_result_n82 = hxc_EnumFixture_ruleLiteralValue(hxc_tmp_static_call_argument_0_borrow_result_n75, hxc_tmp_static_call_argument_1_borrow_result_n79, hxc_tmp_load_result_n80, hxc_copiedRule);
-      hxc_tmp_short_circuit_result_n30 = hxc_tmp_call_result_n82 == 12;
-      hxc_enum_d215f611_destroy(&hxc_tmp_static_call_argument_1_owner_n33);
-      hxc_enum_39285fe9_destroy(&hxc_tmp_static_call_argument_0_owner_n31);
+      int32_t hxc_tmp_call_result_n73 = hxc_EnumFixture_ruleValue(hxc_copiedRule);
+      hxc_tmp_short_circuit_result_n29 = hxc_tmp_call_result_n73 == 10;
     }
-    bool hxc_tmp_short_circuit_load_result_n83 = hxc_tmp_short_circuit_result_n30;
-    bool hxc_tmp_short_circuit_result_n34 = hxc_tmp_short_circuit_load_result_n83;
+    bool hxc_tmp_short_circuit_load_result_n74 = hxc_tmp_short_circuit_result_n29;
+    bool hxc_tmp_short_circuit_result_n30 = hxc_tmp_short_circuit_load_result_n74;
+    if (hxc_tmp_short_circuit_load_result_n74)
+    {
+      int32_t hxc_tmp_call_result_n76 = hxc_EnumFixture_envelopeValue(hxc_copiedEnvelope);
+      hxc_tmp_short_circuit_result_n30 = hxc_tmp_call_result_n76 == 10;
+    }
+    bool hxc_tmp_short_circuit_load_result_n77 = hxc_tmp_short_circuit_result_n30;
+    bool hxc_tmp_short_circuit_result_n31 = hxc_tmp_short_circuit_load_result_n77;
+    if (hxc_tmp_short_circuit_load_result_n77)
+    {
+      bool hxc_tmp_call_result_n79 = hxc_EnumFixture_envelopeIsWrapped(hxc_copiedEnvelope);
+      hxc_tmp_short_circuit_result_n31 = hxc_tmp_call_result_n79;
+    }
+    bool hxc_tmp_short_circuit_load_result_n80 = hxc_tmp_short_circuit_result_n31;
+    bool hxc_tmp_short_circuit_result_n32 = hxc_tmp_short_circuit_load_result_n80;
+    if (hxc_tmp_short_circuit_load_result_n80)
+    {
+      int32_t hxc_tmp_call_result_n82 = hxc_EnumFixture_optionalRuleValue(hxc_optionalRule);
+      hxc_tmp_short_circuit_result_n32 = hxc_tmp_call_result_n82 == 10;
+    }
+    bool hxc_tmp_short_circuit_load_result_n83 = hxc_tmp_short_circuit_result_n32;
+    bool hxc_tmp_short_circuit_result_n33 = hxc_tmp_short_circuit_load_result_n83;
     if (hxc_tmp_short_circuit_load_result_n83)
     {
-      int32_t hxc_tmp_array_length_result_n85;
-      if (hxc_array_ref_length(hxc_envelopes, &hxc_tmp_array_length_result_n85) != HXC_STATUS_OK)
+      struct hxc_Chain *hxc_tmp_enum_recursive_payload_owner_n85 = NULL;
+      hxc_allocator hxc_tmp_enum_recursive_payload_owner_n85_allocator = hxc_default_allocator();
+      if (hxc_alloc(&hxc_tmp_enum_recursive_payload_owner_n85_allocator, sizeof(struct hxc_Chain), _Alignof(struct hxc_Chain), (void **)&hxc_tmp_enum_recursive_payload_owner_n85) != HXC_STATUS_OK)
       {
         abort();
       }
-      hxc_tmp_short_circuit_result_n34 = hxc_tmp_array_length_result_n85 == 1;
+      *hxc_tmp_enum_recursive_payload_owner_n85 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_End, .hxc_payload.hxc_End.hxc_value = 2 };
+      hxc_tmp_static_call_argument_0_owner_n34 = (struct hxc_Chain){ .hxc_tag = hxc_Chain_Link, .hxc_payload.hxc_Link.hxc_value = 1, .hxc_payload.hxc_Link.hxc_next = hxc_tmp_enum_recursive_payload_owner_n85 };
+      struct hxc_Chain hxc_tmp_static_call_argument_0_borrow_result_n87 = hxc_tmp_static_call_argument_0_owner_n34;
+      struct hxc_array_ref *hxc_tmp_enum_payload_0_owner_n35 = hxc_choices;
+      if (hxc_array_ref_retain(hxc_tmp_enum_payload_0_owner_n35) != HXC_STATUS_OK)
+      {
+        abort();
+      }
+      hxc_tmp_static_call_argument_1_owner_n36 = (struct hxc_Choices){ .hxc_tag = hxc_Choices_ChoiceValues, .hxc_payload.hxc_ChoiceValues.hxc_values = hxc_tmp_enum_payload_0_owner_n35 };
+      struct hxc_Choices hxc_tmp_static_call_argument_1_borrow_result_n91 = hxc_tmp_static_call_argument_1_owner_n36;
+      struct hxc_array_ref *hxc_tmp_load_result_n92 = hxc_actions;
+      int32_t hxc_tmp_call_result_n94 = hxc_EnumFixture_ruleLiteralValue(hxc_tmp_static_call_argument_0_borrow_result_n87, hxc_tmp_static_call_argument_1_borrow_result_n91, hxc_tmp_load_result_n92, hxc_copiedRule);
+      hxc_tmp_short_circuit_result_n33 = hxc_tmp_call_result_n94 == 12;
+      hxc_enum_d215f611_destroy(&hxc_tmp_static_call_argument_1_owner_n36);
+      hxc_enum_39285fe9_destroy(&hxc_tmp_static_call_argument_0_owner_n34);
     }
-    bool hxc_tmp_short_circuit_load_result_n86 = hxc_tmp_short_circuit_result_n34;
-    bool hxc_tmp_short_circuit_result_n35 = hxc_tmp_short_circuit_load_result_n86;
-    if (hxc_tmp_short_circuit_load_result_n86)
+    bool hxc_tmp_short_circuit_load_result_n95 = hxc_tmp_short_circuit_result_n33;
+    bool hxc_tmp_short_circuit_result_n37 = hxc_tmp_short_circuit_load_result_n95;
+    if (hxc_tmp_short_circuit_load_result_n95)
     {
-      int32_t hxc_tmp_array_length_result_n88;
-      if (hxc_array_ref_length(hxc_rules, &hxc_tmp_array_length_result_n88) != HXC_STATUS_OK)
+      int32_t hxc_tmp_array_length_result_n97;
+      if (hxc_array_ref_length(hxc_envelopes, &hxc_tmp_array_length_result_n97) != HXC_STATUS_OK)
       {
         abort();
       }
-      hxc_tmp_short_circuit_result_n35 = hxc_tmp_array_length_result_n88 == 1;
+      hxc_tmp_short_circuit_result_n37 = hxc_tmp_array_length_result_n97 == 1;
     }
-    if (!!hxc_tmp_short_circuit_result_n35)
+    bool hxc_tmp_short_circuit_load_result_n98 = hxc_tmp_short_circuit_result_n37;
+    bool hxc_tmp_short_circuit_result_n38 = hxc_tmp_short_circuit_load_result_n98;
+    if (hxc_tmp_short_circuit_load_result_n98)
+    {
+      int32_t hxc_tmp_array_length_result_n100;
+      if (hxc_array_ref_length(hxc_rules, &hxc_tmp_array_length_result_n100) != HXC_STATUS_OK)
+      {
+        abort();
+      }
+      hxc_tmp_short_circuit_result_n38 = hxc_tmp_array_length_result_n100 == 1;
+    }
+    if (!!hxc_tmp_short_circuit_result_n38)
     {
       break;
     }
@@ -1000,11 +1047,11 @@ bool hxc_EnumFixture_modeEquality(void)
 
 bool hxc_EnumFixture_modeIsOn(enum hxc_Mode hxc_value)
 {
-  if (!(hxc_value == hxc_Mode_On))
+  if (hxc_value == hxc_Mode_On)
   {
-    return false;
+    return true;
   }
-  return true;
+  return false;
 }
 
 int32_t hxc_EnumFixture_modeValue(enum hxc_Mode hxc_value)
@@ -1027,18 +1074,20 @@ int32_t hxc_EnumFixture_modeValue(enum hxc_Mode hxc_value)
 
 bool hxc_EnumFixture_optionHasPositiveValue(struct hxc_Option_h95f1c4a28dac hxc_value_he8fa941d9290)
 {
-  if (!(hxc_value_he8fa941d9290.hxc_tag == hxc_Option_Some_ha9454146ff01))
+  int32_t hxc_value_hd7907d0ee1b8 = { 0 };
+  int32_t hxc_payload = { 0 };
+  if (hxc_value_he8fa941d9290.hxc_tag == hxc_Option_Some_ha9454146ff01)
   {
-    return false;
+    if (hxc_value_he8fa941d9290.hxc_tag != hxc_Option_Some_ha9454146ff01)
+    {
+      abort();
+    }
+    int32_t hxc_tmp_enum_payload_project_n0 = hxc_value_he8fa941d9290.hxc_payload.hxc_Some.hxc_value;
+    hxc_value_hd7907d0ee1b8 = hxc_tmp_enum_payload_project_n0;
+    hxc_payload = hxc_value_hd7907d0ee1b8;
+    return hxc_payload > 0;
   }
-  if (hxc_value_he8fa941d9290.hxc_tag != hxc_Option_Some_ha9454146ff01)
-  {
-    abort();
-  }
-  int32_t hxc_tmp_enum_payload_project_n0 = hxc_value_he8fa941d9290.hxc_payload.hxc_Some.hxc_value;
-  int32_t hxc_value_hd7907d0ee1b8 = hxc_tmp_enum_payload_project_n0;
-  int32_t hxc_payload = hxc_value_hd7907d0ee1b8;
-  return hxc_payload > 0;
+  return false;
 }
 
 int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_value_h2c5c76013588)
@@ -1102,6 +1151,56 @@ int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_va
       }
   }
   return hxc_tmp_enum_switch_result_n1;
+}
+
+int32_t hxc_EnumFixture_pairedIdentityValue(enum hxc_IdentityKind hxc_kind, struct hxc_IdentityValue hxc_value_hc42edaab0080)
+{
+  int32_t hxc_tmp_enum_switch_result_n2 = 0;
+  switch (hxc_kind) {
+    case hxc_IdentityKind_FirstIdentity:
+      {
+        int32_t hxc_tmp_conditional_result_n3 = 0;
+        if (hxc_value_hc42edaab0080.hxc_tag == hxc_IdentityValue_FirstValue)
+        {
+          if (hxc_value_hc42edaab0080.hxc_tag != hxc_IdentityValue_FirstValue)
+          {
+            abort();
+          }
+          int32_t hxc_tmp_enum_payload_project_n0 = hxc_value_hc42edaab0080.hxc_payload.hxc_FirstValue.hxc_value;
+          int32_t hxc_value_h16eaf8117e85 = hxc_tmp_enum_payload_project_n0;
+          int32_t hxc_item_ha6e924ef4683 = hxc_value_h16eaf8117e85;
+          hxc_tmp_conditional_result_n3 = hxc_item_ha6e924ef4683;
+        }
+        else
+        {
+          hxc_tmp_conditional_result_n3 = -1;
+        }
+        hxc_tmp_enum_switch_result_n2 = hxc_tmp_conditional_result_n3;
+        break;
+      }
+    case hxc_IdentityKind_SecondIdentity:
+      {
+        int32_t hxc_tmp_conditional_result_n6 = 0;
+        if (hxc_value_hc42edaab0080.hxc_tag == hxc_IdentityValue_SecondValue)
+        {
+          if (hxc_value_hc42edaab0080.hxc_tag != hxc_IdentityValue_SecondValue)
+          {
+            abort();
+          }
+          int32_t hxc_tmp_enum_payload_project_n4 = hxc_value_hc42edaab0080.hxc_payload.hxc_SecondValue.hxc_value;
+          int32_t hxc_value_h5ba4cc9b0b76 = hxc_tmp_enum_payload_project_n4;
+          int32_t hxc_item_hd36f183c49b6 = hxc_value_h5ba4cc9b0b76;
+          hxc_tmp_conditional_result_n6 = hxc_item_hd36f183c49b6;
+        }
+        else
+        {
+          hxc_tmp_conditional_result_n6 = -1;
+        }
+        hxc_tmp_enum_switch_result_n2 = hxc_tmp_conditional_result_n6;
+        break;
+      }
+  }
+  return hxc_tmp_enum_switch_result_n2;
 }
 
 int32_t hxc_EnumFixture_recursiveLocal(void)

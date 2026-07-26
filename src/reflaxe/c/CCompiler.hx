@@ -15,6 +15,7 @@ import reflaxe.c.emit.CProjectEmitter.CProjectEnvironment;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimeDiagnostics;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimePolicy;
 import reflaxe.c.emit.CProjectEmitter.CProjectStandard;
+import reflaxe.c.emit.CProjectEmitter.CProjectSymbolReportDetail;
 import reflaxe.c.emit.CProjectLayout;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlan;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
@@ -79,6 +80,7 @@ private typedef ResolvedProjectConfiguration = {
 	final runtimePolicyProvenance:String;
 	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
 	final runtimeDiagnosticsProvenance:String;
+	final symbolReportDetail:CProjectSymbolReportDetail;
 }
 
 private typedef StaticInitializationInspection = {
@@ -287,6 +289,7 @@ class CCompiler {
 				runtimeDiagnostics: configuration.runtimeDiagnostics,
 				runtimePolicyProvenance: configuration.runtimePolicyProvenance,
 				runtimeDiagnosticsProvenance: configuration.runtimeDiagnosticsProvenance,
+				symbolReportDetail: configuration.symbolReportDetail,
 				units: units,
 				buildFacts: lowered.buildFacts,
 				primitiveHelperIds: helperIds,
@@ -561,7 +564,18 @@ class CCompiler {
 			runtimePolicy: runtime.value,
 			runtimePolicyProvenance: runtime.provenance,
 			runtimeDiagnostics: diagnostics.value,
-			runtimeDiagnosticsProvenance: diagnostics.provenance
+			runtimeDiagnosticsProvenance: diagnostics.provenance,
+			symbolReportDetail: resolveSymbolReportDetail(profile)
+		};
+	}
+
+	static function resolveSymbolReportDetail(profile:CProfile):CProjectSymbolReportDetail {
+		return switch Context.definedValue("hxc_symbol_report") {
+			case null | "" | "full": CProjectSymbolReportDetail.Full;
+			case "summary": CProjectSymbolReportDetail.Summary;
+			case invalid:
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_symbol_report `$invalid`; expected full or summary.',
+					compilationPosition(), profile);
 		};
 	}
 

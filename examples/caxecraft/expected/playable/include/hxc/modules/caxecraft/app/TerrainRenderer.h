@@ -2,9 +2,7 @@
 #define HXC_CAXECRAFT_APP_TERRAIN_RENDERER_H_INCLUDED
 
 #include "hxc/detail/program_types.h"
-#include "hxc/modules/caxecraft/app/TerrainAtlas.h"
 #include "hxc/modules/caxecraft/app/TerrainChunkCache.h"
-#include "hxc/modules/caxecraft/domain/BlockKind.h"
 
 struct hxc_caxecraft_app_TerrainRenderer {
   struct hxc_caxecraft_app_TerrainChunkCache hxc_cache;

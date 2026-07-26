@@ -58,10 +58,10 @@ module "CounterView" @"CounterView.hx":6:1-8:2
 end module "CounterView"
 module "Main" @"Main.hx":3:30-10:3
   function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":3:30-10:3
-    local "local.0" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:34
+    local "local.0" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class storage=automatic state=uninitialized @"Main.hx":4:3-4:34
     local "local.1" type=instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:34
-    local "local.2" type=instance("instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":5:3-5:38
-    local "local.3" type=instance("instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":8:3-8:34
+    local "local.2" type=instance("instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc") ownership=borrowed-interface storage=automatic state=uninitialized @"Main.hx":5:3-5:38
+    local "local.3" type=instance("instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34") ownership=borrowed-interface storage=automatic state=uninitialized @"Main.hx":8:3-8:34
     local "local.4" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":9:10-9:58
     local "local.5" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":9:10-9:85
     cleanup "cleanup.construction" parent=none registration-order @"Main.hx":3:30-10:3

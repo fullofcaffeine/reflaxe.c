@@ -132,6 +132,32 @@ private typedef CBodyStringSwitchDispatchCase = {
 	final position:Position;
 }
 
+/**
+ * One Haxe-created local that carries a managed owner across control flow.
+ *
+ * Haxe may replace a block-valued `if` or `switch` with an empty local,
+ * assignments in every normal arm, and one later read. The binding keeps the
+ * local's exact String or tagged-enum lifecycle beside that compiler ID so
+ * assignments can acquire one owner and the read can move it out once.
+ */
+private typedef CBodyManagedFlowCarrier = {
+	final localId:String;
+	final mapping:CBodyValueType;
+	final managedEnum:Null<CPreparedBodyEnumInstance>;
+}
+
+/**
+ * The one owner behind a borrowed value returned by managed Array indexing.
+ *
+ * `Array.get` copies a managed element into this automatic local before user
+ * code sees it. Most expressions borrow that copy and let `cleanupId` destroy
+ * it. A return may instead move the same owner to the caller by omitting that
+ * one cleanup action; no second deep or reference-counted copy is needed.
+ */
+private typedef CBodyManagedArrayElementOwner = {
+	final cleanupId:String;
+}
+
 /** Stable coordinates plus one real typed initializer expression. */
 typedef CBodyInitializerInput = {
 	final id:String;
@@ -1121,6 +1147,19 @@ private typedef LoweredValue = {
 	final mapping:CBodyValueType;
 }
 
+/**
+ * One enum switch subject plus the cleanup stack depth that precedes it.
+ *
+ * A direct call can return a fresh managed enum without a Haxe local to own it.
+ * The lowering gives that result a short-lived owner, keeps the owner active
+ * while tag tests and payload reads run, then releases every temporary created
+ * by the subject before control continues after the match.
+ */
+private typedef CBodyScopedEnumSubject = {
+	final value:LoweredValue;
+	final cleanupDepth:Int;
+}
+
 /** One left-to-right value, optionally saved across later expression flow. */
 private typedef StagedFlowValue = {
 	final value:LoweredValue;
@@ -1132,6 +1171,27 @@ private typedef LoweredPlace = {
 	final place:HxcIRPlace;
 	final mapping:CBodyValueType;
 	final mutable:Bool;
+}
+
+/** The managed-lifetime family selected for one recursive class-field scan. */
+private enum CBodyManagedClassFieldFamily {
+	CBMCFArray;
+	CBMCFStringMap;
+	CBMCFString;
+	CBMCFDirect;
+}
+
+/**
+ * One managed field reached through zero or more inline-owned child objects.
+ *
+ * `path` starts at the outer object whose construction cleanup owns the
+ * storage. Keeping the complete typed path lets a failed outer constructor
+ * release `child.history`, for example, without pretending that the inline
+ * child is a separately allocated pointer.
+ */
+private typedef CBodyManagedClassFieldPath = {
+	final field:CPreparedBodyClassField;
+	final path:Array<String>;
 }
 
 /**
@@ -1609,6 +1669,7 @@ private class EnumConstructorAdapterRegistry {
 			borrowedClassParameterIds: [],
 			borrowedInterfaceParameterIds: [],
 			borrowedClassLocalIds: [],
+			borrowedInterfaceLocalIds: [],
 			managedRoots: [],
 			locals: [],
 			returnType: prepared.returnMapping.irType,
@@ -2027,6 +2088,7 @@ private class FunctionLiteralRegistry {
 				&& parameter.mapping.interfaceValue() != null)
 				.map(parameter -> parameter.ir.id),
 			borrowedClassLocalIds: [],
+			borrowedInterfaceLocalIds: [],
 			managedRoots: [],
 			locals: [],
 			returnType: prepared.returnMapping.irType,
@@ -2877,7 +2939,7 @@ private class FunctionBuilder {
 	final freshManagedEnumValueIds:Map<String, Bool> = [];
 	final freshManagedAggregateValueIds:Map<String, Bool> = [];
 	final freshManagedOptionalValueIds:Map<String, Bool> = [];
-	final borrowedManagedArrayElementValueIds:Map<String, Bool> = [];
+	final borrowedManagedArrayElementOwners:Map<String, CBodyManagedArrayElementOwner> = [];
 	final arrayCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final intMapCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final stringMapCleanupActionIdsByCompilerId:Map<Int, String> = [];
@@ -2887,19 +2949,29 @@ private class FunctionBuilder {
 	final aggregateCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final optionalCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final stackConstructedCompilerIds:Map<Int, Bool> = [];
-	final managedStringFlowCarrierIds:Map<Int, String> = [];
-	final movedManagedStringFlowCarrierIds:Map<Int, Bool> = [];
+	final managedFlowCarriersByCompilerId:Map<Int, CBodyManagedFlowCarrier> = [];
+	final movedManagedFlowCarrierIds:Map<Int, Bool> = [];
 
-	/** Automatic pointer locals that name parent-owned child storage without owning it. */
+	/** Ordinary owned locals created when a joined managed value is read. */
+	final materializedManagedFlowCarrierLocalIds:Map<Int, String> = [];
+
+	/** Automatic pointer locals that name parent-owned class storage without owning it. */
 	final borrowedClassLocalIds:Map<String, Bool> = [];
 
-	final borrowedClassValueIds:Map<String, Bool> = [];
+	/** Automatic interface-pair locals whose concrete object remains caller-owned. */
+	final borrowedInterfaceLocalIds:Map<String, Bool> = [];
+
+	/** Class pointers and interface pairs whose referenced object remains borrowed. */
+	final borrowedReferenceValueIds:Map<String, Bool> = [];
+
 	final initializedOwnedFixedArrayFields:Map<String, Bool> = [];
 	final initializedOwnedClassFields:Map<String, Bool> = [];
 	final initializedRetainedInterfaceFields:Map<String, Bool> = [];
+	final initializedManagedClassFields:Map<String, Bool> = [];
 	final initializedStaticStringFields:Map<String, Bool> = [];
 	final initializedManagedStringFields:Map<String, Bool> = [];
 	final initializedManagedDirectFields:Map<String, Bool> = [];
+	final initializedDirectAggregateFields:Map<String, Bool> = [];
 	final initializedUnmanagedEnumFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
 	final initializedManagedStringMapFields:Map<String, Bool> = [];
@@ -2930,7 +3002,7 @@ private class FunctionBuilder {
 		for (parameter in prepared.parameters) {
 			final value:LoweredValue = {id: parameter.ir.id, type: parameter.ir.type, mapping: parameter.mapping};
 			if (parameter.borrowedReference)
-				borrowedClassValueIds.set(parameter.ir.id, true);
+				borrowedReferenceValueIds.set(parameter.ir.id, true);
 			if (parameter.ir.id == "parameter.self") {
 				selfValue = value;
 			} else {
@@ -3048,7 +3120,7 @@ private class FunctionBuilder {
 		for (parameter in prepared.parameters) {
 			final classValue = parameter.mapping.classValue();
 			if (classValue != null && classValue.managedByCollector)
-				borrowedClassValueIds.remove(parameter.ir.id);
+				borrowedReferenceValueIds.remove(parameter.ir.id);
 		}
 	}
 
@@ -3140,8 +3212,10 @@ private class FunctionBuilder {
 			};
 		}
 		final functionSpan = HaxeSourceSpan.fromPosition(input.sourceExpression.pos, input.sourcePath);
-		final borrowedLocalIds = [for (localId in borrowedClassLocalIds.keys()) localId];
-		borrowedLocalIds.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		final borrowedClassLocals = [for (localId in borrowedClassLocalIds.keys()) localId];
+		borrowedClassLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		final borrowedInterfaceLocals = [for (localId in borrowedInterfaceLocalIds.keys()) localId];
+		borrowedInterfaceLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final ir:HxcIRFunction = {
 			id: prepared.irId,
 			displayName: '${input.declarationPath}.${input.displayName}',
@@ -3153,7 +3227,8 @@ private class FunctionBuilder {
 			borrowedInterfaceParameterIds: prepared.parameters.filter(parameter -> parameter.borrowedReference
 				&& parameter.mapping.interfaceValue() != null)
 				.map(parameter -> parameter.ir.id),
-			borrowedClassLocalIds: borrowedLocalIds,
+			borrowedClassLocalIds: borrowedClassLocals,
+			borrowedInterfaceLocalIds: borrowedInterfaceLocals,
 			managedRoots: [],
 			locals: locals,
 			returnType: prepared.returnMapping.irType,
@@ -3180,6 +3255,18 @@ private class FunctionBuilder {
 			source: functionSpan
 		};
 		final coalescing = new CBodyValueCoalescingPlanner().plan(ir);
+		// Lowering helpers may reserve a descriptive temporary early, but they
+		// cannot know whether a later expression will reuse the result or place
+		// an effect barrier before its final sink. The completed HxcIR graph can.
+		// Fill every missing required request here, in deterministic block and
+		// instruction order, before the symbol registry is finalized.
+		for (block in ir.blocks)
+			for (instruction in block.instructions)
+				if (instruction.result != null
+					&& coalescing.requiresStableTemporary(instruction.result.id)
+					&& instructionMayNeedNamedResult(instruction.kind)
+					&& !temporaryRequests.exists(instruction.result.id))
+					registerValueTemporary(instruction.result.id, "materialized-value");
 		final inlinedValueIds:Array<String> = [];
 		for (valueId => request in temporaryRequests) {
 			if (coalescing.shouldInline(valueId)) {
@@ -3201,6 +3288,26 @@ private class FunctionBuilder {
 			runtimeRequirements: runtimeRequirements
 		};
 	}
+
+	/**
+		Report whether this instruction family may ask the C emitter for a name.
+
+		Constants, function symbols, pure unary/binary operations, and
+		conversions are recorded as C expressions by their dedicated emitters;
+		reserving a symbol for them would only pollute the temporary ledger.
+		Loads, calls, aggregate/tag operations, allocations, and future effectful
+		result families use declaration-capable emitters, so the completed use
+		plan may fill a missing request for those families.
+
+		The conservative final arm is intentional: a newly admitted result
+		family receives a stable name until its emitter explicitly proves that it
+		is always expression-only.
+	**/
+	static function instructionMayNeedNamedResult(kind:HxcIRInstructionKind):Bool
+		return switch kind {
+			case IRIOConstant(_) | IRIOFunctionReference(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _): false;
+			case _: true;
+		};
 
 	/** Find the source expression that created one still-unconsumed HxcIR value. */
 	function valueProducerSource(valueId:String):Null<HxcSourceSpan> {
@@ -3234,6 +3341,10 @@ private class FunctionBuilder {
 				// The interface value copies a concrete object pointer and its exact
 				// table into the newly allocated owner. The owner's trace callback
 				// follows that object pointer for the rest of the field's lifetime.
+			case TBinop(OpAssign, left, right) if (lowerManagedClassFieldInitializer(left, right)):
+				// A persistent concrete-class reference requires the same stable
+				// collector graph as a retained interface. The first constructor
+				// assignment publishes the already rooted object into that graph.
 			case TBinop(OpAssign, left, right) if (lowerStaticStringFieldInitializer(left, right)):
 				// The immutable view is copied by value. Its bytes come from
 				// compiler-owned literal storage and therefore outlive every object;
@@ -3244,6 +3355,10 @@ private class FunctionBuilder {
 			case TBinop(OpAssign, left, right) if (lowerManagedDirectFieldInitializer(left, right)):
 				// A managed enum, record, optional, or Bytes value receives one
 				// exact owner through its already prepared lifecycle plan.
+			case TBinop(OpAssign, left, right) if (lowerDirectAggregateFieldInitializer(left, right)):
+				// A closed record with no owned children is a direct C struct value.
+				// Its first constructor assignment initializes the final field by
+				// value; later assignment remains an immutable-place error.
 			case TBinop(OpAssign, left, right) if (lowerUnmanagedEnumFieldInitializer(left, right)):
 				// The prepared enum needs no retain, tracing, or destruction. The
 				// first assignment initializes the final field by value.
@@ -3266,6 +3381,8 @@ private class FunctionBuilder {
 				lowerSuperCall(expression, arguments);
 			case TCall(_, _):
 				final result = lowerCall(expression, false);
+				if (result != null)
+					destroyDiscardedFreshManagedOptional(result, expression.pos);
 				if (result != null && freshManagedStringMapValueIds.exists(result.id))
 					unsupported(expression, "TCall(discarded-fresh-managed-StringMap-needs-owner)");
 				if (result != null && freshManagedBytesValueIds.exists(result.id))
@@ -3295,6 +3412,39 @@ private class FunctionBuilder {
 			case _:
 				unsupported(expression, nodeName(expression));
 		}
+	}
+
+	/**
+		Destroy one ignored managed `Null<T>` call result at the statement boundary.
+
+		Haxe still evaluates a call when its result is unused. If the present
+		optional payload owns memory, the returned C value also owns that payload;
+		simply dropping its bits would leak it. A fresh-result marker proves this
+		call supplied the one transferable owner. Moving the value into a typed
+		automatic place and immediately invoking the optional's existing destroy
+		plan consumes that owner exactly once. An absent optional follows the same
+		call but its presence flag makes destruction a no-op.
+
+		This rule is intentionally specific to the already-proven managed optional
+		family. Other managed result families keep their explicit fail-closed
+		diagnostics until their own immediate-destruction contracts are tested.
+	**/
+	function destroyDiscardedFreshManagedOptional(value:LoweredValue, position:Position):Void {
+		if (!freshManagedOptionalValueIds.remove(value.id))
+			return;
+		final optional = value.mapping.optionalValue();
+		if (optional == null || !optional.managedLifetime)
+			throw new CBodyEmissionError('fresh managed optional `${value.id}` lost its managed optional representation');
+		final destroyId = optional.destroyImplementationId();
+		if (destroyId == null)
+			throw new CBodyEmissionError('managed optional `${optional.planId}` lost its destroy plan');
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		// Statement calls normally avoid naming an unused C return value. This
+		// result is not semantically unused: the destroy operation needs its exact
+		// bits, so materialize it before moving it into the owner place.
+		registerValueTemporary(value.id, "discarded-optional-call-result");
+		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, "discarded-optional-owner");
+		appendInstruction(null, IRIORelease(IRPLocal(ownerLocalId), IRIProgramLocal(destroyId)), source, "destroy-discarded-optional");
 	}
 
 	function lowerStatementBlock(expressions:Array<TypedExpr>):Void {
@@ -3384,6 +3534,54 @@ private class FunctionBuilder {
 	}
 
 	/**
+	 * Initialize one concrete class-reference field in a managed object.
+	 *
+	 * A class pointer stored in `this.field` remains observable after the
+	 * constructor returns, so call-only borrowing is not enough. Whole-program
+	 * representation planning has already placed both the owner and referenced
+	 * class in the precise nonmoving collector graph. The owner is rooted while
+	 * its constructor runs, and its generated trace callback follows this field
+	 * after the store. A fresh right side is therefore allocated and rooted
+	 * before this instruction; an existing managed reference is copied without
+	 * reference counting.
+	 *
+	 * This constructor-only path also owns the first assignment to a Haxe `final`
+	 * field. Later assignment still reaches the ordinary mutability check.
+	 */
+	function lowerManagedClassFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedManagedClassFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing class field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		final referenced = field == null ? null : field.type.classValue();
+		if (owner == null || !owner.managedByCollector || referenced == null || !referenced.managedByCollector)
+			return false;
+		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-class-initializer)');
+		rejectOwnedClassBorrow(value, right.pos, 'TField($fieldName:managed-class-stack-escape)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-managed-class-field");
+		initializedManagedClassFields.set(fieldName, true);
+		return true;
+	}
+
+	/**
 	 * Initialize one final literal-backed String field during construction.
 	 *
 	 * The currently admitted Haxe String representation is a small immutable
@@ -3430,7 +3628,15 @@ private class FunctionBuilder {
 		return true;
 	}
 
-	/** Initialize one final owner-capable String field exactly once. */
+	/**
+	 * Establish the first value of one owner-capable String field.
+	 *
+	 * Both final and mutable fields begin in the zero/null state supplied by the
+	 * enclosing object allocation. Their first constructor assignment therefore
+	 * stores the captured value without releasing an earlier String owner. Later
+	 * writes to a mutable field use the ordinary replacement path, which captures
+	 * the new value before releasing the old one.
+	 */
 	function lowerManagedStringFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
 		switch prepared.role {
 			case PBRConstructor(_):
@@ -3453,7 +3659,7 @@ private class FunctionBuilder {
 			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing managed String field `$fieldName`');
 		final owner = self.mapping.classValue();
 		final field = owner == null ? null : owner.field(fieldName);
-		if (field == null || field.mutable || field.type.irType != IRTManagedString)
+		if (field == null || field.type.irType != IRTManagedString)
 			return false;
 		final raw = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-String-initializer)');
 		final value = captureManagedValue(raw, field.type, right.pos, 'TField($fieldName:managed-String-initializer)');
@@ -3463,7 +3669,16 @@ private class FunctionBuilder {
 		return true;
 	}
 
-	/** Initialize one final managed by-value field through its exact lifecycle. */
+	/**
+		Establish the first owner for one managed by-value class field.
+
+		Both final and mutable Haxe fields start as zeroed C storage while their
+		constructor runs. The first `this.field = value` therefore acquires or
+		transfers exactly one owner and stores it without trying to destroy an old
+		value. Final fields use this path once; later writes to a mutable field use
+		the separate replacement rule, which acquires the new owner before
+		releasing the old one.
+	**/
 	function lowerManagedDirectFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
 		switch prepared.role {
 			case PBRConstructor(_):
@@ -3486,13 +3701,62 @@ private class FunctionBuilder {
 			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing managed field `$fieldName`');
 		final owner = self.mapping.classValue();
 		final field = owner == null ? null : owner.field(fieldName);
-		if (field == null || field.mutable || managedDirectFieldRelease(field.type) == null)
+		if (field == null || managedDirectFieldRelease(field.type) == null)
 			return false;
 		final raw = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-field-initializer)');
 		final value = captureManagedValue(raw, field.type, right.pos, 'TField($fieldName:managed-field-initializer)');
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
 			"initialize-managed-field");
 		initializedManagedDirectFields.set(fieldName, true);
+		return true;
+	}
+
+	/**
+		Initialize one final ownership-free closed-record field exactly once.
+
+		Haxe checks that a constructor supplies the field's value, then represents
+		that initialization as the same typed `=` node used for ordinary
+		assignment. At the C level an unmanaged closed record is already one
+		concrete struct value, so copying the constructor expression into the
+		zero-initialized field is both the natural representation and free of
+		retain/release work.
+
+		This recognizer is deliberately narrower than “write an immutable field”:
+		it runs only in the declaring constructor, accepts the first direct
+		`this.field = value`, and requires a prepared record whose complete graph
+		has `managedLifetime == false`. A later write, an Array/Bytes/String child,
+		or any other owner-bearing value still follows its dedicated rule or fails
+		closed.
+	**/
+	function lowerDirectAggregateFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedDirectAggregateFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing record field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		final aggregate = field == null ? null : field.type.aggregateValue();
+		if (field == null || field.mutable || aggregate == null || aggregate.managedLifetime)
+			return false;
+		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:direct-record-initializer)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"initialize-direct-record-field");
+		initializedDirectAggregateFields.set(fieldName, true);
 		return true;
 	}
 
@@ -3639,7 +3903,15 @@ private class FunctionBuilder {
 		return true;
 	}
 
-	/** Construct one final child object directly inside its nonescaping parent. */
+	/**
+	 * Construct one final child object directly inside its parent's C storage.
+	 *
+	 * A fallible child constructor propagates through the surrounding Haxe
+	 * constructor. It intentionally cleans only short-lived expression owners
+	 * here: the caller still owns the zero-initialized partial parent and performs
+	 * one recursive cleanup of every managed field reached before the throw.
+	 * Cleaning the child on both edges would release the same field twice.
+	 */
 	function lowerOwnedClassInitializer(left:TypedExpr, right:TypedExpr):Bool {
 		switch prepared.role {
 			case PBRConstructor(_):
@@ -3681,19 +3953,20 @@ private class FunctionBuilder {
 		final signature = constructorSignaturesById.get(constructorId);
 		if (signature == null)
 			return unsupported(right, 'TNew(owned-field-constructor-unavailable:$constructorId)');
-		if (signature.input.canFail)
-			return unsupported(right, 'TNew(owned-field-fallible-construction-not-admitted:$constructorId)');
-		if (construction.arguments.length != signature.arguments.length)
-			return unsupported(right,
-				'TNew(owned-field-argument-count=${construction.arguments.length},expected=${signature.arguments.length},target=$constructorId)');
+		final argumentExpressions = completeDirectCallArguments(right, construction.arguments, signature.arguments, 0, constructorId,
+			"owned-field-constructor-argument");
 		final arguments:Array<String> = [];
-		for (index in 0...construction.arguments.length) {
-			final argumentExpression = construction.arguments[index];
+		for (index in 0...argumentExpressions.length) {
+			final argumentExpression = argumentExpressions[index];
 			final expected = signature.arguments[index].mapping;
 			if (expected.classValue() != null || referencesStackConstructedValue(argumentExpression))
 				return unsupported(argumentExpression, 'TNew(owned-field-argument:$index:class-alias-not-admitted)');
-			arguments.push(coerce(lowerValue(argumentExpression, expected), expected, argumentExpression.pos,
-				'TNew(owned-field-argument:$index,target=$constructorId)').id);
+			var argument = coerce(lowerValue(argumentExpression, expected), expected, argumentExpression.pos,
+				'TNew(owned-field-argument:$index,target=$constructorId)');
+			argument = stabilizeFreshManagedString(argument, argumentExpression.pos, 'owned-field-constructor-argument-$index');
+			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'owned-field-constructor-argument-$index');
+			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'owned-field-constructor-argument-$index');
+			arguments.push(argument.id);
 		}
 		final virtualTable = dispatch.tableForInstance(child.instanceId);
 		if (virtualTable != null) {
@@ -3711,7 +3984,12 @@ private class FunctionBuilder {
 				dispatch: IRCDDirect(constructorId),
 				arguments: [address.id].concat(arguments),
 				returnType: IRTVoid,
-				failure: null
+				failure: signature.input.canFail ? {
+					kind: IRFException,
+					target: constructionFailureTarget(),
+					arguments: [],
+					cleanup: normalCleanupSteps()
+				} : null
 			}), HaxeSourceSpan.fromPosition(right.pos, input.sourcePath),
 				"owned-class-field-constructor-call");
 		}
@@ -3782,9 +4060,20 @@ private class FunctionBuilder {
 				continue;
 			}
 			switch candidate.expr {
-				case TVar(_, initializer) if (initializer != null && !expressionCreatesFlow(initializer)):
-					// A normal initialized declaration is the only admitted prelude. Its
-					// effects still run after the defensive carrier initialization.
+				case TVar(_, initializer) if (initializer != null):
+					/*
+						An initialized declaration is a safe prelude even when its value
+						uses an `if` or `switch`. The check above proved that it cannot
+						read the still-empty carrier. Every normal path through a Haxe
+						initializer continues to the next statement; a throw or return
+						does not rejoin and therefore needs no carrier value.
+
+						This matters for a nullable switch subject: Haxe first computes
+						the subject with a small conditional, then emits the exhaustive
+						switch that fills the result carrier. HxcIR's path-sensitive
+						carrier validator independently walks both control-flow regions
+						and still rejects any read before assignment.
+					 */
 				case TVar(nested, null) if (sequenceFlowInitializesLocal(expressions, index + 1, endExclusive, nested.id)):
 					// One source lazy chain can make Haxe hoist several result carriers
 					// together before their nested assigning branches. Admit the next
@@ -4004,7 +4293,15 @@ private class FunctionBuilder {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
-		final managedStringFlowCarrier = compilerFlowCarrier && localMapping.irType == IRTManagedString;
+		final managedFlowCarrierEnum = switch localMapping.enumValue() {
+			case null: null;
+			case value if (compilerFlowCarrier && value.managedLifetime && !value.recursive): value;
+			case value if (compilerFlowCarrier && value.managedLifetime && value.recursive):
+				return unsupportedAt(position, 'TVar(${variable.name}:managed-flow-carrier-fallible-retain-not-admitted)');
+			case _: null;
+		};
+		final managedFlowCarrier = compilerFlowCarrier && (localMapping.irType == IRTManagedString || managedFlowCarrierEnum != null);
+		final directFlowCarrier = compilerFlowCarrier && conditionalDirectValue(localMapping);
 		// A switch-pattern binding views the active payload while its enum owner
 		// remains live for the branch. Ref-counted Array and Bytes values therefore
 		// borrow that owner instead of retaining and releasing a redundant local
@@ -4014,26 +4311,21 @@ private class FunctionBuilder {
 			&& isEnumPayloadProjection(initializer)
 			&& (localMapping.arrayValue() != null || localMapping.bytesValue() != null);
 		final value:Null<LoweredValue> = switch initializer {
+			case null if (managedFlowCarrier || directFlowCarrier):
+				// The HxcIR declaration below deliberately starts empty. Its
+				// validator proves every normal arm initializes or acquires it
+				// before the one admitted read.
+				null;
 			case null if (compilerFlowCarrier):
 				// Reflaxe can expose a value-producing if/switch as a temporary followed
 				// by exhaustive control flow that assigns it. The structural recognition
 				// below proves every arm assigns; this defensive value prevents C
 				// uninitialized storage without becoming observable on an admitted path.
-				switch localMapping.kind {
-					case CBVKManagedString(_):
-						null;
-					case CBVKAggregate(_):
-						// Strict C can safely declare a record carrier as `{0}`. Every
-						// admitted source path overwrites it before the later load, while
-						// a forged enum-abstract value takes the fail-stop switch edge.
-						null;
-					case _:
-						final result:HxcIRResult = {id: nextValueId(), type: localMapping.irType};
-						appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:flow-carrier)')),
-							source, "flow-carrier-default");
-						registerDefaultStringRequirement(localMapping, source, position);
-						{id: result.id, type: result.type, mapping: localMapping};
-				}
+				final result:HxcIRResult = {id: nextValueId(), type: localMapping.irType};
+				appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:flow-carrier)')), source,
+					"flow-carrier-default");
+				registerDefaultStringRequirement(localMapping, source, position);
+				{id: result.id, type: result.type, mapping: localMapping};
 			case null:
 				unsupportedAt(position, 'TVar(${variable.name}:uninitialized)');
 			case expression:
@@ -4041,7 +4333,7 @@ private class FunctionBuilder {
 		};
 		if (value != null && !stackReferenceAlias)
 			rejectOwnedClassBorrow(value, position, 'TVar(${variable.name}:owned-class-borrow-escape)');
-		final borrowedStackAlias = value != null && stackReferenceAlias && borrowedClassValueIds.exists(value.id);
+		final borrowedStackAlias = value != null && stackReferenceAlias && borrowedReferenceValueIds.exists(value.id);
 		locals.push({
 			id: localId,
 			type: localMapping.irType,
@@ -4053,10 +4345,13 @@ private class FunctionBuilder {
 			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
 		context.symbols.register(request);
 		localRequests.set(localId, request);
-		if (managedStringFlowCarrier) {
-			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), IRIRuntime("string")), source, "flow-carrier-managed-string-declare");
+		if (managedFlowCarrier) {
+			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), managedCarrierImplementation(localMapping, managedFlowCarrierEnum, false)),
+				source, "flow-carrier-managed-declare");
+		} else if (directFlowCarrier) {
+			appendInstruction(null, IRIODeclareUninitialized(IRPLocal(localId)), source, "flow-carrier-direct-declare");
 		} else if (value == null) {
-			appendInstruction(null, IRIODefaultInitialize(IRPLocal(localId), IRISUninitialized, IRISInitialized), source, "flow-carrier-default-initialize");
+			throw new CBodyEmissionError('flow carrier `${variable.name}` lost its initialization strategy in `${prepared.irId}`');
 		} else {
 			appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
 		}
@@ -4129,7 +4424,7 @@ private class FunctionBuilder {
 			bytesCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "cleanup-release", "ordinary haxe.io.Bytes local lifetime", source, position));
 		}
-		if (localMapping.irType == IRTManagedString && !managedStringFlowCarrier) {
+		if (localMapping.irType == IRTManagedString && !managedFlowCarrier) {
 			final transferredFreshOwner = value != null && freshManagedStringValueIds.remove(value.id);
 			if (!transferredFreshOwner) {
 				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("string")), source, "retain-string-alias");
@@ -4147,7 +4442,7 @@ private class FunctionBuilder {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, position));
 		}
 		final managedEnum = localMapping.enumValue();
-		if (managedEnum != null && managedEnum.managedLifetime) {
+		if (managedEnum != null && managedEnum.managedLifetime && !managedFlowCarrier) {
 			final retainId = managedEnum.retainImplementationId();
 			final destroyId = managedEnum.destroyImplementationId();
 			if (retainId == null || destroyId == null)
@@ -4205,8 +4500,12 @@ private class FunctionBuilder {
 		}
 		localIdsByCompilerId.set(variable.id, localId);
 		localTypesByCompilerId.set(variable.id, localMapping);
-		if (managedStringFlowCarrier)
-			managedStringFlowCarrierIds.set(variable.id, localId);
+		if (managedFlowCarrier)
+			managedFlowCarriersByCompilerId.set(variable.id, {
+				localId: localId,
+				mapping: localMapping,
+				managedEnum: managedFlowCarrierEnum
+			});
 		if (borrowedStackAlias) {
 			// Haxe introduces locals such as `_this = parent.child` while inlining.
 			// The pointer local is a stable non-owning name, not a second object: it
@@ -4214,7 +4513,7 @@ private class FunctionBuilder {
 			// losing the parent's lifetime. Keep the borrow fact beside the local so
 			// every reload retains escape checks, and reject reassignment in
 			// `lowerPlace` below.
-			borrowedClassLocalIds.set(localId, true);
+			markBorrowedReferenceLocal(localId, localMapping);
 		}
 		if (stackReferenceAlias)
 			stackConstructedCompilerIds.set(variable.id, true);
@@ -4258,9 +4557,11 @@ private class FunctionBuilder {
 			}
 			var argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
 				argumentExpression.pos, 'TNew(argument:$index,target=$targetId)');
+			argument = stabilizeFreshManagedString(argument, argumentExpression.pos, 'constructor-argument-$index');
 			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'constructor-argument-$index');
 			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'constructor-argument-$index');
-			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
+			if (!signature.arguments[index].borrowedReference)
+				rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
 			arguments.push(argument.id);
 		}
 
@@ -4284,6 +4585,12 @@ private class FunctionBuilder {
 		appendInstruction(null, IRIOInitialize(IRPLocal(localId), reference.id, IRISUninitialized, IRISInitialized), source, "initialize-class-reference");
 		localIdsByCompilerId.set(variable.id, localId);
 		localTypesByCompilerId.set(variable.id, localMapping);
+		// The object bytes live in the separate backing local created above.
+		// This source-level class local stores only their address, so it is a
+		// non-owning borrow for exactly the backing object's lexical lifetime.
+		// Recording that fact lets validation reject escape while permitting
+		// ordinary method calls and flow staging through the named local.
+		markBorrowedReferenceLocal(localId, localMapping);
 		stackConstructedCompilerIds.set(variable.id, true);
 	}
 
@@ -4347,50 +4654,54 @@ private class FunctionBuilder {
 		// family-specific release operations are null-safe, so one reverse-order
 		// list cleans the exact initialized prefix without runtime field flags.
 		final fieldCleanupActionIds:Array<String> = [];
-		for (field in managedArrayFields(constructedClass)) {
-			final cleanupId = 'construction.$constructionOrdinal.array-field.${field.name}.release';
+		for (entry in managedClassFields(constructedClass, CBMCFArray)) {
+			final fieldPath = entry.path.join(".");
+			final cleanupId = 'construction.$constructionOrdinal.array-field.$fieldPath.release';
 			constructionCleanupActions.push({
 				id: cleanupId,
 				idempotence: IRCExactlyOnce,
-				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("array")),
+				kind: IRCARelease(managedClassFieldPlace(IRPLocal(backingLocalId), entry.path), IRIRuntime("array")),
 				source: source
 			});
 			fieldCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release",
-				'ordinary Haxe Array field `${constructedClass.haxePath}.${field.name}` lifetime', source, expression.pos));
+				'ordinary Haxe Array field `${constructedClass.haxePath}.$fieldPath` lifetime', source, expression.pos));
 		}
-		for (field in managedStringMapFields(constructedClass)) {
-			final cleanupId = 'construction.$constructionOrdinal.string-map-field.${field.name}.release';
+		for (entry in managedClassFields(constructedClass, CBMCFStringMap)) {
+			final fieldPath = entry.path.join(".");
+			final cleanupId = 'construction.$constructionOrdinal.string-map-field.$fieldPath.release';
 			constructionCleanupActions.push({
 				id: cleanupId,
 				idempotence: IRCExactlyOnce,
-				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("string-map")),
+				kind: IRCARelease(managedClassFieldPlace(IRPLocal(backingLocalId), entry.path), IRIRuntime("string-map")),
 				source: source
 			});
 			fieldCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release",
-				'ordinary Haxe StringMap field `${constructedClass.haxePath}.${field.name}` lifetime', source, expression.pos));
+				'ordinary Haxe StringMap field `${constructedClass.haxePath}.$fieldPath` lifetime', source, expression.pos));
 		}
-		for (field in managedStringFields(constructedClass)) {
-			final cleanupId = 'construction.$constructionOrdinal.string-field.${field.name}.release';
+		for (entry in managedClassFields(constructedClass, CBMCFString)) {
+			final fieldPath = entry.path.join(".");
+			final cleanupId = 'construction.$constructionOrdinal.string-field.$fieldPath.release';
 			constructionCleanupActions.push({
 				id: cleanupId,
 				idempotence: IRCExactlyOnce,
-				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), IRIRuntime("string")),
+				kind: IRCARelease(managedClassFieldPlace(IRPLocal(backingLocalId), entry.path), IRIRuntime("string")),
 				source: source
 			});
 			fieldCleanupActionIds.push(cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, expression.pos));
 		}
-		for (field in managedDirectFields(constructedClass)) {
-			final implementation = managedDirectFieldRelease(field.type);
+		for (entry in managedClassFields(constructedClass, CBMCFDirect)) {
+			final implementation = managedDirectFieldRelease(entry.field.type);
 			if (implementation == null)
-				throw new CBodyEmissionError('managed class field `${constructedClass.haxePath}.${field.name}` lost its release plan');
-			final cleanupId = 'construction.$constructionOrdinal.managed-field.${field.name}.release';
+				throw new CBodyEmissionError('managed class field `${constructedClass.haxePath}.${entry.path.join(".")}` lost its release plan');
+			final fieldPath = entry.path.join(".");
+			final cleanupId = 'construction.$constructionOrdinal.managed-field.$fieldPath.release';
 			constructionCleanupActions.push({
 				id: cleanupId,
 				idempotence: IRCExactlyOnce,
-				kind: IRCARelease(IRPField(IRPLocal(backingLocalId), field.name), implementation),
+				kind: IRCARelease(managedClassFieldPlace(IRPLocal(backingLocalId), entry.path), implementation),
 				source: source
 			});
 			fieldCleanupActionIds.push(cleanupId);
@@ -4475,16 +4786,18 @@ private class FunctionBuilder {
 				return unsupported(argumentExpression, 'TNew(stack-reference-escape:constructor-argument:$index)');
 			var argument = coerce(lowerValue(argumentExpression, signature.arguments[index].mapping), signature.arguments[index].mapping,
 				argumentExpression.pos, 'TNew(argument:$index,target=$targetId)');
+			argument = stabilizeFreshManagedString(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
 			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
 			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
-			rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
+			if (!signature.arguments[index].borrowedReference)
+				rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
 			arguments.push(argument.id);
 		}
 
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final self = lowerStackConstructedObject(expression, signature, targetId, arguments, source, "constructed-receiver", classValue);
 		final reference = coerce(self, sourceMapping, expression.pos, 'TNew(receiver-result:$targetId)');
-		borrowedClassValueIds.set(reference.id, true);
+		borrowedReferenceValueIds.set(reference.id, true);
 		return reference;
 	}
 
@@ -4512,8 +4825,6 @@ private class FunctionBuilder {
 		final signature = constructorSignaturesById.get(targetId);
 		if (signature == null)
 			return unsupported(expression, 'TNew(unavailable-constructor:$targetId)');
-		if (signature.input.canFail)
-			return unsupported(expression, 'TNew(managed-fallible-constructor-not-yet-admitted:$targetId)');
 		final argumentExpressions = completeDirectCallArguments(expression, construction.arguments, signature.arguments, 0, targetId,
 			"managed-constructor-argument");
 
@@ -4522,9 +4833,11 @@ private class FunctionBuilder {
 			final sourceArgument = argumentExpressions[index];
 			var argument = coerce(lowerValue(sourceArgument, signature.arguments[index].mapping), signature.arguments[index].mapping, sourceArgument.pos,
 				'TNew(managed-argument:$index,target=$targetId)');
+			argument = stabilizeFreshManagedString(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			argument = stabilizeFreshManagedArray(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			argument = stabilizeFreshManagedBytes(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
-			rejectOwnedClassBorrow(argument, sourceArgument.pos, 'TNew(owned-class-borrow-escape:managed-constructor-argument:$index)');
+			if (!signature.arguments[index].borrowedReference)
+				rejectOwnedClassBorrow(argument, sourceArgument.pos, 'TNew(owned-class-borrow-escape:managed-constructor-argument:$index)');
 			arguments.push(argument.id);
 		}
 
@@ -4544,11 +4857,25 @@ private class FunctionBuilder {
 			final target = functionsById.get(targetId);
 			if (target == null)
 				throw new CBodyEmissionError('non-elided managed constructor `$targetId` has no prepared function');
+			final failure:Null<HxcIRFailureEdge> = signature.input.canFail ? {
+				kind: IRFException,
+				target: constructionFailureTarget(),
+				arguments: [],
+				// The new object remains rooted through this edge. A failed
+				// constructor never publishes it to the destination field, so
+				// popping the caller's exact-root frame makes the zero-initialized
+				// partial object collectible. Its descriptor finalizer owns any
+				// independently reference-counted fields initialized before the
+				// throw. Existing caller-owned temporaries still run their normal
+				// cleanup before the status propagates or reaches the uncaught
+				// abort boundary.
+				cleanup: normalCleanupSteps()
+			} : null;
 			appendInstruction(null, IRIOCall({
 				dispatch: IRCDDirect(targetId),
 				arguments: [self.id].concat(arguments),
 				returnType: IRTVoid,
-				failure: null
+				failure: failure
 			}), source, "managed-constructor-call");
 		}
 		final target = expectedMapping == null ? sourceMapping : expectedMapping;
@@ -4578,9 +4905,11 @@ private class FunctionBuilder {
 				unsupported(argument, 'TNew(stack-reference-escape:super-argument:$index)');
 			var converted = coerce(lowerValue(argument, target.arguments[index].mapping), target.arguments[index].mapping, argument.pos,
 				'TCall(super:argument:$index,target=$baseId)');
+			converted = stabilizeFreshManagedString(converted, argument.pos, 'super-constructor-argument-$index');
 			converted = stabilizeFreshManagedArray(converted, argument.pos, 'super-constructor-argument-$index');
 			converted = stabilizeFreshManagedBytes(converted, argument.pos, 'super-constructor-argument-$index');
-			rejectOwnedClassBorrow(converted, argument.pos, 'TCall(owned-class-borrow-escape:super-argument:$index)');
+			if (!target.arguments[index].borrowedReference)
+				rejectOwnedClassBorrow(converted, argument.pos, 'TCall(owned-class-borrow-escape:super-argument:$index)');
 			arguments.push(converted.id);
 		}
 		if (target.input.elided)
@@ -5207,8 +5536,22 @@ private class FunctionBuilder {
 		}
 		final returnedArray = prepared.returnMapping.arrayValue();
 		final lowered = coerce(lowerValue(value, prepared.returnMapping), prepared.returnMapping, value.pos, "TReturn(value)");
-		if (borrowedManagedArrayElementValueIds.exists(lowered.id))
-			unsupported(value, "TReturn(borrowed-managed-Array-element-needs-owner-transfer)");
+		final arrayElementOwner = borrowedManagedArrayElementOwners.get(lowered.id);
+		if (arrayElementOwner != null) {
+			/*
+				The checked Array read already created an owned element copy in a
+				stable local. Returning its borrowed load copies the value bits to
+				the caller; excluding the local's destructor transfers that one
+				logical owner instead of retaining/copying it again.
+
+				This path exists only for element types with an exact typed cleanup
+				plan. Trivial elements never enter the owner map, while unsupported
+				managed representations fail when Array specialization is prepared.
+			 */
+			borrowedManagedArrayElementOwners.remove(lowered.id);
+			currentBlock.terminator = {kind: IRTReturn(lowered.id, normalCleanupSteps(arrayElementOwner.cleanupId)), source: source};
+			return;
+		}
 		if (returnedArray != null && !returnedArray.managedByCollector) {
 			if (isNullConstantExpression(value)) {
 				// NULL owns no container, so it crosses the return boundary without a
@@ -5826,7 +6169,7 @@ private class FunctionBuilder {
 			final result:HxcIRResult = {id: nextValueId(), type: IRTPointer(IRTInstance(ownedChild.instanceId), false)};
 			appendInstruction(result, IRIOBorrowClassField(place), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "owned-class-field-borrow");
 			registerValueTemporary(result.id, "owned-class-field-address");
-			borrowedClassValueIds.set(result.id, true);
+			borrowedReferenceValueIds.set(result.id, true);
 			return {id: result.id, type: result.type, mapping: CBodyValueType.classReference(ownedChild, false)};
 		}
 		return loadPlace({place: place, mapping: field.type, mutable: field.mutable}, expression.pos, "class-field-load");
@@ -6065,9 +6408,14 @@ private class FunctionBuilder {
 		Lower a switch whose nullable scalar routes absence to the default arm.
 
 		C cannot switch on the generated `{ has_value, value }` record. The
-		presence branch prevents an inactive payload read; only the present path
-		uses C's integer switch, while `null` follows Haxe's ordinary default
-		semantics.
+		presence branch prevents an inactive payload read. A first switch maps a
+		present payload to a source-arm ordinal; absence keeps the preselected
+		default ordinal. One second switch enters each source body exactly once.
+
+		The ordinal step is intentional. Sending both an absent value and the first
+		switch's unmatched value directly to the same default body would create a
+		shared internal graph node. Structured C could represent that graph only by
+		duplicating the body or adding a `goto`.
 	**/
 	function lowerStatementOptionalPrimitiveSwitch(expression:TypedExpr, subject:TypedExpr, optional:CPreparedBodyOptional, cases:Array<TypedSwitchArm>,
 			defaultExpression:Null<TypedExpr>):Void {
@@ -6077,14 +6425,34 @@ private class FunctionBuilder {
 		final subjectMapping = bodyValueType(subject.t, subject.pos, "TSwitch(optional-subject-type)");
 		final subjectValue = coerce(lowerValue(subject, subjectMapping), subjectMapping, subject.pos, "TSwitch(optional-subject)");
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		// The presence test remains in this block, while unwrapping happens in
+		// the present-only child block. Save a local load (not only parameters
+		// are valid across HxcIR block boundaries) so a named Haxe local or call
+		// result cannot leak its block-local SSA ID into that child.
+		final subjectLocalId = createFlowLocal(subjectMapping, subjectValue.id, source, "optional-switch-subject");
+		final selectorMapping = CBodyValueType.primitive(primitiveMapping(Context.getType("Int"), expression.pos, "TSwitch(optional-selector-type)"));
+		final defaultOrdinal:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
+		appendInstruction(defaultOrdinal, IRIOConstant(IRCInt(Std.string(cases.length))), source, "optional-switch-default-ordinal");
+		final selectorLocalId = createFlowLocal(selectorMapping, defaultOrdinal.id, source, "optional-switch-selector");
 		final dispatchBlock = currentBlock;
 		final presentBlock = createGeneratedBlock("optional-switch-present", source);
+		final selectionJoin = createGeneratedBlock("optional-switch-selection-join", source);
+		final selectionBlocks:Array<MutableBodyBlock> = [];
 		final caseBlocks:Array<MutableBodyBlock> = [];
-		for (index in 0...cases.length)
+		for (index in 0...cases.length) {
+			selectionBlocks.push(createGeneratedBlock('optional-switch-select-$index', source));
 			caseBlocks.push(createGeneratedBlock('optional-switch-case-$index', source));
+		}
 		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("optional-switch-default", source);
 		final openEnds:Array<MutableBodyBlock> = [];
 
+		for (index in 0...selectionBlocks.length) {
+			currentBlock = selectionBlocks[index];
+			final ordinal:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
+			appendInstruction(ordinal, IRIOConstant(IRCInt(Std.string(index))), source, "optional-switch-case-ordinal");
+			appendInstruction(null, IRIOStore(IRPLocal(selectorLocalId), ordinal.id), source, "optional-switch-select-case");
+			currentBlock.terminator = {kind: IRTJump(edge(selectionJoin.id)), source: source};
+		}
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
 			final cleanupDepth = normalCleanupActionIds.length;
@@ -6110,22 +6478,34 @@ private class FunctionBuilder {
 		if (exitBlock != null)
 			for (end in openEnds)
 				end.terminator = {kind: IRTJump(edge(exitBlock.id)), source: source};
-		final absentTarget = defaultBlock == null ? requireBlock(exitBlock, "optional switch without default") : defaultBlock;
+		final defaultTarget = defaultBlock == null ? requireBlock(exitBlock, "optional switch without default") : defaultBlock;
 
 		currentBlock = presentBlock;
-		appendInstruction(null, IRIONullCheck(subjectValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))), source,
+		final presentSubject = loadPlace({place: IRPLocal(subjectLocalId), mapping: subjectMapping, mutable: false}, subject.pos,
+			"optional-switch-subject-load");
+		appendInstruction(null, IRIONullCheck(presentSubject.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))), source,
 			"optional-switch-present-proof");
 		final payload:HxcIRResult = {id: nextValueId(), type: optional.payload.irType};
-		appendInstruction(payload, IRIOConvert(subjectValue.id, IRCNullableUnwrap, optional.payload.irType, IRIStatic, null), source, "optional-switch-unwrap");
+		appendInstruction(payload, IRIOConvert(presentSubject.id, IRCNullableUnwrap, optional.payload.irType, IRIStatic, null), source,
+			"optional-switch-unwrap");
 		presentBlock.terminator = {
-			kind: IRTSwitch(payload.id, switchCases(cases, caseBlocks, primitive), edge(absentTarget.id)),
+			kind: IRTSwitch(payload.id, switchCases(cases, selectionBlocks, primitive), edge(selectionJoin.id)),
 			source: source
 		};
+
+		currentBlock = selectionJoin;
+		final selected = loadPlace({place: IRPLocal(selectorLocalId), mapping: selectorMapping, mutable: true}, expression.pos,
+			"optional-switch-selector-load");
+		final selectedCases:Array<HxcIRSwitchCase> = [];
+		for (index in 0...caseBlocks.length)
+			selectedCases.push({value: IRCInt(Std.string(index)), edge: edge(caseBlocks[index].id)});
+		selectionJoin.terminator = {kind: IRTSwitch(selected.id, selectedCases, edge(defaultTarget.id)), source: source};
+
 		currentBlock = dispatchBlock;
 		final present:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(present, IRIOUnary("haxe.direct-optional.is-not-null", subjectValue.id, IRIStatic), source, "optional-switch-has-value");
-		dispatchBlock.terminator = {kind: IRTBranch(present.id, edge(presentBlock.id), edge(absentTarget.id)), source: source};
-		currentBlock = exitBlock == null ? absentTarget : exitBlock;
+		dispatchBlock.terminator = {kind: IRTBranch(present.id, edge(presentBlock.id), edge(selectionJoin.id)), source: source};
+		currentBlock = exitBlock == null ? defaultTarget : exitBlock;
 	}
 
 	/**
@@ -6192,19 +6572,25 @@ private class FunctionBuilder {
 	}
 
 	function lowerStatementEnumSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>):Void {
-		final subjectValue = lowerEnumSwitchSubject(subject);
+		final scopedSubject = lowerScopedEnumSwitchSubject(subject, "enum-switch-subject");
+		final subjectValue = scopedSubject.value;
 		final enumValue = subjectValue.mapping.enumValue();
 		if (enumValue == null)
 			return unsupported(subject, "TSwitch(enum-subject-lost)");
 		if (defaultExpression == null && enumSwitchCoveredCaseCount(cases, enumValue) != enumValue.cases.length) {
 			return unsupported(expression, "TSwitch(non-exhaustive-enum-statement-without-default)");
 		}
+		final exhaustive = enumSwitchCoveredCaseCount(cases, enumValue) == enumValue.cases.length;
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final dispatchBlock = currentBlock;
 		final caseBlocks:Array<MutableBodyBlock> = [];
 		for (index in 0...cases.length)
 			caseBlocks.push(createGeneratedBlock('enum-switch-case-$index', source));
-		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("enum-switch-default", source);
+		// Haxe's pattern matcher can retain the source wildcard even after it has
+		// expanded every closed enum tag into a case. Any per-case pattern
+		// mismatch is already represented inside that case. The outer wildcard is
+		// therefore unreachable and HxcIR deliberately omits its default edge.
+		final defaultBlock = defaultExpression == null || exhaustive ? null : createGeneratedBlock("enum-switch-default", source);
 		final openEnds:Array<MutableBodyBlock> = [];
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
@@ -6244,6 +6630,9 @@ private class FunctionBuilder {
 		} else {
 			throw new CBodyEmissionError('enum switch in `${prepared.irId}` has no continuation block');
 		}
+		if (currentBlock.terminator == null)
+			appendScopedCleanupInstructions(scopedSubject.cleanupDepth);
+		restoreCleanupDepth(scopedSubject.cleanupDepth);
 	}
 
 	function lowerValueSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>,
@@ -6445,13 +6834,15 @@ private class FunctionBuilder {
 
 	function lowerValueEnumSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>,
 			expectedMapping:Null<CBodyValueType>):LoweredValue {
-		final subjectValue = lowerEnumSwitchSubject(subject);
+		final scopedSubject = lowerScopedEnumSwitchSubject(subject, "enum-value-switch-subject");
+		final subjectValue = scopedSubject.value;
 		final enumValue = subjectValue.mapping.enumValue();
 		if (enumValue == null)
 			return unsupported(subject, "TSwitch(enum-subject-lost)");
 		if (defaultExpression == null && enumSwitchCoveredCaseCount(cases, enumValue) != enumValue.cases.length) {
 			return unsupported(expression, "TSwitch(non-exhaustive-enum-value-without-default)");
 		}
+		final exhaustive = enumSwitchCoveredCaseCount(cases, enumValue) == enumValue.cases.length;
 		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TSwitch(enum-result-type)") : expectedMapping;
 		final managedStringResult = resultMapping.irType == IRTManagedString;
 		if (!managedStringResult)
@@ -6474,7 +6865,10 @@ private class FunctionBuilder {
 		final caseBlocks:Array<MutableBodyBlock> = [];
 		for (index in 0...cases.length)
 			caseBlocks.push(createGeneratedBlock('enum-switch-value-case-$index', source));
-		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("enum-switch-value-default", source);
+		// A wildcard left behind by Haxe's pattern expansion has no outer tag to
+		// receive when the explicit cases already cover the closed enum. Nested
+		// pattern failures remain in their owning case blocks.
+		final defaultBlock = defaultExpression == null || exhaustive ? null : createGeneratedBlock("enum-switch-value-default", source);
 		final joinBlock = createGeneratedBlock("enum-switch-value-join", source);
 		var reachesJoin = false;
 		for (index in 0...cases.length) {
@@ -6516,9 +6910,35 @@ private class FunctionBuilder {
 		if (!reachesJoin)
 			return unsupported(expression, "TSwitch(enum-value-all-arms-terminate)");
 		currentBlock = joinBlock;
+		appendScopedCleanupInstructions(scopedSubject.cleanupDepth);
+		restoreCleanupDepth(scopedSubject.cleanupDepth);
 		if (managedStringResult)
 			return moveManagedStringCarrier(resultLocalId, resultMapping, source, "enum-switch-managed-result");
 		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "enum-switch-result-load");
+	}
+
+	/**
+	 * Give a direct fresh enum subject one owner for exactly the matching region.
+	 *
+	 * Haxe normally introduces a local when a pattern reads a payload, and that
+	 * local already owns the value. When every payload is ignored, however, the
+	 * optimizer can expose `enumIndex(makeResult())` directly. The compiler must
+	 * not leak that fresh result merely because the shorter typed-tree shape has
+	 * no source local. This helper records the cleanup depth before evaluating the
+	 * subject and materializes an owner only when the result is fresh and managed.
+	 *
+	 * The caller must release the scope with `appendScopedCleanupInstructions`
+	 * followed by `restoreCleanupDepth` after its final tag or payload use. An
+	 * early return or throw automatically includes the still-active owner in its
+	 * cleanup path.
+	 */
+	function lowerScopedEnumSwitchSubject(expression:TypedExpr, role:String):CBodyScopedEnumSubject {
+		final cleanupDepth = normalCleanupActionIds.length;
+		final value = lowerEnumSwitchSubject(expression);
+		return {
+			value: stabilizeFreshManagedEnum(value, expression.pos, role),
+			cleanupDepth: cleanupDepth
+		};
 	}
 
 	function lowerEnumSwitchSubject(expression:TypedExpr):LoweredValue {
@@ -6625,6 +7045,12 @@ private class FunctionBuilder {
 		Each String literal carries the existing non-null proof used by ordinary
 		String equality. A `null` pattern instead asks the nullable String carrier
 		whether it is missing; neither path compares C pointers.
+
+		Comma-separated patterns share one Haxe arm. Their comparisons first join
+		through a Boolean carrier, then branch to the shared body exactly once. A
+		plain chain in which every successful comparison jumps directly to that body
+		would form a directed graph with a shared internal target; a structured C
+		`if` tree would then have to duplicate the body or introduce a `goto`.
 	**/
 	function lowerStringSwitchDispatch(subject:LoweredValue, cases:Array<CBodyStringSwitchDispatchCase>, defaultTarget:String, source:HxcSourceSpan):Void {
 		if (cases.length == 0) {
@@ -6635,35 +7061,94 @@ private class FunctionBuilder {
 		// automatic local so every later comparison block performs an ordinary
 		// validated load instead of reaching across a control-flow boundary.
 		final subjectLocalId = createFlowLocal(subject.mapping, subject.id, source, "string-switch-subject");
-		for (index in 0...cases.length) {
-			final item = cases[index];
-			final comparisonSubject = loadPlace({
-				place: IRPLocal(subjectLocalId),
-				mapping: subject.mapping,
-				mutable: false
-			}, item.position, "string-switch-subject-load");
-			final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
-			switch item.value {
-				case CBSSCNull:
-					appendInstruction(matched, IRIOUnary("haxe.string.is-null", comparisonSubject.id, IRIStatic), item.source, "string-switch-null-match");
-				case CBSSCText(text):
-					final byteLength = HxcUtf8.byteLength(text);
-					if (byteLength == null)
-						unsupportedAt(item.position, "TSwitch(String-case-malformed-Unicode-literal)");
-					final literal:HxcIRResult = {id: nextValueId(), type: subject.mapping.irType};
-					appendInstruction(literal, IRIOConstant(IRCString(text, byteLength)), item.source, "string-switch-literal");
-					runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", subject.mapping.cSpelling, item.source,
-						item.position, "direct-string-value"));
-					appendInstruction(matched, IRIOBinary("haxe.string.equal.right-non-null", comparisonSubject.id, literal.id, IRIStatic), item.source,
-						"string-switch-text-match");
-			}
-			registerValueTemporary(matched.id, "string-switch-match");
-			final nextBlock = index == cases.length - 1 ? null : createGeneratedBlock('string-switch-compare-${index + 1}', source);
+		var index = 0;
+		while (index < cases.length) {
+			final first = cases[index];
+			var end = index + 1;
+			while (end < cases.length && cases[end].targetBlockId == first.targetBlockId)
+				end++;
+			final nextBlock = end == cases.length ? null : createGeneratedBlock('string-switch-compare-$end', source);
 			final nextTarget = nextBlock == null ? defaultTarget : nextBlock.id;
-			currentBlock.terminator = {kind: IRTBranch(matched.id, edge(item.targetBlockId), edge(nextTarget)), source: item.source};
+			if (end == index + 1) {
+				final matched = lowerStringSwitchComparison(subjectLocalId, subject, first);
+				currentBlock.terminator = {kind: IRTBranch(matched.id, edge(first.targetBlockId), edge(nextTarget)), source: first.source};
+			} else {
+				lowerGroupedStringSwitchPatterns(subjectLocalId, subject, cases, index, end, first.targetBlockId, nextTarget, source);
+			}
 			if (nextBlock != null)
 				currentBlock = nextBlock;
+			index = end;
 		}
+	}
+
+	/**
+		Compare one staged String subject with one closed switch pattern.
+
+		The result is block-local HxcIR `Bool`. Callers must consume it in the same
+		block or copy it into a flow local before creating another block.
+	**/
+	function lowerStringSwitchComparison(subjectLocalId:String, subject:LoweredValue, item:CBodyStringSwitchDispatchCase):HxcIRResult {
+		final comparisonSubject = loadPlace({
+			place: IRPLocal(subjectLocalId),
+			mapping: subject.mapping,
+			mutable: false
+		}, item.position, "string-switch-subject-load");
+		final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		switch item.value {
+			case CBSSCNull:
+				appendInstruction(matched, IRIOUnary("haxe.string.is-null", comparisonSubject.id, IRIStatic), item.source, "string-switch-null-match");
+			case CBSSCText(text):
+				final byteLength = HxcUtf8.byteLength(text);
+				if (byteLength == null)
+					unsupportedAt(item.position, "TSwitch(String-case-malformed-Unicode-literal)");
+				final literal:HxcIRResult = {id: nextValueId(), type: subject.mapping.irType};
+				appendInstruction(literal, IRIOConstant(IRCString(text, byteLength)), item.source, "string-switch-literal");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", subject.mapping.cSpelling, item.source, item.position,
+					"direct-string-value"));
+				appendInstruction(matched, IRIOBinary("haxe.string.equal.right-non-null", comparisonSubject.id, literal.id, IRIStatic), item.source,
+					"string-switch-text-match");
+		}
+		registerValueTemporary(matched.id, "string-switch-match");
+		return matched;
+	}
+
+	/**
+		Reduce comma-separated String patterns to one structured arm decision.
+
+		Each successful comparison owns a tiny, unique block that records `true`.
+		All successes and the final miss then meet at one join, which is the only
+		block allowed to branch into the shared Haxe arm. This preserves source-order
+		comparisons while keeping the later C tree single-entry and single-owner.
+	**/
+	function lowerGroupedStringSwitchPatterns(subjectLocalId:String, subject:LoweredValue, cases:Array<CBodyStringSwitchDispatchCase>, start:Int, end:Int,
+			matchedTarget:String, missedTarget:String, source:HxcSourceSpan):Void {
+		final boolMapping = CBodyValueType.primitive(primitiveMapping(Context.getType("Bool"), cases[start].position, "TSwitch(String-group-result-type)"));
+		final initial:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(initial, IRIOConstant(IRCBool(false)), source, "string-switch-group-default");
+		final matchedLocalId = createFlowLocal(boolMapping, initial.id, source, "string-switch-group-result");
+		final joinBlock = createGeneratedBlock('string-switch-group-join-$start', source);
+		var patternIndex = start;
+		while (patternIndex < end) {
+			final item = cases[patternIndex];
+			final matched = lowerStringSwitchComparison(subjectLocalId, subject, item);
+			final matchedBlock = createGeneratedBlock('string-switch-group-match-$patternIndex', item.source);
+			final nextComparison = patternIndex + 1 < end ? createGeneratedBlock('string-switch-group-compare-${patternIndex + 1}', source) : null;
+			currentBlock.terminator = {
+				kind: IRTBranch(matched.id, edge(matchedBlock.id), edge(nextComparison == null ? joinBlock.id : nextComparison.id)),
+				source: item.source
+			};
+			currentBlock = matchedBlock;
+			final yes:HxcIRResult = {id: nextValueId(), type: IRTBool};
+			appendInstruction(yes, IRIOConstant(IRCBool(true)), item.source, "string-switch-group-matched");
+			appendInstruction(null, IRIOStore(IRPLocal(matchedLocalId), yes.id), item.source, "string-switch-group-store");
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: item.source};
+			if (nextComparison != null)
+				currentBlock = nextComparison;
+			patternIndex++;
+		}
+		currentBlock = joinBlock;
+		final matched = loadPlace({place: IRPLocal(matchedLocalId), mapping: boolMapping, mutable: true}, cases[start].position, "string-switch-group-load");
+		currentBlock.terminator = {kind: IRTBranch(matched.id, edge(matchedTarget), edge(missedTarget)), source: source};
 	}
 
 	/** Read one compile-time String or null pattern without erasing nominal aliases. */
@@ -6934,7 +7419,7 @@ private class FunctionBuilder {
 			final place = lowerCapturedPlace(capture, expression.pos, variable.name);
 			final value = loadPlace(place, expression.pos, 'closure-capture-load:${variable.name}');
 			if (capture.valueMapping.classValue() != null)
-				borrowedClassValueIds.set(value.id, true);
+				borrowedReferenceValueIds.set(value.id, true);
 			return value;
 		}
 		final collection = collectionBindingsByCompilerId.get(variable.id);
@@ -6958,20 +7443,64 @@ private class FunctionBuilder {
 		if (mapping == null) {
 			return unsupported(expression, 'TLocal(${variable.name}:missing-admitted-type)');
 		}
-		final managedCarrierLocalId = managedStringFlowCarrierIds.get(variable.id);
-		if (managedCarrierLocalId != null) {
-			if (movedManagedStringFlowCarrierIds.exists(variable.id))
+		final managedCarrier = managedFlowCarriersByCompilerId.get(variable.id);
+		if (managedCarrier != null) {
+			final materializedLocalId = materializedManagedFlowCarrierLocalIds.get(variable.id);
+			if (materializedLocalId != null)
+				return loadPlace({place: IRPLocal(materializedLocalId), mapping: managedCarrier.mapping, mutable: false}, expression.pos,
+					"managed-flow-owner-load");
+			if (movedManagedFlowCarrierIds.exists(variable.id))
 				return unsupported(expression, 'TLocal(${variable.name}:managed-flow-carrier-read-after-move)');
-			movedManagedStringFlowCarrierIds.set(variable.id, true);
-			return moveManagedStringCarrier(managedCarrierLocalId, mapping, HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-				"managed-string-flow-carrier");
+			movedManagedFlowCarrierIds.set(variable.id, true);
+			return materializeManagedFlowCarrier(variable.id, managedCarrier, expression.pos);
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOLoad(IRPLocal(localId)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "load");
 		registerValueTemporary(result.id, "load-result");
-		if (borrowedClassLocalIds.exists(localId))
-			borrowedClassValueIds.set(result.id, true);
+		if (isBorrowedReferenceLocal(localId))
+			borrowedReferenceValueIds.set(result.id, true);
 		return {id: result.id, type: result.type, mapping: mapping};
+	}
+
+	/**
+	 * Move a joined branch value into one ordinary local owner on its first read.
+	 *
+	 * A Haxe compiler temporary can be read more than once after its `if` or
+	 * `switch` joins—for example, first for `value != null` and then for
+	 * `value.text()`. The managed carrier protocol intentionally permits exactly
+	 * one move, so that move cannot itself stand in for every source read.
+	 * Instead, the first read transfers the carrier's owner into this automatic
+	 * local; later reads borrow the same local, and normal function cleanup
+	 * releases it once. A return may transfer the registered cleanup owner through
+	 * the existing local-return rule.
+	 */
+	function materializeManagedFlowCarrier(compilerId:Int, binding:CBodyManagedFlowCarrier, position:Position):LoweredValue {
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final moved = moveManagedCarrier(binding, source, "managed-flow-carrier");
+		final localId = createFlowLocal(binding.mapping, moved.id, source, "managed-flow-owner");
+		final cleanupId = 'managed-flow-owner.$localId.release';
+		final implementation = managedCarrierImplementation(binding.mapping, binding.managedEnum, false);
+		constructionCleanupActions.push({
+			id: cleanupId,
+			idempotence: IRCExactlyOnce,
+			kind: IRCARelease(IRPLocal(localId), implementation),
+			source: source
+		});
+		normalCleanupActionIds.push(cleanupId);
+		if (binding.mapping.irType == IRTManagedString) {
+			freshManagedStringValueIds.remove(moved.id);
+			freshManagedStringValueRoles.remove(moved.id);
+			stringCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release",
+				"managed String selected by control flow and read through a local owner", source, position));
+		} else if (binding.managedEnum != null) {
+			freshManagedEnumValueIds.remove(moved.id);
+			enumCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
+		} else {
+			throw new CBodyEmissionError("materialized managed flow carrier lost its String or enum lifetime plan");
+		}
+		materializedManagedFlowCarrierLocalIds.set(compilerId, localId);
+		return loadPlace({place: IRPLocal(localId), mapping: binding.mapping, mutable: false}, position, "managed-flow-owner-load");
 	}
 
 	function lowerStaticField(expression:TypedExpr, classReference:Ref<ClassType>, fieldReference:Ref<ClassField>):LoweredValue {
@@ -7128,31 +7657,61 @@ private class FunctionBuilder {
 		return expectedMapping == null ? lowered : coerce(lowered, expectedMapping, expression.pos, "enum-constructor-function-reference:contextual-type");
 	}
 
+	/**
+		Prove that one fresh class can outlive this assignment safely.
+
+		A `new` value cannot normally be assigned after construction because the
+		current direct-class representation uses caller-owned automatic storage;
+		storing that address would leave a dangling pointer when the function
+		returned. The one admitted retained form is different: whole-program
+		planning has already placed the receiving object, destination class, and
+		fresh concrete class in the precise collector graph. The fresh allocation
+		is rooted while its constructor runs, and the receiving object's generated
+		trace function follows the stored field afterward.
+
+		This type-only check emits no instructions. `lowerPlace` still evaluates
+		the receiver before the right side, `coerce` proves the exact assignment
+		conversion, and ordinary mutability checks still apply. Locals, static
+		fields, direct classes, and any unproved target keep the fail-closed stack
+		construction diagnostic.
+	**/
+	function canRetainFreshManagedClassInField(left:TypedExpr, right:TypedExpr):Bool {
+		final construction = newExpression(right);
+		if (construction == null)
+			return false;
+		final constructed = bodyValueType(right.t, right.pos, "TNew(retained-field-constructed-type)").classValue();
+		if (constructed == null || !constructed.managedByCollector)
+			return false;
+		return switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, _)): final owner = bodyValueType(receiver.t, receiver.pos,
+					"TNew(retained-field-owner-type)").classValue(); final target = bodyValueType(left.t, left.pos,
+					"TNew(retained-field-target-type)").classValue(); owner != null && owner.managedByCollector && target != null && target.managedByCollector;
+			case _:
+				false;
+		};
+	}
+
 	function lowerAssignment(expression:TypedExpr, left:TypedExpr, right:TypedExpr):LoweredValue {
 		final managedArrayAssignment = lowerManagedArrayAssignment(expression, left, right);
 		if (managedArrayAssignment != null)
 			return managedArrayAssignment;
-		final managedStringCarrier = switch unwrapExpression(left).expr {
+		final managedCarrier = switch unwrapExpression(left).expr {
 			case TLocal(variable):
-				switch managedStringFlowCarrierIds.get(variable.id) {
-					case null: null;
-					case localId: {compilerId: variable.id, localId: localId};
-				}
+				final binding = managedFlowCarriersByCompilerId.get(variable.id);
+				binding == null ? null : {compilerId: variable.id, binding: binding};
 			case _:
 				null;
 		};
-		if (managedStringCarrier != null) {
-			if (movedManagedStringFlowCarrierIds.exists(managedStringCarrier.compilerId))
+		if (managedCarrier != null) {
+			if (movedManagedFlowCarrierIds.exists(managedCarrier.compilerId))
 				return unsupported(left, "TBinop(OpAssign:managed-flow-carrier-already-moved)");
-			final mapping = localTypesByCompilerId.get(managedStringCarrier.compilerId);
-			if (mapping == null || mapping.irType != IRTManagedString)
-				throw new CBodyEmissionError("managed String flow carrier lost its exact type");
-			final value = coerce(lowerValue(right, mapping), mapping, right.pos, "TBinop(OpAssign:managed-flow-carrier-right)");
-			appendManagedCarrierAcquire(managedStringCarrier.localId, value, mapping, null, HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-				expression.pos, "managed-string-flow-carrier-acquire");
+			final binding = managedCarrier.binding;
+			final value = coerce(lowerValue(right, binding.mapping), binding.mapping, right.pos, "TBinop(OpAssign:managed-flow-carrier-right)");
+			appendManagedCarrierAcquire(binding.localId, value, binding.mapping, binding.managedEnum,
+				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), expression.pos, "managed-flow-carrier-acquire");
 			return value;
 		}
-		if (newExpression(right) != null)
+		if (newExpression(right) != null && !canRetainFreshManagedClassInField(left, right))
 			unsupported(right, "TNew(stack-construction-requires-direct-local)");
 		if (referencesStackConstructedValue(right))
 			unsupported(right, "TNew(stack-reference-escape:assignment)");
@@ -7198,6 +7757,20 @@ private class FunctionBuilder {
 			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-string-assignment-replacement");
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", sourceSpan,
 				expression.pos));
+			return replacement;
+		}
+		final managedAggregate = target.mapping.aggregateValue();
+		if (managedAggregate != null && managedAggregate.managedLifetime) {
+			final destroyId = managedAggregate.destroyImplementationId();
+			if (destroyId == null)
+				throw new CBodyEmissionError('managed aggregate `${managedAggregate.instanceId}` lost its destroy plan');
+			// Acquire the replacement before releasing the destination. Besides
+			// preserving the value when both sides alias the same nested owner,
+			// this makes `field = field` safe.
+			final replacement = captureManagedValue(value, target.mapping, right.pos, "record-assignment-replacement");
+			final sourceSpan = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			appendInstruction(null, IRIORelease(stableTarget.place, IRIProgramLocal(destroyId)), sourceSpan, "release-record-assignment-target");
+			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-record-assignment-replacement");
 			return replacement;
 		}
 		appendInstruction(null, IRIOStore(stableTarget.place, value.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "store");
@@ -7436,7 +8009,8 @@ private class FunctionBuilder {
 		if (enumIndexSubject(tagExpression) != null)
 			return unsupported(expression, "TBinop(enum-index-comparison-requires-one-constant-tag)");
 
-		final subjectValue = lowerEnumSwitchSubject(subject);
+		final scopedSubject = lowerScopedEnumSwitchSubject(subject, "enum-index-subject");
+		final subjectValue = scopedSubject.value;
 		final enumValue = subjectValue.mapping.enumValue();
 		if (enumValue == null)
 			return unsupported(subject, "TBinop(enum-index-subject-lost)");
@@ -7448,6 +8022,8 @@ private class FunctionBuilder {
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(matched, IRIOMatchTag(subjectValue.id, tagCase.name), source, "enum-index-match");
+		appendScopedCleanupInstructions(scopedSubject.cleanupDepth);
+		restoreCleanupDepth(scopedSubject.cleanupDepth);
 		if (operation == OpEq)
 			return {id: matched.id, type: matched.type, mapping: boolMapping};
 
@@ -7583,7 +8159,14 @@ private class FunctionBuilder {
 		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
-	/** Compare one present nullable scalar with a non-null scalar value. */
+	/**
+	 * Compare one nullable direct value with one non-null value of its payload type.
+	 *
+	 * A tagged `Null<T>` first branches on its presence bit. When present, a
+	 * primitive payload uses primitive equality and a payload-free Haxe enum uses
+	 * its already validated nominal tag equality. Payload enums remain excluded:
+	 * their nested values need a separate structural Haxe equality contract.
+	 */
 	function lowerOptionalScalarEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr, leftMapping:Null<CBodyValueType>,
 			rightMapping:Null<CBodyValueType>):LoweredValue {
 		final optionalOnLeft = leftMapping != null && leftMapping.optionalValue() != null;
@@ -7594,7 +8177,11 @@ private class FunctionBuilder {
 		if (optionalMapping == null)
 			return unsupported(expression, "TBinop(direct-optional-scalar-equality-lost-optional)");
 		final optional = optionalMapping.optionalValue();
-		if (optional == null || optional.payload.primitiveMapping() == null)
+		if (optional == null)
+			return unsupported(expression, "TBinop(direct-optional-scalar-equality-lost-payload)");
+		final payloadPrimitive = optional.payload.primitiveMapping();
+		final payloadEnum = optional.payload.enumValue();
+		if (payloadPrimitive == null && (payloadEnum == null || payloadEnum.representation != CBERNativeEnum))
 			return unsupported(expression, "TBinop(direct-optional-scalar-equality-payload-not-primitive)");
 		final optionalExpression = optionalOnLeft ? left : right;
 		final scalarExpression = optionalOnLeft ? right : left;
@@ -7632,8 +8219,22 @@ private class FunctionBuilder {
 		final payload:HxcIRResult = {id: nextValueId(), type: optional.payload.irType};
 		appendInstruction(payload, IRIOConvert(optionalForCompare.id, IRCNullableUnwrap, optional.payload.irType, IRIStatic, null), source,
 			"optional-scalar-unwrap");
-		final compared = lowerBinaryValues(expression, operation, {id: payload.id, type: payload.type, mapping: optional.payload}, scalarForCompare,
-			"optional-scalar-compare", boolMapping);
+		final compared = if (payloadPrimitive != null) {
+			lowerBinaryValues(expression, operation, {id: payload.id, type: payload.type, mapping: optional.payload}, scalarForCompare,
+				"optional-scalar-compare", boolMapping);
+		} else {
+			/*
+				`payloadEnum` can only be null when the admission check above
+				returned. Both operands were coerced to the optional's exact payload
+				type, so this reuses the same nominal, payload-free tag comparison as
+				ordinary `EnumValue == EnumValue`.
+			 */
+			final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
+			appendInstruction(result,
+				IRIOBinary(operation == OpEq ? "haxe.enum-tag.equal" : "haxe.enum-tag.not-equal", payload.id, scalarForCompare.id, IRIStatic), source,
+				"optional-enum-compare");
+			({id: result.id, type: result.type, mapping: boolMapping} : LoweredValue);
+		};
 		appendInstruction(null, IRIOStore(IRPLocal(resultLocal), compared.id), source, "optional-scalar-store");
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		currentBlock = joinBlock;
@@ -8181,20 +8782,29 @@ private class FunctionBuilder {
 	}
 
 	/**
-	 * Move one fully acquired String carrier out of a control-flow join.
+	 * Move one fully acquired managed carrier out of a control-flow join.
 	 *
 	 * The HxcIR validator proves that every normal predecessor acquired exactly
 	 * one owner and that terminating predecessors never reach this block. The
 	 * returned value therefore becomes the single fresh owner seen by the
 	 * surrounding local, call, or return lowering.
 	 */
-	function moveManagedStringCarrier(localId:String, mapping:CBodyValueType, source:HxcSourceSpan, role:String):LoweredValue {
-		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOMoveManagedCarrier(IRPLocal(localId)), source, role + "-move");
+	function moveManagedStringCarrier(localId:String, mapping:CBodyValueType, source:HxcSourceSpan, role:String):LoweredValue
+		return moveManagedCarrier({localId: localId, mapping: mapping, managedEnum: null}, source, role);
+
+	function moveManagedCarrier(binding:CBodyManagedFlowCarrier, source:HxcSourceSpan, role:String):LoweredValue {
+		final result:HxcIRResult = {id: nextValueId(), type: binding.mapping.irType};
+		appendInstruction(result, IRIOMoveManagedCarrier(IRPLocal(binding.localId)), source, role + "-move");
 		registerValueTemporary(result.id, role + "-move-result");
-		freshManagedStringValueIds.set(result.id, true);
-		freshManagedStringValueRoles.set(result.id, role);
-		return {id: result.id, type: result.type, mapping: mapping};
+		if (binding.mapping.irType == IRTManagedString) {
+			freshManagedStringValueIds.set(result.id, true);
+			freshManagedStringValueRoles.set(result.id, role);
+		} else if (binding.managedEnum != null) {
+			freshManagedEnumValueIds.set(result.id, true);
+		} else {
+			throw new CBodyEmissionError('managed flow carrier `$role` lost its String or enum ownership plan');
+		}
+		return {id: result.id, type: result.type, mapping: binding.mapping};
 	}
 
 	/**
@@ -8236,8 +8846,8 @@ private class FunctionBuilder {
 				if (localType == null) {
 					return unsupported(expression, 'TLocal(${variable.name}:missing-place-type)');
 				}
-				if (borrowedClassLocalIds.exists(localId)) {
-					return unsupported(expression, 'TLocal(${variable.name}:borrowed-class-alias-assignment)');
+				if (isBorrowedReferenceLocal(localId)) {
+					return unsupported(expression, 'TLocal(${variable.name}:borrowed-reference-alias-assignment)');
 				}
 				{place: IRPLocal(localId), mapping: localType, mutable: true};
 			case TField(_, FAnon(fieldReference)):
@@ -8913,39 +9523,50 @@ private class FunctionBuilder {
 				unsupportedAt(position, 'TConstructor(uninitialized-managed-field:${owner.haxePath}.${field.name})');
 	}
 
-	/** Base-first list of managed fields destroyed with one constructed object. */
-	static function managedArrayFields(owner:CPreparedBodyClass):Array<CPreparedBodyClassField> {
-		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedArrayFields(owner.base);
-		for (field in owner.fields)
-			if (field.type.arrayValue() != null && field.type.arrayValue().managedByCollector == false)
-				result.push(field);
+	/**
+	 * Find one managed-field family through inheritance and inline-owned children.
+	 *
+	 * The result keeps the previous base-first, source-field order within each
+	 * family. Inline children contribute their actual nested path rather than a
+	 * pointer-shaped approximation, because their bytes live inside the parent.
+	 */
+	static function managedClassFields(owner:CPreparedBodyClass, family:CBodyManagedClassFieldFamily, ?prefix:Array<String>,
+			?visiting:Map<String, Bool>):Array<CBodyManagedClassFieldPath> {
+		final actualPrefix = prefix == null ? [] : prefix;
+		final active = visiting == null ? new Map<String, Bool>() : visiting;
+		if (active.exists(owner.instanceId))
+			throw new CBodyEmissionError('inline-owned class layout recursively contains `${owner.haxePath}`');
+		active.set(owner.instanceId, true);
+		final result:Array<CBodyManagedClassFieldPath> = owner.base == null ? [] : managedClassFields(owner.base, family, actualPrefix, active);
+		for (field in owner.fields) {
+			final path = actualPrefix.concat([field.name]);
+			final child = field.type.ownedClassValue();
+			if (child != null) {
+				for (nested in managedClassFields(child, family, path, active))
+					result.push(nested);
+				continue;
+			}
+			final matches = switch family {
+				case CBMCFArray: final array = field.type.arrayValue(); array != null && !array.managedByCollector;
+				case CBMCFStringMap:
+					field.type.stringMapValue() != null;
+				case CBMCFString:
+					field.type.irType == IRTManagedString;
+				case CBMCFDirect:
+					managedDirectFieldRelease(field.type) != null;
+			};
+			if (matches)
+				result.push({field: field, path: path});
+		}
+		active.remove(owner.instanceId);
 		return result;
 	}
 
-	/** Base-first list of reference-counted StringMap fields owned by one class. */
-	static function managedStringMapFields(owner:CPreparedBodyClass):Array<CPreparedBodyClassField> {
-		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedStringMapFields(owner.base);
-		for (field in owner.fields)
-			if (field.type.stringMapValue() != null)
-				result.push(field);
-		return result;
-	}
-
-	/** Base-first list of reference-counted String fields owned by one class. */
-	static function managedStringFields(owner:CPreparedBodyClass):Array<CPreparedBodyClassField> {
-		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedStringFields(owner.base);
-		for (field in owner.fields)
-			if (field.type.irType == IRTManagedString)
-				result.push(field);
-		return result;
-	}
-
-	/** Base-first list of managed by-value fields owned by one class. */
-	static function managedDirectFields(owner:CPreparedBodyClass):Array<CPreparedBodyClassField> {
-		final result:Array<CPreparedBodyClassField> = owner.base == null ? [] : managedDirectFields(owner.base);
-		for (field in owner.fields)
-			if (managedDirectFieldRelease(field.type) != null)
-				result.push(field);
+	/** Build the structural HxcIR place for one recursively discovered field. */
+	static function managedClassFieldPlace(base:HxcIRPlace, path:Array<String>):HxcIRPlace {
+		var result = base;
+		for (fieldName in path)
+			result = IRPField(result, fieldName);
 		return result;
 	}
 
@@ -8995,6 +9616,7 @@ private class FunctionBuilder {
 			return unsupported(expression, "TArray(managed-identity-lost)");
 		final receiver = stabilizeFreshManagedArray(coerce(lowerValue(collection, mapping), mapping, collection.pos, "TArray(receiver)"), collection.pos,
 			"array-index-receiver");
+		final stagedReceiver = stageFlowValue(receiver, collection, expressionCreatesFlow(index), "array-index-receiver");
 		final indexType = CBodyValueType.primitive(primitiveMapping(index.t, index.pos, "TArray(index-type)"));
 		switch indexType.irType {
 			case IRTInt(32, true):
@@ -9002,11 +9624,12 @@ private class FunctionBuilder {
 				return unsupported(index, 'TArray(index-must-be-Int:actual=${indexType.cSpelling})');
 		}
 		final indexValue = coerce(lowerValue(index, indexType), indexType, index.pos, "TArray(index)");
+		final restoredReceiver = restoreStagedLoweredValue(stagedReceiver, "array-index-receiver-load");
 		final result:HxcIRResult = {id: nextValueId(), type: array.element.irType};
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("array", "get-checked"),
-			arguments: [receiver.id, indexValue.id],
+			arguments: [restoredReceiver.id, indexValue.id],
 			returnType: array.element.irType,
 			failure: managedArrayFailure()
 		}), source, "array-get-checked");
@@ -9020,9 +9643,9 @@ private class FunctionBuilder {
 
 		// `get_copy` has constructed a new owned element. Give that value a stable
 		// place so every normal exit can run the same typed destroy callback that the
-		// Array uses for its slots. Later expressions borrow from this owner; moving
-		// the record across a return/call boundary is rejected until that boundary
-		// has an explicit ownership-transfer contract.
+		// Array uses for its slots. Later expressions borrow from this owner. A
+		// return can move it by omitting this exact cleanup action; other escaping
+		// boundaries still need their own explicit transfer or copy contract.
 		final ownerLocalId = createFlowLocal(array.element, result.id, source, "array-element-owner");
 		final cleanupId = 'array-element.$ownerLocalId.release';
 		constructionCleanupActions.push({
@@ -9039,7 +9662,7 @@ private class FunctionBuilder {
 			case _:
 		}
 		final borrowed = loadPlace({place: IRPLocal(ownerLocalId), mapping: array.element, mutable: false}, expression.pos, "array-element-borrow");
-		borrowedManagedArrayElementValueIds.set(borrowed.id, true);
+		borrowedManagedArrayElementOwners.set(borrowed.id, {cleanupId: cleanupId});
 		return borrowed;
 	}
 
@@ -9083,6 +9706,7 @@ private class FunctionBuilder {
 		final array = receiver.mapping.arrayValue();
 		if (array == null)
 			return unsupported(expression, 'TCall(Array.$method:receiver-identity-lost)');
+		final stagedReceiver = stageFlowValue(receiver, access.receiver, anyExpressionCreatesFlow(arguments), 'array-$method-receiver');
 		return switch method {
 			case "copy":
 				if (arguments.length != 0)
@@ -9091,11 +9715,12 @@ private class FunctionBuilder {
 				final resultArray = resultMapping.arrayValue();
 				if (resultArray == null || resultArray.semanticKey != array.semanticKey)
 					return unsupported(expression, 'TCall(Array.copy:result-specialization-mismatch:${resultMapping.cSpelling})');
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-copy-receiver-load");
 				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 				appendInstruction(result, IRIOCall({
 					dispatch: IRCDRuntime("array", "copy"),
-					arguments: [receiver.id],
+					arguments: [callReceiver.id],
 					returnType: result.type,
 					failure: managedArrayFailure()
 				}), source, "array-copy");
@@ -9121,6 +9746,7 @@ private class FunctionBuilder {
 				separator = stabilizeFreshManagedString(separator, arguments[0].pos, "array-join-separator");
 				appendInstruction(null, IRIONullCheck(separator.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 					HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath), "array-join-separator-null-check");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-join-receiver-load");
 				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.join:result-type)");
 				if (resultMapping.irType != IRTManagedString)
 					return unsupported(expression, 'TCall(Array.join:result-requires-managed-String:${resultMapping.cSpelling})');
@@ -9128,7 +9754,7 @@ private class FunctionBuilder {
 				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 				appendInstruction(result, IRIOCall({
 					dispatch: IRCDRuntime("array-join", "join"),
-					arguments: [receiver.id, separator.id],
+					arguments: [callReceiver.id, separator.id],
 					returnType: IRTManagedString,
 					failure: managedArrayFailure()
 				}), source, "array-string-join");
@@ -9137,6 +9763,30 @@ private class FunctionBuilder {
 				freshManagedStringValueRoles.set(result.id, "Array.join result");
 				runtimeRequirements.push(new CBodyRuntimeRequirement("array-join", "join",
 					"ordinary Haxe Array<String>.join with ordered managed String composition", source, expression.pos));
+				{id: result.id, type: result.type, mapping: resultMapping};
+			case "pop":
+				if (arguments.length != 0)
+					return unsupported(expression, 'TCall(Array.pop:argument-count=${arguments.length})');
+				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.pop:result-type)");
+				final optional = resultMapping.optionalValue();
+				final exactElementResult = resultMapping.hasExactNullCarrier()
+					&& typeKey(resultMapping.irType) == typeKey(array.element.irType);
+				final taggedElementResult = optional != null && typeKey(optional.payload.irType) == typeKey(array.element.irType);
+				if (!exactElementResult && !taggedElementResult)
+					return unsupported(expression, 'TCall(Array.pop:result-must-be-nullable-${array.element.cSpelling}:${resultMapping.cSpelling})');
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-pop-receiver-load");
+				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				appendInstruction(result, IRIOCall({
+					dispatch: IRCDRuntime("array", "pop"),
+					arguments: [callReceiver.id],
+					returnType: result.type,
+					failure: managedArrayFailure()
+				}), source, "array-pop");
+				registerValueTemporary(result.id, "array-pop-result");
+				markFreshArrayPopResult(result.id, resultMapping);
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "pop", "ordinary Haxe Array.pop with nullable ownership transfer", source,
+					expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
 			case "push":
 				if (arguments.length != 1)
@@ -9148,12 +9798,13 @@ private class FunctionBuilder {
 				element = stabilizeFreshManagedEnum(element, arguments[0].pos, "array-push-element");
 				element = stabilizeFreshManagedAggregate(element, arguments[0].pos, "array-push-element");
 				element = stabilizeFreshManagedOptional(element, arguments[0].pos, "array-push-element");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-push-receiver-load");
 				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.push:result-type)");
 				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 				appendInstruction(result, IRIOCall({
 					dispatch: IRCDRuntime("array", "push"),
-					arguments: [receiver.id, element.id],
+					arguments: [callReceiver.id, element.id],
 					returnType: result.type,
 					failure: managedArrayFailure()
 				}), source, "array-push");
@@ -9181,11 +9832,12 @@ private class FunctionBuilder {
 					"array-sort-comparator");
 				comparator = loadPlace({place: IRPLocal(comparatorLocalId), mapping: callableMapping, mutable: false}, arguments[0].pos,
 					"array-sort-comparator-borrow");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-sort-receiver-load");
 				aggregateRegistry.requireArraySort(array);
 				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 				appendInstruction(null, IRIOCall({
 					dispatch: IRCDRuntime("array", "sort"),
-					arguments: [receiver.id, comparator.id],
+					arguments: [callReceiver.id, comparator.id],
 					returnType: IRTVoid,
 					failure: managedArrayFailure()
 				}), source, "array-sort");
@@ -9195,6 +9847,41 @@ private class FunctionBuilder {
 			case _:
 				unsupported(expression, 'TCall(Array.$method:not-yet-admitted)');
 		};
+	}
+
+	/**
+		Record the owner moved out of an `Array.pop()` result.
+
+		`pop` does not copy its element; it transfers the Array slot's existing
+		owner into the returned nullable value. Marking that value as fresh lets a
+		local, return, or later call consume the owner without adding a retain.
+		Collector-managed class references need no explicit retain/release marker.
+	**/
+	function markFreshArrayPopResult(resultId:String, mapping:CBodyValueType):Void {
+		final optional = mapping.optionalValue();
+		if (optional != null && optional.managedLifetime) {
+			freshManagedOptionalValueIds.set(resultId, true);
+			return;
+		}
+		if (mapping.irType == IRTManagedString) {
+			freshManagedStringValueIds.set(resultId, true);
+			freshManagedStringValueRoles.set(resultId, "Array.pop result");
+		}
+		final resultArray = mapping.arrayValue();
+		if (resultArray != null && !resultArray.managedByCollector)
+			freshManagedArrayValueIds.set(resultId, true);
+		if (mapping.intMapValue() != null)
+			freshManagedIntMapValueIds.set(resultId, true);
+		if (mapping.stringMapValue() != null)
+			freshManagedStringMapValueIds.set(resultId, true);
+		if (mapping.bytesValue() != null)
+			freshManagedBytesValueIds.set(resultId, true);
+		final enumValue = mapping.enumValue();
+		if (enumValue != null && enumValue.managedLifetime)
+			freshManagedEnumValueIds.set(resultId, true);
+		final aggregate = mapping.aggregateValue();
+		if (aggregate != null && aggregate.managedLifetime)
+			freshManagedAggregateValueIds.set(resultId, true);
 	}
 
 	function lowerManagedArrayReceiver(expression:TypedExpr, operation:String):LoweredValue {
@@ -9844,7 +10531,9 @@ private class FunctionBuilder {
 		if (effectiveArgumentExpressions.length != explicitMappings.length)
 			return unsupported(expression,
 				'TCall(instance-argument-count=${effectiveArgumentExpressions.length},expected=${explicitMappings.length},target=$targetId)');
-		final explicitArguments:Array<String> = [];
+		final stagedReceiver = stageFlowValue(receiver, access.receiver, laterExpressionCreatesFlow(effectiveArgumentExpressions, -1),
+			"instance-call-receiver");
+		final stagedArguments:Array<StagedFlowValue> = [];
 		for (index in 0...effectiveArgumentExpressions.length) {
 			final argument = effectiveArgumentExpressions[index];
 			if (referencesStackConstructedValue(argument) && !explicitBorrowedClasses[index])
@@ -9862,8 +10551,16 @@ private class FunctionBuilder {
 				return unsupported(argument, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
 			if (!explicitBorrowedClasses[index])
 				rejectOwnedClassBorrow(value, argument.pos, 'TCall(owned-class-borrow-escape:instance-call-argument:$index,target=$targetId)');
-			explicitArguments.push(value.id);
+			stagedArguments.push(stageFlowValue(value, argument, laterExpressionCreatesFlow(effectiveArgumentExpressions, index),
+				'instance-call-argument-$index'));
 		}
+		receiver = restoreStagedLoweredValue(stagedReceiver, "instance-call-receiver-load");
+		final explicitArguments = restoreCallArguments(stagedArguments, "instance-call-argument");
+		dispatchKind = switch dispatchKind {
+			case IRCDVirtual(slotId, _): IRCDVirtual(slotId, receiver.id);
+			case IRCDInterface(interfaceTypeId, slotId, _): IRCDInterface(interfaceTypeId, slotId, receiver.id);
+			case direct: direct;
+		};
 		final callArguments = directReason == null ? explicitArguments : [receiver.id].concat(explicitArguments);
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		if (returnMapping.irType == IRTVoid) {
@@ -9894,8 +10591,9 @@ private class FunctionBuilder {
 				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
 			temporaryRequests.set(result.id, request);
 		}
-		if (borrowedClassValueIds.exists(receiver.id) && returnMapping.classValue() != null)
-			borrowedClassValueIds.set(result.id, true);
+		if (borrowedReferenceValueIds.exists(receiver.id)
+			&& (returnMapping.classValue() != null || returnMapping.interfaceValue() != null))
+			borrowedReferenceValueIds.set(result.id, true);
 		if (returnMapping.bytesValue() != null)
 			freshManagedBytesValueIds.set(result.id, true);
 		if (returnMapping.irType == IRTManagedString)
@@ -10218,14 +10916,14 @@ private class FunctionBuilder {
 
 	/** Reject a class pointer whose storage remains owned by its caller or parent. */
 	function rejectOwnedClassBorrow(value:LoweredValue, position:Position, node:String):Void {
-		if (borrowedClassValueIds.exists(value.id))
+		if (borrowedReferenceValueIds.exists(value.id))
 			unsupportedAt(position, node);
 	}
 
 	/** Preserve the borrow fact across representation-only pointer conversions. */
 	function carryOwnedClassBorrow(sourceId:String, resultId:String):Void {
-		if (borrowedClassValueIds.exists(sourceId))
-			borrowedClassValueIds.set(resultId, true);
+		if (borrowedReferenceValueIds.exists(sourceId))
+			borrowedReferenceValueIds.set(resultId, true);
 	}
 
 	/**
@@ -10778,17 +11476,42 @@ private class FunctionBuilder {
 		};
 	}
 
+	/**
+	 * Report whether lowering an expression can finish in a different basic block.
+	 *
+	 * A conditional can be nested inside an Array index, field receiver,
+	 * constructor argument, or another source expression. Callers use this fact
+	 * to save values that Haxe evaluates earlier and reload them after the nested
+	 * branches meet. This walk therefore follows every child that is evaluated
+	 * now, but deliberately does not enter a function literal's body: creating a
+	 * closure does not execute that body.
+	 */
 	function expressionCreatesFlow(expression:TypedExpr):Bool {
 		return switch expression.expr {
 			case TIf(_, _, _) | TSwitch(_, _, _): true;
+			case TFor(_, _, _) | TWhile(_, _, _) | TTry(_, _): true;
+			case TBreak | TContinue: true;
 			case TBinop(OpBoolAnd, _, _) | TBinop(OpBoolOr, _, _): true;
 			case TBinop(_, left, right): expressionCreatesFlow(left) || expressionCreatesFlow(right);
+			case TArray(collection, index): expressionCreatesFlow(collection) || expressionCreatesFlow(index);
+			case TField(receiver, _) | TEnumParameter(receiver, _, _) | TEnumIndex(receiver): expressionCreatesFlow(receiver);
 			case TUnop(_, _, operand) | TParenthesis(operand) | TMeta(_, operand) | TCast(operand, _): expressionCreatesFlow(operand);
 			case TBlock(expressions): anyExpressionCreatesFlow(expressions);
 			case TCall(callee, arguments): expressionCreatesFlow(callee) || anyExpressionCreatesFlow(arguments);
+			case TNew(_, _, arguments) | TArrayDecl(arguments): anyExpressionCreatesFlow(arguments);
+			case TObjectDecl(fields):
+				var createsFlow = false;
+				for (field in fields)
+					if (expressionCreatesFlow(field.expr)) {
+						createsFlow = true;
+						break;
+					}
+				createsFlow;
 			case TVar(_, initializer): initializer != null && expressionCreatesFlow(initializer);
 			case TReturn(value): value != null && expressionCreatesFlow(value);
-			case _: false;
+			case TThrow(value): expressionCreatesFlow(value);
+			case TFunction(_): false;
+			case TConst(_) | TLocal(_) | TTypeExpr(_) | TIdent(_): false;
 		};
 	}
 
@@ -10815,6 +11538,30 @@ private class FunctionBuilder {
 	}
 
 	/**
+		Record which non-owning carrier an automatic local stores.
+
+		A direct class borrow is one C pointer. An interface borrow is a small
+		by-value pair containing an object pointer and a dispatch-table pointer.
+		Both remain tied to someone else's object lifetime, but HxcIR records them
+		separately so validation can prove the exact carrier shape.
+	**/
+	function markBorrowedReferenceLocal(localId:String, mapping:CBodyValueType):Void {
+		if (mapping.interfaceValue() != null) {
+			borrowedInterfaceLocalIds.set(localId, true);
+			return;
+		}
+		if (mapping.classValue() != null) {
+			borrowedClassLocalIds.set(localId, true);
+			return;
+		}
+		throw new CBodyEmissionError('borrowed reference local `$localId` has neither a class-pointer nor interface-pair representation');
+	}
+
+	/** True when a local only renames a class or interface object owned elsewhere. */
+	function isBorrowedReferenceLocal(localId:String):Bool
+		return borrowedClassLocalIds.exists(localId) || borrowedInterfaceLocalIds.exists(localId);
+
+	/**
 	 * Save a completed value before a later expression introduces control flow.
 	 *
 	 * Haxe evaluates calls and aggregate fields from left to right. HxcIR values belong to
@@ -10825,15 +11572,31 @@ private class FunctionBuilder {
 	 */
 	function stageFlowValue(value:LoweredValue, expression:TypedExpr, crossesFlow:Bool, role:String):StagedFlowValue {
 		final localId = crossesFlow ? createFlowLocal(value.mapping, value.id, HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role) : null;
+		if (localId != null && borrowedReferenceValueIds.exists(value.id))
+			markBorrowedReferenceLocal(localId, value.mapping);
 		return {value: value, localId: localId, position: expression.pos};
 	}
 
-	/** Reload one saved value in the final block, or reuse its still-local result. */
-	function restoreStagedValue(value:StagedFlowValue, role:String):String {
+	/**
+	 * Reload one saved value while preserving a direct class borrow.
+	 *
+	 * A staged receiver may point at inline storage owned by its parent. The
+	 * automatic local saves only that address; it does not become a new owner.
+	 * Carrying the borrow marker from value to local and back to the loaded value
+	 * keeps the existing escape checks effective after a control-flow join.
+	 */
+	function restoreStagedLoweredValue(value:StagedFlowValue, role:String):LoweredValue {
 		if (value.localId == null)
-			return value.value.id;
-		return loadPlace({place: IRPLocal(value.localId), mapping: value.value.mapping, mutable: true}, value.position, role).id;
+			return value.value;
+		final restored = loadPlace({place: IRPLocal(value.localId), mapping: value.value.mapping, mutable: true}, value.position, role);
+		if (isBorrowedReferenceLocal(value.localId))
+			borrowedReferenceValueIds.set(restored.id, true);
+		return restored;
 	}
+
+	/** Reload one saved value ID in the final block, or reuse its still-local result. */
+	function restoreStagedValue(value:StagedFlowValue, role:String):String
+		return restoreStagedLoweredValue(value, role).id;
 
 	/** Reload staged arguments in the final block without changing source effects. */
 	function restoreCallArguments(arguments:Array<StagedFlowValue>, role:String):Array<String> {

@@ -34,9 +34,19 @@ borrow to an unproven call. HxcIR records function parameters as
 chosen. The generated private C function receives an ordinary pointer; neither
 form adds allocation or reference-counting machinery.
 
-An owned-child field must be `final`, have the exact concrete class type, and
-use an infallible constructor in this bounded slice. General escaping objects
-remain owned by the allocator, lifetime, and tracing work in E4.
+An owned-child field must be `final` and have the exact concrete class type.
+Its constructor may fail: the generated call propagates the status through the
+parent constructor, while the caller-owned partial parent releases every
+managed field reached inside the child exactly once. The child still remains
+inline because failure behavior does not change its successful lifetime.
+
+Ordinary class references that are retained in object fields use a different
+representation. Whole-program planning promotes the owner and referenced class
+to the precise nonmoving collector, stores a typed nullable pointer, and traces
+that pointer from the owner. This is the conservative correct baseline for an
+object that can outlive its creating call; later escape analysis may recover
+inline storage only when it proves the alias never exceeds the parent's
+lifetime.
 
 ## Discovery and order
 
@@ -94,6 +104,14 @@ then releases the receiver's field and the short argument owner once each. A
 managed method result follows the ordinary function-return contract: the
 callee returns one owner, so the caller transfers that owner rather than
 retaining it again.
+
+A method receiver and each earlier argument are also saved when a later
+argument creates an `if` or `switch` join. HxcIR values belong to one basic
+block, so the join cannot name the original receiver value directly. A typed
+automatic local carries the already checked pointer through the branches,
+preserves whether it is a parent-bound borrow, and reloads it once for the
+call. The validator carries the receiver's non-null proof through that local;
+generated C does not need a duplicate runtime check after the join.
 
 This first direct-receiver slice remains limited to the function's
 unconditional entry block. Constructing the receiver inside a branch needs
@@ -355,10 +373,38 @@ source-positioned failures unless another ownership rule proves them. The
 source fixture forces a collection and then calls the retained interface,
 showing that the dispatch pair did not become a dangling pointer.
 
-Enums, collections other than the admitted Array slice, and every other
-`IRTInstance` family remain
-source-positioned `HXC1001` failures until their own call, copy, ownership, and
-lifetime contracts are proven.
+### Retained concrete references and record fields
+
+A concrete class field that keeps a reference after its creating method returns
+forms the same kind of persistent object graph as a retained interface. The
+compiler gives both objects stable collector storage, initializes the field
+only from an exactly typed rooted value, and emits an exact trace edge.
+Replacing a mutable reference updates that graph edge; clearing a nullable
+field stores null. An inline `final child = new Child()` remains by value unless
+the same child class must also participate as an independently retained object.
+
+The constructing object may also publish `this` as the first value of one of
+its own managed class-reference fields. That creates a real cycle—for example,
+`peer = this`—but not an unbounded escape: the write targets storage owned by
+the same rooted object while its constructor is running. The generated
+descriptor traces that typed pointer like any other managed edge. The focused
+fixture forces collection and then checks `peer == this`, proving that the
+cycle remains live without a self-reference special case in C.
+
+Constructor fields use the smallest ownership rule that matches their value:
+
+- an ownership-free closed record is copied directly into its final field once;
+- a managed record first captures one replacement owner, releases the prior
+  nested owners, and only then stores the replacement, making aliasing safe;
+- an inline child recursively contributes its nested trace and finalizer work
+  to the outer managed object's descriptor; and
+- a retained concrete class uses the typed collector pointer described above.
+
+The focused retained-object fixture exercises all four rules under allocation
+pressure, strict native compilation, Haxe Eval, and AddressSanitizer plus
+UndefinedBehaviorSanitizer. Unsupported value families still report
+source-positioned `HXC1001`; sharing the generic `IRTInstance` shape alone never
+grants a copy or lifetime contract.
 
 An empty constructor, or an empty zero-argument `super` chain whose base is
 also proven trivial, has no C symbol and no call. Source arguments are still
@@ -409,8 +455,7 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
   stored, thrown, captured, or forwarded beyond a known borrow contract;
 - an assigned, reassigned, or returned owned-child reference, or a bounded
   alias that later outlives or becomes independent from its parent;
-- a mutable owned-child field, a mismatched declared child type, or a fallible
-  owned-child constructor;
+- a mutable owned-child field or a mismatched declared child type;
 - conditional or otherwise non-entry local construction;
 - constructor dependency cycles, with the canonical nominal cycle path;
 - extern or `@:c.layout` native construction, because imported construction
@@ -422,8 +467,9 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
   lifetime contract has not yet been admitted;
 - replacement of an existing managed Array field, or storage of an Array
   parameter through an object other than the one being constructed;
-- an interface constructor parameter that is stored, returned, thrown,
-  captured, or otherwise allowed to outlive its call; and
+- an interface constructor parameter that escapes outside the exact retained
+  field-initialization rule, including return, throw, capture, or unrelated
+  storage; and
 - broader exceptions, runtime-checked interface casts, dynamic/generic
   dispatch, allocation,
   ownership, or public ABI.
@@ -509,10 +555,19 @@ parent with an inline owned child whose constructor, stable identity, and later 
 compares Eval with repeated, reversed-input, portable, metal, and explicit
 runtime-none production builds. Negative fixtures keep child reassignment,
 return, storing a bounded alias, unsafe borrow forwarding, constructor capture,
-fallible construction, and recursive direct layout fail-closed. Focused HxcIR
-fixtures prove that a declared automatic borrow alias may be initialized and
-reloaded, while the same pointer still cannot initialize an ordinary owning
-local or escape after that reload.
+and recursive direct layout fail-closed. The promoted `owned_fallible` fixture
+keeps a fallible child inline inside a collector-managed parent, proves
+recursive cleanup of the child's Array field, and retains a self-reference
+cycle through allocation pressure. The focused `--owned-fallible-only` lane
+checks that graph across split/package/unity output, reversed discovery, warm
+compiler-server reuse, O0/O2, and sanitizers without repeating unrelated
+constructor fixtures. `--negative-only` checks only the still-unsupported
+boundaries. Focused HxcIR fixtures prove that a declared automatic borrow alias
+may be initialized and reloaded, while the same pointer still cannot initialize
+an ordinary owning local or escape after that reload. The parallel interface
+fixture proves the same rule for the small object-pointer/table-pointer pair
+used by interface dispatch. This distinction matters because a copied pair is
+an independent C value but not an independent owner of the object it names.
 Because Eval is a dynamic platform whose uninitialized primitive fields are
 `null`, the separate target-native default-field fixture proves the C target's
 static-platform `0`/`false`/`0.0`/null defaults without pretending Eval is an

@@ -57,6 +57,13 @@ owns or extends the child's lifetime: validation rejects reassignment, return,
 storage into an owning place, unchecked forwarding, and every non-automatic or
 non-class alias declaration. The ordinary address operation remains available
 for construction storage and does not silently acquire borrow semantics.
+The same no-escape rule now covers a compiler-created local that temporarily
+holds an interface value. At the C level that value is a two-pointer pair: one
+pointer names the concrete object and the other names its method table. Copying
+the pair does not keep the object alive, so HxcIR records the local separately
+as `borrowed-interface`. This lets ordinary Haxe name an interface before using
+it while still rejecting a return, persistent store, ownership operation, or
+unchecked call that could outlive the concrete object.
 Schema version 13 adds explicit interface-value construction. The operation
 names the interface type, the concrete object reference, and the selected
 interface table as three separate semantic facts. Validation proves that the
@@ -108,28 +115,34 @@ conditional results that are complete unmanaged values, such as a closed Haxe
 record, an unmanaged tagged enum, or a header-owned C struct. This is not a
 general permission to read uninitialized storage. The validator requires an
 automatic direct-value local, rejects managed or recursive representations, and
-walks both branches plus nested joins to prove that every reachable read follows
-an assignment on that path. C lowering can therefore emit the familiar
-handwritten shape `T selected; if (condition) selected = left; else selected =
-right;` without fabricating a zero value. Managed conditional joins remain a
-separate ownership problem because selecting a branch may require retain,
-transfer, and cleanup.
+walks every `if` branch or `switch` arm plus nested joins to prove that every
+reachable read follows an assignment on that path. The producer accepts both a
+direct value expression and the equivalent typed form Haxe sometimes creates:
+an empty temporary local, exhaustive arm assignments, then one read. C lowering
+can therefore emit the familiar handwritten shape `T selected; if (condition)
+selected = left; else selected = right;` without fabricating a zero value.
+Managed conditional joins remain a separate ownership problem because selecting
+a branch may require retain, transfer, and cleanup.
 Schema version 19 solves that separate problem for managed tagged enums and
 managed Strings. It declares one initially empty carrier before a branch or
 value switch, then records how each normal arm gives that carrier exactly one
-owner. A newly constructed value or owned call result moves into the carrier;
-a parameter, local, static String literal, or other borrowed value is copied
-and retained. Strings use the shared String runtime lifecycle. An enum uses its
-generated, type-specific helper because the active case decides which payload
-needs ownership work. A `throw`, `return`, or unreachable arm ends before the
-join and therefore neither acquires nor invents an owner.
+owner. This applies whether haxe.c receives a direct conditional or Haxe's
+empty-local/arm-assignment/read form. A newly constructed value or owned call
+result moves into the carrier; a parameter, local, static String literal, or
+other borrowed value is copied and retained. Strings use the shared String
+runtime lifecycle. An enum uses its generated, type-specific helper because the
+active case decides which payload needs ownership work. A `throw`, `return`, or
+unreachable arm ends before the join and therefore neither acquires nor invents
+an owner. Recursive managed enums remain rejected because their deep retain can
+allocate and fail, while this carrier protocol is deliberately infallible.
 
-The join moves the one owner out. Validation rejects an unowned normal arm, two
-acquisitions, a borrowed value mislabeled as fresh, a String paired with an
-enum helper, ordinary loads or stores of the carrier, a second move, or a path
-that abandons an acquired owner. This lets C emission use an ordinary local
-plus structured `if`/`else` or `switch` while keeping retain, cleanup, and
-transfer decisions explicit before C syntax is chosen.
+The join moves the one owner out. Validation follows both branch and switch
+edges and rejects an unowned normal arm, two acquisitions, a borrowed value
+mislabeled as fresh, a String paired with an enum helper, ordinary loads or
+stores of the carrier, a second move, or a path that abandons an acquired
+owner. This lets C emission use an ordinary local plus structured `if`/`else`
+or `switch` while keeping retain, cleanup, and transfer decisions explicit
+before C syntax is chosen.
 The same schema's existing `IRTThrow` and `HxcIRFailureEdge` now have a bounded
 ordinary-function producer. When reachability contains no admitted `TTry`, the
 frontend knows the throw cannot be caught: it evaluates the payload once,

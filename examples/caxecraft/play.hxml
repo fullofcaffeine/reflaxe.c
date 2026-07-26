@@ -1,4 +1,9 @@
 -cp src
 -lib reflaxe.c
 -main caxecraft.app.Main
--D hxc_runtime=none
+# The full game uses ordinary Haxe managed values, so the compiler selects only
+# the hxrt features proved reachable instead of pretending this is runtime-free.
+-D hxc_runtime=auto
+# Interactive builds keep every collision decision but omit 20k+ collision-free
+# local records. Required audit/snapshot lanes retain the compiler's full default.
+-D hxc_symbol_report=summary

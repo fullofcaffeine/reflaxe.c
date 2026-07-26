@@ -46,9 +46,12 @@ private typedef CBodyValueProducer = {
 /** Immutable per-function decisions consumed before names and C syntax are chosen. */
 class CBodyValueCoalescingPlan {
 	final dispositions:Map<String, CBodyValueDisposition>;
+	final referenced:Map<String, Bool>;
 
-	public function new(dispositions:Map<String, CBodyValueDisposition>)
+	public function new(dispositions:Map<String, CBodyValueDisposition>, referenced:Map<String, Bool>) {
 		this.dispositions = dispositions;
+		this.referenced = referenced;
+	}
 
 	public function disposition(valueId:String):CBodyValueDisposition
 		return dispositions.get(valueId) ?? CBVDMaterialize(CBVMRUnsupportedProducer);
@@ -67,6 +70,18 @@ class CBodyValueCoalescingPlan {
 
 	public function shouldInlineSequencedAddress(valueId:String):Bool
 		return disposition(valueId) == CBVDInlineSequencedAddress;
+
+	/**
+		Whether naming must reserve one stable C temporary for this result.
+
+		A materialized value with no consumers needs no name: emission keeps only
+		its required effects. A referenced result that cannot be safely inlined must
+		receive a name before the symbol registry is finalized. Keeping this decision
+		beside the coalescing proof prevents individual lowering helpers from having
+		to predict every later fanout or barrier.
+	**/
+	public function requiresStableTemporary(valueId:String):Bool
+		return referenced.exists(valueId) && !shouldInline(valueId);
 }
 
 /**
@@ -120,7 +135,11 @@ class CBodyValueCoalescingPlanner {
 				case _:
 			}
 		}
-		return new CBodyValueCoalescingPlan(dispositions);
+		final referenced:Map<String, Bool> = [];
+		for (valueId => valueUses in uses)
+			if (valueUses.length > 0)
+				referenced.set(valueId, true);
+		return new CBodyValueCoalescingPlan(dispositions, referenced);
 	}
 
 	function collect(fn:HxcIRFunction):Void {

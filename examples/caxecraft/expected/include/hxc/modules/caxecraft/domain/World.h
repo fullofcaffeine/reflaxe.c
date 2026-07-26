@@ -2,7 +2,6 @@
 #define HXC_CAXECRAFT_DOMAIN_WORLD_H_INCLUDED
 
 #include "hxc/detail/program_types.h"
-#include "hxc/modules/caxecraft/domain/BlockKind.h"
 
 bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_domain_BlockCoord hxc_coord);
 

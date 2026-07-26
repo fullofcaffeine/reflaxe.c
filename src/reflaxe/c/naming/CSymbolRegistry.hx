@@ -58,7 +58,7 @@ private typedef GeneratedDraft = {
 
 private typedef GeneratedState = {
 	final draft:GeneratedDraft;
-	final hash:String;
+	var hash:Null<String>;
 	var hashLength:Int;
 }
 
@@ -213,7 +213,10 @@ class CSymbolRegistry {
 			final generated = generatedBase(request);
 			generatedStates.push({
 				draft: generated,
-				hash: Sha256.encode(request.stableKey()),
+				// Most generated names never collide. Compute SHA-256 only when a
+				// real collision needs a suffix instead of hashing every local and
+				// temporary in a large program speculatively.
+				hash: null,
 				hashLength: 0
 			});
 		}
@@ -255,6 +258,8 @@ class CSymbolRegistry {
 				foundCollision = true;
 				registerCollisionEvent(events, key, colliding, exactGroup);
 				for (state in colliding) {
+					if (state.hash == null)
+						state.hash = Sha256.encode(state.draft.request.stableKey());
 					state.hashLength = state.hashLength == 0 ? 12 : state.hashLength + 4;
 					if (state.hashLength > 64) {
 						internalFailure("SHA-256 could not disambiguate distinct C semantic symbol keys", collisionSources(colliding, exactGroup));
@@ -404,7 +409,8 @@ class CSymbolRegistry {
 	}
 
 	static function generatedName(state:GeneratedState):String
-		return state.hashLength == 0 ? state.draft.baseName : appendHash(state.draft.baseName, state.hash, state.hashLength);
+		return state.hashLength == 0 ? state.draft.baseName : appendHash(state.draft.baseName,
+			state.hash ?? internalFailure("colliding C symbol omitted its stable digest", [state.draft.request.sourceSymbol()]), state.hashLength);
 
 	static function namespacedCandidate(namespace:CSymbolNamespace, candidate:String):String
 		return CSymbolRequest.namespaceKey(namespace) + "\x00" + candidate;
@@ -668,18 +674,8 @@ class CSymbolRegistry {
 		};
 	}
 
-	static function compareRequests(left:CSymbolRequest, right:CSymbolRequest):Int {
-		final sourceOrder = compareUtf8(left.sourceSymbol(), right.sourceSymbol());
-		if (sourceOrder != 0) {
-			return sourceOrder;
-		}
-		final kindOrder = compareUtf8(CSymbolRequest.kindName(left.kind), CSymbolRequest.kindName(right.kind));
-		if (kindOrder != 0) {
-			return kindOrder;
-		}
-		final namespaceOrder = compareUtf8(CSymbolRequest.namespaceKey(left.namespace), CSymbolRequest.namespaceKey(right.namespace));
-		return namespaceOrder != 0 ? namespaceOrder : compareUtf8(left.stableKey(), right.stableKey());
-	}
+	static function compareRequests(left:CSymbolRequest, right:CSymbolRequest):Int
+		return CSymbolRequest.compareStableOrder(left, right);
 
 	static function compareCollisions(left:CSymbolCollisionRecord, right:CSymbolCollisionRecord):Int
 		return compareUtf8('${left.namespace.kind}\x00${left.namespace.scope}\x00${left.baseName}',

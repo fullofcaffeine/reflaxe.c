@@ -8,6 +8,7 @@
 struct hxc_caxecraft_app_CaxecraftApp {
   struct hxc_caxecraft_domain_GameSession hxc_session;
   struct hxc_caxecraft_app_TerrainRenderer hxc_terrainRenderer;
+  struct hxc_caxecraft_app_CaxecraftEditorScreen *hxc_editorScreen;
 };
 
 void hxc_compiler_constructor_caxecraft_app_CaxecraftApp(struct hxc_caxecraft_app_CaxecraftApp *hxc_self);

@@ -82,37 +82,93 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale0(int32_t hxc_message
       }
     case 9:
       {
-        return "HEALTH ALREADY FULL";
+        return "BACK";
       }
     case 10:
       {
-        return "ADVENTURE";
+        return "WORLD VIEWPORT \342\200\224 VISUAL BLOCK TOOLS ARE NEXT";
       }
     case 11:
       {
-        return "CREATIVE MODE";
+        return "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY";
       }
     case 12:
       {
-        return "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL";
+        return "NEW WORLD";
       }
     case 13:
       {
-        return "NO BLOCK IN REACH";
+        return "READY \342\200\224 EDITS USE THE REAL CAXEMAP SESSION";
       }
     case 14:
       {
-        return "CLICK TO CAPTURE  //  Q TO QUIT";
+        return "REDO";
       }
     case 15:
       {
-        return "PAUSED";
+        return "STOP TEST";
       }
     case 16:
       {
-        return "PLACE BLOCKED: PLAYER OR WORLD EDGE";
+        return "TEST PLAY";
       }
     case 17:
+      {
+        return "TEST PLAY USES A DISPOSABLE COPY";
+      }
+    case 18:
+      {
+        return "CAXECRAFT WORLD EDITOR";
+      }
+    case 19:
+      {
+        return "UNDO";
+      }
+    case 20:
+      {
+        return "VALID CAXEMAP \342\200\224 READY TO TEST";
+      }
+    case 21:
+      {
+        return "VALIDATE";
+      }
+    case 22:
+      {
+        return "HEALTH ALREADY FULL";
+      }
+    case 23:
+      {
+        return "ADVENTURE";
+      }
+    case 24:
+      {
+        return "CREATIVE MODE";
+      }
+    case 25:
+      {
+        return "WORLD EDITOR";
+      }
+    case 26:
+      {
+        return "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL";
+      }
+    case 27:
+      {
+        return "NO BLOCK IN REACH";
+      }
+    case 28:
+      {
+        return "CLICK TO CAPTURE  //  Q TO QUIT";
+      }
+    case 29:
+      {
+        return "PAUSED";
+      }
+    case 30:
+      {
+        return "PLACE BLOCKED: PLAYER OR WORLD EDGE";
+      }
+    case 31:
       {
         return "CAXECRAFT";
       }
@@ -165,37 +221,93 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale1(int32_t hxc_message
       }
     case 9:
       {
-        return "SALUD COMPLETA";
+        return "VOLVER";
       }
     case 10:
       {
-        return "AVENTURA";
+        return "VISTA DEL MUNDO \342\200\224 HERRAMIENTAS DE BLOQUES MUY PRONTO";
       }
     case 11:
       {
-        return "MODO CREATIVO";
+        return "CORRIGE EL BORRADOR ANTES DE PROBARLO";
       }
     case 12:
       {
-        return "FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH";
+        return "MUNDO NUEVO";
       }
     case 13:
       {
-        return "NINGUN BLOQUE AL ALCANCE";
+        return "LISTO \342\200\224 LOS CAMBIOS USAN LA SESION CAXEMAP REAL";
       }
     case 14:
       {
-        return "CLIC PARA CAPTURAR  //  Q PARA SALIR";
+        return "REHACER";
       }
     case 15:
       {
-        return "PAUSA";
+        return "DETENER PRUEBA";
       }
     case 16:
       {
-        return "NO SE PUEDE COLOCAR: JUGADOR O BORDE";
+        return "PROBAR";
       }
     case 17:
+      {
+        return "LA PRUEBA USA UNA COPIA DESECHABLE";
+      }
+    case 18:
+      {
+        return "EDITOR DE MUNDOS CAXECRAFT";
+      }
+    case 19:
+      {
+        return "DESHACER";
+      }
+    case 20:
+      {
+        return "CAXEMAP VALIDO \342\200\224 LISTO PARA PROBAR";
+      }
+    case 21:
+      {
+        return "VALIDAR";
+      }
+    case 22:
+      {
+        return "SALUD COMPLETA";
+      }
+    case 23:
+      {
+        return "AVENTURA";
+      }
+    case 24:
+      {
+        return "MODO CREATIVO";
+      }
+    case 25:
+      {
+        return "EDITOR DE MUNDOS";
+      }
+    case 26:
+      {
+        return "FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH";
+      }
+    case 27:
+      {
+        return "NINGUN BLOQUE AL ALCANCE";
+      }
+    case 28:
+      {
+        return "CLIC PARA CAPTURAR  //  Q PARA SALIR";
+      }
+    case 29:
+      {
+        return "PAUSA";
+      }
+    case 30:
+      {
+        return "NO SE PUEDE COLOCAR: JUGADOR O BORDE";
+      }
+    case 31:
       {
         return "CAXECRAFT";
       }

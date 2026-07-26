@@ -79,28 +79,28 @@ bool hxc_caxecraft_domain_Aquatics_canMine(struct hxc_caxecraft_domain_AquaticSt
 
 double hxc_caxecraft_domain_Aquatics_clamp(double hxc_value, double hxc_minimum, double hxc_maximum)
 {
-  if (!(hxc_value < hxc_minimum))
+  if (hxc_value < hxc_minimum)
   {
-    if (!(hxc_value > hxc_maximum))
-    {
-      return hxc_value;
-    }
-    return hxc_maximum;
+    return hxc_minimum;
   }
-  return hxc_minimum;
+  if (!(hxc_value > hxc_maximum))
+  {
+    return hxc_value;
+  }
+  return hxc_maximum;
 }
 
 int32_t hxc_caxecraft_domain_Aquatics_clampInt(int32_t hxc_value, int32_t hxc_minimum, int32_t hxc_maximum)
 {
-  if (!(hxc_value < hxc_minimum))
+  if (hxc_value < hxc_minimum)
   {
-    if (!(hxc_value > hxc_maximum))
-    {
-      return hxc_value;
-    }
-    return hxc_maximum;
+    return hxc_minimum;
   }
-  return hxc_minimum;
+  if (!(hxc_value > hxc_maximum))
+  {
+    return hxc_value;
+  }
+  return hxc_maximum;
 }
 
 int32_t hxc_caxecraft_domain_Aquatics_classifyMedium(int32_t hxc_previous, struct hxc_caxecraft_domain_Immersion hxc_immersion)
@@ -112,31 +112,31 @@ int32_t hxc_caxecraft_domain_Aquatics_classifyMedium(int32_t hxc_previous, struc
       }
     case 1:
       {
-        if (!(hxc_immersion.hxc_submersion <= 0.04))
+        if (hxc_immersion.hxc_submersion <= 0.04)
         {
-          if (!hxc_immersion.hxc_headWet)
-          {
-            if (!(hxc_immersion.hxc_submersion >= 0.68))
-            {
-              return 1;
-            }
-            return 2;
-          }
+          return 0;
+        }
+        if (hxc_immersion.hxc_headWet)
+        {
           return 3;
         }
-        return 0;
+        if (!(hxc_immersion.hxc_submersion >= 0.68))
+        {
+          return 1;
+        }
+        return 2;
       }
     case 2:
       {
-        if (!hxc_immersion.hxc_headWet)
+        if (hxc_immersion.hxc_headWet)
         {
-          if (!(hxc_immersion.hxc_submersion <= 0.52))
-          {
-            return 2;
-          }
-          return 1;
+          return 3;
         }
-        return 3;
+        if (!(hxc_immersion.hxc_submersion <= 0.52))
+        {
+          return 2;
+        }
+        return 1;
       }
     case 3:
       {
@@ -354,21 +354,22 @@ struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(uint8
 
 double hxc_caxecraft_domain_Aquatics_waterSurface(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, int32_t hxc_y, double hxc_z)
 {
+  int32_t hxc_distance = { 0 };
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
   int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_Aquatics_floorToInt(hxc_x);
   int32_t hxc_tmp_call_result_n1 = hxc_caxecraft_domain_Aquatics_floorToInt(hxc_z);
-  struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n2 = hxc_caxecraft_domain_World_coord(hxc_tmp_call_result_n0, hxc_y, hxc_tmp_call_result_n1);
-  struct hxc_caxecraft_domain_BlockCoord hxc_coord = hxc_tmp_call_result_n2;
+  struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n2 = hxc_caxecraft_domain_World_coord(hxc_tmp_call_result_n0, hxc_y, hxc_tmp_call_result_n1);
+  struct hxc_caxecraft_scenario_VoxelPoint hxc_coord = hxc_tmp_call_result_n2;
   struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n4 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_coord);
   struct hxc_caxecraft_domain_WaterCellState hxc_g = hxc_tmp_call_result_n4;
   switch (hxc_g.hxc_tag) {
     case hxc_caxecraft_domain_WaterCellState_Empty:
     case hxc_caxecraft_domain_WaterCellState_Blocked:
       {
-        break;
+        return (double)hxc_y;
       }
     case hxc_caxecraft_domain_WaterCellState_Source:
       {
@@ -376,29 +377,29 @@ double hxc_caxecraft_domain_Aquatics_waterSurface(uint8_t *hxc_cells, size_t hxc
       }
     case hxc_caxecraft_domain_WaterCellState_Flowing:
       {
-        if (hxc_g.hxc_tag != hxc_caxecraft_domain_WaterCellState_Flowing)
-        {
-          abort();
-        }
-        int32_t hxc_tmp_enum_payload_project_n7 = hxc_g.hxc_payload.hxc_Flowing.hxc_level;
-        int32_t hxc_level = hxc_tmp_enum_payload_project_n7;
-        if (hxc_g.hxc_tag != hxc_caxecraft_domain_WaterCellState_Flowing)
-        {
-          abort();
-        }
-        bool hxc_tmp_enum_payload_project_n9 = hxc_g.hxc_payload.hxc_Flowing.hxc_falling;
-        bool hxc_falling = hxc_tmp_enum_payload_project_n9;
-        if (!hxc_falling)
-        {
-          int32_t hxc_distance = hxc_level;
-          return (double)hxc_y + hxc_f64_divide_zero_safe(8.0 - (double)hxc_distance, 8.0);
-        }
-        return (double)hxc_y + 1.0;
+        break;
       }
     case hxc_caxecraft_domain_WaterCellState_InvalidStorage:
       {
         return (double)hxc_y;
       }
   }
-  return (double)hxc_y;
+  if (hxc_g.hxc_tag != hxc_caxecraft_domain_WaterCellState_Flowing)
+  {
+    abort();
+  }
+  int32_t hxc_tmp_enum_payload_project_n7 = hxc_g.hxc_payload.hxc_Flowing.hxc_level;
+  int32_t hxc_level = hxc_tmp_enum_payload_project_n7;
+  if (hxc_g.hxc_tag != hxc_caxecraft_domain_WaterCellState_Flowing)
+  {
+    abort();
+  }
+  bool hxc_tmp_enum_payload_project_n9 = hxc_g.hxc_payload.hxc_Flowing.hxc_falling;
+  bool hxc_falling = hxc_tmp_enum_payload_project_n9;
+  if (!hxc_falling)
+  {
+    hxc_distance = hxc_level;
+    return (double)hxc_y + hxc_f64_divide_zero_safe(8.0 - (double)hxc_distance, 8.0);
+  }
+  return (double)hxc_y + 1.0;
 }

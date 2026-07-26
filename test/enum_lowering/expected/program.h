@@ -70,6 +70,8 @@ struct hxc_Chain;
 
 struct hxc_Choices;
 
+struct hxc_IdentityValue;
+
 struct hxc_RuleEnvelope;
 
 struct hxc_EnumFixture_StackClosure {
@@ -184,6 +186,34 @@ enum hxc_Mode {
   hxc_Mode_On = 1
 };
 
+enum hxc_IdentityKind {
+  hxc_IdentityKind_FirstIdentity = 0,
+  hxc_IdentityKind_SecondIdentity = 1
+};
+
+enum hxc_IdentityValue_tag {
+  hxc_IdentityValue_FirstValue = 0,
+  hxc_IdentityValue_SecondValue = 1
+};
+
+struct hxc_IdentityValue_FirstValue_payload {
+  int32_t hxc_value;
+};
+
+struct hxc_IdentityValue_SecondValue_payload {
+  int32_t hxc_value;
+};
+
+union hxc_IdentityValue_payload {
+  struct hxc_IdentityValue_FirstValue_payload hxc_FirstValue;
+  struct hxc_IdentityValue_SecondValue_payload hxc_SecondValue;
+};
+
+struct hxc_IdentityValue {
+  enum hxc_IdentityValue_tag hxc_tag;
+  union hxc_IdentityValue_payload hxc_payload;
+};
+
 enum hxc_RuleEnvelope_tag {
   hxc_RuleEnvelope_MissingRule = 0,
   hxc_RuleEnvelope_WrappedRule = 1
@@ -241,6 +271,8 @@ bool hxc_EnumFixture_optionHasPositiveValue(struct hxc_Option_h95f1c4a28dac hxc_
 int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_value_h2c5c76013588);
 
 int32_t hxc_EnumFixture_optionalRuleValue(struct hxc_Option_h2a07afaff02e hxc_value_hffb395be3233);
+
+int32_t hxc_EnumFixture_pairedIdentityValue(enum hxc_IdentityKind hxc_kind, struct hxc_IdentityValue hxc_value_hc42edaab0080);
 
 int32_t hxc_EnumFixture_recursiveLocal(void);
 

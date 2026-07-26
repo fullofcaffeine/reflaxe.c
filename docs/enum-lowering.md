@@ -112,6 +112,21 @@ value mislabeled as fresh, the wrong enum lifecycle helper, and a second move.
 The emitted C remains a normal local plus `if`/`else`, while ownership stays
 explicit and independently checked.
 
+Block-valued `if` and `switch` expressions can look different after Haxe has
+typed them. Haxe may create an empty temporary, assign the selected arm into
+that temporary, and read it once afterward. Haxe.c recognizes only the proven
+closed version of that graph: every normal arm must assign the exact same
+temporary. It then applies the same move-fresh or retain-borrowed ownership
+operation used by the direct conditional above. An unmanaged enum uses the
+schema-18 direct carrier instead, so generated C declares the enum local and
+lets the exhaustive arms assign it; haxe.c does not fabricate a zero
+constructor merely to satisfy C declaration syntax.
+
+Recursive managed enums remain a fail-closed boundary for this graph. Retaining
+a borrowed recursive value deep-copies its owned child and can fail while
+allocating. Until carrier acquisition has a typed failure edge, the compiler
+reports `HXC1001` at the Haxe temporary instead of emitting an infallible copy.
+
 Array-backed paths select the existing `array` runtime slice. Bytes-backed paths
 select the existing `bytes` slice and its allocator, status, base, and
 literal-view dependencies. Recursive enum links also select the allocator slice
@@ -243,9 +258,11 @@ The narrower `test:enum-lowering:bytes` lane compares the same ordinary Haxe
 program under Eval and generated C. It constructs, returns, copies, matches,
 mutates, conditionally joins, and destroys an enum that owns one shared Bytes
 buffer. Fresh and borrowed arms run in both orders and in local, argument,
-return, and nested positions; an observable trace checks that the condition and
-only the selected arm run in source order. The lane checks the HxcIR ownership
-operations, exact runtime slice, active-tag retain/destroy helpers,
+return, nested, and value-switch positions; an observable trace checks that the
+condition and only the selected arm run in source order. The lane checks the
+exact HxcIR acquire/move ownership operations, proves an unmanaged switch
+carrier has no fabricated default, checks the exact runtime slice and
+active-tag retain/destroy helpers,
 cold/repeated/reversed/server determinism, unity/split/package layouts, strict
 native execution, sanitizers, and the source-positioned rejection of a
 StringMap payload. It is the fast diagnostic for this rule; the complete enum
@@ -253,5 +270,7 @@ runner retains the integrated proof.
 
 The required native matrix uses GCC/G++ and Clang/Clang++ at `-O0` and `-O2`,
 while negative fixtures cover unsupported references, source
-non-exhaustiveness, recursive collector payloads, and validator-only malformed
-tag/root operations.
+non-exhaustiveness, recursive collector payloads, a recursive carrier whose
+retain could fail, branch/switch paths that reach a carrier read or move
+without first supplying a value, and validator-only malformed tag/root
+operations.

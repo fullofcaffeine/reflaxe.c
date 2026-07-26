@@ -23,21 +23,21 @@ struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_gameplay_Recovery_applyVit
 int32_t hxc_caxecraft_gameplay_Recovery_decide(struct hxc_caxecraft_gameplay_InventoryState hxc_inventory, struct hxc_caxecraft_domain_VitalsState hxc_vitals)
 {
   bool hxc_tmp_call_result_n1 = hxc_caxecraft_gameplay_Inventory_selectedIs(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_Berries);
-  if (!!hxc_tmp_call_result_n1)
+  if (!hxc_tmp_call_result_n1)
   {
-    if (!(hxc_vitals.hxc_health <= 0))
-    {
-      if (!(hxc_inventory.hxc_berries <= 0))
-      {
-        if (!(hxc_vitals.hxc_health >= 6))
-        {
-          return 1;
-        }
-        return 2;
-      }
-      return 3;
-    }
+    return 0;
+  }
+  if (hxc_vitals.hxc_health <= 0)
+  {
     return 4;
   }
-  return 0;
+  if (hxc_inventory.hxc_berries <= 0)
+  {
+    return 3;
+  }
+  if (!(hxc_vitals.hxc_health >= 6))
+  {
+    return 1;
+  }
+  return 2;
 }

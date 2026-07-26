@@ -268,6 +268,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="length")',
         'runtime(feature="array",operation="get-checked")',
         'runtime(feature="array",operation="push")',
+        'runtime(feature="array",operation="pop")',
         'runtime(feature="array",operation="sort")',
         'function-reference target="function.lambda.function.Main.main.',
         'implementation=program-local("array-element-lifecycle:instance.closed-record.',
@@ -344,6 +345,31 @@ def validate_generated_hxcir(hxcir: str) -> None:
         hxcir, "function.Main.countFirstScheduledCommands"
     )
     entry = hxcir_function(hxcir, "function.Main.main")
+    history_pop = hxcir_function(hxcir, "method.History.takeNewest")
+    if (
+        history_pop.count('runtime(feature="array",operation="pop")') != 1
+        or 'returns=nullable(tagged,instance("instance.closed-record.' not in history_pop
+        or 'terminator return value="value.' not in history_pop
+        or "cleanup=[]" not in history_pop
+        or " retain " in history_pop
+        or " release " in history_pop
+    ):
+        raise ArrayRuntimeFailure(
+            "managed Array.pop did not transfer one fresh optional owner directly "
+            "to the caller"
+        )
+    if entry.count('runtime(feature="array",operation="pop")') != 3:
+        raise ArrayRuntimeFailure(
+            "primitive Array.pop coverage no longer contains present, repeated, "
+            "and empty mutations"
+        )
+    if (
+        'action "optional-local.' not in entry
+        or "optional-lifecycle:optional." not in entry
+    ):
+        raise ArrayRuntimeFailure(
+            "managed Array.pop result lost its independently owned optional cleanup"
+        )
     if (
         'string-temporary.' not in entry
         or 'array-push-element-owner-initialize' not in entry
@@ -506,6 +532,7 @@ def validate_generated_project(output: Path) -> None:
         "get-checked",
         "length",
         "managed-type-representation",
+        "pop",
         "push",
         "retain",
         "set",
@@ -539,6 +566,7 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_retain",
         "hxc_array_ref_release",
         "hxc_array_ref_push_copy",
+        "hxc_array_ref_pop_move",
         "hxc_array_ref_get_copy",
         "hxc_array_ref_sort",
         "hxc_array_string_join",
@@ -716,7 +744,6 @@ def render_managed_class_pair(root: Path) -> Path:
 def run_generated_negative_cases(root: Path) -> None:
     expected = {
         "join_non_string": "TCall(Array.join:element-not-managed-String:",
-        "managed_element_return": "TReturn(borrowed-managed-Array-element-needs-owner-transfer)",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
     }
@@ -740,60 +767,6 @@ def run_generated_negative_cases(root: Path) -> None:
             raise ArrayRuntimeFailure(f"{label} did not fail closed on managed Array")
         if output.exists() and any(output.rglob("*")):
             raise ArrayRuntimeFailure(f"{label} left plausible generated output")
-
-
-def prove_caxecraft_state_boundary(root: Path) -> None:
-    """Keep the flagship compile beyond every ScenarioWriter Array sort."""
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "examples/caxecraft/play.py"),
-            "--compile-only",
-            "--output-root",
-            str(root / "caxecraft-compile-boundary"),
-        ],
-        cwd=ROOT,
-        env=haxe_environment(),
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=90,
-    )
-    if result.returncode == 0:
-        return
-    # Caxecraft now passes the managed Array element, exact Array.sort
-    # comparators, capturing predicates, enum-constructor callbacks, and the
-    # fresh String copied by ScenarioWriter into returned Bytes. The next
-    # reachable boundary is separately owned by haxe_c-djl.13: pinned Haxe
-    # rewrites a managed-enum switch result into an initially empty flow carrier,
-    # which needs typed branch-acquisition ownership rather than a fabricated
-    # default enum. Requiring that exact later diagnostic proves the Array lane
-    # was implemented instead of skipped or hidden. Accepting an arbitrary
-    # failure would weaken this product check into "Caxecraft still does not
-    # compile."
-    if (
-        "src/caxecraft/scenario/CaxeFlowActionRegistry.hx:179:" not in result.stderr
-        or "caxecraft.scenario._CaxeFlowActionRegistry.CaxeFlowActionRegistry_Fields_.flowActionDescriptorById body"
-        not in result.stderr
-        or "TVar(family:flow-carrier)(result-type-without-direct-default)"
-        not in result.stderr
-        or "function-exit:unowned-fresh-managed-String-value" in result.stderr
-        or "TCall(Array.sort:not-yet-admitted)" in result.stderr
-        or "TCall(Array.copy:not-yet-admitted)" in result.stderr
-        or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
-        in result.stderr
-        or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
-        or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
-        or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
-        in result.stderr
-        or "TCall(unavailable-static-target:function.String.fromCharCode)"
-        in result.stderr
-        or "TCall(Std.string:source-not-yet-admitted" in result.stderr
-    ):
-        raise ArrayRuntimeFailure(
-            "Caxecraft did not compile past its former managed Array element boundary\n"
-            f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
-        )
 
 
 def compile_and_run(
@@ -1015,6 +988,8 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_array_ref_init_in_place",
         "hxc_array_ref_release",
         "hxc_array_ref_retain",
+        "hxc_array_pop_move",
+        "hxc_array_ref_pop_move",
         "hxc_array_resize",
         "hxc_array_remove_at",
     ):
@@ -1046,7 +1021,6 @@ def run_native(
         )
         if generated_haxe:
             run_generated_negative_cases(root)
-            prove_caxecraft_state_boundary(root)
         for toolchain in toolchains:
             build = root / toolchain.family
             build.mkdir(parents=True)

@@ -101,13 +101,19 @@ through the complete symbol registry. A collision-free path such as
 `include/hxc/modules/caxecraft/domain/BlockCoord.h` becomes the readable
 `HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED`; only paths that normalize to the
 same guard (or exceed the length bound) receive a compact SHA-256 suffix. The common
-types header owns system/import includes, program-wide ABI assertions and
-inline primitive helpers, and dependency-neutral forward declarations. Each
-split module header owns that module's complete aggregate,
-enum, and class definitions plus its private globals and function prototypes.
+types header owns system/import includes, program-wide ABI assertions, inline
+primitive helpers, dependency-neutral forward declarations, and native C enum
+definitions. Native enums are the one deliberate type-ownership exception:
+strict ISO C11 cannot forward-declare an enum, so keeping one in a module header
+can manufacture a header cycle even when the Haxe value graph is legal. Their
+small, payload-free definitions therefore live once in the shared private
+header. Tagged Haxe enums still use forward-declarable struct representations
+and retain source-module ownership. Each split module header owns that module's
+complete aggregate, tagged-enum, and class definitions plus its private globals
+and function prototypes.
 It includes module headers only for hard definition-time layout edges and
-types, such as embedded by-value fields and native enums, that strict C11
-cannot declare incompletely. Aggregate, class, and tagged-enum struct tags are
+types, such as embedded by-value fields, that strict C11 cannot declare
+incompletely. Aggregate, class, and tagged-enum struct tags are
 forward-declared in the common header, so function prototypes and `extern`
 objects that name them remain soft declaration edges. Pointer-like storage is
 also soft. Every module source includes the umbrella after all complete
@@ -127,9 +133,10 @@ layout; only their file assignment changes.
 
 Package mode applies the same dependency rules one level higher. Complete
 types from every module in a package are ordered inside that package's header.
-Only a hard by-value or native-enum dependency on another package adds a
-package-header include; forward-declarable pointer, prototype, and `extern`
-edges remain soft. The root Haxe package uses
+Only a hard by-value dependency on another package adds a package-header
+include. Native enums are already complete in the shared private header, while
+forward-declarable pointer, prototype, and `extern` edges remain soft. The root
+Haxe package uses
 `include/hxc/packages/package.h` and `src/packages/package.c`. A package source
 then receives the globals and functions owned by every reached module in that
 package. None of the three layouts creates a public ABI.
@@ -156,9 +163,13 @@ The emitter owns these independently versioned sidecars:
   feature set. Structural fixtures do not fabricate this semantic sidecar;
 - `hxc.manifest.json`: resolved logical configuration, the typed neutral build
   plan, artifact kinds, and SHA-256 digests;
-- `hxc.symbols.json`: the finalized schema-2 `hxc-c-symbol-v2` table, retaining
-  full semantic keys separately from readable emitted names and explaining
-  every collision suffix;
+- `hxc.symbols.json`: by default, the finalized schema-2
+  `hxc-c-symbol-v2` table, retaining full semantic keys separately from
+  readable emitted names and explaining every collision suffix. An explicit
+  `-D hxc_symbol_report=summary` developer build instead writes a smaller
+  `hxc-c-symbol-summary-v1` document with total counts and the complete
+  collision ledger. Both modes validate the same full table before C emission;
+  required audit lanes keep the full default;
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
   direct executable's schema-2 `hxc-runtime-plan-v2`
@@ -255,7 +266,7 @@ evidence. `CProjectEmitter` rejects any unrelated runtime plan or payload. See
 
 Because every selected closure includes `runtime-base`, the private generated
 program header also carries one structural C11 assertion that the runtime ABI
-major matches the compiler's internal 0.12.0 contract. Same-major minor changes
+major matches the compiler's internal 0.13.0 contract. Same-major minor changes
 remain compatible; a changed major fails before linking. Runtime-free projects
 contain no `hxrt` include, version marker, or compatibility assertion. This is
 not a public application ABI: primitive production emission rejects public

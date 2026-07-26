@@ -2,8 +2,6 @@
 #define HXC_CAXECRAFT_APP_TERRAIN_CHUNK_CACHE_H_INCLUDED
 
 #include "hxc/detail/program_types.h"
-#include "hxc/modules/caxecraft/app/TerrainAtlas.h"
-#include "hxc/modules/caxecraft/domain/BlockKind.h"
 
 struct hxc_caxecraft_app_TerrainChunkCache {
   uint8_t hxc_faceX[49152];
@@ -29,7 +27,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft
 
 int32_t hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, int32_t hxc_chunk);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, struct hxc_caxecraft_domain_BlockCoord hxc_coord);
+int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord);
 
 void hxc_caxecraft_app_TerrainChunkCache_invalidateAll(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self);
 

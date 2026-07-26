@@ -669,7 +669,7 @@
         "constructor arguments, pinned-Haxe derived field initializers, super calls, base fields/bodies, and derived bodies retain exact observable order against the Eval oracle",
         "empty zero-argument constructor chains elide their C symbols and calls only after preserving source argument evaluation",
         "throwing constructors use explicit HxcIR status conventions and failure edges whose partial and initialized cleanup steps execute in validated reverse order",
-        "a proven direct helper may borrow a caller-owned class object for one call, while return, local alias, field storage, constructor capture, unproven forwarding, assignment, self escape, conditional construction, dependency cycles, native layouts, and generic classes fail closed with source-positioned HXC1001 and no plausible artifact",
+        "a proven direct helper may borrow a caller-owned class object for one call; a constructor may publish this only into its own collector-managed class field and the native fixture proves that self-cycle after collection; return, unproved local alias, unrelated field storage, constructor capture, unproven forwarding, assignment, conditional construction, dependency cycles, native layouts, and generic classes fail closed with source-positioned HXC1001 and no plausible artifact",
         "portable, metal, reversed-input, repeated, and explicit runtime-none projects are byte-identical; strict GCC and Clang O0/O2 C11 execution, fail-stop status, and a C++17 private-header consumer pass"
       ]
     },

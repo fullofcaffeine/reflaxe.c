@@ -133,7 +133,28 @@ machine identity without forcing that identity into every C declaration.
 Naming is a pure compile-time operation. It allocates no generated-program
 object, selects no `hxrt` feature, and emits no C by itself. E2.T02 consumes its
 finalized names after validated HxcIR for the admitted body fixture, without
-changing those properties. Verify the contract with:
+changing those properties.
+
+### Full and concise reports
+
+The compiler always finalizes and validates the complete in-memory symbol
+table before it emits C. What changes is only how much audit evidence it writes:
+
+- `-D hxc_symbol_report=full` is the default. It writes every symbol record and
+  the collision ledger. Required audit and snapshot lanes use this form.
+- `-D hxc_symbol_report=summary` writes counts plus the complete collision
+  ledger, but omits collision-free per-symbol records. This is useful for a
+  large interactive application where serializing and hashing tens of
+  thousands of local-variable records would lengthen every edit cycle.
+
+The concise document identifies itself with
+`hxc-c-symbol-summary-v1` and records the source full-report schema and
+algorithm. It is not weaker naming: a malformed request or unresolved
+collision still fails before reporting, and generated C names are identical in
+both modes. It is weaker *audit detail*, so it must not replace the full report
+in a lane whose purpose is to review every semantic identity.
+
+Verify the contract with:
 
 ```sh
 npm run test:symbol-registry

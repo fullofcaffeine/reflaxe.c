@@ -233,6 +233,10 @@ int32_t hxc_caxecraft_app_TerrainRenderer_squareDistance(int32_t hxc_x, int32_t 
 
 struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_TerrainRenderer_draw(struct hxc_caxecraft_app_TerrainRenderer *hxc_self, uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_baseTexture, bool hxc_baseReady, struct Texture hxc_adventureTexture, bool hxc_adventureReady, double hxc_playerX, double hxc_playerZ)
 {
+  int32_t hxc_playerCellX = { 0 };
+  int32_t hxc_playerCellZ = { 0 };
+  struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_base = { 0 };
+  struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_adventure = { 0 };
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n8 = hxc_length;
   (void)hxc_borrow;
@@ -252,14 +256,14 @@ struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_TerrainRenderer
   (*hxc_self).hxc_totalRebuiltChunks = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n2, hxc_preparation.hxc_rebuiltChunks);
   if (!!hxc_preparation.hxc_valid)
   {
-    int32_t hxc_playerCellX = hxc_f64_to_i32_saturating(hxc_playerX);
-    int32_t hxc_playerCellZ = hxc_f64_to_i32_saturating(hxc_playerZ);
+    hxc_playerCellX = hxc_f64_to_i32_saturating(hxc_playerX);
+    hxc_playerCellZ = hxc_f64_to_i32_saturating(hxc_playerZ);
     int32_t hxc_tmp_load_result_n9 = hxc_playerCellX;
     struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_tmp_instance_call_result_n11 = hxc_caxecraft_app_TerrainRenderer_drawSheet(hxc_self, hxc_baseTexture, hxc_baseReady, hxc_caxecraft_app_TerrainSheet_Base, hxc_tmp_load_result_n9, hxc_playerCellZ);
-    struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_base = hxc_tmp_instance_call_result_n11;
+    hxc_base = hxc_tmp_instance_call_result_n11;
     int32_t hxc_tmp_load_result_n13 = hxc_playerCellX;
     struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_tmp_instance_call_result_n15 = hxc_caxecraft_app_TerrainRenderer_drawSheet(hxc_self, hxc_adventureTexture, hxc_adventureReady, hxc_caxecraft_app_TerrainSheet_Adventure, hxc_tmp_load_result_n13, hxc_playerCellZ);
-    struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_adventure = hxc_tmp_instance_call_result_n15;
+    hxc_adventure = hxc_tmp_instance_call_result_n15;
     int32_t hxc_tmp_record_field_load_result_n16 = hxc_base.hxc_visible;
     int32_t hxc_tmp_record_field_load_result_n17 = hxc_adventure.hxc_visible;
     int32_t hxc_tmp_record_field_load_result_n18 = hxc_base.hxc_faces;

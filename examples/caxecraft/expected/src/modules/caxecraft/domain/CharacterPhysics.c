@@ -136,7 +136,12 @@ struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_CharacterPhysics_moveA
     double hxc_tmp_load_result_n23 = hxc_candidateX;
     double hxc_tmp_load_result_n24 = hxc_candidateY;
     bool hxc_tmp_call_result_n26 = hxc_caxecraft_domain_CharacterPhysics_overlaps(hxc_cells, hxc_length, hxc_tmp_load_result_n23, hxc_tmp_load_result_n24, hxc_candidateZ);
-    if (!hxc_tmp_call_result_n26)
+    if (hxc_tmp_call_result_n26)
+    {
+      hxc_blocked = true;
+      break;
+    }
+    else
     {
       hxc_currentX = hxc_candidateX;
       hxc_currentY = hxc_candidateY;
@@ -144,8 +149,6 @@ struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_CharacterPhysics_moveA
       hxc_stepIndex = hxc_i32_add_wrapping(hxc_stepIndex, 1);
       continue;
     }
-    hxc_blocked = true;
-    break;
   }
   double hxc_tmp_load_result_n31 = hxc_currentX;
   double hxc_tmp_load_result_n32 = hxc_currentY;
@@ -207,12 +210,11 @@ bool hxc_caxecraft_domain_CharacterPhysics_overlaps(uint8_t *hxc_cells, size_t h
           bool hxc_tmp_call_result_n23 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n22);
           hxc_tmp_short_circuit_result_n15 = hxc_tmp_call_result_n23;
         }
-        if (!hxc_tmp_short_circuit_result_n15)
+        if (hxc_tmp_short_circuit_result_n15)
         {
-          hxc_blockX = hxc_i32_add_wrapping(hxc_blockX, 1);
-          continue;
+          return true;
         }
-        return true;
+        hxc_blockX = hxc_i32_add_wrapping(hxc_blockX, 1);
       }
       hxc_blockZ = hxc_i32_add_wrapping(hxc_blockZ, 1);
     }

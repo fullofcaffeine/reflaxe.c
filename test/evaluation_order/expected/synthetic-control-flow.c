@@ -16,7 +16,7 @@ static void hxc_bounded_control_flow(bool condition, int32_t selector)
         }
       default:
         {
-          break;
+          continue;
         }
     }
   }

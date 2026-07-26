@@ -10,26 +10,26 @@ void hxc_compiler_constructor_caxecraft_domain_EntityStore(struct hxc_caxecraft_
 
 bool hxc_caxecraft_domain_EntityStore_put(struct hxc_caxecraft_domain_EntityStore *hxc_self, struct hxc_caxecraft_domain_Character hxc_character)
 {
-  if (!(hxc_character.hxc_id <= 0))
+  if (hxc_character.hxc_id <= 0)
   {
-    if (hxc_self == NULL)
-    {
-      abort();
-    }
-    bool hxc_tmp_class_field_load_result_n1 = (*hxc_self).hxc_occupied;
-    bool hxc_tmp_short_circuit_result_n2 = hxc_tmp_class_field_load_result_n1;
-    if (hxc_tmp_class_field_load_result_n1)
-    {
-      struct hxc_caxecraft_domain_Character hxc_tmp_class_field_load_result_n2 = (*hxc_self).hxc_current;
-      hxc_tmp_short_circuit_result_n2 = hxc_tmp_class_field_load_result_n2.hxc_id != hxc_character.hxc_id;
-    }
-    if (!hxc_tmp_short_circuit_result_n2)
-    {
-      (*hxc_self).hxc_current = hxc_character;
-      (*hxc_self).hxc_occupied = true;
-      return true;
-    }
     return false;
+  }
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  bool hxc_tmp_class_field_load_result_n1 = (*hxc_self).hxc_occupied;
+  bool hxc_tmp_short_circuit_result_n2 = hxc_tmp_class_field_load_result_n1;
+  if (hxc_tmp_class_field_load_result_n1)
+  {
+    struct hxc_caxecraft_domain_Character hxc_tmp_class_field_load_result_n2 = (*hxc_self).hxc_current;
+    hxc_tmp_short_circuit_result_n2 = hxc_tmp_class_field_load_result_n2.hxc_id != hxc_character.hxc_id;
+  }
+  if (!hxc_tmp_short_circuit_result_n2)
+  {
+    (*hxc_self).hxc_current = hxc_character;
+    (*hxc_self).hxc_occupied = true;
+    return true;
   }
   return false;
 }

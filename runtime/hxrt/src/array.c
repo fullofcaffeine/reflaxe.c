@@ -511,6 +511,47 @@ hxc_status hxc_array_remove_at(hxc_array *array, size_t index) {
   return HXC_STATUS_OK;
 }
 
+hxc_status hxc_array_pop_move(
+  hxc_array *array,
+  void *out_element,
+  bool *out_present
+) {
+  size_t source_index;
+  if (out_element == NULL || !hxc_array_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  /*
+   * An output that aliases a live slot would stop being live when length is
+   * decremented, so it cannot receive ownership. Generated code always supplies
+   * a separate typed local; this check also makes the low-level API fail closed
+   * for the most likely accidental alias.
+   */
+  if (hxc_array_find_source(array, out_element, &source_index)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->length == 0u) {
+    if (out_present != NULL) {
+      *out_present = false;
+    }
+    return HXC_STATUS_OK;
+  }
+  source_index = array->length - 1u;
+  hxc_array_copy_bytes(
+    out_element,
+    hxc_array_slot_const(array, source_index),
+    array->elements.size
+  );
+  /*
+   * The old slot is now outside the live range. Do not destroy it: its logical
+   * owner moved to out_element, and the stale private bytes are never read.
+   */
+  array->length = source_index;
+  if (out_present != NULL) {
+    *out_present = true;
+  }
+  return HXC_STATUS_OK;
+}
+
 hxc_status hxc_array_move(
   hxc_array *source,
   hxc_array *out_array
@@ -829,6 +870,17 @@ hxc_status hxc_array_ref_get_copy(
     return status;
   }
   return hxc_array_construct(&array->value, out_element, element);
+}
+
+hxc_status hxc_array_ref_pop_move(
+  hxc_array_ref *array,
+  void *out_element,
+  bool *out_present
+) {
+  if (!hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  return hxc_array_pop_move(&array->value, out_element, out_present);
 }
 
 hxc_status hxc_array_ref_push_copy(

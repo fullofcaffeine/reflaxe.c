@@ -8,11 +8,11 @@ bounded `Array<Class>` graph path and retained-interface-field path instead
 give the same payload an exact traced representation backed by the selective
 collector. Neither form establishes a public C ABI.
 
-This task defines storage and reference operations. E3.T05 separately adds a
-bounded `new` path for unconditional, nonescaping local objects, including
-constructors, `super`, field initialization, and cleanup. General allocation
-and escaping ownership remain later work; see [bounded constructor
-lowering](constructor-lowering.md).
+This task defines storage and reference operations. E3.T05 adds bounded `new`
+paths for unconditional nonescaping locals and admitted retained graphs,
+including constructors, `super`, field initialization, exact roots, and
+cleanup. Broader allocation and unproved escaping ownership remain later work;
+see [bounded constructor lowering](constructor-lowering.md).
 
 ## Nominal storage and inheritance
 

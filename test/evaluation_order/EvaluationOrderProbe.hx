@@ -222,11 +222,14 @@ class EvaluationOrderProbe {
 		final pointer:HxcIRParameter = {id: "pointer", type: pointerType, source: source};
 		final planner = new CBodyValueCoalescingPlanner();
 
-		requireValueDisposition("single-use private local", planner.plan(syntheticValueFunction("synthetic.coalesce.local", i32, [], [localValue], [
+		final singleLoadPlan = planner.plan(syntheticValueFunction("synthetic.coalesce.local", i32, [], [localValue], [
 			syntheticBlock("entry", IRTReturn("value.local", []), source, [
 				valueInstruction("load-local", "value.local", i32, IRIOLoad(IRPLocal("local.value")), source)
 			])
-		], source)).disposition("value.local"), "inline-sequenced-load");
+		], source));
+		requireValueDisposition("single-use private local", singleLoadPlan.disposition("value.local"), "inline-sequenced-load");
+		if (singleLoadPlan.requiresStableTemporary("value.local"))
+			throw new haxe.Exception("single-use private local unexpectedly reserved a stable temporary");
 		requireValueDisposition("single-use private field", planner.plan(syntheticValueFunction("synthetic.coalesce.field", i32, [], [localRecord], [
 			syntheticBlock("entry", IRTReturn("value.field", []), source, [
 				valueInstruction("load-field", "value.field", i32, IRIOLoad(IRPField(IRPLocal("local.record"), "x")), source)
@@ -321,12 +324,15 @@ class EvaluationOrderProbe {
 				])
 			], source)).disposition("value.address"), "inline-sequenced-address");
 
-		requireValueDisposition("multiple reads of one value", planner.plan(syntheticValueFunction("synthetic.coalesce.multiple-use", i32, [], [localValue], [
+		final multipleUsePlan = planner.plan(syntheticValueFunction("synthetic.coalesce.multiple-use", i32, [], [localValue], [
 			syntheticBlock("entry", IRTReturn("value.sum", []), source, [
 				valueInstruction("load-twice", "value.twice", i32, IRIOLoad(IRPLocal("local.value")), source),
 				valueInstruction("add-twice", "value.sum", i32, IRIOBinary("haxe.i32.add", "value.twice", "value.twice", IRIStatic), source)
 			])
-		], source)).disposition("value.twice"), "materialize:multiple-uses:2");
+		], source));
+		requireValueDisposition("multiple reads of one value", multipleUsePlan.disposition("value.twice"), "materialize:multiple-uses:2");
+		if (!multipleUsePlan.requiresStableTemporary("value.twice"))
+			throw new haxe.Exception("multiply-used private local omitted its required stable temporary");
 		requireValueDisposition("expression fanout", planner.plan(syntheticValueFunction("synthetic.coalesce.fanout", i32, [candidate], [localValue], [
 			syntheticBlock("entry", IRTReturn("value.negative", []), source, [
 				valueInstruction("load-for-fanout", "value.fanout-load", i32, IRIOLoad(IRPLocal("local.value")), source),
@@ -502,6 +508,29 @@ class EvaluationOrderProbe {
 			case CCFLegacyIrreducible(_):
 				throw new haxe.Exception("reducible loop with an early return selected the irreducible fallback");
 		}
+		final loopWithBranchedReturnValue = syntheticFunction("synthetic.loop-with-branched-return-value", [condition], "loop-header", [
+			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("loop-body"), plainEdge("exit")), source),
+			syntheticBlock("loop-body", IRTBranch("condition", plainEdge("return-value-choice"), plainEdge("advance")), source),
+			syntheticBlock("return-value-choice", IRTBranch("condition", plainEdge("first-return"), plainEdge("second-return")), source),
+			syntheticBlock("first-return", IRTReturn(null, []), source),
+			syntheticBlock("second-return", IRTReturn(null, []), source),
+			syntheticBlock("advance", IRTJump(plainEdge("loop-header")), source),
+			syntheticBlock("exit", IRTReturn(null, []), source)
+		], source);
+		requireStructured("loop with a branched early-return value region", loopWithBranchedReturnValue, planner.plan(loopWithBranchedReturnValue), verifier);
+		final nestedLoopSharedTail = syntheticFunction("synthetic.nested-loop-shared-tail", [condition], "outer-header", [
+			syntheticBlock("outer-header", IRTBranch("condition", plainEdge("outer-choice"), plainEdge("exit")), source),
+			syntheticBlock("outer-choice", IRTBranch("condition", plainEdge("nested-setup"), plainEdge("shared-tail")), source),
+			syntheticBlock("nested-setup", IRTBranch("condition", plainEdge("early-return"), plainEdge("nested-header")), source),
+			syntheticBlock("nested-header", IRTBranch("condition", plainEdge("nested-body"), plainEdge("nested-exit")), source),
+			syntheticBlock("nested-body", IRTBranch("condition", plainEdge("early-return"), plainEdge("nested-advance")), source),
+			syntheticBlock("nested-advance", IRTJump(plainEdge("nested-header")), source),
+			syntheticBlock("nested-exit", IRTJump(plainEdge("shared-tail")), source),
+			syntheticBlock("shared-tail", IRTJump(plainEdge("outer-header")), source),
+			syntheticBlock("early-return", IRTReturn(null, []), source),
+			syntheticBlock("exit", IRTReturn(null, []), source)
+		], source);
+		requireStructured("nested loop with one outer shared cleanup tail", nestedLoopSharedTail, planner.plan(nestedLoopSharedTail), verifier);
 		final directBreakNormalJoin = syntheticFunction("synthetic.direct-break-normal-join", [condition], "loop-header", [
 			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("body-choice"), plainEdge("exit")), source),
 			syntheticBlock("body-choice", IRTBranch("condition", plainEdge("exit"), plainEdge("normal-arm")), source),
@@ -596,6 +625,44 @@ class EvaluationOrderProbe {
 			case CCFLegacyIrreducible(_):
 				throw new haxe.Exception("reducible loop switch break selected the irreducible fallback");
 		}
+		final loopSwitchWithAbruptDefault = syntheticFunction("synthetic.loop-switch-with-abrupt-default", [condition, selector], "loop-header", [
+			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
+			syntheticBlock("dispatch", IRTSwitch("selector", [
+				{
+					value: IRCInt("1"),
+					edge: plainEdge("first-arm")
+				},
+				{value: IRCInt("2"), edge: plainEdge("second-arm")}
+			],
+				plainEdge("error-choice")),
+				source),
+			syntheticBlock("first-arm", IRTJump(plainEdge("shared-continue-prefix")), source),
+			syntheticBlock("second-arm", IRTJump(plainEdge("shared-continue-prefix")), source),
+			syntheticBlock("shared-continue-prefix", IRTJump(plainEdge("loop-header")), source),
+			syntheticBlock("error-choice", IRTBranch("condition", plainEdge("first-return"), plainEdge("second-return")), source),
+			syntheticBlock("first-return", IRTReturn(null, []), source),
+			syntheticBlock("second-return", IRTReturn(null, []), source),
+			syntheticBlock("exit", IRTReturn(null, []), source)
+		], source);
+		requireStructured("loop switch with a shared continuation and an abrupt default", loopSwitchWithAbruptDefault,
+			planner.plan(loopSwitchWithAbruptDefault), verifier);
+		final loopSwitchWithDistinctContinuePrefixes = syntheticFunction("synthetic.loop-switch-with-distinct-continue-prefixes", [condition, selector],
+			"loop-header", [
+				syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
+				syntheticBlock("dispatch", IRTSwitch("selector", [
+					{
+						value: IRCInt("1"),
+						edge: plainEdge("first-work")
+					}
+				],
+					plainEdge("second-work")),
+					source),
+				syntheticBlock("first-work", IRTJump(plainEdge("loop-header")), source),
+				syntheticBlock("second-work", IRTJump(plainEdge("loop-header")), source),
+				syntheticBlock("exit", IRTReturn(null, []), source)
+			], source);
+		requireStructured("loop switch keeps distinct continue prefixes in their own arms", loopSwitchWithDistinctContinuePrefixes,
+			planner.plan(loopSwitchWithDistinctContinuePrefixes), verifier);
 
 		final irreducible = syntheticFunction("synthetic.irreducible", [condition], "entry", [
 			syntheticBlock("entry", IRTBranch("condition", plainEdge("left-entry"), plainEdge("right-entry")), source),
@@ -635,24 +702,24 @@ class EvaluationOrderProbe {
 			case CCFStructured(_, _):
 				throw new haxe.Exception("nested irreducible graph was incorrectly structuralized");
 		}
-		requirePlanFailure("overlapping-normal-join-prefixes",
-			() -> planner.plan(syntheticFunction("synthetic.overlapping-normal-join-prefixes", [condition, selector], "entry", [
-				syntheticBlock("entry", IRTSwitch("selector", [
-					{
-						value: IRCInt("1"),
-						edge: plainEdge("first-arm")
-					},
-					{value: IRCInt("2"), edge: plainEdge("second-arm")}
-				],
-					plainEdge("default-arm")),
-					source),
-				syntheticBlock("first-arm", IRTJump(plainEdge("split")), source),
-				syntheticBlock("split", IRTBranch("condition", plainEdge("first-return"), plainEdge("second-return")), source),
-				syntheticBlock("second-arm", IRTJump(plainEdge("first-return")), source),
-				syntheticBlock("default-arm", IRTJump(plainEdge("second-return")), source),
-				syntheticBlock("first-return", IRTReturn(null, []), source),
-				syntheticBlock("second-return", IRTReturn(null, []), source)
-			], source)));
+		final sharedAbruptPrefixes = syntheticFunction("synthetic.shared-abrupt-prefixes", [condition, selector], "entry", [
+			syntheticBlock("entry", IRTSwitch("selector", [
+				{
+					value: IRCInt("1"),
+					edge: plainEdge("first-arm")
+				},
+				{value: IRCInt("2"), edge: plainEdge("second-arm")}
+			],
+				plainEdge("default-arm")),
+				source),
+			syntheticBlock("first-arm", IRTJump(plainEdge("split")), source),
+			syntheticBlock("split", IRTBranch("condition", plainEdge("first-return"), plainEdge("second-return")), source),
+			syntheticBlock("second-arm", IRTJump(plainEdge("first-return")), source),
+			syntheticBlock("default-arm", IRTJump(plainEdge("second-return")), source),
+			syntheticBlock("first-return", IRTReturn(null, []), source),
+			syntheticBlock("second-return", IRTReturn(null, []), source)
+		], source);
+		requireStructured("overlapping prefixes that end only in shared abrupt tails", sharedAbruptPrefixes, planner.plan(sharedAbruptPrefixes), verifier);
 
 		requirePlanFailure("unreachable-block", () -> planner.plan(syntheticFunction("synthetic.unreachable", [], "entry", [
 			syntheticBlock("entry", IRTReturn(null, []), source),
@@ -704,7 +771,7 @@ class EvaluationOrderProbe {
 
 		final emission = syntheticControlFlowEmission(loopSwitchBreak, loopSwitchPlan, nestedIrreducible, nestedIrreduciblePlan);
 		return {
-			summary: "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-escapes-inverted-pre-post-and-bounded-switch-escape-structured;maximal-and-nested-irreducible-fallback;overlapping-normal-join-malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected",
+			summary: "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-abrupt-escapes-inverted-pre-post-and-bounded-switch-escape-structured;maximal-and-nested-irreducible-fallback;malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected",
 			emissionC: emission.source,
 			gotoProvenance: emission.gotoProvenance
 		};
@@ -843,7 +910,7 @@ class EvaluationOrderProbe {
 					case CBGRLoopBreakThroughSwitch: EGCLoopBreakThroughSwitch;
 				};
 				appendGotoProvenance(result, category, fn, cName, ownerBlockId, targetBlockId, labelNames);
-			case CFCFallthrough | CFCClosed | CFCReturn(_) | CFCThrow(_) | CFCUnreachable(_) | CFCBreak(_, _) | CFCContinue(_, _):
+			case CFCFallthrough | CFCClosed | CFCReturn(_) | CFCThrow(_) | CFCUnreachable(_) | CFCBreak(_, _) | CFCContinue(_, _) | CFCSharedAbrupt(_, _):
 		}
 	}
 

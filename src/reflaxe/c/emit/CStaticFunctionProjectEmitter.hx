@@ -121,6 +121,7 @@ private class CStaticFunctionSemanticPlan {
 	public final optionalForwards:Array<CDecl>;
 	public final optionalTypes:Array<CTypeSemanticPlan>;
 	public final enumForwards:Array<CDecl>;
+	public final commonEnumTypes:Array<CTypeSemanticPlan>;
 	public final enumTypes:Array<CTypeSemanticPlan>;
 	public final virtualForwards:Array<CDecl>;
 	public final classForwards:Array<CDecl>;
@@ -136,16 +137,18 @@ private class CStaticFunctionSemanticPlan {
 	public final entry:Array<CDecl>;
 
 	public function new(common:CTranslationUnit, aggregateForwards:Array<CDecl>, aggregateTypes:Array<CTypeSemanticPlan>, optionalForwards:Array<CDecl>,
-			optionalTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>, enumTypes:Array<CTypeSemanticPlan>, virtualForwards:Array<CDecl>,
-			classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>, virtualDefinitions:Array<CDecl>, virtualObjectDeclarations:Array<CDecl>,
-			moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>, supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>,
-			globalDefinitions:Array<CModuleDeclaration>, functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
+			optionalTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>, commonEnumTypes:Array<CTypeSemanticPlan>, enumTypes:Array<CTypeSemanticPlan>,
+			virtualForwards:Array<CDecl>, classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>, virtualDefinitions:Array<CDecl>,
+			virtualObjectDeclarations:Array<CDecl>, moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>, supportGlobalSplit:Int,
+			globalDeclarations:Array<CModuleDeclaration>, globalDefinitions:Array<CModuleDeclaration>, functions:Array<CFunctionSemanticPlan>,
+			entry:Array<CDecl>) {
 		this.common = common;
 		this.aggregateForwards = aggregateForwards.copy();
 		this.aggregateTypes = aggregateTypes.copy();
 		this.optionalForwards = optionalForwards.copy();
 		this.optionalTypes = optionalTypes.copy();
 		this.enumForwards = enumForwards.copy();
+		this.commonEnumTypes = commonEnumTypes.copy();
 		this.enumTypes = enumTypes.copy();
 		this.virtualForwards = virtualForwards.copy();
 		this.classForwards = classForwards.copy();
@@ -317,14 +320,19 @@ class CStaticFunctionProjectEmitter {
 		final optionalForwards = bodyEmitter.optionalForwardDeclarations();
 		final optionalTypes = optionalTypePlans(lowered, bodyEmitter);
 		final enumForwards = bodyEmitter.enumForwardDeclarations();
-		final enumTypes = enumTypePlans(lowered, bodyEmitter);
+		final allEnumTypes = enumTypePlans(lowered, bodyEmitter);
+		final commonEnumTypes = allEnumTypes.filter(plan -> !bodyEmitter.typeInstanceIsForwardDeclarable(plan.instanceId));
+		final enumTypes = allEnumTypes.filter(plan -> bodyEmitter.typeInstanceIsForwardDeclarable(plan.instanceId));
 		final virtualForwards = bodyEmitter.virtualTableForwardDeclarations();
 		final classForwards = bodyEmitter.classForwardDeclarations();
 		final classTypes = classTypePlans(lowered, bodyEmitter);
 		final virtualDefinitions = bodyEmitter.virtualTableDefinitions();
 		final virtualObjectDeclarations = bodyEmitter.virtualTableObjectDeclarations();
-		final moduleDependencies = completeModuleDependencies(lowered, aggregateTypes.concat(optionalTypes).concat(enumTypes).concat(classTypes), typeOwners,
-			bodyEmitter);
+		final commonTypeIds:Map<String, Bool> = [];
+		for (plan in commonEnumTypes)
+			commonTypeIds.set(plan.instanceId, true);
+		final moduleDependencies = completeModuleDependencies(lowered,
+			aggregateTypes.concat(optionalTypes).concat(commonEnumTypes).concat(enumTypes).concat(classTypes), typeOwners, commonTypeIds, bodyEmitter);
 		final globalDeclarations:Array<CModuleDeclaration> = [];
 		final globalDefinitions:Array<CModuleDeclaration> = [];
 		for (global in lowered.globals) {
@@ -439,8 +447,8 @@ class CStaticFunctionProjectEmitter {
 			attributes: []
 		}));
 		final semantic = new CStaticFunctionSemanticPlan(headerUnit, aggregateForwards, aggregateTypes, optionalForwards, optionalTypes, enumForwards,
-			enumTypes, virtualForwards, classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations, moduleDependencies, support,
-			supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
+			commonEnumTypes, enumTypes, virtualForwards, classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations, moduleDependencies,
+			support, supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
 		return switch layout.layout {
 			case Unity: assignUnity(semantic, layout, headerGuards);
 			case Split: assignSplit(semantic, layout, headerGuards);
@@ -567,7 +575,7 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(headerUnit, semantic.optionalForwards);
 		appendDeclarations(headerUnit, semantic.virtualForwards);
 		appendDeclarations(headerUnit, semantic.classForwards);
-		appendTypeDeclarations(headerUnit, semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.enumTypes));
+		appendTypeDeclarations(headerUnit, semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.commonEnumTypes).concat(semantic.enumTypes));
 		// A class may contain an interface pair by value, so the pair must be
 		// complete before class definitions in unity output too. Split/package
 		// layouts establish the same ordering in their shared private type header.
@@ -622,6 +630,11 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(typesUnit, semantic.enumForwards);
 		appendDeclarations(typesUnit, semantic.virtualForwards);
 		appendDeclarations(typesUnit, semantic.classForwards);
+		// ISO C11 cannot forward-declare native enums. Defining these small,
+		// payload-free values in the existing shared type header prevents a false
+		// module cycle when one Haxe module declares both an enum and a record that
+		// depends (indirectly) on a record in another module.
+		appendTypeDeclarations(typesUnit, semantic.commonEnumTypes);
 		// Interface values are stored by value in ordinary class fields. Their
 		// two-pointer struct must therefore be complete before a module header can
 		// define its owning class. Table layouts use only forward-declared object
@@ -734,6 +747,7 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(typesUnit, semantic.enumForwards);
 		appendDeclarations(typesUnit, semantic.virtualForwards);
 		appendDeclarations(typesUnit, semantic.classForwards);
+		appendTypeDeclarations(typesUnit, semantic.commonEnumTypes);
 		appendDeclarations(typesUnit, semantic.virtualDefinitions);
 		appendDeclarations(typesUnit, semantic.virtualObjectDeclarations);
 		headers.push({
@@ -1101,22 +1115,22 @@ class CStaticFunctionProjectEmitter {
 	}
 
 	static function completeModuleDependencies(lowered:CBodyLoweringResult, typePlans:Array<CTypeSemanticPlan>, typeOwners:Map<String, String>,
-			emitter:CBodyEmitter):Map<String, Array<String>> {
+			commonTypeIds:Map<String, Bool>, emitter:CBodyEmitter):Map<String, Array<String>> {
 		final result:Map<String, Array<String>> = [];
 		for (module in lowered.program.modules)
 			result.set(module.id, []);
 		for (plan in typePlans) {
 			requireModuleDependencyList(result, plan.modulePath);
 			for (instanceId in plan.completeDependencies)
-				addModuleDependencyForInstance(result, plan.modulePath, instanceId, typeOwners);
+				addModuleDependencyForInstance(result, plan.modulePath, instanceId, typeOwners, commonTypeIds);
 		}
 		for (fn in lowered.functions) {
-			addModuleDeclarationTypeDependency(result, fn.modulePath, fn.ir.returnType, typeOwners, emitter);
+			addModuleDeclarationTypeDependency(result, fn.modulePath, fn.ir.returnType, typeOwners, commonTypeIds, emitter);
 			for (parameter in fn.ir.parameters)
-				addModuleDeclarationTypeDependency(result, fn.modulePath, parameter.type, typeOwners, emitter);
+				addModuleDeclarationTypeDependency(result, fn.modulePath, parameter.type, typeOwners, commonTypeIds, emitter);
 		}
 		for (global in lowered.globals)
-			addModuleDeclarationTypeDependency(result, global.modulePath, global.ir.type, typeOwners, emitter);
+			addModuleDeclarationTypeDependency(result, global.modulePath, global.ir.type, typeOwners, commonTypeIds, emitter);
 		for (dependencies in result)
 			dependencies.sort(compareStrings);
 		return result;
@@ -1128,11 +1142,11 @@ class CStaticFunctionProjectEmitter {
 		module source includes the umbrella after all complete definitions exist.
 	**/
 	static function addModuleDeclarationTypeDependency(result:Map<String, Array<String>>, modulePath:String, type:HxcIRTypeRef,
-			typeOwners:Map<String, String>, emitter:CBodyEmitter):Void {
+			typeOwners:Map<String, String>, commonTypeIds:Map<String, Bool>, emitter:CBodyEmitter):Void {
 		final instances:Array<String> = [];
 		addDeclarationHeaderDependencies(type, instances, emitter);
 		for (instanceId in instances)
-			addModuleDependencyForInstance(result, modulePath, instanceId, typeOwners);
+			addModuleDependencyForInstance(result, modulePath, instanceId, typeOwners, commonTypeIds);
 	}
 
 	static function addDeclarationHeaderDependencies(type:HxcIRTypeRef, dependencies:Array<String>, emitter:CBodyEmitter):Void {
@@ -1157,8 +1171,10 @@ class CStaticFunctionProjectEmitter {
 		}
 	}
 
-	static function addModuleDependencyForInstance(result:Map<String, Array<String>>, modulePath:String, instanceId:String,
-			typeOwners:Map<String, String>):Void {
+	static function addModuleDependencyForInstance(result:Map<String, Array<String>>, modulePath:String, instanceId:String, typeOwners:Map<String, String>,
+			commonTypeIds:Map<String, Bool>):Void {
+		if (commonTypeIds.exists(instanceId))
+			return;
 		final owner = typeOwners.get(instanceId);
 		if (owner == null || owner == modulePath)
 			return;
