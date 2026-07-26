@@ -77,9 +77,59 @@ normal Git secret scanner sees only opaque Dolt storage chunks. Do not use the
 passive JSONL file as a replacement database or run `bd import` during ordinary
 synchronization.
 
+## Nullable-history recovery reader
+
+The reviewed Beads 1.1.0 build has one upstream read bug: `bd history` scans
+old text columns into non-null Go strings, but 46 pre-migration revisions
+legitimately contain SQL `NULL`. The command stops at the first such revision.
+That is not evidence of database damage, and the publication guard must not
+skip the unreadable rows. Upstream
+[issue 4867](https://github.com/gastownhall/beads/issues/4867) and
+[pull request 4912](https://github.com/gastownhall/beads/pull/4912) own the
+Beads fix. Repository issue `haxe_c-od2.10` owns this recovery path and its
+removal once a fixed Beads build becomes the reviewed pin.
+
+Until then, the guard admits one read-only Dolt command-line build whose Go
+module revision and checksum exactly match the Dolt library embedded in the
+reviewed Beads binary. Build it from the pinned module:
+
+```sh
+HXC_DOLT_TOOL_DIR="$PWD/.cache/tools/dolt-2.1.4"
+mkdir -p "$HXC_DOLT_TOOL_DIR"
+
+# CGO builds need the ICU compiler and linker flags. On Homebrew systems,
+# pkg-config obtains them from the installed icu4c package.
+CGO_CPPFLAGS="$(pkg-config --cflags icu-uc icu-i18n)" \
+CGO_LDFLAGS="$(pkg-config --libs icu-uc icu-i18n)" \
+GOBIN="$HXC_DOLT_TOOL_DIR" \
+  go install github.com/dolthub/dolt/go/cmd/dolt@v0.40.5-0.20260605230755-1bf533220ab0
+
+HXC_DOLT_BIN="$HXC_DOLT_TOOL_DIR/dolt" npm run beads:push
+```
+
+`resolve-reviewed-dolt.py` checks the executable's user-facing version, Go
+package path, exact module revision, and module checksum. A different binary
+that merely prints “2.1.4” is rejected.
+
+This recovery does not edit, normalize, compact, or replace the database. It
+feeds Gitleaks three decoded sources:
+
+1. `bd export --all`, covering the complete current Beads records;
+2. `dolt_log`, covering database commit metadata; and
+3. each `dolt_diff_<table>` system table, whose `from_*` and `to_*` columns
+   contain every changed row throughout the current branch's history.
+
+The scanner discovers every base table, validates each table name before
+constructing the fixed `SELECT`, and fails before publication if any query,
+decode, provenance check, or Gitleaks scan fails. The reviewed `bd` binary
+still performs the eventual push. The standalone Dolt binary has read
+authority only.
+
 ## Recovery messages
 
 When a hook says no reviewed client was found, install Beads 1.1.0 from revision
 `8e4e59d39` or point `HXC_BD_BIN` to that build. When it says the database is
 unavailable after upgrading the client, follow the adoption steps above rather
-than initializing or migrating another database in place.
+than initializing or migrating another database in place. When `bd history`
+reports a legacy `NULL` conversion failure, use the exact recovery reader above;
+do not bypass `push-safe.sh`, skip the affected issue, or rewrite history.

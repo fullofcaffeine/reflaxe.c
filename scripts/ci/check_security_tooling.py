@@ -22,8 +22,11 @@ INSTALLER = ROOT / "scripts/ci/install-gitleaks.sh"
 GITLEAKS_CONFIG = ROOT / ".gitleaks.toml"
 PACKAGE = ROOT / "package.json"
 BEADS_RESOLVER = ROOT / "scripts/beads/resolve-reviewed.py"
+DOLT_RESOLVER = ROOT / "scripts/beads/resolve-reviewed-dolt.py"
 EXPECTED_BEADS_VERSION = "1.1.0"
 EXPECTED_BEADS_REVISION = "8e4e59d39"
+EXPECTED_DOLT_VERSION = "2.1.4"
+EXPECTED_DOLT_MODULE_REVISION = "1bf533220ab0"
 EXPECTED_ACTIONS = {
     "actions/checkout": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
     "actions/setup-node": "249970729cb0ef3589644e2896645e5dc5ba9c38",
@@ -361,6 +364,20 @@ def validate_config_and_hooks() -> None:
                 f"reviewed Beads resolver lost compatibility contract: {expected}"
             )
 
+    dolt_resolver = read_text(DOLT_RESOLVER)
+    for expected in (
+        EXPECTED_DOLT_VERSION,
+        EXPECTED_DOLT_MODULE_REVISION,
+        "HXC_DOLT_BIN",
+        'shutil.which("go")',
+        '"version", "-m"',
+        "EXPECTED_MODULE_SUM",
+    ):
+        if expected not in dolt_resolver:
+            raise SecurityToolingFailure(
+                f"reviewed Dolt recovery resolver lost provenance contract: {expected}"
+            )
+
     git_scan = read_text(ROOT / "scripts/security/run-gitleaks.sh")
     for required in (
         'readonly DOLT_REMOTE_REF="refs/dolt/data"',
@@ -377,6 +394,11 @@ def validate_config_and_hooks() -> None:
     for required in (
         "export --all",
         'history "$issue_id" --json',
+        "resolve-reviewed-dolt.py",
+        "SELECT * FROM dolt_log",
+        "dolt_diff_${table_name}",
+        "table_type = 'BASE TABLE'",
+        'PIPELINE_STATUS=("${PIPESTATUS[@]}")',
         "gitleaks stdin",
     ):
         if required not in beads_scan:
@@ -483,6 +505,7 @@ def validate_config_and_hooks() -> None:
         "scripts/beads/push-safe.sh",
         "scripts/beads/export-passive.sh",
         "scripts/beads/resolve-reviewed.py",
+        "scripts/beads/resolve-reviewed-dolt.py",
         "scripts/lint/hx_format_guard.sh",
         "scripts/security/run-beads-gitleaks.sh",
         "scripts/security/run-gitleaks.sh",
