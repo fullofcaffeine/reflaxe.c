@@ -80,6 +80,8 @@ class CPreparedBodyArray {
 	public final copyStatusRequest:Null<CSymbolRequest>;
 	public final assignStatusRequest:Null<CSymbolRequest>;
 	public final managedByCollector:Bool;
+	public var sortAdapterRequest:Null<CSymbolRequest> = null;
+	public var sortAdapterParameterRequests:Array<CSymbolRequest> = [];
 	public var descriptorRequest:Null<CSymbolRequest> = null;
 	public var traceRequest:Null<CSymbolRequest> = null;
 	public var finalizerRequest:Null<CSymbolRequest> = null;
@@ -224,11 +226,13 @@ class CLoweredBodyArray {
 	public final descriptorName:Null<CIdentifier>;
 	public final traceName:Null<CIdentifier>;
 	public final finalizerName:Null<CIdentifier>;
+	public final sortAdapterName:Null<CIdentifier>;
+	public final sortAdapterParameterNames:Array<CIdentifier>;
 
 	public function new(prepared:CPreparedBodyArray, copyName:Null<CIdentifier>, assignName:Null<CIdentifier>, destroyName:Null<CIdentifier>,
 			copyParameterNames:Array<CIdentifier>, assignParameterNames:Array<CIdentifier>, destroyParameterNames:Array<CIdentifier>,
 			copyStatusName:Null<CIdentifier>, assignStatusName:Null<CIdentifier>, descriptorName:Null<CIdentifier>, traceName:Null<CIdentifier>,
-			finalizerName:Null<CIdentifier>) {
+			finalizerName:Null<CIdentifier>, sortAdapterName:Null<CIdentifier>, sortAdapterParameterNames:Array<CIdentifier>) {
 		this.prepared = prepared;
 		this.copyName = copyName;
 		this.assignName = assignName;
@@ -241,6 +245,8 @@ class CLoweredBodyArray {
 		this.descriptorName = descriptorName;
 		this.traceName = traceName;
 		this.finalizerName = finalizerName;
+		this.sortAdapterName = sortAdapterName;
+		this.sortAdapterParameterNames = sortAdapterParameterNames.copy();
 	}
 
 	/** Managed strategies always have the complete callback trio. */
@@ -417,6 +423,23 @@ class CBodyArrayRegistry {
 		return request;
 	}
 
+	/**
+		Request the one typed comparator adapter shared by this Array specialization.
+
+		The adapter recovers the exact Haxe function-pointer and element types from
+		the runtime's erased callback boundary. It is registered only when reachable
+		source calls `Array.sort`, so ordinary Array programs do not gain unused C.
+	**/
+	public function requireSortAdapter(value:CPreparedBodyArray):Void {
+		if (value.sortAdapterRequest != null)
+			return;
+		final request = new CSymbolRequest(CSKMethod, ["compiler", "haxe-array", value.digest, "sort", "compare"], CNSOrdinary("translation-unit"),
+			CSVInternal, null, [], [], 0, ["array", value.digest.substr(0, 8), "sort", "compare"]);
+		context.symbols.register(request);
+		value.sortAdapterRequest = request;
+		value.sortAdapterParameterRequests = registerParameters(request, ["context", "left", "right"]);
+	}
+
 	static function elementSemanticKey(element:CBodyValueType):String
 		return switch element.kind {
 			case CBVKPrimitive(mapping): 'primitive:${mapping.sourceType}:${Std.string(mapping.irType)}';
@@ -441,7 +464,8 @@ class CBodyArrayRegistry {
 			};
 			if (!hasCallbacks) {
 				result.push(new CLoweredBodyArray(value, null, null, null, [], [], [], null, null, identifierOrNull(symbols, value.descriptorRequest),
-					identifierOrNull(symbols, value.traceRequest), identifierOrNull(symbols, value.finalizerRequest)));
+					identifierOrNull(symbols, value.traceRequest), identifierOrNull(symbols, value.finalizerRequest),
+					identifierOrNull(symbols, value.sortAdapterRequest), value.sortAdapterParameterRequests.map(symbols.identifierFor)));
 				continue;
 			}
 			if (value.copyRequest == null || value.assignRequest == null || value.destroyRequest == null)
@@ -453,7 +477,8 @@ class CBodyArrayRegistry {
 				value.assignParameterRequests.map(symbols.identifierFor), value.destroyParameterRequests.map(symbols.identifierFor),
 				symbols.identifierFor(value.copyStatusRequest), symbols.identifierFor(value.assignStatusRequest),
 				identifierOrNull(symbols, value.descriptorRequest), identifierOrNull(symbols, value.traceRequest),
-				identifierOrNull(symbols, value.finalizerRequest)));
+				identifierOrNull(symbols, value.finalizerRequest), identifierOrNull(symbols, value.sortAdapterRequest),
+				value.sortAdapterParameterRequests.map(symbols.identifierFor)));
 		}
 		return result;
 	}

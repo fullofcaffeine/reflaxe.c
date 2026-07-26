@@ -1076,6 +1076,43 @@
       "notes": "The admitted element specializations create distinct Array storage and shallow-copy slots in source order through their exact copy or retain operation. Primitive, String, Bytes, nested Array, managed enum/record, and traced class-reference evidence covers independent outer mutation, shared element identity, returns, allocation failure, and partial-copy rollback. Unsupported element representations remain fail-closed."
     },
     {
+      "id": "array-sort-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "sort",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(f : ((Array.T, Array.T) -> Int)) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/negative/sort_capturing_comparator/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted Array specializations sort in place through one exact non-capturing `(T, T) -> Int` comparator. Receiver and comparator evaluation happen once, aliases observe the reorder, and allocation-free slot relocation preserves managed element ownership. Haxe does not promise a stable Array.sort; capturing closures and unsupported element representations remain source-positioned failures."
+    },
+    {
       "id": "array-string-join-partial",
       "selector": {
         "module": "Array",
@@ -2900,12 +2937,9 @@
       "kind": "method",
       "signature": "(f : ((Array.T, Array.T) -> Int)) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -2913,20 +2947,23 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/negative/sort_capturing_comparator/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted Array specializations sort in place through one exact non-capturing `(T, T) -> Int` comparator. Receiver and comparator evaluation happen once, aliases observe the reorder, and allocation-free slot relocation preserves managed element ownership. Haxe does not promise a stable Array.sort; capturing closures and unsupported element representations remain source-positioned failures.",
+      "ruleId": "array-sort-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:fb71f06231e0f2f975330c42cb76a90c5bc9c2297f0f6145c970818827930f03",

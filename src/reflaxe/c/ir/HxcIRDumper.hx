@@ -341,6 +341,7 @@ class HxcIRDumper {
 			case IRRTagged: "tagged";
 			case IRROpaqueHandle: "opaque-handle";
 			case IRRManaged(runtimeFeature): 'managed(${quote(runtimeFeature)})';
+			case IRRStackClosure(parameters, result): 'stack-closure(${parameters.map(typeRef).join(",")})->${typeRef(result)}';
 		}
 	}
 

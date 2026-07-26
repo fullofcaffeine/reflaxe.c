@@ -33,6 +33,7 @@ import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueKind;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
+import reflaxe.c.lowering.CBodyAggregate.CBodyStackClosureCapture;
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregateField;
@@ -372,9 +373,30 @@ class CBodyLowering {
 			preparedById.set(fn.irId, fn);
 		}
 		final globalRegistry = new BodyGlobalRegistry(context, inputGlobals == null ? [] : inputGlobals, deferredInitializersByGlobal);
+		final functionLiterals = new FunctionLiteralRegistry(context, aggregateRegistry);
+		for (fn in prepared.copy())
+			functionLiterals.discover(fn, preparedById);
+		final literalFunctions = functionLiterals.preparedFunctions();
+		for (closure in literalFunctions) {
+			if (preparedById.exists(closure.irId))
+				throw new CBodyEmissionError('function literal collides with semantic function `${closure.irId}`');
+			prepared.push(closure);
+			preparedById.set(closure.irId, closure);
+		}
+		// Nested literals are deliberately rejected, but an admitted literal body
+		// can still pass a named function or enum constructor to another proven
+		// synchronous helper. Give those values the same contextual adapter prepass
+		// as named function bodies before symbol finalization.
+		for (closure in literalFunctions)
+			functionLiterals.discover(closure, preparedById);
+		for (adapter in functionLiterals.preparedStaticAdapters()) {
+			if (preparedById.exists(adapter.irId))
+				throw new CBodyEmissionError('synchronous callback adapter collides with semantic function `${adapter.irId}`');
+			preparedById.set(adapter.irId, adapter);
+		}
 		final enumConstructorAdapters = new EnumConstructorAdapterRegistry(context, aggregateRegistry);
 		for (fn in prepared)
-			enumConstructorAdapters.discover(fn);
+			enumConstructorAdapters.discover(fn, functionLiterals);
 		for (adapter in enumConstructorAdapters.preparedFunctions()) {
 			if (preparedById.exists(adapter.irId))
 				throw new CBodyEmissionError('enum-constructor adapter collides with semantic function `${adapter.irId}`');
@@ -383,7 +405,7 @@ class CBodyLowering {
 		final builders:Array<FunctionBuilder> = [];
 		for (fn in prepared)
 			builders.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry,
-				enumConstructorAdapters, preparedDispatch));
+				enumConstructorAdapters, functionLiterals, preparedDispatch));
 		// Representation is a whole-program decision. Discover the narrow
 		// `Array<Class>` graph first so an earlier function cannot choose stack
 		// storage merely because a later function is the first place that mentions
@@ -402,8 +424,16 @@ class CBodyLowering {
 		final built:Array<BuiltBodyFunction> = [];
 		for (builder in builders)
 			built.push(builder.build());
+		for (adapter in functionLiterals.builtStaticAdapters())
+			built.push(adapter);
 		for (adapter in enumConstructorAdapters.builtFunctions())
 			built.push(adapter);
+		// Contextual enum-constructor adapters can be admitted while a caller body
+		// is built, after the direct adapter discovery pass. Register those late
+		// but still request-local owners before managed-root naming and emission.
+		for (adapter in enumConstructorAdapters.preparedFunctions())
+			if (!preparedById.exists(adapter.irId))
+				preparedById.set(adapter.irId, adapter);
 		aggregateRegistry.completeClassLayouts();
 		final preparedGlobals = globalRegistry.canonicalGlobals();
 		final preparedAggregates = aggregateRegistry.canonicalAggregates();
@@ -1104,6 +1134,21 @@ private typedef LoweredPlace = {
 	final mutable:Bool;
 }
 
+/**
+	A stack local that keeps one captured-variable address available across blocks.
+
+	HxcIR values are immutable and local to the basic block that creates them.
+	Automatic locals, by contrast, are stable function storage. The closure entry
+	block saves each environment pointer here; a read or write loads that pointer
+	in its current block before dereferencing it.
+**/
+private typedef CapturedPlaceBinding = {
+	final pointerLocalId:String;
+	final pointerMapping:CBodyValueType;
+	final valueMapping:CBodyValueType;
+	final mutable:Bool;
+}
+
 /** An assignment destination, optionally saved as one checked element address. */
 private typedef StagedFlowPlace = {
 	final target:LoweredPlace;
@@ -1196,6 +1241,27 @@ private typedef PreparedConstructorSignature = {
 	final arguments:Array<PreparedParameter>;
 }
 
+/** One captured outer variable and its pointer field in a stack environment. */
+private typedef PreparedStackClosureCapture = {
+	final compilerId:Int;
+	final sourceName:String;
+	final mapping:CBodyValueType;
+	final field:CPreparedBodyAggregateField;
+}
+
+/**
+	The caller-owned environment read by one promoted capturing function literal.
+
+	The hidden adapter parameter is always opaque `void *` at the C ABI. The
+	function body converts it back to this exact aggregate before loading the
+	typed capture pointers.
+**/
+private typedef PreparedStackClosureEnvironment = {
+	final aggregate:CPreparedBodyAggregate;
+	final captures:Array<PreparedStackClosureCapture>;
+	final contextParameterId:String;
+}
+
 private typedef PreparedBodyFunction = {
 	final modulePath:String;
 	final declarationPath:String;
@@ -1211,6 +1277,7 @@ private typedef PreparedBodyFunction = {
 	final returnMapping:CBodyValueType;
 	final functionRequest:CSymbolRequest;
 	final parameterRequests:Map<String, CSymbolRequest>;
+	final closureEnvironment:Null<PreparedStackClosureEnvironment>;
 }
 
 private enum PreparedBodyRole {
@@ -1375,8 +1442,8 @@ private class EnumConstructorAdapterRegistry {
 		this.aggregateRegistry = aggregateRegistry;
 	}
 
-	/** Discover constructor values while excluding constructors called directly. */
-	public function discover(owner:PreparedBodyFunction):Void {
+	/** Discover constructor values with the callback context proven by the source prepass. */
+	public function discover(owner:PreparedBodyFunction, functionLiterals:FunctionLiteralRegistry):Void {
 		function visit(expression:TypedExpr):Void {
 			switch expression.expr {
 				case TCall(callee, arguments):
@@ -1385,7 +1452,7 @@ private class EnumConstructorAdapterRegistry {
 					for (argument in arguments)
 						visit(argument);
 				case TField(_, FEnum(reference, field)) if (isFunctionType(expression.t)):
-					require(expression, reference, field, owner);
+					require(expression, reference, field, owner, functionLiterals.expectedMapping(expression, owner));
 				case _:
 					TypedExprTools.iter(expression, visit);
 			}
@@ -1393,7 +1460,8 @@ private class EnumConstructorAdapterRegistry {
 		visit(owner.bodyExpression);
 	}
 
-	public function require(expression:TypedExpr, reference:Ref<EnumType>, field:EnumField, owner:PreparedBodyFunction):PreparedBodyFunction {
+	public function require(expression:TypedExpr, reference:Ref<EnumType>, field:EnumField, owner:PreparedBodyFunction,
+			?expected:CBodyValueType):PreparedBodyFunction {
 		final callable = aggregateRegistry.valueType(expression.t, expression.pos, owner.modulePath, owner.sourcePath,
 			(position, node) -> reject(owner, position, node), 'enum-constructor-function:${field.name}');
 		final signature = callable.functionValue();
@@ -1419,7 +1487,19 @@ private class EnumConstructorAdapterRegistry {
 			if (payload.indirect || hasManagedLifetime(payload.valueType))
 				return reject(owner, expression.pos, 'enum-constructor-function:${field.name}:parameter-$index-managed-or-recursive-adapter-not-yet-admitted');
 		}
-		final id = adapterId(enumValue, field.name);
+		final closure = expected == null ? null : expected.stackClosureValue();
+		if (expected != null && closure == null)
+			return reject(owner, expression.pos, 'enum-constructor-function:${field.name}:contextual-value-is-not-stack-closure');
+		if (closure != null) {
+			if (closure.parameters.length != signature.parameters.length)
+				return reject(owner, expression.pos, 'enum-constructor-function:${field.name}:stack-closure-parameter-count');
+			for (index in 0...signature.parameters.length)
+				if (FunctionBuilder.typeKey(closure.parameters[index].irType) != FunctionBuilder.typeKey(signature.parameters[index].irType))
+					return reject(owner, expression.pos, 'enum-constructor-function:${field.name}:stack-closure-parameter-$index-type');
+			if (FunctionBuilder.typeKey(closure.result.irType) != FunctionBuilder.typeKey(signature.result.irType))
+				return reject(owner, expression.pos, 'enum-constructor-function:${field.name}:stack-closure-result-type');
+		}
+		final id = adapterId(enumValue, field.name, closure == null ? null : closure.carrier.instanceId);
 		final existing = byId.get(id);
 		if (existing != null)
 			return existing;
@@ -1428,11 +1508,38 @@ private class EnumConstructorAdapterRegistry {
 		// the value first. HxcIR modules must stay within one source file, and using
 		// the caller here would also make output depend on discovery order.
 		final source = tagCase.source;
-		final request = new CSymbolRequest(CSKMethod, ["compiler", "enum-constructor-adapter", enumValue.digest, field.name], CNSOrdinary("translation-unit"),
-			CSVInternal, null, [], enumValue.typeArguments.map(argument -> argument.key), null, [enumValue.displayName, field.name, "adapter"]);
+		final requestPath = ["compiler", "enum-constructor-adapter", enumValue.digest, field.name];
+		if (closure != null)
+			requestPath.push("stack-" + closure.carrier.instanceId);
+		final request = new CSymbolRequest(CSKMethod, requestPath, CNSOrdinary("translation-unit"), CSVInternal, null, [],
+			enumValue.typeArguments.map(argument -> argument.key), null, [
+				enumValue.displayName,
+				field.name,
+				closure == null ? "adapter" : "synchronous callback adapter"
+			]);
 		context.symbols.register(request);
 		final parameters:Array<PreparedParameter> = [];
 		final parameterRequests:Map<String, CSymbolRequest> = [];
+		if (closure != null) {
+			final contextMapping = CBodyValueType.closureContext();
+			final contextId = "parameter.context";
+			parameters.push({
+				compilerId: -2147483647,
+				ir: {id: contextId, type: contextMapping.irType, source: source},
+				mapping: contextMapping,
+				borrowedReference: false,
+				defaultValue: null
+			});
+			final contextRequest = new CSymbolRequest(CSKLocal, [
+				"compiler",
+				"enum-constructor-adapter",
+				enumValue.digest,
+				field.name,
+				"stack-context"
+			], CNSOrdinary(request.stableKey()), CSVInternal, null, [], [], 0, ["context"]);
+			context.symbols.register(contextRequest);
+			parameterRequests.set(contextId, contextRequest);
+		}
 		for (index in 0...tagCase.payload.length) {
 			final payload = tagCase.payload[index];
 			final parameterId = 'parameter.$index';
@@ -1449,8 +1556,8 @@ private class EnumConstructorAdapterRegistry {
 				enumValue.digest,
 				field.name,
 				payload.name
-			], CNSOrdinary(request.stableKey()), CSVInternal, null, [], [], index,
-				[payload.name]);
+			], CNSOrdinary(request.stableKey()), CSVInternal,
+				null, [], [], index + (closure == null ? 0 : 1), [payload.name]);
 			context.symbols.register(parameterRequest);
 			parameterRequests.set(parameterId, parameterRequest);
 		}
@@ -1458,8 +1565,8 @@ private class EnumConstructorAdapterRegistry {
 			modulePath: enumValue.ownerModule,
 			declarationPath: enumValue.haxePath,
 			sourcePath: source.file,
-			displayName: '${field.name} constructor adapter',
-			fieldName: field.name,
+			displayName: '${field.name} constructor adapter${closure == null ? "" : " for synchronous callback"}',
+			fieldName: closure == null ? field.name : '${field.name}.synchronous-callback-adapter',
 			specialization: null,
 			sourceExpression: expression,
 			bodyExpression: expression,
@@ -1468,7 +1575,8 @@ private class EnumConstructorAdapterRegistry {
 			parameters: parameters,
 			returnMapping: signature.result,
 			functionRequest: request,
-			parameterRequests: parameterRequests
+			parameterRequests: parameterRequests,
+			closureEnvironment: null
 		};
 		byId.set(id, prepared);
 		casesById.set(id, tagCase);
@@ -1493,6 +1601,7 @@ private class EnumConstructorAdapterRegistry {
 		if (enumValue == null)
 			throw new CBodyEmissionError('enum-constructor adapter `${prepared.irId}` lost its enum result representation');
 		final result:HxcIRResult = {id: "value.0", type: prepared.returnMapping.irType};
+		final payloadParameters = prepared.parameters.filter(parameter -> parameter.ir.id != "parameter.context");
 		final ir:HxcIRFunction = {
 			id: prepared.irId,
 			displayName: '${prepared.declarationPath}.${prepared.displayName}',
@@ -1513,7 +1622,7 @@ private class EnumConstructorAdapterRegistry {
 						{
 							id: "instruction.0.construct-enum-adapter",
 							result: result,
-							kind: IRIOConstructTag(enumValue.instanceId, tagCase.name, prepared.parameters.map(parameter -> parameter.ir.id)),
+							kind: IRIOConstructTag(enumValue.instanceId, tagCase.name, payloadParameters.map(parameter -> parameter.ir.id)),
 							source: source
 						}
 					],
@@ -1536,8 +1645,8 @@ private class EnumConstructorAdapterRegistry {
 		};
 	}
 
-	static function adapterId(value:CPreparedBodyEnumInstance, caseName:String):String
-		return 'function.enum-constructor-adapter.${value.instanceId}.$caseName';
+	static function adapterId(value:CPreparedBodyEnumInstance, caseName:String, carrierId:Null<String>):String
+		return carrierId == null ? 'function.enum-constructor-adapter.${value.instanceId}.$caseName' : 'function.enum-constructor-adapter.${value.instanceId}.$caseName.stack.$carrierId';
 
 	static function hasManagedLifetime(value:CBodyValueType):Bool
 		return switch value.kind {
@@ -1559,6 +1668,537 @@ private class EnumConstructorAdapterRegistry {
 			case TField(_, FEnum(reference, field)): {reference: reference, field: field};
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): enumConstructor(inner);
 			case _: null;
+		};
+
+	function reject<T>(owner:PreparedBodyFunction, position:Position, node:String):T {
+		final source = HaxeSourceSpan.fromPosition(position, owner.sourcePath);
+		throw new CBodyLoweringError(HxcIRDiagnostic.unsupportedTypedAstNode(Std.string(context.profile), node,
+			'function ${owner.declarationPath}.${owner.displayName} body', source),
+			position);
+	}
+}
+
+/**
+	Promote each reachable Haxe function literal with its smallest safe carrier.
+
+	A literal used as an ordinary non-capturing value remains one exact C function
+	pointer. A literal passed to a parameter proven to invoke synchronously becomes
+	a typed `{ invoke, context }` value. Captured variables live in a caller-owned
+	stack record and are stored by address, preserving Haxe's shared mutation
+	semantics without heap allocation. Any use that could retain that record still
+	fails closed under the broader escaping-closure task.
+**/
+private class FunctionLiteralRegistry {
+	final context:CompilationContext;
+	final aggregateRegistry:CBodyAggregateRegistry;
+	final byKey:Map<String, PreparedBodyFunction> = [];
+	final expectedByKey:Map<String, Null<CBodyValueType>> = [];
+	final staticAdaptersById:Map<String, PreparedBodyFunction> = [];
+	final staticAdapterTargetsById:Map<String, PreparedBodyFunction> = [];
+	final staticAdapterTemporaryRequestsById:Map<String, Map<String, CSymbolRequest>> = [];
+
+	public function new(context:CompilationContext, aggregateRegistry:CBodyAggregateRegistry) {
+		this.context = context;
+		this.aggregateRegistry = aggregateRegistry;
+	}
+
+	/**
+		Discover literals with the direct call's already-proven parameter mapping.
+
+		This is a representation prepass, not call lowering. Unknown, virtual, or
+		generic call shapes deliberately provide no stack-closure authority.
+	**/
+	public function discover(owner:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>):Void {
+		function visit(expression:TypedExpr, expected:Null<CBodyValueType>):Void {
+			switch expression.expr {
+				case TFunction(_):
+					require(expression, owner, expected);
+				case TField(_, FStatic(classReference, fieldReference))
+					if (expected != null && expected.stackClosureValue() != null && isFunctionType(expression.t)):
+					final field = fieldReference.get();
+					if (field.params.length == 0) {
+						final definition = classReference.get();
+						final targetId = CBodyLowering.functionId(definition.pack.concat([definition.name]).join("."), field.name);
+						final target = functionsById.get(targetId);
+						if (target != null)
+							requireStaticAdapter(expression, owner, expected, target);
+					}
+				case TField(_, FEnum(_, _)) if (expected != null && expected.stackClosureValue() != null && isFunctionType(expression.t)):
+					expectedByKey.set(expressionKey(expression, owner), expected);
+				case TCall(callee, arguments):
+					visit(callee, null);
+					final mappings = directArgumentMappings(callee, arguments, functionsById);
+					for (index => argument in arguments)
+						visit(argument, mappings == null || index >= mappings.length ? null : mappings[index]);
+				case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+					visit(inner, expected);
+				case _:
+					TypedExprTools.iter(expression, child -> visit(child, null));
+			}
+		}
+		visit(owner.bodyExpression, null);
+	}
+
+	/** Return the source-stable private function prepared during discovery. */
+	public function require(expression:TypedExpr, owner:PreparedBodyFunction, ?expected:CBodyValueType):PreparedBodyFunction {
+		final baseKey = expressionKey(expression, owner);
+		final expectedClosure = expected == null ? null : expected.stackClosureValue();
+		final key = '$baseKey\x00${expectedClosure == null ? "direct" : "stack"}';
+		final existing = byKey.get(key);
+		if (existing != null)
+			return existing;
+		final value = switch expression.expr {
+			case TFunction(found): found;
+			case _: return reject(owner, expression.pos, "function-literal-registry-received-non-function");
+		};
+		final captures = captureVariables(value, expression, owner);
+		if (captures.length > 0 && expectedClosure == null)
+			return reject(owner, expression.pos, 'TFunction(capturing-closure:outer-local:${captures[0].sourceName})');
+		final declared = switch TypeTools.follow(expression.t) {
+			case TFun(arguments, result): {arguments: arguments, result: result};
+			case _: return reject(owner, expression.pos, "TFunction(literal-type-not-function)");
+		};
+		if (declared.arguments.length != value.args.length)
+			return reject(owner, expression.pos, 'TFunction(literal-argument-count:declared=${declared.arguments.length},body=${value.args.length})');
+		if (expectedClosure != null && expectedClosure.parameters.length != value.args.length)
+			return reject(owner, expression.pos,
+				'TFunction(stack-closure-argument-count:expected=${expectedClosure.parameters.length},actual=${value.args.length})');
+		final source = HaxeSourceSpan.fromPosition(expression.pos, owner.sourcePath);
+		final info = Context.getPosInfos(expression.pos);
+		final mode = expectedClosure == null ? "direct" : "stack";
+		final request = new CSymbolRequest(CSKClosure,
+			owner.declarationPath.split(".").concat([owner.fieldName, "lambda", mode, Std.string(info.min), Std.string(info.max)]),
+			CNSOrdinary("translation-unit"), CSVInternal, null, [], [], info.min, [owner.displayName, "lambda", mode, Std.string(info.min)]);
+		context.symbols.register(request);
+		final parameters:Array<PreparedParameter> = [];
+		final parameterRequests:Map<String, CSymbolRequest> = [];
+		var closureEnvironment:Null<PreparedStackClosureEnvironment> = null;
+		if (expectedClosure != null) {
+			final contextMapping = CBodyValueType.closureContext();
+			final contextId = "parameter.context";
+			parameters.push({
+				compilerId: -2147483647,
+				ir: {id: contextId, type: contextMapping.irType, source: source},
+				mapping: contextMapping,
+				borrowedReference: false,
+				defaultValue: null
+			});
+			final contextRequest = new CSymbolRequest(CSKLocal,
+				owner.declarationPath.split(".").concat([owner.fieldName, "lambda", mode, Std.string(info.min), "context"]), CNSOrdinary(request.stableKey()),
+				CSVInternal, null, [], [], 0, ["context"]);
+			context.symbols.register(contextRequest);
+			parameterRequests.set(contextId, contextRequest);
+			if (captures.length > 0) {
+				final environment = aggregateRegistry.requireStackClosureEnvironment(baseKey, '${owner.declarationPath}.${owner.fieldName}.LambdaEnvironment',
+					captures, owner.modulePath, owner.sourcePath, expression.pos);
+				final preparedCaptures:Array<PreparedStackClosureCapture> = [];
+				for (index => capture in captures)
+					preparedCaptures.push({
+						compilerId: capture.compilerId,
+						sourceName: capture.sourceName,
+						mapping: capture.type,
+						field: environment.fields[index]
+					});
+				closureEnvironment = {aggregate: environment, captures: preparedCaptures, contextParameterId: contextId};
+			}
+		}
+		for (index in 0...value.args.length) {
+			final argument = value.args[index];
+			final declaredArgument = declared.arguments[index];
+			if (declaredArgument.opt || argument.value != null || isRestType(argument.v.t))
+				return reject(owner, expression.pos, 'TFunction(lambda-argument-$index:optional-or-rest-not-admitted)');
+			final mapping = aggregateRegistry.valueType(declaredArgument.t, expression.pos, owner.modulePath, owner.sourcePath,
+				(position, node) -> reject(owner, position, node), 'TFunction(lambda-argument:${argument.v.name})');
+			if (mapping.irType == IRTVoid || mapping.spanElement() != null || mapping.functionValue() != null)
+				return reject(owner, expression.pos, 'TFunction(lambda-argument-$index:not-direct-value:${mapping.cSpelling})');
+			if (expectedClosure != null
+				&& FunctionBuilder.typeKey(mapping.irType) != FunctionBuilder.typeKey(expectedClosure.parameters[index].irType))
+				return reject(owner, expression.pos, 'TFunction(stack-closure-argument-$index:contextual-signature-mismatch)');
+			final parameterId = 'parameter.$index';
+			parameters.push({
+				compilerId: argument.v.id,
+				ir: {id: parameterId, type: mapping.irType, source: source},
+				mapping: mapping,
+				borrowedReference: mapping.classValue() != null,
+				defaultValue: null
+			});
+			final parameterRequest = new CSymbolRequest(CSKLocal,
+				owner.declarationPath.split(".").concat([owner.fieldName, "lambda", mode, Std.string(info.min), argument.v.name]),
+				CNSOrdinary(request.stableKey()), CSVInternal, null, [], [], index + (expectedClosure == null ? 0 : 1), [argument.v.name]);
+			context.symbols.register(parameterRequest);
+			parameterRequests.set(parameterId, parameterRequest);
+		}
+		final returnMapping = aggregateRegistry.valueType(declared.result, expression.pos, owner.modulePath, owner.sourcePath,
+			(position, node) -> reject(owner, position, node), "TFunction(lambda-result)");
+		if (returnMapping.spanElement() != null || returnMapping.functionValue() != null)
+			return reject(owner, expression.pos, 'TFunction(lambda-result:not-direct-value:${returnMapping.cSpelling})');
+		if (expectedClosure != null
+			&& FunctionBuilder.typeKey(returnMapping.irType) != FunctionBuilder.typeKey(expectedClosure.result.irType))
+			return reject(owner, expression.pos, "TFunction(stack-closure-contextual-signature-mismatch)");
+		final prepared:PreparedBodyFunction = {
+			modulePath: owner.modulePath,
+			declarationPath: owner.declarationPath,
+			sourcePath: owner.sourcePath,
+			displayName: '${owner.displayName} lambda at ${source.startLine}:${source.startColumn}',
+			fieldName: '${owner.fieldName}.lambda.$mode.${info.min}',
+			specialization: null,
+			sourceExpression: expression,
+			bodyExpression: value.expr,
+			role: PBRFunction,
+			irId: 'function.lambda.${owner.irId}.$mode.${info.min}.${info.max}',
+			parameters: parameters,
+			returnMapping: returnMapping,
+			functionRequest: request,
+			parameterRequests: parameterRequests,
+			closureEnvironment: closureEnvironment
+		};
+		byKey.set(key, prepared);
+		expectedByKey.set(baseKey, expected);
+		return prepared;
+	}
+
+	public function preparedFunctions():Array<PreparedBodyFunction> {
+		final result = [for (value in byKey) value];
+		result.sort((left, right) -> CBodyLowering.compareUtf8(left.irId, right.irId));
+		return result;
+	}
+
+	/** Return the context-discarding adapters required by static callback values. */
+	public function preparedStaticAdapters():Array<PreparedBodyFunction> {
+		final result = [for (value in staticAdaptersById) value];
+		result.sort((left, right) -> CBodyLowering.compareUtf8(left.irId, right.irId));
+		return result;
+	}
+
+	/** Build each static adapter directly in HxcIR; no printer-only C is needed. */
+	public function builtStaticAdapters():Array<BuiltBodyFunction>
+		return preparedStaticAdapters().map(buildStaticAdapter);
+
+	/** Find the adapter discovered for one static function and carrier ABI. */
+	public function staticAdapter(targetId:String, mapping:CBodyValueType):Null<PreparedBodyFunction> {
+		final closure = mapping.stackClosureValue();
+		return closure == null ? null : staticAdaptersById.get(staticAdapterId(targetId, closure.carrier.instanceId));
+	}
+
+	/** Recover the contextual closure carrier recorded for a literal or enum constructor. */
+	public function expectedMapping(expression:TypedExpr, owner:PreparedBodyFunction):Null<CBodyValueType>
+		return expectedByKey.get(expressionKey(expression, owner));
+
+	/**
+		Create a typed adapter that ignores an empty closure context.
+
+		A stack-closure carrier has one uniform invoke signature:
+		`invoke(void *context, arguments...)`. A named static Haxe function has no
+		context parameter, so pointing the carrier at it directly would be an
+		incompatible C function-pointer call. This small HxcIR function accepts and
+		ignores the null context, then forwards the real arguments to the original
+		target. It allocates nothing and is shared by every use of the same target
+		and carrier ABI.
+	**/
+	function requireStaticAdapter(expression:TypedExpr, owner:PreparedBodyFunction, mapping:CBodyValueType, target:PreparedBodyFunction):PreparedBodyFunction {
+		final closure = mapping.stackClosureValue();
+		if (closure == null)
+			return reject(owner, expression.pos, "synchronous-callback-adapter:carrier-lost");
+		if (target.parameters.length != closure.parameters.length)
+			return reject(owner, expression.pos,
+				'synchronous-callback-adapter:${target.irId}:parameter-count=${target.parameters.length},expected=${closure.parameters.length}');
+		for (index in 0...target.parameters.length)
+			if (FunctionBuilder.typeKey(target.parameters[index].mapping.irType) != FunctionBuilder.typeKey(closure.parameters[index].irType))
+				return reject(owner, expression.pos, 'synchronous-callback-adapter:${target.irId}:parameter-$index-type-mismatch');
+		if (FunctionBuilder.typeKey(target.returnMapping.irType) != FunctionBuilder.typeKey(closure.result.irType))
+			return reject(owner, expression.pos, 'synchronous-callback-adapter:${target.irId}:return-type-mismatch');
+		final id = staticAdapterId(target.irId, closure.carrier.instanceId);
+		final existing = staticAdaptersById.get(id);
+		if (existing != null)
+			return existing;
+		final source = HaxeSourceSpan.fromPosition(target.sourceExpression.pos, target.sourcePath);
+		final sourceOrdinal = Context.getPosInfos(target.sourceExpression.pos).min;
+		final request = new CSymbolRequest(CSKClosure,
+			target.declarationPath.split(".").concat([target.fieldName, "synchronous-callback-adapter", closure.carrier.digest]),
+			CNSOrdinary("translation-unit"), CSVInternal, null, [], [], sourceOrdinal, [target.displayName, "synchronous callback adapter"]);
+		context.symbols.register(request);
+		final contextMapping = CBodyValueType.closureContext();
+		final parameters:Array<PreparedParameter> = [
+			{
+				compilerId: -2147483647,
+				ir: {id: "parameter.context", type: contextMapping.irType, source: source},
+				mapping: contextMapping,
+				borrowedReference: false,
+				defaultValue: null
+			}
+		];
+		final parameterRequests:Map<String, CSymbolRequest> = [];
+		final contextRequest = new CSymbolRequest(CSKLocal,
+			target.declarationPath.split(".").concat([target.fieldName, "synchronous-callback-adapter", "context"]), CNSOrdinary(request.stableKey()),
+			CSVInternal, null, [], [], 0, ["context"]);
+		context.symbols.register(contextRequest);
+		parameterRequests.set("parameter.context", contextRequest);
+		for (index in 0...target.parameters.length) {
+			final sourceParameter = target.parameters[index];
+			final parameterId = 'parameter.$index';
+			parameters.push({
+				compilerId: -2147483646 + index,
+				ir: {id: parameterId, type: sourceParameter.mapping.irType, source: source},
+				mapping: sourceParameter.mapping,
+				borrowedReference: sourceParameter.borrowedReference,
+				defaultValue: null
+			});
+			final parameterRequest = new CSymbolRequest(CSKLocal,
+				target.declarationPath.split(".").concat([target.fieldName, "synchronous-callback-adapter", "argument", Std.string(index)]),
+				CNSOrdinary(request.stableKey()), CSVInternal, null, [], [], index + 1, ['argument $index']);
+			context.symbols.register(parameterRequest);
+			parameterRequests.set(parameterId, parameterRequest);
+		}
+		final prepared:PreparedBodyFunction = {
+			modulePath: target.modulePath,
+			declarationPath: target.declarationPath,
+			sourcePath: target.sourcePath,
+			displayName: '${target.displayName} synchronous callback adapter',
+			fieldName: '${target.fieldName}.synchronous-callback-adapter',
+			specialization: null,
+			sourceExpression: target.sourceExpression,
+			bodyExpression: target.bodyExpression,
+			role: PBRFunction,
+			irId: id,
+			parameters: parameters,
+			returnMapping: target.returnMapping,
+			functionRequest: request,
+			parameterRequests: parameterRequests,
+			closureEnvironment: null
+		};
+		staticAdaptersById.set(id, prepared);
+		staticAdapterTargetsById.set(id, target);
+		final temporaryRequests:Map<String, CSymbolRequest> = [];
+		if (target.returnMapping.irType != IRTVoid) {
+			final temporaryRequest = new CSymbolRequest(CSKTemporary,
+				target.declarationPath.split(".").concat([target.fieldName, "synchronous-callback-adapter", "result"]), CNSOrdinary(request.stableKey()),
+				CSVInternal, null, [], [], 0, ["result"]);
+			context.symbols.register(temporaryRequest);
+			temporaryRequests.set("value.0", temporaryRequest);
+		}
+		staticAdapterTemporaryRequestsById.set(id, temporaryRequests);
+		return prepared;
+	}
+
+	function buildStaticAdapter(prepared:PreparedBodyFunction):BuiltBodyFunction {
+		final target = staticAdapterTargetsById.get(prepared.irId);
+		if (target == null)
+			throw new CBodyEmissionError('synchronous callback adapter `${prepared.irId}` lost its direct target');
+		final source = prepared.parameters[0].ir.source;
+		final arguments = [for (index in 1...prepared.parameters.length) prepared.parameters[index].ir.id];
+		final instructions:Array<HxcIRInstruction> = [];
+		var returnedValue:Null<String> = null;
+		if (prepared.returnMapping.irType == IRTVoid) {
+			instructions.push({
+				id: "instruction.0.forward",
+				result: null,
+				kind: IRIOCall({
+					dispatch: IRCDDirect(target.irId),
+					arguments: arguments,
+					returnType: IRTVoid,
+					failure: null
+				}),
+				source: source
+			});
+		} else {
+			final result:HxcIRResult = {id: "value.0", type: prepared.returnMapping.irType};
+			instructions.push({
+				id: "instruction.0.forward",
+				result: result,
+				kind: IRIOCall({
+					dispatch: IRCDDirect(target.irId),
+					arguments: arguments,
+					returnType: prepared.returnMapping.irType,
+					failure: null
+				}),
+				source: source
+			});
+			returnedValue = result.id;
+		}
+		final ir:HxcIRFunction = {
+			id: prepared.irId,
+			displayName: '${prepared.declarationPath}.${prepared.displayName}',
+			parameters: prepared.parameters.map(parameter -> parameter.ir),
+			borrowedClassParameterIds: prepared.parameters.filter(parameter -> {
+				final value = parameter.mapping.classValue();
+				return parameter.borrowedReference && value != null && !value.managedByCollector;
+			}).map(parameter -> parameter.ir.id),
+			borrowedInterfaceParameterIds: prepared.parameters.filter(parameter -> parameter.borrowedReference
+				&& parameter.mapping.interfaceValue() != null)
+				.map(parameter -> parameter.ir.id),
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [],
+			returnType: prepared.returnMapping.irType,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: instructions,
+					terminator: {kind: IRTReturn(returnedValue, []), source: source},
+					source: source
+				}
+			],
+			cleanupRegions: [],
+			source: source
+		};
+		final temporaryRequests = staticAdapterTemporaryRequestsById.get(prepared.irId);
+		if (temporaryRequests == null)
+			throw new CBodyEmissionError('synchronous callback adapter `${prepared.irId}` lost its temporary-name plan');
+		return {
+			prepared: prepared,
+			ir: ir,
+			localRequests: [],
+			spanLengthRequests: [],
+			temporaryRequests: temporaryRequests,
+			tailArgumentRequests: [],
+			labelRequests: [],
+			runtimeRequirements: []
+		};
+	}
+
+	static function staticAdapterId(targetId:String, carrierId:String):String
+		return 'function.synchronous-callback-adapter.$targetId.$carrierId';
+
+	/**
+		Collect each outer local once in stable source order.
+
+		Locals declared inside the literal belong to its own frame. A nested
+		literal or `this`/`super` capture has a different lifetime and remains
+		outside this stack-only slice.
+	**/
+	function captureVariables(value:TFunc, expression:TypedExpr, owner:PreparedBodyFunction):Array<CBodyStackClosureCapture> {
+		final owned:Map<Int, Bool> = [];
+		for (argument in value.args)
+			owned.set(argument.v.id, true);
+		var nested = false;
+		function collect(current:TypedExpr):Void {
+			switch current.expr {
+				case TFunction(_):
+					nested = true;
+				case TVar(variable, initializer):
+					owned.set(variable.id, true);
+					if (initializer != null)
+						collect(initializer);
+				case TFor(variable, iterator, body):
+					owned.set(variable.id, true);
+					collect(iterator);
+					collect(body);
+				case TTry(body, catches):
+					collect(body);
+					for (item in catches) {
+						owned.set(item.v.id, true);
+						collect(item.expr);
+					}
+				case _:
+					TypedExprTools.iter(current, collect);
+			}
+		}
+		collect(value.expr);
+		if (nested)
+			reject(owner, expression.pos, "TFunction(nested-function-literal-not-yet-admitted)");
+		final capturedById:Map<Int, TVar> = [];
+		final positionsById:Map<Int, Position> = [];
+		var capturesSelf = false;
+		function inspect(current:TypedExpr):Void {
+			switch current.expr {
+				case TFunction(_):
+				case TLocal(variable) if (!owned.exists(variable.id)):
+					capturedById.set(variable.id, variable);
+					if (!positionsById.exists(variable.id))
+						positionsById.set(variable.id, current.pos);
+				case TConst(TThis) | TConst(TSuper):
+					capturesSelf = true;
+				case _:
+					TypedExprTools.iter(current, inspect);
+			}
+		}
+		inspect(value.expr);
+		if (capturesSelf)
+			reject(owner, expression.pos, "TFunction(capturing-closure:this-or-super)");
+		final result:Array<CBodyStackClosureCapture> = [];
+		for (variable in capturedById) {
+			final variablePosition = positionsById.get(variable.id);
+			if (variablePosition == null)
+				reject(owner, expression.pos, 'TFunction(capture:${variable.name}:missing-source-position)');
+			final position = Context.getPosInfos(variablePosition);
+			final mapping = aggregateRegistry.valueType(variable.t, variablePosition, owner.modulePath, owner.sourcePath,
+				(pos, node) -> reject(owner, pos, node), 'TFunction(capture:${variable.name})');
+			if (mapping.irType == IRTVoid || mapping.spanElement() != null || mapping.functionValue() != null)
+				reject(owner, variablePosition, 'TFunction(capture:${variable.name}:not-addressable-direct-value:${mapping.cSpelling})');
+			result.push({
+				compilerId: variable.id,
+				sourceName: variable.name,
+				identity: '${position.file}:${position.min}:${position.max}:${variable.name}',
+				type: mapping,
+				position: variablePosition
+			});
+		}
+		result.sort(compareCaptureSource);
+		return result;
+	}
+
+	function directArgumentMappings(callee:TypedExpr, arguments:Array<TypedExpr>, functionsById:Map<String, PreparedBodyFunction>):Null<Array<CBodyValueType>> {
+		final unwrapped = unwrap(callee);
+		switch unwrapped.expr {
+			case TField(_, FStatic(classReference, fieldReference)):
+				if (fieldReference.get().params.length != 0)
+					return null;
+				final owner = classReference.get();
+				final target = functionsById.get(CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), fieldReference.get().name));
+				return target == null
+					|| target.parameters.length != arguments.length ? null : target.parameters.map(parameter -> parameter.mapping);
+			case _:
+		}
+		final access = CBodyDispatchCatalog.instanceAccess(unwrapped);
+		if (access == null)
+			return null;
+		final declaration = CBodyDispatchCatalog.declaringClass(access.owner, access.field);
+		final field = access.field.get();
+		if (field.params.length != 0 || CBodyDispatchCatalog.directReason(access.receiver, declaration, field) == null)
+			return null;
+		final target = functionsById.get(CBodyDispatchCatalog.methodIdForAccess(access.owner, access.field));
+		if (target == null || target.parameters.length != arguments.length + 1)
+			return null;
+		return [for (index in 1...target.parameters.length) target.parameters[index].mapping];
+	}
+
+	static function unwrap(expression:TypedExpr):TypedExpr
+		return switch expression.expr {
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): unwrap(inner);
+			case _: expression;
+		};
+
+	static function compareCaptureSource(left:CBodyStackClosureCapture, right:CBodyStackClosureCapture):Int {
+		final leftPosition = Context.getPosInfos(left.position);
+		final rightPosition = Context.getPosInfos(right.position);
+		final file = CBodyLowering.compareUtf8(leftPosition.file, rightPosition.file);
+		if (file != 0)
+			return file;
+		if (leftPosition.min != rightPosition.min)
+			return leftPosition.min - rightPosition.min;
+		if (leftPosition.max != rightPosition.max)
+			return leftPosition.max - rightPosition.max;
+		return CBodyLowering.compareUtf8(left.sourceName, right.sourceName);
+	}
+
+	static function expressionKey(expression:TypedExpr, owner:PreparedBodyFunction):String {
+		final info = Context.getPosInfos(expression.pos);
+		return '${owner.irId}\x00${info.file}\x00${info.min}\x00${info.max}';
+	}
+
+	static function isRestType(type:Type):Bool
+		return switch TypeTools.follow(type) {
+			case TAbstract(reference, _) if (reference.get().pack.join(".") == "haxe" && reference.get().name == "Rest"): true;
+			case _: false;
+		};
+
+	static function isFunctionType(type:Type):Bool
+		return switch TypeTools.follow(type) {
+			case TFun(_, _): true;
+			case _: false;
 		};
 
 	function reject<T>(owner:PreparedBodyFunction, position:Position, node:String):T {
@@ -1607,10 +2247,17 @@ private class FunctionPreparer {
 			}
 			if (declared.opt && argument.value == null)
 				unsupported(input.expression.pos, 'TFunction(optional-argument-without-typed-default:${argument.v.name})');
-			final mapping = admittedValueType(declared.t, input.expression.pos, 'TFunction(argument:${argument.v.name})');
+			var mapping = admittedValueType(declared.t, input.expression.pos, 'TFunction(argument:${argument.v.name})');
 			if (mapping.irType == IRTVoid) {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:Void)');
 			}
+			final hasExactCallbackBody = input.specialization == null
+				&& (input.instanceOwner == null || input.instanceOwner.get().isFinal);
+			if (mapping.kind.match(CBVKFunction(_, _))
+				&& hasExactCallbackBody
+				&& parameterIsSynchronousCallback(functionValue.expr, argument.v.id))
+				mapping = aggregateRegistry.requireStackClosureCarrier(mapping, input.modulePath, input.sourcePath, input.expression.pos, reject,
+					'TFunction(argument:${argument.v.name}:stack-closure-carrier)');
 			if (mapping.spanElement() != null) {
 				// A final class has no subclasses, so this method can only use the
 				// compiler-known body prepared here. That makes a span parameter a
@@ -1695,7 +2342,8 @@ private class FunctionPreparer {
 			parameters: signatureParameters,
 			returnMapping: returnMapping,
 			functionRequest: functionRequest,
-			parameterRequests: parameterRequests
+			parameterRequests: parameterRequests,
+			closureEnvironment: null
 		};
 	}
 
@@ -1784,6 +2432,38 @@ private class FunctionPreparer {
 		}
 		visit(body);
 		return safe;
+	}
+
+	/**
+		Prove that a function parameter can only run before its call returns.
+
+		Every occurrence must be the callee of a direct `parameter(arguments...)`
+		expression. Storing, returning, forwarding, comparing, or capturing the
+		value fails the proof. This deliberately small rule is what permits a
+		caller to place captured storage on its own stack: the callee has no typed
+		operation with which to retain the closure after the direct call.
+	**/
+	public static function parameterIsSynchronousCallback(body:TypedExpr, compilerId:Int):Bool {
+		var safe = true;
+		var callCount = 0;
+		function visit(expression:TypedExpr):Void {
+			if (!safe)
+				return;
+			switch expression.expr {
+				case TCall(callee, arguments) if (isDirectParameterValue(callee, compilerId)):
+					callCount++;
+					for (argument in arguments)
+						visit(argument);
+				case TFunction(_) if (referencesParameter(expression, compilerId)):
+					safe = false;
+				case TLocal(variable) if (variable.id == compilerId):
+					safe = false;
+				case _:
+					TypedExprTools.iter(expression, visit);
+			}
+		}
+		visit(body);
+		return safe && callCount > 0;
 	}
 
 	/**
@@ -2032,7 +2712,8 @@ private class ConstructorPreparer {
 			parameters: parameters,
 			returnMapping: voidMapping,
 			functionRequest: functionRequest,
-			parameterRequests: parameterRequests
+			parameterRequests: parameterRequests,
+			closureEnvironment: null
 		};
 	}
 
@@ -2151,7 +2832,8 @@ private class InitializerPreparer {
 			parameters: [],
 			returnMapping: returnMapping,
 			functionRequest: functionRequest,
-			parameterRequests: []
+			parameterRequests: [],
+			closureEnvironment: null
 		};
 	}
 }
@@ -2165,9 +2847,12 @@ private class FunctionBuilder {
 	final globalRegistry:BodyGlobalRegistry;
 	final aggregateRegistry:CBodyAggregateRegistry;
 	final enumConstructorAdapters:EnumConstructorAdapterRegistry;
+	final functionLiterals:FunctionLiteralRegistry;
 	final dispatch:CPreparedBodyDispatch;
 	final functionContext:String;
 	final parameterValuesByCompilerId:Map<Int, LoweredValue> = [];
+	final capturedPlacesByCompilerId:Map<Int, CapturedPlaceBinding> = [];
+	final capturedParameterShadowPlaces:Map<Int, LoweredPlace> = [];
 	final localIdsByCompilerId:Map<Int, String> = [];
 	final localTypesByCompilerId:Map<Int, CBodyValueType> = [];
 	final collectionBindingsByCompilerId:Map<Int, BodyCollectionBinding> = [];
@@ -2228,7 +2913,7 @@ private class FunctionBuilder {
 
 	public function new(context:CompilationContext, prepared:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>,
 			constructorSignaturesById:Map<String, PreparedConstructorSignature>, globalRegistry:BodyGlobalRegistry, aggregateRegistry:CBodyAggregateRegistry,
-			enumConstructorAdapters:EnumConstructorAdapterRegistry, dispatch:CPreparedBodyDispatch) {
+			enumConstructorAdapters:EnumConstructorAdapterRegistry, functionLiterals:FunctionLiteralRegistry, dispatch:CPreparedBodyDispatch) {
 		this.context = context;
 		this.prepared = prepared;
 		this.input = prepared;
@@ -2237,6 +2922,7 @@ private class FunctionBuilder {
 		this.globalRegistry = globalRegistry;
 		this.aggregateRegistry = aggregateRegistry;
 		this.enumConstructorAdapters = enumConstructorAdapters;
+		this.functionLiterals = functionLiterals;
 		this.dispatch = dispatch;
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.localOrdinal = prepared.parameters.length;
@@ -2290,6 +2976,51 @@ private class FunctionBuilder {
 					});
 				case _:
 			}
+		}
+		prepareClosureCapturePlaces();
+	}
+
+	/**
+		Recover typed capture places from the adapter's opaque context pointer.
+
+		The caller always supplies a non-null address for capturing literals. HxcIR
+		still checks that invariant before converting `void *` back to the exact
+		environment pointer, then loads each stored variable address once. Reads and
+		writes in the lambda use those dereferenced places just like ordinary locals.
+	**/
+	function prepareClosureCapturePlaces():Void {
+		final environment = prepared.closureEnvironment;
+		if (environment == null)
+			return;
+		var contextValue:Null<LoweredValue> = null;
+		for (parameter in prepared.parameters)
+			if (parameter.ir.id == environment.contextParameterId) {
+				contextValue = {id: parameter.ir.id, type: parameter.ir.type, mapping: parameter.mapping};
+				break;
+			}
+		if (contextValue == null)
+			throw new CBodyEmissionError('capturing function `${prepared.irId}` lost its hidden context parameter');
+		final source = environment.aggregate.source;
+		appendInstruction(null, IRIONullCheck(contextValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))), source,
+			"closure-context-null-check");
+		final environmentMapping = CBodyValueType.aggregate(environment.aggregate);
+		final environmentPointer = CBodyValueType.closureCapturePointer(environmentMapping);
+		final converted:HxcIRResult = {id: nextValueId(), type: environmentPointer.irType};
+		appendInstruction(converted, IRIOConvert(contextValue.id, IRCPointer, environmentPointer.irType, IRIStatic, null), source, "closure-context-cast");
+		registerValueTemporary(converted.id, "closure-environment");
+		for (capture in environment.captures) {
+			final pointerMapping = CBodyValueType.closureCapturePointer(capture.mapping);
+			final pointer:HxcIRResult = {id: nextValueId(), type: pointerMapping.irType};
+			appendInstruction(pointer, IRIOLoad(IRPField(IRPDereference(converted.id), capture.field.name)), capture.field.source,
+				'closure-capture-address:${capture.sourceName}');
+			registerValueTemporary(pointer.id, 'closure-capture-address:${capture.sourceName}');
+			final pointerLocalId = createFlowLocal(pointerMapping, pointer.id, capture.field.source, 'closure-capture-address:${capture.sourceName}');
+			capturedPlacesByCompilerId.set(capture.compilerId, {
+				pointerLocalId: pointerLocalId,
+				pointerMapping: pointerMapping,
+				valueMapping: capture.mapping,
+				mutable: true
+			});
 		}
 	}
 
@@ -4641,6 +5372,7 @@ private class FunctionBuilder {
 				}
 			case TArrayDecl(elements): lowerManagedArrayLiteral(expression, elements, expectedMapping);
 			case TObjectDecl(fields): lowerAggregateLiteral(expression, fields, expectedMapping);
+			case TFunction(_): lowerFunctionLiteralReference(expression, expectedMapping);
 			case TField(_, FEnum(enumReference, enumField)) if (isFunctionType(expression.t)):
 				lowerEnumConstructorFunctionReference(expression, enumReference, enumField, expectedMapping);
 			case TField(_, FEnum(enumReference, enumField)):
@@ -4703,7 +5435,8 @@ private class FunctionBuilder {
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
 					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
-						CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _):
+						CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
+						CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -6174,10 +6907,35 @@ private class FunctionBuilder {
 		};
 	}
 
+	/** Load a captured address in the current block, then expose its typed place. */
+	function lowerCapturedPlace(binding:CapturedPlaceBinding, position:Position, sourceName:String):LoweredPlace {
+		final pointer = loadPlace({
+			place: IRPLocal(binding.pointerLocalId),
+			mapping: binding.pointerMapping,
+			mutable: false
+		}, position, 'closure-capture-address-load:$sourceName');
+		return {
+			place: IRPDereference(pointer.id),
+			mapping: binding.valueMapping,
+			mutable: binding.mutable
+		};
+	}
+
 	function lowerLocal(expression:TypedExpr, variable:TVar):LoweredValue {
+		final shadow = capturedParameterShadowPlaces.get(variable.id);
+		if (shadow != null)
+			return loadPlace(shadow, expression.pos, 'stack-closure-captured-parameter-load:${variable.name}');
 		final parameter = parameterValuesByCompilerId.get(variable.id);
 		if (parameter != null) {
 			return parameter;
+		}
+		final capture = capturedPlacesByCompilerId.get(variable.id);
+		if (capture != null) {
+			final place = lowerCapturedPlace(capture, expression.pos, variable.name);
+			final value = loadPlace(place, expression.pos, 'closure-capture-load:${variable.name}');
+			if (capture.valueMapping.classValue() != null)
+				borrowedClassValueIds.set(value.id, true);
+			return value;
 		}
 		final collection = collectionBindingsByCompilerId.get(variable.id);
 		if (collection != null) {
@@ -6244,20 +7002,119 @@ private class FunctionBuilder {
 				return unsupported(expression, 'TField(function-value:parameter-$index-type:$targetId)');
 		if (typeKey(signature.result.irType) != typeKey(target.returnMapping.irType))
 			return unsupported(expression, 'TField(function-value:return-type:$targetId)');
+		final closure = expectedMapping == null ? null : expectedMapping.stackClosureValue();
+		if (closure != null) {
+			final adapter = functionLiterals.staticAdapter(targetId, expectedMapping);
+			if (adapter == null)
+				return unsupported(expression, 'TField(function-value:undiscovered-synchronous-callback-adapter:$targetId)');
+			return lowerStackClosureLiteral(expression, adapter, expectedMapping, closure);
+		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOFunctionReference(targetId), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "function-reference");
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
 		return expectedMapping == null ? lowered : coerce(lowered, expectedMapping, expression.pos, "function-reference:contextual-type");
 	}
 
+	/**
+		Materialize a literal as either a bare function pointer or a stack closure.
+
+		The contextual mapping comes from the direct callee parameter whose body was
+		proven not to retain callbacks. It is therefore authority to take addresses
+		of outer variables and pass their environment for this one synchronous call.
+	**/
+	function lowerFunctionLiteralReference(expression:TypedExpr, expectedMapping:Null<CBodyValueType>):LoweredValue {
+		final discoveredExpected = functionLiterals.expectedMapping(expression, prepared);
+		final contextual = expectedMapping == null ? discoveredExpected : expectedMapping;
+		final target = functionLiterals.require(expression, prepared, contextual);
+		final closure = contextual == null ? null : contextual.stackClosureValue();
+		if (closure != null)
+			return lowerStackClosureLiteral(expression, target, contextual, closure);
+		final mapping = bodyValueType(expression.t, expression.pos, 'TFunction(lambda:${target.irId}:type)');
+		if (mapping.functionValue() == null || mapping.stackClosureValue() != null)
+			return unsupported(expression, 'TFunction(lambda:${target.irId}:signature-lost)');
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		appendInstruction(result, IRIOFunctionReference(target.irId), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
+			"non-capturing-function-reference");
+		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
+		return contextual == null ? lowered : coerce(lowered, contextual, expression.pos, "function-literal:contextual-type");
+	}
+
+	/** Build the typed `{ invoke, context }` value for one synchronous call. */
+	function lowerStackClosureLiteral(expression:TypedExpr, target:PreparedBodyFunction, mapping:CBodyValueType,
+			closure:{carrier:CPreparedBodyAggregate, parameters:Array<CBodyValueType>, result:CBodyValueType}):LoweredValue {
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final contextMapping = CBodyValueType.closureContext();
+		if (target.parameters.length != closure.parameters.length + 1 || target.parameters[0].mapping.kind != CBVKClosureContext)
+			return unsupported(expression, 'TFunction(stack-closure-adapter-signature:${target.irId})');
+		final invokeMapping = CBodyValueType.directFunction(target.parameters.map(parameter -> parameter.mapping), target.returnMapping);
+		final invoke:HxcIRResult = {id: nextValueId(), type: invokeMapping.irType};
+		appendInstruction(invoke, IRIOFunctionReference(target.irId), source, "stack-closure-invoke-reference");
+		final contextValue:LoweredValue = if (target.closureEnvironment == null) {
+			final empty:HxcIRResult = {id: nextValueId(), type: contextMapping.irType};
+			appendInstruction(empty, IRIOConstant(IRCNull), source, "stack-closure-empty-context");
+			{id: empty.id, type: empty.type, mapping: contextMapping};
+		} else {
+			final environment = target.closureEnvironment;
+			final fields:Array<HxcIRNamedValue> = [];
+			for (capture in environment.captures) {
+				final place = closureCaptureSourcePlace(capture, expression.pos);
+				final pointerMapping = CBodyValueType.closureCapturePointer(capture.mapping);
+				final address:HxcIRResult = {id: nextValueId(), type: pointerMapping.irType};
+				appendInstruction(address, IRIOAddress(place.place), capture.field.source, 'stack-closure-capture:${capture.sourceName}');
+				registerValueTemporary(address.id, 'stack-closure-capture:${capture.sourceName}');
+				fields.push({name: capture.field.name, valueId: address.id});
+			}
+			final environmentMapping = CBodyValueType.aggregate(environment.aggregate);
+			final environmentValue:HxcIRResult = {id: nextValueId(), type: environmentMapping.irType};
+			appendInstruction(environmentValue, IRIOConstructAggregate(environment.aggregate.instanceId, fields), source, "stack-closure-environment");
+			final localId = createFlowLocal(environmentMapping, environmentValue.id, source, "stack-closure-environment");
+			final environmentPointer = CBodyValueType.closureCapturePointer(environmentMapping);
+			final address:HxcIRResult = {id: nextValueId(), type: environmentPointer.irType};
+			appendInstruction(address, IRIOAddress(IRPLocal(localId)), source, "stack-closure-environment-address");
+			registerValueTemporary(address.id, "stack-closure-environment-address");
+			final erased:HxcIRResult = {id: nextValueId(), type: contextMapping.irType};
+			appendInstruction(erased, IRIOConvert(address.id, IRCPointer, contextMapping.irType, IRIStatic, null), source, "stack-closure-context-erase");
+			registerValueTemporary(erased.id, "stack-closure-context");
+			{id: erased.id, type: erased.type, mapping: contextMapping};
+		};
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		appendInstruction(result, IRIOConstructAggregate(closure.carrier.instanceId, [
+			{name: "invoke", valueId: invoke.id},
+			{name: "context", valueId: contextValue.id}
+		]), source, "stack-closure-value");
+		registerValueTemporary(result.id, "stack-closure-value");
+		return {id: result.id, type: result.type, mapping: mapping};
+	}
+
+	/** Find stable caller storage for one captured variable, shadowing parameters when needed. */
+	function closureCaptureSourcePlace(capture:PreparedStackClosureCapture, position:Position):LoweredPlace {
+		final localId = localIdsByCompilerId.get(capture.compilerId);
+		if (localId != null)
+			return {place: IRPLocal(localId), mapping: capture.mapping, mutable: true};
+		final existing = capturedParameterShadowPlaces.get(capture.compilerId);
+		if (existing != null)
+			return existing;
+		final parameter = parameterValuesByCompilerId.get(capture.compilerId);
+		if (parameter == null)
+			return unsupportedAt(position, 'TFunction(capture:${capture.sourceName}:outside-addressable-owner)');
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final shadowId = createFlowLocal(capture.mapping, parameter.id, source, 'stack-closure-capture:${capture.sourceName}');
+		final place:LoweredPlace = {place: IRPLocal(shadowId), mapping: capture.mapping, mutable: true};
+		capturedParameterShadowPlaces.set(capture.compilerId, place);
+		return place;
+	}
+
 	/** Point an enum constructor value at its validated generated adapter. */
 	function lowerEnumConstructorFunctionReference(expression:TypedExpr, enumReference:Ref<EnumType>, enumField:EnumField,
 			expectedMapping:Null<CBodyValueType>):LoweredValue {
-		final adapter = enumConstructorAdapters.require(expression, enumReference, enumField, prepared);
 		final mapping = bodyValueType(expression.t, expression.pos, 'enum-constructor-function:${enumField.name}:type');
 		final signature = mapping.functionValue();
 		if (signature == null)
 			return unsupported(expression, 'enum-constructor-function:${enumField.name}:signature-lost-after-preparation');
+		final closure = expectedMapping == null ? null : expectedMapping.stackClosureValue();
+		final adapter = enumConstructorAdapters.require(expression, enumReference, enumField, prepared, closure == null ? null : expectedMapping);
+		if (closure != null)
+			return lowerStackClosureLiteral(expression, adapter, expectedMapping, closure);
 		if (typeKey(signature.result.irType) != typeKey(adapter.returnMapping.irType)
 			|| signature.parameters.length != adapter.parameters.length)
 			return unsupported(expression, 'enum-constructor-function:${enumField.name}:adapter-signature-drift');
@@ -7362,6 +8219,12 @@ private class FunctionBuilder {
 		return switch expression.expr {
 			case TArray(collection, index): lowerCollectionIndexPlace(expression, collection, index);
 			case TLocal(variable):
+				final shadow = capturedParameterShadowPlaces.get(variable.id);
+				if (shadow != null)
+					return shadow;
+				final capture = capturedPlacesByCompilerId.get(variable.id);
+				if (capture != null)
+					return lowerCapturedPlace(capture, expression.pos, variable.name);
 				if (parameterValuesByCompilerId.exists(variable.id)) {
 					unsupported(expression, 'TLocal(${variable.name}:parameter-assignment-not-yet-lowered)');
 				}
@@ -7663,12 +8526,17 @@ private class FunctionBuilder {
 	/** Call an already evaluated, exact-signature non-capturing function value. */
 	function lowerIndirectFunctionCall(expression:TypedExpr, calleeExpression:TypedExpr, argumentExpressions:Array<TypedExpr>, callableMapping:CBodyValueType,
 			materializeResult:Bool):Null<LoweredValue> {
-		final signature = callableMapping.functionValue();
+		// The Haxe type attached to a callback parameter remains `A -> B` even
+		// after preparation chooses the richer `{ invoke, context }` carrier for a
+		// synchronous closure. Lower the callee first and trust that prepared
+		// value's exact representation; coercing it back to the source-level bare
+		// function-pointer mapping would erase the context needed by captures.
+		var callable = lowerValue(calleeExpression, callableMapping);
+		final signature = callable.mapping.functionValue();
 		if (signature == null)
 			return unsupported(calleeExpression, "TCall(indirect-signature-lost)");
 		if (argumentExpressions.length != signature.parameters.length)
 			return unsupported(expression, 'TCall(indirect-argument-count:expected=${signature.parameters.length},actual=${argumentExpressions.length})');
-		var callable = coerce(lowerValue(calleeExpression, callableMapping), callableMapping, calleeExpression.pos, "TCall(indirect-callee)");
 		if (laterExpressionCreatesFlow(argumentExpressions, -1))
 			callable = stageCallableAcrossArguments(callable, calleeExpression.pos);
 		final stagedArguments:Array<StagedFlowValue> = [];
@@ -8292,6 +9160,38 @@ private class FunctionBuilder {
 				registerValueTemporary(result.id, "array-push-result");
 				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "push", "ordinary Haxe Array.push", source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
+			case "sort":
+				if (arguments.length != 1)
+					return unsupported(expression, 'TCall(Array.sort:argument-count=${arguments.length})');
+				final callableMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Array.sort:comparator-type)");
+				final signature = callableMapping.functionValue();
+				if (signature == null
+					|| signature.parameters.length != 2
+					|| typeKey(signature.parameters[0].irType) != typeKey(array.element.irType)
+					|| typeKey(signature.parameters[1].irType) != typeKey(array.element.irType)
+					|| typeKey(signature.result.irType) != typeKey(IRTInt(32, true))) {
+					return unsupported(arguments[0], 'TCall(Array.sort:comparator-must-be-${array.element.cSpelling}->${array.element.cSpelling}->Int)');
+				}
+				var comparator = coerce(lowerValue(arguments[0], callableMapping), callableMapping, arguments[0].pos, "TCall(Array.sort:comparator)");
+				// The runtime callback receives an erased `void *` context. Keep the
+				// exact function pointer in one addressable local for this call so
+				// the generated typed adapter can recover it without global state or
+				// a non-portable function-pointer/object-pointer cast.
+				final comparatorLocalId = createFlowLocal(callableMapping, comparator.id, HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath),
+					"array-sort-comparator");
+				comparator = loadPlace({place: IRPLocal(comparatorLocalId), mapping: callableMapping, mutable: false}, arguments[0].pos,
+					"array-sort-comparator-borrow");
+				aggregateRegistry.requireArraySort(array);
+				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				appendInstruction(null, IRIOCall({
+					dispatch: IRCDRuntime("array", "sort"),
+					arguments: [receiver.id, comparator.id],
+					returnType: IRTVoid,
+					failure: managedArrayFailure()
+				}), source, "array-sort");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "sort", "ordinary Haxe Array.sort in-place comparator ordering", source,
+					expression.pos));
+				null;
 			case _:
 				unsupported(expression, 'TCall(Array.$method:not-yet-admitted)');
 		};

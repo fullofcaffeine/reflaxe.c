@@ -39,6 +39,7 @@ MODULE_FIELDS = FIXTURES / "module_fields"
 MODULE_FIELDS_UNSUPPORTED = FIXTURES / "module_fields_unsupported"
 DEFAULT_ARGUMENT = FIXTURES / "default"
 OPTIONAL_ARGUMENT = FIXTURES / "optional"
+CLOSURE_ESCAPE = FIXTURES / "closure_escape"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_FUNCTION_LOWERING="
@@ -238,6 +239,20 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         if marker not in hxcir:
             raise FunctionLoweringFailure(f"recursive call graph omitted {marker}")
+    for marker in (
+        "representation=stack-closure(i32)->i32",
+        'name="FunctionFixture.captureRoundTrip.LambdaEnvironment"',
+        "stack-closure-capture:calls",
+        "stack-closure-capture:seed",
+        "closure-context-null-check",
+        "closure-context-cast",
+        "closure-capture-address-load:calls",
+        "closure-capture-address-load:seed",
+    ):
+        if marker not in hxcir:
+            raise FunctionLoweringFailure(
+                f"stack-closure HxcIR omitted semantic marker {marker!r}"
+            )
 
     header = required_text(report, "header")
     program_source = sources["src/program.c"]
@@ -331,9 +346,21 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise FunctionLoweringFailure(
             "generated C did not materialize nested arguments before the two-argument call"
         )
+    for marker in (
+        "struct hxc_FunctionFixture_StackClosure",
+        "hxc_operation.hxc_invoke(hxc_operation.hxc_context",
+        "struct hxc_FunctionFixture_captureRoundTrip_LambdaEnvironment",
+        "if (hxc_context == NULL)",
+        "(void *)hxc_tmp_stack_closure_environment_address",
+        "(void)hxc_context;",
+    ):
+        if marker not in program_source:
+            raise FunctionLoweringFailure(
+                f"generated C omitted stack-closure evidence {marker!r}"
+            )
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 14:
+    if not isinstance(functions, list) or len(functions) != 18:
         raise FunctionLoweringFailure("function report omitted admitted functions")
     by_field = {
         entry.get("field"): entry
@@ -341,10 +368,18 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if isinstance(entry, dict) and isinstance(entry.get("field"), str)
     }
     if (
-        len(by_field) != 14
+        len(by_field) != 18
         or by_field.get("main", {}).get("parameters") != []
         or len(by_field.get("first", {}).get("parameters", [])) != 2
         or len(by_field.get("apply", {}).get("parameters", [])) != 2
+        or len(by_field.get("applyTwice", {}).get("parameters", [])) != 2
+        or len(by_field.get("captureRoundTrip", {}).get("parameters", [])) != 1
+        or not any(
+            "captureRoundTrip lambda" in field for field in by_field
+        )
+        or not any(
+            "synchronous callback adapter" in field for field in by_field
+        )
         or len(by_field.get("recursive", {}).get("parameters", [])) != 2
     ):
         raise FunctionLoweringFailure("function parameter records drifted")
@@ -409,6 +444,15 @@ def check_snapshots(report: dict[str, object]) -> None:
                 raise FunctionLoweringFailure(
                     f"{name} drifted:\n" + difference(expected, actual, name)
                 )
+
+def normalized_profile(report: dict[str, object]) -> dict[str, object]:
+    """Remove only expected profile labels before cross-profile parity checks."""
+    normalized = dict(report)
+    normalized["profile"] = "<profile>"
+    normalized["hxcir"] = required_text(report, "hxcir").replace(
+        'profile="portable"', 'profile="<profile>"'
+    ).replace('profile="metal"', 'profile="<profile>"')
+    return normalized
 
 
 def compiler_identity(executable: str) -> tuple[str, str]:
@@ -549,6 +593,79 @@ def check_native(
                         f"{toolchain.family} {optimization} executable failed: "
                         f"exit={ran.returncode} stdout={ran.stdout!r} stderr={ran.stderr!r}"
                     )
+            sanitized = root / f"program-{toolchain.family}-sanitized"
+            sanitizer_compile = subprocess.run(
+                [
+                    toolchain.compiler,
+                    *STRICT_FLAGS,
+                    "-O1",
+                    "-fno-omit-frame-pointer",
+                    "-fsanitize=address,undefined",
+                    "-I",
+                    str(root / "include"),
+                    *(str(source) for source in sources),
+                    "-o",
+                    str(sanitized),
+                ],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if (
+                sanitizer_compile.returncode != 0
+                or sanitizer_compile.stdout
+                or sanitizer_compile.stderr
+            ):
+                raise FunctionLoweringFailure(
+                    f"{toolchain.family} rejected the sanitized function C\n"
+                    f"stdout:\n{sanitizer_compile.stdout}"
+                    f"stderr:\n{sanitizer_compile.stderr}"
+                )
+            sanitized_run = subprocess.run(
+                [str(sanitized)],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if (
+                sanitized_run.returncode != 0
+                or sanitized_run.stdout
+                or sanitized_run.stderr
+            ):
+                raise FunctionLoweringFailure(
+                    f"{toolchain.family} sanitized function executable failed: "
+                    f"exit={sanitized_run.returncode} stdout={sanitized_run.stdout!r} "
+                    f"stderr={sanitized_run.stderr!r}"
+                )
+
+
+def check_eval_oracle() -> None:
+    """Run the same closure assertions through Haxe Eval as an independent oracle."""
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(POSITIVE),
+            "-main",
+            "FunctionFixture",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env={**os.environ, "HAXE_NO_SERVER": "1"},
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise FunctionLoweringFailure(
+            "Haxe Eval disagreed with the function/closure semantic fixture\n"
+            f"stdout:\n{result.stdout}stderr:\n{result.stderr}"
+        )
 
 
 def custom_target(
@@ -1316,10 +1433,16 @@ def check_default_argument_server_determinism() -> None:
 
 
 def check_argument_diagnostics() -> None:
-    expected = {"rest": "TFunction(rest-argument:values)"}
+    expected = {
+        "rest": ("TFunction(rest-argument:values)", 2),
+        "closure_escape": (
+            "TFunction(capturing-closure:outer-local:offset)",
+            16,
+        ),
+    }
     with tempfile.TemporaryDirectory(prefix="hxc-function-negative-") as temporary:
         root = Path(temporary)
-        for kind, marker in expected.items():
+        for kind, (marker, line) in expected.items():
             output = root / kind
             result = custom_target(FIXTURES / kind, output)
             combined = result.stdout + result.stderr
@@ -1327,7 +1450,7 @@ def check_argument_diagnostics() -> None:
                 result.returncode != 1
                 or "HXC1001" not in combined
                 or marker not in combined
-                or f"fixtures/{kind}/Main.hx:2:" not in combined.replace("\\", "/")
+                or f"fixtures/{kind}/Main.hx:{line}:" not in combined.replace("\\", "/")
                 or list(output.rglob("*"))
             ):
                 raise FunctionLoweringFailure(
@@ -1376,11 +1499,10 @@ def main(arguments: Iterable[str] = ()) -> int:
             raise FunctionLoweringFailure("function render changed with discovery order")
         validate(first)
         validate(metal, profile="metal")
-        portable_normalized = {**first, "profile": "<profile>"}
-        metal_normalized = {**metal, "profile": "<profile>"}
-        if portable_normalized != metal_normalized:
+        if normalized_profile(first) != normalized_profile(metal):
             raise FunctionLoweringFailure("portable and metal function lowering diverged")
         check_snapshots(first)
+        check_eval_oracle()
         check_native(first, args.toolchain)
         check_production()
         check_module_fields()

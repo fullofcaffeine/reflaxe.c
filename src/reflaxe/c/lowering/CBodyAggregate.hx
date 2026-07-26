@@ -85,6 +85,21 @@ enum CBodyValueKind {
 
 	/** An allocation-free callable with one exact source-level signature. */
 	CBVKFunction(parameters:Array<CBodyValueType>, result:CBodyValueType);
+
+	/** A non-owning pointer used only inside a proven stack closure environment. */
+	CBVKClosureCapturePointer(pointee:CBodyValueType);
+
+	/** The opaque `void *` passed from a closure carrier to its typed adapter. */
+	CBVKClosureContext;
+
+	/**
+		A typed callable plus a caller-owned context pointer.
+
+		The carrier is a direct C struct. Its semantic representation records the
+		source-visible signature so HxcIR can distinguish it from an arbitrary
+		record with similarly named fields.
+	**/
+	CBVKStackClosure(carrier:CPreparedBodyAggregate, parameters:Array<CBodyValueType>, result:CBodyValueType);
 }
 
 /** The exact admitted representation of one Haxe body value. */
@@ -150,6 +165,15 @@ class CBodyValueType {
 			case CBVKFunction(parameters, result):
 				this.irType = IRTFunction(parameters.map(parameter -> parameter.irType), result.irType);
 				this.cSpelling = 'direct-function:(${parameters.map(parameter -> parameter.cSpelling).join(",")})->${result.cSpelling}';
+			case CBVKClosureCapturePointer(pointee):
+				this.irType = IRTPointer(pointee.irType, false);
+				this.cSpelling = 'stack-closure-capture-pointer<${pointee.cSpelling}>';
+			case CBVKClosureContext:
+				this.irType = IRTPointer(IRTVoid, true);
+				this.cSpelling = "stack-closure-context:void-pointer";
+			case CBVKStackClosure(carrier, parameters, result):
+				this.irType = IRTInstance(carrier.instanceId);
+				this.cSpelling = 'stack-closure:${carrier.digest}:(${parameters.map(parameter -> parameter.cSpelling).join(",")})->${result.cSpelling}';
 		}
 	}
 
@@ -209,12 +233,21 @@ class CBodyValueType {
 	public static function directFunction(parameters:Array<CBodyValueType>, result:CBodyValueType):CBodyValueType
 		return new CBodyValueType(CBVKFunction(parameters, result));
 
+	public static function closureCapturePointer(pointee:CBodyValueType):CBodyValueType
+		return new CBodyValueType(CBVKClosureCapturePointer(pointee));
+
+	public static function closureContext():CBodyValueType
+		return new CBodyValueType(CBVKClosureContext);
+
+	public static function stackClosure(carrier:CPreparedBodyAggregate, parameters:Array<CBodyValueType>, result:CBodyValueType):CBodyValueType
+		return new CBodyValueType(CBVKStackClosure(carrier, parameters, result));
+
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
 			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
 				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
-				CBVKOptional(_) | CBVKFunction(_, _): null;
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -267,8 +300,8 @@ class CBodyValueType {
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
-				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_,
-					_): null;
+				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
+				CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -278,7 +311,7 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
-				CBVKOptional(_) | CBVKFunction(_, _): null;
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
@@ -287,7 +320,7 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _): null;
+				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
 		};
 	}
@@ -343,7 +376,15 @@ class CBodyValueType {
 
 	public function functionValue():Null<{parameters:Array<CBodyValueType>, result:CBodyValueType}> {
 		return switch kind {
-			case CBVKFunction(parameters, result): {parameters: parameters, result: result};
+			case CBVKFunction(parameters, result) | CBVKStackClosure(_, parameters, result): {parameters: parameters, result: result};
+			case _: null;
+		};
+	}
+
+	/** Return the direct struct carrier only for a proven stack closure value. */
+	public function stackClosureValue():Null<{carrier:CPreparedBodyAggregate, parameters:Array<CBodyValueType>, result:CBodyValueType}> {
+		return switch kind {
+			case CBVKStackClosure(carrier, parameters, result): {carrier: carrier, parameters: parameters, result: result};
 			case _: null;
 		};
 	}
@@ -354,7 +395,7 @@ class CBodyValueType {
 			case CBVKClass(_, nullable): nullable;
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _): null;
+				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -397,6 +438,23 @@ private typedef CBodyAggregateTypedefOwner = {
 	final position:Position;
 }
 
+/** One outer variable stored by address in a caller-owned closure environment. */
+typedef CBodyStackClosureCapture = {
+	final compilerId:Int;
+	final sourceName:String;
+	final identity:String;
+	final type:CBodyValueType;
+	final position:Position;
+}
+
+private typedef CBodySyntheticAggregateField = {
+	final name:String;
+	final readableName:String;
+	final type:CBodyValueType;
+	final mutable:Bool;
+	final position:Position;
+}
+
 /** One shape-deduplicated anonymous record before symbol finalization. */
 class CPreparedBodyAggregate {
 	public final shapeKey:String;
@@ -408,6 +466,7 @@ class CPreparedBodyAggregate {
 	public final source:HxcSourceSpan;
 	public final typeRequest:CSymbolRequest;
 	public final fields:Array<CPreparedBodyAggregateField>;
+	public final representation:HxcIRRepresentation;
 	public var managedLifetime:Bool = false;
 	public var retainRequest:Null<CSymbolRequest> = null;
 	public var destroyRequest:Null<CSymbolRequest> = null;
@@ -415,7 +474,8 @@ class CPreparedBodyAggregate {
 	public var destroyParameterRequest:Null<CSymbolRequest> = null;
 	public var retainStatusRequest:Null<CSymbolRequest> = null;
 
-	public function new(shapeKey:String, digest:String, displayName:Null<String>, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest) {
+	public function new(shapeKey:String, digest:String, displayName:Null<String>, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest,
+			?representation:HxcIRRepresentation) {
 		this.shapeKey = shapeKey;
 		this.digest = digest;
 		this.declarationId = 'type.closed-record.$digest';
@@ -425,6 +485,7 @@ class CPreparedBodyAggregate {
 		this.source = source;
 		this.typeRequest = typeRequest;
 		this.fields = [];
+		this.representation = representation == null ? IRRDirect : representation;
 	}
 
 	public function declaration():HxcIRTypeDeclaration {
@@ -446,7 +507,7 @@ class CPreparedBodyAggregate {
 			id: instanceId,
 			declarationId: declarationId,
 			arguments: [],
-			representation: IRRDirect,
+			representation: representation,
 			source: source
 		};
 	}
@@ -702,6 +763,10 @@ class CBodyAggregateRegistry {
 	public function canonicalArrays():Array<CPreparedBodyArray>
 		return arrayRegistry.canonicalArrays();
 
+	/** Register the typed callback adapter required by reachable `Array.sort`. */
+	public function requireArraySort(value:CPreparedBodyArray):Void
+		arrayRegistry.requireSortAdapter(value);
+
 	public function canonicalStringMaps():Array<CPreparedBodyStringMap>
 		return stringMapRegistry.canonicalMaps();
 
@@ -749,6 +814,98 @@ class CBodyAggregateRegistry {
 			appendDependencies(aggregate, result, emitted);
 		}
 		return result;
+	}
+
+	/**
+		Select one exact closure carrier for a synchronous callback parameter.
+
+		The carrier is shared only inside the module that owns the receiving
+		parameter. That keeps split-C ownership deterministic while callers use the
+		callee's already-prepared parameter mapping. The `invoke` field includes one
+		leading opaque context argument; `IRRStackClosure` separately records the
+		source-visible signature used to validate indirect calls.
+	**/
+	public function requireStackClosureCarrier(direct:CBodyValueType, ownerModule:String, sourcePath:String, position:Position,
+			fail:(Position, String) -> Void, node:String):CBodyValueType {
+		final signature = switch direct.kind {
+			case CBVKFunction(parameters, result): {parameters: parameters, result: result};
+			case _: return rejected(fail, position, '$node:requires-direct-function-signature');
+		};
+		final signatureKey = '(${signature.parameters.map(value -> canonicalPart(value.cSpelling)).join("")})->${canonicalPart(signature.result.cSpelling)}';
+		final shape = 'stack-closure-carrier-v1(${canonicalPart(ownerModule)}${canonicalPart(signatureKey)})';
+		var carrier = byShape.get(shape);
+		if (carrier == null) {
+			final contextType = CBodyValueType.closureContext();
+			final invokeType = CBodyValueType.directFunction([contextType].concat(signature.parameters), signature.result);
+			carrier = prepareSyntheticAggregate(shape, '${ownerModule}.StackClosure', ownerModule, sourcePath, position,
+				IRRStackClosure(signature.parameters.map(value -> value.irType), signature.result.irType), [
+				{
+					name: "invoke",
+					readableName: "invoke",
+					type: invokeType,
+					mutable: false,
+					position: position
+				},
+				{
+					name: "context",
+					readableName: "context",
+					type: contextType,
+					mutable: false,
+					position: position
+				}
+			], "stack-closure");
+			byShape.set(shape, carrier);
+		}
+		return CBodyValueType.stackClosure(carrier, signature.parameters, signature.result);
+	}
+
+	/**
+		Build the private stack record that points at each captured Haxe variable.
+
+		Fields contain pointers rather than value copies because Haxe closures
+		observe later writes and may update the same variable. The environment owns
+		nothing: its caller keeps both the record and every pointed-to value alive
+		for the one proven synchronous call.
+	**/
+	public function requireStackClosureEnvironment(literalIdentity:String, displayName:String, captures:Array<CBodyStackClosureCapture>, ownerModule:String,
+			sourcePath:String, position:Position):CPreparedBodyAggregate {
+		final shape = 'stack-closure-environment-v1(${canonicalPart(ownerModule)}${canonicalPart(literalIdentity)}'
+			+ captures.map(capture -> canonicalPart(capture.identity) + canonicalPart(capture.type.cSpelling)).join("")
+			+ ")";
+		final existing = byShape.get(shape);
+		if (existing != null)
+			return existing;
+		final fields:Array<CBodySyntheticAggregateField> = [];
+		for (index => capture in captures)
+			fields.push({
+				name: 'capture.$index',
+				readableName: capture.sourceName,
+				type: CBodyValueType.closureCapturePointer(capture.type),
+				mutable: false,
+				position: capture.position
+			});
+		final environment = prepareSyntheticAggregate(shape, displayName, ownerModule, sourcePath, position, IRRDirect, fields, "stack-closure-environment");
+		byShape.set(shape, environment);
+		return environment;
+	}
+
+	/** Prepare a compiler-owned struct through the same naming and layout path as records. */
+	function prepareSyntheticAggregate(shape:String, displayName:String, ownerModule:String, sourcePath:String, position:Position,
+			representation:HxcIRRepresentation, fields:Array<CBodySyntheticAggregateField>, role:String):CPreparedBodyAggregate {
+		final digest = Sha256.encode(shape);
+		final source = HaxeSourceSpan.fromPosition(position, sourcePath);
+		final typeRequest = new CSymbolRequest(CSKType, ["compiler", role, digest], CNSTag("translation-unit"), CSVInternal, null, [], [], null,
+			displayName.split("."));
+		context.symbols.register(typeRequest);
+		final aggregate = new CPreparedBodyAggregate(shape, digest, displayName, ownerModule, source, typeRequest, representation);
+		for (index => field in fields) {
+			final request = new CSymbolRequest(CSKField, ["compiler", role, digest, field.name], CNSMember(aggregate.declarationId), CSVInternal, null, [],
+				[], index, [field.readableName]);
+			context.symbols.register(request);
+			aggregate.fields.push(new CPreparedBodyAggregateField(field.name, field.type, field.mutable,
+				HaxeSourceSpan.fromPosition(field.position, sourcePath), request));
+		}
+		return aggregate;
 	}
 
 	public function finalize(symbols:CSymbolRegistry):Array<CLoweredBodyAggregate> {

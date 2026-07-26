@@ -1,4 +1,4 @@
-# Static functions, direct calls, and executable entry
+# Static functions, bounded closures, and executable entry
 
 E2.T03 extends the primitive body pipeline into the first production-emitted
 Haxe-to-C executable slice. The compiler collects the reachable typed static
@@ -32,16 +32,97 @@ pointer such as `int32_t (*operation)(int32_t)`. Calling that value uses the
 pointer directly; it does not box arguments, erase them to `void *`, or select a
 runtime feature.
 
+An inline function literal uses the same direct representation when it is
+non-capturing. For example, an `Array<Int>` comparator that uses only its
+`left` and `right` parameters becomes a private typed HxcIR function and an
+ordinary C function pointer. Here, “capturing” has a precise meaning: the
+function reads or changes a local variable, parameter, `this`, or `super` that
+belongs to an enclosing function. A locally written function is therefore not
+automatically a closure at the C level; its actual data dependencies and
+lifetime decide the representation.
+
+### Nonescaping captured callbacks
+
+A bounded capturing case is now implemented. A callback parameter is eligible
+only when the compiler can inspect the exact Haxe body that will run and prove
+that every use calls the callback directly. That currently means a static
+function or a method on a final class, with no unresolved generic or virtual
+implementation. “Nonescaping” means the callee neither stores nor returns the
+callback, passes it to another function, compares it, nor captures it in a
+second function. The callback and its captured variables therefore need to stay
+alive only until that one direct call returns.
+
+For that proven case, the caller creates two typed values on its C stack:
+
+1. an environment record containing pointers to the captured Haxe variables;
+2. a small callback value containing an `invoke` function pointer and a
+   `context` pointer to that environment.
+
+For example, this ordinary Haxe:
+
+```haxe
+var calls = 0;
+final result = applyTwice(1, function(value:Int):Int {
+  calls = calls + 1;
+  return value;
+});
+```
+
+has the following simplified C shape:
+
+```c
+struct CallbackEnvironment {
+  int32_t *calls;
+};
+
+struct IntCallback {
+  int32_t (*invoke)(void *context, int32_t value);
+  void *context;
+};
+```
+
+The generated adapter receives `context`, checks it before use, converts it
+back to the exact environment pointer, and reads or writes `*calls`. Storing
+the address rather than a copy preserves Haxe's observable behavior: two
+invocations see the same changing variable, and the enclosing function sees
+the final value. When the captured value started as a function parameter, the
+caller first places it in one addressable local; both the callback and all
+later reads in the enclosing function use that shared slot. HxcIR names the
+carrier with `IRRStackClosure`, keeps the
+environment fields and pointer conversion typed, and validates that the
+context check occurs before dereference. The structural C layer then emits the
+two plain structs and direct calls such as
+`operation.invoke(operation.context, value)`.
+
+No heap allocation or `hxrt` runtime feature is selected for this path. A
+non-capturing named static function or enum constructor passed to the same
+callback parameter receives a tiny context-discarding adapter so the callback
+slot keeps one exact C signature; its context is `NULL`. Ordinary
+non-capturing function values outside this context remain bare function
+pointers.
+
+This is deliberately not general closure support. A callback that can escape,
+a closure that captures `this` or `super`, nested or recursive closures,
+general closure storage, and callback sites without a statically inspected
+synchronous-use proof remain source-positioned `HXC1001` boundaries. The
+stack environment must never be used to disguise one of those longer
+lifetimes. They remain owned by `haxe_c-ckk.3`; the bounded stack slice is
+`haxe_c-ckk.3.1`.
+
 Haxe enum constructors can also be function values. For example,
 `parseId(token, ShowDialogue)` passes the typed constructor
 `ScenarioId -> FlowAction`. C has no standalone constructor symbol for a tagged
-union, so haxe.c creates one deterministic adapter function. The adapter is a
-normal validated HxcIR function that accepts the constructor payload and returns
-the exact enum value. This keeps it visible to naming, project layout, snapshots,
-and native validation instead of hiding semantic work in the printer. The first
-slice admits non-recursive payloads that need no retain operation; managed or
-recursive constructor adapters remain fail-closed until their ownership steps
-are explicit.
+union, so haxe.c creates one deterministic adapter function with the exact
+required calling convention. The adapter is a normal validated HxcIR function
+that accepts the constructor payload and returns the exact enum value. This
+keeps it visible to naming, project layout, snapshots, and native validation
+instead of hiding semantic work in the printer. An ordinary bare function value
+gets a bare adapter. A proven synchronous callback slot gets the context-aware
+form instead; its otherwise-unused context parameter is discarded explicitly.
+The compiler does not emit both forms unless the program actually uses both.
+The first slice remains bounded to non-recursive payload shapes admitted by the
+current enum ownership plan; unsupported recursive or ownership-sensitive
+constructors still fail closed.
 
 The graph collector walks real `TypedExpr` nodes with the typed compiler API, is
 cycle-safe, and normalizes the reachable set before lowering. An unavailable
@@ -257,10 +338,13 @@ npm run test:generic-specialization
 npm run snapshots:check
 ```
 
-The suite renders twice, reverses discovery order, compares portable and metal,
-checks exact HxcIR/header/C-source-set/symbol snapshots, proves explicit
-argument conversion order, exact non-capturing function pointers and indirect
-calls, verifies direct and mutual recursion planning, and
+The focused function and enum suites render twice, reverse discovery order,
+compare portable and metal, check exact HxcIR/header/C-source-set/symbol
+snapshots, and prove explicit
+argument conversion order, exact non-capturing function pointers, nonescaping
+stack closures, shared captured mutation, captured parameters, repeated
+callback calls, context-discarding static/enum adapters, and indirect calls.
+It verifies direct and mutual recursion planning, and
 checks readable module-level fields under Eval, generated C, and a strict native
 compiler. Focused direct-call fixtures cover omitted versus explicit primitive
 defaults, multiple trailing defaults, nesting, recursion, source-order side
@@ -278,8 +362,9 @@ both fixture and production C under strict GCC and Clang lanes at `-O0` and
 
 Broader object/string operations, general arrays, generic classes/references,
 descriptor-driven generic bodies, unresolved virtual/interface omission,
-capturing closures and closure environments, exceptions, escaping allocation,
-managed or recursive enum-constructor adapters,
+escaping, nested, recursive, or self-capturing closures, callback sites without
+a proven synchronous-use contract, exceptions, escaping allocation, recursive
+or otherwise unsupported enum-constructor adapters,
 public exports, rest arguments, and general standard-library lowering remain
 outside this slice and fail closed. Native
 build orchestration is still future `hxc`/adapter work; direct Haxe invocation

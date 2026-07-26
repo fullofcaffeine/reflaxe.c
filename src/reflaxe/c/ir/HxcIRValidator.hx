@@ -676,6 +676,12 @@ private class HxcIRValidationState {
 						add(path,
 							'class instance `${instance.id}` must pair direct storage with a direct/virtual header or managed(gc) storage with a runtime(gc) header',
 							instance.source);
+				case IRTKAggregate(fields):
+					switch instance.representation {
+						case IRRStackClosure(parameters, result):
+							validateStackClosureCarrier(instance, fields, parameters, result, path);
+						case _:
+					}
 				case _:
 			}
 		}
@@ -692,8 +698,33 @@ private class HxcIRValidationState {
 		switch instance.representation {
 			case IRRManaged(runtimeFeature):
 				validateStableId(runtimeFeature, '$path.runtimeFeature', instance.source);
+			case IRRStackClosure(parameters, result):
+				for (index => parameter in parameters)
+					validateTypeRef(parameter, '$path.closureParameter:$index', instance.source, false);
+				validateTypeRef(result, '$path.closureResult', instance.source, true);
 			case IRRDirect | IRRTagged | IRROpaqueHandle:
 		}
+	}
+
+	/** Prove the structural `{ invoke, context }` carrier matches its semantic call signature. */
+	function validateStackClosureCarrier(instance:HxcIRTypeInstance, fields:Array<HxcIRTypeField>, parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef,
+			path:String):Void {
+		if (instance.arguments.length != 0)
+			add(path, 'stack closure `${instance.id}` must have a fully specialized carrier', instance.source);
+		final invoke = findAggregateField(fields, "invoke");
+		final context = findAggregateField(fields, "context");
+		if (fields.length != 2 || invoke == null || context == null) {
+			add(path, 'stack closure `${instance.id}` requires exactly `invoke` and `context` fields', instance.source);
+			return;
+		}
+		final contextType = IRTPointer(IRTVoid, true);
+		final expectedInvoke = IRTFunction([contextType].concat(parameters), result);
+		if (typeKey(invoke.type) != typeKey(expectedInvoke))
+			add(path, 'stack closure `${instance.id}` invoke field does not preserve its typed context-first signature', invoke.source);
+		if (typeKey(context.type) != typeKey(contextType))
+			add(path, 'stack closure `${instance.id}` context field must be a nullable opaque pointer', context.source);
+		if (invoke.mutable || context.mutable)
+			add(path, 'stack closure `${instance.id}` carrier fields must be immutable', instance.source);
 	}
 
 	function validateGlobal(global:HxcIRGlobal, path:String):Void {
@@ -2073,12 +2104,15 @@ private class HxcIRValidationState {
 					switch checkedType {
 						case IRTPointer(IRTInstance(instanceId), true) if (isClassInstance(instanceId)):
 							nullProofs.set(valueId, true);
+						case IRTPointer(_, true):
+							nullProofs.set(valueId, true);
 						case IRTString | IRTManagedString:
 							nullProofs.set(valueId, true);
 						case value if (isTaggedOptionalType(value)):
 							nullProofs.set(valueId, true);
 						case _:
-							add(path, "null check requires a nullable String, concrete-class reference, or tagged scalar, record, or enum", instruction.source);
+							add(path, "null check requires a nullable pointer, String, concrete-class reference, or tagged scalar, record, or enum",
+								instruction.source);
 					}
 				}
 				validateNullCheckPolicy(policy, '$path.policy', instruction.source);
@@ -2176,15 +2210,14 @@ private class HxcIRValidationState {
 			case IRCDClosure(callableValueId):
 				final callableType = requireValue(callableValueId, '$path.callable', source, available);
 				if (callableType != null) {
-					switch callableType {
-						case IRTFunction(parameters, result):
-							final signatureParameters:Array<HxcIRParameter> = [];
-							for (index => parameter in parameters) {
-								signatureParameters.push({id: 'closure.argument.$index', type: parameter, source: source});
-							}
-							validateKnownCallSignature(call, argumentTypes, signatureParameters, result, path, source);
-						case _:
-							add(path, 'closure call value `$callableValueId` does not have a function type', source);
+					final signature = callableSignature(callableType);
+					if (signature == null) {
+						add(path, 'closure call value `$callableValueId` does not have a callable representation', source);
+					} else {
+						final signatureParameters:Array<HxcIRParameter> = [];
+						for (index => parameter in signature.parameters)
+							signatureParameters.push({id: 'closure.argument.$index', type: parameter, source: source});
+						validateKnownCallSignature(call, argumentTypes, signatureParameters, signature.result, path, source);
 					}
 				}
 			case IRCDNative(symbol):
@@ -2291,6 +2324,19 @@ private class HxcIRValidationState {
 					|| typeKey(thirdArgumentType) != typeKey(receiverElement)
 					|| typeKey(call.returnType) != typeKey(receiverElement)) {
 					add(path, "Array indexed assignment requires managed Array + Haxe Int + matching element", source);
+				}
+			case "sort":
+				if (argumentTypes.length != 2 || receiverElement == null || secondArgumentType == null || call.returnType != IRTVoid) {
+					add(path, "Array.sort requires one managed Array plus an exact element comparator and returns Void", source);
+				} else {
+					switch secondArgumentType {
+						case IRTFunction(parameters, IRTInt(32, true))
+							if (parameters.length == 2
+								&& typeKey(parameters[0]) == typeKey(receiverElement)
+								&& typeKey(parameters[1]) == typeKey(receiverElement)):
+						case _:
+							add(path, "Array.sort comparator must accept two exact element values and return Haxe Int", source);
+					}
 				}
 			case _:
 				add(path, 'array runtime call names unsupported operation `$operationId`', source);
@@ -3029,7 +3075,7 @@ private class HxcIRValidationState {
 		}
 		switch instance.representation {
 			case IRRDirect | IRRTagged:
-			case IRROpaqueHandle | IRRManaged(_):
+			case IRROpaqueHandle | IRRManaged(_) | IRRStackClosure(_, _):
 				add(path, 'tag operation requires direct or tagged representation for instance `$instanceId`', source);
 				return null;
 		}
@@ -3088,8 +3134,12 @@ private class HxcIRValidationState {
 		if (instance == null) {
 			return null;
 		}
-		if (instance.representation != IRRDirect) {
-			add(path, 'aggregate operation requires direct representation for instance `$instanceId`', source);
+		final structural = switch instance.representation {
+			case IRRDirect | IRRStackClosure(_, _): true;
+			case _: false;
+		};
+		if (!structural) {
+			add(path, 'aggregate operation requires direct or stack-closure representation for instance `$instanceId`', source);
 			return null;
 		}
 		if (instance.arguments.length != 0) {
@@ -3108,6 +3158,26 @@ private class HxcIRValidationState {
 		};
 	}
 
+	/** Resolve either a bare function pointer or a typed stack-closure carrier. */
+	function callableSignature(type:HxcIRTypeRef):Null<{parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef}> {
+		return switch type {
+			case IRTFunction(parameters, result):
+				{parameters: parameters, result: result};
+			case IRTInstance(instanceId):
+				final instance = typeInstances.get(instanceId);
+				if (instance == null) {
+					null;
+				} else {
+					switch instance.representation {
+						case IRRStackClosure(parameters, result): {parameters: parameters, result: result};
+						case _: null;
+					}
+				}
+			case _:
+				null;
+		};
+	}
+
 	function aggregateFieldType(type:HxcIRTypeRef, fieldName:String):Null<HxcIRTypeRef> {
 		return switch type {
 			case IRTInstance(instanceId):
@@ -3118,7 +3188,11 @@ private class HxcIRValidationState {
 				} else {
 					switch declaration.kind {
 						case IRTKAggregate(fields):
-							if (instance.representation != IRRDirect) {
+							final structural = switch instance.representation {
+								case IRRDirect | IRRStackClosure(_, _): true;
+								case _: false;
+							};
+							if (!structural) {
 								null;
 							} else {
 								final field = findAggregateField(fields, fieldName);
@@ -3190,7 +3264,7 @@ private class HxcIRValidationState {
 					} else {
 						final direct = switch instance.representation {
 							case IRRDirect | IRRTagged: true;
-							case IRROpaqueHandle | IRRManaged(_): false;
+							case IRROpaqueHandle | IRRManaged(_) | IRRStackClosure(_, _): false;
 						};
 						if (!direct) {
 							false;
@@ -3591,7 +3665,7 @@ private class HxcIRValidationState {
 	function directLayoutDependencies(instance:HxcIRTypeInstance):Array<String> {
 		final result:Array<String> = [];
 		switch instance.representation {
-			case IRRDirect | IRRTagged:
+			case IRRDirect | IRRTagged | IRRStackClosure(_, _):
 				final declaration = typeDeclarations.get(instance.declarationId);
 				if (declaration != null) {
 					switch declaration.kind {
@@ -3698,7 +3772,22 @@ private class HxcIRValidationState {
 				if (!isSafeClassUpcast(sourceType, targetType) || implementation != IRIStatic || failure != null) {
 					add(path, "direct representation conversion requires a null-preserving concrete-class upcast", source);
 				}
-			case IRCPointer | IRCBox | IRCUnbox:
+			case IRCPointer:
+				switch [sourceType, targetType] {
+					case [
+						IRTPointer(sourcePointee, sourceNullable),
+						IRTPointer(targetPointee, targetNullable)
+					]:
+						if (sourceNullable && !targetNullable && !hasNullProof)
+							add(path, "nullable-to-non-null pointer conversion requires a dominating null check", source);
+						if (typeKey(sourcePointee) != typeKey(targetPointee) && sourcePointee != IRTVoid && targetPointee != IRTVoid)
+							add(path, "pointer conversion may only preserve its pointee type or erase/restore it through void", source);
+						if (implementation != IRIStatic || failure != null) add(path, "pointer conversion must use direct C with no independent failure edge",
+							source);
+					case _:
+						add(path, "pointer conversion requires pointer source and target types", source);
+				}
+			case IRCBox | IRCUnbox:
 		}
 	}
 

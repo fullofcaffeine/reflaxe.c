@@ -3,7 +3,7 @@
 This document records both the bounded E4.T04 native `hxrt` array storage and
 the first E5.T03 ordinary-Haxe lowering that selects it. A program can now use
 empty or nonempty `Array<T>` literals, aliases, `length`, checked indexing,
-`push`, `copy`, and source-order iteration for the admitted element types
+`push`, `copy`, in-place `sort`, and source-order iteration for the admitted element types
 described below. An exact managed `Array<String>` also supports
 `join(separator)` with one explicit String separator. Elements may now be
 plain direct values,
@@ -21,10 +21,11 @@ acyclic value families: it uses the precise collector and can reclaim cycles.
 The original typed storage advanced the provisional same-major runtime
 Application Binary Interface (ABI) from 0.4.0 to 0.5.0. Adding the
 compiler-used shared-identity container advanced it to 0.6.0. The two public
-copy entry points added by this slice advance the current internal marker from
-0.10.0 to 0.11.0; the intervening additions are recorded in their owning
-runtime documents. These are internal compatibility markers, not a stable
-application ABI or supported-release promise.
+copy entry points advanced the internal marker from 0.10.0 to 0.11.0. Adding
+the compiler-used in-place sort entry point advances the current marker to
+0.12.0; the intervening additions are recorded in their owning runtime
+documents. These are internal compatibility markers, not a stable application
+ABI or supported-release promise.
 
 ## Representation and specialization boundary
 
@@ -178,6 +179,54 @@ nonescaping classes remain stack-shaped C values, while every class reachable
 from the admitted `Array<Class>` graph receives stable collector storage and a
 descriptor. Each additional managed family still needs a complete lifetime
 rule before it can broaden the support claim.
+
+## In-place sorting and typed comparators
+
+`Array.sort(compare)` changes the existing Array rather than creating another
+one. Haxe defines the comparator by the sign of its result: a negative result
+places the first value before the second, zero treats them as equal for this
+comparison, and a positive result places the first value after the second.
+Like Haxe's `Array.sort` contract, this implementation is deliberately
+unstable: values that compare equal are not promised to retain their earlier
+relative order. Code that needs that stronger promise should use a stable-sort
+API when haxe.c admits one.
+
+The current compiler slice accepts an exact, non-capturing comparator such as
+`(left:Int, right:Int) -> left - right`. “Non-capturing” means the function does
+not read a local variable or `this` from the surrounding function. The compiler
+lowers an inline function literal of that shape to a private, typed HxcIR
+function. The Array lowering then emits a small typed adapter: the runtime hands
+the adapter two addresses, and the adapter reads them as the exact element type
+before calling the Haxe comparator. This keeps the erased byte-storage detail
+inside the runtime boundary; ordinary application code and HxcIR retain
+`(T, T) -> Int`.
+
+The adapter receives its comparator through an explicit context pointer. That
+context is the address of a local variable whose type is the exact C function
+pointer. This avoids process-global comparator state, preserves nested or
+concurrent sorts, and does not perform the undefined conversion between a C
+function pointer and an object pointer. The receiver and comparator expressions
+are each evaluated once, and every alias still observes the same reordered
+Array.
+
+`hxrt` uses an allocation-free heap sort. It swaps the bytes of already-live,
+relocatable slots and does not call element copy, assignment, destruction,
+retain, or release callbacks while ordering them. That distinction matters for
+managed elements such as Strings and class references: sorting moves their
+existing owners between slots without creating or dropping ownership. Native
+tests check that allocation and lifetime counters remain unchanged.
+
+The implementation does not use the C library's `qsort`. Portable C `qsort`
+cannot carry a caller-owned context into its comparator, so using it would
+require global mutable state or a non-portable callback cast. The local heap
+sort is slightly more code, but it keeps the Haxe semantics deterministic and
+reentrant across strict C11 platforms.
+
+Capturing comparators and element types without an admitted Array storage plan
+fail with source-positioned `HXC1001` before C is written. They are not silently
+copied, boxed, or routed through raw C. General closure environments remain
+owned by `haxe_c-ckk.3` under E3.T08; function-valued Array element storage is
+tracked separately by `haxe_c-7d0.7`.
 
 ## Growth and ownership invariants
 

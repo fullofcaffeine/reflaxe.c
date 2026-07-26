@@ -455,7 +455,7 @@ class CBodyEnumRegistry {
 			case CBVKCString:
 				rejected(fail, position, '$node:borrowed-c-string-payload-escape');
 			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKOptional(_) |
-				CBVKFunction(_, _):
+				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
 				rejectDirectReference(sourceType, position, fail, node);
 		}
 	}

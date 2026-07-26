@@ -249,17 +249,17 @@ def is_current_compiler_boundary(message: str) -> bool:
 
     Caxecraft is a compiler-development workload, so "the game failed to
     compile" is not an acceptable success condition. Until Beads issue
-    `haxe_c-7d0.5` lowers typed `Array.copy`, callers that intentionally test
-    product progress may accept only this exact source-positioned HXC1001
-    diagnostic. Any earlier, later, or differently shaped failure remains an
-    error. Once that shallow typed copy is admitted, this predicate naturally
-    returns false and snapshot validation resumes against newly generated
-    playable artifacts.
+    `haxe_c-8al` gives `Bytes.ofString` the ownership transfer needed here,
+    callers that intentionally test product progress may accept only this exact
+    source-positioned HXC1001 diagnostic. Any earlier, later, or differently
+    shaped failure remains an error. Once that transfer is admitted, this
+    predicate naturally returns false and snapshot validation resumes against
+    newly generated playable artifacts.
     """
     return (
-        "src/caxecraft/scenario/ScenarioWriter.hx:33:" in message
+        "src/caxecraft/scenario/ScenarioWriter.hx:29:" in message
         and "caxecraft.scenario.ScenarioWriter.write body" in message
-        and "TCall(Array.copy:not-yet-admitted)" in message
+        and "function-exit:unowned-fresh-managed-String-value" in message
     )
 
 

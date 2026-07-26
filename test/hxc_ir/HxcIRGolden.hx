@@ -64,6 +64,7 @@ class HxcIRGolden {
 				uncheckedClassDereference: invalidDiagnostics(uncheckedClassDereferenceProgram()),
 				nonDominatingNullProof: invalidDiagnostics(nonDominatingNullProofProgram()),
 				unsafeClassUpcast: invalidDiagnostics(unsafeClassUpcastProgram()),
+				incompatiblePointerConversion: invalidDiagnostics(incompatiblePointerConversionProgram()),
 				mismatchedClassEquality: invalidDiagnostics(mismatchedClassEqualityProgram()),
 				invalidStringNonNullProof: invalidDiagnostics(invalidStringNonNullProofProgram()),
 				mismatchedEnumTagEquality: invalidDiagnostics(mismatchedEnumTagEqualityProgram()),
@@ -1019,6 +1020,24 @@ class HxcIRGolden {
 		return minimalProgram("invalid.ConstantTypeMismatch", [
 			instruction("bad.constant", result("value.bad", IRTInt(32, true)), IRIOConstant(IRCBool(true)), file, 2)
 		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	/**
+		Reject pointer type-punning that does not pass through an opaque context.
+
+		Stack closures erase one exact environment pointer to `void *` and restore
+		it after a null check. That narrow C operation must not become permission
+		for unrelated HxcIR producers to reinterpret one typed pointer as another.
+	**/
+	static function incompatiblePointerConversionProgram():HxcIRProgram {
+		final file = "test/negative/IncompatiblePointerConversion.hx";
+		final integerPointer = IRTPointer(IRTInt(32, true), true);
+		final floatPointer = IRTPointer(IRTFloat(64), true);
+		return minimalProgram("invalid.IncompatiblePointerConversion", [
+			instruction("value.null", result("value.null", integerPointer), IRIOConstant(IRCNull), file, 2),
+			instruction("bad.pointer-conversion", result("value.bad", floatPointer), IRIOConvert("value.null", IRCPointer, floatPointer, IRIStatic, null),
+				file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
 	}
 
 	static function nativeConstantAggregateProgram():HxcIRProgram {

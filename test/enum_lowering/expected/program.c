@@ -1,5 +1,15 @@
 #include "hxc/program.h"
 
+_Static_assert(offsetof(struct hxc_EnumFixture_StackClosure, hxc_invoke) == 0, "closed record hxc_EnumFixture_StackClosure first field begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_EnumFixture_StackClosure) >= _Alignof(struct hxc_Option_h95f1c4a28dac (*)(void *, int32_t)), "closed record hxc_EnumFixture_StackClosure alignment admits field 0");
+
+_Static_assert(offsetof(struct hxc_EnumFixture_StackClosure, hxc_context) >= offsetof(struct hxc_EnumFixture_StackClosure, hxc_invoke) + sizeof(struct hxc_Option_h95f1c4a28dac (*)(void *, int32_t)), "closed record hxc_EnumFixture_StackClosure field 1 follows the prior field without overlap");
+
+_Static_assert(_Alignof(struct hxc_EnumFixture_StackClosure) >= _Alignof(void *), "closed record hxc_EnumFixture_StackClosure alignment admits field 1");
+
+_Static_assert(sizeof(struct hxc_EnumFixture_StackClosure) >= offsetof(struct hxc_EnumFixture_StackClosure, hxc_context) + sizeof(void *), "closed record hxc_EnumFixture_StackClosure size contains its final field");
+
 _Static_assert(offsetof(struct hxc_Rule, hxc_actions) == 0, "closed record hxc_Rule first field begins at offset zero");
 
 _Static_assert(_Alignof(struct hxc_Rule) >= _Alignof(struct hxc_array_ref *), "closed record hxc_Rule alignment admits field 0");
@@ -438,9 +448,9 @@ void hxc_array_84c38722_element_destroy(void *hxc_context, void *hxc_element)
   hxc_enum_ffce8027_destroy(&*(struct hxc_RuleEnvelope *)hxc_element);
 }
 
-struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_applyOption(int32_t hxc_value, struct hxc_Option_h95f1c4a28dac (*hxc_constructor)(int32_t))
+struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_applyOption(int32_t hxc_value, struct hxc_EnumFixture_StackClosure hxc_constructor)
 {
-  struct hxc_Option_h95f1c4a28dac hxc_tmp_indirect_call_result_n0 = hxc_constructor(hxc_value);
+  struct hxc_Option_h95f1c4a28dac hxc_tmp_indirect_call_result_n0 = hxc_constructor.hxc_invoke(hxc_constructor.hxc_context, hxc_value);
   return hxc_tmp_indirect_call_result_n0;
 }
 
@@ -574,9 +584,9 @@ int32_t hxc_EnumFixture_choiceValue(struct hxc_Choices hxc_value)
 
 int32_t hxc_EnumFixture_constructorValue(void)
 {
-  struct hxc_Option_h95f1c4a28dac hxc_tmp_call_result_n0 = hxc_EnumFixture_applyOption(9, hxc_Option_i32_Some_adapter);
-  int32_t hxc_tmp_call_result_n1 = hxc_EnumFixture_optionValue(hxc_tmp_call_result_n0);
-  return hxc_tmp_call_result_n1;
+  struct hxc_Option_h95f1c4a28dac hxc_tmp_call_result_n1 = hxc_EnumFixture_applyOption(9, (struct hxc_EnumFixture_StackClosure){ .hxc_invoke = hxc_Option_i32_Some_synchronous_callback_adapter, .hxc_context = NULL });
+  int32_t hxc_tmp_call_result_n2 = hxc_EnumFixture_optionValue(hxc_tmp_call_result_n1);
+  return hxc_tmp_call_result_n2;
 }
 
 struct hxc_RuleEnvelope hxc_EnumFixture_copyEnvelope(struct hxc_RuleEnvelope hxc_value)
@@ -1282,8 +1292,9 @@ struct hxc_RuleEnvelope hxc_EnumFixture_wrapRule(struct hxc_Rule hxc_value)
   return (struct hxc_RuleEnvelope){ .hxc_tag = hxc_RuleEnvelope_WrappedRule, .hxc_payload.hxc_WrappedRule.hxc_rule = hxc_tmp_enum_payload_0_owner_n1 };
 }
 
-struct hxc_Option_h95f1c4a28dac hxc_Option_i32_Some_adapter(int32_t hxc_value)
+struct hxc_Option_h95f1c4a28dac hxc_Option_i32_Some_synchronous_callback_adapter(void *hxc_context, int32_t hxc_value)
 {
+  (void)hxc_context;
   return (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = hxc_value };
 }
 

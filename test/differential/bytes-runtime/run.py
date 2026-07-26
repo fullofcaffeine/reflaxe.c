@@ -398,15 +398,19 @@ def prove_caxecraft_bytes_argument_boundary(root: Path) -> None:
     # construction, String search, String splitting, Bool conversion through
     # Std.string, typed Int interpolation, Array<String>.join, uncaught throw,
     # managed String switch joins, fresh String Array insertion, and
-    # ownership-preserving Std.string(String) identity and shallow Array.copy
-    # also lower. The next reachable boundary is Array.sort in ScenarioWriter.
+    # ownership-preserving Std.string(String) identity, shallow Array.copy,
+    # exact Array.sort comparators, capturing predicates, and enum-constructor
+    # callbacks also lower. The next reachable boundary is ScenarioWriter's final
+    # managed String, whose ownership has not yet been transferred into the
+    # returned Bytes value.
     # Requiring that exact later diagnostic proves this lane passed every prior
     # boundary rather than accepting an arbitrary failure.
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:35:" not in result.stderr
-        or "TCall(Array.sort:not-yet-admitted)" not in result.stderr
+        "src/caxecraft/scenario/ScenarioWriter.hx:29:" not in result.stderr
+        or "function-exit:unowned-fresh-managed-String-value" not in result.stderr
         or "fresh-managed-Bytes-argument-needs-owner" in result.stderr
         or "TCall(Array.copy:not-yet-admitted)" in result.stderr
+        or "TCall(Array.sort:not-yet-admitted)" in result.stderr
         or "Bytes.ofString:non-literal-String-not-yet-admitted" in result.stderr
         or "TConst(TNull:requires-nullable-reference-or-direct-optional-context)"
         in result.stderr

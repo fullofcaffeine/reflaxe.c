@@ -1797,7 +1797,7 @@ def validate_snapshots(
         if not is_current_compiler_boundary(str(error)):
             raise
         progress(
-            "playable snapshots deferred at exact typed Array.copy boundary"
+            "playable snapshots deferred at exact managed String-to-Bytes ownership boundary"
         )
         # The domain program below is fully generated and compared. The wider
         # playable application is intentionally checked only up to its exact

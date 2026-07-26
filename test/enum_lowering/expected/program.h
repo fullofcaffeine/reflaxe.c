@@ -72,6 +72,11 @@ struct hxc_Choices;
 
 struct hxc_RuleEnvelope;
 
+struct hxc_EnumFixture_StackClosure {
+  struct hxc_Option_h95f1c4a28dac (*hxc_invoke)(void *, int32_t);
+  void *hxc_context;
+};
+
 enum hxc_Chain_tag {
   hxc_Chain_End = 0,
   hxc_Chain_Link = 1
@@ -197,7 +202,7 @@ struct hxc_RuleEnvelope {
   union hxc_RuleEnvelope_payload hxc_payload;
 };
 
-struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_applyOption(int32_t hxc_value, struct hxc_Option_h95f1c4a28dac (*hxc_constructor)(int32_t));
+struct hxc_Option_h95f1c4a28dac hxc_EnumFixture_applyOption(int32_t hxc_value, struct hxc_EnumFixture_StackClosure hxc_constructor);
 
 int32_t hxc_EnumFixture_boolOptionValue(struct hxc_Option_ha0e4b5dcc139 hxc_value_hb6e6538779c8);
 
@@ -247,6 +252,6 @@ int32_t hxc_EnumFixture_tailValue(struct hxc_Chain hxc_value_h43dc2cb9ec11);
 
 struct hxc_RuleEnvelope hxc_EnumFixture_wrapRule(struct hxc_Rule hxc_value);
 
-struct hxc_Option_h95f1c4a28dac hxc_Option_i32_Some_adapter(int32_t hxc_value);
+struct hxc_Option_h95f1c4a28dac hxc_Option_i32_Some_synchronous_callback_adapter(void *hxc_context, int32_t hxc_value);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

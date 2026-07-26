@@ -165,6 +165,7 @@ class CBodyEmitter {
 	final aggregateFieldOrder:Map<String, Array<String>> = [];
 	final aggregateInstanceOrder:Array<String> = [];
 	final aggregatesByInstance:Map<String, CLoweredBodyAggregate> = [];
+	final stackClosureSignatures:Map<String, {parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef}> = [];
 	final aggregateLifecycles:Map<String, CBodyEmitterAggregateLifecycle> = [];
 	final enumRepresentations:Map<String, CBodyEnumCRepresentation> = [];
 	final enumValueTags:Map<String, CIdentifier> = [];
@@ -233,6 +234,11 @@ class CBodyEmitter {
 					aggregateFieldTypes.set(aggregateFieldKey(instanceId, field.semanticName), field.type.irType);
 				}
 				aggregateFieldOrder.set(instanceId, order);
+				switch aggregate.prepared.representation {
+					case IRRStackClosure(parameters, result):
+						stackClosureSignatures.set(instanceId, {parameters: parameters, result: result});
+					case _:
+				}
 				if (aggregate.prepared.managedLifetime) {
 					final lifecycle:CBodyEmitterAggregateLifecycle = {
 						instanceId: instanceId,
@@ -1036,6 +1042,11 @@ class CBodyEmitter {
 					final result = requireResult(instruction, fn.id);
 					final optional = requireOptional(valueType(fn, valueId));
 					final expression = EMember(requireValue(state.values, valueId, fn.id), optional.payloadName, false);
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+				case IRIOConvert(valueId, IRCPointer, targetType, IRIStatic, null):
+					final result = requireResult(instruction, fn.id);
+					final target = typedDeclarator(targetType, DName(null));
+					final expression = ECast(target.type, target.declarator, requireValue(state.values, valueId, fn.id));
 					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
 				case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
 					final result = requireResult(instruction, fn.id);
@@ -2781,6 +2792,8 @@ class CBodyEmitter {
 			result.push(arrayLifecyclePrototype(requireArrayCallbackName(array.assignName, array, "assign"), array.assignParameterNames, false));
 			result.push(arrayLifecyclePrototype(requireArrayCallbackName(array.destroyName, array, "destroy"), array.destroyParameterNames, true));
 		}
+		for (array in canonicalSortableArrays())
+			result.push(arraySortAdapterPrototype(array));
 		for (map in canonicalManagedStringMaps()) {
 			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.copyName, map, "copy"), map.copyParameterNames, false));
 			result.push(arrayLifecyclePrototype(requireStringMapCallbackName(map.assignName, map, "assign"), map.assignParameterNames, false));
@@ -2813,6 +2826,8 @@ class CBodyEmitter {
 			result.push(arrayAssignDefinition(array));
 			result.push(arrayDestroyDefinition(array));
 		}
+		for (array in canonicalSortableArrays())
+			result.push(arraySortAdapterDefinition(array));
 		for (map in canonicalManagedStringMaps()) {
 			result.push(stringMapCopyDefinition(map));
 			result.push(stringMapAssignDefinition(map));
@@ -3872,6 +3887,56 @@ class CBodyEmitter {
 		return result;
 	}
 
+	/** Declare one erased runtime callback backed by an exact typed comparator. */
+	function arraySortAdapterPrototype(array:CLoweredBodyArray):CDecl {
+		final name = requireArraySortAdapterName(array);
+		return DPrototype([], [], new CType(TInt(32, true)), DFunction(DName(name), FPPrototype(arraySortAdapterParameters(array), false)), []);
+	}
+
+	/**
+		Recover a typed Haxe comparator and typed element borrows at the hxrt edge.
+
+		The context points to a caller-local function-pointer object. This extra
+		level of indirection keeps strict C portable: ISO C does not promise that a
+		function pointer itself can be converted to `void *`.
+	**/
+	function arraySortAdapterDefinition(array:CLoweredBodyArray):CDecl {
+		final name = requireArraySortAdapterName(array);
+		final parameters = array.sortAdapterParameterNames;
+		if (parameters.length != 3)
+			throw new CBodyEmissionError('Array sort adapter `${array.prepared.semanticKey}` lost its three parameters');
+		final functionType = IRTFunction([array.prepared.element.irType, array.prepared.element.irType], IRTInt(32, true));
+		final pointerToCallable = typedDeclarator(functionType, DPointer(DName(null), []));
+		final callable = EUnary(Dereference, ECast(pointerToCallable.type, pointerToCallable.declarator, EIdentifier(parameters[0])));
+		final left = arrayElementStorageValue(array, EIdentifier(parameters[1]), true);
+		final right = arrayElementStorageValue(array, EIdentifier(parameters[2]), true);
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TInt(32, true)),
+			declarator: DFunction(DName(name), FPPrototype(arraySortAdapterParameters(array), false)),
+			body: SBlock([SReturn(ECall(callable, [left, right]))]),
+			attributes: []
+		});
+	}
+
+	function arraySortAdapterParameters(array:CLoweredBodyArray):Array<CParam> {
+		final names = array.sortAdapterParameterNames;
+		if (names.length != 3)
+			throw new CBodyEmissionError('Array sort adapter `${array.prepared.semanticKey}` expected three finalized parameters');
+		return [
+			{type: new CType(TVoid), declarator: DPointer(DName(names[0]), []), attributes: []},
+			{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(names[1]), []), attributes: []},
+			{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(names[2]), []), attributes: []}
+		];
+	}
+
+	static function requireArraySortAdapterName(array:CLoweredBodyArray):CIdentifier {
+		if (array.sortAdapterName == null)
+			throw new CBodyEmissionError('Array `${array.prepared.semanticKey}` lost its sort adapter name');
+		return array.sortAdapterName;
+	}
+
 	static function statusDeclaration(name:CIdentifier):CStmt
 		return SDecl({
 			storage: [],
@@ -3887,6 +3952,12 @@ class CBodyEmitter {
 
 	function canonicalManagedArrays():Array<CLoweredBodyArray> {
 		final result = [for (value in arraysByInstance) if (value.hasLifecycle()) value];
+		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
+		return result;
+	}
+
+	function canonicalSortableArrays():Array<CLoweredBodyArray> {
+		final result = [for (value in arraysByInstance) if (value.sortAdapterName != null) value];
 		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
 		return result;
 	}
@@ -4704,7 +4775,19 @@ class CBodyEmitter {
 						case IRTSpan(_, _): return fail('function-value call `${instruction.id}` in `$functionId` cannot carry a borrowed span');
 						case _:
 					}
-				ECall(requireValue(values, callableValueId, functionId), call.arguments.map(argument -> requireValue(values, argument, functionId)));
+				final callable = requireValue(values, callableValueId, functionId);
+				switch valueType(fn, callableValueId) {
+					case IRTFunction(_, _):
+						ECall(callable, call.arguments.map(argument -> requireValue(values, argument, functionId)));
+					case IRTInstance(instanceId) if (stackClosureSignatures.exists(instanceId)):
+						final invoke = EMember(callable, requireAggregateFieldName(instanceId, "invoke", instruction.id, functionId), false);
+						final context = EMember(callable, requireAggregateFieldName(instanceId, "context", instruction.id, functionId), false);
+						ECall(invoke, [context].concat(call.arguments.map(argument -> requireValue(values, argument, functionId))));
+					case null:
+						fail('function-value call `${instruction.id}` in `$functionId` lost its callable type');
+					case other:
+						fail('function-value call `${instruction.id}` in `$functionId` has unsupported carrier `${typeKey(other)}`');
+				}
 			case IRCDNative(importId):
 				final imported = imports.functionById(importId);
 				if (imported == null)
@@ -5042,6 +5125,31 @@ class CBodyEmitter {
 			case IRCDRuntime("array", value): value;
 			case _: return fail('managed Array emitter received a non-Array call in `${fn.id}`');
 		};
+		if (operation == "sort") {
+			if (call.arguments.length != 2 || call.returnType != IRTVoid)
+				return fail('Array sort `${instruction.id}` in `${fn.id}` lost its receiver/comparator/Void signature');
+			final receiverType = valueType(fn, call.arguments[0]);
+			if (receiverType == null)
+				return fail('Array sort `${instruction.id}` in `${fn.id}` lost its receiver type');
+			final instanceId = requireArrayInstanceId(receiverType, instruction.id, fn.id);
+			final arrayPlan = requireArrayPlan(instanceId);
+			final adapter = arrayPlan.sortAdapterName;
+			if (adapter == null)
+				return fail('Array sort `${instruction.id}` in `${fn.id}` lost its typed comparator adapter');
+			final comparator = requireValue(values, call.arguments[1], fn.id);
+			final comparatorLocal = switch comparator {
+				case EIdentifier(name): name;
+				case _:
+					return fail('Array sort `${instruction.id}` in `${fn.id}` comparator is not an addressable staged local');
+			};
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySort)), [
+				requireValue(values, call.arguments[0], fn.id),
+				EIdentifier(adapter),
+				ECast(new CType(TVoid), DPointer(DName(null), []), EUnary(AddressOf, EIdentifier(comparatorLocal)))
+			]), boundsAbortName, instruction.id, fn.id);
+			return;
+		}
 		final result = requireResult(instruction, fn.id);
 		final temporary = temporaryNames.get(result.id);
 		if (temporary == null)

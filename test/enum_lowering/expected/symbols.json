@@ -4,7 +4,7 @@
     {
       "overloadSignature": [
         "i32",
-        "function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb"
+        "instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c"
       ],
       "collisionResolved": false,
       "naming": "generated",
@@ -15,7 +15,7 @@
       ],
       "requestedName": null,
       "cName": "hxc_EnumFixture_applyOption",
-      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i32102:function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb|0:|0:",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i3296:instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:",
       "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
@@ -25,7 +25,7 @@
       "kind": "method",
       "specializationArguments": [],
       "baseName": "hxc_EnumFixture_applyOption",
-      "sourceSymbol": "EnumFixture.applyOption(i32, function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb)"
+      "sourceSymbol": "EnumFixture.applyOption(i32, instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c)"
     },
     {
       "overloadSignature": [],
@@ -37,10 +37,10 @@
       ],
       "requestedName": null,
       "cName": "hxc_constructor",
-      "semanticKey": "5:local|204:ordinary:191:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i32102:function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb|0:|0:|3:11:EnumFixture11:applyOption11:constructor|0:|0:|1:1",
+      "semanticKey": "5:local|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i3296:instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:|3:11:EnumFixture11:applyOption11:constructor|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i32102:function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb|0:|0:",
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i3296:instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:",
         "kind": "ordinary"
       },
       "visibility": "internal",
@@ -60,13 +60,13 @@
       ],
       "requestedName": null,
       "cName": "hxc_tmp_indirect_call_result_n0",
-      "semanticKey": "9:temporary|204:ordinary:191:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i32102:function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb|0:|0:|3:11:EnumFixture11:applyOption20:indirect-call-result|0:|0:|1:0",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i3296:instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:|3:11:EnumFixture11:applyOption20:indirect-call-result|0:|0:|1:0",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
       ],
       "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i32102:function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb|0:|0:",
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i3296:instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:",
         "kind": "ordinary"
       },
       "visibility": "internal",
@@ -85,10 +85,10 @@
       ],
       "requestedName": null,
       "cName": "hxc_value",
-      "semanticKey": "5:local|204:ordinary:191:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i32102:function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb|0:|0:|3:11:EnumFixture11:applyOption5:value|0:|0:|1:0",
+      "semanticKey": "5:local|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i3296:instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:|3:11:EnumFixture11:applyOption5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i32102:function(i32)->instance:instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb|0:|0:",
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture11:applyOption|2:3:i3296:instance:instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:",
         "kind": "ordinary"
       },
       "visibility": "internal",
@@ -1176,32 +1176,6 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 0,
-      "readableName": [
-        "tmp",
-        "call-result"
-      ],
-      "requestedName": null,
-      "cName": "hxc_tmp_call_result_n0",
-      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture16:constructorValue|0:|0:|0:|3:11:EnumFixture16:constructorValue11:call-result|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture16:constructorValue|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_tmp_call_result_n0",
-      "sourceSymbol": "EnumFixture.constructorValue.call-result#0"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 1,
       "readableName": [
         "tmp",
@@ -1223,6 +1197,32 @@
       "specializationArguments": [],
       "baseName": "hxc_tmp_call_result_n1",
       "sourceSymbol": "EnumFixture.constructorValue.call-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_call_result_n2",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:11:EnumFixture16:constructorValue|0:|0:|0:|3:11:EnumFixture16:constructorValue11:call-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:EnumFixture16:constructorValue|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_call_result_n2",
+      "sourceSymbol": "EnumFixture.constructorValue.call-result#2"
     },
     {
       "overloadSignature": [
@@ -8676,21 +8676,21 @@
       "naming": "generated",
       "sourceOrdinal": 0,
       "readableName": [
-        "value"
+        "context"
       ],
       "requestedName": null,
-      "cName": "hxc_value",
-      "semanticKey": "5:local|180:ordinary:167:6:method|28:ordinary:16:translation-unit|4:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some|0:|1:3:i32|0:|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some5:value|0:|0:|1:0",
+      "cName": "hxc_context",
+      "semanticKey": "5:local|276:ordinary:263:6:method|28:ordinary:16:translation-unit|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some93:stack-instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|1:3:i32|0:|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some13:stack-context|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|4:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some|0:|1:3:i32|0:",
+        "scope": "6:method|28:ordinary:16:translation-unit|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some93:stack-instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|1:3:i32|0:",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_value",
-      "sourceSymbol": "compiler.enum-constructor-adapter.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb.Some.value#0"
+      "baseName": "hxc_context",
+      "sourceSymbol": "compiler.enum-constructor-adapter.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb.Some.stack-context#0"
     },
     {
       "overloadSignature": [],
@@ -8700,11 +8700,11 @@
       "readableName": [
         "Option<i32>",
         "Some",
-        "adapter"
+        "synchronous callback adapter"
       ],
       "requestedName": null,
-      "cName": "hxc_Option_i32_Some_adapter",
-      "semanticKey": "6:method|28:ordinary:16:translation-unit|4:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some|0:|1:3:i32|0:",
+      "cName": "hxc_Option_i32_Some_synchronous_callback_adapter",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some93:stack-instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|1:3:i32|0:",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -8718,8 +8718,30 @@
       "specializationArguments": [
         "i32"
       ],
-      "baseName": "hxc_Option_i32_Some_adapter",
-      "sourceSymbol": "compiler.enum-constructor-adapter.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb.Some<i32>"
+      "baseName": "hxc_Option_i32_Some_synchronous_callback_adapter",
+      "sourceSymbol": "compiler.enum-constructor-adapter.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb.Some.stack-instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c<i32>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_value",
+      "semanticKey": "5:local|276:ordinary:263:6:method|28:ordinary:16:translation-unit|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some93:stack-instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|1:3:i32|0:|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some5:value|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|5:8:compiler24:enum-constructor-adapter64:34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb4:Some93:stack-instance.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|1:3:i32|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_value",
+      "sourceSymbol": "compiler.enum-constructor-adapter.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb.Some.value#1"
     },
     {
       "overloadSignature": [],
@@ -11553,6 +11575,73 @@
       "specializationArguments": [],
       "baseName": "HXC_PROGRAM_H_INCLUDED",
       "sourceSymbol": "compiler.program-header.guard"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "EnumFixture",
+        "StackClosure"
+      ],
+      "requestedName": null,
+      "cName": "hxc_EnumFixture_StackClosure",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler13:stack-closure64:9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "tag"
+      },
+      "visibility": "internal",
+      "kind": "type",
+      "specializationArguments": [],
+      "baseName": "hxc_EnumFixture_StackClosure",
+      "sourceSymbol": "compiler.stack-closure.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "context"
+      ],
+      "requestedName": null,
+      "cName": "hxc_context",
+      "semanticKey": "5:field|93:member:83:type.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|4:8:compiler13:stack-closure64:9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c7:context|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_context",
+      "sourceSymbol": "compiler.stack-closure.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c.context#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "invoke"
+      ],
+      "requestedName": null,
+      "cName": "hxc_invoke",
+      "semanticKey": "5:field|93:member:83:type.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c|4:8:compiler13:stack-closure64:9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c6:invoke|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_invoke",
+      "sourceSymbol": "compiler.stack-closure.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c.invoke#0"
     }
   ],
   "collisions": [

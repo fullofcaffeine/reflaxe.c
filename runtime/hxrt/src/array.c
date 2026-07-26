@@ -92,6 +92,50 @@ static void hxc_array_move_bytes_right(
   }
 }
 
+static void hxc_array_swap_slots(
+  hxc_array *array,
+  size_t left_index,
+  size_t right_index
+) {
+  unsigned char *left = (unsigned char *)hxc_array_slot(array, left_index);
+  unsigned char *right = (unsigned char *)hxc_array_slot(array, right_index);
+  size_t byte_index;
+  for (byte_index = 0u; byte_index < array->elements.size; byte_index++) {
+    unsigned char temporary = left[byte_index];
+    left[byte_index] = right[byte_index];
+    right[byte_index] = temporary;
+  }
+}
+
+static void hxc_array_sift_max_heap(
+  hxc_array *array,
+  size_t root,
+  size_t count,
+  hxc_array_compare_fn compare,
+  void *context
+) {
+  while (root < count / 2u) {
+    size_t child = (root * 2u) + 1u;
+    if (child + 1u < count
+        && compare(
+          context,
+          hxc_array_slot_const(array, child),
+          hxc_array_slot_const(array, child + 1u)
+        ) < 0) {
+      child++;
+    }
+    if (compare(
+      context,
+      hxc_array_slot_const(array, root),
+      hxc_array_slot_const(array, child)
+    ) >= 0) {
+      return;
+    }
+    hxc_array_swap_slots(array, root, child);
+    root = child;
+  }
+}
+
 static hxc_status hxc_array_construct(
   const hxc_array *array,
   void *destination,
@@ -817,4 +861,32 @@ hxc_status hxc_array_ref_set_copy(
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   return hxc_array_set_copy(&array->value, index, element);
+}
+
+hxc_status hxc_array_ref_sort(
+  hxc_array_ref *array,
+  hxc_array_compare_fn compare,
+  void *context
+) {
+  size_t count;
+  size_t root;
+  if (!hxc_array_ref_is_valid(array) || compare == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  count = array->value.length;
+  if (count < 2u) {
+    return HXC_STATUS_OK;
+  }
+
+  root = count / 2u;
+  while (root != 0u) {
+    root--;
+    hxc_array_sift_max_heap(&array->value, root, count, compare, context);
+  }
+  while (count > 1u) {
+    count--;
+    hxc_array_swap_slots(&array->value, 0u, count);
+    hxc_array_sift_max_heap(&array->value, 0u, count, compare, context);
+  }
+  return HXC_STATUS_OK;
 }

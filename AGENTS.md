@@ -245,6 +245,18 @@ performance, packaging, and developer experience together.
   focused regression and the flagship E2E path that originally exposed it.
   The focused test diagnoses the rule; the flagship proves the layers work
   together.
+- Treat an expected-failure test as a temporary safety boundary, never as
+  evidence that its planned capability is implemented. Such a test may prove
+  that today's compiler rejects an unsafe or unrepresentable program before
+  emitting plausible C, but the natural positive program must remain owned by
+  an open Beads issue and by a product/compiler acceptance path that cannot pass
+  until the real capability exists. Do not add unrelated negative cases merely
+  to catalogue missing features. Add one when it protects a concrete safety or
+  diagnostic invariant exposed by the active work; when the owning capability
+  lands, replace or complement it with positive semantic and native evidence
+  instead of preserving the rejection as policy. A known failure must not be
+  normalized by marking the positive path complete, weakening the required
+  check, or teaching CI to ignore it.
 - Design the flagship's public APIs in the natural, safe Haxe shape first. If
   that shape reveals a missing haxe.c capability, do not replace it with a
   compiler-shaped bandage: generated target-library calls, duplicated

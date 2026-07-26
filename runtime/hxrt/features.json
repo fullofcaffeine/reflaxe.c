@@ -157,6 +157,11 @@
             "description": "A reachable ordinary Haxe Array<T> whose length and shared identity are decided at run time.",
             "id": "managed-type-representation",
             "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe Array.sort call with an admitted exact typed comparator.",
+            "id": "sort",
+            "kind": "hxc-ir-operation"
           }
         ],
         "runtimeRationale": "Ordinary Haxe Array values combine run-time growth with shared mutable identity. A reference-counted container preserves that identity for the admitted acyclic element slice while the compiler keeps fixed arrays and spans direct and runtime-free.",
@@ -196,6 +201,7 @@
         "hxc_array_ref_release",
         "hxc_array_ref_retain",
         "hxc_array_ref_set_copy",
+        "hxc_array_ref_sort",
         "hxc_array_remove_at",
         "hxc_array_reserve",
         "hxc_array_resize",
@@ -203,13 +209,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "5bd329b6373b6913e78df137cb878c8e391f3656b4ba28f9943f4910d9ed821c",
+          "sourceSha256": "a3d345c10c1764a6348c3252170023f332d11e997e8c590ce5fea856ff3a58c2",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "de8602192e729a349b4c4a4d301a17094397f56cc75ebe25fdb7c0871e36da4a",
+          "sourceSha256": "f9f7c80021897ea33d3c6b4a7422cb5d7bd16cfe2c5d22011e90d776b12487d8",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -1151,7 +1157,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 11
+      "minor": 12
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1188,7 +1194,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "0488c4078ff00ec731b275dba6e78fdde48481386e814923b58073f44b579adf",
+      "sourceSetSha256": "cfe12528853fef2a3c0b3582eb4fd6870656b6dd325364bb23d37a4c2b0f609b",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

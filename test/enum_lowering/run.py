@@ -448,8 +448,15 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "terminator tag-switch" not in envelope_value_section
         or 'project-tag value=' not in envelope_value_section
         or "dispatch=closure(" not in apply_option_section
-        or "enum-constructor-function-reference" not in constructor_value_section
-        or "function.enum-constructor-adapter." not in constructor_value_section
+        or "stack-closure-invoke-reference" not in constructor_value_section
+        or "stack-closure-empty-context" not in constructor_value_section
+        or "stack-closure-value" not in constructor_value_section
+        or ".Some.stack.instance.closed-record." not in constructor_value_section
+        or 'fields=["invoke"=' not in constructor_value_section
+        or ',"context"=' not in constructor_value_section
+        or 'name="Option.Some constructor adapter for synchronous callback"'
+        not in hxcir
+        or 'name="Option.Some constructor adapter"' in hxcir
         or 'instruction "instruction.0.construct-enum-adapter"' not in hxcir
     ):
         raise EnumLoweringFailure("enum construction, checking, switch, or recursive HxcIR drifted")
@@ -491,6 +498,12 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "hxc_record_" not in source
         or "_retain(void *" not in source
         or "_destroy(void *" not in source
+        or ".hxc_invoke(" not in source
+        or ".hxc_context," not in source
+        or "_Some_synchronous_callback_adapter" not in source
+        or "_Some_adapter(" in source
+        or ".hxc_context = NULL" not in source
+        or "(void)hxc_context;" not in source
     ):
         raise EnumLoweringFailure("structural enum CAST emission or checks drifted")
     record_retain_start = source.find("hxc_status hxc_record_")

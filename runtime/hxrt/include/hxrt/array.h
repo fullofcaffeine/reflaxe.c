@@ -48,6 +48,21 @@ typedef hxc_status (*hxc_array_assign_fn)(
 typedef void (*hxc_array_destroy_fn)(void *context, void *element);
 
 /**
+ * Compare two borrowed live elements for an in-place Array sort.
+ *
+ * Return a negative value when `left` sorts before `right`, zero when they
+ * compare equal, and a positive value when `left` sorts after `right`.
+ * The callback may use `context` to reach one request-local typed Haxe
+ * function pointer. It must not retain either borrowed element address or
+ * mutate the Array being sorted while the call is active.
+ */
+typedef int32_t (*hxc_array_compare_fn)(
+  void *context,
+  const void *left,
+  const void *right
+);
+
+/**
  * Closed element strategy for one unboxed array representation.
  *
  * Trivial byte-relocatable values use three null callbacks. Values with
@@ -319,6 +334,20 @@ HXC_API hxc_status hxc_array_ref_set_copy(
   hxc_array_ref *array,
   size_t index,
   const void *element
+);
+
+/**
+ * Reorder one shared Array identity in place with an unstable heap sort.
+ *
+ * The operation performs no allocation and relocates the bytes of already-live
+ * elements, so it neither copies nor destroys logical owners. Aliases observe
+ * the same reordered container. Haxe's `Array.sort` does not promise stability;
+ * use its separate stable-sort API when equal elements must retain their order.
+ */
+HXC_API hxc_status hxc_array_ref_sort(
+  hxc_array_ref *array,
+  hxc_array_compare_fn compare,
+  void *context
 );
 
 #if defined(__cplusplus)

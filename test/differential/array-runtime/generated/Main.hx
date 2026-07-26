@@ -19,6 +19,7 @@ typedef ManagedRecord = {
 /** Ordinary-Haxe executable for typed managed-record Array elements. */
 final class Main {
 	static var joinSeparatorEvaluations:Int = 0;
+	static var sortComparatorCalls:Int = 0;
 
 	/** Return one separator while proving `Array.join` evaluates it once. */
 	static function observedSeparator(value:String):String {
@@ -45,6 +46,24 @@ final class Main {
 		labels.push("a\u0000b");
 		final labelsCopy = labels.copy();
 		labelsCopy.push(fromCode(0x1F680));
+		final emptySorted:Array<Int> = [];
+		emptySorted.sort((left, right) -> left - right);
+		final singletonSorted = [7];
+		singletonSorted.sort((left, right) -> left - right);
+		final alreadySorted = [1, 2, 3, 4];
+		alreadySorted.sort((left, right) -> left - right);
+		final reverseSorted = [4, 3, 2, 1];
+		final reverseAlias = reverseSorted;
+		sortComparatorCalls = 0;
+		reverseSorted.sort((left, right) -> {
+			sortComparatorCalls += 1;
+			return left - right;
+		});
+		final duplicateSorted = [3, 1, 3, 2, 1];
+		duplicateSorted.sort((left, right) -> left - right);
+		final customSorted = [1, 4, 2, 3];
+		customSorted.sort((left, right) -> right - left);
+		labelsCopy.sort((left, right) -> left.length - right.length);
 		joinSeparatorEvaluations = 0;
 		final joined = labels.join(observedSeparator("|"));
 		final emptyJoined = ([] : Array<String>).join("");
@@ -109,9 +128,27 @@ final class Main {
 			|| returnedCopy[2] != 77
 			|| labels.length != 3
 			|| labelsCopy.length != 4
-			|| labelsCopy[0] != labels[0]
-			|| labelsCopy[3] != "🚀"
+			|| labelsCopy[0] != "🚀"
+			|| labelsCopy[1] != "a\u0000b"
+			|| labelsCopy[2] != "café"
+			|| labelsCopy[3] != "ready"
 			|| labels[0] != "ready"
+			|| emptySorted.length != 0
+			|| singletonSorted[0] != 7
+			|| alreadySorted[0] != 1
+			|| alreadySorted[3] != 4
+			|| reverseAlias[0] != 1
+			|| reverseAlias[3] != 4
+			|| sortComparatorCalls <= 0
+			|| duplicateSorted[0] != 1
+			|| duplicateSorted[1] != 1
+			|| duplicateSorted[2] != 2
+			|| duplicateSorted[3] != 3
+			|| duplicateSorted[4] != 3
+			|| customSorted[0] != 4
+			|| customSorted[1] != 3
+			|| customSorted[2] != 2
+			|| customSorted[3] != 1
 			|| values[2] != 12
 			|| joined != "ready|café|a\u0000b"
 			|| emptyJoined != ""

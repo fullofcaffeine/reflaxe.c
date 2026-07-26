@@ -174,6 +174,16 @@ enum HxcIRRepresentation {
 	IRRTagged;
 	IRROpaqueHandle;
 	IRRManaged(runtimeFeature:String);
+
+	/**
+		A typed function value paired with caller-owned captured storage.
+
+		`parameters` and `result` describe the source-visible call. The concrete
+		aggregate also carries an exact adapter whose first argument is an opaque
+		context pointer. Keeping the call signature here lets validation prove a
+		closure call before C selects the familiar `{ invoke, context }` struct.
+	**/
+	IRRStackClosure(parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef);
 }
 
 typedef HxcIRTypeInstance = {

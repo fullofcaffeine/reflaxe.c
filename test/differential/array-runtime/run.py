@@ -268,6 +268,8 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="length")',
         'runtime(feature="array",operation="get-checked")',
         'runtime(feature="array",operation="push")',
+        'runtime(feature="array",operation="sort")',
+        'function-reference target="function.lambda.function.Main.main.',
         'implementation=program-local("array-element-lifecycle:instance.closed-record.',
         'array-element-owner-initialize',
         'array-element-borrow',
@@ -507,6 +509,7 @@ def validate_generated_project(output: Path) -> None:
         "push",
         "retain",
         "set",
+        "sort",
     }
     if operations != expected:
         raise ArrayRuntimeFailure(
@@ -537,6 +540,7 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_release",
         "hxc_array_ref_push_copy",
         "hxc_array_ref_get_copy",
+        "hxc_array_ref_sort",
         "hxc_array_string_join",
         "_element_copy(",
         "_element_assign(",
@@ -714,6 +718,7 @@ def run_generated_negative_cases(root: Path) -> None:
         "join_non_string": "TCall(Array.join:element-not-managed-String:",
         "managed_element_return": "TReturn(borrowed-managed-Array-element-needs-owner-transfer)",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
+        "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
     }
     for name, marker in expected.items():
         output = root / f"negative-{name}"
@@ -738,7 +743,7 @@ def run_generated_negative_cases(root: Path) -> None:
 
 
 def prove_caxecraft_state_boundary(root: Path) -> None:
-    """Keep the flagship compile beyond the Array<Class> defect that found this work."""
+    """Keep the flagship compile beyond every ScenarioWriter Array sort."""
     result = subprocess.run(
         [
             sys.executable,
@@ -764,14 +769,18 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     # interpolation, Array<String>.join, uncaught throw, managed String
     # value-switch joins, fresh String insertion into the Array comprehension,
     # and ownership-preserving Std.string(String) identity that followed them.
-    # The shallow `Array.copy` in ScenarioWriter now lowers. The next reachable
-    # boundary is its comparison-based `Array.sort`. Requiring that exact later
-    # diagnostic proves this task did not merely move or hide the former copy
-    # failure. Accepting an arbitrary failure would weaken this product check
-    # into "Caxecraft still does not compile."
+    # ScenarioWriter's shallow copies and comparisons now lower, as do the
+    # capturing predicates and enum-constructor callbacks that follow them. The
+    # next reachable boundary is the final managed String assembled by
+    # ScenarioWriter.write: ownership has not yet been transferred into its
+    # returned Bytes value. Requiring that exact later diagnostic proves
+    # Array.sort and the intervening closure support were implemented instead of
+    # skipped or hidden. Accepting an arbitrary failure would weaken this product
+    # check into "Caxecraft still does not compile."
     if (
-        "src/caxecraft/scenario/ScenarioWriter.hx:35:" not in result.stderr
-        or "TCall(Array.sort:not-yet-admitted)" not in result.stderr
+        "src/caxecraft/scenario/ScenarioWriter.hx:29:" not in result.stderr
+        or "function-exit:unowned-fresh-managed-String-value" not in result.stderr
+        or "TCall(Array.sort:not-yet-admitted)" in result.stderr
         or "TCall(Array.copy:not-yet-admitted)" in result.stderr
         or "managed-element-owner-in-nested-control-flow-not-yet-admitted"
         in result.stderr
@@ -781,7 +790,6 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
         in result.stderr
         or "TCall(unavailable-static-target:function.String.fromCharCode)"
         in result.stderr
-        or "function-exit:unowned-fresh-managed-String-value" in result.stderr
         or "TCall(Std.string:source-not-yet-admitted" in result.stderr
     ):
         raise ArrayRuntimeFailure(
