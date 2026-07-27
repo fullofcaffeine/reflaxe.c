@@ -3,6 +3,10 @@ package reflaxe.c.emit;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.ast.CAST;
 import reflaxe.c.ast.CASTPrinter;
+#if reflaxe_c_phase_timing
+import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
+#end
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlan;
 import reflaxe.c.emit.CProjectLayout.CProjectModuleLayout;
 import reflaxe.c.emit.CProjectLayout.CProjectPackageLayout;
@@ -465,10 +469,43 @@ class CStaticFunctionProjectEmitter {
 	public function emitPlan(declarationPlan:CStaticFunctionDeclarationPlan):Array<GeneratedFile> {
 		final printer = new CASTPrinter();
 		final files:Array<GeneratedFile> = [];
-		for (header in declarationPlan.headers)
+		for (header in declarationPlan.headers) {
+			#if reflaxe_c_phase_timing
+			final timer = CPhaseTiming.startDetail(CDTCTranslationUnitPrinting, header.path);
+			final printed = printer.printHeaderWithWork(header.unit);
+			CPhaseTiming.setDetailWork(timer, {
+				kind: "c-printer-v1",
+				controlFlow: null,
+				typedBody: null,
+				printer: printed.work
+			});
+			CPhaseTiming.stopDetail(timer);
+			final fileTimer = CPhaseTiming.startDetail(CDTCGeneratedFileConstruction, header.path);
+			final file = new GeneratedFile(header.path, printed.text, GeneratedFileKind.PrivateHeader);
+			CPhaseTiming.stopDetail(fileTimer);
+			files.push(file);
+			#else
 			files.push(new GeneratedFile(header.path, printer.printHeader(header.unit), GeneratedFileKind.PrivateHeader));
+			#end
+		}
 		for (source in declarationPlan.sources) {
+			#if reflaxe_c_phase_timing
+			final timer = CPhaseTiming.startDetail(CDTCTranslationUnitPrinting, source.path);
+			final printed = printer.printTranslationUnitWithWork(source.unit);
+			CPhaseTiming.setDetailWork(timer, {
+				kind: "c-printer-v1",
+				controlFlow: null,
+				typedBody: null,
+				printer: printed.work
+			});
+			CPhaseTiming.stopDetail(timer);
+			final fileTimer = CPhaseTiming.startDetail(CDTCGeneratedFileConstruction, source.path);
+			final file = new GeneratedFile(source.path, printed.text, GeneratedFileKind.Source);
+			CPhaseTiming.stopDetail(fileTimer);
+			files.push(file);
+			#else
 			files.push(new GeneratedFile(source.path, printer.printTranslationUnit(source.unit), GeneratedFileKind.Source));
+			#end
 		}
 		files.sort((left, right) -> compareStrings(left.relativePath, right.relativePath));
 		return files;

@@ -159,7 +159,8 @@ contains HxcIR construction and validation, but its exclusive value does not
 count those children again.
 
 Each structured `HXC_PROFILE` JSON Lines record belongs to one request and
-uses schema 1. Span records carry monotonic wall time, process CPU time,
+uses the current closed schema 4. Span records carry monotonic wall time,
+process CPU time,
 allocation change when the Eval host exposes it, and resident-memory samples.
 The final request record reports total request time and peak observed resident
 memory. Bounded counters describe the input and output scale--for example
@@ -197,6 +198,14 @@ similarly splits body setup/value planning, control-flow planning, and CAST
 emission. This is diagnostic structure, not a new compiler layer: the HxcIR
 control-flow plan remains the semantic authority, and CAST emission still only
 turns that verified plan into C syntax.
+
+Schema 4 also separates formatting one structural C translation unit from
+constructing its immutable `GeneratedFile`. The file-scoped printer payload
+counts declarations, statements, expressions, output bytes, indentation,
+token joins, uniqueness checks, and UTF-8 work without copying generated source
+into the report. That distinction matters because the `GeneratedFile`
+constructor validates and hashes the finished bytes after formatting; a broad
+“C printing” clock alone cannot tell those two costs apart.
 
 The same diagnostic boundary divides semantic analysis into helper selection,
 name-request registration, deterministic symbol finalization, representation

@@ -838,6 +838,61 @@ without changing compiler artifacts. The next optimization should move to the
 remaining measured owners—especially symbol collision work and C printing—
 rather than broadening these deliberately narrow caches.
 
+### C formatting and generated-file hashing
+
+The next profile split corrected the meaning of the broad “C printing” phase.
+It now measures two separate jobs for every generated source or header:
+
+1. the structural `CASTPrinter` turns an already validated C tree into text;
+2. `GeneratedFile` converts that text to UTF-8 and computes the SHA-256 digest
+   used by manifests and build caches.
+
+Only 0.648s of the original 4.992s CPU sample belonged to formatting 189 files.
+Constructing the immutable generated files took 4.304s. The cause was not the
+SHA-256 algorithm itself: Haxe's standard Eval implementation first expands
+the complete input into large boxed integer arrays. Hashing 4.49MB of generated
+C therefore allocated about 29.3GB cumulatively in the macro host.
+
+`CContentDigest` preserves the exact SHA-256 contract but uses a fixed-memory
+streaming implementation on Eval. It reads each complete 64-byte block
+directly, keeps one 64-word schedule, and allocates only the final padded block.
+Other Haxe targets retain the standard library. The registered
+`test:content-digest` gate checks public known vectors and compares binary
+payloads with Haxe's implementation around every one-block/two-block padding
+boundary and across many blocks. This is an execution optimization, not a
+weaker or different content identity.
+
+The formatter itself now reuses one indentation prefix per nesting depth,
+returns immediately for empty qualifier/specifier lists, and joins already
+validated non-empty tokens without intermediate filter and join arrays. The
+profile work counters prove the intended structural reduction: 69,143
+indentation requests now construct 29 prefix steps instead of 260,397 repeated
+indent units, and empty uniqueness checks fall from 56,395 calls to the 2,608
+checks that have actual inputs.
+
+These are single-run **contended diagnostic samples**, not stable medians or
+release budgets. Both runs formatted the same 4,949 declarations, 45,083
+statements, and 164,220 expressions into 4,493,190 bytes. Both emitted the same
+225 normal artifacts with SHA-256 tree digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+
+| Measured C-output value | Before | After |
+| --- | ---: | ---: |
+| Broad C printing, CPU | 4.992s | 3.144s |
+| Broad C printing, cumulative allocation | 31.31GB | 18.68GB |
+| Structural translation-unit printing, CPU | 0.648s | 0.488s |
+| Structural printing, cumulative allocation | 1.95GB | 1.25GB |
+| Generated-file construction, CPU | 4.304s | 2.617s |
+| Generated-file construction, cumulative allocation | 29.26GB | 17.33GB |
+| Full Haxe-to-generated-C wall | 41.483s | 39.959s |
+
+The broad phase lost about 1.85s of CPU and 12.63GB of allocation while keeping
+every integrity digest. The compiler is still too slow: even the streaming
+digest costs about 2.6s in this workload, and other exclusive phases now rank
+above the actual formatter. Further work must follow those measurements rather
+than weakening hashing, collapsing output ownership, or adding speculative
+cross-request state.
+
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
 runner started 87 independent Haxe processes: 18 report/determinism renders, 36

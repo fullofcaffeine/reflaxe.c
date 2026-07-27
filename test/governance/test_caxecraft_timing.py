@@ -99,7 +99,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             return "HXC_PROFILE\t" + json.dumps(value, separators=(",", ":"))
 
         child = {
-            "schemaVersion": 3,
+            "schemaVersion": profiler.PROFILE_SCHEMA_VERSION,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 2,
@@ -118,7 +118,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": 1024.0,
         }
         parent = {
-            "schemaVersion": 3,
+            "schemaVersion": profiler.PROFILE_SCHEMA_VERSION,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 1,
@@ -137,14 +137,14 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": 1024.0,
         }
         counter = {
-            "schemaVersion": 3,
+            "schemaVersion": profiler.PROFILE_SCHEMA_VERSION,
             "recordKind": "counter",
             "requestId": "request-1",
             "name": "runtime.requirements",
             "value": 3,
         }
         request = {
-            "schemaVersion": 3,
+            "schemaVersion": profiler.PROFILE_SCHEMA_VERSION,
             "recordKind": "request",
             "requestId": "request-1",
             "status": "ok",
@@ -196,6 +196,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "prefixDisjointBlockVisits": 8,
                     },
                     "typedBody": None,
+                    "printer": None,
                 },
             }
         )
@@ -244,6 +245,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "producedBlockCount": 2,
                         "producedInstructionCount": 9,
                     },
+                    "printer": None,
                 },
             }
         )
@@ -264,6 +266,48 @@ class CaxecraftTimingTests(unittest.TestCase):
         self.assertEqual(
             typed_body_profile.spans[0].work.direct_primitive_fast_paths, 3
         )
+
+        printer_child = dict(child)
+        printer_child.update(
+            {
+                "category": "detail",
+                "name": "C translation-unit printing",
+                "subject": "src/modules/demo/Main.c",
+                "work": {
+                    "kind": "c-printer-v1",
+                    "controlFlow": None,
+                    "typedBody": None,
+                    "printer": {
+                        "declarationCount": 3,
+                        "statementCount": 9,
+                        "expressionCount": 14,
+                        "outputBytes": 512,
+                        "indentationRequests": 11,
+                        "indentationUnitCopies": 17,
+                        "tokenJoinCalls": 8,
+                        "tokenJoinInputs": 21,
+                        "tokenJoinOutputs": 15,
+                        "uniquenessCheckCalls": 6,
+                        "uniquenessCheckInputs": 4,
+                        "utf8EncodingCalls": 2,
+                        "utf8InputCodeUnits": 18,
+                    },
+                },
+            }
+        )
+        printer_profile = profiler.parse_profile_records(
+            "\n".join(
+                (
+                    record(printer_child),
+                    record(parent),
+                    record(counter),
+                    record(request),
+                )
+            ),
+            expected_status="ok",
+        )
+        self.assertEqual(printer_profile.spans[0].work.output_bytes, 512)
+        self.assertEqual(printer_profile.spans[0].work.token_join_inputs, 21)
 
         mixed_work_child = json.loads(json.dumps(typed_body_child))
         mixed_work_child["work"]["controlFlow"] = work_child["work"]["controlFlow"]
@@ -287,6 +331,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             "kind": "future-unregistered-work-v1",
             "controlFlow": None,
             "typedBody": None,
+            "printer": None,
         }
         with self.assertRaisesRegex(
             profiler.CompilerProfileFailure, "unknown kind"
@@ -356,7 +401,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             ROOT / "examples/caxecraft/profile_compiler.py",
         )
         span = {
-            "schemaVersion": 3,
+            "schemaVersion": profiler.PROFILE_SCHEMA_VERSION,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 1,
@@ -375,7 +420,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": None,
         }
         request = {
-            "schemaVersion": 3,
+            "schemaVersion": profiler.PROFILE_SCHEMA_VERSION,
             "recordKind": "request",
             "requestId": "request-1",
             "status": "failed",

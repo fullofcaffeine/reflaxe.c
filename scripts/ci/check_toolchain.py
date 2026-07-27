@@ -211,6 +211,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     if not isinstance(scripts, dict) or scripts.get("postinstall") != "lix download":
         errors.append("package.json postinstall must resolve the scoped Haxe toolchain with lix download")
     expected_all_sources_script = "python3 test/all_sources/run.py"
+    expected_content_digest_script = "python3 test/content_digest/run.py"
     expected_diagnostics_script = "python3 test/diagnostics/run.py"
     expected_hxc_config_script = "python3 test/hxc_config/run.py"
     expected_c_ast_script = "python3 test/c_ast/run.py"
@@ -299,7 +300,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     )
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
-        "npm run test:hxc-config && npm run test:all-sources && "
+        "npm run test:hxc-config && npm run test:all-sources && npm run test:content-digest && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
         "npm run test:runtime-features && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
@@ -313,6 +314,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:all-sources") != expected_all_sources_script
     ):
         errors.append("package.json must retain the dedicated all-source Haxe gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:content-digest") != expected_content_digest_script
+    ):
+        errors.append("package.json must retain the generated-content digest gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:diagnostics") != expected_diagnostics_script

@@ -1,12 +1,28 @@
 package reflaxe.c.ast;
 
 import reflaxe.c.ast.CAST;
+#if reflaxe_c_phase_timing
+import reflaxe.c.CPhaseTiming.CProfilePrinterWork;
+#end
 
-/** Deterministic C11 printer seed. Formatting is intentionally boring. */
+/**
+	Turns an already-validated structural C tree into deterministic source text.
+
+	The printer owns spelling, whitespace, precedence, escaping, and the final
+	C11 grammar checks that depend on rendered tokens. It does not choose Haxe
+	semantics, runtime helpers, names, or storage representations; those choices
+	must be settled before this boundary. Profiling builds can also count the
+	formatting work for one output file, while ordinary builds compile those
+	counters out completely.
+**/
 class CASTPrinter {
 	final indentUnit:String;
 	final dialect:CDialect;
+	final indentPrefixes:Array<String> = [""];
 	var indent:Int = 0;
+	#if reflaxe_c_phase_timing
+	var work:Null<CASTPrinterWorkCounter> = null;
+	#end
 
 	public function new(indentUnit:String = "  ", dialect:CDialect = StrictC11) {
 		if (indentUnit == "")
@@ -56,7 +72,34 @@ class CASTPrinter {
 		return '#ifndef $guard\n#define $guard\n\n$body\n#endif /* $guard */\n';
 	}
 
+	#if reflaxe_c_phase_timing
+	/**
+		Print one source file and return bounded structural work counts.
+
+		This entry point exists only in opt-in profiler builds. The generated text
+		is exactly the same as `printTranslationUnit`; the extra record helps the
+		compiler attribute time without retaining source text in its profile.
+	**/
+	public function printTranslationUnitWithWork(unit:CTranslationUnit):CASTPrintedUnit {
+		return captureWork(() -> printTranslationUnit(unit));
+	}
+
+	/**
+		Print one guarded header and return bounded structural work counts.
+
+		Header framing and its nested translation unit share one counter so the
+		enclosing file span describes the complete emitted header.
+	**/
+	public function printHeaderWithWork(unit:CHeaderUnit):CASTPrintedUnit {
+		return captureWork(() -> printHeader(unit));
+	}
+	#end
+
 	public function printDecl(decl:CDecl):String {
+		#if reflaxe_c_phase_timing
+		if (work != null)
+			work.declarationCount++;
+		#end
 		return switch decl {
 			case DComment(text): printComment(text);
 			case DLineDirective(directive): printLineDirective(directive);
@@ -81,6 +124,10 @@ class CASTPrinter {
 	}
 
 	public function printStmt(stmt:CStmt):String {
+		#if reflaxe_c_phase_timing
+		if (work != null)
+			work.statementCount++;
+		#end
 		return switch stmt {
 			case SEmpty: line(";");
 			case SComment(text): line(printComment(text));
@@ -110,6 +157,10 @@ class CASTPrinter {
 	}
 
 	public function printExpr(expr:CExpr, parentPrecedence:Int = 0):String {
+		#if reflaxe_c_phase_timing
+		if (work != null)
+			work.expressionCount++;
+		#end
 		final current = precedence(expr);
 		final rendered = switch expr {
 			case EIdentifier(name): identifier(name);
@@ -561,6 +612,8 @@ class CASTPrinter {
 	}
 
 	function printStorage(storage:Array<CStorage>):String {
+		if (storage.length == 0)
+			return "";
 		final tokens = storage.map(storageToken);
 		ensureUnique(tokens, "storage-class specifier");
 		if (storage.length > 1) {
@@ -575,12 +628,16 @@ class CASTPrinter {
 	}
 
 	function printFunctionSpecifiers(specifiers:Array<CFunctionSpecifier>):String {
+		if (specifiers.length == 0)
+			return "";
 		final tokens = specifiers.map(functionSpecifierToken);
 		ensureUnique(tokens, "function specifier");
 		return [FInline, FNoReturn].filter(value -> specifiers.contains(value)).map(functionSpecifierToken).join(" ");
 	}
 
 	function printQualifiers(qualifiers:Array<CQualifier>):String {
+		if (qualifiers.length == 0)
+			return "";
 		final tokens = qualifiers.map(qualifierToken);
 		ensureUnique(tokens, "type qualifier");
 		return [QConst, QRestrict, QVolatile, QAtomic].filter(value -> qualifiers.contains(value)).map(qualifierToken).join(" ");
@@ -726,6 +783,12 @@ class CASTPrinter {
 		return value.value;
 
 	function ensureUnique(values:Array<String>, kind:String):Void {
+		#if reflaxe_c_phase_timing
+		if (work != null) {
+			work.uniquenessCheckCalls++;
+			work.uniquenessCheckInputs += values.length;
+		}
+		#end
 		final seen:Map<String, Bool> = [];
 		for (value in values) {
 			if (seen.exists(value))
@@ -753,17 +816,48 @@ class CASTPrinter {
 			case Local: 1;
 		}
 
-	function joinTokens(tokens:Array<String>):String
-		return tokens.filter(token -> StringTools.trim(token) != "").join(" ");
+	function joinTokens(tokens:Array<String>):String {
+		#if reflaxe_c_phase_timing
+		if (work != null) {
+			work.tokenJoinCalls++;
+			work.tokenJoinInputs += tokens.length;
+		}
+		#end
+		final retained = new StringBuf();
+		var retainedCount = 0;
+		for (token in tokens) {
+			if (token == "")
+				continue;
+			if (retainedCount > 0)
+				retained.add(" ");
+			retained.add(token);
+			retainedCount++;
+		}
+		#if reflaxe_c_phase_timing
+		if (work != null)
+			work.tokenJoinOutputs += retainedCount;
+		#end
+		return retained.toString();
+	}
 
-	function line(value:String):String
+	function line(value:String):String {
+		#if reflaxe_c_phase_timing
+		if (work != null) {
+			work.indentationRequests++;
+		}
+		#end
 		return indentPrefix() + value;
+	}
 
 	function indentPrefix():String {
-		final out = new StringBuf();
-		for (_ in 0...indent)
-			out.add(indentUnit);
-		return out.toString();
+		while (indentPrefixes.length <= indent) {
+			indentPrefixes.push(indentPrefixes[indentPrefixes.length - 1] + indentUnit);
+			#if reflaxe_c_phase_timing
+			if (work != null)
+				work.indentationUnitCopies++;
+			#end
+		}
+		return indentPrefixes[indent];
 	}
 
 	function compareUtf8(a:String, b:String):Int {
@@ -856,6 +950,12 @@ class CASTPrinter {
 	}
 
 	function utf8Bytes(value:String):Array<Int> {
+		#if reflaxe_c_phase_timing
+		if (work != null) {
+			work.utf8EncodingCalls++;
+			work.utf8InputCodeUnits += value.length;
+		}
+		#end
 		final result:Array<Int> = [];
 		var index = 0;
 		while (index < value.length) {
@@ -906,4 +1006,68 @@ class CASTPrinter {
 			throw 'Invalid system include path: "$path"';
 		}
 	}
+
+	#if reflaxe_c_phase_timing
+	function captureWork(render:() -> String):CASTPrintedUnit {
+		if (work != null)
+			throw "C AST printer work capture cannot be nested";
+		final counter = new CASTPrinterWorkCounter();
+		work = counter;
+		final text = render();
+		work = null;
+		return {
+			text: text,
+			work: counter.snapshot(haxe.io.Bytes.ofString(text).length)
+		};
+	}
+	#end
 }
+
+#if reflaxe_c_phase_timing
+/**
+	The text and stable work counts produced for one profiled C output file.
+
+	This type is diagnostic-only. Normal builds call the ordinary printer
+	methods and do not compile the mutable counters below.
+**/
+typedef CASTPrintedUnit = {
+	final text:String;
+	final work:CProfilePrinterWork;
+}
+
+/** Mutable counters kept private to one profiled printer call. */
+private class CASTPrinterWorkCounter {
+	public var declarationCount:Int = 0;
+	public var statementCount:Int = 0;
+	public var expressionCount:Int = 0;
+	public var indentationRequests:Int = 0;
+	public var indentationUnitCopies:Int = 0;
+	public var tokenJoinCalls:Int = 0;
+	public var tokenJoinInputs:Int = 0;
+	public var tokenJoinOutputs:Int = 0;
+	public var uniquenessCheckCalls:Int = 0;
+	public var uniquenessCheckInputs:Int = 0;
+	public var utf8EncodingCalls:Int = 0;
+	public var utf8InputCodeUnits:Int = 0;
+
+	public function new() {}
+
+	public function snapshot(outputBytes:Int):CProfilePrinterWork {
+		return {
+			declarationCount: declarationCount,
+			statementCount: statementCount,
+			expressionCount: expressionCount,
+			outputBytes: outputBytes,
+			indentationRequests: indentationRequests,
+			indentationUnitCopies: indentationUnitCopies,
+			tokenJoinCalls: tokenJoinCalls,
+			tokenJoinInputs: tokenJoinInputs,
+			tokenJoinOutputs: tokenJoinOutputs,
+			uniquenessCheckCalls: uniquenessCheckCalls,
+			uniquenessCheckInputs: uniquenessCheckInputs,
+			utf8EncodingCalls: utf8EncodingCalls,
+			utf8InputCodeUnits: utf8InputCodeUnits
+		};
+	}
+}
+#end

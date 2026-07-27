@@ -515,7 +515,8 @@ class CBodyEmitter {
 				prefixDisjointSearches: controlFlow.work.prefixDisjointSearches,
 				prefixDisjointBlockVisits: controlFlow.work.prefixDisjointBlockVisits
 			},
-			typedBody: null
+			typedBody: null,
+			printer: null
 		});
 		CPhaseTiming.stopDetail(controlFlowTimer);
 		final plan = controlFlow.plan;

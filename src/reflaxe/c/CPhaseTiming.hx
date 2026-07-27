@@ -77,6 +77,8 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTBodyControlFlowConstruction = "body control-flow construction";
 	var CDTBodyControlFlowValidation = "body control-flow validation";
 	var CDTBodyCASTEmission = "body CAST emission";
+	var CDTCTranslationUnitPrinting = "C translation-unit printing";
+	var CDTCGeneratedFileConstruction = "C generated-file construction";
 	var CDTArtifactRuntimePackaging = "artifact runtime packaging";
 	var CDTArtifactSpecializationReport = "artifact specialization report";
 	var CDTArtifactProjectEmission = "artifact project emission";
@@ -162,6 +164,7 @@ typedef CProfileSpanWork = {
 	final kind:String;
 	final controlFlow:Null<CProfileControlFlowWork>;
 	final typedBody:Null<CProfileTypedBodyWork>;
+	final printer:Null<CProfilePrinterWork>;
 }
 
 /**
@@ -219,6 +222,31 @@ typedef CProfileTypedBodyWork = {
 	final coercionRequests:Int;
 	final producedBlockCount:Int;
 	final producedInstructionCount:Int;
+}
+
+/**
+	Structural formatting counts for one generated C source or header.
+
+	The file path lives in the enclosing span's `subject`. These counts explain
+	whether printer time follows the amount of C structure, indentation
+	reconstruction, token joining, legality checking, or UTF-8 escaping without
+	recording generated source text in the diagnostic profile.
+**/
+@:noCompletion
+typedef CProfilePrinterWork = {
+	final declarationCount:Int;
+	final statementCount:Int;
+	final expressionCount:Int;
+	final outputBytes:Int;
+	final indentationRequests:Int;
+	final indentationUnitCopies:Int;
+	final tokenJoinCalls:Int;
+	final tokenJoinInputs:Int;
+	final tokenJoinOutputs:Int;
+	final uniquenessCheckCalls:Int;
+	final uniquenessCheckInputs:Int;
+	final utf8EncodingCalls:Int;
+	final utf8InputCodeUnits:Int;
 }
 
 private typedef CProfileCounterRecord = {
@@ -367,7 +395,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 3;
+	public static inline final PROFILE_SCHEMA_VERSION = 4;
 
 	static var active:Null<CProfileRequestState> = null;
 

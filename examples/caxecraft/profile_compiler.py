@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 3
+PROFILE_SCHEMA_VERSION = 4
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -94,6 +94,8 @@ DETAIL_PHASES = (
     "body control-flow construction",
     "body control-flow validation",
     "body CAST emission",
+    "C translation-unit printing",
+    "C generated-file construction",
     "artifact runtime packaging",
     "artifact specialization report",
     "artifact project emission",
@@ -305,8 +307,44 @@ class CompilerProfileTypedBodyWork:
         }
 
 
+@dataclass(frozen=True)
+class CompilerProfilePrinterWork:
+    declaration_count: int
+    statement_count: int
+    expression_count: int
+    output_bytes: int
+    indentation_requests: int
+    indentation_unit_copies: int
+    token_join_calls: int
+    token_join_inputs: int
+    token_join_outputs: int
+    uniqueness_check_calls: int
+    uniqueness_check_inputs: int
+    utf8_encoding_calls: int
+    utf8_input_code_units: int
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "declarationCount": self.declaration_count,
+            "statementCount": self.statement_count,
+            "expressionCount": self.expression_count,
+            "outputBytes": self.output_bytes,
+            "indentationRequests": self.indentation_requests,
+            "indentationUnitCopies": self.indentation_unit_copies,
+            "tokenJoinCalls": self.token_join_calls,
+            "tokenJoinInputs": self.token_join_inputs,
+            "tokenJoinOutputs": self.token_join_outputs,
+            "uniquenessCheckCalls": self.uniqueness_check_calls,
+            "uniquenessCheckInputs": self.uniqueness_check_inputs,
+            "utf8EncodingCalls": self.utf8_encoding_calls,
+            "utf8InputCodeUnits": self.utf8_input_code_units,
+        }
+
+
 CompilerProfileSpanWork = (
-    CompilerProfileControlFlowWork | CompilerProfileTypedBodyWork
+    CompilerProfileControlFlowWork
+    | CompilerProfileTypedBodyWork
+    | CompilerProfilePrinterWork
 )
 
 
@@ -339,7 +377,11 @@ class CompilerProfileSpan:
                     "kind": (
                         "normal-join-search-v1"
                         if isinstance(self.work, CompilerProfileControlFlowWork)
-                        else "typed-body-lowering-v1"
+                        else (
+                            "typed-body-lowering-v1"
+                            if isinstance(self.work, CompilerProfileTypedBodyWork)
+                            else "c-printer-v1"
+                        )
                     ),
                     "controlFlow": (
                         self.work.to_json()
@@ -349,6 +391,11 @@ class CompilerProfileSpan:
                     "typedBody": (
                         self.work.to_json()
                         if isinstance(self.work, CompilerProfileTypedBodyWork)
+                        else None
+                    ),
+                    "printer": (
+                        self.work.to_json()
+                        if isinstance(self.work, CompilerProfilePrinterWork)
                         else None
                     ),
                 }
@@ -434,7 +481,7 @@ SPAN_FIELDS = frozenset(
         "residentBytesAtEnd",
     }
 )
-SPAN_WORK_FIELDS = frozenset({"kind", "controlFlow", "typedBody"})
+SPAN_WORK_FIELDS = frozenset({"kind", "controlFlow", "typedBody", "printer"})
 CONTROL_FLOW_WORK_FIELDS = frozenset(
     {
         "blockCount",
@@ -477,6 +524,23 @@ TYPED_BODY_WORK_FIELDS = frozenset(
         "coercionRequests",
         "producedBlockCount",
         "producedInstructionCount",
+    }
+)
+PRINTER_WORK_FIELDS = frozenset(
+    {
+        "declarationCount",
+        "statementCount",
+        "expressionCount",
+        "outputBytes",
+        "indentationRequests",
+        "indentationUnitCopies",
+        "tokenJoinCalls",
+        "tokenJoinInputs",
+        "tokenJoinOutputs",
+        "uniquenessCheckCalls",
+        "uniquenessCheckInputs",
+        "utf8EncodingCalls",
+        "utf8InputCodeUnits",
     }
 )
 COUNTER_FIELDS = frozenset(
@@ -713,10 +777,12 @@ def parse_profile_records(
                 kind = profile_string(work_value, "kind")
                 control_flow_value = work_value.get("controlFlow")
                 typed_body_value = work_value.get("typedBody")
+                printer_value = work_value.get("printer")
                 if kind == "normal-join-search-v1":
                     if (
                         not isinstance(control_flow_value, dict)
                         or typed_body_value is not None
+                        or printer_value is not None
                     ):
                         raise CompilerProfileFailure(
                             "normal-join span work requires only a controlFlow payload"
@@ -810,6 +876,7 @@ def parse_profile_records(
                     if (
                         control_flow_value is not None
                         or not isinstance(typed_body_value, dict)
+                        or printer_value is not None
                     ):
                         raise CompilerProfileFailure(
                             "typed-body span work requires only a typedBody payload"
@@ -898,6 +965,70 @@ def parse_profile_records(
                         raise CompilerProfileFailure(
                             "typed-body work belongs only to a function-scoped "
                             "HxcIR typed-body detail span"
+                        )
+                elif kind == "c-printer-v1":
+                    if (
+                        control_flow_value is not None
+                        or typed_body_value is not None
+                        or not isinstance(printer_value, dict)
+                    ):
+                        raise CompilerProfileFailure(
+                            "C-printer span work requires only a printer payload"
+                        )
+                    require_profile_fields_without_schema(
+                        printer_value,
+                        PRINTER_WORK_FIELDS,
+                        "C-printer span work",
+                    )
+                    work = CompilerProfilePrinterWork(
+                        declaration_count=profile_integer(
+                            printer_value, "declarationCount", minimum=0
+                        ),
+                        statement_count=profile_integer(
+                            printer_value, "statementCount", minimum=0
+                        ),
+                        expression_count=profile_integer(
+                            printer_value, "expressionCount", minimum=0
+                        ),
+                        output_bytes=profile_integer(
+                            printer_value, "outputBytes", minimum=1
+                        ),
+                        indentation_requests=profile_integer(
+                            printer_value, "indentationRequests", minimum=0
+                        ),
+                        indentation_unit_copies=profile_integer(
+                            printer_value, "indentationUnitCopies", minimum=0
+                        ),
+                        token_join_calls=profile_integer(
+                            printer_value, "tokenJoinCalls", minimum=0
+                        ),
+                        token_join_inputs=profile_integer(
+                            printer_value, "tokenJoinInputs", minimum=0
+                        ),
+                        token_join_outputs=profile_integer(
+                            printer_value, "tokenJoinOutputs", minimum=0
+                        ),
+                        uniqueness_check_calls=profile_integer(
+                            printer_value, "uniquenessCheckCalls", minimum=0
+                        ),
+                        uniqueness_check_inputs=profile_integer(
+                            printer_value, "uniquenessCheckInputs", minimum=0
+                        ),
+                        utf8_encoding_calls=profile_integer(
+                            printer_value, "utf8EncodingCalls", minimum=0
+                        ),
+                        utf8_input_code_units=profile_integer(
+                            printer_value, "utf8InputCodeUnits", minimum=0
+                        ),
+                    )
+                    if (
+                        category != "detail"
+                        or name != "C translation-unit printing"
+                        or subject_value is None
+                    ):
+                        raise CompilerProfileFailure(
+                            "C-printer work belongs only to a file-scoped "
+                            "C translation-unit printing detail span"
                         )
                 else:
                     raise CompilerProfileFailure(

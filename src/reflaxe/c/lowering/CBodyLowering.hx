@@ -3349,7 +3349,8 @@ private class FunctionBuilder {
 				coercionRequests: profileCoercionRequests,
 				producedBlockCount: blocks.length - blockCountBefore,
 				producedInstructionCount: instructionOrdinal - instructionCountBefore
-			}
+			},
+			printer: null
 		});
 		CPhaseTiming.stopDetail(typedBodyLoweringTimer);
 		final functionFinalizationTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionFinalization);

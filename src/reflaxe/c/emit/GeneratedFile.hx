@@ -1,7 +1,7 @@
 package reflaxe.c.emit;
 
-import haxe.crypto.Sha256;
 import haxe.io.Bytes;
+import reflaxe.c.emit.CContentDigest.sha256Hex;
 
 /** Stable artifact roles admitted by the project emitter. */
 enum abstract GeneratedFileKind(String) to String {
@@ -58,7 +58,7 @@ class GeneratedFile {
 		this.contents = contents;
 		this.kind = kind;
 		final encoded = Bytes.ofString(contents);
-		this.contentSha256 = Sha256.make(encoded).toHex();
+		this.contentSha256 = sha256Hex(encoded);
 		this.contentByteLength = encoded.length;
 	}
 
