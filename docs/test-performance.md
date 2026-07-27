@@ -509,6 +509,14 @@ next optimization must add phase timing around typing and target compilation,
 then reduce demonstrated repeated target work without caching mutable
 `CompilationContext` state or weakening stale-file ownership checks.
 
+The focused [Haxe compilation-server audit](research/haxe-server-audit.md)
+checks that conclusion against the pinned Haxe 5 implementation and the
+long-lived server owners in Reflaxe.Elixir and hxhx/Reflaxe.OCaml. It defines
+the accepted automatic/off/explicit-attach modes, compatibility identity,
+process ownership, retry behavior, cache boundary, and parity matrix for
+`haxe_c-5sd.8.2`. Those rules are planned until that Beads task supplies their
+executable evidence.
+
 ### Caxecraft unchanged-build launch path
 
 Beads issue `haxe_c-5sd.8.1` implements the first user-visible incremental
