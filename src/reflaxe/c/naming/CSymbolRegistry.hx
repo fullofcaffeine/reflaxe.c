@@ -217,7 +217,7 @@ class CSymbolRegistry {
 		#if (macro || reflaxe_runtime)
 		final draftConstructionTimer = CPhaseTiming.startDetail(CDTSymbolDraftConstruction);
 		#end
-		final assigned:Array<AssignedDraft> = [];
+		final assignedByKey:Map<String, AssignedDraft> = [];
 		final generatedStates:Array<GeneratedState> = [];
 		final exactByCandidate:Map<String, Array<AssignedDraft>> = [];
 		for (request in requests) {
@@ -229,7 +229,7 @@ class CSymbolRegistry {
 					collisionResolved: false,
 					escapeReasons: []
 				};
-				assigned.push(exact);
+				assignedByKey.set(request.stableKey(), exact);
 				final candidateKey = namespacedCandidate(request.namespace, request.explicitName);
 				var exactGroup = exactByCandidate.get(candidateKey);
 				if (exactGroup == null) {
@@ -372,25 +372,32 @@ class CSymbolRegistry {
 		final tableMaterializationTimer = CPhaseTiming.startDetail(CDTSymbolTableMaterialization);
 		#end
 		for (state in generatedStates) {
-			assigned.push({
+			final generated:AssignedDraft = {
 				request: state.draft.request,
 				baseName: state.draft.baseName,
 				cName: generatedName(state),
 				collisionResolved: state.hashLength > 0,
 				escapeReasons: state.draft.escapeReasons
-			});
+			};
+			assignedByKey.set(generated.request.stableKey(), generated);
 		}
 
+		/*
+			`requests` is already the registry's canonical stable order. Collision
+			resolution changes only each request's final C spelling, not that
+			order, so project the finalized drafts through the settled request
+			list instead of sorting the same 22k-plus semantic identities again.
+			The map is lookup-only here and its iteration order is never observed.
+		 */
+		final assigned:Array<AssignedDraft> = [];
+		for (request in requests) {
+			final item:AssignedDraft = assignedByKey.get(request.stableKey()) ?? internalFailure("C symbol finalization lost a registered request",
+				[request.sourceSymbol()]);
+			assigned.push(item);
+		}
 		#if reflaxe_c_phase_timing
-		var assignedSortComparisons = 0;
-		assigned.sort((left, right) -> {
-			assignedSortComparisons++;
-			return compareRequests(left.request, right.request);
-		});
-		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, assignedSortComparisons);
+		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, 0);
 		CPhaseTiming.setCounter(CPCounterSymbolTableRecords, assigned.length);
-		#else
-		assigned.sort((left, right) -> compareRequests(left.request, right.request));
 		#end
 		validateAssignedUnique(assigned);
 		final finalNamesByKey:Map<String, String> = [];

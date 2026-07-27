@@ -82,7 +82,11 @@ class CSymbolRequest {
 	var stableKeyValue:String = "";
 	var namingFingerprintValue:String = "";
 	var sourceSymbolValue:String = "";
+	#if (macro || eval)
+	var stableOrderValue:String = "";
+	#else
 	var stableOrderValue:Bytes = Bytes.alloc(0);
+	#end
 
 	public function new(kind:CSymbolKind, qualifiedName:Array<String>, namespace:CSymbolNamespace, ?visibility:CSymbolVisibility, ?explicitName:String,
 			?overloadSignature:Array<String>, ?specializationArguments:Array<String>, ?sourceOrdinal:Int, ?readableName:Array<String>) {
@@ -105,7 +109,19 @@ class CSymbolRequest {
 			+ canonicalPart(this.explicitName == null ? "" : this.explicitName)
 			+ "|"
 			+ canonicalArray(this.readableName);
-		this.stableOrderValue = Bytes.ofString(sourceSymbolValue + "\x00" + kindName(kind) + "\x00" + namespaceKey(namespace) + "\x00" + stableKeyValue);
+		final stableOrder = sourceSymbolValue + "\x00" + kindName(kind) + "\x00" + namespaceKey(namespace) + "\x00" + stableKeyValue;
+		#if (macro || eval)
+		/*
+			Eval stores Haxe strings as UTF-8, so its native comparison has the
+			same byte order as the explicit portable comparator below. Keeping
+			the canonical tuple as a String lets the host compare it in native
+			code instead of walking long symbol names byte by byte in interpreted
+			Haxe during every sort comparison.
+		 */
+		this.stableOrderValue = stableOrder;
+		#else
+		this.stableOrderValue = Bytes.ofString(stableOrder);
+		#end
 	}
 
 	/**
@@ -155,11 +171,17 @@ class CSymbolRequest {
 	/**
 		Compare two requests by the registry's deterministic UTF-8 tuple order.
 
-		The cached byte sequence preserves the prior
-		`source/kind/namespace/identity` ordering while avoiding fresh UTF-8
-		conversions for every comparison in an `O(n log n)` sort.
+		The cached tuple preserves the prior `source/kind/namespace/identity`
+		ordering. Eval compares its immutable UTF-8 String in native host code;
+		other targets retain the explicit cached-byte comparison. Both paths
+		avoid fresh UTF-8 conversions during an `O(n log n)` sort.
 	**/
 	public static function compareStableOrder(left:CSymbolRequest, right:CSymbolRequest):Int {
+		#if (macro || eval)
+		final leftValue = left.stableOrderValue;
+		final rightValue = right.stableOrderValue;
+		return leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0;
+		#else
 		final leftBytes = left.stableOrderValue;
 		final rightBytes = right.stableOrderValue;
 		final length = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
@@ -169,6 +191,7 @@ class CSymbolRequest {
 				return difference;
 		}
 		return leftBytes.length - rightBytes.length;
+		#end
 	}
 
 	public static function kindName(kind:CSymbolKind):String {

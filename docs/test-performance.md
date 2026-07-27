@@ -1115,6 +1115,44 @@ remaining symbol time. They use the request's already cached stable-order
 bytes, so the next improvement must profile their specific work rather than
 generalizing this candidate-name shortcut or weakening deterministic reports.
 
+### Canonical symbol-request order reuse
+
+The follow-up profile found two copies of the same ordering work. The registry
+first sorted all 22,876 requests into its canonical semantic order. After
+collision resolution changed some C spellings, it sorted those same requests
+again even though a spelling change cannot change semantic order. Both sorts
+also compared cached byte arrays one byte at a time in interpreted Haxe.
+
+The registry now keeps the canonical tuple as an immutable String on Eval and
+uses the same native UTF-8 comparison already proven for candidate names.
+Non-Eval hosts retain the explicit byte comparator. Finalized drafts are
+looked up by semantic key and projected through the first sorted request list,
+so the second sort is gone rather than cached. Map iteration order remains
+unobservable, and exact-name validation, collision grouping, suffix hashing,
+the collision ledger, and the generated symbol table keep the same owners.
+
+These are one-sample **contended diagnostic values**, not stable medians or a
+release budget. The before and after runs used the same compiler workload and
+emitted the same 225 normal artifacts with SHA-256 tree digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+
+| Measured naming value | Before | After |
+| --- | ---: | ---: |
+| Request ordering, CPU | 1.515s | 0.180s |
+| Final table materialization, CPU | 1.700s | 0.281s |
+| Second-sort comparisons | 403,022 | 0 |
+| Complete target request, CPU | 25.001s | 22.913s |
+| Complete request cumulative allocation | 95.91GB | 84.60GB |
+| Haxe-to-generated-C wall | 27.525s | 25.795s |
+
+The stable evidence is structural: the second sort has zero comparisons, the
+first sort retains the same 420,830 comparisons, every collision counter is
+unchanged, and every compiler artifact is byte-identical. The timing direction
+is useful, but the saturated host means it must not be published as a p50,
+p95, or machine-independent speedup.
+
+### Span-lowering compiler-process reuse
+
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
 runner started 87 independent Haxe processes: 18 report/determinism renders, 36
