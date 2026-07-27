@@ -513,15 +513,18 @@ then reduce demonstrated repeated target work without caching mutable
 
 Beads issue `haxe_c-fbq` added an opt-in compiler profiler rather than guessing
 from whole-suite wall time. A *phase* here means one named portion of the build,
-such as “turn validated HxcIR into structural C bodies.” The current schema-1
+such as “turn validated HxcIR into structural C bodies.” The current schema-3
 `HXC_PROFILE` stream records phases as a checked parent/child tree only when
 `reflaxe_c_phase_timing` is enabled. Inclusive time contains nested work;
 exclusive time subtracts it. Bottleneck ranking uses exclusive wall and CPU
 time, so a broad parent cannot make the same work look expensive twice.
 Allocation changes, resident-memory samples, and bounded entity/output counts
 help distinguish “one operation is intrinsically slow” from “the compiler
-repeated or materialized far more work than expected.” Haxe's `--times` report
-still supplies the surrounding parse/type/macro context. The command is:
+repeated or materialized far more work than expected.” Function-scoped work
+records use a closed tagged envelope: control-flow and typed-body counts have
+separate payloads, and the consumer rejects an unknown tag, a mixed payload, or
+a payload on the wrong phase. Haxe's `--times` report still supplies the
+surrounding parse/type/macro context. The command is:
 
 ```sh
 npm run profile:caxecraft-compiler
@@ -778,6 +781,62 @@ block at most once. Host contention can stretch elapsed time but cannot make
 those counts flaky. The overall compile remains too slow; this result closes
 one measured hotspot and supplies better attribution for selecting the next
 one.
+
+### Function-attributed typed-body work
+
+The next full-playable profile gave every `HxcIR typed-body lowering` span its
+stable function ID and counted both source work and produced HxcIR. *Type
+classification* means deciding which exact C-facing value contract a typed
+Haxe value needs: a primitive, record, collection, enum or class, callable, or
+another supported carrier. This decision is semantic work, not merely spelling
+a C type, because some families must also register layout, lifetime, import,
+specialization, or source-provenance facts.
+
+The playable asked for 21,698 body value classifications. Three distinct
+repeated costs were safe to remove:
+
+- 8,539 requests were exact non-nullable primitives such as Haxe `Int`, `Bool`,
+  or a `c.UInt8` abstract. They now reuse one request-local immutable value plan.
+  The shortcut deliberately does not unwrap `Null<T>`, imported typedefs, or
+  user abstracts because those neighboring shapes can carry different
+  representation or diagnostic meaning.
+- Non-generic named record typedefs produced 80 distinct classifications and
+  5,591 repeated requests. A named, non-generic typedef has the same transparent
+  field definition throughout one compiler request, so those repetitions now
+  reuse the first immutable record value plan. Generic records and anonymous
+  object literals retain full structural classification because their shape
+  can depend on type arguments or local typing context.
+- Each distinct enum use records a source location explaining why that enum
+  shape exists. The previous code re-sorted the enum's entire growing
+  provenance list after every new location, rebuilding display keys during
+  comparisons. Discovery now deduplicates by the same stable display key and
+  sorts once when the final specialization report asks for canonical order.
+  The report remains complete and byte-identical.
+
+These changes do not persist Haxe `Type` or `TypedExpr` values between compiler
+requests, do not skip HxcIR validation, and do not turn a side-effecting general
+type lookup into a cache hit. The primitive and named-record plans are shared
+only inside the current `CBodyAggregateRegistry`; enum provenance still records
+every distinct source location before its deterministic final sort.
+
+The table compares two single cold runs of the same full playable on a
+**contended host**. It is diagnostic evidence, not a stable median or a release
+budget. Both runs produced the same 225 normal artifacts with SHA-256 tree
+digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+
+| Measured typed-body value | Before | After |
+| --- | ---: | ---: |
+| Typed-body lowering, CPU | 11.338s | 4.443s |
+| Typed-body cumulative allocation | 39.16GB | 15.55GB |
+| Nominal-family classification, CPU | 3.242s | 0.899s |
+| Haxe-to-generated-C wall | 47.007s | 38.338s |
+
+The compile is still too slow. The durable result is that the largest named
+semantic phase lost about 6.9 seconds of CPU and 23.6GB of repeated allocation
+without changing compiler artifacts. The next optimization should move to the
+remaining measured owners—especially symbol collision work and C printing—
+rather than broadening these deliberately narrow caches.
 
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its

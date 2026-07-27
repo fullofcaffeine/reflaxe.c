@@ -99,7 +99,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             return "HXC_PROFILE\t" + json.dumps(value, separators=(",", ":"))
 
         child = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 2,
@@ -118,7 +118,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": 1024.0,
         }
         parent = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 1,
@@ -137,14 +137,14 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": 1024.0,
         }
         counter = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "recordKind": "counter",
             "requestId": "request-1",
             "name": "runtime.requirements",
             "value": 3,
         }
         request = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "recordKind": "request",
             "requestId": "request-1",
             "status": "ok",
@@ -178,21 +178,24 @@ class CaxecraftTimingTests(unittest.TestCase):
                 "subject": "demo.Main.main",
                 "work": {
                     "kind": "normal-join-search-v1",
-                    "blockCount": 4,
-                    "normalJoinSearches": 2,
-                    "normalJoinCandidateProofs": 2,
-                    "normalJoinDistanceSearches": 4,
-                    "normalJoinDistanceBlockVisits": 12,
-                    "completionSetSearches": 2,
-                    "completionSetInitialBlockScans": 12,
-                    "completionSetWorklistDequeues": 3,
-                    "abruptCompletionSetSearches": 1,
-                    "abruptCompletionSetInitialBlockScans": 4,
-                    "abruptCompletionSetWorklistDequeues": 1,
-                    "forwardReachabilitySearches": 4,
-                    "forwardReachabilityBlockVisits": 12,
-                    "prefixDisjointSearches": 2,
-                    "prefixDisjointBlockVisits": 8,
+                    "controlFlow": {
+                        "blockCount": 4,
+                        "normalJoinSearches": 2,
+                        "normalJoinCandidateProofs": 2,
+                        "normalJoinDistanceSearches": 4,
+                        "normalJoinDistanceBlockVisits": 12,
+                        "completionSetSearches": 2,
+                        "completionSetInitialBlockScans": 12,
+                        "completionSetWorklistDequeues": 3,
+                        "abruptCompletionSetSearches": 1,
+                        "abruptCompletionSetInitialBlockScans": 4,
+                        "abruptCompletionSetWorklistDequeues": 1,
+                        "forwardReachabilitySearches": 4,
+                        "forwardReachabilityBlockVisits": 12,
+                        "prefixDisjointSearches": 2,
+                        "prefixDisjointBlockVisits": 8,
+                    },
+                    "typedBody": None,
                 },
             }
         )
@@ -209,6 +212,96 @@ class CaxecraftTimingTests(unittest.TestCase):
         )
         self.assertEqual(work_profile.spans[0].subject, "demo.Main.main")
         self.assertEqual(work_profile.spans[0].work.block_count, 4)
+        typed_body_child = dict(child)
+        typed_body_child.update(
+            {
+                "category": "detail",
+                "name": "HxcIR typed-body lowering",
+                "subject": "method.demo.Main.run",
+                "work": {
+                    "kind": "typed-body-lowering-v1",
+                    "controlFlow": None,
+                    "typedBody": {
+                        "expressionNodeCount": 12,
+                        "statementLoweringCalls": 5,
+                        "valueLoweringCalls": 7,
+                        "bodyValueTypeRequests": 4,
+                        "directPrimitiveFastPaths": 3,
+                        "stringTypeClassifications": 1,
+                        "stringTypeCpuMicroseconds": 10.5,
+                        "recordTypeClassifications": 1,
+                        "recordTypeCpuMicroseconds": 20.5,
+                        "collectionTypeClassifications": 1,
+                        "collectionTypeCpuMicroseconds": 30.5,
+                        "nominalTypeClassifications": 1,
+                        "nominalTypeCpuMicroseconds": 40.5,
+                        "callableOptionalTypeClassifications": 1,
+                        "callableOptionalTypeCpuMicroseconds": 50.5,
+                        "otherTypeClassifications": 1,
+                        "otherTypeCpuMicroseconds": 60.5,
+                        "specializationRequests": 6,
+                        "coercionRequests": 3,
+                        "producedBlockCount": 2,
+                        "producedInstructionCount": 9,
+                    },
+                },
+            }
+        )
+        typed_body_profile = profiler.parse_profile_records(
+            "\n".join(
+                (
+                    record(typed_body_child),
+                    record(parent),
+                    record(counter),
+                    record(request),
+                )
+            ),
+            expected_status="ok",
+        )
+        self.assertEqual(
+            typed_body_profile.spans[0].work.expression_node_count, 12
+        )
+        self.assertEqual(
+            typed_body_profile.spans[0].work.direct_primitive_fast_paths, 3
+        )
+
+        mixed_work_child = json.loads(json.dumps(typed_body_child))
+        mixed_work_child["work"]["controlFlow"] = work_child["work"]["controlFlow"]
+        with self.assertRaisesRegex(
+            profiler.CompilerProfileFailure,
+            "typed-body span work requires only a typedBody payload",
+        ):
+            profiler.parse_profile_records(
+                "\n".join(
+                    (
+                        record(mixed_work_child),
+                        record(parent),
+                        record(counter),
+                        record(request),
+                    )
+                )
+            )
+
+        unknown_work_child = json.loads(json.dumps(typed_body_child))
+        unknown_work_child["work"] = {
+            "kind": "future-unregistered-work-v1",
+            "controlFlow": None,
+            "typedBody": None,
+        }
+        with self.assertRaisesRegex(
+            profiler.CompilerProfileFailure, "unknown kind"
+        ):
+            profiler.parse_profile_records(
+                "\n".join(
+                    (
+                        record(unknown_work_child),
+                        record(parent),
+                        record(counter),
+                        record(request),
+                    )
+                )
+            )
+
         self.assertEqual(
             profiler.distribution([1.0, 2.0, 3.0, 4.0, 5.0]),
             {
@@ -263,7 +356,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             ROOT / "examples/caxecraft/profile_compiler.py",
         )
         span = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 1,
@@ -282,7 +375,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": None,
         }
         request = {
-            "schemaVersion": 2,
+            "schemaVersion": 3,
             "recordKind": "request",
             "requestId": "request-1",
             "status": "failed",

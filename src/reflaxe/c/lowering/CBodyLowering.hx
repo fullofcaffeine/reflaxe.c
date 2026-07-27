@@ -490,6 +490,8 @@ class CBodyLowering {
 		new CBodyNullCheckCoalescing().run(program);
 		CPhaseTiming.stopDetail(nullCheckTimer);
 		recordProgramCounters(program);
+		CPhaseTiming.setCounter(CPCounterHxcIRNamedRecordCacheHits, aggregateRegistry.namedRecordHits());
+		CPhaseTiming.setCounter(CPCounterHxcIRNamedRecordCacheMisses, aggregateRegistry.namedRecordMisses());
 		CPhaseTiming.stop(hxcIRConstructionTimer);
 		final hxcIRValidationTimer = CPhaseTiming.start(CPHxcIRValidation);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
@@ -3078,6 +3080,25 @@ private class FunctionBuilder {
 	var valueOrdinal = 0;
 	var blockOrdinal = 0;
 	var currentBlock:MutableBodyBlock;
+	final collectProfileWork:Bool;
+	var profileStatementLoweringCalls = 0;
+	var profileValueLoweringCalls = 0;
+	var profileBodyValueTypeRequests = 0;
+	var profileDirectPrimitiveFastPaths = 0;
+	var profileStringTypeClassifications = 0;
+	var profileStringTypeCpuSeconds = 0.0;
+	var profileRecordTypeClassifications = 0;
+	var profileRecordTypeCpuSeconds = 0.0;
+	var profileCollectionTypeClassifications = 0;
+	var profileCollectionTypeCpuSeconds = 0.0;
+	var profileNominalTypeClassifications = 0;
+	var profileNominalTypeCpuSeconds = 0.0;
+	var profileCallableOptionalTypeClassifications = 0;
+	var profileCallableOptionalTypeCpuSeconds = 0.0;
+	var profileOtherTypeClassifications = 0;
+	var profileOtherTypeCpuSeconds = 0.0;
+	var profileSpecializationRequests = 0;
+	var profileCoercionRequests = 0;
 
 	public function new(context:CompilationContext, prepared:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>,
 			constructorSignaturesById:Map<String, PreparedConstructorSignature>, globalRegistry:BodyGlobalRegistry, aggregateRegistry:CBodyAggregateRegistry,
@@ -3093,6 +3114,7 @@ private class FunctionBuilder {
 		this.functionLiterals = functionLiterals;
 		this.dispatch = dispatch;
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
+		this.collectProfileWork = CPhaseTiming.collectsWork();
 		this.localOrdinal = prepared.parameters.length;
 		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.bodyExpression.pos, input.sourcePath));
 		if (prepared.borrowedSpanReturn != null) {
@@ -3267,7 +3289,31 @@ private class FunctionBuilder {
 
 	public function build():BuiltBodyFunction {
 		final bodyExpression = prepared.bodyExpression;
-		final typedBodyLoweringTimer = CPhaseTiming.startDetail(CDTHxcIRTypedBodyLowering);
+		final expressionNodeCount = collectProfileWork ? countTypedExpressionNodes(bodyExpression) : 0;
+		profileStatementLoweringCalls = 0;
+		profileValueLoweringCalls = 0;
+		profileBodyValueTypeRequests = 0;
+		profileDirectPrimitiveFastPaths = 0;
+		profileStringTypeClassifications = 0;
+		profileStringTypeCpuSeconds = 0.0;
+		profileRecordTypeClassifications = 0;
+		profileRecordTypeCpuSeconds = 0.0;
+		profileCollectionTypeClassifications = 0;
+		profileCollectionTypeCpuSeconds = 0.0;
+		profileNominalTypeClassifications = 0;
+		profileNominalTypeCpuSeconds = 0.0;
+		profileCallableOptionalTypeClassifications = 0;
+		profileCallableOptionalTypeCpuSeconds = 0.0;
+		profileOtherTypeClassifications = 0;
+		profileOtherTypeCpuSeconds = 0.0;
+		profileSpecializationRequests = 0;
+		profileCoercionRequests = 0;
+		final instructionCountBefore = instructionOrdinal;
+		final blockCountBefore = blocks.length;
+		// The function ID lets the opt-in profiler distinguish one expensive
+		// source body from repeated whole-program work. It is diagnostic context
+		// only: normal compilation and the generated HxcIR remain unchanged.
+		final typedBodyLoweringTimer = CPhaseTiming.startDetail(CDTHxcIRTypedBodyLowering, prepared.irId);
 		switch prepared.role {
 			case PBRFunction | PBRConstructor(_) | PBRClassInitializer:
 				lowerStatement(bodyExpression);
@@ -3278,6 +3324,33 @@ private class FunctionBuilder {
 				appendInstruction(null, IRIOInitialize(IRPGlobal(global.ir.id), value.id, IRISUninitialized, IRISInitialized),
 					HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath), "initialize-global");
 		}
+		CPhaseTiming.setDetailWork(typedBodyLoweringTimer, {
+			kind: "typed-body-lowering-v1",
+			controlFlow: null,
+			typedBody: {
+				expressionNodeCount: expressionNodeCount,
+				statementLoweringCalls: profileStatementLoweringCalls,
+				valueLoweringCalls: profileValueLoweringCalls,
+				bodyValueTypeRequests: profileBodyValueTypeRequests,
+				directPrimitiveFastPaths: profileDirectPrimitiveFastPaths,
+				stringTypeClassifications: profileStringTypeClassifications,
+				stringTypeCpuMicroseconds: profileStringTypeCpuSeconds * 1000000.0,
+				recordTypeClassifications: profileRecordTypeClassifications,
+				recordTypeCpuMicroseconds: profileRecordTypeCpuSeconds * 1000000.0,
+				collectionTypeClassifications: profileCollectionTypeClassifications,
+				collectionTypeCpuMicroseconds: profileCollectionTypeCpuSeconds * 1000000.0,
+				nominalTypeClassifications: profileNominalTypeClassifications,
+				nominalTypeCpuMicroseconds: profileNominalTypeCpuSeconds * 1000000.0,
+				callableOptionalTypeClassifications: profileCallableOptionalTypeClassifications,
+				callableOptionalTypeCpuMicroseconds: profileCallableOptionalTypeCpuSeconds * 1000000.0,
+				otherTypeClassifications: profileOtherTypeClassifications,
+				otherTypeCpuMicroseconds: profileOtherTypeCpuSeconds * 1000000.0,
+				specializationRequests: profileSpecializationRequests,
+				coercionRequests: profileCoercionRequests,
+				producedBlockCount: blocks.length - blockCountBefore,
+				producedInstructionCount: instructionOrdinal - instructionCountBefore
+			}
+		});
 		CPhaseTiming.stopDetail(typedBodyLoweringTimer);
 		final functionFinalizationTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionFinalization);
 		validateConstructorManagedFields(bodyExpression.pos);
@@ -3430,6 +3503,8 @@ private class FunctionBuilder {
 	}
 
 	function lowerStatement(expression:TypedExpr):Void {
+		if (collectProfileWork)
+			profileStatementLoweringCalls++;
 		if (currentBlock.terminator != null) {
 			unsupported(expression, 'unreachable ${nodeName(expression)}');
 		}
@@ -5834,6 +5909,8 @@ private class FunctionBuilder {
 	}
 
 	function lowerValue(expression:TypedExpr, ?expectedMapping:CBodyValueType):LoweredValue {
+		if (collectProfileWork)
+			profileValueLoweringCalls++;
 		return switch expression.expr {
 			case TConst(constant): lowerConstant(expression, constant, expectedMapping);
 			case TLocal(variable): lowerLocal(expression, variable);
@@ -11457,6 +11534,8 @@ private class FunctionBuilder {
 	}
 
 	function coerce(value:LoweredValue, target:CBodyValueType, position:Position, node:String):LoweredValue {
+		if (collectProfileWork)
+			profileCoercionRequests++;
 		if (typeKey(value.mapping.irType) == typeKey(target.irType)) {
 			// The carrier is already correct, but retain the contextual Haxe identity
 			// (for example LogicalPath rather than plain String) for later diagnostics.
@@ -11867,11 +11946,76 @@ private class FunctionBuilder {
 		};
 	}
 
-	function bodyValueType(type:Type, position:Position, node:String):CBodyValueType
-		return aggregateRegistry.valueType(applyCurrentSpecialization(type), position, input.modulePath, input.sourcePath, rejectAggregateType, node);
+	function bodyValueType(type:Type, position:Position, node:String):CBodyValueType {
+		if (collectProfileWork)
+			profileBodyValueTypeRequests++;
+		final specialized = applyCurrentSpecialization(type);
+		final directPrimitive = aggregateRegistry.directPrimitiveValueType(specialized);
+		if (directPrimitive != null) {
+			if (collectProfileWork)
+				profileDirectPrimitiveFastPaths++;
+			return directPrimitive;
+		}
+		final started = collectProfileWork ? Sys.cpuTime() : 0.0;
+		final classified = aggregateRegistry.valueType(specialized, position, input.modulePath, input.sourcePath, rejectAggregateType, node);
+		if (collectProfileWork)
+			recordProfileTypeClassification(classified, Sys.cpuTime() - started);
+		return classified;
+	}
 
-	function applyCurrentSpecialization(type:Type):Type
+	/**
+		Attribute slow-path type work without changing the semantic classifier.
+
+		The profiler groups closed value families rather than logging every call.
+		This keeps the report bounded while showing whether the next optimization
+		belongs to records, collections, nominal types, or callable/optional
+		carriers. Timing is opt-in and never runs in an ordinary compilation.
+	**/
+	function recordProfileTypeClassification(value:CBodyValueType, cpuSeconds:Float):Void {
+		switch value.kind {
+			case CBVKStaticString(_) | CBVKManagedString(_):
+				profileStringTypeClassifications++;
+				profileStringTypeCpuSeconds += cpuSeconds;
+			case CBVKAggregate(_):
+				profileRecordTypeClassifications++;
+				profileRecordTypeCpuSeconds += cpuSeconds;
+			case CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_):
+				profileCollectionTypeClassifications++;
+				profileCollectionTypeCpuSeconds += cpuSeconds;
+			case CBVKImport(_) | CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_):
+				profileNominalTypeClassifications++;
+				profileNominalTypeCpuSeconds += cpuSeconds;
+			case CBVKOptional(_) | CBVKFunction(_, _) | CBVKStackClosure(_, _, _):
+				profileCallableOptionalTypeClassifications++;
+				profileCallableOptionalTypeCpuSeconds += cpuSeconds;
+			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKClosureCapturePointer(_) | CBVKClosureContext:
+				profileOtherTypeClassifications++;
+				profileOtherTypeCpuSeconds += cpuSeconds;
+		}
+	}
+
+	function applyCurrentSpecialization(type:Type):Type {
+		if (collectProfileWork)
+			profileSpecializationRequests++;
 		return input.specialization == null ? type : input.specialization.apply(type);
+	}
+
+	/**
+		Count the typed Haxe nodes owned by this function for profiler comparison.
+
+		This extra walk runs only under the opt-in structured profiler. It gives
+		later work counts a stable source-size denominator without changing normal
+		compilation or retaining `TypedExpr` nodes beyond the request.
+	**/
+	static function countTypedExpressionNodes(root:TypedExpr):Int {
+		var count = 0;
+		function visit(expression:TypedExpr):Void {
+			count++;
+			TypedExprTools.iter(expression, visit);
+		}
+		visit(root);
+		return count;
+	}
 
 	function rejectAggregateType(position:Position, node:String):Void
 		unsupportedAt(position, node);

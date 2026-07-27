@@ -86,10 +86,23 @@ class CPreparedBodyEnumInstance {
 	public final typeParameterNames:Array<String>;
 	public final typeArguments:Array<CGenericTypeArgument>;
 	public final arguments:Array<CBodyValueType>;
-	public final reasons:Array<HxcSourceSpan> = [];
 
-	/** Membership index that avoids rescanning the sorted public provenance. */
-	final reasonDisplays:Map<String, Bool> = [];
+	/**
+		Records each distinct source location that required this enum shape.
+
+		Discovery order is deliberately not observable. A large program may find
+		thousands of uses of one enum while lowering function bodies. Sorting the
+		whole growing list after every insertion would repeat the same work
+		quadratically. We therefore use the stable display text as both the
+		deduplication key and the eventual sort key, then sort once when a report
+		or another final consumer asks for canonical provenance.
+	**/
+	final reasonsByDisplay:Map<String, HxcSourceSpan> = [];
+
+	/** Cached canonical view, invalidated if later lowering discovers a new use. */
+	var canonicalReasonOrder:Null<Array<HxcSourceSpan>> = null;
+
+	var distinctReasonCount:Int = 0;
 
 	public final valueTagRequest:CSymbolRequest;
 	public final discriminantTagRequest:CSymbolRequest;
@@ -161,11 +174,34 @@ class CPreparedBodyEnumInstance {
 
 	public function addReason(reason:HxcSourceSpan):Void {
 		final display = reason.display();
-		if (reasonDisplays.exists(display))
+		if (reasonsByDisplay.exists(display))
 			return;
-		reasonDisplays.set(display, true);
-		reasons.push(reason);
-		reasons.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.display(), right.display()));
+		reasonsByDisplay.set(display, reason);
+		distinctReasonCount++;
+		canonicalReasonOrder = null;
+	}
+
+	/** Returns how many distinct source locations required this enum shape. */
+	public inline function reasonCount():Int {
+		return distinctReasonCount;
+	}
+
+	/**
+		Returns enum provenance in deterministic UTF-8 order.
+
+		The returned copy prevents report code from mutating the cached order.
+		Lowering pays for this sort only when a final consumer needs it, rather
+		than once for every source expression that mentions the enum.
+	**/
+	public function canonicalReasons():Array<HxcSourceSpan> {
+		final cached = canonicalReasonOrder;
+		if (cached != null)
+			return cached.copy();
+		final displays = [for (display in reasonsByDisplay.keys()) display];
+		displays.sort(CGenericTypeCanonicalizer.compareUtf8);
+		final ordered = displays.map(display -> reasonsByDisplay.get(display));
+		canonicalReasonOrder = ordered;
+		return ordered.copy();
 	}
 
 	public function declaration():HxcIRTypeDeclaration {

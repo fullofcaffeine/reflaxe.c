@@ -106,6 +106,8 @@ enum abstract CProfileCounterId(String) to String {
 	var CPCounterHxcIRBlocks = "hxcir.blocks";
 	var CPCounterHxcIRInstructions = "hxcir.instructions";
 	var CPCounterHxcIRManagedRoots = "hxcir.managed-roots";
+	var CPCounterHxcIRNamedRecordCacheHits = "hxcir.named-record-cache-hits";
+	var CPCounterHxcIRNamedRecordCacheMisses = "hxcir.named-record-cache-misses";
 	var CPCounterCASTFunctions = "cast.functions";
 	var CPCounterRuntimeRequirements = "runtime.requirements";
 	var CPCounterSymbolInitialCandidates = "symbols.initial-candidates";
@@ -158,6 +160,18 @@ private typedef CProfileSpanRecord = {
 @:noCompletion
 typedef CProfileSpanWork = {
 	final kind:String;
+	final controlFlow:Null<CProfileControlFlowWork>;
+	final typedBody:Null<CProfileTypedBodyWork>;
+}
+
+/**
+	Graph-search counts for one structural C control-flow plan.
+
+	The enclosing `kind` tag and null sibling payload make this a closed sum:
+	consumers reject a control-flow payload attached to another work family.
+**/
+@:noCompletion
+typedef CProfileControlFlowWork = {
 	final blockCount:Int;
 	final normalJoinSearches:Int;
 	final normalJoinCandidateProofs:Int;
@@ -173,6 +187,38 @@ typedef CProfileSpanWork = {
 	final forwardReachabilityBlockVisits:Int;
 	final prefixDisjointSearches:Int;
 	final prefixDisjointBlockVisits:Int;
+}
+
+/**
+	Typed-source and produced-HxcIR counts for one function body.
+
+	The counts separate source size from compiler work. For example, a high
+	`bodyValueTypeRequests` to `expressionNodeCount` ratio reveals repeated type
+	classification even when a busy host makes elapsed time noisy.
+**/
+@:noCompletion
+typedef CProfileTypedBodyWork = {
+	final expressionNodeCount:Int;
+	final statementLoweringCalls:Int;
+	final valueLoweringCalls:Int;
+	final bodyValueTypeRequests:Int;
+	final directPrimitiveFastPaths:Int;
+	final stringTypeClassifications:Int;
+	final stringTypeCpuMicroseconds:Float;
+	final recordTypeClassifications:Int;
+	final recordTypeCpuMicroseconds:Float;
+	final collectionTypeClassifications:Int;
+	final collectionTypeCpuMicroseconds:Float;
+	final nominalTypeClassifications:Int;
+	final nominalTypeCpuMicroseconds:Float;
+	final callableOptionalTypeClassifications:Int;
+	final callableOptionalTypeCpuMicroseconds:Float;
+	final otherTypeClassifications:Int;
+	final otherTypeCpuMicroseconds:Float;
+	final specializationRequests:Int;
+	final coercionRequests:Int;
+	final producedBlockCount:Int;
+	final producedInstructionCount:Int;
 }
 
 private typedef CProfileCounterRecord = {
@@ -321,7 +367,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 2;
+	public static inline final PROFILE_SCHEMA_VERSION = 3;
 
 	static var active:Null<CProfileRequestState> = null;
 
@@ -370,6 +416,10 @@ class CPhaseTiming {
 		if (timer != null)
 			timer.stop();
 	}
+
+	/** True only while the opt-in structured profiler owns this request. */
+	public static function collectsWork():Bool
+		return active != null;
 
 	/** Set one closed counter; conflicting repeated values are an internal error. */
 	public static function setCounter(id:CProfileCounterId, value:Int):Void {

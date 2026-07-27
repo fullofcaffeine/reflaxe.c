@@ -7,12 +7,43 @@ import reflaxe.c.CProfile;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveMappingResult;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveNullability;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveSourceType;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveTypeMapping;
 import reflaxe.c.semantics.CPrimitiveTypes.CTypedSourceType;
 
 /** Recognizes primitive contracts from real Haxe compiler `Type` values. */
 class CPrimitiveTypeMapper {
 	public static function map(type:Type, profile:CProfile):CTypedSourceType {
 		return mapType(type, profile);
+	}
+
+	/**
+		Recognize only an exact, non-nullable primitive abstract.
+
+		General type mapping deliberately follows typedefs, nullable wrappers, and
+		other representation layers. Body lowering often asks about the same
+		already-typed `Int`, `Bool`, or `c.UInt8` value thousands of times, though,
+		and those exact abstracts need none of that discovery. This narrow query
+		lets the body classifier take the cheap path without accidentally erasing a
+		C import typedef, a nominal user abstract, or `Null<T>`.
+
+		The returned mapping has the same source identity and C representation as
+		`map`; `null` means “use the complete mapper,” not “unsupported.”
+	**/
+	public static function mapDirectNonNullable(type:Type, profile:CProfile):Null<CPrimitiveTypeMapping> {
+		return switch type {
+			case TAbstract(reference, parameters) if (parameters.length == 0):
+				final sourceType = primitiveSource(qualifiedName(reference.get()));
+				if (sourceType == null) {
+					null;
+				} else {
+					switch CPrimitiveSemantics.mapping(profile, sourceType, CPNonNullable) {
+						case CPMappingAvailable(mapping): mapping;
+						case CPMappingRejected(_): null;
+					}
+				}
+			case _:
+				null;
+		};
 	}
 
 	static function mapType(type:Type, profile:CProfile):CTypedSourceType {

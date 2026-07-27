@@ -201,7 +201,8 @@ class CGenericSpecializationReportBuilder {
 			var payloadCount = 0;
 			for (tagCase in value.cases)
 				payloadCount += tagCase.payload.length;
-			mergedTypeReasons += value.prepared.reasons.length;
+			final reasons = value.prepared.canonicalReasons();
+			mergedTypeReasons += reasons.length;
 			if (value.prepared.recursive)
 				recursiveCount++;
 			typeRecords.push({
@@ -217,7 +218,7 @@ class CGenericSpecializationReportBuilder {
 					case CBERTaggedUnion: "tagged-union";
 				},
 				arguments: argumentSnapshots(value.prepared.typeParameterNames, value.prepared.typeArguments),
-				reasons: value.prepared.reasons.map(sourceSnapshot),
+				reasons: reasons.map(sourceSnapshot),
 				recursive: value.prepared.recursive,
 				codeSize: {
 					metric: "typed-enum-layout-structural-units",

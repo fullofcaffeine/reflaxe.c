@@ -498,21 +498,24 @@ class CBodyEmitter {
 		final controlFlow = new CBodyControlFlowPlanner().planWithWorkReport(fn);
 		CPhaseTiming.setDetailWork(controlFlowTimer, {
 			kind: "normal-join-search-v1",
-			blockCount: fn.blocks.length,
-			normalJoinSearches: controlFlow.work.normalJoinSearches,
-			normalJoinCandidateProofs: controlFlow.work.normalJoinCandidateProofs,
-			normalJoinDistanceSearches: controlFlow.work.normalJoinDistanceSearches,
-			normalJoinDistanceBlockVisits: controlFlow.work.normalJoinDistanceBlockVisits,
-			completionSetSearches: controlFlow.work.completionSetSearches,
-			completionSetInitialBlockScans: controlFlow.work.completionSetInitialBlockScans,
-			completionSetWorklistDequeues: controlFlow.work.completionSetWorklistDequeues,
-			abruptCompletionSetSearches: controlFlow.work.abruptCompletionSetSearches,
-			abruptCompletionSetInitialBlockScans: controlFlow.work.abruptCompletionSetInitialBlockScans,
-			abruptCompletionSetWorklistDequeues: controlFlow.work.abruptCompletionSetWorklistDequeues,
-			forwardReachabilitySearches: controlFlow.work.forwardReachabilitySearches,
-			forwardReachabilityBlockVisits: controlFlow.work.forwardReachabilityBlockVisits,
-			prefixDisjointSearches: controlFlow.work.prefixDisjointSearches,
-			prefixDisjointBlockVisits: controlFlow.work.prefixDisjointBlockVisits
+			controlFlow: {
+				blockCount: fn.blocks.length,
+				normalJoinSearches: controlFlow.work.normalJoinSearches,
+				normalJoinCandidateProofs: controlFlow.work.normalJoinCandidateProofs,
+				normalJoinDistanceSearches: controlFlow.work.normalJoinDistanceSearches,
+				normalJoinDistanceBlockVisits: controlFlow.work.normalJoinDistanceBlockVisits,
+				completionSetSearches: controlFlow.work.completionSetSearches,
+				completionSetInitialBlockScans: controlFlow.work.completionSetInitialBlockScans,
+				completionSetWorklistDequeues: controlFlow.work.completionSetWorklistDequeues,
+				abruptCompletionSetSearches: controlFlow.work.abruptCompletionSetSearches,
+				abruptCompletionSetInitialBlockScans: controlFlow.work.abruptCompletionSetInitialBlockScans,
+				abruptCompletionSetWorklistDequeues: controlFlow.work.abruptCompletionSetWorklistDequeues,
+				forwardReachabilitySearches: controlFlow.work.forwardReachabilitySearches,
+				forwardReachabilityBlockVisits: controlFlow.work.forwardReachabilityBlockVisits,
+				prefixDisjointSearches: controlFlow.work.prefixDisjointSearches,
+				prefixDisjointBlockVisits: controlFlow.work.prefixDisjointBlockVisits
+			},
+			typedBody: null
 		});
 		CPhaseTiming.stopDetail(controlFlowTimer);
 		final plan = controlFlow.plan;

@@ -39,6 +39,7 @@ import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRegistry;
 import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
+import reflaxe.c.semantics.CPrimitiveSemantics;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
 import reflaxe.c.semantics.CPrimitiveTypes;
 
@@ -436,6 +437,7 @@ private typedef CBodyAggregateTypedefOwner = {
 	final modulePath:String;
 	final displayName:String;
 	final position:Position;
+	final cacheKey:Null<String>;
 }
 
 /** One outer variable stored by address in a caller-owned closure environment. */
@@ -588,6 +590,10 @@ class CBodyAggregateRegistry {
 	final optionalRegistry:CBodyOptionalRegistry;
 	final importRegistry:Null<CImportRegistry>;
 	final sourcePathsByModule:Map<String, String> = [];
+	final directPrimitiveValues:Map<String, CBodyValueType> = [];
+	final namedRecordValues:Map<String, CBodyValueType> = [];
+	var namedRecordCacheHits = 0;
+	var namedRecordCacheMisses = 0;
 
 	public function new(context:CompilationContext, ?program:TypedProgramInput, ?contract:TypedCContractSnapshot, runtimeCreatedStrings:Bool = false) {
 		this.context = context;
@@ -611,6 +617,9 @@ class CBodyAggregateRegistry {
 		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (imported != null)
 			return imported;
+		final directPrimitive = directPrimitiveValueType(type);
+		if (directPrimitive != null)
+			return directPrimitive;
 		final stringIdentity = staticStringIdentity(type);
 		if (stringIdentity != null)
 			return runtimeCreatedStrings ? CBodyValueType.managedString(stringIdentity) : CBodyValueType.staticString(stringIdentity);
@@ -669,22 +678,78 @@ class CBodyAggregateRegistry {
 				valueType(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, ownerModule, sourcePath, fail,
 					'$node.abstract-representation');
 			case TAnonymous(reference):
-				final shape = anonymousShape(reference, [], position, ownerModule, sourcePath, fail, node);
-				var aggregate = byShape.get(shape);
-				if (aggregate == null) {
-					final aggregateOwner = aliasOwner == null ? ownerModule : aliasOwner.modulePath;
-					final aggregateSource = sourcePathsByModule.exists(aggregateOwner) ? sourcePathsByModule.get(aggregateOwner) : sourcePath;
-					if (aggregateSource == null)
-						return rejected(fail, position, '$node:missing-source-for-aggregate-owner:$aggregateOwner');
-					final aggregatePosition = aliasOwner == null ? position : aliasOwner.position;
-					aggregate = prepareAggregate(reference, shape, aliasOwner == null ? null : aliasOwner.displayName, aggregatePosition, aggregateOwner,
-						aggregateSource, fail, node);
-					byShape.set(shape, aggregate);
-				}
-				CBodyValueType.aggregate(aggregate);
+				anonymousValueType(reference, aliasOwner, position, ownerModule, sourcePath, fail, node);
 			case _:
 				CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node));
 		};
+	}
+
+	/**
+		Return a shared value plan for an exact primitive abstract.
+
+		This is intentionally narrower than `valueType`: it does not follow
+		typedefs, unwrap `Null<T>`, or classify user abstracts. Those forms may
+		carry nominal, import, lifetime, or diagnostic meaning. Exact primitives
+		have no use-site observation to replay, so one request-local immutable
+		value plan is safe to share across every function that mentions them.
+	**/
+	public function directPrimitiveValueType(type:Type):Null<CBodyValueType> {
+		final mapping = CPrimitiveTypeMapper.mapDirectNonNullable(type, context.profile);
+		if (mapping == null)
+			return null;
+		final key = CPrimitiveSemantics.sourceTypeKey(mapping.sourceType);
+		final existing = directPrimitiveValues.get(key);
+		if (existing != null)
+			return existing;
+		final prepared = CBodyValueType.primitive(mapping);
+		directPrimitiveValues.set(key, prepared);
+		return prepared;
+	}
+
+	/** Number of repeated non-generic typedef-record classifications reused. */
+	public inline function namedRecordHits():Int
+		return namedRecordCacheHits;
+
+	/** Number of distinct non-generic typedef records classified in this request. */
+	public inline function namedRecordMisses():Int
+		return namedRecordCacheMisses;
+
+	/**
+		Classify one anonymous record, reusing a proven named typedef when safe.
+
+		A non-generic typedef has one transparent Haxe definition for the whole
+		request. Its fields and their source positions do not vary by use, so later
+		mentions can share the immutable value plan. Generic typedefs and object
+		literals still take the complete structural path because their shape can
+		depend on type arguments or local typing context.
+	**/
+	function anonymousValueType(reference:Ref<AnonType>, aliasOwner:Null<CBodyAggregateTypedefOwner>, position:Position, ownerModule:String,
+			sourcePath:String, fail:(Position, String) -> Void, node:String):CBodyValueType {
+		final cacheKey = aliasOwner == null ? null : aliasOwner.cacheKey;
+		if (cacheKey != null) {
+			final cached = namedRecordValues.get(cacheKey);
+			if (cached != null) {
+				namedRecordCacheHits++;
+				return cached;
+			}
+			namedRecordCacheMisses++;
+		}
+		final shape = anonymousShape(reference, [], position, ownerModule, sourcePath, fail, node);
+		var aggregate = byShape.get(shape);
+		if (aggregate == null) {
+			final aggregateOwner = aliasOwner == null ? ownerModule : aliasOwner.modulePath;
+			final aggregateSource = sourcePathsByModule.exists(aggregateOwner) ? sourcePathsByModule.get(aggregateOwner) : sourcePath;
+			if (aggregateSource == null)
+				return rejected(fail, position, '$node:missing-source-for-aggregate-owner:$aggregateOwner');
+			final aggregatePosition = aliasOwner == null ? position : aliasOwner.position;
+			aggregate = prepareAggregate(reference, shape, aliasOwner == null ? null : aliasOwner.displayName, aggregatePosition, aggregateOwner,
+				aggregateSource, fail, node);
+			byShape.set(shape, aggregate);
+		}
+		final prepared = CBodyValueType.aggregate(aggregate);
+		if (cacheKey != null)
+			namedRecordValues.set(cacheKey, prepared);
+		return prepared;
 	}
 
 	/**
@@ -1170,8 +1235,9 @@ class CBodyAggregateRegistry {
 				anonymousTypedefOwner(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), {
 					modulePath: definition.module,
 					displayName: definition.pack.concat([definition.name]).join("."),
-					position: definition.pos
-				});
+					position: definition.pos,
+					cacheKey: definition.params.length == 0
+					&& parameters.length == 0 ? definition.pack.concat([definition.name]).join(".") : null});
 			case TAnonymous(_): candidate;
 			case _: null;
 		};

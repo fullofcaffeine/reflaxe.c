@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 2
+PROFILE_SCHEMA_VERSION = 3
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -150,6 +150,8 @@ PROFILE_COUNTERS = (
     "hxcir.instructions",
     "hxcir.managed-roots",
     "hxcir.modules",
+    "hxcir.named-record-cache-hits",
+    "hxcir.named-record-cache-misses",
     "hxcir.type-instances",
     "hxcir.types",
     "output.planned-files",
@@ -216,8 +218,7 @@ class HaxeTimerRow:
 
 
 @dataclass(frozen=True)
-class CompilerProfileSpanWork:
-    kind: str
+class CompilerProfileControlFlowWork:
     block_count: int
     normal_join_searches: int
     normal_join_candidate_proofs: int
@@ -236,7 +237,6 @@ class CompilerProfileSpanWork:
 
     def to_json(self) -> dict[str, object]:
         return {
-            "kind": self.kind,
             "blockCount": self.block_count,
             "normalJoinSearches": self.normal_join_searches,
             "normalJoinCandidateProofs": self.normal_join_candidate_proofs,
@@ -253,6 +253,61 @@ class CompilerProfileSpanWork:
             "prefixDisjointSearches": self.prefix_disjoint_searches,
             "prefixDisjointBlockVisits": self.prefix_disjoint_block_visits,
         }
+
+
+@dataclass(frozen=True)
+class CompilerProfileTypedBodyWork:
+    expression_node_count: int
+    statement_lowering_calls: int
+    value_lowering_calls: int
+    body_value_type_requests: int
+    direct_primitive_fast_paths: int
+    string_type_classifications: int
+    string_type_cpu_microseconds: float
+    record_type_classifications: int
+    record_type_cpu_microseconds: float
+    collection_type_classifications: int
+    collection_type_cpu_microseconds: float
+    nominal_type_classifications: int
+    nominal_type_cpu_microseconds: float
+    callable_optional_type_classifications: int
+    callable_optional_type_cpu_microseconds: float
+    other_type_classifications: int
+    other_type_cpu_microseconds: float
+    specialization_requests: int
+    coercion_requests: int
+    produced_block_count: int
+    produced_instruction_count: int
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "expressionNodeCount": self.expression_node_count,
+            "statementLoweringCalls": self.statement_lowering_calls,
+            "valueLoweringCalls": self.value_lowering_calls,
+            "bodyValueTypeRequests": self.body_value_type_requests,
+            "directPrimitiveFastPaths": self.direct_primitive_fast_paths,
+            "stringTypeClassifications": self.string_type_classifications,
+            "stringTypeCpuMicroseconds": self.string_type_cpu_microseconds,
+            "recordTypeClassifications": self.record_type_classifications,
+            "recordTypeCpuMicroseconds": self.record_type_cpu_microseconds,
+            "collectionTypeClassifications": self.collection_type_classifications,
+            "collectionTypeCpuMicroseconds": self.collection_type_cpu_microseconds,
+            "nominalTypeClassifications": self.nominal_type_classifications,
+            "nominalTypeCpuMicroseconds": self.nominal_type_cpu_microseconds,
+            "callableOptionalTypeClassifications": self.callable_optional_type_classifications,
+            "callableOptionalTypeCpuMicroseconds": self.callable_optional_type_cpu_microseconds,
+            "otherTypeClassifications": self.other_type_classifications,
+            "otherTypeCpuMicroseconds": self.other_type_cpu_microseconds,
+            "specializationRequests": self.specialization_requests,
+            "coercionRequests": self.coercion_requests,
+            "producedBlockCount": self.produced_block_count,
+            "producedInstructionCount": self.produced_instruction_count,
+        }
+
+
+CompilerProfileSpanWork = (
+    CompilerProfileControlFlowWork | CompilerProfileTypedBodyWork
+)
 
 
 @dataclass(frozen=True)
@@ -279,7 +334,27 @@ class CompilerProfileSpan:
             "category": self.category,
             "name": self.name,
             "subject": self.subject,
-            "work": self.work.to_json() if self.work is not None else None,
+            "work": (
+                {
+                    "kind": (
+                        "normal-join-search-v1"
+                        if isinstance(self.work, CompilerProfileControlFlowWork)
+                        else "typed-body-lowering-v1"
+                    ),
+                    "controlFlow": (
+                        self.work.to_json()
+                        if isinstance(self.work, CompilerProfileControlFlowWork)
+                        else None
+                    ),
+                    "typedBody": (
+                        self.work.to_json()
+                        if isinstance(self.work, CompilerProfileTypedBodyWork)
+                        else None
+                    ),
+                }
+                if self.work is not None
+                else None
+            ),
             "status": self.status,
             "startOffsetMs": round(self.start_offset_us / 1000.0, 3),
             "inclusiveWallMs": round(self.inclusive_wall_us / 1000.0, 3),
@@ -359,9 +434,9 @@ SPAN_FIELDS = frozenset(
         "residentBytesAtEnd",
     }
 )
-SPAN_WORK_FIELDS = frozenset(
+SPAN_WORK_FIELDS = frozenset({"kind", "controlFlow", "typedBody"})
+CONTROL_FLOW_WORK_FIELDS = frozenset(
     {
-        "kind",
         "blockCount",
         "normalJoinSearches",
         "normalJoinCandidateProofs",
@@ -377,6 +452,31 @@ SPAN_WORK_FIELDS = frozenset(
         "forwardReachabilityBlockVisits",
         "prefixDisjointSearches",
         "prefixDisjointBlockVisits",
+    }
+)
+TYPED_BODY_WORK_FIELDS = frozenset(
+    {
+        "expressionNodeCount",
+        "statementLoweringCalls",
+        "valueLoweringCalls",
+        "bodyValueTypeRequests",
+        "directPrimitiveFastPaths",
+        "stringTypeClassifications",
+        "stringTypeCpuMicroseconds",
+        "recordTypeClassifications",
+        "recordTypeCpuMicroseconds",
+        "collectionTypeClassifications",
+        "collectionTypeCpuMicroseconds",
+        "nominalTypeClassifications",
+        "nominalTypeCpuMicroseconds",
+        "callableOptionalTypeClassifications",
+        "callableOptionalTypeCpuMicroseconds",
+        "otherTypeClassifications",
+        "otherTypeCpuMicroseconds",
+        "specializationRequests",
+        "coercionRequests",
+        "producedBlockCount",
+        "producedInstructionCount",
     }
 )
 COUNTER_FIELDS = frozenset(
@@ -610,67 +710,198 @@ def parse_profile_records(
                 require_profile_fields_without_schema(
                     work_value, SPAN_WORK_FIELDS, "span work"
                 )
-                work = CompilerProfileSpanWork(
-                    kind=profile_string(work_value, "kind"),
-                    block_count=profile_integer(
-                        work_value, "blockCount", minimum=0
-                    ),
-                    normal_join_searches=profile_integer(
-                        work_value, "normalJoinSearches", minimum=0
-                    ),
-                    normal_join_candidate_proofs=profile_integer(
-                        work_value, "normalJoinCandidateProofs", minimum=0
-                    ),
-                    normal_join_distance_searches=profile_integer(
-                        work_value, "normalJoinDistanceSearches", minimum=0
-                    ),
-                    normal_join_distance_block_visits=profile_integer(
-                        work_value, "normalJoinDistanceBlockVisits", minimum=0
-                    ),
-                    completion_set_searches=profile_integer(
-                        work_value, "completionSetSearches", minimum=0
-                    ),
-                    completion_set_initial_block_scans=profile_integer(
-                        work_value, "completionSetInitialBlockScans", minimum=0
-                    ),
-                    completion_set_worklist_dequeues=profile_integer(
-                        work_value, "completionSetWorklistDequeues", minimum=0
-                    ),
-                    abrupt_completion_set_searches=profile_integer(
-                        work_value, "abruptCompletionSetSearches", minimum=0
-                    ),
-                    abrupt_completion_set_initial_block_scans=profile_integer(
-                        work_value, "abruptCompletionSetInitialBlockScans", minimum=0
-                    ),
-                    abrupt_completion_set_worklist_dequeues=profile_integer(
-                        work_value,
-                        "abruptCompletionSetWorklistDequeues",
-                        minimum=0,
-                    ),
-                    forward_reachability_searches=profile_integer(
-                        work_value, "forwardReachabilitySearches", minimum=0
-                    ),
-                    forward_reachability_block_visits=profile_integer(
-                        work_value,
-                        "forwardReachabilityBlockVisits",
-                        minimum=0,
-                    ),
-                    prefix_disjoint_searches=profile_integer(
-                        work_value, "prefixDisjointSearches", minimum=0
-                    ),
-                    prefix_disjoint_block_visits=profile_integer(
-                        work_value, "prefixDisjointBlockVisits", minimum=0
-                    ),
-                )
-                if (
-                    category != "detail"
-                    or name != "body control-flow planning"
-                    or subject_value is None
-                    or work.kind != "normal-join-search-v1"
-                ):
+                kind = profile_string(work_value, "kind")
+                control_flow_value = work_value.get("controlFlow")
+                typed_body_value = work_value.get("typedBody")
+                if kind == "normal-join-search-v1":
+                    if (
+                        not isinstance(control_flow_value, dict)
+                        or typed_body_value is not None
+                    ):
+                        raise CompilerProfileFailure(
+                            "normal-join span work requires only a controlFlow payload"
+                        )
+                    require_profile_fields_without_schema(
+                        control_flow_value,
+                        CONTROL_FLOW_WORK_FIELDS,
+                        "control-flow span work",
+                    )
+                    work = CompilerProfileControlFlowWork(
+                        block_count=profile_integer(
+                            control_flow_value, "blockCount", minimum=0
+                        ),
+                        normal_join_searches=profile_integer(
+                            control_flow_value, "normalJoinSearches", minimum=0
+                        ),
+                        normal_join_candidate_proofs=profile_integer(
+                            control_flow_value,
+                            "normalJoinCandidateProofs",
+                            minimum=0,
+                        ),
+                        normal_join_distance_searches=profile_integer(
+                            control_flow_value,
+                            "normalJoinDistanceSearches",
+                            minimum=0,
+                        ),
+                        normal_join_distance_block_visits=profile_integer(
+                            control_flow_value,
+                            "normalJoinDistanceBlockVisits",
+                            minimum=0,
+                        ),
+                        completion_set_searches=profile_integer(
+                            control_flow_value, "completionSetSearches", minimum=0
+                        ),
+                        completion_set_initial_block_scans=profile_integer(
+                            control_flow_value,
+                            "completionSetInitialBlockScans",
+                            minimum=0,
+                        ),
+                        completion_set_worklist_dequeues=profile_integer(
+                            control_flow_value,
+                            "completionSetWorklistDequeues",
+                            minimum=0,
+                        ),
+                        abrupt_completion_set_searches=profile_integer(
+                            control_flow_value,
+                            "abruptCompletionSetSearches",
+                            minimum=0,
+                        ),
+                        abrupt_completion_set_initial_block_scans=profile_integer(
+                            control_flow_value,
+                            "abruptCompletionSetInitialBlockScans",
+                            minimum=0,
+                        ),
+                        abrupt_completion_set_worklist_dequeues=profile_integer(
+                            control_flow_value,
+                            "abruptCompletionSetWorklistDequeues",
+                            minimum=0,
+                        ),
+                        forward_reachability_searches=profile_integer(
+                            control_flow_value,
+                            "forwardReachabilitySearches",
+                            minimum=0,
+                        ),
+                        forward_reachability_block_visits=profile_integer(
+                            control_flow_value,
+                            "forwardReachabilityBlockVisits",
+                            minimum=0,
+                        ),
+                        prefix_disjoint_searches=profile_integer(
+                            control_flow_value,
+                            "prefixDisjointSearches",
+                            minimum=0,
+                        ),
+                        prefix_disjoint_block_visits=profile_integer(
+                            control_flow_value,
+                            "prefixDisjointBlockVisits",
+                            minimum=0,
+                        ),
+                    )
+                    if (
+                        category != "detail"
+                        or name != "body control-flow planning"
+                        or subject_value is None
+                    ):
+                        raise CompilerProfileFailure(
+                            "normal-join work belongs only to a function-scoped "
+                            "body control-flow detail span"
+                        )
+                elif kind == "typed-body-lowering-v1":
+                    if (
+                        control_flow_value is not None
+                        or not isinstance(typed_body_value, dict)
+                    ):
+                        raise CompilerProfileFailure(
+                            "typed-body span work requires only a typedBody payload"
+                        )
+                    require_profile_fields_without_schema(
+                        typed_body_value,
+                        TYPED_BODY_WORK_FIELDS,
+                        "typed-body span work",
+                    )
+                    work = CompilerProfileTypedBodyWork(
+                        expression_node_count=profile_integer(
+                            typed_body_value, "expressionNodeCount", minimum=1
+                        ),
+                        statement_lowering_calls=profile_integer(
+                            typed_body_value, "statementLoweringCalls", minimum=0
+                        ),
+                        value_lowering_calls=profile_integer(
+                            typed_body_value, "valueLoweringCalls", minimum=0
+                        ),
+                        body_value_type_requests=profile_integer(
+                            typed_body_value, "bodyValueTypeRequests", minimum=0
+                        ),
+                        direct_primitive_fast_paths=profile_integer(
+                            typed_body_value, "directPrimitiveFastPaths", minimum=0
+                        ),
+                        string_type_classifications=profile_integer(
+                            typed_body_value, "stringTypeClassifications", minimum=0
+                        ),
+                        string_type_cpu_microseconds=profile_number(
+                            typed_body_value, "stringTypeCpuMicroseconds"
+                        ),
+                        record_type_classifications=profile_integer(
+                            typed_body_value, "recordTypeClassifications", minimum=0
+                        ),
+                        record_type_cpu_microseconds=profile_number(
+                            typed_body_value, "recordTypeCpuMicroseconds"
+                        ),
+                        collection_type_classifications=profile_integer(
+                            typed_body_value,
+                            "collectionTypeClassifications",
+                            minimum=0,
+                        ),
+                        collection_type_cpu_microseconds=profile_number(
+                            typed_body_value,
+                            "collectionTypeCpuMicroseconds",
+                        ),
+                        nominal_type_classifications=profile_integer(
+                            typed_body_value, "nominalTypeClassifications", minimum=0
+                        ),
+                        nominal_type_cpu_microseconds=profile_number(
+                            typed_body_value, "nominalTypeCpuMicroseconds"
+                        ),
+                        callable_optional_type_classifications=profile_integer(
+                            typed_body_value,
+                            "callableOptionalTypeClassifications",
+                            minimum=0,
+                        ),
+                        callable_optional_type_cpu_microseconds=profile_number(
+                            typed_body_value,
+                            "callableOptionalTypeCpuMicroseconds",
+                        ),
+                        other_type_classifications=profile_integer(
+                            typed_body_value, "otherTypeClassifications", minimum=0
+                        ),
+                        other_type_cpu_microseconds=profile_number(
+                            typed_body_value, "otherTypeCpuMicroseconds"
+                        ),
+                        specialization_requests=profile_integer(
+                            typed_body_value, "specializationRequests", minimum=0
+                        ),
+                        coercion_requests=profile_integer(
+                            typed_body_value, "coercionRequests", minimum=0
+                        ),
+                        produced_block_count=profile_integer(
+                            typed_body_value, "producedBlockCount", minimum=0
+                        ),
+                        produced_instruction_count=profile_integer(
+                            typed_body_value, "producedInstructionCount", minimum=0
+                        ),
+                    )
+                    if (
+                        category != "detail"
+                        or name != "HxcIR typed-body lowering"
+                        or subject_value is None
+                    ):
+                        raise CompilerProfileFailure(
+                            "typed-body work belongs only to a function-scoped "
+                            "HxcIR typed-body detail span"
+                        )
+                else:
                     raise CompilerProfileFailure(
-                        "compiler profile normal-join work belongs only to a "
-                        "function-scoped body control-flow detail span"
+                        f"compiler profile span work has unknown kind {kind!r}"
                     )
             status = profile_string(record, "status")
             if status not in PROFILE_STATUSES:
