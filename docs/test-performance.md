@@ -1342,6 +1342,47 @@ direction remain useful diagnostic evidence, but comparable uncontended
 repetitions are still required before publishing a percentage speedup or
 regression budget.
 
+### Reusing exact nominal body-value plans
+
+Typed-body lowering repeatedly asks what C representation one Haxe value needs.
+For an exact, non-generic class or interface such as `GameSession`, that answer
+is the same at every field, parameter, local, and expression that mentions the
+type. The older path still replayed alias, callable, collection, primitive, and
+nominal classification before reaching the already-canonical class or
+interface registry.
+
+`CBodyAggregateRegistry` now keeps the resulting immutable value plan for the
+rest of the compilation request. This is deliberately a narrow cache, not a
+shortcut around type checking:
+
+- exact `TInst` class and interface types may reuse the plan;
+- core `Array`, generic instances, imported or extern types, enums, typedefs,
+  abstracts, `Null<T>`, and unresolved types continue through the complete
+  classifier; and
+- the cache stores only the wrapper around the registry-owned representation.
+  It does not suppress a use-site diagnostic or create a second class layout.
+
+The full-playable profile records cache hits and first-time plans so a future
+change cannot mistake an unused cache for an optimization. The before and after
+samples below were both collected on a contended host, so wall time is not used
+as proof. Both produced the same 227 normal artifacts with SHA-256 tree digest
+`64c1a39e1e8814fc8f0146bbef0acdccfd9a266ba71b2dde5cb91da296515bb1`.
+
+| Full-playable warm-profile value | Before | Exact nominal reuse |
+| --- | ---: | ---: |
+| Nominal classifications | 5,470 | 5,470 |
+| Nominal-classification CPU | 0.935s | 0.747s |
+| Exact nominal cache hits / first plans | not recorded | 3,463 / 32 |
+| Complete request cumulative allocation | 68.339GB | 67.595GB |
+| Complete request CPU | 18.126s | 18.214s |
+| Haxe-to-generated-C wall | 18.759s | 18.920s |
+
+The owned nominal work fell by about 188ms, or 20%, and Eval reported about
+745MB less cumulative allocation. The broad request CPU and wall values moved
+in the opposite direction by less than the variation expected from the
+recorded host contention; they remain diagnostics rather than a publishable
+end-to-end speed claim.
+
 ### Span-lowering compiler-process reuse
 
 The measured time belongs to that feature's exhaustive **test suite**, not to a

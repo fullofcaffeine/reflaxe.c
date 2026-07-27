@@ -16,6 +16,7 @@ import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportConstant;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportFunction;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportType;
+import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRegistry;
 import reflaxe.c.lowering.CBodyArray.CPreparedBodyArray;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRegistry;
@@ -607,8 +608,11 @@ class CBodyAggregateRegistry {
 	final sourcePathsByModule:Map<String, String> = [];
 	final directPrimitiveValues:Map<String, CBodyValueType> = [];
 	final namedRecordValues:Map<String, CBodyValueType> = [];
+	final exactNominalValues:Map<String, CBodyValueType> = [];
 	var namedRecordCacheHits = 0;
 	var namedRecordCacheMisses = 0;
+	var exactNominalCacheHits = 0;
+	var exactNominalCacheMisses = 0;
 
 	public function new(context:CompilationContext, ?program:TypedProgramInput, ?contract:TypedCContractSnapshot, runtimeCreatedStrings:Bool = false) {
 		this.context = context;
@@ -647,6 +651,9 @@ class CBodyAggregateRegistry {
 		final directIntMap = intMapRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (directIntMap != null)
 			return CBodyValueType.intMapReference(directIntMap);
+		final exactNominal = exactNominalValueType(type, position, ownerModule, sourcePath, fail, node);
+		if (exactNominal != null)
+			return exactNominal;
 		final aliasOwner = anonymousTypedefOwner(type);
 		final resolved = unwrapAliases(type, position, fail, node);
 		final resolvedImport = importRegistry == null ? null : importRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
@@ -731,6 +738,52 @@ class CBodyAggregateRegistry {
 	/** Number of distinct non-generic typedef records classified in this request. */
 	public inline function namedRecordMisses():Int
 		return namedRecordCacheMisses;
+
+	/** Number of repeated exact class/interface value plans reused in this request. */
+	public inline function exactNominalHits():Int
+		return exactNominalCacheHits;
+
+	/** Number of distinct exact class/interface value plans built in this request. */
+	public inline function exactNominalMisses():Int
+		return exactNominalCacheMisses;
+
+	/**
+		Reuses the value plan for an exact non-generic class or interface.
+
+		A plain `TInst` already names one Haxe declaration. Once imports, native
+		references, primitives, strings, and maps have declined that exact type,
+		a non-extern declaration cannot change representation at another use
+		site. Reusing its immutable wrapper avoids replaying alias, function,
+		collection, and primitive classification for every field or expression.
+
+		Core `Array`, imported/extern, generic, enum, typedef, abstract, `Null<T>`,
+		and unresolved types deliberately return `null`; the complete classifier
+		continues to own their representation and source-positioned failures.
+	**/
+	function exactNominalValueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):Null<CBodyValueType> {
+		return switch type {
+			case TInst(reference, parameters) if (parameters.length == 0 && !CBodyArrayRecognition.isCoreArray(reference)):
+				final definition = reference.get();
+				if (definition.isExtern) {
+					null;
+				} else {
+					final path = definition.pack.concat([definition.name]).join(".");
+					final cached = exactNominalValues.get(path);
+					if (cached != null) {
+						exactNominalCacheHits++;
+						cached;
+					} else {
+						final prepared = definition.isInterface ? CBodyValueType.interfaceReference(interfaceRegistry.require(reference, parameters, position,
+							sourcePath, fail, node)) : classRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
+						exactNominalValues.set(path, prepared);
+						exactNominalCacheMisses++;
+						prepared;
+					}
+				}
+			case _: null;
+		};
+	}
 
 	/**
 		Classify one anonymous record, reusing a proven named typedef when safe.

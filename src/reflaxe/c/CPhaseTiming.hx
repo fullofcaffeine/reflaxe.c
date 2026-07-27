@@ -117,6 +117,8 @@ enum abstract CProfileCounterId(String) to String {
 	var CPCounterHxcIRManagedRoots = "hxcir.managed-roots";
 	var CPCounterHxcIRNamedRecordCacheHits = "hxcir.named-record-cache-hits";
 	var CPCounterHxcIRNamedRecordCacheMisses = "hxcir.named-record-cache-misses";
+	var CPCounterHxcIRExactNominalCacheHits = "hxcir.exact-nominal-cache-hits";
+	var CPCounterHxcIRExactNominalCacheMisses = "hxcir.exact-nominal-cache-misses";
 	var CPCounterCASTFunctions = "cast.functions";
 	var CPCounterRuntimeRequirements = "runtime.requirements";
 	var CPCounterSymbolAssignedSortComparisons = "symbols.assigned-sort-comparisons";

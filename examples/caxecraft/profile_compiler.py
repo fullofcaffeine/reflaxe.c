@@ -154,6 +154,8 @@ PROFILE_COUNTERS = (
     "artifacts.files",
     "cast.functions",
     "hxcir.blocks",
+    "hxcir.exact-nominal-cache-hits",
+    "hxcir.exact-nominal-cache-misses",
     "hxcir.functions",
     "hxcir.globals",
     "hxcir.instructions",

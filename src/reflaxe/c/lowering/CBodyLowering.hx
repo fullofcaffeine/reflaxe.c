@@ -493,6 +493,8 @@ class CBodyLowering {
 		recordProgramCounters(program);
 		CPhaseTiming.setCounter(CPCounterHxcIRNamedRecordCacheHits, aggregateRegistry.namedRecordHits());
 		CPhaseTiming.setCounter(CPCounterHxcIRNamedRecordCacheMisses, aggregateRegistry.namedRecordMisses());
+		CPhaseTiming.setCounter(CPCounterHxcIRExactNominalCacheHits, aggregateRegistry.exactNominalHits());
+		CPhaseTiming.setCounter(CPCounterHxcIRExactNominalCacheMisses, aggregateRegistry.exactNominalMisses());
 		CPhaseTiming.stop(hxcIRConstructionTimer);
 		final hxcIRValidationTimer = CPhaseTiming.start(CPHxcIRValidation);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
