@@ -51,6 +51,10 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTHxcIRFunctionPreparation = "HxcIR function preparation";
 	var CDTHxcIRRepresentationPlanning = "HxcIR representation planning";
 	var CDTHxcIRFunctionConstruction = "HxcIR function construction";
+	var CDTHxcIRTypedBodyLowering = "HxcIR typed-body lowering";
+	var CDTHxcIRFunctionFinalization = "HxcIR function finalization";
+	var CDTHxcIRValueCoalescing = "HxcIR value coalescing";
+	var CDTHxcIRValuePlanApplication = "HxcIR value-plan application";
 	var CDTHxcIRProgramAssembly = "HxcIR program assembly";
 	var CDTHxcIRManagedRootPlanning = "HxcIR managed-root planning";
 	var CDTHxcIRNullCheckCoalescing = "HxcIR null-check coalescing";

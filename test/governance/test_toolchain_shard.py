@@ -58,6 +58,7 @@ class ToolchainShardTests(unittest.TestCase):
             "src/reflaxe/c/ir/HxcIR.hx",
             "src/reflaxe/c/lowering/CBodyLowering.hx",
             "src/reflaxe/c/CCompiler.hx",
+            "src/reflaxe/c/CPhaseTiming.hx",
             "scripts/ci/check_ci_policy.py",
             "scripts/hooks/pre-commit",
             "examples/caxecraft/src/caxecraft/domain/Vitals.hx",
@@ -150,6 +151,47 @@ class ToolchainShardTests(unittest.TestCase):
                 "test:hello",
                 "snapshots:catalog",
                 "test:caxecraft-domain",
+            ),
+        )
+
+    def test_profiler_and_specialization_change_selects_exact_affected_owners(
+        self,
+    ) -> None:
+        owners = self.route_selector.select_affected_owners(
+            (
+                "src/reflaxe/c/CPhaseTiming.hx",
+                "src/reflaxe/c/lowering/CBodyEnum.hx",
+                "src/reflaxe/c/lowering/CGenericSpecialization.hx",
+                "examples/caxecraft/profile_compiler.py",
+            )
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+                "test:body-lowering",
+                "test:span-lowering",
+                "test:generic-specialization",
+            ),
+        )
+        self.assertNotIn(
+            "test:caxecraft-domain", tuple(owner.script for owner in owners)
+        )
+
+    def test_profile_consumer_uses_governance_without_game_domain(self) -> None:
+        owners = self.route_selector.select_affected_owners(
+            ("examples/caxecraft/profile_compiler.py",)
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
             ),
         )
 

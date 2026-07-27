@@ -87,6 +87,10 @@ class CPreparedBodyEnumInstance {
 	public final typeArguments:Array<CGenericTypeArgument>;
 	public final arguments:Array<CBodyValueType>;
 	public final reasons:Array<HxcSourceSpan> = [];
+
+	/** Membership index that avoids rescanning the sorted public provenance. */
+	final reasonDisplays:Map<String, Bool> = [];
+
 	public final valueTagRequest:CSymbolRequest;
 	public final discriminantTagRequest:CSymbolRequest;
 	public final payloadUnionRequest:Null<CSymbolRequest>;
@@ -156,10 +160,10 @@ class CPreparedBodyEnumInstance {
 	}
 
 	public function addReason(reason:HxcSourceSpan):Void {
-		for (existing in reasons) {
-			if (existing.display() == reason.display())
-				return;
-		}
+		final display = reason.display();
+		if (reasonDisplays.exists(display))
+			return;
+		reasonDisplays.set(display, true);
 		reasons.push(reason);
 		reasons.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.display(), right.display()));
 	}

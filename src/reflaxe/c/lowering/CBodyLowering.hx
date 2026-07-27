@@ -3060,6 +3060,7 @@ private class FunctionBuilder {
 	final initializedUnmanagedEnumFields:Map<String, Bool> = [];
 	final initializedManagedArrayFields:Map<String, Bool> = [];
 	final initializedManagedStringMapFields:Map<String, Bool> = [];
+
 	var selfValue:Null<LoweredValue> = null;
 	var localOrdinal = 0;
 	var temporaryOrdinal = 0;
@@ -3256,6 +3257,7 @@ private class FunctionBuilder {
 
 	public function build():BuiltBodyFunction {
 		final bodyExpression = prepared.bodyExpression;
+		final typedBodyLoweringTimer = CPhaseTiming.startDetail(CDTHxcIRTypedBodyLowering);
 		switch prepared.role {
 			case PBRFunction | PBRConstructor(_) | PBRClassInitializer:
 				lowerStatement(bodyExpression);
@@ -3266,6 +3268,8 @@ private class FunctionBuilder {
 				appendInstruction(null, IRIOInitialize(IRPGlobal(global.ir.id), value.id, IRISUninitialized, IRISInitialized),
 					HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath), "initialize-global");
 		}
+		CPhaseTiming.stopDetail(typedBodyLoweringTimer);
+		final functionFinalizationTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionFinalization);
 		validateConstructorManagedFields(bodyExpression.pos);
 		if (freshManagedArrayValueIds.keys().hasNext()) {
 			final ids = [for (id in freshManagedArrayValueIds.keys()) id];
@@ -3346,7 +3350,11 @@ private class FunctionBuilder {
 			],
 			source: functionSpan
 		};
+		CPhaseTiming.stopDetail(functionFinalizationTimer);
+		final valueCoalescingTimer = CPhaseTiming.startDetail(CDTHxcIRValueCoalescing);
 		final coalescing = new CBodyValueCoalescingPlanner().plan(ir);
+		CPhaseTiming.stopDetail(valueCoalescingTimer);
+		final valuePlanApplicationTimer = CPhaseTiming.startDetail(CDTHxcIRValuePlanApplication);
 		// Lowering helpers may reserve a descriptive temporary early, but they
 		// cannot know whether a later expression will reuse the result or place
 		// an effect barrier before its final sink. The completed HxcIR graph can.
@@ -3369,6 +3377,7 @@ private class FunctionBuilder {
 		}
 		for (valueId in inlinedValueIds)
 			temporaryRequests.remove(valueId);
+		CPhaseTiming.stopDetail(valuePlanApplicationTimer);
 		return {
 			prepared: prepared,
 			ir: ir,

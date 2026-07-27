@@ -267,6 +267,14 @@ edit. [`select_pre_commit_route.py`](../scripts/ci/select_pre_commit_route.py)
 keeps classifications and owner order explicit, deduplicated, fail-closed, and
 unit-tested.
 
+An established root compiler module must be named explicitly before it can use
+the affected route. `CPhaseTiming.hx` is one such reviewed module; a new
+unrecognized root file or subdirectory still takes the exhaustive fallback.
+Changes to specialization provenance select the generic-specialization owner.
+Changing only Caxecraft's compiler-profile consumer does not select the full
+game-domain suite: the governance tests own its timing schema and parser,
+whereas actual game source and content still select the Caxecraft owner.
+
 The change was prompted by an interrupted local commit that had spent more
 than 55 minutes in the one-worker exhaustive route under heavy host contention
 and had not completed. That saturated duration is diagnostic evidence, not an
@@ -570,6 +578,40 @@ cache and retains no compiler state. The next full-playable costs are HxcIR
 function construction, semantic analyses/naming, artifact planning, and CAST
 control-flow planning. Those require their own bounded evidence before another
 implementation change.
+
+The function-construction detail clocks then separated four existing jobs.
+Translating typed Haxe expressions into HxcIR took 12.166s of CPU in the first
+sample. Finishing the function, deciding which values could remain inline, and
+applying the temporary-name plan together took less than 0.2s. That result
+rules out the final value plan as the immediate problem.
+
+One attempted shortcut cached the complete Haxe-type-to-HxcIR-type answer.
+Although 87.8% of 22,970 requests found a cached answer, the answer is not the
+whole operation: encountering an enum also records the source locations that
+explain why its specialization exists. Reusing only the type silently removed
+those reasons from `hxc.specializations.json`; replaying the reasons preserved
+the report but cost substantially more than doing the original work. The
+experiment was removed rather than turning incomplete provenance into a faster
+contract.
+
+The retained smaller optimization indexes already-recorded specialization
+reasons by their stable key. It still keeps the complete sorted reason arrays,
+but a repeated encounter no longer rebuilds and compares every earlier key.
+The before/after runs were again contended one-sample diagnostics. Both emitted
+the same 225 normal artifacts and the same tree digest shown above.
+
+| Measured value | Before | After |
+| --- | ---: | ---: |
+| HxcIR typed-body lowering, CPU | 12.166s | 11.576s |
+| HxcIR typed-body lowering, cumulative allocation | 41.0GB | 39.2GB |
+| Target request CPU | 56.093s | 55.466s |
+| Total cumulative allocation reported by Eval | 238.4GB | 236.4GB |
+
+This is a bounded improvement, not the feedback-loop solution. It removes
+about 590ms of CPU and 1.83GB of allocation from the measured hot phase while
+preserving the provenance that makes specialization decisions auditable. The
+remaining typed-body work still needs structural attribution; semantic
+analyses/naming and artifact planning each remain roughly ten-second targets.
 
 There is an important pinned-toolchain detail on macOS. Haxe
 `5.0.0-preview.1` revision `2c1e544` computes the Mach timer's nanosecond value

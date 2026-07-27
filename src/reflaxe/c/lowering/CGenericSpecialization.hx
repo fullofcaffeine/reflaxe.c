@@ -71,6 +71,9 @@ class CGenericFunctionSpecialization {
 	public final arguments:Array<CGenericTypeArgument>;
 	public final reasons:Array<CGenericSpecializationReason> = [];
 
+	/** Membership index that avoids rescanning the sorted public provenance. */
+	final reasonKeys:Map<String, Bool> = [];
+
 	public function new(baseFunctionId:String, fieldName:String, typeParameters:Array<TypeParameter>, arguments:Array<CGenericTypeArgument>,
 			initialReason:CGenericSpecializationReason) {
 		if (typeParameters.length == 0 || typeParameters.length != arguments.length) {
@@ -90,11 +93,10 @@ class CGenericFunctionSpecialization {
 		return TypeTools.applyTypeParameters(type, typeParameters, arguments.map(argument -> argument.type));
 
 	public function addReason(reason:CGenericSpecializationReason):Void {
-		for (existing in reasons) {
-			if (existing.key() == reason.key()) {
-				return;
-			}
-		}
+		final key = reason.key();
+		if (reasonKeys.exists(key))
+			return;
+		reasonKeys.set(key, true);
 		reasons.push(reason);
 		reasons.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.key(), right.key()));
 	}

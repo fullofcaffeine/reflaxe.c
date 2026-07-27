@@ -34,7 +34,7 @@ KNOWN_AFFECTED_PATH = re.compile(
     r"|test/governance/test_toolchain_shard\.py"
     r"|examples/caxecraft/"
     r"|docs/caxecraft-"
-    r"|src/reflaxe/c/(?:CCompiler|CReflaxeCompiler|CompilationContext)\.hx"
+    r"|src/reflaxe/c/(?:CCompiler|CPhaseTiming|CReflaxeCompiler|CompilationContext)\.hx"
     r"|src/reflaxe/c/(?:ast|emit|frontend|ir|lowering|naming|plan|runtime|semantics)/"
     r")"
 )
@@ -103,7 +103,18 @@ AFFECTED_OWNER_RULES = (
         AffectedOwner("test:span-lowering", "fixed-array/span semantics may have changed"),
     ),
     (
-        re.compile(r"^examples/caxecraft/|^docs/caxecraft-"),
+        re.compile(
+            r"^src/reflaxe/c/lowering/(?:CBodyEnum|CGenericSpecialization)\.hx"
+        ),
+        AffectedOwner(
+            "test:generic-specialization",
+            "generic function or enum specialization ownership changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?!profile_compiler\.py$)|^docs/caxecraft-"
+        ),
         AffectedOwner("test:caxecraft-domain", "the flagship compiler/product path changed"),
     ),
 )

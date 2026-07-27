@@ -187,12 +187,16 @@ request state.
 
 The broad HxcIR-construction phase has closed detail clocks for function
 preparation, representation planning, function construction, program assembly,
-managed-root planning, and null-check coalescing. The CAST-body phase similarly
-splits body setup/value planning, control-flow planning, and CAST emission.
-Repeated calls are added together in the profiler report. This is diagnostic
-structure, not a new compiler layer: the HxcIR control-flow plan remains the
-semantic authority, and CAST emission still only turns that verified plan into
-C syntax.
+managed-root planning, and null-check coalescing. Function construction is
+split again around its existing jobs: translating the typed Haxe body,
+assembling the finished function and checking its ownership obligations,
+deciding which values may remain inline, and registering names for the values
+that must become stable C temporaries. These inner clocks repeat once per
+function and the profiler adds equal names together. The CAST-body phase
+similarly splits body setup/value planning, control-flow planning, and CAST
+emission. This is diagnostic structure, not a new compiler layer: the HxcIR
+control-flow plan remains the semantic authority, and CAST emission still only
+turns that verified plan into C syntax.
 
 See [test feedback-loop and CI performance](test-performance.md) for the
 measurement method, the pinned-Haxe macOS timer caveat, and current Caxecraft
