@@ -11,7 +11,7 @@ import caxecraft.app.TerrainImmediateBaseline.drawImmediate;
 #end
 import caxecraft.domain.BlockCoord;
 import caxecraft.domain.BlockKind;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldView;
 import raylib.Color;
 import raylib.Raylib;
 import raylib.Rlgl;
@@ -85,7 +85,7 @@ final class TerrainRenderer {
 	}
 
 	/** Rebuild dirty chunks and submit at most one batch per ready opaque atlas. */
-	public function draw(cells:WorldCells, baseTexture:Texture2D, baseReady:Bool, adventureTexture:Texture2D, adventureReady:Bool, playerX:Float,
+	public function draw(cells:WorldView, baseTexture:Texture2D, baseReady:Bool, adventureTexture:Texture2D, adventureReady:Bool, playerX:Float,
 			playerZ:Float):TerrainRenderCounters {
 		#if caxecraft_renderer_baseline
 		return drawImmediate(cells, baseTexture, baseReady, adventureTexture, adventureReady, playerX, playerZ);

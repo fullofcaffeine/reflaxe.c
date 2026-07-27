@@ -69,6 +69,7 @@ SPLIT_HEADERS = (
     "include/hxc/modules/caxecraft/domain/StepInput.h",
     "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
     "include/hxc/modules/caxecraft/domain/World.h",
+    "include/hxc/modules/caxecraft/domain/WorldRead.h",
     "include/hxc/modules/caxecraft/domain/WorldStorage.h",
     "include/hxc/modules/caxecraft/qa/DomainProbe.h",
     "include/hxc/program.h",
@@ -80,6 +81,7 @@ SPLIT_SOURCES = (
     "src/modules/caxecraft/domain/CharacterPhysics.c",
     "src/modules/caxecraft/domain/VoxelRaycast.c",
     "src/modules/caxecraft/domain/World.c",
+    "src/modules/caxecraft/domain/WorldRead.c",
     "src/modules/caxecraft/domain/WorldStorage.c",
     "src/modules/caxecraft/qa/DomainProbe.c",
 )
@@ -837,7 +839,7 @@ def validate_hxcir(hxcir: str, projection: dict[str, object]) -> None:
         projection, "caxecraft.domain.CharacterPhysics.step"
     )
     for marker in (
-        "hxcir schema=19",
+        "hxcir schema=20",
         'function "function.caxecraft.domain.World.generate"',
         'function "function.caxecraft.domain.VoxelRaycast.trace"',
         f'function "{player_step_id}"',
@@ -877,7 +879,7 @@ def validate_generated_text(
         "uint8_t hxc_storage[16384]",
         projected_method_name(
             method_symbols,
-            "caxecraft.domain.VoxelRaycast.trace(span:mutable<u8>, f64, f64, f64, f64, f64, f64, f64)",
+            "caxecraft.domain.VoxelRaycast.trace(span:const<u8>, f64, f64, f64, f64, f64, f64, f64)",
         ),
         projected_method_name(
             method_symbols, "caxecraft.domain.CharacterPhysics.step", prefix=True

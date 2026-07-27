@@ -1321,8 +1321,14 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "DrawCubeWires(",
         "FirstPlayableSessionLoader_loadCandidate(",
         "GameSession_bindLocalPlayer(",
+        "GameSession_authoredItemsView(",
+        "GameSession_deactivateAuthoredItem(",
+        "GameSession_mineTerrain(",
+        "GameSession_placeTerrain(",
+        "GameSession_removeTerrain(",
         "GameSession_tick(",
         "GameSession_view(",
+        "GameSession_worldView(",
         "hxc_completedTicks",
         "WaterRenderer_draw(",
     ):
@@ -1358,6 +1364,18 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         raise PlayFailure(
             "generated Caxecraft presentation bypassed GameSession.view to read mutable entity storage"
         )
+    for forbidden in (
+        "hxc_worldStorage",
+        "hxc_authoredItemStorage",
+        "WaterSimulation_",
+        "World_remove(",
+        "World_replace(",
+        "WorldStorage_writeCode(",
+    ):
+        if forbidden in app:
+            raise PlayFailure(
+                f"generated Caxecraft app bypassed typed GameSession ownership through {forbidden}"
+            )
     for required in (
         "MotionInterpolation_start(",
         "MotionInterpolation_advance(",
@@ -1399,6 +1417,12 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "GameSession_bindLocalPlayer(",
         "GameSession_tick(",
         "GameSession_view(",
+        "GameSession_worldView(",
+        "GameSession_authoredItemsView(",
+        "GameSession_deactivateAuthoredItem(",
+        "GameSession_mineTerrain(",
+        "GameSession_placeTerrain(",
+        "GameSession_removeTerrain(",
         "hxc_completedTicks",
         "hxc_tickIndex",
         "GameSession_placeInitialWaterVolume(",
@@ -1412,6 +1436,20 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
             raise PlayFailure(
                 f"generated Caxecraft session omitted fixed-tick call {required}"
             )
+    if not re.search(
+        r"const uint8_t \*[^\n]*GameSession_worldView\([^\n]*size_t \*",
+        session_source,
+    ):
+        raise PlayFailure(
+            "generated Caxecraft world view must be a zero-copy const byte pointer plus checked length output"
+        )
+    if not re.search(
+        r"const int32_t \*[^\n]*GameSession_authoredItemsView\([^\n]*size_t \*",
+        session_source,
+    ):
+        raise PlayFailure(
+            "generated Caxecraft authored-item view must be a zero-copy const integer pointer plus checked length output"
+        )
     for required in ("FirstPlayableLevel_loadTerrain(", "FirstPlayableSessionLoader_loadCandidate("):
         if required not in combined:
             raise PlayFailure(f"generated Caxecraft output omitted level assembly call {required}")

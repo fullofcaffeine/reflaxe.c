@@ -41,6 +41,39 @@ bool hxc_caxecraft_domain_GameSession_activateAuthoredItemDuringLoad(struct hxc_
   return false;
 }
 
+bool hxc_caxecraft_domain_GameSession_authoredItemIsActive(struct hxc_caxecraft_domain_GameSession *hxc_self, int32_t hxc_index)
+{
+  bool hxc_tmp_short_circuit_result_n2 = hxc_index < 0;
+  if (!(hxc_index < 0))
+  {
+    hxc_tmp_short_circuit_result_n2 = hxc_index >= 256;
+  }
+  if (!hxc_tmp_short_circuit_result_n2)
+  {
+    if (hxc_self == NULL)
+    {
+      abort();
+    }
+    if (hxc_index < 0 || (size_t)hxc_index >= 256)
+    {
+      abort();
+    }
+    int32_t hxc_tmp_collection_index_load_result_n1 = (*hxc_self).hxc_authoredItemStorage[(size_t)hxc_index];
+    return hxc_tmp_collection_index_load_result_n1 != 0;
+  }
+  return false;
+}
+
+const int32_t *hxc_caxecraft_domain_GameSession_authoredItemsView(struct hxc_caxecraft_domain_GameSession *hxc_self, size_t *hxc_returned_span_length)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  *hxc_returned_span_length = 256;
+  return (*hxc_self).hxc_authoredItemStorage;
+}
+
 bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_Character hxc_character)
 {
   if (hxc_self == NULL)
@@ -62,6 +95,47 @@ bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domai
   return false;
 }
 
+bool hxc_caxecraft_domain_GameSession_deactivateAuthoredItem(struct hxc_caxecraft_domain_GameSession *hxc_self, int32_t hxc_index)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  bool hxc_tmp_instance_call_result_n0 = hxc_caxecraft_domain_GameSession_authoredItemIsActive(hxc_self, hxc_index);
+  if (!!hxc_tmp_instance_call_result_n0)
+  {
+    if (hxc_index < 0 || (size_t)hxc_index >= 256)
+    {
+      abort();
+    }
+    (*hxc_self).hxc_authoredItemStorage[(size_t)hxc_index] = 0;
+    return true;
+  }
+  return false;
+}
+
+struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_domain_GameSession_mineTerrain(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  uint8_t *hxc_cells = (*hxc_self).hxc_worldStorage;
+  size_t hxc_tmp_length_n3 = 16384;
+  struct hxc_caxecraft_gameplay_MiningResult hxc_tmp_call_result_n0 = hxc_caxecraft_gameplay_Mining_attempt(hxc_cells, hxc_tmp_length_n3, hxc_coord, hxc_inventory);
+  struct hxc_caxecraft_gameplay_MiningResult hxc_result = hxc_tmp_call_result_n0;
+  if (hxc_result.hxc_outcome == 2)
+  {
+    struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n2 = &(*hxc_self).hxc_water;
+    if (hxc_tmp_owned_class_field_address_n2 == NULL)
+    {
+      abort();
+    }
+    hxc_caxecraft_domain_WaterSimulation_terrainChanged(hxc_tmp_owned_class_field_address_n2, hxc_coord);
+  }
+  return hxc_result;
+}
+
 bool hxc_caxecraft_domain_GameSession_placeInitialWaterVolume(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_origin, int32_t hxc_width, int32_t hxc_height, int32_t hxc_depth)
 {
   if (hxc_self == NULL)
@@ -76,6 +150,23 @@ bool hxc_caxecraft_domain_GameSession_placeInitialWaterVolume(struct hxc_caxecra
     abort();
   }
   bool hxc_tmp_instance_call_result_n1 = hxc_caxecraft_domain_WaterSimulation_placeInitialVolume(hxc_tmp_owned_class_field_address_n0, hxc_cells, hxc_tmp_length_n5, hxc_origin, hxc_width, hxc_height, hxc_depth);
+  return hxc_tmp_instance_call_result_n1;
+}
+
+bool hxc_caxecraft_domain_GameSession_placeTerrain(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord, enum hxc_caxecraft_domain_BlockKind hxc_kind)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  uint8_t *hxc_cells = (*hxc_self).hxc_worldStorage;
+  size_t hxc_tmp_length_n3 = 16384;
+  struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_water;
+  if (hxc_tmp_owned_class_field_address_n0 == NULL)
+  {
+    abort();
+  }
+  bool hxc_tmp_instance_call_result_n1 = hxc_caxecraft_domain_WaterSimulation_placeTerrain(hxc_tmp_owned_class_field_address_n0, hxc_cells, hxc_tmp_length_n3, hxc_coord, hxc_kind);
   return hxc_tmp_instance_call_result_n1;
 }
 
@@ -94,6 +185,28 @@ bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_doma
   }
   bool hxc_tmp_instance_call_result_n1 = hxc_caxecraft_domain_WaterSimulation_placeSource(hxc_tmp_owned_class_field_address_n0, hxc_cells, hxc_tmp_length_n2, hxc_coord);
   return hxc_tmp_instance_call_result_n1;
+}
+
+bool hxc_caxecraft_domain_GameSession_removeTerrain(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  uint8_t *hxc_cells = (*hxc_self).hxc_worldStorage;
+  size_t hxc_tmp_length_n2 = 16384;
+  bool hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_remove(hxc_cells, hxc_tmp_length_n2, hxc_coord);
+  if (!!hxc_tmp_call_result_n0)
+  {
+    struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n1 = &(*hxc_self).hxc_water;
+    if (hxc_tmp_owned_class_field_address_n1 == NULL)
+    {
+      abort();
+    }
+    hxc_caxecraft_domain_WaterSimulation_terrainChanged(hxc_tmp_owned_class_field_address_n1, hxc_coord);
+    return true;
+  }
+  return false;
 }
 
 void hxc_caxecraft_domain_GameSession_resetEmptyWorld(struct hxc_caxecraft_domain_GameSession *hxc_self)
@@ -131,6 +244,8 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   }
   uint8_t *hxc_cells = (*hxc_self).hxc_worldStorage;
   size_t hxc_tmp_length_n2 = 16384;
+  const uint8_t *hxc_readCells = (*hxc_self).hxc_worldStorage;
+  size_t hxc_tmp_length_n3 = 16384;
   struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n0 = (*hxc_self).hxc_localPlayer;
   int32_t hxc_characterId = hxc_tmp_class_field_load_result_n0.hxc_characterId;
   struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n2 = &(*hxc_self).hxc_entities;
@@ -143,7 +258,7 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   if (hxc_original.hxc_id <= 0)
   {
     struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n6 = hxc_original;
-    struct hxc_caxecraft_domain_Immersion hxc_tmp_call_result_n8 = hxc_caxecraft_domain_Aquatics_observe(hxc_cells, hxc_tmp_length_n2, hxc_original.hxc_body);
+    struct hxc_caxecraft_domain_Immersion hxc_tmp_call_result_n8 = hxc_caxecraft_domain_Aquatics_observe(hxc_readCells, hxc_tmp_length_n3, hxc_original.hxc_body);
     struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n9 = &(*hxc_self).hxc_water;
     int32_t hxc_tmp_class_field_load_result_n10 = (*hxc_tmp_owned_class_field_address_n9).hxc_pendingCount;
     return (struct hxc_caxecraft_domain_GameTickResult){ .hxc_character = hxc_tmp_load_result_n6, .hxc_committed = false, .hxc_drowningDamage = 0, .hxc_immersion = hxc_tmp_call_result_n8, .hxc_tickIndex = -1, .hxc_water = (struct hxc_caxecraft_domain_WaterTickResult){ .hxc_changed = 0, .hxc_processed = 0, .hxc_remaining = hxc_tmp_class_field_load_result_n10 } };
@@ -155,7 +270,7 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   }
   struct hxc_caxecraft_domain_WaterTickResult hxc_tmp_instance_call_result_n15 = hxc_caxecraft_domain_WaterSimulation_tick(hxc_tmp_owned_class_field_address_n13, hxc_cells, hxc_tmp_length_n2, hxc_input.hxc_waterUpdateBudget);
   struct hxc_caxecraft_domain_WaterTickResult hxc_waterResult = hxc_tmp_instance_call_result_n15;
-  struct hxc_caxecraft_domain_CharacterStep hxc_tmp_call_result_n19 = hxc_caxecraft_domain_Character_step(hxc_cells, hxc_tmp_length_n2, hxc_original, hxc_input.hxc_intent, hxc_input.hxc_damagePolicy);
+  struct hxc_caxecraft_domain_CharacterStep hxc_tmp_call_result_n19 = hxc_caxecraft_domain_Character_step(hxc_readCells, hxc_tmp_length_n3, hxc_original, hxc_input.hxc_intent, hxc_input.hxc_damagePolicy);
   struct hxc_caxecraft_domain_CharacterStep hxc_characterResult = hxc_tmp_call_result_n19;
   struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n20 = &(*hxc_self).hxc_entities;
   if (hxc_tmp_owned_class_field_address_n20 == NULL)
@@ -166,17 +281,17 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   bool hxc_tmp_instance_call_result_n23 = hxc_caxecraft_domain_EntityStore_replace(hxc_tmp_owned_class_field_address_n20, hxc_tmp_load_result_n21, hxc_characterResult.hxc_character);
   bool hxc_committed = hxc_tmp_instance_call_result_n23;
   bool hxc_tmp_load_result_n24 = hxc_committed;
-  int32_t hxc_tmp_conditional_result_n9 = 0;
+  int32_t hxc_tmp_conditional_result_n10 = 0;
   if (hxc_tmp_load_result_n24)
   {
     int32_t hxc_tmp_class_field_load_result_n25 = (*hxc_self).hxc_completedTicks;
-    hxc_tmp_conditional_result_n9 = hxc_tmp_class_field_load_result_n25;
+    hxc_tmp_conditional_result_n10 = hxc_tmp_class_field_load_result_n25;
   }
   else
   {
-    hxc_tmp_conditional_result_n9 = -1;
+    hxc_tmp_conditional_result_n10 = -1;
   }
-  int32_t hxc_tickIndex = hxc_tmp_conditional_result_n9;
+  int32_t hxc_tickIndex = hxc_tmp_conditional_result_n10;
   if (hxc_committed)
   {
     int32_t hxc_tmp_increment_load_result_n28 = (*hxc_self).hxc_completedTicks;
@@ -208,6 +323,16 @@ struct hxc_caxecraft_domain_GameView hxc_caxecraft_domain_GameSession_view(struc
   struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n5 = hxc_character;
   int32_t hxc_tmp_class_field_load_result_n6 = (*hxc_self).hxc_completedTicks;
   return (struct hxc_caxecraft_domain_GameView){ .hxc_completedTicks = hxc_tmp_class_field_load_result_n6, .hxc_localPlayer = hxc_tmp_load_result_n5, .hxc_valid = hxc_tmp_record_field_load_result_n4 > 0 };
+}
+
+const uint8_t *hxc_caxecraft_domain_GameSession_worldView(struct hxc_caxecraft_domain_GameSession *hxc_self, size_t *hxc_returned_span_length)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  *hxc_returned_span_length = 16384;
+  return (*hxc_self).hxc_worldStorage;
 }
 
 int32_t hxc_caxecraft_domain_GameSession_writeTerrainRunDuringLoad(struct hxc_caxecraft_domain_GameSession *hxc_self, int32_t hxc_startIndex, int32_t hxc_storageCode, int32_t hxc_count)

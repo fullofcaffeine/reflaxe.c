@@ -176,12 +176,15 @@ final class GameSession {
 	final pendingWaterStorage:CArray<UInt8, WorldVolume>;
 	final authoredItemStorage:CArray<Int, AuthoredItemSlots>;
 	final entities:EntityStore;
+	final water:WaterSimulation;
 	var localPlayer:PlayerAgent;
 	var completedTicks:Int;
-	public final water:WaterSimulation;
 
 	public function tick(input:GameTickInput):GameTickResult;
 	public function view():GameView;
+	public function worldView():WorldView;
+	public function mineTerrain(coord:BlockCoord, inventory:InventoryState):MiningResult;
+	public function placeTerrain(coord:BlockCoord, kind:BlockKind):Bool;
 }
 ```
 
@@ -192,36 +195,28 @@ ordinary Haxe arrays provide the same semantic surface for differential tests.
 health, commit order, and the deterministic completed-step clock; callers no
 longer pass world storage or an authoritative tick number into the tick.
 
-`CaxecraftApp` is the application composition root and the one type named by
-`GameSession`'s class-level `@:allow` metadata. During Haxe type checking, that
-metadata lets this exact collaborator read or call otherwise-private
-`GameSession` members; unrelated types still receive the usual private-access
-error. Class-level placement means the grant covers the class's private members,
-so it is broader than putting `@:allow` on one field even though the receiving
-type remains exact. This temporary friendship lets the composition root create
-the short-lived read/write views still needed by loading and rendering without
-publishing mutable session storage to every caller.
+`CaxecraftApp` no longer has friend access to this class. It cannot read
+`worldStorage`, `authoredItemStorage`, or `WaterSimulation`, and it cannot make
+a mutable span. Mining, placement, removal, and authored-item collection enter
+through public typed session operations, which preserve inventory atomicity and
+water scheduling before presentation invalidates a renderer cache.
 
-That makes the current code safer than public mutable fields, but it does not
-make it good steady-state architecture. `CaxecraftApp` can still borrow the
-world and authored-item buffers and call `WaterSimulation` directly. The outer
-application layer therefore knows the simulation's storage representation and
-can bypass session-owned mutation rules. `@:allow` is not a cast--Haxe keeps
-normal types and does not reinterpret memory--but it is an encapsulation escape
-hatch, much like a narrowly named `friend` in C++.
+Rendering and other bounded readers call `worldView()` directly as an argument
+to a read-only consumer. On C, haxe.c returns `const uint8_t *` and writes the
+known 16,384-element length through a hidden `size_t *` parameter. This is a
+borrow: the session still owns the array and no bytes are copied. The compiler
+proves that the method returns this receiver's immediate fixed-array field, then
+rejects assigning the result to a local, saving it in another value, returning
+it again, passing it through an unknown callback, or writing through it. Eval
+uses the same session-owned `Array<Int>` as a behavior oracle; shared read
+algorithms accept the target-selected `WorldView`.
 
-After Haxe accepts an access, haxe.c lowers it like an access written inside
-`GameSession`: ordinary direct C field or method code, with no runtime
-permission branch, capability object, ownership transfer, or public C ABI
-expansion. The separate span-lifetime analysis—not `@:allow`—rejects returning
-or storing those borrowed views. The shipped `GameView` already removes direct
-character and clock reads, but it does not yet expose a renderable world.
-P1 task `haxe_c-xge.20.4.2.6` owns the complete repair: mutation becomes typed
-session commands or fixed-tick intent, rendering receives a zero-copy read-only
-world view tied to the session lifetime, and the class-level `@:allow` is
-deleted. If that natural borrow exposes a compiler limitation, the task must
-reduce and fix the general haxe.c rule instead of preserving friendship,
-copying the world, or moving Raylib into `GameSession`.
+This boundary exists because class-level `@:allow` was the wrong ownership
+tool. Haxe friendship changes compile-time private access; it is not a cast and
+does not reinterpret memory, but it would still let the outer application
+bypass the session's mutation rules. The focused compiler capability and span
+regressions owned by `haxe_c-xge.20.4.2.6.1`, plus the generated-C
+`GameSessionProbe`, are the executable evidence for the replacement.
 
 The session now owns the shipped `localPlayer` binding and deterministic
 completed-tick clock. It resolves the binding internally and advances the clock
@@ -597,10 +592,10 @@ the application does not import every implementation detail.
    current movement/aquatics/vitals slice and a focused non-player fixture; do
    not wait for every future mechanic before introducing the session.
 3. Extend the shipped `GameSession` slice: it already owns entity/water state,
-   fixed world/work/item buffers, and the fixed water/character tick; move the
-   remaining fixed-tick mechanics out of `CaxecraftApp` as their shared system
-   boundaries are admitted, then replace friend buffer access with the runtime
-   loader and read-only view.
+   fixed world/work/item buffers, the fixed water/character tick, typed terrain
+   commands, and zero-copy read-only world/item views. Move the remaining
+   fixed-tick mechanics out of `CaxecraftApp` as their shared system boundaries
+   are admitted; runtime loading is a separate content-ingress migration.
 4. Add only the typed events/commands required by real cross-system effects.
 5. Instantiate generic actors from validated content. Generalize inventory,
    equipment, weapons, interaction, effects, and any remaining character rule

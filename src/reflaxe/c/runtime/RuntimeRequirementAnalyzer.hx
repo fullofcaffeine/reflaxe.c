@@ -10,19 +10,46 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementAnalysis;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementCandidate;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementReason;
 
+/**
+ * Names one runtime operation found while walking validated HxcIR.
+ *
+ * The stable identity is computed once because large programs compare the same
+ * feature, operation, and source location while sorting, deduplicating, and
+ * reconciling compiler evidence. Rebuilding that source string inside each
+ * comparison would turn bookkeeping into a measurable part of compilation.
+ */
 private class RuntimeIntentObservation {
 	public final featureId:String;
 	public final operationId:String;
 	public final source:HxcSourceSpan;
+	public final identity:String;
 
 	public function new(featureId:String, operationId:String, source:HxcSourceSpan) {
 		this.featureId = featureId;
 		this.operationId = operationId;
 		this.source = source;
+		this.identity = '$featureId\x00$operationId\x00${source.display()}';
 	}
 
-	public function key():String
-		return '$featureId\x00$operationId\x00${source.display()}';
+	public inline function key():String
+		return identity;
+}
+
+/**
+ * Pairs one typed source requirement with its precomputed reconciliation key.
+ *
+ * This is request-local derived data, not a cache shared between compilations.
+ * Keeping the key beside the candidate preserves deterministic sorting while
+ * avoiding repeated source-span formatting in the comparator.
+ */
+private class RuntimeCandidateEntry {
+	public final candidate:RuntimeRequirementCandidate;
+	public final identity:String;
+
+	public function new(candidate:RuntimeRequirementCandidate) {
+		this.candidate = candidate;
+		this.identity = '${candidate.featureId.text()}\x00${candidate.operationId}\x00${candidate.source.display()}';
+	}
 }
 
 /** Reconciles every reachable HxcIR runtime intent with one typed source root. */
@@ -80,16 +107,22 @@ class RuntimeRequirementAnalyzer {
 
 		final candidates = canonicalCandidates(input);
 		final uniqueObservations = canonicalObservations(observations);
+		final candidateByIdentity:Map<String, RuntimeRequirementCandidate> = [];
+		for (entry in candidates)
+			candidateByIdentity.set(entry.identity, entry.candidate);
+		final observedIdentities:Map<String, Bool> = [];
 		final reasons:Array<RuntimeRequirementReason> = [];
 		for (index in 0...uniqueObservations.length) {
 			final observation = uniqueObservations[index];
-			final candidate = candidateFor(candidates, observation);
+			final candidate = candidateFor(candidateByIdentity, observation);
+			observedIdentities.set(observation.identity, true);
 			reasons.push(new RuntimeRequirementReason('runtime.${observation.featureId}.${observation.operationId}.$index',
 				RuntimeFeatureId.parse(observation.featureId), observation.operationId, candidate.kind, candidate.surface, observation.source,
 				candidate.alternative));
 		}
-		for (candidate in candidates) {
-			if (!hasObservation(uniqueObservations, candidate)) {
+		for (entry in candidates) {
+			final candidate = entry.candidate;
+			if (!observedIdentities.exists(entry.identity)) {
 				internal('runtime source reason for `${candidate.operationId}` at `${candidate.source.display()}` has no reachable HxcIR runtime intent',
 					[candidate.featureId.text()]);
 			}
@@ -175,16 +208,17 @@ class RuntimeRequirementAnalyzer {
 		};
 	}
 
-	static function canonicalCandidates(input:Array<RuntimeRequirementCandidate>):Array<RuntimeRequirementCandidate> {
-		final candidates = input.copy();
-		candidates.sort((left, right) -> RuntimeFeatureRegistry.compareUtf8(candidateKey(left), candidateKey(right)));
-		final result:Array<RuntimeRequirementCandidate> = [];
-		for (candidate in candidates) {
-			if (result.length == 0 || candidateKey(result[result.length - 1]) != candidateKey(candidate)) {
-				result.push(candidate);
+	static function canonicalCandidates(input:Array<RuntimeRequirementCandidate>):Array<RuntimeCandidateEntry> {
+		final candidates = input.map(candidate -> new RuntimeCandidateEntry(candidate));
+		candidates.sort((left, right) -> RuntimeFeatureRegistry.compareUtf8(left.identity, right.identity));
+		final result:Array<RuntimeCandidateEntry> = [];
+		for (entry in candidates) {
+			if (result.length == 0 || result[result.length - 1].identity != entry.identity) {
+				result.push(entry);
 				continue;
 			}
-			final previous = result[result.length - 1];
+			final candidate = entry.candidate;
+			final previous = result[result.length - 1].candidate;
 			if (previous.kind != candidate.kind
 				|| previous.surface != candidate.surface
 				|| previous.alternative != candidate.alternative) {
@@ -207,29 +241,14 @@ class RuntimeRequirementAnalyzer {
 		return result;
 	}
 
-	static function candidateFor(candidates:Array<RuntimeRequirementCandidate>, observation:RuntimeIntentObservation):RuntimeRequirementCandidate {
-		for (candidate in candidates) {
-			if (candidateKey(candidate) == observation.key()) {
-				return candidate;
-			}
-		}
+	static function candidateFor(candidates:Map<String, RuntimeRequirementCandidate>, observation:RuntimeIntentObservation):RuntimeRequirementCandidate {
+		final candidate = candidates.get(observation.identity);
+		if (candidate != null)
+			return candidate;
 		return
 			internal('reachable HxcIR runtime intent `${observation.featureId}/${observation.operationId}` at `${observation.source.display()}` has no typed source reason',
 			[observation.featureId]);
 	}
-
-	static function hasObservation(observations:Array<RuntimeIntentObservation>, candidate:RuntimeRequirementCandidate):Bool {
-		final key = candidateKey(candidate);
-		for (observation in observations) {
-			if (observation.key() == key) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	static function candidateKey(candidate:RuntimeRequirementCandidate):String
-		return '${candidate.featureId.text()}\x00${candidate.operationId}\x00${candidate.source.display()}';
 
 	static function internal<T>(detail:String, ?featureIds:Array<String>):T
 		throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError, detail, featureIds);

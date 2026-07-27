@@ -5,7 +5,7 @@ import caxecraft.domain.CharacterPhysics.HEIGHT;
 import caxecraft.domain.CharacterPhysics.input as landInput;
 import caxecraft.domain.CharacterPhysics.resolveVelocity;
 import caxecraft.domain.CharacterPhysics.step as stepOnLand;
-import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
+import caxecraft.domain.WaterCellCodec.stateInView as waterStateAt;
 
 /**
 	Fixed-tick swimming, floating, breath, and waterline state.
@@ -106,7 +106,7 @@ function input(moveX:Float, moveZ:Float, ascend:Bool, descend:Bool):CharacterInt
 	character's center column; collision continues to use the complete horizontal
 	body box.
 **/
-function observe(cells:WorldCells, body:CharacterBody):Immersion {
+function observe(cells:WorldView, body:CharacterBody):Immersion {
 	final feetY = body.y;
 	final headY = body.y + HEIGHT;
 	var submergedHeight = 0.0;
@@ -149,7 +149,7 @@ function classifyMedium(previous:AquaticMedium, immersion:Immersion):AquaticMedi
 }
 
 /** Advance movement and breath by exactly one 50 ms simulation tick. */
-function step(cells:WorldCells, original:CharacterBody, aquatic:AquaticState, command:CharacterIntent, capability:AquaticProfile):AquaticStep {
+function step(cells:WorldView, original:CharacterBody, aquatic:AquaticState, command:CharacterIntent, capability:AquaticProfile):AquaticStep {
 	final before = observe(cells, original);
 	final beforeMedium = classifyMedium(aquatic.medium, before);
 	var moved = original;
@@ -221,7 +221,7 @@ private function advanceBreath(previous:AquaticState, immersion:Immersion, capab
 	return {remaining: remaining, drowningTicks: drowningTicks, damage: damage};
 }
 
-private function waterSurface(cells:WorldCells, x:Float, y:Int, z:Float):Float {
+private function waterSurface(cells:WorldView, x:Float, y:Int, z:Float):Float {
 	final coord = World.coord(floorToInt(x), y, floorToInt(z));
 	return switch waterStateAt(cells, coord) {
 		case Source: y + 1.0;
@@ -234,7 +234,7 @@ private function waterSurface(cells:WorldCells, x:Float, y:Int, z:Float):Float {
 	};
 }
 
-private function pointIsWet(cells:WorldCells, x:Float, y:Float, z:Float):Bool {
+private function pointIsWet(cells:WorldView, x:Float, y:Float, z:Float):Bool {
 	final cellY = floorToInt(y);
 	return waterSurface(cells, x, cellY, z) > y + EPSILON;
 }

@@ -11,6 +11,7 @@
 #include "hxc/modules/caxecraft/domain/StepInput.h"
 #include "hxc/modules/caxecraft/domain/VoxelRaycast.h"
 #include "hxc/modules/caxecraft/domain/World.h"
+#include "hxc/modules/caxecraft/domain/WorldRead.h"
 #include "hxc/modules/caxecraft/domain/WorldStorage.h"
 #include "hxc/modules/caxecraft/qa/DomainProbe.h"
 

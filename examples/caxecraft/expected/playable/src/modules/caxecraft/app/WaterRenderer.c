@@ -1,8 +1,8 @@
 #include "hxc/program.h"
 
-struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_draw(uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_texture, bool hxc_textureReady, int32_t hxc_presentationCell)
+struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_draw(const uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_texture, bool hxc_textureReady, int32_t hxc_presentationCell)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
@@ -57,7 +57,7 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
         int32_t hxc_tmp_load_result_n16 = hxc_x;
         int32_t hxc_tmp_load_result_n17 = hxc_y;
         struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n19 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n16, hxc_tmp_load_result_n17, hxc_z);
-        struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n20 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_tmp_call_result_n19);
+        struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n20 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_cells, hxc_length, hxc_tmp_call_result_n19);
         struct hxc_caxecraft_domain_WaterCellState hxc_state = hxc_tmp_call_result_n20;
         bool hxc_tmp_call_result_n22 = hxc_caxecraft_app_WaterRenderer_isWater(hxc_state);
         if (hxc_tmp_call_result_n22)
@@ -69,7 +69,7 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
           int32_t hxc_tmp_load_result_n26 = hxc_x;
           int32_t hxc_tmp_load_result_n27 = hxc_y;
           struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n29 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n26, hxc_i32_add_wrapping(hxc_tmp_load_result_n27, 1), hxc_z);
-          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n30 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_tmp_call_result_n29);
+          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n30 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_cells, hxc_length, hxc_tmp_call_result_n29);
           bool hxc_tmp_call_result_n31 = hxc_caxecraft_app_WaterRenderer_isOpenAir(hxc_tmp_call_result_n30);
           if (hxc_tmp_call_result_n31)
           {
@@ -86,7 +86,7 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
           int32_t hxc_tmp_load_result_n40 = hxc_x;
           int32_t hxc_tmp_load_result_n41 = hxc_y;
           struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n43 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n40, hxc_tmp_load_result_n41, hxc_i32_subtract_wrapping(hxc_z, 1));
-          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n44 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_tmp_call_result_n43);
+          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n44 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_cells, hxc_length, hxc_tmp_call_result_n43);
           int32_t hxc_tmp_load_result_n45 = hxc_y;
           double hxc_tmp_call_result_n47 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_tmp_call_result_n44, hxc_tmp_load_result_n45, hxc_top);
           double hxc_northBottom = hxc_tmp_call_result_n47;
@@ -107,7 +107,7 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
           int32_t hxc_tmp_load_result_n59 = hxc_x;
           int32_t hxc_tmp_load_result_n60 = hxc_y;
           struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n62 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n59, hxc_tmp_load_result_n60, hxc_i32_add_wrapping(hxc_z, 1));
-          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n63 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_tmp_call_result_n62);
+          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n63 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_cells, hxc_length, hxc_tmp_call_result_n62);
           int32_t hxc_tmp_load_result_n64 = hxc_y;
           double hxc_tmp_call_result_n66 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_tmp_call_result_n63, hxc_tmp_load_result_n64, hxc_top);
           double hxc_southBottom = hxc_tmp_call_result_n66;
@@ -128,7 +128,7 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
           int32_t hxc_tmp_load_result_n78 = hxc_x;
           int32_t hxc_tmp_load_result_n79 = hxc_y;
           struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n81 = hxc_caxecraft_domain_World_coord(hxc_i32_add_wrapping(hxc_tmp_load_result_n78, 1), hxc_tmp_load_result_n79, hxc_z);
-          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n82 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_tmp_call_result_n81);
+          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n82 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_cells, hxc_length, hxc_tmp_call_result_n81);
           int32_t hxc_tmp_load_result_n83 = hxc_y;
           double hxc_tmp_call_result_n85 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_tmp_call_result_n82, hxc_tmp_load_result_n83, hxc_top);
           double hxc_eastBottom = hxc_tmp_call_result_n85;
@@ -149,7 +149,7 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
           int32_t hxc_tmp_load_result_n97 = hxc_x;
           int32_t hxc_tmp_load_result_n98 = hxc_y;
           struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n100 = hxc_caxecraft_domain_World_coord(hxc_i32_subtract_wrapping(hxc_tmp_load_result_n97, 1), hxc_tmp_load_result_n98, hxc_z);
-          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n101 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_tmp_call_result_n100);
+          struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n101 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_cells, hxc_length, hxc_tmp_call_result_n100);
           int32_t hxc_tmp_load_result_n102 = hxc_y;
           double hxc_tmp_call_result_n104 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_tmp_call_result_n101, hxc_tmp_load_result_n102, hxc_top);
           double hxc_westBottom = hxc_tmp_call_result_n104;

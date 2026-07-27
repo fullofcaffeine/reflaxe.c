@@ -65,9 +65,9 @@ struct hxc_caxecraft_domain_StepInput hxc_caxecraft_domain_CharacterPhysics_inpu
   return (struct hxc_caxecraft_domain_StepInput){ .hxc_jump = hxc_jump, .hxc_moveX = hxc_moveX, .hxc_moveZ = hxc_moveZ };
 }
 
-struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_CharacterPhysics_moveAxis(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z, double hxc_delta, int32_t hxc_axis)
+struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_CharacterPhysics_moveAxis(const uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z, double hxc_delta, int32_t hxc_axis)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n6 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n6;
@@ -156,9 +156,9 @@ struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_CharacterPhysics_moveA
   return (struct hxc_caxecraft_domain_AxisMove){ .hxc_blocked = hxc_blocked, .hxc_x = hxc_tmp_load_result_n31, .hxc_y = hxc_tmp_load_result_n32, .hxc_z = hxc_tmp_load_result_n33 };
 }
 
-bool hxc_caxecraft_domain_CharacterPhysics_overlaps(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z)
+bool hxc_caxecraft_domain_CharacterPhysics_overlaps(const uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
@@ -206,7 +206,7 @@ bool hxc_caxecraft_domain_CharacterPhysics_overlaps(uint8_t *hxc_cells, size_t h
         bool hxc_tmp_short_circuit_result_n15 = !hxc_tmp_call_result_n20;
         if (!!hxc_tmp_call_result_n20)
         {
-          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n22 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
+          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n22 = hxc_caxecraft_domain_WorldRead_query(hxc_cells, hxc_length, hxc_coord);
           bool hxc_tmp_call_result_n23 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n22);
           hxc_tmp_short_circuit_result_n15 = hxc_tmp_call_result_n23;
         }
@@ -223,9 +223,9 @@ bool hxc_caxecraft_domain_CharacterPhysics_overlaps(uint8_t *hxc_cells, size_t h
   return false;
 }
 
-struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_state)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(const uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_state)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n2 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n2;
@@ -249,9 +249,9 @@ struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_
   return (struct hxc_caxecraft_domain_CharacterBody){ .hxc_grounded = false, .hxc_velocityX = hxc_state.hxc_velocityX, .hxc_velocityY = 0.0, .hxc_velocityZ = hxc_state.hxc_velocityZ, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_recoveredY, .hxc_z = hxc_state.hxc_z };
 }
 
-struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_resolveVelocity(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_state, double hxc_velocityX, double hxc_requestedVelocityY, double hxc_velocityZ)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_resolveVelocity(const uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_state, double hxc_velocityX, double hxc_requestedVelocityY, double hxc_velocityZ)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n5 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n5;
@@ -304,9 +304,9 @@ struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_
   return (struct hxc_caxecraft_domain_CharacterBody){ .hxc_grounded = hxc_grounded, .hxc_velocityX = hxc_tmp_load_result_n27, .hxc_velocityY = hxc_tmp_load_result_n28, .hxc_velocityZ = hxc_tmp_load_result_n29, .hxc_x = hxc_tmp_record_field_load_result_n24, .hxc_y = hxc_tmp_record_field_load_result_n25, .hxc_z = hxc_tmp_record_field_load_result_n26 };
 }
 
-struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_step(const uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n3 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n3;

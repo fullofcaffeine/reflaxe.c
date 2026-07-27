@@ -354,6 +354,28 @@ typedef HxcIRCall = {
 	final arguments:Array<String>;
 	final returnType:HxcIRTypeRef;
 	final failure:Null<HxcIRFailureEdge>;
+
+	/**
+		The direct target's declaration that owns a returned read-only span.
+
+		This contract is present only on a direct call to a function carrying the
+		same declaration. Validation resolves the named target parameter to the
+		corresponding live caller argument before C syntax is selected.
+	**/
+	final ?borrowedSpanReturn:HxcIRBorrowedSpanReturn;
+}
+
+/**
+	The one admitted origin for a span that crosses a direct function boundary.
+
+	`IRBSRReceiverField` means that the result is a read-only view of fixed-array
+	storage embedded in the named receiver parameter. The receiver continues to
+	own those bytes; the result may only be consumed during the caller's bounded
+	scope. Mutable returns and borrows from locals are deliberately not variants,
+	so they fail closed instead of acquiring an accidental C lifetime.
+**/
+enum HxcIRBorrowedSpanReturn {
+	IRBSRReceiverField(receiverParameterId:String);
 }
 
 typedef HxcIRNamedValue = {
@@ -453,6 +475,15 @@ enum HxcIRInstructionKind {
 	IRIOInitializeFixedArray(place:HxcIRPlace, values:Array<String>, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOZeroInitializeFixedArray(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeSpan(place:HxcIRPlace, sourceArray:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
+
+	/**
+		Borrow a pointer and fixed length from inline array storage without copying.
+
+		Unlike `IRIOInitializeSpan`, this operation produces a semantic span value
+		that may be returned under an explicit receiver-owned return contract.
+	**/
+	IRIOBorrowSpan(sourceArray:HxcIRPlace);
+
 	IRIOBindVirtualTable(place:HxcIRPlace, tableId:String);
 	IRIOBoundsCheck(collection:HxcIRPlace, indexValueId:String, policy:HxcIRBoundsPolicy);
 	IRIONullCheck(valueId:String, policy:HxcIRNullCheckPolicy);
@@ -607,6 +638,16 @@ typedef HxcIRFunction = {
 
 	final locals:Array<HxcIRLocal>;
 	final returnType:HxcIRTypeRef;
+
+	/**
+		How this function may lend a read-only span across its return boundary.
+
+		The optional field preserves compatibility with older hand-built HxcIR
+		fixtures. Compiler-produced schema-20 functions always supply either the
+		closed receiver-field contract or `null`.
+	**/
+	final ?borrowedSpanReturn:HxcIRBorrowedSpanReturn;
+
 	final failureConvention:HxcIRFunctionFailureConvention;
 	final entryBlockId:String;
 	final blocks:Array<HxcIRBlock>;

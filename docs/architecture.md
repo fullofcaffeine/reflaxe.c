@@ -264,7 +264,7 @@ complete rationale, direct-lowering alternative, sibling comparison, extraction
 criteria, and implementation-language analysis are in [the HxcIR semantic
 contract](hxc-ir.md#why-a-second-ir-when-haxe-already-has-one).
 
-The schema-19 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-20 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -283,6 +283,12 @@ chosen arm moves a fresh owner or retains a borrowed value, and then moves the
 single joined owner onward. Validation proves this protocol before CAST emits a
 plain C local and structured `if`/`else`; the C printer never guesses whether a
 copy needs retaining.
+Schema 20 adds one separately owned lifetime rule: a final instance method may
+return a read-only span borrowed from an immediate fixed-array field of its
+receiver. HxcIR records the field origin and matching direct-call contract,
+then rejects every retention or unchecked forwarding path before C syntax is
+selected. See [fixed arrays and spans](span-lowering.md) for the exact bounded
+source and generated-C contract.
 An embedded class-field borrow is distinct from an ordinary address. A named
 automatic borrow alias may reload that pointer in a later control-flow block,
 but cannot be reassigned, returned, stored as an owner, or forwarded without a

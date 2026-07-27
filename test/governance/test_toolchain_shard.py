@@ -51,15 +51,29 @@ class ToolchainShardTests(unittest.TestCase):
         self.runner = load_runner()
         self.route_selector = load_route_selector()
 
-    def test_high_fanout_compiler_and_infrastructure_paths_use_parallel_route(
+    def test_known_compiler_and_product_paths_use_affected_route(
         self,
     ) -> None:
         for path in (
             "src/reflaxe/c/ir/HxcIR.hx",
             "src/reflaxe/c/lowering/CBodyLowering.hx",
             "src/reflaxe/c/CCompiler.hx",
-            "scripts/ci/run_toolchain_shard.py",
+            "scripts/ci/check_ci_policy.py",
             "scripts/hooks/pre-commit",
+            "examples/caxecraft/src/caxecraft/domain/Vitals.hx",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(
+                    self.route_selector.select_route((path,)),
+                    self.route_selector.AFFECTED,
+                )
+
+    def test_unknown_cross_cutting_paths_fail_closed_to_parallel_route(self) -> None:
+        for path in (
+            "scripts/ci/run_toolchain_shard.py",
+            ".github/workflows/governance.yml",
+            "package.json",
+            "src/reflaxe/c/new_layer/FuturePass.hx",
         ):
             with self.subTest(path=path):
                 self.assertEqual(
@@ -71,7 +85,6 @@ class ToolchainShardTests(unittest.TestCase):
         for path in (
             "test/differential/string-runtime/generated/Main.hx",
             "docs/string-runtime.md",
-            "examples/caxecraft/src/caxecraft/domain/Vitals.hx",
         ):
             with self.subTest(path=path):
                 self.assertEqual(
@@ -79,7 +92,7 @@ class ToolchainShardTests(unittest.TestCase):
                     self.route_selector.FOCUSED,
                 )
 
-    def test_one_high_fanout_path_dominates_a_mixed_change(self) -> None:
+    def test_one_affected_path_dominates_a_mixed_focused_change(self) -> None:
         self.assertEqual(
             self.route_selector.select_route(
                 (
@@ -87,8 +100,66 @@ class ToolchainShardTests(unittest.TestCase):
                     "src/reflaxe/c/lowering/CBodyEmitter.hx",
                 )
             ),
+            self.route_selector.AFFECTED,
+        )
+
+    def test_unknown_cross_cutting_path_dominates_an_affected_change(self) -> None:
+        self.assertEqual(
+            self.route_selector.select_route(
+                (
+                    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+                    "scripts/ci/run_toolchain_shard.py",
+                )
+            ),
             self.route_selector.PARALLEL_EXHAUSTIVE,
         )
+
+    def test_affected_owners_are_deterministic_and_deduplicated(self) -> None:
+        owners = self.route_selector.select_affected_owners(
+            (
+                "src/reflaxe/c/ir/HxcIR.hx",
+                "src/reflaxe/c/lowering/CBodyEmitter.hx",
+                "src/reflaxe/c/runtime/RuntimeRequirementAnalyzer.hx",
+                "examples/caxecraft/src/caxecraft/domain/WorldView.hx",
+            )
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+                "test:body-lowering",
+                "test:runtime-features",
+                "test:span-lowering",
+                "test:caxecraft-domain",
+            ),
+        )
+        self.assertTrue(all(owner.reason for owner in owners))
+
+    def test_caxecraft_only_change_selects_product_owner(self) -> None:
+        owners = self.route_selector.select_affected_owners(
+            ("examples/caxecraft/src/caxecraft/domain/Vitals.hx",)
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+                "test:caxecraft-domain",
+            ),
+        )
+
+    def test_unknown_cross_cutting_change_has_no_affected_owner_fallback(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError, "affected owners require the affected pre-commit route"
+        ):
+            self.route_selector.select_affected_owners(
+                ("src/reflaxe/c/new_layer/FuturePass.hx",)
+            )
 
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
@@ -959,12 +1030,20 @@ class ToolchainShardTests(unittest.TestCase):
             ["contracts", "lowering-objects", "caxecraft"],
         )
 
-    def test_hook_resume_is_local_and_uncached_checks_stay_before_it(self) -> None:
+    def test_hook_keeps_affected_local_and_exhaustive_fallback_routes(self) -> None:
         hook = (ROOT / "scripts/hooks/pre-commit").read_text(encoding="utf-8")
         workflow = (ROOT / ".github/workflows/governance.yml").read_text(
             encoding="utf-8"
         )
+        affected = (
+            "[pre-commit] Running affected local compiler evidence; "
+            "complete cold coverage remains required in CI..."
+        )
         resume = "npm run test:toolchain:parallel -- --resume --with-native"
+        self.assertIn(affected, hook)
+        self.assertIn('"$PRE_COMMIT_ROUTE" = "affected"', hook)
+        self.assertIn('select_pre_commit_route.py" --owners', hook)
+        self.assertIn('npm run "$owner_script"', hook)
         self.assertIn(resume, hook)
         self.assertIn("scripts/ci/select_pre_commit_route.py", hook)
         for uncached_check in (
@@ -973,10 +1052,11 @@ class ToolchainShardTests(unittest.TestCase):
             "Running local path guard",
             "Checking staged whitespace",
             "Running staged secret scan",
-            "npm run test:governance",
         ):
             with self.subTest(uncached_check=uncached_check):
-                self.assertLess(hook.index(uncached_check), hook.index(resume))
+                self.assertLess(hook.index(uncached_check), hook.index(affected))
+        self.assertLess(hook.index(affected), hook.index(resume))
+        self.assertIn("npm run test:governance", hook)
         self.assertNotIn("\n  npm run test:native\n", hook)
         self.assertNotIn("--resume", workflow)
         self.assertIn("npm run test:toolchain:shard", workflow)

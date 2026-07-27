@@ -71,7 +71,7 @@ inline function isValid(character:Character):Bool
 	The damage policy is explicit because Creative mode intentionally moves and
 	swims without advancing survival damage. Role names never enter this system.
 **/
-function step(cells:WorldCells, original:Character, intent:CharacterIntent, damagePolicy:CharacterDamagePolicy):CharacterStep {
+function step(cells:WorldView, original:Character, intent:CharacterIntent, damagePolicy:CharacterDamagePolicy):CharacterStep {
 	if (vitalsAreDefeated(original.vitals)) {
 		return {
 			character: original,

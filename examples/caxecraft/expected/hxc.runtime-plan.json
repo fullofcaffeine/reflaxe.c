@@ -31,11 +31,11 @@
     ],
     "reachability": {
       "typeInstances": 6,
-      "functions": 43,
-      "blocks": 468,
-      "modules": 12,
+      "functions": 45,
+      "blocks": 472,
+      "modules": 13,
       "runtimeIntents": 0,
-      "instructions": 2268,
+      "instructions": 2286,
       "cleanupActions": 0
     },
     "programLocalHelpers": [

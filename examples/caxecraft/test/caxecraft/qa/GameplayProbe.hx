@@ -2,6 +2,12 @@ package caxecraft.qa;
 
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldView;
+#if c
+import c.CArray;
+import c.UInt8;
+import caxecraft.domain.WorldVolume;
+#end
 import caxecraft.domain.Vitals.ATTACK_SAFE_TICKS;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.Vitals.applyAttack as applyVitalsAttack;
@@ -32,8 +38,15 @@ import caxecraft.gameplay.SwordCombatDecision;
 /** Renderer-independent proof for the first friendly and hostile actors. */
 final class GameplayProbe {
 	static function main():Void {
+		#if c
+		final storage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
+		final cells:WorldCells = storage.span();
+		final view:WorldView = storage.constSpan();
+		#else
 		final storage:Array<Int> = [];
 		final cells:WorldCells = storage;
+		final view:WorldView = WorldView.borrow(storage);
+		#end
 		World.generate(cells, 0x0cafe);
 		World.prepareSpawnMeadow(cells);
 		require(World.surfaceY(cells, 16, 16) >= 3, "generated surface is discoverable");
@@ -63,7 +76,7 @@ final class GameplayProbe {
 			&& World.query(cells, World.coord(16, 0, 16)) == caxecraft.domain.BlockKind.Bedrock,
 			"immutable bedrock remains a separate non-capacity outcome");
 
-		var guide = GuideNpc.start(cells, 17.5, 13.5);
+		var guide = GuideNpc.start(view, 17.5, 13.5);
 		require(GuideNpc.phase(guide) == GuidePhase.Waiting, "guide starts ready to meet");
 		require(GuideNpc.isInRange(guide, 16.5, 16.5), "spawn can reach guide interaction");
 		guide = GuideNpc.interact(guide);
@@ -75,7 +88,7 @@ final class GameplayProbe {
 		guide = GuideNpc.interact(guide);
 		require(GuideNpc.phase(guide) == GuidePhase.SharedBerries && inventory.berries == berriesBefore + 2, "one-time gift is explicit");
 		require(GuideNpc.phase(GuideNpc.interact(guide)) == GuidePhase.SharedBerries, "finished conversation is stable");
-		var waitingGift = GuideNpc.interact(GuideNpc.start(cells, 17.5, 13.5));
+		var waitingGift = GuideNpc.interact(GuideNpc.start(view, 17.5, 13.5));
 		final fullBerries = Inventory.make(5, 0, 0, 0, 0, 0, Inventory.MAX_STACK, 0, 0);
 		final acceptedGift = Inventory.acceptedAmount(fullBerries, ItemKind.Berries, 2);
 		if (acceptedGift == 2)
@@ -83,51 +96,51 @@ final class GameplayProbe {
 		require(acceptedGift == 0
 			&& GuideNpc.phase(waitingGift) == GuidePhase.Welcomed, "full stack keeps Nia's gift available for retry");
 
-		var mossling = Mossling.start(cells, 12.5, 12.5);
+		var mossling = Mossling.start(view, 12.5, 12.5);
 		final initialX = mossling.x;
-		mossling = Mossling.step(cells, mossling, 15.5, 12.5, 0);
+		mossling = Mossling.step(view, mossling, 15.5, 12.5, 0);
 		require(Mossling.mode(mossling) == MosslingMode.Chasing && mossling.x > initialX, "near player is chased one bounded step");
 		final chasedX = mossling.x;
-		mossling = Mossling.step(cells, mossling, 30.5, 30.5, 1);
+		mossling = Mossling.step(view, mossling, 30.5, 30.5, 1);
 		require(Mossling.mode(mossling) == MosslingMode.Returning && mossling.x < chasedX, "far player releases creature toward home");
 
-		var wanderA = Mossling.start(cells, 12.5, 12.5);
-		var wanderB = Mossling.start(cells, 12.5, 12.5);
+		var wanderA = Mossling.start(view, 12.5, 12.5);
+		var wanderB = Mossling.start(view, 12.5, 12.5);
 		var wanderTick = 0;
 		while (wanderTick < 240) {
-			wanderA = Mossling.step(cells, wanderA, 30.5, 30.5, wanderTick);
-			wanderB = Mossling.step(cells, wanderB, 30.5, 30.5, wanderTick);
+			wanderA = Mossling.step(view, wanderA, 30.5, 30.5, wanderTick);
+			wanderB = Mossling.step(view, wanderB, 30.5, 30.5, wanderTick);
 			require(sameMossling(wanderA, wanderB), "identical fixed ticks choose the same wander route");
 			require(absolute(wanderA.x - wanderA.homeX) <= 1.08 && absolute(wanderA.z - wanderA.homeZ) <= 1.08,
 				"wander route remains inside its declared home square");
 			wanderTick++;
 		}
-		require(Mossling.mode(Mossling.step(cells, Mossling.start(cells, 12.5, 12.5), 30.5, 30.5, 20)) == MosslingMode.Wandering,
+		require(Mossling.mode(Mossling.step(view, Mossling.start(view, 12.5, 12.5), 30.5, 30.5, 20)) == MosslingMode.Wandering,
 			"far Mossling begins its bounded route after resting");
 
-		var attacker = Mossling.start(cells, 12.5, 12.5);
-		attacker = Mossling.step(cells, attacker, 13.5, 12.5, 0);
+		var attacker = Mossling.start(view, 12.5, 12.5);
+		attacker = Mossling.step(view, attacker, 13.5, 12.5, 0);
 		require(Mossling.mode(attacker) == MosslingMode.Windup && attacker.phaseTicks == Mossling.WINDUP_TICKS,
 			"attack begins with a visible fixed-tick warning");
 		var windupTicks = 0;
 		while (attacker.phaseTicks > 1) {
 			require(!Mossling.attacksThisTick(attacker, 13.5, 12.5), "warning ticks cannot damage early");
-			attacker = Mossling.step(cells, attacker, 13.5, 12.5, windupTicks + 1);
+			attacker = Mossling.step(view, attacker, 13.5, 12.5, windupTicks + 1);
 			windupTicks++;
 		}
 		require(windupTicks == Mossling.WINDUP_TICKS - 1
 			&& Mossling.attacksThisTick(attacker, 13.5, 12.5), "wind-up produces one exact impact tick");
-		attacker = Mossling.step(cells, attacker, 13.5, 12.5, windupTicks + 1);
+		attacker = Mossling.step(view, attacker, 13.5, 12.5, windupTicks + 1);
 		require(Mossling.mode(attacker) == MosslingMode.Recovering
 			&& attacker.phaseTicks == Mossling.RECOVERY_TICKS
 			&& !Mossling.attacksThisTick(attacker, 13.5, 12.5),
 			"impact enters a non-damaging recovery period");
-		var escaped = Mossling.step(cells, Mossling.start(cells, 12.5, 12.5), 13.5, 12.5, 0);
-		escaped = Mossling.step(cells, escaped, 16.5, 12.5, 1);
+		var escaped = Mossling.step(view, Mossling.start(view, 12.5, 12.5), 13.5, 12.5, 0);
+		escaped = Mossling.step(view, escaped, 16.5, 12.5, 1);
 		require(Mossling.mode(escaped) != MosslingMode.Windup && !Mossling.attacksThisTick(escaped, 16.5, 12.5),
 			"leaving the marked range cancels the pending hit");
 
-		var target = Mossling.start(cells, 12.5, 12.5);
+		var target = Mossling.start(view, 12.5, 12.5);
 		inventory = Inventory.select(inventory, 4);
 		require(Inventory.selectedIs(inventory, ItemKind.CopperSword), "combat asks for a semantic sword rather than a slot number");
 		require(Mossling.canStrike(target, 10.5, 12.5, 1.0, 0.0), "near aimed sword reaches Mossling");
@@ -152,7 +165,7 @@ final class GameplayProbe {
 		require(target.health == 1 && Mossling.isAlive(target), "two strikes leave one health");
 		target = Mossling.strike(target);
 		require(target.health == 0 && !Mossling.isAlive(target), "third strike defeats Mossling");
-		require(Mossling.step(cells, target, 10.5, 12.5, 0) == target, "defeated Mossling state is stable");
+		require(Mossling.step(view, target, 10.5, 12.5, 0) == target, "defeated Mossling state is stable");
 
 		var drop = berryDropFromDefeatedMossling(target);
 		require(drop.active && drop.amount == 2, "defeat creates one visible berry drop");

@@ -237,7 +237,7 @@ at 30-second intervals, then full logs are replayed in canonical shard order so
 interleaving cannot hide the first useful failure. All scheduled shards finish
 to retain independent evidence even when one fails.
 
-The high-fanout pre-commit route also queues native smoke in this same worker
+The exhaustive pre-commit fallback also queues native smoke in this same worker
 pool. It does not start an unbounded fifth worker: four toolchain shards plus
 native smoke are five pieces of work sharing the selected one, two, or four
 workers. Native smoke starts as soon as a worker becomes free, so it no longer
@@ -245,18 +245,40 @@ waits for every shard to finish. Its isolated log is replayed after the four
 shard logs and failures remain attributed to `native`. The canonical serial
 `test:toolchain` and standalone `test:native` commands are unchanged.
 
-The pre-commit hook uses this exhaustive path once when staged changes touch
-cross-cutting test infrastructure such as `package.json`, the snapshot
-registry, shard runner, CI policy, or their governance tests. It also uses this
-route for central compiler semantic layers such as HxcIR, lowering, CAST,
-emission, naming, and runtime planning. Those paths already match most focused
-owners, so running each matching `if` serially is an exhaustive test run in a
-slower disguise. [`select_pre_commit_route.py`](../scripts/ci/select_pre_commit_route.py)
-keeps this classification explicit and unit-tested. Narrow fixtures,
-target-library surfaces, examples, and focused documentation continue to select
-only their owning gates.
+Local commits now have three explicit routes:
 
-The parallel route still runs governance before the complete canonical
+1. A narrow fixture, target-library surface, or focused document runs its
+   existing path-owned checks.
+2. A known compiler semantic layer or Caxecraft change runs governance plus a
+   small, deterministic set of affected owners. The base sentinels type-check
+   all target-owned Haxe, validate HxcIR, compile and run the small Hello
+   product, and verify snapshot ownership. Staged paths then add only relevant
+   owners such as body lowering, runtime planning, spans, or Caxecraft.
+3. An unknown compiler subdirectory or cross-cutting test/CI input fails closed
+   to the complete bounded shard and native matrix.
+
+This is a cadence boundary, not weaker proof. Every pull request, nightly run,
+and release still runs the complete cold matrix; developers can run the same
+proof explicitly with
+`npm run test:toolchain:parallel -- --with-native`. The local route answers the
+smaller question “did this known semantic change preserve its direct owners?”
+without pretending that a 61-command repository replay is useful after every
+edit. [`select_pre_commit_route.py`](../scripts/ci/select_pre_commit_route.py)
+keeps classifications and owner order explicit, deduplicated, fail-closed, and
+unit-tested.
+
+The change was prompted by an interrupted local commit that had spent more
+than 55 minutes in the one-worker exhaustive route under heavy host contention
+and had not completed. That saturated duration is diagnostic evidence, not an
+authoritative performance baseline. On the same exact staged tree, the new
+affected route passed governance and eight selected owners in 464.47 seconds
+(7 minutes 44 seconds; 339.03 seconds user CPU and 22.40 seconds system CPU).
+The starting one-minute load was 5.73 on 12 logical CPUs. This single observed
+run is below the initial eight-minute target, but one run cannot establish a
+p95; publish repeated uncontended measurements before claiming that budget has
+been achieved.
+
+The exhaustive fallback still runs governance before the complete canonical
 partition and native-smoke queue. It does not omit evidence or run commands
 concurrently inside a shard. On a busy host it may choose one worker; safe
 resume then avoids discarding completed shards when the same unchanged staged

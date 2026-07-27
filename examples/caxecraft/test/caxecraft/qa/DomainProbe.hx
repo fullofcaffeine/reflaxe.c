@@ -10,6 +10,7 @@ import caxecraft.domain.CharacterPhysics.step as stepPlayer;
 import caxecraft.domain.VoxelRaycast;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldView;
 import caxecraft.domain.WorldVolume;
 #if c
 // Only the generated-C probe needs the fixed native storage carrier.
@@ -66,6 +67,11 @@ final class DomainProbe {
 			fill++;
 		}
 		#end
+		#if c
+		var view:WorldView = storage.constSpan();
+		#else
+		var view:WorldView = WorldView.borrow(cells);
+		#end
 
 		if (World.indexOf(World.coord(0, 0, 0)) != 0)
 			return 1;
@@ -77,52 +83,52 @@ final class DomainProbe {
 			return 4;
 		if (!World.replace(cells, World.coord(8, 8, 8), BlockKind.Stone))
 			return 5;
-		final axis = VoxelRaycast.trace(cells, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 12.0);
+		final axis = VoxelRaycast.trace(view, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 12.0);
 		if (!axis.hit || axis.cellX != 8 || axis.cellY != 8 || axis.cellZ != 8 || axis.previousX != 7 || axis.normalX != -1 || !near(axis.distance, 5.5)
 			|| axis.visited != 7)
 			return 10;
 
-		final negative = VoxelRaycast.trace(cells, 12.5, 8.5, 8.5, -1.0, 0.0, 0.0, 12.0);
+		final negative = VoxelRaycast.trace(view, 12.5, 8.5, 8.5, -1.0, 0.0, 0.0, 12.0);
 		if (!negative.hit || negative.previousX != 9 || negative.normalX != 1 || !near(negative.distance, 3.5))
 			return 11;
 
 		World.replace(cells, World.coord(8, 8, 8), BlockKind.Air);
 		World.replace(cells, World.coord(10, 10, 10), BlockKind.Stone);
-		final diagonal = VoxelRaycast.trace(cells, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
+		final diagonal = VoxelRaycast.trace(view, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
 		if (!diagonal.hit || diagonal.cellX != 10 || diagonal.cellY != 10 || diagonal.cellZ != 10 || diagonal.visited != 10)
 			return 12;
 		World.replace(cells, World.coord(8, 7, 7), BlockKind.Stone);
-		final tieX = VoxelRaycast.trace(cells, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
+		final tieX = VoxelRaycast.trace(view, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
 		if (!tieX.hit || tieX.cellX != 8 || tieX.cellY != 7 || tieX.cellZ != 7 || tieX.normalX != -1 || tieX.visited != 2)
 			return 18;
 		World.replace(cells, World.coord(8, 7, 7), BlockKind.Air);
 		World.replace(cells, World.coord(8, 8, 7), BlockKind.Stone);
-		final tieY = VoxelRaycast.trace(cells, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
+		final tieY = VoxelRaycast.trace(view, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
 		if (!tieY.hit || tieY.cellX != 8 || tieY.cellY != 8 || tieY.cellZ != 7 || tieY.normalY != -1 || tieY.visited != 3)
 			return 19;
 		World.replace(cells, World.coord(8, 8, 7), BlockKind.Air);
 		World.replace(cells, World.coord(8, 8, 8), BlockKind.Stone);
-		final tieZ = VoxelRaycast.trace(cells, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
+		final tieZ = VoxelRaycast.trace(view, 7.5, 7.5, 7.5, 1.0, 1.0, 1.0, 12.0);
 		if (!tieZ.hit || tieZ.cellX != 8 || tieZ.cellY != 8 || tieZ.cellZ != 8 || tieZ.normalZ != -1 || tieZ.visited != 4)
 			return 23;
 
-		final zeroDirection = VoxelRaycast.trace(cells, 1.5, 1.5, 1.5, 0.0, 0.0, 0.0, 12.0);
+		final zeroDirection = VoxelRaycast.trace(view, 1.5, 1.5, 1.5, 0.0, 0.0, 0.0, 12.0);
 		if (zeroDirection.hit || zeroDirection.visited != 1)
 			return 13;
 
-		final exactBoundary = VoxelRaycast.trace(cells, 9.0, 8.5, 8.5, -1.0, 0.0, 0.0, 2.0);
+		final exactBoundary = VoxelRaycast.trace(view, 9.0, 8.5, 8.5, -1.0, 0.0, 0.0, 2.0);
 		if (!exactBoundary.hit || exactBoundary.cellX != 8 || !near(exactBoundary.distance, 0.0))
 			return 14;
 
-		final inside = VoxelRaycast.trace(cells, 8.5, 8.5, 8.5, 0.0, 1.0, 0.0, 2.0);
+		final inside = VoxelRaycast.trace(view, 8.5, 8.5, 8.5, 0.0, 1.0, 0.0, 2.0);
 		if (!inside.hit || inside.previousX != 8 || !near(inside.distance, 0.0) || inside.visited != 1)
 			return 15;
 
-		final tooShort = VoxelRaycast.trace(cells, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 5.49);
+		final tooShort = VoxelRaycast.trace(view, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 5.49);
 		if (tooShort.hit || tooShort.previousX != 7)
 			return 16;
 
-		final worldEdge = VoxelRaycast.trace(cells, 30.5, 14.5, 30.5, 1.0, 0.0, 0.0, 8.0);
+		final worldEdge = VoxelRaycast.trace(view, 30.5, 14.5, 30.5, 1.0, 0.0, 0.0, 8.0);
 		if (worldEdge.hit || worldEdge.previousX != 31 || !near(worldEdge.distance, 1.5))
 			return 17;
 
@@ -141,54 +147,54 @@ final class DomainProbe {
 			return 37;
 		if (!playerCanPlaceAt(player, World.coord(7, 1, 5)))
 			return 39;
-		player = stepPlayer(cells, player, playerInput(0.0, 0.0, false));
+		player = stepPlayer(view, player, playerInput(0.0, 0.0, false));
 		if (!player.grounded || !near(player.y, 1.0) || !near(player.velocityY, 0.0))
 			return 30;
 
-		player = stepPlayer(cells, player, playerInput(0.0, 0.0, true));
+		player = stepPlayer(view, player, playerInput(0.0, 0.0, true));
 		if (player.grounded || player.velocityY <= 0.0 || player.y <= 1.0)
 			return 31;
 
 		World.replace(cells, World.coord(6, 1, 5), BlockKind.Stone);
 		World.replace(cells, World.coord(6, 2, 5), BlockKind.Stone);
 		var slider = createPlayer(5.7, 1.0, 5.2);
-		slider = stepPlayer(cells, slider, playerInput(1.0, 1.0, false));
+		slider = stepPlayer(view, slider, playerInput(1.0, 1.0, false));
 		if (!near(slider.x, 5.7) || slider.z <= 5.2 || !near(slider.velocityX, 0.0) || slider.velocityZ <= 0.0)
 			return 32;
 
 		World.replace(cells, World.coord(5, 1, 6), BlockKind.Stone);
 		World.replace(cells, World.coord(5, 2, 6), BlockKind.Stone);
 		var corner = createPlayer(5.7, 1.0, 5.7);
-		corner = stepPlayer(cells, corner, playerInput(1.0, 1.0, false));
+		corner = stepPlayer(view, corner, playerInput(1.0, 1.0, false));
 		if (!near(corner.x, 5.7) || !near(corner.z, 5.7) || !near(corner.velocityX, 0.0) || !near(corner.velocityZ, 0.0))
 			return 38;
 
 		World.replace(cells, World.coord(4, 3, 4), BlockKind.Stone);
 		var ceiling = createPlayer(4.5, 1.0, 4.5);
-		ceiling = stepPlayer(cells, ceiling, playerInput(0.0, 0.0, false));
-		ceiling = stepPlayer(cells, ceiling, playerInput(0.0, 0.0, true));
+		ceiling = stepPlayer(view, ceiling, playerInput(0.0, 0.0, false));
+		ceiling = stepPlayer(view, ceiling, playerInput(0.0, 0.0, true));
 		var ceilingTicks = 0;
 		while (ceilingTicks < 4) {
-			ceiling = stepPlayer(cells, ceiling, playerInput(0.0, 0.0, false));
+			ceiling = stepPlayer(view, ceiling, playerInput(0.0, 0.0, false));
 			ceilingTicks++;
 		}
 		if (ceiling.y + 1.8 > 3.0001 || ceiling.velocityY > 0.0)
 			return 33;
 
 		var embedded = createPlayer(6.5, 1.0, 5.5);
-		embedded = recoverPlayerSpawn(cells, embedded);
+		embedded = recoverPlayerSpawn(view, embedded);
 		if (embedded.y < 3.0)
 			return 34;
 
 		var boundary = createPlayer(0.31, 1.0, 0.31);
-		boundary = stepPlayer(cells, boundary, playerInput(-1.0, -1.0, false));
+		boundary = stepPlayer(view, boundary, playerInput(-1.0, -1.0, false));
 		if (boundary.x < 0.29 || boundary.z < 0.29)
 			return 35;
 
 		var tunnel = createPlayer(10.5, 1.0, 10.5);
 		World.replace(cells, World.coord(11, 1, 10), BlockKind.Stone);
 		World.replace(cells, World.coord(11, 2, 10), BlockKind.Stone);
-		tunnel = stepPlayer(cells, tunnel, playerInput(20.0, 0.0, false));
+		tunnel = stepPlayer(view, tunnel, playerInput(20.0, 0.0, false));
 		if (tunnel.x > 10.701)
 			return 36;
 

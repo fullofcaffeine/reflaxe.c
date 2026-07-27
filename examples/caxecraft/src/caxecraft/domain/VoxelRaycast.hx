@@ -1,10 +1,12 @@
 package caxecraft.domain;
 
+import caxecraft.domain.WorldRead.query as queryWorld;
+
 /** Deterministic Amanatides-Woo-style traversal of the finite voxel grid. */
 final class VoxelRaycast {
 	static inline final MAX_VISITS:Int = World.WIDTH + World.HEIGHT + World.DEPTH + 8;
 
-	public static function trace(cells:WorldCells, originX:Float, originY:Float, originZ:Float, directionX:Float, directionY:Float, directionZ:Float,
+	public static function trace(cells:WorldView, originX:Float, originY:Float, originZ:Float, directionX:Float, directionY:Float, directionZ:Float,
 			maximumDistance:Float):RaycastHit {
 		var cellX = floorToInt(originX);
 		var cellY = floorToInt(originY);
@@ -12,7 +14,7 @@ final class VoxelRaycast {
 		if (maximumDistance < 0.0 || !World.contains(World.coord(cellX, cellY, cellZ)))
 			return miss(cellX, cellY, cellZ, 0.0, 0);
 
-		if (World.isSolid(World.query(cells, World.coord(cellX, cellY, cellZ))))
+		if (World.isSolid(queryWorld(cells, World.coord(cellX, cellY, cellZ))))
 			return hit(cellX, cellY, cellZ, cellX, cellY, cellZ, 0, 0, 0, 0.0, 1);
 
 		final stepX = directionX > 0.0 ? 1 : (directionX < 0.0 ? -1 : 0);
@@ -68,7 +70,7 @@ final class VoxelRaycast {
 			final coord = World.coord(cellX, cellY, cellZ);
 			if (!World.contains(coord))
 				return miss(previousX, previousY, previousZ, distance, visited);
-			if (World.isSolid(World.query(cells, coord)))
+			if (World.isSolid(queryWorld(cells, coord)))
 				return hit(cellX, cellY, cellZ, previousX, previousY, previousZ, normalX, normalY, normalZ, distance, visited);
 		}
 		return miss(previousX, previousY, previousZ, distance, visited);

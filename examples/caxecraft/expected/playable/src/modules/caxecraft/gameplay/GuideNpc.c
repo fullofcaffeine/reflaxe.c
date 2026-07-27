@@ -32,12 +32,12 @@ bool hxc_caxecraft_gameplay_GuideNpc_sharesBerriesOnNextInteraction(struct hxc_c
   return hxc_state.hxc_phase == hxc_caxecraft_gameplay_GuidePhase_Welcomed;
 }
 
-struct hxc_caxecraft_gameplay_GuideState hxc_caxecraft_gameplay_GuideNpc_start(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_z)
+struct hxc_caxecraft_gameplay_GuideState hxc_caxecraft_gameplay_GuideNpc_start(const uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_z)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n3 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n3;
-  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_surfaceY(hxc_cells, hxc_length, hxc_f64_to_i32_saturating(hxc_x), hxc_f64_to_i32_saturating(hxc_z));
+  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_WorldRead_surfaceY(hxc_cells, hxc_length, hxc_f64_to_i32_saturating(hxc_x), hxc_f64_to_i32_saturating(hxc_z));
   return (struct hxc_caxecraft_gameplay_GuideState){ .hxc_phase = hxc_caxecraft_gameplay_GuidePhase_Waiting, .hxc_x = hxc_x, .hxc_y = (double)hxc_tmp_call_result_n0 + 1.0, .hxc_z = hxc_z };
 }

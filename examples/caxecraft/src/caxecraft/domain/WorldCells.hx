@@ -8,8 +8,10 @@ package caxecraft.domain;
 	and only the selected typedef is typed and emitted. Defining `c` manually is
 	not a substitute for activating the custom target.
 
-	The C branch borrows compact fixed one-byte storage through `Span<UInt8>` so
-	the bounded world can be backed by one ordinary native C byte array. This is
+	The C branch borrows compact fixed one-byte storage through mutable
+	`Span<UInt8>` so the bounded world can be backed by one ordinary native C
+	byte array. This type is for the session-owned editing and simulation
+	boundary; read-only physics and presentation receive `WorldView` instead. This is
 	both a useful representation and deliberate showcase evidence: the generated
 	program needs no Haxe `Array`, heap allocation, collector, or `hxrt` for world
 	storage. The non-C branch uses an ordinary Haxe `Array<Int>` and is currently

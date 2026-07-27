@@ -1,17 +1,18 @@
 package caxecraft.gameplay;
 
 import caxecraft.domain.World;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldRead.surfaceY as worldSurfaceY;
+import caxecraft.domain.WorldView;
 
 /** Deterministic rules for Nia, the first friendly Caxecraft guide. */
 final class GuideNpc {
 	public static inline final INTERACTION_DISTANCE_SQUARED:Float = 12.25;
 
 	/** Place Nia on the highest solid block in one world column. */
-	public static function start(cells:WorldCells, x:Float, z:Float):GuideState {
+	public static function start(cells:WorldView, x:Float, z:Float):GuideState {
 		return {
 			x: x,
-			y: World.surfaceY(cells, Std.int(x), Std.int(z)) + 1.0,
+			y: worldSurfaceY(cells, Std.int(x), Std.int(z)) + 1.0,
 			z: z,
 			phase: GuidePhase.Waiting
 		};

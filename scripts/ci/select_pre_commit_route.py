@@ -1,53 +1,154 @@
 #!/usr/bin/env python3
-"""Choose one pre-commit test route from normalized staged repository paths.
+"""Choose one local pre-commit evidence route and its focused owners.
 
 The hook normally maps each changed file to a small set of focused owners.
-Compiler-wide semantic layers are different: one edit there already selects
-most focused suites, and running those owners one after another can take tens
-of minutes. This policy sends those high-fanout edits through the repository's
-same exact toolchain partition, where four isolation-reviewed shards may run
-concurrently and successful shards may be resumed safely.
+Known compiler-wide semantic layers use a deliberately bounded ``affected``
+route: one reviewable set of source/semantic/integration sentinels plus focused
+owners selected by the staged paths. The complete cold matrix remains a
+separate pull-request, nightly, release, and explicit local command.
 
-The selector never decides how many workers to use and never caches a test.
-Those safety decisions remain in ``run_toolchain_shard.py``.
+Unknown cross-cutting compiler or test-infrastructure paths fail closed to the
+complete bounded shard runner. The selector never caches a test or changes the
+canonical CI partition.
 """
 
 from __future__ import annotations
 
 import re
 import sys
+from dataclasses import dataclass
 from collections.abc import Iterable
 
 
 FOCUSED = "focused"
+AFFECTED = "affected"
 PARALLEL_EXHAUSTIVE = "parallel-exhaustive"
 
-PARALLEL_EXHAUSTIVE_PATH = re.compile(
+KNOWN_AFFECTED_PATH = re.compile(
     r"^(?:"
-    r"\.github/workflows/"
-    r"|package(?:-lock)?\.json"
-    r"|docs/specs/(?:caxecraft-timing|fixture-taxonomy(?:\.schema)?|toolchain-timing)\.json"
-    r"|scripts/ci/(?:check_ci_policy|check_toolchain|run_toolchain_shard|select_pre_commit_route)\.py"
+    r"docs/specs/fixture-taxonomy(?:\.schema)?\.json"
+    r"|scripts/ci/check_ci_policy\.py"
+    r"|scripts/ci/select_pre_commit_route\.py"
     r"|scripts/hooks/pre-commit"
     r"|scripts/test/snapshots\.py"
-    r"|test/governance/test_(?:caxecraft_timing|fixture_policy|toolchain_shard)\.py"
+    r"|test/governance/test_toolchain_shard\.py"
+    r"|examples/caxecraft/"
+    r"|docs/caxecraft-"
     r"|src/reflaxe/c/(?:CCompiler|CReflaxeCompiler|CompilationContext)\.hx"
     r"|src/reflaxe/c/(?:ast|emit|frontend|ir|lowering|naming|plan|runtime|semantics)/"
     r")"
 )
 
+UNKNOWN_CROSS_CUTTING_PATH = re.compile(
+    r"^(?:"
+    r"\.github/workflows/"
+    r"|package(?:-lock)?\.json"
+    r"|docs/specs/(?:caxecraft-timing|toolchain-timing)\.json"
+    r"|scripts/ci/(?:check_toolchain|run_toolchain_shard)\.py"
+    r"|test/governance/test_(?:caxecraft_timing|fixture_policy)\.py"
+    r"|src/reflaxe/c/"
+    r")"
+)
+
+
+@dataclass(frozen=True)
+class AffectedOwner:
+    """One focused package-script owner and the staged family that selected it."""
+
+    script: str
+    reason: str
+
+
+# Order is part of the local evidence contract: cheap structural checks run
+# first, then increasingly integrated semantic/product checks.
+AFFECTED_BASE_OWNERS = (
+    AffectedOwner("test:all-sources", "all target-owned Haxe must still type-check"),
+    AffectedOwner("test:hxc-ir", "validated semantic IR is the compiler boundary"),
+    AffectedOwner("test:hello", "a compact generated-C product must still compile and run"),
+    AffectedOwner("snapshots:catalog", "checked expected outputs retain one registered owner"),
+)
+
+AFFECTED_OWNER_RULES = (
+    (
+        re.compile(r"^src/reflaxe/c/(?:ast/|lowering/|CCompiler\.hx)"),
+        AffectedOwner("test:body-lowering", "C body construction or its semantic input changed"),
+    ),
+    (
+        re.compile(r"^src/reflaxe/c/(?:emit/|plan/|CCompiler\.hx)"),
+        AffectedOwner("test:project-emitter", "project or artifact planning changed"),
+    ),
+    (
+        re.compile(r"^src/reflaxe/c/(?:frontend/|CReflaxeCompiler\.hx|CompilationContext\.hx)"),
+        AffectedOwner("test:typed-ast", "typed-source capture or request context changed"),
+    ),
+    (
+        re.compile(r"^src/reflaxe/c/naming/"),
+        AffectedOwner("test:symbol-registry", "deterministic C naming changed"),
+    ),
+    (
+        re.compile(r"^src/reflaxe/c/semantics/"),
+        AffectedOwner("test:primitive-semantics", "primitive semantic planning changed"),
+    ),
+    (
+        re.compile(r"^src/reflaxe/c/runtime/|^runtime/hxrt/"),
+        AffectedOwner("test:runtime-features", "runtime requirement or packaging logic changed"),
+    ),
+    (
+        re.compile(
+            r"^(?:std/c/(?:CArray|ConstSpan|Span)\.hx"
+            r"|src/reflaxe/c/(?:ir|lowering)/"
+            r"|test/span_lowering/"
+            r"|docs/span-lowering\.md)"
+        ),
+        AffectedOwner("test:span-lowering", "fixed-array/span semantics may have changed"),
+    ),
+    (
+        re.compile(r"^examples/caxecraft/|^docs/caxecraft-"),
+        AffectedOwner("test:caxecraft-domain", "the flagship compiler/product path changed"),
+    ),
+)
+
 
 def select_route(paths: Iterable[str]) -> str:
     """Return the one route required by the complete staged path set."""
+    saw_affected = False
     for raw_path in paths:
         path = raw_path.strip()
-        if path and PARALLEL_EXHAUSTIVE_PATH.match(path):
+        if not path:
+            continue
+        if KNOWN_AFFECTED_PATH.match(path):
+            saw_affected = True
+            continue
+        if UNKNOWN_CROSS_CUTTING_PATH.match(path):
             return PARALLEL_EXHAUSTIVE
-    return FOCUSED
+    return AFFECTED if saw_affected else FOCUSED
 
 
-def main() -> int:
-    print(select_route(sys.stdin))
+def select_affected_owners(paths: Iterable[str]) -> tuple[AffectedOwner, ...]:
+    """Return deterministic deduplicated owners for a known affected change."""
+    normalized = tuple(path.strip() for path in paths if path.strip())
+    if select_route(normalized) != AFFECTED:
+        raise ValueError("affected owners require the affected pre-commit route")
+    owners = list(AFFECTED_BASE_OWNERS)
+    selected_scripts = {owner.script for owner in owners}
+    for pattern, owner in AFFECTED_OWNER_RULES:
+        if any(pattern.match(path) for path in normalized):
+            if owner.script not in selected_scripts:
+                owners.append(owner)
+                selected_scripts.add(owner.script)
+    return tuple(owners)
+
+
+def main(arguments: Iterable[str] | None = None) -> int:
+    selected_arguments = tuple(sys.argv[1:] if arguments is None else arguments)
+    paths = tuple(sys.stdin)
+    if selected_arguments == ("--owners",):
+        for owner in select_affected_owners(paths):
+            print(f"{owner.script}\t{owner.reason}")
+        return 0
+    if selected_arguments:
+        raise SystemExit("usage: select_pre_commit_route.py [--owners]")
+    print(select_route(paths))
     return 0
 
 

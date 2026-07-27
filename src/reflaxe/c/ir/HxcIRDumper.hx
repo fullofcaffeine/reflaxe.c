@@ -83,7 +83,8 @@ class HxcIRDumper {
 	}
 
 	function dumpFunction(fn:HxcIRFunction):Void {
-		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)} failure=${functionFailure(fn.failureConvention)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
+		final borrowedReturn = fn.borrowedSpanReturn == null ? "" : ' borrowed-span-return=${borrowedSpanReturn(fn.borrowedSpanReturn)}';
+		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)}$borrowedReturn failure=${functionFailure(fn.failureConvention)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
 		final managedRoots = fn.managedRoots == null ? [] : fn.managedRoots;
 		for (root in managedRoots)
 			line('    managed-root ${quote(root.id)} value=${quote(root.valueId)} path=${quote(HxcIRManagedRootPaths.key(root.projections))} ${source(root.source)}');
@@ -186,6 +187,8 @@ class HxcIRDumper {
 				'zero-initialize-fixed-array place=${renderPlace(place)} transition=${state(from)}->${state(to)}';
 			case IRIOInitializeSpan(place, sourceArray, from, to):
 				'initialize-span place=${renderPlace(place)} source=${renderPlace(sourceArray)} transition=${state(from)}->${state(to)}';
+			case IRIOBorrowSpan(sourceArray):
+				'borrow-span source=${renderPlace(sourceArray)}';
 			case IRIOBindVirtualTable(place, tableId): 'bind-virtual-table place=${renderPlace(place)} table=${quote(tableId)}';
 			case IRIOBoundsCheck(collection, indexValueId, policy):
 				'bounds-check collection=${renderPlace(collection)} index=${quote(indexValueId)} policy=${boundsPolicy(policy)}';
@@ -223,9 +226,16 @@ class HxcIRDumper {
 	}
 
 	function renderCall(call:HxcIRCall):String {
+		final borrowedReturn = call.borrowedSpanReturn == null ? "" : ' borrowed-span-return=${borrowedSpanReturn(call.borrowedSpanReturn)}';
 		return
-			'call dispatch=${dispatch(call.dispatch)} arguments=${strings(call.arguments)} returns=${typeRef(call.returnType)} failure=${call.failure == null ? "none" : failureEdge(call.failure)}';
+			'call dispatch=${dispatch(call.dispatch)} arguments=${strings(call.arguments)} returns=${typeRef(call.returnType)}$borrowedReturn failure=${call.failure == null ? "none" : failureEdge(call.failure)}';
 	}
+
+	function borrowedSpanReturn(value:Null<HxcIRBorrowedSpanReturn>):String
+		return switch value {
+			case null: "none";
+			case IRBSRReceiverField(receiverParameterId): 'receiver-field(${quote(receiverParameterId)})';
+		};
 
 	function dispatch(value:HxcIRCallDispatch):String {
 		return switch value {

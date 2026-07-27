@@ -10,6 +10,9 @@ import caxecraft.domain.CharacterPhysics.body as createBody;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
 import caxecraft.domain.World;
+import caxecraft.domain.WorldRead.query as queryWorld;
+import caxecraft.gameplay.Inventory;
+import caxecraft.gameplay.MiningOutcome;
 
 /**
 	Executable specification for unpublished level assembly and session ownership.
@@ -39,8 +42,27 @@ function selfCheck():Int {
 		return 2;
 	if (!session.authoredItemIsActive(0) || session.authoredItemIsActive(1))
 		return 3;
-	if (session.water.pending() <= 0 || session.worldStateHash() == 0)
+	if (session.pendingWaterWork() <= 0 || session.worldStateHash() == 0)
 		return 4;
+	final editable = World.coord(16, 4, 16);
+	if (queryWorld(session.worldView(), editable) != Grass)
+		return 15;
+	final beforeFullInventory = session.worldStateHash();
+	final fullInventory = Inventory.make(0, Inventory.MAX_STACK, 0, 0, 0, 0, 0, 0, 0);
+	final rejectedMining = session.mineTerrain(editable, fullInventory);
+	if (rejectedMining.outcome != MiningOutcome.InventoryFull
+		|| session.worldStateHash() != beforeFullInventory
+		|| queryWorld(session.worldView(), editable) != Grass)
+		return 16;
+	final mined = session.mineTerrain(editable, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0));
+	if (mined.outcome != MiningOutcome.Collected || mined.inventory.grass != 1 || queryWorld(session.worldView(), editable) != Air)
+		return 17;
+	if (!session.placeTerrain(editable, Grass) || queryWorld(session.worldView(), editable) != Grass)
+		return 18;
+	if (session.removeTerrain(World.coord(16, 0, 16)))
+		return 19;
+	if (!session.deactivateAuthoredItem(0) || session.deactivateAuthoredItem(0) || session.authoredItemIsActive(0))
+		return 20;
 
 	final beforeRejectedRun = session.worldStateHash();
 	if (session.writeTerrainRunDuringLoad(World.VOLUME, 1, 1) != -1
@@ -52,7 +74,7 @@ function selfCheck():Int {
 	final unboundView = session.view();
 	if (unboundView.valid || unboundView.localPlayer.id.isValid() || unboundView.completedTicks != 0)
 		return 7;
-	final pendingBeforeRejectedTick = session.water.pending();
+	final pendingBeforeRejectedTick = session.pendingWaterWork();
 	final missingPlayerTick = session.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
 		damagePolicy: CharacterDamagePolicy.Invulnerable,
@@ -64,7 +86,7 @@ function selfCheck():Int {
 		|| session.completedTickCount() != 0
 		|| missingPlayerTick.water.processed != 0
 		|| missingPlayerTick.water.remaining != pendingBeforeRejectedTick
-		|| session.water.pending() != pendingBeforeRejectedTick)
+		|| session.pendingWaterWork() != pendingBeforeRejectedTick)
 		return 8;
 	final localId = EntityId.fromValidatedStorageCode(11);
 	final localProfile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
@@ -105,6 +127,6 @@ function trace():Int {
 	if (!loaded.valid)
 		return -1;
 	var hash = CaxecraftTrace.mix(session.worldStateHash(), loaded.waterPresentationCell);
-	hash = CaxecraftTrace.mix(hash, session.water.pending());
+	hash = CaxecraftTrace.mix(hash, session.pendingWaterWork());
 	return CaxecraftTrace.mix(hash, session.authoredItemIsActive(0) ? 1 : 0);
 }

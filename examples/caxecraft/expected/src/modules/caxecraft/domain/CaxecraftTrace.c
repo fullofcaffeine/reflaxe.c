@@ -6,15 +6,17 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_collisionTrace(void)
   uint8_t *hxc_cells = hxc_storage;
   size_t hxc_tmp_length_n1 = sizeof(hxc_storage) / sizeof(hxc_storage[0]);
   hxc_caxecraft_domain_CaxecraftTrace_makeFloor(hxc_cells, hxc_tmp_length_n1);
+  const uint8_t *hxc_view = hxc_storage;
+  size_t hxc_tmp_length_n2 = sizeof(hxc_storage) / sizeof(hxc_storage[0]);
   struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n0 = hxc_caxecraft_domain_CharacterPhysics_body(5.5, 1.0, 5.5);
   struct hxc_caxecraft_domain_CharacterBody hxc_state = hxc_tmp_call_result_n0;
   struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n1 = hxc_state;
   struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n2 = hxc_caxecraft_domain_CharacterPhysics_input(1.0, 0.5, false);
-  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n3 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n1, hxc_tmp_call_result_n2);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n3 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_view, hxc_tmp_length_n2, hxc_tmp_load_result_n1, hxc_tmp_call_result_n2);
   hxc_state = hxc_tmp_call_result_n3;
   struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n4 = hxc_state;
   struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n5 = hxc_caxecraft_domain_CharacterPhysics_input(0.0, 0.0, true);
-  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n6 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n4, hxc_tmp_call_result_n5);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n6 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_view, hxc_tmp_length_n2, hxc_tmp_load_result_n4, hxc_tmp_call_result_n5);
   hxc_state = hxc_tmp_call_result_n6;
   int32_t hxc_hash = hxc_f64_to_i32_saturating(hxc_state.hxc_x * 1000.0);
   int32_t hxc_tmp_load_result_n8 = hxc_hash;
@@ -110,39 +112,41 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_propertyTrace(int32_t hxc_seed)
   {
     hxc_caxecraft_domain_World_place(hxc_cells, hxc_tmp_length_n2, hxc_edit, hxc_caxecraft_domain_BlockKind_Stone);
   }
+  const uint8_t *hxc_view = hxc_storage;
+  size_t hxc_tmp_length_n6 = sizeof(hxc_storage) / sizeof(hxc_storage[0]);
   int32_t hxc_tmp_load_result_n7 = hxc_x;
-  struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n9 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_cells, hxc_tmp_length_n2, (double)hxc_tmp_load_result_n7 + 0.5, 15.5, (double)hxc_z + 0.5, 0.25, -1.0, 0.5, 24.0);
+  struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n9 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_view, hxc_tmp_length_n6, (double)hxc_tmp_load_result_n7 + 0.5, 15.5, (double)hxc_z + 0.5, 0.25, -1.0, 0.5, 24.0);
   struct hxc_caxecraft_domain_RaycastHit hxc_ray = hxc_tmp_call_result_n9;
-  double hxc_tmp_conditional_result_n8 = 0.0;
+  double hxc_tmp_conditional_result_n9 = 0.0;
   if (hxc_i32_bit_and(hxc_seed, 1) == 0)
   {
-    hxc_tmp_conditional_result_n8 = 1.0;
+    hxc_tmp_conditional_result_n9 = 1.0;
   }
   else
   {
-    hxc_tmp_conditional_result_n8 = -1.0;
+    hxc_tmp_conditional_result_n9 = -1.0;
   }
-  double hxc_moveX = hxc_tmp_conditional_result_n8;
-  double hxc_tmp_conditional_result_n10 = 0.0;
+  double hxc_moveX = hxc_tmp_conditional_result_n9;
+  double hxc_tmp_conditional_result_n11 = 0.0;
   if (hxc_i32_bit_and(hxc_seed, 2) == 0)
   {
-    hxc_tmp_conditional_result_n10 = 0.5;
+    hxc_tmp_conditional_result_n11 = 0.5;
   }
   else
   {
-    hxc_tmp_conditional_result_n10 = -0.5;
+    hxc_tmp_conditional_result_n11 = -0.5;
   }
-  double hxc_moveZ = hxc_tmp_conditional_result_n10;
+  double hxc_moveZ = hxc_tmp_conditional_result_n11;
   bool hxc_jump = hxc_i32_bit_and(hxc_seed, 4) != 0;
   struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n12 = hxc_caxecraft_domain_CharacterPhysics_body(1.5 + (double)hxc_i32_bit_and(hxc_seed, 3), 14.0, 1.5 + (double)hxc_i32_bit_and(hxc_i32_unsigned_shift_right_masked(hxc_seed, 2), 3));
   struct hxc_caxecraft_domain_CharacterBody hxc_state = hxc_tmp_call_result_n12;
-  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n14 = hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(hxc_cells, hxc_tmp_length_n2, hxc_state);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n14 = hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(hxc_view, hxc_tmp_length_n6, hxc_state);
   hxc_state = hxc_tmp_call_result_n14;
   struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n15 = hxc_state;
   double hxc_tmp_load_result_n16 = hxc_moveX;
   double hxc_tmp_load_result_n17 = hxc_moveZ;
   struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n19 = hxc_caxecraft_domain_CharacterPhysics_input(hxc_tmp_load_result_n16, hxc_tmp_load_result_n17, hxc_jump);
-  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n20 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n2, hxc_tmp_load_result_n15, hxc_tmp_call_result_n19);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n20 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_view, hxc_tmp_length_n6, hxc_tmp_load_result_n15, hxc_tmp_call_result_n19);
   hxc_state = hxc_tmp_call_result_n20;
   int32_t hxc_tmp_call_result_n21 = hxc_caxecraft_domain_World_stateHash(hxc_cells, hxc_tmp_length_n2);
   int32_t hxc_hash = hxc_tmp_call_result_n21;
@@ -184,19 +188,21 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_rayTrace(void)
   size_t hxc_tmp_length_n1 = sizeof(hxc_storage) / sizeof(hxc_storage[0]);
   struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_coord(8, 8, 8);
   hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n0, hxc_caxecraft_domain_BlockKind_Stone);
-  struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n2 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_cells, hxc_tmp_length_n1, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 12.0);
+  const uint8_t *hxc_view = hxc_storage;
+  size_t hxc_tmp_length_n2 = sizeof(hxc_storage) / sizeof(hxc_storage[0]);
+  struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n2 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_view, hxc_tmp_length_n2, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 12.0);
   struct hxc_caxecraft_domain_RaycastHit hxc_hit = hxc_tmp_call_result_n2;
   bool hxc_tmp_record_field_load_result_n3 = hxc_hit.hxc_hit;
-  int32_t hxc_tmp_conditional_result_n4 = 0;
+  int32_t hxc_tmp_conditional_result_n5 = 0;
   if (hxc_tmp_record_field_load_result_n3)
   {
-    hxc_tmp_conditional_result_n4 = 1;
+    hxc_tmp_conditional_result_n5 = 1;
   }
   else
   {
-    hxc_tmp_conditional_result_n4 = 0;
+    hxc_tmp_conditional_result_n5 = 0;
   }
-  int32_t hxc_hash = hxc_tmp_conditional_result_n4;
+  int32_t hxc_hash = hxc_tmp_conditional_result_n5;
   int32_t hxc_tmp_load_result_n5 = hxc_hash;
   int32_t hxc_tmp_call_result_n7 = hxc_caxecraft_domain_CaxecraftTrace_mix(hxc_tmp_load_result_n5, hxc_hit.hxc_cellX);
   hxc_hash = hxc_tmp_call_result_n7;

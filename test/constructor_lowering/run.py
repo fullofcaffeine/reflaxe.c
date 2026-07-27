@@ -1448,8 +1448,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     for label, text in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in text or "\\" in text or "hxrt" in text.lower():
             raise ConstructorLoweringFailure(f"{label} leaked a host path or runtime")
-    if not hxcir.startswith("hxcir schema=19\n"):
-        raise ConstructorLoweringFailure("constructor lowering did not use schema-19 HxcIR")
+    if not hxcir.startswith("hxcir schema=20\n"):
+        raise ConstructorLoweringFailure("constructor lowering did not use schema-20 HxcIR")
 
     leaf = function_section(hxcir, "constructor.LeafRecord")
     ordered(

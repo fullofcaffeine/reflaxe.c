@@ -14,6 +14,28 @@ private final class FinalSpanMutator {
 }
 
 /**
+	Owns the bytes behind one read-only view returned to a direct caller.
+
+	The object remains alive for the complete nested `readAt(owner.view(), ...)`
+	call. haxe.c therefore returns the pointer plus its fixed length without a
+	copy, while HxcIR keeps the result tied to this exact receiver.
+**/
+#if !span_lowering_report
+private final class ReturnedSpanOwner {
+	var bytes:CArray<UInt8, Length4> = CArray.zero(4);
+
+	public function new() {
+		bytes[2] = c.IntConvert.modulo(29);
+	}
+
+	/** Lend the receiver-owned bytes read-only for the caller's bounded use. */
+	public function view():ConstSpan<UInt8> {
+		return bytes.constSpan();
+	}
+}
+#end
+
+/**
 	Owns two small fixed arrays for the complete lifetime of one stack object.
 
 	This is the focused source shape required by Caxecraft's `GameSession`: the
@@ -93,6 +115,12 @@ class SpanFixture {
 		var view:Span<UInt8> = values.span();
 		final mutator = new FinalSpanMutator();
 		return mutator.replace(view, 2, replacement);
+	}
+
+	/** Consume a returned receiver borrow directly, without retaining it locally. */
+	static function returnedSpanRoundTrip():UInt8 {
+		final owner = new ReturnedSpanOwner();
+		return readAt(owner.view(), 2);
 	}
 	#end
 
@@ -180,6 +208,7 @@ class SpanFixture {
 		mutatedGridCell(zeroedGridCell());
 		#if !span_lowering_report
 		finalClassParameterRoundTrip(c.IntConvert.modulo(201));
+		returnedSpanRoundTrip();
 		conditionalAssignment(true);
 		conditionalAssignment(false);
 		#end

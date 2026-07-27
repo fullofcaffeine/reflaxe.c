@@ -73,14 +73,15 @@ Do not use `@:allow`, another private-access override, or an internal mutable
 buffer as the permanent bridge between `CaxecraftApp`, presentation, and
 `GameSession`. The application shell may translate input into typed intent or
 commands and may render a bounded read-only view; only the session and its
-systems mutate simulation state. The current class-level `GameSession`
-friendship is acknowledged migration debt owned by
-`haxe_c-xge.20.4.2.6`. Do not broaden it, build new mechanics on it, or call a
-field-level version a completed fix. Remove it through the typed command and
-zero-copy read-only-view boundary required by that task. If haxe.c cannot
-express the view's owner-tied lifetime, switch to compiler work instead of
-exposing storage, copying the world, adding raw C, or moving rendering into the
-simulation.
+systems mutate simulation state. The shipped `GameSession.worldView()` is the
+positive pattern: haxe.c returns a receiver-owned fixed array as a read-only
+pointer-and-length borrow for one direct consumer, while mining, placement,
+removal, and item collection remain typed session operations. The application
+cannot retain the view or write through it, and neither path copies the world.
+Do not regress to friendship, expose storage, copy the world each frame, add
+raw C, or move rendering into the simulation. If a new natural owner-tied view
+exposes a compiler gap, switch to focused compiler work and lift the general
+limit first.
 
 Keep this rule evidence-bounded. CAXEMAP 1 already stores an `asset-pack`
 logical path, `packs/caxecraft/base/content.json` is the strict schema-2 content

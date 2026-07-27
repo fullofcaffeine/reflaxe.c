@@ -821,7 +821,7 @@ class CBodyEmitter {
 			final terminator = requireTerminator(block.terminator, fn.id);
 			addLineDirective(statements, terminator.source, state.lineDirectives);
 			emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName, state.localNames, state.globalNames,
-				state.spanLengthNames);
+				state.spanLengthNames, state.spanValueLengths);
 		}
 	}
 
@@ -959,7 +959,7 @@ class CBodyEmitter {
 				final terminator = requireTerminator(block.terminator, fn.id);
 				addLineDirective(statements, terminator.source, state.lineDirectives);
 				emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName, state.localNames, state.globalNames,
-					state.spanLengthNames);
+					state.spanLengthNames, state.spanValueLengths);
 			case CFCUnreachable(ownerBlockId):
 				final block = requireBlock(fn, ownerBlockId);
 				addTerminatorLineDirective(statements, block, state.lineDirectives, fn.id);
@@ -980,7 +980,7 @@ class CBodyEmitter {
 					final terminator = requireTerminator(target.terminator, fn.id);
 					addLineDirective(statements, terminator.source, state.lineDirectives);
 					emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName, state.localNames, state.globalNames,
-						state.spanLengthNames);
+						state.spanLengthNames, state.spanValueLengths);
 				}
 			case CFCGoto(ownerBlockId, targetBlockId, _):
 				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
@@ -1077,6 +1077,9 @@ class CBodyEmitter {
 				case IRIOInitializeSpan(IRPLocal(localId), sourceArray, IRISUninitialized, IRISInitialized):
 					emitSpanInitialize(statements, state.values, state.declared, state.referencedLocals, state.referencedSpanLengths, instruction, localId,
 						sourceArray, fn, state.localNames, state.spanLengthNames, state.globalNames, state.lineDirectives);
+				case IRIOBorrowSpan(sourceArray):
+					emitBorrowedSpanValue(statements, state.values, state.spanValueLengths, state.referencedValues, instruction, sourceArray, fn,
+						state.localNames, state.globalNames, state.spanLengthNames, state.lineDirectives);
 				case IRIOBoundsCheck(collection, indexValueId, IRBPCheckedAbort(_, _)):
 					emitBoundsCheck(statements, state.values, instruction, collection, indexValueId, fn, state.localNames, state.globalNames,
 						state.spanLengthNames, state.boundsAbortName, state.lineDirectives);
@@ -1561,6 +1564,22 @@ class CBodyEmitter {
 		final result = requireResult(instruction, fn.id);
 		final pointer = placeExpression(place, fn, localNames, globalNames, spanLengthNames, values);
 		final length = collectionLengthExpression(place, fn, localNames, globalNames, spanLengthNames);
+		values.set(result.id, pointer);
+		spanValueLengths.set(result.id, length);
+		if (!referencedValues.exists(result.id)) {
+			addLineDirective(statements, instruction.source, lineDirectives);
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), pointer)));
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), length)));
+		}
+	}
+
+	/** Emit one validator-approved pointer-and-length borrow from fixed storage. */
+	function emitBorrowedSpanValue(statements:Array<CStmt>, values:Map<String, CExpr>, spanValueLengths:Map<String, CExpr>,
+			referencedValues:Map<String, Bool>, instruction:HxcIRInstruction, sourceArray:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>,
+			globalNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		final result = requireResult(instruction, fn.id);
+		final pointer = placeExpression(sourceArray, fn, localNames, globalNames, spanLengthNames, values);
+		final length = collectionLengthExpression(sourceArray, fn, localNames, globalNames, spanLengthNames);
 		values.set(result.id, pointer);
 		spanValueLengths.set(result.id, length);
 		if (!referencedValues.exists(result.id)) {
@@ -2074,7 +2093,7 @@ class CBodyEmitter {
 
 	function emitTerminator(statements:Array<CStmt>, values:Map<String, CExpr>, terminator:HxcIRTerminator, labelNames:Map<String, CIdentifier>,
 			fn:HxcIRFunction, boundsAbortName:Null<CIdentifier>, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
-			spanLengthNames:Map<String, CIdentifier>):Void {
+			spanLengthNames:Map<String, CIdentifier>, spanValueLengths:Map<String, CExpr>):Void {
 		final functionId = fn.id;
 		switch terminator.kind {
 			case IRTReturn(valueId, cleanup):
@@ -2082,6 +2101,13 @@ class CBodyEmitter {
 				emitManagedRootFramePop(statements, fn, boundsAbortName);
 				switch fn.failureConvention {
 					case IRFCInfallible:
+						if (fn.borrowedSpanReturn != null) {
+							if (valueId == null)
+								fail('borrowed-span function `$functionId` returned no value');
+							statements.push(SExpr(EBinary(Assign,
+								EUnary(Dereference, EIdentifier(requireSpanLengthName(spanLengthNames, returnedSpanLengthId(), functionId))),
+								requireSpanValueLength(spanValueLengths, valueId, functionId))));
+						}
 						statements.push(SReturn(valueId == null ? null : requireValue(values, valueId, functionId)));
 					case IRFCStatus(_):
 						if (valueId != null || fn.returnType != IRTVoid)
@@ -2563,6 +2589,12 @@ class CBodyEmitter {
 				{type: new CType(TStruct(new CIdentifier("hxc_bytes_ref"))), declarator: DPointer(inner, [])};
 			case IRTCString:
 				{type: new CType(TChar(null), [QConst]), declarator: DPointer(inner, [])};
+			case IRTSpan(element, mutable):
+				final nested:CTypedDeclarator = {
+					type: mutable ? cType(element) : constType(element),
+					declarator: DPointer(inner, [])
+				};
+				nested;
 			case IRTFunction(parameters, result):
 				final cParameters:Array<CParam> = [];
 				for (parameter in parameters) {
@@ -2692,6 +2724,13 @@ class CBodyEmitter {
 						attributes: []
 					});
 			}
+		}
+		if (fn.borrowedSpanReturn != null) {
+			result.push({
+				type: new CType(TSizeT),
+				declarator: DPointer(DName(requireSpanLengthName(resolvedSpanLengthNames, returnedSpanLengthId(), fn.id)), []),
+				attributes: []
+			});
 		}
 		return result;
 	}
@@ -4851,6 +4890,20 @@ class CBodyEmitter {
 						case _:
 					}
 				}
+				if (call.borrowedSpanReturn != null) {
+					final result = requireResult(instruction, functionId);
+					final lengthName = requireSpanLengthName(spanLengthNames, result.id, functionId);
+					addLineDirective(statements, instruction.source, lineDirectives);
+					statements.push(SDecl({
+						storage: [],
+						alignments: [],
+						type: new CType(TSizeT),
+						declarator: DName(lengthName),
+						initializer: null,
+						attributes: []
+					}));
+					cArguments.push(EUnary(AddressOf, EIdentifier(lengthName)));
+				}
 				ECall(EIdentifier(targetName), cArguments);
 			case IRCDVirtual(slotId, receiverValueId):
 				for (argument in call.arguments) {
@@ -5006,6 +5059,8 @@ class CBodyEmitter {
 			attributes: []
 		}));
 		values.set(result.id, EIdentifier(temporaryName));
+		if (call.borrowedSpanReturn != null)
+			spanValueLengths.set(result.id, EIdentifier(requireSpanLengthName(spanLengthNames, result.id, functionId)));
 		return doesNotReturn;
 	}
 
@@ -6360,6 +6415,10 @@ class CBodyEmitter {
 		}
 		return length;
 	}
+
+	/** Shared pseudo-value key for a returned span's hidden length parameter. */
+	static inline function returnedSpanLengthId():String
+		return "return.borrowed-span.length";
 
 	static function requireLocal(fn:HxcIRFunction, localId:String):HxcIRLocal {
 		for (local in fn.locals) {

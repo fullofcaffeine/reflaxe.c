@@ -14,9 +14,21 @@ _Static_assert(offsetof(struct hxc_SpanFixture_FinalSpanMutator, hxc_storage) ==
 
 _Static_assert(sizeof(struct hxc_SpanFixture_FinalSpanMutator) >= 1, "class hxc_SpanFixture_FinalSpanMutator strict-C empty-storage anchor occupies one byte");
 
+_Static_assert(offsetof(struct hxc_SpanFixture_ReturnedSpanOwner, hxc_bytes) == 0, "class hxc_SpanFixture_ReturnedSpanOwner first storage field begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_SpanFixture_ReturnedSpanOwner) >= _Alignof(uint8_t [4]), "class hxc_SpanFixture_ReturnedSpanOwner alignment admits field 0");
+
+_Static_assert(sizeof(struct hxc_SpanFixture_ReturnedSpanOwner) >= offsetof(struct hxc_SpanFixture_ReturnedSpanOwner, hxc_bytes) + sizeof(uint8_t [4]), "class hxc_SpanFixture_ReturnedSpanOwner size contains its final storage member");
+
 void hxc_compiler_constructor_SpanFixture_OwnedSpanBuffer(struct hxc_SpanFixture_OwnedSpanBuffer *hxc_self)
 {
   (void)hxc_self;
+  return;
+}
+
+void hxc_compiler_constructor_SpanFixture_ReturnedSpanOwner(struct hxc_SpanFixture_ReturnedSpanOwner *hxc_self)
+{
+  (*hxc_self).hxc_bytes[(size_t)2] = (uint8_t)29;
   return;
 }
 
@@ -146,6 +158,7 @@ void hxc_SpanFixture_main(void)
   uint8_t hxc_tmp_call_result_n1 = hxc_SpanFixture_zeroedGridCell();
   hxc_SpanFixture_mutatedGridCell(hxc_tmp_call_result_n1);
   hxc_SpanFixture_finalClassParameterRoundTrip((uint8_t)201);
+  hxc_SpanFixture_returnedSpanRoundTrip();
   hxc_SpanFixture_conditionalAssignment(true);
   hxc_SpanFixture_conditionalAssignment(false);
   return;
@@ -275,6 +288,23 @@ uint8_t hxc_SpanFixture_replaceAt(uint8_t *hxc_values, size_t hxc_length, int32_
   return hxc_tmp_collection_index_load_result_n0;
 }
 
+uint8_t hxc_SpanFixture_returnedSpanRoundTrip(void)
+{
+  struct hxc_SpanFixture_ReturnedSpanOwner hxc_tmp_object_storage_n1 = { 0 };
+  struct hxc_SpanFixture_ReturnedSpanOwner *hxc_tmp_class_object_address_n0 = &hxc_tmp_object_storage_n1;
+  hxc_compiler_constructor_SpanFixture_ReturnedSpanOwner(hxc_tmp_class_object_address_n0);
+  struct hxc_SpanFixture_ReturnedSpanOwner *hxc_owner = hxc_tmp_class_object_address_n0;
+  struct hxc_SpanFixture_ReturnedSpanOwner *hxc_tmp_load_result_n1 = hxc_owner;
+  if (hxc_tmp_load_result_n1 == NULL)
+  {
+    abort();
+  }
+  size_t hxc_tmp_length_n3;
+  const uint8_t *hxc_tmp_instance_call_result_n2 = hxc_SpanFixture_ReturnedSpanOwner_view(hxc_tmp_load_result_n1, &hxc_tmp_length_n3);
+  uint8_t hxc_tmp_call_result_n4 = hxc_SpanFixture_readAt(hxc_tmp_instance_call_result_n2, hxc_tmp_length_n3, 2);
+  return hxc_tmp_call_result_n4;
+}
+
 uint8_t hxc_SpanFixture_spanBeforeConditionalArgument(bool hxc_selectThird)
 {
   uint8_t hxc_values[4] = { (uint8_t)2, (uint8_t)4, (uint8_t)8, (uint8_t)16 };
@@ -373,6 +403,16 @@ int32_t hxc_SpanFixture_OwnedSpanBuffer_roundTrip(struct hxc_SpanFixture_OwnedSp
   uint8_t hxc_tmp_collection_index_load_result_n0 = hxc_readBytes[(size_t)2];
   int32_t hxc_tmp_collection_index_load_result_n1 = hxc_readNumbers[(size_t)1];
   return hxc_i32_add_wrapping((int32_t)hxc_tmp_collection_index_load_result_n0, hxc_tmp_collection_index_load_result_n1);
+}
+
+const uint8_t *hxc_SpanFixture_ReturnedSpanOwner_view(struct hxc_SpanFixture_ReturnedSpanOwner *hxc_self, size_t *hxc_returned_span_length)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  *hxc_returned_span_length = 4;
+  return (*hxc_self).hxc_bytes;
 }
 
 int main(void)

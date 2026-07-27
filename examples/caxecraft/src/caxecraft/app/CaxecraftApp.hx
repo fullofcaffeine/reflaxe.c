@@ -47,7 +47,7 @@ import caxecraft.domain.CharacterBody;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.VoxelRaycast;
 import caxecraft.domain.World;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldView;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
@@ -66,7 +66,6 @@ import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
 import caxecraft.gameplay.MosslingState;
-import caxecraft.gameplay.Mining.attempt as attemptMining;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.domain.VitalsState;
 import caxecraft.domain.Vitals.MAX_HEALTH;
@@ -162,13 +161,6 @@ final class CaxecraftApp {
 			return;
 		final waterPresentationCell = loadedLevel.waterPresentationCell;
 
-		// These friend views are now presentation/interaction migration seams only.
-		// Level assembly above creates its own short-lived views inside GameSession.
-		// `GameView` will remove the remaining reads in the presentation task.
-		final cells = session.worldStorage.span();
-		final itemActive = session.authoredItemStorage.span();
-		final itemActiveRead = session.authoredItemStorage.constSpan();
-		final inactiveItem = 0;
 		final initialAquaticProfile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
 		#if caxecraft_pilot_secondary_locale
 		final pilotName:PilotScriptName = PilotScriptName.LaunchSmoke;
@@ -199,7 +191,8 @@ final class CaxecraftApp {
 		// build contains neither this branch nor a way to alter starting health.
 		initialHealth = PilotScript.initialHealth(pilotName);
 		#end
-		if (!session.bindLocalPlayer(startCharacter(EntityId.fromValidatedStorageCode(1), spawnPlayer(cells), initialAquaticProfile, initialHealth)))
+		if (!session.bindLocalPlayer(startCharacter(EntityId.fromValidatedStorageCode(1), spawnPlayer(session.worldView()), initialAquaticProfile,
+			initialHealth)))
 			return;
 
 		var windowFlags = ConfigFlags.VsyncHint | ConfigFlags.WindowResizable;
@@ -258,8 +251,8 @@ final class CaxecraftApp {
 		// exercise the same typed inventory transitions as a real player.
 		inventory = PilotScript.initialInventory(pilotName);
 		#end
-		var guide:GuideState = GuideNpc.start(cells, 17.5, 13.5);
-		var mossling:MosslingState = Mossling.start(cells, 15.5, 13.8);
+		var guide:GuideState = GuideNpc.start(session.worldView(), 17.5, 13.5);
+		var mossling:MosslingState = Mossling.start(session.worldView(), 15.5, 13.8);
 		var swordCombat:SwordCombatState = SwordCombat.start();
 		var berryDrop:BerryDropState = emptyBerryDrop();
 		var lookX = 0.0;
@@ -397,7 +390,7 @@ final class CaxecraftApp {
 				inventory = Inventory.cycle(inventory, hotbarCycle);
 			if (screenIsPlaying(screen) && interactPressed) {
 				if (characterIsDefeated(character.vitals)) {
-					character = reviveCharacterAt(character, spawnPlayer(cells));
+					character = reviveCharacterAt(character, spawnPlayer(session.worldView()));
 					cameraWaterBlend = 0.0;
 					accumulator = 0.0;
 					resetMotionThisFrame = true;
@@ -558,7 +551,7 @@ final class CaxecraftApp {
 				if (!characterIsDefeated(character.vitals)) {
 					var pickupIndex = 0;
 					while (pickupIndex < itemCount()) {
-						if (itemActive[pickupIndex] != inactiveItem
+						if (session.authoredItemIsActive(pickupIndex)
 							&& authoredItemIsInRange(character.body.x, character.body.y, character.body.z, itemXMilli(pickupIndex), itemYMilli(pickupIndex),
 								itemZMilli(pickupIndex))) {
 							final itemCode = itemStorageCode(pickupIndex);
@@ -566,10 +559,11 @@ final class CaxecraftApp {
 							if (BaseContentPack.itemUseProfile(item) == ItemUseProfile.EquipAquatic
 								&& BaseContentPack.itemProvidesAquaticProfile(item)) {
 								final replacement = BaseContentPack.aquaticProfile(BaseContentPack.itemAquaticProfile(item));
-								character = adoptCharacterProfile(character, replacement);
-								aquaticEquipmentCode = itemCode;
-								aquaticEquipmentFrames = 120;
-								itemActive[pickupIndex] = inactiveItem;
+								if (session.deactivateAuthoredItem(pickupIndex)) {
+									character = adoptCharacterProfile(character, replacement);
+									aquaticEquipmentCode = itemCode;
+									aquaticEquipmentFrames = 120;
+								}
 							}
 						}
 						pickupIndex++;
@@ -581,7 +575,7 @@ final class CaxecraftApp {
 						character = applyCharacterAttack(character, mosslingAttacked);
 						if (mosslingAttacked)
 							enemyAttackFrames = 120;
-						mossling = Mossling.step(cells, mossling, character.body.x, character.body.z, gameTick.tickIndex);
+						mossling = Mossling.step(session.worldView(), mossling, character.body.x, character.body.z, gameTick.tickIndex);
 					}
 					swordCombat = SwordCombat.step(swordCombat);
 					if (swordQueued) {
@@ -616,7 +610,7 @@ final class CaxecraftApp {
 			final selectionEyeX = character.body.x;
 			final selectionEyeY = character.body.y + 1.62;
 			final selectionEyeZ = character.body.z;
-			final hit = VoxelRaycast.trace(cells, selectionEyeX, selectionEyeY, selectionEyeZ, lookX, lookY, lookZ, PICK_DISTANCE);
+			final hit = VoxelRaycast.trace(session.worldView(), selectionEyeX, selectionEyeY, selectionEyeZ, lookX, lookY, lookZ, PICK_DISTANCE);
 			if (captured && !recapturedThisFrame && primaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
 					if (selectedMode == GameMode.Adventure) {
@@ -624,10 +618,9 @@ final class CaxecraftApp {
 							&& hit.hit
 							&& playerCanMine(character.aquatic, character.aquaticProfile)) {
 							final minedCoordinate = World.coord(hit.cellX, hit.cellY, hit.cellZ);
-							final mining = attemptMining(cells, minedCoordinate, inventory);
+							final mining = session.mineTerrain(minedCoordinate, inventory);
 							inventory = mining.inventory;
 							if (mining.outcome == MiningOutcome.Collected) {
-								session.water.terrainChanged(minedCoordinate);
 								terrainRenderer.invalidate(minedCoordinate);
 							}
 							#if caxecraft_pilot
@@ -644,7 +637,7 @@ final class CaxecraftApp {
 						}
 					} else if (hit.hit) {
 						final removedCoordinate = World.coord(hit.cellX, hit.cellY, hit.cellZ);
-						final removed = session.water.removeTerrain(cells, removedCoordinate);
+						final removed = session.removeTerrain(removedCoordinate);
 						if (removed)
 							terrainRenderer.invalidate(removedCoordinate);
 						#if caxecraft_pilot
@@ -669,7 +662,7 @@ final class CaxecraftApp {
 						if (!hasItem
 							|| !World.isPlaceable(selectedBlock)
 							|| !playerCanPlaceAt(character.body, placement)
-							|| !session.water.placeTerrain(cells, placement, selectedBlock)) {
+							|| !session.placeTerrain(placement, selectedBlock)) {
 							placementBlockedFrames = 60;
 							#if caxecraft_pilot
 							rejectedEdits++;
@@ -777,8 +770,8 @@ final class CaxecraftApp {
 				#if caxecraft_render_benchmark
 				final terrainStarted = Raylib.GetTime();
 				#end
-				final renderCounters = terrainRenderer.draw(cells, terrainTexture, terrainTextureReady, adventureTerrainTexture, adventureTerrainTextureReady,
-					renderPosition.x, renderPosition.z);
+				final renderCounters = terrainRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, adventureTerrainTexture,
+					adventureTerrainTextureReady, renderPosition.x, renderPosition.z);
 				#if caxecraft_render_benchmark
 				if (frameCount >= 2) {
 					measuredTerrainMicroseconds += Std.int((Raylib.GetTime() - terrainStarted) * 1000000.0);
@@ -786,7 +779,7 @@ final class CaxecraftApp {
 					measuredTerrainFrames++;
 				}
 				#end
-				final waterCounters = WaterRenderer.draw(cells, terrainTexture, terrainTextureReady, waterPresentationCell);
+				final waterCounters = WaterRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, waterPresentationCell);
 				final totalVisible = renderCounters.visible + waterCounters.visible;
 				final totalDrawCalls = renderCounters.drawCalls + waterCounters.drawCalls;
 				#if caxecraft_pilot
@@ -798,7 +791,8 @@ final class CaxecraftApp {
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
 				drawActors(camera, entityTexture, entityTextureReady, guide, mossling, berryDrop);
-				AuthoredItemRenderer.drawWorldItems(camera, itemActiveRead, itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady);
+				AuthoredItemRenderer.drawWorldItems(camera, session.authoredItemsView(), itemTexture, itemTextureReady, adventureItemTexture,
+					adventureItemTextureReady);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
 						c.Float32.fromFloat(1.04), c.Float32.fromFloat(1.04), CaxecraftPalette.selection());
@@ -850,16 +844,17 @@ final class CaxecraftApp {
 			final pilotComplete = PilotScript.complete(pilotName, frameCount);
 			#if caxecraft_render_benchmark
 			if (pilotComplete)
-				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, cells, hit, removedBlocks, placedBlocks, rejectedEdits,
-					visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide), Mossling.isAlive(mossling), onTitle,
-					paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks,
-					terrainCacheValid, measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds);
+				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
+					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
+					Mossling.isAlive(mossling), onTitle, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
+					rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds, measuredTerrainFrames,
+					measuredUpdateMicroseconds, measuredPreparationMicroseconds);
 			#else
 			if (pilotComplete)
-				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, cells, hit, removedBlocks, placedBlocks, rejectedEdits,
-					visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide), Mossling.isAlive(mossling), onTitle,
-					paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks,
-					terrainCacheValid, 0, 0, 0, 0);
+				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
+					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
+					Mossling.isAlive(mossling), onTitle, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
+					rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0);
 			#end
 			var capturePilotFrame = pilotComplete;
 			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
@@ -930,7 +925,7 @@ final class CaxecraftApp {
 	}
 
 	/** Restore the validated authored spawn, then recover if later edits blocked it. */
-	static function spawnPlayer(cells:WorldCells):CharacterBody {
+	static function spawnPlayer(cells:WorldView):CharacterBody {
 		final spawnX = spawnXMilli() / 1000.0;
 		final spawnY = spawnYMilli() / 1000.0;
 		final spawnZ = spawnZMilli() / 1000.0;

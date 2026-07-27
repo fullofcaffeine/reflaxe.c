@@ -1,10 +1,10 @@
 package caxecraft.app;
 
 #if c
-import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
+import caxecraft.domain.WaterCellCodec.stateInView as waterStateAt;
 import caxecraft.domain.WaterCellState;
 import caxecraft.domain.World;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldView;
 import raylib.Color;
 import raylib.Rlgl;
 import raylib.Texture2D;
@@ -24,7 +24,7 @@ typedef WaterRenderCounters = {
 	surface. This is intentionally a small first transparent pass rather than a
 	per-block Raylib draw call or a renderer-owned fluid update.
 **/
-function draw(cells:WorldCells, texture:Texture2D, textureReady:Bool, presentationCell:Int):WaterRenderCounters {
+function draw(cells:WorldView, texture:Texture2D, textureReady:Bool, presentationCell:Int):WaterRenderCounters {
 	if (!textureReady || presentationCell < 0)
 		return {visible: 0, drawCalls: 0};
 	final column = presentationCell % TerrainAtlas.COLUMNS;

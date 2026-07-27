@@ -62733,11 +62733,11 @@
       "source": {
         "file": "caxecraft/app/CaxecraftApp.hx",
         "end": {
-          "line": 145,
+          "line": 144,
           "column": 45
         },
         "start": {
-          "line": 145,
+          "line": 144,
           "column": 18
         }
       }
@@ -63170,11 +63170,11 @@
       "source": {
         "file": "caxecraft/app/CaxecraftApp.hx",
         "end": {
-          "line": 1182,
+          "line": 1177,
           "column": 2
         },
         "start": {
-          "line": 123,
+          "line": 122,
           "column": 7
         }
       }
@@ -63626,11 +63626,11 @@
       "source": {
         "file": "caxecraft/app/CaxecraftApp.hx",
         "end": {
-          "line": 1182,
+          "line": 1177,
           "column": 2
         },
         "start": {
-          "line": 123,
+          "line": 122,
           "column": 7
         }
       }
@@ -64177,11 +64177,11 @@
       "source": {
         "file": "caxecraft/app/CaxecraftApp.hx",
         "end": {
-          "line": 146,
+          "line": 145,
           "column": 3
         },
         "start": {
-          "line": 144,
+          "line": 143,
           "column": 2
         }
       }
@@ -64196,11 +64196,11 @@
       "source": {
         "file": "caxecraft/app/CaxecraftApp.hx",
         "end": {
-          "line": 145,
+          "line": 144,
           "column": 45
         },
         "start": {
-          "line": 145,
+          "line": 144,
           "column": 18
         }
       }
@@ -64215,11 +64215,11 @@
       "source": {
         "file": "caxecraft/app/CaxecraftApp.hx",
         "end": {
-          "line": 930,
+          "line": 925,
           "column": 3
         },
         "start": {
-          "line": 156,
+          "line": 155,
           "column": 29
         }
       }
@@ -64234,11 +64234,11 @@
       "source": {
         "file": "caxecraft/app/CaxecraftApp.hx",
         "end": {
-          "line": 767,
+          "line": 760,
           "column": 21
         },
         "start": {
-          "line": 767,
+          "line": 760,
           "column": 9
         }
       }

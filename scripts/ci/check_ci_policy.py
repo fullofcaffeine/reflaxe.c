@@ -1555,12 +1555,23 @@ def validate() -> list[str]:
         errors.append("pre-commit must check registered snapshot ownership and drift")
     if (
         "npm run test:toolchain:parallel" not in pre_commit
-        or "high-fanout compiler or test-infrastructure change" not in pre_commit
+        or "unknown cross-cutting compiler or test-infrastructure changes"
+        not in pre_commit
         or "scripts/ci/select_pre_commit_route.py" not in pre_commit
     ):
         errors.append(
-            "pre-commit must de-duplicate high-fanout focused gates through "
-            "the bounded parallel toolchain runner"
+            "pre-commit must preserve a fail-closed bounded exhaustive route "
+            "for unknown cross-cutting changes"
+        )
+    if (
+        "Running affected local compiler evidence" not in pre_commit
+        or 'select_pre_commit_route.py" --owners' not in pre_commit
+        or 'npm run "$owner_script"' not in pre_commit
+        or "complete cold coverage remains required in CI" not in pre_commit
+    ):
+        errors.append(
+            "pre-commit must run reviewed affected owners for known compiler "
+            "changes while retaining complete cold CI evidence"
         )
     if "npm run test:beads-plan" not in pre_commit:
         errors.append("pre-commit must validate the reproducible Beads graph")

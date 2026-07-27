@@ -1,5 +1,7 @@
 package caxecraft.domain;
 
+import caxecraft.domain.WorldRead.query as queryWorld;
+
 /**
 	Fixed-step first-person collision and dry-land movement.
 
@@ -65,7 +67,7 @@ function canPlaceAt(state:CharacterBody, coord:BlockCoord):Bool {
 }
 
 /** Lift an invalid spawn by whole blocks until its AABB is free. */
-function recoverSpawn(cells:WorldCells, state:CharacterBody):CharacterBody {
+function recoverSpawn(cells:WorldView, state:CharacterBody):CharacterBody {
 	var recoveredY = state.y;
 	var attempts = 0;
 	while (overlaps(cells, state.x, recoveredY, state.z) && attempts < World.HEIGHT) {
@@ -84,7 +86,7 @@ function recoverSpawn(cells:WorldCells, state:CharacterBody):CharacterBody {
 }
 
 /** Advance exactly one 50 ms simulation tick. */
-function step(cells:WorldCells, original:CharacterBody, command:StepInput):CharacterBody {
+function step(cells:WorldView, original:CharacterBody, command:StepInput):CharacterBody {
 	var state = original;
 	if (overlaps(cells, original.x, original.y, original.z))
 		state = recoverSpawn(cells, original);
@@ -101,7 +103,7 @@ function step(cells:WorldCells, original:CharacterBody, command:StepInput):Chara
 	owns only collision and contact response, so new movement media reuse one
 	wall/floor/ceiling implementation instead of copying it.
 **/
-function resolveVelocity(cells:WorldCells, state:CharacterBody, velocityX:Float, requestedVelocityY:Float, velocityZ:Float):CharacterBody {
+function resolveVelocity(cells:WorldView, state:CharacterBody, velocityX:Float, requestedVelocityY:Float, velocityZ:Float):CharacterBody {
 	var velocityY = requestedVelocityY;
 	final movedX = moveAxis(cells, state.x, state.y, state.z, velocityX * FIXED_SECONDS, 0);
 	final movedZ = moveAxis(cells, movedX.x, movedX.y, movedX.z, velocityZ * FIXED_SECONDS, 2);
@@ -129,7 +131,7 @@ function resolveVelocity(cells:WorldCells, state:CharacterBody, velocityX:Float,
 	};
 }
 
-private function moveAxis(cells:WorldCells, x:Float, y:Float, z:Float, delta:Float, axis:Int):AxisMove {
+private function moveAxis(cells:WorldView, x:Float, y:Float, z:Float, delta:Float, axis:Int):AxisMove {
 	final magnitude = abs(delta);
 	if (magnitude == 0.0)
 		return {
@@ -170,7 +172,7 @@ private function moveAxis(cells:WorldCells, x:Float, y:Float, z:Float, delta:Flo
 	};
 }
 
-private function overlaps(cells:WorldCells, x:Float, y:Float, z:Float):Bool {
+private function overlaps(cells:WorldView, x:Float, y:Float, z:Float):Bool {
 	final minimumX = floorToInt(x - HALF_WIDTH + EPSILON);
 	final maximumX = floorToInt(x + HALF_WIDTH - EPSILON);
 	final minimumY = floorToInt(y + EPSILON);
@@ -184,7 +186,7 @@ private function overlaps(cells:WorldCells, x:Float, y:Float, z:Float):Bool {
 			var blockX = minimumX;
 			while (blockX <= maximumX) {
 				final coord = World.coord(blockX, blockY, blockZ);
-				if (!World.contains(coord) || World.isSolid(World.query(cells, coord)))
+				if (!World.contains(coord) || World.isSolid(queryWorld(cells, coord)))
 					return true;
 				blockX++;
 			}

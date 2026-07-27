@@ -7,7 +7,8 @@ import caxecraft.app.TerrainRenderer.TerrainRenderCounters;
 import caxecraft.app.TerrainRenderer.emitFace;
 import caxecraft.app.TerrainRenderer.squareDistance;
 import caxecraft.domain.World;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldRead.query as queryWorld;
+import caxecraft.domain.WorldView;
 import raylib.Rlgl;
 import raylib.Texture2D;
 
@@ -27,7 +28,7 @@ private typedef ImmediateSheetCounters = {
 	The `caxecraft_renderer_baseline` define is accepted only by the dedicated
 	benchmark command; ordinary builds do not type or emit this module.
 **/
-function drawImmediate(cells:WorldCells, baseTexture:Texture2D, baseReady:Bool, adventureTexture:Texture2D, adventureReady:Bool, playerX:Float,
+function drawImmediate(cells:WorldView, baseTexture:Texture2D, baseReady:Bool, adventureTexture:Texture2D, adventureReady:Bool, playerX:Float,
 		playerZ:Float):TerrainRenderCounters {
 	final playerCellX = Std.int(playerX);
 	final playerCellZ = Std.int(playerZ);
@@ -47,8 +48,7 @@ function drawImmediate(cells:WorldCells, baseTexture:Texture2D, baseReady:Bool, 
 }
 
 /** Submit one atlas after performing the former complete-world scan. */
-private function drawSheet(cells:WorldCells, texture:Texture2D, textureReady:Bool, sheet:TerrainSheet, playerCellX:Int,
-		playerCellZ:Int):ImmediateSheetCounters {
+private function drawSheet(cells:WorldView, texture:Texture2D, textureReady:Bool, sheet:TerrainSheet, playerCellX:Int, playerCellZ:Int):ImmediateSheetCounters {
 	if (!textureReady)
 		return {visible: 0, faces: 0, drawCalls: 0};
 
@@ -62,36 +62,36 @@ private function drawSheet(cells:WorldCells, texture:Texture2D, textureReady:Boo
 		while (y < World.HEIGHT) {
 			var x = 0;
 			while (x < World.WIDTH) {
-				final kind = World.query(cells, World.coord(x, y, z));
+				final kind = queryWorld(cells, World.coord(x, y, z));
 				if (World.isSolid(kind) && TerrainAtlas.sheet(kind) == sheet) {
 					var blockVisible = false;
 					final distance = squareDistance(x, z, playerCellX, playerCellZ);
-					if (!World.isSolid(World.query(cells, World.coord(x, y + 1, z)))) {
+					if (!World.isSolid(queryWorld(cells, World.coord(x, y + 1, z)))) {
 						emitFace(kind, VoxelFace.Top, x, y, z, halfPixel, distance);
 						faces++;
 						blockVisible = true;
 					}
-					if (!World.isSolid(World.query(cells, World.coord(x, y - 1, z)))) {
+					if (!World.isSolid(queryWorld(cells, World.coord(x, y - 1, z)))) {
 						emitFace(kind, VoxelFace.Bottom, x, y, z, halfPixel, distance);
 						faces++;
 						blockVisible = true;
 					}
-					if (!World.isSolid(World.query(cells, World.coord(x, y, z - 1)))) {
+					if (!World.isSolid(queryWorld(cells, World.coord(x, y, z - 1)))) {
 						emitFace(kind, VoxelFace.North, x, y, z, halfPixel, distance);
 						faces++;
 						blockVisible = true;
 					}
-					if (!World.isSolid(World.query(cells, World.coord(x, y, z + 1)))) {
+					if (!World.isSolid(queryWorld(cells, World.coord(x, y, z + 1)))) {
 						emitFace(kind, VoxelFace.South, x, y, z, halfPixel, distance);
 						faces++;
 						blockVisible = true;
 					}
-					if (!World.isSolid(World.query(cells, World.coord(x + 1, y, z)))) {
+					if (!World.isSolid(queryWorld(cells, World.coord(x + 1, y, z)))) {
 						emitFace(kind, VoxelFace.East, x, y, z, halfPixel, distance);
 						faces++;
 						blockVisible = true;
 					}
-					if (!World.isSolid(World.query(cells, World.coord(x - 1, y, z)))) {
+					if (!World.isSolid(queryWorld(cells, World.coord(x - 1, y, z)))) {
 						emitFace(kind, VoxelFace.West, x, y, z, halfPixel, distance);
 						faces++;
 						blockVisible = true;

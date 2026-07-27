@@ -27,6 +27,7 @@ import caxecraft.domain.WaterSimulation;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.domain.WorldStorage;
+import caxecraft.domain.WorldView;
 import caxecraft.domain.WorldVolume;
 import caxecraft.gameplay.WorldItemPickup.isInRange as itemIsInRange;
 #if c
@@ -58,56 +59,58 @@ function selfCheck():Int {
 	#if c
 	var worldStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 	var cells:WorldCells = worldStorage.span();
+	var view:WorldView = worldStorage.constSpan();
 	#else
 	var cells:WorldCells = zeroes();
+	var view:WorldView = WorldView.borrow(cells);
 	#end
 	prepare(cells);
 	final basic = basicProfile();
 	final enhanced = enhancedProfile();
 
 	final dryPlayer = createPlayer(12.5, 1.0, 12.5);
-	final dry = observe(cells, dryPlayer);
+	final dry = observe(view, dryPlayer);
 	if (dry.submersion != 0.0 || dry.feetWet || dry.bodyWet || dry.headWet || dry.cameraBlend != 0.0)
 		return 1;
 	if (classifyMedium(AquaticMedium.Dry, dry) != AquaticMedium.Dry)
 		return 2;
 
 	final wadingPlayer = createPlayer(4.5, 1.0, 4.5);
-	final wading = observe(cells, wadingPlayer);
+	final wading = observe(view, wadingPlayer);
 	if (!near(wading.submersion, 1.0 / 1.8) || !wading.feetWet || !wading.bodyWet || wading.headWet)
 		return 3;
 	if (classifyMedium(AquaticMedium.Dry, wading) != AquaticMedium.Wading)
 		return 4;
 
 	final floatingPlayer = createPlayer(8.5, 1.4, 8.5);
-	final floating = observe(cells, floatingPlayer);
+	final floating = observe(view, floatingPlayer);
 	if (floating.submersion < 0.80 || floating.headWet || floating.cameraBlend <= 0.0 || floating.cameraBlend >= 1.0)
 		return 5;
 	if (classifyMedium(AquaticMedium.Wading, floating) != AquaticMedium.Floating)
 		return 6;
 
 	final submergedPlayer = createPlayer(8.5, 1.2, 8.5);
-	final submerged = observe(cells, submergedPlayer);
+	final submerged = observe(view, submergedPlayer);
 	if (!near(submerged.submersion, 1.0) || !submerged.headWet || submerged.cameraBlend != 1.0)
 		return 7;
 	if (classifyMedium(AquaticMedium.Floating, submerged) != AquaticMedium.Submerged)
 		return 8;
 
-	final enterFloat = observe(cells, createPlayer(8.5, 1.75, 8.5));
-	final stayFloat = observe(cells, createPlayer(8.5, 1.80, 8.5));
+	final enterFloat = observe(view, createPlayer(8.5, 1.75, 8.5));
+	final stayFloat = observe(view, createPlayer(8.5, 1.80, 8.5));
 	if (classifyMedium(AquaticMedium.Wading, enterFloat) != AquaticMedium.Floating
 		|| classifyMedium(AquaticMedium.Floating, stayFloat) != AquaticMedium.Floating
 		|| classifyMedium(AquaticMedium.Wading, stayFloat) != AquaticMedium.Wading)
 		return 9;
 
 	final initial = startAquatics(basic);
-	final rising = stepAquatics(cells, submergedPlayer, initial, aquaticInput(0.0, 0.0, true, false), basic);
-	final descending = stepAquatics(cells, submergedPlayer, initial, aquaticInput(0.0, 0.0, false, true), basic);
+	final rising = stepAquatics(view, submergedPlayer, initial, aquaticInput(0.0, 0.0, true, false), basic);
+	final descending = stepAquatics(view, submergedPlayer, initial, aquaticInput(0.0, 0.0, false, true), basic);
 	if (rising.body.velocityY <= 0.0 || descending.body.velocityY >= 0.0 || rising.body.y <= descending.body.y)
 		return 10;
 
-	final basicMove = stepAquatics(cells, submergedPlayer, initial, aquaticInput(1.0, 0.0, false, false), basic);
-	final enhancedMove = stepAquatics(cells, submergedPlayer, startAquatics(enhanced), aquaticInput(1.0, 0.0, false, false), enhanced);
+	final basicMove = stepAquatics(view, submergedPlayer, initial, aquaticInput(1.0, 0.0, false, false), basic);
+	final enhancedMove = stepAquatics(view, submergedPlayer, startAquatics(enhanced), aquaticInput(1.0, 0.0, false, false), enhanced);
 	if (enhancedMove.body.velocityX <= basicMove.body.velocityX || enhanced.maximumBreathTicks <= basic.maximumBreathTicks)
 		return 11;
 	if (canMine(basicMove.aquatic, basic)
@@ -117,10 +120,10 @@ function selfCheck():Int {
 		return 12;
 
 	setDeepPoolRoof(cells, true);
-	var breathStep = stepAquatics(cells, submergedPlayer, initial, aquaticInput(0.0, 0.0, false, false), basic);
+	var breathStep = stepAquatics(view, submergedPlayer, initial, aquaticInput(0.0, 0.0, false, false), basic);
 	var ticks = 1;
 	while (ticks < basic.maximumBreathTicks) {
-		breathStep = stepAquatics(cells, breathStep.body, breathStep.aquatic, aquaticInput(0.0, 0.0, false, false), basic);
+		breathStep = stepAquatics(view, breathStep.body, breathStep.aquatic, aquaticInput(0.0, 0.0, false, false), basic);
 		if (breathStep.drowningDamage != 0)
 			return 13;
 		ticks++;
@@ -130,7 +133,7 @@ function selfCheck():Int {
 	var drowningTicks = 0;
 	var damage = 0;
 	while (drowningTicks < basic.drowningIntervalTicks) {
-		breathStep = stepAquatics(cells, breathStep.body, breathStep.aquatic, aquaticInput(0.0, 0.0, false, false), basic);
+		breathStep = stepAquatics(view, breathStep.body, breathStep.aquatic, aquaticInput(0.0, 0.0, false, false), basic);
 		damage += breathStep.drowningDamage;
 		drowningTicks++;
 	}
@@ -140,7 +143,7 @@ function selfCheck():Int {
 	var recovered = breathStep.aquatic;
 	var dryTicks = 0;
 	while (dryTicks < 3) {
-		final result = stepAquatics(cells, dryPlayer, recovered, aquaticInput(0.0, 0.0, false, false), basic);
+		final result = stepAquatics(view, dryPlayer, recovered, aquaticInput(0.0, 0.0, false, false), basic);
 		recovered = result.aquatic;
 		dryTicks++;
 	}
@@ -150,17 +153,17 @@ function selfCheck():Int {
 		return 17;
 
 	setDeepPoolRoof(cells, false);
-	var breach = stepAquatics(cells, submergedPlayer, initial, aquaticInput(0.0, 0.0, true, false), basic);
+	var breach = stepAquatics(view, submergedPlayer, initial, aquaticInput(0.0, 0.0, true, false), basic);
 	var breachTicks = 0;
 	while (breach.immersion.headWet && breachTicks < 40) {
-		breach = stepAquatics(cells, breach.body, breach.aquatic, aquaticInput(0.0, 0.0, true, false), basic);
+		breach = stepAquatics(view, breach.body, breach.aquatic, aquaticInput(0.0, 0.0, true, false), basic);
 		breachTicks++;
 	}
 	if (breach.immersion.headWet || breach.body.y <= submergedPlayer.y || breachTicks >= 40)
 		return 18;
 
-	var spent = stepAquatics(cells, submergedPlayer, initial, aquaticInput(0.0, 0.0, false, false), basic).aquatic;
-	spent = stepAquatics(cells, submergedPlayer, spent, aquaticInput(0.0, 0.0, false, false), basic).aquatic;
+	var spent = stepAquatics(view, submergedPlayer, initial, aquaticInput(0.0, 0.0, false, false), basic).aquatic;
+	spent = stepAquatics(view, submergedPlayer, spent, aquaticInput(0.0, 0.0, false, false), basic).aquatic;
 	final upgraded = adoptProfile(spent, basic, enhanced);
 	if (upgraded.breathTicks != enhanced.maximumBreathTicks - 2
 		|| upgraded.medium != spent.medium
@@ -171,7 +174,7 @@ function selfCheck():Int {
 		return 20;
 	if (!itemIsInRange(4.5, 4.1, 4.5, 4500, 5000, 4500) || itemIsInRange(8.0, 4.1, 8.0, 4500, 5000, 4500))
 		return 21;
-	final sharedCharacterResult = sharedCharacterCheck(cells, basic);
+	final sharedCharacterResult = sharedCharacterCheck(view, basic);
 	if (sharedCharacterResult != 0)
 		return 21 + sharedCharacterResult;
 	return 0;
@@ -184,7 +187,7 @@ function selfCheck():Int {
 	stable IDs. Equal intents must produce equal movement, water, and health; the
 	player binding contains only the local ID and cannot replace the NPC slot.
 **/
-private function sharedCharacterCheck(cells:WorldCells, capability:AquaticProfile):Int {
+private function sharedCharacterCheck(cells:WorldView, capability:AquaticProfile):Int {
 	final localStore = new EntityStore();
 	final npcStore = new EntityStore();
 	final localId = EntityId.fromValidatedStorageCode(1);

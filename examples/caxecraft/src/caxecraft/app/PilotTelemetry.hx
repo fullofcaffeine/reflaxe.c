@@ -3,8 +3,8 @@ package caxecraft.app;
 #if (c && caxecraft_pilot)
 import caxecraft.domain.CharacterBody;
 import caxecraft.domain.RaycastHit;
-import caxecraft.domain.World;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldRead.stateHash as worldStateHash;
+import caxecraft.domain.WorldView;
 import caxecraft.gameplay.GuidePhase;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
@@ -38,7 +38,7 @@ import raylib.Raylib;
  * to thousandths of a world unit. Hashes preserve their complete 32-bit bit
  * patterns even when Haxe `Int` represents them as negative numbers.
  */
-function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldCells, selection:RaycastHit,
+function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldView, selection:RaycastHit,
 		removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int, guidePhase:GuidePhase,
 		mosslingAlive:Bool, onTitle:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool, interpolationObserved:Bool, visibleTerrainFaces:Int,
 		rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool, measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int,
@@ -70,7 +70,7 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 	word = drawWord(word, Std.int(player.velocityY * 1000.0));
 	word = drawWord(word, Std.int(player.velocityZ * 1000.0));
 	word = drawWord(word, player.grounded ? 1 : 0);
-	word = drawWord(word, World.stateHash(cells));
+	word = drawWord(word, worldStateHash(cells));
 	word = drawWord(word, selection.hit ? 1 : 0);
 	word = drawWord(word, selection.cellX);
 	word = drawWord(word, selection.cellY);

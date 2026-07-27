@@ -30,6 +30,7 @@ class HxcIRGolden {
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
+		validator.requireValid(borrowedSpanReturnProgram(false), PROFILE);
 		validator.requireValid(managedRootProgram(false), PROFILE);
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
@@ -81,6 +82,8 @@ class HxcIRGolden {
 				borrowedInterfaceAliasEscape: invalidDiagnostics(borrowedInterfaceAliasEscapeProgram()),
 				borrowedClassReturn: invalidDiagnostics(borrowedClassReturnProgram()),
 				borrowedInterfaceStore: invalidDiagnostics(borrowedInterfaceStoreProgram()),
+				borrowedSpanLocalReturn: invalidDiagnostics(borrowedSpanReturnProgram(true)),
+				borrowedSpanCallerRetention: invalidDiagnostics(borrowedSpanCallerRetentionProgram()),
 				invalidManagedRoot: invalidDiagnostics(managedRootProgram(true)),
 				invalidManagedRootProjection: invalidDiagnostics(invalidManagedRootProjectionProgram()),
 				deferredInitializerMissingWrite: invalidDiagnostics(deferredInitializerMissingWriteProgram()),
@@ -551,7 +554,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-19 exact-root contract without involving C emission.
+		Exercise the schema-20 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -1894,6 +1897,115 @@ class HxcIRGolden {
 			cleanupRegions: [],
 			source: span(file, 1, 4)
 		};
+		return program;
+	}
+
+	/**
+		Build the exact receiver-field span contract or a dangling local variant.
+
+		The valid program proves the semantic operation independently of source
+		lowering. The negative form keeps the same declared receiver contract but
+		points the borrow at automatic local storage, so the validator—not the C
+		emitter—must identify the false ownership claim.
+	**/
+	static function borrowedSpanReturnProgram(invalidLocalOrigin:Bool):HxcIRProgram {
+		final file = invalidLocalOrigin ? "test/negative/BorrowedSpanLocalReturn.hx" : "test/positive/BorrowedSpanReceiverFieldReturn.hx";
+		final moduleId = invalidLocalOrigin ? "invalid.BorrowedSpanLocalReturn" : "valid.BorrowedSpanReceiverFieldReturn";
+		final program = classProgram(file, [], moduleId);
+		final fixedType = IRTFixedArray(IRTInt(8, false), 4, "Length4");
+		final spanType = IRTSpan(IRTInt(8, false), false);
+		final rootDeclaration = program.modules[0].types[0];
+		program.modules[0].types[0] = switch rootDeclaration.kind {
+			case IRTKClass(layout): {
+					id: rootDeclaration.id,
+					displayName: rootDeclaration.displayName,
+					kind: IRTKClass({
+						baseInstanceId: layout.baseInstanceId,
+						fields: [
+							{
+								name: "values",
+								type: fixedType,
+								mutable: false,
+								source: span(file, 1)
+							}
+						],
+						header: layout.header
+					}),
+					source: rootDeclaration.source
+				};
+			case _: throw "receiver span fixture root must remain a class";
+		};
+		final receiverType = IRTPointer(IRTInstance("instance.class.root"), false);
+		final borrowPlace = invalidLocalOrigin ? IRPLocal("local.values") : IRPField(IRPDereference("value.self"), "values");
+		program.modules[0].functions[0] = {
+			id: '$moduleId.view',
+			displayName: '$moduleId.view',
+			parameters: [parameter("value.self", receiverType, file, 2)],
+			borrowedClassParameterIds: ["value.self"],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: invalidLocalOrigin ? [local("local.values", fixedType, IRLSAutomatic, IRISInitialized, file, 3)] : [],
+			returnType: spanType,
+			borrowedSpanReturn: IRBSRReceiverField("value.self"),
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: [
+						instruction("borrow.result", result("value.borrow", spanType), IRIOBorrowSpan(borrowPlace), file, 4)
+					],
+					terminator: terminator(IRTReturn("value.borrow", []), file, 5),
+					source: span(file, 2, 5)
+				}
+			],
+			cleanupRegions: [],
+			source: span(file, 2, 5)
+		};
+		return program;
+	}
+
+	/** A valid receiver-return call cannot initialize a longer-lived caller local. */
+	static function borrowedSpanCallerRetentionProgram():HxcIRProgram {
+		final file = "test/negative/BorrowedSpanCallerRetention.hx";
+		final program = borrowedSpanReturnProgram(false);
+		final target = program.modules[0].functions[0];
+		final receiverType = target.parameters[0].type;
+		final spanType = target.returnType;
+		program.modules[0].functions.push({
+			id: "invalid.BorrowedSpanCallerRetention.main",
+			displayName: "invalid.BorrowedSpanCallerRetention.main",
+			parameters: [parameter("value.owner", receiverType, file, 2)],
+			borrowedClassParameterIds: ["value.owner"],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [local("local.retained", spanType, IRLSAutomatic, IRISUninitialized, file, 3)],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: [
+						instruction("call.view", result("value.view", spanType), IRIOCall({
+							dispatch: IRCDDirect(target.id),
+							arguments: ["value.owner"],
+							returnType: spanType,
+							failure: null,
+							borrowedSpanReturn: IRBSRReceiverField("value.self")
+						}),
+							file, 4),
+						instruction("retain.view", null, IRIOInitialize(IRPLocal("local.retained"), "value.view", IRISUninitialized, IRISInitialized), file, 5)
+					],
+					terminator: terminator(IRTReturn(null, []), file, 6),
+					source: span(file, 2, 6)
+				}
+			],
+			cleanupRegions: [],
+			source: span(file, 2, 6)
+		});
 		return program;
 	}
 

@@ -16,6 +16,7 @@ import caxecraft.app.TerrainChunkLayout.unpackKind;
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldView;
 #if c
 import c.CArray;
 import c.UInt8;
@@ -58,6 +59,7 @@ function selfCheck():Int {
 	#if c
 	var storage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 	var cells:WorldCells = storage.span();
+	var view:WorldView = storage.constSpan();
 	#else
 	var cells:WorldCells = [];
 	var emptyIndex = 0;
@@ -65,11 +67,12 @@ function selfCheck():Int {
 		cells.push(0);
 		emptyIndex++;
 	}
+	var view:WorldView = WorldView.borrow(cells);
 	#end
-	var preparation = cache.prepare(cells);
+	var preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.rebuiltChunks != 16 || preparation.faces != 0 || preparation.visibleBlocks != 0)
 		return 3;
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.rebuiltChunks != 0)
 		return 4;
 
@@ -77,7 +80,7 @@ function selfCheck():Int {
 	World.replace(cells, interior, BlockKind.Stone);
 	if (cache.invalidate(interior) != 1 || cache.invalidate(interior) != 0)
 		return 5;
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.rebuiltChunks != 1 || preparation.faces != 6 || preparation.visibleBlocks != 1)
 		return 6;
 
@@ -85,7 +88,7 @@ function selfCheck():Int {
 	World.replace(cells, adjacent, BlockKind.Stone);
 	if (cache.invalidate(adjacent) != 1)
 		return 7;
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.rebuiltChunks != 1 || preparation.faces != 10 || preparation.visibleBlocks != 2)
 		return 8;
 
@@ -95,20 +98,20 @@ function selfCheck():Int {
 	final east = World.coord(8, 2, 2);
 	World.replace(cells, west, BlockKind.Stone);
 	World.replace(cells, east, BlockKind.Stone);
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.faces != 10 || cache.chunkFaceCount(0) != 5 || cache.chunkFaceCount(1) != 5)
 		return 9;
 	World.replace(cells, east, BlockKind.Air);
 	if (cache.invalidate(east) != 2)
 		return 10;
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.rebuiltChunks != 2 || preparation.faces != 6 || cache.chunkFaceCount(0) != 6 || cache.chunkFaceCount(1) != 0)
 		return 11;
 
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (preparation.rebuiltChunks != 0 || cache.invalidate(World.coord(7, 2, 7)) != 3 || cache.invalidate(World.coord(7, 2, 7)) != 0)
 		return 12;
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.rebuiltChunks != 3)
 		return 13;
 
@@ -128,7 +131,7 @@ function selfCheck():Int {
 		z++;
 	}
 	cache.invalidateAll();
-	preparation = cache.prepare(cells);
+	preparation = cache.prepare(view);
 	if (!preparation.valid
 		|| cache.chunkFaceCount(0) != FACES_PER_CHUNK
 		|| preparation.faces != FACES_PER_CHUNK

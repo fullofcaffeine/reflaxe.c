@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 19
+the structural C AST. Its schema is internal to the compiler: schema version 20
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
 
@@ -152,6 +152,16 @@ store or join edge. Constructor functions retain `IRFTPropagate`, because their
 callers already use the separate explicit status convention. This adds no
 catch, `finally`, payload-transport, or general exception-frame semantics; those
 remain a later exception capability rather than printer behavior.
+Schema version 20 adds a receiver-tied, read-only span return. An exact final
+instance method may use `IRIOBorrowSpan` to lend one immediate fixed-array field
+owned by its `self` parameter. Matching function and direct-call contracts keep
+that ownership fact explicit across the return boundary. Validation proves the
+origin and restricts the caller to an immediate compiler-known span
+consumption; mutable returns, local-owner returns, retained results, indirect
+calls, and public/native boundaries remain illegal. C emission returns
+`const T *` and writes the exact element count through a compiler-private
+`size_t *` out-parameter. The receiver still owns the storage, so this adds no
+copy, allocation, wrapper object, garbage-collector root, or public ABI.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by

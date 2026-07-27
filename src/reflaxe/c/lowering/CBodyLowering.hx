@@ -1335,6 +1335,7 @@ private typedef PreparedBodyFunction = {
 	final irId:String;
 	final parameters:Array<PreparedParameter>;
 	final returnMapping:CBodyValueType;
+	final borrowedSpanReturn:Null<HxcIRBorrowedSpanReturn>;
 	final functionRequest:CSymbolRequest;
 	final parameterRequests:Map<String, CSymbolRequest>;
 	final closureEnvironment:Null<PreparedStackClosureEnvironment>;
@@ -1634,6 +1635,7 @@ private class EnumConstructorAdapterRegistry {
 			irId: id,
 			parameters: parameters,
 			returnMapping: signature.result,
+			borrowedSpanReturn: null,
 			functionRequest: request,
 			parameterRequests: parameterRequests,
 			closureEnvironment: null
@@ -1909,6 +1911,7 @@ private class FunctionLiteralRegistry {
 			irId: 'function.lambda.${owner.irId}.$mode.${info.min}.${info.max}',
 			parameters: parameters,
 			returnMapping: returnMapping,
+			borrowedSpanReturn: null,
 			functionRequest: request,
 			parameterRequests: parameterRequests,
 			closureEnvironment: closureEnvironment
@@ -2023,6 +2026,7 @@ private class FunctionLiteralRegistry {
 			irId: id,
 			parameters: parameters,
 			returnMapping: target.returnMapping,
+			borrowedSpanReturn: null,
 			functionRequest: request,
 			parameterRequests: parameterRequests,
 			closureEnvironment: null
@@ -2344,9 +2348,18 @@ private class FunctionPreparer {
 				defaultValue: argument.value
 			});
 		}
-		if (isBorrowedSpanType(declaredSignature.result)) {
-			unsupported(input.expression.pos, "TFunction(return-type:borrowed-span-escape)");
-		}
+		final borrowedSpanReturn = if (isBorrowedSpanType(declaredSignature.result)) {
+			if (borrowedSpanIsMutable(declaredSignature.result))
+				unsupported(input.expression.pos, "TFunction(return-type:mutable-borrowed-span-escape)");
+			final owner = input.instanceOwner;
+			if (owner == null || !owner.get().isFinal)
+				unsupported(input.expression.pos, "TFunction(return-type:borrowed-span-requires-final-instance-method)");
+			if (input.specialization != null)
+				unsupported(input.expression.pos, "TFunction(return-type:borrowed-span-generic-specialization-not-admitted)");
+			IRBSRReceiverField("parameter.self");
+		} else {
+			null;
+		};
 		final returnMapping = admittedValueType(declaredSignature.result, input.expression.pos, "TFunction(return-type)");
 		final returnEnum = returnMapping.enumValue();
 		final instanceOwner = input.instanceOwner;
@@ -2403,6 +2416,7 @@ private class FunctionPreparer {
 			irId: CBodyLowering.functionInputId(input),
 			parameters: signatureParameters,
 			returnMapping: returnMapping,
+			borrowedSpanReturn: borrowedSpanReturn,
 			functionRequest: functionRequest,
 			parameterRequests: parameterRequests,
 			closureEnvironment: null
@@ -2450,6 +2464,21 @@ private class FunctionPreparer {
 				final resolved = reference.get();
 				resolved == null ? false : isBorrowedSpanType(resolved);
 			case TLazy(resolve): isBorrowedSpanType(resolve());
+			case _: false;
+		};
+	}
+
+	/** Distinguish the mutable `Span` return, which this lifetime slice rejects. */
+	static function borrowedSpanIsMutable(type:Type):Bool {
+		return switch type {
+			case TAbstract(reference, _): final abstractType = reference.get(); abstractType.pack.join(".") == "c" && abstractType.name == "Span";
+			case TType(reference, parameters):
+				final definition = reference.get();
+				borrowedSpanIsMutable(TypeTools.applyTypeParameters(definition.type, definition.params, parameters));
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? false : borrowedSpanIsMutable(resolved);
+			case TLazy(resolve): borrowedSpanIsMutable(resolve());
 			case _: false;
 		};
 	}
@@ -2773,6 +2802,7 @@ private class ConstructorPreparer {
 			irId: input.id,
 			parameters: parameters,
 			returnMapping: voidMapping,
+			borrowedSpanReturn: null,
 			functionRequest: functionRequest,
 			parameterRequests: parameterRequests,
 			closureEnvironment: null
@@ -2893,6 +2923,7 @@ private class InitializerPreparer {
 			irId: input.id,
 			parameters: [],
 			returnMapping: returnMapping,
+			borrowedSpanReturn: null,
 			functionRequest: functionRequest,
 			parameterRequests: [],
 			closureEnvironment: null
@@ -2999,6 +3030,12 @@ private class FunctionBuilder {
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.localOrdinal = prepared.parameters.length;
 		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.bodyExpression.pos, input.sourcePath));
+		if (prepared.borrowedSpanReturn != null) {
+			final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, "returned-span-length"]),
+				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], localOrdinal++);
+			context.symbols.register(request);
+			spanLengthRequests.set(returnedSpanLengthId(), request);
+		}
 		for (parameter in prepared.parameters) {
 			final value:LoweredValue = {id: parameter.ir.id, type: parameter.ir.type, mapping: parameter.mapping};
 			if (parameter.borrowedReference)
@@ -3232,6 +3269,7 @@ private class FunctionBuilder {
 			managedRoots: [],
 			locals: locals,
 			returnType: prepared.returnMapping.irType,
+			borrowedSpanReturn: prepared.borrowedSpanReturn,
 			failureConvention: switch prepared.role {
 				case PBRConstructor(signature) if (signature.input.canFail): IRFCStatus(IRFException);
 				case _: IRFCInfallible;
@@ -5520,6 +5558,26 @@ private class FunctionBuilder {
 		}
 		if (isTerminalThrowExpression(value)) {
 			lowerValueOrThrow(value, prepared.returnMapping, "TReturn(value)");
+			return;
+		}
+		if (prepared.borrowedSpanReturn != null) {
+			final sourceBorrow = requireSpanSource(value, false);
+			switch sourceBorrow.place {
+				case IRPField(IRPDereference("parameter.self"), _):
+				case _:
+					unsupported(value, "TReturn(receiver-borrowed-span:requires-immediate-self-field)");
+			}
+			if (typeKey(sourceBorrow.element.irType) != typeKey(switch prepared.returnMapping.irType {
+				case IRTSpan(element, false): element;
+				case _: unsupported(value, "TReturn(receiver-borrowed-span:return-type-lost)");
+			}))
+				unsupported(value, "TReturn(receiver-borrowed-span:element-type-mismatch)");
+			final result:HxcIRResult = {
+				id: nextValueId(),
+				type: prepared.returnMapping.irType
+			};
+			appendInstruction(result, IRIOBorrowSpan(sourceBorrow.place), source, "receiver-borrowed-span");
+			currentBlock.terminator = {kind: IRTReturn(result.id, normalCleanupSteps()), source: source};
 			return;
 		}
 		if (referencesStackConstructedValue(value))
@@ -10562,13 +10620,15 @@ private class FunctionBuilder {
 			case direct: direct;
 		};
 		final callArguments = directReason == null ? explicitArguments : [receiver.id].concat(explicitArguments);
+		final borrowedSpanReturn = directTarget == null ? null : directTarget.borrowedSpanReturn;
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		if (returnMapping.irType == IRTVoid) {
 			final callInstruction = instruction(null, IRIOCall({
 				dispatch: dispatchKind,
 				arguments: callArguments,
 				returnType: IRTVoid,
-				failure: null
+				failure: null,
+				borrowedSpanReturn: null
 			}), source, "instance-call");
 			currentBlock.instructions.push(callInstruction);
 			if (directReason != null)
@@ -10580,7 +10640,8 @@ private class FunctionBuilder {
 			dispatch: dispatchKind,
 			arguments: callArguments,
 			returnType: returnMapping.irType,
-			failure: null
+			failure: null,
+			borrowedSpanReturn: borrowedSpanReturn
 		}), source, "instance-call");
 		currentBlock.instructions.push(callInstruction);
 		if (directReason != null)
@@ -10590,6 +10651,14 @@ private class FunctionBuilder {
 			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "instance-call-result"]),
 				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
 			temporaryRequests.set(result.id, request);
+		}
+		if (borrowedSpanReturn != null) {
+			final ordinal = temporaryOrdinal++;
+			final lengthRequest = new CSymbolRequest(CSKTemporary,
+				input.declarationPath.split(".").concat([input.fieldName, "instance-call-result", "length"]),
+				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+			context.symbols.register(lengthRequest);
+			spanLengthRequests.set(result.id, lengthRequest);
 		}
 		if (borrowedReferenceValueIds.exists(receiver.id)
 			&& (returnMapping.classValue() != null || returnMapping.interfaceValue() != null))
@@ -10913,6 +10982,10 @@ private class FunctionBuilder {
 			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
 		temporaryRequests.set(valueId, request);
 	}
+
+	/** Stable pseudo-value key used for the hidden returned-span length parameter. */
+	static inline function returnedSpanLengthId():String
+		return "return.borrowed-span.length";
 
 	/** Reject a class pointer whose storage remains owned by its caller or parent. */
 	function rejectOwnedClassBorrow(value:LoweredValue, position:Position, node:String):Void {

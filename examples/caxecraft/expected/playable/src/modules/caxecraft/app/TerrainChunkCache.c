@@ -10,15 +10,15 @@ void hxc_compiler_constructor_caxecraft_app_TerrainChunkCache(struct hxc_caxecra
   return;
 }
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk, int32_t hxc_count, enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face, int32_t hxc_x, int32_t hxc_y, int32_t hxc_z, int32_t hxc_neighborX, int32_t hxc_neighborY, int32_t hxc_neighborZ)
+int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk, int32_t hxc_count, enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face, int32_t hxc_x, int32_t hxc_y, int32_t hxc_z, int32_t hxc_neighborX, int32_t hxc_neighborY, int32_t hxc_neighborZ)
 {
   int32_t hxc_index = { 0 };
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n12 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n12;
   struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_coord(hxc_neighborX, hxc_neighborY, hxc_neighborZ);
-  enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n1 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n0);
+  enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n1 = hxc_caxecraft_domain_WorldRead_query(hxc_cells, hxc_length, hxc_tmp_call_result_n0);
   bool hxc_tmp_call_result_n2 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n1);
   if (hxc_tmp_call_result_n2)
   {
@@ -305,9 +305,9 @@ bool hxc_caxecraft_app_TerrainChunkCache_invalidateBrokenChunk(struct hxc_caxecr
   return false;
 }
 
-struct hxc_caxecraft_app_TerrainChunkPreparation hxc_caxecraft_app_TerrainChunkCache_prepare(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, uint8_t *hxc_cells, size_t hxc_length)
+struct hxc_caxecraft_app_TerrainChunkPreparation hxc_caxecraft_app_TerrainChunkCache_prepare(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n2 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n2;
@@ -358,9 +358,9 @@ struct hxc_caxecraft_app_TerrainChunkPreparation hxc_caxecraft_app_TerrainChunkC
   return (struct hxc_caxecraft_app_TerrainChunkPreparation){ .hxc_faces = hxc_tmp_instance_call_result_n9, .hxc_rebuiltChunks = hxc_tmp_load_result_n8, .hxc_valid = hxc_valid, .hxc_visibleBlocks = hxc_i32_add_wrapping(hxc_tmp_instance_call_result_n11, hxc_tmp_instance_call_result_n13) };
 }
 
-bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk)
+bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n3 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n3;
@@ -398,7 +398,7 @@ bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_Terrai
         int32_t hxc_tmp_load_result_n9 = hxc_x;
         int32_t hxc_tmp_load_result_n10 = hxc_y;
         struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n12 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n9, hxc_tmp_load_result_n10, hxc_z);
-        enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n13 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n12);
+        enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n13 = hxc_caxecraft_domain_WorldRead_query(hxc_cells, hxc_length, hxc_tmp_call_result_n12);
         enum hxc_caxecraft_domain_BlockKind hxc_kind = hxc_tmp_call_result_n13;
         bool hxc_tmp_call_result_n15 = hxc_caxecraft_domain_World_isSolid(hxc_kind);
         if (hxc_tmp_call_result_n15)

@@ -29,9 +29,9 @@ struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_miss(in
   return (struct hxc_caxecraft_domain_RaycastHit){ .hxc_cellX = 0, .hxc_cellY = 0, .hxc_cellZ = 0, .hxc_distance = hxc_distance, .hxc_hit = false, .hxc_normalX = 0, .hxc_normalY = 0, .hxc_normalZ = 0, .hxc_previousX = hxc_previousX, .hxc_previousY = hxc_previousY, .hxc_previousZ = hxc_previousZ, .hxc_visited = hxc_visited };
 }
 
-struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(uint8_t *hxc_cells, size_t hxc_length, double hxc_originX, double hxc_originY, double hxc_originZ, double hxc_directionX, double hxc_directionY, double hxc_directionZ, double hxc_maximumDistance)
+struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(const uint8_t *hxc_cells, size_t hxc_length, double hxc_originX, double hxc_originY, double hxc_originZ, double hxc_directionX, double hxc_directionY, double hxc_directionZ, double hxc_maximumDistance)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n8 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n8;
@@ -60,7 +60,7 @@ struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(u
   int32_t hxc_tmp_load_result_n13 = hxc_cellX;
   int32_t hxc_tmp_load_result_n14 = hxc_cellY;
   struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n16 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n13, hxc_tmp_load_result_n14, hxc_cellZ);
-  enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n17 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n16);
+  enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n17 = hxc_caxecraft_domain_WorldRead_query(hxc_cells, hxc_length, hxc_tmp_call_result_n16);
   bool hxc_tmp_call_result_n18 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n17);
   if (hxc_tmp_call_result_n18)
   {
@@ -363,7 +363,7 @@ struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(u
       struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n129 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n124, hxc_tmp_load_result_n125, hxc_tmp_load_result_n126, hxc_tmp_load_result_n127, hxc_visited);
       return hxc_tmp_call_result_n129;
     }
-    enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n131 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
+    enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n131 = hxc_caxecraft_domain_WorldRead_query(hxc_cells, hxc_length, hxc_coord);
     bool hxc_tmp_call_result_n132 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n131);
     if (hxc_tmp_call_result_n132)
     {

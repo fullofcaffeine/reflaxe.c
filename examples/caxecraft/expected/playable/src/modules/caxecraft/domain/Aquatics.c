@@ -178,9 +178,9 @@ struct hxc_caxecraft_domain_CharacterIntent hxc_caxecraft_domain_Aquatics_input(
   return (struct hxc_caxecraft_domain_CharacterIntent){ .hxc_descend = hxc_descend, .hxc_jump = hxc_ascend, .hxc_moveX = hxc_moveX, .hxc_moveZ = hxc_moveZ };
 }
 
-struct hxc_caxecraft_domain_Immersion hxc_caxecraft_domain_Aquatics_observe(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_body)
+struct hxc_caxecraft_domain_Immersion hxc_caxecraft_domain_Aquatics_observe(const uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_body)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n2 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n2;
@@ -251,9 +251,9 @@ struct hxc_caxecraft_domain_Immersion hxc_caxecraft_domain_Aquatics_observe(uint
   return (struct hxc_caxecraft_domain_Immersion){ .hxc_bodyWet = hxc_tmp_call_result_n47, .hxc_cameraBlend = hxc_tmp_call_result_n53, .hxc_feetWet = hxc_tmp_call_result_n43, .hxc_headWet = hxc_tmp_call_result_n51, .hxc_submersion = hxc_tmp_call_result_n39 };
 }
 
-bool hxc_caxecraft_domain_Aquatics_pointIsWet(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z)
+bool hxc_caxecraft_domain_Aquatics_pointIsWet(const uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
@@ -281,9 +281,9 @@ struct hxc_caxecraft_domain_AquaticState hxc_caxecraft_domain_Aquatics_start(str
   return (struct hxc_caxecraft_domain_AquaticState){ .hxc_breathTicks = hxc_capability.hxc_maximumBreathTicks, .hxc_drowningTicks = hxc_capability.hxc_drowningIntervalTicks, .hxc_headSubmerged = false, .hxc_medium = 0, .hxc_submersion = 0.0 };
 }
 
-struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_original, struct hxc_caxecraft_domain_AquaticState hxc_aquatic, struct hxc_caxecraft_domain_CharacterIntent hxc_command, struct hxc_caxecraft_domain_AquaticProfile hxc_capability)
+struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(const uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_original, struct hxc_caxecraft_domain_AquaticState hxc_aquatic, struct hxc_caxecraft_domain_CharacterIntent hxc_command, struct hxc_caxecraft_domain_AquaticProfile hxc_capability)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n5 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n5;
@@ -352,10 +352,10 @@ struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(uint8
   return (struct hxc_caxecraft_domain_AquaticStep){ .hxc_aquatic = (struct hxc_caxecraft_domain_AquaticState){ .hxc_breathTicks = hxc_tmp_record_field_load_result_n61, .hxc_drowningTicks = hxc_tmp_record_field_load_result_n62, .hxc_headSubmerged = hxc_tmp_record_field_load_result_n60, .hxc_medium = hxc_tmp_load_result_n58, .hxc_submersion = hxc_tmp_record_field_load_result_n59 }, .hxc_body = hxc_tmp_load_result_n56, .hxc_drowningDamage = hxc_breath.hxc_damage, .hxc_immersion = hxc_tmp_load_result_n57 };
 }
 
-double hxc_caxecraft_domain_Aquatics_waterSurface(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, int32_t hxc_y, double hxc_z)
+double hxc_caxecraft_domain_Aquatics_waterSurface(const uint8_t *hxc_cells, size_t hxc_length, double hxc_x, int32_t hxc_y, double hxc_z)
 {
   int32_t hxc_distance = { 0 };
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
@@ -363,7 +363,7 @@ double hxc_caxecraft_domain_Aquatics_waterSurface(uint8_t *hxc_cells, size_t hxc
   int32_t hxc_tmp_call_result_n1 = hxc_caxecraft_domain_Aquatics_floorToInt(hxc_z);
   struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n2 = hxc_caxecraft_domain_World_coord(hxc_tmp_call_result_n0, hxc_y, hxc_tmp_call_result_n1);
   struct hxc_caxecraft_scenario_VoxelPoint hxc_coord = hxc_tmp_call_result_n2;
-  struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n4 = hxc_caxecraft_domain_WaterCellCodec_stateAt(hxc_cells, hxc_length, hxc_coord);
+  struct hxc_caxecraft_domain_WaterCellState hxc_tmp_call_result_n4 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_cells, hxc_length, hxc_coord);
   struct hxc_caxecraft_domain_WaterCellState hxc_g = hxc_tmp_call_result_n4;
   switch (hxc_g.hxc_tag) {
     case hxc_caxecraft_domain_WaterCellState_Empty:

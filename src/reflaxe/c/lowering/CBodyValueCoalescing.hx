@@ -443,6 +443,8 @@ class CBodyValueCoalescingPlanner {
 			case IRIOInitializeSpan(place, sourceArray, _, _):
 				collectPlaceUses(place, site);
 				collectPlaceUses(sourceArray, site);
+			case IRIOBorrowSpan(sourceArray):
+				collectPlaceUses(sourceArray, site);
 			case IRIOBoundsCheck(collection, indexValueId, _):
 				collectPlaceUses(collection, site);
 				addUse(indexValueId, site);

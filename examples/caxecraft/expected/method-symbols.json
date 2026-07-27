@@ -81,31 +81,31 @@
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.moveAxis(span:mutable<u8>, f64, f64, f64, f64, i32)",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.moveAxis(span:const<u8>, f64, f64, f64, f64, i32)",
       "readableSymbol": "caxecraft.domain.CharacterPhysics.moveAxis",
       "cName": "hxc_caxecraft_domain_CharacterPhysics_moveAxis",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.overlaps(span:mutable<u8>, f64, f64, f64)",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.overlaps(span:const<u8>, f64, f64, f64)",
       "readableSymbol": "caxecraft.domain.CharacterPhysics.overlaps",
       "cName": "hxc_caxecraft_domain_CharacterPhysics_overlaps",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.recoverSpawn(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001)",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.recoverSpawn(span:const<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001)",
       "readableSymbol": "caxecraft.domain.CharacterPhysics.recoverSpawn",
       "cName": "hxc_caxecraft_domain_CharacterPhysics_recoverSpawn",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.resolveVelocity(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, f64, f64, f64)",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.resolveVelocity(span:const<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, f64, f64, f64)",
       "readableSymbol": "caxecraft.domain.CharacterPhysics.resolveVelocity",
       "cName": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.step(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.bc04a64b56baa2f3e6cd72087421c3aca30316ecd3e8002f46391dbd97835c09)",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.step(span:const<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.bc04a64b56baa2f3e6cd72087421c3aca30316ecd3e8002f46391dbd97835c09)",
       "readableSymbol": "caxecraft.domain.CharacterPhysics.step",
       "cName": "hxc_caxecraft_domain_CharacterPhysics_step",
       "kind": "method"
@@ -135,7 +135,7 @@
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain.VoxelRaycast.trace(span:mutable<u8>, f64, f64, f64, f64, f64, f64, f64)",
+      "sourceSymbol": "caxecraft.domain.VoxelRaycast.trace(span:const<u8>, f64, f64, f64, f64, f64, f64, f64)",
       "readableSymbol": "caxecraft.domain.VoxelRaycast.trace",
       "cName": "hxc_caxecraft_domain_VoxelRaycast_trace",
       "kind": "method"
@@ -222,6 +222,18 @@
       "sourceSymbol": "caxecraft.domain.World.terrainNoise(i32, i32, i32)",
       "readableSymbol": "caxecraft.domain.World.terrainNoise",
       "cName": "hxc_caxecraft_domain_World_terrainNoise",
+      "kind": "method"
+    },
+    {
+      "sourceSymbol": "caxecraft.domain._WorldRead.WorldRead_Fields_.query(span:const<u8>, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
+      "readableSymbol": "caxecraft.domain.WorldRead.query",
+      "cName": "hxc_caxecraft_domain_WorldRead_query",
+      "kind": "method"
+    },
+    {
+      "sourceSymbol": "caxecraft.domain._WorldRead.WorldRead_Fields_.storageCodeAt(span:const<u8>, i32)",
+      "readableSymbol": "caxecraft.domain.WorldRead.storageCodeAt",
+      "cName": "hxc_caxecraft_domain_WorldRead_storageCodeAt",
       "kind": "method"
     },
     {

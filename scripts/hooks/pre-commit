@@ -73,14 +73,31 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
 fi
 
-# Cross-cutting harness files and central compiler semantic layers would match
-# nearly every focused condition below. Run the same exact-coverage shards once
-# with bounded local concurrency, plus governance and native smoke, instead of
-# serializing and repeating those owners. Narrow source, fixture, and document
-# changes continue through the focused conditions below.
+# Known compiler semantic layers use a reviewed set of affected owners for
+# quick local proof. Unknown cross-cutting infrastructure still fails closed to
+# the complete matrix. Pull requests, nightly runs, releases, and the explicit
+# toolchain command always retain the cold exhaustive proof.
 PRE_COMMIT_ROUTE="$(printf '%s\n' "$STAGED_FILES" | python3 "$ROOT_DIR/scripts/ci/select_pre_commit_route.py")"
+if [ "$PRE_COMMIT_ROUTE" = "affected" ]; then
+  echo "[pre-commit] Running affected local compiler evidence; complete cold coverage remains required in CI..."
+  npm run test:governance
+  while IFS=$'\t' read -r owner_script owner_reason; do
+    if [ -z "$owner_script" ]; then
+      continue
+    fi
+    echo "[pre-commit] Running $owner_script: $owner_reason"
+    npm run "$owner_script"
+  done < <(
+    printf '%s\n' "$STAGED_FILES" |
+      python3 "$ROOT_DIR/scripts/ci/select_pre_commit_route.py" --owners
+  )
+  echo "[pre-commit] Affected evidence passed. Run 'npm run test:toolchain:parallel -- --with-native' for the complete cold local matrix."
+  echo "[pre-commit] OK"
+  exit 0
+fi
+
 if [ "$PRE_COMMIT_ROUTE" = "parallel-exhaustive" ]; then
-  echo "[pre-commit] Running one bounded parallel exhaustive gate for a high-fanout compiler or test-infrastructure change..."
+  echo "[pre-commit] Running one bounded parallel exhaustive gate for unknown cross-cutting compiler or test-infrastructure changes..."
   npm run test:governance
   # Resume is deliberately local to this hook. It can reuse only exact,
   # unexpired passing shards from the same staged/worktree/tool environment;

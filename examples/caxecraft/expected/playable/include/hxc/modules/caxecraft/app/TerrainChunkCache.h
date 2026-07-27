@@ -23,7 +23,7 @@ struct hxc_caxecraft_app_TerrainChunkPreparation {
 
 void hxc_compiler_constructor_caxecraft_app_TerrainChunkCache(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk, int32_t hxc_count, enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face, int32_t hxc_x, int32_t hxc_y, int32_t hxc_z, int32_t hxc_neighborX, int32_t hxc_neighborY, int32_t hxc_neighborZ);
+int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk, int32_t hxc_count, enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face, int32_t hxc_x, int32_t hxc_y, int32_t hxc_z, int32_t hxc_neighborX, int32_t hxc_neighborY, int32_t hxc_neighborZ);
 
 int32_t hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, int32_t hxc_chunk);
 
@@ -33,9 +33,9 @@ void hxc_caxecraft_app_TerrainChunkCache_invalidateAll(struct hxc_caxecraft_app_
 
 bool hxc_caxecraft_app_TerrainChunkCache_invalidateBrokenChunk(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, int32_t hxc_chunk);
 
-struct hxc_caxecraft_app_TerrainChunkPreparation hxc_caxecraft_app_TerrainChunkCache_prepare(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, uint8_t *hxc_cells, size_t hxc_length);
+struct hxc_caxecraft_app_TerrainChunkPreparation hxc_caxecraft_app_TerrainChunkCache_prepare(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length);
 
-bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk);
+bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk);
 
 int32_t hxc_caxecraft_app_TerrainChunkCache_totalFaces(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self);
 

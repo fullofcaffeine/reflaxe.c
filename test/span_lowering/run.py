@@ -151,8 +151,23 @@ NEGATIVE_CASES = (
     ),
     NegativeCase(
         "EscapingSpanFixture",
-        "TFunction(return-type:borrowed-span-escape)",
+        "TFunction(return-type:mutable-borrowed-span-escape)",
         "EscapingSpanFixture.hx:6: lines 6-9",
+    ),
+    NegativeCase(
+        "StaticConstSpanReturnFixture",
+        "TFunction(return-type:borrowed-span-requires-final-instance-method)",
+        "StaticConstSpanReturnFixture.hx:13: lines 13-16",
+    ),
+    NegativeCase(
+        "LocalConstSpanReturnFixture",
+        "TReturn(receiver-borrowed-span:requires-immediate-self-field)",
+        "LocalConstSpanReturnFixture.hx:17: characters 10-28",
+    ),
+    NegativeCase(
+        "RetainedReturnedSpanFixture",
+        "TVar(ConstSpan:requires-fixed-array-borrow)",
+        "RetainedReturnedSpanFixture.hx:30: characters 20-32",
     ),
     NegativeCase(
         "RecursiveSpanParameterFixture",
@@ -385,11 +400,14 @@ class HaxeHarness:
     def validate_topology(self) -> None:
         cold = sum(value.transport == "cold" for value in self.invocations)
         warm = sum(value.transport == "warm-server" for value in self.invocations)
-        if len(self.invocations) != 66 or cold != 8 or warm != 58:
+        # The 27 negative fixtures run once per profile. The remaining warm
+        # requests prove report/production determinism and configuration edges;
+        # eight cold requests independently detect compiler-server state leaks.
+        if len(self.invocations) != 72 or cold != 8 or warm != 64:
             raise SpanLoweringFailure(
                 "span Haxe request topology drifted: "
                 f"total={len(self.invocations)}, cold={cold}, warm={warm}; "
-                "expected total=66, cold=8, warm=58"
+                "expected total=72, cold=8, warm=64"
             )
 
     def timing_report(self, *, outcome: str) -> dict[str, object]:
@@ -537,6 +555,7 @@ def function_names(
         expected.add("finalClassParameterRoundTrip")
         expected.add("conditionalAssignment")
         expected.add("ownedFieldRoundTrip")
+        expected.add("returnedSpanRoundTrip")
     if set(names) != expected:
         raise SpanLoweringFailure(f"span fixture symbol set drifted: {sorted(names)!r}")
     return names
@@ -751,11 +770,11 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or reachability
         != {
             "modules": 2,
-            "typeInstances": 2,
-            "functions": 20,
-            "blocks": 41,
-            "instructions": 264,
-            "cleanupActions": 4,
+            "typeInstances": 3,
+            "functions": 23,
+            "blocks": 44,
+            "instructions": 283,
+            "cleanupActions": 6,
             "runtimeIntents": 0,
         }
         or runtime_absence
@@ -791,14 +810,14 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "indirectCalls": 0,
             "slots": 0,
-            "instanceCalls": 2,
+            "instanceCalls": 3,
             "tables": 0,
-            "directCalls": 2,
+            "directCalls": 3,
             "adapters": 0,
             "layouts": 0,
         }
         or not isinstance(calls, list)
-        or len(calls) != 2
+        or len(calls) != 3
         or any(
             not isinstance(call, dict)
             or call.get("dispatch") != "direct"
@@ -849,12 +868,12 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[16384\] = \{ 0 \};", source)) != 2
         or source.count("const int32_t *") != 3
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
-        or source.count("const uint8_t *") != 10
+        or source.count("const uint8_t *") != 12
         or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 10
         or source.count(" = sizeof(") != 11
         or source.count("bounds") != 0
-        or source.count("abort();") != 17
-        or source.count("[(size_t)") != 24
+        or source.count("abort();") != 19
+        or source.count("[(size_t)") != 25
     ):
         raise SpanLoweringFailure(f"{profile}/{build} fixed-array/span C shape drifted")
     if (
@@ -863,7 +882,7 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or source.count(" + 1;") != 3
     ):
         raise SpanLoweringFailure("span iteration stopped being a direct guarded index loop")
-    if source.count(" < 0 || (size_t)") != 14 or source.count(" >= ") != 19:
+    if source.count(" < 0 || (size_t)") != 14 or source.count(" >= ") != 21:
         raise SpanLoweringFailure("dynamic span access lost its signed/size_t bounds check")
     if (
         len(
@@ -873,7 +892,12 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
             )
         )
         != 2
-        or len(re.findall(r"(?m)^  \*[A-Za-z0-9_]+ = [A-Za-z0-9_]+;$", source))
+        or len(
+            re.findall(
+                r"(?m)^  \*[A-Za-z0-9_]*address[A-Za-z0-9_]* = [A-Za-z0-9_]+;$",
+                source,
+            )
+        )
         != 2
     ):
         raise SpanLoweringFailure(
@@ -886,6 +910,14 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
     if len(parameter_signatures) != 5 or "struct" in "\n".join(parameter_signatures):
         raise SpanLoweringFailure(
             "span parameters stopped lowering directly to pointer-plus-size_t signatures"
+        )
+    if not re.search(
+        r"const uint8_t \*[^(]+ReturnedSpanOwner_view\("
+        r"struct [A-Za-z0-9_]*ReturnedSpanOwner \*[^,]+, size_t \*[^)]+\)",
+        source,
+    ):
+        raise SpanLoweringFailure(
+            "receiver-owned ConstSpan return stopped using a const pointer plus hidden length output"
         )
     function_names(symbols, require_final_class_case=True)
     return {"header": header, "source": source, "symbols": symbols}
@@ -1044,6 +1076,7 @@ int main(void)
   if ({names["conditionalAssignment"]}(true) != UINT8_C(37)) return 10;
   if ({names["conditionalAssignment"]}(false) != UINT8_C(73)) return 11;
   if ({names["ownedFieldRoundTrip"]}(UINT8_C(201)) != INT32_C(242)) return 12;
+  if ({names["returnedSpanRoundTrip"]}() != UINT8_C(29)) return 13;
   return 0;
 }}
 '''

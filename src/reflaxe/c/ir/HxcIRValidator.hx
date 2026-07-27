@@ -43,7 +43,7 @@ private enum HxcIRDispatchLayoutKind {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 19;
+	public static inline final SCHEMA_VERSION = 20;
 
 	public function new() {}
 
@@ -579,6 +579,7 @@ private class HxcIRValidationState {
 					validateStableId(field.name, '$fieldPath.name', field.source);
 					validateSpan(field.source, '$fieldPath.source');
 					validateTypeRef(field.type, '$fieldPath.type', field.source, false);
+					rejectStoredSpanType(field.type, '$fieldPath.type', field.source, "aggregate field");
 					if (names.exists(field.name)) {
 						add(fieldPath, 'duplicate aggregate field `${field.name}`', field.source);
 					} else {
@@ -611,6 +612,7 @@ private class HxcIRValidationState {
 						validateStableId(payload.name, '$payloadPath.name', payload.source);
 						validateSpan(payload.source, '$payloadPath.source');
 						validateTypeRef(payload.type, '$payloadPath.type', payload.source, false);
+						rejectStoredSpanType(payload.type, '$payloadPath.type', payload.source, "tagged-union payload");
 						if (payloadNames.exists(payload.name)) {
 							add(payloadPath, 'duplicate payload name `${payload.name}` in tagged-union case `${tag.name}`', payload.source);
 						} else {
@@ -643,6 +645,7 @@ private class HxcIRValidationState {
 					validateStableId(field.name, '$fieldPath.name', field.source);
 					validateSpan(field.source, '$fieldPath.source');
 					validateTypeRef(field.type, '$fieldPath.type', field.source, false);
+					rejectStoredSpanType(field.type, '$fieldPath.type', field.source, "class field");
 					if (names.exists(field.name)) {
 						add(fieldPath, 'duplicate class storage field `${field.name}`', field.source);
 					} else {
@@ -751,6 +754,7 @@ private class HxcIRValidationState {
 	function validateGlobal(global:HxcIRGlobal, path:String):Void {
 		validateSpan(global.source, '$path.source');
 		validateTypeRef(global.type, '$path.type', global.source, false);
+		rejectStoredSpanType(global.type, '$path.type', global.source, "global");
 		switch global.initialization {
 			case IRGIUninitialized:
 			case IRGIConstant(value):
@@ -778,6 +782,22 @@ private class HxcIRValidationState {
 							global.source);
 					}
 				}
+		}
+	}
+
+	/**
+		Keep borrowed views out of storage whose lifetime is independent of the owner.
+
+		Function parameters and automatic locals may carry a span only inside their
+		checked call scope. Aggregate, enum, class, and global storage would retain
+		the pointer without retaining its fixed-array owner, so those declarations
+		fail before an instruction or C declarator can use them.
+	**/
+	function rejectStoredSpanType(type:HxcIRTypeRef, path:String, source:HxcSourceSpan, owner:String):Void {
+		switch type {
+			case IRTSpan(_, _):
+				add(path, "$owner storage cannot own a borrowed span", source);
+			case _:
 		}
 	}
 
@@ -959,6 +979,7 @@ private class HxcIRValidationState {
 			}
 		}
 
+		validateBorrowedSpanReturn(fn, path, parametersById, valueSites);
 		validateManagedRoots(fn, path, values, parametersById, valueSites, blockParameterIds);
 
 		if (!blocks.exists(fn.entryBlockId)) {
@@ -992,9 +1013,93 @@ private class HxcIRValidationState {
 	}
 
 	/**
+		Prove that a cross-function span is a read-only view of its receiver.
+
+		The declaration alone is not trusted. The one return must name an
+		`IRIOBorrowSpan` result whose fixed-array place is an immediate field of
+		the declared receiver. This rejects local-array returns and fabricated
+		call annotations before the C ABI grows a pointer and length parameter.
+	**/
+	function validateBorrowedSpanReturn(fn:HxcIRFunction, path:String, parameters:Map<String, HxcIRParameter>,
+			valueSites:Map<String, HxcIRInstructionSite>):Void {
+		final contract = fn.borrowedSpanReturn;
+		if (contract == null) {
+			switch fn.returnType {
+				case IRTSpan(_, _):
+					add('$path.borrowedSpanReturn', "a span return requires an explicit validated receiver-field contract", fn.source);
+				case _:
+			}
+			return;
+		}
+		final receiverId = switch contract {
+			case IRBSRReceiverField(parameterId): parameterId;
+		};
+		final receiver = parameters.get(receiverId);
+		if (receiver == null) {
+			add('$path.borrowedSpanReturn', 'receiver-field span contract names unknown parameter `$receiverId`', fn.source);
+		} else {
+			if (fn.borrowedClassParameterIds.indexOf(receiverId) == -1)
+				add('$path.borrowedSpanReturn', 'receiver-field span contract requires borrowed class parameter `$receiverId`', receiver.source);
+			if (!isConcreteClassReference(receiver.type))
+				add('$path.borrowedSpanReturn', 'receiver-field span contract parameter `$receiverId` is not a concrete class reference', receiver.source);
+		}
+		switch fn.returnType {
+			case IRTSpan(_, false):
+			case IRTSpan(_, true):
+				add('$path.borrowedSpanReturn', "receiver-field span returns must be read-only", fn.source);
+			case _:
+				add('$path.borrowedSpanReturn', "receiver-field span contract requires a ConstSpan return", fn.source);
+		}
+		switch fn.failureConvention {
+			case IRFCInfallible:
+			case IRFCStatus(_):
+				add('$path.borrowedSpanReturn', "receiver-field span returns must be infallible", fn.source);
+		}
+
+		var returnCount = 0;
+		for (block in fn.blocks) {
+			if (block.terminator == null)
+				continue;
+			switch block.terminator.kind {
+				case IRTReturn(valueId, _):
+					returnCount++;
+					if (valueId == null) {
+						add('$path.block:${block.id}.terminator', "receiver-field span return omits its value", block.terminator.source);
+						continue;
+					}
+					final site = valueSites.get(valueId);
+					if (site == null) {
+						add('$path.block:${block.id}.terminator', "receiver-field span return is not produced by a checked borrow instruction",
+							block.terminator.source);
+						continue;
+					}
+					switch site.instruction.kind {
+						case IRIOBorrowSpan(sourceArray):
+							if (!isImmediateReceiverField(sourceArray,
+								receiverId)) add('$path.block:${block.id}.terminator',
+									'receiver-field span return must borrow an immediate fixed-array field of `$receiverId`', site.instruction.source);
+						case _:
+							add('$path.block:${block.id}.terminator',
+								"receiver-field span return is not produced by the checked fixed-array borrow operation", site.instruction.source);
+					}
+				case _:
+			}
+		}
+		if (returnCount != 1)
+			add('$path.borrowedSpanReturn', 'receiver-field span function must have exactly one return; found $returnCount', fn.source);
+	}
+
+	static function isImmediateReceiverField(place:HxcIRPlace, receiverId:String):Bool {
+		return switch place {
+			case IRPField(IRPDereference(pointerValueId), _): pointerValueId == receiverId;
+			case _: false;
+		};
+	}
+
+	/**
 		Prove that every function root names one exact collector-managed value.
 
-		Block parameters are deliberately rejected in schema 19. Their value changes
+		Block parameters are deliberately rejected in schema 20. Their value changes
 		on incoming edges, so they need an edge-owned root update rather than the
 		simpler "store immediately after definition" rule used for parameters and
 		instruction results.
@@ -1002,7 +1107,7 @@ private class HxcIRValidationState {
 	function validateManagedRoots(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, parameters:Map<String, HxcIRParameter>,
 			valueSites:Map<String, HxcIRInstructionSite>, blockParameterIds:Map<String, Bool>):Void {
 		if (fn.managedRoots == null) {
-			add('$path.managedRoots', "function has no explicit managed-root plan for schema 19", fn.source);
+			add('$path.managedRoots', "function has no explicit managed-root plan for schema 20", fn.source);
 			return;
 		}
 		final rootIds:Map<String, Bool> = [];
@@ -1313,6 +1418,7 @@ private class HxcIRValidationState {
 			valueSites:Map<String, HxcIRInstructionSite>, dominanceProofs:HxcIRDominanceProofs):Void {
 		final available:Map<String, HxcIRTypeRef> = [];
 		final borrowedReferenceValues:Map<String, Bool> = [];
+		final returnedSpanValues:Map<String, Bool> = [];
 		for (parameter in fn.parameters) {
 			available.set(parameter.id, parameter.type);
 		}
@@ -1338,10 +1444,18 @@ private class HxcIRValidationState {
 			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs,
 				nullProofs, dominanceProofs);
 			validateBorrowedReferenceInstruction(instruction, instructionPath, borrowedReferenceValues, borrowedReferenceLocals);
+			validateBorrowedSpanInstruction(instruction, instructionPath, available, locals, returnedSpanValues);
 			if (instruction.result != null) {
 				available.set(instruction.result.id, instruction.result.type);
 				if (instructionResultBorrowsReference(instruction, borrowedReferenceValues, borrowedReferenceLocals))
 					borrowedReferenceValues.set(instruction.result.id, true);
+				switch instruction.kind {
+					case IRIOBorrowSpan(_):
+						returnedSpanValues.set(instruction.result.id, true);
+					case IRIOCall(call) if (call.borrowedSpanReturn != null):
+						returnedSpanValues.set(instruction.result.id, true);
+					case _:
+				}
 			}
 		}
 
@@ -1351,7 +1465,119 @@ private class HxcIRValidationState {
 		}
 		validateSpan(block.terminator.source, '$path.terminator.source');
 		validateBorrowedReferenceTerminator(block.terminator.kind, '$path.terminator', block.terminator.source, borrowedReferenceValues);
+		validateBorrowedSpanTerminator(fn, block.terminator.kind, '$path.terminator', block.terminator.source, available);
 		validateTerminator(fn, block.terminator.kind, '$path.terminator', block.terminator.source, available, blocks, regions);
+	}
+
+	/**
+		Keep every borrowed span inside a checked direct-call lifetime.
+
+		A span local may rename the pointer and length inside one function. It may
+		not enter owned storage, an aggregate, a tag, or an indirect/native call.
+		The narrower receiver-return value may not even initialize a span local:
+		its owner relationship exists only for the immediate checked call.
+		This check is intentionally based on HxcIR types, so a hand-built program
+		cannot bypass the source lowerer's narrower syntax checks.
+	**/
+	function validateBorrowedSpanInstruction(instruction:HxcIRInstruction, path:String, available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>,
+			returnedSpanValues:Map<String, Bool>):Void {
+		function isSpan(valueId:String):Bool
+			return switch available.get(valueId) {
+				case IRTSpan(_, _): true;
+				case _: false;
+			};
+		function reject(valueId:String, role:String):Void {
+			if (isSpan(valueId))
+				add(path, 'borrowed span value `$valueId` escapes through $role', instruction.source);
+		}
+		switch instruction.kind {
+			case IRIOStore(_, valueId):
+				reject(valueId, "a store");
+			case IRIOInitialize(IRPLocal(localId), valueId, _, _):
+				final local = locals.get(localId);
+				switch local == null ? null : local.type {
+					case IRTSpan(_, _):
+						if (returnedSpanValues.exists(valueId)) add(path, 'receiver-owned returned span `$valueId` cannot be retained in local `$localId`',
+							instruction.source);
+					case _:
+						reject(valueId, "an owned initializer");
+				}
+			case IRIOInitialize(_, valueId, _, _):
+				reject(valueId, "an initializer");
+			case IRIOInitializeFixedArray(_, values, _, _):
+				for (valueId in values)
+					reject(valueId, "a fixed-array initializer");
+			case IRIOConstructAggregate(_, fields):
+				for (field in fields)
+					reject(field.valueId, 'aggregate field `${field.name}`');
+			case IRIOConstructInterface(_, objectValueId, _):
+				reject(objectValueId, "an interface value");
+			case IRIOConstructTag(_, tagName, payload):
+				for (valueId in payload)
+					reject(valueId, 'tag `$tagName` payload');
+			case IRIOCall(call):
+				for (index => valueId in call.arguments) {
+					if (!isSpan(valueId))
+						continue;
+					final admitted = switch call.dispatch {
+						case IRCDDirect(functionId): final target = functions.get(functionId); target != null && index < target.parameters.length && switch target.parameters[index].type {
+								case IRTSpan(_, _): true;
+								case _: false;
+							};
+						case _:
+							false;
+					};
+					if (!admitted)
+						add(path, 'borrowed span argument `$valueId` has no checked direct parameter at argument $index', instruction.source);
+				}
+			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOBorrowSpan(_) |
+				IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) |
+				IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIORelease(_, _) | IRIOTrace(_, _) |
+				IRIODeclareUninitialized(_) | IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) | IRIOMoveManagedCarrier(_) |
+				IRIODefaultInitialize(_, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) |
+				IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
+		}
+	}
+
+	/** Reject span flow across control-flow or function boundaries without the one contract. */
+	function validateBorrowedSpanTerminator(fn:HxcIRFunction, kind:HxcIRTerminatorKind, path:String, source:HxcSourceSpan,
+			available:Map<String, HxcIRTypeRef>):Void {
+		function isSpan(valueId:String):Bool
+			return switch available.get(valueId) {
+				case IRTSpan(_, _): true;
+				case _: false;
+			};
+		function rejectEdge(edge:HxcIRBlockEdge, role:String):Void {
+			for (index => valueId in edge.arguments)
+				if (isSpan(valueId))
+					add(path, 'borrowed span value `$valueId` escapes through $role argument $index', source);
+		}
+		switch kind {
+			case IRTJump(edge):
+				rejectEdge(edge, "a jump");
+			case IRTBranch(_, whenTrue, whenFalse):
+				rejectEdge(whenTrue, "a branch");
+				rejectEdge(whenFalse, "a branch");
+			case IRTSwitch(_, cases, defaultEdge):
+				for (item in cases)
+					rejectEdge(item.edge, "a switch edge");
+				rejectEdge(defaultEdge, "a switch edge");
+			case IRTTagSwitch(_, cases, defaultEdge):
+				for (item in cases)
+					rejectEdge(item.edge, "a tag-switch edge");
+				if (defaultEdge != null)
+					rejectEdge(defaultEdge, "a tag-switch edge");
+			case IRTReturn(valueId, _):
+				if (valueId != null && isSpan(valueId) && fn.borrowedSpanReturn == null)
+					add(path, 'borrowed span value `$valueId` escapes through an uncontracted return', source);
+			case IRTThrow(valueId, edge):
+				if (isSpan(valueId))
+					add(path, 'borrowed span value `$valueId` escapes through a throw', source);
+				for (index => argument in edge.arguments)
+					if (isSpan(argument))
+						add(path, 'borrowed span value `$argument` escapes through failure-edge argument $index', source);
+			case IRTUnreachable:
+		}
 	}
 
 	/**
@@ -1409,7 +1635,7 @@ private class HxcIRValidationState {
 				IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
 				IRIOAllocate(_, _, _, _) | IRIODeclareUninitialized(_) | IRIODeclareManagedCarrier(_, _) | IRIOAcquireManagedCarrier(_, _, _) |
 				IRIOMoveManagedCarrier(_) | IRIODefaultInitialize(_, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
-				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _):
+				IRIOBorrowSpan(_) | IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _):
 		}
 	}
 
@@ -2173,6 +2399,16 @@ private class HxcIRValidationState {
 						add(path, "span initialization requires a span place and fixed-array source", instruction.source);
 				}
 				validateInitializeTransition(from, to, path, instruction.source);
+			case IRIOBorrowSpan(sourceArray):
+				validatePlace(sourceArray, '$path.sourceArray', instruction.source, available, locals, nullProofs);
+				final sourceType = knownPlaceType(sourceArray, available, locals);
+				switch [instruction.result == null ? null : instruction.result.type, sourceType] {
+					case [IRTSpan(spanElement, false), IRTFixedArray(arrayElement, _, _)] if (typeKey(spanElement) == typeKey(arrayElement)):
+					case [IRTSpan(_, _), IRTFixedArray(_, _, _)]:
+						add(path, "borrowed span result must be read-only and match its fixed-array element", instruction.source);
+					case _:
+						add(path, "borrowed span operation requires a span result and fixed-array source", instruction.source);
+				}
 			case IRIOBindVirtualTable(place, tableId):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateStableId(tableId, '$path.tableId', instruction.source);
@@ -2235,9 +2471,10 @@ private class HxcIRValidationState {
 
 	function instructionProducesValue(kind:HxcIRInstructionKind):Bool {
 		return switch kind {
-			case IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOUnary(_, _, _) |
-				IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOConstructAggregate(_, _) | IRIOConstructInterface(_, _, _) | IRIOProject(_, _) |
-				IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIOMoveManagedCarrier(_):
+			case IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOBorrowSpan(_) |
+				IRIOUnary(_, _, _) | IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOConstructAggregate(_, _) | IRIOConstructInterface(_, _, _) |
+				IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) |
+				IRIOMoveManagedCarrier(_):
 				true;
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
@@ -2252,6 +2489,7 @@ private class HxcIRValidationState {
 	function validateCall(call:HxcIRCall, path:String, source:HxcSourceSpan, available:Map<String, HxcIRTypeRef>, blocks:Map<String, HxcIRBlock>,
 			regions:Map<String, HxcIRCleanupRegion>, nullProofs:Map<String, Bool>):Void {
 		validateTypeRef(call.returnType, '$path.returnType', source, true);
+		validateBorrowedSpanCallContract(call, path, source, available);
 		final argumentTypes:Array<Null<HxcIRTypeRef>> = [];
 		for (index => argument in call.arguments) {
 			argumentTypes.push(requireValue(argument, '$path.argument:$index', source, available));
@@ -2377,6 +2615,52 @@ private class HxcIRValidationState {
 		}
 		if (call.failure != null) {
 			validateFailureEdge(call.failure, '$path.failure', source, available, blocks, regions);
+		}
+	}
+
+	/** Require a span-return call to echo the exact contract of its direct target. */
+	function validateBorrowedSpanCallContract(call:HxcIRCall, path:String, source:HxcSourceSpan, available:Map<String, HxcIRTypeRef>):Void {
+		final targetContract = switch call.dispatch {
+			case IRCDDirect(functionId):
+				final target = functions.get(functionId);
+				target == null ? null : target.borrowedSpanReturn;
+			case _:
+				null;
+		};
+		switch [call.borrowedSpanReturn, targetContract] {
+			case [null, null]:
+			case [IRBSRReceiverField(actual), IRBSRReceiverField(expected)] if (actual == expected):
+			case [null, IRBSRReceiverField(expected)]:
+				add('$path.borrowedSpanReturn', 'direct span-return call omitted target receiver contract `$expected`', source);
+			case [IRBSRReceiverField(actual), null]:
+				add('$path.borrowedSpanReturn', 'call fabricates receiver span contract `$actual` without a matching direct target', source);
+			case [IRBSRReceiverField(actual), IRBSRReceiverField(expected)]:
+				add('$path.borrowedSpanReturn', 'call receiver span contract `$actual` does not match target contract `$expected`', source);
+		}
+		if (call.borrowedSpanReturn != null)
+			switch call.returnType {
+				case IRTSpan(_, false):
+				case _:
+					add('$path.borrowedSpanReturn', "receiver span call contract requires a read-only span result", source);
+			}
+		switch [call.dispatch, call.borrowedSpanReturn] {
+			case [IRCDDirect(functionId), IRBSRReceiverField(receiverParameterId)]:
+				final target = functions.get(functionId);
+				if (target != null) {
+					var receiverIndex = -1;
+					for (index => parameter in target.parameters)
+						if (parameter.id == receiverParameterId)
+							receiverIndex = index;
+					if (receiverIndex < 0 || receiverIndex >= call.arguments.length) {
+						add('$path.borrowedSpanReturn', 'receiver span contract cannot resolve caller argument for `$receiverParameterId`', source);
+					} else {
+						final ownerId = call.arguments[receiverIndex];
+						final ownerType = available.get(ownerId);
+						if (ownerType == null || !isConcreteClassReference(ownerType))
+							add('$path.borrowedSpanReturn', 'receiver span result owner `$ownerId` is not a live concrete class reference', source);
+					}
+				}
+			case _:
 		}
 	}
 
@@ -3697,6 +3981,7 @@ private class HxcIRValidationState {
 				IRIOBoundsCheck(place, _, _) | IRIOLifetime(place, _, _, _):
 				placeContainsLocal(place, localId);
 			case IRIOInitializeSpan(place, sourceArray, _, _): placeContainsLocal(place, localId) || placeContainsLocal(sourceArray, localId);
+			case IRIOBorrowSpan(sourceArray): placeContainsLocal(sourceArray, localId);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |
 				IRIOCall(_) | IRIOConstructAggregate(_, _) | IRIOConstructInterface(_, _, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) |
 				IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) | IRIOAllocate(_, _, _, _) | IRIONullCheck(_, _):

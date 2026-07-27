@@ -65,7 +65,12 @@ final class CaxecraftTrace {
 			cells.push(0);
 		#end
 		World.replace(cells, World.coord(8, 8, 8), BlockKind.Stone);
-		final hit = VoxelRaycast.trace(cells, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 12.0);
+		#if c
+		var view:WorldView = storage.constSpan();
+		#else
+		var view:WorldView = WorldView.borrow(cells);
+		#end
+		final hit = VoxelRaycast.trace(view, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 12.0);
 		var hash = hit.hit ? 1 : 0;
 		hash = mix(hash, hit.cellX);
 		hash = mix(hash, hit.previousX);
@@ -84,9 +89,14 @@ final class CaxecraftTrace {
 			cells.push(0);
 		#end
 		makeFloor(cells);
+		#if c
+		var view:WorldView = storage.constSpan();
+		#else
+		var view:WorldView = WorldView.borrow(cells);
+		#end
 		var state = createPlayer(5.5, 1.0, 5.5);
-		state = stepPlayer(cells, state, playerInput(1.0, 0.5, false));
-		state = stepPlayer(cells, state, playerInput(0.0, 0.0, true));
+		state = stepPlayer(view, state, playerInput(1.0, 0.5, false));
+		state = stepPlayer(view, state, playerInput(0.0, 0.0, true));
 		var hash = Std.int(state.x * 1000.0);
 		hash = mix(hash, Std.int(state.y * 1000.0));
 		hash = mix(hash, Std.int(state.z * 1000.0));
@@ -115,13 +125,18 @@ final class CaxecraftTrace {
 			World.place(cells, edit, BlockKind.Dirt);
 		else
 			World.place(cells, edit, BlockKind.Stone);
-		final ray = VoxelRaycast.trace(cells, x + 0.5, 15.5, z + 0.5, 0.25, -1.0, 0.5, 24.0);
+		#if c
+		var view:WorldView = storage.constSpan();
+		#else
+		var view:WorldView = WorldView.borrow(cells);
+		#end
+		final ray = VoxelRaycast.trace(view, x + 0.5, 15.5, z + 0.5, 0.25, -1.0, 0.5, 24.0);
 		final moveX = (seed & 1) == 0 ? 1.0 : -1.0;
 		final moveZ = (seed & 2) == 0 ? 0.5 : -0.5;
 		final jump = (seed & 4) != 0;
 		var state = createPlayer(1.5 + (seed & 3), 14.0, 1.5 + ((seed >>> 2) & 3));
-		state = recoverPlayerSpawn(cells, state);
-		state = stepPlayer(cells, state, playerInput(moveX, moveZ, jump));
+		state = recoverPlayerSpawn(view, state);
+		state = stepPlayer(view, state, playerInput(moveX, moveZ, jump));
 		var hash = World.stateHash(cells);
 		var hitCode = 0;
 		if (ray.hit)

@@ -17,7 +17,8 @@ import caxecraft.app.TerrainChunkLayout.packFace;
 import caxecraft.domain.BlockCoord;
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.World;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldRead.query as queryWorld;
+import caxecraft.domain.WorldView;
 #if c
 import c.CArray;
 import c.IntConvert;
@@ -136,7 +137,7 @@ final class TerrainChunkCache {
 	}
 
 	/** Rebuild every dirty partition, then return complete renderer counters. */
-	public function prepare(cells:WorldCells):TerrainChunkPreparation {
+	public function prepare(cells:WorldView):TerrainChunkPreparation {
 		var rebuilt = 0;
 		var valid = true;
 		var chunk = 0;
@@ -211,7 +212,7 @@ final class TerrainChunkCache {
 	public inline function packedAt(index:Int):Int
 		return readFaceByte(packedFaces, index);
 
-	function rebuild(cells:WorldCells, chunk:Int):Bool {
+	function rebuild(cells:WorldView, chunk:Int):Bool {
 		final originX = chunkOriginX(chunk);
 		final originZ = chunkOriginZ(chunk);
 		var count = 0;
@@ -224,7 +225,7 @@ final class TerrainChunkCache {
 			while (y < World.HEIGHT) {
 				var x = originX;
 				while (x < originX + CHUNK_WIDTH) {
-					final kind = World.query(cells, World.coord(x, y, z));
+					final kind = queryWorld(cells, World.coord(x, y, z));
 					if (World.isSolid(kind)) {
 						var blockVisible = false;
 						var nextCount = appendIfExposed(cells, chunk, count, kind, VoxelFace.Top, x, y, z, x, y + 1, z);
@@ -298,9 +299,9 @@ final class TerrainChunkCache {
 		return true;
 	}
 
-	function appendIfExposed(cells:WorldCells, chunk:Int, count:Int, kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, neighborX:Int, neighborY:Int,
+	function appendIfExposed(cells:WorldView, chunk:Int, count:Int, kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, neighborX:Int, neighborY:Int,
 			neighborZ:Int):Int {
-		if (World.isSolid(World.query(cells, World.coord(neighborX, neighborY, neighborZ))))
+		if (World.isSolid(queryWorld(cells, World.coord(neighborX, neighborY, neighborZ))))
 			return count;
 		if (count >= FACES_PER_CHUNK)
 			return -1;

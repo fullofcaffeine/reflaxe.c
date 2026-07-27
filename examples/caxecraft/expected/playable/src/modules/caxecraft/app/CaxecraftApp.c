@@ -629,9 +629,9 @@ void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc
   return;
 }
 
-struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_app_CaxecraftApp_spawnPlayer(uint8_t *hxc_cells, size_t hxc_length)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_app_CaxecraftApp_spawnPlayer(const uint8_t *hxc_cells, size_t hxc_length)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n1 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n1;
@@ -669,28 +669,25 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
     return;
   }
   int32_t hxc_waterPresentationCell = hxc_loadedLevel.hxc_waterPresentationCell;
-  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n4 = &(*hxc_self).hxc_session;
-  uint8_t *hxc_cells = (*hxc_tmp_owned_class_field_address_n4).hxc_worldStorage;
-  size_t hxc_tmp_length_n3 = 16384;
-  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n5 = &(*hxc_self).hxc_session;
-  int32_t *hxc_itemActive = (*hxc_tmp_owned_class_field_address_n5).hxc_authoredItemStorage;
-  size_t hxc_tmp_length_n4 = 256;
-  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n6 = &(*hxc_self).hxc_session;
-  const int32_t *hxc_itemActiveRead = (*hxc_tmp_owned_class_field_address_n6).hxc_authoredItemStorage;
-  size_t hxc_tmp_length_n5 = 256;
-  int32_t hxc_inactiveItem = 0;
-  struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_call_result_n7 = hxc_caxecraft_content_BaseContentPack_aquaticProfile(0);
-  struct hxc_caxecraft_domain_AquaticProfile hxc_initialAquaticProfile = hxc_tmp_call_result_n7;
+  struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_call_result_n4 = hxc_caxecraft_content_BaseContentPack_aquaticProfile(0);
+  struct hxc_caxecraft_domain_AquaticProfile hxc_initialAquaticProfile = hxc_tmp_call_result_n4;
   int32_t hxc_initialHealth = 6;
-  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n8 = &(*hxc_self).hxc_session;
-  if (hxc_tmp_owned_class_field_address_n8 == NULL)
+  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n5 = &(*hxc_self).hxc_session;
+  if (hxc_tmp_owned_class_field_address_n5 == NULL)
   {
     abort();
   }
-  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n9 = hxc_caxecraft_app_CaxecraftApp_spawnPlayer(hxc_cells, hxc_tmp_length_n3);
+  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n6 = &(*hxc_self).hxc_session;
+  if (hxc_tmp_owned_class_field_address_n6 == NULL)
+  {
+    abort();
+  }
+  size_t hxc_tmp_length_n8;
+  const uint8_t *hxc_tmp_instance_call_result_n7 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n6, &hxc_tmp_length_n8);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n9 = hxc_caxecraft_app_CaxecraftApp_spawnPlayer(hxc_tmp_instance_call_result_n7, hxc_tmp_length_n8);
   struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_load_result_n10 = hxc_initialAquaticProfile;
   struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n12 = hxc_caxecraft_domain_Character_start(1, hxc_tmp_call_result_n9, hxc_tmp_load_result_n10, hxc_initialHealth);
-  bool hxc_tmp_instance_call_result_n13 = hxc_caxecraft_domain_GameSession_bindLocalPlayer(hxc_tmp_owned_class_field_address_n8, hxc_tmp_call_result_n12);
+  bool hxc_tmp_instance_call_result_n13 = hxc_caxecraft_domain_GameSession_bindLocalPlayer(hxc_tmp_owned_class_field_address_n5, hxc_tmp_call_result_n12);
   if (!hxc_tmp_instance_call_result_n13)
   {
     if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
@@ -757,23 +754,37 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
   double hxc_cameraWaterBlend = 0.0;
   struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n48 = hxc_caxecraft_gameplay_Inventory_starter();
   struct hxc_caxecraft_gameplay_InventoryState hxc_inventory = hxc_tmp_call_result_n48;
-  struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n49 = hxc_caxecraft_gameplay_GuideNpc_start(hxc_cells, hxc_tmp_length_n3, 17.5, 13.5);
-  struct hxc_caxecraft_gameplay_GuideState hxc_guide = hxc_tmp_call_result_n49;
-  struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n50 = hxc_caxecraft_gameplay_Mossling_start(hxc_cells, hxc_tmp_length_n3, 15.5, 13.8);
-  struct hxc_caxecraft_gameplay_MosslingState hxc_mossling = hxc_tmp_call_result_n50;
+  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n49 = &(*hxc_self).hxc_session;
+  if (hxc_tmp_owned_class_field_address_n49 == NULL)
+  {
+    abort();
+  }
+  size_t hxc_tmp_length_n51;
+  const uint8_t *hxc_tmp_instance_call_result_n50 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n49, &hxc_tmp_length_n51);
+  struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n52 = hxc_caxecraft_gameplay_GuideNpc_start(hxc_tmp_instance_call_result_n50, hxc_tmp_length_n51, 17.5, 13.5);
+  struct hxc_caxecraft_gameplay_GuideState hxc_guide = hxc_tmp_call_result_n52;
+  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n53 = &(*hxc_self).hxc_session;
+  if (hxc_tmp_owned_class_field_address_n53 == NULL)
+  {
+    abort();
+  }
+  size_t hxc_tmp_length_n55;
+  const uint8_t *hxc_tmp_instance_call_result_n54 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n53, &hxc_tmp_length_n55);
+  struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n56 = hxc_caxecraft_gameplay_Mossling_start(hxc_tmp_instance_call_result_n54, hxc_tmp_length_n55, 15.5, 13.8);
+  struct hxc_caxecraft_gameplay_MosslingState hxc_mossling = hxc_tmp_call_result_n56;
   struct hxc_caxecraft_gameplay_SwordCombatState hxc_swordCombat = (struct hxc_caxecraft_gameplay_SwordCombatState){ .hxc_cooldownTicks = 0 };
   struct hxc_caxecraft_gameplay_BerryDropState hxc_berryDrop = (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = 0.0, .hxc_y = 0.0, .hxc_z = 0.0 };
   double hxc_lookX = 0.0;
   double hxc_lookY = -0.18;
   double hxc_lookZ = -1.0;
   double hxc_accumulator = 0.0;
-  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n53 = &(*hxc_self).hxc_session;
-  if (hxc_tmp_owned_class_field_address_n53 == NULL)
+  struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n59 = &(*hxc_self).hxc_session;
+  if (hxc_tmp_owned_class_field_address_n59 == NULL)
   {
     abort();
   }
-  struct hxc_caxecraft_domain_GameView hxc_tmp_instance_call_result_n54 = hxc_caxecraft_domain_GameSession_view(hxc_tmp_owned_class_field_address_n53);
-  struct hxc_caxecraft_domain_GameView hxc_initialPresentation = hxc_tmp_instance_call_result_n54;
+  struct hxc_caxecraft_domain_GameView hxc_tmp_instance_call_result_n60 = hxc_caxecraft_domain_GameSession_view(hxc_tmp_owned_class_field_address_n59);
+  struct hxc_caxecraft_domain_GameView hxc_initialPresentation = hxc_tmp_instance_call_result_n60;
   if (!hxc_initialPresentation.hxc_valid)
   {
     if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
@@ -782,17 +793,17 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
     }
     return;
   }
-  struct hxc_caxecraft_app_MotionHistory hxc_tmp_call_result_n57 = hxc_caxecraft_app_MotionInterpolation_start(hxc_initialPresentation.hxc_localPlayer.hxc_body);
-  struct hxc_caxecraft_app_MotionHistory hxc_motionHistory = hxc_tmp_call_result_n57;
+  struct hxc_caxecraft_app_MotionHistory hxc_tmp_call_result_n63 = hxc_caxecraft_app_MotionInterpolation_start(hxc_initialPresentation.hxc_localPlayer.hxc_body);
+  struct hxc_caxecraft_app_MotionHistory hxc_motionHistory = hxc_tmp_call_result_n63;
   bool hxc_jumpQueued = false;
   bool hxc_swordQueued = false;
   int32_t hxc_selectedMode = 0;
   int32_t hxc_locale = 0;
   bool hxc_showInitialTitle = true;
-  enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n59 = hxc_caxecraft_app_AppScreen_initialScreen(hxc_showInitialTitle);
-  enum hxc_caxecraft_app_AppScreen hxc_screen = hxc_tmp_call_result_n59;
-  bool hxc_tmp_call_result_n61 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
-  if (hxc_tmp_call_result_n61)
+  enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n65 = hxc_caxecraft_app_AppScreen_initialScreen(hxc_showInitialTitle);
+  enum hxc_caxecraft_app_AppScreen hxc_screen = hxc_tmp_call_result_n65;
+  bool hxc_tmp_call_result_n67 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
+  if (hxc_tmp_call_result_n67)
   {
     DisableCursor();
   }
@@ -812,24 +823,24 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
   int32_t hxc_aquaticEquipmentFrames = 0;
   while (1)
   {
-    bool hxc_tmp_load_result_n62 = hxc_quit;
-    bool hxc_tmp_short_circuit_result_n59 = !hxc_tmp_load_result_n62;
-    if (!hxc_tmp_load_result_n62)
+    bool hxc_tmp_load_result_n68 = hxc_quit;
+    bool hxc_tmp_short_circuit_result_n55 = !hxc_tmp_load_result_n68;
+    if (!hxc_tmp_load_result_n68)
     {
-      bool hxc_tmp_native_call_result_n63 = WindowShouldClose();
-      hxc_tmp_short_circuit_result_n59 = !hxc_tmp_native_call_result_n63;
+      bool hxc_tmp_native_call_result_n69 = WindowShouldClose();
+      hxc_tmp_short_circuit_result_n55 = !hxc_tmp_native_call_result_n69;
     }
-    if (!hxc_tmp_short_circuit_result_n59)
+    if (!hxc_tmp_short_circuit_result_n55)
     {
       break;
     }
-    struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n65 = &(*hxc_self).hxc_session;
-    if (hxc_tmp_owned_class_field_address_n65 == NULL)
+    struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n71 = &(*hxc_self).hxc_session;
+    if (hxc_tmp_owned_class_field_address_n71 == NULL)
     {
       abort();
     }
-    struct hxc_caxecraft_domain_GameView hxc_tmp_instance_call_result_n66 = hxc_caxecraft_domain_GameSession_view(hxc_tmp_owned_class_field_address_n65);
-    struct hxc_caxecraft_domain_GameView hxc_initialView = hxc_tmp_instance_call_result_n66;
+    struct hxc_caxecraft_domain_GameView hxc_tmp_instance_call_result_n72 = hxc_caxecraft_domain_GameSession_view(hxc_tmp_owned_class_field_address_n71);
+    struct hxc_caxecraft_domain_GameView hxc_initialView = hxc_tmp_instance_call_result_n72;
     if (!hxc_initialView.hxc_valid)
     {
       hxc_quit = true;
@@ -837,215 +848,222 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
     struct hxc_caxecraft_domain_Character hxc_character = hxc_initialView.hxc_localPlayer;
     bool hxc_recapturedThisFrame = false;
     bool hxc_resetMotionThisFrame = false;
-    bool hxc_tmp_native_call_result_n69 = IsWindowFocused();
-    bool hxc_focused = hxc_tmp_native_call_result_n69;
-    bool hxc_tmp_call_result_n71 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
-    bool hxc_captured_hc20519ecc5f5 = hxc_tmp_call_result_n71;
-    bool hxc_tmp_call_result_n73 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
-    bool hxc_paused_h41f896003bd3 = hxc_tmp_call_result_n73;
+    bool hxc_tmp_native_call_result_n75 = IsWindowFocused();
+    bool hxc_focused = hxc_tmp_native_call_result_n75;
+    bool hxc_tmp_call_result_n77 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
+    bool hxc_captured_hbb25a798d147 = hxc_tmp_call_result_n77;
+    bool hxc_tmp_call_result_n79 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
+    bool hxc_paused_h4c7d23b73dde = hxc_tmp_call_result_n79;
     double hxc_forward = 0.0;
     double hxc_right = 0.0;
-    bool hxc_tmp_native_call_result_n74 = IsKeyDown((int32_t)87);
-    if (hxc_tmp_native_call_result_n74)
+    bool hxc_tmp_native_call_result_n80 = IsKeyDown((int32_t)87);
+    if (hxc_tmp_native_call_result_n80)
     {
       hxc_forward = hxc_forward + 1.0;
     }
-    bool hxc_tmp_native_call_result_n76 = IsKeyDown((int32_t)83);
-    if (hxc_tmp_native_call_result_n76)
+    bool hxc_tmp_native_call_result_n82 = IsKeyDown((int32_t)83);
+    if (hxc_tmp_native_call_result_n82)
     {
       hxc_forward = hxc_forward - 1.0;
     }
-    bool hxc_tmp_native_call_result_n78 = IsKeyDown((int32_t)68);
-    if (hxc_tmp_native_call_result_n78)
+    bool hxc_tmp_native_call_result_n84 = IsKeyDown((int32_t)68);
+    if (hxc_tmp_native_call_result_n84)
     {
       hxc_right = hxc_right + 1.0;
     }
-    bool hxc_tmp_native_call_result_n80 = IsKeyDown((int32_t)65);
-    if (hxc_tmp_native_call_result_n80)
+    bool hxc_tmp_native_call_result_n86 = IsKeyDown((int32_t)65);
+    if (hxc_tmp_native_call_result_n86)
     {
       hxc_right = hxc_right - 1.0;
     }
-    double hxc_lookYaw_h1cb31510ff56 = 0.0;
-    double hxc_lookPitch_hbe0308e7e967 = 0.0;
-    if (hxc_captured_hc20519ecc5f5)
+    double hxc_lookYaw_h838a3bb4a0b6 = 0.0;
+    double hxc_lookPitch_h4f0e8aebc2bf = 0.0;
+    if (hxc_captured_hbb25a798d147)
     {
-      struct Vector2 hxc_tmp_native_call_result_n83 = GetMouseDelta();
-      struct Vector2 hxc_mouse = hxc_tmp_native_call_result_n83;
-      hxc_lookYaw_h1cb31510ff56 = -(double)hxc_mouse.x * 0.0025;
-      hxc_lookPitch_hbe0308e7e967 = -(double)hxc_mouse.y * 0.0025;
+      struct Vector2 hxc_tmp_native_call_result_n89 = GetMouseDelta();
+      struct Vector2 hxc_mouse = hxc_tmp_native_call_result_n89;
+      hxc_lookYaw_h838a3bb4a0b6 = -(double)hxc_mouse.x * 0.0025;
+      hxc_lookPitch_h4f0e8aebc2bf = -(double)hxc_mouse.y * 0.0025;
     }
-    bool hxc_tmp_native_call_result_n88 = IsMouseButtonPressed((int32_t)0);
-    bool hxc_leftPressed = hxc_tmp_native_call_result_n88;
-    bool hxc_tmp_load_result_n89 = hxc_captured_hc20519ecc5f5;
-    bool hxc_tmp_short_circuit_result_n74 = hxc_tmp_load_result_n89;
-    if (hxc_tmp_load_result_n89)
-    {
-      hxc_tmp_short_circuit_result_n74 = hxc_leftPressed;
-    }
-    bool hxc_primaryPressed_hedceb70fb358 = hxc_tmp_short_circuit_result_n74;
-    bool hxc_tmp_load_result_n92 = hxc_captured_hc20519ecc5f5;
-    bool hxc_tmp_short_circuit_result_n76 = hxc_tmp_load_result_n92;
-    if (hxc_tmp_load_result_n92)
-    {
-      bool hxc_tmp_native_call_result_n93 = IsMouseButtonPressed((int32_t)1);
-      hxc_tmp_short_circuit_result_n76 = hxc_tmp_native_call_result_n93;
-    }
-    bool hxc_secondaryPressed_hfa577afa0202 = hxc_tmp_short_circuit_result_n76;
-    bool hxc_tmp_load_result_n95 = hxc_captured_hc20519ecc5f5;
-    bool hxc_tmp_short_circuit_result_n78 = hxc_tmp_load_result_n95;
+    bool hxc_tmp_native_call_result_n94 = IsMouseButtonPressed((int32_t)0);
+    bool hxc_leftPressed = hxc_tmp_native_call_result_n94;
+    bool hxc_tmp_load_result_n95 = hxc_captured_hbb25a798d147;
+    bool hxc_tmp_short_circuit_result_n70 = hxc_tmp_load_result_n95;
     if (hxc_tmp_load_result_n95)
     {
-      bool hxc_tmp_native_call_result_n96 = IsKeyPressed((int32_t)69);
-      hxc_tmp_short_circuit_result_n78 = hxc_tmp_native_call_result_n96;
+      hxc_tmp_short_circuit_result_n70 = hxc_leftPressed;
     }
-    bool hxc_interactPressed_hb42cb809783f = hxc_tmp_short_circuit_result_n78;
-    int32_t hxc_hotbarSelection_h5ba6d54f3d49 = -1;
-    bool hxc_tmp_native_call_result_n98 = IsKeyPressed((int32_t)49);
-    if (hxc_tmp_native_call_result_n98)
+    bool hxc_primaryPressed_hd68fe468a578 = hxc_tmp_short_circuit_result_n70;
+    bool hxc_tmp_load_result_n98 = hxc_captured_hbb25a798d147;
+    bool hxc_tmp_short_circuit_result_n72 = hxc_tmp_load_result_n98;
+    if (hxc_tmp_load_result_n98)
     {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 0;
+      bool hxc_tmp_native_call_result_n99 = IsMouseButtonPressed((int32_t)1);
+      hxc_tmp_short_circuit_result_n72 = hxc_tmp_native_call_result_n99;
     }
-    bool hxc_tmp_native_call_result_n99 = IsKeyPressed((int32_t)50);
-    if (hxc_tmp_native_call_result_n99)
+    bool hxc_secondaryPressed_h1122a5738a02 = hxc_tmp_short_circuit_result_n72;
+    bool hxc_tmp_load_result_n101 = hxc_captured_hbb25a798d147;
+    bool hxc_tmp_short_circuit_result_n74 = hxc_tmp_load_result_n101;
+    if (hxc_tmp_load_result_n101)
     {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 1;
+      bool hxc_tmp_native_call_result_n102 = IsKeyPressed((int32_t)69);
+      hxc_tmp_short_circuit_result_n74 = hxc_tmp_native_call_result_n102;
     }
-    bool hxc_tmp_native_call_result_n100 = IsKeyPressed((int32_t)51);
-    if (hxc_tmp_native_call_result_n100)
-    {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 2;
-    }
-    bool hxc_tmp_native_call_result_n101 = IsKeyPressed((int32_t)52);
-    if (hxc_tmp_native_call_result_n101)
-    {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 3;
-    }
-    bool hxc_tmp_native_call_result_n102 = IsKeyPressed((int32_t)53);
-    if (hxc_tmp_native_call_result_n102)
-    {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 4;
-    }
-    bool hxc_tmp_native_call_result_n103 = IsKeyPressed((int32_t)54);
-    if (hxc_tmp_native_call_result_n103)
-    {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 5;
-    }
-    bool hxc_tmp_native_call_result_n104 = IsKeyPressed((int32_t)55);
+    bool hxc_interactPressed_h4369df8d47ef = hxc_tmp_short_circuit_result_n74;
+    int32_t hxc_hotbarSelection_hd02e5559b0e2 = -1;
+    bool hxc_tmp_native_call_result_n104 = IsKeyPressed((int32_t)49);
     if (hxc_tmp_native_call_result_n104)
     {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 6;
+      hxc_hotbarSelection_hd02e5559b0e2 = 0;
     }
-    bool hxc_tmp_native_call_result_n105 = IsKeyPressed((int32_t)56);
+    bool hxc_tmp_native_call_result_n105 = IsKeyPressed((int32_t)50);
     if (hxc_tmp_native_call_result_n105)
     {
-      hxc_hotbarSelection_h5ba6d54f3d49 = 7;
+      hxc_hotbarSelection_hd02e5559b0e2 = 1;
     }
-    float hxc_tmp_native_call_result_n106 = GetMouseWheelMove();
-    double hxc_wheel = (double)hxc_tmp_native_call_result_n106;
-    int32_t hxc_hotbarCycle_ha3c2a5e2cb19 = 0;
+    bool hxc_tmp_native_call_result_n106 = IsKeyPressed((int32_t)51);
+    if (hxc_tmp_native_call_result_n106)
+    {
+      hxc_hotbarSelection_hd02e5559b0e2 = 2;
+    }
+    bool hxc_tmp_native_call_result_n107 = IsKeyPressed((int32_t)52);
+    if (hxc_tmp_native_call_result_n107)
+    {
+      hxc_hotbarSelection_hd02e5559b0e2 = 3;
+    }
+    bool hxc_tmp_native_call_result_n108 = IsKeyPressed((int32_t)53);
+    if (hxc_tmp_native_call_result_n108)
+    {
+      hxc_hotbarSelection_hd02e5559b0e2 = 4;
+    }
+    bool hxc_tmp_native_call_result_n109 = IsKeyPressed((int32_t)54);
+    if (hxc_tmp_native_call_result_n109)
+    {
+      hxc_hotbarSelection_hd02e5559b0e2 = 5;
+    }
+    bool hxc_tmp_native_call_result_n110 = IsKeyPressed((int32_t)55);
+    if (hxc_tmp_native_call_result_n110)
+    {
+      hxc_hotbarSelection_hd02e5559b0e2 = 6;
+    }
+    bool hxc_tmp_native_call_result_n111 = IsKeyPressed((int32_t)56);
+    if (hxc_tmp_native_call_result_n111)
+    {
+      hxc_hotbarSelection_hd02e5559b0e2 = 7;
+    }
+    float hxc_tmp_native_call_result_n112 = GetMouseWheelMove();
+    double hxc_wheel = (double)hxc_tmp_native_call_result_n112;
+    int32_t hxc_hotbarCycle_hae50ef8710bb = 0;
     if (hxc_wheel > 0.0)
     {
-      hxc_hotbarCycle_ha3c2a5e2cb19 = -1;
+      hxc_hotbarCycle_hae50ef8710bb = -1;
     }
     if (hxc_wheel < 0.0)
     {
-      hxc_hotbarCycle_ha3c2a5e2cb19 = 1;
+      hxc_hotbarCycle_hae50ef8710bb = 1;
     }
-    bool hxc_tmp_native_call_result_n109 = IsKeyPressed((int32_t)32);
-    bool hxc_jumpPressed_h6f7bdfcd4f1c = hxc_tmp_native_call_result_n109;
-    bool hxc_tmp_native_call_result_n110 = IsKeyPressed((int32_t)256);
-    bool hxc_pausePressed_h43f8b126c2a3 = hxc_tmp_native_call_result_n110;
-    bool hxc_tmp_native_call_result_n111 = IsKeyPressed((int32_t)81);
-    bool hxc_quitPressed_h40b7d5b5e075 = hxc_tmp_native_call_result_n111;
+    bool hxc_tmp_native_call_result_n115 = IsKeyPressed((int32_t)32);
+    bool hxc_jumpPressed_h64ebb5de09c1 = hxc_tmp_native_call_result_n115;
+    bool hxc_tmp_native_call_result_n116 = IsKeyPressed((int32_t)256);
+    bool hxc_pausePressed_h2166f29017ec = hxc_tmp_native_call_result_n116;
+    bool hxc_tmp_native_call_result_n117 = IsKeyPressed((int32_t)81);
+    bool hxc_quitPressed_h335682af3a76 = hxc_tmp_native_call_result_n117;
     double hxc_frameInput_moveForward = hxc_forward;
     double hxc_frameInput_moveRight = hxc_right;
-    double hxc_frameInput_lookYaw = hxc_lookYaw_h1cb31510ff56;
-    double hxc_frameInput_lookPitch = hxc_lookPitch_hbe0308e7e967;
-    bool hxc_frameInput_jumpPressed = hxc_jumpPressed_h6f7bdfcd4f1c;
-    bool hxc_tmp_native_call_result_n117 = IsKeyDown((int32_t)340);
-    bool hxc_frameInput_descendHeld = hxc_tmp_native_call_result_n117;
-    bool hxc_frameInput_primaryPressed = hxc_primaryPressed_hedceb70fb358;
-    bool hxc_frameInput_secondaryPressed = hxc_secondaryPressed_hfa577afa0202;
-    bool hxc_frameInput_interactPressed = hxc_interactPressed_hb42cb809783f;
-    bool hxc_frameInput_pausePressed = hxc_pausePressed_h43f8b126c2a3;
-    bool hxc_tmp_load_result_n122 = hxc_paused_h41f896003bd3;
-    bool hxc_tmp_short_circuit_result_n96 = hxc_tmp_load_result_n122;
-    if (hxc_tmp_load_result_n122)
+    double hxc_frameInput_lookYaw = hxc_lookYaw_h838a3bb4a0b6;
+    double hxc_frameInput_lookPitch = hxc_lookPitch_h4f0e8aebc2bf;
+    bool hxc_frameInput_jumpPressed = hxc_jumpPressed_h64ebb5de09c1;
+    bool hxc_tmp_native_call_result_n123 = IsKeyDown((int32_t)340);
+    bool hxc_frameInput_descendHeld = hxc_tmp_native_call_result_n123;
+    bool hxc_frameInput_primaryPressed = hxc_primaryPressed_hd68fe468a578;
+    bool hxc_frameInput_secondaryPressed = hxc_secondaryPressed_h1122a5738a02;
+    bool hxc_frameInput_interactPressed = hxc_interactPressed_h4369df8d47ef;
+    bool hxc_frameInput_pausePressed = hxc_pausePressed_h2166f29017ec;
+    bool hxc_tmp_load_result_n128 = hxc_paused_h4c7d23b73dde;
+    bool hxc_tmp_short_circuit_result_n92 = hxc_tmp_load_result_n128;
+    if (hxc_tmp_load_result_n128)
     {
-      hxc_tmp_short_circuit_result_n96 = hxc_leftPressed;
+      hxc_tmp_short_circuit_result_n92 = hxc_leftPressed;
     }
-    bool hxc_frameInput_capturePressed = hxc_tmp_short_circuit_result_n96;
-    bool hxc_frameInput_quitPressed = hxc_quitPressed_h40b7d5b5e075;
-    int32_t hxc_frameInput_hotbarSelection = hxc_hotbarSelection_h5ba6d54f3d49;
-    int32_t hxc_frameInput_hotbarCycle = hxc_hotbarCycle_ha3c2a5e2cb19;
+    bool hxc_frameInput_capturePressed = hxc_tmp_short_circuit_result_n92;
+    bool hxc_frameInput_quitPressed = hxc_quitPressed_h335682af3a76;
+    int32_t hxc_frameInput_hotbarSelection = hxc_hotbarSelection_hd02e5559b0e2;
+    int32_t hxc_frameInput_hotbarCycle = hxc_hotbarCycle_hae50ef8710bb;
     double hxc_moveForward = hxc_frameInput_moveForward;
     double hxc_moveRight = hxc_frameInput_moveRight;
-    double hxc_lookYaw_h52e265ab3392 = hxc_frameInput_lookYaw;
-    double hxc_lookPitch_hc9c1a0baac13 = hxc_frameInput_lookPitch;
-    bool hxc_jumpPressed_h09e185bca9ef = hxc_frameInput_jumpPressed;
-    bool hxc_primaryPressed_h14933bca7ddc = hxc_frameInput_primaryPressed;
-    bool hxc_secondaryPressed_hbfa41a2f05a4 = hxc_frameInput_secondaryPressed;
-    bool hxc_interactPressed_h57fc42df9573 = hxc_frameInput_interactPressed;
-    bool hxc_pausePressed_h5a4e4e6ca492 = hxc_frameInput_pausePressed;
+    double hxc_lookYaw_h392e84460ac7 = hxc_frameInput_lookYaw;
+    double hxc_lookPitch_h2ad440705588 = hxc_frameInput_lookPitch;
+    bool hxc_jumpPressed_h8ed2cfbff572 = hxc_frameInput_jumpPressed;
+    bool hxc_primaryPressed_h4ff46dcccd0b = hxc_frameInput_primaryPressed;
+    bool hxc_secondaryPressed_h762a911cecbb = hxc_frameInput_secondaryPressed;
+    bool hxc_interactPressed_h3ff6d3fee486 = hxc_frameInput_interactPressed;
+    bool hxc_pausePressed_h06bdfd900460 = hxc_frameInput_pausePressed;
     bool hxc_capturePressed = hxc_frameInput_capturePressed;
-    bool hxc_quitPressed_hd8afebab4ae7 = hxc_frameInput_quitPressed;
-    int32_t hxc_hotbarSelection_h92d1ed3827bb = hxc_frameInput_hotbarSelection;
-    int32_t hxc_hotbarCycle_h9e8986394191 = hxc_frameInput_hotbarCycle;
+    bool hxc_quitPressed_h2b01f405fe62 = hxc_frameInput_quitPressed;
+    int32_t hxc_hotbarSelection_h28bbffbca158 = hxc_frameInput_hotbarSelection;
+    int32_t hxc_hotbarCycle_hb4b8a76d91ad = hxc_frameInput_hotbarCycle;
     bool hxc_descendHeld = hxc_frameInput_descendHeld;
-    if (hxc_quitPressed_hd8afebab4ae7)
+    if (hxc_quitPressed_h2b01f405fe62)
     {
       hxc_quit = true;
     }
-    if (hxc_hotbarSelection_h92d1ed3827bb >= 0)
+    if (hxc_hotbarSelection_h28bbffbca158 >= 0)
     {
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n144 = hxc_inventory;
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n146 = hxc_caxecraft_gameplay_Inventory_select(hxc_tmp_load_result_n144, hxc_hotbarSelection_h92d1ed3827bb);
-      hxc_inventory = hxc_tmp_call_result_n146;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n150 = hxc_inventory;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n152 = hxc_caxecraft_gameplay_Inventory_select(hxc_tmp_load_result_n150, hxc_hotbarSelection_h28bbffbca158);
+      hxc_inventory = hxc_tmp_call_result_n152;
     }
-    if (hxc_hotbarCycle_h9e8986394191 != 0)
+    if (hxc_hotbarCycle_hb4b8a76d91ad != 0)
     {
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n148 = hxc_inventory;
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n150 = hxc_caxecraft_gameplay_Inventory_cycle(hxc_tmp_load_result_n148, hxc_hotbarCycle_h9e8986394191);
-      hxc_inventory = hxc_tmp_call_result_n150;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n154 = hxc_inventory;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n156 = hxc_caxecraft_gameplay_Inventory_cycle(hxc_tmp_load_result_n154, hxc_hotbarCycle_hb4b8a76d91ad);
+      hxc_inventory = hxc_tmp_call_result_n156;
     }
-    bool hxc_tmp_call_result_n152 = hxc_caxecraft_app_AppScreen_isPlaying(hxc_screen);
-    bool hxc_tmp_short_circuit_result_n114 = hxc_tmp_call_result_n152;
-    if (hxc_tmp_call_result_n152)
+    bool hxc_tmp_call_result_n158 = hxc_caxecraft_app_AppScreen_isPlaying(hxc_screen);
+    bool hxc_tmp_short_circuit_result_n110 = hxc_tmp_call_result_n158;
+    if (hxc_tmp_call_result_n158)
     {
-      hxc_tmp_short_circuit_result_n114 = hxc_interactPressed_h57fc42df9573;
+      hxc_tmp_short_circuit_result_n110 = hxc_interactPressed_h3ff6d3fee486;
     }
-    if (hxc_tmp_short_circuit_result_n114)
+    if (hxc_tmp_short_circuit_result_n110)
     {
       if (hxc_character.hxc_vitals.hxc_health <= 0)
       {
-        struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n156 = hxc_character;
-        struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n157 = hxc_caxecraft_app_CaxecraftApp_spawnPlayer(hxc_cells, hxc_tmp_length_n3);
-        struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n158 = hxc_caxecraft_domain_Character_reviveAt(hxc_tmp_load_result_n156, hxc_tmp_call_result_n157);
-        hxc_character = hxc_tmp_call_result_n158;
+        struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n162 = hxc_character;
+        struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n163 = &(*hxc_self).hxc_session;
+        if (hxc_tmp_owned_class_field_address_n163 == NULL)
+        {
+          abort();
+        }
+        size_t hxc_tmp_length_n165;
+        const uint8_t *hxc_tmp_instance_call_result_n164 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n163, &hxc_tmp_length_n165);
+        struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n166 = hxc_caxecraft_app_CaxecraftApp_spawnPlayer(hxc_tmp_instance_call_result_n164, hxc_tmp_length_n165);
+        struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n167 = hxc_caxecraft_domain_Character_reviveAt(hxc_tmp_load_result_n162, hxc_tmp_call_result_n166);
+        hxc_character = hxc_tmp_call_result_n167;
         hxc_cameraWaterBlend = 0.0;
         hxc_accumulator = 0.0;
         hxc_resetMotionThisFrame = true;
       }
       else
       {
-        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n159 = hxc_guide;
-        double hxc_tmp_record_field_load_result_n160 = hxc_character.hxc_body.hxc_x;
-        bool hxc_tmp_call_result_n162 = hxc_caxecraft_gameplay_GuideNpc_isInRange(hxc_tmp_load_result_n159, hxc_tmp_record_field_load_result_n160, hxc_character.hxc_body.hxc_z);
-        if (hxc_tmp_call_result_n162)
+        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n168 = hxc_guide;
+        double hxc_tmp_record_field_load_result_n169 = hxc_character.hxc_body.hxc_x;
+        bool hxc_tmp_call_result_n171 = hxc_caxecraft_gameplay_GuideNpc_isInRange(hxc_tmp_load_result_n168, hxc_tmp_record_field_load_result_n169, hxc_character.hxc_body.hxc_z);
+        if (hxc_tmp_call_result_n171)
         {
-          bool hxc_tmp_call_result_n164 = hxc_caxecraft_gameplay_GuideNpc_sharesBerriesOnNextInteraction(hxc_guide);
-          bool hxc_sharesBerries = hxc_tmp_call_result_n164;
+          bool hxc_tmp_call_result_n173 = hxc_caxecraft_gameplay_GuideNpc_sharesBerriesOnNextInteraction(hxc_guide);
+          bool hxc_sharesBerries = hxc_tmp_call_result_n173;
           if (hxc_sharesBerries)
           {
-            int32_t hxc_tmp_call_result_n168 = hxc_caxecraft_gameplay_Inventory_acceptedAmount(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_Berries, 2);
-            int32_t hxc_acceptedGift = hxc_tmp_call_result_n168;
+            int32_t hxc_tmp_call_result_n177 = hxc_caxecraft_gameplay_Inventory_acceptedAmount(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_Berries, 2);
+            int32_t hxc_acceptedGift = hxc_tmp_call_result_n177;
             if (hxc_acceptedGift == 2)
             {
-              struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n170 = hxc_inventory;
-              struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n173 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_tmp_load_result_n170, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_acceptedGift);
-              hxc_inventory = hxc_tmp_call_result_n173;
-              struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n175 = hxc_caxecraft_gameplay_GuideNpc_interact(hxc_guide);
-              hxc_guide = hxc_tmp_call_result_n175;
+              struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n179 = hxc_inventory;
+              struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n182 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_tmp_load_result_n179, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_acceptedGift);
+              hxc_inventory = hxc_tmp_call_result_n182;
+              struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n184 = hxc_caxecraft_gameplay_GuideNpc_interact(hxc_guide);
+              hxc_guide = hxc_tmp_call_result_n184;
             }
             else
             {
@@ -1055,56 +1073,56 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
           }
           else
           {
-            struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n177 = hxc_caxecraft_gameplay_GuideNpc_interact(hxc_guide);
-            hxc_guide = hxc_tmp_call_result_n177;
+            struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n186 = hxc_caxecraft_gameplay_GuideNpc_interact(hxc_guide);
+            hxc_guide = hxc_tmp_call_result_n186;
           }
         }
       }
     }
-    bool hxc_tmp_call_result_n179 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
-    bool hxc_tmp_short_circuit_result_n117 = hxc_tmp_call_result_n179;
-    if (hxc_tmp_call_result_n179)
+    bool hxc_tmp_call_result_n188 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
+    bool hxc_tmp_short_circuit_result_n113 = hxc_tmp_call_result_n188;
+    if (hxc_tmp_call_result_n188)
     {
-      hxc_tmp_short_circuit_result_n117 = hxc_focused;
+      hxc_tmp_short_circuit_result_n113 = hxc_focused;
     }
-    if (hxc_tmp_short_circuit_result_n117)
+    if (hxc_tmp_short_circuit_result_n113)
     {
       int32_t hxc_modeBeforeInput = hxc_selectedMode;
-      bool hxc_tmp_native_call_result_n183 = IsKeyPressed((int32_t)76);
-      if (hxc_tmp_native_call_result_n183)
+      bool hxc_tmp_native_call_result_n192 = IsKeyPressed((int32_t)76);
+      if (hxc_tmp_native_call_result_n192)
       {
-        int32_t hxc_tmp_call_result_n185 = hxc_caxecraft_localization_UiCatalog_nextLocale(hxc_locale);
-        hxc_locale = hxc_tmp_call_result_n185;
+        int32_t hxc_tmp_call_result_n194 = hxc_caxecraft_localization_UiCatalog_nextLocale(hxc_locale);
+        hxc_locale = hxc_tmp_call_result_n194;
       }
-      bool hxc_tmp_native_call_result_n186 = IsKeyPressed((int32_t)265);
-      bool hxc_tmp_short_circuit_result_n119 = hxc_tmp_native_call_result_n186;
-      if (!hxc_tmp_native_call_result_n186)
+      bool hxc_tmp_native_call_result_n195 = IsKeyPressed((int32_t)265);
+      bool hxc_tmp_short_circuit_result_n115 = hxc_tmp_native_call_result_n195;
+      if (!hxc_tmp_native_call_result_n195)
       {
-        bool hxc_tmp_native_call_result_n187 = IsKeyPressed((int32_t)264);
-        hxc_tmp_short_circuit_result_n119 = hxc_tmp_native_call_result_n187;
+        bool hxc_tmp_native_call_result_n196 = IsKeyPressed((int32_t)264);
+        hxc_tmp_short_circuit_result_n115 = hxc_tmp_native_call_result_n196;
       }
-      if (hxc_tmp_short_circuit_result_n119)
+      if (hxc_tmp_short_circuit_result_n115)
       {
-        int32_t hxc_tmp_load_result_n189 = hxc_selectedMode;
-        int32_t hxc_tmp_conditional_result_n120 = 0;
-        if (hxc_tmp_load_result_n189 == 0)
+        int32_t hxc_tmp_load_result_n198 = hxc_selectedMode;
+        int32_t hxc_tmp_conditional_result_n116 = 0;
+        if (hxc_tmp_load_result_n198 == 0)
         {
-          hxc_tmp_conditional_result_n120 = 1;
+          hxc_tmp_conditional_result_n116 = 1;
         }
         else
         {
-          hxc_tmp_conditional_result_n120 = 0;
+          hxc_tmp_conditional_result_n116 = 0;
         }
-        hxc_selectedMode = hxc_tmp_conditional_result_n120;
+        hxc_selectedMode = hxc_tmp_conditional_result_n116;
       }
-      struct Vector2 hxc_tmp_native_call_result_n191 = GetMousePosition();
-      struct Vector2 hxc_menuMouse = hxc_tmp_native_call_result_n191;
-      struct Vector2 hxc_tmp_load_result_n192 = hxc_menuMouse;
-      struct Vector2 hxc_tmp_load_result_n194 = hxc_menuMouse;
-      int32_t hxc_tmp_native_call_result_n196 = GetScreenWidth();
-      int32_t hxc_tmp_native_call_result_n197 = GetScreenHeight();
-      int32_t hxc_tmp_call_result_n198 = hxc_caxecraft_app_TitleMenu_selectionAt((double)hxc_tmp_load_result_n192.x, (double)hxc_tmp_load_result_n194.y, (int32_t)hxc_tmp_native_call_result_n196, (int32_t)hxc_tmp_native_call_result_n197);
-      int32_t hxc_hovered = hxc_tmp_call_result_n198;
+      struct Vector2 hxc_tmp_native_call_result_n200 = GetMousePosition();
+      struct Vector2 hxc_menuMouse = hxc_tmp_native_call_result_n200;
+      struct Vector2 hxc_tmp_load_result_n201 = hxc_menuMouse;
+      struct Vector2 hxc_tmp_load_result_n203 = hxc_menuMouse;
+      int32_t hxc_tmp_native_call_result_n205 = GetScreenWidth();
+      int32_t hxc_tmp_native_call_result_n206 = GetScreenHeight();
+      int32_t hxc_tmp_call_result_n207 = hxc_caxecraft_app_TitleMenu_selectionAt((double)hxc_tmp_load_result_n201.x, (double)hxc_tmp_load_result_n203.y, (int32_t)hxc_tmp_native_call_result_n205, (int32_t)hxc_tmp_native_call_result_n206);
+      int32_t hxc_hovered = hxc_tmp_call_result_n207;
       if (hxc_hovered == 0)
       {
         hxc_selectedMode = 0;
@@ -1113,47 +1131,47 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
       {
         hxc_selectedMode = 1;
       }
-      int32_t hxc_tmp_load_result_n201 = hxc_selectedMode;
-      if (hxc_tmp_load_result_n201 != hxc_modeBeforeInput)
+      int32_t hxc_tmp_load_result_n210 = hxc_selectedMode;
+      if (hxc_tmp_load_result_n210 != hxc_modeBeforeInput)
       {
         hxc_accumulator = 0.0;
         hxc_resetMotionThisFrame = true;
       }
-      int32_t hxc_tmp_load_result_n203 = hxc_hovered;
-      bool hxc_tmp_short_circuit_result_n124 = hxc_tmp_load_result_n203 >= 0;
-      if (hxc_tmp_load_result_n203 >= 0)
+      int32_t hxc_tmp_load_result_n212 = hxc_hovered;
+      bool hxc_tmp_short_circuit_result_n120 = hxc_tmp_load_result_n212 >= 0;
+      if (hxc_tmp_load_result_n212 >= 0)
       {
-        bool hxc_tmp_native_call_result_n204 = IsMouseButtonPressed((int32_t)0);
-        hxc_tmp_short_circuit_result_n124 = hxc_tmp_native_call_result_n204;
+        bool hxc_tmp_native_call_result_n213 = IsMouseButtonPressed((int32_t)0);
+        hxc_tmp_short_circuit_result_n120 = hxc_tmp_native_call_result_n213;
       }
-      bool hxc_clickedChoice = hxc_tmp_short_circuit_result_n124;
-      bool hxc_tmp_load_result_n206 = hxc_clickedChoice;
-      bool hxc_tmp_short_circuit_result_n125 = hxc_tmp_load_result_n206;
-      if (hxc_tmp_load_result_n206)
+      bool hxc_clickedChoice = hxc_tmp_short_circuit_result_n120;
+      bool hxc_tmp_load_result_n215 = hxc_clickedChoice;
+      bool hxc_tmp_short_circuit_result_n121 = hxc_tmp_load_result_n215;
+      if (hxc_tmp_load_result_n215)
       {
-        hxc_tmp_short_circuit_result_n125 = hxc_hovered == 2;
+        hxc_tmp_short_circuit_result_n121 = hxc_hovered == 2;
       }
-      if (hxc_tmp_short_circuit_result_n125)
+      if (hxc_tmp_short_circuit_result_n121)
       {
-        enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n210 = hxc_caxecraft_app_AppScreen_openEditor(hxc_screen);
-        hxc_screen = hxc_tmp_call_result_n210;
+        enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n219 = hxc_caxecraft_app_AppScreen_openEditor(hxc_screen);
+        hxc_screen = hxc_tmp_call_result_n219;
         hxc_accumulator = 0.0;
         hxc_resetMotionThisFrame = true;
         EnableCursor();
       }
       else
       {
-        bool hxc_tmp_load_result_n211 = hxc_clickedChoice;
-        bool hxc_tmp_short_circuit_result_n126 = hxc_tmp_load_result_n211;
-        if (!hxc_tmp_load_result_n211)
+        bool hxc_tmp_load_result_n220 = hxc_clickedChoice;
+        bool hxc_tmp_short_circuit_result_n122 = hxc_tmp_load_result_n220;
+        if (!hxc_tmp_load_result_n220)
         {
-          bool hxc_tmp_native_call_result_n212 = IsKeyPressed((int32_t)257);
-          hxc_tmp_short_circuit_result_n126 = hxc_tmp_native_call_result_n212;
+          bool hxc_tmp_native_call_result_n221 = IsKeyPressed((int32_t)257);
+          hxc_tmp_short_circuit_result_n122 = hxc_tmp_native_call_result_n221;
         }
-        if (hxc_tmp_short_circuit_result_n126)
+        if (hxc_tmp_short_circuit_result_n122)
         {
-          enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n215 = hxc_caxecraft_app_AppScreen_startPlaying(hxc_screen);
-          hxc_screen = hxc_tmp_call_result_n215;
+          enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n224 = hxc_caxecraft_app_AppScreen_startPlaying(hxc_screen);
+          hxc_screen = hxc_tmp_call_result_n224;
           hxc_recapturedThisFrame = true;
           hxc_accumulator = 0.0;
           hxc_resetMotionThisFrame = true;
@@ -1161,69 +1179,69 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
         }
       }
     }
-    bool hxc_tmp_load_result_n216 = hxc_focused;
-    bool hxc_tmp_short_circuit_result_n127 = !hxc_tmp_load_result_n216;
-    if (!hxc_tmp_load_result_n216)
+    bool hxc_tmp_load_result_n225 = hxc_focused;
+    bool hxc_tmp_short_circuit_result_n123 = !hxc_tmp_load_result_n225;
+    if (!hxc_tmp_load_result_n225)
     {
-      bool hxc_tmp_call_result_n218 = hxc_caxecraft_app_AppScreen_isPlaying(hxc_screen);
-      hxc_tmp_short_circuit_result_n127 = hxc_tmp_call_result_n218;
+      bool hxc_tmp_call_result_n227 = hxc_caxecraft_app_AppScreen_isPlaying(hxc_screen);
+      hxc_tmp_short_circuit_result_n123 = hxc_tmp_call_result_n227;
     }
-    if (hxc_tmp_short_circuit_result_n127)
+    if (hxc_tmp_short_circuit_result_n123)
     {
-      enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n221 = hxc_caxecraft_app_AppScreen_loseFocus(hxc_screen);
-      hxc_screen = hxc_tmp_call_result_n221;
+      enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n230 = hxc_caxecraft_app_AppScreen_loseFocus(hxc_screen);
+      hxc_screen = hxc_tmp_call_result_n230;
       hxc_jumpQueued = false;
       hxc_accumulator = 0.0;
       hxc_resetMotionThisFrame = true;
       EnableCursor();
     }
-    bool hxc_tmp_call_result_n223 = hxc_caxecraft_app_AppScreen_showsEditor(hxc_screen);
-    bool hxc_tmp_short_circuit_result_n128 = hxc_tmp_call_result_n223;
-    if (hxc_tmp_call_result_n223)
+    bool hxc_tmp_call_result_n232 = hxc_caxecraft_app_AppScreen_showsEditor(hxc_screen);
+    bool hxc_tmp_short_circuit_result_n124 = hxc_tmp_call_result_n232;
+    if (hxc_tmp_call_result_n232)
     {
-      hxc_tmp_short_circuit_result_n128 = hxc_focused;
+      hxc_tmp_short_circuit_result_n124 = hxc_focused;
     }
-    bool hxc_tmp_short_circuit_load_result_n225 = hxc_tmp_short_circuit_result_n128;
-    bool hxc_tmp_short_circuit_result_n129 = hxc_tmp_short_circuit_load_result_n225;
-    if (hxc_tmp_short_circuit_load_result_n225)
+    bool hxc_tmp_short_circuit_load_result_n234 = hxc_tmp_short_circuit_result_n124;
+    bool hxc_tmp_short_circuit_result_n125 = hxc_tmp_short_circuit_load_result_n234;
+    if (hxc_tmp_short_circuit_load_result_n234)
     {
-      hxc_tmp_short_circuit_result_n129 = hxc_pausePressed_h5a4e4e6ca492;
+      hxc_tmp_short_circuit_result_n125 = hxc_pausePressed_h06bdfd900460;
     }
-    if (hxc_tmp_short_circuit_result_n129)
+    if (hxc_tmp_short_circuit_result_n125)
     {
-      enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n229 = hxc_caxecraft_app_AppScreen_closeEditor(hxc_screen);
-      hxc_screen = hxc_tmp_call_result_n229;
+      enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n238 = hxc_caxecraft_app_AppScreen_closeEditor(hxc_screen);
+      hxc_screen = hxc_tmp_call_result_n238;
       hxc_accumulator = 0.0;
       hxc_resetMotionThisFrame = true;
       EnableCursor();
     }
     else
     {
-      bool hxc_tmp_call_result_n231 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
-      bool hxc_tmp_short_circuit_result_n130 = !hxc_tmp_call_result_n231;
-      if (!hxc_tmp_call_result_n231)
+      bool hxc_tmp_call_result_n240 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
+      bool hxc_tmp_short_circuit_result_n126 = !hxc_tmp_call_result_n240;
+      if (!hxc_tmp_call_result_n240)
       {
-        hxc_tmp_short_circuit_result_n130 = hxc_focused;
+        hxc_tmp_short_circuit_result_n126 = hxc_focused;
       }
-      bool hxc_tmp_short_circuit_load_result_n233 = hxc_tmp_short_circuit_result_n130;
-      bool hxc_tmp_short_circuit_result_n131 = hxc_tmp_short_circuit_load_result_n233;
-      if (hxc_tmp_short_circuit_load_result_n233)
+      bool hxc_tmp_short_circuit_load_result_n242 = hxc_tmp_short_circuit_result_n126;
+      bool hxc_tmp_short_circuit_result_n127 = hxc_tmp_short_circuit_load_result_n242;
+      if (hxc_tmp_short_circuit_load_result_n242)
       {
-        hxc_tmp_short_circuit_result_n131 = hxc_pausePressed_h5a4e4e6ca492;
+        hxc_tmp_short_circuit_result_n127 = hxc_pausePressed_h06bdfd900460;
       }
-      if (hxc_tmp_short_circuit_result_n131)
+      if (hxc_tmp_short_circuit_result_n127)
       {
-        enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n237 = hxc_caxecraft_app_AppScreen_togglePause(hxc_screen);
-        hxc_screen = hxc_tmp_call_result_n237;
+        enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n246 = hxc_caxecraft_app_AppScreen_togglePause(hxc_screen);
+        hxc_screen = hxc_tmp_call_result_n246;
         hxc_accumulator = 0.0;
         hxc_resetMotionThisFrame = true;
-        bool hxc_tmp_call_result_n239 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
-        if (hxc_tmp_call_result_n239)
+        bool hxc_tmp_call_result_n248 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
+        if (hxc_tmp_call_result_n248)
         {
           hxc_jumpQueued = false;
         }
-        bool hxc_tmp_call_result_n241 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
-        if (hxc_tmp_call_result_n241)
+        bool hxc_tmp_call_result_n250 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
+        if (hxc_tmp_call_result_n250)
         {
           DisableCursor();
         }
@@ -1233,52 +1251,52 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
         }
       }
     }
-    bool hxc_tmp_call_result_n243 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
-    bool hxc_tmp_short_circuit_result_n132 = !hxc_tmp_call_result_n243;
-    if (!hxc_tmp_call_result_n243)
+    bool hxc_tmp_call_result_n252 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
+    bool hxc_tmp_short_circuit_result_n128 = !hxc_tmp_call_result_n252;
+    if (!hxc_tmp_call_result_n252)
     {
-      bool hxc_tmp_call_result_n245 = hxc_caxecraft_app_AppScreen_showsEditor(hxc_screen);
-      hxc_tmp_short_circuit_result_n132 = !hxc_tmp_call_result_n245;
+      bool hxc_tmp_call_result_n254 = hxc_caxecraft_app_AppScreen_showsEditor(hxc_screen);
+      hxc_tmp_short_circuit_result_n128 = !hxc_tmp_call_result_n254;
     }
-    bool hxc_tmp_short_circuit_load_result_n246 = hxc_tmp_short_circuit_result_n132;
-    bool hxc_tmp_short_circuit_result_n133 = hxc_tmp_short_circuit_load_result_n246;
-    if (hxc_tmp_short_circuit_load_result_n246)
+    bool hxc_tmp_short_circuit_load_result_n255 = hxc_tmp_short_circuit_result_n128;
+    bool hxc_tmp_short_circuit_result_n129 = hxc_tmp_short_circuit_load_result_n255;
+    if (hxc_tmp_short_circuit_load_result_n255)
     {
-      hxc_tmp_short_circuit_result_n133 = hxc_focused;
+      hxc_tmp_short_circuit_result_n129 = hxc_focused;
     }
-    bool hxc_tmp_short_circuit_load_result_n248 = hxc_tmp_short_circuit_result_n133;
-    bool hxc_tmp_short_circuit_result_n134 = hxc_tmp_short_circuit_load_result_n248;
-    if (hxc_tmp_short_circuit_load_result_n248)
+    bool hxc_tmp_short_circuit_load_result_n257 = hxc_tmp_short_circuit_result_n129;
+    bool hxc_tmp_short_circuit_result_n130 = hxc_tmp_short_circuit_load_result_n257;
+    if (hxc_tmp_short_circuit_load_result_n257)
     {
-      bool hxc_tmp_call_result_n250 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
-      hxc_tmp_short_circuit_result_n134 = hxc_tmp_call_result_n250;
+      bool hxc_tmp_call_result_n259 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
+      hxc_tmp_short_circuit_result_n130 = hxc_tmp_call_result_n259;
     }
-    bool hxc_tmp_short_circuit_load_result_n251 = hxc_tmp_short_circuit_result_n134;
-    bool hxc_tmp_short_circuit_result_n135 = hxc_tmp_short_circuit_load_result_n251;
-    if (hxc_tmp_short_circuit_load_result_n251)
+    bool hxc_tmp_short_circuit_load_result_n260 = hxc_tmp_short_circuit_result_n130;
+    bool hxc_tmp_short_circuit_result_n131 = hxc_tmp_short_circuit_load_result_n260;
+    if (hxc_tmp_short_circuit_load_result_n260)
     {
-      hxc_tmp_short_circuit_result_n135 = hxc_capturePressed;
+      hxc_tmp_short_circuit_result_n131 = hxc_capturePressed;
     }
-    if (hxc_tmp_short_circuit_result_n135)
+    if (hxc_tmp_short_circuit_result_n131)
     {
-      enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n255 = hxc_caxecraft_app_AppScreen_recapture(hxc_screen);
-      hxc_screen = hxc_tmp_call_result_n255;
+      enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n264 = hxc_caxecraft_app_AppScreen_recapture(hxc_screen);
+      hxc_screen = hxc_tmp_call_result_n264;
       hxc_recapturedThisFrame = true;
       hxc_accumulator = 0.0;
       hxc_resetMotionThisFrame = true;
       DisableCursor();
     }
-    bool hxc_tmp_call_result_n257 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
-    bool hxc_onTitle = hxc_tmp_call_result_n257;
-    bool hxc_tmp_call_result_n259 = hxc_caxecraft_app_AppScreen_showsEditor(hxc_screen);
-    bool hxc_onEditor = hxc_tmp_call_result_n259;
-    bool hxc_tmp_call_result_n261 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
-    bool hxc_paused_h1f5b7f5f52ab = hxc_tmp_call_result_n261;
-    bool hxc_tmp_call_result_n263 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
-    bool hxc_captured_hc92eeb5fda1c = hxc_tmp_call_result_n263;
-    if (hxc_captured_hc92eeb5fda1c)
+    bool hxc_tmp_call_result_n266 = hxc_caxecraft_app_AppScreen_showsTitle(hxc_screen);
+    bool hxc_onTitle = hxc_tmp_call_result_n266;
+    bool hxc_tmp_call_result_n268 = hxc_caxecraft_app_AppScreen_showsEditor(hxc_screen);
+    bool hxc_onEditor = hxc_tmp_call_result_n268;
+    bool hxc_tmp_call_result_n270 = hxc_caxecraft_app_AppScreen_pausesSimulation(hxc_screen);
+    bool hxc_paused_h39f5af304915 = hxc_tmp_call_result_n270;
+    bool hxc_tmp_call_result_n272 = hxc_caxecraft_app_AppScreen_capturesPointer(hxc_screen);
+    bool hxc_captured_h6756636cf2ae = hxc_tmp_call_result_n272;
+    if (hxc_captured_h6756636cf2ae)
     {
-      double hxc_yawDelta = hxc_lookYaw_h52e265ab3392;
+      double hxc_yawDelta = hxc_lookYaw_h392e84460ac7;
       if (hxc_yawDelta > 0.25)
       {
         hxc_yawDelta = 0.25;
@@ -1287,23 +1305,23 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
       {
         hxc_yawDelta = -0.25;
       }
-      double hxc_tmp_load_result_n268 = hxc_lookX;
-      double hxc_tmp_load_result_n269 = hxc_yawDelta;
-      double hxc_candidateX = hxc_tmp_load_result_n268 + hxc_tmp_load_result_n269 * hxc_lookZ;
-      double hxc_tmp_load_result_n271 = hxc_lookZ;
-      double hxc_tmp_load_result_n272 = hxc_yawDelta;
-      double hxc_candidateZ = hxc_tmp_load_result_n271 - hxc_tmp_load_result_n272 * hxc_lookX;
-      double hxc_tmp_load_result_n274 = hxc_candidateX;
-      double hxc_tmp_load_result_n275 = hxc_candidateX;
-      double hxc_tmp_load_result_n276 = hxc_candidateZ;
-      double hxc_lengthSquared = hxc_tmp_load_result_n274 * hxc_tmp_load_result_n275 + hxc_tmp_load_result_n276 * hxc_candidateZ;
+      double hxc_tmp_load_result_n277 = hxc_lookX;
+      double hxc_tmp_load_result_n278 = hxc_yawDelta;
+      double hxc_candidateX = hxc_tmp_load_result_n277 + hxc_tmp_load_result_n278 * hxc_lookZ;
+      double hxc_tmp_load_result_n280 = hxc_lookZ;
+      double hxc_tmp_load_result_n281 = hxc_yawDelta;
+      double hxc_candidateZ = hxc_tmp_load_result_n280 - hxc_tmp_load_result_n281 * hxc_lookX;
+      double hxc_tmp_load_result_n283 = hxc_candidateX;
+      double hxc_tmp_load_result_n284 = hxc_candidateX;
+      double hxc_tmp_load_result_n285 = hxc_candidateZ;
+      double hxc_lengthSquared = hxc_tmp_load_result_n283 * hxc_tmp_load_result_n284 + hxc_tmp_load_result_n285 * hxc_candidateZ;
       double hxc_normalize = 1.5 - 0.5 * hxc_lengthSquared;
-      double hxc_tmp_load_result_n279 = hxc_candidateX;
-      hxc_lookX = hxc_tmp_load_result_n279 * hxc_normalize;
-      double hxc_tmp_load_result_n281 = hxc_candidateZ;
-      hxc_lookZ = hxc_tmp_load_result_n281 * hxc_normalize;
-      double hxc_tmp_compound_load_result_n283 = hxc_lookY;
-      hxc_lookY = hxc_tmp_compound_load_result_n283 + hxc_lookPitch_hc9c1a0baac13;
+      double hxc_tmp_load_result_n288 = hxc_candidateX;
+      hxc_lookX = hxc_tmp_load_result_n288 * hxc_normalize;
+      double hxc_tmp_load_result_n290 = hxc_candidateZ;
+      hxc_lookZ = hxc_tmp_load_result_n290 * hxc_normalize;
+      double hxc_tmp_compound_load_result_n292 = hxc_lookY;
+      hxc_lookY = hxc_tmp_compound_load_result_n292 + hxc_lookPitch_h2ad440705588;
       if (hxc_lookY > 0.90)
       {
         hxc_lookY = 0.90;
@@ -1312,110 +1330,110 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
       {
         hxc_lookY = -0.90;
       }
-      if (hxc_jumpPressed_h09e185bca9ef)
+      if (hxc_jumpPressed_h8ed2cfbff572)
       {
         hxc_jumpQueued = true;
       }
     }
-    float hxc_tmp_native_call_result_n288 = GetFrameTime();
-    double hxc_frameSeconds = (double)hxc_tmp_native_call_result_n288;
+    float hxc_tmp_native_call_result_n297 = GetFrameTime();
+    double hxc_frameSeconds = (double)hxc_tmp_native_call_result_n297;
     if (hxc_frameSeconds > 0.25)
     {
       hxc_frameSeconds = 0.25;
     }
-    bool hxc_tmp_load_result_n290 = hxc_captured_hc92eeb5fda1c;
-    bool hxc_tmp_short_circuit_result_n146 = hxc_tmp_load_result_n290;
-    if (hxc_tmp_load_result_n290)
+    bool hxc_tmp_load_result_n299 = hxc_captured_h6756636cf2ae;
+    bool hxc_tmp_short_circuit_result_n142 = hxc_tmp_load_result_n299;
+    if (hxc_tmp_load_result_n299)
     {
-      hxc_tmp_short_circuit_result_n146 = !hxc_recapturedThisFrame;
+      hxc_tmp_short_circuit_result_n142 = !hxc_recapturedThisFrame;
     }
-    bool hxc_tmp_short_circuit_load_result_n292 = hxc_tmp_short_circuit_result_n146;
-    bool hxc_tmp_short_circuit_result_n147 = hxc_tmp_short_circuit_load_result_n292;
-    if (hxc_tmp_short_circuit_load_result_n292)
+    bool hxc_tmp_short_circuit_load_result_n301 = hxc_tmp_short_circuit_result_n142;
+    bool hxc_tmp_short_circuit_result_n143 = hxc_tmp_short_circuit_load_result_n301;
+    if (hxc_tmp_short_circuit_load_result_n301)
     {
-      hxc_tmp_short_circuit_result_n147 = hxc_primaryPressed_h14933bca7ddc;
+      hxc_tmp_short_circuit_result_n143 = hxc_primaryPressed_h4ff46dcccd0b;
     }
-    bool hxc_tmp_short_circuit_load_result_n294 = hxc_tmp_short_circuit_result_n147;
-    bool hxc_tmp_short_circuit_result_n148 = hxc_tmp_short_circuit_load_result_n294;
-    if (hxc_tmp_short_circuit_load_result_n294)
+    bool hxc_tmp_short_circuit_load_result_n303 = hxc_tmp_short_circuit_result_n143;
+    bool hxc_tmp_short_circuit_result_n144 = hxc_tmp_short_circuit_load_result_n303;
+    if (hxc_tmp_short_circuit_load_result_n303)
     {
-      hxc_tmp_short_circuit_result_n148 = hxc_selectedMode == 1;
+      hxc_tmp_short_circuit_result_n144 = hxc_selectedMode == 1;
     }
-    bool hxc_tmp_short_circuit_load_result_n296 = hxc_tmp_short_circuit_result_n148;
-    bool hxc_tmp_short_circuit_result_n149 = hxc_tmp_short_circuit_load_result_n296;
-    if (hxc_tmp_short_circuit_load_result_n296)
+    bool hxc_tmp_short_circuit_load_result_n305 = hxc_tmp_short_circuit_result_n144;
+    bool hxc_tmp_short_circuit_result_n145 = hxc_tmp_short_circuit_load_result_n305;
+    if (hxc_tmp_short_circuit_load_result_n305)
     {
-      bool hxc_tmp_call_result_n299 = hxc_caxecraft_gameplay_Inventory_selectedIs(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_CopperSword);
-      hxc_tmp_short_circuit_result_n149 = hxc_tmp_call_result_n299;
+      bool hxc_tmp_call_result_n308 = hxc_caxecraft_gameplay_Inventory_selectedIs(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_CopperSword);
+      hxc_tmp_short_circuit_result_n145 = hxc_tmp_call_result_n308;
     }
-    if (hxc_tmp_short_circuit_result_n149)
+    if (hxc_tmp_short_circuit_result_n145)
     {
       hxc_swordQueued = true;
     }
-    if (!hxc_paused_h1f5b7f5f52ab)
+    if (!hxc_paused_h39f5af304915)
     {
-      double hxc_tmp_compound_load_result_n302 = hxc_accumulator;
-      hxc_accumulator = hxc_tmp_compound_load_result_n302 + hxc_frameSeconds;
+      double hxc_tmp_compound_load_result_n311 = hxc_accumulator;
+      hxc_accumulator = hxc_tmp_compound_load_result_n311 + hxc_frameSeconds;
     }
     while (1)
     {
-      bool hxc_tmp_load_result_n304 = hxc_paused_h1f5b7f5f52ab;
-      bool hxc_tmp_short_circuit_result_n150 = !hxc_tmp_load_result_n304;
-      if (!hxc_tmp_load_result_n304)
+      bool hxc_tmp_load_result_n313 = hxc_paused_h39f5af304915;
+      bool hxc_tmp_short_circuit_result_n146 = !hxc_tmp_load_result_n313;
+      if (!hxc_tmp_load_result_n313)
       {
-        hxc_tmp_short_circuit_result_n150 = hxc_accumulator >= 0.05;
+        hxc_tmp_short_circuit_result_n146 = hxc_accumulator >= 0.05;
       }
-      if (!hxc_tmp_short_circuit_result_n150)
+      if (!hxc_tmp_short_circuit_result_n146)
       {
         break;
       }
-      double hxc_tmp_load_result_n307 = hxc_moveForward;
-      double hxc_tmp_load_result_n308 = hxc_lookX;
-      double hxc_tmp_load_result_n309 = hxc_moveRight;
-      double hxc_moveX = hxc_tmp_load_result_n307 * hxc_tmp_load_result_n308 - hxc_tmp_load_result_n309 * hxc_lookZ;
-      double hxc_tmp_load_result_n311 = hxc_moveForward;
-      double hxc_tmp_load_result_n312 = hxc_lookZ;
-      double hxc_tmp_load_result_n313 = hxc_moveRight;
-      double hxc_moveZ = hxc_tmp_load_result_n311 * hxc_tmp_load_result_n312 + hxc_tmp_load_result_n313 * hxc_lookX;
-      double hxc_tmp_load_result_n315 = hxc_moveForward;
-      bool hxc_tmp_short_circuit_result_n153 = hxc_tmp_load_result_n315 != 0.0;
-      if (hxc_tmp_load_result_n315 != 0.0)
+      double hxc_tmp_load_result_n316 = hxc_moveForward;
+      double hxc_tmp_load_result_n317 = hxc_lookX;
+      double hxc_tmp_load_result_n318 = hxc_moveRight;
+      double hxc_moveX = hxc_tmp_load_result_n316 * hxc_tmp_load_result_n317 - hxc_tmp_load_result_n318 * hxc_lookZ;
+      double hxc_tmp_load_result_n320 = hxc_moveForward;
+      double hxc_tmp_load_result_n321 = hxc_lookZ;
+      double hxc_tmp_load_result_n322 = hxc_moveRight;
+      double hxc_moveZ = hxc_tmp_load_result_n320 * hxc_tmp_load_result_n321 + hxc_tmp_load_result_n322 * hxc_lookX;
+      double hxc_tmp_load_result_n324 = hxc_moveForward;
+      bool hxc_tmp_short_circuit_result_n149 = hxc_tmp_load_result_n324 != 0.0;
+      if (hxc_tmp_load_result_n324 != 0.0)
       {
-        hxc_tmp_short_circuit_result_n153 = hxc_moveRight != 0.0;
+        hxc_tmp_short_circuit_result_n149 = hxc_moveRight != 0.0;
       }
-      if (hxc_tmp_short_circuit_result_n153)
+      if (hxc_tmp_short_circuit_result_n149)
       {
         hxc_moveX = hxc_moveX * 0.7071067811865476;
         hxc_moveZ = hxc_moveZ * 0.7071067811865476;
       }
-      int32_t hxc_tmp_load_result_n320 = hxc_selectedMode;
-      int32_t hxc_tmp_conditional_result_n155 = 0;
-      if (hxc_tmp_load_result_n320 == 1)
+      int32_t hxc_tmp_load_result_n329 = hxc_selectedMode;
+      int32_t hxc_tmp_conditional_result_n151 = 0;
+      if (hxc_tmp_load_result_n329 == 1)
       {
-        hxc_tmp_conditional_result_n155 = 1;
+        hxc_tmp_conditional_result_n151 = 1;
       }
       else
       {
-        hxc_tmp_conditional_result_n155 = 0;
+        hxc_tmp_conditional_result_n151 = 0;
       }
-      int32_t hxc_damagePolicy = hxc_tmp_conditional_result_n155;
-      struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n322 = &(*hxc_self).hxc_session;
-      if (hxc_tmp_owned_class_field_address_n322 == NULL)
+      int32_t hxc_damagePolicy = hxc_tmp_conditional_result_n151;
+      struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n331 = &(*hxc_self).hxc_session;
+      if (hxc_tmp_owned_class_field_address_n331 == NULL)
       {
         abort();
       }
-      double hxc_tmp_load_result_n323 = hxc_moveX;
-      double hxc_tmp_load_result_n324 = hxc_moveZ;
-      bool hxc_tmp_load_result_n325 = hxc_jumpQueued;
-      struct hxc_caxecraft_domain_CharacterIntent hxc_tmp_call_result_n327 = hxc_caxecraft_domain_Aquatics_input(hxc_tmp_load_result_n323, hxc_tmp_load_result_n324, hxc_tmp_load_result_n325, hxc_descendHeld);
-      struct hxc_caxecraft_domain_GameTickResult hxc_tmp_instance_call_result_n330 = hxc_caxecraft_domain_GameSession_tick(hxc_tmp_owned_class_field_address_n322, (struct hxc_caxecraft_domain_GameTickInput){ .hxc_damagePolicy = hxc_damagePolicy, .hxc_intent = hxc_tmp_call_result_n327, .hxc_waterUpdateBudget = 64 });
-      struct hxc_caxecraft_domain_GameTickResult hxc_gameTick = hxc_tmp_instance_call_result_n330;
+      double hxc_tmp_load_result_n332 = hxc_moveX;
+      double hxc_tmp_load_result_n333 = hxc_moveZ;
+      bool hxc_tmp_load_result_n334 = hxc_jumpQueued;
+      struct hxc_caxecraft_domain_CharacterIntent hxc_tmp_call_result_n336 = hxc_caxecraft_domain_Aquatics_input(hxc_tmp_load_result_n332, hxc_tmp_load_result_n333, hxc_tmp_load_result_n334, hxc_descendHeld);
+      struct hxc_caxecraft_domain_GameTickResult hxc_tmp_instance_call_result_n339 = hxc_caxecraft_domain_GameSession_tick(hxc_tmp_owned_class_field_address_n331, (struct hxc_caxecraft_domain_GameTickInput){ .hxc_damagePolicy = hxc_damagePolicy, .hxc_intent = hxc_tmp_call_result_n336, .hxc_waterUpdateBudget = 64 });
+      struct hxc_caxecraft_domain_GameTickResult hxc_gameTick = hxc_tmp_instance_call_result_n339;
       hxc_character = hxc_gameTick.hxc_character;
       if (hxc_gameTick.hxc_committed)
       {
-        struct hxc_caxecraft_app_MotionHistory hxc_tmp_load_result_n333 = hxc_motionHistory;
-        struct hxc_caxecraft_app_MotionHistory hxc_tmp_call_result_n335 = hxc_caxecraft_app_MotionInterpolation_advance(hxc_tmp_load_result_n333, hxc_character.hxc_body);
-        hxc_motionHistory = hxc_tmp_call_result_n335;
+        struct hxc_caxecraft_app_MotionHistory hxc_tmp_load_result_n342 = hxc_motionHistory;
+        struct hxc_caxecraft_app_MotionHistory hxc_tmp_call_result_n344 = hxc_caxecraft_app_MotionInterpolation_advance(hxc_tmp_load_result_n342, hxc_character.hxc_body);
+        hxc_motionHistory = hxc_tmp_call_result_n344;
       }
       hxc_cameraWaterBlend = hxc_gameTick.hxc_immersion.hxc_cameraBlend;
       if (!hxc_gameTick.hxc_committed)
@@ -1431,54 +1449,56 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
           {
             break;
           }
-          int32_t hxc_tmp_load_result_n340 = hxc_pickupIndex;
-          if (hxc_tmp_load_result_n340 < 0 || (size_t)hxc_tmp_load_result_n340 >= hxc_tmp_length_n4)
+          struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n349 = &(*hxc_self).hxc_session;
+          if (hxc_tmp_owned_class_field_address_n349 == NULL)
           {
             abort();
           }
-          int32_t hxc_tmp_collection_index_load_result_n341 = hxc_itemActive[(size_t)hxc_tmp_load_result_n340];
-          int32_t hxc_tmp_load_result_n342 = hxc_inactiveItem;
-          bool hxc_tmp_short_circuit_result_n158 = hxc_tmp_collection_index_load_result_n341 != hxc_tmp_load_result_n342;
-          if (hxc_tmp_collection_index_load_result_n341 != hxc_tmp_load_result_n342)
+          bool hxc_tmp_instance_call_result_n351 = hxc_caxecraft_domain_GameSession_authoredItemIsActive(hxc_tmp_owned_class_field_address_n349, hxc_pickupIndex);
+          bool hxc_tmp_short_circuit_result_n154 = hxc_tmp_instance_call_result_n351;
+          if (hxc_tmp_instance_call_result_n351)
           {
-            double hxc_tmp_record_field_load_result_n343 = hxc_character.hxc_body.hxc_x;
-            double hxc_tmp_record_field_load_result_n344 = hxc_character.hxc_body.hxc_y;
-            double hxc_tmp_record_field_load_result_n345 = hxc_character.hxc_body.hxc_z;
-            int32_t hxc_tmp_call_result_n347 = hxc_caxecraft_content_FirstPlayableLevel_itemXMilli(hxc_pickupIndex);
-            int32_t hxc_tmp_call_result_n349 = hxc_caxecraft_content_FirstPlayableLevel_itemYMilli(hxc_pickupIndex);
-            int32_t hxc_tmp_call_result_n351 = hxc_caxecraft_content_FirstPlayableLevel_itemZMilli(hxc_pickupIndex);
-            bool hxc_tmp_call_result_n352 = hxc_caxecraft_gameplay_WorldItemPickup_isInRange(hxc_tmp_record_field_load_result_n343, hxc_tmp_record_field_load_result_n344, hxc_tmp_record_field_load_result_n345, hxc_tmp_call_result_n347, hxc_tmp_call_result_n349, hxc_tmp_call_result_n351);
-            hxc_tmp_short_circuit_result_n158 = hxc_tmp_call_result_n352;
+            double hxc_tmp_record_field_load_result_n352 = hxc_character.hxc_body.hxc_x;
+            double hxc_tmp_record_field_load_result_n353 = hxc_character.hxc_body.hxc_y;
+            double hxc_tmp_record_field_load_result_n354 = hxc_character.hxc_body.hxc_z;
+            int32_t hxc_tmp_call_result_n356 = hxc_caxecraft_content_FirstPlayableLevel_itemXMilli(hxc_pickupIndex);
+            int32_t hxc_tmp_call_result_n358 = hxc_caxecraft_content_FirstPlayableLevel_itemYMilli(hxc_pickupIndex);
+            int32_t hxc_tmp_call_result_n360 = hxc_caxecraft_content_FirstPlayableLevel_itemZMilli(hxc_pickupIndex);
+            bool hxc_tmp_call_result_n361 = hxc_caxecraft_gameplay_WorldItemPickup_isInRange(hxc_tmp_record_field_load_result_n352, hxc_tmp_record_field_load_result_n353, hxc_tmp_record_field_load_result_n354, hxc_tmp_call_result_n356, hxc_tmp_call_result_n358, hxc_tmp_call_result_n360);
+            hxc_tmp_short_circuit_result_n154 = hxc_tmp_call_result_n361;
           }
-          if (hxc_tmp_short_circuit_result_n158)
+          if (hxc_tmp_short_circuit_result_n154)
           {
-            int32_t hxc_tmp_call_result_n355 = hxc_caxecraft_content_FirstPlayableLevel_itemStorageCode(hxc_pickupIndex);
-            int32_t hxc_itemCode = hxc_tmp_call_result_n355;
-            int32_t hxc_tmp_call_result_n357 = hxc_caxecraft_content_BaseContentPack_itemFromValidatedStorageCode(hxc_itemCode);
-            int32_t hxc_item = hxc_tmp_call_result_n357;
-            int32_t hxc_tmp_call_result_n359 = hxc_caxecraft_content_BaseContentPack_itemUseProfile(hxc_item);
-            bool hxc_tmp_short_circuit_result_n161 = hxc_tmp_call_result_n359 == 1;
-            if (hxc_tmp_call_result_n359 == 1)
+            int32_t hxc_tmp_call_result_n364 = hxc_caxecraft_content_FirstPlayableLevel_itemStorageCode(hxc_pickupIndex);
+            int32_t hxc_itemCode = hxc_tmp_call_result_n364;
+            int32_t hxc_tmp_call_result_n366 = hxc_caxecraft_content_BaseContentPack_itemFromValidatedStorageCode(hxc_itemCode);
+            int32_t hxc_item = hxc_tmp_call_result_n366;
+            int32_t hxc_tmp_call_result_n368 = hxc_caxecraft_content_BaseContentPack_itemUseProfile(hxc_item);
+            bool hxc_tmp_short_circuit_result_n157 = hxc_tmp_call_result_n368 == 1;
+            if (hxc_tmp_call_result_n368 == 1)
             {
-              bool hxc_tmp_call_result_n361 = hxc_caxecraft_content_BaseContentPack_itemProvidesAquaticProfile(hxc_item);
-              hxc_tmp_short_circuit_result_n161 = hxc_tmp_call_result_n361;
+              bool hxc_tmp_call_result_n370 = hxc_caxecraft_content_BaseContentPack_itemProvidesAquaticProfile(hxc_item);
+              hxc_tmp_short_circuit_result_n157 = hxc_tmp_call_result_n370;
             }
-            if (hxc_tmp_short_circuit_result_n161)
+            if (hxc_tmp_short_circuit_result_n157)
             {
-              int32_t hxc_tmp_call_result_n364 = hxc_caxecraft_content_BaseContentPack_itemAquaticProfile(hxc_item);
-              struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_call_result_n365 = hxc_caxecraft_content_BaseContentPack_aquaticProfile(hxc_tmp_call_result_n364);
-              struct hxc_caxecraft_domain_AquaticProfile hxc_replacement = hxc_tmp_call_result_n365;
-              struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n366 = hxc_character;
-              struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n368 = hxc_caxecraft_domain_Character_adoptProfile(hxc_tmp_load_result_n366, hxc_replacement);
-              hxc_character = hxc_tmp_call_result_n368;
-              hxc_aquaticEquipmentCode = hxc_itemCode;
-              hxc_aquaticEquipmentFrames = 120;
-              int32_t hxc_tmp_load_result_n370 = hxc_pickupIndex;
-              if (hxc_tmp_load_result_n370 < 0 || (size_t)hxc_tmp_load_result_n370 >= hxc_tmp_length_n4)
+              int32_t hxc_tmp_call_result_n373 = hxc_caxecraft_content_BaseContentPack_itemAquaticProfile(hxc_item);
+              struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_call_result_n374 = hxc_caxecraft_content_BaseContentPack_aquaticProfile(hxc_tmp_call_result_n373);
+              struct hxc_caxecraft_domain_AquaticProfile hxc_replacement = hxc_tmp_call_result_n374;
+              struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n375 = &(*hxc_self).hxc_session;
+              if (hxc_tmp_owned_class_field_address_n375 == NULL)
               {
                 abort();
               }
-              hxc_itemActive[(size_t)hxc_tmp_load_result_n370] = hxc_inactiveItem;
+              bool hxc_tmp_instance_call_result_n377 = hxc_caxecraft_domain_GameSession_deactivateAuthoredItem(hxc_tmp_owned_class_field_address_n375, hxc_pickupIndex);
+              if (hxc_tmp_instance_call_result_n377)
+              {
+                struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n378 = hxc_character;
+                struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n380 = hxc_caxecraft_domain_Character_adoptProfile(hxc_tmp_load_result_n378, hxc_replacement);
+                hxc_character = hxc_tmp_call_result_n380;
+                hxc_aquaticEquipmentCode = hxc_itemCode;
+                hxc_aquaticEquipmentFrames = 120;
+              }
             }
           }
           hxc_pickupIndex = hxc_i32_add_wrapping(hxc_pickupIndex, 1);
@@ -1488,64 +1508,71 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
       {
         if (hxc_character.hxc_vitals.hxc_health > 0)
         {
-          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n375 = hxc_mossling;
-          double hxc_tmp_record_field_load_result_n376 = hxc_character.hxc_body.hxc_x;
-          bool hxc_tmp_call_result_n378 = hxc_caxecraft_gameplay_Mossling_attacksThisTick(hxc_tmp_load_result_n375, hxc_tmp_record_field_load_result_n376, hxc_character.hxc_body.hxc_z);
-          bool hxc_mosslingAttacked = hxc_tmp_call_result_n378;
-          struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n379 = hxc_character;
-          struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n381 = hxc_caxecraft_domain_Character_applyAttack(hxc_tmp_load_result_n379, hxc_mosslingAttacked);
-          hxc_character = hxc_tmp_call_result_n381;
+          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n385 = hxc_mossling;
+          double hxc_tmp_record_field_load_result_n386 = hxc_character.hxc_body.hxc_x;
+          bool hxc_tmp_call_result_n388 = hxc_caxecraft_gameplay_Mossling_attacksThisTick(hxc_tmp_load_result_n385, hxc_tmp_record_field_load_result_n386, hxc_character.hxc_body.hxc_z);
+          bool hxc_mosslingAttacked = hxc_tmp_call_result_n388;
+          struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n389 = hxc_character;
+          struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n391 = hxc_caxecraft_domain_Character_applyAttack(hxc_tmp_load_result_n389, hxc_mosslingAttacked);
+          hxc_character = hxc_tmp_call_result_n391;
           if (hxc_mosslingAttacked)
           {
             hxc_enemyAttackFrames = 120;
           }
-          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n383 = hxc_mossling;
-          double hxc_tmp_record_field_load_result_n384 = hxc_character.hxc_body.hxc_x;
-          double hxc_tmp_record_field_load_result_n385 = hxc_character.hxc_body.hxc_z;
-          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n387 = hxc_caxecraft_gameplay_Mossling_step(hxc_cells, hxc_tmp_length_n3, hxc_tmp_load_result_n383, hxc_tmp_record_field_load_result_n384, hxc_tmp_record_field_load_result_n385, hxc_gameTick.hxc_tickIndex);
-          hxc_mossling = hxc_tmp_call_result_n387;
+          struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n393 = &(*hxc_self).hxc_session;
+          if (hxc_tmp_owned_class_field_address_n393 == NULL)
+          {
+            abort();
+          }
+          size_t hxc_tmp_length_n395;
+          const uint8_t *hxc_tmp_instance_call_result_n394 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n393, &hxc_tmp_length_n395);
+          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n396 = hxc_mossling;
+          double hxc_tmp_record_field_load_result_n397 = hxc_character.hxc_body.hxc_x;
+          double hxc_tmp_record_field_load_result_n398 = hxc_character.hxc_body.hxc_z;
+          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n400 = hxc_caxecraft_gameplay_Mossling_step(hxc_tmp_instance_call_result_n394, hxc_tmp_length_n395, hxc_tmp_load_result_n396, hxc_tmp_record_field_load_result_n397, hxc_tmp_record_field_load_result_n398, hxc_gameTick.hxc_tickIndex);
+          hxc_mossling = hxc_tmp_call_result_n400;
         }
-        struct hxc_caxecraft_gameplay_SwordCombatState hxc_tmp_call_result_n389 = hxc_caxecraft_gameplay_SwordCombat_step(hxc_swordCombat);
-        hxc_swordCombat = hxc_tmp_call_result_n389;
+        struct hxc_caxecraft_gameplay_SwordCombatState hxc_tmp_call_result_n402 = hxc_caxecraft_gameplay_SwordCombat_step(hxc_swordCombat);
+        hxc_swordCombat = hxc_tmp_call_result_n402;
         if (hxc_swordQueued)
         {
-          struct hxc_caxecraft_gameplay_SwordCombatState hxc_tmp_load_result_n391 = hxc_swordCombat;
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n392 = hxc_inventory;
-          struct hxc_caxecraft_domain_VitalsState hxc_tmp_record_field_load_result_n393 = hxc_character.hxc_vitals;
-          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n394 = hxc_mossling;
-          double hxc_tmp_record_field_load_result_n395 = hxc_character.hxc_body.hxc_x;
-          double hxc_tmp_record_field_load_result_n396 = hxc_character.hxc_body.hxc_z;
-          double hxc_tmp_load_result_n397 = hxc_lookX;
-          int32_t hxc_tmp_call_result_n399 = hxc_caxecraft_gameplay_SwordCombat_decide(hxc_tmp_load_result_n391, hxc_tmp_load_result_n392, hxc_tmp_record_field_load_result_n393, hxc_tmp_load_result_n394, hxc_tmp_record_field_load_result_n395, hxc_tmp_record_field_load_result_n396, hxc_tmp_load_result_n397, hxc_lookZ);
-          int32_t hxc_swordDecision = hxc_tmp_call_result_n399;
+          struct hxc_caxecraft_gameplay_SwordCombatState hxc_tmp_load_result_n404 = hxc_swordCombat;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n405 = hxc_inventory;
+          struct hxc_caxecraft_domain_VitalsState hxc_tmp_record_field_load_result_n406 = hxc_character.hxc_vitals;
+          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n407 = hxc_mossling;
+          double hxc_tmp_record_field_load_result_n408 = hxc_character.hxc_body.hxc_x;
+          double hxc_tmp_record_field_load_result_n409 = hxc_character.hxc_body.hxc_z;
+          double hxc_tmp_load_result_n410 = hxc_lookX;
+          int32_t hxc_tmp_call_result_n412 = hxc_caxecraft_gameplay_SwordCombat_decide(hxc_tmp_load_result_n404, hxc_tmp_load_result_n405, hxc_tmp_record_field_load_result_n406, hxc_tmp_load_result_n407, hxc_tmp_record_field_load_result_n408, hxc_tmp_record_field_load_result_n409, hxc_tmp_load_result_n410, hxc_lookZ);
+          int32_t hxc_swordDecision = hxc_tmp_call_result_n412;
           if (hxc_swordDecision == 5)
           {
-            struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n402 = hxc_caxecraft_gameplay_Mossling_strike(hxc_mossling);
-            hxc_mossling = hxc_tmp_call_result_n402;
+            struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n415 = hxc_caxecraft_gameplay_Mossling_strike(hxc_mossling);
+            hxc_mossling = hxc_tmp_call_result_n415;
             hxc_strikeHitFrames = 16;
             if (hxc_mossling.hxc_health <= 0)
             {
-              struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_call_result_n405 = hxc_caxecraft_gameplay_BerryDrop_fromDefeatedMossling(hxc_mossling);
-              hxc_berryDrop = hxc_tmp_call_result_n405;
+              struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_call_result_n418 = hxc_caxecraft_gameplay_BerryDrop_fromDefeatedMossling(hxc_mossling);
+              hxc_berryDrop = hxc_tmp_call_result_n418;
               hxc_enemyDefeatedFrames = 120;
             }
           }
-          int32_t hxc_tmp_load_result_n406 = hxc_swordDecision;
-          struct hxc_caxecraft_gameplay_SwordCombatState hxc_tmp_call_result_n408 = hxc_caxecraft_gameplay_SwordCombat_after(hxc_tmp_load_result_n406, hxc_swordCombat);
-          hxc_swordCombat = hxc_tmp_call_result_n408;
+          int32_t hxc_tmp_load_result_n419 = hxc_swordDecision;
+          struct hxc_caxecraft_gameplay_SwordCombatState hxc_tmp_call_result_n421 = hxc_caxecraft_gameplay_SwordCombat_after(hxc_tmp_load_result_n419, hxc_swordCombat);
+          hxc_swordCombat = hxc_tmp_call_result_n421;
           hxc_swordQueued = false;
         }
       }
       hxc_jumpQueued = false;
       hxc_accumulator = hxc_accumulator - 0.05;
     }
-    struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n410 = &(*hxc_self).hxc_session;
-    if (hxc_tmp_owned_class_field_address_n410 == NULL)
+    struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n423 = &(*hxc_self).hxc_session;
+    if (hxc_tmp_owned_class_field_address_n423 == NULL)
     {
       abort();
     }
-    struct hxc_caxecraft_domain_GameView hxc_tmp_instance_call_result_n411 = hxc_caxecraft_domain_GameSession_view(hxc_tmp_owned_class_field_address_n410);
-    struct hxc_caxecraft_domain_GameView hxc_committedView = hxc_tmp_instance_call_result_n411;
+    struct hxc_caxecraft_domain_GameView hxc_tmp_instance_call_result_n424 = hxc_caxecraft_domain_GameSession_view(hxc_tmp_owned_class_field_address_n423);
+    struct hxc_caxecraft_domain_GameView hxc_committedView = hxc_tmp_instance_call_result_n424;
     if (!hxc_committedView.hxc_valid)
     {
       hxc_quit = true;
@@ -1554,71 +1581,76 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
     double hxc_selectionEyeX = hxc_character.hxc_body.hxc_x;
     double hxc_selectionEyeY = hxc_character.hxc_body.hxc_y + 1.62;
     double hxc_selectionEyeZ = hxc_character.hxc_body.hxc_z;
-    double hxc_tmp_load_result_n417 = hxc_selectionEyeX;
-    double hxc_tmp_load_result_n418 = hxc_selectionEyeY;
-    double hxc_tmp_load_result_n419 = hxc_selectionEyeZ;
-    double hxc_tmp_load_result_n420 = hxc_lookX;
-    double hxc_tmp_load_result_n421 = hxc_lookY;
-    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n423 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_cells, hxc_tmp_length_n3, hxc_tmp_load_result_n417, hxc_tmp_load_result_n418, hxc_tmp_load_result_n419, hxc_tmp_load_result_n420, hxc_tmp_load_result_n421, hxc_lookZ, 7.0);
-    struct hxc_caxecraft_domain_RaycastHit hxc_hit = hxc_tmp_call_result_n423;
-    bool hxc_tmp_load_result_n424 = hxc_captured_hc92eeb5fda1c;
-    bool hxc_tmp_short_circuit_result_n171 = hxc_tmp_load_result_n424;
-    if (hxc_tmp_load_result_n424)
+    struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n430 = &(*hxc_self).hxc_session;
+    if (hxc_tmp_owned_class_field_address_n430 == NULL)
     {
-      hxc_tmp_short_circuit_result_n171 = !hxc_recapturedThisFrame;
+      abort();
     }
-    bool hxc_tmp_short_circuit_load_result_n426 = hxc_tmp_short_circuit_result_n171;
-    bool hxc_tmp_short_circuit_result_n172 = hxc_tmp_short_circuit_load_result_n426;
-    if (hxc_tmp_short_circuit_load_result_n426)
+    size_t hxc_tmp_length_n432;
+    const uint8_t *hxc_tmp_instance_call_result_n431 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n430, &hxc_tmp_length_n432);
+    double hxc_tmp_load_result_n433 = hxc_selectionEyeX;
+    double hxc_tmp_load_result_n434 = hxc_selectionEyeY;
+    double hxc_tmp_load_result_n435 = hxc_selectionEyeZ;
+    double hxc_tmp_load_result_n436 = hxc_lookX;
+    double hxc_tmp_load_result_n437 = hxc_lookY;
+    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n439 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_tmp_instance_call_result_n431, hxc_tmp_length_n432, hxc_tmp_load_result_n433, hxc_tmp_load_result_n434, hxc_tmp_load_result_n435, hxc_tmp_load_result_n436, hxc_tmp_load_result_n437, hxc_lookZ, 7.0);
+    struct hxc_caxecraft_domain_RaycastHit hxc_hit = hxc_tmp_call_result_n439;
+    bool hxc_tmp_load_result_n440 = hxc_captured_h6756636cf2ae;
+    bool hxc_tmp_short_circuit_result_n167 = hxc_tmp_load_result_n440;
+    if (hxc_tmp_load_result_n440)
     {
-      hxc_tmp_short_circuit_result_n172 = hxc_primaryPressed_h14933bca7ddc;
+      hxc_tmp_short_circuit_result_n167 = !hxc_recapturedThisFrame;
     }
-    if (hxc_tmp_short_circuit_result_n172)
+    bool hxc_tmp_short_circuit_load_result_n442 = hxc_tmp_short_circuit_result_n167;
+    bool hxc_tmp_short_circuit_result_n168 = hxc_tmp_short_circuit_load_result_n442;
+    if (hxc_tmp_short_circuit_load_result_n442)
+    {
+      hxc_tmp_short_circuit_result_n168 = hxc_primaryPressed_h4ff46dcccd0b;
+    }
+    if (hxc_tmp_short_circuit_result_n168)
     {
       if (hxc_character.hxc_vitals.hxc_health > 0)
       {
         if (hxc_selectedMode == 1)
         {
-          bool hxc_tmp_call_result_n433 = hxc_caxecraft_gameplay_Inventory_selectedIs(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_CopperSword);
-          bool hxc_tmp_short_circuit_result_n173 = !hxc_tmp_call_result_n433;
-          if (!hxc_tmp_call_result_n433)
+          bool hxc_tmp_call_result_n449 = hxc_caxecraft_gameplay_Inventory_selectedIs(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_CopperSword);
+          bool hxc_tmp_short_circuit_result_n169 = !hxc_tmp_call_result_n449;
+          if (!hxc_tmp_call_result_n449)
           {
-            hxc_tmp_short_circuit_result_n173 = hxc_hit.hxc_hit;
+            hxc_tmp_short_circuit_result_n169 = hxc_hit.hxc_hit;
           }
-          bool hxc_tmp_short_circuit_load_result_n435 = hxc_tmp_short_circuit_result_n173;
-          bool hxc_tmp_short_circuit_result_n174 = hxc_tmp_short_circuit_load_result_n435;
-          if (hxc_tmp_short_circuit_load_result_n435)
+          bool hxc_tmp_short_circuit_load_result_n451 = hxc_tmp_short_circuit_result_n169;
+          bool hxc_tmp_short_circuit_result_n170 = hxc_tmp_short_circuit_load_result_n451;
+          if (hxc_tmp_short_circuit_load_result_n451)
           {
-            struct hxc_caxecraft_domain_AquaticState hxc_tmp_record_field_load_result_n436 = hxc_character.hxc_aquatic;
-            bool hxc_tmp_call_result_n438 = hxc_caxecraft_domain_Aquatics_canMine(hxc_tmp_record_field_load_result_n436, hxc_character.hxc_aquaticProfile);
-            hxc_tmp_short_circuit_result_n174 = hxc_tmp_call_result_n438;
+            struct hxc_caxecraft_domain_AquaticState hxc_tmp_record_field_load_result_n452 = hxc_character.hxc_aquatic;
+            bool hxc_tmp_call_result_n454 = hxc_caxecraft_domain_Aquatics_canMine(hxc_tmp_record_field_load_result_n452, hxc_character.hxc_aquaticProfile);
+            hxc_tmp_short_circuit_result_n170 = hxc_tmp_call_result_n454;
           }
-          if (hxc_tmp_short_circuit_result_n174)
+          if (hxc_tmp_short_circuit_result_n170)
           {
-            int32_t hxc_tmp_record_field_load_result_n440 = hxc_hit.hxc_cellX;
-            int32_t hxc_tmp_record_field_load_result_n441 = hxc_hit.hxc_cellY;
-            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n443 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n440, hxc_tmp_record_field_load_result_n441, hxc_hit.hxc_cellZ);
-            struct hxc_caxecraft_scenario_VoxelPoint hxc_minedCoordinate = hxc_tmp_call_result_n443;
-            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_load_result_n444 = hxc_minedCoordinate;
-            struct hxc_caxecraft_gameplay_MiningResult hxc_tmp_call_result_n446 = hxc_caxecraft_gameplay_Mining_attempt(hxc_cells, hxc_tmp_length_n3, hxc_tmp_load_result_n444, hxc_inventory);
-            struct hxc_caxecraft_gameplay_MiningResult hxc_mining = hxc_tmp_call_result_n446;
+            int32_t hxc_tmp_record_field_load_result_n456 = hxc_hit.hxc_cellX;
+            int32_t hxc_tmp_record_field_load_result_n457 = hxc_hit.hxc_cellY;
+            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n459 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n456, hxc_tmp_record_field_load_result_n457, hxc_hit.hxc_cellZ);
+            struct hxc_caxecraft_scenario_VoxelPoint hxc_minedCoordinate = hxc_tmp_call_result_n459;
+            struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n460 = &(*hxc_self).hxc_session;
+            if (hxc_tmp_owned_class_field_address_n460 == NULL)
+            {
+              abort();
+            }
+            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_load_result_n461 = hxc_minedCoordinate;
+            struct hxc_caxecraft_gameplay_MiningResult hxc_tmp_instance_call_result_n463 = hxc_caxecraft_domain_GameSession_mineTerrain(hxc_tmp_owned_class_field_address_n460, hxc_tmp_load_result_n461, hxc_inventory);
+            struct hxc_caxecraft_gameplay_MiningResult hxc_mining = hxc_tmp_instance_call_result_n463;
             hxc_inventory = hxc_mining.hxc_inventory;
             if (hxc_mining.hxc_outcome == 2)
             {
-              struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n449 = &(*hxc_self).hxc_session;
-              struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n450 = &(*hxc_tmp_owned_class_field_address_n449).hxc_water;
-              if (hxc_tmp_owned_class_field_address_n450 == NULL)
+              struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n466 = &(*hxc_self).hxc_terrainRenderer;
+              struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n467 = &(*hxc_tmp_owned_class_field_address_n466).hxc_cache;
+              if (hxc_tmp_owned_class_field_address_n467 == NULL)
               {
                 abort();
               }
-              hxc_caxecraft_domain_WaterSimulation_terrainChanged(hxc_tmp_owned_class_field_address_n450, hxc_minedCoordinate);
-              struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n452 = &(*hxc_self).hxc_terrainRenderer;
-              struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n453 = &(*hxc_tmp_owned_class_field_address_n452).hxc_cache;
-              if (hxc_tmp_owned_class_field_address_n453 == NULL)
-              {
-                abort();
-              }
-              hxc_caxecraft_app_TerrainChunkCache_invalidate(hxc_tmp_owned_class_field_address_n453, hxc_minedCoordinate);
+              hxc_caxecraft_app_TerrainChunkCache_invalidate(hxc_tmp_owned_class_field_address_n467, hxc_minedCoordinate);
             }
             if (hxc_mining.hxc_outcome == 1)
             {
@@ -1631,117 +1663,115 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
         {
           if (hxc_hit.hxc_hit)
           {
-            int32_t hxc_tmp_record_field_load_result_n457 = hxc_hit.hxc_cellX;
-            int32_t hxc_tmp_record_field_load_result_n458 = hxc_hit.hxc_cellY;
-            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n460 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n457, hxc_tmp_record_field_load_result_n458, hxc_hit.hxc_cellZ);
-            struct hxc_caxecraft_scenario_VoxelPoint hxc_removedCoordinate = hxc_tmp_call_result_n460;
-            struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n461 = &(*hxc_self).hxc_session;
-            struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n462 = &(*hxc_tmp_owned_class_field_address_n461).hxc_water;
-            if (hxc_tmp_owned_class_field_address_n462 == NULL)
+            int32_t hxc_tmp_record_field_load_result_n471 = hxc_hit.hxc_cellX;
+            int32_t hxc_tmp_record_field_load_result_n472 = hxc_hit.hxc_cellY;
+            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n474 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n471, hxc_tmp_record_field_load_result_n472, hxc_hit.hxc_cellZ);
+            struct hxc_caxecraft_scenario_VoxelPoint hxc_removedCoordinate = hxc_tmp_call_result_n474;
+            struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n475 = &(*hxc_self).hxc_session;
+            if (hxc_tmp_owned_class_field_address_n475 == NULL)
             {
               abort();
             }
-            bool hxc_tmp_instance_call_result_n464 = hxc_caxecraft_domain_WaterSimulation_removeTerrain(hxc_tmp_owned_class_field_address_n462, hxc_cells, hxc_tmp_length_n3, hxc_removedCoordinate);
-            bool hxc_removed = hxc_tmp_instance_call_result_n464;
+            bool hxc_tmp_instance_call_result_n477 = hxc_caxecraft_domain_GameSession_removeTerrain(hxc_tmp_owned_class_field_address_n475, hxc_removedCoordinate);
+            bool hxc_removed = hxc_tmp_instance_call_result_n477;
             if (hxc_removed)
             {
-              struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n466 = &(*hxc_self).hxc_terrainRenderer;
-              struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n467 = &(*hxc_tmp_owned_class_field_address_n466).hxc_cache;
-              if (hxc_tmp_owned_class_field_address_n467 == NULL)
+              struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n479 = &(*hxc_self).hxc_terrainRenderer;
+              struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n480 = &(*hxc_tmp_owned_class_field_address_n479).hxc_cache;
+              if (hxc_tmp_owned_class_field_address_n480 == NULL)
               {
                 abort();
               }
-              hxc_caxecraft_app_TerrainChunkCache_invalidate(hxc_tmp_owned_class_field_address_n467, hxc_removedCoordinate);
+              hxc_caxecraft_app_TerrainChunkCache_invalidate(hxc_tmp_owned_class_field_address_n480, hxc_removedCoordinate);
             }
           }
         }
       }
     }
-    bool hxc_tmp_load_result_n469 = hxc_captured_hc92eeb5fda1c;
-    bool hxc_tmp_short_circuit_result_n179 = hxc_tmp_load_result_n469;
-    if (hxc_tmp_load_result_n469)
+    bool hxc_tmp_load_result_n482 = hxc_captured_h6756636cf2ae;
+    bool hxc_tmp_short_circuit_result_n175 = hxc_tmp_load_result_n482;
+    if (hxc_tmp_load_result_n482)
     {
-      hxc_tmp_short_circuit_result_n179 = hxc_secondaryPressed_hbfa41a2f05a4;
+      hxc_tmp_short_circuit_result_n175 = hxc_secondaryPressed_h762a911cecbb;
     }
-    if (hxc_tmp_short_circuit_result_n179)
+    if (hxc_tmp_short_circuit_result_n175)
     {
       if (hxc_character.hxc_vitals.hxc_health > 0)
       {
-        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n473 = hxc_inventory;
-        int32_t hxc_tmp_call_result_n475 = hxc_caxecraft_gameplay_Recovery_decide(hxc_tmp_load_result_n473, hxc_character.hxc_vitals);
-        int32_t hxc_recoveryDecision = hxc_tmp_call_result_n475;
+        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n486 = hxc_inventory;
+        int32_t hxc_tmp_call_result_n488 = hxc_caxecraft_gameplay_Recovery_decide(hxc_tmp_load_result_n486, hxc_character.hxc_vitals);
+        int32_t hxc_recoveryDecision = hxc_tmp_call_result_n488;
         if (hxc_recoveryDecision != 0)
         {
           hxc_recoveryFeedback = hxc_recoveryDecision;
           hxc_recoveryFeedbackFrames = 90;
-          int32_t hxc_tmp_load_result_n478 = hxc_recoveryDecision;
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n480 = hxc_caxecraft_gameplay_Recovery_applyInventory(hxc_tmp_load_result_n478, hxc_inventory);
-          hxc_inventory = hxc_tmp_call_result_n480;
-          struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n481 = hxc_character;
-          int32_t hxc_tmp_load_result_n482 = hxc_recoveryDecision;
-          struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n484 = hxc_caxecraft_gameplay_Recovery_applyVitals(hxc_tmp_load_result_n482, hxc_character.hxc_vitals);
-          struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n485 = hxc_caxecraft_domain_Character_withVitals(hxc_tmp_load_result_n481, hxc_tmp_call_result_n484);
-          hxc_character = hxc_tmp_call_result_n485;
+          int32_t hxc_tmp_load_result_n491 = hxc_recoveryDecision;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n493 = hxc_caxecraft_gameplay_Recovery_applyInventory(hxc_tmp_load_result_n491, hxc_inventory);
+          hxc_inventory = hxc_tmp_call_result_n493;
+          struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n494 = hxc_character;
+          int32_t hxc_tmp_load_result_n495 = hxc_recoveryDecision;
+          struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n497 = hxc_caxecraft_gameplay_Recovery_applyVitals(hxc_tmp_load_result_n495, hxc_character.hxc_vitals);
+          struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n498 = hxc_caxecraft_domain_Character_withVitals(hxc_tmp_load_result_n494, hxc_tmp_call_result_n497);
+          hxc_character = hxc_tmp_call_result_n498;
         }
         else
         {
           if (hxc_hit.hxc_hit)
           {
-            int32_t hxc_tmp_record_field_load_result_n487 = hxc_hit.hxc_previousX;
-            int32_t hxc_tmp_record_field_load_result_n488 = hxc_hit.hxc_previousY;
-            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n490 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n487, hxc_tmp_record_field_load_result_n488, hxc_hit.hxc_previousZ);
-            struct hxc_caxecraft_scenario_VoxelPoint hxc_placement = hxc_tmp_call_result_n490;
-            enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n492 = hxc_caxecraft_gameplay_Inventory_selectedBlock(hxc_inventory);
-            enum hxc_caxecraft_domain_BlockKind hxc_selectedBlock = hxc_tmp_call_result_n492;
-            struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n493 = hxc_inventory;
-            int32_t hxc_tmp_call_result_n495 = hxc_caxecraft_gameplay_Inventory_countAt(hxc_tmp_load_result_n493, hxc_inventory.hxc_selected);
-            bool hxc_hasItem = hxc_tmp_call_result_n495 > 0;
-            bool hxc_tmp_load_result_n496 = hxc_hasItem;
-            bool hxc_tmp_short_circuit_result_n184 = !hxc_tmp_load_result_n496;
-            if (!!hxc_tmp_load_result_n496)
+            int32_t hxc_tmp_record_field_load_result_n500 = hxc_hit.hxc_previousX;
+            int32_t hxc_tmp_record_field_load_result_n501 = hxc_hit.hxc_previousY;
+            struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_call_result_n503 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n500, hxc_tmp_record_field_load_result_n501, hxc_hit.hxc_previousZ);
+            struct hxc_caxecraft_scenario_VoxelPoint hxc_placement = hxc_tmp_call_result_n503;
+            enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n505 = hxc_caxecraft_gameplay_Inventory_selectedBlock(hxc_inventory);
+            enum hxc_caxecraft_domain_BlockKind hxc_selectedBlock = hxc_tmp_call_result_n505;
+            struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n506 = hxc_inventory;
+            int32_t hxc_tmp_call_result_n508 = hxc_caxecraft_gameplay_Inventory_countAt(hxc_tmp_load_result_n506, hxc_inventory.hxc_selected);
+            bool hxc_hasItem = hxc_tmp_call_result_n508 > 0;
+            bool hxc_tmp_load_result_n509 = hxc_hasItem;
+            bool hxc_tmp_short_circuit_result_n180 = !hxc_tmp_load_result_n509;
+            if (!!hxc_tmp_load_result_n509)
             {
-              bool hxc_tmp_call_result_n498 = hxc_caxecraft_domain_World_isPlaceable(hxc_selectedBlock);
-              hxc_tmp_short_circuit_result_n184 = !hxc_tmp_call_result_n498;
+              bool hxc_tmp_call_result_n511 = hxc_caxecraft_domain_World_isPlaceable(hxc_selectedBlock);
+              hxc_tmp_short_circuit_result_n180 = !hxc_tmp_call_result_n511;
             }
-            bool hxc_tmp_short_circuit_load_result_n499 = hxc_tmp_short_circuit_result_n184;
-            bool hxc_tmp_short_circuit_result_n185 = hxc_tmp_short_circuit_load_result_n499;
-            if (!hxc_tmp_short_circuit_load_result_n499)
+            bool hxc_tmp_short_circuit_load_result_n512 = hxc_tmp_short_circuit_result_n180;
+            bool hxc_tmp_short_circuit_result_n181 = hxc_tmp_short_circuit_load_result_n512;
+            if (!hxc_tmp_short_circuit_load_result_n512)
             {
-              struct hxc_caxecraft_domain_CharacterBody hxc_tmp_record_field_load_result_n500 = hxc_character.hxc_body;
-              bool hxc_tmp_call_result_n502 = hxc_caxecraft_domain_CharacterPhysics_canPlaceAt(hxc_tmp_record_field_load_result_n500, hxc_placement);
-              hxc_tmp_short_circuit_result_n185 = !hxc_tmp_call_result_n502;
+              struct hxc_caxecraft_domain_CharacterBody hxc_tmp_record_field_load_result_n513 = hxc_character.hxc_body;
+              bool hxc_tmp_call_result_n515 = hxc_caxecraft_domain_CharacterPhysics_canPlaceAt(hxc_tmp_record_field_load_result_n513, hxc_placement);
+              hxc_tmp_short_circuit_result_n181 = !hxc_tmp_call_result_n515;
             }
-            bool hxc_tmp_short_circuit_load_result_n503 = hxc_tmp_short_circuit_result_n185;
-            bool hxc_tmp_short_circuit_result_n186 = hxc_tmp_short_circuit_load_result_n503;
-            if (!hxc_tmp_short_circuit_load_result_n503)
+            bool hxc_tmp_short_circuit_load_result_n516 = hxc_tmp_short_circuit_result_n181;
+            bool hxc_tmp_short_circuit_result_n182 = hxc_tmp_short_circuit_load_result_n516;
+            if (!hxc_tmp_short_circuit_load_result_n516)
             {
-              struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n504 = &(*hxc_self).hxc_session;
-              struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n505 = &(*hxc_tmp_owned_class_field_address_n504).hxc_water;
-              if (hxc_tmp_owned_class_field_address_n505 == NULL)
+              struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n517 = &(*hxc_self).hxc_session;
+              if (hxc_tmp_owned_class_field_address_n517 == NULL)
               {
                 abort();
               }
-              struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_load_result_n506 = hxc_placement;
-              bool hxc_tmp_instance_call_result_n508 = hxc_caxecraft_domain_WaterSimulation_placeTerrain(hxc_tmp_owned_class_field_address_n505, hxc_cells, hxc_tmp_length_n3, hxc_tmp_load_result_n506, hxc_selectedBlock);
-              hxc_tmp_short_circuit_result_n186 = !hxc_tmp_instance_call_result_n508;
+              struct hxc_caxecraft_scenario_VoxelPoint hxc_tmp_load_result_n518 = hxc_placement;
+              bool hxc_tmp_instance_call_result_n520 = hxc_caxecraft_domain_GameSession_placeTerrain(hxc_tmp_owned_class_field_address_n517, hxc_tmp_load_result_n518, hxc_selectedBlock);
+              hxc_tmp_short_circuit_result_n182 = !hxc_tmp_instance_call_result_n520;
             }
-            if (hxc_tmp_short_circuit_result_n186)
+            if (hxc_tmp_short_circuit_result_n182)
             {
               hxc_placementBlockedFrames = 60;
             }
             else
             {
-              struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n510 = &(*hxc_self).hxc_terrainRenderer;
-              struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n511 = &(*hxc_tmp_owned_class_field_address_n510).hxc_cache;
-              if (hxc_tmp_owned_class_field_address_n511 == NULL)
+              struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n522 = &(*hxc_self).hxc_terrainRenderer;
+              struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n523 = &(*hxc_tmp_owned_class_field_address_n522).hxc_cache;
+              if (hxc_tmp_owned_class_field_address_n523 == NULL)
               {
                 abort();
               }
-              hxc_caxecraft_app_TerrainChunkCache_invalidate(hxc_tmp_owned_class_field_address_n511, hxc_placement);
+              hxc_caxecraft_app_TerrainChunkCache_invalidate(hxc_tmp_owned_class_field_address_n523, hxc_placement);
               if (hxc_selectedMode == 1)
               {
-                struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n515 = hxc_caxecraft_gameplay_Inventory_consumeSelected(hxc_inventory);
-                hxc_inventory = hxc_tmp_call_result_n515;
+                struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n527 = hxc_caxecraft_gameplay_Inventory_consumeSelected(hxc_inventory);
+                hxc_inventory = hxc_tmp_call_result_n527;
               }
             }
           }
@@ -1752,25 +1782,25 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
     {
       hxc_placementBlockedFrames = hxc_i32_subtract_wrapping(hxc_placementBlockedFrames, 1);
     }
-    if (!hxc_paused_h1f5b7f5f52ab)
+    if (!hxc_paused_h39f5af304915)
     {
-      struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_load_result_n519 = hxc_berryDrop;
-      double hxc_tmp_record_field_load_result_n520 = hxc_character.hxc_body.hxc_x;
-      double hxc_tmp_record_field_load_result_n521 = hxc_character.hxc_body.hxc_y;
-      bool hxc_tmp_call_result_n523 = hxc_caxecraft_gameplay_BerryDrop_isInRange(hxc_tmp_load_result_n519, hxc_tmp_record_field_load_result_n520, hxc_tmp_record_field_load_result_n521, hxc_character.hxc_body.hxc_z);
-      if (hxc_tmp_call_result_n523)
+      struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_load_result_n531 = hxc_berryDrop;
+      double hxc_tmp_record_field_load_result_n532 = hxc_character.hxc_body.hxc_x;
+      double hxc_tmp_record_field_load_result_n533 = hxc_character.hxc_body.hxc_y;
+      bool hxc_tmp_call_result_n535 = hxc_caxecraft_gameplay_BerryDrop_isInRange(hxc_tmp_load_result_n531, hxc_tmp_record_field_load_result_n532, hxc_tmp_record_field_load_result_n533, hxc_character.hxc_body.hxc_z);
+      if (hxc_tmp_call_result_n535)
       {
-        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n524 = hxc_inventory;
-        int32_t hxc_tmp_call_result_n527 = hxc_caxecraft_gameplay_Inventory_acceptedAmount(hxc_tmp_load_result_n524, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_berryDrop.hxc_amount);
-        int32_t hxc_acceptedDrop = hxc_tmp_call_result_n527;
+        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n536 = hxc_inventory;
+        int32_t hxc_tmp_call_result_n539 = hxc_caxecraft_gameplay_Inventory_acceptedAmount(hxc_tmp_load_result_n536, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_berryDrop.hxc_amount);
+        int32_t hxc_acceptedDrop = hxc_tmp_call_result_n539;
         if (hxc_acceptedDrop > 0)
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n529 = hxc_inventory;
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n532 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_tmp_load_result_n529, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_acceptedDrop);
-          hxc_inventory = hxc_tmp_call_result_n532;
-          struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_load_result_n533 = hxc_berryDrop;
-          struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_call_result_n535 = hxc_caxecraft_gameplay_BerryDrop_collectAmount(hxc_tmp_load_result_n533, hxc_acceptedDrop);
-          hxc_berryDrop = hxc_tmp_call_result_n535;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n541 = hxc_inventory;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n544 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_tmp_load_result_n541, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_acceptedDrop);
+          hxc_inventory = hxc_tmp_call_result_n544;
+          struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_load_result_n545 = hxc_berryDrop;
+          struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_call_result_n547 = hxc_caxecraft_gameplay_BerryDrop_collectAmount(hxc_tmp_load_result_n545, hxc_acceptedDrop);
+          hxc_berryDrop = hxc_tmp_call_result_n547;
           hxc_pickupAmount = hxc_acceptedDrop;
           hxc_pickupFrames = 90;
         }
@@ -1813,365 +1843,386 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
     {
       hxc_aquaticEquipmentFrames = hxc_i32_subtract_wrapping(hxc_aquaticEquipmentFrames, 1);
     }
-    struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n552 = &(*hxc_self).hxc_session;
-    struct hxc_caxecraft_domain_GameSession *hxc_this = hxc_tmp_owned_class_field_address_n552;
-    struct hxc_caxecraft_domain_GameSession *hxc_tmp_load_result_n553 = hxc_this;
-    if (hxc_tmp_load_result_n553 == NULL)
+    struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n564 = &(*hxc_self).hxc_session;
+    struct hxc_caxecraft_domain_GameSession *hxc_this = hxc_tmp_owned_class_field_address_n564;
+    struct hxc_caxecraft_domain_GameSession *hxc_tmp_load_result_n565 = hxc_this;
+    if (hxc_tmp_load_result_n565 == NULL)
     {
       abort();
     }
-    struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n554 = &(*hxc_tmp_load_result_n553).hxc_entities;
-    if (hxc_tmp_owned_class_field_address_n554 == NULL)
+    struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n566 = &(*hxc_tmp_load_result_n565).hxc_entities;
+    if (hxc_tmp_owned_class_field_address_n566 == NULL)
     {
       abort();
     }
-    struct hxc_caxecraft_domain_GameSession *hxc_tmp_load_result_n555 = hxc_this;
-    if (hxc_tmp_load_result_n555 == NULL)
+    struct hxc_caxecraft_domain_GameSession *hxc_tmp_load_result_n567 = hxc_this;
+    if (hxc_tmp_load_result_n567 == NULL)
     {
       abort();
     }
-    struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n556 = (*hxc_tmp_load_result_n555).hxc_localPlayer;
-    bool hxc_tmp_instance_call_result_n559 = hxc_caxecraft_domain_EntityStore_replace(hxc_tmp_owned_class_field_address_n554, hxc_tmp_class_field_load_result_n556.hxc_characterId, hxc_character);
-    if (!hxc_tmp_instance_call_result_n559)
+    struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n568 = (*hxc_tmp_load_result_n567).hxc_localPlayer;
+    bool hxc_tmp_instance_call_result_n571 = hxc_caxecraft_domain_EntityStore_replace(hxc_tmp_owned_class_field_address_n566, hxc_tmp_class_field_load_result_n568.hxc_characterId, hxc_character);
+    if (!hxc_tmp_instance_call_result_n571)
     {
       hxc_quit = true;
     }
     if (hxc_resetMotionThisFrame)
     {
-      struct hxc_caxecraft_app_MotionHistory hxc_tmp_call_result_n562 = hxc_caxecraft_app_MotionInterpolation_start(hxc_character.hxc_body);
-      hxc_motionHistory = hxc_tmp_call_result_n562;
+      struct hxc_caxecraft_app_MotionHistory hxc_tmp_call_result_n574 = hxc_caxecraft_app_MotionInterpolation_start(hxc_character.hxc_body);
+      hxc_motionHistory = hxc_tmp_call_result_n574;
     }
-    struct hxc_caxecraft_app_MotionHistory hxc_tmp_load_result_n563 = hxc_motionHistory;
-    struct hxc_caxecraft_app_RenderPosition hxc_tmp_call_result_n565 = hxc_caxecraft_app_MotionInterpolation_sample(hxc_tmp_load_result_n563, hxc_accumulator, 0.05);
-    struct hxc_caxecraft_app_RenderPosition hxc_renderPosition = hxc_tmp_call_result_n565;
+    struct hxc_caxecraft_app_MotionHistory hxc_tmp_load_result_n575 = hxc_motionHistory;
+    struct hxc_caxecraft_app_RenderPosition hxc_tmp_call_result_n577 = hxc_caxecraft_app_MotionInterpolation_sample(hxc_tmp_load_result_n575, hxc_accumulator, 0.05);
+    struct hxc_caxecraft_app_RenderPosition hxc_renderPosition = hxc_tmp_call_result_n577;
     double hxc_eyeX = hxc_renderPosition.hxc_x;
     double hxc_eyeY = hxc_renderPosition.hxc_y + 1.62;
     double hxc_eyeZ = hxc_renderPosition.hxc_z;
-    double hxc_tmp_load_result_n569 = hxc_eyeX;
-    double hxc_tmp_load_result_n570 = hxc_eyeY;
-    double hxc_tmp_load_result_n571 = hxc_eyeZ;
-    double hxc_tmp_load_result_n573 = hxc_eyeX;
-    double hxc_tmp_load_result_n574 = hxc_lookX;
-    double hxc_tmp_load_result_n575 = hxc_eyeY;
-    double hxc_tmp_load_result_n576 = hxc_lookY;
-    double hxc_tmp_load_result_n577 = hxc_eyeZ;
-    struct Camera3D hxc_camera = (struct Camera3D){ .position = (struct Vector3){ .x = (float)hxc_tmp_load_result_n569, .y = (float)hxc_tmp_load_result_n570, .z = (float)hxc_tmp_load_result_n571 }, .target = (struct Vector3){ .x = (float)(hxc_tmp_load_result_n573 + hxc_tmp_load_result_n574), .y = (float)(hxc_tmp_load_result_n575 + hxc_tmp_load_result_n576), .z = (float)(hxc_tmp_load_result_n577 + hxc_lookZ) }, .up = (struct Vector3){ .x = (float)0.0, .y = (float)1.0, .z = (float)0.0 }, .fovy = (float)70.0, .projection = 0 };
+    double hxc_tmp_load_result_n581 = hxc_eyeX;
+    double hxc_tmp_load_result_n582 = hxc_eyeY;
+    double hxc_tmp_load_result_n583 = hxc_eyeZ;
+    double hxc_tmp_load_result_n585 = hxc_eyeX;
+    double hxc_tmp_load_result_n586 = hxc_lookX;
+    double hxc_tmp_load_result_n587 = hxc_eyeY;
+    double hxc_tmp_load_result_n588 = hxc_lookY;
+    double hxc_tmp_load_result_n589 = hxc_eyeZ;
+    struct Camera3D hxc_camera = (struct Camera3D){ .position = (struct Vector3){ .x = (float)hxc_tmp_load_result_n581, .y = (float)hxc_tmp_load_result_n582, .z = (float)hxc_tmp_load_result_n583 }, .target = (struct Vector3){ .x = (float)(hxc_tmp_load_result_n585 + hxc_tmp_load_result_n586), .y = (float)(hxc_tmp_load_result_n587 + hxc_tmp_load_result_n588), .z = (float)(hxc_tmp_load_result_n589 + hxc_lookZ) }, .up = (struct Vector3){ .x = (float)0.0, .y = (float)1.0, .z = (float)0.0 }, .fovy = (float)70.0, .projection = 0 };
     BeginDrawing();
     if (hxc_onTitle)
     {
-      int32_t hxc_tmp_native_call_result_n583 = GetScreenWidth();
-      int32_t hxc_width_h4ee6a4d11b9a = (int32_t)hxc_tmp_native_call_result_n583;
-      int32_t hxc_tmp_native_call_result_n584 = GetScreenHeight();
-      int32_t hxc_height_h5f6971756af4 = (int32_t)hxc_tmp_native_call_result_n584;
+      int32_t hxc_tmp_native_call_result_n595 = GetScreenWidth();
+      int32_t hxc_width_h55842f1c0316 = (int32_t)hxc_tmp_native_call_result_n595;
+      int32_t hxc_tmp_native_call_result_n596 = GetScreenHeight();
+      int32_t hxc_height_ha7fc3b6cf35b = (int32_t)hxc_tmp_native_call_result_n596;
       if (hxc_titleTextureReady)
       {
-        struct Color hxc_this1_h6159516cfc01 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
-        struct Texture hxc_tmp_load_result_n587 = hxc_titleTexture;
-        double hxc_imageAspect = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n587.width, (double)(int32_t)hxc_titleTexture.height);
-        int32_t hxc_tmp_load_result_n591 = hxc_width_h4ee6a4d11b9a;
-        double hxc_screenAspect = hxc_f64_divide_zero_safe((double)hxc_tmp_load_result_n591, (double)hxc_height_h5f6971756af4);
+        struct Color hxc_this1_h1870d894a773 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
+        struct Texture hxc_tmp_load_result_n599 = hxc_titleTexture;
+        double hxc_imageAspect = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n599.width, (double)(int32_t)hxc_titleTexture.height);
+        int32_t hxc_tmp_load_result_n603 = hxc_width_h55842f1c0316;
+        double hxc_screenAspect = hxc_f64_divide_zero_safe((double)hxc_tmp_load_result_n603, (double)hxc_height_ha7fc3b6cf35b);
         double hxc_sourceX = 0.0;
         double hxc_sourceY = 0.0;
         double hxc_sourceWidth = (double)(int32_t)hxc_titleTexture.width;
         double hxc_sourceHeight = (double)(int32_t)hxc_titleTexture.height;
-        double hxc_tmp_load_result_n597 = hxc_screenAspect;
-        if (hxc_tmp_load_result_n597 > hxc_imageAspect)
+        double hxc_tmp_load_result_n609 = hxc_screenAspect;
+        if (hxc_tmp_load_result_n609 > hxc_imageAspect)
         {
-          struct Texture hxc_tmp_load_result_n599 = hxc_titleTexture;
-          hxc_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n599.width, hxc_screenAspect);
-          struct Texture hxc_tmp_load_result_n602 = hxc_titleTexture;
-          hxc_sourceY = ((double)(int32_t)hxc_tmp_load_result_n602.height - hxc_sourceHeight) * 0.5;
+          struct Texture hxc_tmp_load_result_n611 = hxc_titleTexture;
+          hxc_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n611.width, hxc_screenAspect);
+          struct Texture hxc_tmp_load_result_n614 = hxc_titleTexture;
+          hxc_sourceY = ((double)(int32_t)hxc_tmp_load_result_n614.height - hxc_sourceHeight) * 0.5;
         }
         else
         {
-          struct Texture hxc_tmp_load_result_n605 = hxc_titleTexture;
-          hxc_sourceWidth = (double)(int32_t)hxc_tmp_load_result_n605.height * hxc_screenAspect;
-          struct Texture hxc_tmp_load_result_n608 = hxc_titleTexture;
-          hxc_sourceX = ((double)(int32_t)hxc_tmp_load_result_n608.width - hxc_sourceWidth) * 0.5;
+          struct Texture hxc_tmp_load_result_n617 = hxc_titleTexture;
+          hxc_sourceWidth = (double)(int32_t)hxc_tmp_load_result_n617.height * hxc_screenAspect;
+          struct Texture hxc_tmp_load_result_n620 = hxc_titleTexture;
+          hxc_sourceX = ((double)(int32_t)hxc_tmp_load_result_n620.width - hxc_sourceWidth) * 0.5;
         }
-        struct Texture hxc_tmp_load_result_n611 = hxc_titleTexture;
-        double hxc_tmp_load_result_n612 = hxc_sourceX;
-        double hxc_tmp_load_result_n613 = hxc_sourceY;
-        double hxc_tmp_load_result_n614 = hxc_sourceWidth;
-        double hxc_tmp_load_result_n615 = hxc_sourceHeight;
-        int32_t hxc_tmp_load_result_n617 = hxc_width_h4ee6a4d11b9a;
-        int32_t hxc_tmp_load_result_n618 = hxc_height_h5f6971756af4;
-        DrawTexturePro(hxc_tmp_load_result_n611, (struct Rectangle){ .x = (float)hxc_tmp_load_result_n612, .y = (float)hxc_tmp_load_result_n613, .width = (float)hxc_tmp_load_result_n614, .height = (float)hxc_tmp_load_result_n615 }, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)((double)hxc_tmp_load_result_n617 + 0.0), .height = (float)((double)hxc_tmp_load_result_n618 + 0.0) }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_h6159516cfc01);
+        struct Texture hxc_tmp_load_result_n623 = hxc_titleTexture;
+        double hxc_tmp_load_result_n624 = hxc_sourceX;
+        double hxc_tmp_load_result_n625 = hxc_sourceY;
+        double hxc_tmp_load_result_n626 = hxc_sourceWidth;
+        double hxc_tmp_load_result_n627 = hxc_sourceHeight;
+        int32_t hxc_tmp_load_result_n629 = hxc_width_h55842f1c0316;
+        int32_t hxc_tmp_load_result_n630 = hxc_height_ha7fc3b6cf35b;
+        DrawTexturePro(hxc_tmp_load_result_n623, (struct Rectangle){ .x = (float)hxc_tmp_load_result_n624, .y = (float)hxc_tmp_load_result_n625, .width = (float)hxc_tmp_load_result_n626, .height = (float)hxc_tmp_load_result_n627 }, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)((double)hxc_tmp_load_result_n629 + 0.0), .height = (float)((double)hxc_tmp_load_result_n630 + 0.0) }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_h1870d894a773);
       }
       else
       {
         ClearBackground((struct Color){ .r = 126, .g = 190, .b = 201, .a = 255 });
       }
-      struct Color hxc_this1_h3cf4ef1a20d3 = (struct Color){ .r = 4, .g = 14, .b = 23, .a = 132 };
-      int32_t hxc_tmp_load_result_n624 = hxc_width_h4ee6a4d11b9a;
-      int32_t hxc_tmp_load_result_n625 = hxc_height_h5f6971756af4;
-      DrawRectangle((int32_t)0, (int32_t)0, (int32_t)hxc_tmp_load_result_n624, (int32_t)hxc_tmp_load_result_n625, hxc_this1_h3cf4ef1a20d3);
+      struct Color hxc_this1_hea3535c501fa = (struct Color){ .r = 4, .g = 14, .b = 23, .a = 132 };
+      int32_t hxc_tmp_load_result_n636 = hxc_width_h55842f1c0316;
+      int32_t hxc_tmp_load_result_n637 = hxc_height_ha7fc3b6cf35b;
+      DrawRectangle((int32_t)0, (int32_t)0, (int32_t)hxc_tmp_load_result_n636, (int32_t)hxc_tmp_load_result_n637, hxc_this1_hea3535c501fa);
       if (hxc_wordmarkTextureReady)
       {
-        int32_t hxc_centerX = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4ee6a4d11b9a, (double)2));
-        struct Color hxc_this1_h9ef83f7d6fd3 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
+        int32_t hxc_centerX = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h55842f1c0316, (double)2));
+        struct Color hxc_this1_h4bb3e30f7ad7 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
         double hxc_scale = hxc_f64_divide_zero_safe((double)560, (double)(int32_t)hxc_wordmarkTexture.width);
         double hxc_heightScale = hxc_f64_divide_zero_safe((double)132, (double)(int32_t)hxc_wordmarkTexture.height);
-        double hxc_tmp_load_result_n634 = hxc_heightScale;
-        if (hxc_tmp_load_result_n634 < hxc_scale)
+        double hxc_tmp_load_result_n646 = hxc_heightScale;
+        if (hxc_tmp_load_result_n646 < hxc_scale)
         {
           hxc_scale = hxc_heightScale;
         }
-        struct Texture hxc_tmp_load_result_n637 = hxc_wordmarkTexture;
-        double hxc_width_hca14facce705 = (double)(int32_t)hxc_tmp_load_result_n637.width * hxc_scale;
-        struct Texture hxc_tmp_load_result_n640 = hxc_wordmarkTexture;
-        double hxc_height_h24662e21b74f = (double)(int32_t)hxc_tmp_load_result_n640.height * hxc_scale;
+        struct Texture hxc_tmp_load_result_n649 = hxc_wordmarkTexture;
+        double hxc_width_hd7a651f0fc38 = (double)(int32_t)hxc_tmp_load_result_n649.width * hxc_scale;
+        struct Texture hxc_tmp_load_result_n652 = hxc_wordmarkTexture;
+        double hxc_height_hafb7783489e7 = (double)(int32_t)hxc_tmp_load_result_n652.height * hxc_scale;
         double hxc_width1 = (double)(int32_t)hxc_wordmarkTexture.width + 0.0;
         double hxc_height1 = (double)(int32_t)hxc_wordmarkTexture.height + 0.0;
-        struct Texture hxc_tmp_load_result_n647 = hxc_wordmarkTexture;
-        double hxc_tmp_load_result_n648 = hxc_width1;
-        double hxc_tmp_load_result_n649 = hxc_height1;
-        int32_t hxc_tmp_load_result_n651 = hxc_centerX;
-        double hxc_tmp_load_result_n652 = hxc_width_hca14facce705;
-        double hxc_tmp_load_result_n653 = hxc_width_hca14facce705;
-        double hxc_tmp_load_result_n654 = hxc_height_h24662e21b74f;
-        DrawTexturePro(hxc_tmp_load_result_n647, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)hxc_tmp_load_result_n648, .height = (float)hxc_tmp_load_result_n649 }, (struct Rectangle){ .x = (float)((double)hxc_tmp_load_result_n651 - hxc_tmp_load_result_n652 * 0.5), .y = (float)28.0, .width = (float)hxc_tmp_load_result_n653, .height = (float)hxc_tmp_load_result_n654 }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_h9ef83f7d6fd3);
+        struct Texture hxc_tmp_load_result_n659 = hxc_wordmarkTexture;
+        double hxc_tmp_load_result_n660 = hxc_width1;
+        double hxc_tmp_load_result_n661 = hxc_height1;
+        int32_t hxc_tmp_load_result_n663 = hxc_centerX;
+        double hxc_tmp_load_result_n664 = hxc_width_hd7a651f0fc38;
+        double hxc_tmp_load_result_n665 = hxc_width_hd7a651f0fc38;
+        double hxc_tmp_load_result_n666 = hxc_height_hafb7783489e7;
+        DrawTexturePro(hxc_tmp_load_result_n659, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)hxc_tmp_load_result_n660, .height = (float)hxc_tmp_load_result_n661 }, (struct Rectangle){ .x = (float)((double)hxc_tmp_load_result_n663 - hxc_tmp_load_result_n664 * 0.5), .y = (float)28.0, .width = (float)hxc_tmp_load_result_n665, .height = (float)hxc_tmp_load_result_n666 }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_h4bb3e30f7ad7);
       }
       else
       {
-        int32_t hxc_x_hd7e77ceae12c = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4ee6a4d11b9a, (double)2)), 92);
-        struct Color hxc_this1_h06276a2cb0a6 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-        const char *hxc_tmp_call_result_n661 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 31);
-        int32_t hxc_tmp_load_result_n662 = hxc_x_hd7e77ceae12c;
-        DrawText(hxc_tmp_call_result_n661, (int32_t)hxc_tmp_load_result_n662, (int32_t)52, (int32_t)34, hxc_this1_h06276a2cb0a6);
+        int32_t hxc_x_hc4f8f14c954d = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h55842f1c0316, (double)2)), 92);
+        struct Color hxc_this1_h4263b82f4cdc = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+        const char *hxc_tmp_call_result_n673 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 31);
+        int32_t hxc_tmp_load_result_n674 = hxc_x_hc4f8f14c954d;
+        DrawText(hxc_tmp_call_result_n673, (int32_t)hxc_tmp_load_result_n674, (int32_t)52, (int32_t)34, hxc_this1_h4263b82f4cdc);
       }
-      int32_t hxc_firstTop = hxc_i32_subtract_wrapping(hxc_height_h5f6971756af4, 293);
-      int32_t hxc_left_h019b8a1f9439 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4ee6a4d11b9a, (double)2)), 180);
+      int32_t hxc_firstTop = hxc_i32_subtract_wrapping(hxc_height_ha7fc3b6cf35b, 293);
+      int32_t hxc_left_hc850de20ce1e = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h55842f1c0316, (double)2)), 180);
       if (hxc_selectedMode == 0)
       {
-        struct Color hxc_this1_hd1958c7bed6b = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
-        int32_t hxc_tmp_load_result_n668 = hxc_left_h019b8a1f9439;
-        int32_t hxc_tmp_load_result_n669 = hxc_firstTop;
-        DrawRectangle((int32_t)hxc_tmp_load_result_n668, (int32_t)hxc_tmp_load_result_n669, (int32_t)360, (int32_t)54, hxc_this1_hd1958c7bed6b);
-        struct Color hxc_this1_heaf911b4ee44 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
-        int32_t hxc_tmp_load_result_n672 = hxc_left_h019b8a1f9439;
-        int32_t hxc_tmp_load_result_n673 = hxc_firstTop;
-        DrawRectangleLines((int32_t)hxc_tmp_load_result_n672, (int32_t)hxc_tmp_load_result_n673, (int32_t)360, (int32_t)54, hxc_this1_heaf911b4ee44);
-      }
-      else
-      {
-        struct Color hxc_this1_h9a26e2fc1bb7 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
-        int32_t hxc_tmp_load_result_n676 = hxc_left_h019b8a1f9439;
-        int32_t hxc_tmp_load_result_n677 = hxc_firstTop;
-        DrawRectangle((int32_t)hxc_tmp_load_result_n676, (int32_t)hxc_tmp_load_result_n677, (int32_t)360, (int32_t)54, hxc_this1_h9a26e2fc1bb7);
-        struct Color hxc_this1_h20c2b0dc47fd = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
-        int32_t hxc_tmp_load_result_n680 = hxc_left_h019b8a1f9439;
+        struct Color hxc_this1_h2614f9f4d0a3 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
+        int32_t hxc_tmp_load_result_n680 = hxc_left_hc850de20ce1e;
         int32_t hxc_tmp_load_result_n681 = hxc_firstTop;
-        DrawRectangleLines((int32_t)hxc_tmp_load_result_n680, (int32_t)hxc_tmp_load_result_n681, (int32_t)360, (int32_t)54, hxc_this1_h20c2b0dc47fd);
-      }
-      struct Color hxc_this1_hf74b7200e366 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-      const char *hxc_tmp_call_result_n685 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 24);
-      int32_t hxc_tmp_load_result_n686 = hxc_left_h019b8a1f9439;
-      int32_t hxc_tmp_load_result_n687 = hxc_firstTop;
-      DrawText(hxc_tmp_call_result_n685, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n686, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n687, 16), (int32_t)21, hxc_this1_hf74b7200e366);
-      int32_t hxc_top_h251761e6918e = hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_firstTop, 54), 14);
-      int32_t hxc_left_h9950b1f549a0 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4ee6a4d11b9a, (double)2)), 180);
-      if (hxc_selectedMode == 1)
-      {
-        struct Color hxc_this1_hf4ee83235bf5 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
-        int32_t hxc_tmp_load_result_n693 = hxc_left_h9950b1f549a0;
-        int32_t hxc_tmp_load_result_n694 = hxc_top_h251761e6918e;
-        DrawRectangle((int32_t)hxc_tmp_load_result_n693, (int32_t)hxc_tmp_load_result_n694, (int32_t)360, (int32_t)54, hxc_this1_hf4ee83235bf5);
-        struct Color hxc_this1_h13ceef808fa9 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
-        int32_t hxc_tmp_load_result_n697 = hxc_left_h9950b1f549a0;
-        int32_t hxc_tmp_load_result_n698 = hxc_top_h251761e6918e;
-        DrawRectangleLines((int32_t)hxc_tmp_load_result_n697, (int32_t)hxc_tmp_load_result_n698, (int32_t)360, (int32_t)54, hxc_this1_h13ceef808fa9);
+        DrawRectangle((int32_t)hxc_tmp_load_result_n680, (int32_t)hxc_tmp_load_result_n681, (int32_t)360, (int32_t)54, hxc_this1_h2614f9f4d0a3);
+        struct Color hxc_this1_h06276a2cb0a6 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
+        int32_t hxc_tmp_load_result_n684 = hxc_left_hc850de20ce1e;
+        int32_t hxc_tmp_load_result_n685 = hxc_firstTop;
+        DrawRectangleLines((int32_t)hxc_tmp_load_result_n684, (int32_t)hxc_tmp_load_result_n685, (int32_t)360, (int32_t)54, hxc_this1_h06276a2cb0a6);
       }
       else
       {
-        struct Color hxc_this1_h457f972477cc = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
-        int32_t hxc_tmp_load_result_n701 = hxc_left_h9950b1f549a0;
-        int32_t hxc_tmp_load_result_n702 = hxc_top_h251761e6918e;
-        DrawRectangle((int32_t)hxc_tmp_load_result_n701, (int32_t)hxc_tmp_load_result_n702, (int32_t)360, (int32_t)54, hxc_this1_h457f972477cc);
-        struct Color hxc_this1_h037f46677af9 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
-        int32_t hxc_tmp_load_result_n705 = hxc_left_h9950b1f549a0;
-        int32_t hxc_tmp_load_result_n706 = hxc_top_h251761e6918e;
-        DrawRectangleLines((int32_t)hxc_tmp_load_result_n705, (int32_t)hxc_tmp_load_result_n706, (int32_t)360, (int32_t)54, hxc_this1_h037f46677af9);
+        struct Color hxc_this1_h5cf0f224801b = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
+        int32_t hxc_tmp_load_result_n688 = hxc_left_hc850de20ce1e;
+        int32_t hxc_tmp_load_result_n689 = hxc_firstTop;
+        DrawRectangle((int32_t)hxc_tmp_load_result_n688, (int32_t)hxc_tmp_load_result_n689, (int32_t)360, (int32_t)54, hxc_this1_h5cf0f224801b);
+        struct Color hxc_this1_h6b4d4c64ec43 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
+        int32_t hxc_tmp_load_result_n692 = hxc_left_hc850de20ce1e;
+        int32_t hxc_tmp_load_result_n693 = hxc_firstTop;
+        DrawRectangleLines((int32_t)hxc_tmp_load_result_n692, (int32_t)hxc_tmp_load_result_n693, (int32_t)360, (int32_t)54, hxc_this1_h6b4d4c64ec43);
       }
-      struct Color hxc_this1_he882878e4f78 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-      const char *hxc_tmp_call_result_n710 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 23);
-      int32_t hxc_tmp_load_result_n711 = hxc_left_h9950b1f549a0;
-      int32_t hxc_tmp_load_result_n712 = hxc_top_h251761e6918e;
-      DrawText(hxc_tmp_call_result_n710, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n711, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n712, 16), (int32_t)21, hxc_this1_he882878e4f78);
-      int32_t hxc_top_h8a9d92c9e1b0 = hxc_i32_add_wrapping(hxc_firstTop, 136);
-      int32_t hxc_left_h111bc68133af = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4ee6a4d11b9a, (double)2)), 180);
-      struct Color hxc_this1_h65866ca13a5a = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
-      int32_t hxc_tmp_load_result_n717 = hxc_left_h111bc68133af;
-      int32_t hxc_tmp_load_result_n718 = hxc_top_h8a9d92c9e1b0;
-      DrawRectangle((int32_t)hxc_tmp_load_result_n717, (int32_t)hxc_tmp_load_result_n718, (int32_t)360, (int32_t)54, hxc_this1_h65866ca13a5a);
-      struct Color hxc_this1_ha09f35dab2be = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
-      int32_t hxc_tmp_load_result_n721 = hxc_left_h111bc68133af;
-      int32_t hxc_tmp_load_result_n722 = hxc_top_h8a9d92c9e1b0;
-      DrawRectangleLines((int32_t)hxc_tmp_load_result_n721, (int32_t)hxc_tmp_load_result_n722, (int32_t)360, (int32_t)54, hxc_this1_ha09f35dab2be);
-      struct Color hxc_this1_h4705f486231e = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-      const char *hxc_tmp_call_result_n726 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 25);
-      int32_t hxc_tmp_load_result_n727 = hxc_left_h111bc68133af;
-      int32_t hxc_tmp_load_result_n728 = hxc_top_h8a9d92c9e1b0;
-      DrawText(hxc_tmp_call_result_n726, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n727, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n728, 16), (int32_t)21, hxc_this1_h4705f486231e);
-      int32_t hxc_x_hdfc3e4792cdf = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4ee6a4d11b9a, (double)2)), 285);
-      struct Color hxc_this1_h37fa303a2eb7 = (struct Color){ .r = 229, .g = 241, .b = 235, .a = 255 };
-      const char *hxc_tmp_call_result_n733 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 26);
-      int32_t hxc_tmp_load_result_n734 = hxc_x_hdfc3e4792cdf;
-      int32_t hxc_tmp_load_result_n735 = hxc_height_h5f6971756af4;
-      DrawText(hxc_tmp_call_result_n733, (int32_t)hxc_tmp_load_result_n734, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n735, 58), (int32_t)16, hxc_this1_h37fa303a2eb7);
+      struct Color hxc_this1_hd1958c7bed6b = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+      const char *hxc_tmp_call_result_n697 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 24);
+      int32_t hxc_tmp_load_result_n698 = hxc_left_hc850de20ce1e;
+      int32_t hxc_tmp_load_result_n699 = hxc_firstTop;
+      DrawText(hxc_tmp_call_result_n697, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n698, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n699, 16), (int32_t)21, hxc_this1_hd1958c7bed6b);
+      int32_t hxc_top_h11d273f20639 = hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_firstTop, 54), 14);
+      int32_t hxc_left_he65bfc121857 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h55842f1c0316, (double)2)), 180);
       if (hxc_selectedMode == 1)
       {
-        int32_t hxc_x_h34890c384618 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4ee6a4d11b9a, (double)2)), 230);
-        struct Color hxc_this1_hf77e0ced26cf = (struct Color){ .r = 255, .g = 205, .b = 91, .a = 255 };
-        const char *hxc_tmp_call_result_n741 = hxc_caxecraft_localization_FirstPlayableCatalog_text(hxc_locale, 1);
-        int32_t hxc_tmp_load_result_n742 = hxc_x_h34890c384618;
-        int32_t hxc_tmp_load_result_n743 = hxc_firstTop;
-        DrawText(hxc_tmp_call_result_n741, (int32_t)hxc_tmp_load_result_n742, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n743, 36), (int32_t)17, hxc_this1_hf77e0ced26cf);
+        struct Color hxc_this1_h20c2b0dc47fd = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
+        int32_t hxc_tmp_load_result_n705 = hxc_left_he65bfc121857;
+        int32_t hxc_tmp_load_result_n706 = hxc_top_h11d273f20639;
+        DrawRectangle((int32_t)hxc_tmp_load_result_n705, (int32_t)hxc_tmp_load_result_n706, (int32_t)360, (int32_t)54, hxc_this1_h20c2b0dc47fd);
+        struct Color hxc_this1_hf74b7200e366 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
+        int32_t hxc_tmp_load_result_n709 = hxc_left_he65bfc121857;
+        int32_t hxc_tmp_load_result_n710 = hxc_top_h11d273f20639;
+        DrawRectangleLines((int32_t)hxc_tmp_load_result_n709, (int32_t)hxc_tmp_load_result_n710, (int32_t)360, (int32_t)54, hxc_this1_hf74b7200e366);
+      }
+      else
+      {
+        struct Color hxc_this1_hc8dbf4b728b0 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
+        int32_t hxc_tmp_load_result_n713 = hxc_left_he65bfc121857;
+        int32_t hxc_tmp_load_result_n714 = hxc_top_h11d273f20639;
+        DrawRectangle((int32_t)hxc_tmp_load_result_n713, (int32_t)hxc_tmp_load_result_n714, (int32_t)360, (int32_t)54, hxc_this1_hc8dbf4b728b0);
+        struct Color hxc_this1_h8fa9d7c208ba = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
+        int32_t hxc_tmp_load_result_n717 = hxc_left_he65bfc121857;
+        int32_t hxc_tmp_load_result_n718 = hxc_top_h11d273f20639;
+        DrawRectangleLines((int32_t)hxc_tmp_load_result_n717, (int32_t)hxc_tmp_load_result_n718, (int32_t)360, (int32_t)54, hxc_this1_h8fa9d7c208ba);
+      }
+      struct Color hxc_this1_hf4ee83235bf5 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+      const char *hxc_tmp_call_result_n722 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 23);
+      int32_t hxc_tmp_load_result_n723 = hxc_left_he65bfc121857;
+      int32_t hxc_tmp_load_result_n724 = hxc_top_h11d273f20639;
+      DrawText(hxc_tmp_call_result_n722, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n723, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n724, 16), (int32_t)21, hxc_this1_hf4ee83235bf5);
+      int32_t hxc_top_hd139ba5568e3 = hxc_i32_add_wrapping(hxc_firstTop, 136);
+      int32_t hxc_left_hf615a8fc3b9d = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h55842f1c0316, (double)2)), 180);
+      struct Color hxc_this1_h037f46677af9 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
+      int32_t hxc_tmp_load_result_n729 = hxc_left_hf615a8fc3b9d;
+      int32_t hxc_tmp_load_result_n730 = hxc_top_hd139ba5568e3;
+      DrawRectangle((int32_t)hxc_tmp_load_result_n729, (int32_t)hxc_tmp_load_result_n730, (int32_t)360, (int32_t)54, hxc_this1_h037f46677af9);
+      struct Color hxc_this1_he882878e4f78 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
+      int32_t hxc_tmp_load_result_n733 = hxc_left_hf615a8fc3b9d;
+      int32_t hxc_tmp_load_result_n734 = hxc_top_hd139ba5568e3;
+      DrawRectangleLines((int32_t)hxc_tmp_load_result_n733, (int32_t)hxc_tmp_load_result_n734, (int32_t)360, (int32_t)54, hxc_this1_he882878e4f78);
+      struct Color hxc_this1_hd17b8db9460a = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+      const char *hxc_tmp_call_result_n738 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 25);
+      int32_t hxc_tmp_load_result_n739 = hxc_left_hf615a8fc3b9d;
+      int32_t hxc_tmp_load_result_n740 = hxc_top_hd139ba5568e3;
+      DrawText(hxc_tmp_call_result_n738, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n739, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n740, 16), (int32_t)21, hxc_this1_hd17b8db9460a);
+      int32_t hxc_x_h797957bd65d3 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h55842f1c0316, (double)2)), 285);
+      struct Color hxc_this1_h65866ca13a5a = (struct Color){ .r = 229, .g = 241, .b = 235, .a = 255 };
+      const char *hxc_tmp_call_result_n745 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 26);
+      int32_t hxc_tmp_load_result_n746 = hxc_x_h797957bd65d3;
+      int32_t hxc_tmp_load_result_n747 = hxc_height_ha7fc3b6cf35b;
+      DrawText(hxc_tmp_call_result_n745, (int32_t)hxc_tmp_load_result_n746, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n747, 58), (int32_t)16, hxc_this1_h65866ca13a5a);
+      if (hxc_selectedMode == 1)
+      {
+        int32_t hxc_x_hf110c4cb1cf3 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h55842f1c0316, (double)2)), 230);
+        struct Color hxc_this1_h4705f486231e = (struct Color){ .r = 255, .g = 205, .b = 91, .a = 255 };
+        const char *hxc_tmp_call_result_n753 = hxc_caxecraft_localization_FirstPlayableCatalog_text(hxc_locale, 1);
+        int32_t hxc_tmp_load_result_n754 = hxc_x_hf110c4cb1cf3;
+        int32_t hxc_tmp_load_result_n755 = hxc_firstTop;
+        DrawText(hxc_tmp_call_result_n753, (int32_t)hxc_tmp_load_result_n754, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n755, 36), (int32_t)17, hxc_this1_h4705f486231e);
       }
     }
     else
     {
       if (hxc_onEditor)
       {
-        struct hxc_caxecraft_app_CaxecraftEditorScreen *hxc_tmp_class_field_load_result_n746 = (*hxc_self).hxc_editorScreen;
-        hxc_gc_roots[1] = (const void *)hxc_tmp_class_field_load_result_n746;
-        if (hxc_tmp_class_field_load_result_n746 == NULL)
+        struct hxc_caxecraft_app_CaxecraftEditorScreen *hxc_tmp_class_field_load_result_n758 = (*hxc_self).hxc_editorScreen;
+        hxc_gc_roots[1] = (const void *)hxc_tmp_class_field_load_result_n758;
+        if (hxc_tmp_class_field_load_result_n758 == NULL)
         {
           abort();
         }
-        enum hxc_caxecraft_app_EditorScreenAction hxc_tmp_instance_call_result_n748 = hxc_caxecraft_app_CaxecraftEditorScreen_draw(hxc_tmp_class_field_load_result_n746, hxc_locale);
-        if (hxc_tmp_instance_call_result_n748 == hxc_caxecraft_app_EditorScreenAction_ReturnToTitle)
+        enum hxc_caxecraft_app_EditorScreenAction hxc_tmp_instance_call_result_n760 = hxc_caxecraft_app_CaxecraftEditorScreen_draw(hxc_tmp_class_field_load_result_n758, hxc_locale);
+        if (hxc_tmp_instance_call_result_n760 == hxc_caxecraft_app_EditorScreenAction_ReturnToTitle)
         {
-          enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n751 = hxc_caxecraft_app_AppScreen_closeEditor(hxc_screen);
-          hxc_screen = hxc_tmp_call_result_n751;
+          enum hxc_caxecraft_app_AppScreen hxc_tmp_call_result_n763 = hxc_caxecraft_app_AppScreen_closeEditor(hxc_screen);
+          hxc_screen = hxc_tmp_call_result_n763;
         }
       }
       else
       {
         ClearBackground((struct Color){ .r = 126, .g = 190, .b = 201, .a = 255 });
-        int32_t hxc_tmp_native_call_result_n753 = GetScreenWidth();
-        int32_t hxc_sunX = hxc_i32_subtract_wrapping((int32_t)hxc_tmp_native_call_result_n753, 260);
-        float hxc_radius_h0da49ac28259 = (float)42.0;
-        struct Color hxc_this1_h2ab1c24fb80d = (struct Color){ .r = 255, .g = 226, .b = 136, .a = 255 };
-        int32_t hxc_tmp_load_result_n755 = hxc_sunX;
-        float hxc_tmp_load_result_n756 = hxc_radius_h0da49ac28259;
-        DrawCircle((int32_t)hxc_tmp_load_result_n755, (int32_t)86, hxc_tmp_load_result_n756, hxc_this1_h2ab1c24fb80d);
-        float hxc_radius_h7eedde971ed1 = (float)30.0;
-        struct Color hxc_this1_h5968f6e293c3 = (struct Color){ .r = 255, .g = 246, .b = 205, .a = 255 };
-        int32_t hxc_tmp_load_result_n759 = hxc_sunX;
-        float hxc_tmp_load_result_n760 = hxc_radius_h7eedde971ed1;
-        DrawCircle((int32_t)hxc_tmp_load_result_n759, (int32_t)86, hxc_tmp_load_result_n760, hxc_this1_h5968f6e293c3);
+        int32_t hxc_tmp_native_call_result_n765 = GetScreenWidth();
+        int32_t hxc_sunX = hxc_i32_subtract_wrapping((int32_t)hxc_tmp_native_call_result_n765, 260);
+        float hxc_radius_hac743f061708 = (float)42.0;
+        struct Color hxc_this1_h1d57c59d99d8 = (struct Color){ .r = 255, .g = 226, .b = 136, .a = 255 };
+        int32_t hxc_tmp_load_result_n767 = hxc_sunX;
+        float hxc_tmp_load_result_n768 = hxc_radius_hac743f061708;
+        DrawCircle((int32_t)hxc_tmp_load_result_n767, (int32_t)86, hxc_tmp_load_result_n768, hxc_this1_h1d57c59d99d8);
+        float hxc_radius_h4281826033b4 = (float)30.0;
+        struct Color hxc_this1_hfec7e85c5bdd = (struct Color){ .r = 255, .g = 246, .b = 205, .a = 255 };
+        int32_t hxc_tmp_load_result_n771 = hxc_sunX;
+        float hxc_tmp_load_result_n772 = hxc_radius_h4281826033b4;
+        DrawCircle((int32_t)hxc_tmp_load_result_n771, (int32_t)86, hxc_tmp_load_result_n772, hxc_this1_hfec7e85c5bdd);
         BeginMode3D(hxc_camera);
-        struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n763 = &(*hxc_self).hxc_terrainRenderer;
-        if (hxc_tmp_owned_class_field_address_n763 == NULL)
+        struct hxc_caxecraft_app_TerrainRenderer *hxc_tmp_owned_class_field_address_n775 = &(*hxc_self).hxc_terrainRenderer;
+        if (hxc_tmp_owned_class_field_address_n775 == NULL)
         {
           abort();
         }
-        struct Texture hxc_tmp_load_result_n764 = hxc_terrainTexture;
-        bool hxc_tmp_load_result_n765 = hxc_terrainTextureReady;
-        struct Texture hxc_tmp_load_result_n766 = hxc_adventureTerrainTexture;
-        bool hxc_tmp_load_result_n767 = hxc_adventureTerrainTextureReady;
-        double hxc_tmp_record_field_load_result_n768 = hxc_renderPosition.hxc_x;
-        struct hxc_caxecraft_app_TerrainRenderCounters hxc_tmp_instance_call_result_n770 = hxc_caxecraft_app_TerrainRenderer_draw(hxc_tmp_owned_class_field_address_n763, hxc_cells, hxc_tmp_length_n3, hxc_tmp_load_result_n764, hxc_tmp_load_result_n765, hxc_tmp_load_result_n766, hxc_tmp_load_result_n767, hxc_tmp_record_field_load_result_n768, hxc_renderPosition.hxc_z);
-        struct hxc_caxecraft_app_TerrainRenderCounters hxc_renderCounters = hxc_tmp_instance_call_result_n770;
-        struct Texture hxc_tmp_load_result_n771 = hxc_terrainTexture;
-        bool hxc_tmp_load_result_n772 = hxc_terrainTextureReady;
-        struct hxc_caxecraft_app_WaterRenderCounters hxc_tmp_call_result_n774 = hxc_caxecraft_app_WaterRenderer_draw(hxc_cells, hxc_tmp_length_n3, hxc_tmp_load_result_n771, hxc_tmp_load_result_n772, hxc_waterPresentationCell);
-        struct hxc_caxecraft_app_WaterRenderCounters hxc_waterCounters = hxc_tmp_call_result_n774;
-        int32_t hxc_tmp_record_field_load_result_n775 = hxc_renderCounters.hxc_visible;
-        int32_t hxc_totalVisible = hxc_i32_add_wrapping(hxc_tmp_record_field_load_result_n775, hxc_waterCounters.hxc_visible);
-        int32_t hxc_tmp_record_field_load_result_n777 = hxc_renderCounters.hxc_drawCalls;
-        int32_t hxc_totalDrawCalls = hxc_i32_add_wrapping(hxc_tmp_record_field_load_result_n777, hxc_waterCounters.hxc_drawCalls);
-        struct Camera3D hxc_tmp_load_result_n779 = hxc_camera;
-        struct Texture hxc_tmp_load_result_n780 = hxc_entityTexture;
-        bool hxc_tmp_load_result_n781 = hxc_entityTextureReady;
-        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n782 = hxc_guide;
-        struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n783 = hxc_mossling;
-        hxc_caxecraft_app_CaxecraftApp_drawActors(hxc_tmp_load_result_n779, hxc_tmp_load_result_n780, hxc_tmp_load_result_n781, hxc_tmp_load_result_n782, hxc_tmp_load_result_n783, hxc_berryDrop);
-        struct Camera3D hxc_tmp_load_result_n785 = hxc_camera;
-        struct Texture hxc_tmp_load_result_n786 = hxc_itemTexture;
-        bool hxc_tmp_load_result_n787 = hxc_itemTextureReady;
-        struct Texture hxc_tmp_load_result_n788 = hxc_adventureItemTexture;
-        hxc_caxecraft_app_AuthoredItemRenderer_drawWorldItems(hxc_tmp_load_result_n785, hxc_itemActiveRead, hxc_tmp_length_n5, hxc_tmp_load_result_n786, hxc_tmp_load_result_n787, hxc_tmp_load_result_n788, hxc_adventureItemTextureReady);
+        struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n776 = &(*hxc_self).hxc_session;
+        if (hxc_tmp_owned_class_field_address_n776 == NULL)
+        {
+          abort();
+        }
+        size_t hxc_tmp_length_n778;
+        const uint8_t *hxc_tmp_instance_call_result_n777 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n776, &hxc_tmp_length_n778);
+        struct Texture hxc_tmp_load_result_n779 = hxc_terrainTexture;
+        bool hxc_tmp_load_result_n780 = hxc_terrainTextureReady;
+        struct Texture hxc_tmp_load_result_n781 = hxc_adventureTerrainTexture;
+        bool hxc_tmp_load_result_n782 = hxc_adventureTerrainTextureReady;
+        double hxc_tmp_record_field_load_result_n783 = hxc_renderPosition.hxc_x;
+        struct hxc_caxecraft_app_TerrainRenderCounters hxc_tmp_instance_call_result_n785 = hxc_caxecraft_app_TerrainRenderer_draw(hxc_tmp_owned_class_field_address_n775, hxc_tmp_instance_call_result_n777, hxc_tmp_length_n778, hxc_tmp_load_result_n779, hxc_tmp_load_result_n780, hxc_tmp_load_result_n781, hxc_tmp_load_result_n782, hxc_tmp_record_field_load_result_n783, hxc_renderPosition.hxc_z);
+        struct hxc_caxecraft_app_TerrainRenderCounters hxc_renderCounters = hxc_tmp_instance_call_result_n785;
+        struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n786 = &(*hxc_self).hxc_session;
+        if (hxc_tmp_owned_class_field_address_n786 == NULL)
+        {
+          abort();
+        }
+        size_t hxc_tmp_length_n788;
+        const uint8_t *hxc_tmp_instance_call_result_n787 = hxc_caxecraft_domain_GameSession_worldView(hxc_tmp_owned_class_field_address_n786, &hxc_tmp_length_n788);
+        struct Texture hxc_tmp_load_result_n789 = hxc_terrainTexture;
+        bool hxc_tmp_load_result_n790 = hxc_terrainTextureReady;
+        struct hxc_caxecraft_app_WaterRenderCounters hxc_tmp_call_result_n792 = hxc_caxecraft_app_WaterRenderer_draw(hxc_tmp_instance_call_result_n787, hxc_tmp_length_n788, hxc_tmp_load_result_n789, hxc_tmp_load_result_n790, hxc_waterPresentationCell);
+        struct hxc_caxecraft_app_WaterRenderCounters hxc_waterCounters = hxc_tmp_call_result_n792;
+        int32_t hxc_tmp_record_field_load_result_n793 = hxc_renderCounters.hxc_visible;
+        int32_t hxc_totalVisible = hxc_i32_add_wrapping(hxc_tmp_record_field_load_result_n793, hxc_waterCounters.hxc_visible);
+        int32_t hxc_tmp_record_field_load_result_n795 = hxc_renderCounters.hxc_drawCalls;
+        int32_t hxc_totalDrawCalls = hxc_i32_add_wrapping(hxc_tmp_record_field_load_result_n795, hxc_waterCounters.hxc_drawCalls);
+        struct Camera3D hxc_tmp_load_result_n797 = hxc_camera;
+        struct Texture hxc_tmp_load_result_n798 = hxc_entityTexture;
+        bool hxc_tmp_load_result_n799 = hxc_entityTextureReady;
+        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n800 = hxc_guide;
+        struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n801 = hxc_mossling;
+        hxc_caxecraft_app_CaxecraftApp_drawActors(hxc_tmp_load_result_n797, hxc_tmp_load_result_n798, hxc_tmp_load_result_n799, hxc_tmp_load_result_n800, hxc_tmp_load_result_n801, hxc_berryDrop);
+        struct Camera3D hxc_tmp_load_result_n803 = hxc_camera;
+        struct hxc_caxecraft_domain_GameSession *hxc_tmp_owned_class_field_address_n804 = &(*hxc_self).hxc_session;
+        if (hxc_tmp_owned_class_field_address_n804 == NULL)
+        {
+          abort();
+        }
+        size_t hxc_tmp_length_n806;
+        const int32_t *hxc_tmp_instance_call_result_n805 = hxc_caxecraft_domain_GameSession_authoredItemsView(hxc_tmp_owned_class_field_address_n804, &hxc_tmp_length_n806);
+        struct Texture hxc_tmp_load_result_n807 = hxc_itemTexture;
+        bool hxc_tmp_load_result_n808 = hxc_itemTextureReady;
+        struct Texture hxc_tmp_load_result_n809 = hxc_adventureItemTexture;
+        hxc_caxecraft_app_AuthoredItemRenderer_drawWorldItems(hxc_tmp_load_result_n803, hxc_tmp_instance_call_result_n805, hxc_tmp_length_n806, hxc_tmp_load_result_n807, hxc_tmp_load_result_n808, hxc_tmp_load_result_n809, hxc_adventureItemTextureReady);
         if (hxc_hit.hxc_hit)
         {
           double hxc_y = (double)hxc_hit.hxc_cellY + 0.5;
           double hxc_z = (double)hxc_hit.hxc_cellZ + 0.5;
-          int32_t hxc_tmp_record_field_load_result_n793 = hxc_hit.hxc_cellX;
-          double hxc_tmp_load_result_n794 = hxc_y;
-          DrawCubeWires((struct Vector3){ .x = (float)((double)hxc_tmp_record_field_load_result_n793 + 0.5), .y = (float)hxc_tmp_load_result_n794, .z = (float)hxc_z }, (float)1.04, (float)1.04, (float)1.04, (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 });
+          int32_t hxc_tmp_record_field_load_result_n814 = hxc_hit.hxc_cellX;
+          double hxc_tmp_load_result_n815 = hxc_y;
+          DrawCubeWires((struct Vector3){ .x = (float)((double)hxc_tmp_record_field_load_result_n814 + 0.5), .y = (float)hxc_tmp_load_result_n815, .z = (float)hxc_z }, (float)1.04, (float)1.04, (float)1.04, (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 });
         }
         EndMode3D();
         if (hxc_cameraWaterBlend > 0.0)
         {
           int32_t hxc_overlayAlpha = hxc_f64_to_i32_saturating(105.0 * hxc_cameraWaterBlend);
-          int32_t hxc_tmp_native_call_result_n800 = GetScreenWidth();
-          int32_t hxc_width_h82dbba833b6f = (int32_t)hxc_tmp_native_call_result_n800;
-          int32_t hxc_tmp_native_call_result_n801 = GetScreenHeight();
-          int32_t hxc_height_h534a611b011b = (int32_t)hxc_tmp_native_call_result_n801;
+          int32_t hxc_tmp_native_call_result_n821 = GetScreenWidth();
+          int32_t hxc_width_h8cecb3de8d91 = (int32_t)hxc_tmp_native_call_result_n821;
+          int32_t hxc_tmp_native_call_result_n822 = GetScreenHeight();
+          int32_t hxc_height_hc2980016e2f0 = (int32_t)hxc_tmp_native_call_result_n822;
           uint8_t hxc_red = (uint8_t)31;
           uint8_t hxc_green = (uint8_t)115;
           uint8_t hxc_blue = (uint8_t)154;
-          int32_t hxc_tmp_load_result_n802 = hxc_overlayAlpha;
-          int32_t hxc_tmp_conditional_result_n255 = 0;
-          if (hxc_tmp_load_result_n802 < 0)
+          int32_t hxc_tmp_load_result_n823 = hxc_overlayAlpha;
+          int32_t hxc_tmp_conditional_result_n251 = 0;
+          if (hxc_tmp_load_result_n823 < 0)
           {
-            hxc_tmp_conditional_result_n255 = 0;
+            hxc_tmp_conditional_result_n251 = 0;
           }
           else
           {
-            int32_t hxc_tmp_load_result_n803 = hxc_overlayAlpha;
-            int32_t hxc_tmp_conditional_result_n256 = 0;
-            if (hxc_tmp_load_result_n803 > 255)
+            int32_t hxc_tmp_load_result_n824 = hxc_overlayAlpha;
+            int32_t hxc_tmp_conditional_result_n252 = 0;
+            if (hxc_tmp_load_result_n824 > 255)
             {
-              hxc_tmp_conditional_result_n256 = 255;
+              hxc_tmp_conditional_result_n252 = 255;
             }
             else
             {
-              hxc_tmp_conditional_result_n256 = hxc_overlayAlpha;
+              hxc_tmp_conditional_result_n252 = hxc_overlayAlpha;
             }
-            hxc_tmp_conditional_result_n255 = hxc_tmp_conditional_result_n256;
+            hxc_tmp_conditional_result_n251 = hxc_tmp_conditional_result_n252;
           }
-          uint8_t hxc_alpha = (uint8_t)hxc_tmp_conditional_result_n255;
-          uint8_t hxc_tmp_load_result_n807 = hxc_red;
-          uint8_t hxc_tmp_load_result_n808 = hxc_green;
-          uint8_t hxc_tmp_load_result_n809 = hxc_blue;
-          struct Color hxc_this1_h53c5fe42188c = (struct Color){ .r = hxc_tmp_load_result_n807, .g = hxc_tmp_load_result_n808, .b = hxc_tmp_load_result_n809, .a = hxc_alpha };
-          int32_t hxc_tmp_load_result_n812 = hxc_width_h82dbba833b6f;
-          int32_t hxc_tmp_load_result_n813 = hxc_height_h534a611b011b;
-          DrawRectangle((int32_t)0, (int32_t)0, (int32_t)hxc_tmp_load_result_n812, (int32_t)hxc_tmp_load_result_n813, hxc_this1_h53c5fe42188c);
+          uint8_t hxc_alpha = (uint8_t)hxc_tmp_conditional_result_n251;
+          uint8_t hxc_tmp_load_result_n828 = hxc_red;
+          uint8_t hxc_tmp_load_result_n829 = hxc_green;
+          uint8_t hxc_tmp_load_result_n830 = hxc_blue;
+          struct Color hxc_this1_h1eb9b322c3a1 = (struct Color){ .r = hxc_tmp_load_result_n828, .g = hxc_tmp_load_result_n829, .b = hxc_tmp_load_result_n830, .a = hxc_alpha };
+          int32_t hxc_tmp_load_result_n833 = hxc_width_h8cecb3de8d91;
+          int32_t hxc_tmp_load_result_n834 = hxc_height_hc2980016e2f0;
+          DrawRectangle((int32_t)0, (int32_t)0, (int32_t)hxc_tmp_load_result_n833, (int32_t)hxc_tmp_load_result_n834, hxc_this1_h1eb9b322c3a1);
         }
-        int32_t hxc_tmp_load_result_n815 = hxc_totalVisible;
-        int32_t hxc_tmp_load_result_n816 = hxc_totalDrawCalls;
-        int32_t hxc_tmp_load_result_n817 = hxc_frameCount;
-        int32_t hxc_tmp_load_result_n818 = hxc_completedTicks;
-        double hxc_tmp_record_field_load_result_n820 = hxc_character.hxc_body.hxc_x;
-        double hxc_tmp_record_field_load_result_n821 = hxc_character.hxc_body.hxc_z;
-        struct hxc_caxecraft_domain_VitalsState hxc_tmp_record_field_load_result_n822 = hxc_character.hxc_vitals;
-        int32_t hxc_tmp_load_result_n823 = hxc_aquaticEquipmentCode;
-        int32_t hxc_tmp_load_result_n824 = hxc_aquaticEquipmentFrames;
-        bool hxc_tmp_record_field_load_result_n825 = hxc_character.hxc_aquatic.hxc_headSubmerged;
-        int32_t hxc_tmp_record_field_load_result_n826 = hxc_character.hxc_aquatic.hxc_breathTicks;
-        int32_t hxc_tmp_record_field_load_result_n827 = hxc_character.hxc_aquaticProfile.hxc_maximumBreathTicks;
-        int32_t hxc_tmp_load_result_n829 = hxc_placementBlockedFrames;
-        int32_t hxc_tmp_load_result_n830 = hxc_strikeHitFrames;
-        int32_t hxc_tmp_load_result_n831 = hxc_enemyDefeatedFrames;
-        int32_t hxc_tmp_load_result_n832 = hxc_enemyAttackFrames;
-        int32_t hxc_tmp_load_result_n833 = hxc_pickupFrames;
-        int32_t hxc_tmp_load_result_n834 = hxc_pickupAmount;
-        int32_t hxc_tmp_load_result_n835 = hxc_inventoryFullReason;
-        int32_t hxc_tmp_load_result_n836 = hxc_recoveryFeedback;
-        int32_t hxc_tmp_load_result_n837 = hxc_recoveryFeedbackFrames;
-        bool hxc_tmp_load_result_n839 = hxc_paused_h1f5b7f5f52ab;
-        bool hxc_tmp_load_result_n840 = hxc_captured_hc92eeb5fda1c;
-        struct hxc_caxecraft_domain_RaycastHit hxc_tmp_load_result_n841 = hxc_hit;
-        int32_t hxc_tmp_load_result_n842 = hxc_selectedMode;
-        int32_t hxc_tmp_load_result_n843 = hxc_locale;
-        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n844 = hxc_inventory;
-        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n845 = hxc_guide;
-        struct hxc_caxecraft_app_HudView hxc_hudView = (struct hxc_caxecraft_app_HudView){ .hxc_character = (struct hxc_caxecraft_app_HudCharacterView){ .hxc_aquaticEquipmentCode = hxc_tmp_load_result_n823, .hxc_aquaticEquipmentVisible = hxc_tmp_load_result_n824 > 0, .hxc_breathTicks = hxc_tmp_record_field_load_result_n826, .hxc_headSubmerged = hxc_tmp_record_field_load_result_n825, .hxc_maximumBreathTicks = hxc_tmp_record_field_load_result_n827, .hxc_vitals = hxc_tmp_record_field_load_result_n822, .hxc_x = hxc_tmp_record_field_load_result_n820, .hxc_z = hxc_tmp_record_field_load_result_n821 }, .hxc_feedback = (struct hxc_caxecraft_app_HudFeedbackView){ .hxc_enemyAttacked = hxc_tmp_load_result_n832 > 0, .hxc_enemyDefeated = hxc_tmp_load_result_n831 > 0, .hxc_inventoryFullReason = hxc_tmp_load_result_n835, .hxc_pickedUp = hxc_tmp_load_result_n833 > 0, .hxc_pickupAmount = hxc_tmp_load_result_n834, .hxc_placementBlocked = hxc_tmp_load_result_n829 > 0, .hxc_recoveryDecision = hxc_tmp_load_result_n836, .hxc_recoveryVisible = hxc_tmp_load_result_n837 > 0, .hxc_strikeHit = hxc_tmp_load_result_n830 > 0 }, .hxc_guide = hxc_tmp_load_result_n845, .hxc_hit = hxc_tmp_load_result_n841, .hxc_inventory = hxc_tmp_load_result_n844, .hxc_locale = hxc_tmp_load_result_n843, .hxc_metrics = (struct hxc_caxecraft_app_HudMetricsView){ .hxc_completedTicks = hxc_tmp_load_result_n818, .hxc_drawCalls = hxc_tmp_load_result_n816, .hxc_renderedFrames = hxc_tmp_load_result_n817, .hxc_visibleBlocks = hxc_tmp_load_result_n815 }, .hxc_mode = hxc_tmp_load_result_n842, .hxc_mossling = hxc_mossling, .hxc_paused = hxc_tmp_load_result_n839, .hxc_pointerCaptured = hxc_tmp_load_result_n840 };
-        struct hxc_caxecraft_app_HudView hxc_tmp_load_result_n848 = hxc_hudView;
-        hxc_caxecraft_app_CaxecraftApp_drawHud(hxc_tmp_load_result_n848, hxc_hudResources);
+        int32_t hxc_tmp_load_result_n836 = hxc_totalVisible;
+        int32_t hxc_tmp_load_result_n837 = hxc_totalDrawCalls;
+        int32_t hxc_tmp_load_result_n838 = hxc_frameCount;
+        int32_t hxc_tmp_load_result_n839 = hxc_completedTicks;
+        double hxc_tmp_record_field_load_result_n841 = hxc_character.hxc_body.hxc_x;
+        double hxc_tmp_record_field_load_result_n842 = hxc_character.hxc_body.hxc_z;
+        struct hxc_caxecraft_domain_VitalsState hxc_tmp_record_field_load_result_n843 = hxc_character.hxc_vitals;
+        int32_t hxc_tmp_load_result_n844 = hxc_aquaticEquipmentCode;
+        int32_t hxc_tmp_load_result_n845 = hxc_aquaticEquipmentFrames;
+        bool hxc_tmp_record_field_load_result_n846 = hxc_character.hxc_aquatic.hxc_headSubmerged;
+        int32_t hxc_tmp_record_field_load_result_n847 = hxc_character.hxc_aquatic.hxc_breathTicks;
+        int32_t hxc_tmp_record_field_load_result_n848 = hxc_character.hxc_aquaticProfile.hxc_maximumBreathTicks;
+        int32_t hxc_tmp_load_result_n850 = hxc_placementBlockedFrames;
+        int32_t hxc_tmp_load_result_n851 = hxc_strikeHitFrames;
+        int32_t hxc_tmp_load_result_n852 = hxc_enemyDefeatedFrames;
+        int32_t hxc_tmp_load_result_n853 = hxc_enemyAttackFrames;
+        int32_t hxc_tmp_load_result_n854 = hxc_pickupFrames;
+        int32_t hxc_tmp_load_result_n855 = hxc_pickupAmount;
+        int32_t hxc_tmp_load_result_n856 = hxc_inventoryFullReason;
+        int32_t hxc_tmp_load_result_n857 = hxc_recoveryFeedback;
+        int32_t hxc_tmp_load_result_n858 = hxc_recoveryFeedbackFrames;
+        bool hxc_tmp_load_result_n860 = hxc_paused_h39f5af304915;
+        bool hxc_tmp_load_result_n861 = hxc_captured_h6756636cf2ae;
+        struct hxc_caxecraft_domain_RaycastHit hxc_tmp_load_result_n862 = hxc_hit;
+        int32_t hxc_tmp_load_result_n863 = hxc_selectedMode;
+        int32_t hxc_tmp_load_result_n864 = hxc_locale;
+        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n865 = hxc_inventory;
+        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n866 = hxc_guide;
+        struct hxc_caxecraft_app_HudView hxc_hudView = (struct hxc_caxecraft_app_HudView){ .hxc_character = (struct hxc_caxecraft_app_HudCharacterView){ .hxc_aquaticEquipmentCode = hxc_tmp_load_result_n844, .hxc_aquaticEquipmentVisible = hxc_tmp_load_result_n845 > 0, .hxc_breathTicks = hxc_tmp_record_field_load_result_n847, .hxc_headSubmerged = hxc_tmp_record_field_load_result_n846, .hxc_maximumBreathTicks = hxc_tmp_record_field_load_result_n848, .hxc_vitals = hxc_tmp_record_field_load_result_n843, .hxc_x = hxc_tmp_record_field_load_result_n841, .hxc_z = hxc_tmp_record_field_load_result_n842 }, .hxc_feedback = (struct hxc_caxecraft_app_HudFeedbackView){ .hxc_enemyAttacked = hxc_tmp_load_result_n853 > 0, .hxc_enemyDefeated = hxc_tmp_load_result_n852 > 0, .hxc_inventoryFullReason = hxc_tmp_load_result_n856, .hxc_pickedUp = hxc_tmp_load_result_n854 > 0, .hxc_pickupAmount = hxc_tmp_load_result_n855, .hxc_placementBlocked = hxc_tmp_load_result_n850 > 0, .hxc_recoveryDecision = hxc_tmp_load_result_n857, .hxc_recoveryVisible = hxc_tmp_load_result_n858 > 0, .hxc_strikeHit = hxc_tmp_load_result_n851 > 0 }, .hxc_guide = hxc_tmp_load_result_n866, .hxc_hit = hxc_tmp_load_result_n862, .hxc_inventory = hxc_tmp_load_result_n865, .hxc_locale = hxc_tmp_load_result_n864, .hxc_metrics = (struct hxc_caxecraft_app_HudMetricsView){ .hxc_completedTicks = hxc_tmp_load_result_n839, .hxc_drawCalls = hxc_tmp_load_result_n837, .hxc_renderedFrames = hxc_tmp_load_result_n838, .hxc_visibleBlocks = hxc_tmp_load_result_n836 }, .hxc_mode = hxc_tmp_load_result_n863, .hxc_mossling = hxc_mossling, .hxc_paused = hxc_tmp_load_result_n860, .hxc_pointerCaptured = hxc_tmp_load_result_n861 };
+        struct hxc_caxecraft_app_HudView hxc_tmp_load_result_n869 = hxc_hudView;
+        hxc_caxecraft_app_CaxecraftApp_drawHud(hxc_tmp_load_result_n869, hxc_hudResources);
       }
     }
     EndDrawing();

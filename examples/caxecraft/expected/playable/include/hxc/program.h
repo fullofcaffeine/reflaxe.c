@@ -46,6 +46,7 @@
 #include "hxc/modules/caxecraft/domain/WaterSimulation.h"
 #include "hxc/modules/caxecraft/domain/WaterTickResult.h"
 #include "hxc/modules/caxecraft/domain/World.h"
+#include "hxc/modules/caxecraft/domain/WorldRead.h"
 #include "hxc/modules/caxecraft/domain/WorldStorage.h"
 #include "hxc/modules/caxecraft/editor/EditorHistory.h"
 #include "hxc/modules/caxecraft/editor/EditorPolicy.h"

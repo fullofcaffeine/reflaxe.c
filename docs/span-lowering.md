@@ -145,11 +145,42 @@ also has a runtime-forwarded length rather than a compile-time fixed-array
 length, so the current exact `for (value in span)` proof does not admit it;
 ordinary indexed access retains checked bounds against the forwarded count.
 
-A function cannot return either borrowed span type. The signature is rejected
-as `TFunction(return-type:borrowed-span-escape)` at its exact source range.
-Span fields, global storage, enum/record payload storage, address taking, and
-other escape paths also remain unsupported. A recursive direct call carrying a
-span fails as
+A mutable `Span<T>` still cannot be returned. A read-only `ConstSpan<T>` has one
+narrow return contract: a `final`, non-generic instance method may lend an
+immediate `CArray<T, N>` field owned by its receiver. The result must be
+consumed immediately by another compiler-known span call while that receiver
+is still alive:
+
+```haxe
+final class WorldBuffer {
+  final cells:c.CArray<c.UInt8, GridVolume> =
+    c.CArray.zero(WIDTH * HEIGHT * DEPTH);
+
+  public function new() {}
+
+  public function view():c.ConstSpan<c.UInt8> {
+    return cells.constSpan();
+  }
+}
+
+renderWorld(world.view());
+```
+
+The `WorldBuffer` remains the owner. `view()` does not allocate, copy, transfer,
+or lengthen the life of `cells`; it only lends a pointer and its exact element
+count for that call. The final-class rule prevents a virtual override from
+returning storage with a different lifetime contract. HxcIR validates both
+ends: the callee must return the receiver's immediate field, and the caller
+must use the result only in the admitted direct call. The C function returns
+`const T *` and writes the count through one compiler-private `size_t *`
+out-parameter. This is an internal calling convention, not a public C ABI.
+
+Returning a local array, returning mutable `Span<T>`, saving the returned view
+in a local or field, forwarding it to an unknown/native/callback/exported call,
+returning it again without the same proven contract, or using it after the
+receiver can die remains rejected. Span fields, global storage, enum/record
+payload storage, address taking, and other escape paths also remain
+unsupported. A recursive direct call carrying a span fails as
 `TCall(recursive-borrowed-span-target-not-admitted:<function-id>)` rather than
 silently extending the borrow lifetime.
 
@@ -166,6 +197,8 @@ HxcIR distinguishes:
 - `IRIOInitializeFixedArray` for element-by-element literal initialization;
 - `IRIOZeroInitializeFixedArray` for validated fixed-storage zeroing;
 - `IRIOInitializeSpan` for a borrow; and
+- `IRIOBorrowSpan` for a read-only receiver-field borrow that crosses one
+  function return; and
 - `IRIOBoundsCheck` with one explicit proof or failure policy.
 
 A source span parameter remains one semantic HxcIR parameter of
@@ -192,10 +225,18 @@ This distinction is intentional:
 - another hypothetical emitter could choose a native slice representation
   without changing the Haxe/HxcIR call contract.
 
-No new HxcIR schema form is needed for this extension. Schema 9 already has the
-required span type, parameter, ordered call, typed initialization, place, and
-bounds operations. Adding a separate “span parameter” type would duplicate a
-source/call-site distinction that is not a distinct semantic value.
+No new HxcIR schema form was needed when span *parameters* were added. Schema 9
+already had the required span type, parameter, ordered call, typed
+initialization, place, and bounds operations. Adding a separate “span
+parameter” type would duplicate a source/call-site distinction that is not a
+distinct semantic value.
+
+Schema 20 does add a form for the narrower and semantically different returned
+borrow. `IRIOBorrowSpan` records the exact source field, while matching
+function and call contracts name the receiver parameter whose lifetime bounds
+the result. This extra form earns its place because ordinary call syntax does
+not say who owns the returned pointer, and the C emitter must not rediscover or
+guess that fact.
 
 The zero-initialization instruction is an effect on one local fixed-array place
 with an explicit uninitialized-to-initialized transition. A class-owned array
@@ -252,9 +293,11 @@ aggregate rule directly, for example `uint8_t voxels[16384] = { 0 }`. It does
 not allocate and does not call `memset` or a runtime helper.
 
 `Span<T>` is a `T *` plus `size_t` length, while `ConstSpan<T>` is a `const T *`
-plus `size_t` length. The length is derived from owned storage as
-`sizeof(array) / sizeof(array[0])`; it is never an application-authored byte
-count. All access uses element-scaled C subscripting,
+plus `size_t` length. A local or parameter borrow carries that pair inside the
+compiler. A returned receiver-field borrow uses `const T *` as the C return
+value and one hidden `size_t *` out-parameter for the count. In every case the
+length comes from compiler-proven owned storage; it is never an
+application-authored byte count. All access uses element-scaled C subscripting,
 `base[(size_t)index]`.
 
 The fixture's three-dimensional mapping is ordinary Haxe:

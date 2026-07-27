@@ -167,9 +167,11 @@ Every admitted event, condition, and action reaches one typed Haxe mechanic.
 Every mutable value needs one clear owner. `GameSession` now owns the first
 committed game-state slice, and `EntityStore` owns each admitted character once;
 `PlayerAgent` refers to a character by stable ID rather than copying it. The
-read-only renderer view is the target boundary. `Main` still has a documented
-narrow friend-access migration seam until that view is implemented. This rule
-prevents two “authoritative” values from drifting apart.
+read-only renderer view is the target boundary. `GameSession.worldView()` lends
+its receiver-owned array only to one direct read call; haxe.c emits a `const`
+pointer plus length and rejects retaining or writing through it. Terrain and
+item changes instead use typed session commands. This rule prevents two
+“authoritative” values from drifting apart without copying 16 KiB each frame.
 
 ### Dependencies point toward stable rules
 

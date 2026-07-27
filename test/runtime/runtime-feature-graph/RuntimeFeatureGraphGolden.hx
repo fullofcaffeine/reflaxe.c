@@ -60,7 +60,7 @@ class RuntimeFeatureGraphGolden {
 	static inline final PACKAGE_PREFIX = "HXC_RUNTIME_FEATURE_PACKAGE=";
 
 	static function main():Void {
-		verifyObjectDescriptorEmission();
+		RuntimeRequirementReconciliationGolden.verify(verifyObjectDescriptorEmission);
 		final registry = RuntimeFeatureCatalog.registry();
 		final definitions = RuntimeFeatureCatalog.definitions();
 		final reservations = RuntimeFeatureCatalog.reservations();

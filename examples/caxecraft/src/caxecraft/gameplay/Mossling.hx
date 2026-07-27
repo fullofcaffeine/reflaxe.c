@@ -1,7 +1,8 @@
 package caxecraft.gameplay;
 
 import caxecraft.domain.World;
-import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldRead.surfaceY as worldSurfaceY;
+import caxecraft.domain.WorldView;
 
 /**
  * Bounded fixed-step movement for Caxecraft's first hostile creature.
@@ -25,10 +26,10 @@ final class Mossling {
 	static inline final WANDER_RADIUS:Float = 1.0;
 	static inline final WANDER_CYCLE_TICKS:Int = 240;
 
-	public static function start(cells:WorldCells, x:Float, z:Float):MosslingState {
+	public static function start(cells:WorldView, x:Float, z:Float):MosslingState {
 		return {
 			x: x,
-			y: World.surfaceY(cells, Std.int(x), Std.int(z)) + 1.0,
+			y: worldSurfaceY(cells, Std.int(x), Std.int(z)) + 1.0,
 			z: z,
 			homeX: x,
 			homeZ: z,
@@ -49,7 +50,7 @@ final class Mossling {
 	}
 
 	/** Advance exactly one 50 ms game tick. */
-	public static function step(cells:WorldCells, state:MosslingState, playerX:Float, playerZ:Float, tickNumber:Int):MosslingState {
+	public static function step(cells:WorldView, state:MosslingState, playerX:Float, playerZ:Float, tickNumber:Int):MosslingState {
 		if (!isAlive(state))
 			return state;
 		final currentMode = mode(state);
@@ -125,7 +126,7 @@ final class Mossling {
 		else
 			candidateZ += boundedStep(dz);
 
-		final surface = World.surfaceY(cells, Std.int(candidateX), Std.int(candidateZ));
+		final surface = worldSurfaceY(cells, Std.int(candidateX), Std.int(candidateZ));
 		final candidateY = surface + 1.0;
 		if (surface < 0)
 			return make(state.x, state.y, state.z, state.homeX, state.homeZ, nextMode, 0, state.health);

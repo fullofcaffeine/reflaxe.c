@@ -448,8 +448,15 @@ have completed the same migration.
 immutable `GameView` containing the committed local-character value and tick
 count, never the entity store, water scheduler, or backing arrays. The invalid
 view before binding is explicit, so rendering and telemetry can fail closed
-without receiving mutation authority. World and actor read models remain on
-the presentation migration task rather than being implied by this first slice.
+without receiving mutation authority.
+
+`GameSession.worldView()` is the separate shipped world-reading boundary. It
+lends the fixed voxel bytes to one direct read-only consumer without a copy or
+heap allocation. The C representation is `const uint8_t *` plus a checked
+length, and the compiler ties its lifetime to the session receiver; assigning
+that returned borrow to persistent application state is rejected. Actor and
+event read models remain on the presentation migration task rather than being
+implied by these two focused views.
 
 ## Determinism and executable evidence
 

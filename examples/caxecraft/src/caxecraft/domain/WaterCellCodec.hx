@@ -1,5 +1,7 @@
 package caxecraft.domain;
 
+import caxecraft.domain.WorldRead.storageCodeAt as readWorldStorageCode;
+
 /**
 	The one owner of compact water bytes in the shared world buffer.
 
@@ -22,6 +24,18 @@ function stateAt(cells:WorldCells, coord:BlockCoord):WaterCellState {
 	if (!World.contains(coord))
 		return Blocked;
 	return decode(WorldStorage.readCode(cells, World.indexOf(coord)));
+}
+
+/**
+	Return one water state through a read-only session view.
+
+	This is separate from `stateAt` because the C type system correctly refuses
+	to pass a `const` world view to code that also has write authority.
+**/
+function stateInView(view:WorldView, coord:BlockCoord):WaterCellState {
+	if (!World.contains(coord))
+		return Blocked;
+	return decode(readWorldStorageCode(view, World.indexOf(coord)));
 }
 
 /** Decode every byte explicitly so malformed storage cannot masquerade as air. */

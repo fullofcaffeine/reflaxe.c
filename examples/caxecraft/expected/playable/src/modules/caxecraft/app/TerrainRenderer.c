@@ -231,13 +231,13 @@ int32_t hxc_caxecraft_app_TerrainRenderer_squareDistance(int32_t hxc_x, int32_t 
   return hxc_dx;
 }
 
-struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_TerrainRenderer_draw(struct hxc_caxecraft_app_TerrainRenderer *hxc_self, uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_baseTexture, bool hxc_baseReady, struct Texture hxc_adventureTexture, bool hxc_adventureReady, double hxc_playerX, double hxc_playerZ)
+struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_TerrainRenderer_draw(struct hxc_caxecraft_app_TerrainRenderer *hxc_self, const uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_baseTexture, bool hxc_baseReady, struct Texture hxc_adventureTexture, bool hxc_adventureReady, double hxc_playerX, double hxc_playerZ)
 {
   int32_t hxc_playerCellX = { 0 };
   int32_t hxc_playerCellZ = { 0 };
   struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_base = { 0 };
   struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_adventure = { 0 };
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n8 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n8;

@@ -44,9 +44,9 @@ struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_start(int32
   return (struct hxc_caxecraft_domain_Character){ .hxc_aquatic = hxc_tmp_call_result_n0, .hxc_aquaticProfile = hxc_aquaticProfile, .hxc_body = hxc_body, .hxc_id = hxc_id, .hxc_vitals = hxc_tmp_call_result_n1 };
 }
 
-struct hxc_caxecraft_domain_CharacterStep hxc_caxecraft_domain_Character_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_Character hxc_original, struct hxc_caxecraft_domain_CharacterIntent hxc_intent, int32_t hxc_damagePolicy)
+struct hxc_caxecraft_domain_CharacterStep hxc_caxecraft_domain_Character_step(const uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_Character hxc_original, struct hxc_caxecraft_domain_CharacterIntent hxc_intent, int32_t hxc_damagePolicy)
 {
-  uint8_t *hxc_borrow = hxc_cells;
+  const uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
