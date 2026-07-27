@@ -7,3 +7,7 @@
 # Interactive builds keep every collision decision but omit 20k+ collision-free
 # local records. Required audit/snapshot lanes retain the compiler's full default.
 -D hxc_symbol_report=summary
+# The in-memory runtime plan remains complete and fully validated. Normal play
+# writes exact counts for its thousands of repeated source reasons; a dedicated
+# audit build overrides this with -D hxc_runtime_report=full.
+-D hxc_runtime_report=summary

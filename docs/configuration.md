@@ -170,6 +170,7 @@ The canonical expert/debug defines are:
 -D reflaxe_c_profile=portable|metal
 -D hxc_runtime=auto|minimal|none
 -D hxc_runtime_diagnostics=off|summary|warn
+-D hxc_runtime_report=full|summary
 -D hxc_symbol_report=full|summary
 -D hxc_environment=hosted|freestanding|wasi|emscripten
 -D hxc_c_standard=c11|c17|c23
@@ -186,6 +187,17 @@ summary to shorten serialization and output-ownership work, but required audit
 lanes keep the full report. This expert reporting switch is intentionally not a
 portable `hxc.json` project setting: changing a shared project file should not
 silently weaken repository evidence.
+
+`hxc_runtime_report` makes the same full-versus-interactive distinction for
+`hxc.runtime-plan.json`. `full` is the default and writes every
+source-positioned reason plus every feature-to-reason edge. `summary` still
+builds and validates that complete plan, then writes the selected feature,
+artifact, symbol, library, define, and direct-decision sets while replacing
+large repeated reason lists with exact counts. It does not reserialize or
+rehash the omitted source provenance, because that would repeat the expensive
+work the interactive report avoids. Runtime selection, generated C, packaged
+`hxrt` files, and native behavior must remain identical. Use full mode when the
+lane needs to inspect each source reason.
 
 `projectLayout` changes only compiler-owned file assignment after HxcIR,
 representation, symbol, and declaration planning are finalized:

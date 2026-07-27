@@ -190,7 +190,13 @@ The emitter owns these independently versioned sidecars:
   records `reachable-program-local-virtual-dispatch`; this is a direct compiler
   decision, not an `hxrt` feature. A reached import graph records
   `typed-header-owned-c-imports` plus exact reached function/value/type counts;
-  header and linker build facts remain outside the runtime feature sets;
+  header and linker build facts remain outside the runtime feature sets. An
+  explicit `-D hxc_runtime_report=summary` interactive build keeps those
+  resolved selections but replaces large source-reason and feature-edge reason
+  arrays with exact counts in
+  `hxc-runtime-plan-summary-v1`. The complete schema-2 plan is still validated
+  before this report projection. Summary mode does not reserialize or rehash
+  the omitted source provenance; full mode remains the default for audit lanes;
 - `hxc.abi.json`: either `placeholder-no-export-analysis` or the admitted
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the

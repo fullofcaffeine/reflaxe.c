@@ -1122,6 +1122,7 @@ def compile_haxe(
     layout: str,
     platform_name: str,
     raylib_configuration: str,
+    runtime_report: str = "summary",
     pilot: str | None = None,
     renderer: str = "chunk-cache",
     benchmark_renderer: bool = False,
@@ -1129,6 +1130,8 @@ def compile_haxe(
     verify_level_adapter_provenance()
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
         raise PlayFailure(f"unknown Raylib configuration {raylib_configuration!r}")
+    if runtime_report not in ("full", "summary"):
+        raise PlayFailure(f"unknown runtime report detail {runtime_report!r}")
     arguments = [
         development_tool("haxe"),
         "--cwd",
@@ -1144,6 +1147,8 @@ def compile_haxe(
             if raylib_configuration == "desktop"
             else "raylib_configuration_memory"
         ),
+        "-D",
+        f"hxc_runtime_report={runtime_report}",
     ]
     if layout != "split":
         arguments.extend(["-D", f"hxc_project_layout={layout}"])
@@ -1214,9 +1219,24 @@ def validate_compiled_haxe(
         else []
     )
     selected_well_formed = isinstance(selected, list) and len(selected_ids) == len(selected)
+    runtime_report_is_full = (
+        runtime_plan.get("schemaVersion") == 2
+        and runtime_plan.get("algorithm") == "hxc-runtime-plan-v2"
+        and isinstance(runtime_plan.get("rootReasons"), list)
+    )
+    root_reason_summary = runtime_plan.get("rootReasons")
+    runtime_report_is_summary = (
+        runtime_plan.get("schemaVersion") == 1
+        and runtime_plan.get("algorithm") == "hxc-runtime-plan-summary-v1"
+        and runtime_plan.get("detail") == "summary"
+        and runtime_plan.get("sourceSchemaVersion") == 2
+        and runtime_plan.get("sourceAlgorithm") == "hxc-runtime-plan-v2"
+        and isinstance(root_reason_summary, dict)
+        and isinstance(root_reason_summary.get("count"), int)
+        and root_reason_summary["count"] > 0
+    )
     if (
-        runtime_plan.get("schemaVersion") != 2
-        or runtime_plan.get("algorithm") != "hxc-runtime-plan-v2"
+        not (runtime_report_is_full or runtime_report_is_summary)
         or runtime_plan.get("status") != "analyzed-runtime-features"
         or runtime_plan.get("planPurpose") != "compiler-program"
         or runtime_plan.get("requestedPolicy") != "auto"
@@ -1576,6 +1596,7 @@ def snapshot_values() -> dict[str, object]:
             layout="split",
             platform_name=SNAPSHOT_PLATFORM,
             raylib_configuration="desktop",
+            runtime_report="full",
         )
         values: dict[str, object] = {}
         for name, format_name in PLAYABLE_SNAPSHOT_FORMATS.items():

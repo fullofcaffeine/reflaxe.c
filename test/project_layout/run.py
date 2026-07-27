@@ -671,6 +671,11 @@ def check_invalid_direct_defines(root: Path) -> None:
             "hxc_symbol_report=invalid",
             "invalid hxc_symbol_report `invalid`; expected full or summary",
         ),
+        (
+            "runtime-report",
+            "hxc_runtime_report=invalid",
+            "invalid hxc_runtime_report `invalid`; expected full or summary",
+        ),
     )
     for label, define, expected in fixtures:
         output = root / label

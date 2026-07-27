@@ -206,6 +206,12 @@ specialization-report construction, and final project-manifest emission. These
 clocks identify repeated work; they do not let reports or manifests make
 semantic decisions.
 
+When one of those boundaries remains expensive, nested diagnostic clocks split
+symbol ordering, draft creation, collision resolution, and table
+materialization, plus project-plan validation, unit canonicalization, sidecar
+construction, and manifest construction. The nested records add up under their
+named parent, so the report can locate cost without counting it twice.
+
 See [test feedback-loop and CI performance](test-performance.md) for the
 measurement method, the pinned-Haxe macOS timer caveat, and current Caxecraft
 results.

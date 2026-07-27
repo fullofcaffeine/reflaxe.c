@@ -38,6 +38,7 @@ class SymbolRegistryGolden {
 		if (Json.stringify(finalized) != Json.stringify(reversedFinalized)) {
 			throw "typed C name finalization changed with declaration discovery order";
 		}
+		verifyRepeatedCollisionRound();
 		final plan = new CDeclarationPlanner().plan(finalized.snapshot);
 		final forwardNames = [];
 		for (header in plan.headers) {
@@ -117,6 +118,35 @@ class SymbolRegistryGolden {
 			new CSymbolRequest(CSKField, ["demo", "LIMIT"], CNSPreprocessor, CSVPublic, "DEMO_LIMIT"),
 			new CSymbolRequest(CSKLocal, ["demo", "Worker", "label"], CNSLabel("demo.Worker.run(c.Int32)"))
 		];
+	}
+
+	/**
+		Prove that a hash-suffixed name which collides again advances safely.
+
+		Ordinary collisions settle after one suffix. This fixture deliberately
+		gives a third generated symbol the exact spelling of another symbol's
+		first suffix, forcing a second round. It protects the rare correctness
+		path while production finalization revisits only names changed by the
+		previous round.
+	**/
+	static function verifyRepeatedCollisionRound():Void {
+		final namespace = CNSOrdinary("translation-unit");
+		final first = new CSymbolRequest(CSKSpecialization, ["demo", "Box", "map"], namespace, CSVInternal, null, null, ["c.Int32"]);
+		final second = new CSymbolRequest(CSKSpecialization, ["demo", "Box", "map"], namespace, CSVInternal, null, null, ["demo.User"]);
+		final occupant = new CSymbolRequest(CSKMethod, ["collision", "occupant"], namespace, CSVInternal, null, null, null, null,
+			["demo", "Box", "map", "h8297ed1a605e"]);
+		final registry = new CSymbolRegistry();
+		registry.registerAll([first, second, occupant]);
+		final snapshot = registry.finalizeSymbols();
+		final firstName = registry.identifierFor(first).value;
+		final secondName = registry.identifierFor(second).value;
+		final occupantName = registry.identifierFor(occupant).value;
+		if (!StringTools.endsWith(firstName, "_h8297ed1a605e5954")
+			|| !StringTools.endsWith(secondName, "_h6b7e6eb9dc80")
+			|| occupantName.indexOf("hxc_demo_Box_map_h8297ed1a605e_h") != 0
+			|| snapshot.collisions.length != 2) {
+			throw 'a generated C name that collided after its first hash suffix was not advanced deterministically: first=$firstName second=$secondName occupant=$occupantName collisions=${snapshot.collisions.length}';
+		}
 	}
 
 	static function readableIdentityProof():String {

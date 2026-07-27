@@ -155,6 +155,14 @@ uses no runtime. Read it in this order:
 7. `directDecisions` and `programLocalHelpers` explain work intentionally kept
    outside `hxrt`.
 
+The default `-D hxc_runtime_report=full` form provides that complete
+source-positioned explanation. Large interactive programs may opt into
+`-D hxc_runtime_report=summary`: `rootReasons` and selected-feature/dependency
+reason lists then become exact counts. The summary still shows what was
+selected and which native artifacts are packaged, but it deliberately does not
+reserialize or rehash every omitted source span. Use a full audit build when
+you need to trace one selection back to its exact Haxe source location.
+
 For example, a literal `Sys.println` root selects `io`. The plan then shows
 `status`, `string-literal`, and `runtime-base` as dependency-propagated features.
 Removing a dependency from the link command would break the validated feature

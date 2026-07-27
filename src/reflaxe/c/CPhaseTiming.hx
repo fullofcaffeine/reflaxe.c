@@ -61,6 +61,10 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTSemanticHelperSelection = "semantic helper selection";
 	var CDTSemanticNameRegistration = "semantic name registration";
 	var CDTSymbolFinalization = "symbol finalization";
+	var CDTSymbolRequestOrdering = "symbol request ordering";
+	var CDTSymbolDraftConstruction = "symbol draft construction";
+	var CDTSymbolCollisionResolution = "symbol collision resolution";
+	var CDTSymbolTableMaterialization = "symbol table materialization";
 	var CDTSemanticRepresentationFinalization = "semantic representation finalization";
 	var CDTSemanticNameProjection = "semantic name projection";
 	var CDTBodySetupAndValuePlanning = "body setup and value planning";
@@ -69,6 +73,17 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTArtifactRuntimePackaging = "artifact runtime packaging";
 	var CDTArtifactSpecializationReport = "artifact specialization report";
 	var CDTArtifactProjectEmission = "artifact project emission";
+	var CDTArtifactPlanValidation = "artifact plan validation";
+	var CDTArtifactUnitCanonicalization = "artifact unit canonicalization";
+	var CDTArtifactSidecarConstruction = "artifact sidecar construction";
+	var CDTArtifactSymbolReportSerialization = "artifact symbol-report serialization";
+	var CDTArtifactInitializationReportSerialization = "artifact initialization-report serialization";
+	var CDTArtifactRuntimeReportProjection = "artifact runtime-report projection";
+	var CDTArtifactRuntimeReportSerialization = "artifact runtime-report serialization";
+	var CDTArtifactContractReportSerialization = "artifact contract-report serialization";
+	var CDTArtifactSpecializationDispatchSerialization = "artifact specialization-dispatch serialization";
+	var CDTArtifactBuildAdapterConstruction = "artifact build-adapter construction";
+	var CDTArtifactManifestConstruction = "artifact manifest construction";
 }
 
 /** Bounded entity and I/O counts recorded only at semantic boundaries. */
@@ -86,6 +101,10 @@ enum abstract CProfileCounterId(String) to String {
 	var CPCounterHxcIRManagedRoots = "hxcir.managed-roots";
 	var CPCounterCASTFunctions = "cast.functions";
 	var CPCounterRuntimeRequirements = "runtime.requirements";
+	var CPCounterSymbolInitialCandidates = "symbols.initial-candidates";
+	var CPCounterSymbolCollisionRounds = "symbols.collision-rounds";
+	var CPCounterSymbolCollisionCandidatesRechecked = "symbols.collision-candidates-rechecked";
+	var CPCounterSymbolCollisionStatesMoved = "symbols.collision-states-moved";
 	var CPCounterGeneratedFiles = "artifacts.files";
 	var CPCounterGeneratedBytes = "artifacts.bytes";
 	var CPCounterPriorOwnedFiles = "output.prior-owned-files";

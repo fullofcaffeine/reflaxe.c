@@ -3,6 +3,10 @@ package reflaxe.c.emit;
 import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
+#if (macro || reflaxe_runtime)
+import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
+#end
 import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
 import reflaxe.c.CRuntimeDiagnostics;
@@ -54,6 +58,20 @@ enum abstract CProjectSymbolReportDetail(String) to String {
 	var Summary = "summary";
 }
 
+/**
+	Controls the serialized runtime-plan evidence without changing selection.
+
+	`Full` writes every source-positioned reason for audit lanes. `Summary`
+	retains the resolved feature closure and exact reason counts, which keeps an
+	interactive build from formatting or hashing the same thousands of
+	provenance records after the complete in-memory plan has already passed
+	validation.
+**/
+enum abstract CProjectRuntimeReportDetail(String) to String {
+	var Full = "full";
+	var Summary = "summary";
+}
+
 /** Complete logical input to deterministic project packaging; it contains no output root. */
 typedef CProjectEmissionPlan = {
 	final schemaVersion:Int;
@@ -68,6 +86,7 @@ typedef CProjectEmissionPlan = {
 	final ?runtimePolicyProvenance:String;
 	final ?runtimeDiagnosticsProvenance:String;
 	final ?symbolReportDetail:CProjectSymbolReportDetail;
+	final ?runtimeReportDetail:CProjectRuntimeReportDetail;
 	final units:Array<GeneratedFile>;
 	final buildFacts:Array<TypedCBuildFact>;
 	final ?primitiveHelperIds:Array<String>;
@@ -201,6 +220,57 @@ private typedef SymbolTableSummary = {
 	final collisions:Array<reflaxe.c.naming.CSymbolRegistry.CSymbolCollisionRecord>;
 }
 
+private typedef RuntimeReasonSetSummary = {
+	final count:Int;
+}
+
+private typedef RuntimeDependencyEdgeSummary = {
+	final featureId:String;
+	final dependencyId:String;
+	final reasons:RuntimeReasonSetSummary;
+}
+
+private typedef RuntimeSelectedFeatureSummary = {
+	final id:String;
+	final availability:reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureAvailability;
+	final root:Bool;
+	final reasons:RuntimeReasonSetSummary;
+	final dependencies:Array<String>;
+	final artifacts:Array<String>;
+	final symbols:Array<String>;
+	final libraries:Array<String>;
+	final defines:Array<String>;
+}
+
+private typedef RuntimePlanSummary = {
+	final schemaVersion:Int;
+	final algorithm:String;
+	final detail:CProjectRuntimeReportDetail;
+	final sourceSchemaVersion:Int;
+	final sourceAlgorithm:String;
+	final status:RuntimeFeaturePlanStatus;
+	final planPurpose:RuntimePlanningPurpose;
+	final profile:CProfile;
+	final requestedPolicy:CProjectRuntimePolicy;
+	final resolvedPolicy:CProjectRuntimePolicy;
+	final policyProvenance:String;
+	final diagnosticMode:CProjectRuntimeDiagnostics;
+	final diagnosticProvenance:String;
+	final environment:CProjectEnvironment;
+	final rootReasons:RuntimeReasonSetSummary;
+	final manualOverrides:Array<reflaxe.c.runtime.RuntimeFeatureModel.RuntimeOverrideRecord>;
+	final directDecisions:Array<String>;
+	final dependencyEdges:Array<RuntimeDependencyEdgeSummary>;
+	final selectedFeatures:Array<RuntimeSelectedFeatureSummary>;
+	final features:Array<String>;
+	final artifactDetails:Array<reflaxe.c.runtime.RuntimeFeatureModel.RuntimeArtifactRecord>;
+	final artifacts:Array<String>;
+	final symbols:Array<String>;
+	final libraries:Array<String>;
+	final defines:Array<String>;
+	final noRuntimeProof:Null<reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeProofRecord>;
+}
+
 /** Pure schema-1 project emitter. Filesystem ownership is handled separately. */
 class CProjectEmitter {
 	public static inline final SCHEMA_VERSION = 1;
@@ -221,40 +291,118 @@ class CProjectEmitter {
 	public function new() {}
 
 	public function emit(plan:CProjectEmissionPlan):Array<GeneratedFile> {
+		#if (macro || reflaxe_runtime)
+		final planValidationTimer = CPhaseTiming.startDetail(CDTArtifactPlanValidation);
+		#end
 		validatePlan(plan);
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(planValidationTimer);
+		final unitCanonicalizationTimer = CPhaseTiming.startDetail(CDTArtifactUnitCanonicalization);
+		#end
 		final units = canonicalUnits(plan.units);
 		final buildPlan = new CBuildPlanBuilder().build(plan.projectName, plan.cStandard, units, plan.buildFacts);
 		final files = units.copy();
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(unitCanonicalizationTimer);
 
+		final sidecarConstructionTimer = CPhaseTiming.startDetail(CDTArtifactSidecarConstruction);
+		final symbolReportTimer = CPhaseTiming.startDetail(CDTArtifactSymbolReportSerialization);
+		#end
 		switch symbolReportDetail(plan) {
 			case Full:
 				files.push(jsonFile("hxc.symbols.json", GeneratedFileKind.SymbolTable, plan.symbolTable));
 			case Summary:
 				files.push(jsonFile("hxc.symbols.json", GeneratedFileKind.SymbolTable, symbolTableSummary(plan.symbolTable)));
 		}
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(symbolReportTimer);
+		#end
 		switch plan.compilationStatus {
 			case StructuralFixture:
+				#if (macro || reflaxe_runtime)
+				final runtimeReportTimer = CPhaseTiming.startDetail(CDTArtifactRuntimeReportSerialization);
+				#end
 				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanPlaceholder(plan)));
+				#if (macro || reflaxe_runtime)
+				CPhaseTiming.stopDetail(runtimeReportTimer);
+				final contractReportTimer = CPhaseTiming.startDetail(CDTArtifactContractReportSerialization);
+				#end
 				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiPlaceholder(plan)));
 				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibPlaceholder(plan)));
+				#if (macro || reflaxe_runtime)
+				CPhaseTiming.stopDetail(contractReportTimer);
+				#end
 			case PrimitiveExecutable | DirectValueExecutable:
+				#if (macro || reflaxe_runtime)
+				final initializationReportTimer = CPhaseTiming.startDetail(CDTArtifactInitializationReportSerialization);
+				#end
 				files.push(jsonFile("hxc.initialization-plan.json", GeneratedFileKind.InitializationPlan, requireStaticInitialization(plan)));
-				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanResolved(plan)));
+				#if (macro || reflaxe_runtime)
+				CPhaseTiming.stopDetail(initializationReportTimer);
+				#end
+				switch runtimeReportDetail(plan) {
+					case Full: {
+							#if (macro || reflaxe_runtime)
+							final runtimeProjectionTimer = CPhaseTiming.startDetail(CDTArtifactRuntimeReportProjection);
+							#end
+							final reportedRuntimePlan = runtimePlanResolved(plan);
+							#if (macro || reflaxe_runtime)
+							CPhaseTiming.stopDetail(runtimeProjectionTimer);
+							final runtimeReportTimer = CPhaseTiming.startDetail(CDTArtifactRuntimeReportSerialization);
+							#end
+							files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, reportedRuntimePlan));
+							#if (macro || reflaxe_runtime)
+							CPhaseTiming.stopDetail(runtimeReportTimer);
+							#end
+						}
+					case Summary: {
+							#if (macro || reflaxe_runtime)
+							final runtimeProjectionTimer = CPhaseTiming.startDetail(CDTArtifactRuntimeReportProjection);
+							#end
+							final reportedRuntimePlan = runtimePlanSummary(runtimePlanResolved(plan));
+							#if (macro || reflaxe_runtime)
+							CPhaseTiming.stopDetail(runtimeProjectionTimer);
+							final runtimeReportTimer = CPhaseTiming.startDetail(CDTArtifactRuntimeReportSerialization);
+							#end
+							files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, reportedRuntimePlan));
+							#if (macro || reflaxe_runtime)
+							CPhaseTiming.stopDetail(runtimeReportTimer);
+							#end
+						}
+				}
+				#if (macro || reflaxe_runtime)
+				final contractReportTimer = CPhaseTiming.startDetail(CDTArtifactContractReportSerialization);
+				#end
 				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiResolved(plan)));
 				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibResolved(plan)));
+				#if (macro || reflaxe_runtime)
+				CPhaseTiming.stopDetail(contractReportTimer);
+				final specializationDispatchTimer = CPhaseTiming.startDetail(CDTArtifactSpecializationDispatchSerialization);
+				#end
 				if (plan.specializationReport != null)
 					files.push(jsonFile("hxc.specializations.json", GeneratedFileKind.SpecializationReport, plan.specializationReport));
 				if (plan.dispatchReport != null)
 					files.push(jsonFile("hxc.dispatch.json", GeneratedFileKind.DispatchReport, plan.dispatchReport));
+				#if (macro || reflaxe_runtime)
+				CPhaseTiming.stopDetail(specializationDispatchTimer);
+				#end
 			case LoweredProgram:
 				throw new ProjectEmissionError("unreachable generic lowered-program plan passed validation");
 			case _:
 				throw new ProjectEmissionError('unreachable project compilation status `${Std.string(plan.compilationStatus)}`');
 		}
+		#if (macro || reflaxe_runtime)
+		final buildAdapterTimer = CPhaseTiming.startDetail(CDTArtifactBuildAdapterConstruction);
+		#end
 		for (adapter in new CBuildAdapterEmitter().emit(plan.projectName, buildPlan)) {
 			files.push(adapter);
 		}
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(buildAdapterTimer);
+		CPhaseTiming.stopDetail(sidecarConstructionTimer);
 
+		final manifestConstructionTimer = CPhaseTiming.startDetail(CDTArtifactManifestConstruction);
+		#end
 		files.sort(compareFiles);
 		final addressedArtifacts:Array<AddressedArtifact> = files.map(file -> {
 			path: file.relativePath,
@@ -284,6 +432,9 @@ class CProjectEmitter {
 		};
 		files.push(jsonFile("hxc.manifest.json", GeneratedFileKind.CompilerManifest, manifest));
 		files.sort(compareFiles);
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(manifestConstructionTimer);
+		#end
 		return files;
 	}
 
@@ -338,6 +489,11 @@ class CProjectEmitter {
 			case Full | Summary:
 			case _:
 				fail('unknown project symbol-report detail `${Std.string(plan.symbolReportDetail)}`');
+		}
+		switch runtimeReportDetail(plan) {
+			case Full | Summary:
+			case _:
+				fail('unknown project runtime-report detail `${Std.string(plan.runtimeReportDetail)}`');
 		}
 		if (plan.symbolTable.schemaVersion != CSymbolRegistry.SCHEMA_VERSION || plan.symbolTable.algorithm != CSymbolRegistry.ALGORITHM) {
 			fail('project emission requires the finalized schema-${CSymbolRegistry.SCHEMA_VERSION} ${CSymbolRegistry.ALGORITHM} symbol table');
@@ -1172,6 +1328,9 @@ class CProjectEmitter {
 	static function symbolReportDetail(plan:CProjectEmissionPlan):CProjectSymbolReportDetail
 		return plan.symbolReportDetail == null ? CProjectSymbolReportDetail.Full : plan.symbolReportDetail;
 
+	static function runtimeReportDetail(plan:CProjectEmissionPlan):CProjectRuntimeReportDetail
+		return plan.runtimeReportDetail == null ? CProjectRuntimeReportDetail.Full : plan.runtimeReportDetail;
+
 	static function symbolTableSummary(symbols:CSymbolTableSnapshot):SymbolTableSummary {
 		var collisionSymbolCount = 0;
 		for (collision in symbols.collisions)
@@ -1187,6 +1346,71 @@ class CProjectEmitter {
 			collisionSymbolCount: collisionSymbolCount,
 			collisions: symbols.collisions
 		};
+	}
+
+	/**
+		Project a validated runtime plan into compact interactive evidence.
+
+		The selected features, artifacts, symbols, libraries, defines, and direct
+		compiler decisions remain readable because they explain what the native
+		build contains. Repeated source reasons are replaced with exact counts.
+		Their complete source spans and other provenance remain available in full
+		audit mode; recomputing a second content digest here would repeat the costly
+		provenance serialization that interactive mode exists to skip.
+	**/
+	static function runtimePlanSummary(plan:RuntimeFeaturePlanSnapshot):RuntimePlanSummary {
+		final dependencyEdges:Array<RuntimeDependencyEdgeSummary> = plan.dependencyEdges.map(edge -> {
+			featureId: edge.featureId,
+			dependencyId: edge.dependencyId,
+			reasons: stringReasonSummary(edge.reasonIds)
+		});
+		final selectedFeatures:Array<RuntimeSelectedFeatureSummary> = plan.selectedFeatures.map(feature -> {
+			id: feature.id,
+			availability: feature.availability,
+			root: feature.root,
+			reasons: stringReasonSummary(feature.reasonIds),
+			dependencies: feature.dependencies,
+			artifacts: feature.artifacts,
+			symbols: feature.symbols,
+			libraries: feature.libraries,
+			defines: feature.defines
+		});
+		return {
+			schemaVersion: 1,
+			algorithm: "hxc-runtime-plan-summary-v1",
+			detail: CProjectRuntimeReportDetail.Summary,
+			sourceSchemaVersion: plan.schemaVersion,
+			sourceAlgorithm: plan.algorithm,
+			status: plan.status,
+			planPurpose: plan.planPurpose,
+			profile: plan.profile,
+			requestedPolicy: plan.requestedPolicy,
+			resolvedPolicy: plan.resolvedPolicy,
+			policyProvenance: plan.policyProvenance,
+			diagnosticMode: plan.diagnosticMode,
+			diagnosticProvenance: plan.diagnosticProvenance,
+			environment: plan.environment,
+			rootReasons: runtimeReasonSummary(plan.rootReasons),
+			manualOverrides: plan.manualOverrides,
+			directDecisions: plan.directDecisions,
+			dependencyEdges: dependencyEdges,
+			selectedFeatures: selectedFeatures,
+			features: plan.features,
+			artifactDetails: plan.artifactDetails,
+			artifacts: plan.artifacts,
+			symbols: plan.symbols,
+			libraries: plan.libraries,
+			defines: plan.defines,
+			noRuntimeProof: plan.noRuntimeProof
+		};
+	}
+
+	static function runtimeReasonSummary(reasons:Array<reflaxe.c.runtime.RuntimeFeatureModel.RuntimeReasonRecord>):RuntimeReasonSetSummary {
+		return {count: reasons.length};
+	}
+
+	static function stringReasonSummary(reasonIds:Array<String>):RuntimeReasonSetSummary {
+		return {count: reasonIds.length};
 	}
 
 	function validateLogicalText(value:String, label:String):Void {

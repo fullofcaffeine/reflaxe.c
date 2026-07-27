@@ -3,6 +3,11 @@ package reflaxe.c.naming;
 import haxe.Json;
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
+#if (macro || reflaxe_runtime)
+import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
+import reflaxe.c.CPhaseTiming.CProfileCounterId;
+#end
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.naming.CSymbolRequest.CSymbolKind;
@@ -66,6 +71,11 @@ private typedef CollisionEvent = {
 	final namespace:CSymbolNamespace;
 	final baseName:String;
 	final requests:Array<CSymbolRequest>;
+}
+
+private typedef CollisionMove = {
+	final state:GeneratedState;
+	final priorCandidate:String;
 }
 
 private typedef AssignedDraft = {
@@ -184,10 +194,19 @@ class CSymbolRegistry {
 			return finalizedSnapshot;
 		}
 
+		#if (macro || reflaxe_runtime)
+		final requestOrderingTimer = CPhaseTiming.startDetail(CDTSymbolRequestOrdering);
+		#end
 		final requests = [for (request in requestsByKey) request];
 		requests.sort(compareRequests);
 		validateExactCollisions(requests);
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(requestOrderingTimer);
+		#end
 
+		#if (macro || reflaxe_runtime)
+		final draftConstructionTimer = CPhaseTiming.startDetail(CDTSymbolDraftConstruction);
+		#end
 		final assigned:Array<AssignedDraft> = [];
 		final generatedStates:Array<GeneratedState> = [];
 		final exactByCandidate:Map<String, Array<AssignedDraft>> = [];
@@ -220,27 +239,26 @@ class CSymbolRegistry {
 				hashLength: 0
 			});
 		}
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(draftConstructionTimer);
+		#end
 
+		#if (macro || reflaxe_runtime)
+		final collisionResolutionTimer = CPhaseTiming.startDetail(CDTSymbolCollisionResolution);
+		#end
 		final events:Map<String, CollisionEvent> = [];
+		final generatedByCandidate:Map<String, Array<GeneratedState>> = [];
+		for (state in generatedStates) {
+			addGeneratedCandidate(generatedByCandidate, namespacedCandidate(state.draft.request.namespace, generatedName(state)), state);
+		}
+		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate);
+		final initialCandidateCount = candidateKeys.length;
+		var collisionCandidatesRechecked = 0;
+		var collisionStatesMoved = 0;
 		var rounds = 0;
 		while (true) {
-			final generatedByCandidate:Map<String, Array<GeneratedState>> = [];
-			for (state in generatedStates) {
-				final key = namespacedCandidate(state.draft.request.namespace, generatedName(state));
-				var group = generatedByCandidate.get(key);
-				if (group == null) {
-					group = [];
-					generatedByCandidate.set(key, group);
-				}
-				group.push(state);
-			}
-
-			final candidateKeys = [for (key in generatedByCandidate.keys()) key];
-			for (key in exactByCandidate.keys()) {
-				addUnique(candidateKeys, key);
-			}
-			candidateKeys.sort(compareUtf8);
 			var foundCollision = false;
+			final moves:Array<CollisionMove> = [];
 			for (key in candidateKeys) {
 				final generatedGroup = generatedByCandidate.get(key);
 				final exactGroup = exactByCandidate.get(key);
@@ -264,17 +282,61 @@ class CSymbolRegistry {
 					if (state.hashLength > 64) {
 						internalFailure("SHA-256 could not disambiguate distinct C semantic symbol keys", collisionSources(colliding, exactGroup));
 					}
+					moves.push({state: state, priorCandidate: key});
 				}
 			}
 			if (!foundCollision) {
 				break;
 			}
+
+			/*
+				A collision changes only the names in its collision group. Move
+				those states between the existing candidate buckets, then inspect
+				only the newly produced names on the next round. The old
+				implementation rebuilt and sorted the candidate table for every
+				symbol after each round, even though nearly all names were
+				unchanged. Applying every move after the scan preserves the prior
+				round-at-a-time contract: two symbols changed in the same round see
+				each other's new names together.
+			 */
+			for (move in moves) {
+				final priorGroup:Array<GeneratedState> = generatedByCandidate.get(move.priorCandidate) ?? internalFailure("C symbol collision index lost a generated candidate",
+					[move.state.draft.request.sourceSymbol()]);
+				if (!priorGroup.remove(move.state)) {
+					internalFailure("C symbol collision index lost a generated candidate", [move.state.draft.request.sourceSymbol()]);
+				}
+				if (priorGroup.length == 0) {
+					generatedByCandidate.remove(move.priorCandidate);
+				}
+			}
+			final nextCandidateSet:Map<String, Bool> = [];
+			for (move in moves) {
+				final nextCandidate = namespacedCandidate(move.state.draft.request.namespace, generatedName(move.state));
+				addGeneratedCandidate(generatedByCandidate, nextCandidate, move.state);
+				nextCandidateSet.set(nextCandidate, true);
+			}
+			candidateKeys = [for (key in nextCandidateSet.keys()) key];
+			candidateKeys.sort(compareUtf8);
+			collisionCandidatesRechecked += candidateKeys.length;
+			collisionStatesMoved += moves.length;
 			rounds++;
 			if (rounds > generatedStates.length * 15 + 1) {
 				internalFailure("C symbol collision resolution did not converge", requests.map(request -> request.sourceSymbol()));
 			}
 		}
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.setCounter(CPCounterSymbolInitialCandidates, initialCandidateCount);
+		CPhaseTiming.setCounter(CPCounterSymbolCollisionRounds, rounds);
+		CPhaseTiming.setCounter(CPCounterSymbolCollisionCandidatesRechecked, collisionCandidatesRechecked);
+		CPhaseTiming.setCounter(CPCounterSymbolCollisionStatesMoved, collisionStatesMoved);
+		#end
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(collisionResolutionTimer);
+		#end
 
+		#if (macro || reflaxe_runtime)
+		final tableMaterializationTimer = CPhaseTiming.startDetail(CDTSymbolTableMaterialization);
+		#end
 		for (state in generatedStates) {
 			assigned.push({
 				request: state.draft.request,
@@ -305,6 +367,9 @@ class CSymbolRegistry {
 			symbols: records,
 			collisions: collisions
 		};
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(tableMaterializationTimer);
+		#end
 		return finalizedSnapshot;
 	}
 
@@ -414,6 +479,28 @@ class CSymbolRegistry {
 
 	static function namespacedCandidate(namespace:CSymbolNamespace, candidate:String):String
 		return CSymbolRequest.namespaceKey(namespace) + "\x00" + candidate;
+
+	static function addGeneratedCandidate(candidates:Map<String, Array<GeneratedState>>, key:String, state:GeneratedState):Void {
+		var group = candidates.get(key);
+		if (group == null) {
+			group = [];
+			candidates.set(key, group);
+		}
+		group.push(state);
+	}
+
+	static function candidateKeysFor(generated:Map<String, Array<GeneratedState>>, exact:Map<String, Array<AssignedDraft>>):Array<String> {
+		final present:Map<String, Bool> = [];
+		for (key in generated.keys()) {
+			present.set(key, true);
+		}
+		for (key in exact.keys()) {
+			present.set(key, true);
+		}
+		final keys = [for (key in present.keys()) key];
+		keys.sort(compareUtf8);
+		return keys;
+	}
 
 	static function registerCollisionEvent(events:Map<String, CollisionEvent>, key:String, generated:Array<GeneratedState>,
 			exact:Null<Array<AssignedDraft>>):Void {

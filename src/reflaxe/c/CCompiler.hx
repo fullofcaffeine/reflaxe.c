@@ -15,6 +15,7 @@ import reflaxe.c.emit.CProjectEmitter.CProjectCompilationStatus;
 import reflaxe.c.emit.CProjectEmitter.CProjectEnvironment;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimeDiagnostics;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimePolicy;
+import reflaxe.c.emit.CProjectEmitter.CProjectRuntimeReportDetail;
 import reflaxe.c.emit.CProjectEmitter.CProjectStandard;
 import reflaxe.c.emit.CProjectEmitter.CProjectSymbolReportDetail;
 import reflaxe.c.emit.CProjectLayout;
@@ -82,6 +83,7 @@ private typedef ResolvedProjectConfiguration = {
 	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
 	final runtimeDiagnosticsProvenance:String;
 	final symbolReportDetail:CProjectSymbolReportDetail;
+	final runtimeReportDetail:CProjectRuntimeReportDetail;
 }
 
 private typedef StaticInitializationInspection = {
@@ -296,6 +298,7 @@ class CCompiler {
 				runtimePolicyProvenance: configuration.runtimePolicyProvenance,
 				runtimeDiagnosticsProvenance: configuration.runtimeDiagnosticsProvenance,
 				symbolReportDetail: configuration.symbolReportDetail,
+				runtimeReportDetail: configuration.runtimeReportDetail,
 				units: units,
 				buildFacts: lowered.buildFacts,
 				primitiveHelperIds: helperIds,
@@ -577,7 +580,8 @@ class CCompiler {
 			runtimePolicyProvenance: runtime.provenance,
 			runtimeDiagnostics: diagnostics.value,
 			runtimeDiagnosticsProvenance: diagnostics.provenance,
-			symbolReportDetail: resolveSymbolReportDetail(profile)
+			symbolReportDetail: resolveSymbolReportDetail(profile),
+			runtimeReportDetail: resolveRuntimeReportDetail(profile)
 		};
 	}
 
@@ -587,6 +591,16 @@ class CCompiler {
 			case "summary": CProjectSymbolReportDetail.Summary;
 			case invalid:
 				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_symbol_report `$invalid`; expected full or summary.',
+					compilationPosition(), profile);
+		};
+	}
+
+	static function resolveRuntimeReportDetail(profile:CProfile):CProjectRuntimeReportDetail {
+		return switch Context.definedValue("hxc_runtime_report") {
+			case null | "" | "full": CProjectRuntimeReportDetail.Full;
+			case "summary": CProjectRuntimeReportDetail.Summary;
+			case invalid:
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_runtime_report `$invalid`; expected full or summary.',
 					compilationPosition(), profile);
 		};
 	}
