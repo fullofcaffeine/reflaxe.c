@@ -32,6 +32,7 @@ KNOWN_AFFECTED_PATH = re.compile(
     r"|scripts/hooks/pre-commit"
     r"|scripts/test/snapshots\.py"
     r"|test/governance/test_toolchain_shard\.py"
+    r"|test/governance/test_caxecraft_timing\.py"
     r"|examples/caxecraft/"
     r"|docs/caxecraft-"
     r"|docs/raygui-hx\.md"
@@ -51,7 +52,7 @@ UNKNOWN_CROSS_CUTTING_PATH = re.compile(
     r"|package(?:-lock)?\.json"
     r"|docs/specs/(?:caxecraft-timing|toolchain-timing)\.json"
     r"|scripts/ci/(?:check_toolchain|run_toolchain_shard)\.py"
-    r"|test/governance/test_(?:caxecraft_timing|fixture_policy)\.py"
+    r"|test/governance/test_fixture_policy\.py"
     r"|src/reflaxe/c/"
     r")"
 )

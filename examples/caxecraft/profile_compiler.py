@@ -293,7 +293,9 @@ class CompilerProfileTypedBodyWork:
     other_type_classifications: int
     other_type_cpu_microseconds: float
     specialization_requests: int
+    specialization_cpu_microseconds: float
     coercion_requests: int
+    coercion_type_comparison_cpu_microseconds: float
     source_span_requests: int
     source_span_computations: int
     source_span_cache_hits: int
@@ -321,7 +323,9 @@ class CompilerProfileTypedBodyWork:
             "otherTypeClassifications": self.other_type_classifications,
             "otherTypeCpuMicroseconds": self.other_type_cpu_microseconds,
             "specializationRequests": self.specialization_requests,
+            "specializationCpuMicroseconds": self.specialization_cpu_microseconds,
             "coercionRequests": self.coercion_requests,
+            "coercionTypeComparisonCpuMicroseconds": self.coercion_type_comparison_cpu_microseconds,
             "sourceSpanRequests": self.source_span_requests,
             "sourceSpanComputations": self.source_span_computations,
             "sourceSpanCacheHits": self.source_span_cache_hits,
@@ -545,7 +549,9 @@ TYPED_BODY_WORK_FIELDS = frozenset(
         "otherTypeClassifications",
         "otherTypeCpuMicroseconds",
         "specializationRequests",
+        "specializationCpuMicroseconds",
         "coercionRequests",
+        "coercionTypeComparisonCpuMicroseconds",
         "sourceSpanRequests",
         "sourceSpanComputations",
         "sourceSpanCacheHits",
@@ -975,8 +981,16 @@ def parse_profile_records(
                         specialization_requests=profile_integer(
                             typed_body_value, "specializationRequests", minimum=0
                         ),
+                        specialization_cpu_microseconds=profile_number(
+                            typed_body_value,
+                            "specializationCpuMicroseconds",
+                        ),
                         coercion_requests=profile_integer(
                             typed_body_value, "coercionRequests", minimum=0
+                        ),
+                        coercion_type_comparison_cpu_microseconds=profile_number(
+                            typed_body_value,
+                            "coercionTypeComparisonCpuMicroseconds",
                         ),
                         source_span_requests=profile_integer(
                             typed_body_value, "sourceSpanRequests", minimum=0

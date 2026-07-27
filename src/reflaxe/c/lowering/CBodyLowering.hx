@@ -3104,7 +3104,9 @@ private class FunctionBuilder {
 	var profileOtherTypeClassifications = 0;
 	var profileOtherTypeCpuSeconds = 0.0;
 	var profileSpecializationRequests = 0;
+	var profileSpecializationCpuSeconds = 0.0;
 	var profileCoercionRequests = 0;
+	var profileCoercionTypeComparisonCpuSeconds = 0.0;
 	final sourceSpans:HaxeSourceSpanResolver;
 
 	public function new(context:CompilationContext, prepared:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>,
@@ -3315,7 +3317,9 @@ private class FunctionBuilder {
 		profileOtherTypeClassifications = 0;
 		profileOtherTypeCpuSeconds = 0.0;
 		profileSpecializationRequests = 0;
+		profileSpecializationCpuSeconds = 0.0;
 		profileCoercionRequests = 0;
+		profileCoercionTypeComparisonCpuSeconds = 0.0;
 		final sourceSpanRequestsBefore = sourceSpans.requestCount;
 		final sourceSpanComputationsBefore = sourceSpans.computationCount;
 		final sourceSpanCacheHitsBefore = sourceSpans.cacheHitCount;
@@ -3358,7 +3362,9 @@ private class FunctionBuilder {
 				otherTypeClassifications: profileOtherTypeClassifications,
 				otherTypeCpuMicroseconds: profileOtherTypeCpuSeconds * 1000000.0,
 				specializationRequests: profileSpecializationRequests,
+				specializationCpuMicroseconds: profileSpecializationCpuSeconds * 1000000.0,
 				coercionRequests: profileCoercionRequests,
+				coercionTypeComparisonCpuMicroseconds: profileCoercionTypeComparisonCpuSeconds * 1000000.0,
 				sourceSpanRequests: sourceSpans.requestCount - sourceSpanRequestsBefore,
 				sourceSpanComputations: sourceSpans.computationCount - sourceSpanComputationsBefore,
 				sourceSpanCacheHits: sourceSpans.cacheHitCount - sourceSpanCacheHitsBefore,
@@ -11582,7 +11588,11 @@ private class FunctionBuilder {
 	function coerce(value:LoweredValue, target:CBodyValueType, position:Position, node:String):LoweredValue {
 		if (collectProfileWork)
 			profileCoercionRequests++;
-		if (typeKey(value.mapping.irType) == typeKey(target.irType)) {
+		final comparisonStarted = collectProfileWork ? Sys.cpuTime() : 0.0;
+		final sameType = typeKey(value.mapping.irType) == typeKey(target.irType);
+		if (collectProfileWork)
+			profileCoercionTypeComparisonCpuSeconds += Sys.cpuTime() - comparisonStarted;
+		if (sameType) {
 			// The carrier is already correct, but retain the contextual Haxe identity
 			// (for example LogicalPath rather than plain String) for later diagnostics.
 			return {id: value.id, type: value.type, mapping: target};
@@ -12043,7 +12053,11 @@ private class FunctionBuilder {
 	function applyCurrentSpecialization(type:Type):Type {
 		if (collectProfileWork)
 			profileSpecializationRequests++;
-		return input.specialization == null ? type : input.specialization.apply(type);
+		final started = collectProfileWork ? Sys.cpuTime() : 0.0;
+		final result = input.specialization == null ? type : input.specialization.apply(type);
+		if (collectProfileWork)
+			profileSpecializationCpuSeconds += Sys.cpuTime() - started;
+		return result;
 	}
 
 	/**

@@ -224,7 +224,10 @@ class ToolchainShardTests(unittest.TestCase):
 
     def test_profile_consumer_uses_governance_without_game_domain(self) -> None:
         owners = self.route_selector.select_affected_owners(
-            ("examples/caxecraft/profile_compiler.py",)
+            (
+                "examples/caxecraft/profile_compiler.py",
+                "test/governance/test_caxecraft_timing.py",
+            )
         )
         self.assertEqual(
             tuple(owner.script for owner in owners),

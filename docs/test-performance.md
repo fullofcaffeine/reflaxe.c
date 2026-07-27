@@ -280,6 +280,9 @@ affect.
 Changing only Caxecraft's compiler-profile consumer does not select the full
 game-domain suite: the governance tests own its timing schema and parser,
 whereas actual game source and content still select the Caxecraft owner.
+The consumer's exact parser test travels on that same affected route. Other
+governance and fixture-policy changes remain unknown cross-cutting inputs and
+therefore retain the exhaustive fallback.
 
 The change was prompted by an interrupted local commit that had spent more
 than 55 minutes in the one-worker exhaustive route under heavy host contention
@@ -1382,6 +1385,34 @@ The owned nominal work fell by about 188ms, or 20%, and Eval reported about
 in the opposite direction by less than the variation expected from the
 recorded host contention; they remain diagnostics rather than a publishable
 end-to-end speed claim.
+
+### Ruling out specialization and coercion comparison
+
+After the safe type-plan caches above, typed-body lowering still accounted for
+about 4.4s of CPU. Two high request counts looked suspicious: applying a
+function's generic specialization 28,907 times and comparing HxcIR types during
+25,150 coercion checks. The profiler now measures the CPU inside those exact
+operations, but only when structured profiling is enabled. Normal compilation
+does not read the clock for either operation.
+
+One full-playable warm profile on a contended host measured:
+
+| Typed-body operation | Requests | CPU |
+| --- | ---: | ---: |
+| Apply the current generic specialization | 28,907 | 12ms |
+| Serialize and compare coercion HxcIR types | 25,150 | 23ms |
+| All recorded type-family classification | 21,722 | 1.291s |
+| Source-position conversion | 35,914 | 403ms |
+| Complete typed-body lowering | 45,454 source nodes | 4.382s |
+
+The build retained the exact 227-artifact SHA-256 tree digest
+`64c1a39e1e8814fc8f0146bbef0acdccfd9a266ba71b2dde5cb91da296515bb1`.
+An attempted object-identity shortcut covered 8,727 coercions but reduced the
+phase's 14.3GB cumulative allocation by only about 11MB, so it was removed.
+The remaining time is distributed through real expression-to-HxcIR
+construction and its ownership, lifetime, instruction, and provenance
+bookkeeping. A future optimization must attribute one of those owners rather
+than treating the two large request counts as cost by themselves.
 
 ### Span-lowering compiler-process reuse
 

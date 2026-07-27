@@ -238,7 +238,9 @@ typedef CProfileTypedBodyWork = {
 	final otherTypeClassifications:Int;
 	final otherTypeCpuMicroseconds:Float;
 	final specializationRequests:Int;
+	final specializationCpuMicroseconds:Float;
 	final coercionRequests:Int;
+	final coercionTypeComparisonCpuMicroseconds:Float;
 	final sourceSpanRequests:Int;
 	final sourceSpanComputations:Int;
 	final sourceSpanCacheHits:Int;
