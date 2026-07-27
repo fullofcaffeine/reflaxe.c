@@ -70,7 +70,7 @@ class RuntimeFeatureGraphGolden {
 		if (Json.stringify(registry.catalogSnapshot()) != Json.stringify(reversedRegistry.catalogSnapshot())) {
 			throw "runtime feature catalog changed with discovery order";
 		}
-
+		verifyCanonicalRootClosure();
 		final planner = new RuntimeFeaturePlanner(registry);
 		final empty = planner.plan(emptyRequest());
 		final alloc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.alloc", "alloc")], []));
@@ -354,6 +354,47 @@ class RuntimeFeatureGraphGolden {
 	static function syntheticFeature(id:String, dependencies:Array<String>):RuntimeFeatureDefinition {
 		return new RuntimeFeatureDefinition(RuntimeFeatureId.parse(id), 'Synthetic `$id` graph fixture.', NativeSeedOnly, true, [CEnvironment.Hosted],
 			dependencies.map(RuntimeFeatureId.parse), [], [], [], [], fixtureDocumentation());
+	}
+
+	/**
+		Proves that a shared dependency receives each canonical reason exactly once.
+
+		The synthetic graph is a diamond: the root reaches the leaf through both
+		its left and right dependencies. The planner may reuse that settled graph
+		shape, but the optimization must not duplicate a reason at the shared leaf
+		or change output when discovery order changes.
+	**/
+	static function verifyCanonicalRootClosure():Void {
+		final planner = new RuntimeFeaturePlanner(new RuntimeFeatureRegistry([
+			syntheticFeature("closure-root", ["closure-right", "closure-left"]),
+			syntheticFeature("closure-left", ["closure-leaf"]),
+			syntheticFeature("closure-right", ["closure-leaf"]),
+			syntheticFeature("closure-leaf", [])
+		], []));
+		final reasons = [
+			reason("fixture.closure.z", "closure-root"),
+			reason("fixture.closure.a", "closure-root")
+		];
+		final forward = planner.plan(featureRequest(CRuntimePolicy.Auto, reasons, []));
+		reasons.reverse();
+		final reverse = planner.plan(featureRequest(CRuntimePolicy.Auto, reasons, []));
+		if (Json.stringify(forward) != Json.stringify(reverse)) {
+			throw "runtime dependency closure changed with root-reason discovery order";
+		}
+		final expectedReasonIds = '["fixture.closure.a","fixture.closure.z"]';
+		if (forward.selectedFeatures.length != 4 || forward.dependencyEdges.length != 4) {
+			throw "runtime dependency diamond lost a feature or edge";
+		}
+		for (feature in forward.selectedFeatures) {
+			if (Json.stringify(feature.reasonIds) != expectedReasonIds) {
+				throw 'runtime feature `${feature.id}` did not receive each canonical reason exactly once';
+			}
+		}
+		for (edge in forward.dependencyEdges) {
+			if (Json.stringify(edge.reasonIds) != expectedReasonIds) {
+				throw 'runtime dependency `${edge.featureId}` -> `${edge.dependencyId}` did not receive each canonical reason exactly once';
+			}
+		}
 	}
 
 	static function fixtureDocumentation():RuntimeFeatureDocumentation

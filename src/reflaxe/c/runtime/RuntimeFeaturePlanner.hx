@@ -1,5 +1,8 @@
 package reflaxe.c.runtime;
 
+#if (macro || reflaxe_runtime)
+import reflaxe.c.CPhaseTiming;
+#end
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
@@ -26,19 +29,32 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeSelectedFeatureRecord;
 private typedef MutableDependencyEdge = {
 	final featureId:String;
 	final dependencyId:String;
-	final reasons:MutableReasonSet;
+	final reasonIds:Array<String>;
 }
 
 /**
-	A deterministically ordered list with constant-time membership checks.
+	One validated runtime feature and its canonical direct dependencies.
 
-	Runtime reasons arrive in canonical ID order, so `values` retains the exact
-	report order. `seen` prevents dependency diamonds from repeatedly scanning
-	and walking thousands of already-propagated reasons.
+	The planning request has one policy and environment, so a feature needs the
+	same validation and dependency sorting for every reason that selects it.
+	Keeping that settled work here avoids rediscovering it thousands of times.
 **/
-private typedef MutableReasonSet = {
-	final values:Array<String>;
-	final seen:Map<String, Bool>;
+private typedef RuntimePlanningNode = {
+	final definition:RuntimeFeatureDefinition;
+	final dependencies:Array<String>;
+}
+
+/**
+	The de-duplicated feature and edge closure reached from one root feature.
+
+	A *closure* is the root plus every transitive dependency it needs. Runtime
+	reasons have globally unique IDs and are processed in canonical order, so a
+	reason can append its ID once to every entry in this reusable closure without
+	per-feature membership maps or a later sort.
+**/
+private typedef RuntimeRootClosure = {
+	final featureIds:Array<String>;
+	final edgeKeys:Array<String>;
 }
 
 /** Resolves source-rooted requests into one policy-checked exact feature closure. */
@@ -53,6 +69,9 @@ class RuntimeFeaturePlanner {
 	}
 
 	public function plan(request:RuntimePlanningRequest):RuntimeFeaturePlanSnapshot {
+		#if (macro || reflaxe_runtime)
+		final reasonTimer = CPhaseTiming.startDetail(CDTRuntimeReasonCanonicalization);
+		#end
 		validateRequest(request);
 		final reasons = canonicalReasons(request.rootReasons);
 		if (reasons.length == 0) {
@@ -67,35 +86,49 @@ class RuntimeFeaturePlanner {
 				throw new RuntimeNoRuntimeEligibilityAnalyzer(registry).policyFailure(reasons);
 			}
 		}
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(reasonTimer);
 
+		final dependencyTimer = CPhaseTiming.startDetail(CDTRuntimeDependencyPropagation);
+		#end
 		final selected:Map<String, Bool> = [];
 		final rootFeatures:Map<String, Bool> = [];
-		final reasonIdsByFeature:Map<String, MutableReasonSet> = [];
+		final reasonIdsByFeature:Map<String, Array<String>> = [];
 		final edgesByKey:Map<String, MutableDependencyEdge> = [];
+		final nodesByFeature:Map<String, RuntimePlanningNode> = [];
+		final closuresByRoot:Map<String, RuntimeRootClosure> = [];
 		for (reason in reasons) {
 			final featureId = reason.featureId.text();
 			rootFeatures.set(featureId, true);
-			select(featureId, reason.id, request, selected, reasonIdsByFeature, edgesByKey);
+			final closure = requiredRootClosure(featureId, request, selected, edgesByKey, nodesByFeature, closuresByRoot);
+			for (selectedFeatureId in closure.featureIds) {
+				appendReasonId(reasonIdsByFeature, selectedFeatureId, reason.id);
+			}
+			for (edgeKey in closure.edgeKeys) {
+				requiredEdge(edgesByKey, edgeKey).reasonIds.push(reason.id);
+			}
 		}
 
 		final overrides = canonicalOverrides(request.manualOverrides);
 		validateOverrides(overrides, selected, request);
-		final orderedFeatures = dependencyOrder(selected);
+		final orderedFeatures = dependencyOrder(selected, nodesByFeature);
 		final dependencyEdges = dependencyRecords(edgesByKey);
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(dependencyTimer);
+		final projectionTimer = CPhaseTiming.startDetail(CDTRuntimePlanProjection);
+		#end
 		final featureRecords:Array<RuntimeSelectedFeatureRecord> = [];
 		final artifactDetails:Array<RuntimeArtifactRecord> = [];
 		final symbols:Array<String> = [];
 		final libraries:Array<String> = [];
 		final defines:Array<String> = [];
 		for (featureId in orderedFeatures) {
-			final definition = requireDefinition(featureId);
+			final node = requiredPlanningNode(nodesByFeature, featureId);
+			final definition = node.definition;
 			final reasonIds = requiredReasonIds(reasonIdsByFeature, featureId);
 			if (reasonIds.length == 0) {
 				internal('selected runtime feature `$featureId` has an empty source-reason set', [featureId]);
 			}
-			reasonIds.sort(RuntimeFeatureRegistry.compareUtf8);
-			final dependencies = definition.dependencies.map(dependency -> dependency.text());
-			dependencies.sort(RuntimeFeatureRegistry.compareUtf8);
 			final featureArtifacts = definition.artifacts.map(artifact -> artifact.outputPath);
 			featureArtifacts.sort(RuntimeFeatureRegistry.compareUtf8);
 			final featureSymbols = sortedUnique(definition.symbols);
@@ -107,7 +140,7 @@ class RuntimeFeaturePlanner {
 				availability: definition.availability,
 				root: rootFeatures.exists(featureId),
 				reasonIds: reasonIds.copy(),
-				dependencies: dependencies,
+				dependencies: node.dependencies.copy(),
 				artifacts: featureArtifacts,
 				symbols: featureSymbols,
 				libraries: featureLibraries,
@@ -135,7 +168,7 @@ class RuntimeFeaturePlanner {
 			case null: null;
 			case evidence: new RuntimeNoRuntimeEligibilityAnalyzer(registry).prove(request.purpose, evidence, directDecisions);
 		};
-		return {
+		final result:RuntimeFeaturePlanSnapshot = {
 			schemaVersion: PLAN_SCHEMA_VERSION,
 			algorithm: PLAN_ALGORITHM,
 			status: orderedFeatures.length == 0 ? RuntimeFeaturePlanStatus.RuntimeFree : request.purpose == RuntimePlanningPurpose.CompilerProgram ? RuntimeFeaturePlanStatus.RuntimeFeatures : RuntimeFeaturePlanStatus.NativeSeedFeatures,
@@ -160,33 +193,58 @@ class RuntimeFeaturePlanner {
 			defines: defines,
 			noRuntimeProof: orderedFeatures.length == 0 ? noRuntimeProof : null
 		};
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(projectionTimer);
+		#end
+		return result;
 	}
 
-	function select(featureId:String, reasonId:String, request:RuntimePlanningRequest, selected:Map<String, Bool>,
-			reasonIdsByFeature:Map<String, MutableReasonSet>, edgesByKey:Map<String, MutableDependencyEdge>):Void {
-		// The first visit for this feature/reason pair also visits every
-		// dependency. A later visit can only be a dependency diamond, so walking
-		// it again would add no information.
-		if (!appendUniqueValue(reasonIdsByFeature, featureId, reasonId))
+	function requiredRootClosure(featureId:String, request:RuntimePlanningRequest, selected:Map<String, Bool>, edgesByKey:Map<String, MutableDependencyEdge>,
+			nodesByFeature:Map<String, RuntimePlanningNode>, closuresByRoot:Map<String, RuntimeRootClosure>):RuntimeRootClosure {
+		final existing = closuresByRoot.get(featureId);
+		if (existing != null) {
+			return existing;
+		}
+		final closure:RuntimeRootClosure = {featureIds: [], edgeKeys: []};
+		appendRootClosure(featureId, request, selected, edgesByKey, nodesByFeature, [], [], closure);
+		closuresByRoot.set(featureId, closure);
+		return closure;
+	}
+
+	function appendRootClosure(featureId:String, request:RuntimePlanningRequest, selected:Map<String, Bool>, edgesByKey:Map<String, MutableDependencyEdge>,
+			nodesByFeature:Map<String, RuntimePlanningNode>, visitedFeatures:Map<String, Bool>, visitedEdges:Map<String, Bool>,
+			closure:RuntimeRootClosure):Void {
+		if (visitedFeatures.exists(featureId)) {
 			return;
-		final definition = selectableDefinition(featureId, request);
+		}
+		visitedFeatures.set(featureId, true);
 		selected.set(featureId, true);
+		closure.featureIds.push(featureId);
+		final node = planningNode(featureId, request, nodesByFeature);
+		for (dependencyId in node.dependencies) {
+			final key = edgeKey(featureId, dependencyId);
+			if (!visitedEdges.exists(key)) {
+				visitedEdges.set(key, true);
+				closure.edgeKeys.push(key);
+				if (!edgesByKey.exists(key)) {
+					edgesByKey.set(key, {featureId: featureId, dependencyId: dependencyId, reasonIds: []});
+				}
+			}
+			appendRootClosure(dependencyId, request, selected, edgesByKey, nodesByFeature, visitedFeatures, visitedEdges, closure);
+		}
+	}
+
+	function planningNode(featureId:String, request:RuntimePlanningRequest, nodesByFeature:Map<String, RuntimePlanningNode>):RuntimePlanningNode {
+		final existing = nodesByFeature.get(featureId);
+		if (existing != null) {
+			return existing;
+		}
+		final definition = selectableDefinition(featureId, request);
 		final dependencies = definition.dependencies.map(dependency -> dependency.text());
 		dependencies.sort(RuntimeFeatureRegistry.compareUtf8);
-		for (dependencyId in dependencies) {
-			final key = edgeKey(featureId, dependencyId);
-			var edge = edgesByKey.get(key);
-			if (edge == null) {
-				edge = {
-					featureId: featureId,
-					dependencyId: dependencyId,
-					reasons: {values: [], seen: []}
-				};
-				edgesByKey.set(key, edge);
-			}
-			appendReason(edge.reasons, reasonId);
-			select(dependencyId, reasonId, request, selected, reasonIdsByFeature, edgesByKey);
-		}
+		final node:RuntimePlanningNode = {definition: definition, dependencies: dependencies};
+		nodesByFeature.set(featureId, node);
+		return node;
 	}
 
 	function selectableDefinition(featureId:String, request:RuntimePlanningRequest):RuntimeFeatureDefinition {
@@ -211,30 +269,28 @@ class RuntimeFeaturePlanner {
 		return policyViolation('runtime feature `$featureId` is not registered', [featureId]);
 	}
 
-	function dependencyOrder(selected:Map<String, Bool>):Array<String> {
+	function dependencyOrder(selected:Map<String, Bool>, nodesByFeature:Map<String, RuntimePlanningNode>):Array<String> {
 		final result:Array<String> = [];
 		final visited:Map<String, Bool> = [];
 		final ids = [for (id in selected.keys()) id];
 		ids.sort(RuntimeFeatureRegistry.compareUtf8);
 		for (id in ids) {
-			appendDependencyOrder(id, selected, visited, result);
+			appendDependencyOrder(id, selected, nodesByFeature, visited, result);
 		}
 		return result;
 	}
 
-	function appendDependencyOrder(featureId:String, selected:Map<String, Bool>, visited:Map<String, Bool>, result:Array<String>):Void {
+	function appendDependencyOrder(featureId:String, selected:Map<String, Bool>, nodesByFeature:Map<String, RuntimePlanningNode>, visited:Map<String, Bool>,
+			result:Array<String>):Void {
 		if (visited.exists(featureId)) {
 			return;
 		}
 		visited.set(featureId, true);
-		final definition = requireDefinition(featureId);
-		final dependencies = definition.dependencies.map(dependency -> dependency.text());
-		dependencies.sort(RuntimeFeatureRegistry.compareUtf8);
-		for (dependencyId in dependencies) {
+		for (dependencyId in requiredPlanningNode(nodesByFeature, featureId).dependencies) {
 			if (!selected.exists(dependencyId)) {
 				internal('selected feature `$featureId` lost dependency `$dependencyId`', [featureId, dependencyId]);
 			}
-			appendDependencyOrder(dependencyId, selected, visited, result);
+			appendDependencyOrder(dependencyId, selected, nodesByFeature, visited, result);
 		}
 		result.push(featureId);
 	}
@@ -245,8 +301,7 @@ class RuntimeFeaturePlanner {
 		final result:Array<RuntimeDependencyEdgeRecord> = [];
 		for (key in keys) {
 			final edge = requiredEdge(edgesByKey, key);
-			edge.reasons.values.sort(RuntimeFeatureRegistry.compareUtf8);
-			result.push({featureId: edge.featureId, dependencyId: edge.dependencyId, reasonIds: edge.reasons.values.copy()});
+			result.push({featureId: edge.featureId, dependencyId: edge.dependencyId, reasonIds: edge.reasonIds.copy()});
 		}
 		return result;
 	}
@@ -398,39 +453,37 @@ class RuntimeFeaturePlanner {
 		}
 	}
 
-	static function appendUniqueValue(valuesByKey:Map<String, MutableReasonSet>, key:String, value:String):Bool {
+	static function appendReasonId(valuesByKey:Map<String, Array<String>>, key:String, value:String):Void {
 		var reasons = valuesByKey.get(key);
 		if (reasons == null) {
-			reasons = {values: [], seen: []};
+			reasons = [];
 			valuesByKey.set(key, reasons);
 		}
-		return appendReason(reasons, value);
+		reasons.push(value);
 	}
 
-	static function appendReason(reasons:MutableReasonSet, value:String):Bool {
-		if (reasons.seen.exists(value))
-			return false;
-		reasons.seen.set(value, true);
-		reasons.values.push(value);
-		return true;
-	}
-
-	static function requiredReasonIds(valuesByKey:Map<String, MutableReasonSet>, featureId:String):Array<String> {
-		for (key => reasons in valuesByKey) {
-			if (key == featureId) {
-				return reasons.values;
-			}
+	static function requiredReasonIds(valuesByKey:Map<String, Array<String>>, featureId:String):Array<String> {
+		final reasons = valuesByKey.get(featureId);
+		if (reasons != null) {
+			return reasons;
 		}
 		return internal('selected runtime feature `$featureId` has no propagated source reason', [featureId]);
 	}
 
 	static function requiredEdge(edgesByKey:Map<String, MutableDependencyEdge>, expectedKey:String):MutableDependencyEdge {
-		for (key => edge in edgesByKey) {
-			if (key == expectedKey) {
-				return edge;
-			}
+		final edge = edgesByKey.get(expectedKey);
+		if (edge != null) {
+			return edge;
 		}
 		return internal('runtime dependency edge `$expectedKey` disappeared during canonicalization');
+	}
+
+	static function requiredPlanningNode(nodesByFeature:Map<String, RuntimePlanningNode>, featureId:String):RuntimePlanningNode {
+		final node = nodesByFeature.get(featureId);
+		if (node != null) {
+			return node;
+		}
+		return internal('selected runtime feature `$featureId` has no validated planning node', [featureId]);
 	}
 
 	static function appendUnique(target:Array<String>, values:Array<String>):Void {

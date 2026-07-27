@@ -1202,6 +1202,57 @@ unchanged, and every compiler artifact is byte-identical. The timing direction
 is useful, but the saturated host means it must not be published as a p50,
 p95, or machine-independent speedup.
 
+### Runtime feature-closure reuse
+
+Runtime planning answers a small but important question: after direct C and
+program-local helpers have been considered, which exact `hxrt` features does
+this program still need, and why? The full playable supplied 4,662 independently
+validated semantic reasons, but those reasons selected only a small set of root
+features. Every root reaches a fixed *dependency closure*: the root feature
+plus all of the features it depends on, directly or indirectly.
+
+The earlier planner walked that same closure once per reason. It also kept a
+hash map beside every feature and dependency edge to detect duplicate reason
+IDs. After propagation, it sorted each large reason-ID array again. Those
+defenses were unnecessary at this phase: canonicalization has already proved
+that every reason ID is globally unique and put the reasons in deterministic
+UTF-8 order.
+
+The planner now validates and traverses each distinct root closure once per
+compiler request. It then appends each canonical reason ID once to the
+de-duplicated features and edges in that settled closure. The resulting arrays
+are already in their final order, so projection copies them without another
+large sort. This is request-local immutable planning work, not a cross-build
+cache. Policy, environment, availability, dependency, reason, diagnostic, and
+runtime-free checks remain in place.
+
+Stable nested profiler spans separate catalog construction, direct-evidence
+projection, HxcIR requirement reconciliation, reason canonicalization,
+dependency propagation, and final plan projection. A focused diamond-graph
+fixture proves that a dependency reached by two paths still receives each
+reason exactly once and that reversing input discovery cannot change the plan.
+
+The before and after samples below used the same full playable on a
+**contended host**, so they are diagnostic attribution rather than a release
+benchmark. Both emitted the same 225 normal artifacts with SHA-256 tree digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+
+| Measured runtime-plan value | Before | After |
+| --- | ---: | ---: |
+| Dependency propagation, CPU | 0.590s | 0.011s |
+| Dependency propagation, cumulative allocation | 2.45GB | 0.034GB |
+| Final plan projection, CPU | 0.525s | 0.006s |
+| Final plan projection, cumulative allocation | 2.27GB | 0.014GB |
+| Complete feature closure, cumulative allocation | 5.36GB | 0.69GB |
+| Complete target request, CPU | 20.810s | 20.189s |
+| Complete request cumulative allocation | 78.82GB | 74.15GB |
+
+Requirement reconciliation now owns most of the remaining broad runtime-plan
+cost at about 0.48s and 1.91GB in this sample. It independently proves that
+source-side runtime requests and validated HxcIR observations agree, so it must
+not be skipped merely because closure projection is now cheap. Any further
+change needs narrower attribution inside that proof.
+
 ### Span-lowering compiler-process reuse
 
 The measured time belongs to that feature's exhaustive **test suite**, not to a

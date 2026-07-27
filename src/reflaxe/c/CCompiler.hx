@@ -239,7 +239,9 @@ class CCompiler {
 			final interfaceTypeCount = lowered.dispatch.layouts.filter(layout -> layout.prepared.isInterface()).length;
 			final genericFunctionCount = graph.specializations.length;
 			final genericTypeCount = lowered.enums.filter(value -> value.prepared.typeParameterNames.length > 0).length;
+			final runtimeCatalogTimer = CPhaseTiming.startDetail(CDTRuntimeCatalogConstruction);
 			final registry = RuntimeFeatureCatalog.registry();
+			CPhaseTiming.stopDetail(runtimeCatalogTimer);
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
 					lowered.aggregates.length, lowered.enums.length, lowered.classes.length, lowered.constructors.length, genericFunctionCount,
@@ -355,6 +357,7 @@ class CCompiler {
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, constructorCount:Int,
 			genericFunctionCount:Int, genericTypeCount:Int, virtualInstanceCallCount:Int, interfaceInstanceCallCount:Int, importOperationCount:Int,
 			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
+		final directEvidenceTimer = CPhaseTiming.startDetail(CDTRuntimeDirectEvidenceProjection);
 		final directDecisions = [
 			"primitive-values",
 			"ub-safe-primitive-operations",
@@ -450,6 +453,8 @@ class CCompiler {
 		}
 		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
 			proof += ", plus fixed-length shared haxe.io.Bytes storage with explicit ownership and checked binary operations";
+		CPhaseTiming.stopDetail(directEvidenceTimer);
+		final reconciliationTimer = CPhaseTiming.startDetail(CDTRuntimeRequirementReconciliation);
 		final candidates:Array<RuntimeRequirementCandidate> = [];
 		for (requirement in runtimeRequirements) {
 			candidates.push(new RuntimeRequirementCandidate(RuntimeFeatureId.parse(requirement.featureId), requirement.operationId, requirement.kind,
@@ -458,9 +463,13 @@ class CCompiler {
 		final analysis = new RuntimeRequirementAnalyzer().analyze(program, candidates);
 		final noRuntimeEvidence = analysis.reasons.length == 0 ? new RuntimeNoRuntimeEvidence(RuntimeNoRuntimeScope.ReachableWholeProgram, proof,
 			analysis.reachability, helperIds) : null;
-		return new RuntimeFeaturePlanner(registry).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, context.profile,
+		CPhaseTiming.stopDetail(reconciliationTimer);
+		final featureClosureTimer = CPhaseTiming.startDetail(CDTRuntimeFeatureClosure);
+		final result = new RuntimeFeaturePlanner(registry).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, context.profile,
 			configuration.environment, configuration.runtimePolicy, configuration.runtimePolicyProvenance, configuration.runtimeDiagnostics,
 			configuration.runtimeDiagnosticsProvenance, analysis.reasons, [], directDecisions, noRuntimeEvidence));
+		CPhaseTiming.stopDetail(featureClosureTimer);
+		return result;
 	}
 
 	static function hasRuntimeFeature(requirements:Array<CBodyRuntimeRequirement>, featureId:String):Bool {

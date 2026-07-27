@@ -77,6 +77,13 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTBodyControlFlowConstruction = "body control-flow construction";
 	var CDTBodyControlFlowValidation = "body control-flow validation";
 	var CDTBodyCASTEmission = "body CAST emission";
+	var CDTRuntimeCatalogConstruction = "runtime catalog construction";
+	var CDTRuntimeDirectEvidenceProjection = "runtime direct-evidence projection";
+	var CDTRuntimeRequirementReconciliation = "runtime requirement reconciliation";
+	var CDTRuntimeFeatureClosure = "runtime feature closure";
+	var CDTRuntimeReasonCanonicalization = "runtime reason canonicalization";
+	var CDTRuntimeDependencyPropagation = "runtime dependency propagation";
+	var CDTRuntimePlanProjection = "runtime plan projection";
 	var CDTCTranslationUnitPrinting = "C translation-unit printing";
 	var CDTCGeneratedFileConstruction = "C generated-file construction";
 	var CDTArtifactRuntimePackaging = "artifact runtime packaging";
