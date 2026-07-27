@@ -1096,6 +1096,30 @@ above the actual formatter. Further work must follow those measurements rather
 than weakening hashing, collapsing output ownership, or adding speculative
 cross-request state.
 
+The follow-up profile found that the fixed-memory implementation still stored
+its 64-word SHA-256 schedule and round constants in `haxe.io.Bytes`. Eval then
+called byte-buffer helpers for values that were already 32-bit host integers.
+Ordinary fixed-size integer arrays preserve the algorithm and memory bound while
+removing those repeated conversions. The focused gate now also checks the
+published SHA-256 vector for one million ASCII `a` bytes, in addition to the
+standard-library padding-boundary differential.
+
+These follow-up values are again one-sample **contended diagnostics**. The
+before and after profiles emitted the same 225 normal artifacts with the same
+tree digest shown above.
+
+| Measured digest value | Byte schedule | Integer schedule |
+| --- | ---: | ---: |
+| Generated-file construction, CPU | 2.561s | 1.798s |
+| Generated-file construction, cumulative allocation | 17.33GB | 12.87GB |
+| Complete target request, CPU | 21.852s | 21.151s |
+| Complete request cumulative allocation | 84.59GB | 78.82GB |
+
+The isolated owner lost about 0.76s of CPU and 4.46GB of cumulative allocation.
+An attempted `haxe.ds.Vector` schedule did not reduce allocation and was not
+faster in the same workload, so the compiler keeps the simpler array rather
+than retaining an abstraction that the evidence did not justify.
+
 ### Deterministic candidate-name ordering
 
 The next profile attributed the remaining deterministic symbol work before
