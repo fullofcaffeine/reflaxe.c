@@ -201,10 +201,42 @@ runtime features proven reachable rather than claiming a runtime-free build.
 It never consults an undeclared sibling checkout or writes hand-authored C into
 the generated project.
 
+After a successful interactive build, the launcher records which exact inputs
+produced the game and hashes every output it may reuse. A second unchanged
+`caxecraft:play` checks that record, the complete Haxe/compiler/runtime/content
+input inventory, the native tool identities and foreign headers/libraries, the
+generated C project, staged files, and executable. Only an exact match skips
+Haxe, haxe.c, C compilation, and linking. A local diagnostic sample validated
+3,067 files in 0.31–0.91 seconds and reached launch preparation in 1.09
+seconds. The host was busy, so those figures show that the fast path meets its
+intended order of magnitude; they are not an authoritative percentile
+benchmark.
+
+The record is a local optimization, not build authority. A source edit, new
+module, changed define or layout, compiler/runtime/binding change, content
+change, native-tool or library change, missing output, or altered executable
+prints the first detected miss and runs the normal build. A failed requested
+build exits as a failure; it never presents the previous executable as if it
+contained the edit.
+
+Use these explicit escape hatches when measuring or diagnosing the build:
+
+```sh
+# Rebuild, but keep the normal Haxe compilation-server policy.
+npm run caxecraft:play -- --no-build-cache
+
+# Authoritative cold path: bypass executable reuse and force a fresh Haxe process.
+npm run caxecraft:play -- --cold
+```
+
+An existing `HAXE_NO_SERVER=1` also bypasses executable reuse because it
+expresses a request for fresh-process evidence. Deterministic pilots, snapshot
+checks, sanitizer runs, and compile/build-only modes retain their own explicit
+behavior and never claim an interactive unchanged-build hit.
+
 Interactive and deterministic pilot builds use separate marked output
 directories. Changing a pilot define therefore cannot leave stale generated
-files in another profile, while repeating the same profile can reuse its own
-safe build state.
+files in another profile.
 
 Useful non-interactive forms are:
 
@@ -503,9 +535,11 @@ unity builds also have different layout defines, so they do not form one shared
 cache context. Local and hosted measurements found no meaningful end-to-end
 speedup for the current Caxecraft builds, including repeated same-layout output.
 Required determinism lanes therefore keep an explicit cold build as independent
-evidence. The interactive `play.py` launcher does not force
-`HAXE_NO_SERVER=1`; it respects the developer's HaxeShim/server policy, while
-`--build-only` skips Haxe entirely for a reviewed generated project. See
+evidence. On a cache miss, the interactive `play.py` launcher does not force
+`HAXE_NO_SERVER=1`; it respects the developer's HaxeShim/server policy. An exact
+unchanged-build hit skips Haxe and the native toolchain altogether,
+`--no-build-cache` bypasses only that hit, `--cold` also forces a fresh Haxe
+process, and `--build-only` skips Haxe for a reviewed generated project. See
 [test performance](../../docs/test-performance.md) for the measurements. A
 future `hxc dev`/`hxc watch` path should make server ownership and invalidation
 more convenient only after phase timing shows that typing reuse reduces real

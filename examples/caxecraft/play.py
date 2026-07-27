@@ -16,6 +16,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 import zlib
 from pathlib import Path, PurePosixPath
 
@@ -27,6 +28,17 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(PROVISION_DIR))
 import provision  # type: ignore  # noqa: E402
+from dev_build_state import (  # noqa: E402
+    BuildStateFailure,
+    ExternalFile,
+    InputPath,
+    atomic_write_state,
+    build_state,
+    output_snapshot,
+    request_snapshot,
+    sha256_file,
+    validate_reuse,
+)
 from scripts.raygui import provision as raygui_provision  # noqa: E402
 
 
@@ -60,6 +72,7 @@ EXPECTED = CASE / "expected"
 # separately validates each platform's libraries and frameworks.
 SNAPSHOT_PLATFORM = "linux"
 OUTPUT_MARKER = ".hxc-caxecraft-play-root.json"
+PLAY_BUILD_STATE = "hxc-play-build-state.json"
 PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/hxc.manifest.json": "json",
     "playable/hxc.runtime-plan.json": "json",
@@ -1033,6 +1046,242 @@ def tool_version(executable: str) -> str:
         if line.strip():
             return line.strip()
     raise PlayFailure(f"{executable} did not report a version")
+
+
+def resolved_executable(command: str, label: str) -> Path:
+    """Resolve one invoked tool to the real executable whose bytes affect output."""
+
+    candidate = Path(command)
+    located = candidate if candidate.parent != Path(".") else Path(shutil.which(command) or "")
+    if not str(located) or not located.exists():
+        raise PlayFailure(f"{label} executable is unavailable: {command}")
+    resolved = located.resolve()
+    if resolved.is_symlink() or not resolved.is_file():
+        raise PlayFailure(f"{label} executable is not a regular file: {resolved}")
+    return resolved
+
+
+def tool_identity(name: str, command: str, *, report_version: bool) -> dict[str, object]:
+    """Capture tool bytes/version without asking that tool to compile anything."""
+
+    executable = resolved_executable(command, name)
+    identity: dict[str, object] = {
+        "name": name,
+        "command": command,
+        "path": str(executable),
+        "bytes": executable.stat().st_size,
+        "sha256": sha256_file(executable),
+    }
+    if report_version:
+        identity["version"] = tool_version(command)
+    return identity
+
+
+def haxe_install_inputs() -> list[InputPath]:
+    """Resolve the Lix-pinned Haxe compiler and standard library without running it.
+
+    Lix stores downloaded compilers below ``HAXESHIM_ROOT`` (or ``~/haxe`` by
+    default). Reading the checked-in ``.haxerc`` and hashing that exact install
+    lets an unchanged launch prove the Haxe identity while still skipping the
+    Haxe process completely.
+    """
+
+    haxerc = load_object(ROOT / ".haxerc", "pinned Haxe selection")
+    version = haxerc.get("version")
+    if not isinstance(version, str) or not re.fullmatch(r"[A-Za-z0-9._+-]+", version):
+        raise PlayFailure("pinned Haxe selection contains an invalid version")
+    roots: list[Path] = []
+    for variable in ("HAXE_ROOT", "HAXESHIM_ROOT"):
+        configured = os.environ.get(variable)
+        if configured:
+            roots.append(Path(configured).expanduser())
+    roots.append(Path.home() / "haxe")
+
+    executable_name = "haxe.exe" if os.name == "nt" else "haxe"
+    install: Path | None = None
+    for root in roots:
+        for candidate in (root, root / "versions" / version):
+            if (candidate / executable_name).is_file():
+                install = candidate
+                break
+        if install is not None:
+            break
+    if install is None:
+        raise PlayFailure(f"cannot locate the Lix-pinned Haxe {version} install without running Haxe")
+
+    std_override = os.environ.get("HAXE_STD_PATH")
+    standard_library = Path(std_override).expanduser() if std_override else install / "std"
+    return [
+        InputPath("haxe/compiler", install / executable_name),
+        InputPath("haxe/std", standard_library),
+    ]
+
+
+def source_tooling_inputs() -> list[InputPath]:
+    """List repository-owned build scripts without admitting interpreter caches.
+
+    Python's ``__pycache__`` files describe one local interpreter run, not the
+    source that builds Caxecraft. Hashing whole tooling directories would make
+    those disposable files invalidate an otherwise identical build. Listing
+    the reviewed source and patch inputs keeps additions visible while leaving
+    Python's local bytecode cache outside the semantic request.
+    """
+
+    inputs: list[InputPath] = []
+    for logical_root, directory in (
+        ("repo/caxecraft/tooling", CASE),
+        ("repo/raylib-tooling", ROOT / "scripts/raylib"),
+        ("repo/raygui-tooling", ROOT / "scripts/raygui"),
+    ):
+        for source in sorted(directory.glob("*.py"), key=lambda path: path.name.encode("utf-8")):
+            inputs.append(InputPath(f"{logical_root}/{source.name}", source))
+    inputs.append(InputPath("repo/raylib-tooling/patches", ROOT / "scripts/raylib/patches"))
+    inputs.extend(
+        [
+            InputPath(
+                "repo/raylib-tooling/provisioning-lock.json",
+                ROOT / "docs/specs/raylib-provisioning-lock.json",
+            ),
+            InputPath(
+                "repo/raygui-tooling/core-binding-lock.json",
+                ROOT / "docs/specs/raygui-core-binding-lock.json",
+            ),
+        ]
+    )
+    return inputs
+
+
+def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
+    """Name every source family whose bytes can change the playable build.
+
+    The logical names form the vocabulary used by cache-miss diagnostics. This
+    function is separate from hashing so focused tests can prove that compiler,
+    binding, runtime, content, Haxe-install, and launcher inputs all participate
+    without performing a full game build.
+    """
+
+    inputs = [
+        InputPath("repo/.haxerc", ROOT / ".haxerc"),
+        InputPath("repo/extraParams.hxml", ROOT / "extraParams.hxml"),
+        InputPath("repo/haxelib.json", ROOT / "haxelib.json"),
+        InputPath("repo/package-lock.json", ROOT / "package-lock.json"),
+        InputPath("repo/package.json", ROOT / "package.json"),
+        InputPath("repo/haxe_libraries", ROOT / "haxe_libraries"),
+        InputPath("repo/compiler/src", ROOT / "src"),
+        InputPath("repo/compiler/std", ROOT / "std"),
+        InputPath("repo/compiler/runtime", ROOT / "runtime/hxrt"),
+        InputPath("repo/vendor/reflaxe", ROOT / "vendor/reflaxe/src"),
+        InputPath("repo/caxecraft/play.hxml", CASE / "play.hxml"),
+        InputPath("repo/caxecraft/src", CASE / "src"),
+        InputPath("repo/caxecraft/assets", CASE / "assets"),
+        InputPath("repo/caxecraft/locales", CASE / "locales"),
+        InputPath("repo/caxecraft/packs", CASE / "packs"),
+        InputPath("repo/caxecraft/scenarios", CASE / "scenarios"),
+        *source_tooling_inputs(),
+        InputPath("tooling/haxeshim.js", resolved_executable(development_tool("haxe"), "Haxe shim")),
+        *haxe_install_inputs(),
+    ]
+    if args.source is not None:
+        inputs.append(InputPath("user/raylib-source", args.source.resolve()))
+    if args.raygui_source is not None:
+        inputs.append(InputPath("user/raygui-source", args.raygui_source.resolve()))
+    if args.prebuilt_raylib_report is not None:
+        inputs.append(InputPath("user/prebuilt-raylib-report", args.prebuilt_raylib_report.resolve()))
+    return inputs
+
+
+def play_request_snapshot(
+    args: argparse.Namespace,
+    *,
+    platform_name: str,
+    selected_pilot: str | None,
+    native_sanitizer_flags: tuple[str, ...],
+) -> dict[str, object]:
+    """Describe the complete source/configuration/tool request before building."""
+
+    generator_command = "ninja" if args.generator == "Ninja" else "make"
+    configuration: dict[str, object] = {
+        "platform": platform_name,
+        "layout": args.layout,
+        "raylibConfiguration": args.raylib_configuration,
+        "renderer": args.renderer,
+        "benchmarkRenderer": args.benchmark_renderer,
+        "pilot": selected_pilot,
+        "optimization": args.optimization,
+        "sanitizers": args.sanitizers,
+        "strictFlags": list(STRICT_FLAGS),
+        "sanitizerFlags": list(native_sanitizer_flags),
+        "authority": args.authority,
+        "raylibSource": str(args.source.resolve()) if args.source is not None else None,
+        "rayguiSource": str(args.raygui_source.resolve()) if args.raygui_source is not None else None,
+        "raylibCacheRoot": str(args.cache_root.resolve()),
+        "rayguiCacheRoot": str(args.raygui_cache_root.resolve()),
+        "prebuiltRaylibCache": (
+            str(args.prebuilt_raylib_cache.resolve()) if args.prebuilt_raylib_cache is not None else None
+        ),
+        "prebuiltRaylibBuild": (
+            str(args.prebuilt_raylib_build.resolve()) if args.prebuilt_raylib_build is not None else None
+        ),
+        "prebuiltRaylibReport": (
+            str(args.prebuilt_raylib_report.resolve()) if args.prebuilt_raylib_report is not None else None
+        ),
+        "runtimePolicy": "auto",
+        "runtimeReport": "summary",
+        "symbolReport": "summary",
+        "hxml": "examples/caxecraft/play.hxml",
+    }
+    tools = [
+        tool_identity("node", "node", report_version=True),
+        tool_identity("c-compiler", args.cc, report_version=True),
+        tool_identity("cxx-compiler", args.cxx, report_version=True),
+        tool_identity("cmake", args.cmake, report_version=True),
+        tool_identity("archiver", args.ar, report_version=False),
+        tool_identity("generator", generator_command, report_version=False),
+    ]
+    environment = {
+        name: os.environ[name]
+        for name in (
+            "HAXE_LIBCACHE",
+            "HAXE_ROOT",
+            "HAXE_STD_PATH",
+            "HAXESHIM_LIBCACHE",
+            "HAXESHIM_ROOT",
+        )
+        if name in os.environ
+    }
+    try:
+        return request_snapshot(
+            configuration=configuration,
+            inputs=play_build_inputs(args),
+            tools=tools,
+            environment=environment,
+        )
+    except BuildStateFailure as error:
+        raise PlayFailure(str(error)) from error
+
+
+def native_external_files(
+    *,
+    include_directory: Path,
+    library: Path,
+    raygui_include_directory: Path,
+    raygui_library: Path,
+) -> list[ExternalFile]:
+    """List the exact foreign headers and static libraries used by native C."""
+
+    files = [
+        ExternalFile("raylib/library", library),
+        ExternalFile("raygui/library", raygui_library),
+    ]
+    for family, directory in (
+        ("raylib/include", include_directory),
+        ("raygui/include", raygui_include_directory),
+    ):
+        if directory.is_symlink() or not directory.is_dir():
+            raise PlayFailure(f"{family} directory is missing or a symlink: {directory}")
+        for header in sorted(directory.glob("*.h"), key=lambda path: path.name.encode("utf-8")):
+            files.append(ExternalFile(f"{family}/{header.name}", header))
+    return files
 
 
 def sanitizer_flags(executable: str, platform_name: str) -> tuple[str, ...]:
@@ -2060,6 +2309,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--raygui-cache-root", type=Path, default=ROOT / ".cache/caxecraft/raygui")
     parser.add_argument("--ar", default=os.environ.get("AR", "ar"))
     parser.add_argument("--output-root", type=Path, default=CASE / "_build/play")
+    parser.add_argument(
+        "--no-build-cache",
+        action="store_true",
+        help="bypass the unchanged executable fast path while retaining normal Haxe-server policy",
+    )
+    parser.add_argument(
+        "--cold",
+        action="store_true",
+        help="bypass unchanged-build reuse and force a fresh Haxe process for the authoritative cold path",
+    )
     parser.add_argument("--rebuild-raylib", action="store_true")
     parser.add_argument("--rebuild-raygui", action="store_true")
     parser.add_argument("--prebuilt-raylib-cache", type=Path, help="verified pinned-source cache produced by the Raylib integration lane")
@@ -2071,6 +2330,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     try:
         args = parse_args(argv)
+        if args.cold:
+            os.environ["HAXE_NO_SERVER"] = "1"
         selected_pilot = "launch-smoke" if args.smoke else args.pilot
         if args.smoke and args.pilot is not None:
             raise PlayFailure("--smoke is the launch-smoke pilot alias and cannot be combined with --pilot")
@@ -2118,6 +2379,43 @@ def main(argv: list[str]) -> int:
         )
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
+        requested_snapshot: dict[str, object] | None = None
+        reusable_profile = selected_pilot is None and not args.sanitizers
+        if reusable_profile and not (args.compile_only or args.build_only):
+            snapshot_started = time.monotonic()
+            requested_snapshot = play_request_snapshot(
+                args,
+                platform_name=platform_name,
+                selected_pilot=selected_pilot,
+                native_sanitizer_flags=native_sanitizer_flags,
+            )
+            snapshot_ms = (time.monotonic() - snapshot_started) * 1000.0
+            fast_path_eligible = (
+                not args.rebuild_raylib
+                and not args.rebuild_raygui
+                and not args.benchmark_renderer
+                and not args.no_build_cache
+                and not args.cold
+                and os.environ.get("HAXE_NO_SERVER") != "1"
+            )
+            if fast_path_eligible:
+                validation_started = time.monotonic()
+                decision = validate_reuse(
+                    state_path=output_root / PLAY_BUILD_STATE,
+                    current_request=requested_snapshot,
+                    output_root=output_root,
+                    executable=executable,
+                )
+                validation_ms = (time.monotonic() - validation_started) * 1000.0
+                if decision.hit:
+                    total_ms = snapshot_ms + validation_ms
+                    print(
+                        "caxecraft: unchanged build hit; reused generated C, native executable, "
+                        f"and staged content after {total_ms:.1f} ms validation"
+                    )
+                    print("caxecraft: launching; press Q to quit")
+                    return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
+                print(f"caxecraft: unchanged build miss: {decision.reason}")
         if args.build_only:
             verify_level_adapter_provenance()
             manifest = validate_compiled_haxe(
@@ -2206,6 +2504,33 @@ def main(argv: list[str]) -> int:
         stage_runtime_assets(executable.parent)
         stage_content_catalogs(executable.parent)
         print(f"caxecraft: built native executable at {executable}")
+        if requested_snapshot is not None:
+            final_snapshot = play_request_snapshot(
+                args,
+                platform_name=platform_name,
+                selected_pilot=selected_pilot,
+                native_sanitizer_flags=native_sanitizer_flags,
+            )
+            if final_snapshot.get("sha256") != requested_snapshot.get("sha256"):
+                raise PlayFailure(
+                    "Caxecraft build inputs changed while the build was running; "
+                    "the executable was not published as reusable"
+                )
+            try:
+                state = build_state(
+                    request=requested_snapshot,
+                    outputs=output_snapshot(output_root, executable),
+                    external_native_files=native_external_files(
+                        include_directory=include_directory,
+                        library=library,
+                        raygui_include_directory=raygui_include_directory,
+                        raygui_library=raygui_library,
+                    ),
+                )
+                atomic_write_state(output_root / PLAY_BUILD_STATE, state)
+            except BuildStateFailure as error:
+                raise PlayFailure(str(error)) from error
+            print(f"caxecraft: published unchanged-build state at {output_root / PLAY_BUILD_STATE}")
         if args.build_only:
             return 0
         if selected_pilot is not None:
@@ -2340,7 +2665,7 @@ def main(argv: list[str]) -> int:
             return 0
         print("caxecraft: launching; press Q to quit")
         return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
-    except (OSError, UnicodeError, provision.ProvisionFailure, PlayFailure) as error:
+    except (OSError, UnicodeError, BuildStateFailure, provision.ProvisionFailure, PlayFailure) as error:
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1
 

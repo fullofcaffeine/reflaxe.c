@@ -509,6 +509,48 @@ next optimization must add phase timing around typing and target compilation,
 then reduce demonstrated repeated target work without caching mutable
 `CompilationContext` state or weakening stale-file ownership checks.
 
+### Caxecraft unchanged-build launch path
+
+Beads issue `haxe_c-5sd.8.1` implements the first user-visible incremental
+milestone without caching typed Haxe or compiler state. After one successful
+interactive build, `play.py` writes an ignored, schema-versioned state record
+beside that build variant. On the next request it performs these checks in
+order:
+
+1. hash every reviewed Haxe, nested HXML, compiler, Reflaxe, runtime, binding,
+   build-script, asset, localization, content-pack, scenario, pinned Haxe, and
+   standard-library input;
+2. compare the requested configuration, selected native tools, flags, and
+   environment with the request that produced the executable;
+3. re-hash the exact Raylib/Raygui headers and libraries used by that native
+   build; and
+4. re-hash the complete generated project, staged assets/content, and linked
+   executable.
+
+Only an exact match launches the existing executable. A missing, malformed,
+partial, or corrupt record is a visible miss. The ordinary build then runs and
+publishes replacement state only after Haxe-to-C generation, native compilation
+and linking, content staging, and a second input snapshot all succeed. If an
+input changes during the build, publication fails; an old executable is never
+reported as the result of the new request.
+
+The default interactive fast path is deliberately separate from correctness
+evidence. `--no-build-cache` rebuilds while retaining the developer's normal
+Haxe-server policy. `--cold` (or `HAXE_NO_SERVER=1`) bypasses reuse and starts a
+fresh Haxe process. Pilots, snapshots, sanitizers, and compile/build-only modes
+do not turn an old interactive executable into passing test evidence.
+
+After the input boundary was finalized, the end-to-end hit hashed 3,067 input
+files, 239 reusable outputs, and nine external native inputs in 635.0ms; the
+complete `npm run caxecraft:play` process reached launch preparation in 1.09s.
+Twenty additional direct-run hits had p50 349.0ms, observed p95 858.6ms, and
+maximum 901.7ms. During that sample the Mac's load average rose to 27.32 on 12
+logical CPUs because unrelated compiler and operating-system work was active,
+so these are conservative contention diagnostics rather than the parent's
+authoritative unsaturated baseline. They do demonstrate the intended structural
+result: an unchanged launch performs zero Haxe requests, zero C compilations,
+and zero links.
+
 ### Caxecraft target-phase profile and duplicate-body removal
 
 Beads issue `haxe_c-fbq` added an opt-in compiler profiler rather than guessing
