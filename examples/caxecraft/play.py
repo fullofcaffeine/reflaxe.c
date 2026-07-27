@@ -53,6 +53,14 @@ from dev_haxe_server import (  # noqa: E402
     transport_failed,
     verify_pinned_haxe,
 )
+from dev_native_cache import (  # noqa: E402
+    DependencyRoot,
+    ENVIRONMENT_KEYS as NATIVE_ENVIRONMENT_KEYS,
+    IncludeRoot,
+    NativeBuildResult,
+    NativeCache,
+    NativeCacheFailure,
+)
 from dev_generation import (  # noqa: E402
     GenerationFailure,
     VariantLock,
@@ -1308,6 +1316,7 @@ def play_request_snapshot(
             "HAXE_STD_PATH",
             "HAXESHIM_LIBCACHE",
             "HAXESHIM_ROOT",
+            *NATIVE_ENVIRONMENT_KEYS,
         )
         if name in os.environ
     }
@@ -2288,7 +2297,19 @@ def compile_native(
     cc: str,
     optimization: str,
     native_sanitizer_flags: tuple[str, ...],
-) -> None:
+    cache_root: Path,
+    cache_enabled: bool,
+    jobs: int,
+) -> NativeBuildResult:
+    """Build the generated project through depfile-validated object/link reuse.
+
+    The split project already gives each source module a stable C translation
+    unit. The native cache preserves that boundary: a source or dependency
+    change recompiles only the affected units, while link-only inputs can reuse
+    every object. ``cache_enabled=False`` runs the same depfile-aware compile
+    plan in private temporary directories and publishes no reusable entries.
+    """
+
     if platform_name == "windows":
         raise PlayFailure("the one-command Windows linker adapter is deferred; generated C remains available with --compile-only")
     build = manifest.get("build")
@@ -2306,48 +2327,41 @@ def compile_native(
         if not directory.is_dir():
             raise PlayFailure(f"generated include directory is missing: {include_value}")
         generated_include_directories.append(directory)
-    object_root = output.parent / "obj"
-    if object_root.exists():
-        shutil.rmtree(object_root)
-    object_root.mkdir(parents=True)
-    objects: list[Path] = []
+    sources: list[tuple[str, Path]] = []
     for index, source_value in enumerate(source_values):
         relative = validated_relative(source_value, f"generated source {index}")
         source_path = generated.joinpath(*relative.parts)
         if not source_path.is_file():
             raise PlayFailure(f"generated source is missing: {source_value}")
-        object_path = object_root / f"{index:03d}.o"
-        compile_arguments = [
-            cc,
+        sources.append((source_value, source_path))
+
+    include_roots = [
+        *[
+            IncludeRoot(f"generated-include-{index}", path)
+            for index, path in enumerate(generated_include_directories)
+        ],
+        IncludeRoot("raylib-include", include_directory),
+        IncludeRoot("raygui-include", raygui_include_directory),
+    ]
+    dependency_roots = [
+        DependencyRoot("generated-project", generated),
+        DependencyRoot("raylib-include", include_directory),
+        DependencyRoot("raygui-include", raygui_include_directory),
+    ]
+    native_cache = NativeCache(
+        cache_root,
+        compiler=cc,
+        compile_flags=(
             *STRICT_FLAGS,
             f"-O{optimization}",
             *native_sanitizer_flags,
-        ]
-        for generated_include_directory in generated_include_directories:
-            compile_arguments.extend(["-I", str(generated_include_directory)])
-        compile_arguments.extend(
-            [
-                "-I",
-                str(include_directory),
-                "-I",
-                str(raygui_include_directory),
-            ]
-        )
-        compile_arguments.extend(
-            [
-                "-c",
-                str(source_path),
-                "-o",
-                str(object_path),
-            ]
-        )
-        run(
-            compile_arguments,
-            cwd=ROOT,
-            timeout=180,
-            label=f"native compile of {source_value}",
-        )
-        objects.append(object_path)
+        ),
+        include_roots=include_roots,
+        dependency_roots=dependency_roots,
+        jobs=jobs,
+        enabled=cache_enabled,
+    )
+    objects = native_cache.objects(sources)
 
     lock = provision.load_lock()
     libraries, frameworks = provision.link_facts(lock, platform_name, raylib_configuration)
@@ -2362,15 +2376,32 @@ def compile_native(
         raise PlayFailure("generated Caxecraft frameworks differ from the pinned Raylib link plan")
     # Static-link order is significant: generated code needs raygui, and the
     # raygui implementation in turn needs raylib. System libraries follow both.
-    arguments = [cc, *native_sanitizer_flags, *[str(path) for path in objects], str(raygui_library), str(library)]
+    arguments_after_objects = [
+        *native_sanitizer_flags,
+        str(raygui_library),
+        str(library),
+    ]
     for name in expected_libraries:
         if name not in ("raylib", "raygui"):
-            arguments.append(f"-l{name}")
+            arguments_after_objects.append(f"-l{name}")
     for name in frameworks:
-        arguments.extend(["-framework", name])
-    output.parent.mkdir(parents=True, exist_ok=True)
-    arguments.extend(["-o", str(output)])
-    run(arguments, cwd=ROOT, timeout=180, label="Caxecraft native link")
+        arguments_after_objects.extend(["-framework", name])
+    link_hit = native_cache.link(
+        objects,
+        output=output,
+        arguments_after_objects=arguments_after_objects,
+        libraries=(
+            ("raygui/library", raygui_library),
+            ("raylib/library", library),
+        ),
+    )
+    object_hits = sum(1 for item in objects if item.cache_hit)
+    return NativeBuildResult(
+        objects=objects,
+        object_hits=object_hits,
+        object_misses=len(objects) - object_hits,
+        link_hit=link_hit,
+    )
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -2460,6 +2491,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="stop only the exact auto-owned server recorded for this worktree",
     )
+    parser.add_argument(
+        "--native-cache",
+        choices=("auto", "off"),
+        default="auto",
+        help="reuse depfile-validated objects/links or force an uncached native build",
+    )
+    parser.add_argument(
+        "--native-jobs",
+        type=int,
+        default=min(4, max(1, (os.cpu_count() or 2) // 2)),
+        help="bounded parallel C compiler processes (default: half the CPUs, capped at 4)",
+    )
     parser.add_argument("--rebuild-raylib", action="store_true")
     parser.add_argument("--rebuild-raygui", action="store_true")
     parser.add_argument("--prebuilt-raylib-cache", type=Path, help="verified pinned-source cache produced by the Raylib integration lane")
@@ -2487,6 +2530,8 @@ def main(argv: list[str]) -> int:
             )
         if args.haxe_server == "off":
             os.environ["HAXE_NO_SERVER"] = "1"
+        if args.native_jobs < 1 or args.native_jobs > 32:
+            raise PlayFailure("--native-jobs must be between 1 and 32")
         selected_pilot = "launch-smoke" if args.smoke else args.pilot
         if args.smoke and args.pilot is not None:
             raise PlayFailure("--smoke is the launch-smoke pilot alias and cannot be combined with --pilot")
@@ -2571,6 +2616,7 @@ def main(argv: list[str]) -> int:
                 and not args.benchmark_renderer
                 and not args.no_build_cache
                 and not args.cold
+                and args.native_cache != "off"
                 and os.environ.get("HAXE_NO_SERVER") != "1"
             )
             if fast_path_eligible:
@@ -2703,7 +2749,7 @@ def main(argv: list[str]) -> int:
             allow_network=args.allow_network,
             rebuild=args.rebuild_raygui,
         )
-        compile_native(
+        native_result = compile_native(
             generated,
             manifest,
             output=executable,
@@ -2716,6 +2762,17 @@ def main(argv: list[str]) -> int:
             cc=args.cc,
             optimization=args.optimization,
             native_sanitizer_flags=native_sanitizer_flags,
+            # Keep mutable indexes and immutable entries variant-local first.
+            # Cross-variant sharing needs its own concurrent-CAS proof.
+            cache_root=output_root / "native-cache",
+            cache_enabled=args.native_cache == "auto",
+            jobs=args.native_jobs,
+        )
+        print(
+            "caxecraft: native cache "
+            f"{native_result.object_hits} object hit(s), "
+            f"{native_result.object_misses} miss(es), "
+            f"link {'hit' if native_result.link_hit else 'miss'}"
         )
         stage_runtime_assets(executable.parent)
         stage_content_catalogs(executable.parent)
@@ -2887,6 +2944,7 @@ def main(argv: list[str]) -> int:
         BuildStateFailure,
         GenerationFailure,
         HaxeServerFailure,
+        NativeCacheFailure,
         provision.ProvisionFailure,
         PlayFailure,
     ) as error:

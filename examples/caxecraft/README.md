@@ -233,6 +233,9 @@ npm run caxecraft:play -- --haxe-server off --no-build-cache
 
 # Stop only this worktree's exact auto-owned Haxe server.
 npm run caxecraft:play -- --stop-haxe-server
+
+# Rebuild all native objects through the uncached reference path.
+npm run caxecraft:play -- --build-only --native-cache off
 ```
 
 An existing `HAXE_NO_SERVER=1` also bypasses executable reuse because it
@@ -254,6 +257,16 @@ internal build evidence rather than multiple game editions; `layout`, Raylib
 configuration, sanitizer, pilot, and renderer choices still use separate
 variant folders because those choices genuinely produce different C or native
 behavior.
+
+Native compilation consumes those immutable projects through compiler-produced
+dependency files. On a hit, every header in the previous dependency closure is
+re-hashed and the ordered include roots are checked for newly shadowing paths;
+an object is never reused merely because its `.c` file looks unchanged.
+Independent misses compile in a bounded pool, then a separate link key checks
+the ordered objects and exact Raylib/Raygui libraries. The launcher prints the
+object hit/miss count and whether the link was reused. `--native-jobs` adjusts
+the bounded worker count, while `--native-cache off` remains the clean native
+reference.
 
 Useful non-interactive forms are:
 

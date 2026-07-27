@@ -595,6 +595,44 @@ performance step: compiler depfiles, content-addressed objects, and a link
 cache. Until that lands, a changed Haxe build still recompiles every generated
 C translation unit.
 
+The depfile-backed native layer is now implemented by Beads
+`haxe_c-5sd.8.3`. Every generated source compiles with a GCC/Clang dependency
+file. A cached object is accepted only when all of these still match:
+
+- direct generated-C bytes;
+- C compiler executable, version, target, flags, and relevant include
+  environment;
+- the ordered include-root path inventory, which detects a newly added
+  shadowing header;
+- every generated, Raylib, Raygui, and system header named by the compiler's
+  dependency closure; and
+- the cached object bytes and schema-versioned metadata themselves.
+
+The fast base-key index is only a hint. Final object entries are immutable and
+content-addressed by the complete dependency record. A missing/corrupt index,
+dependency record, object, or link becomes a miss. Corrupt entries move to a
+quarantine directory before replacement; a failed compiler or linker process
+publishes no reusable result.
+
+Independent source files compile through a bounded pool: half the detected
+logical CPUs, capped at four by default. `--native-jobs` changes that bound;
+logs and object order remain tied to the manifest's canonical source order.
+The link cache separately keys the ordered objects, compiler/link arguments,
+and exact Raylib/Raygui library bytes. A link-only change can therefore reuse
+all objects. Use `--native-cache off` for the uncached authority; it follows
+the same depfile-aware plan in private temporary directories.
+
+On the current Mac, the first real 82-translation-unit split build took 6.28
+seconds with four workers. The second build reported 82 object hits and one
+link hit in 2.62 seconds. An uncached rebuild took 6.94 seconds and produced
+the same executable SHA-256,
+`b8afb9bf0f4b62bd34bfbca2e84ae8f66635e96aeadf2a9e671e33e61057921d`.
+These are observed integration samples, not an unsaturated benchmark. The
+important structural result is exact: a normal cache hit launches zero C
+compiler or linker processes. The remaining changed-Haxe path is still
+dominated by haxe.c's roughly 26-second request-local backend, which is the
+next optimization owner rather than a reason to weaken dependency checks.
+
 ### Caxecraft owned Haxe server
 
 On a changed build, normal interactive development uses one loopback-only Haxe
@@ -632,6 +670,9 @@ npm run caxecraft:play -- \
 
 # Stop only the exact auto-owned process recorded by this worktree.
 npm run caxecraft:play -- --stop-haxe-server
+
+# Rebuild every C object and link without publishing or accepting native cache entries.
+npm run caxecraft:play -- --build-only --native-cache off
 ```
 
 One real split playable sample on the current Mac took 35.28 seconds for the
