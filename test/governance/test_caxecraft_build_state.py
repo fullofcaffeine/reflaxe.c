@@ -179,6 +179,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "repo/caxecraft/tooling/play.py",
             "repo/caxecraft/tooling/dev_build_state.py",
             "repo/caxecraft/tooling/dev_generation.py",
+            "repo/caxecraft/tooling/dev_haxe_server.py",
             "repo/raylib-tooling/provision.py",
             "repo/raylib-tooling/patches",
             "repo/raylib-tooling/provisioning-lock.json",

@@ -31,9 +31,10 @@ The development order is therefore:
 4. the native build reuses only objects whose compiler-produced dependency
    closure still matches.
 
-Step 1 is implemented by `haxe_c-5sd.8.1`. Steps 2 and 3 are planned and owned
-by `haxe_c-5sd.8.2`. Step 4 is planned and owned by `haxe_c-5sd.8.3`. This
-document does not describe those planned steps as shipped behavior.
+Step 1 is implemented by `haxe_c-5sd.8.1`. Steps 2 and 3 are implemented by
+`haxe_c-5sd.8.2`: the focused lifecycle tests own process/cookie safety, while
+the exhaustive domain lane owns cold/server artifact parity and interleaved
+layout contexts. Step 4 remains planned and owned by `haxe_c-5sd.8.3`.
 
 Keep a visible `--server=off` cold path. Cold compilation remains the
 independent correctness reference in continuous integration (CI), even after
@@ -228,7 +229,10 @@ than several independently written state files.
 
 ## Accepted development contract
 
-Beads `haxe_c-5sd.8.2` should implement the following contract.
+Beads `haxe_c-5sd.8.2` implements this contract for the Caxecraft runner's
+shipped paths. Remaining soak and interruption evidence stays on that issue
+until it closes. Later extraction into generic `hxc dev` tooling must preserve
+the contract.
 
 ### Modes
 
@@ -301,7 +305,7 @@ by Haxe itself. haxe.c must not retain:
 Native objects receive their own content-complete depfile-backed keys in
 `haxe_c-5sd.8.3`.
 
-## Verification required before default use
+## Verification owned by the implementation
 
 The implementation owner must prove:
 

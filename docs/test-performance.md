@@ -515,8 +515,9 @@ long-lived server owners in Reflaxe.Elixir and hxhx/Reflaxe.OCaml. It defines
 the accepted automatic/off/explicit-attach modes, compatibility identity,
 process ownership, retry behavior, cache boundary, and parity matrix for
 `haxe_c-5sd.8.2`. Immutable generated-project publication is implemented as
-the first half of that task; automatic server ownership remains planned until
-its process-lifecycle and cold-parity gates pass.
+the first half of that task. The interactive launcher now also implements the
+owned automatic/off/explicit-attach modes. The exhaustive Caxecraft lane
+remains the independent cold/server byte-parity owner.
 
 ### Caxecraft unchanged-build launch path
 
@@ -593,6 +594,55 @@ generation, and sequence behavior. Beads `haxe_c-5sd.8.3` owns the next
 performance step: compiler depfiles, content-addressed objects, and a link
 cache. Until that lands, a changed Haxe build still recompiles every generated
 C translation unit.
+
+### Caxecraft owned Haxe server
+
+On a changed build, normal interactive development uses one loopback-only Haxe
+server owned by this worktree. A cookie records the exact Haxe process ID,
+operating-system process-start identity, live executable identity, endpoint,
+and compatibility digest.
+That digest includes the canonical worktree, pinned Haxe compiler and standard
+library, package/HXML inputs, haxe.c sources, and vendored Reflaxe sources.
+Game source is deliberately excluded from the server compatibility digest:
+Haxe's own module cache observes and invalidates those edits, which is the work
+the server is meant to reuse.
+
+The launcher may stop or replace a process only when both its PID and
+process-start and executable identities still match the cookie. A
+malformed/stale cookie cannot authorize killing a process, and an explicitly
+attached endpoint is never owned. Automatic mode retries one request only when
+the failure is a server
+transport failure; an ordinary source or compiler diagnostic is returned
+without retry. Every target request still constructs a fresh
+`CompilationContext` and reruns HxcIR, validation, CAST, and output planning.
+
+Use the modes directly when diagnosing the loop:
+
+```sh
+# Default: reuse or start this worktree's exact pinned loopback server.
+npm run caxecraft:play -- --haxe-server auto
+
+# Independent fresh-process authority; --cold implies this mode too.
+npm run caxecraft:play -- --haxe-server off --no-build-cache
+
+# Borrow an operator-owned server; Caxecraft never stops it.
+npm run caxecraft:play -- \
+  --haxe-server attach \
+  --haxe-server-endpoint 127.0.0.1:6123
+
+# Stop only the exact auto-owned process recorded by this worktree.
+npm run caxecraft:play -- --stop-haxe-server
+```
+
+One real split playable sample on the current Mac took 35.28 seconds for the
+first owned-server request, 26.05 seconds for the second request in the same
+server, and 34.21 seconds through `--cold`. All three selected the same complete
+generation digest
+`e754f1333bfadd0052f6dd26e137177996e18190a83f9ed437901f1ec0123976`.
+These are single observed integration samples, not an unsaturated benchmark.
+They show that frontend reuse is real, but also that roughly 26 seconds remain
+because haxe.c's request-local backend still runs. Native object reuse and
+request-local backend deduplication therefore remain necessary.
 
 ### Caxecraft target-phase profile and duplicate-body removal
 

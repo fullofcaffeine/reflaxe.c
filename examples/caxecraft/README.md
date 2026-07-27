@@ -227,6 +227,12 @@ npm run caxecraft:play -- --no-build-cache
 
 # Authoritative cold path: bypass executable reuse and force a fresh Haxe process.
 npm run caxecraft:play -- --cold
+
+# Rebuild through a fresh process without changing the other cold-path choices.
+npm run caxecraft:play -- --haxe-server off --no-build-cache
+
+# Stop only this worktree's exact auto-owned Haxe server.
+npm run caxecraft:play -- --stop-haxe-server
 ```
 
 An existing `HAXE_NO_SERVER=1` also bypasses executable reuse because it
@@ -530,8 +536,8 @@ CI and the full repository toolchain gate use that exhaustive command. The
 short command is deliberately useful while developing the game or compiler; it
 is not a weaker replacement for release evidence.
 
-The warm-server part of the exhaustive command is currently a correctness and
-request-isolation proof, not a speed claim. Its runner starts the exact Haxe
+The warm-server part of the exhaustive command is a correctness and
+request-isolation proof, not merely a speed claim. Its runner starts the exact Haxe
 `5.0.0-preview.1` binary from this checkout's Lix installation, binds it only
 to `127.0.0.1` on an ephemeral port, and always stops it. HaxeShim still expands
 the scoped HXML/library arguments, so connecting directly to the native server
@@ -546,16 +552,20 @@ unity builds also have different layout defines, so they do not form one shared
 cache context. Local and hosted measurements found no meaningful end-to-end
 speedup for the current Caxecraft builds, including repeated same-layout output.
 Required determinism lanes therefore keep an explicit cold build as independent
-evidence. On a cache miss, the interactive `play.py` launcher does not force
-`HAXE_NO_SERVER=1`; it respects the developer's HaxeShim/server policy. An exact
-unchanged-build hit skips Haxe and the native toolchain altogether,
-`--no-build-cache` bypasses only that hit, `--cold` also forces a fresh Haxe
-process, and `--build-only` skips Haxe for a reviewed generated project. See
+evidence. On a cache miss, the interactive `play.py` launcher now owns one
+exact-pin, loopback-only server per worktree. Its compatibility cookie includes
+the Haxe/haxe.c/Reflaxe/HXML infrastructure identity and exact process-start
+and executable identities; a stale cookie cannot authorize killing an
+unrelated process.
+`--haxe-server off` uses a fresh process, while `attach` borrows an explicit
+endpoint without owning its lifecycle. An exact unchanged-build hit skips Haxe
+and the native toolchain altogether, `--no-build-cache` bypasses only that hit,
+`--cold` also forces a fresh Haxe process, and `--build-only` skips Haxe for a
+reviewed generated project. See
 [test performance](../../docs/test-performance.md) for the measurements. A
-future `hxc dev`/`hxc watch` path should make server ownership and invalidation
-more convenient only after phase timing shows that typing reuse reduces real
-wall time; it must preserve cold/server byte parity and fresh request-local
-compiler state.
+future `hxc dev`/`hxc watch` command may extract this proven lifecycle from the
+Caxecraft runner; it must preserve the same cold/server byte parity and fresh
+request-local compiler state.
 
 For a focused compiler-latency investigation, run:
 

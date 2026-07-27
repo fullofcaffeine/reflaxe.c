@@ -34,10 +34,24 @@ from dev_build_state import (  # noqa: E402
     InputPath,
     atomic_write_state,
     build_state,
+    canonical_digest,
+    inventory_inputs,
     output_snapshot,
     request_snapshot,
     sha256_file,
     validate_reuse,
+)
+from dev_haxe_server import (  # noqa: E402
+    HaxeInstallation,
+    HaxeServerFailure,
+    HaxeServerLease,
+    OwnedHaxeServer,
+    attached_server,
+    pinned_haxe_environment,
+    pinned_haxe_installation,
+    resolve_haxe_arguments,
+    transport_failed,
+    verify_pinned_haxe,
 )
 from dev_generation import (  # noqa: E402
     GenerationFailure,
@@ -1199,6 +1213,45 @@ def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
     return inputs
 
 
+def haxe_server_compatibility(
+    installation: HaxeInstallation,
+) -> dict[str, object]:
+    """Identify infrastructure that may persist inside the Haxe server.
+
+    Ordinary game modules are intentionally absent: Haxe's server checks and
+    invalidates changed user modules itself, which is the work we want it to
+    reuse. Compiler macros, Reflaxe, the pinned Haxe binary/standard library,
+    package resolution, and base HXML are different. They define the machinery
+    interpreting a request, so changing any of them replaces the server before
+    another request is sent.
+    """
+
+    inputs = (
+        InputPath("repo/.haxerc", ROOT / ".haxerc"),
+        InputPath("repo/extraParams.hxml", ROOT / "extraParams.hxml"),
+        InputPath("repo/haxelib.json", ROOT / "haxelib.json"),
+        InputPath("repo/haxe_libraries", ROOT / "haxe_libraries"),
+        InputPath("repo/compiler/src", ROOT / "src"),
+        InputPath("repo/compiler/std", ROOT / "std"),
+        InputPath("repo/vendor/reflaxe", ROOT / "vendor/reflaxe/src"),
+        InputPath("repo/caxecraft/play.hxml", CASE / "play.hxml"),
+        InputPath(
+            "repo/caxecraft/tooling/dev_haxe_server.py",
+            CASE / "dev_haxe_server.py",
+        ),
+        InputPath("haxe/compiler", installation.compiler),
+        InputPath("haxe/std", installation.standard_library),
+    )
+    files = inventory_inputs(inputs)
+    body: dict[str, object] = {
+        "schemaVersion": 1,
+        "canonicalWorktree": str(ROOT.resolve()),
+        "haxeVersion": installation.version,
+        "files": files,
+    }
+    return {**body, "sha256": canonical_digest(body)}
+
+
 def play_request_snapshot(
     args: argparse.Namespace,
     *,
@@ -1384,6 +1437,8 @@ def compile_haxe(
     pilot: str | None = None,
     renderer: str = "chunk-cache",
     benchmark_renderer: bool = False,
+    server_lease: HaxeServerLease | None = None,
+    server_owner: OwnedHaxeServer | None = None,
 ) -> dict[str, object]:
     verify_level_adapter_provenance()
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
@@ -1391,9 +1446,6 @@ def compile_haxe(
     if runtime_report not in ("full", "summary"):
         raise PlayFailure(f"unknown runtime report detail {runtime_report!r}")
     arguments = [
-        development_tool("haxe"),
-        "--cwd",
-        str(CASE),
         "play.hxml",
         "-D",
         "hxc_runtime_diagnostics=off",
@@ -1435,7 +1487,69 @@ def compile_haxe(
             raise PlayFailure(f"unknown Caxecraft pilot script {pilot!r}")
         arguments.extend(["-D", "caxecraft_pilot", "-D", pilot_define])
     arguments.extend(["--custom-target", f"c={generated}"])
-    run(arguments, cwd=ROOT, timeout=120, label="Caxecraft Haxe-to-C compile")
+    if server_lease is None:
+        run(
+            [
+                development_tool("haxe"),
+                "--cwd",
+                str(CASE),
+                *arguments,
+            ],
+            cwd=ROOT,
+            timeout=120,
+            label="Caxecraft Haxe-to-C compile",
+        )
+    else:
+        resolved = resolve_haxe_arguments(arguments, locale="C")
+
+        def request(lease: HaxeServerLease) -> subprocess.CompletedProcess[str]:
+            try:
+                return subprocess.run(
+                    [
+                        str(lease.connection.installation.compiler),
+                        "--connect",
+                        lease.connection.endpoint,
+                        *resolved,
+                    ],
+                    cwd=CASE,
+                    env=pinned_haxe_environment(
+                        "C", lease.connection.installation
+                    ),
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+            except (OSError, subprocess.TimeoutExpired) as error:
+                raise PlayFailure(
+                    f"Caxecraft Haxe-to-C server request could not run: {error}"
+                ) from error
+
+        result = request(server_lease)
+        if (
+            transport_failed(result, server_lease)
+            and server_owner is not None
+            and server_lease.owned
+        ):
+            print(
+                "caxecraft: owned Haxe server transport failed; "
+                "restarting it once and retrying the same request"
+            )
+            server_lease = server_owner.restart_after_transport_failure(
+                server_lease
+            )
+            result = request(server_lease)
+        if result.returncode != 0:
+            detail = "\n".join(
+                value.strip()
+                for value in (result.stdout, result.stderr)
+                if value.strip()
+            )
+            suffix = f"\n{detail}" if detail else ""
+            raise PlayFailure(
+                "Caxecraft Haxe-to-C compile failed with exit "
+                f"{result.returncode}{suffix}"
+            )
     return validate_compiled_haxe(
         generated,
         layout=layout,
@@ -2328,6 +2442,24 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="bypass unchanged-build reuse and force a fresh Haxe process for the authoritative cold path",
     )
+    parser.add_argument(
+        "--haxe-server",
+        choices=("auto", "off", "attach"),
+        default="auto",
+        help=(
+            "own/reuse this worktree's loopback server, use a fresh process, "
+            "or borrow --haxe-server-endpoint without owning it"
+        ),
+    )
+    parser.add_argument(
+        "--haxe-server-endpoint",
+        help="existing host:port accepted only with --haxe-server attach",
+    )
+    parser.add_argument(
+        "--stop-haxe-server",
+        action="store_true",
+        help="stop only the exact auto-owned server recorded for this worktree",
+    )
     parser.add_argument("--rebuild-raylib", action="store_true")
     parser.add_argument("--rebuild-raygui", action="store_true")
     parser.add_argument("--prebuilt-raylib-cache", type=Path, help="verified pinned-source cache produced by the Raylib integration lane")
@@ -2341,6 +2473,19 @@ def main(argv: list[str]) -> int:
     try:
         args = parse_args(argv)
         if args.cold:
+            os.environ["HAXE_NO_SERVER"] = "1"
+            args.haxe_server = "off"
+        elif os.environ.get("HAXE_NO_SERVER") == "1":
+            args.haxe_server = "off"
+        if args.haxe_server == "attach" and args.haxe_server_endpoint is None:
+            raise PlayFailure(
+                "--haxe-server attach requires --haxe-server-endpoint"
+            )
+        if args.haxe_server != "attach" and args.haxe_server_endpoint is not None:
+            raise PlayFailure(
+                "--haxe-server-endpoint is accepted only with --haxe-server attach"
+            )
+        if args.haxe_server == "off":
             os.environ["HAXE_NO_SERVER"] = "1"
         selected_pilot = "launch-smoke" if args.smoke else args.pilot
         if args.smoke and args.pilot is not None:
@@ -2375,6 +2520,24 @@ def main(argv: list[str]) -> int:
                 "memory-software has no interactive window; select --pilot, --smoke, --build-only, or --compile-only"
             )
         output_base = prepare_output_root(args.output_root.resolve())
+        server_state_root = output_base / "haxe-server"
+        if args.stop_haxe_server:
+            installation = pinned_haxe_installation()
+            verify_pinned_haxe(installation)
+            # Stop validates the cookie's own compatibility and exact process
+            # identity; this placeholder is never used to claim a connection.
+            server_owner = OwnedHaxeServer(
+                server_state_root,
+                installation=installation,
+                compatibility={"operation": "stop-only"},
+            )
+            stopped = server_owner.stop()
+            print(
+                "caxecraft: stopped the exact owned Haxe server"
+                if stopped
+                else "caxecraft: no exactly owned Haxe server was running"
+            )
+            return 0
         variants = output_base / "variants"
         if variants.exists() and (not variants.is_dir() or variants.is_symlink()):
             raise PlayFailure(f"Caxecraft variant root must be a real directory: {variants}")
@@ -2445,6 +2608,30 @@ def main(argv: list[str]) -> int:
             )
             print(f"caxecraft: reusing validated {args.layout} C project at {generated}")
         else:
+            server_lease: HaxeServerLease | None = None
+            server_owner: OwnedHaxeServer | None = None
+            if args.haxe_server != "off":
+                installation = pinned_haxe_installation()
+                verify_pinned_haxe(installation)
+                if args.haxe_server == "attach":
+                    server_lease = attached_server(
+                        str(args.haxe_server_endpoint), installation
+                    )
+                    print(
+                        "caxecraft: borrowing explicit Haxe server "
+                        f"{server_lease.connection.endpoint}; lifecycle remains external"
+                    )
+                else:
+                    server_owner = OwnedHaxeServer(
+                        server_state_root,
+                        installation=installation,
+                        compatibility=haxe_server_compatibility(installation),
+                    )
+                    server_lease = server_owner.connect()
+                    print(
+                        "caxecraft: using worktree-owned Haxe server "
+                        f"{server_lease.connection.endpoint}"
+                    )
             transaction = begin_transaction(output_root)
             try:
                 manifest = compile_haxe(
@@ -2455,6 +2642,8 @@ def main(argv: list[str]) -> int:
                     pilot=selected_pilot,
                     renderer=args.renderer,
                     benchmark_renderer=args.benchmark_renderer,
+                    server_lease=server_lease,
+                    server_owner=server_owner,
                 )
                 generation = finalize_transaction(output_root, transaction)
                 generation = publish_pointer(output_root, generation)
@@ -2697,6 +2886,7 @@ def main(argv: list[str]) -> int:
         UnicodeError,
         BuildStateFailure,
         GenerationFailure,
+        HaxeServerFailure,
         provision.ProvisionFailure,
         PlayFailure,
     ) as error:
