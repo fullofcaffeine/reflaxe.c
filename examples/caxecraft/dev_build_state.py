@@ -177,7 +177,7 @@ def external_file_snapshot(files: Sequence[ExternalFile]) -> list[dict[str, obje
     return records
 
 
-def output_snapshot(output_root: Path, executable: Path) -> dict[str, object]:
+def output_snapshot(generated: Path, executable: Path) -> dict[str, object]:
     """Hash the generated project, staged content/assets, and executable.
 
     Object files are deliberately absent. The linked executable is the
@@ -186,7 +186,7 @@ def output_snapshot(output_root: Path, executable: Path) -> dict[str, object]:
     """
 
     roots = (
-        InputPath("generated", output_root / "generated"),
+        InputPath("generated", generated),
         InputPath("staged/assets", executable.parent / "assets"),
         InputPath("staged/content", executable.parent / "content"),
         InputPath("native/executable", executable),
@@ -330,7 +330,7 @@ def validate_reuse(
     *,
     state_path: Path,
     current_request: Mapping[str, object],
-    output_root: Path,
+    generated: Path,
     executable: Path,
 ) -> ReuseDecision:
     """Return a hit only after request, external input, and output parity."""
@@ -385,7 +385,7 @@ def validate_reuse(
         return ReuseDecision(False, difference)
 
     try:
-        current_outputs = output_snapshot(output_root, executable)
+        current_outputs = output_snapshot(generated, executable)
     except (OSError, BuildStateFailure):
         return ReuseDecision(False, "generated, staged, or executable output is missing")
     stored_outputs = state.get("outputs")

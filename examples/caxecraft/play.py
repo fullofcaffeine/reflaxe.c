@@ -39,6 +39,15 @@ from dev_build_state import (  # noqa: E402
     sha256_file,
     validate_reuse,
 )
+from dev_generation import (  # noqa: E402
+    GenerationFailure,
+    VariantLock,
+    begin_transaction,
+    current_generation,
+    discard_transaction,
+    finalize_transaction,
+    publish_pointer,
+)
 from scripts.raygui import provision as raygui_provision  # noqa: E402
 
 
@@ -2328,6 +2337,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
+    variant_lock: VariantLock | None = None
     try:
         args = parse_args(argv)
         if args.cold:
@@ -2377,6 +2387,8 @@ def main(argv: list[str]) -> int:
         output_root = prepare_output_root(
             variants / f"{platform_name}{configuration_part}-{args.layout}{sanitizer_part}-{profile}{renderer_part}{benchmark_part}"
         )
+        variant_lock = VariantLock(output_root / "hxc-play-build.lock")
+        variant_lock.__enter__()
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
         requested_snapshot: dict[str, object] | None = None
@@ -2400,14 +2412,19 @@ def main(argv: list[str]) -> int:
             )
             if fast_path_eligible:
                 validation_started = time.monotonic()
-                decision = validate_reuse(
-                    state_path=output_root / PLAY_BUILD_STATE,
-                    current_request=requested_snapshot,
-                    output_root=output_root,
-                    executable=executable,
-                )
+                try:
+                    generated = current_generation(output_root).generated
+                    decision = validate_reuse(
+                        state_path=output_root / PLAY_BUILD_STATE,
+                        current_request=requested_snapshot,
+                        generated=generated,
+                        executable=executable,
+                    )
+                except GenerationFailure as error:
+                    decision = None
+                    generation_miss = str(error)
                 validation_ms = (time.monotonic() - validation_started) * 1000.0
-                if decision.hit:
+                if decision is not None and decision.hit:
                     total_ms = snapshot_ms + validation_ms
                     print(
                         "caxecraft: unchanged build hit; reused generated C, native executable, "
@@ -2415,9 +2432,11 @@ def main(argv: list[str]) -> int:
                     )
                     print("caxecraft: launching; press Q to quit")
                     return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
-                print(f"caxecraft: unchanged build miss: {decision.reason}")
+                miss_reason = generation_miss if decision is None else decision.reason
+                print(f"caxecraft: unchanged build miss: {miss_reason}")
         if args.build_only:
             verify_level_adapter_provenance()
+            generated = current_generation(output_root).generated
             manifest = validate_compiled_haxe(
                 generated,
                 layout=args.layout,
@@ -2426,15 +2445,23 @@ def main(argv: list[str]) -> int:
             )
             print(f"caxecraft: reusing validated {args.layout} C project at {generated}")
         else:
-            manifest = compile_haxe(
-                generated,
-                layout=args.layout,
-                platform_name=platform_name,
-                raylib_configuration=args.raylib_configuration,
-                pilot=selected_pilot,
-                renderer=args.renderer,
-                benchmark_renderer=args.benchmark_renderer,
-            )
+            transaction = begin_transaction(output_root)
+            try:
+                manifest = compile_haxe(
+                    transaction.generated,
+                    layout=args.layout,
+                    platform_name=platform_name,
+                    raylib_configuration=args.raylib_configuration,
+                    pilot=selected_pilot,
+                    renderer=args.renderer,
+                    benchmark_renderer=args.benchmark_renderer,
+                )
+                generation = finalize_transaction(output_root, transaction)
+                generation = publish_pointer(output_root, generation)
+                generated = generation.generated
+            except BaseException:
+                discard_transaction(transaction)
+                raise
             print(f"caxecraft: generated {args.layout} C project at {generated}")
         if args.compile_only:
             print("caxecraft: compile-only proof passed (direct C with reviewed selective hxrt plan)")
@@ -2519,7 +2546,7 @@ def main(argv: list[str]) -> int:
             try:
                 state = build_state(
                     request=requested_snapshot,
-                    outputs=output_snapshot(output_root, executable),
+                    outputs=output_snapshot(generated, executable),
                     external_native_files=native_external_files(
                         include_directory=include_directory,
                         library=library,
@@ -2665,9 +2692,19 @@ def main(argv: list[str]) -> int:
             return 0
         print("caxecraft: launching; press Q to quit")
         return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
-    except (OSError, UnicodeError, BuildStateFailure, provision.ProvisionFailure, PlayFailure) as error:
+    except (
+        OSError,
+        UnicodeError,
+        BuildStateFailure,
+        GenerationFailure,
+        provision.ProvisionFailure,
+        PlayFailure,
+    ) as error:
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1
+    finally:
+        if variant_lock is not None:
+            variant_lock.__exit__(None, None, None)
 
 
 if __name__ == "__main__":

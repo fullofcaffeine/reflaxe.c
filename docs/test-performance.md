@@ -514,8 +514,9 @@ checks that conclusion against the pinned Haxe 5 implementation and the
 long-lived server owners in Reflaxe.Elixir and hxhx/Reflaxe.OCaml. It defines
 the accepted automatic/off/explicit-attach modes, compatibility identity,
 process ownership, retry behavior, cache boundary, and parity matrix for
-`haxe_c-5sd.8.2`. Those rules are planned until that Beads task supplies their
-executable evidence.
+`haxe_c-5sd.8.2`. Immutable generated-project publication is implemented as
+the first half of that task; automatic server ownership remains planned until
+its process-lifecycle and cold-parity gates pass.
 
 ### Caxecraft unchanged-build launch path
 
@@ -558,6 +559,40 @@ so these are conservative contention diagnostics rather than the parent's
 authoritative unsaturated baseline. They do demonstrate the intended structural
 result: an unchanged launch performs zero Haxe requests, zero C compilations,
 and zero links.
+
+### Caxecraft immutable generated projects
+
+Changed Haxe builds no longer write into the previously selected `generated/`
+directory. The launcher holds one operating-system lock for the selected build
+variant, gives haxe.c a unique directory under `transactions/`, and runs the
+normal complete generated-project validation there. Only a valid, non-empty
+project can move into `generations/<content-sha256>/`.
+
+The hexadecimal directory name is the digest of every generated path and byte,
+not a timestamp or random build ID. Repeating exactly the same output therefore
+reuses one immutable generation. A small
+`hxc-play-current-generation.json` record selects the active generation. It is
+written to a temporary file and renamed atomically; it is deliberately not a
+symlink because generated-output safety rejects symlink traversal.
+
+This boundary matters for both correctness and speed:
+
+- a compiler crash can leave only an unselected transaction, never a
+  half-old/half-new selected C project;
+- a crash after the generation rename but before the pointer rename leaves an
+  complete but unselected generation;
+- the previous pointer remains usable until the new complete pointer is
+  published;
+- native object caching can safely key an object to immutable source and header
+  bytes instead of copying or trusting a mutable tree.
+
+The variant lock currently covers the full one-shot build, so two launchers
+cannot overwrite the generated project, executable, or publication state out
+of order. Focused fault tests own transaction, pointer, corruption, duplicate
+generation, and sequence behavior. Beads `haxe_c-5sd.8.3` owns the next
+performance step: compiler depfiles, content-addressed objects, and a link
+cache. Until that lands, a changed Haxe build still recompiles every generated
+C translation unit.
 
 ### Caxecraft target-phase profile and duplicate-body removal
 

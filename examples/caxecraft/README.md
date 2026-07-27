@@ -238,6 +238,17 @@ Interactive and deterministic pilot builds use separate marked output
 directories. Changing a pilot define therefore cannot leave stale generated
 files in another profile.
 
+Each changed Haxe build also gets a private generated-project transaction.
+After the normal Reflaxe ownership and generated-C checks pass, the launcher
+renames it into a content-addressed `generations/` directory and atomically
+updates a JSON pointer. The previously selected project is never edited in
+place. This makes a compiler interruption safe and gives the planned native
+object cache stable source bytes to depend on. The generated folders are
+internal build evidence rather than multiple game editions; `layout`, Raylib
+configuration, sanitizer, pilot, and renderer choices still use separate
+variant folders because those choices genuinely produce different C or native
+behavior.
+
 Useful non-interactive forms are:
 
 ```sh

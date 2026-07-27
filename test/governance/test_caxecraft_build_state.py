@@ -74,7 +74,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
     def publish(self) -> None:
         state = build_state(
             request=self.request(),
-            outputs=output_snapshot(self.output_root, self.executable),
+            outputs=output_snapshot(self.output_root / "generated", self.executable),
             external_native_files=[
                 ExternalFile("raylib/library", self.raylib),
                 ExternalFile("raygui/library", self.raygui),
@@ -86,7 +86,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         return validate_reuse(
             state_path=self.state_path,
             current_request=request or self.request(),
-            output_root=self.output_root,
+            generated=self.output_root / "generated",
             executable=self.executable,
         )
 
@@ -178,6 +178,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "repo/caxecraft/scenarios",
             "repo/caxecraft/tooling/play.py",
             "repo/caxecraft/tooling/dev_build_state.py",
+            "repo/caxecraft/tooling/dev_generation.py",
             "repo/raylib-tooling/provision.py",
             "repo/raylib-tooling/patches",
             "repo/raylib-tooling/provisioning-lock.json",
