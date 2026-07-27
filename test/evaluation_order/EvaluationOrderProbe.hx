@@ -473,6 +473,22 @@ class EvaluationOrderProbe {
 		if (ladderResult.work.normalJoinCandidateProofs > ladderResult.work.normalJoinSearches * 2)
 			throw new haxe.Exception('early-return ladder used ${ladderResult.work.normalJoinCandidateProofs} candidate proofs for '
 				+ '${ladderResult.work.normalJoinSearches} searches; ranked search should need at most one build proof and one validation proof per branch');
+		final maximumCompletionWork = ladderResult.work.completionSetSearches * earlyReturnLadder.blocks.length;
+		if (ladderResult.work.completionSetInitialBlockScans != maximumCompletionWork)
+			throw new haxe.Exception('early-return ladder scanned ${ladderResult.work.completionSetInitialBlockScans} completion blocks; '
+				+ 'one seed scan for each of ${ladderResult.work.completionSetSearches} searches over ${earlyReturnLadder.blocks.length} blocks '
+				+ 'requires exactly $maximumCompletionWork');
+		if (ladderResult.work.completionSetWorklistDequeues > maximumCompletionWork)
+			throw new haxe.Exception('early-return ladder dequeued ${ladderResult.work.completionSetWorklistDequeues} completion blocks; '
+				+ 'the reverse worklist may resolve each block at most once per search');
+		final maximumAbruptCompletionWork = ladderResult.work.abruptCompletionSetSearches * earlyReturnLadder.blocks.length;
+		if (ladderResult.work.abruptCompletionSetInitialBlockScans != maximumAbruptCompletionWork)
+			throw new haxe.Exception('early-return ladder scanned ${ladderResult.work.abruptCompletionSetInitialBlockScans} abrupt-completion blocks; '
+				+ 'one seed scan for each of ${ladderResult.work.abruptCompletionSetSearches} searches over ${earlyReturnLadder.blocks.length} blocks '
+				+ 'requires exactly $maximumAbruptCompletionWork');
+		if (ladderResult.work.abruptCompletionSetWorklistDequeues > maximumAbruptCompletionWork)
+			throw new haxe.Exception('early-return ladder dequeued ${ladderResult.work.abruptCompletionSetWorklistDequeues} abrupt-completion blocks; '
+				+ 'the reverse worklist may resolve each block at most once per search');
 		final sharedTargetBranch = syntheticFunction("synthetic.shared-target-branch", [condition], "entry", [
 			syntheticBlock("entry", IRTBranch("condition", plainEdge("nested"), plainEdge("join")), source),
 			syntheticBlock("nested", IRTBranch("condition", plainEdge("shared-arm"), plainEdge("shared-arm")), source),

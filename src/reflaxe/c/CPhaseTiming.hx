@@ -69,6 +69,13 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTSemanticNameProjection = "semantic name projection";
 	var CDTBodySetupAndValuePlanning = "body setup and value planning";
 	var CDTBodyControlFlowPlanning = "body control-flow planning";
+	var CDTBodyControlFlowAnalysis = "body control-flow analysis";
+	var CDTBodyControlFlowIndexing = "body control-flow indexing";
+	var CDTBodyControlFlowDominators = "body control-flow dominators";
+	var CDTBodyControlFlowPostDominators = "body control-flow post-dominators";
+	var CDTBodyControlFlowLoopAnalysis = "body control-flow loop analysis";
+	var CDTBodyControlFlowConstruction = "body control-flow construction";
+	var CDTBodyControlFlowValidation = "body control-flow validation";
 	var CDTBodyCASTEmission = "body CAST emission";
 	var CDTArtifactRuntimePackaging = "artifact runtime packaging";
 	var CDTArtifactSpecializationReport = "artifact specialization report";
@@ -129,6 +136,8 @@ private typedef CProfileSpanRecord = {
 	final parentSpanId:Null<Int>;
 	final category:String;
 	final name:String;
+	final subject:Null<String>;
+	final work:Null<CProfileSpanWork>;
 	final status:String;
 	final startOffsetMicroseconds:Float;
 	final inclusiveWallMicroseconds:Float;
@@ -137,6 +146,33 @@ private typedef CProfileSpanRecord = {
 	final exclusiveCpuMicroseconds:Float;
 	final allocatedBytesDelta:Null<Float>;
 	final residentBytesAtEnd:Null<Float>;
+}
+
+/**
+	Stable algorithmic work attached to one detailed compiler span.
+
+	Elapsed time varies with machine load. These counts describe the graph work
+	the compiler actually requested, so a focused performance regression remains
+	reviewable even when the host is busy.
+**/
+@:noCompletion
+typedef CProfileSpanWork = {
+	final kind:String;
+	final blockCount:Int;
+	final normalJoinSearches:Int;
+	final normalJoinCandidateProofs:Int;
+	final normalJoinDistanceSearches:Int;
+	final normalJoinDistanceBlockVisits:Int;
+	final completionSetSearches:Int;
+	final completionSetInitialBlockScans:Int;
+	final completionSetWorklistDequeues:Int;
+	final abruptCompletionSetSearches:Int;
+	final abruptCompletionSetInitialBlockScans:Int;
+	final abruptCompletionSetWorklistDequeues:Int;
+	final forwardReachabilitySearches:Int;
+	final forwardReachabilityBlockVisits:Int;
+	final prefixDisjointSearches:Int;
+	final prefixDisjointBlockVisits:Int;
 }
 
 private typedef CProfileCounterRecord = {
@@ -170,19 +206,22 @@ class CProfileSpan {
 	public final parent:Null<CProfileSpan>;
 	public final category:String;
 	public final name:String;
+	public final subject:Null<String>;
 	public final startedWall:CProfileWallStamp;
 	public final startedCpu:Float;
 	public final startedAllocatedBytes:Null<Float>;
 	public final stopCompilerTimer:() -> Void;
 	public var childWallMicroseconds:Float = 0.0;
 	public var childCpuMicroseconds:Float = 0.0;
+	public var work:Null<CProfileSpanWork> = null;
 	public var stopped:Bool = false;
 
-	public function new(id:Int, parent:Null<CProfileSpan>, category:String, name:String, stopCompilerTimer:() -> Void) {
+	public function new(id:Int, parent:Null<CProfileSpan>, category:String, name:String, subject:Null<String>, stopCompilerTimer:() -> Void) {
 		this.id = id;
 		this.parent = parent;
 		this.category = category;
 		this.name = name;
+		this.subject = subject;
 		this.startedWall = CPhaseTiming.wallNow();
 		this.startedCpu = Sys.cpuTime();
 		this.startedAllocatedBytes = CPhaseTiming.allocatedBytes();
@@ -228,9 +267,16 @@ class CDetailTimer {
 	final id:CDetailTimingId;
 	final span:CProfileSpan;
 
-	public function new(id:CDetailTimingId) {
+	public function new(id:CDetailTimingId, subject:Null<String>) {
 		this.id = id;
-		this.span = CPhaseTiming.openSpan("detail", Std.string(id), Context.timer("hxc " + Std.string(id)));
+		this.span = CPhaseTiming.openSpan("detail", Std.string(id), subject, Context.timer("hxc " + Std.string(id)));
+	}
+
+	/** Attach stable work counts before the detailed span closes. */
+	public function setWork(work:CProfileSpanWork):Void {
+		if (span.work != null)
+			throw new haxe.Exception('compiler profile span `${span.name}` received work twice');
+		span.work = work;
 	}
 
 	public function stop():Void {
@@ -251,7 +297,7 @@ class CPhaseTimer {
 
 	public function new(id:CPhaseTimingId) {
 		this.id = id;
-		this.span = CPhaseTiming.openSpan("phase", Std.string(id), Context.timer("hxc " + Std.string(id)));
+		this.span = CPhaseTiming.openSpan("phase", Std.string(id), null, Context.timer("hxc " + Std.string(id)));
 	}
 
 	public function stop():Void {
@@ -275,7 +321,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 1;
+	public static inline final PROFILE_SCHEMA_VERSION = 2;
 
 	static var active:Null<CProfileRequestState> = null;
 
@@ -310,8 +356,14 @@ class CPhaseTiming {
 			timer.stop();
 	}
 
-	public static function startDetail(id:CDetailTimingId):Null<CDetailTimer> {
-		return active == null ? null : new CDetailTimer(id);
+	public static function startDetail(id:CDetailTimingId, ?subject:String):Null<CDetailTimer> {
+		return active == null ? null : new CDetailTimer(id, subject);
+	}
+
+	/** Attach deterministic work counts to an active detailed span. */
+	public static function setDetailWork(timer:Null<CDetailTimer>, work:CProfileSpanWork):Void {
+		if (timer != null)
+			timer.setWork(work);
 	}
 
 	public static function stopDetail(timer:Null<CDetailTimer>):Void {
@@ -376,10 +428,10 @@ class CPhaseTiming {
 		method is not a target API.
 	**/
 	@:noCompletion
-	public static function openSpan(category:String, name:String, stopCompilerTimer:() -> Void):CProfileSpan {
+	public static function openSpan(category:String, name:String, subject:Null<String>, stopCompilerTimer:() -> Void):CProfileSpan {
 		final state = requireState();
 		final parent = state.spans.length == 0 ? null : state.spans[state.spans.length - 1];
-		final span = new CProfileSpan(state.nextSpanId++, parent, category, name, stopCompilerTimer);
+		final span = new CProfileSpan(state.nextSpanId++, parent, category, name, subject, stopCompilerTimer);
 		state.spans.push(span);
 		return span;
 	}
@@ -419,6 +471,8 @@ class CPhaseTiming {
 			parentSpanId: span.parent == null ? null : span.parent.id,
 			category: span.category,
 			name: span.name,
+			subject: span.subject,
+			work: span.work,
 			status: status,
 			startOffsetMicroseconds: elapsedWallMicroseconds(state.startedWall, span.startedWall),
 			inclusiveWallMicroseconds: inclusiveWall,

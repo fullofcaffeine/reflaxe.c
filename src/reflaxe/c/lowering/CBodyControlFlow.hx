@@ -1,6 +1,10 @@
 package reflaxe.c.lowering;
 
 import reflaxe.c.ir.HxcIR;
+#if (macro || reflaxe_runtime)
+import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
+#end
 
 /** Why a reducible branch was admitted as one structured C `if`. */
 enum CBodyBranchProof {
@@ -188,6 +192,18 @@ private class CBodyNaturalLoop {
 	}
 }
 
+/** One natural-loop completion rule waiting for its remaining exits. */
+private class CBodyCompletionLoopRule {
+	public final nodes:Array<String>;
+	public var remaining:Int;
+	public var resolved:Bool = false;
+
+	public function new(nodes:Array<String>, remaining:Int) {
+		this.nodes = nodes;
+		this.remaining = remaining;
+	}
+}
+
 /** Builds and independently verifies the structural plan for one HxcIR CFG. */
 class CBodyControlFlowPlanner {
 	public function new() {}
@@ -202,14 +218,30 @@ class CBodyControlFlowPlanner {
 		so a busy machine cannot make the regression flaky.
 	**/
 	public function planWithWorkReport(fn:HxcIRFunction):CBodyControlFlowPlanningResult {
+		#if (macro || reflaxe_runtime)
+		final analysisTimer = CPhaseTiming.startDetail(CDTBodyControlFlowAnalysis, fn.id);
+		#end
 		final analysis = new CBodyControlFlowAnalysis(fn);
 		analysis.requireAdmittedGraph();
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(analysisTimer);
+		#end
 		if (analysis.irreducibleEntries.length > 0) {
 			return new CBodyControlFlowPlanningResult(CCFLegacyIrreducible(analysis.irreducibleEntries), analysis.workReport());
 		}
+		#if (macro || reflaxe_runtime)
+		final constructionTimer = CPhaseTiming.startDetail(CDTBodyControlFlowConstruction, fn.id);
+		#end
 		final builder = new CBodyControlFlowBuilder(fn, analysis);
 		final result = builder.build();
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(constructionTimer);
+		final validationTimer = CPhaseTiming.startDetail(CDTBodyControlFlowValidation, fn.id);
+		#end
 		new CBodyControlFlowPlanValidator(fn, analysis).requireValid(result);
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(validationTimer);
+		#end
 		return new CBodyControlFlowPlanningResult(result, analysis.workReport());
 	}
 }
@@ -231,18 +263,47 @@ class CBodyControlFlowPlanningResult {
 
 	A "candidate proof" is the expensive check that every normal path reaches a
 	possible join and that branch prefixes do not overlap. A "distance search"
-	walks the admitted graph once from one branch start.
+	walks the admitted graph once from one branch start. Each completion-set
+	search scans the admitted blocks once to seed a reverse worklist, then
+	dequeues a block only when all of that block's required successors have
+	completed. Keeping those two counts separate makes a return to repeated
+	whole-graph fixed-point scans visible without relying on machine timing.
 **/
 @:noCompletion
 class CBodyControlFlowWorkReport {
 	public final normalJoinSearches:Int;
 	public final normalJoinCandidateProofs:Int;
 	public final normalJoinDistanceSearches:Int;
+	public final normalJoinDistanceBlockVisits:Int;
+	public final completionSetSearches:Int;
+	public final completionSetInitialBlockScans:Int;
+	public final completionSetWorklistDequeues:Int;
+	public final abruptCompletionSetSearches:Int;
+	public final abruptCompletionSetInitialBlockScans:Int;
+	public final abruptCompletionSetWorklistDequeues:Int;
+	public final forwardReachabilitySearches:Int;
+	public final forwardReachabilityBlockVisits:Int;
+	public final prefixDisjointSearches:Int;
+	public final prefixDisjointBlockVisits:Int;
 
-	public function new(normalJoinSearches:Int, normalJoinCandidateProofs:Int, normalJoinDistanceSearches:Int) {
+	public function new(normalJoinSearches:Int, normalJoinCandidateProofs:Int, normalJoinDistanceSearches:Int, normalJoinDistanceBlockVisits:Int,
+			completionSetSearches:Int, completionSetInitialBlockScans:Int, completionSetWorklistDequeues:Int, abruptCompletionSetSearches:Int,
+			abruptCompletionSetInitialBlockScans:Int, abruptCompletionSetWorklistDequeues:Int, forwardReachabilitySearches:Int,
+			forwardReachabilityBlockVisits:Int, prefixDisjointSearches:Int, prefixDisjointBlockVisits:Int) {
 		this.normalJoinSearches = normalJoinSearches;
 		this.normalJoinCandidateProofs = normalJoinCandidateProofs;
 		this.normalJoinDistanceSearches = normalJoinDistanceSearches;
+		this.normalJoinDistanceBlockVisits = normalJoinDistanceBlockVisits;
+		this.completionSetSearches = completionSetSearches;
+		this.completionSetInitialBlockScans = completionSetInitialBlockScans;
+		this.completionSetWorklistDequeues = completionSetWorklistDequeues;
+		this.abruptCompletionSetSearches = abruptCompletionSetSearches;
+		this.abruptCompletionSetInitialBlockScans = abruptCompletionSetInitialBlockScans;
+		this.abruptCompletionSetWorklistDequeues = abruptCompletionSetWorklistDequeues;
+		this.forwardReachabilitySearches = forwardReachabilitySearches;
+		this.forwardReachabilityBlockVisits = forwardReachabilityBlockVisits;
+		this.prefixDisjointSearches = prefixDisjointSearches;
+		this.prefixDisjointBlockVisits = prefixDisjointBlockVisits;
 	}
 }
 
@@ -1318,9 +1379,23 @@ private class CBodyControlFlowAnalysis {
 	var normalJoinSearches:Int = 0;
 	var normalJoinCandidateProofs:Int = 0;
 	var normalJoinDistanceSearches:Int = 0;
+	var normalJoinDistanceBlockVisits:Int = 0;
+	var completionSetSearches:Int = 0;
+	var completionSetInitialBlockScans:Int = 0;
+	var completionSetWorklistDequeues:Int = 0;
+	var abruptCompletionSetSearches:Int = 0;
+	var abruptCompletionSetInitialBlockScans:Int = 0;
+	var abruptCompletionSetWorklistDequeues:Int = 0;
+	var forwardReachabilitySearches:Int = 0;
+	var forwardReachabilityBlockVisits:Int = 0;
+	var prefixDisjointSearches:Int = 0;
+	var prefixDisjointBlockVisits:Int = 0;
 
 	public function new(fn:HxcIRFunction) {
 		this.fn = fn;
+		#if (macro || reflaxe_runtime)
+		final indexingTimer = CPhaseTiming.startDetail(CDTBodyControlFlowIndexing, fn.id);
+		#end
 		for (index => block in fn.blocks) {
 			if (blocks.exists(block.id))
 				fail('control-flow analysis for `${fn.id}` received duplicate block `${block.id}`');
@@ -1332,10 +1407,25 @@ private class CBodyControlFlowAnalysis {
 			successorsByBlock.set(block.id, collectSuccessors(block));
 		computeReachability();
 		computePredecessors();
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(indexingTimer);
+		final dominatorTimer = CPhaseTiming.startDetail(CDTBodyControlFlowDominators, fn.id);
+		#end
 		computeDominators();
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(dominatorTimer);
+		final postDominatorTimer = CPhaseTiming.startDetail(CDTBodyControlFlowPostDominators, fn.id);
+		#end
 		computePostDominators();
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(postDominatorTimer);
+		final loopAnalysisTimer = CPhaseTiming.startDetail(CDTBodyControlFlowLoopAnalysis, fn.id);
+		#end
 		computeNaturalLoops();
 		computeIrreducibleEntries();
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.stopDetail(loopAnalysisTimer);
+		#end
 	}
 
 	public function requireAdmittedGraph():Void {
@@ -1451,7 +1541,10 @@ private class CBodyControlFlowAnalysis {
 	}
 
 	public function workReport():CBodyControlFlowWorkReport {
-		return new CBodyControlFlowWorkReport(normalJoinSearches, normalJoinCandidateProofs, normalJoinDistanceSearches);
+		return new CBodyControlFlowWorkReport(normalJoinSearches, normalJoinCandidateProofs, normalJoinDistanceSearches, normalJoinDistanceBlockVisits,
+			completionSetSearches, completionSetInitialBlockScans, completionSetWorklistDequeues, abruptCompletionSetSearches,
+			abruptCompletionSetInitialBlockScans, abruptCompletionSetWorklistDequeues, forwardReachabilitySearches, forwardReachabilityBlockVisits,
+			prefixDisjointSearches, prefixDisjointBlockVisits);
 	}
 
 	public function dominates(dominator:String, blockId:String):Bool {
@@ -1517,6 +1610,12 @@ private class CBodyControlFlowAnalysis {
 	public function normalJoin(starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>, unavailable:Map<String, Bool>,
 			preferredCandidate:Null<String>):Null<String> {
 		normalJoinSearches++;
+		var abruptCompletion:Null<Map<String, Bool>> = null;
+		function requireAbruptCompletion():Map<String, Bool> {
+			if (abruptCompletion == null)
+				abruptCompletion = abruptCompletionSet(allowed);
+			return abruptCompletion;
+		}
 		if (preferredCandidate != null
 			&& escapeTargets.exists(preferredCandidate)
 			&& !unavailable.exists(preferredCandidate)
@@ -1527,7 +1626,7 @@ private class CBodyControlFlowAnalysis {
 			&& allowed.exists(preferredCandidate)
 			&& !escapeTargets.exists(preferredCandidate)
 			&& !unavailable.exists(preferredCandidate)
-			&& isNormalJoinWithAvailability(preferredCandidate, starts, allowed, escapeTargets, unavailable, distances))
+			&& isNormalJoinWithAvailability(preferredCandidate, starts, allowed, escapeTargets, unavailable, distances, requireAbruptCompletion))
 			return preferredCandidate;
 
 		final candidates:Array<CBodyNormalJoinCandidate> = [];
@@ -1569,14 +1668,14 @@ private class CBodyControlFlowAnalysis {
 			return compareBlockIds(left.blockId, right.blockId);
 		});
 		for (candidate in candidates)
-			if (isNormalJoinWithAvailability(candidate.blockId, starts, allowed, escapeTargets, unavailable, distances))
+			if (isNormalJoinWithAvailability(candidate.blockId, starts, allowed, escapeTargets, unavailable, distances, requireAbruptCompletion))
 				return candidate.blockId;
 		return null;
 	}
 
 	public function isNormalJoin(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Bool {
 		final unavailable:Map<String, Bool> = [];
-		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable, distancesForStarts(starts, allowed, escapeTargets));
+		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable, distancesForStarts(starts, allowed, escapeTargets), null);
 	}
 
 	/**
@@ -1601,21 +1700,23 @@ private class CBodyControlFlowAnalysis {
 		for (target in escapeTargets.keys())
 			if (target != candidate)
 				remainingEscapes.set(target, true);
-		return isNormalJoinWithAvailability(candidate, starts, allowed, remainingEscapes, unavailable, distancesForStarts(starts, allowed, remainingEscapes));
+		return isNormalJoinWithAvailability(candidate, starts, allowed, remainingEscapes, unavailable, distancesForStarts(starts, allowed, remainingEscapes),
+			null);
 	}
 
 	function isNormalJoinWithAvailability(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
-			unavailable:Map<String, Bool>, distances:Array<Map<String, Int>>):Bool {
+			unavailable:Map<String, Bool>, distances:Array<Map<String, Int>>, abruptCompletion:Null<Void->Map<String, Bool>>):Bool {
 		normalJoinCandidateProofs++;
 		if (!allowed.exists(candidate) || escapeTargets.exists(candidate))
 			return false;
 		if (isLinearEscapePrefix(candidate, allowed, escapeTargets)) {
-			final abrupt = abruptCompletionSet(allowed);
+			final abrupt = abruptCompletion == null ? abruptCompletionSet(allowed) : abruptCompletion();
 			for (index => distance in distances)
 				if (!distance.exists(candidate) && !abrupt.exists(starts[index]))
 					return false;
 		}
-		final completing = completionSet(candidate, allowed, escapeTargets);
+		final continuation = forwardReachable(candidate, allowed, escapeTargets);
+		final completing = completionSet(candidate, allowed, escapeTargets, continuation);
 		var hasContinuingPath = false;
 		for (index => start in starts) {
 			if (distances[index].exists(candidate))
@@ -1623,75 +1724,141 @@ private class CBodyControlFlowAnalysis {
 			if (!escapeTargets.exists(start) && !completing.exists(start))
 				return false;
 		}
-		final disjoint = prefixesAreDisjoint(candidate, starts, allowed, escapeTargets, unavailable);
+		final disjoint = prefixesAreDisjoint(candidate, starts, allowed, escapeTargets, unavailable, continuation);
 		return hasContinuingPath && disjoint;
 	}
 
-	function completionSet(candidate:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Map<String, Bool> {
+	function completionSet(candidate:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>, continuation:Map<String, Bool>):Map<String, Bool> {
+		completionSetSearches++;
 		final result:Map<String, Bool> = [];
 		result.set(candidate, true);
 		// A loop's continue/header target starts a later iteration. Do not walk
 		// through it while deciding which abrupt paths belong to this iteration;
 		// otherwise a later iteration can make the current return arm look like
 		// part of the candidate's continuation and hide the real local join.
-		final continuation = forwardReachable(candidate, allowed, escapeTargets);
 		for (blockId in orderedReachable)
 			if (allowed.exists(blockId) && !continuation.exists(blockId) && isAbruptTerminal(requireBlock(blockId)))
 				result.set(blockId, true);
-		var changed = true;
-		while (changed) {
-			changed = false;
-			for (blockId in orderedReachable) {
-				if (!allowed.exists(blockId) || result.exists(blockId))
-					continue;
-				final outgoing = successors(blockId);
-				if (outgoing.length == 0)
-					continue;
-				var complete = true;
-				for (target in outgoing) {
-					if (!escapeTargets.exists(target) && target != candidate && (!allowed.exists(target) || !result.exists(target))) {
-						complete = false;
-						break;
-					}
+
+		/*
+			The old fixed point rescanned every reachable block until no new block
+			completed. A long function with a backward source order could therefore
+			visit the same 339 blocks thousands of times for one candidate. Instead,
+			count each rule's unresolved successors once. When one successor becomes
+			complete, only its direct predecessor rules and loop-exit rules wake up.
+			This computes the same least fixed point without depending on source
+			order.
+		 */
+		final remainingByBlock:Map<String, Int> = [];
+		final ready:Array<String> = [];
+		final queued:Map<String, Bool> = [];
+		for (blockId in orderedReachable) {
+			completionSetInitialBlockScans++;
+			if (!allowed.exists(blockId) || result.exists(blockId))
+				continue;
+			final outgoing = successors(blockId);
+			if (outgoing.length == 0)
+				continue;
+			var remaining = 0;
+			for (target in outgoing)
+				if (!escapeTargets.exists(target) && target != candidate && (!allowed.exists(target) || !result.exists(target)))
+					remaining++;
+			remainingByBlock.set(blockId, remaining);
+			if (remaining == 0) {
+				ready.push(blockId);
+				queued.set(blockId, true);
+			}
+		}
+
+		final loopRulesByExit:Map<String, Array<CBodyCompletionLoopRule>> = [];
+		final immediatelyReadyLoops:Array<CBodyCompletionLoopRule> = [];
+		for (headerId in orderedReachable) {
+			final loop = loopsByHeader.get(headerId);
+			if (loop == null)
+				continue;
+			var admitted = true;
+			final nodes = [for (blockId in loop.nodes.keys()) blockId];
+			nodes.sort(compareBlockIds);
+			for (blockId in nodes)
+				if (!allowed.exists(blockId)) {
+					admitted = false;
+					break;
 				}
-				if (complete) {
-					result.set(blockId, true);
-					changed = true;
+			if (!admitted)
+				continue;
+			final unresolvedExits:Map<String, Bool> = [];
+			var hasExit = false;
+			for (blockId in nodes)
+				for (target in successors(blockId)) {
+					if (loop.nodes.exists(target))
+						continue;
+					hasExit = true;
+					if (!escapeTargets.exists(target) && target != candidate && !result.exists(target))
+						unresolvedExits.set(target, true);
+				}
+			if (!hasExit)
+				continue;
+			var unresolvedExitCount = 0;
+			for (_ in unresolvedExits.keys())
+				unresolvedExitCount++;
+			final rule = new CBodyCompletionLoopRule(nodes, unresolvedExitCount);
+			if (rule.remaining == 0) {
+				immediatelyReadyLoops.push(rule);
+			} else {
+				for (target in unresolvedExits.keys()) {
+					if (!allowed.exists(target))
+						continue;
+					var rules = loopRulesByExit.get(target);
+					if (rules == null) {
+						rules = [];
+						loopRulesByExit.set(target, rules);
+					}
+					rules.push(rule);
 				}
 			}
-			// A natural loop is one structural unit. Its internal backedge means
-			// the ordinary one-block-at-a-time fixed point cannot prove the header
-			// complete, even when every actual loop exit already reaches this
-			// candidate or an admitted abrupt boundary. Mark the complete group
-			// together; an infinite iteration is non-fallthrough, not a second
-			// route around the candidate.
-			for (loop in loopsByHeader) {
-				var admitted = true;
-				var hasExit = false;
-				for (blockId in loop.nodes.keys()) {
-					if (!allowed.exists(blockId)) {
-						admitted = false;
-						break;
-					}
-					for (target in successors(blockId)) {
-						if (loop.nodes.exists(target))
-							continue;
-						hasExit = true;
-						if (!escapeTargets.exists(target) && target != candidate && !result.exists(target)) {
-							admitted = false;
-							break;
-						}
-					}
-					if (!admitted)
-						break;
+		}
+
+		function markComplete(blockId:String):Void {
+			if (!result.exists(blockId)) {
+				result.set(blockId, true);
+				if (!queued.exists(blockId)) {
+					ready.push(blockId);
+					queued.set(blockId, true);
 				}
-				if (admitted && hasExit)
-					for (blockId in loop.nodes.keys())
-						if (!result.exists(blockId)) {
-							result.set(blockId, true);
-							changed = true;
-						}
 			}
+		}
+		function resolveLoop(rule:CBodyCompletionLoopRule):Void {
+			if (rule.resolved || rule.remaining != 0)
+				return;
+			rule.resolved = true;
+			for (blockId in rule.nodes)
+				markComplete(blockId);
+		}
+		for (rule in immediatelyReadyLoops)
+			resolveLoop(rule);
+		var readyIndex = 0;
+		while (readyIndex < ready.length) {
+			completionSetWorklistDequeues++;
+			final completedId = ready[readyIndex++];
+			if (!result.exists(completedId))
+				result.set(completedId, true);
+			for (predecessorId in requirePredecessors(completedId)) {
+				final remaining = remainingByBlock.get(predecessorId);
+				if (remaining == null || remaining <= 0 || result.exists(predecessorId))
+					continue;
+				final next = remaining - 1;
+				remainingByBlock.set(predecessorId, next);
+				if (next == 0)
+					markComplete(predecessorId);
+			}
+			final loopRules = loopRulesByExit.get(completedId);
+			if (loopRules != null)
+				for (rule in loopRules) {
+					if (rule.resolved || rule.remaining <= 0)
+						continue;
+					rule.remaining--;
+					resolveLoop(rule);
+				}
 		}
 		return result;
 	}
@@ -1705,42 +1872,56 @@ private class CBodyControlFlowAnalysis {
 		moved after a sibling that owns different work.
 	**/
 	function abruptCompletionSet(allowed:Map<String, Bool>):Map<String, Bool> {
+		abruptCompletionSetSearches++;
 		final result:Map<String, Bool> = [];
 		for (blockId in orderedReachable)
 			if (allowed.exists(blockId) && isAbruptTerminal(requireBlock(blockId)))
 				result.set(blockId, true);
-		var changed = true;
-		while (changed) {
-			changed = false;
-			for (blockId in orderedReachable) {
-				if (!allowed.exists(blockId) || result.exists(blockId))
+		final remainingByBlock:Map<String, Int> = [];
+		final ready:Array<String> = [];
+		for (blockId in orderedReachable) {
+			abruptCompletionSetInitialBlockScans++;
+			if (!allowed.exists(blockId) || result.exists(blockId))
+				continue;
+			final outgoing = successors(blockId);
+			if (outgoing.length == 0)
+				continue;
+			var remaining = 0;
+			for (target in outgoing)
+				if (!allowed.exists(target) || !result.exists(target))
+					remaining++;
+			remainingByBlock.set(blockId, remaining);
+			if (remaining == 0)
+				ready.push(blockId);
+		}
+		var readyIndex = 0;
+		while (readyIndex < ready.length) {
+			abruptCompletionSetWorklistDequeues++;
+			final completedId = ready[readyIndex++];
+			if (result.exists(completedId))
+				continue;
+			result.set(completedId, true);
+			for (predecessorId in requirePredecessors(completedId)) {
+				final remaining = remainingByBlock.get(predecessorId);
+				if (remaining == null || remaining <= 0 || result.exists(predecessorId))
 					continue;
-				final outgoing = successors(blockId);
-				if (outgoing.length == 0)
-					continue;
-				var allAbrupt = true;
-				for (target in outgoing)
-					if (!allowed.exists(target) || !result.exists(target)) {
-						allAbrupt = false;
-						break;
-					}
-				if (allAbrupt) {
-					result.set(blockId, true);
-					changed = true;
-				}
+				final next = remaining - 1;
+				remainingByBlock.set(predecessorId, next);
+				if (next == 0)
+					ready.push(predecessorId);
 			}
 		}
 		return result;
 	}
 
 	function prefixesAreDisjoint(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
-			unavailable:Map<String, Bool>):Bool {
+			unavailable:Map<String, Bool>, continuation:Map<String, Bool>):Bool {
+		prefixDisjointSearches++;
 		final ownerByBlock:Map<String, Int> = [];
 		// A block reached after the candidate belongs to the shared continuation.
 		// If another arm reaches that same block before the candidate (for
 		// example, by continuing the loop), choosing this candidate would place
 		// the block both inside that arm and after the structured branch.
-		final continuation = forwardReachable(candidate, allowed, escapeTargets);
 		for (armIndex => start in starts) {
 			if (start == candidate || escapeTargets.exists(start))
 				continue;
@@ -1748,6 +1929,7 @@ private class CBodyControlFlowAnalysis {
 			final seen:Map<String, Bool> = [];
 			var index = 0;
 			while (index < pending.length) {
+				prefixDisjointBlockVisits++;
 				final current = pending[index++];
 				if (current == candidate || escapeTargets.exists(current) || seen.exists(current))
 					continue;
@@ -1777,10 +1959,12 @@ private class CBodyControlFlowAnalysis {
 	}
 
 	function forwardReachable(start:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Map<String, Bool> {
+		forwardReachabilitySearches++;
 		final result:Map<String, Bool> = [];
 		final pending:Array<String> = [start];
 		var index = 0;
 		while (index < pending.length) {
+			forwardReachabilityBlockVisits++;
 			final current = pending[index++];
 			if (!allowed.exists(current) || result.exists(current))
 				continue;
@@ -1842,6 +2026,7 @@ private class CBodyControlFlowAnalysis {
 		distances.set(start, 0);
 		var index = 0;
 		while (index < pending.length) {
+			normalJoinDistanceBlockVisits++;
 			final current = pending[index++];
 			final distance = distances.get(current);
 			if (distance == null)
@@ -1919,9 +2104,17 @@ private class CBodyControlFlowAnalysis {
 	}
 
 	function computeDominators():Void {
-		final all = setOf(orderedReachable);
-		for (blockId in orderedReachable)
-			dominators.set(blockId, blockId == fn.entryBlockId ? singleton(blockId) : copySet(all));
+		final bitCount = orderedReachable.length;
+		final wordCount = bitWordCount(bitCount);
+		final all = fullBitWords(bitCount);
+		final bitsByBlock:Map<String, Array<Int>> = [];
+		for (blockId in orderedReachable) {
+			final words = blockId == fn.entryBlockId ? emptyBitWords(wordCount) : all.copy();
+			if (blockId == fn.entryBlockId)
+				setBit(words, requireInt(blockOrder, blockId));
+			bitsByBlock.set(blockId, words);
+		}
+		final scratch = emptyBitWords(wordCount);
 		var changed = true;
 		while (changed) {
 			changed = false;
@@ -1931,42 +2124,60 @@ private class CBodyControlFlowAnalysis {
 				final incoming = predecessors.get(blockId);
 				if (incoming == null || incoming.length == 0)
 					continue;
-				var next = copySet(requireSet(dominators, incoming[0], "dominator"));
+				copyBitWords(requireBitWords(bitsByBlock, incoming[0], "dominator"), scratch);
 				for (index in 1...incoming.length)
-					next = intersect(next, requireSet(dominators, incoming[index], "dominator"));
-				next.set(blockId, true);
-				if (!sameSet(next, requireSet(dominators, blockId, "dominator"))) {
-					dominators.set(blockId, next);
+					intersectBitWords(scratch, requireBitWords(bitsByBlock, incoming[index], "dominator"));
+				setBit(scratch, requireInt(blockOrder, blockId));
+				final current = requireBitWords(bitsByBlock, blockId, "dominator");
+				if (replaceBitWordsWhenChanged(current, scratch))
 					changed = true;
-				}
 			}
 		}
+		for (blockId in orderedReachable)
+			dominators.set(blockId, bitWordsToSet(requireBitWords(bitsByBlock, blockId, "dominator"), orderedReachable));
 	}
 
 	function computePostDominators():Void {
-		final universe = orderedReachable.copy();
-		universe.push(EXIT_ID);
-		final all = setOf(universe);
-		postDominators.set(EXIT_ID, singleton(EXIT_ID));
+		final blockCount = orderedReachable.length;
+		final bitCount = blockCount + 1;
+		final wordCount = bitWordCount(bitCount);
+		final all = fullBitWords(bitCount);
+		final bitsByBlock:Map<String, Array<Int>> = [];
+		final exitWords = emptyBitWords(wordCount);
+		setBit(exitWords, blockCount);
+		bitsByBlock.set(EXIT_ID, exitWords);
 		for (blockId in orderedReachable)
-			postDominators.set(blockId, copySet(all));
+			bitsByBlock.set(blockId, all.copy());
+		final scratch = emptyBitWords(wordCount);
 		var changed = true;
 		while (changed) {
 			changed = false;
 			for (blockId in orderedReachable) {
-				var outgoing = successors(blockId).filter(target -> reachable.exists(target));
-				if (outgoing.length == 0)
-					outgoing = [EXIT_ID];
-				var next = copySet(requireSet(postDominators, outgoing[0], "post-dominator"));
-				for (index in 1...outgoing.length)
-					next = intersect(next, requireSet(postDominators, outgoing[index], "post-dominator"));
-				next.set(blockId, true);
-				if (!sameSet(next, requireSet(postDominators, blockId, "post-dominator"))) {
-					postDominators.set(blockId, next);
-					changed = true;
+				var foundOutgoing = false;
+				for (target in successors(blockId)) {
+					if (!reachable.exists(target))
+						continue;
+					final targetWords = requireBitWords(bitsByBlock, target, "post-dominator");
+					if (foundOutgoing)
+						intersectBitWords(scratch, targetWords);
+					else {
+						copyBitWords(targetWords, scratch);
+						foundOutgoing = true;
+					}
 				}
+				if (!foundOutgoing)
+					copyBitWords(exitWords, scratch);
+				setBit(scratch, requireInt(blockOrder, blockId));
+				final current = requireBitWords(bitsByBlock, blockId, "post-dominator");
+				if (replaceBitWordsWhenChanged(current, scratch))
+					changed = true;
 			}
 		}
+		final identities = orderedReachable.copy();
+		identities.push(EXIT_ID);
+		postDominators.set(EXIT_ID, bitWordsToSet(exitWords, identities));
+		for (blockId in orderedReachable)
+			postDominators.set(blockId, bitWordsToSet(requireBitWords(bitsByBlock, blockId, "post-dominator"), identities));
 	}
 
 	function computeNaturalLoops():Void {
@@ -2085,6 +2296,78 @@ private class CBodyControlFlowAnalysis {
 			if (admitted.exists(blockId) && !indexByBlock.exists(blockId))
 				strongConnect(blockId);
 		return components;
+	}
+
+	/*
+		Dominator sets are dense: most blocks initially contain nearly every
+		block. A string-keyed Map therefore allocates one hash entry per bit for
+		every fixed-point candidate. These helpers keep the same set operation in
+		32-bit words and reuse one scratch array while converging, then materialize
+		the public string sets once.
+	 */
+	static inline function bitWordCount(bitCount:Int):Int
+		return (bitCount + 31) >> 5;
+
+	static function emptyBitWords(wordCount:Int):Array<Int>
+		return [for (_ in 0...wordCount) 0];
+
+	static function fullBitWords(bitCount:Int):Array<Int> {
+		final result = [for (_ in 0...bitWordCount(bitCount)) -1];
+		final remainder = bitCount & 31;
+		if (remainder != 0)
+			result[result.length - 1] = (1 << remainder) - 1;
+		return result;
+	}
+
+	static inline function setBit(words:Array<Int>, index:Int):Void {
+		final wordIndex = index >> 5;
+		words[wordIndex] = words[wordIndex] | (1 << (index & 31));
+	}
+
+	static inline function hasBit(words:Array<Int>, index:Int):Bool
+		return (words[index >> 5] & (1 << (index & 31))) != 0;
+
+	static function copyBitWords(source:Array<Int>, target:Array<Int>):Void {
+		if (source.length != target.length)
+			fail('control-flow dense set width changed from ${source.length} to ${target.length}');
+		for (index in 0...source.length)
+			target[index] = source[index];
+	}
+
+	static function intersectBitWords(target:Array<Int>, other:Array<Int>):Void {
+		if (target.length != other.length)
+			fail('control-flow dense intersection width changed from ${target.length} to ${other.length}');
+		for (index in 0...target.length)
+			target[index] = target[index] & other[index];
+	}
+
+	static function replaceBitWordsWhenChanged(target:Array<Int>, candidate:Array<Int>):Bool {
+		if (target.length != candidate.length)
+			fail('control-flow dense assignment width changed from ${target.length} to ${candidate.length}');
+		var changed = false;
+		for (index in 0...target.length)
+			if (target[index] != candidate[index]) {
+				changed = true;
+				break;
+			}
+		if (changed)
+			copyBitWords(candidate, target);
+		return changed;
+	}
+
+	static function bitWordsToSet(words:Array<Int>, identities:Array<String>):Map<String, Bool> {
+		final result:Map<String, Bool> = [];
+		for (index => identity in identities)
+			if (hasBit(words, index))
+				result.set(identity, true);
+		return result;
+	}
+
+	static function requireBitWords(index:Map<String, Array<Int>>, key:String, label:String):Array<Int> {
+		final value = index.get(key);
+		if (value == null)
+			return fail('control-flow analysis lost dense $label set `$key`');
+		return value;
 	}
 
 	static function setOf(values:Array<String>):Map<String, Bool> {

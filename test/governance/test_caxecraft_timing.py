@@ -99,13 +99,15 @@ class CaxecraftTimingTests(unittest.TestCase):
             return "HXC_PROFILE\t" + json.dumps(value, separators=(",", ":"))
 
         child = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 2,
             "parentSpanId": 1,
             "category": "phase",
             "name": "runtime planning",
+            "subject": None,
+            "work": None,
             "status": "ok",
             "startOffsetMicroseconds": 20.0,
             "inclusiveWallMicroseconds": 60.0,
@@ -116,13 +118,15 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": 1024.0,
         }
         parent = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 1,
             "parentSpanId": None,
             "category": "phase",
             "name": "target pipeline",
+            "subject": None,
+            "work": None,
             "status": "ok",
             "startOffsetMicroseconds": 0.0,
             "inclusiveWallMicroseconds": 100.0,
@@ -133,14 +137,14 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": 1024.0,
         }
         counter = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "recordKind": "counter",
             "requestId": "request-1",
             "name": "runtime.requirements",
             "value": 3,
         }
         request = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "recordKind": "request",
             "requestId": "request-1",
             "status": "ok",
@@ -166,6 +170,45 @@ class CaxecraftTimingTests(unittest.TestCase):
         self.assertEqual(wall["profile request unspanned remainder"], 20.0)
         self.assertEqual(wall["external process/frontend remainder"], 30.0)
         self.assertEqual(cpu["profile request unspanned remainder"], 20.0)
+        work_child = dict(child)
+        work_child.update(
+            {
+                "category": "detail",
+                "name": "body control-flow planning",
+                "subject": "demo.Main.main",
+                "work": {
+                    "kind": "normal-join-search-v1",
+                    "blockCount": 4,
+                    "normalJoinSearches": 2,
+                    "normalJoinCandidateProofs": 2,
+                    "normalJoinDistanceSearches": 4,
+                    "normalJoinDistanceBlockVisits": 12,
+                    "completionSetSearches": 2,
+                    "completionSetInitialBlockScans": 12,
+                    "completionSetWorklistDequeues": 3,
+                    "abruptCompletionSetSearches": 1,
+                    "abruptCompletionSetInitialBlockScans": 4,
+                    "abruptCompletionSetWorklistDequeues": 1,
+                    "forwardReachabilitySearches": 4,
+                    "forwardReachabilityBlockVisits": 12,
+                    "prefixDisjointSearches": 2,
+                    "prefixDisjointBlockVisits": 8,
+                },
+            }
+        )
+        work_profile = profiler.parse_profile_records(
+            "\n".join(
+                (
+                    record(work_child),
+                    record(parent),
+                    record(counter),
+                    record(request),
+                )
+            ),
+            expected_status="ok",
+        )
+        self.assertEqual(work_profile.spans[0].subject, "demo.Main.main")
+        self.assertEqual(work_profile.spans[0].work.block_count, 4)
         self.assertEqual(
             profiler.distribution([1.0, 2.0, 3.0, 4.0, 5.0]),
             {
@@ -220,13 +263,15 @@ class CaxecraftTimingTests(unittest.TestCase):
             ROOT / "examples/caxecraft/profile_compiler.py",
         )
         span = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "recordKind": "span",
             "requestId": "request-1",
             "spanId": 1,
             "parentSpanId": None,
             "category": "phase",
             "name": "configuration and contracts",
+            "subject": None,
+            "work": None,
             "status": "failed",
             "startOffsetMicroseconds": 0,
             "inclusiveWallMicroseconds": 10,
@@ -237,7 +282,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             "residentBytesAtEnd": None,
         }
         request = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "recordKind": "request",
             "requestId": "request-1",
             "status": "failed",

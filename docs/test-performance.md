@@ -735,6 +735,50 @@ The internal control-flow reduction is the durable result; the wall numbers
 show practical direction under load but must not be published as a stable
 median, percentile, or machine-independent speedup claim.
 
+### Function-attributed control-flow work
+
+The full playable later made the remaining control-flow cost visible in one
+real function: `caxecraft.app.CaxecraftApp.run`, whose HxcIR graph has 339
+basic blocks. A *basic block* is a straight-line group of instructions with one
+entry and one final jump, branch, return, or throw. The profiler schema now
+attaches the function ID and deterministic graph-work counts to each
+`body control-flow planning` span. This distinguishes “one large function did
+expensive work” from “the compiler planned the same function twice”; the
+measured playable had 529 spans for 529 different functions.
+
+Two repeated operations owned most of the cost:
+
+- dominator and post-dominator convergence copied and intersected
+  string-keyed sets on every iteration; and
+- completion proofs repeatedly rescanned all admitted blocks until no new
+  answer changed.
+
+The replacement uses dense bit sets while dominator answers converge, then
+materializes the existing string-keyed sets once. Completion proofs now seed a
+reverse worklist once and revisit only predecessors whose unresolved successor
+count changed. The independent plan validator still consumes the finalized
+plan, and neither optimization is cached across compiler requests.
+
+These before/after values are one-sample **contended diagnostic evidence** from
+the same full playable, not a stable wall-time benchmark. Both runs emitted the
+same 225 normal artifacts with SHA-256 tree digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+
+| Measured control-flow value | Before | After |
+| --- | ---: | ---: |
+| All 529 functions, planning CPU | 6.382s | 2.457s |
+| All 529 functions, cumulative allocation | 17.06GB | 5.93GB |
+| Analysis inside `CaxecraftApp.run` | 3.154s / 9.10GB | 0.109s / 0.29GB |
+| Full planning for `CaxecraftApp.run` | 4.249s / 11.26GB | 1.110s / 2.45GB |
+| Full Haxe-to-generated-C wall | 52.338s | 47.724s |
+
+The work counters are the durable regression boundary. Every completion search
+must perform exactly one initial block scan, and its worklist may dequeue each
+block at most once. Host contention can stretch elapsed time but cannot make
+those counts flaky. The overall compile remains too slow; this result closes
+one measured hotspot and supplies better attribution for selecting the next
+one.
+
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
 runner started 87 independent Haxe processes: 18 report/determinism renders, 36

@@ -78,10 +78,24 @@ first broken boundary; neither the emitter nor printer tries to recover.
 
 Analysis is deterministic in HxcIR block order. It builds predecessor sets,
 iterative dominators and post-dominators, natural loops from dominated
-backedges, and strongly connected components. Irreducibility analysis is
-recursive rather than limited to maximal SCCs: when a cyclic SCC has one entry,
-the analysis removes that unique outer header and scans the remaining induced
-subgraph again. This detects a nested two-entry cycle hidden inside an otherwise
+backedges, and strongly connected components. A *dominator* is a block that
+every route from the function entry must pass through; a *post-dominator* is
+the same idea looking toward function exit. These sets let the planner prove
+where branches and loops can safely rejoin.
+
+During the iterative calculation, the implementation gives every reachable
+block a small integer and stores each set as bits in an `Array<Int>`. One bit
+answers whether one block is in the set. Intersecting two sets therefore walks
+a compact array of machine-sized words instead of copying and looking up many
+string-keyed `Map` entries. After the answer stops changing, the compiler
+materializes the public string-keyed sets once for the remaining planner and
+its independent validator. This is a request-local representation
+optimization: it changes neither the HxcIR program nor the structural C plan.
+
+Irreducibility analysis is recursive rather than limited to maximal strongly
+connected components (SCCs): when a cyclic SCC has one entry, the analysis
+removes that unique outer header and scans the remaining induced subgraph
+again. This detects a nested two-entry cycle hidden inside an otherwise
 single-entry outer loop. An SCC with more than one entry is genuinely
 irreducible and cannot be represented by ordinary nested C regions without node
 duplication or a state-machine transformation.
@@ -107,6 +121,15 @@ emitted twice. The planner may separately prove that one arm returns, throws,
 breaks, or continues while the other is the continuation, or that both arms
 complete. Nested early returns remain inside their owning branch and loop
 regions.
+
+Completion proofs use a reverse worklist. The planner first counts how many
+successors of each block are not yet known to reach the candidate join or an
+abrupt exit. When a successor becomes complete, only its direct predecessors
+are reconsidered. The previous fixed-point loop rescanned the complete graph
+until no answer changed, so source order could make a large function inspect
+the same blocks thousands of times. Both algorithms compute the same least
+fixed point; the worklist avoids unrelated rescans and the focused
+early-return ladder bounds its deterministic scan and dequeue counts.
 
 ## Loop proof and emitted shape
 

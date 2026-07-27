@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 1
+PROFILE_SCHEMA_VERSION = 2
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -86,6 +86,13 @@ DETAIL_PHASES = (
     "semantic name projection",
     "body setup and value planning",
     "body control-flow planning",
+    "body control-flow analysis",
+    "body control-flow indexing",
+    "body control-flow dominators",
+    "body control-flow post-dominators",
+    "body control-flow loop analysis",
+    "body control-flow construction",
+    "body control-flow validation",
     "body CAST emission",
     "artifact runtime packaging",
     "artifact specialization report",
@@ -209,11 +216,53 @@ class HaxeTimerRow:
 
 
 @dataclass(frozen=True)
+class CompilerProfileSpanWork:
+    kind: str
+    block_count: int
+    normal_join_searches: int
+    normal_join_candidate_proofs: int
+    normal_join_distance_searches: int
+    normal_join_distance_block_visits: int
+    completion_set_searches: int
+    completion_set_initial_block_scans: int
+    completion_set_worklist_dequeues: int
+    abrupt_completion_set_searches: int
+    abrupt_completion_set_initial_block_scans: int
+    abrupt_completion_set_worklist_dequeues: int
+    forward_reachability_searches: int
+    forward_reachability_block_visits: int
+    prefix_disjoint_searches: int
+    prefix_disjoint_block_visits: int
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "kind": self.kind,
+            "blockCount": self.block_count,
+            "normalJoinSearches": self.normal_join_searches,
+            "normalJoinCandidateProofs": self.normal_join_candidate_proofs,
+            "normalJoinDistanceSearches": self.normal_join_distance_searches,
+            "normalJoinDistanceBlockVisits": self.normal_join_distance_block_visits,
+            "completionSetSearches": self.completion_set_searches,
+            "completionSetInitialBlockScans": self.completion_set_initial_block_scans,
+            "completionSetWorklistDequeues": self.completion_set_worklist_dequeues,
+            "abruptCompletionSetSearches": self.abrupt_completion_set_searches,
+            "abruptCompletionSetInitialBlockScans": self.abrupt_completion_set_initial_block_scans,
+            "abruptCompletionSetWorklistDequeues": self.abrupt_completion_set_worklist_dequeues,
+            "forwardReachabilitySearches": self.forward_reachability_searches,
+            "forwardReachabilityBlockVisits": self.forward_reachability_block_visits,
+            "prefixDisjointSearches": self.prefix_disjoint_searches,
+            "prefixDisjointBlockVisits": self.prefix_disjoint_block_visits,
+        }
+
+
+@dataclass(frozen=True)
 class CompilerProfileSpan:
     span_id: int
     parent_span_id: int | None
     category: str
     name: str
+    subject: str | None
+    work: CompilerProfileSpanWork | None
     status: str
     start_offset_us: float
     inclusive_wall_us: float
@@ -229,6 +278,8 @@ class CompilerProfileSpan:
             "parentSpanId": self.parent_span_id,
             "category": self.category,
             "name": self.name,
+            "subject": self.subject,
+            "work": self.work.to_json() if self.work is not None else None,
             "status": self.status,
             "startOffsetMs": round(self.start_offset_us / 1000.0, 3),
             "inclusiveWallMs": round(self.inclusive_wall_us / 1000.0, 3),
@@ -296,6 +347,8 @@ SPAN_FIELDS = frozenset(
         "parentSpanId",
         "category",
         "name",
+        "subject",
+        "work",
         "status",
         "startOffsetMicroseconds",
         "inclusiveWallMicroseconds",
@@ -304,6 +357,26 @@ SPAN_FIELDS = frozenset(
         "exclusiveCpuMicroseconds",
         "allocatedBytesDelta",
         "residentBytesAtEnd",
+    }
+)
+SPAN_WORK_FIELDS = frozenset(
+    {
+        "kind",
+        "blockCount",
+        "normalJoinSearches",
+        "normalJoinCandidateProofs",
+        "normalJoinDistanceSearches",
+        "normalJoinDistanceBlockVisits",
+        "completionSetSearches",
+        "completionSetInitialBlockScans",
+        "completionSetWorklistDequeues",
+        "abruptCompletionSetSearches",
+        "abruptCompletionSetInitialBlockScans",
+        "abruptCompletionSetWorklistDequeues",
+        "forwardReachabilitySearches",
+        "forwardReachabilityBlockVisits",
+        "prefixDisjointSearches",
+        "prefixDisjointBlockVisits",
     }
 )
 COUNTER_FIELDS = frozenset(
@@ -383,6 +456,21 @@ def require_profile_fields(
     if record.get("recordKind") != kind:
         raise CompilerProfileFailure(
             f"compiler profile record kind drifted from {kind!r}"
+        )
+
+
+def require_profile_fields_without_schema(
+    record: Mapping[str, object], expected: frozenset[str], kind: str
+) -> None:
+    """Reject missing or accidental work-record fields before reading values."""
+
+    observed = frozenset(record)
+    if observed != expected:
+        missing = sorted(expected - observed)
+        extra = sorted(observed - expected)
+        raise CompilerProfileFailure(
+            f"compiler profile {kind} fields drifted; "
+            f"missing={missing}, extra={extra}"
         )
 
 
@@ -504,6 +592,86 @@ def parse_profile_records(
                 raise CompilerProfileFailure(
                     f"compiler profile contains unknown category {category!r}"
                 )
+            subject_value = record.get("subject")
+            if subject_value is not None and (
+                not isinstance(subject_value, str) or not subject_value
+            ):
+                raise CompilerProfileFailure(
+                    "compiler profile span subject must be null or a non-empty string"
+                )
+            work_value = record.get("work")
+            if work_value is None:
+                work = None
+            else:
+                if not isinstance(work_value, dict):
+                    raise CompilerProfileFailure(
+                        "compiler profile span work must be null or an object"
+                    )
+                require_profile_fields_without_schema(
+                    work_value, SPAN_WORK_FIELDS, "span work"
+                )
+                work = CompilerProfileSpanWork(
+                    kind=profile_string(work_value, "kind"),
+                    block_count=profile_integer(
+                        work_value, "blockCount", minimum=0
+                    ),
+                    normal_join_searches=profile_integer(
+                        work_value, "normalJoinSearches", minimum=0
+                    ),
+                    normal_join_candidate_proofs=profile_integer(
+                        work_value, "normalJoinCandidateProofs", minimum=0
+                    ),
+                    normal_join_distance_searches=profile_integer(
+                        work_value, "normalJoinDistanceSearches", minimum=0
+                    ),
+                    normal_join_distance_block_visits=profile_integer(
+                        work_value, "normalJoinDistanceBlockVisits", minimum=0
+                    ),
+                    completion_set_searches=profile_integer(
+                        work_value, "completionSetSearches", minimum=0
+                    ),
+                    completion_set_initial_block_scans=profile_integer(
+                        work_value, "completionSetInitialBlockScans", minimum=0
+                    ),
+                    completion_set_worklist_dequeues=profile_integer(
+                        work_value, "completionSetWorklistDequeues", minimum=0
+                    ),
+                    abrupt_completion_set_searches=profile_integer(
+                        work_value, "abruptCompletionSetSearches", minimum=0
+                    ),
+                    abrupt_completion_set_initial_block_scans=profile_integer(
+                        work_value, "abruptCompletionSetInitialBlockScans", minimum=0
+                    ),
+                    abrupt_completion_set_worklist_dequeues=profile_integer(
+                        work_value,
+                        "abruptCompletionSetWorklistDequeues",
+                        minimum=0,
+                    ),
+                    forward_reachability_searches=profile_integer(
+                        work_value, "forwardReachabilitySearches", minimum=0
+                    ),
+                    forward_reachability_block_visits=profile_integer(
+                        work_value,
+                        "forwardReachabilityBlockVisits",
+                        minimum=0,
+                    ),
+                    prefix_disjoint_searches=profile_integer(
+                        work_value, "prefixDisjointSearches", minimum=0
+                    ),
+                    prefix_disjoint_block_visits=profile_integer(
+                        work_value, "prefixDisjointBlockVisits", minimum=0
+                    ),
+                )
+                if (
+                    category != "detail"
+                    or name != "body control-flow planning"
+                    or subject_value is None
+                    or work.kind != "normal-join-search-v1"
+                ):
+                    raise CompilerProfileFailure(
+                        "compiler profile normal-join work belongs only to a "
+                        "function-scoped body control-flow detail span"
+                    )
             status = profile_string(record, "status")
             if status not in PROFILE_STATUSES:
                 raise CompilerProfileFailure(
@@ -514,6 +682,8 @@ def parse_profile_records(
                 parent_span_id=parent_span_id,
                 category=category,
                 name=name,
+                subject=subject_value,
+                work=work,
                 status=status,
                 start_offset_us=profile_number(
                     record, "startOffsetMicroseconds"
