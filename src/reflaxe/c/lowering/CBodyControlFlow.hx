@@ -266,8 +266,12 @@ class CBodyControlFlowPlanningResult {
 	walks the admitted graph once from one branch start. Each completion-set
 	search scans the admitted blocks once to seed a reverse worklist, then
 	dequeues a block only when all of that block's required successors have
-	completed. Keeping those two counts separate makes a return to repeated
-	whole-graph fixed-point scans visible without relying on machine timing.
+	completed. An *immediate post-dominator* is the first block that every path
+	from a source block must reach; plan construction and validation may ask for
+	that same settled graph fact. Its query, computation, and cache-hit counts
+	prove that repeated questions reuse the fact without reusing the builder's
+	plan verdict. Keeping these counts separate makes repeated graph work visible
+	without relying on machine timing.
 **/
 @:noCompletion
 class CBodyControlFlowWorkReport {
@@ -285,11 +289,15 @@ class CBodyControlFlowWorkReport {
 	public final forwardReachabilityBlockVisits:Int;
 	public final prefixDisjointSearches:Int;
 	public final prefixDisjointBlockVisits:Int;
+	public final immediatePostDominatorQueries:Int;
+	public final immediatePostDominatorComputations:Int;
+	public final immediatePostDominatorCacheHits:Int;
 
 	public function new(normalJoinSearches:Int, normalJoinCandidateProofs:Int, normalJoinDistanceSearches:Int, normalJoinDistanceBlockVisits:Int,
 			completionSetSearches:Int, completionSetInitialBlockScans:Int, completionSetWorklistDequeues:Int, abruptCompletionSetSearches:Int,
 			abruptCompletionSetInitialBlockScans:Int, abruptCompletionSetWorklistDequeues:Int, forwardReachabilitySearches:Int,
-			forwardReachabilityBlockVisits:Int, prefixDisjointSearches:Int, prefixDisjointBlockVisits:Int) {
+			forwardReachabilityBlockVisits:Int, prefixDisjointSearches:Int, prefixDisjointBlockVisits:Int, immediatePostDominatorQueries:Int,
+			immediatePostDominatorComputations:Int, immediatePostDominatorCacheHits:Int) {
 		this.normalJoinSearches = normalJoinSearches;
 		this.normalJoinCandidateProofs = normalJoinCandidateProofs;
 		this.normalJoinDistanceSearches = normalJoinDistanceSearches;
@@ -304,6 +312,9 @@ class CBodyControlFlowWorkReport {
 		this.forwardReachabilityBlockVisits = forwardReachabilityBlockVisits;
 		this.prefixDisjointSearches = prefixDisjointSearches;
 		this.prefixDisjointBlockVisits = prefixDisjointBlockVisits;
+		this.immediatePostDominatorQueries = immediatePostDominatorQueries;
+		this.immediatePostDominatorComputations = immediatePostDominatorComputations;
+		this.immediatePostDominatorCacheHits = immediatePostDominatorCacheHits;
 	}
 }
 
@@ -1367,6 +1378,10 @@ private class CBodyControlFlowAnalysis {
 	public final blockOrder:Map<String, Int> = [];
 
 	final successorsByBlock:Map<String, Array<String>> = [];
+	// These facts belong only to this immutable function analysis. The separate
+	// map records null results too, so "no post-dominator" is computed once.
+	final immediatePostDominatorByBlock:Map<String, String> = [];
+	final immediatePostDominatorComputed:Map<String, Bool> = [];
 
 	public final orderedReachable:Array<String> = [];
 	public final reachable:Map<String, Bool> = [];
@@ -1390,6 +1405,9 @@ private class CBodyControlFlowAnalysis {
 	var forwardReachabilityBlockVisits:Int = 0;
 	var prefixDisjointSearches:Int = 0;
 	var prefixDisjointBlockVisits:Int = 0;
+	var immediatePostDominatorQueries:Int = 0;
+	var immediatePostDominatorComputations:Int = 0;
+	var immediatePostDominatorCacheHits:Int = 0;
 
 	public function new(fn:HxcIRFunction) {
 		this.fn = fn;
@@ -1544,7 +1562,8 @@ private class CBodyControlFlowAnalysis {
 		return new CBodyControlFlowWorkReport(normalJoinSearches, normalJoinCandidateProofs, normalJoinDistanceSearches, normalJoinDistanceBlockVisits,
 			completionSetSearches, completionSetInitialBlockScans, completionSetWorklistDequeues, abruptCompletionSetSearches,
 			abruptCompletionSetInitialBlockScans, abruptCompletionSetWorklistDequeues, forwardReachabilitySearches, forwardReachabilityBlockVisits,
-			prefixDisjointSearches, prefixDisjointBlockVisits);
+			prefixDisjointSearches, prefixDisjointBlockVisits, immediatePostDominatorQueries, immediatePostDominatorComputations,
+			immediatePostDominatorCacheHits);
 	}
 
 	public function dominates(dominator:String, blockId:String):Bool {
@@ -1558,9 +1577,17 @@ private class CBodyControlFlowAnalysis {
 	}
 
 	public function immediatePostDominator(blockId:String):Null<String> {
+		immediatePostDominatorQueries++;
+		if (immediatePostDominatorComputed.exists(blockId)) {
+			immediatePostDominatorCacheHits++;
+			return immediatePostDominatorByBlock.get(blockId);
+		}
+		immediatePostDominatorComputations++;
 		final values = postDominators.get(blockId);
-		if (values == null)
+		if (values == null) {
+			immediatePostDominatorComputed.set(blockId, true);
 			return null;
+		}
 		final candidates = [
 			for (candidate in orderedReachable)
 				if (candidate != blockId && values.exists(candidate)) candidate
@@ -1576,9 +1603,13 @@ private class CBodyControlFlowAnalysis {
 					break;
 				}
 			}
-			if (immediate)
+			if (immediate) {
+				immediatePostDominatorByBlock.set(blockId, candidate);
+				immediatePostDominatorComputed.set(blockId, true);
 				return candidate;
+			}
 		}
+		immediatePostDominatorComputed.set(blockId, true);
 		return null;
 	}
 

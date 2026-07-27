@@ -958,6 +958,33 @@ those counts flaky. The overall compile remains too slow; this result closes
 one measured hotspot and supplies better attribution for selecting the next
 one.
 
+### Request-local immediate post-dominator reuse
+
+Plan construction and plan validation can ask the same immutable function graph
+for an *immediate post-dominator*: the first later block that every path from a
+given block must reach. The previous implementation answered each question by
+scanning the settled post-dominator sets again. This repeated source-graph work
+did not make validation more independent; validation was still checking a plan
+against the same HxcIR function.
+
+Each `CBodyControlFlowAnalysis` now remembers the answer by source block,
+including the valid answer “there is no such block.” The cache is deliberately
+limited to one function in one compile. The validator still interprets and
+checks every plan node itself; it reuses only an immutable graph fact, never the
+builder's decision that a plan is valid. A reducible-diamond fixture proves one
+computation plus a later cache hit and accounts for every query with
+machine-independent work counters.
+
+One-sample full-playable profiles were both **contended diagnostics**, with
+different host load, so their 25.795s and 22.318s wall values are not an
+attributable speedup. The narrower same-phase CPU direction was 1.208s to
+1.156s for construction and 0.809s to 0.774s for validation across 529
+functions. Both profiles emitted the same 225 normal artifacts with SHA-256
+tree digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+This is a small, bounded reuse win; generated-file hashing and other larger
+allocation owners remain higher priorities.
+
 ### Function-attributed typed-body work
 
 The next full-playable profile gave every `HxcIR typed-body lowering` span its

@@ -443,13 +443,19 @@ class EvaluationOrderProbe {
 		], source);
 		final planner = new CBodyControlFlowPlanner();
 		final verifier = new CBodyControlFlowPlanVerifier();
-		final diamondPlan = planner.plan(diamond);
+		final diamondResult = planner.planWithWorkReport(diamond);
+		final diamondPlan = diamondResult.plan;
 		switch diamondPlan {
 			case CCFStructured(_, _):
 				verifier.requireValid(diamond, diamondPlan);
 			case CCFLegacyIrreducible(_):
 				throw new haxe.Exception("reducible diamond selected the irreducible fallback");
 		}
+		if (diamondResult.work.immediatePostDominatorQueries <= diamondResult.work.immediatePostDominatorComputations)
+			throw new haxe.Exception("reducible diamond did not reuse its immediate post-dominator fact during plan validation");
+		if (diamondResult.work.immediatePostDominatorQueries != diamondResult.work.immediatePostDominatorComputations
+			+ diamondResult.work.immediatePostDominatorCacheHits)
+			throw new haxe.Exception("immediate post-dominator work counters do not account for every diamond query");
 		final normalJoinBranch = syntheticFunction("synthetic.normal-join-branch", [condition], "entry", [
 			syntheticBlock("entry", IRTBranch("condition", plainEdge("nested"), plainEdge("common-tail")), source),
 			syntheticBlock("nested", IRTBranch("condition", plainEdge("early-return"), plainEdge("common-tail")), source),
