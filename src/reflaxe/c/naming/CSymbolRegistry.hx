@@ -198,7 +198,17 @@ class CSymbolRegistry {
 		final requestOrderingTimer = CPhaseTiming.startDetail(CDTSymbolRequestOrdering);
 		#end
 		final requests = [for (request in requestsByKey) request];
+		#if reflaxe_c_phase_timing
+		var primaryRequestSortComparisons = 0;
+		requests.sort((left, right) -> {
+			primaryRequestSortComparisons++;
+			return compareRequests(left, right);
+		});
+		CPhaseTiming.setCounter(CPCounterSymbolRequests, requests.length);
+		CPhaseTiming.setCounter(CPCounterSymbolPrimaryRequestSortComparisons, primaryRequestSortComparisons);
+		#else
 		requests.sort(compareRequests);
+		#end
 		validateExactCollisions(requests);
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(requestOrderingTimer);
@@ -251,7 +261,22 @@ class CSymbolRegistry {
 		for (state in generatedStates) {
 			addGeneratedCandidate(generatedByCandidate, namespacedCandidate(state.draft.request.namespace, generatedName(state)), state);
 		}
-		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate);
+		#if reflaxe_c_phase_timing
+		var candidateSortComparisons = 0;
+		var candidateSortUtf8Encodings = 0;
+		var candidateSortUtf8CodeUnits = 0;
+		final compareCandidateKeys = (left:String, right:String) -> {
+			candidateSortComparisons++;
+			#if !(macro || eval)
+			candidateSortUtf8Encodings += 2;
+			candidateSortUtf8CodeUnits += left.length + right.length;
+			#end
+			return compareUtf8(left, right);
+		};
+		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate, compareCandidateKeys);
+		#else
+		var candidateKeys = candidateKeysFor(generatedByCandidate, exactByCandidate, compareUtf8);
+		#end
 		final initialCandidateCount = candidateKeys.length;
 		var collisionCandidatesRechecked = 0;
 		var collisionStatesMoved = 0;
@@ -316,7 +341,11 @@ class CSymbolRegistry {
 				nextCandidateSet.set(nextCandidate, true);
 			}
 			candidateKeys = [for (key in nextCandidateSet.keys()) key];
+			#if reflaxe_c_phase_timing
+			candidateKeys.sort(compareCandidateKeys);
+			#else
 			candidateKeys.sort(compareUtf8);
+			#end
 			collisionCandidatesRechecked += candidateKeys.length;
 			collisionStatesMoved += moves.length;
 			rounds++;
@@ -329,6 +358,11 @@ class CSymbolRegistry {
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionRounds, rounds);
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionCandidatesRechecked, collisionCandidatesRechecked);
 		CPhaseTiming.setCounter(CPCounterSymbolCollisionStatesMoved, collisionStatesMoved);
+		#if reflaxe_c_phase_timing
+		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortComparisons, candidateSortComparisons);
+		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8Encodings, candidateSortUtf8Encodings);
+		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8CodeUnits, candidateSortUtf8CodeUnits);
+		#end
 		#end
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(collisionResolutionTimer);
@@ -347,7 +381,17 @@ class CSymbolRegistry {
 			});
 		}
 
+		#if reflaxe_c_phase_timing
+		var assignedSortComparisons = 0;
+		assigned.sort((left, right) -> {
+			assignedSortComparisons++;
+			return compareRequests(left.request, right.request);
+		});
+		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, assignedSortComparisons);
+		CPhaseTiming.setCounter(CPCounterSymbolTableRecords, assigned.length);
+		#else
 		assigned.sort((left, right) -> compareRequests(left.request, right.request));
+		#end
 		validateAssignedUnique(assigned);
 		final finalNamesByKey:Map<String, String> = [];
 		for (item in assigned) {
@@ -489,7 +533,8 @@ class CSymbolRegistry {
 		group.push(state);
 	}
 
-	static function candidateKeysFor(generated:Map<String, Array<GeneratedState>>, exact:Map<String, Array<AssignedDraft>>):Array<String> {
+	static function candidateKeysFor(generated:Map<String, Array<GeneratedState>>, exact:Map<String, Array<AssignedDraft>>,
+			compare:(String, String) -> Int):Array<String> {
 		final present:Map<String, Bool> = [];
 		for (key in generated.keys()) {
 			present.set(key, true);
@@ -498,7 +543,7 @@ class CSymbolRegistry {
 			present.set(key, true);
 		}
 		final keys = [for (key in present.keys()) key];
-		keys.sort(compareUtf8);
+		keys.sort(compare);
 		return keys;
 	}
 
@@ -769,8 +814,24 @@ class CSymbolRegistry {
 			'${right.namespace.kind}\x00${right.namespace.scope}\x00${right.baseName}');
 
 	static function compareUtf8(left:String, right:String):Int {
+		#if (macro || eval)
+		/*
+			Haxe's Eval host stores these compiler strings as UTF-8 and compares
+			their underlying bytes lexicographically. Calling the native string
+			comparison therefore preserves the registry's byte-order contract
+			without wrapping both operands in new Bytes values for every sort
+			comparison. The portable fallback keeps the explicit byte walk for
+			non-Eval test or tooling hosts.
+		 */
+		return left < right ? -1 : left > right ? 1 : 0;
+		#else
 		final leftBytes = Bytes.ofString(left);
 		final rightBytes = Bytes.ofString(right);
+		return compareUtf8Bytes(leftBytes, rightBytes);
+		#end
+	}
+
+	static function compareUtf8Bytes(leftBytes:Bytes, rightBytes:Bytes):Int {
 		final length = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
 		for (index in 0...length) {
 			final difference = leftBytes.get(index) - rightBytes.get(index);

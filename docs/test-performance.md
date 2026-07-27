@@ -893,6 +893,52 @@ above the actual formatter. Further work must follow those measurements rather
 than weakening hashing, collapsing output ownership, or adding speculative
 cross-request state.
 
+### Deterministic candidate-name ordering
+
+The next profile attributed the remaining deterministic symbol work before
+changing it. Caxecraft registered 22,876 C symbols. Resolving their generated
+names sorted 22,221 first-round candidates and 850 names changed by a real
+collision. The established comparator converted both strings to `Bytes` on
+every comparison. That meant 408,804 comparisons performed 817,608 wrapper
+conversions and accepted about 202 million Haxe string code units as repeated
+conversion input.
+
+The compiler itself runs on Haxe's Eval host. Eval stores a Haxe string as
+UTF-8 bytes and its native string comparison delegates to OCaml's
+lexicographic byte comparison. The registry can therefore compare those
+strings directly without changing its canonical UTF-8 byte order. This is a
+host execution optimization, not a naming-policy change: a non-Eval tooling
+host retains the explicit byte comparator, and `CSymbolRegistry` remains the
+only naming and collision authority.
+
+The first attempted optimization cached one UTF-8 wrapper per candidate. It
+removed the repeated conversions but made the profiled CPU sample worse
+because the extra wrapper records had their own Eval cost. That version was
+rejected rather than accepted on reduced work counts alone. Direct host
+comparison removed the conversions without adding a parallel data structure.
+
+These are single-run **contended diagnostic samples**, not stable medians or
+release budgets. The host load was already above its 12 logical CPUs and
+changed between runs, so process CPU and allocation are the primary attribution
+evidence. Both runs performed the same 408,804 candidate comparisons, retained
+the same collision counts, and emitted the same 225 normal artifacts with
+SHA-256 tree digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+
+| Measured naming value | Before | After |
+| --- | ---: | ---: |
+| Candidate collision resolution, CPU | 3.147s | 0.589s |
+| Candidate collision resolution, cumulative allocation | 15.35GB | 3.59GB |
+| Explicit candidate UTF-8 conversions | 817,608 | 0 |
+| Symbol finalization, CPU | 6.636s | 4.122s |
+| Symbol finalization, cumulative allocation | 29.86GB | 17.94GB |
+| Full Haxe-to-generated-C wall | 36.889s | 35.012s |
+
+Request ordering and final table construction now account for most of the
+remaining symbol time. They use the request's already cached stable-order
+bytes, so the next improvement must profile their specific work rather than
+generalizing this candidate-name shortcut or weakening deterministic reports.
+
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
 runner started 87 independent Haxe processes: 18 report/determinism renders, 36

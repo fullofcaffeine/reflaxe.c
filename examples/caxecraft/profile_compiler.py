@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 4
+PROFILE_SCHEMA_VERSION = 5
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -161,10 +161,17 @@ PROFILE_COUNTERS = (
     "output.prior-owned-files",
     "output.saved-files",
     "runtime.requirements",
+    "symbols.assigned-sort-comparisons",
+    "symbols.candidate-sort-comparisons",
+    "symbols.candidate-sort-utf8-code-units",
+    "symbols.candidate-sort-utf8-encodings",
     "symbols.collision-candidates-rechecked",
     "symbols.collision-rounds",
     "symbols.collision-states-moved",
     "symbols.initial-candidates",
+    "symbols.primary-request-sort-comparisons",
+    "symbols.requests",
+    "symbols.table-records",
     "typed.declarations",
     "typed.expression-roots",
     "typed.modules",

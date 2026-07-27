@@ -159,7 +159,7 @@ contains HxcIR construction and validation, but its exclusive value does not
 count those children again.
 
 Each structured `HXC_PROFILE` JSON Lines record belongs to one request and
-uses the current closed schema 4. Span records carry monotonic wall time,
+uses the current closed schema 5. Span records carry monotonic wall time,
 process CPU time,
 allocation change when the Eval host exposes it, and resident-memory samples.
 The final request record reports total request time and peak observed resident
@@ -199,13 +199,23 @@ emission. This is diagnostic structure, not a new compiler layer: the HxcIR
 control-flow plan remains the semantic authority, and CAST emission still only
 turns that verified plan into C syntax.
 
-Schema 4 also separates formatting one structural C translation unit from
+Schema 4 added the distinction between formatting one structural C translation unit and
 constructing its immutable `GeneratedFile`. The file-scoped printer payload
 counts declarations, statements, expressions, output bytes, indentation,
 token joins, uniqueness checks, and UTF-8 work without copying generated source
 into the report. That distinction matters because the `GeneratedFile`
 constructor validates and hashes the finished bytes after formatting; a broad
 “C printing” clock alone cannot tell those two costs apart.
+
+Schema 5 adds stable counts for the request, candidate-name, and assigned-name
+sorts inside deterministic symbol finalization. It records how often the
+candidate comparator explicitly encodes UTF-8 and how much source text those
+encodings consume, making repeated comparison work visible without recording
+semantic keys or names. The Haxe Eval host stores compiler strings as UTF-8 and
+compares their underlying bytes lexicographically, so the normal macro path can
+use its native string comparison while preserving the same canonical byte
+order. The explicit byte-walk remains the portable fallback for a non-Eval
+tooling host.
 
 The same diagnostic boundary divides semantic analysis into helper selection,
 name-request registration, deterministic symbol finalization, representation

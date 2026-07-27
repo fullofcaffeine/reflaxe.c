@@ -112,10 +112,17 @@ enum abstract CProfileCounterId(String) to String {
 	var CPCounterHxcIRNamedRecordCacheMisses = "hxcir.named-record-cache-misses";
 	var CPCounterCASTFunctions = "cast.functions";
 	var CPCounterRuntimeRequirements = "runtime.requirements";
+	var CPCounterSymbolAssignedSortComparisons = "symbols.assigned-sort-comparisons";
+	var CPCounterSymbolCandidateSortComparisons = "symbols.candidate-sort-comparisons";
+	var CPCounterSymbolCandidateSortUtf8CodeUnits = "symbols.candidate-sort-utf8-code-units";
+	var CPCounterSymbolCandidateSortUtf8Encodings = "symbols.candidate-sort-utf8-encodings";
 	var CPCounterSymbolInitialCandidates = "symbols.initial-candidates";
 	var CPCounterSymbolCollisionRounds = "symbols.collision-rounds";
 	var CPCounterSymbolCollisionCandidatesRechecked = "symbols.collision-candidates-rechecked";
 	var CPCounterSymbolCollisionStatesMoved = "symbols.collision-states-moved";
+	var CPCounterSymbolPrimaryRequestSortComparisons = "symbols.primary-request-sort-comparisons";
+	var CPCounterSymbolRequests = "symbols.requests";
+	var CPCounterSymbolTableRecords = "symbols.table-records";
 	var CPCounterGeneratedFiles = "artifacts.files";
 	var CPCounterGeneratedBytes = "artifacts.bytes";
 	var CPCounterPriorOwnedFiles = "output.prior-owned-files";
@@ -395,7 +402,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 4;
+	public static inline final PROFILE_SCHEMA_VERSION = 5;
 
 	static var active:Null<CProfileRequestState> = null;
 
