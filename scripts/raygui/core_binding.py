@@ -99,17 +99,32 @@ def load_selection(path: Path = SELECTION_PATH) -> dict[str, object]:
         raise BindingFailure("raygui selection schemaVersion must be 2")
     require_names(selection.get("functions"), "selection.functions")
     borrowed = selection.get("borrowedMutableParameters")
-    if borrowed != [
+    expected_borrowed = [
         {
             "function": "GuiToggle",
             "parameter": "active",
             "canonicalCType": "_Bool *",
             "haxeType": "c.Ref<Bool>",
             "lifetime": "call",
-        }
-    ]:
+        },
+        {
+            "function": "GuiListView",
+            "parameter": "scrollIndex",
+            "canonicalCType": "int *",
+            "haxeType": "c.Ref<c.Int32>",
+            "lifetime": "call",
+        },
+        {
+            "function": "GuiListView",
+            "parameter": "active",
+            "canonicalCType": "int *",
+            "haxeType": "c.Ref<c.Int32>",
+            "lifetime": "call",
+        },
+    ]
+    if borrowed != expected_borrowed:
         raise BindingFailure(
-            "raygui mutable parameters must retain the reviewed call-scoped GuiToggle contract"
+            "raygui mutable parameters must retain the reviewed call-scoped scalar contracts"
         )
     implementation = require_mapping(selection.get("implementation"), "selection.implementation")
     require_exact_keys(
@@ -158,8 +173,8 @@ def extract_selected_functions(
 
     Clang proves the exact C type, but a header spelling alone cannot prove how
     long a callee keeps a pointer. The selection therefore has to name every
-    pointer parameter and its lifetime. This first slice accepts only GuiToggle's
-    mutable Boolean for the duration of one call.
+    pointer parameter and its lifetime. The admitted controls may borrow only
+    caller-owned scalar fields for the duration of one call.
     """
 
     nodes = named_nodes(ast, "FunctionDecl")
@@ -195,8 +210,16 @@ def extract_selected_functions(
                         f"reviewed pointer {name}.{parameter_name} expected "
                         f"{policy['canonicalCType']!r}, found {clang_type!r}"
                     )
+                reviewed_c_type = {
+                    "_Bool *": "bool *",
+                    "int *": "int *",
+                }.get(policy["canonicalCType"])
+                if reviewed_c_type is None:
+                    raise BindingFailure(
+                        f"reviewed pointer {name}.{parameter_name} has no rendered C type"
+                    )
                 parameter_type = {
-                    "cType": "bool *",
+                    "cType": reviewed_c_type,
                     "canonicalCType": policy["canonicalCType"],
                     "haxeType": policy["haxeType"],
                     "borrowLifetime": policy["lifetime"],
@@ -300,7 +323,7 @@ def extract_lock(raygui_source: Path, raylib_source: Path, clang: str) -> dict[s
         "schemaVersion": 1,
         "generator": {
             "path": GENERATOR_PATH,
-            "algorithm": "hxc-raygui-clang-core-v2",
+            "algorithm": "hxc-raygui-clang-core-v3",
         },
         "upstream": {
             "name": "raygui",
@@ -374,7 +397,7 @@ def validate_lock(lock: Mapping[str, object]) -> None:
     generator = require_mapping(lock.get("generator"), "lock.generator")
     if generator != {
         "path": GENERATOR_PATH,
-        "algorithm": "hxc-raygui-clang-core-v2",
+        "algorithm": "hxc-raygui-clang-core-v3",
     }:
         raise BindingFailure("raygui binding generator identity drifted")
     upstream = require_mapping(lock.get("upstream"), "lock.upstream")

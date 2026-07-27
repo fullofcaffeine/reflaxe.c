@@ -13,6 +13,7 @@
     "GuiLabel",
     "GuiLabelButton",
     "GuiLine",
+    "GuiListView",
     "GuiLoadStyleDefault",
     "GuiLock",
     "GuiPanel",
@@ -31,6 +32,20 @@
       "canonicalCType": "_Bool *",
       "haxeType": "c.Ref<Bool>",
       "lifetime": "call"
+    },
+    {
+      "function": "GuiListView",
+      "parameter": "scrollIndex",
+      "canonicalCType": "int *",
+      "haxeType": "c.Ref<c.Int32>",
+      "lifetime": "call"
+    },
+    {
+      "function": "GuiListView",
+      "parameter": "active",
+      "canonicalCType": "int *",
+      "haxeType": "c.Ref<c.Int32>",
+      "lifetime": "call"
     }
   ],
   "implementation": {
@@ -47,7 +62,7 @@
   "omissions": [
     {
       "family": "pointer-mutating-controls",
-      "reason": "GuiToggle now uses the admitted call-scoped Boolean borrow. Text boxes, lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts.",
+      "reason": "GuiToggle and GuiListView now use reviewed call-scoped scalar borrows. Text boxes, extended lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts.",
       "owner": "haxe_c-xge.19.6.1"
     },
     {

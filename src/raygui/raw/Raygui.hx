@@ -57,6 +57,8 @@ extern class Raygui {
 
 	public static function GuiLine(bounds:raylib.raw.Rectangle, text:c.CString):c.Int32;
 
+	public static function GuiListView(bounds:raylib.raw.Rectangle, text:c.CString, scrollIndex:c.Ref<c.Int32>, active:c.Ref<c.Int32>):c.Int32;
+
 	public static function GuiLoadStyleDefault():Void;
 
 	public static function GuiLock():Void;

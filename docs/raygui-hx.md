@@ -5,14 +5,14 @@
 RayguiHx is the Haxe-facing boundary for the pinned raygui 5.0 header. It is
 being built first for Caxecraft's visual editor, menus, settings, pause screen,
 inventory panels, and loading screens. The first checked slice is deliberately
-small: panels, labels, buttons, a Boolean toggle, status bars, shared state,
-and shared style.
+small: panels, labels, buttons, a Boolean toggle, a selectable scrolling list,
+status bars, shared state, and shared style.
 
-This is not a claim that all of raygui is supported. Text boxes, lists,
-lists, sliders, file-loaded styles, and other pointer- or resource-owning
-controls are still omitted. Each will be added only with its element type,
-buffer size, lifetime, ownership, failure, and cleanup rules made explicit in
-Haxe.
+This is not a claim that all of raygui is supported. Text boxes, extended lists
+whose items arrive as a `char **`, sliders, file-loaded styles, and other
+pointer- or resource-owning controls are still omitted. Each will be added only
+with its element type, buffer size, lifetime, ownership, failure, and cleanup
+rules made explicit in Haxe.
 
 ## Why there are two Haxe layers
 
@@ -32,7 +32,8 @@ the program describes each visible control again every frame and receives what
 happened during that frame. A persistent Haxe `Button` object would suggest an
 owned widget and lifetime that raygui does not actually have. Higher-level
 Caxecraft screens may still own durable editor state; they simply render that
-state through this stateless foreign interface.
+state through stateless facade calls and small typed state owners such as the
+list below.
 
 `GuiToggleState` is one example of that division. The Haxe class owns one
 Boolean across frames. `Raygui.Toggle` lends the address of that Boolean to
@@ -43,8 +44,15 @@ binding selection records that raygui may use it only until `GuiToggle`
 returns. This is a narrow out-parameter contract, not a general C pointer or
 borrow checker.
 
+`GuiListViewState` applies the same rule to two C integers: the first visible
+row and the selected row. Its `draw` method keeps those exact-width ABI values
+private, exposes ordinary Haxe `Int` queries, and lends both addresses only
+until `GuiListView` returns. A class is useful for this control because its
+small state has a real lifetime across frames; stateless buttons remain simple
+facade calls and do not become pretend widget objects.
+
 The extra binding policy matters because Clang can prove that the header says
-`bool *`, but a C type does not say whether the library keeps that pointer.
+`bool *` or `int *`, but a C type does not say whether the library keeps that pointer.
 [`raygui-core-selection.json`](specs/raygui-core-selection.json) therefore
 names every admitted mutable parameter together with its call-only lifetime.
 The generator fails if the pinned header no longer matches that reviewed

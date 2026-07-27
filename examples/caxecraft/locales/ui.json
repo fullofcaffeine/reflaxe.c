@@ -168,6 +168,14 @@
       }
     },
     {
+      "id": "editor_tool_list",
+      "symbol": "EditorToolList",
+      "text": {
+        "en": "SELECT;PAINT;ERASE;FILL",
+        "es-MX": "SELECCIONAR;PINTAR;BORRAR;RELLENAR"
+      }
+    },
+    {
       "id": "editor_undo",
       "symbol": "EditorUndo",
       "text": {

@@ -11,10 +11,11 @@ package raygui;
  * The static namespace is intentional here: raygui itself has process-wide
  * immediate-mode state and exposes C functions, so inventing Haxe widget
  * instances would imply ownership and lifetimes that do not exist. Each inline
- * method becomes the corresponding C call. `Toggle` is the first mutable
- * control: it borrows one Boolean field for the duration of the native call.
- * Text boxes remain absent until their buffer capacity and text ownership have
- * equally explicit contracts.
+ * method becomes the corresponding C call. `Toggle` borrows one Boolean field
+ * for the duration of the native call. Stateful list views use
+ * `GuiListViewState`, which keeps their exact C integers private. Text boxes
+ * remain absent until buffer capacity and text ownership have equally explicit
+ * contracts.
  */
 class Raygui {
 	public static inline function Enable():Void

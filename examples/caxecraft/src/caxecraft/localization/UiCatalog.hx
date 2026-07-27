@@ -28,19 +28,20 @@ enum abstract UiMessage(Int) {
 	var EditorTest = 17;
 	var EditorTesting = 18;
 	var EditorTitle = 19;
-	var EditorUndo = 20;
-	var EditorValid = 21;
-	var EditorValidate = 22;
-	var HealthFull = 23;
-	var MenuAdventure = 24;
-	var MenuCreative = 25;
-	var MenuEditor = 26;
-	var MenuInstructions = 27;
-	var NoBlockInReach = 28;
-	var PauseHelp = 29;
-	var PauseTitle = 30;
-	var PlaceBlocked = 31;
-	var TitleFallback = 32;
+	var EditorToolList = 20;
+	var EditorUndo = 21;
+	var EditorValid = 22;
+	var EditorValidate = 23;
+	var HealthFull = 24;
+	var MenuAdventure = 25;
+	var MenuCreative = 26;
+	var MenuEditor = 27;
+	var MenuInstructions = 28;
+	var NoBlockInReach = 29;
+	var PauseHelp = 30;
+	var PauseTitle = 31;
+	var PlaceBlocked = 32;
+	var TitleFallback = 33;
 }
 
 /**
@@ -68,7 +69,7 @@ final class UiCatalog {
 
 	/** Reject an unknown raw message code before constructing a typed ID. */
 	public static inline function isValidMessageStorageCode(code:Int):Bool
-		return code >= 0 && code < 33;
+		return code >= 0 && code < 34;
 
 	public static function text(locale:LocaleCursor, message:UiMessage):LocalizationText {
 		return switch (locale) {
@@ -101,6 +102,7 @@ final class UiCatalog {
 			case EditorTest: "TEST PLAY";
 			case EditorTesting: "TEST PLAY USES A DISPOSABLE COPY";
 			case EditorTitle: "CAXECRAFT WORLD EDITOR";
+			case EditorToolList: "SELECT;PAINT;ERASE;FILL";
 			case EditorUndo: "UNDO";
 			case EditorValid: "VALID CAXEMAP — READY TO TEST";
 			case EditorValidate: "VALIDATE";
@@ -141,6 +143,7 @@ final class UiCatalog {
 			case EditorTest: "PROBAR";
 			case EditorTesting: "LA PRUEBA USA UNA COPIA DESECHABLE";
 			case EditorTitle: "EDITOR DE MUNDOS CAXECRAFT";
+			case EditorToolList: "SELECCIONAR;PINTAR;BORRAR;RELLENAR";
 			case EditorUndo: "DESHACER";
 			case EditorValid: "CAXEMAP VALIDO — LISTO PARA PROBAR";
 			case EditorValidate: "VALIDAR";

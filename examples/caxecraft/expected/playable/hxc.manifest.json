@@ -93,6 +93,7 @@
       "src/modules/caxecraft/scenario/ScenarioWorldReader.c",
       "src/modules/caxecraft/scenario/ScenarioWorldValidator.c",
       "src/modules/caxecraft/scenario/ScenarioWriter.c",
+      "src/modules/raygui/GuiListViewState.c",
       "src/modules/raygui/GuiToggleState.c"
     ],
     "cStandard": "c11",
@@ -209,6 +210,7 @@
       "include/hxc/modules/caxecraft/scenario/ScenarioWorldReader.h",
       "include/hxc/modules/caxecraft/scenario/ScenarioWorldValidator.h",
       "include/hxc/modules/caxecraft/scenario/ScenarioWriter.h",
+      "include/hxc/modules/raygui/GuiListViewState.h",
       "include/hxc/modules/raygui/GuiToggleState.h",
       "include/hxc/modules/raylib/raw/Camera.h",
       "include/hxc/modules/raylib/raw/Camera3D.h",
@@ -349,7 +351,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "836384801333fddab825ac566f485ff5f26f580818a9051ed3b2a3891d5408be",
+      "sha256": "1953a191cc4a812acde4c9914e97948a0a8e088b3fcec13fa81afc2b29d5dce5",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -359,7 +361,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "1a74378a7d25b37a976e83b639126769be40309de6412264ce66d0218e428666",
+      "sha256": "affc56236d64034216645e866e1e4d67cfb0637671a8f31447f1c388ad46216c",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -369,12 +371,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "3fadeb07484c4192a4c267bae9a700e70078a20509b9593cb149c1874d69535c",
+      "sha256": "c0558f1ce748f11cc7f19d03236daa347f6a970b728da1e94cfdef7786095e48",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "446540bdf0ccd80839172d0ccaf563a53d258341cb6271a9b75b2109c19e4278",
+      "sha256": "0b8b525b460b9906081bfb7261b802c846b4ca87884f61757885aa02bc4100f8",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -384,12 +386,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "01ca6b0f5ed54a53a7e788cc4801ff7bd74f7d264de4c170bd8d3e56792e9494",
+      "sha256": "e384808edfa3235eaa72d7dd3f33a7aabf951d215fb880fbee4ea6010d7bdfd4",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "7544fa341bd567e9802d1d176cefcf7e90dd3105d1e59262ecadb942d7bb40c2",
+      "sha256": "31ed685bb2998fe863a8a07d3bec00097927804eb529c002592ad89a7030996a",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -414,7 +416,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "be97a78b8526d0c1e451845320cc0f887d020b26dfbc5b4943c101da4610a18b",
+      "sha256": "8f697d0a5d41a206952e60ccf4abe235b3d6fcf1dade5c0cac1a997f6e89bbbb",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftEditorScreen.h",
       "kind": "private-header"
     },
@@ -934,6 +936,11 @@
       "kind": "private-header"
     },
     {
+      "sha256": "ecdd757819b41716ca0a44dd1772386a7704d983e8d062998b6adf3c0c403834",
+      "path": "include/hxc/modules/raygui/GuiListViewState.h",
+      "kind": "private-header"
+    },
+    {
       "sha256": "566ca738fe81b7db097b1b8afc108f356b8c2b9c298b142384dc2633e9aaec29",
       "path": "include/hxc/modules/raygui/GuiToggleState.h",
       "kind": "private-header"
@@ -979,12 +986,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "0d7654bb716753387775c1a5c204bc413e5f2e011d170885222d374578bb23bc",
+      "sha256": "1f1ebb651d3a5de6a4c0d726304246caec8d6b79fb791cb965e0df1a6687473c",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "827b358212be6d1de15891a3426d2678e02d0185cccb3fe8fd785aa41b3bf2a0",
+      "sha256": "9bcd923e82b10648492186f5191b3baf86454b369c0859b4a6d35234ae103277",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1124,7 +1131,7 @@
       "kind": "source"
     },
     {
-      "sha256": "5d29462908779da176429e418851c1de4db32c58163392edab2e5ccbd48aa73d",
+      "sha256": "a9b4870d7acac9d6af9eeedde237f78b605c5ddea98f6626f353f52b1dc7e24d",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1139,7 +1146,7 @@
       "kind": "source"
     },
     {
-      "sha256": "b48452905f6824695cfdcc51c1c31b3ef74fa95b4b9f186bb98ae9ca4545be52",
+      "sha256": "32bd1c103121c46b656a14279ac62bf99ca344a103ff6235edd2a2b39e987af7",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -1149,7 +1156,7 @@
       "kind": "source"
     },
     {
-      "sha256": "ad29681fb46134a8ce2258a374ad39742c7b108b8716630cb044d97c55b82668",
+      "sha256": "2ca65c4d69540dab924143c6141b69c6dcd4d858fb0dd5d15c9bde03fa50fa50",
       "path": "src/modules/caxecraft/app/CaxecraftEditorScreen.c",
       "kind": "source"
     },
@@ -1354,7 +1361,7 @@
       "kind": "source"
     },
     {
-      "sha256": "d499f4ef1847c7d0abef739fdfcbd122a0e1e86c647fdc727a395ba43135e513",
+      "sha256": "3d80a8436b4083b4bed120c2fc53a56f475c979e7fad630abd037aefa6d15fc2",
       "path": "src/modules/caxecraft/localization/UiCatalog.c",
       "kind": "source"
     },
@@ -1471,6 +1478,11 @@
     {
       "sha256": "f8fc79e616701745f2ceb444837f315c0fb0da447e9133288579eae61e1984f5",
       "path": "src/modules/caxecraft/scenario/ScenarioWriter.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "3c521f13079286dad3fec50ccffb67aa3ba9596e87dee079f752d2da6a2e6468",
+      "path": "src/modules/raygui/GuiListViewState.c",
       "kind": "source"
     },
     {

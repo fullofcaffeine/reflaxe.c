@@ -24,7 +24,7 @@
       "required": ["path", "algorithm"],
       "properties": {
         "path": { "const": "scripts/raygui/core_binding.py" },
-        "algorithm": { "const": "hxc-raygui-clang-core-v1" }
+        "algorithm": { "const": "hxc-raygui-clang-core-v3" }
       }
     },
     "upstream": { "$ref": "#/$defs/upstream" },

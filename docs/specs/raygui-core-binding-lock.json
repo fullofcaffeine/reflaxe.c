@@ -4,7 +4,7 @@
     "languageStandard": "c11",
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "9b83bd815f7d7b07cbd591cdbb09484151222d91f4d243e7dd7179f2ceedc7b5",
+  "declarationSha256": "4454888e130f0fab12d91938f80c6ff0ac3a961bb7bf1a0e1cde272b59e2a3e8",
   "declarations": {
     "functions": [
       {
@@ -256,6 +256,51 @@
         "sourceLine": 830
       },
       {
+        "name": "GuiListView",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          },
+          {
+            "name": "scrollIndex",
+            "type": {
+              "borrowLifetime": "call",
+              "cType": "int *",
+              "canonicalCType": "int *",
+              "haxeType": "c.Ref<c.Int32>"
+            }
+          },
+          {
+            "name": "active",
+            "type": {
+              "borrowLifetime": "call",
+              "cType": "int *",
+              "canonicalCType": "int *",
+              "haxeType": "c.Ref<c.Int32>"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 858
+      },
+      {
         "name": "GuiLoadStyleDefault",
         "parameters": [],
         "returnType": {
@@ -504,7 +549,7 @@
     "src/raygui/raw/Raygui.hx"
   ],
   "generator": {
-    "algorithm": "hxc-raygui-clang-core-v2",
+    "algorithm": "hxc-raygui-clang-core-v3",
     "path": "scripts/raygui/core_binding.py"
   },
   "implementation": {
@@ -516,7 +561,7 @@
   "schemaVersion": 1,
   "selection": {
     "counts": {
-      "functions": 22,
+      "functions": 23,
       "omittedFamilies": 3
     },
     "coverageState": "coherent-editor-shell-core",
@@ -524,7 +569,7 @@
       {
         "family": "pointer-mutating-controls",
         "owner": "haxe_c-xge.19.6.1",
-        "reason": "GuiToggle now uses the admitted call-scoped Boolean borrow. Text boxes, lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts."
+        "reason": "GuiToggle and GuiListView now use reviewed call-scoped scalar borrows. Text boxes, extended lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts."
       },
       {
         "family": "style-and-icon-file-loading",
@@ -538,7 +583,7 @@
       }
     ],
     "path": "docs/specs/raygui-core-selection.json",
-    "sha256": "41f3da2800cde9cece25e976a708e8ade854a3dc9552d2b5e59b3b7045bb3aa8"
+    "sha256": "47cb23935533cbfb36d90d6ccc3fb1581c2766f3a17a59012939b52f696f0eb2"
   },
   "upstream": {
     "archive": {

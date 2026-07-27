@@ -48,10 +48,22 @@ class RayguiBindingTests(unittest.TestCase):
             "GuiToggle(bounds:raylib.raw.Rectangle, text:c.CString, active:c.Ref<Bool>)",
             rendered,
         )
+        self.assertIn(
+            "GuiListView(bounds:raylib.raw.Rectangle, text:c.CString, "
+            "scrollIndex:c.Ref<c.Int32>, active:c.Ref<c.Int32>)",
+            rendered,
+        )
         functions = load_lock()["declarations"]["functions"]
         toggle = next(function for function in functions if function["name"] == "GuiToggle")
         active = next(parameter for parameter in toggle["parameters"] if parameter["name"] == "active")
         self.assertEqual(active["type"]["borrowLifetime"], "call")
+        list_view = next(function for function in functions if function["name"] == "GuiListView")
+        for parameter_name in ("scrollIndex", "active"):
+            parameter = next(
+                item for item in list_view["parameters"] if item["name"] == parameter_name
+            )
+            self.assertEqual(parameter["type"]["haxeType"], "c.Ref<c.Int32>")
+            self.assertEqual(parameter["type"]["borrowLifetime"], "call")
         for forbidden in ("@:c.name(", "Dynamic", "untyped", "__c__", "@:native"):
             self.assertNotIn(forbidden, rendered)
 
@@ -122,6 +134,15 @@ class RayguiBindingTests(unittest.TestCase):
             schema = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
             self.assertFalse(schema["additionalProperties"])
+        lock_schema = json.loads(
+            (ROOT / "docs/specs/raygui-core-binding-lock.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            lock_schema["properties"]["generator"]["properties"]["algorithm"]["const"],
+            load_lock()["generator"]["algorithm"],
+        )
 
     def test_semantic_facade_compiles_to_direct_raygui_calls(self) -> None:
         fixture = ROOT / "test/raygui_binding/fixtures/semantic"
@@ -156,6 +177,7 @@ class RayguiBindingTests(unittest.TestCase):
             self.assertIn("GuiButton", program)
             self.assertIn("GuiPanel", program)
             self.assertIn("GuiToggle", program)
+            self.assertIn("GuiListView", program)
             self.assertIn(" = &", program)
             self.assertNotIn("hxrt", program)
 

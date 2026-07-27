@@ -16,6 +16,7 @@ import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
+import raygui.GuiListViewState;
 import raygui.GuiResult;
 import raygui.GuiToggleState;
 import raygui.Raygui;
@@ -54,11 +55,13 @@ final class CaxecraftEditorScreen {
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
 	final advancedTools:GuiToggleState;
+	final toolList:GuiListViewState;
 
 	public function new() {
 		session = openNewWorld();
 		notice = Ready;
 		advancedTools = new GuiToggleState(false);
+		toolList = new GuiListViewState();
 	}
 
 	/** Draw one responsive editor frame and apply controls to the real session. */
@@ -99,7 +102,9 @@ final class CaxecraftEditorScreen {
 			UiCatalog.text(locale, UiMessage.EditorCanvasHelp));
 		Raygui.Panel(Rectangle.fromFloat(width - sidebarWidth - 32.0, viewportTop, sidebarWidth, height - viewportTop - 70.0),
 			UiCatalog.text(locale, UiMessage.EditorReady));
-		Raygui.Toggle(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 44.0, sidebarWidth - 32.0, 32.0),
+		toolList.draw(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 44.0, sidebarWidth - 32.0, 116.0),
+			UiCatalog.text(locale, UiMessage.EditorToolList));
+		Raygui.Toggle(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 172.0, sidebarWidth - 32.0, 32.0),
 			UiCatalog.text(locale, UiMessage.EditorAdvanced), advancedTools);
 
 		final status = switch notice {

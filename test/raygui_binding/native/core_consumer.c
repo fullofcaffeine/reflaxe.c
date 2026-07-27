@@ -11,6 +11,10 @@
  * desktop window, so the same binary runs with Raylib's headless build.
  */
 int main(void) {
+  int (*list_view)(Rectangle, const char *, int *, int *) = &GuiListView;
+  if (list_view == NULL) {
+    return 3;
+  }
   GuiLoadStyleDefault();
   GuiSetState(STATE_FOCUSED);
   if (GuiGetState() != STATE_FOCUSED) {
