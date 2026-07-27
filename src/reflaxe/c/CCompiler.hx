@@ -268,11 +268,16 @@ class CCompiler {
 			final units = staticProjectEmitter.emitPlan(staticProject);
 			CPhaseTiming.stop(printingTimer);
 			final artifactPlanTimer = CPhaseTiming.start(CPArtifactPlanning);
+			final runtimePackagingTimer = CPhaseTiming.startDetail(CDTArtifactRuntimePackaging);
 			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
 				units.push(runtimeFile);
 			}
+			CPhaseTiming.stopDetail(runtimePackagingTimer);
+			final specializationReportTimer = CPhaseTiming.startDetail(CDTArtifactSpecializationReport);
 			final specializationReport = new CGenericSpecializationReportBuilder(context).build(graph, lowered, staticProject.functionDefinitions, units,
 				input.expression.pos, input.sourcePath);
+			CPhaseTiming.stopDetail(specializationReportTimer);
+			final projectEmissionTimer = CPhaseTiming.startDetail(CDTArtifactProjectEmission);
 			final generatedFiles = new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.readableDeclarationPath == null ? input.declarationPath : input.readableDeclarationPath,
@@ -313,6 +318,7 @@ class CCompiler {
 				runtimePlan: runtimePlan,
 				symbolTable: lowered.symbolTable
 			});
+			CPhaseTiming.stopDetail(projectEmissionTimer);
 			var generatedBytes = 0.0;
 			for (file in generatedFiles)
 				generatedBytes += file.contentByteLength;

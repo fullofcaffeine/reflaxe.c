@@ -34,6 +34,15 @@ class GeneratedFile {
 	/** UTF-8 payload size captured with the bytes already needed for hashing. */
 	public final contentByteLength:Int;
 
+	/**
+		Validate and content-address one compiler-owned artifact.
+
+		Haxe strings are immutable and every stored field is `final`, so the
+		digest and byte length remain valid for this object's whole lifetime.
+		Later project planning may safely reuse them instead of hashing the same
+		large generated C payload again. Filesystem output is a separate trust
+		boundary with its own ownership and path checks.
+	**/
 	public function new(relativePath:String, contents:String, kind:GeneratedFileKind) {
 		if (!isNormalizedRelativePath(relativePath) || relativePath == OWNERSHIP_MANIFEST) {
 			fail('generated artifact path must be normalized, output-root-relative, and must not reserve `$OWNERSHIP_MANIFEST`: `$relativePath`',
@@ -51,12 +60,6 @@ class GeneratedFile {
 		final encoded = Bytes.ofString(contents);
 		this.contentSha256 = Sha256.make(encoded).toHex();
 		this.contentByteLength = encoded.length;
-	}
-
-	public function verifyIntegrity():Void {
-		if (contentSha256 != Sha256.encode(contents)) {
-			fail('generated artifact content changed after hashing: `$relativePath`', [relativePath]);
-		}
 	}
 
 	public static function isNormalizedRelativePath(value:String):Bool {

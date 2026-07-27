@@ -1056,7 +1056,8 @@ class CProjectEmitter {
 		units.sort(compareFiles);
 		var previous:Null<String> = null;
 		for (unit in units) {
-			unit.verifyIntegrity();
+			// GeneratedFile validated and hashed its immutable contents once.
+			// This pass checks relationships between files, not the same bytes again.
 			if (!GeneratedFile.isPayloadKind(unit.kind)) {
 				fail('project payload `${unit.relativePath}` uses reserved sidecar kind `${Std.string(unit.kind)}`', [unit.relativePath]);
 			}

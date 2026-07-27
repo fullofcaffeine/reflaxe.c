@@ -75,9 +75,17 @@ DETAIL_PHASES = (
     "HxcIR program assembly",
     "HxcIR managed-root planning",
     "HxcIR null-check coalescing",
+    "semantic helper selection",
+    "semantic name registration",
+    "symbol finalization",
+    "semantic representation finalization",
+    "semantic name projection",
     "body setup and value planning",
     "body control-flow planning",
     "body CAST emission",
+    "artifact runtime packaging",
+    "artifact specialization report",
+    "artifact project emission",
 )
 SEMANTIC_CHILDREN = (
     "HxcIR construction",

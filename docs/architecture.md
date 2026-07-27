@@ -198,6 +198,14 @@ emission. This is diagnostic structure, not a new compiler layer: the HxcIR
 control-flow plan remains the semantic authority, and CAST emission still only
 turns that verified plan into C syntax.
 
+The same diagnostic boundary divides semantic analysis into helper selection,
+name-request registration, deterministic symbol finalization, representation
+finalization, and projecting the settled names into the structures consumed by
+C emission. Artifact planning separately records runtime-file packaging,
+specialization-report construction, and final project-manifest emission. These
+clocks identify repeated work; they do not let reports or manifests make
+semantic decisions.
+
 See [test feedback-loop and CI performance](test-performance.md) for the
 measurement method, the pinned-Haxe macOS timer caveat, and current Caxecraft
 results.

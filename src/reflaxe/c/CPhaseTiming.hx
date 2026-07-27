@@ -58,9 +58,17 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTHxcIRProgramAssembly = "HxcIR program assembly";
 	var CDTHxcIRManagedRootPlanning = "HxcIR managed-root planning";
 	var CDTHxcIRNullCheckCoalescing = "HxcIR null-check coalescing";
+	var CDTSemanticHelperSelection = "semantic helper selection";
+	var CDTSemanticNameRegistration = "semantic name registration";
+	var CDTSymbolFinalization = "symbol finalization";
+	var CDTSemanticRepresentationFinalization = "semantic representation finalization";
+	var CDTSemanticNameProjection = "semantic name projection";
 	var CDTBodySetupAndValuePlanning = "body setup and value planning";
 	var CDTBodyControlFlowPlanning = "body control-flow planning";
 	var CDTBodyCASTEmission = "body CAST emission";
+	var CDTArtifactRuntimePackaging = "artifact runtime packaging";
+	var CDTArtifactSpecializationReport = "artifact specialization report";
+	var CDTArtifactProjectEmission = "artifact project emission";
 }
 
 /** Bounded entity and I/O counts recorded only at semantic boundaries. */

@@ -613,6 +613,30 @@ preserving the provenance that makes specialization decisions auditable. The
 remaining typed-body work still needs structural attribution; semantic
 analyses/naming and artifact planning each remain roughly ten-second targets.
 
+The next detail split found that project emission spent 9.455s of CPU and
+allocated 64.2GB cumulatively. `GeneratedFile` had already validated and hashed
+each immutable generated C payload in its constructor, but project
+canonicalization called `verifyIntegrity()` and hashed all 9.5MB again before
+building sidecars. Because Haxe strings are immutable and the file's stored
+fields are `final`, no compiler operation can change those in-memory bytes
+between the two points. Removing that duplicate same-request proof does not
+weaken output ownership, which still validates filesystem paths, prior
+ownership, symlinks, and the complete artifact set at the external boundary.
+
+One contended before/after diagnostic retained the same 225-file tree digest:
+
+| Measured value | Before | After |
+| --- | ---: | ---: |
+| Artifact project emission, CPU | 9.455s | 5.081s |
+| Artifact project emission, cumulative allocation | 64.2GB | 33.6GB |
+| Target request CPU | 55.141s | 50.175s |
+| Total cumulative allocation reported by Eval | 236.4GB | 205.8GB |
+
+The remaining project-emission work is still about five seconds and needs its
+own attribution. This result proves only that the second payload hash was
+redundant; it does not justify skipping manifest hashing, filesystem checks, or
+another independently owned integrity proof.
+
 There is an important pinned-toolchain detail on macOS. Haxe
 `5.0.0-preview.1` revision `2c1e544` computes the Mach timer's nanosecond value
 but returns the unconverted counter in `libs/extc/extc_stubs.c`. On this host,

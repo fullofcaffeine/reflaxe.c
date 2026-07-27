@@ -495,12 +495,19 @@ class CBodyLowering {
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
 		CPhaseTiming.stop(hxcIRValidationTimer);
 		final analysisTimer = CPhaseTiming.start(CPSemanticAnalysesAndNaming);
+		final helperSelectionTimer = CPhaseTiming.startDetail(CDTSemanticHelperSelection);
 		final helperSelection = new CPrimitiveHelperSelection();
 		helperSelection.collect(program);
 		helperSelection.register(context.symbols);
+		CPhaseTiming.stopDetail(helperSelectionTimer);
+		final nameRegistrationTimer = CPhaseTiming.startDetail(CDTSemanticNameRegistration);
 		final boundsAbortRequest = registerBoundsAbort(program);
 		final managedProgramRequests = registerManagedProgramNames(program, preparedById);
+		CPhaseTiming.stopDetail(nameRegistrationTimer);
+		final symbolFinalizationTimer = CPhaseTiming.startDetail(CDTSymbolFinalization);
 		final symbolTable = context.symbols.finalizeSymbols();
+		CPhaseTiming.stopDetail(symbolFinalizationTimer);
+		final representationFinalizationTimer = CPhaseTiming.startDetail(CDTSemanticRepresentationFinalization);
 		final loweredAggregates = aggregateRegistry.finalize(context.symbols);
 		final loweredEnums = aggregateRegistry.finalizeEnums(context.symbols);
 		final loweredClasses = aggregateRegistry.finalizeClasses(context.symbols);
@@ -509,6 +516,8 @@ class CBodyLowering {
 		final loweredOptionals = aggregateRegistry.finalizeOptionals(context.symbols);
 		final loweredDispatch = preparedDispatch.finalize(context.symbols);
 		final loweredImports = aggregateRegistry.finalizeImports(context.symbols);
+		CPhaseTiming.stopDetail(representationFinalizationTimer);
+		final nameProjectionTimer = CPhaseTiming.startDetail(CDTSemanticNameProjection);
 		final loweredConstructors:Array<CLoweredBodyConstructor> = [];
 		for (input in constructorInputs) {
 			final signature = constructorSignaturesById.get(input.id);
@@ -537,6 +546,7 @@ class CBodyLowering {
 			globalNames.set(global.ir.id, cName);
 			loweredGlobals.push(new CLoweredBodyGlobal(global.modulePath, global.ir, cName));
 		}
+		CPhaseTiming.stopDetail(nameProjectionTimer);
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
 		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIntMaps, loweredStringMaps, preparedBytes,
