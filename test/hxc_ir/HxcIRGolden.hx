@@ -15,6 +15,7 @@ class HxcIRGolden {
 	static inline final COVERAGE_SOURCE = "test/hxc_ir/fixtures/IRCoverage.hx";
 
 	static function main():Void {
+		HxcIRControlFlowGolden.run();
 		final validator = new HxcIRValidator();
 		final dumper = new HxcIRDumper();
 		final semantic = semanticProgram(false);

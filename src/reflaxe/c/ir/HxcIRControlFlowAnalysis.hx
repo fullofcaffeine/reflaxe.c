@@ -10,21 +10,24 @@ import reflaxe.c.ir.HxcIR;
 	safety checks only when the check is guaranteed to have run first.
 **/
 class HxcIRControlFlowFacts {
-	final dominators:Map<String, Map<String, Bool>>;
+	final blockIndices:Map<String, Int>;
+	final strictDominators:Array<Array<String>>;
 	final instructionFailureJumps:Map<String, Bool>;
-	final blockOrder:Array<String>;
 
-	public function new(dominators:Map<String, Map<String, Bool>>, instructionFailureJumps:Map<String, Bool>) {
-		this.dominators = dominators;
+	public function new(blockIndices:Map<String, Int>, strictDominators:Array<Array<String>>, instructionFailureJumps:Map<String, Bool>) {
+		this.blockIndices = blockIndices;
+		this.strictDominators = strictDominators;
 		this.instructionFailureJumps = instructionFailureJumps;
-		this.blockOrder = [for (blockId in dominators.keys()) blockId];
-		this.blockOrder.sort(compareUtf8);
 	}
 
 	/** True when `candidateBlockId` lies on every route to `blockId`. */
 	public function dominates(candidateBlockId:String, blockId:String):Bool {
-		final values = dominators.get(blockId);
-		return values != null && values.exists(candidateBlockId);
+		final blockIndex = blockIndices.get(blockId);
+		if (blockIndex == null)
+			return false;
+		if (candidateBlockId == blockId)
+			return true;
+		return containsUtf8(strictDominators[blockIndex], candidateBlockId);
 	}
 
 	/** True when the candidate dominates a different block. */
@@ -35,14 +38,8 @@ class HxcIRControlFlowFacts {
 		Return strict dominators in stable order for deterministic proof searches.
 	**/
 	public function strictDominatorsOf(blockId:String):Array<String> {
-		final result:Array<String> = [];
-		final values = dominators.get(blockId);
-		if (values != null)
-			for (candidate in blockOrder)
-				if (candidate != blockId)
-					if (values.exists(candidate))
-						result.push(candidate);
-		return result;
+		final blockIndex = blockIndices.get(blockId);
+		return blockIndex == null ? [] : strictDominators[blockIndex].copy();
 	}
 
 	/**
@@ -53,6 +50,22 @@ class HxcIRControlFlowFacts {
 	**/
 	public inline function hasInstructionFailureJump(blockId:String):Bool
 		return instructionFailureJumps.exists(blockId);
+
+	static function containsUtf8(values:Array<String>, expected:String):Bool {
+		var low = 0;
+		var high = values.length;
+		while (low < high) {
+			final middle = low + ((high - low) >> 1);
+			final comparison = compareUtf8(values[middle], expected);
+			if (comparison < 0)
+				low = middle + 1;
+			else if (comparison > 0)
+				high = middle;
+			else
+				return true;
+		}
+		return false;
+	}
 
 	static function compareUtf8(left:String, right:String):Int {
 		final leftBytes = haxe.io.Bytes.ofString(left);
@@ -71,89 +84,169 @@ class HxcIRControlFlowFacts {
 	Builds the shared control-flow proof used by HxcIR passes and validation.
 
 	The analysis includes normal terminator edges and explicit instruction failure
-	edges. It considers only blocks reachable from the declared entry, then uses
-	the standard predecessor-intersection algorithm to find dominators.
+	edges. It considers only blocks reachable from the declared entry. Blocks are
+	assigned small integer indices, visited in reverse postorder, and reduced to
+	one immediate-dominator tree. Walking that tree yields the same “which blocks
+	must have run first?” answers without repeatedly copying a hash-map set for
+	every block.
+
+	This is the Cooper-Harvey-Kennedy iterative algorithm. Its tree-shaped result
+	is especially useful here because callers ask only dominance membership and
+	the stable list of strict dominators; they do not need mutable set algebra.
 **/
 class HxcIRControlFlowAnalysis {
 	public function new() {}
 
 	public function analyze(fn:HxcIRFunction):HxcIRControlFlowFacts {
-		final blocks:Map<String, HxcIRBlock> = [];
-		final successors:Map<String, Array<String>> = [];
-		final predecessors:Map<String, Array<String>> = [];
+		final blockIds:Array<String> = [];
+		final blocks:Array<HxcIRBlock> = [];
+		final allBlockIndices:Map<String, Int> = [];
 		final instructionFailureJumps:Map<String, Bool> = [];
 		for (block in fn.blocks) {
-			blocks.set(block.id, block);
-			predecessors.set(block.id, []);
-			successors.set(block.id, blockTargets(block));
+			final previousIndex = allBlockIndices.get(block.id);
+			if (previousIndex == null) {
+				allBlockIndices.set(block.id, blocks.length);
+				blockIds.push(block.id);
+				blocks.push(block);
+			} else {
+				// Invalid duplicate IDs are diagnosed later by HxcIRValidator.
+				// Matching the former StringMap behavior here keeps the last
+				// declaration as the graph node without hiding that diagnostic.
+				blocks[previousIndex] = block;
+			}
 			if (blockHasInstructionFailureJump(block))
 				instructionFailureJumps.set(block.id, true);
 		}
-		for (source in fn.blocks) {
-			final targets = successors.get(source.id);
-			if (targets == null)
-				continue;
-			for (target in targets) {
-				final incoming = predecessors.get(target);
-				if (incoming != null && incoming.indexOf(source.id) == -1)
-					incoming.push(source.id);
-			}
-		}
 
-		final reachable:Map<String, Bool> = [];
-		if (blocks.exists(fn.entryBlockId)) {
-			final pending = [fn.entryBlockId];
-			var next = 0;
-			while (next < pending.length) {
-				final blockId = pending[next++];
-				if (reachable.exists(blockId))
+		final successors:Array<Array<Int>> = [for (_ in blocks) []];
+		final predecessors:Array<Array<Int>> = [for (_ in blocks) []];
+		for (sourceIndex => source in blocks) {
+			for (targetId in blockTargets(source)) {
+				final targetIndex = allBlockIndices.get(targetId);
+				if (targetIndex == null || successors[sourceIndex].indexOf(targetIndex) != -1)
 					continue;
-				reachable.set(blockId, true);
-				final outgoing = successors.get(blockId);
-				if (outgoing != null)
-					for (target in outgoing)
-						if (blocks.exists(target) && !reachable.exists(target))
-							pending.push(target);
+				successors[sourceIndex].push(targetIndex);
+				if (predecessors[targetIndex].indexOf(sourceIndex) == -1)
+					predecessors[targetIndex].push(sourceIndex);
 			}
 		}
 
-		final allReachable:Map<String, Bool> = [];
-		for (blockId in reachable.keys())
-			allReachable.set(blockId, true);
-		final dominators:Map<String, Map<String, Bool>> = [];
-		for (blockId in reachable.keys())
-			dominators.set(blockId, blockId == fn.entryBlockId ? singleton(blockId) : copySet(allReachable));
+		final entryIndex = allBlockIndices.get(fn.entryBlockId);
+		if (entryIndex == null)
+			return new HxcIRControlFlowFacts([], [for (_ in blocks) []], instructionFailureJumps);
+
+		final reversePostorder = computeReversePostorder(entryIndex, successors);
+		final immediateDominators = computeImmediateDominators(entryIndex, reversePostorder, predecessors, blocks.length);
+		final reachableIndices:Map<String, Int> = [];
+		final strictDominators:Array<Array<String>> = [for (_ in blocks) []];
+		for (blockIndex in reversePostorder) {
+			reachableIndices.set(blockIds[blockIndex], blockIndex);
+			if (blockIndex == entryIndex)
+				continue;
+			final immediate = immediateDominators[blockIndex];
+			if (immediate < 0)
+				continue;
+			final values = strictDominators[immediate].copy();
+			insertUtf8(values, blockIds[immediate]);
+			strictDominators[blockIndex] = values;
+		}
+		return new HxcIRControlFlowFacts(reachableIndices, strictDominators, instructionFailureJumps);
+	}
+
+	/**
+		Return reachable blocks in reverse postorder without recursive host calls.
+
+		Parents usually appear before children in this order. That lets the
+		immediate-dominator fixed point converge quickly even for loops, while an
+		explicit stack keeps deeply generated control flow from overflowing the
+		Eval host's call stack.
+	**/
+	static function computeReversePostorder(entryIndex:Int, successors:Array<Array<Int>>):Array<Int> {
+		final visited:Array<Bool> = [for (_ in successors) false];
+		final nodes = [entryIndex];
+		final nextSuccessors = [0];
+		final postorder:Array<Int> = [];
+		visited[entryIndex] = true;
+		while (nodes.length > 0) {
+			final stackIndex = nodes.length - 1;
+			final blockIndex = nodes[stackIndex];
+			final successorIndex = nextSuccessors[stackIndex];
+			if (successorIndex < successors[blockIndex].length) {
+				nextSuccessors[stackIndex] = successorIndex + 1;
+				final targetIndex = successors[blockIndex][successorIndex];
+				if (!visited[targetIndex]) {
+					visited[targetIndex] = true;
+					nodes.push(targetIndex);
+					nextSuccessors.push(0);
+				}
+			} else {
+				nodes.pop();
+				nextSuccessors.pop();
+				postorder.push(blockIndex);
+			}
+		}
+		postorder.reverse();
+		return postorder;
+	}
+
+	/**
+		Compute one immediate parent in the dominator tree for each reachable block.
+
+		`-1` means that the block has not been reached by the fixed point. The entry
+		points to itself, giving `intersectDominators` a finite root.
+	**/
+	static function computeImmediateDominators(entryIndex:Int, reversePostorder:Array<Int>, predecessors:Array<Array<Int>>, blockCount:Int):Array<Int> {
+		final positions:Array<Int> = [for (_ in 0...blockCount) -1];
+		for (position => blockIndex in reversePostorder)
+			positions[blockIndex] = position;
+		final immediateDominators:Array<Int> = [for (_ in 0...blockCount) -1];
+		immediateDominators[entryIndex] = entryIndex;
 
 		var changed = true;
 		while (changed) {
 			changed = false;
-			for (blockId in reachable.keys()) {
-				if (blockId == fn.entryBlockId)
-					continue;
-				final incoming = predecessors.get(blockId);
-				if (incoming == null)
-					continue;
-				final reachableIncoming = incoming.filter(value -> reachable.exists(value));
-				if (reachableIncoming.length == 0)
-					continue;
-				final first = dominators.get(reachableIncoming[0]);
-				if (first == null)
-					continue;
-				var nextSet = copySet(first);
-				for (index in 1...reachableIncoming.length) {
-					final candidate = dominators.get(reachableIncoming[index]);
-					if (candidate != null)
-						nextSet = intersectSets(nextSet, candidate);
+			for (position in 1...reversePostorder.length) {
+				final blockIndex = reversePostorder[position];
+				var nextImmediate = -1;
+				for (predecessor in predecessors[blockIndex]) {
+					if (immediateDominators[predecessor] < 0)
+						continue;
+					nextImmediate = nextImmediate < 0 ? predecessor : intersectDominators(predecessor, nextImmediate, immediateDominators, positions);
 				}
-				nextSet.set(blockId, true);
-				final current = dominators.get(blockId);
-				if (current == null || !sameSet(current, nextSet)) {
-					dominators.set(blockId, nextSet);
+				if (nextImmediate >= 0 && immediateDominators[blockIndex] != nextImmediate) {
+					immediateDominators[blockIndex] = nextImmediate;
 					changed = true;
 				}
 			}
 		}
-		return new HxcIRControlFlowFacts(dominators, instructionFailureJumps);
+		return immediateDominators;
+	}
+
+	/** Walk two known parent chains until they meet at the nearest shared proof. */
+	static function intersectDominators(leftIndex:Int, rightIndex:Int, immediateDominators:Array<Int>, positions:Array<Int>):Int {
+		var left = leftIndex;
+		var right = rightIndex;
+		while (left != right) {
+			while (positions[left] > positions[right])
+				left = immediateDominators[left];
+			while (positions[right] > positions[left])
+				right = immediateDominators[right];
+		}
+		return left;
+	}
+
+	/** Insert one new tree parent while preserving byte-wise UTF-8 order. */
+	static function insertUtf8(values:Array<String>, value:String):Void {
+		var low = 0;
+		var high = values.length;
+		while (low < high) {
+			final middle = low + ((high - low) >> 1);
+			if (compareUtf8(values[middle], value) < 0)
+				low = middle + 1;
+			else
+				high = middle;
+		}
+		values.insert(low, value);
 	}
 
 	/** Collect normal and explicit failure successors without trusting their IDs. */
@@ -218,37 +311,15 @@ class HxcIRControlFlowAnalysis {
 			case _: null;
 		};
 
-	static function singleton(value:String):Map<String, Bool> {
-		final result:Map<String, Bool> = [];
-		result.set(value, true);
-		return result;
-	}
-
-	static function copySet(source:Map<String, Bool>):Map<String, Bool> {
-		final result:Map<String, Bool> = [];
-		for (key in source.keys())
-			result.set(key, true);
-		return result;
-	}
-
-	static function intersectSets(left:Map<String, Bool>, right:Map<String, Bool>):Map<String, Bool> {
-		final result:Map<String, Bool> = [];
-		for (key in left.keys())
-			if (right.exists(key))
-				result.set(key, true);
-		return result;
-	}
-
-	static function sameSet(left:Map<String, Bool>, right:Map<String, Bool>):Bool {
-		var leftCount = 0;
-		for (key in left.keys()) {
-			leftCount++;
-			if (!right.exists(key))
-				return false;
+	static function compareUtf8(left:String, right:String):Int {
+		final leftBytes = haxe.io.Bytes.ofString(left);
+		final rightBytes = haxe.io.Bytes.ofString(right);
+		final limit = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
+		for (index in 0...limit) {
+			final difference = leftBytes.get(index) - rightBytes.get(index);
+			if (difference != 0)
+				return difference;
 		}
-		var rightCount = 0;
-		for (_ in right.keys())
-			rightCount++;
-		return leftCount == rightCount;
+		return leftBytes.length - rightBytes.length;
 	}
 }

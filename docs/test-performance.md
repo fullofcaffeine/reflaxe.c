@@ -536,6 +536,41 @@ compilation, native linking, Raylib, and game execution. Native compile/run
 timing belongs to the separate Caxecraft differential lane, so a slow target
 compiler pass is not confused with native-toolchain work.
 
+The first full-playable structured profile found one avoidable control-flow
+cost. A *dominator* is a block that every route from the function entry must
+pass through before reaching another block. Null-check coalescing and HxcIR
+validation both need that proof. The old algorithm gave every reachable block a
+hash-map set of possible dominators, then repeatedly copied and intersected the
+sets until no answer changed. The replacement assigns blocks integer indices,
+computes one immediate-dominator tree in reverse postorder, and derives the same
+stable answers from that tree.
+
+The focused regression uses an independent definition: it temporarily removes
+each proposed dominator and asks whether graph search can still reach the
+destination. Linear, branch/join, loop, unreachable, reversed-declaration, and
+instruction-failure graphs must agree for every block pair. HxcIR, class-layout,
+body-lowering, and evaluation-order owners then preserve the semantic,
+diagnostic, generated-C, and native boundaries.
+
+The before/after full-playable runs below are one-sample **contended diagnostic
+evidence**, not medians or release budgets. Both emitted the same 225 normal
+artifacts with SHA-256 tree digest
+`de51d720add1179168963978c515dca3f5499586510db338088f88f2e473de8a`.
+
+| Measured value | Before | After |
+| --- | ---: | ---: |
+| HxcIR null-check coalescing, exclusive | 4.760s | 0.083s |
+| HxcIR validation, exclusive | 5.867s | 1.133s |
+| Target request CPU | 64.730s | 53.547s |
+| Haxe-to-generated-C wall | 75.551s | 62.156s |
+| Cumulative allocation reported by Eval | 267.9GB | 238.0GB |
+
+The tree algorithm removes the demonstrated hot path; it is not a cross-request
+cache and retains no compiler state. The next full-playable costs are HxcIR
+function construction, semantic analyses/naming, artifact planning, and CAST
+control-flow planning. Those require their own bounded evidence before another
+implementation change.
+
 There is an important pinned-toolchain detail on macOS. Haxe
 `5.0.0-preview.1` revision `2c1e544` computes the Mach timer's nanosecond value
 but returns the unconverted counter in `libs/extc/extc_stubs.c`. On this host,
