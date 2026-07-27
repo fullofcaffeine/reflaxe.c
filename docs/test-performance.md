@@ -689,7 +689,7 @@ request-local backend deduplication therefore remain necessary.
 
 Beads issue `haxe_c-fbq` added an opt-in compiler profiler rather than guessing
 from whole-suite wall time. A *phase* here means one named portion of the build,
-such as “turn validated HxcIR into structural C bodies.” The current schema-3
+such as “turn validated HxcIR into structural C bodies.” The current schema-6
 `HXC_PROFILE` stream records phases as a checked parent/child tree only when
 `reflaxe_c_phase_timing` is enabled. Inclusive time contains nested work;
 exclusive time subtracts it. Bottleneck ranking uses exclusive wall and CPU
@@ -1040,6 +1040,48 @@ semantic phase lost about 6.9 seconds of CPU and 23.6GB of repeated allocation
 without changing compiler artifacts. The next optimization should move to the
 remaining measured owners—especially symbol collision work and C printing—
 rather than broadening these deliberately narrow caches.
+
+### Exact source-position reuse
+
+Every HxcIR instruction that came from Haxe source carries a *source span*: the
+source file plus the start and end line and column. Diagnostics use that range
+to point at the right expression, and generated `#line` directives use it to
+map C compiler messages back to Haxe. One Haxe expression can produce several
+HxcIR instructions, so the old builder repeatedly asked the Haxe compiler to
+convert the same internal byte offsets into the same line and column range.
+
+Each function builder now remembers conversions by the exact compiler filename,
+start byte, and end byte. An identical request reuses the immutable
+`HxcSourceSpan`; a different file or either different offset still performs a
+fresh conversion. The cache ends with that function body, so it cannot retain a
+compiler-owned `Position` or leak a result into another request. It does not
+remove source maps, coarsen ranges, or trust a nearby position as equivalent.
+
+Profile schema 6 records requests, real computations, hits, and CPU time for
+this operation. Its parser fails unless every request is accounted for by
+exactly one computation or hit. A focused macro probe requests one position
+twice and another position once, proving both reuse and separation.
+
+The following single cold samples used the same full playable on a
+**contended host**. Their wall times are not comparable performance evidence
+because host load differed. The narrower operation and allocation counters are
+the attributable result. Both runs produced the same 225 normal artifacts with
+SHA-256 tree digest
+`65d62650fe99b2fcac78ffe9e4a66293e2ab3b11f352be89c44ecff06db4749d`.
+
+| Measured source-position value | Before | After |
+| --- | ---: | ---: |
+| Requests | 35,875 | 35,875 |
+| Haxe coordinate computations | 35,875 | 20,190 |
+| Exact cache hits | 0 | 15,685 |
+| Source-position CPU | 623ms | 408ms |
+| Typed-body cumulative allocation | 15.55GB | 14.88GB |
+| Whole-request cumulative allocation | 77.92GB | 77.23GB |
+
+This removes about 674MB of typed-body allocation and 215ms from the measured
+source-position operation. It is a useful local improvement, not a claim that
+the feedback loop is fixed; the next iteration must continue with the largest
+remaining independently attributed owner.
 
 ### C formatting and generated-file hashing
 

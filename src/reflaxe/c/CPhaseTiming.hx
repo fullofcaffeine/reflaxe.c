@@ -211,7 +211,10 @@ typedef CProfileControlFlowWork = {
 
 	The counts separate source size from compiler work. For example, a high
 	`bodyValueTypeRequests` to `expressionNodeCount` ratio reveals repeated type
-	classification even when a busy host makes elapsed time noisy.
+	classification even when a busy host makes elapsed time noisy. Source-span
+	request, computation, and hit counts similarly show how often several HxcIR
+	instructions reuse one exact Haxe source position; their accounting must
+	remain `requests = computations + hits`.
 **/
 @:noCompletion
 typedef CProfileTypedBodyWork = {
@@ -234,6 +237,10 @@ typedef CProfileTypedBodyWork = {
 	final otherTypeCpuMicroseconds:Float;
 	final specializationRequests:Int;
 	final coercionRequests:Int;
+	final sourceSpanRequests:Int;
+	final sourceSpanComputations:Int;
+	final sourceSpanCacheHits:Int;
+	final sourceSpanCpuMicroseconds:Float;
 	final producedBlockCount:Int;
 	final producedInstructionCount:Int;
 }
@@ -409,7 +416,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 5;
+	public static inline final PROFILE_SCHEMA_VERSION = 6;
 
 	static var active:Null<CProfileRequestState> = null;
 

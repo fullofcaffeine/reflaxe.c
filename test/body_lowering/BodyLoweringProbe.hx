@@ -14,6 +14,7 @@ import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CBodySourceMappingMode;
 import reflaxe.c.lowering.CBodyLoweringError;
+import reflaxe.c.lowering.HaxeSourceSpan.HaxeSourceSpanResolver;
 
 typedef BodyLoweringFunctionRecord = {
 	final field:String;
@@ -91,6 +92,7 @@ class BodyLoweringProbe {
 		if (Context.defined("body_lowering_reverse_input")) {
 			inputs.reverse();
 		}
+		verifySourceSpanReuse(inputs);
 		final profile = Context.definedValue("body_lowering_profile") == "metal" ? CProfile.Metal : CProfile.Portable;
 		final unreachableDiagnostic = renderUnreachableDiagnostic(inputs, profile);
 		final result = new CBodyLowering(new CompilationContext(profile), CBSMNormalAndLineMapped).lower(inputs);
@@ -129,6 +131,30 @@ class BodyLoweringProbe {
 			unreachableDiagnostic: unreachableDiagnostic
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(record));
+	}
+
+	/**
+		Prove that source-position reuse is exact rather than coordinate guessing.
+
+		The first two requests use the same compiler position and must share one
+		conversion. The third uses another fixture function and must remain a
+		separate range. This small macro-level check protects diagnostics and
+		`#line` mappings without requiring the full Caxecraft workload.
+	**/
+	static function verifySourceSpanReuse(inputs:Array<CBodyFunctionInput>):Void {
+		if (inputs.length < 2)
+			fatal("source-span reuse probe requires two body functions", Context.currentPos());
+		final resolver = new HaxeSourceSpanResolver(inputs[0].sourcePath, true);
+		final first = resolver.resolve(inputs[0].expression.pos);
+		final repeated = resolver.resolve(inputs[0].expression.pos);
+		final distinct = resolver.resolve(inputs[1].expression.pos);
+		if (resolver.requestCount != 3 || resolver.computationCount != 2 || resolver.cacheHitCount != 1)
+			fatal('source-span reuse counted requests=${resolver.requestCount}, computations=${resolver.computationCount}, hits=${resolver.cacheHitCount}',
+				inputs[0].expression.pos);
+		if (first.display() != repeated.display())
+			fatal("an exact repeated compiler position produced a different HxcIR range", inputs[0].expression.pos);
+		if (first.display() == distinct.display())
+			fatal("two distinct fixture positions were incorrectly merged", inputs[1].expression.pos);
 	}
 
 	static function renderUnreachableDiagnostic(inputs:Array<CBodyFunctionInput>, profile:CProfile):String {

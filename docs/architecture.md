@@ -159,7 +159,7 @@ contains HxcIR construction and validation, but its exclusive value does not
 count those children again.
 
 Each structured `HXC_PROFILE` JSON Lines record belongs to one request and
-uses the current closed schema 5. Span records carry monotonic wall time,
+uses the current closed schema 6. Span records carry monotonic wall time,
 process CPU time,
 allocation change when the Eval host exposes it, and resident-memory samples.
 The final request record reports total request time and peak observed resident

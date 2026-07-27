@@ -242,6 +242,10 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "otherTypeCpuMicroseconds": 60.5,
                         "specializationRequests": 6,
                         "coercionRequests": 3,
+                        "sourceSpanRequests": 11,
+                        "sourceSpanComputations": 8,
+                        "sourceSpanCacheHits": 3,
+                        "sourceSpanCpuMicroseconds": 70.5,
                         "producedBlockCount": 2,
                         "producedInstructionCount": 9,
                     },
@@ -266,6 +270,25 @@ class CaxecraftTimingTests(unittest.TestCase):
         self.assertEqual(
             typed_body_profile.spans[0].work.direct_primitive_fast_paths, 3
         )
+        self.assertEqual(
+            typed_body_profile.spans[0].work.source_span_computations, 8
+        )
+        malformed_source_span_work = json.loads(json.dumps(typed_body_child))
+        malformed_source_span_work["work"]["typedBody"]["sourceSpanCacheHits"] = 2
+        with self.assertRaisesRegex(
+            profiler.CompilerProfileFailure,
+            "must account for every request",
+        ):
+            profiler.parse_profile_records(
+                "\n".join(
+                    (
+                        record(malformed_source_span_work),
+                        record(parent),
+                        record(counter),
+                        record(request),
+                    )
+                )
+            )
 
         printer_child = dict(child)
         printer_child.update(

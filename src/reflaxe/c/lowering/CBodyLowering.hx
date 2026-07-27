@@ -27,6 +27,7 @@ import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcIRManagedRootPlanner;
 import reflaxe.c.ir.HxcUtf8;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.HaxeSourceSpan.HaxeSourceSpanResolver;
 import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportFunction;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportType;
@@ -3099,6 +3100,7 @@ private class FunctionBuilder {
 	var profileOtherTypeCpuSeconds = 0.0;
 	var profileSpecializationRequests = 0;
 	var profileCoercionRequests = 0;
+	final sourceSpans:HaxeSourceSpanResolver;
 
 	public function new(context:CompilationContext, prepared:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>,
 			constructorSignaturesById:Map<String, PreparedConstructorSignature>, globalRegistry:BodyGlobalRegistry, aggregateRegistry:CBodyAggregateRegistry,
@@ -3115,8 +3117,9 @@ private class FunctionBuilder {
 		this.dispatch = dispatch;
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.collectProfileWork = CPhaseTiming.collectsWork();
+		this.sourceSpans = new HaxeSourceSpanResolver(input.sourcePath, collectProfileWork);
 		this.localOrdinal = prepared.parameters.length;
-		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.bodyExpression.pos, input.sourcePath));
+		this.currentBlock = createEntryBlock(sourceSpan(prepared.bodyExpression.pos));
 		if (prepared.borrowedSpanReturn != null) {
 			final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, "returned-span-length"]),
 				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], localOrdinal++);
@@ -3308,6 +3311,10 @@ private class FunctionBuilder {
 		profileOtherTypeCpuSeconds = 0.0;
 		profileSpecializationRequests = 0;
 		profileCoercionRequests = 0;
+		final sourceSpanRequestsBefore = sourceSpans.requestCount;
+		final sourceSpanComputationsBefore = sourceSpans.computationCount;
+		final sourceSpanCacheHitsBefore = sourceSpans.cacheHitCount;
+		final sourceSpanCpuSecondsBefore = sourceSpans.cpuSeconds;
 		final instructionCountBefore = instructionOrdinal;
 		final blockCountBefore = blocks.length;
 		// The function ID lets the opt-in profiler distinguish one expensive
@@ -3321,8 +3328,8 @@ private class FunctionBuilder {
 				final global = globalRegistry.requireId(globalId, bodyExpression, unsupportedAt);
 				final globalType = CBodyValueType.primitive(global.mapping);
 				final value = coerce(lowerValue(bodyExpression, globalType), globalType, bodyExpression.pos, "static-field-initializer");
-				appendInstruction(null, IRIOInitialize(IRPGlobal(global.ir.id), value.id, IRISUninitialized, IRISInitialized),
-					HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath), "initialize-global");
+				appendInstruction(null, IRIOInitialize(IRPGlobal(global.ir.id), value.id, IRISUninitialized, IRISInitialized), sourceSpan(bodyExpression.pos),
+					"initialize-global");
 		}
 		CPhaseTiming.setDetailWork(typedBodyLoweringTimer, {
 			kind: "typed-body-lowering-v1",
@@ -3347,6 +3354,10 @@ private class FunctionBuilder {
 				otherTypeCpuMicroseconds: profileOtherTypeCpuSeconds * 1000000.0,
 				specializationRequests: profileSpecializationRequests,
 				coercionRequests: profileCoercionRequests,
+				sourceSpanRequests: sourceSpans.requestCount - sourceSpanRequestsBefore,
+				sourceSpanComputations: sourceSpans.computationCount - sourceSpanComputationsBefore,
+				sourceSpanCacheHits: sourceSpans.cacheHitCount - sourceSpanCacheHitsBefore,
+				sourceSpanCpuMicroseconds: (sourceSpans.cpuSeconds - sourceSpanCpuSecondsBefore) * 1000000.0,
 				producedBlockCount: blocks.length - blockCountBefore,
 				producedInstructionCount: instructionOrdinal - instructionCountBefore
 			},
@@ -3387,10 +3398,10 @@ private class FunctionBuilder {
 		if (currentBlock.terminator == null) {
 			currentBlock.terminator = {
 				kind: IRTReturn(null, normalCleanupSteps()),
-				source: HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath)
+				source: sourceSpan(bodyExpression.pos)
 			};
 		}
-		final functionSpan = HaxeSourceSpan.fromPosition(input.sourceExpression.pos, input.sourcePath);
+		final functionSpan = sourceSpan(input.sourceExpression.pos);
 		final borrowedClassLocals = [for (localId in borrowedClassLocalIds.keys()) localId];
 		borrowedClassLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final borrowedInterfaceLocals = [for (localId in borrowedInterfaceLocalIds.keys()) localId];
@@ -3625,7 +3636,7 @@ private class FunctionBuilder {
 		final destroyId = optional.destroyImplementationId();
 		if (destroyId == null)
 			throw new CBodyEmissionError('managed optional `${optional.planId}` lost its destroy plan');
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		// Statement calls normally avoid naming an unused C return value. This
 		// result is not semantically unused: the destroy operation needs its exact
 		// bits, so materialize it before moving it into the owner place.
@@ -3714,8 +3725,7 @@ private class FunctionBuilder {
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:retained-interface-initializer)');
 		rejectOwnedClassBorrow(value, right.pos, 'TField($fieldName:retained-interface-stack-escape)');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-retained-interface-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-retained-interface-field");
 		initializedRetainedInterfaceFields.set(fieldName, true);
 		return true;
 	}
@@ -3762,8 +3772,7 @@ private class FunctionBuilder {
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-class-initializer)');
 		rejectOwnedClassBorrow(value, right.pos, 'TField($fieldName:managed-class-stack-escape)');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-managed-class-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-managed-class-field");
 		initializedManagedClassFields.set(fieldName, true);
 		return true;
 	}
@@ -3809,8 +3818,7 @@ private class FunctionBuilder {
 		if (field == null || field.mutable || !field.type.kind.match(CBVKStaticString(_)))
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:static-String-initializer)');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-static-string-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-static-string-field");
 		initializedStaticStringFields.set(fieldName, true);
 		return true;
 	}
@@ -3850,8 +3858,7 @@ private class FunctionBuilder {
 			return false;
 		final raw = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-String-initializer)');
 		final value = captureManagedValue(raw, field.type, right.pos, 'TField($fieldName:managed-String-initializer)');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-managed-string-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-managed-string-field");
 		initializedManagedStringFields.set(fieldName, true);
 		return true;
 	}
@@ -3892,8 +3899,7 @@ private class FunctionBuilder {
 			return false;
 		final raw = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:managed-field-initializer)');
 		final value = captureManagedValue(raw, field.type, right.pos, 'TField($fieldName:managed-field-initializer)');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-managed-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-managed-field");
 		initializedManagedDirectFields.set(fieldName, true);
 		return true;
 	}
@@ -3941,8 +3947,7 @@ private class FunctionBuilder {
 		if (field == null || field.mutable || aggregate == null || aggregate.managedLifetime)
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:direct-record-initializer)');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-direct-record-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-direct-record-field");
 		initializedDirectAggregateFields.set(fieldName, true);
 		return true;
 	}
@@ -3987,8 +3992,7 @@ private class FunctionBuilder {
 		if (field == null || field.mutable || enumValue == null || enumValue.managedLifetime)
 			return false;
 		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:direct-enum-initializer)');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-unmanaged-enum-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-unmanaged-enum-field");
 		initializedUnmanagedEnumFields.set(fieldName, true);
 		return true;
 	}
@@ -4034,7 +4038,7 @@ private class FunctionBuilder {
 		final array = field.type.arrayValue();
 		if (array == null)
 			throw new CBodyEmissionError('Array field `$fieldName` lost its prepared specialization');
-		final source = HaxeSourceSpan.fromPosition(left.pos, input.sourcePath);
+		final source = sourceSpan(left.pos);
 		final fieldPlace = IRPField(IRPDereference(self.id), fieldName);
 		final transferredFreshOwner = !array.managedByCollector && freshManagedArrayValueIds.remove(value.id);
 		appendInstruction(null, IRIOStore(fieldPlace, value.id), source, "initialize-array-field");
@@ -4084,8 +4088,7 @@ private class FunctionBuilder {
 		final value = lowerStringMapConstruction(right, construction.arguments, field.type);
 		if (!freshManagedStringMapValueIds.remove(value.id))
 			throw new CBodyEmissionError('StringMap field `$fieldName` did not receive a fresh table owner');
-		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"initialize-string-map-field");
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-string-map-field");
 		initializedManagedStringMapFields.set(fieldName, true);
 		return true;
 	}
@@ -4157,15 +4160,14 @@ private class FunctionBuilder {
 		}
 		final virtualTable = dispatch.tableForInstance(child.instanceId);
 		if (virtualTable != null) {
-			appendInstruction(null, IRIOBindVirtualTable(target.place, virtualTable.input.id), HaxeSourceSpan.fromPosition(right.pos, input.sourcePath),
-				"owned-class-field-bind-virtual-table");
+			appendInstruction(null, IRIOBindVirtualTable(target.place, virtualTable.input.id), sourceSpan(right.pos), "owned-class-field-bind-virtual-table");
 		}
 		if (!signature.input.elided) {
 			final address:HxcIRResult = {
 				id: nextValueId(),
 				type: IRTPointer(IRTInstance(child.instanceId), false)
 			};
-			appendInstruction(address, IRIOAddress(target.place), HaxeSourceSpan.fromPosition(right.pos, input.sourcePath), "owned-class-field-address");
+			appendInstruction(address, IRIOAddress(target.place), sourceSpan(right.pos), "owned-class-field-address");
 			registerValueTemporary(address.id, "owned-class-field-address");
 			appendInstruction(null, IRIOCall({
 				dispatch: IRCDDirect(constructorId),
@@ -4177,8 +4179,7 @@ private class FunctionBuilder {
 					arguments: [],
 					cleanup: normalCleanupSteps()
 				} : null
-			}), HaxeSourceSpan.fromPosition(right.pos, input.sourcePath),
-				"owned-class-field-constructor-call");
+			}), sourceSpan(right.pos), "owned-class-field-constructor-call");
 		}
 		initializedOwnedClassFields.set(fieldName, true);
 		return true;
@@ -4361,7 +4362,7 @@ private class FunctionBuilder {
 	}
 
 	function lowerSpanLoop(pattern:SpanLoopPattern):Void {
-		final source = HaxeSourceSpan.fromPosition(pattern.sourceExpression.pos, input.sourcePath);
+		final source = sourceSpan(pattern.sourceExpression.pos);
 		final indexMapping = compilerSpanIndexMapping(pattern.sourceExpression.pos);
 		final indexType = CBodyValueType.primitive(indexMapping);
 		final zero:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
@@ -4479,7 +4480,7 @@ private class FunctionBuilder {
 		if (localMapping.irType == IRTVoid) {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final managedFlowCarrierEnum = switch localMapping.enumValue() {
 			case null: null;
 			case value if (compilerFlowCarrier && value.managedLifetime && !value.recursive): value;
@@ -4752,7 +4753,7 @@ private class FunctionBuilder {
 			arguments.push(argument.id);
 		}
 
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final constructedClass = localMapping.classValue();
 		if (constructedClass == null)
 			throw new CBodyEmissionError('constructed local `${variable.name}` lost its class layout');
@@ -4981,7 +4982,7 @@ private class FunctionBuilder {
 			arguments.push(argument.id);
 		}
 
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final self = lowerStackConstructedObject(expression, signature, targetId, arguments, source, "constructed-receiver", classValue);
 		final reference = coerce(self, sourceMapping, expression.pos, 'TNew(receiver-result:$targetId)');
 		borrowedReferenceValueIds.set(reference.id, true);
@@ -5028,7 +5029,7 @@ private class FunctionBuilder {
 			arguments.push(argument.id);
 		}
 
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final allocated:HxcIRResult = {id: nextValueId(), type: signature.selfMapping.irType};
 		appendInstruction(allocated, IRIOAllocate(IRTInstance(classValue.instanceId), IRAShared, IRIRuntime("gc"), {
 			kind: IRFAllocationFailure,
@@ -5114,8 +5115,7 @@ private class FunctionBuilder {
 			arguments: arguments,
 			returnType: IRTVoid,
 			failure: failure
-		}), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"super-constructor-call");
+		}), sourceSpan(expression.pos), "super-constructor-call");
 	}
 
 	function lowerThrow(expression:TypedExpr, valueExpression:TypedExpr):Void {
@@ -5159,7 +5159,7 @@ private class FunctionBuilder {
 				arguments: [],
 				cleanup: normalCleanupSteps()
 			}),
-			source: HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath)
+			source: sourceSpan(expression.pos)
 		};
 	}
 
@@ -5316,7 +5316,7 @@ private class FunctionBuilder {
 			unsupportedAt(position, 'TVar(${variable.name}:collection-uninitialized)');
 		}
 		final expression:TypedExpr = initializer;
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		switch collectionType.kind {
 			case BCKFixedArray(witnessId):
 				final zeroLengthExpression = fixedArrayZeroLengthExpression(expression);
@@ -5700,7 +5700,7 @@ private class FunctionBuilder {
 	}
 
 	function lowerReturn(value:Null<TypedExpr>, position:Position):Void {
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		if (value == null) {
 			currentBlock.terminator = {kind: IRTReturn(null, normalCleanupSteps()), source: source};
 			return;
@@ -6031,8 +6031,7 @@ private class FunctionBuilder {
 	function lowerImportConstant(expression:TypedExpr, constant:reflaxe.c.interop.CImportRegistry.CPreparedImportConstant,
 			expectedMapping:Null<CBodyValueType>):LoweredValue {
 		final result:HxcIRResult = {id: nextValueId(), type: constant.type.irType};
-		appendInstruction(result, IRIOConstant(IRCNativeConstant(constant.id)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"native-constant");
+		appendInstruction(result, IRIOConstant(IRCNativeConstant(constant.id)), sourceSpan(expression.pos), "native-constant");
 		final value:LoweredValue = {id: result.id, type: result.type, mapping: constant.type};
 		return expectedMapping == null ? value : coerce(value, expectedMapping, expression.pos, "native-constant-context");
 	}
@@ -6047,7 +6046,7 @@ private class FunctionBuilder {
 		final expressionType = bodyValueType(expression.t, expression.pos, 'TField($fieldName:imported-result-type)');
 		if (typeKey(expressionType.irType) != typeKey(field.type.irType))
 			return unsupported(expression, 'TField($fieldName:imported-result-mismatch)');
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final addressableBase = importedReadPlace(receiver);
 		if (addressableBase != null) {
 			final pointer:HxcIRResult = {id: nextValueId(), type: IRTPointer(field.type.irType, false)};
@@ -6092,14 +6091,14 @@ private class FunctionBuilder {
 			return unsupported(expression, 'enum-constructor:${enumField.name}:argument-count=${arguments.length},expected=${tagCase.payload.length}');
 		}
 		final payloadIds:Array<String> = [];
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		for (index in 0...arguments.length) {
 			final payload = tagCase.payload[index];
 			final argument = arguments[index];
 			final lowered = coerce(lowerValue(argument, payload.valueType), payload.valueType, argument.pos,
 				'enum-constructor:${enumField.name}:payload:$index');
 			final ownedPayload = captureManagedValue(lowered, payload.valueType, argument.pos, 'enum-payload-$index');
-			final payloadSource = HaxeSourceSpan.fromPosition(argument.pos, input.sourcePath);
+			final payloadSource = sourceSpan(argument.pos);
 			if (payload.indirect) {
 				final pointer:HxcIRResult = {id: nextValueId(), type: payload.storageType()};
 				appendInstruction(pointer, IRIOAllocate(payload.valueType.irType, IRAOwned, IRIRuntime("alloc"), {
@@ -6144,7 +6143,7 @@ private class FunctionBuilder {
 		final result:HxcIRResult = {id: nextValueId(), type: payload.storageType()};
 		appendInstruction(result,
 			IRIOProjectTag(receiverValue.id, tagCase.name, payloadIndex, IRTCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "enum-payload-project");
+			sourceSpan(expression.pos), "enum-payload-project");
 		registerValueTemporary(result.id, "enum-payload-project");
 		if (payload.indirect) {
 			return loadPlace({place: IRPDereference(result.id), mapping: payload.valueType, mutable: false}, expression.pos, "enum-recursive-payload-load");
@@ -6181,8 +6180,7 @@ private class FunctionBuilder {
 			namedValues.push({name: field.name, valueId: restoreStagedValue(value, 'record-field-${field.name}-load')});
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOConstructAggregate(aggregate.instanceId, namedValues), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"construct-record");
+		appendInstruction(result, IRIOConstructAggregate(aggregate.instanceId, namedValues), sourceSpan(expression.pos), "construct-record");
 		registerValueTemporary(result.id, "record-result");
 		if (aggregate.managedLifetime)
 			freshManagedAggregateValueIds.set(result.id, true);
@@ -6220,7 +6218,7 @@ private class FunctionBuilder {
 		so those move directly into the record without an extra retain.
 	**/
 	function captureManagedValue(value:LoweredValue, mapping:CBodyValueType, position:Position, role:String):LoweredValue {
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		if (mapping.irType == IRTManagedString) {
 			if (freshManagedStringValueIds.remove(value.id))
 				return value;
@@ -6300,14 +6298,14 @@ private class FunctionBuilder {
 		if (typeKey(expressionType.irType) != typeKey(field.type.irType)) {
 			return unsupported(expression, 'TField($fieldName:typed-result-mismatch)');
 		}
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		if (optional != null) {
 			// Haxe permits a field read through `Null<Record>` and raises at runtime
 			// when the value is absent. Keep that observable check in HxcIR before
 			// projecting the payload; the C emitter may not silently read `.value`.
 			final nullable = coerce(lowerValue(receiver, receiverType), receiverType, receiver.pos, 'TField($fieldName:optional-receiver)');
 			appendInstruction(null, IRIONullCheck(nullable.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-				HaxeSourceSpan.fromPosition(receiver.pos, input.sourcePath), "optional-record-field-null-check");
+				sourceSpan(receiver.pos), "optional-record-field-null-check");
 			final unwrappedResult:HxcIRResult = {id: nextValueId(), type: payloadType.irType};
 			appendInstruction(unwrappedResult, IRIOConvert(nullable.id, IRCNullableUnwrap, payloadType.irType, IRIStatic, null), source,
 				"optional-record-field-unwrap");
@@ -6371,12 +6369,12 @@ private class FunctionBuilder {
 			return unsupported(expression, 'TField($fieldName:receiver-value-not-class-reference)');
 		if (isNullableClassReference(receiverValue.type)) {
 			appendInstruction(null, IRIONullCheck(receiverValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-				HaxeSourceSpan.fromPosition(receiver.pos, input.sourcePath), "class-field-null-check");
+				sourceSpan(receiver.pos), "class-field-null-check");
 		}
 		final place = IRPField(IRPDereference(receiverValue.id), fieldName);
 		if (ownedChild != null) {
 			final result:HxcIRResult = {id: nextValueId(), type: IRTPointer(IRTInstance(ownedChild.instanceId), false)};
-			appendInstruction(result, IRIOBorrowClassField(place), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "owned-class-field-borrow");
+			appendInstruction(result, IRIOBorrowClassField(place), sourceSpan(expression.pos), "owned-class-field-borrow");
 			registerValueTemporary(result.id, "owned-class-field-address");
 			borrowedReferenceValueIds.set(result.id, true);
 			return {id: result.id, type: result.type, mapping: CBodyValueType.classReference(ownedChild, false)};
@@ -6392,7 +6390,7 @@ private class FunctionBuilder {
 		// storage declared by the condition expression.
 		appendScopedCleanupInstructions(conditionCleanupDepth);
 		restoreCleanupDepth(conditionCleanupDepth);
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final trueBlock = createGeneratedBlock("if-true", source);
 		if (whenFalse == null) {
 			final joinBlock = createGeneratedBlock("if-join", source);
@@ -6455,7 +6453,7 @@ private class FunctionBuilder {
 	}
 
 	function lowerPreTestLoop(expression:TypedExpr, condition:TypedExpr, body:TypedExpr):Void {
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final conditionBlock = createGeneratedBlock("while-condition", source);
 		final bodyBlock = createGeneratedBlock("while-body", source);
 		final exitBlock = createGeneratedBlock("while-exit", source);
@@ -6486,7 +6484,7 @@ private class FunctionBuilder {
 	}
 
 	function lowerPostTestLoop(expression:TypedExpr, condition:TypedExpr, body:TypedExpr):Void {
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final bodyBlock = createGeneratedBlock("do-body", source);
 		final conditionBlock = reserveGeneratedBlock("do-condition", source);
 		final exitBlock = reserveGeneratedBlock("do-exit", source);
@@ -6537,7 +6535,7 @@ private class FunctionBuilder {
 			control.usedContinue = true;
 		}
 		final target = isBreak ? control.breakTargetBlockId : control.continueTargetBlockId;
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		appendScopedCleanupInstructions(control.cleanupDepth);
 		currentBlock.terminator = {
 			kind: IRTJump(edge(target)),
@@ -6562,7 +6560,7 @@ private class FunctionBuilder {
 			return;
 		}
 		final subjectValue = lowerSwitchSubject(subject);
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final dispatchBlock = currentBlock;
 		final caseBlocks:Array<MutableBodyBlock> = [];
 		for (index in 0...cases.length) {
@@ -6633,7 +6631,7 @@ private class FunctionBuilder {
 			return unsupported(subject, "TSwitch(optional-payload-not-primitive)");
 		final subjectMapping = bodyValueType(subject.t, subject.pos, "TSwitch(optional-subject-type)");
 		final subjectValue = coerce(lowerValue(subject, subjectMapping), subjectMapping, subject.pos, "TSwitch(optional-subject)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		// The presence test remains in this block, while unwrapping happens in
 		// the present-only child block. Save a local load (not only parameters
 		// are valid across HxcIR block boundaries) so a named Haxe local or call
@@ -6728,7 +6726,7 @@ private class FunctionBuilder {
 	function lowerStatementStringSwitch(expression:TypedExpr, subject:TypedExpr, subjectMapping:CBodyValueType, cases:Array<TypedSwitchArm>,
 			defaultExpression:Null<TypedExpr>):Void {
 		final subjectValue = coerce(lowerValue(subject, subjectMapping), subjectMapping, subject.pos, "TSwitch(string-subject)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final dispatchBlock = currentBlock;
 		final caseBlocks:Array<MutableBodyBlock> = [];
 		for (index in 0...cases.length)
@@ -6790,7 +6788,7 @@ private class FunctionBuilder {
 			return unsupported(expression, "TSwitch(non-exhaustive-enum-statement-without-default)");
 		}
 		final exhaustive = enumSwitchCoveredCaseCount(cases, enumValue) == enumValue.cases.length;
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final dispatchBlock = currentBlock;
 		final caseBlocks:Array<MutableBodyBlock> = [];
 		for (index in 0...cases.length)
@@ -6868,7 +6866,7 @@ private class FunctionBuilder {
 		if (resultMapping.irType == IRTVoid) {
 			return unsupported(expression, "TSwitch(Void-as-value)");
 		}
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final managedStringResult = resultMapping.irType == IRTManagedString;
 		final initialResultId:Null<String> = if (managedStringResult) {
 			null;
@@ -6967,7 +6965,7 @@ private class FunctionBuilder {
 		}
 		if (resultMapping.irType == IRTVoid)
 			return unsupported(expression, "TSwitch(string-Void-as-value)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final managedStringResult = resultMapping.irType == IRTManagedString;
 		final initialResultId:Null<String> = if (managedStringResult) {
 			null;
@@ -7058,7 +7056,7 @@ private class FunctionBuilder {
 			requirePrimitive(resultMapping, expression.pos, "TSwitch(enum-result-type)");
 		if (resultMapping.irType == IRTVoid)
 			return unsupported(expression, "TSwitch(enum-Void-as-value)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final resultLocalId = if (managedStringResult) {
 			final localId = declareFlowLocal(resultMapping, source, "enum-switch-managed-result");
 			appendInstruction(null, IRIODeclareManagedCarrier(IRPLocal(localId), IRIRuntime("string")), source, "enum-switch-managed-result-declare");
@@ -7173,7 +7171,7 @@ private class FunctionBuilder {
 			// null-check coalescer can remove a repeated check only when dominance
 			// proves an earlier check covers this exact value.
 			final nullable = coerce(lowerValue(expression, mapping), mapping, expression.pos, '$role:nullable-value');
-			final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			final source = sourceSpan(expression.pos);
 			appendInstruction(null, IRIONullCheck(nullable.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))), source,
 				'$role-null-check');
 			final unwrapped:HxcIRResult = {id: nextValueId(), type: optional.payload.irType};
@@ -7239,7 +7237,7 @@ private class FunctionBuilder {
 				result.push({
 					value: stringSwitchConstant(value),
 					targetBlockId: blocks[index].id,
-					source: HaxeSourceSpan.fromPosition(value.pos, input.sourcePath),
+					source: sourceSpan(value.pos),
 					position: value.pos
 				});
 			}
@@ -7505,7 +7503,7 @@ private class FunctionBuilder {
 			if (!mapping.hasExactNullCarrier() && mapping.optionalValue() == null)
 				return unsupported(expression, "TConst(TNull:requires-nullable-reference-or-direct-optional-context)");
 			final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-			appendInstruction(result, IRIOConstant(IRCNull), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
+			appendInstruction(result, IRIOConstant(IRCNull), sourceSpan(expression.pos),
 				mapping.optionalValue() == null ? "null-reference" : "null-direct-optional");
 			final optional = mapping.optionalValue();
 			if (optional != null && optional.managedLifetime)
@@ -7524,7 +7522,7 @@ private class FunctionBuilder {
 			if (byteLength == null)
 				return unsupported(expression, "TConst(TString:malformed-Unicode-literal)");
 			final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-			final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			final source = sourceSpan(expression.pos);
 			appendInstruction(result, IRIOConstant(IRCString(text, byteLength)), source, "static-string-literal");
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-literal", "static-value", mapping.cSpelling, source, expression.pos,
 				"direct-string-value"));
@@ -7562,7 +7560,7 @@ private class FunctionBuilder {
 				unsupported(expression, nodeName(expression));
 		};
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOConstant(value), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "constant");
+		appendInstruction(result, IRIOConstant(value), sourceSpan(expression.pos), "constant");
 		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(mapping)};
 	}
 
@@ -7637,8 +7635,7 @@ private class FunctionBuilder {
 				case BCKSpan(mutable):
 					final mapping = CBodyValueType.span(collection.element, mutable);
 					final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-					appendInstruction(result, IRIOLoad(IRPLocal(collection.localId)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-						"load-span-borrow");
+					appendInstruction(result, IRIOLoad(IRPLocal(collection.localId)), sourceSpan(expression.pos), "load-span-borrow");
 					return {id: result.id, type: result.type, mapping: mapping};
 				case BCKFixedArray(_):
 					return unsupported(expression, 'TLocal(${variable.name}:fixed-array-value-escape)');
@@ -7664,7 +7661,7 @@ private class FunctionBuilder {
 			return materializeManagedFlowCarrier(variable.id, managedCarrier, expression.pos);
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOLoad(IRPLocal(localId)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "load");
+		appendInstruction(result, IRIOLoad(IRPLocal(localId)), sourceSpan(expression.pos), "load");
 		registerValueTemporary(result.id, "load-result");
 		if (isBorrowedReferenceLocal(localId))
 			borrowedReferenceValueIds.set(result.id, true);
@@ -7684,7 +7681,7 @@ private class FunctionBuilder {
 	 * the existing local-return rule.
 	 */
 	function materializeManagedFlowCarrier(compilerId:Int, binding:CBodyManagedFlowCarrier, position:Position):LoweredValue {
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final moved = moveManagedCarrier(binding, source, "managed-flow-carrier");
 		final localId = createFlowLocal(binding.mapping, moved.id, source, "managed-flow-owner");
 		final cleanupId = 'managed-flow-owner.$localId.release';
@@ -7748,7 +7745,7 @@ private class FunctionBuilder {
 			return lowerStackClosureLiteral(expression, adapter, expectedMapping, closure);
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOFunctionReference(targetId), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "function-reference");
+		appendInstruction(result, IRIOFunctionReference(targetId), sourceSpan(expression.pos), "function-reference");
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
 		return expectedMapping == null ? lowered : coerce(lowered, expectedMapping, expression.pos, "function-reference:contextual-type");
 	}
@@ -7771,8 +7768,7 @@ private class FunctionBuilder {
 		if (mapping.functionValue() == null || mapping.stackClosureValue() != null)
 			return unsupported(expression, 'TFunction(lambda:${target.irId}:signature-lost)');
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOFunctionReference(target.irId), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"non-capturing-function-reference");
+		appendInstruction(result, IRIOFunctionReference(target.irId), sourceSpan(expression.pos), "non-capturing-function-reference");
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
 		return contextual == null ? lowered : coerce(lowered, contextual, expression.pos, "function-literal:contextual-type");
 	}
@@ -7780,7 +7776,7 @@ private class FunctionBuilder {
 	/** Build the typed `{ invoke, context }` value for one synchronous call. */
 	function lowerStackClosureLiteral(expression:TypedExpr, target:PreparedBodyFunction, mapping:CBodyValueType,
 			closure:{carrier:CPreparedBodyAggregate, parameters:Array<CBodyValueType>, result:CBodyValueType}):LoweredValue {
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final contextMapping = CBodyValueType.closureContext();
 		if (target.parameters.length != closure.parameters.length + 1 || target.parameters[0].mapping.kind != CBVKClosureContext)
 			return unsupported(expression, 'TFunction(stack-closure-adapter-signature:${target.irId})');
@@ -7835,7 +7831,7 @@ private class FunctionBuilder {
 		final parameter = parameterValuesByCompilerId.get(capture.compilerId);
 		if (parameter == null)
 			return unsupportedAt(position, 'TFunction(capture:${capture.sourceName}:outside-addressable-owner)');
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final shadowId = createFlowLocal(capture.mapping, parameter.id, source, 'stack-closure-capture:${capture.sourceName}');
 		final place:LoweredPlace = {place: IRPLocal(shadowId), mapping: capture.mapping, mutable: true};
 		capturedParameterShadowPlaces.set(capture.compilerId, place);
@@ -7860,8 +7856,7 @@ private class FunctionBuilder {
 			if (typeKey(signature.parameters[index].irType) != typeKey(adapter.parameters[index].mapping.irType))
 				return unsupported(expression, 'enum-constructor-function:${enumField.name}:adapter-parameter-$index-drift');
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOFunctionReference(adapter.irId), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"enum-constructor-function-reference");
+		appendInstruction(result, IRIOFunctionReference(adapter.irId), sourceSpan(expression.pos), "enum-constructor-function-reference");
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
 		return expectedMapping == null ? lowered : coerce(lowered, expectedMapping, expression.pos, "enum-constructor-function-reference:contextual-type");
 	}
@@ -7916,8 +7911,8 @@ private class FunctionBuilder {
 				return unsupported(left, "TBinop(OpAssign:managed-flow-carrier-already-moved)");
 			final binding = managedCarrier.binding;
 			final value = coerce(lowerValue(right, binding.mapping), binding.mapping, right.pos, "TBinop(OpAssign:managed-flow-carrier-right)");
-			appendManagedCarrierAcquire(binding.localId, value, binding.mapping, binding.managedEnum,
-				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), expression.pos, "managed-flow-carrier-acquire");
+			appendManagedCarrierAcquire(binding.localId, value, binding.mapping, binding.managedEnum, sourceSpan(expression.pos), expression.pos,
+				"managed-flow-carrier-acquire");
 			return value;
 		}
 		if (newExpression(right) != null && !canRetainFreshManagedClassInField(left, right))
@@ -7949,7 +7944,7 @@ private class FunctionBuilder {
 			if (destroyId == null)
 				throw new CBodyEmissionError('managed optional `${optional.planId}` lost its destroy plan');
 			final replacement = captureManagedValue(value, target.mapping, right.pos, "optional-assignment-replacement");
-			final sourceSpan = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			final sourceSpan = sourceSpan(expression.pos);
 			// Capture the replacement before destroying the prior owner. Besides
 			// preserving failure behavior, this makes `value = value` safe.
 			appendInstruction(null, IRIORelease(stableTarget.place, IRIProgramLocal(destroyId)), sourceSpan, "release-optional-assignment-target");
@@ -7958,7 +7953,7 @@ private class FunctionBuilder {
 		}
 		if (target.mapping.irType == IRTManagedString) {
 			final replacement = captureManagedValue(value, target.mapping, right.pos, "string-assignment-replacement");
-			final sourceSpan = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			final sourceSpan = sourceSpan(expression.pos);
 			// Retain or transfer the replacement before releasing the old target.
 			// This ordering makes `text = text` safe and also preserves the old
 			// value if evaluating the right side produced the same owner.
@@ -7977,12 +7972,12 @@ private class FunctionBuilder {
 			// preserving the value when both sides alias the same nested owner,
 			// this makes `field = field` safe.
 			final replacement = captureManagedValue(value, target.mapping, right.pos, "record-assignment-replacement");
-			final sourceSpan = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			final sourceSpan = sourceSpan(expression.pos);
 			appendInstruction(null, IRIORelease(stableTarget.place, IRIProgramLocal(destroyId)), sourceSpan, "release-record-assignment-target");
 			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-record-assignment-replacement");
 			return replacement;
 		}
-		appendInstruction(null, IRIOStore(stableTarget.place, value.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "store");
+		appendInstruction(null, IRIOStore(stableTarget.place, value.id), sourceSpan(expression.pos), "store");
 		return value;
 	}
 
@@ -8013,7 +8008,7 @@ private class FunctionBuilder {
 		if (typeKey(resultMapping.irType) != typeKey(array.element.irType))
 			return unsupported(expression, "TArray(set:assignment-result-mismatch)");
 		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("array", "set"),
 			arguments: [receiver.id, index.id, element.id],
@@ -8040,7 +8035,7 @@ private class FunctionBuilder {
 			rightValue = stabilizeFreshManagedString(rightValue, right.pos, "compound-string-right");
 			final nextValue = lowerManagedStringConcatValues(expression, stableOldValue, rightValue, target.mapping, "compound-string-concat");
 			final stableTarget = restoreStagedPlace(stagedTarget, "compound-string-target");
-			final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+			final source = sourceSpan(expression.pos);
 			appendInstruction(null, IRIORelease(stableTarget.place, IRIRuntime("string")), source, "release-compound-string-target");
 			appendInstruction(null, IRIOStore(stableTarget.place, nextValue.id), source, "store-compound-string-result");
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release", "ordinary Haxe managed String cleanup", source, expression.pos));
@@ -8050,15 +8045,14 @@ private class FunctionBuilder {
 		}
 		final rightCreatesFlow = expressionCreatesFlow(right);
 		final stagedTarget = stageFlowPlace(target, left.pos, rightCreatesFlow, "compound-target");
-		final oldValueLocal = rightCreatesFlow ? createFlowLocal(oldValue.mapping, oldValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"compound-left") : null;
+		final oldValueLocal = rightCreatesFlow ? createFlowLocal(oldValue.mapping, oldValue.id, sourceSpan(left.pos), "compound-left") : null;
 		final rightValue = lowerValue(right);
 		final stableOldValue = oldValueLocal == null ? oldValue : loadPlace({place: IRPLocal(oldValueLocal), mapping: oldValue.mapping, mutable: true},
 			left.pos, "compound-left-load");
 		final nextValue = lowerBinaryValues(expression, operation, stableOldValue, rightValue, "compound", target.mapping);
 		final stored = coerce(nextValue, target.mapping, expression.pos, "TBinop(OpAssignOp:result)");
 		final stableTarget = restoreStagedPlace(stagedTarget, "compound-target");
-		appendInstruction(null, IRIOStore(stableTarget.place, stored.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "compound-store");
+		appendInstruction(null, IRIOStore(stableTarget.place, stored.id), sourceSpan(expression.pos), "compound-store");
 		return stored;
 	}
 
@@ -8079,7 +8073,7 @@ private class FunctionBuilder {
 		if (typeKey(argumentMapping.irType) != typeKey(IRTInt(32, true)))
 			return unsupported(arguments[0], "TCall(String.fromCharCode:argument-requires-Haxe-Int)");
 		final scalar = coerce(lowerValue(arguments[0], argumentMapping), argumentMapping, arguments[0].pos, "TCall(String.fromCharCode:argument)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("string", "from-scalar"),
@@ -8101,7 +8095,7 @@ private class FunctionBuilder {
 		var leftValue = lowerStringConcatOperand(left, leftMapping, resultMapping, "TBinop(String-concat:left)");
 		leftValue = stabilizeFreshManagedString(leftValue, left.pos, "string-concat-left");
 		final stableLeftValue = if (expressionCreatesFlow(right)) {
-			final localId = createFlowLocal(leftMapping, leftValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "string-concat-left");
+			final localId = createFlowLocal(leftMapping, leftValue.id, sourceSpan(left.pos), "string-concat-left");
 			loadPlace({place: IRPLocal(localId), mapping: leftMapping, mutable: false}, left.pos, "string-concat-left-load");
 		} else {
 			leftValue;
@@ -8127,7 +8121,7 @@ private class FunctionBuilder {
 	/** Build one owned concatenation after both immutable operands are stable borrows. */
 	function lowerManagedStringConcatValues(expression:TypedExpr, leftValue:LoweredValue, rightValue:LoweredValue, resultMapping:CBodyValueType,
 			role:String):LoweredValue {
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("string", "concat"),
@@ -8184,8 +8178,7 @@ private class FunctionBuilder {
 			}
 		}
 		final leftValue = lowerValue(left);
-		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(leftValue.mapping, leftValue.id,
-			HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "binary-left") : null;
+		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(leftValue.mapping, leftValue.id, sourceSpan(left.pos), "binary-left") : null;
 		final rightValue = lowerValue(right);
 		final stableLeftValue = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: leftValue.mapping, mutable: true},
 			left.pos, "binary-left-load");
@@ -8228,7 +8221,7 @@ private class FunctionBuilder {
 		if (boolMapping.irType != IRTBool)
 			return unsupported(expression, "TBinop(enum-index-result-not-Bool)");
 
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final matched:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(matched, IRIOMatchTag(subjectValue.id, tagCase.name), source, "enum-index-match");
 		appendScopedCleanupInstructions(scopedSubject.cleanupDepth);
@@ -8309,7 +8302,7 @@ private class FunctionBuilder {
 				return unsupported(expression, "TBinop(String-null-equality:result-not-Bool)");
 			final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 			appendInstruction(result, IRIOUnary(operation == OpEq ? "haxe.string.is-null" : "haxe.string.is-not-null", value.id, IRIStatic),
-				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "string-null-equality");
+				sourceSpan(expression.pos), "string-null-equality");
 			return {id: result.id, type: result.type, mapping: boolMapping};
 		}
 		if (leftMapping != null
@@ -8332,7 +8325,7 @@ private class FunctionBuilder {
 			&& rightLiteral ? ".non-null" : leftLiteral ? ".left-non-null" : rightLiteral ? ".right-non-null" : "";
 		appendInstruction(result,
 			IRIOBinary('${operation == OpEq ? "haxe.string.equal" : "haxe.string.not-equal"}$proofSuffix', stableLeftId, rightValue.id, IRIStatic),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "string-equality");
+			sourceSpan(expression.pos), "string-equality");
 		registerValueTemporary(result.id, "string-equality-result");
 		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(String-equality:result-type)");
 		if (boolMapping.irType != IRTBool)
@@ -8364,7 +8357,7 @@ private class FunctionBuilder {
 			return unsupported(expression, "TBinop(direct-optional-null-equality:result-not-Bool)");
 		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(result, IRIOUnary(operation == OpEq ? "haxe.direct-optional.is-null" : "haxe.direct-optional.is-not-null", value.id, IRIStatic),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "direct-optional-null-equality");
+			sourceSpan(expression.pos), "direct-optional-null-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
@@ -8401,7 +8394,7 @@ private class FunctionBuilder {
 		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(direct-optional-scalar-equality:result)");
 		if (boolMapping.irType != IRTBool)
 			return unsupported(expression, "TBinop(direct-optional-scalar-equality:result-not-Bool)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		// The comparison below introduces a new control-flow block. Values defined
 		// only in the predecessor do not magically exist in that block, so save
 		// both evaluated operands in locals and load them after taking the
@@ -8472,8 +8465,8 @@ private class FunctionBuilder {
 			return unsupported(expression, 'TBinop(payload-enum-equality-requires-structural-semantics:${leftEnum.haxePath})');
 
 		final leftValue = coerce(lowerValue(left, leftMapping), leftMapping, left.pos, "TBinop(fieldless-enum-equality:left)");
-		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(leftMapping, leftValue.id,
-			HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "fieldless-enum-equality-left") : null;
+		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(leftMapping, leftValue.id, sourceSpan(left.pos),
+			"fieldless-enum-equality-left") : null;
 		final rightValue = coerce(lowerValue(right, rightMapping), rightMapping, right.pos, "TBinop(fieldless-enum-equality:right)");
 		final stableLeft = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: leftMapping, mutable: true}, left.pos,
 			"fieldless-enum-equality-left-load");
@@ -8482,7 +8475,7 @@ private class FunctionBuilder {
 			return unsupported(expression, "TBinop(fieldless-enum-equality:result-not-Bool)");
 		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(result, IRIOBinary(operation == OpEq ? "haxe.enum-tag.equal" : "haxe.enum-tag.not-equal", stableLeft.id, rightValue.id, IRIStatic),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "fieldless-enum-equality");
+			sourceSpan(expression.pos), "fieldless-enum-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
@@ -8510,8 +8503,7 @@ private class FunctionBuilder {
 		if (target.classValue() == null)
 			return unsupported(expression, "TBinop(class-reference-equality-target-not-class)");
 		final leftValue = coerce(lowerValue(left, target), target, left.pos, "TBinop(class-reference-equality:left)");
-		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(target, leftValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
-			"class-equality-left") : null;
+		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(target, leftValue.id, sourceSpan(left.pos), "class-equality-left") : null;
 		final rightValue = coerce(lowerValue(right, target), target, right.pos, "TBinop(class-reference-equality:right)");
 		final stableLeft = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: target, mutable: true}, left.pos,
 			"class-equality-left-load");
@@ -8521,7 +8513,7 @@ private class FunctionBuilder {
 		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(result,
 			IRIOBinary(operation == OpEq ? "haxe.class-reference.equal" : "haxe.class-reference.not-equal", stableLeft.id, rightValue.id, IRIStatic),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "class-reference-equality");
+			sourceSpan(expression.pos), "class-reference-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
@@ -8555,7 +8547,7 @@ private class FunctionBuilder {
 		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(result,
 			IRIOBinary(operation == OpEq ? "haxe.array-reference.equal" : "haxe.array-reference.not-equal", stableLeftId, rightValue.id, IRIStatic),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "array-reference-equality");
+			sourceSpan(expression.pos), "array-reference-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
@@ -8589,7 +8581,7 @@ private class FunctionBuilder {
 		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		appendInstruction(result,
 			IRIOBinary(operation == OpEq ? "haxe.string-map-reference.equal" : "haxe.string-map-reference.not-equal", stableLeftId, rightValue.id, IRIStatic),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "string-map-reference-equality");
+			sourceSpan(expression.pos), "string-map-reference-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
@@ -8764,8 +8756,7 @@ private class FunctionBuilder {
 		final left = coerce(leftValue, CBodyValueType.primitive(decision.leftOperand), expression.pos, 'TBinop($operation:left)');
 		final right = coerce(rightValue, CBodyValueType.primitive(decision.rightOperand), expression.pos, 'TBinop($operation:right)');
 		final result:HxcIRResult = {id: nextValueId(), type: decision.result.irType};
-		appendInstruction(result, IRIOBinary(decision.operationId, left.id, right.id, decision.implementation),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role);
+		appendInstruction(result, IRIOBinary(decision.operationId, left.id, right.id, decision.implementation), sourceSpan(expression.pos), role);
 		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(decision.result)};
 	}
 
@@ -8790,8 +8781,7 @@ private class FunctionBuilder {
 		}
 		final operand = coerce(operandValue, CBodyValueType.primitive(decision.operand), expression.pos, 'TUnop($operation:operand)');
 		final result:HxcIRResult = {id: nextValueId(), type: decision.result.irType};
-		appendInstruction(result, IRIOUnary(decision.operationId, operand.id, decision.implementation),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "unary");
+		appendInstruction(result, IRIOUnary(decision.operationId, operand.id, decision.implementation), sourceSpan(expression.pos), "unary");
 		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(decision.result)};
 	}
 
@@ -8808,10 +8798,10 @@ private class FunctionBuilder {
 			case IRTFloat(64): IRCFloat("1.0");
 			case _: return unsupported(expression, 'TUnop(${increment ? "OpIncrement" : "OpDecrement"}:non-numeric)');
 		};
-		appendInstruction(oneResult, IRIOConstant(one), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role + "-one");
+		appendInstruction(oneResult, IRIOConstant(one), sourceSpan(expression.pos), role + "-one");
 		final oneValue:LoweredValue = {id: oneResult.id, type: oneResult.type, mapping: target.mapping};
 		final nextValue = lowerBinaryValues(expression, increment ? OpAdd : OpSub, oldValue, oneValue, role, target.mapping);
-		appendInstruction(null, IRIOStore(target.place, nextValue.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role + "-store");
+		appendInstruction(null, IRIOStore(target.place, nextValue.id), sourceSpan(expression.pos), role + "-store");
 		return postFix ? oldValue : nextValue;
 	}
 
@@ -8822,7 +8812,7 @@ private class FunctionBuilder {
 		}
 		final boolType = CBodyValueType.primitive(boolMapping);
 		final leftValue = coerce(lowerValue(left), boolType, left.pos, "TBinop(short-circuit:left)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final resultLocalId = createFlowLocal(boolType, leftValue.id, source, "short-circuit-result");
 		final rhsBlock = createGeneratedBlock("short-circuit-rhs", source);
 		final joinBlock = createGeneratedBlock("short-circuit-join", source);
@@ -8878,7 +8868,7 @@ private class FunctionBuilder {
 			return unsupported(expression,
 				'TIf(Void-as-value:${expectedMapping == null ? "typed-expression" : "contextual"}:function-return=${prepared.returnMapping.cSpelling})');
 		}
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final resultLocalId = if (managedCarrierResult) {
 			final destroyImplementation = managedCarrierImplementation(resultMapping, managedEnumResult, false);
 			final localId = declareFlowLocal(resultMapping, source, "conditional-managed-result");
@@ -9085,7 +9075,7 @@ private class FunctionBuilder {
 					return unsupported(expression, 'TField($fieldName:receiver-place-value-not-class-reference)');
 				if (isNullableClassReference(receiverValue.type)) {
 					appendInstruction(null, IRIONullCheck(receiverValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-						HaxeSourceSpan.fromPosition(receiver.pos, input.sourcePath), "class-field-null-check");
+						sourceSpan(receiver.pos), "class-field-null-check");
 				}
 				{
 					place: IRPField(IRPDereference(receiverValue.id), fieldName),
@@ -9111,8 +9101,7 @@ private class FunctionBuilder {
 		final indexType = CBodyValueType.primitive(indexMapping);
 		final indexValue = coerce(lowerValue(index, indexType), indexType, index.pos, "TArray(index)");
 		final policy = boundsPolicy(binding.length, index);
-		appendInstruction(null, IRIOBoundsCheck(binding.place, indexValue.id, policy), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"collection-bounds");
+		appendInstruction(null, IRIOBoundsCheck(binding.place, indexValue.id, policy), sourceSpan(expression.pos), "collection-bounds");
 		final mutable = switch binding.kind {
 			case BCKFixedArray(_): true;
 			case BCKSpan(value): value;
@@ -9174,7 +9163,7 @@ private class FunctionBuilder {
 
 	function loadPlace(place:LoweredPlace, position:Position, role:String):LoweredValue {
 		final result:HxcIRResult = {id: nextValueId(), type: place.mapping.irType};
-		appendInstruction(result, IRIOLoad(place.place), HaxeSourceSpan.fromPosition(position, input.sourcePath), role);
+		appendInstruction(result, IRIOLoad(place.place), sourceSpan(position), role);
 		registerValueTemporary(result.id, role + "-result");
 		return {id: result.id, type: result.type, mapping: place.mapping};
 	}
@@ -9230,8 +9219,8 @@ private class FunctionBuilder {
 					return unsupported(expression, 'TCall(Std.int:primitive-conversion-must-not-use-runtime:$featureId)');
 			}
 			final result:HxcIRResult = {id: nextValueId(), type: target.irType};
-			appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, decision.implementation, null),
-				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "std-int");
+			appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, decision.implementation, null), sourceSpan(expression.pos),
+				"std-int");
 			return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(target)};
 		}
 		if (isStdString(call.callee))
@@ -9291,7 +9280,7 @@ private class FunctionBuilder {
 				'static-call-argument-$index'));
 		}
 		final arguments = restoreCallArguments(stagedArguments, "static-call-argument");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final returnType = target.returnMapping.irType;
 		if (returnType == IRTVoid) {
 			final callInstruction = instruction(null, IRIOCall({
@@ -9377,7 +9366,7 @@ private class FunctionBuilder {
 				'indirect-call-argument-$index'));
 		}
 		final arguments = restoreCallArguments(stagedArguments, "indirect-call-argument");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final returnType = signature.result.irType;
 		if (returnType == IRTVoid) {
 			appendInstruction(null, IRIOCall({
@@ -9420,7 +9409,7 @@ private class FunctionBuilder {
 
 	/** Keep a callable available when later argument lowering creates branches. */
 	function stageCallableAcrossArguments(callable:LoweredValue, position:Position):LoweredValue {
-		final localId = createFlowLocal(callable.mapping, callable.id, HaxeSourceSpan.fromPosition(position, input.sourcePath), "indirect-callee");
+		final localId = createFlowLocal(callable.mapping, callable.id, sourceSpan(position), "indirect-callee");
 		return loadPlace({place: IRPLocal(localId), mapping: callable.mapping, mutable: false}, position, "indirect-callee-reload");
 	}
 
@@ -9460,8 +9449,7 @@ private class FunctionBuilder {
 			namedValues.push({name: field.name, valueId: restoreStagedValue(value, 'imported-struct-field-${field.name}-load')});
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOConstructAggregate(imported.instanceId, namedValues), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"construct-imported-struct");
+		appendInstruction(result, IRIOConstructAggregate(imported.instanceId, namedValues), sourceSpan(expression.pos), "construct-imported-struct");
 		registerValueTemporary(result.id, "imported-struct-result");
 		return {id: result.id, type: result.type, mapping: mapping};
 	}
@@ -9507,8 +9495,8 @@ private class FunctionBuilder {
 					unsupported(expression, 'TCall($surface:source-range-not-contained-by-target)');
 				}
 				final result:HxcIRResult = {id: nextValueId(), type: target.irType};
-				appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, IRIStatic, null),
-					HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), mode == ICExact ? "integer-conversion-exact" : "integer-conversion-modulo");
+				appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, IRIStatic, null), sourceSpan(expression.pos),
+					mode == ICExact ? "integer-conversion-exact" : "integer-conversion-modulo");
 				{id: result.id, type: result.type, mapping: target};
 			case CPConversionRejected(reason):
 				unsupported(expression, 'TCall($surface:unsupported:$reason)');
@@ -9544,8 +9532,8 @@ private class FunctionBuilder {
 					unsupported(expression, 'TCall($surface:must-be-direct-and-infallible)');
 				}
 				final result:HxcIRResult = {id: nextValueId(), type: target.irType};
-				appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, IRIStatic, null),
-					HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), mode == FCNarrow ? "float32-narrow" : "float32-widen");
+				appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, IRIStatic, null), sourceSpan(expression.pos),
+					mode == FCNarrow ? "float32-narrow" : "float32-widen");
 				{id: result.id, type: result.type, mapping: target};
 			case CPConversionElided:
 				unsupported(expression, 'TCall($surface:unexpected-elided-conversion)');
@@ -9568,7 +9556,7 @@ private class FunctionBuilder {
 			stagedArguments.push(stageFlowValue(value, argument, laterExpressionCreatesFlow(argumentExpressions, index), 'native-call-argument-$index'));
 		}
 		final arguments = restoreCallArguments(stagedArguments, "native-call-argument");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		if (target.returnType.irType == IRTVoid) {
 			appendInstruction(null, IRIOCall({
 				dispatch: IRCDNative(target.id),
@@ -9611,8 +9599,7 @@ private class FunctionBuilder {
 				target == null ? "A static c.CString literal is not valid Unicode-scalar text." : 'Imported C function `${target.haxePath}` argument $argumentIndex is not valid Unicode-scalar text.');
 		final mapping = CBodyValueType.cString();
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		appendInstruction(result, IRIOConstant(IRCCStringLiteral(text, byteLength)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-			"cstring-literal");
+		appendInstruction(result, IRIOConstant(IRCCStringLiteral(text, byteLength)), sourceSpan(expression.pos), "cstring-literal");
 		return {id: result.id, type: result.type, mapping: mapping};
 	}
 
@@ -9698,7 +9685,7 @@ private class FunctionBuilder {
 			loweredElement = stabilizeFreshManagedAggregate(loweredElement, element.pos, 'array-literal-element-$index');
 			arguments.push(loweredElement.id);
 		}
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("array", "create-literal"),
@@ -9806,7 +9793,7 @@ private class FunctionBuilder {
 		final receiver = lowerManagedArrayReceiver(receiverExpression, "length");
 		final mapping = bodyValueType(expression.t, expression.pos, "TField(Array.length:result-type)");
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("array", "length"),
 			arguments: [receiver.id],
@@ -9835,7 +9822,7 @@ private class FunctionBuilder {
 		final indexValue = coerce(lowerValue(index, indexType), indexType, index.pos, "TArray(index)");
 		final restoredReceiver = restoreStagedLoweredValue(stagedReceiver, "array-index-receiver-load");
 		final result:HxcIRResult = {id: nextValueId(), type: array.element.irType};
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("array", "get-checked"),
 			arguments: [restoredReceiver.id, indexValue.id],
@@ -9926,7 +9913,7 @@ private class FunctionBuilder {
 					return unsupported(expression, 'TCall(Array.copy:result-specialization-mismatch:${resultMapping.cSpelling})');
 				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-copy-receiver-load");
 				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				final source = sourceSpan(expression.pos);
 				appendInstruction(result, IRIOCall({
 					dispatch: IRCDRuntime("array", "copy"),
 					arguments: [callReceiver.id],
@@ -9954,13 +9941,13 @@ private class FunctionBuilder {
 				// runtime call and release it on every function exit.
 				separator = stabilizeFreshManagedString(separator, arguments[0].pos, "array-join-separator");
 				appendInstruction(null, IRIONullCheck(separator.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-					HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath), "array-join-separator-null-check");
+					sourceSpan(arguments[0].pos), "array-join-separator-null-check");
 				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-join-receiver-load");
 				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.join:result-type)");
 				if (resultMapping.irType != IRTManagedString)
 					return unsupported(expression, 'TCall(Array.join:result-requires-managed-String:${resultMapping.cSpelling})');
 				final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
-				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				final source = sourceSpan(expression.pos);
 				appendInstruction(result, IRIOCall({
 					dispatch: IRCDRuntime("array-join", "join"),
 					arguments: [callReceiver.id, separator.id],
@@ -9985,7 +9972,7 @@ private class FunctionBuilder {
 					return unsupported(expression, 'TCall(Array.pop:result-must-be-nullable-${array.element.cSpelling}:${resultMapping.cSpelling})');
 				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-pop-receiver-load");
 				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				final source = sourceSpan(expression.pos);
 				appendInstruction(result, IRIOCall({
 					dispatch: IRCDRuntime("array", "pop"),
 					arguments: [callReceiver.id],
@@ -10010,7 +9997,7 @@ private class FunctionBuilder {
 				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-push-receiver-load");
 				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.push:result-type)");
 				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				final source = sourceSpan(expression.pos);
 				appendInstruction(result, IRIOCall({
 					dispatch: IRCDRuntime("array", "push"),
 					arguments: [callReceiver.id, element.id],
@@ -10037,13 +10024,12 @@ private class FunctionBuilder {
 				// exact function pointer in one addressable local for this call so
 				// the generated typed adapter can recover it without global state or
 				// a non-portable function-pointer/object-pointer cast.
-				final comparatorLocalId = createFlowLocal(callableMapping, comparator.id, HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath),
-					"array-sort-comparator");
+				final comparatorLocalId = createFlowLocal(callableMapping, comparator.id, sourceSpan(arguments[0].pos), "array-sort-comparator");
 				comparator = loadPlace({place: IRPLocal(comparatorLocalId), mapping: callableMapping, mutable: false}, arguments[0].pos,
 					"array-sort-comparator-borrow");
 				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-sort-receiver-load");
 				aggregateRegistry.requireArraySort(array);
-				final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+				final source = sourceSpan(expression.pos);
 				appendInstruction(null, IRIOCall({
 					dispatch: IRCDRuntime("array", "sort"),
 					arguments: [callReceiver.id, comparator.id],
@@ -10117,7 +10103,7 @@ private class FunctionBuilder {
 		if (mapping.intMapValue() == null)
 			return unsupported(expression, 'TNew(IntMap:expected-type=${mapping.cSpelling})');
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("int-map", "create"),
 			arguments: [],
@@ -10160,7 +10146,7 @@ private class FunctionBuilder {
 		final loweredArguments:Array<String> = [receiver.id, key.id];
 		if (method == "set")
 			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(IntMap.set:value)").id);
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		if (method == "set") {
 			appendInstruction(null, IRIOCall({
 				dispatch: IRCDRuntime("int-map", "set"),
@@ -10192,7 +10178,7 @@ private class FunctionBuilder {
 		if (mapping.stringMapValue() == null)
 			return unsupported(expression, 'TNew(StringMap:expected-type=${mapping.cSpelling})');
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("string-map", "create"),
 			arguments: [],
@@ -10230,7 +10216,7 @@ private class FunctionBuilder {
 		}
 		if (method == "set")
 			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(StringMap.set:value)").id);
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		if (method == "set" || method == "clear") {
 			appendInstruction(null, IRIOCall({
 				dispatch: IRCDRuntime("string-map", method),
@@ -10293,7 +10279,7 @@ private class FunctionBuilder {
 		var receiver = coerce(lowerValue(access.receiver, receiverMapping), receiverMapping, access.receiver.pos, 'TCall(String.$method:receiver)');
 		receiver = stabilizeFreshManagedString(receiver, access.receiver.pos, 'string-$method-receiver');
 		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-			HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), 'string-$method-receiver-null-check');
+			sourceSpan(access.receiver.pos), 'string-$method-receiver-null-check');
 		if (method == "indexOf" || method == "lastIndexOf")
 			return lowerStringSearch(expression, receiver, arguments, method);
 		if (method == "split")
@@ -10312,7 +10298,7 @@ private class FunctionBuilder {
 		final charCodeOptional = resultMapping.optionalValue();
 		if (method == "charCodeAt" && (charCodeOptional == null || typeKey(charCodeOptional.payload.irType) != typeKey(IRTInt(32, true))))
 			return unsupported(expression, "TCall(String.charCodeAt:result-not-Null-Int)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		if (method == "substring") {
 			final hasEnd:HxcIRResult = {id: nextValueId(), type: IRTBool};
 			appendInstruction(hasEnd, IRIOConstant(IRCBool(arguments.length == 2)), source, "string-substring-has-end");
@@ -10368,12 +10354,11 @@ private class FunctionBuilder {
 		var needle = coerce(lowerValue(needleExpression, needleMapping), needleMapping, needleExpression.pos, 'TCall(String.$method:needle)');
 		needle = stabilizeFreshManagedString(needle, needleExpression.pos, 'string-$method-needle');
 		appendInstruction(null, IRIONullCheck(needle.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-			HaxeSourceSpan.fromPosition(needleExpression.pos, input.sourcePath), 'string-$operation-needle-null-check');
+			sourceSpan(needleExpression.pos), 'string-$operation-needle-null-check');
 		final loweredArguments = [receiver.id, needle.id];
 		if (method == "lastIndexOf") {
 			final hasStart:HxcIRResult = {id: nextValueId(), type: IRTBool};
-			appendInstruction(hasStart, IRIOConstant(IRCBool(arguments.length == 2)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-				"string-last-index-of-has-start");
+			appendInstruction(hasStart, IRIOConstant(IRCBool(arguments.length == 2)), sourceSpan(expression.pos), "string-last-index-of-has-start");
 			loweredArguments.push(hasStart.id);
 		}
 		if (arguments.length == 2) {
@@ -10384,14 +10369,13 @@ private class FunctionBuilder {
 			loweredArguments.push(coerce(lowerValue(startExpression, startMapping), startMapping, startExpression.pos, 'TCall(String.$method:start)').id);
 		} else {
 			final defaultStart:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
-			appendInstruction(defaultStart, IRIOConstant(IRCInt("0")), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
-				'string-$operation-unused-or-default-start');
+			appendInstruction(defaultStart, IRIOConstant(IRCInt("0")), sourceSpan(expression.pos), 'string-$operation-unused-or-default-start');
 			loweredArguments.push(defaultStart.id);
 		}
 		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(String.$method:result-type)');
 		if (typeKey(resultMapping.irType) != typeKey(IRTInt(32, true)))
 			return unsupported(expression, 'TCall(String.$method:result-requires-Haxe-Int)');
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("string-scalar", operation),
@@ -10426,12 +10410,12 @@ private class FunctionBuilder {
 		var delimiter = coerce(lowerValue(delimiterExpression, delimiterMapping), delimiterMapping, delimiterExpression.pos, "TCall(String.split:delimiter)");
 		delimiter = stabilizeFreshManagedString(delimiter, delimiterExpression.pos, "string-split-delimiter");
 		appendInstruction(null, IRIONullCheck(delimiter.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-			HaxeSourceSpan.fromPosition(delimiterExpression.pos, input.sourcePath), "string-split-delimiter-null-check");
+			sourceSpan(delimiterExpression.pos), "string-split-delimiter-null-check");
 		final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(String.split:result-type)");
 		final array = resultMapping.arrayValue();
 		if (array == null || array.managedByCollector || array.element.irType != IRTManagedString)
 			return unsupported(expression, 'TCall(String.split:result-not-managed-Array-String:${resultMapping.cSpelling})');
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("string-split", "split"),
@@ -10466,11 +10450,11 @@ private class FunctionBuilder {
 		var receiver = coerce(lowerValue(receiverExpression, receiverMapping), receiverMapping, receiverExpression.pos, "TField(String.length:receiver)");
 		receiver = stabilizeFreshManagedString(receiver, receiverExpression.pos, "string-length-receiver");
 		appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-			HaxeSourceSpan.fromPosition(receiverExpression.pos, input.sourcePath), "string-length-receiver-null-check");
+			sourceSpan(receiverExpression.pos), "string-length-receiver-null-check");
 		final resultMapping = bodyValueType(expression.t, expression.pos, "TField(String.length:result-type)");
 		if (typeKey(resultMapping.irType) != typeKey(IRTInt(32, true)))
 			return unsupported(expression, "TField(String.length:result-requires-Haxe-Int)");
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("string-scalar", "length"),
@@ -10489,7 +10473,7 @@ private class FunctionBuilder {
 		final receiver = lowerManagedBytesReceiver(receiverExpression, "length");
 		final mapping = bodyValueType(expression.t, expression.pos, "TField(Bytes.length:result-type)");
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("bytes", "length"),
 			arguments: [receiver.id],
@@ -10535,13 +10519,13 @@ private class FunctionBuilder {
 				var sourceValue = coerce(lowerValue(arguments[0], sourceMapping), sourceMapping, arguments[0].pos, "TCall(Bytes.ofString:source)");
 				sourceValue = stabilizeFreshManagedString(sourceValue, arguments[0].pos, "bytes-of-string-source");
 				appendInstruction(null, IRIONullCheck(sourceValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-					HaxeSourceSpan.fromPosition(arguments[0].pos, input.sourcePath), "bytes-of-string-source-null-check");
+					sourceSpan(arguments[0].pos), "bytes-of-string-source-null-check");
 				loweredArguments.push(sourceValue.id);
 			case _:
 				return unsupported(expression, 'TCall(Bytes.$method:not-yet-admitted)');
 		}
 		final operation = method == "alloc" ? "alloc" : "of-string-utf8";
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("bytes", operation),
@@ -10607,7 +10591,7 @@ private class FunctionBuilder {
 			case _:
 				return unsupported(expression, 'TCall(Bytes.$method:not-yet-admitted)');
 		}
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(Bytes.$method:result-type)');
 		if (resultMapping.irType == IRTVoid) {
 			appendInstruction(null, IRIOCall({
@@ -10733,7 +10717,7 @@ private class FunctionBuilder {
 		}
 		if (isNullableClassReference(receiver.type)) {
 			appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-				HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), "instance-call-null-check");
+				sourceSpan(access.receiver.pos), "instance-call-null-check");
 		}
 		final effectiveArgumentExpressions = directTarget == null ? argumentExpressions : completeDirectCallArguments(expression, argumentExpressions,
 			directTarget.parameters, 1, targetId, "instance-argument");
@@ -10772,7 +10756,7 @@ private class FunctionBuilder {
 		};
 		final callArguments = directReason == null ? explicitArguments : [receiver.id].concat(explicitArguments);
 		final borrowedSpanReturn = directTarget == null ? null : directTarget.borrowedSpanReturn;
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		if (returnMapping.irType == IRTVoid) {
 			final callInstruction = instruction(null, IRIOCall({
 				dispatch: dispatchKind,
@@ -10881,7 +10865,7 @@ private class FunctionBuilder {
 		if (literal == null) {
 			return unsupported(arguments[0], 'TCall($surface:requires-String-literal)');
 		}
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		final output = traceFormatting ? traceOutput(literal, arguments[1], source) : literal;
 		final byteLength = HxcUtf8.byteLength(output);
 		if (byteLength == null) {
@@ -11070,7 +11054,7 @@ private class FunctionBuilder {
 
 	/** Lower one statically known `Std.string` source without Dynamic boxing. */
 	function lowerStdStringValue(expression:TypedExpr, argumentMapping:CBodyValueType, resultMapping:CBodyValueType, role:String):LoweredValue {
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		return switch argumentMapping.irType {
 			case IRTString | IRTManagedString:
 				coerce(lowerValue(expression, argumentMapping), resultMapping, expression.pos, '$role:String-identity');
@@ -11164,7 +11148,7 @@ private class FunctionBuilder {
 		final managed = value.mapping.arrayValue();
 		if (managed == null || managed.managedByCollector || !freshManagedArrayValueIds.remove(value.id))
 			return value;
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		final cleanupId = 'array-temporary.$ownerLocalId.release';
 		constructionCleanupActions.push({
@@ -11193,7 +11177,7 @@ private class FunctionBuilder {
 	function stabilizeFreshManagedString(value:LoweredValue, position:Position, role:String):LoweredValue {
 		if (value.mapping.irType != IRTManagedString || !freshManagedStringValueIds.remove(value.id))
 			return value;
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		final cleanupId = 'string-temporary.$ownerLocalId.release';
 		constructionCleanupActions.push({
@@ -11221,7 +11205,7 @@ private class FunctionBuilder {
 	function ownBorrowedStringResult(value:LoweredValue, position:Position, role:String):LoweredValue {
 		if (value.mapping.irType != IRTManagedString)
 			return value;
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("string")), source, role + "-retain");
 		final owned = loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-owned-load");
@@ -11243,7 +11227,7 @@ private class FunctionBuilder {
 	function retainManagedStringTemporary(value:LoweredValue, position:Position, role:String):LoweredValue {
 		if (value.mapping.irType != IRTManagedString)
 			return value;
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("string")), source, role + "-retain");
 		final cleanupId = 'string-retained-temporary.$ownerLocalId.release';
@@ -11273,7 +11257,7 @@ private class FunctionBuilder {
 	function stabilizeFreshManagedBytes(value:LoweredValue, position:Position, role:String):LoweredValue {
 		if (value.mapping.bytesValue() == null || !freshManagedBytesValueIds.remove(value.id))
 			return value;
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		final cleanupId = 'bytes-temporary.$ownerLocalId.release';
 		constructionCleanupActions.push({
@@ -11302,7 +11286,7 @@ private class FunctionBuilder {
 		final destroyId = managed.destroyImplementationId();
 		if (destroyId == null)
 			throw new CBodyEmissionError('managed enum `${managed.instanceId}` lost its destroy plan');
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		final cleanupId = 'enum-temporary.$ownerLocalId.release';
 		constructionCleanupActions.push({
@@ -11329,7 +11313,7 @@ private class FunctionBuilder {
 		final destroyId = managed.destroyImplementationId();
 		if (destroyId == null)
 			throw new CBodyEmissionError('managed aggregate `${managed.instanceId}` lost its destroy plan');
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		final cleanupId = 'record-temporary.$ownerLocalId.release';
 		constructionCleanupActions.push({
@@ -11350,7 +11334,7 @@ private class FunctionBuilder {
 		final destroyId = managed.destroyImplementationId();
 		if (destroyId == null)
 			throw new CBodyEmissionError('managed optional `${managed.planId}` lost its destroy plan');
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final ownerLocalId = createFlowLocal(value.mapping, value.id, source, role + "-owner");
 		final cleanupId = 'optional-temporary.$ownerLocalId.release';
 		constructionCleanupActions.push({
@@ -11554,8 +11538,8 @@ private class FunctionBuilder {
 			final payload = targetOptional.managedLifetime ? captureManagedValue(convertedPayload, targetOptional.payload, position,
 				"optional-payload") : convertedPayload;
 			final injected:HxcIRResult = {id: nextValueId(), type: target.irType};
-			appendInstruction(injected, IRIOConvert(payload.id, IRCNullableInject, target.irType, IRIStatic, null),
-				HaxeSourceSpan.fromPosition(position, input.sourcePath), "direct-optional-inject");
+			appendInstruction(injected, IRIOConvert(payload.id, IRCNullableInject, target.irType, IRIStatic, null), sourceSpan(position),
+				"direct-optional-inject");
 			registerValueTemporary(injected.id, "direct-optional-value");
 			if (targetOptional.managedLifetime)
 				freshManagedOptionalValueIds.set(injected.id, true);
@@ -11568,7 +11552,7 @@ private class FunctionBuilder {
 			// following conversion. The null-check coalescer may remove a repeated
 			// check only when control-flow dominance proves an earlier check covers
 			// this exact value.
-			final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+			final source = sourceSpan(position);
 			appendInstruction(null, IRIONullCheck(value.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))), source,
 				"direct-optional-null-check");
 			final unwrapped:HxcIRResult = {id: nextValueId(), type: sourceOptional.payload.irType};
@@ -11594,10 +11578,10 @@ private class FunctionBuilder {
 				return unsupportedAt(position, '$node:interface-source-class-nullability-missing');
 			if (sourceNullable)
 				appendInstruction(null, IRIONullCheck(value.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
-					HaxeSourceSpan.fromPosition(position, input.sourcePath), "interface-construction-null-check");
+					sourceSpan(position), "interface-construction-null-check");
 			final result:HxcIRResult = {id: nextValueId(), type: target.irType};
-			appendInstruction(result, IRIOConstructInterface(targetInterface.instanceId, value.id, table.input.id),
-				HaxeSourceSpan.fromPosition(position, input.sourcePath), "interface-construction");
+			appendInstruction(result, IRIOConstructInterface(targetInterface.instanceId, value.id, table.input.id), sourceSpan(position),
+				"interface-construction");
 			registerValueTemporary(result.id, "interface-value");
 			carryOwnedClassBorrow(value.id, result.id);
 			return {id: result.id, type: result.type, mapping: target};
@@ -11620,15 +11604,15 @@ private class FunctionBuilder {
 			if (sourceClass.instanceId != targetClass.instanceId) {
 				final upcastTarget = CBodyValueType.classReference(targetClass, sourceNullable);
 				final upcast:HxcIRResult = {id: nextValueId(), type: upcastTarget.irType};
-				appendInstruction(upcast, IRIOConvert(converted.id, IRCRepresentation, upcastTarget.irType, IRIStatic, null),
-					HaxeSourceSpan.fromPosition(position, input.sourcePath), "class-upcast");
+				appendInstruction(upcast, IRIOConvert(converted.id, IRCRepresentation, upcastTarget.irType, IRIStatic, null), sourceSpan(position),
+					"class-upcast");
 				carryOwnedClassBorrow(converted.id, upcast.id);
 				converted = {id: upcast.id, type: upcast.type, mapping: upcastTarget};
 			}
 			if (!sourceNullable && targetNullable) {
 				final injected:HxcIRResult = {id: nextValueId(), type: target.irType};
-				appendInstruction(injected, IRIOConvert(converted.id, IRCNullableInject, target.irType, IRIStatic, null),
-					HaxeSourceSpan.fromPosition(position, input.sourcePath), "class-nullable-inject");
+				appendInstruction(injected, IRIOConvert(converted.id, IRCNullableInject, target.irType, IRIStatic, null), sourceSpan(position),
+					"class-nullable-inject");
 				carryOwnedClassBorrow(converted.id, injected.id);
 				converted = {id: injected.id, type: injected.type, mapping: target};
 			}
@@ -11653,8 +11637,8 @@ private class FunctionBuilder {
 						unsupportedAt(position, '$node:primitive-conversion-must-not-use-runtime:$featureId');
 				}
 				final result:HxcIRResult = {id: nextValueId(), type: target.irType};
-				appendInstruction(result, IRIOConvert(value.id, decision.irKind, target.irType, decision.implementation, null),
-					HaxeSourceSpan.fromPosition(position, input.sourcePath), "convert");
+				appendInstruction(result, IRIOConvert(value.id, decision.irKind, target.irType, decision.implementation, null), sourceSpan(position),
+					"convert");
 				{id: result.id, type: result.type, mapping: target};
 			case CPConversionRejected(reason):
 				unsupportedAt(position, '$node:unsupported-implicit-conversion:$reason');
@@ -11797,7 +11781,7 @@ private class FunctionBuilder {
 	 * has completed.
 	 */
 	function stageFlowValue(value:LoweredValue, expression:TypedExpr, crossesFlow:Bool, role:String):StagedFlowValue {
-		final localId = crossesFlow ? createFlowLocal(value.mapping, value.id, HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role) : null;
+		final localId = crossesFlow ? createFlowLocal(value.mapping, value.id, sourceSpan(expression.pos), role) : null;
 		if (localId != null && borrowedReferenceValueIds.exists(value.id))
 			markBorrowedReferenceLocal(localId, value.mapping);
 		return {value: value, localId: localId, position: expression.pos};
@@ -11846,7 +11830,7 @@ private class FunctionBuilder {
 	function stageFlowPlace(target:LoweredPlace, position:Position, crossesFlow:Bool, role:String):StagedFlowPlace {
 		if (!crossesFlow || !placeUsesBlockValue(target.place))
 			return {target: target, addressLocalId: null, position: position};
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		final address:HxcIRResult = {
 			id: nextValueId(),
 			type: IRTPointer(target.mapping.irType, false)
@@ -11884,8 +11868,7 @@ private class FunctionBuilder {
 			id: nextValueId(),
 			type: IRTPointer(staged.target.mapping.irType, false)
 		};
-		appendInstruction(pointer, IRIOLoad(IRPLocal(staged.addressLocalId)), HaxeSourceSpan.fromPosition(staged.position, input.sourcePath),
-			role + "-address-load");
+		appendInstruction(pointer, IRIOLoad(IRPLocal(staged.addressLocalId)), sourceSpan(staged.position), role + "-address-load");
 		registerValueTemporary(pointer.id, role + "-address-load");
 		return {
 			place: IRPDereference(pointer.id),
@@ -12000,6 +11983,17 @@ private class FunctionBuilder {
 			profileSpecializationRequests++;
 		return input.specialization == null ? type : input.specialization.apply(type);
 	}
+
+	/**
+		Return the stable HxcIR range for one Haxe compiler position.
+
+		One source expression may produce several semantic instructions. The
+		function-owned resolver converts each exact Haxe position once and reuses
+		that immutable range for later instructions. It does not combine different
+		files or offsets, and it does not survive the current compiler request.
+	**/
+	function sourceSpan(position:Position):HxcSourceSpan
+		return sourceSpans.resolve(position);
 
 	/**
 		Count the typed Haxe nodes owned by this function for profiler comparison.
@@ -12187,12 +12181,12 @@ private class FunctionBuilder {
 		return unsupportedAt(expression.pos, node);
 
 	function unsupportedAt<T>(position:Position, node:String):T {
-		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final source = sourceSpan(position);
 		throw new CBodyLoweringError(HxcIRDiagnostic.unsupportedTypedAstNode(Std.string(context.profile), node, functionContext, source), position);
 	}
 
 	function invalidAbi<T>(expression:TypedExpr, detail:String):T {
-		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final source = sourceSpan(expression.pos);
 		throw new CBodyLoweringError(HxcIRDiagnostic.invalidAbiBoundary(Std.string(context.profile), functionContext, detail, source), expression.pos);
 	}
 

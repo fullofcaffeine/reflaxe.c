@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 5
+PROFILE_SCHEMA_VERSION = 6
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -292,6 +292,10 @@ class CompilerProfileTypedBodyWork:
     other_type_cpu_microseconds: float
     specialization_requests: int
     coercion_requests: int
+    source_span_requests: int
+    source_span_computations: int
+    source_span_cache_hits: int
+    source_span_cpu_microseconds: float
     produced_block_count: int
     produced_instruction_count: int
 
@@ -316,6 +320,10 @@ class CompilerProfileTypedBodyWork:
             "otherTypeCpuMicroseconds": self.other_type_cpu_microseconds,
             "specializationRequests": self.specialization_requests,
             "coercionRequests": self.coercion_requests,
+            "sourceSpanRequests": self.source_span_requests,
+            "sourceSpanComputations": self.source_span_computations,
+            "sourceSpanCacheHits": self.source_span_cache_hits,
+            "sourceSpanCpuMicroseconds": self.source_span_cpu_microseconds,
             "producedBlockCount": self.produced_block_count,
             "producedInstructionCount": self.produced_instruction_count,
         }
@@ -536,6 +544,10 @@ TYPED_BODY_WORK_FIELDS = frozenset(
         "otherTypeCpuMicroseconds",
         "specializationRequests",
         "coercionRequests",
+        "sourceSpanRequests",
+        "sourceSpanComputations",
+        "sourceSpanCacheHits",
+        "sourceSpanCpuMicroseconds",
         "producedBlockCount",
         "producedInstructionCount",
     }
@@ -964,6 +976,18 @@ def parse_profile_records(
                         coercion_requests=profile_integer(
                             typed_body_value, "coercionRequests", minimum=0
                         ),
+                        source_span_requests=profile_integer(
+                            typed_body_value, "sourceSpanRequests", minimum=0
+                        ),
+                        source_span_computations=profile_integer(
+                            typed_body_value, "sourceSpanComputations", minimum=0
+                        ),
+                        source_span_cache_hits=profile_integer(
+                            typed_body_value, "sourceSpanCacheHits", minimum=0
+                        ),
+                        source_span_cpu_microseconds=profile_number(
+                            typed_body_value, "sourceSpanCpuMicroseconds"
+                        ),
                         produced_block_count=profile_integer(
                             typed_body_value, "producedBlockCount", minimum=0
                         ),
@@ -971,6 +995,14 @@ def parse_profile_records(
                             typed_body_value, "producedInstructionCount", minimum=0
                         ),
                     )
+                    if (
+                        work.source_span_computations + work.source_span_cache_hits
+                        != work.source_span_requests
+                    ):
+                        raise CompilerProfileFailure(
+                            "typed-body source-span computations and cache hits "
+                            "must account for every request"
+                        )
                     if (
                         category != "detail"
                         or name != "HxcIR typed-body lowering"
