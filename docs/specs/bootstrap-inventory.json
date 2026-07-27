@@ -403,7 +403,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C.",
-      "scope": "Exact fixed-arity C functions, scalars including target-qualified binary32 float, typedef identity, direct one-level imported struct aliases, fieldless enum/constants, by-value imported structs and fields (including fields inside private closed Haxe records), typed aggregate constants, direct closed-literal struct construction through c.StructInit, and borrowed CString arguments constructed from literals or proven literal-only selections lower through schema-20 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. Typed program-local flow may propagate the static CString carrier; dynamic String conversion remains rejected. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
+      "scope": "Exact fixed-arity C functions, scalars including target-qualified binary32 float, typedef identity, direct one-level imported struct aliases, fieldless enum/constants, by-value imported structs and fields (including fields inside private closed Haxe records), typed aggregate constants, direct closed-literal struct construction through c.StructInit, borrowed CString arguments constructed from literals or proven literal-only selections, and call-scoped mutable scalar out parameters through c.Ref.to(addressableValue) lower through schema-20 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. Typed program-local flow may propagate the static CString carrier; dynamic String conversion remains rejected. c.Ref cannot escape its direct imported call and rejects temporaries, read-only storage, managed or aggregate pointees, and mismatched carriers. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
       "evidence": [
         "docs/typed-c-authoring.md",
         "src/reflaxe/c/interop/CImportRegistry.hx",
@@ -419,7 +419,7 @@
       ],
       "limitations": [
         "Declarations may be hand-authored or produced by a purpose-built reviewed generator such as the bounded raylib core; generic Clang-backed bindgen remains unsupported.",
-        "Callbacks, variadics, pointers and retained lifetimes, opaque ownership, unions, bit fields, packing, C++, public exports, and stable ABI remain fail-closed.",
+        "Callbacks, variadics, general pointers, retained lifetimes, aggregate or managed c.Ref pointees, opaque ownership, unions, bit fields, packing, C++, public exports, and stable ABI remain fail-closed.",
         "Compiled pointlib probes establish only the declared fixture header and target compiler invocation, not general cross-platform ABI compatibility."
       ]
     },

@@ -11,9 +11,10 @@ package raygui;
  * The static namespace is intentional here: raygui itself has process-wide
  * immediate-mode state and exposes C functions, so inventing Haxe widget
  * instances would imply ownership and lifetimes that do not exist. Each inline
- * method becomes the corresponding C call. Pointer-mutating controls such as
- * text boxes remain absent until their buffer capacity and borrow rules have a
- * typed owner.
+ * method becomes the corresponding C call. `Toggle` is the first mutable
+ * control: it borrows one Boolean field for the duration of the native call.
+ * Text boxes remain absent until their buffer capacity and text ownership have
+ * equally explicit contracts.
  */
 class Raygui {
 	public static inline function Enable():Void
@@ -86,5 +87,15 @@ class Raygui {
 
 	public static inline function StatusBar(bounds:raylib.Rectangle, text:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiStatusBar(bounds, text)));
+
+	/**
+	 * Draw a toggle and update its caller-owned state.
+	 *
+	 * `state` survives across frames. The raw raygui call receives only a
+	 * call-scoped pointer to `state.active`, so the C library may replace the
+	 * Boolean during this call but cannot retain or own it.
+	 */
+	public static inline function Toggle(bounds:raylib.Rectangle, text:c.CString, state:GuiToggleState):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiToggle(bounds, text, c.Ref.to(state.active))));
 }
 #end

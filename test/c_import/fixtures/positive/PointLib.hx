@@ -3,6 +3,15 @@
 extern class PointLib {
 	public static function pointlib_build_fact_probe():Void;
 
+	/**
+		Flip one caller-owned Boolean during this call.
+
+		The exact `c.Ref<Bool>` parameter models the header's non-retained
+		`bool *`. Callers must pass `c.Ref.to(addressableValue)` so haxe.c can
+		prove which mutable storage receives the write.
+	**/
+	public static function pointlib_flip(value:c.Ref<Bool>):Void;
+
 	@:c.constant
 	@:c.name("POINTLIB_FLOAT_ONE_POINT_FIVE")
 	public static var floatOnePointFive(default, never):c.Float32;

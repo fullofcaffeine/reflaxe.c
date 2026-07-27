@@ -65,6 +65,16 @@ NEGATIVE_CASES = {
         "DefineApi.hx:",
         "Preprocessor definitions require an exact configuration/ABI identity",
     ),
+    "ref_escape": (
+        "HXC1001",
+        "Main.hx:4",
+        "TCall(c.Ref.to:requires-direct-import-argument)",
+    ),
+    "ref_temporary": (
+        "HXC3000",
+        "Main.hx:3",
+        "can only borrow a mutable local, field, or indexed element; a temporary value has no caller-owned address",
+    ),
     "struct_init_missing": (
         "HXC1001",
         "Main.hx:3",
@@ -90,6 +100,7 @@ TYPING_NEGATIVE_CASES = {
 REQUIRED_COVERAGE = frozenset(
     {
         "allocation-free-cstring",
+        "caller-owned-out-parameter",
         "compiled-abi-layout",
         "compiled-constant-values",
         "direct-native-calls",
@@ -321,6 +332,9 @@ def validate_positive(project: RenderedProject) -> None:
                 f"generated Float32 carrier omitted target guard {spelling!r}"
             )
     for spelling in (
+        "bool *hxc_tmp_native_call_ref",
+        " = &hxc_flipped;",
+        "pointlib_flip(",
         "pointlib_point_make(",
         "pointlib_point_translate(",
         "pointlib_point_alias_identity(",
@@ -480,6 +494,7 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_point",
         "pointlib_point_alias",
         "pointlib_build_fact_probe",
+        "pointlib_flip",
         "pointlib_point_make",
         "pointlib_point_translate",
         "pointlib_point_alias_identity",
@@ -643,6 +658,7 @@ def check_native(
             "",
             (
                 "allocation-free-cstring",
+                "caller-owned-out-parameter",
                 "direct-native-calls",
                 "float32-conversions",
                 "generated-haxe-program",
@@ -749,8 +765,8 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         "c-import: OK: direct scalar/enum/typedef/by-value struct calls, compiled ABI "
-        "probes, explicit Float32 narrowing/widening, static CString borrowing, deterministic build facts, runtime absence, "
-        "and fail-closed ABI edges passed"
+        "probes, explicit Float32 narrowing/widening, static CString borrowing, call-scoped mutable out parameters, "
+        "deterministic build facts, runtime absence, and fail-closed ABI edges passed"
     )
     return 0
 

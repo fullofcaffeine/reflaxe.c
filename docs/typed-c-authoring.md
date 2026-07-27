@@ -35,9 +35,11 @@ fieldless enums/constants, by-value structs, explicit binary32 `c.Float32`
 values, and statically selected borrowed `CString` arguments. An ordinary
 closed Haxe record may contain one of those already admitted by-value structs;
 the imported header still owns its layout, and the containing generated record
-remains a private Haxe implementation detail. Other `c.*` operations remain
-fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority markers
-until their owning safety and inspection work is complete.
+remains a private Haxe implementation detail. A direct imported call may also
+receive `c.Ref.to(localOrField)` for one mutable scalar out-parameter whose C
+callee uses the address only until that call returns. Other `c.*` operations
+remain fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority
+markers until their owning safety and inspection work is complete.
 
 Profile-aware validation now rejects `@:c.pack(...)` on a
 `@:c.layout(c.Layout.Struct|Union)` declaration in `metal` with `HXC5002`.
@@ -162,7 +164,9 @@ import has these properties:
   value representation. This needs no wrapper or conversion; alias chains,
   cycles, and cross-family aliases remain fail-closed;
 - functions are static extern, fixed-arity, non-callback C calls whose admitted
-  parameter and result types are exact scalars or by-value imported values;
+  parameter and result types are exact scalars or by-value imported values.
+  One direct scalar parameter may instead use the call-scoped `c.Ref` contract
+  described below;
 - imported struct fields are ordinary typed HxcIR places, so reads and writes
   stay structural rather than becoming C fragments;
 - a `String` literal, or a conditional/switch whose every reachable result is a
@@ -174,6 +178,34 @@ import has these properties:
 - reached include, logical library, pkg-config, and framework facts are
   deduplicated with declaration provenance in the neutral build plan. Merely
   declaring an unused extern selects no fact and no runtime feature.
+
+### Call-scoped mutable out parameters
+
+Some C functions return a small result by changing storage supplied by their
+caller. Haxe names that intent explicitly:
+
+```haxe
+extern class NativeToggle {
+	public static function update(active:c.Ref<Bool>):Void;
+}
+
+var active = false;
+NativeToggle.update(c.Ref.to(active));
+```
+
+`c.Ref.to(active)` does not allocate a pointer wrapper. haxe.c proves that
+`active` is a mutable local, field, or indexed element with the exact scalar C
+carrier, emits its address with C's `&` operator, and lets the imported function
+use that address until the call returns. The Haxe value remains the owner of
+the storage.
+
+This first contract is intentionally smaller than a general borrow checker.
+The reference cannot be stored in another Haxe value, returned, passed through
+an indirect function, made from a temporary such as `c.Ref.to(true)`, or used
+for an aggregate or managed value. A binding generator must also record the
+callee's call-only lifetime explicitly: Clang can prove that a header says
+`bool *`, but C type spelling alone cannot prove that the library does not keep
+the pointer.
 
 ### Exact C `float` values
 

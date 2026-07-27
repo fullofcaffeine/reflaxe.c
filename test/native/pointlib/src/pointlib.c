@@ -96,4 +96,8 @@ bool pointlib_inline_float32_verify(float from_integer_local, float from_integer
     && from_non_inline == 8.0f;
 }
 
+void pointlib_flip(bool *value) {
+  *value = !*value;
+}
+
 void pointlib_build_fact_probe(void) {}

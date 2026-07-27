@@ -165,7 +165,8 @@
       "properties": {
         "cType": { "type": "string", "minLength": 1 },
         "canonicalCType": { "type": "string", "minLength": 1 },
-        "haxeType": { "type": "string", "minLength": 1 }
+        "haxeType": { "type": "string", "minLength": 1 },
+        "borrowLifetime": { "const": "call" }
       }
     },
     "parameter": {

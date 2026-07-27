@@ -82,93 +82,97 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale0(int32_t hxc_message
       }
     case 9:
       {
-        return "BACK";
+        return "ADVANCED TOOLS";
       }
     case 10:
       {
-        return "WORLD VIEWPORT \342\200\224 VISUAL BLOCK TOOLS ARE NEXT";
+        return "BACK";
       }
     case 11:
       {
-        return "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY";
+        return "WORLD VIEWPORT \342\200\224 VISUAL BLOCK TOOLS ARE NEXT";
       }
     case 12:
       {
-        return "NEW WORLD";
+        return "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY";
       }
     case 13:
       {
-        return "READY \342\200\224 EDITS USE THE REAL CAXEMAP SESSION";
+        return "NEW WORLD";
       }
     case 14:
       {
-        return "REDO";
+        return "READY \342\200\224 EDITS USE THE REAL CAXEMAP SESSION";
       }
     case 15:
       {
-        return "STOP TEST";
+        return "REDO";
       }
     case 16:
       {
-        return "TEST PLAY";
+        return "STOP TEST";
       }
     case 17:
       {
-        return "TEST PLAY USES A DISPOSABLE COPY";
+        return "TEST PLAY";
       }
     case 18:
       {
-        return "CAXECRAFT WORLD EDITOR";
+        return "TEST PLAY USES A DISPOSABLE COPY";
       }
     case 19:
       {
-        return "UNDO";
+        return "CAXECRAFT WORLD EDITOR";
       }
     case 20:
       {
-        return "VALID CAXEMAP \342\200\224 READY TO TEST";
+        return "UNDO";
       }
     case 21:
       {
-        return "VALIDATE";
+        return "VALID CAXEMAP \342\200\224 READY TO TEST";
       }
     case 22:
       {
-        return "HEALTH ALREADY FULL";
+        return "VALIDATE";
       }
     case 23:
       {
-        return "ADVENTURE";
+        return "HEALTH ALREADY FULL";
       }
     case 24:
       {
-        return "CREATIVE MODE";
+        return "ADVENTURE";
       }
     case 25:
       {
-        return "WORLD EDITOR";
+        return "CREATIVE MODE";
       }
     case 26:
       {
-        return "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL";
+        return "WORLD EDITOR";
       }
     case 27:
       {
-        return "NO BLOCK IN REACH";
+        return "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL";
       }
     case 28:
       {
-        return "CLICK TO CAPTURE  //  Q TO QUIT";
+        return "NO BLOCK IN REACH";
       }
     case 29:
       {
-        return "PAUSED";
+        return "CLICK TO CAPTURE  //  Q TO QUIT";
       }
     case 30:
       {
-        return "PLACE BLOCKED: PLAYER OR WORLD EDGE";
+        return "PAUSED";
       }
     case 31:
+      {
+        return "PLACE BLOCKED: PLAYER OR WORLD EDGE";
+      }
+    case 32:
       {
         return "CAXECRAFT";
       }
@@ -221,93 +225,97 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale1(int32_t hxc_message
       }
     case 9:
       {
-        return "VOLVER";
+        return "HERRAMIENTAS AVANZADAS";
       }
     case 10:
       {
-        return "VISTA DEL MUNDO \342\200\224 HERRAMIENTAS DE BLOQUES MUY PRONTO";
+        return "VOLVER";
       }
     case 11:
       {
-        return "CORRIGE EL BORRADOR ANTES DE PROBARLO";
+        return "VISTA DEL MUNDO \342\200\224 HERRAMIENTAS DE BLOQUES MUY PRONTO";
       }
     case 12:
       {
-        return "MUNDO NUEVO";
+        return "CORRIGE EL BORRADOR ANTES DE PROBARLO";
       }
     case 13:
       {
-        return "LISTO \342\200\224 LOS CAMBIOS USAN LA SESION CAXEMAP REAL";
+        return "MUNDO NUEVO";
       }
     case 14:
       {
-        return "REHACER";
+        return "LISTO \342\200\224 LOS CAMBIOS USAN LA SESION CAXEMAP REAL";
       }
     case 15:
       {
-        return "DETENER PRUEBA";
+        return "REHACER";
       }
     case 16:
       {
-        return "PROBAR";
+        return "DETENER PRUEBA";
       }
     case 17:
       {
-        return "LA PRUEBA USA UNA COPIA DESECHABLE";
+        return "PROBAR";
       }
     case 18:
       {
-        return "EDITOR DE MUNDOS CAXECRAFT";
+        return "LA PRUEBA USA UNA COPIA DESECHABLE";
       }
     case 19:
       {
-        return "DESHACER";
+        return "EDITOR DE MUNDOS CAXECRAFT";
       }
     case 20:
       {
-        return "CAXEMAP VALIDO \342\200\224 LISTO PARA PROBAR";
+        return "DESHACER";
       }
     case 21:
       {
-        return "VALIDAR";
+        return "CAXEMAP VALIDO \342\200\224 LISTO PARA PROBAR";
       }
     case 22:
       {
-        return "SALUD COMPLETA";
+        return "VALIDAR";
       }
     case 23:
       {
-        return "AVENTURA";
+        return "SALUD COMPLETA";
       }
     case 24:
       {
-        return "MODO CREATIVO";
+        return "AVENTURA";
       }
     case 25:
       {
-        return "EDITOR DE MUNDOS";
+        return "MODO CREATIVO";
       }
     case 26:
       {
-        return "FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH";
+        return "EDITOR DE MUNDOS";
       }
     case 27:
       {
-        return "NINGUN BLOQUE AL ALCANCE";
+        return "FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH";
       }
     case 28:
       {
-        return "CLIC PARA CAPTURAR  //  Q PARA SALIR";
+        return "NINGUN BLOQUE AL ALCANCE";
       }
     case 29:
       {
-        return "PAUSA";
+        return "CLIC PARA CAPTURAR  //  Q PARA SALIR";
       }
     case 30:
       {
-        return "NO SE PUEDE COLOCAR: JUGADOR O BORDE";
+        return "PAUSA";
       }
     case 31:
+      {
+        return "NO SE PUEDE COLOCAR: JUGADOR O BORDE";
+      }
+    case 32:
       {
         return "CAXECRAFT";
       }

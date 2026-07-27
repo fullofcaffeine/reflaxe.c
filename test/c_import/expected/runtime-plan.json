@@ -34,10 +34,10 @@
     "reachability": {
       "typeInstances": 6,
       "functions": 10,
-      "blocks": 30,
+      "blocks": 32,
       "modules": 7,
       "runtimeIntents": 0,
-      "instructions": 191,
+      "instructions": 200,
       "cleanupActions": 0
     },
     "programLocalHelpers": [

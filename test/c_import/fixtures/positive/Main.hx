@@ -54,6 +54,8 @@ class Main {
 
 	static function main():Void {
 		PointLib.pointlib_build_fact_probe();
+		var flipped = false;
+		PointLib.pointlib_flip(c.Ref.to(flipped));
 		var left = PointLib.make(PointLib.one, PointLib.negativeThree);
 		var resources = pointResources(localPoint(PointLib.seven, true));
 		var right = selectPoint(false, left, resources.point);
@@ -76,7 +78,8 @@ class Main {
 		var negativeZero = c.Float32.fromFloat(-0.0);
 		var finiteOverflow = c.Float32.fromFloat(1e300);
 		var locale = 0;
-		while (!resources.ready
+		while (!flipped
+			|| !resources.ready
 			|| !PointLib.verify(left, right, dot, component, axis, localizedLabel(locale, 0))
 			|| !PointLib.verifyFloat32(floatPoint, floatDot, widened, tie, subnormal, positiveInfinity, nan, negativeZero, finiteOverflow)
 			|| !InlineFloat32Probe.run()) {}

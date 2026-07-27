@@ -1035,17 +1035,20 @@ class CBodyLowering {
 	public static function globalId(declarationPath:String, fieldName:String):String
 		return 'global.$declarationPath.$fieldName';
 
+	/**
+		Order compiler identities by their UTF-8 bytes without allocating during
+		every comparison.
+
+		Deterministic lowering sorts functions, constructors, modules, and emitted
+		declarations with this helper. The Haxe Eval host already stores strings as
+		UTF-8 and compares those bytes lexicographically, so its native comparison
+		has the exact ordering this compiler requires. Using it avoids constructing
+		two temporary `Bytes` wrappers for every comparison. Other Haxe hosts keep
+		the explicit byte walk so this optimization cannot silently change the
+		portable ordering contract.
+	**/
 	public static function compareUtf8(left:String, right:String):Int {
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		final limit = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...limit) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0) {
-				return difference;
-			}
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 
 	/**
@@ -5988,7 +5991,7 @@ private class FunctionBuilder {
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
 					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
 						CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
-						CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
+						CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -9190,6 +9193,8 @@ private class FunctionBuilder {
 		if (isAbstractMethod(call.callee, "c.StructInit", "make")) {
 			return lowerImportedStructInit(expression, call.arguments);
 		}
+		if (isAbstractMethod(call.callee, "c.Ref", "to"))
+			return unsupported(expression, "TCall(c.Ref.to:requires-direct-import-argument)");
 		final bytesStaticMethod = coreBytesStaticMethod(call.callee);
 		if (bytesStaticMethod != null)
 			return lowerManagedBytesStaticCall(expression, bytesStaticMethod, call.arguments);
@@ -9551,8 +9556,11 @@ private class FunctionBuilder {
 		for (index in 0...argumentExpressions.length) {
 			final argument = argumentExpressions[index];
 			final expected = target.parameters[index];
-			final value = expected.isCString() ? lowerBorrowedCString(argument, target,
-				index) : coerce(lowerValue(argument, expected), expected, argument.pos, 'native-call:${target.id}:argument:$index');
+			final value = switch expected.kind {
+				case CBVKNativeRef(pointee): lowerNativeRefArgument(argument, expected, pointee, target, index);
+				case _: expected.isCString() ? lowerBorrowedCString(argument, target,
+						index) : coerce(lowerValue(argument, expected), expected, argument.pos, 'native-call:${target.id}:argument:$index');
+			};
 			stagedArguments.push(stageFlowValue(value, argument, laterExpressionCreatesFlow(argumentExpressions, index), 'native-call-argument-$index'));
 		}
 		final arguments = restoreCallArguments(stagedArguments, "native-call-argument");
@@ -9576,6 +9584,57 @@ private class FunctionBuilder {
 		if (materializeResult)
 			registerValueTemporary(result.id, "native-call-result");
 		return {id: result.id, type: result.type, mapping: target.returnType};
+	}
+
+	/**
+		Borrow one assignable Haxe place for a direct imported-C call.
+
+		`c.Ref.to` is deliberately consumed here instead of lowered as an ordinary
+		value. That makes the native call the only possible owner of the pointer
+		use: source code cannot return it, store it, or hand it to an indirect
+		function. The addressed storage remains owned by the caller and the C
+		callee may mutate it only until this call returns.
+	**/
+	function lowerNativeRefArgument(expression:TypedExpr, expected:CBodyValueType, pointee:CBodyValueType, target:CPreparedImportFunction,
+			argumentIndex:Int):LoweredValue {
+		final borrowed = switch unwrapExpression(expression).expr {
+			case TCall(callee, [value]) if (isAbstractMethod(callee, "c.Ref", "to")): value;
+			case TCall(callee, arguments) if (isAbstractMethod(callee, "c.Ref", "to")):
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires c.Ref.to with exactly one mutable value.');
+			case _:
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires an explicit c.Ref.to(addressableValue) call.');
+		};
+		if (!isNativeRefAddressable(borrowed))
+			return invalidAbi(borrowed,
+				'Imported C function `${target.haxePath}` argument $argumentIndex can only borrow a mutable local, field, or indexed element; a temporary value has no caller-owned address.');
+		final place = lowerPlace(borrowed);
+		if (!place.mutable)
+			return invalidAbi(borrowed, 'Imported C function `${target.haxePath}` argument $argumentIndex cannot borrow read-only storage.');
+		if (typeKey(place.mapping.irType) != typeKey(pointee.irType))
+			return invalidAbi(borrowed,
+				'Imported C function `${target.haxePath}` argument $argumentIndex expects a reference to `${pointee.cSpelling}`, received `${place.mapping.cSpelling}`.');
+		final result:HxcIRResult = {id: nextValueId(), type: expected.irType};
+		appendInstruction(result, IRIOAddress(place.place), sourceSpan(expression.pos), "native-call-ref");
+		registerValueTemporary(result.id, "native-call-ref");
+		return {id: result.id, type: result.type, mapping: expected};
+	}
+
+	/**
+		Recognize source expressions that can name persistent caller-owned storage.
+
+		This small syntactic gate exists to give `c.Ref.to(true)` and similar
+		temporary-value mistakes an ABI-focused diagnostic. `lowerPlace` still
+		performs the authoritative semantic checks for mutability, field
+		representation, collection bounds, and the exact C carrier type.
+	**/
+	static function isNativeRefAddressable(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TLocal(_) | TField(_, _) | TArray(_, _): true;
+			case TParenthesis(inner) | TMeta(_, inner): isNativeRefAddressable(inner);
+			case _: false;
+		};
 	}
 
 	function lowerBorrowedCString(expression:TypedExpr, target:CPreparedImportFunction, argumentIndex:Int):LoweredValue {
@@ -11972,7 +12031,8 @@ private class FunctionBuilder {
 			case CBVKOptional(_) | CBVKFunction(_, _) | CBVKStackClosure(_, _, _):
 				profileCallableOptionalTypeClassifications++;
 				profileCallableOptionalTypeCpuSeconds += cpuSeconds;
-			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKClosureCapturePointer(_) | CBVKClosureContext:
+			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
+				CBVKClosureContext:
 				profileOtherTypeClassifications++;
 				profileOtherTypeCpuSeconds += cpuSeconds;
 		}

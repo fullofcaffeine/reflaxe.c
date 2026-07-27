@@ -44,6 +44,14 @@ class RayguiBindingTests(unittest.TestCase):
         rendered = render_raw(load_lock())
         self.assertIn("public static function GuiButton", rendered)
         self.assertIn("public static function GuiPanel", rendered)
+        self.assertIn(
+            "GuiToggle(bounds:raylib.raw.Rectangle, text:c.CString, active:c.Ref<Bool>)",
+            rendered,
+        )
+        functions = load_lock()["declarations"]["functions"]
+        toggle = next(function for function in functions if function["name"] == "GuiToggle")
+        active = next(parameter for parameter in toggle["parameters"] if parameter["name"] == "active")
+        self.assertEqual(active["type"]["borrowLifetime"], "call")
         for forbidden in ("@:c.name(", "Dynamic", "untyped", "__c__", "@:native"):
             self.assertNotIn(forbidden, rendered)
 
@@ -147,6 +155,8 @@ class RayguiBindingTests(unittest.TestCase):
             program = (output / "src/program.c").read_text(encoding="utf-8")
             self.assertIn("GuiButton", program)
             self.assertIn("GuiPanel", program)
+            self.assertIn("GuiToggle", program)
+            self.assertIn(" = &", program)
             self.assertNotIn("hxrt", program)
 
 

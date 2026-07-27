@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "functions": [
     "GuiButton",
     "GuiDisable",
@@ -20,8 +20,18 @@
     "GuiSetState",
     "GuiSetStyle",
     "GuiStatusBar",
+    "GuiToggle",
     "GuiUnlock",
     "GuiWindowBox"
+  ],
+  "borrowedMutableParameters": [
+    {
+      "function": "GuiToggle",
+      "parameter": "active",
+      "canonicalCType": "_Bool *",
+      "haxeType": "c.Ref<Bool>",
+      "lifetime": "call"
+    }
   ],
   "implementation": {
     "macro": "RAYGUI_IMPLEMENTATION",
@@ -37,7 +47,7 @@
   "omissions": [
     {
       "family": "pointer-mutating-controls",
-      "reason": "Text boxes, lists, toggles, sliders, color controls, grids, scroll panels, tabs, and message boxes require typed mutable-borrow and buffer-capacity contracts before the ergonomic facade can expose them.",
+      "reason": "GuiToggle now uses the admitted call-scoped Boolean borrow. Text boxes, lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts.",
       "owner": "haxe_c-xge.19.6.1"
     },
     {

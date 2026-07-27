@@ -5,12 +5,14 @@
 RayguiHx is the Haxe-facing boundary for the pinned raygui 5.0 header. It is
 being built first for Caxecraft's visual editor, menus, settings, pause screen,
 inventory panels, and loading screens. The first checked slice is deliberately
-small: panels, labels, buttons, status bars, shared state, and shared style.
+small: panels, labels, buttons, a Boolean toggle, status bars, shared state,
+and shared style.
 
 This is not a claim that all of raygui is supported. Text boxes, lists,
-sliders, file-loaded styles, and other pointer- or resource-owning controls are
-still omitted. Each will be added only with its buffer size, lifetime,
-ownership, failure, and cleanup rules made explicit in Haxe.
+lists, sliders, file-loaded styles, and other pointer- or resource-owning
+controls are still omitted. Each will be added only with its element type,
+buffer size, lifetime, ownership, failure, and cleanup rules made explicit in
+Haxe.
 
 ## Why there are two Haxe layers
 
@@ -31,6 +33,22 @@ happened during that frame. A persistent Haxe `Button` object would suggest an
 owned widget and lifetime that raygui does not actually have. Higher-level
 Caxecraft screens may still own durable editor state; they simply render that
 state through this stateless foreign interface.
+
+`GuiToggleState` is one example of that division. The Haxe class owns one
+Boolean across frames. `Raygui.Toggle` lends the address of that Boolean to
+raygui for one native call through `c.Ref.to(state.active)`. In the generated C,
+that becomes an ordinary `bool *` pointing at the caller-owned field. The
+pointer cannot be stored in a Haxe value or returned from a function, and the
+binding selection records that raygui may use it only until `GuiToggle`
+returns. This is a narrow out-parameter contract, not a general C pointer or
+borrow checker.
+
+The extra binding policy matters because Clang can prove that the header says
+`bool *`, but a C type does not say whether the library keeps that pointer.
+[`raygui-core-selection.json`](specs/raygui-core-selection.json) therefore
+names every admitted mutable parameter together with its call-only lifetime.
+The generator fails if the pinned header no longer matches that reviewed
+contract.
 
 ## Why the package is `#if c`
 

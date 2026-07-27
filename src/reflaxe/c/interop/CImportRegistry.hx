@@ -641,7 +641,7 @@ class CImportRegistry {
 				final path = typePath(value.module, value.pack, value.name);
 				if (path == "c.FunctionPtr")
 					abiFailure(position, sourcePath, label, "Callbacks require the later typed function-pointer and context-lifetime contract.");
-				if (pointerLike(path) && !(parameter && path == "c.CString"))
+				if (pointerLike(path) && !(parameter && (path == "c.CString" || path == "c.Ref")))
 					abiFailure(position, sourcePath, label, "Pointer and retained-borrow lifetimes are outside this direct by-value slice.");
 			case TInst(reference, _):
 				final value = reference.get();
@@ -868,15 +868,7 @@ class CImportRegistry {
 		return '${fact.kind}\x00${fact.name}\x00${fact.valueKind == null ? "" : fact.valueKind}\x00${fact.value == null ? "" : fact.value}\x00${fact.ownerModulePaths.join("\x00")}';
 
 	static function compareUtf8(left:String, right:String):Int {
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		final length = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...length) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0)
-				return difference;
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 
 	function abiRejectFor(sourcePath:String):(Position, String) -> Void

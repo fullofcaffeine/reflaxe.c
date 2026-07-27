@@ -80,6 +80,14 @@
       }
     },
     {
+      "id": "editor_advanced",
+      "symbol": "EditorAdvanced",
+      "text": {
+        "en": "ADVANCED TOOLS",
+        "es-MX": "HERRAMIENTAS AVANZADAS"
+      }
+    },
+    {
       "id": "editor_back",
       "symbol": "EditorBack",
       "text": {

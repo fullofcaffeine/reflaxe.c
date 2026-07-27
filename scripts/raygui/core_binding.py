@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Extract and render the first pinned, by-value raygui 5.0 binding slice.
+"""Extract and render the pinned raygui 5.0 editor-shell binding slice.
 
 Clang reads the exact upstream header together with the pinned raylib 6.0
 header. The checked selection decides which declarations are admitted; this
 script never guesses neighboring coverage from a successful declaration.
+Pointer parameters additionally require an explicit reviewed lifetime because
+that behavior cannot be inferred from C type spelling alone.
 """
 
 from __future__ import annotations
@@ -46,12 +48,16 @@ from scripts.raylib.core_binding import (  # noqa: E402
     canonical_json,
     clang_identity,
     digest_json,
-    extract_functions,
+    function_result_type,
+    named_nodes,
     require_exact_keys,
     require_mapping,
     require_names,
+    require_selected_node,
     run_text,
     sha256_file,
+    source_line,
+    type_fact,
 )
 from scripts.raylib.provision import canonical_tree_identity  # noqa: E402
 
@@ -82,15 +88,29 @@ def load_selection(path: Path = SELECTION_PATH) -> dict[str, object]:
         (
             "schemaVersion",
             "functions",
+            "borrowedMutableParameters",
             "implementation",
             "canonicalAbi",
             "omissions",
         ),
         "raygui selection",
     )
-    if selection.get("schemaVersion") != 1:
-        raise BindingFailure("raygui selection schemaVersion must be 1")
+    if selection.get("schemaVersion") != 2:
+        raise BindingFailure("raygui selection schemaVersion must be 2")
     require_names(selection.get("functions"), "selection.functions")
+    borrowed = selection.get("borrowedMutableParameters")
+    if borrowed != [
+        {
+            "function": "GuiToggle",
+            "parameter": "active",
+            "canonicalCType": "_Bool *",
+            "haxeType": "c.Ref<Bool>",
+            "lifetime": "call",
+        }
+    ]:
+        raise BindingFailure(
+            "raygui mutable parameters must retain the reviewed call-scoped GuiToggle contract"
+        )
     implementation = require_mapping(selection.get("implementation"), "selection.implementation")
     require_exact_keys(
         implementation,
@@ -129,6 +149,71 @@ def load_selection(path: Path = SELECTION_PATH) -> dict[str, object]:
             raise BindingFailure(f"raygui omission {family} needs a Beads owner")
         families.add(family)
     return selection
+
+
+def extract_selected_functions(
+    ast: Mapping[str, object], selection: Mapping[str, object]
+) -> list[dict[str, object]]:
+    """Extract selected functions while applying reviewed pointer lifetimes.
+
+    Clang proves the exact C type, but a header spelling alone cannot prove how
+    long a callee keeps a pointer. The selection therefore has to name every
+    pointer parameter and its lifetime. This first slice accepts only GuiToggle's
+    mutable Boolean for the duration of one call.
+    """
+
+    nodes = named_nodes(ast, "FunctionDecl")
+    borrowed = {
+        (item["function"], item["parameter"]): item
+        for item in selection["borrowedMutableParameters"]
+    }
+    used: set[tuple[str, str]] = set()
+    result: list[dict[str, object]] = []
+    for name in require_names(selection.get("functions"), "selection.functions"):
+        node = require_selected_node(nodes, name, "function")
+        parameters: list[dict[str, object]] = []
+        inner = node.get("inner", [])
+        if not isinstance(inner, list):
+            raise BindingFailure(f"function {name} has malformed parameters")
+        for raw in inner:
+            if not isinstance(raw, dict) or raw.get("kind") != "ParmVarDecl":
+                continue
+            parameter_name = raw.get("name")
+            if not isinstance(parameter_name, str) or not parameter_name:
+                raise BindingFailure(f"function {name} contains an unnamed parameter")
+            policy = borrowed.get((name, parameter_name))
+            if policy is None:
+                parameter_type = type_fact(
+                    raw.get("type"), f"function {name}.{parameter_name}"
+                )
+            else:
+                clang_type = require_mapping(
+                    raw.get("type"), f"function {name}.{parameter_name}.type"
+                ).get("qualType")
+                if clang_type != policy["canonicalCType"]:
+                    raise BindingFailure(
+                        f"reviewed pointer {name}.{parameter_name} expected "
+                        f"{policy['canonicalCType']!r}, found {clang_type!r}"
+                    )
+                parameter_type = {
+                    "cType": "bool *",
+                    "canonicalCType": policy["canonicalCType"],
+                    "haxeType": policy["haxeType"],
+                    "borrowLifetime": policy["lifetime"],
+                }
+                used.add((name, parameter_name))
+            parameters.append({"name": parameter_name, "type": parameter_type})
+        result.append(
+            {
+                "name": name,
+                "sourceLine": source_line(node, f"function {name}"),
+                "returnType": function_result_type(node, f"function {name}"),
+                "parameters": parameters,
+            }
+        )
+    if used != set(borrowed):
+        raise BindingFailure("one or more reviewed raygui mutable parameters were not extracted")
+    return result
 
 
 def source_inputs(raygui_source: Path, raylib_source: Path) -> tuple[Path, Path, Path]:
@@ -209,13 +294,13 @@ def extract_lock(raygui_source: Path, raylib_source: Path, clang: str) -> dict[s
     selection = load_selection()
     header, raygui_include, raylib_include = source_inputs(raygui_source, raylib_source)
     ast = parse_ast(clang, header, raygui_include, raylib_include)
-    functions = extract_functions(ast, selection)
+    functions = extract_selected_functions(ast, selection)
     declarations = {"functions": functions}
     lock: dict[str, object] = {
         "schemaVersion": 1,
         "generator": {
             "path": GENERATOR_PATH,
-            "algorithm": "hxc-raygui-clang-core-v1",
+            "algorithm": "hxc-raygui-clang-core-v2",
         },
         "upstream": {
             "name": "raygui",
@@ -289,7 +374,7 @@ def validate_lock(lock: Mapping[str, object]) -> None:
     generator = require_mapping(lock.get("generator"), "lock.generator")
     if generator != {
         "path": GENERATOR_PATH,
-        "algorithm": "hxc-raygui-clang-core-v1",
+        "algorithm": "hxc-raygui-clang-core-v2",
     }:
         raise BindingFailure("raygui binding generator identity drifted")
     upstream = require_mapping(lock.get("upstream"), "lock.upstream")

@@ -17,29 +17,30 @@ enum abstract UiMessage(Int) {
 	var DebugFrame = 6;
 	var DebugTick = 7;
 	var DebugVisible = 8;
-	var EditorBack = 9;
-	var EditorCanvasHelp = 10;
-	var EditorInvalid = 11;
-	var EditorNewWorld = 12;
-	var EditorReady = 13;
-	var EditorRedo = 14;
-	var EditorStopTest = 15;
-	var EditorTest = 16;
-	var EditorTesting = 17;
-	var EditorTitle = 18;
-	var EditorUndo = 19;
-	var EditorValid = 20;
-	var EditorValidate = 21;
-	var HealthFull = 22;
-	var MenuAdventure = 23;
-	var MenuCreative = 24;
-	var MenuEditor = 25;
-	var MenuInstructions = 26;
-	var NoBlockInReach = 27;
-	var PauseHelp = 28;
-	var PauseTitle = 29;
-	var PlaceBlocked = 30;
-	var TitleFallback = 31;
+	var EditorAdvanced = 9;
+	var EditorBack = 10;
+	var EditorCanvasHelp = 11;
+	var EditorInvalid = 12;
+	var EditorNewWorld = 13;
+	var EditorReady = 14;
+	var EditorRedo = 15;
+	var EditorStopTest = 16;
+	var EditorTest = 17;
+	var EditorTesting = 18;
+	var EditorTitle = 19;
+	var EditorUndo = 20;
+	var EditorValid = 21;
+	var EditorValidate = 22;
+	var HealthFull = 23;
+	var MenuAdventure = 24;
+	var MenuCreative = 25;
+	var MenuEditor = 26;
+	var MenuInstructions = 27;
+	var NoBlockInReach = 28;
+	var PauseHelp = 29;
+	var PauseTitle = 30;
+	var PlaceBlocked = 31;
+	var TitleFallback = 32;
 }
 
 /**
@@ -67,7 +68,7 @@ final class UiCatalog {
 
 	/** Reject an unknown raw message code before constructing a typed ID. */
 	public static inline function isValidMessageStorageCode(code:Int):Bool
-		return code >= 0 && code < 32;
+		return code >= 0 && code < 33;
 
 	public static function text(locale:LocaleCursor, message:UiMessage):LocalizationText {
 		return switch (locale) {
@@ -89,6 +90,7 @@ final class UiCatalog {
 			case DebugFrame: "FRAME";
 			case DebugTick: "TICK";
 			case DebugVisible: "VISIBLE";
+			case EditorAdvanced: "ADVANCED TOOLS";
 			case EditorBack: "BACK";
 			case EditorCanvasHelp: "WORLD VIEWPORT — VISUAL BLOCK TOOLS ARE NEXT";
 			case EditorInvalid: "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY";
@@ -128,6 +130,7 @@ final class UiCatalog {
 			case DebugFrame: "CUADRO";
 			case DebugTick: "PASO";
 			case DebugVisible: "VISIBLES";
+			case EditorAdvanced: "HERRAMIENTAS AVANZADAS";
 			case EditorBack: "VOLVER";
 			case EditorCanvasHelp: "VISTA DEL MUNDO — HERRAMIENTAS DE BLOQUES MUY PRONTO";
 			case EditorInvalid: "CORRIGE EL BORRADOR ANTES DE PROBARLO";

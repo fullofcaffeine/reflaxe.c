@@ -4,7 +4,7 @@
     "languageStandard": "c11",
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "73b9389b133d549a629dec8fc5ca1e32c7ad87403339fa9d1a9c8d29f297bd31",
+  "declarationSha256": "9b83bd815f7d7b07cbd591cdbb09484151222d91f4d243e7dd7179f2ceedc7b5",
   "declarations": {
     "functions": [
       {
@@ -403,6 +403,42 @@
         "sourceLine": 853
       },
       {
+        "name": "GuiToggle",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          },
+          {
+            "name": "active",
+            "type": {
+              "borrowLifetime": "call",
+              "cType": "bool *",
+              "canonicalCType": "_Bool *",
+              "haxeType": "c.Ref<Bool>"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 838
+      },
+      {
         "name": "GuiUnlock",
         "parameters": [],
         "returnType": {
@@ -468,7 +504,7 @@
     "src/raygui/raw/Raygui.hx"
   ],
   "generator": {
-    "algorithm": "hxc-raygui-clang-core-v1",
+    "algorithm": "hxc-raygui-clang-core-v2",
     "path": "scripts/raygui/core_binding.py"
   },
   "implementation": {
@@ -480,7 +516,7 @@
   "schemaVersion": 1,
   "selection": {
     "counts": {
-      "functions": 21,
+      "functions": 22,
       "omittedFamilies": 3
     },
     "coverageState": "coherent-editor-shell-core",
@@ -488,7 +524,7 @@
       {
         "family": "pointer-mutating-controls",
         "owner": "haxe_c-xge.19.6.1",
-        "reason": "Text boxes, lists, toggles, sliders, color controls, grids, scroll panels, tabs, and message boxes require typed mutable-borrow and buffer-capacity contracts before the ergonomic facade can expose them."
+        "reason": "GuiToggle now uses the admitted call-scoped Boolean borrow. Text boxes, lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts."
       },
       {
         "family": "style-and-icon-file-loading",
@@ -502,7 +538,7 @@
       }
     ],
     "path": "docs/specs/raygui-core-selection.json",
-    "sha256": "3a0407a97f76b0970d0a1a326bd6276242103a17f85978e1575e23a96175143c"
+    "sha256": "41f3da2800cde9cece25e976a708e8ade854a3dc9552d2b5e59b3b7045bb3aa8"
   },
   "upstream": {
     "archive": {

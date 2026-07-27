@@ -90,6 +90,15 @@ enum CBodyValueKind {
 	/** A non-owning pointer used only inside a proven stack closure environment. */
 	CBVKClosureCapturePointer(pointee:CBodyValueType);
 
+	/**
+		A mutable address borrowed only for one direct imported-C call.
+
+		The source-level `c.Ref<T>` never becomes owned storage. Lowering creates
+		this carrier only from an addressable place and the native-call validator
+		requires the exact pointer type expected by the header-owned function.
+	**/
+	CBVKNativeRef(pointee:CBodyValueType);
+
 	/** The opaque `void *` passed from a closure carrier to its typed adapter. */
 	CBVKClosureContext;
 
@@ -169,6 +178,9 @@ class CBodyValueType {
 			case CBVKClosureCapturePointer(pointee):
 				this.irType = IRTPointer(pointee.irType, false);
 				this.cSpelling = 'stack-closure-capture-pointer<${pointee.cSpelling}>';
+			case CBVKNativeRef(pointee):
+				this.irType = IRTPointer(pointee.irType, false);
+				this.cSpelling = 'native-call-ref<${pointee.cSpelling}>';
 			case CBVKClosureContext:
 				this.irType = IRTPointer(IRTVoid, true);
 				this.cSpelling = "stack-closure-context:void-pointer";
@@ -237,6 +249,9 @@ class CBodyValueType {
 	public static function closureCapturePointer(pointee:CBodyValueType):CBodyValueType
 		return new CBodyValueType(CBVKClosureCapturePointer(pointee));
 
+	public static function nativeRef(pointee:CBodyValueType):CBodyValueType
+		return new CBodyValueType(CBVKNativeRef(pointee));
+
 	public static function closureContext():CBodyValueType
 		return new CBodyValueType(CBVKClosureContext);
 
@@ -248,7 +263,7 @@ class CBodyValueType {
 			case CBVKPrimitive(mapping): mapping;
 			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
 				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
-				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -302,7 +317,7 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
-				CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -312,7 +327,7 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
-				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
@@ -321,7 +336,7 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
 		};
 	}
@@ -396,7 +411,7 @@ class CBodyValueType {
 			case CBVKClass(_, nullable): nullable;
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -617,6 +632,9 @@ class CBodyAggregateRegistry {
 		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (imported != null)
 			return imported;
+		final nativeRef = nativeRefValueType(type, position, fail, node);
+		if (nativeRef != null)
+			return nativeRef;
 		final directPrimitive = directPrimitiveValueType(type);
 		if (directPrimitive != null)
 			return directPrimitive;
@@ -788,6 +806,26 @@ class CBodyAggregateRegistry {
 
 	static function isSpan(value:AbstractType, parameters:Array<Type>):Bool
 		return parameters.length == 1 && value.pack.join(".") == "c" && (value.name == "Span" || value.name == "ConstSpan");
+
+	/**
+		Classify the narrow mutable pointer accepted by direct imported-C calls.
+
+		The first slice admits exact scalar carriers because their address has one
+		unambiguous C type and no ownership lifecycle. Aggregates, managed values,
+		nullable carriers, nested pointers, and `Void` remain fail-closed.
+	**/
+	function nativeRefValueType(type:Type, position:Position, fail:(Position, String) -> Void, node:String):Null<CBodyValueType> {
+		return switch type {
+			case TAbstract(reference, parameters) if (reference.get().pack.join(".") == "c" && reference.get().name == "Ref"):
+				if (parameters.length != 1)
+					rejected(fail, position, '$node:c.Ref-requires-one-pointee');
+				final pointee = directPrimitiveValueType(parameters[0]);
+				if (pointee == null || pointee.irType == IRTVoid)
+					rejected(fail, position, '$node:c.Ref-pointee-requires-direct-non-Void-scalar');
+				CBodyValueType.nativeRef(pointee);
+			case _: null;
+		};
+	}
 
 	function admittedSpanElement(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CPrimitiveTypeMapping {
 		final mapping = admittedPrimitive(type, position, fail, '$node.element');
@@ -1292,16 +1330,7 @@ class CBodyAggregateRegistry {
 		return '${Bytes.ofString(value).length}:$value';
 
 	static function compareUtf8(left:String, right:String):Int {
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		final limit = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...limit) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0) {
-				return difference;
-			}
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 
 	static function rejected<T>(fail:(Position, String) -> Void, position:Position, node:String):T {
