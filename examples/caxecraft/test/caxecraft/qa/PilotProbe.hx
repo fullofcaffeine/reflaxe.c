@@ -24,6 +24,7 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.ResizeLayout, 6);
 		sampledFrames += checkBounded(PilotScriptName.AquaticGear, 96);
 		sampledFrames += checkBounded(PilotScriptName.SmoothMotion, 12);
+		sampledFrames += checkBounded(PilotScriptName.EditorShell, 4);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
@@ -34,9 +35,10 @@ final class PilotProbe {
 		checkpoints += checkResize();
 		checkpoints += checkAquaticGear();
 		checkpoints += checkSmoothMotion();
+		checkpoints += checkEditorShell();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 10 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 11 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -197,6 +199,18 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 10);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "smooth-motion.frame",
 			"smooth-motion screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkEditorShell():Int {
+		final name = PilotScriptName.EditorShell;
+		require(PilotScript.stableName(name) == "editor-shell", "editor-shell script lost its stable name");
+		final first = PilotScript.sample(name, 0);
+		require(first.moveForward == 0.0 && first.moveRight == 0.0 && !first.primaryPressed && !first.secondaryPressed,
+			"editor-shell script must remain idle while the native editor draws");
+		final screenshot = PilotScript.checkpoint(name, 2);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "editor-shell.frame",
+			"editor-shell screenshot checkpoint changed");
 		return 1;
 	}
 

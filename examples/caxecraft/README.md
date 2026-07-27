@@ -308,6 +308,9 @@ npm run caxecraft:play -- --pilot aquatic-gear
 # Prove real move-and-jump rendering between varied display intervals
 npm run caxecraft:play -- --pilot smooth-motion
 
+# Prove the generated native application enters and presents the raygui editor
+npm run caxecraft:play -- --pilot editor-shell
+
 # Verify every source byte in an already extracted Raylib tree
 npm run caxecraft:play -- \
   --authority offline-source \

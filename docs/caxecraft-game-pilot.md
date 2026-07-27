@@ -105,11 +105,16 @@ npm run caxecraft:play -- --pilot aquatic-gear
 # Move and jump through the ordinary game loop at deterministic 8/17/25 ms
 # display intervals and prove the camera rendered between simulation states.
 npm run caxecraft:play -- --pilot smooth-motion
+
+# Enter through the real title-to-editor transition, draw the native raygui
+# shell twice, validate its working regions and typed screen state, then quit.
+npm run caxecraft:play -- --pilot editor-shell
 ```
 
-The ten closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+The eleven closed script names are `LaunchSmoke`, `MoveJumpEdit`,
 `PauseRecapture`, `CombatDrop`, `RecoveryUse`, `FullInventoryGift`, and
-`FullInventoryMining`, plus `ResizeLayout`, `AquaticGear`, and `SmoothMotion`.
+`FullInventoryMining`, plus `ResizeLayout`, `AquaticGear`, `SmoothMotion`, and
+`EditorShell`.
 Each has a small fixed frame limit below the absolute 120-frame policy. Its
 final and every later action is `Quit`, which protects against a script
 accidentally becoming an unattended interactive session. The Python runner
@@ -169,7 +174,7 @@ The aquatic-gear pilot starts in Adventure mode and follows deterministic
 movement intent toward the Tideweave placement authored by the level data. The
 ordinary fixed tick, collision, generic world-item range check, content-pack
 item profile, aquatic-profile adoption, item removal, renderer, and HUD paths
-perform the result. Protocol version 5 records the `aquaticGearEquipped` flag
+perform the result. Protocol version 6 records the `aquaticGearEquipped` flag
 and appends exposed-face, current-rebuild, cumulative-rebuild, and cache-valid
 counters. A gameplay frame must report a valid initial sixteen-chunk build, and
 the edit pilot must report later rebuild work while its final steady frame
@@ -194,6 +199,17 @@ interpolation path without feeding visual coordinates back into gameplay. A
 human playtest still owns the subjective question of whether movement feels
 pleasant.
 
+The editor-shell pilot begins on the title screen and calls the same typed
+`openEditor` transition as the menu. It bypasses only operating-system pointer
+input so an unattended run can enter the editor; drawing still passes through
+the shipped `CaxecraftEditorScreen`, Haxe raygui wrappers, generated C, pinned
+raygui implementation, Raylib framebuffer, and native window. The screenshot
+check looks for four independently placed regions—the toolbar, canvas,
+sidebar/tool list, and status bar—without demanding byte-identical font
+rasterization. Faster localization and editor-domain tests own exact labels
+and command behavior. Protocol version 6 adds a distinct editor-screen bit so
+a title or gameplay frame cannot accidentally satisfy this proof.
+
 ## How semantic state leaves the native game
 
 A screenshot can prove that the game drew a scene, but it cannot reliably tell
@@ -203,11 +219,11 @@ frame capture. Each colored mark represents one hexadecimal digit. Forty
 fixed-width words carry a magic number, protocol version, script identity and
 input hash, completed frames and fixed ticks, player motion, world selection
 and edit counts, render counters, inventory/actor state, presentation flags,
-and four benchmark-only timing counters. Version 5 also records exposed terrain
-faces, dirty-chunk rebuilds, cumulative rebuilds, and whether the fixed cache
-capacity remained valid. Ordinary pilots require every timing counter to be
-zero, proving that their executable does not accidentally retain benchmark
-instrumentation.
+and four benchmark-only timing counters. Version 6 records exposed terrain
+faces, dirty-chunk rebuilds, cumulative rebuilds, whether the fixed cache
+capacity remained valid, and whether the editor rather than title or gameplay
+is visible. Ordinary pilots require every timing counter to be zero, proving
+that their executable does not accidentally retain benchmark instrumentation.
 
 This strip is test instrumentation, not game content or a public save format.
 It is used because it exercises the same real Raylib framebuffer without adding

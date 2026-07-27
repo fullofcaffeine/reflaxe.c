@@ -184,6 +184,8 @@ final class CaxecraftApp {
 		final pilotName:PilotScriptName = PilotScriptName.AquaticGear;
 		#elseif caxecraft_pilot_smooth_motion
 		final pilotName:PilotScriptName = PilotScriptName.SmoothMotion;
+		#elseif caxecraft_pilot_editor_shell
+		final pilotName:PilotScriptName = PilotScriptName.EditorShell;
 		#end
 		var initialHealth = MAX_HEALTH;
 		#if caxecraft_pilot
@@ -286,11 +288,18 @@ final class CaxecraftApp {
 		locale = UiCatalog.nextLocale(locale);
 		#end
 		#if caxecraft_pilot
-		final showInitialTitle = pilotName == PilotScriptName.LaunchSmoke || pilotName == PilotScriptName.ResizeLayout;
+		final showInitialTitle = pilotName == PilotScriptName.LaunchSmoke
+			|| pilotName == PilotScriptName.ResizeLayout
+			|| pilotName == PilotScriptName.EditorShell;
 		#else
 		final showInitialTitle = true;
 		#end
 		var screen = initialScreen(showInitialTitle);
+		#if caxecraft_pilot_editor_shell
+		// Start at the same typed screen transition used by the title menu. The
+		// pilot bypasses only operating-system pointer input, not editor drawing.
+		screen = openEditor(screen);
+		#end
 		if (screenCapturesPointer(screen))
 			Raylib.DisableCursor();
 		var quit = false;
@@ -846,14 +855,14 @@ final class CaxecraftApp {
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
-					Mossling.isAlive(mossling), onTitle, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
+					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
 					rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds, measuredTerrainFrames,
 					measuredUpdateMicroseconds, measuredPreparationMicroseconds);
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
-					Mossling.isAlive(mossling), onTitle, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
+					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
 					rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0);
 			#end
 			var capturePilotFrame = pilotComplete;
@@ -866,7 +875,8 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 92)
-				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10))
+				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
+				|| (pilotName == PilotScriptName.EditorShell && frameCount == 2))
 				capturePilotFrame = true;
 			// Submit this frame before reading it. `EndDrawing()` would otherwise
 			// swap the buffers first, causing Raylib's screenshot function to read
@@ -897,6 +907,8 @@ final class CaxecraftApp {
 				Raylib.TakeScreenshot("caxecraft-pilot-aquatic-gear.png");
 			if (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
 				Raylib.TakeScreenshot("caxecraft-pilot-smooth-motion.png");
+			if (pilotName == PilotScriptName.EditorShell && frameCount == 2)
+				Raylib.TakeScreenshot("caxecraft-pilot-editor.png");
 			if (pilotComplete)
 				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end

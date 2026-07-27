@@ -265,7 +265,7 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 5
+PILOT_TELEMETRY_VERSION = 6
 PILOT_TELEMETRY_WORDS = 40
 PILOT_TELEMETRY_COLORS = tuple(
     (
@@ -288,6 +288,7 @@ PILOT_SCRIPT_CODES = {
     "resize-layout": 7,
     "aquatic-gear": 8,
     "smooth-motion": 9,
+    "editor-shell": 10,
 }
 PILOT_FRAME_LIMITS = {
     "launch-smoke": 4,
@@ -301,6 +302,7 @@ PILOT_FRAME_LIMITS = {
     "resize-layout": 6,
     "aquatic-gear": 96,
     "smooth-motion": 12,
+    "editor-shell": 4,
 }
 
 
@@ -901,27 +903,30 @@ def build_pilot_report(
         raise PlayFailure("pilot telemetry render counters cannot be negative")
     if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 8 or not 0 <= signed[29] <= 2:
         raise PlayFailure("pilot telemetry gameplay carriers are outside their closed ranges")
-    if not 0 <= signed[31] <= 31:
+    if not 0 <= signed[31] <= 63:
         raise PlayFailure("pilot telemetry presentation flags contain unknown bits")
     if signed[32] < 0 or signed[33] < 0 or signed[34] < 0 or signed[35] not in (0, 1):
         raise PlayFailure("pilot telemetry terrain-cache counters are outside their closed ranges")
     if any(value < 0 for value in signed[36:40]):
         raise PlayFailure("pilot telemetry renderer timings cannot be negative")
     title_visible = bool(signed[31] & 1)
+    editor_visible = bool(signed[31] & 32)
+    if title_visible and editor_visible:
+        raise PlayFailure("pilot telemetry cannot show the title and editor together")
     if signed[26] > 3:
         raise PlayFailure("pilot telemetry exceeded two opaque terrain batches plus one water batch")
-    if title_visible and signed[26] != 0:
-        raise PlayFailure("title-only pilot unexpectedly submitted world terrain")
-    if title_visible and (signed[32] != 0 or signed[33] != 0 or signed[34] != 0):
-        raise PlayFailure("title-only pilot unexpectedly prepared terrain chunks")
-    if not title_visible and signed[26] != 3:
+    if (title_visible or editor_visible) and signed[26] != 0:
+        raise PlayFailure("non-gameplay pilot unexpectedly submitted world terrain")
+    if (title_visible or editor_visible) and (signed[32] != 0 or signed[33] != 0 or signed[34] != 0):
+        raise PlayFailure("non-gameplay pilot unexpectedly prepared terrain chunks")
+    if not title_visible and not editor_visible and signed[26] != 3:
         raise PlayFailure("gameplay pilot did not submit the base, adventure, and water batches exactly once")
-    if not title_visible and (signed[32] <= 0 or signed[35] != 1):
+    if not title_visible and not editor_visible and (signed[32] <= 0 or signed[35] != 1):
         raise PlayFailure("gameplay pilot did not submit valid terrain faces")
     if renderer == "chunk-cache":
-        if not title_visible and signed[34] < 16:
+        if not title_visible and not editor_visible and signed[34] < 16:
             raise PlayFailure("gameplay pilot did not prepare the complete terrain cache")
-        if not title_visible and signed[33] != 0:
+        if not title_visible and not editor_visible and signed[33] != 0:
             raise PlayFailure("gameplay pilot rebuilt an unchanged terrain chunk on its final steady frame")
         if pilot == "move-jump-edit" and signed[34] <= 16:
             raise PlayFailure("move-jump-edit pilot did not rebuild terrain after its successful edits")
@@ -934,6 +939,11 @@ def build_pilot_report(
         raise PlayFailure("ordinary pilot unexpectedly retained renderer timing instrumentation")
     aquatic_gear_equipped = bool(signed[31] & 8)
     interpolation_observed = bool(signed[31] & 16)
+    if pilot == "editor-shell":
+        if not editor_visible or title_visible:
+            raise PlayFailure("editor-shell pilot did not finish on the native editor screen")
+    elif editor_visible:
+        raise PlayFailure(f"pilot {pilot!r} unexpectedly finished on the editor screen")
     if pilot == "aquatic-gear" and not aquatic_gear_equipped:
         raise PlayFailure("aquatic-gear pilot completed without collecting and equipping the authored item")
     if pilot == "smooth-motion" and (
@@ -967,6 +977,10 @@ def build_pilot_report(
             "id": pilot,
             "code": script_code,
             "inputHash": f"{words[4]:08x}",
+        },
+        "screen": {
+            "title": title_visible,
+            "editor": editor_visible,
         },
         "clock": {
             "fixedStepMilliseconds": 50,
@@ -1062,6 +1076,65 @@ def validate_presented_screenshot(
         expected_entities=expected_entities,
         expected_open_sky=expected_open_sky,
     )
+
+
+def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the native editor drew its toolbar, canvas, sidebar, and status bar.
+
+    This is a structural framebuffer check, not a pixel golden. It admits small
+    driver and font-rendering differences while still rejecting a blank frame,
+    a gameplay frame, or an editor missing one of its main working regions.
+    Exact labels and button behavior remain owned by the faster localization
+    and editor tests.
+    """
+    width, height, pixels = decode_rgba_png(path, "editor")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor screenshot must match its logical 1280x720 window "
+            f"at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+
+    def region_evidence(left: int, top: int, right: int, bottom: int) -> tuple[int, int]:
+        changed = 0
+        colors: set[int] = set()
+        for row in range(top * scale, bottom * scale):
+            row_at = row * width * 4
+            for column in range(left * scale, right * scale):
+                at = row_at + column * 4
+                red, green, blue = pixels[at : at + 3]
+                colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+                if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                    changed += 1
+        return changed, len(colors)
+
+    toolbar = region_evidence(32, 52, 672, 94)
+    canvas = region_evidence(32, 104, 1018, 650)
+    sidebar = region_evidence(1018, 104, 1248, 650)
+    status = region_evidence(32, 660, 1248, 700)
+    minimum_changed = (
+        2_000 * scale * scale,
+        25_000 * scale * scale,
+        8_000 * scale * scale,
+        2_000 * scale * scale,
+    )
+    evidence = (toolbar, canvas, sidebar, status)
+    labels = ("toolbar", "canvas", "sidebar", "status")
+    failures = [
+        f"{label}=changed:{changed},colors:{colors}"
+        for label, (changed, colors), threshold in zip(labels, evidence, minimum_changed)
+        if changed < threshold or colors < 3
+    ]
+    if failures:
+        raise PlayFailure(
+            "Caxecraft editor framebuffer is blank or missing a working region "
+            f"({'; '.join(failures)})"
+        )
+    return width, height
 
 
 def host_platform() -> str:
@@ -1490,6 +1563,7 @@ def compile_haxe(
             "resize-layout": "caxecraft_pilot_resize_layout",
             "aquatic-gear": "caxecraft_pilot_aquatic_gear",
             "smooth-motion": "caxecraft_pilot_smooth_motion",
+            "editor-shell": "caxecraft_pilot_editor_shell",
         }
         pilot_define = pilot_defines.get(pilot)
         if pilot_define is None:
@@ -2424,6 +2498,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             "resize-layout",
             "aquatic-gear",
             "smooth-motion",
+            "editor-shell",
         ),
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
@@ -2600,7 +2675,7 @@ def main(argv: list[str]) -> int:
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
         requested_snapshot: dict[str, object] | None = None
-        reusable_profile = selected_pilot is None and not args.sanitizers
+        reusable_profile = not args.sanitizers
         if reusable_profile and not (args.compile_only or args.build_only):
             snapshot_started = time.monotonic()
             requested_snapshot = play_request_snapshot(
@@ -2639,10 +2714,17 @@ def main(argv: list[str]) -> int:
                         "caxecraft: unchanged build hit; reused generated C, native executable, "
                         f"and staged content after {total_ms:.1f} ms validation"
                     )
-                    print("caxecraft: launching; press Q to quit")
-                    return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
-                miss_reason = generation_miss if decision is None else decision.reason
-                print(f"caxecraft: unchanged build miss: {miss_reason}")
+                    if selected_pilot is None:
+                        print("caxecraft: launching; press Q to quit")
+                        return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
+                    # Keep the graphical assertions below, but skip Haxe. The
+                    # build-only branch revalidates generated structure and the
+                    # native cache rechecks every compiler dependency before
+                    # the two bounded pilot runs.
+                    args.build_only = True
+                if not args.build_only:
+                    miss_reason = generation_miss if decision is None else decision.reason
+                    print(f"caxecraft: unchanged build miss: {miss_reason}")
         if args.build_only:
             verify_level_adapter_provenance()
             generated = current_generation(output_root).generated
@@ -2804,7 +2886,7 @@ def main(argv: list[str]) -> int:
             except BuildStateFailure as error:
                 raise PlayFailure(str(error)) from error
             print(f"caxecraft: published unchanged-build state at {output_root / PLAY_BUILD_STATE}")
-        if args.build_only:
+        if args.build_only and selected_pilot is None:
             return 0
         if selected_pilot is not None:
             screenshot_names = {
@@ -2819,6 +2901,7 @@ def main(argv: list[str]) -> int:
                 "resize-layout": "caxecraft-pilot-resize.png",
                 "aquatic-gear": "caxecraft-pilot-aquatic-gear.png",
                 "smooth-motion": "caxecraft-pilot-smooth-motion.png",
+                "editor-shell": "caxecraft-pilot-editor.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
             state_screenshot = executable.parent / "caxecraft-pilot-state.png"
@@ -2852,6 +2935,8 @@ def main(argv: list[str]) -> int:
                         platform_name=platform_name,
                         expected_logical_size=(960, 540),
                     )
+                elif selected_pilot == "editor-shell":
+                    width, height = validate_editor_screenshot(screenshot, platform_name=platform_name)
                 else:
                     width, height = validate_presented_screenshot(
                         screenshot,

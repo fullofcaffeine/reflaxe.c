@@ -19,6 +19,7 @@ enum abstract PilotScriptName(Int) to Int {
 	var ResizeLayout = 7;
 	var AquaticGear = 8;
 	var SmoothMotion = 9;
+	var EditorShell = 10;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -104,6 +105,8 @@ final class PilotScript {
 			return 96;
 		if (name == SmoothMotion)
 			return 12;
+		if (name == EditorShell)
+			return 4;
 		return 4;
 	}
 
@@ -126,6 +129,8 @@ final class PilotScript {
 			return "aquatic-gear";
 		if (name == SmoothMotion)
 			return "smooth-motion";
+		if (name == EditorShell)
+			return "editor-shell";
 		return "resize-layout";
 	}
 
@@ -148,6 +153,8 @@ final class PilotScript {
 			return frameNumber < 92 ? ForwardLeft : Idle;
 		if (name == SmoothMotion)
 			return frameNumber == 8 ? ForwardJump : Forward;
+		if (name == EditorShell)
+			return Idle;
 		return fullInventoryMiningAction(frameNumber);
 	}
 
@@ -223,6 +230,8 @@ final class PilotScript {
 				frameNumber == 92 ? new PilotCheckpoint("aquatic-gear.frame", CaptureScreenshot) : null;
 			case SmoothMotion:
 				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
+			case EditorShell:
+				frameNumber == 2 ? new PilotCheckpoint("editor-shell.frame", CaptureScreenshot) : null;
 			case _: null;
 		};
 	}

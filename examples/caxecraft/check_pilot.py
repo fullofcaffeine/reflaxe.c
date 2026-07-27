@@ -34,7 +34,7 @@ import play as playable  # noqa: E402
 import benchmark_renderer as renderer_benchmark  # noqa: E402
 
 EXPECTED_TRACE = (
-    "caxecraft-pilot: 10 named scripts, 194 deterministic frames, 12 checkpoints; "
+    "caxecraft-pilot: 11 named scripts, 198 deterministic frames, 13 checkpoints; "
     "bounded quit and shared input interface\n"
 )
 FORBIDDEN_PILOT_TEXT = (
