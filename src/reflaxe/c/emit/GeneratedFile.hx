@@ -1,6 +1,7 @@
 package reflaxe.c.emit;
 
 import haxe.crypto.Sha256;
+import haxe.io.Bytes;
 
 /** Stable artifact roles admitted by the project emitter. */
 enum abstract GeneratedFileKind(String) to String {
@@ -30,6 +31,9 @@ class GeneratedFile {
 	public final kind:GeneratedFileKind;
 	public final contentSha256:String;
 
+	/** UTF-8 payload size captured with the bytes already needed for hashing. */
+	public final contentByteLength:Int;
+
 	public function new(relativePath:String, contents:String, kind:GeneratedFileKind) {
 		if (!isNormalizedRelativePath(relativePath) || relativePath == OWNERSHIP_MANIFEST) {
 			fail('generated artifact path must be normalized, output-root-relative, and must not reserve `$OWNERSHIP_MANIFEST`: `$relativePath`',
@@ -44,7 +48,9 @@ class GeneratedFile {
 		this.relativePath = relativePath;
 		this.contents = contents;
 		this.kind = kind;
-		this.contentSha256 = Sha256.encode(contents);
+		final encoded = Bytes.ofString(contents);
+		this.contentSha256 = Sha256.make(encoded).toHex();
+		this.contentByteLength = encoded.length;
 	}
 
 	public function verifyIntegrity():Void {

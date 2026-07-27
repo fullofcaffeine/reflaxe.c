@@ -89,6 +89,176 @@ class CaxecraftTimingTests(unittest.TestCase):
             ],
         )
 
+    def test_compiler_profile_validates_nested_structured_records(self) -> None:
+        profiler = load_module(
+            "caxecraft_structured_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+
+        def record(value: dict[str, object]) -> str:
+            return "HXC_PROFILE\t" + json.dumps(value, separators=(",", ":"))
+
+        child = {
+            "schemaVersion": 1,
+            "recordKind": "span",
+            "requestId": "request-1",
+            "spanId": 2,
+            "parentSpanId": 1,
+            "category": "phase",
+            "name": "runtime planning",
+            "status": "ok",
+            "startOffsetMicroseconds": 20.0,
+            "inclusiveWallMicroseconds": 60.0,
+            "exclusiveWallMicroseconds": 60.0,
+            "inclusiveCpuMicroseconds": 60.0,
+            "exclusiveCpuMicroseconds": 60.0,
+            "allocatedBytesDelta": 12.0,
+            "residentBytesAtEnd": 1024.0,
+        }
+        parent = {
+            "schemaVersion": 1,
+            "recordKind": "span",
+            "requestId": "request-1",
+            "spanId": 1,
+            "parentSpanId": None,
+            "category": "phase",
+            "name": "target pipeline",
+            "status": "ok",
+            "startOffsetMicroseconds": 0.0,
+            "inclusiveWallMicroseconds": 100.0,
+            "exclusiveWallMicroseconds": 40.0,
+            "inclusiveCpuMicroseconds": 80.0,
+            "exclusiveCpuMicroseconds": 20.0,
+            "allocatedBytesDelta": 20.0,
+            "residentBytesAtEnd": 1024.0,
+        }
+        counter = {
+            "schemaVersion": 1,
+            "recordKind": "counter",
+            "requestId": "request-1",
+            "name": "runtime.requirements",
+            "value": 3,
+        }
+        request = {
+            "schemaVersion": 1,
+            "recordKind": "request",
+            "requestId": "request-1",
+            "status": "ok",
+            "profile": "portable",
+            "buildMode": "debug",
+            "haxeVersion": "5.0.0-preview.1",
+            "wallMicroseconds": 120.0,
+            "cpuMicroseconds": 100.0,
+            "allocatedBytesDelta": 32.0,
+            "maximumObservedResidentBytes": 1024.0,
+            "spanCount": 2,
+            "counterCount": 1,
+        }
+        stream = "\n".join(
+            (record(child), record(parent), record(counter), record(request))
+        )
+        parsed = profiler.parse_profile_records(stream, expected_status="ok")
+        self.assertEqual(parsed.request.span_count, 2)
+        self.assertEqual(parsed.counters, (("runtime.requirements", 3.0),))
+        wall, cpu = profiler.exclusive_accounting(150, parsed)
+        self.assertEqual(wall["runtime planning"], 60.0)
+        self.assertEqual(wall["target pipeline"], 40.0)
+        self.assertEqual(wall["profile request unspanned remainder"], 20.0)
+        self.assertEqual(wall["external process/frontend remainder"], 30.0)
+        self.assertEqual(cpu["profile request unspanned remainder"], 20.0)
+        self.assertEqual(
+            profiler.distribution([1.0, 2.0, 3.0, 4.0, 5.0]),
+            {
+                "samples": 5,
+                "minimum": 1.0,
+                "median": 3.0,
+                "medianAbsoluteDeviation": 1.0,
+                "p95": 4.8,
+                "maximum": 5.0,
+            },
+        )
+        self.assertEqual(
+            profiler.host_condition((5.5, 6.0), 12), "representative"
+        )
+        self.assertEqual(profiler.host_condition((5.5, 6.1), 12), "contended")
+
+        missing_parent = dict(child)
+        missing_parent["parentSpanId"] = 99
+        with self.assertRaisesRegex(
+            profiler.CompilerProfileFailure, "missing parent"
+        ):
+            profiler.parse_profile_records(
+                "\n".join(
+                    (
+                        record(missing_parent),
+                        record(parent),
+                        record(counter),
+                        record(request),
+                    )
+                )
+            )
+
+        inconsistent = dict(parent)
+        inconsistent["exclusiveWallMicroseconds"] = 30.0
+        with self.assertRaisesRegex(
+            profiler.CompilerProfileFailure, "inconsistent exclusive wall"
+        ):
+            profiler.parse_profile_records(
+                "\n".join(
+                    (
+                        record(child),
+                        record(inconsistent),
+                        record(counter),
+                        record(request),
+                    )
+                )
+            )
+
+    def test_compiler_profile_preserves_the_active_failed_span(self) -> None:
+        profiler = load_module(
+            "caxecraft_failed_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        span = {
+            "schemaVersion": 1,
+            "recordKind": "span",
+            "requestId": "request-1",
+            "spanId": 1,
+            "parentSpanId": None,
+            "category": "phase",
+            "name": "configuration and contracts",
+            "status": "failed",
+            "startOffsetMicroseconds": 0,
+            "inclusiveWallMicroseconds": 10,
+            "exclusiveWallMicroseconds": 10,
+            "inclusiveCpuMicroseconds": 8,
+            "exclusiveCpuMicroseconds": 8,
+            "allocatedBytesDelta": None,
+            "residentBytesAtEnd": None,
+        }
+        request = {
+            "schemaVersion": 1,
+            "recordKind": "request",
+            "requestId": "request-1",
+            "status": "failed",
+            "profile": "portable",
+            "buildMode": "unresolved",
+            "haxeVersion": "5.0.0-preview.1",
+            "wallMicroseconds": 12,
+            "cpuMicroseconds": 9,
+            "allocatedBytesDelta": None,
+            "maximumObservedResidentBytes": None,
+            "spanCount": 1,
+            "counterCount": 0,
+        }
+        stream = "\n".join(
+            "HXC_PROFILE\t" + json.dumps(value, separators=(",", ":"))
+            for value in (span, request)
+        )
+        parsed = profiler.parse_profile_records(stream, expected_status="failed")
+        self.assertEqual(parsed.request.status, "failed")
+        self.assertEqual(parsed.spans[0].status, "failed")
+
     def test_compiler_profile_accounting_does_not_double_count_parents(self) -> None:
         profiler = load_module(
             "caxecraft_compiler_accounting_subject",

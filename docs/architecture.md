@@ -149,29 +149,50 @@ place to make and validate those decisions.
 ## Performance-observation boundary
 
 Compiler profiling is opt-in and must not become hidden process-global state.
-`reflaxe_c_phase_timing` creates request-local clocks around typed-input
-capture, HxcIR construction and validation, semantic analyses and naming,
-structural CAST construction, project planning, printing, artifact planning,
-and output ownership. Each clock has a closed `CPhaseTimingId`; adding or
-renaming a phase therefore requires an intentional compiler and profiler
-change rather than a new free-form string in a hot path. Normal builds create
-no phase objects and emit no timing records.
+`reflaxe_c_phase_timing` starts one profile before typed input is captured and
+finishes it after generated-file ownership has been checked. It places the
+named compiler phases in a strict parent/child tree. A *span* is one timed
+region in that tree. Its **inclusive** time is the complete region, including
+children; its **exclusive** time subtracts those children and therefore shows
+only work owned directly by that region. For example, “semantic lowering”
+contains HxcIR construction and validation, but its exclusive value does not
+count those children again.
 
-The Caxecraft profiler combines those exact target wall times with Haxe's
-opt-in `--times` table. Parent durations are not added to their children: the
-report derives non-overlapping “remainder” records so its bottleneck ranking
-does not count the same time twice. Durations are diagnostic observations, not
-compiler artifacts, and live under ignored `_build/`; normal generated files
-remain byte-deterministic. The profiler starts a fresh process for cold samples
-and owns an ephemeral loopback compiler server for post-prime warm samples. It
-never caches `TypedExpr`, `CompilationContext`, symbols, output ownership, or
-other mutable request state.
+Each structured `HXC_PROFILE` JSON Lines record belongs to one request and
+uses schema 1. Span records carry monotonic wall time, process CPU time,
+allocation change when the Eval host exposes it, and resident-memory samples.
+The final request record reports total request time and peak observed resident
+memory. Bounded counters describe the input and output scale--for example
+typed declarations, HxcIR instructions, runtime requirements, generated
+bytes, and owned output paths--without adding a second analysis walk. An
+expected compiler diagnostic closes every still-open span as failed before
+Haxe stops the request, preserving the phase that rejected the program.
 
-The broad CAST-body phase also has three closed, opt-in detail clocks: body
-setup/value planning, control-flow planning, and CAST emission. Repeated calls
-are added together in the profiler report. This is diagnostic structure, not a
-new compiler layer: the HxcIR control-flow plan remains the semantic authority,
-and CAST emission still only turns that verified plan into C syntax.
+Each phase and counter has a closed enum name. Adding or renaming one therefore
+requires an intentional compiler and profiler change rather than a new
+free-form string in a hot path. The older `HXC_PHASE_TIMING` and
+`HXC_DETAIL_TIMING` lines remain available for existing tools, but bottleneck
+ranking uses the structured exclusive records. The Caxecraft consumer rejects
+unknown fields, duplicate IDs, missing parents, spans outside their parent,
+incorrect exclusive arithmetic, unsorted counters, and a mismatched request
+summary instead of trusting decoded JSON blindly.
+
+Normal builds create no profile state and emit no timing records. Profile data
+is diagnostic output, not a generated compiler artifact, and reports live
+under ignored `_build/`; normal generated files remain byte-deterministic. The
+Caxecraft profiler starts a fresh process for cold samples and owns an
+ephemeral loopback compiler server for post-prime warm samples. It never caches
+`TypedExpr`, `CompilationContext`, symbols, output ownership, or other mutable
+request state.
+
+The broad HxcIR-construction phase has closed detail clocks for function
+preparation, representation planning, function construction, program assembly,
+managed-root planning, and null-check coalescing. The CAST-body phase similarly
+splits body setup/value planning, control-flow planning, and CAST emission.
+Repeated calls are added together in the profiler report. This is diagnostic
+structure, not a new compiler layer: the HxcIR control-flow plan remains the
+semantic authority, and CAST emission still only turns that verified plan into
+C syntax.
 
 See [test feedback-loop and CI performance](test-performance.md) for the
 measurement method, the pinned-Haxe macOS timer caveat, and current Caxecraft

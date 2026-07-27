@@ -57,7 +57,7 @@
   "allowlist": [
     {
       "path": "src/reflaxe/c/emit/ReflaxeOutputWriter.hx",
-      "line": 98,
+      "line": 109,
       "column": 46,
       "construct": "json-parse",
       "boundaryKind": "external-json",

@@ -362,6 +362,10 @@ class CDiagnostic {
 	#if macro
 	public static function fatal<T>(id:CDiagnosticId, detail:String, pos:Position, ?profile:String):T {
 		requireAllowedSeverity(definition(id), Error);
+		// Profiling is opt-in. Closing it here preserves the first failing phase
+		// before Context.fatalError stops the macro request; normal diagnostics
+		// allocate no profile state and emit exactly the same compiler message.
+		CPhaseTiming.abortRequest();
 		Context.fatalError(humanMessage(id, detail, profile), pos);
 		throw new haxe.Exception("Context.fatalError returned after a fatal compiler diagnostic");
 	}

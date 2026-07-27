@@ -8,6 +8,7 @@ import haxe.macro.Type;
 import haxe.Json;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
+import reflaxe.c.CPhaseTiming.CProfileCounterId;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.emit.CProjectEmitter;
 import reflaxe.c.emit.CProjectEmitter.CProjectCompilationStatus;
@@ -312,6 +313,11 @@ class CCompiler {
 				runtimePlan: runtimePlan,
 				symbolTable: lowered.symbolTable
 			});
+			var generatedBytes = 0.0;
+			for (file in generatedFiles)
+				generatedBytes += file.contentByteLength;
+			CPhaseTiming.setCounter(CPCounterGeneratedFiles, generatedFiles.length);
+			CPhaseTiming.setCounterFloat(CPCounterGeneratedBytes, generatedBytes);
 			CPhaseTiming.stop(artifactPlanTimer);
 			return generatedFiles;
 		} catch (error:CStaticInitializationError) {

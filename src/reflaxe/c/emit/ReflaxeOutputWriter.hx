@@ -4,6 +4,8 @@ package reflaxe.c.emit;
 import haxe.Json;
 import haxe.io.Bytes;
 import haxe.io.Path;
+import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CProfileCounterId;
 import reflaxe.output.OutputManager;
 import sys.FileSystem;
 import sys.io.File;
@@ -17,6 +19,8 @@ private typedef ReflaxeOwnershipMetadata = {
 
 /** Validates the ownership boundary before delegating every write to Reflaxe. */
 class ReflaxeOutputWriter {
+	var prefixChecks:Int = 0;
+
 	public function new() {}
 
 	public function write(output:OutputManager, generatedFiles:Array<GeneratedFile>):Void {
@@ -36,8 +40,13 @@ class ReflaxeOutputWriter {
 		}
 
 		final owned = loadAndValidateOwnership(destination, root);
+		var priorOwnedCount = 0;
+		for (_ in owned.keys())
+			priorOwnedCount++;
+		CPhaseTiming.setCounter(CPCounterPriorOwnedFiles, priorOwnedCount);
 		final files = generatedFiles.copy();
 		files.sort(compareFiles);
+		CPhaseTiming.setCounter(CPCounterPlannedOutputFiles, files.length);
 		var previous:Null<String> = null;
 		for (file in files) {
 			// `GeneratedFile` validates and hashes its final String in the
@@ -62,6 +71,8 @@ class ReflaxeOutputWriter {
 		for (file in files) {
 			output.saveFile(file.relativePath, file.contents);
 		}
+		CPhaseTiming.setCounter(CPCounterSavedOutputFiles, files.length);
+		CPhaseTiming.setCounter(CPCounterPrefixChecks, prefixChecks);
 	}
 
 	function loadAndValidateOwnership(outputDir:String, root:String):Map<String, Bool> {
@@ -113,6 +124,7 @@ class ReflaxeOutputWriter {
 	}
 
 	function validateExistingPrefixes(outputDir:String, canonicalRoot:String, relativePath:String):Void {
+		prefixChecks++;
 		var current = outputDir;
 		var expected = canonicalRoot;
 		for (part in relativePath.split("/")) {

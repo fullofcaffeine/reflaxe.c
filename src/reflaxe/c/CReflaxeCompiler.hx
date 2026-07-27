@@ -10,6 +10,8 @@ import reflaxe.data.EnumOptionData;
 import reflaxe.output.DataAndFileInfo;
 import reflaxe.output.StringOrBytes;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
+import reflaxe.c.CPhaseTiming.CProfileCounterId;
+import reflaxe.c.CPhaseTiming.CPhaseTimer;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.ProjectEmissionError;
@@ -23,6 +25,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 	var currentProgram:Null<TypedProgramInput> = null;
 	var generatedFiles:Array<GeneratedFile> = [];
 	var compilationContext:Null<CompilationContext> = null;
+	var targetTimer:Null<CPhaseTimer> = null;
 
 	public function new() {
 		super();
@@ -33,12 +36,19 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		// retained even when no individual callback would compile them. Capture
 		// expressions now as well: the framework may replace field expressions
 		// during later callback preprocessing.
+		CPhaseTiming.beginRequest();
 		final capturedModules = moduleTypes.copy();
 		if (Context.defined("reflaxe_c_test_reverse_typed_modules")) {
 			capturedModules.reverse();
 		}
 		final captureTimer = CPhaseTiming.start(CPTypedInputCapture);
 		pendingProgram = TypedAstNormalizer.normalize(capturedModules, getMainModule(), getMainExpr());
+		final captured = pendingProgram;
+		if (captured != null) {
+			CPhaseTiming.setCounter(CPCounterTypedModules, captured.modules.length);
+			CPhaseTiming.setCounter(CPCounterTypedDeclarations, captured.declarations.length);
+			CPhaseTiming.setCounter(CPCounterTypedExpressionRoots, captured.expressionRoots.length);
+		}
 		CPhaseTiming.stop(captureTimer);
 		return moduleTypes;
 	}
@@ -46,8 +56,11 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 	override public function onCompileStart():Void {
 		// Every compilation gets fresh mutable state. Never cache a context across
 		// compiler-server requests.
+		targetTimer = CPhaseTiming.start(CPTargetPipeline);
 		final profile = ProfileResolver.resolve();
-		compilationContext = new CompilationContext(profile, BuildModeResolver.resolve(profile));
+		final buildMode = BuildModeResolver.resolve(profile);
+		CPhaseTiming.describeRequest(Std.string(profile), Std.string(buildMode));
+		compilationContext = new CompilationContext(profile, buildMode);
 		generatedFiles = [];
 		currentProgram = pendingProgram;
 		pendingProgram = null;
@@ -62,9 +75,9 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			return;
 		}
 		context.setTypedProgram(program);
-		final targetTimer = CPhaseTiming.start(CPTargetPipeline);
 		generatedFiles = new CCompiler(context).compileModules(program);
 		CPhaseTiming.stop(targetTimer);
+		targetTimer = null;
 	}
 
 	override public function generateFilesManually():Void {
@@ -77,6 +90,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		try {
 			new ReflaxeOutputWriter().write(output, generatedFiles);
 			CPhaseTiming.stop(outputTimer);
+			CPhaseTiming.finishRequest();
 		} catch (error:ProjectEmissionError) {
 			CPhaseTiming.stop(outputTimer);
 			CDiagnostic.fatal(error.diagnosticId, error.detail, Context.currentPos());

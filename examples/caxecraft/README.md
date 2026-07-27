@@ -519,13 +519,19 @@ npm run profile:caxecraft-compiler
 ```
 
 This is a profiler, not another correctness gate. It builds the same runtime-
-free split Caxecraft program three times in fresh Haxe processes, primes one
-owned loopback compiler server, then measures three same-context warm requests.
-Every run must produce the same 30 normal artifacts byte-for-byte. The path-
-free report is written to ignored
+free split Caxecraft program five times in fresh Haxe processes, primes one
+owned loopback compiler server, then measures five same-context warm requests.
+Every run must produce the same complete normal-artifact set byte-for-byte; the
+report records the current set instead of making its incidental file count part
+of the compiler contract. The path-free report is written to ignored
 `examples/caxecraft/_build/compiler-profile.json`; it records host load, wall
-time, exact target phases, Haxe's raw timer table, and a non-overlapping phase
-summary.
+and CPU time, allocation and resident-memory observations, exact target
+phases, bounded program/output counts, Haxe's raw timer table, and a
+non-overlapping phase summary. “Non-overlapping” means the summary uses each
+span's exclusive time--the time left after its nested child spans are
+subtracted--so it never ranks the same work once under a child and again under
+its parent. The consumer validates the whole span tree and final request totals
+before accepting a sample.
 
 These durations stop when Haxe and Reflaxe.C have written the generated C
 project. They do **not** include Clang/GCC compilation, native linking with

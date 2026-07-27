@@ -12,6 +12,8 @@ import haxe.macro.TypedExprTools;
 import reflaxe.c.CProfile;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CProfileCounterId;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
@@ -344,6 +346,7 @@ class CBodyLowering {
 		// The profiler enables these request-local clocks explicitly. They describe
 		// semantic boundaries rather than helper calls, so reports survive refactors.
 		final hxcIRConstructionTimer = CPhaseTiming.start(CPHxcIRConstruction);
+		final functionPreparationTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionPreparation);
 		final inputs = inputFunctions.copy();
 		inputs.sort(compareInputs);
 		final aggregateRegistry = new CBodyAggregateRegistry(context, typedProgram, typedContract,
@@ -432,10 +435,12 @@ class CBodyLowering {
 		for (fn in prepared)
 			builders.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry,
 				enumConstructorAdapters, functionLiterals, preparedDispatch));
+		CPhaseTiming.stopDetail(functionPreparationTimer);
 		// Representation is a whole-program decision. Discover the narrow
 		// `Array<Class>` graph first so an earlier function cannot choose stack
 		// storage merely because a later function is the first place that mentions
 		// the same class as an Array element.
+		final representationTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationPlanning);
 		for (builder in builders)
 			builder.discoverManagedRepresentations();
 		final interfaceImplementations:Array<CBodyInterfaceImplementation> = [];
@@ -447,6 +452,8 @@ class CBodyLowering {
 		aggregateRegistry.completeManagedRepresentations(interfaceImplementations);
 		for (builder in builders)
 			builder.completeManagedRepresentations();
+		CPhaseTiming.stopDetail(representationTimer);
+		final functionConstructionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionConstruction);
 		final built:Array<BuiltBodyFunction> = [];
 		for (builder in builders)
 			built.push(builder.build());
@@ -460,6 +467,8 @@ class CBodyLowering {
 		for (adapter in enumConstructorAdapters.preparedFunctions())
 			if (!preparedById.exists(adapter.irId))
 				preparedById.set(adapter.irId, adapter);
+		CPhaseTiming.stopDetail(functionConstructionTimer);
+		final programAssemblyTimer = CPhaseTiming.startDetail(CDTHxcIRProgramAssembly);
 		aggregateRegistry.completeClassLayouts();
 		final preparedGlobals = globalRegistry.canonicalGlobals();
 		final preparedAggregates = aggregateRegistry.canonicalAggregates();
@@ -473,8 +482,14 @@ class CBodyLowering {
 		final preparedImports = aggregateRegistry.canonicalImports();
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
 			preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
+		CPhaseTiming.stopDetail(programAssemblyTimer);
+		final managedRootTimer = CPhaseTiming.startDetail(CDTHxcIRManagedRootPlanning);
 		new HxcIRManagedRootPlanner().run(program);
+		CPhaseTiming.stopDetail(managedRootTimer);
+		final nullCheckTimer = CPhaseTiming.startDetail(CDTHxcIRNullCheckCoalescing);
 		new CBodyNullCheckCoalescing().run(program);
+		CPhaseTiming.stopDetail(nullCheckTimer);
+		recordProgramCounters(program);
 		CPhaseTiming.stop(hxcIRConstructionTimer);
 		final hxcIRValidationTimer = CPhaseTiming.start(CPHxcIRValidation);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
@@ -562,6 +577,7 @@ class CBodyLowering {
 				labelNames, emitter.requiredHeaders(item.ir), body, lineMappedBody));
 		}
 		lowered.sort((left, right) -> compareUtf8(left.ir.id, right.ir.id));
+		CPhaseTiming.setCounter(CPCounterCASTFunctions, lowered.length);
 		CPhaseTiming.stop(castBodyTimer);
 		final runtimeRequirements:Array<CBodyRuntimeRequirement> = [];
 		for (item in built) {
@@ -598,9 +614,47 @@ class CBodyLowering {
 					runtimeRequirements.push(new CBodyRuntimeRequirement("gc", "root-frame", "compiler-emitted exact managed root frame", root.source, null));
 			}
 		runtimeRequirements.sort(compareRuntimeRequirements);
+		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
 		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIntMaps,
 			loweredStringMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
 			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram);
+	}
+
+	/**
+		Count semantic entities once, immediately after HxcIR construction.
+
+		These counters describe scale; they do not cache analysis facts or walk
+		instruction children. Recording them here keeps the profiling pass bounded
+		to the arrays that define the program's structural ownership.
+	**/
+	static function recordProgramCounters(program:HxcIRProgram):Void {
+		var typeCount = 0;
+		var typeInstanceCount = 0;
+		var globalCount = 0;
+		var functionCount = 0;
+		var blockCount = 0;
+		var instructionCount = 0;
+		var managedRootCount = 0;
+		for (module in program.modules) {
+			typeCount += module.types.length;
+			typeInstanceCount += module.typeInstances.length;
+			globalCount += module.globals.length;
+			functionCount += module.functions.length;
+			for (fn in module.functions) {
+				blockCount += fn.blocks.length;
+				managedRootCount += fn.managedRoots == null ? 0 : fn.managedRoots.length;
+				for (block in fn.blocks)
+					instructionCount += block.instructions.length;
+			}
+		}
+		CPhaseTiming.setCounter(CPCounterHxcIRModules, program.modules.length);
+		CPhaseTiming.setCounter(CPCounterHxcIRTypes, typeCount);
+		CPhaseTiming.setCounter(CPCounterHxcIRTypeInstances, typeInstanceCount);
+		CPhaseTiming.setCounter(CPCounterHxcIRGlobals, globalCount);
+		CPhaseTiming.setCounter(CPCounterHxcIRFunctions, functionCount);
+		CPhaseTiming.setCounter(CPCounterHxcIRBlocks, blockCount);
+		CPhaseTiming.setCounter(CPCounterHxcIRInstructions, instructionCount);
+		CPhaseTiming.setCounter(CPCounterHxcIRManagedRoots, managedRootCount);
 	}
 
 	function registerManagedProgramNames(program:HxcIRProgram, preparedById:Map<String, PreparedBodyFunction>):Null<CManagedProgramRequests> {

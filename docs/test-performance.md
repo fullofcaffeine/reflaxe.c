@@ -505,20 +505,29 @@ then reduce demonstrated repeated target work without caching mutable
 
 Beads issue `haxe_c-fbq` added an opt-in compiler profiler rather than guessing
 from whole-suite wall time. A *phase* here means one named portion of the build,
-such as “turn validated HxcIR into structural C bodies.” The compiler records
-each target phase with a request-local wall clock only when
-`reflaxe_c_phase_timing` is enabled. Haxe's `--times` report supplies the
-surrounding parse/type/macro context. The command is:
+such as “turn validated HxcIR into structural C bodies.” The current schema-1
+`HXC_PROFILE` stream records phases as a checked parent/child tree only when
+`reflaxe_c_phase_timing` is enabled. Inclusive time contains nested work;
+exclusive time subtracts it. Bottleneck ranking uses exclusive wall and CPU
+time, so a broad parent cannot make the same work look expensive twice.
+Allocation changes, resident-memory samples, and bounded entity/output counts
+help distinguish “one operation is intrinsically slow” from “the compiler
+repeated or materialized far more work than expected.” Haxe's `--times` report
+still supplies the surrounding parse/type/macro context. The command is:
 
 ```sh
 npm run profile:caxecraft-compiler
 ```
 
-It uses the exact Haxe pin, one runtime-free split Caxecraft workload, three
-fresh compiler processes, one unmeasured server-prime request, and three
-same-context warm requests. All seven requests must produce the same 30 normal
-artifacts byte-for-byte. `_GeneratedFiles.json` remains separately owned
-Reflaxe activity metadata. The profiler records no command, checkout path,
+It uses the exact Haxe pin, one runtime-free split Caxecraft workload, five
+fresh compiler processes, one unmeasured server-prime request, and five
+same-context warm requests. All eleven requests must produce the same complete
+set of normal artifacts byte-for-byte; the report records the measured set
+rather than treating today's fixture count as a permanent compiler contract.
+`_GeneratedFiles.json` remains separately owned Reflaxe activity metadata. The
+consumer independently validates span identity, nesting, containment,
+exclusive-time arithmetic, counter order, and the final request totals before
+it writes the path-free report. The profiler records no command, checkout path,
 temporary path, timestamp, or environment secret.
 
 The measured boundary is Haxe source through generated C files. It includes
@@ -550,7 +559,10 @@ proof actually finds a non-returning cycle. This is not a cache: no mutable
 Haxe tree or compiler context survives a request, and recursive-cycle output
 keeps its existing specialized path.
 
-The first three-plus-three post-change sample began at one-minute load `9.88`
+The first three-plus-three post-change sample below predates structured
+exclusive spans. Its “remainder” rows were derived by subtracting known child
+wall timers from their parents; they remain historical evidence, not the
+current accounting authority. The sample began at one-minute load `9.88`
 on 12 logical CPUs and ended at `9.649`, so it is deliberately labeled
 **contended diagnostic evidence**, not a p50/p95 budget:
 
