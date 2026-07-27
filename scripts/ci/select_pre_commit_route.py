@@ -34,8 +34,14 @@ KNOWN_AFFECTED_PATH = re.compile(
     r"|test/governance/test_toolchain_shard\.py"
     r"|examples/caxecraft/"
     r"|docs/caxecraft-"
-    r"|src/reflaxe/c/(?:CCompiler|CPhaseTiming|CReflaxeCompiler|CompilationContext)\.hx"
-    r"|src/reflaxe/c/(?:ast|emit|frontend|ir|lowering|naming|plan|runtime|semantics)/"
+    r"|docs/raygui-hx\.md"
+    r"|docs/specs/raygui-core-(?:binding-lock|selection)(?:\.schema)?\.json"
+    r"|scripts/raygui/"
+    r"|src/raygui/"
+    r"|std/c/Ref\.hx"
+    r"|test/(?:c_import|raygui_binding)/"
+    r"|src/reflaxe/c/(?:CCompiler|CPhaseTiming|CUtf8Order|CReflaxeCompiler|CompilationContext)\.hx"
+    r"|src/reflaxe/c/(?:ast|emit|frontend|interop|ir|lowering|macros|naming|plan|runtime|semantics)/"
     r")"
 )
 
@@ -78,12 +84,33 @@ AFFECTED_OWNER_RULES = (
         AffectedOwner("test:project-emitter", "project or artifact planning changed"),
     ),
     (
+        re.compile(r"^src/reflaxe/c/CUtf8Order\.hx"),
+        AffectedOwner("test:project-emitter", "shared deterministic compiler ordering changed"),
+    ),
+    (
         re.compile(r"^src/reflaxe/c/(?:frontend/|CReflaxeCompiler\.hx|CompilationContext\.hx)"),
         AffectedOwner("test:typed-ast", "typed-source capture or request context changed"),
     ),
     (
+        re.compile(
+            r"^(?:src/reflaxe/c/interop/|std/c/Ref\.hx|test/c_import/)"
+        ),
+        AffectedOwner(
+            "test:c-import",
+            "typed direct-C imports or call-scoped native references changed",
+        ),
+    ),
+    (
         re.compile(r"^src/reflaxe/c/naming/"),
         AffectedOwner("test:symbol-registry", "deterministic C naming changed"),
+    ),
+    (
+        re.compile(r"^src/reflaxe/c/CUtf8Order\.hx"),
+        AffectedOwner("test:symbol-registry", "shared deterministic compiler ordering changed"),
+    ),
+    (
+        re.compile(r"^src/reflaxe/c/macros/"),
+        AffectedOwner("test:typed-c", "typed C macro contract capture changed"),
     ),
     (
         re.compile(r"^src/reflaxe/c/semantics/"),
@@ -116,6 +143,19 @@ AFFECTED_OWNER_RULES = (
             r"^examples/caxecraft/(?!profile_compiler\.py$)|^docs/caxecraft-"
         ),
         AffectedOwner("test:caxecraft-domain", "the flagship compiler/product path changed"),
+    ),
+    (
+        re.compile(
+            r"^(?:docs/raygui-hx\.md"
+            r"|docs/specs/raygui-core-(?:binding-lock|selection)(?:\.schema)?\.json"
+            r"|scripts/raygui/"
+            r"|src/raygui/"
+            r"|test/raygui_binding/)"
+        ),
+        AffectedOwner(
+            "test:raygui-binding",
+            "the generated raw binding or typed Raygui surface changed",
+        ),
     ),
 )
 

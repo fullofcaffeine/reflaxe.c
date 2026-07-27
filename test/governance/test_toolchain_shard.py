@@ -154,6 +154,47 @@ class ToolchainShardTests(unittest.TestCase):
             ),
         )
 
+    def test_c_import_and_raygui_change_selects_exact_affected_owners(self) -> None:
+        owners = self.route_selector.select_affected_owners(
+            (
+                "src/reflaxe/c/interop/CImportRegistry.hx",
+                "std/c/Ref.hx",
+                "src/raygui/Raygui.hx",
+                "docs/specs/raygui-core-selection.json",
+            )
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+                "test:c-import",
+                "test:raygui-binding",
+            ),
+        )
+
+    def test_shared_order_and_macro_change_selects_exact_affected_owners(self) -> None:
+        owners = self.route_selector.select_affected_owners(
+            (
+                "src/reflaxe/c/CUtf8Order.hx",
+                "src/reflaxe/c/macros/TypedCContractMacro.hx",
+            )
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+                "test:project-emitter",
+                "test:symbol-registry",
+                "test:typed-c",
+            ),
+        )
+
     def test_profiler_and_specialization_change_selects_exact_affected_owners(
         self,
     ) -> None:

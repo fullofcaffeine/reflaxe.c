@@ -820,23 +820,8 @@ class CSymbolRegistry {
 		return compareUtf8('${left.namespace.kind}\x00${left.namespace.scope}\x00${left.baseName}',
 			'${right.namespace.kind}\x00${right.namespace.scope}\x00${right.baseName}');
 
-	static function compareUtf8(left:String, right:String):Int {
-		#if (macro || eval)
-		/*
-			Haxe's Eval host stores these compiler strings as UTF-8 and compares
-			their underlying bytes lexicographically. Calling the native string
-			comparison therefore preserves the registry's byte-order contract
-			without wrapping both operands in new Bytes values for every sort
-			comparison. The portable fallback keeps the explicit byte walk for
-			non-Eval test or tooling hosts.
-		 */
-		return left < right ? -1 : left > right ? 1 : 0;
-		#else
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		return compareUtf8Bytes(leftBytes, rightBytes);
-		#end
-	}
+	static function compareUtf8(left:String, right:String):Int
+		return reflaxe.c.CUtf8Order.compare(left, right);
 
 	static function compareUtf8Bytes(leftBytes:Bytes, rightBytes:Bytes):Int {
 		final length = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;

@@ -696,15 +696,7 @@ class CPhaseTiming {
 		return Std.string(Math.round(Math.min(value, 2147483647.0)));
 
 	static function compareUtf8(left:String, right:String):Int {
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		final length = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...length) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0)
-				return difference;
-		}
-		return leftBytes.length - rightBytes.length;
+		return CUtf8Order.compare(left, right);
 	}
 }
 #else

@@ -861,14 +861,7 @@ class CASTPrinter {
 	}
 
 	function compareUtf8(a:String, b:String):Int {
-		final left = utf8Bytes(a);
-		final right = utf8Bytes(b);
-		final shared = left.length < right.length ? left.length : right.length;
-		for (index in 0...shared) {
-			if (left[index] != right[index])
-				return left[index] < right[index] ? -1 : 1;
-		}
-		return left.length < right.length ? -1 : (left.length > right.length ? 1 : 0);
+		return reflaxe.c.CUtf8Order.compare(a, b);
 	}
 
 	function printComment(text:String):String {

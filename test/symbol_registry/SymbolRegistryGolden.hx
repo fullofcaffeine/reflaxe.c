@@ -1,4 +1,5 @@
 import haxe.Json;
+import haxe.io.Bytes;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractField;
@@ -19,6 +20,7 @@ class SymbolRegistryGolden {
 	static inline final REPORT_PREFIX = "HXC_SYMBOL_REGISTRY=";
 
 	static function main():Void {
+		verifyUtf8Order();
 		final requests = corpus();
 		final forward = registry(requests);
 		final reverseRequests = requests.copy();
@@ -64,6 +66,36 @@ class SymbolRegistryGolden {
 				sealedRegistry: sealedRegistryDiagnostic()
 			}
 		}));
+	}
+
+	/**
+			Checks the shared fast comparator against an independent UTF-8 byte walk.
+
+		ASCII alone cannot prove the contract because every common string order
+		agrees there. These values cross one-, two-, three-, and four-byte UTF-8
+		encodings, so an Eval-host shortcut that used a different Unicode order
+		would fail before it could perturb generated artifact order.
+	**/
+	static function verifyUtf8Order():Void {
+		final values = ["z", "é", "Ā", "雪", "🙂", "a", ""];
+		for (left in values) {
+			for (right in values) {
+				final expected = compareUtf8Bytes(Bytes.ofString(left), Bytes.ofString(right));
+				final actual = reflaxe.c.CUtf8Order.compare(left, right);
+				if ((expected < 0) != (actual < 0) || (expected == 0) != (actual == 0) || (expected > 0) != (actual > 0))
+					throw 'shared UTF-8 order differs for `${left}` and `${right}`: expected=$expected actual=$actual';
+			}
+		}
+	}
+
+	static function compareUtf8Bytes(left:Bytes, right:Bytes):Int {
+		final length = left.length < right.length ? left.length : right.length;
+		for (index in 0...length) {
+			final difference = left.get(index) - right.get(index);
+			if (difference != 0)
+				return difference;
+		}
+		return left.length - right.length;
 	}
 
 	static function corpus():Array<CSymbolRequest> {

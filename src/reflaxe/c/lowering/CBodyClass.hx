@@ -781,15 +781,7 @@ class CBodyClassRegistry {
 		return '${Bytes.ofString(value).length}:$value';
 
 	static function compareUtf8(left:String, right:String):Int {
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		final limit = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...limit) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0)
-				return difference;
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 
 	static function identifierOrNull(symbols:CSymbolRegistry, request:Null<CSymbolRequest>):Null<CIdentifier>

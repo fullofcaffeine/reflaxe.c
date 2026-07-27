@@ -68,15 +68,7 @@ class HxcIRControlFlowFacts {
 	}
 
 	static function compareUtf8(left:String, right:String):Int {
-		final leftBytes = haxe.io.Bytes.ofString(left);
-		final rightBytes = haxe.io.Bytes.ofString(right);
-		final limit = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...limit) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0)
-				return difference;
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 }
 
@@ -312,14 +304,6 @@ class HxcIRControlFlowAnalysis {
 		};
 
 	static function compareUtf8(left:String, right:String):Int {
-		final leftBytes = haxe.io.Bytes.ofString(left);
-		final rightBytes = haxe.io.Bytes.ofString(right);
-		final limit = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...limit) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0)
-				return difference;
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 }

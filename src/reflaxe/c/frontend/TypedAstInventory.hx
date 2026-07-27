@@ -241,7 +241,7 @@ class TypedAstInventory {
 	}
 
 	static function compareStrings(left:String, right:String):Int {
-		return left < right ? -1 : (left > right ? 1 : 0);
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 }
 #else

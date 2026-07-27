@@ -148,15 +148,7 @@ class CDeclarationPlanner {
 	}
 
 	static function compareUtf8Static(left:String, right:String):Int {
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		final common = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...common) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0)
-				return difference;
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 }
 
@@ -647,16 +639,7 @@ private class PlanningState {
 		return kind == PIKSystem ? 0 : 1;
 
 	function compareUtf8(left:String, right:String):Int {
-		final leftBytes = Bytes.ofString(left);
-		final rightBytes = Bytes.ofString(right);
-		final commonLength = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
-		for (index in 0...commonLength) {
-			final difference = leftBytes.get(index) - rightBytes.get(index);
-			if (difference != 0) {
-				return difference;
-			}
-		}
-		return leftBytes.length - rightBytes.length;
+		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
 
 	function fail(message:String, ?modulePaths:Array<String>):Void

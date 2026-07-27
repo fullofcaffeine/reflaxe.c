@@ -271,6 +271,12 @@ An established root compiler module must be named explicitly before it can use
 the affected route. `CPhaseTiming.hx` is one such reviewed module; a new
 unrecognized root file or subdirectory still takes the exhaustive fallback.
 Changes to specialization provenance select the generic-specialization owner.
+The established direct-C interop layer and `c.Ref` select the C-import owner;
+the reviewed Raygui generator, lock, raw binding, and typed surface select the
+Raygui binding owner. This keeps a foreign-function change from falling into
+the exhaustive route merely because its compiler code lives under `interop/`,
+while still proving the exact ABI and generated-binding contracts it can
+affect.
 Changing only Caxecraft's compiler-profile consumer does not select the full
 game-domain suite: the governance tests own its timing schema and parser,
 whereas actual game source and content still select the Caxecraft owner.
@@ -1294,6 +1300,47 @@ cost at about 0.48s and 1.91GB in this sample. It independently proves that
 source-side runtime requests and validated HxcIR observations agree, so it must
 not be skipped merely because closure projection is now cheap. Any further
 change needs narrower attribution inside that proof.
+
+### Allocation-free UTF-8 ordering on Eval
+
+Compiler output must use one deterministic order even when source discovery,
+map iteration, or the host machine changes. Many phases therefore sort module
+paths, semantic IDs, generated paths, runtime facts, and diagnostic evidence by
+their UTF-8 bytes. The earlier implementation repeated a byte comparator in
+many owners. Each comparison converted both strings to new `Bytes` buffers;
+an `O(n log n)` sort then performed that allocation thousands of times.
+
+[`CUtf8Order.hx`](../src/reflaxe/c/CUtf8Order.hx) now owns this one ordering
+rule. Haxe Eval stores compiler strings as UTF-8 and its native String
+comparison produces the same lexicographic order, so the compiler can compare
+those existing strings without allocating temporary buffers. Other Haxe hosts
+retain an explicit byte walk. A focused differential check uses ASCII and
+two-, three-, and four-byte Unicode values to compare the Eval shortcut with an
+independent byte comparator. Existing reversed-discovery and raw-byte artifact
+tests still own the complete output-order contract.
+
+The first measured migration covered the largest lowering, validation,
+project, runtime, naming, and output owners; the completed migration then moved
+the remaining compiler comparators to the same owner. These are one-sample
+diagnostics, not a stable benchmark: the first migrated sample met the
+profiler's representative-host threshold, while the before and completed
+samples were contended. Every sample produced the same 227 normal artifacts
+with SHA-256 tree digest
+`64c1a39e1e8814fc8f0146bbef0acdccfd9a266ba71b2dde5cb91da296515bb1`.
+
+| Full-playable warm-profile value | Before | First migration | Complete migration |
+| --- | ---: | ---: | ---: |
+| Target CPU | 19.660s | 18.006s | 18.126s |
+| Cumulative allocation reported by Eval | 73.728GB | 69.587GB | 68.339GB |
+| Maximum observed resident memory | 1.571GB | not recorded here | 1.437GB |
+| Haxe-to-generated-C wall | 20.186s | 18.717s | 18.759s |
+
+The completed migration removed about 5.39GB of cumulative temporary
+allocation from this request. That decrease is the important structural signal:
+the migrated sort callbacks no longer create byte buffers. Wall-time and CPU
+direction remain useful diagnostic evidence, but comparable uncontended
+repetitions are still required before publishing a percentage speedup or
+regression budget.
 
 ### Span-lowering compiler-process reuse
 
