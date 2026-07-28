@@ -1294,17 +1294,46 @@ def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
     return inputs
 
 
+def haxe_module_path_inventory(source_root: Path) -> list[str]:
+    """List Haxe module files whose add/remove/rename requires a fresh server.
+
+    Haxe normally invalidates edits inside an existing module. The pinned Haxe
+    preview did not reliably discard a removed or newly shadowed module when the
+    classpath's module path set changed, so the owned-server identity includes
+    this path-only inventory. File contents are deliberately excluded: changing
+    a method body should keep the server alive and use its frontend cache.
+    """
+
+    if source_root.is_symlink() or not source_root.is_dir():
+        raise PlayFailure(
+            f"Haxe module inventory root must be a real directory: {source_root}"
+        )
+    modules: list[str] = []
+    for candidate in source_root.rglob("*"):
+        relative = candidate.relative_to(source_root)
+        if candidate.is_symlink():
+            raise PlayFailure(
+                "Haxe module inventory contains a symlink: "
+                + PurePosixPath(*relative.parts).as_posix()
+            )
+        if candidate.is_file() and candidate.suffix == ".hx":
+            modules.append(PurePosixPath(*relative.parts).as_posix())
+    modules.sort(key=lambda value: value.encode("utf-8"))
+    return modules
+
+
 def haxe_server_compatibility(
     installation: HaxeInstallation,
 ) -> dict[str, object]:
     """Identify infrastructure that may persist inside the Haxe server.
 
-    Ordinary game modules are intentionally absent: Haxe's server checks and
-    invalidates changed user modules itself, which is the work we want it to
-    reuse. Compiler macros, Reflaxe, the pinned Haxe binary/standard library,
-    package resolution, and base HXML are different. They define the machinery
-    interpreting a request, so changing any of them replaces the server before
-    another request is sent.
+    Ordinary game-module bytes are intentionally absent: Haxe's server checks
+    and invalidates edits inside those modules, which is the work we want it to
+    reuse. Their relative `.hx` paths are present because add/remove/rename
+    changes need a fresh server under the pinned preview. Compiler macros,
+    Reflaxe, the Haxe binary/standard library, package resolution, and base HXML
+    also define the machinery interpreting a request, so changing any of them
+    replaces the server before another request is sent.
     """
 
     inputs = (
@@ -1325,9 +1354,10 @@ def haxe_server_compatibility(
     )
     files = inventory_inputs(inputs)
     body: dict[str, object] = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "canonicalWorktree": str(ROOT.resolve()),
         "haxeVersion": installation.version,
+        "haxeModulePaths": haxe_module_path_inventory(CASE / "src"),
         "files": files,
     }
     return {**body, "sha256": canonical_digest(body)}

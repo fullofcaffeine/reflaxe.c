@@ -1794,6 +1794,40 @@ private class BodyGlobalRegistry {
 		return requireId(id, expression, fail);
 	}
 
+	/**
+		Return whether discovery can add this global without choosing a diagnostic.
+
+		The replay prepass runs before ordinary source-order lowering. It may add a
+		primitive global whose initializer is already proven valid: either a
+		separate initializer function owns the write, or the captured field has a
+		direct constant that `requireId` accepts without another semantic decision.
+		It must not reject an unsupported or uncaptured field early. The real body
+		visit still owns that source-positioned error. This keeps cache discovery
+		output-inert while ensuring successful functions see every static place in
+		the shared program.
+	**/
+	public function admittedForReplayPrepass(id:String):Bool {
+		if (byId.exists(id))
+			return true;
+		final input = inputsById.get(id);
+		if (input == null)
+			return false;
+		final mapping = switch CPrimitiveTypeMapper.map(input.fieldType, context.profile) {
+			case CTPrimitive(value) if (value.nullability == CPNonNullable):
+				switch value.sourceType {
+					case CPHaxeBool | CPHaxeInt | CPHaxeUInt | CPHaxeFloat: value;
+					case _: null;
+				}
+			case CTPrimitive(_) | CTReference(_, _) | CTNativePointer(_, _) | CTUnsupported(_):
+				null;
+		};
+		if (mapping == null)
+			return false;
+		if (deferredInitializersByGlobal.exists(id))
+			return true;
+		return input.expression != null && admittedConstantInitializer(input.expression, mapping.irType);
+	}
+
 	public function requireId(id:String, expression:TypedExpr, fail:(Position, String) -> Void):PreparedBodyGlobal {
 		final existing = byId.get(id);
 		if (existing != null) {
@@ -1866,6 +1900,25 @@ private class BodyGlobalRegistry {
 			case TConst(constant): IRGIConstant(globalConstant(constant, type, expression.pos, fail, fieldName));
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): globalInitializer(inner, type, fail, fieldName);
 			case _: rejected(fail, expression.pos, 'TField(static:${fieldName}:non-constant-initializer)');
+		};
+	}
+
+	/**
+		Prove that `globalInitializer` can consume one captured expression.
+
+		Discovery calls this pure predicate before `requireId`, so it cannot move an
+		unsupported-initializer diagnostic ahead of ordinary source-order lowering.
+		Keep its cases identical to the successful branches of `globalConstant`.
+	**/
+	static function admittedConstantInitializer(expression:TypedExpr, type:HxcIRTypeRef):Bool {
+		return switch expression.expr {
+			case TConst(TInt(_)): switch type {
+					case IRTInt(_, _): true;
+					case _: false;
+				};
+			case TConst(TBool(_)): type == IRTBool;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): admittedConstantInitializer(inner, type);
+			case _: false;
 		};
 	}
 
@@ -3640,14 +3693,25 @@ private class FunctionBuilder {
 
 		Function preparation already owns signatures and most type layouts. This
 		prepass adds only facts whose first reachable use can occur in an
-		expression: imported C calls/constants, `Null<T>` wrappers, map
-		specializations, and extern or typedef-backed values that reveal one of
-		those families. It deliberately does not materialize every anonymous
-		literal; authoritative lowering may use such a literal only as input to an
-		imported C struct. It emits no HxcIR and retains no expression; ordinary
-		construction still validates and lowers the body afterward.
+		expression: imported C calls/constants, local enum values, `Null<T>`
+		wrappers, map specializations, and imported or typedef-backed values that
+		reveal one of those families. It deliberately does not materialize every
+		anonymous literal; authoritative lowering may use such a literal only as
+		input to an imported C struct. It emits no HxcIR and retains no expression;
+		ordinary construction still validates and lowers the body afterward.
 	**/
 	public function discoverSharedBodySemantics():Void {
+		// A static-field initializer writes its destination even when its source
+		// expression never reads that field. Register the destination before the
+		// replay revision freezes the function-free program. Otherwise the cached
+		// function can retain an initialize-global instruction whose global is
+		// absent from the program, and validation correctly stops compilation.
+		switch prepared.role {
+			case PBRStaticFieldInitializer(globalId):
+				if (globalRegistry.admittedForReplayPrepass(globalId))
+					globalRegistry.requireId(globalId, prepared.bodyExpression, unsupportedAt);
+			case PBRFunction | PBRConstructor(_) | PBRClassInitializer:
+		}
 		function visit(expression:TypedExpr):Void {
 			// `trace(value)` includes compiler-created source metadata whose Array
 			// is not application data. Match the representation prepass and inspect
@@ -3687,7 +3751,15 @@ private class FunctionBuilder {
 				case TField(_, FEnum(enumReference, enumField)) if (!isFunctionType(expression.t)):
 					aggregateRegistry.importEnumConstant(enumReference, enumField, expression.pos, input.sourcePath);
 				case TField(_, FStatic(classReference, fieldReference)) if (!isFunctionType(expression.t)):
-					aggregateRegistry.importStaticConstant(classReference, fieldReference, expression.pos, input.sourcePath);
+					final imported = aggregateRegistry.importStaticConstant(classReference, fieldReference, expression.pos, input.sourcePath);
+					// Existing C constants belong to the import plan. An ordinary
+					// Haxe static field instead belongs to the program's global set.
+					// Discovering it here gives a replayed load the same destination
+					// that authoritative body construction would register.
+					final owner = classReference.get();
+					final globalId = BodyGlobalRegistry.globalId(owner.pack.concat([owner.name]).join("."), fieldReference.get().name);
+					if (imported == null && globalRegistry.admittedForReplayPrepass(globalId))
+						globalRegistry.require(classReference, fieldReference, expression, unsupportedAt);
 				case _:
 			}
 
@@ -3719,7 +3791,13 @@ private class FunctionBuilder {
 			switch expression.expr {
 				case TVar(variable, _):
 					final variableType = applyCurrentSpecialization(variable.t);
-					if (mayDiscoverSharedBodyType(variableType))
+					// A local can be the first storage boundary that makes a
+					// non-signature enum layout reachable. Discover the layout at
+					// this same full declaration range that authoritative TVar
+					// lowering uses. Mapping every enum-valued child instead would
+					// retain extra provenance for expressions that need no separate
+					// storage and would make cold output depend on prepass coverage.
+					if (isLocalEnumType(variableType) || mayDiscoverSharedBodyType(variableType))
 						bodyValueType(variable.t, expression.pos, 'shared-body-plan:TVar(${variable.name})');
 				case _:
 			}
@@ -3751,14 +3829,14 @@ private class FunctionBuilder {
 	/**
 		Identify only type families proven to be discovered during body lowering.
 
-		Primitive values and ordinary nominal classes/enums are already planned by
-		signature and managed-representation preparation. The contribution
-		inventory found body-time optionals, map carriers, and imported extern
-		values, but no new record or enum layouts. Typedefs and non-core abstracts
-		are unwrapped only so they can reveal one of those proven families. Mapping
-		every anonymous literal or enum expression would register unused layouts or
-		extra provenance merely because the prepass sees more nodes than
-		authoritative lowering.
+		Primitive values and ordinary nominal classes named by signatures are
+		already planned during preparation. A local enum can first appear only
+		inside a function body, so discovery must register that closed layout before
+		the replay revision freezes. The contribution inventory also found
+		body-time optionals, map carriers, and imported values. Typedefs and
+		non-core abstracts are unwrapped only so they can reveal one of those proven
+		families. Anonymous literals remain excluded because authoritative lowering
+		may consume one only as contextual input without materializing its record.
 	**/
 	static function mayDiscoverSharedBodyType(type:Type, depth:Int = 0):Bool {
 		if (depth > 32)
@@ -3782,10 +3860,28 @@ private class FunctionBuilder {
 				} else {
 					mayDiscoverSharedBodyType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
 				}
-			case TInst(reference, _): final value = reference.get(); value.isExtern || (value.pack.join(".") == "haxe.ds"
+			case TInst(reference, _): final value = reference.get(); value.meta.has(":c.layout") || (value.pack.join(".") == "haxe.ds"
 					&& (value.name == "IntMap" || value.name == "StringMap"));
 			case TEnum(_, _):
 				false;
+			case _:
+				false;
+		};
+	}
+
+	/** Recognize an enum whose first runtime storage can be a local declaration. */
+	static function isLocalEnumType(type:Type, depth:Int = 0):Bool {
+		if (depth > 32)
+			return false;
+		return switch type {
+			case TMono(reference): final resolved = reference.get(); resolved != null && isLocalEnumType(resolved, depth + 1);
+			case TLazy(resolve):
+				isLocalEnumType(resolve(), depth + 1);
+			case TType(reference, parameters):
+				final value = reference.get();
+				isLocalEnumType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
+			case TEnum(_, _):
+				true;
 			case _:
 				false;
 		};

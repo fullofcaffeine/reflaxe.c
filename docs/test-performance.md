@@ -650,9 +650,14 @@ operating-system process-start identity, live executable identity, endpoint,
 and compatibility digest.
 That digest includes the canonical worktree, pinned Haxe compiler and standard
 library, package/HXML inputs, haxe.c sources, and vendored Reflaxe sources.
-Game source is deliberately excluded from the server compatibility digest:
-Haxe's own module cache observes and invalidates those edits, which is the work
-the server is meant to reuse.
+Game source bytes are deliberately excluded from the server compatibility digest:
+Haxe's own module cache observes and invalidates byte edits inside an existing
+module, which is the work the server is meant to reuse. The relative `.hx`
+module-path inventory is included without file contents. Adding, removing, or
+renaming a module changes that inventory and replaces the exact owned server;
+the pinned preview otherwise retained removed or newly shadowed modules in the
+focused cold/warm catalog. Base HXML and classpath order remain compatibility
+inputs for the same reason.
 
 The launcher may stop or replace a process only when both its PID and
 process-start and executable identities still match the cookie. A
@@ -698,11 +703,14 @@ request-local backend deduplication therefore remain necessary.
 
 `npm run profile:caxecraft-incremental-edit` answers a narrower question than
 the repeated-build profiler: after one ordinary Haxe implementation edit, what
-actually changed at each layer? It uses one temporary source copy, one stable
-output root, and one owned Haxe server. The sequence is cold prime, unchanged
-warm baseline, edit `Vitals.hx`, and changed warm request. Every comparison is
-content based; Haxe's rebuilt-class report is frontend evidence rather than
-permission to reuse a later artifact.
+actually changed at each layer? It runs five independent sequences by default.
+Each sequence uses one temporary source copy, one stable output root, and one
+owned Haxe server. The sequence is cold prime, unchanged warm baseline, edit
+`Vitals.hx`, and changed warm request. Every comparison is content based;
+Haxe's rebuilt-class report is frontend evidence rather than permission to
+reuse a later artifact. The outer report rejects structurally different runs
+instead of averaging them and records median, median absolute deviation, and
+p95 for each request kind.
 
 The first full-playable run produced this structural result:
 
@@ -1536,6 +1544,89 @@ so tooling need not infer invalidation from elapsed time. Use
 ordinary construction path; use
 `reflaxe_c_body_function_replay_cache_report` when a server test needs the
 machine-readable lifecycle result.
+
+### Exact invalidation catalog and bounded server state
+
+`npm run test:incremental-backend` answers a different question from the
+full-playable timing profile: after a meaningful program fact changes, what may
+the warm backend still reuse? The fixture applies one ordered mutation at a
+time, compiles through one owned Haxe server where that is safe, and compares
+the complete HxcIR and generated-file tree with a fresh-process request. The
+tree comparison includes runtime, ABI, initialization, dispatch, symbol, and
+specialization reports; a matching C file alone is not enough.
+
+The current catalog proves these ownership boundaries:
+
+| Edit | Required replay behavior |
+| --- | --- |
+| Static initializer value | Shared program still matches; rebuild the changed initializer function |
+| Class hierarchy or dispatch | Shared program changes; rebuild every semantic function |
+| Generic specialization set | Shared program changes; rebuild every semantic function |
+| Reachable `Array` runtime use | Representation/runtime program changes; rebuild every semantic function |
+| `@:c.name` on an existing C import | Replay unchanged semantic functions; rebuild the request-local import/name plan, whose generated C must match cold output |
+| Compile-time define | Use Haxe's separate define context; no function from an incompatible context may hit |
+| Classpath order or shadowing | Restart the exact owned Haxe server, then compare with cold output |
+| Removed or renamed module | Restart the exact owned Haxe server, then compare with cold output |
+| Declared external macro input | Haxe rebuilds the caller; the matching shared program permits only changed exact function inputs to miss |
+
+The restart cases are a frontend safety boundary, not a lost backend
+optimization. Once Haxe returns a typed program containing a stale module,
+haxe.c cannot reconstruct which source the user intended. Caxecraft's
+server-compatibility schema therefore hashes compiler/HXML/classpath
+infrastructure and the path-only `.hx` module inventory, while deliberately
+excluding ordinary game-module bytes. Method-body edits stay warm; path-set
+changes replace the server before compilation.
+
+The same change also repaired a regression exposed by this matrix. Static-field
+initializer functions could mention a global before the replay prepass had
+added that global to the function-free program. The prepass now registers both
+the initializer's destination and every referenced ordinary Haxe static field
+before it freezes the replay revision. The dedicated static-initialization
+suite verifies exact-once behavior, dependency order, cycle diagnostics,
+JavaScript differential behavior, and strict native C.
+
+Persistent storage has a separate fast structural soak. It publishes 24
+different two-function generations and follows each with an unchanged replay,
+for 48 requests total. Every replacement retains exactly two functions and the
+same complete input-text size; old generations do not accumulate. The ordered
+real-server test continues to own failed-request rollback, cache-off, process
+restart, and two-worktree isolation.
+
+One contended run of the two-worker warm/cold catalog took 99.83 seconds while
+an unrelated Haxe 4.3.7 process continuously used one CPU and one-minute load
+was near the repository's 6.0-on-12-CPU cutoff. This is responsiveness
+evidence, not the required p50/p95 budget. The catalog is a separate named CI
+owner so ordinary `test:typed-ast` work does not pay for all nine cold oracles.
+
+### Repeated changed-source budget
+
+On 2026-07-28, the five-run incremental profiler completed with every sample
+classified as representative on the 12-logical-CPU Apple arm64 development
+host. Each sample started a new owned Haxe server, so its first request had
+empty frontend and haxe.c caches. It then measured one unchanged request and
+one real `Vitals.hx` implementation edit in that same server:
+
+| Request | Median | Median absolute deviation | p95 |
+| --- | ---: | ---: | ---: |
+| Cold-prime | 33.822s | 0.402s | 34.209s |
+| Warm unchanged | 11.993s | 0.007s | 12.317s |
+| One-module edit | 12.166s | 0.026s | 12.285s |
+
+The cold-prime p95 is below the 40-second cold budget and the edited p95 is
+below the initial 20-second budget. The edit still misses the 10-second
+destination. The report attributes the largest remaining edited-request
+exclusive owner to HxcIR representation planning at a 1.257-second median;
+function preparation and replay-key construction each cost about another
+second. Beads issue `haxe_c-5sd.8.4.7` owns the narrow next experiment:
+reconstruct the shared representation/import/adapter/global plan from bounded
+immutable contributions for frontend-reused functions, while rediscovering
+every changed or uncertain function and retaining the complete program-revision
+comparison and independent HxcIR validator.
+
+A separate five-run fresh-process cold report ended just above the load cutoff,
+so its 34.593-second median and 35.335-second p95 remain contended diagnostic
+evidence rather than a second budget claim. It agrees with, but does not replace,
+the representative cold-prime distribution.
 
 ### Function-build contribution inventory
 

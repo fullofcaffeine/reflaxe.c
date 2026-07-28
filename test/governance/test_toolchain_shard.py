@@ -154,6 +154,23 @@ class ToolchainShardTests(unittest.TestCase):
             ),
         )
 
+    def test_replay_change_selects_incremental_invalidation_owner(self) -> None:
+        owners = self.route_selector.select_affected_owners(
+            ("src/reflaxe/c/lowering/CBodyFunctionReplayCache.hx",)
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+                "test:incremental-backend",
+                "test:body-lowering",
+                "test:span-lowering",
+            ),
+        )
+
     def test_c_import_and_raygui_change_selects_exact_affected_owners(self) -> None:
         owners = self.route_selector.select_affected_owners(
             (
@@ -250,7 +267,7 @@ class ToolchainShardTests(unittest.TestCase):
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 62)
+        self.assertEqual(len(canonical), 63)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER

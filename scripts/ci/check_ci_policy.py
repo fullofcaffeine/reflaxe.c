@@ -1218,6 +1218,13 @@ def validate() -> list[str]:
             )
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
+    if (
+        scripts.get("test:incremental-backend")
+        != "python3 test/typed_ast/run.py --invalidation-matrix"
+    ):
+        errors.append(
+            "package.json must retain the test:incremental-backend entry point"
+        )
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
         errors.append("package.json must retain the test:fixture-policy entry point")
     if (
@@ -1353,6 +1360,12 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:caxecraft-domain:full")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
+    if "npm run test:incremental-backend" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:incremental-backend"
+        )
     if "npm run test:c-import" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-import")
     if "npm run test:raylib-provisioning" not in str(

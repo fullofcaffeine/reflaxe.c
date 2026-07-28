@@ -36,6 +36,7 @@ sys.path.insert(0, str(CASE))
 from profile_compiler import (  # noqa: E402
     CompilerProfileFailure,
     compiler_revision,
+    distribution,
     host_condition,
     load_average,
     run_observed_sample,
@@ -55,7 +56,8 @@ from run import (  # noqa: E402
 
 INCREMENTAL_PREFIX = "HXC_INCREMENTAL_INPUT="
 STATIC_INITIALIZATION_PREFIX = "HXC_STATIC_INITIALIZATION="
-REPORT_SCHEMA_VERSION = 3
+SAMPLE_SCHEMA_VERSION = 3
+REPORT_SCHEMA_VERSION = 4
 SOURCE_RELATIVE_PATH = Path("caxecraft/domain/Vitals.hx")
 EDIT_BEFORE = "inline final ATTACK_SAFE_TICKS:Int = 20;"
 EDIT_AFTER = "inline final ATTACK_SAFE_TICKS:Int = 21;"
@@ -620,7 +622,7 @@ def require_function_replay_accounting(
 
 
 def profile_incremental_edit() -> dict[str, object]:
-    """Run the fixed Vitals edit and return path-free compiler evidence."""
+    """Run one fixed Vitals edit and return path-free compiler evidence."""
 
     installation = pinned_haxe_installation()
     verify_pinned_haxe(installation)
@@ -853,7 +855,7 @@ def profile_incremental_edit() -> dict[str, object]:
             if isinstance(path, str) and path.endswith(".h")
         ]
         report: dict[str, object] = {
-            "schemaVersion": REPORT_SCHEMA_VERSION,
+            "schemaVersion": SAMPLE_SCHEMA_VERSION,
             "suite": "caxecraft-incremental-edit-profile",
             "boundary": "haxe-source-to-generated-c",
             "edit": {
@@ -991,10 +993,180 @@ def profile_incremental_edit() -> dict[str, object]:
         return report
 
 
+def sample_wall_duration(
+    report: Mapping[str, object], phase: str
+) -> float:
+    """Read one measured request duration from a validated sample report."""
+
+    timing = report.get("timing")
+    sample = timing.get(phase) if isinstance(timing, dict) else None
+    duration = (
+        sample.get("wallDurationMs") if isinstance(sample, dict) else None
+    )
+    if (
+        isinstance(duration, bool)
+        or not isinstance(duration, (int, float))
+        or duration < 0
+    ):
+        raise IncrementalEditProfileFailure(
+            f"incremental {phase} wall duration is malformed"
+        )
+    return float(duration)
+
+
+def repeated_profile_report(
+    samples: Sequence[Mapping[str, object]],
+) -> dict[str, object]:
+    """Summarize independent edit sequences without hiding their variation.
+
+    Each sample already proves cold/warm byte parity, exact cache accounting,
+    and the complete generated-artifact difference. This outer report adds the
+    distribution needed for a performance budget. It also requires every run
+    to observe the same structural result, so a faster but semantically
+    different run cannot disappear behind the timing statistics.
+    """
+
+    if not samples:
+        raise IncrementalEditProfileFailure(
+            "incremental profiling requires at least one sample"
+        )
+
+    def comparable_structure(
+        sample: Mapping[str, object],
+    ) -> dict[str, object]:
+        """Remove only identities that deliberately include a temporary root.
+
+        Every independent sample copies the same source into a new temporary
+        directory. HxcIR source provenance therefore gives the non-function
+        skeleton a different exact-text digest even when that sample proves
+        its own cold/warm equality. The observable change sets, equality
+        booleans, cache accounting, and complete generated artifacts remain
+        comparable across samples and are retained here.
+        """
+
+        hxcir = sample.get("hxcir")
+        if not isinstance(hxcir, dict):
+            raise IncrementalEditProfileFailure(
+                "incremental sample has no HxcIR evidence"
+            )
+        comparable_hxcir = dict(hxcir)
+        for field in (
+            "nonFunctionSkeleton",
+            "schemaAndDispatchSkeleton",
+        ):
+            skeleton = comparable_hxcir.get(field)
+            if not isinstance(skeleton, dict) or not isinstance(
+                skeleton.get("changed"), bool
+            ):
+                raise IncrementalEditProfileFailure(
+                    f"incremental sample has malformed {field} evidence"
+                )
+            comparable_hxcir[field] = {"changed": skeleton["changed"]}
+
+        result = {
+            field: sample.get(field)
+            for field in (
+                "edit",
+                "compiler",
+                "haxe",
+                "backendReuse",
+                "generatedArtifacts",
+                "semanticSidecars",
+                "castTranslationUnits",
+                "nativeProjection",
+            )
+        }
+        result["hxcir"] = comparable_hxcir
+        return result
+
+    first = samples[0]
+    expected_structure = comparable_structure(first)
+    structural_fields = (
+        "edit",
+        "compiler",
+        "haxe",
+        "hxcir",
+        "backendReuse",
+        "generatedArtifacts",
+        "semanticSidecars",
+        "castTranslationUnits",
+        "nativeProjection",
+    )
+    for index, sample in enumerate(samples, start=1):
+        if sample.get("schemaVersion") != SAMPLE_SCHEMA_VERSION:
+            raise IncrementalEditProfileFailure(
+                f"incremental sample {index} has an unsupported schema"
+            )
+        actual_structure = comparable_structure(sample)
+        for field in structural_fields:
+            if actual_structure.get(field) != expected_structure.get(field):
+                raise IncrementalEditProfileFailure(
+                    f"incremental sample {index} changed structural "
+                    f"evidence in {field}"
+                )
+
+    host_conditions: list[str] = []
+    for index, sample in enumerate(samples, start=1):
+        host = sample.get("host")
+        condition = (
+            host.get("condition") if isinstance(host, dict) else None
+        )
+        if not isinstance(condition, str):
+            raise IncrementalEditProfileFailure(
+                f"incremental sample {index} has no host condition"
+            )
+        host_conditions.append(condition)
+
+    return {
+        "schemaVersion": REPORT_SCHEMA_VERSION,
+        "suite": "caxecraft-incremental-edit-profile",
+        "measurement": {
+            "requestedRuns": len(samples),
+            "replication": (
+                "five-or-more" if len(samples) >= 5 else "diagnostic-only"
+            ),
+            "hostConditions": [
+                {
+                    "condition": condition,
+                    "samples": host_conditions.count(condition),
+                }
+                for condition in sorted(set(host_conditions))
+            ],
+        },
+        "summary": {
+            "coldPrimeWallMs": distribution(
+                [
+                    sample_wall_duration(sample, "prime")
+                    for sample in samples
+                ]
+            ),
+            "warmUnchangedWallMs": distribution(
+                [
+                    sample_wall_duration(sample, "baseline")
+                    for sample in samples
+                ]
+            ),
+            "oneModuleEditWallMs": distribution(
+                [
+                    sample_wall_duration(sample, "edited")
+                    for sample in samples
+                ]
+            ),
+        },
+        "samples": list(samples),
+    }
+
+
 def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
-    """Parse the optional ignored report destination."""
+    """Parse the repetition count and ignored report destination."""
 
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=5,
+        help="run independent cold/warm/edit sequences (default: 5)",
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -1004,14 +1176,27 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
 
 
 def main(arguments: Iterable[str] = ()) -> int:
-    """Write one report and print a concise changed-artifact summary."""
+    """Write repeated evidence and print its timing distributions."""
 
     options = parse_args(arguments)
     try:
-        report = profile_incremental_edit()
+        if options.runs < 1:
+            raise IncrementalEditProfileFailure(
+                "--runs must be at least one"
+            )
+        samples: list[dict[str, object]] = []
+        for run in range(1, options.runs + 1):
+            print(
+                "caxecraft-incremental-edit: "
+                f"[sample {run}/{options.runs}]",
+                flush=True,
+            )
+            samples.append(profile_incremental_edit())
+        report = repeated_profile_report(samples)
         write_timing_report(options.output, report)
-        generated = report["generatedArtifacts"]
-        hxcir = report["hxcir"]
+        first = samples[0]
+        generated = first["generatedArtifacts"]
+        hxcir = first["hxcir"]
         if not isinstance(generated, dict) or not isinstance(hxcir, dict):
             raise IncrementalEditProfileFailure(
                 "incremental edit summary is malformed"
@@ -1020,6 +1205,16 @@ def main(arguments: Iterable[str] = ()) -> int:
         if not isinstance(functions, dict):
             raise IncrementalEditProfileFailure(
                 "incremental edit function summary is malformed"
+            )
+        summary = report.get("summary")
+        edit_timing = (
+            summary.get("oneModuleEditWallMs")
+            if isinstance(summary, dict)
+            else None
+        )
+        if not isinstance(edit_timing, dict):
+            raise IncrementalEditProfileFailure(
+                "incremental edit timing summary is malformed"
             )
     except (
         CaxecraftFailure,
@@ -1037,6 +1232,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         "caxecraft-incremental-edit: OK: "
         f"{len(generated['changed'])} generated artifacts and "
         f"{len(functions['changed'])} HxcIR functions changed; "
+        f"edit median {edit_timing['median']}ms, "
+        f"p95 {edit_timing['p95']}ms; "
         f"report {options.output}"
     )
     return 0

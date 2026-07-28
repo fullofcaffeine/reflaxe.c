@@ -3,14 +3,17 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import os
 import re
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -51,6 +54,29 @@ class CompileResult:
     generated_tree: dict[str, bytes] | None = None
     control_flow_cache_report: dict[str, object] | None = None
     body_function_replay_report: dict[str, object] | None = None
+
+
+@dataclass(frozen=True)
+class IncrementalCompileConfiguration:
+    """Names every request option intentionally varied by the invalidation catalog."""
+
+    defines: tuple[str, ...] = ()
+    shadowing_class_paths: tuple[Path, ...] = ()
+
+
+@dataclass(frozen=True)
+class BackendInvalidationCase:
+    """Apply one semantic mutation and state the exact safe replay scope it permits."""
+
+    label: str
+    mutate: Callable[[Path, Path], None]
+    configuration: IncrementalCompileConfiguration
+    allowed_decisions: tuple[str, ...]
+    # True rebuilds every function, False rebuilds changed function inputs, and
+    # None permits a full hit because a refreshed non-function plan owns the edit.
+    program_wide: bool | None
+    hxcir_changes: bool
+    requires_server_restart: bool
 
 
 def development_tool(name: str) -> str:
@@ -459,15 +485,20 @@ def compile_successful_incremental_fixture(
     connect: str | None,
     output: Path,
     disable_control_flow_cache: bool = False,
+    configuration: IncrementalCompileConfiguration = IncrementalCompileConfiguration(),
 ) -> CompileResult:
     """Compile one successful fixture so Haxe may commit its frontend cache."""
 
     command = [development_tool("haxe")]
     if connect is not None:
         command.extend(["--connect", connect])
+    command.extend(["-cp", str(fixture_root)])
+    # Haxe prepends each `-cp` while parsing arguments, so a path listed after
+    # the fixture is searched first. Keeping that otherwise surprising order in
+    # one helper lets the shadowing test state its intent directly.
+    for class_path in configuration.shadowing_class_paths:
+        command.extend(["-cp", str(class_path)])
     command.extend([
-        "-cp",
-        str(fixture_root),
         "-lib",
         "reflaxe.c",
         "-D",
@@ -485,6 +516,8 @@ def compile_successful_incremental_fixture(
         "--custom-target",
         f"c={output}",
     ])
+    for define in configuration.defines:
+        command.extend(["-D", define])
     if disable_control_flow_cache:
         command.extend(
             [
@@ -834,6 +867,402 @@ def stop_server(server: subprocess.Popen[str]) -> None:
     except subprocess.TimeoutExpired:
         server.kill()
         server.wait(timeout=5)
+
+
+def replace_fixture_text(
+    fixture_root: Path, relative_path: str, before: str, after: str
+) -> None:
+    """Apply one exact source mutation without accepting a stale or broad match."""
+
+    path = fixture_root / relative_path
+    source = path.read_text(encoding="utf-8")
+    if source.count(before) != 1:
+        raise TypedAstProbeFailure(
+            f"{relative_path} expected one invalidation anchor, found "
+            f"{source.count(before)}"
+        )
+    path.write_text(source.replace(before, after, 1), encoding="utf-8")
+
+
+def assert_catalog_replay_scope(
+    result: CompileResult, case: BackendInvalidationCase
+) -> None:
+    """Require one mutation to rebuild or reuse exactly its semantic owner."""
+
+    report = require_body_function_replay_report(result, case.label)
+    decision = report.get("programDecision")
+    hits = report.get("hits")
+    misses = report.get("misses")
+    retained = report.get("retainedFunctions")
+    changed_inputs = report.get("changedFunctionInputMisses")
+    if (
+        report.get("enabled") is not True
+        or decision not in case.allowed_decisions
+        or not isinstance(hits, int)
+        or not isinstance(misses, int)
+        or not isinstance(retained, int)
+        or retained <= 0
+        or hits + misses != retained
+    ):
+        raise TypedAstProbeFailure(
+            f"{case.label} did not report a complete replay decision: {report!r}"
+        )
+    if case.program_wide:
+        if (
+            report.get("programRevisionMatched") is not False
+            or hits != 0
+            or misses != retained
+            or report.get("missingFunctionMisses") != 0
+            or changed_inputs != 0
+        ):
+            raise TypedAstProbeFailure(
+                f"{case.label} reused functions across a changed shared program: "
+                f"{report!r}"
+            )
+    elif case.program_wide is False and (
+        report.get("programRevisionMatched") is not True
+        or misses <= 0
+        or not isinstance(changed_inputs, int)
+        or changed_inputs <= 0
+    ):
+        raise TypedAstProbeFailure(
+            f"{case.label} did not attribute its precise function-input miss: "
+            f"{report!r}"
+        )
+    elif case.program_wide is None and (
+        report.get("programRevisionMatched") is not True
+        or hits != retained
+        or misses != 0
+        or report.get("missingFunctionMisses") != 0
+        or changed_inputs != 0
+    ):
+        raise TypedAstProbeFailure(
+            f"{case.label} rebuilt a semantic function owned by an unchanged "
+            f"typed body and shared HxcIR program: {report!r}"
+        )
+
+
+def assert_cold_catalog_oracle(result: CompileResult, label: str) -> None:
+    """Prove the comparison request constructed every semantic function afresh."""
+
+    report = require_body_function_replay_report(result, f"cold {label}")
+    misses = report.get("misses")
+    if (
+        report.get("enabled") is not True
+        or report.get("programDecision") != "no-prior-generation"
+        or report.get("programRevisionMatched") is not False
+        or not isinstance(misses, int)
+        or misses <= 0
+        or report.get("hits") != 0
+        or report.get("retainedFunctions") != misses
+    ):
+        raise TypedAstProbeFailure(
+            f"cold {label} was not an authoritative fresh generation: {report!r}"
+        )
+
+
+def backend_invalidation_cases(
+    shadow_root: Path,
+) -> tuple[BackendInvalidationCase, ...]:
+    """Return the ordered semantic mutation catalog used by one server process."""
+
+    baseline = IncrementalCompileConfiguration()
+    with_define = IncrementalCompileConfiguration(defines=("replay_extra",))
+    with_shadow = IncrementalCompileConfiguration(
+        defines=("replay_extra",), shadowing_class_paths=(shadow_root,)
+    )
+
+    def static_initializer(fixture: Path, _: Path) -> None:
+        replace_fixture_text(
+            fixture,
+            "Main.hx",
+            "public static var startupOffset:Int = 0;",
+            "public static var startupOffset:Int = 1;",
+        )
+
+    def class_hierarchy(fixture: Path, _: Path) -> None:
+        replace_fixture_text(
+            fixture,
+            "ReplayFeatures.hx",
+            """/** Concrete override selected through the base-typed local in `score`. */
+private class ReplayLeaf extends ReplayBase {
+""",
+            """/** Intermediate override that changes the reachable dispatch hierarchy. */
+private class ReplayMiddle extends ReplayBase {
+\t/** Add two before the concrete leaf refines the result. */
+\tpublic override function value(delta:Int):Int
+\t\treturn super.value(delta) + 2;
+}
+
+/** Concrete override selected through the base-typed local in `score`. */
+private class ReplayLeaf extends ReplayMiddle {
+""",
+        )
+        replace_fixture_text(
+            fixture,
+            "ReplayFeatures.hx",
+            "return super.value(delta) + 10;",
+            "return super.value(delta) + 8;",
+        )
+
+    def generic_specialization(fixture: Path, _: Path) -> None:
+        replace_fixture_text(
+            fixture,
+            "ReplayFeatures.hx",
+            """\t\tfinal worker:ReplayBase = new ReplayLeaf(seed);
+\t\tReplayNative.magnitude(ReplayNative.zero);
+\t\treturn switch identity(ReplayValue(worker.value(1))) {
+\t\t\tcase ReplayValue(value): value + variant + ReplayDependency.value() + ReplayMacro.value();
+""",
+            """\t\tfinal worker:ReplayBase = new ReplayLeaf(seed);
+\t\tfinal enabled = identity(true);
+\t\tReplayNative.magnitude(ReplayNative.zero);
+\t\treturn switch identity(ReplayValue(worker.value(1))) {
+\t\t\tcase ReplayValue(value): value + (enabled ? 0 : 1) + variant + ReplayDependency.value() + ReplayMacro.value();
+""",
+        )
+
+    def runtime_feature(fixture: Path, _: Path) -> None:
+        replace_fixture_text(
+            fixture,
+            "ReplayFeatures.hx",
+            """\t\tfinal enabled = identity(true);
+\t\tReplayNative.magnitude(ReplayNative.zero);
+\t\treturn switch identity(ReplayValue(worker.value(1))) {
+""",
+            """\t\tfinal enabled = identity(true);
+\t\tfinal samples = [worker.value(1)];
+\t\tReplayNative.magnitude(ReplayNative.zero);
+\t\treturn switch identity(ReplayValue(samples[0])) {
+""",
+        )
+
+    def binding_metadata(fixture: Path, _: Path) -> None:
+        replace_fixture_text(
+            fixture,
+            "ReplayNative.hx",
+            '@:c.name("abs")',
+            '@:c.name("labs")',
+        )
+
+    def define_signature(_: Path, __: Path) -> None:
+        # The configuration itself is the mutation. Its conditional is already
+        # reachable in ReplayFeatures, so generated semantics must change.
+        return
+
+    def classpath_shadow(_: Path, shadow: Path) -> None:
+        shadow.mkdir(parents=True, exist_ok=True)
+        (shadow / "ReplayDependency.hx").write_text(
+            """/**
+\tShadows the fixture dependency only for the classpath invalidation case.
+**/
+class ReplayDependency {
+\t/** Distinguish the selected earlier classpath in generated semantics. */
+\tpublic static function value():Int
+\t\treturn 1;
+}
+""",
+            encoding="utf-8",
+        )
+
+    def renamed_module(fixture: Path, _: Path) -> None:
+        original = fixture / "ReplayDependency.hx"
+        renamed = fixture / "RenamedReplayDependency.hx"
+        if not original.is_file() or renamed.exists():
+            raise TypedAstProbeFailure(
+                "module-rename case did not find one unambiguous source owner"
+            )
+        source = original.read_text(encoding="utf-8").replace(
+            "class ReplayDependency", "class RenamedReplayDependency", 1
+        )
+        renamed.write_text(source, encoding="utf-8")
+        original.unlink()
+        replace_fixture_text(
+            fixture,
+            "ReplayFeatures.hx",
+            "ReplayDependency.value()",
+            "RenamedReplayDependency.value()",
+        )
+
+    def macro_dependency(fixture: Path, _: Path) -> None:
+        replace_fixture_text(
+            fixture,
+            "replay-macro-value.txt",
+            "0\n",
+            "2\n",
+        )
+
+    return (
+        BackendInvalidationCase(
+            "static-initializer edit",
+            static_initializer,
+            baseline,
+            ("matched",),
+            False,
+            True,
+            False,
+        ),
+        BackendInvalidationCase(
+            "class hierarchy and dispatch edit",
+            class_hierarchy,
+            baseline,
+            ("program-changed",),
+            True,
+            True,
+            False,
+        ),
+        BackendInvalidationCase(
+            "generic specialization edit",
+            generic_specialization,
+            baseline,
+            ("program-changed",),
+            True,
+            True,
+            False,
+        ),
+        BackendInvalidationCase(
+            "runtime feature edit",
+            runtime_feature,
+            baseline,
+            ("program-changed",),
+            True,
+            True,
+            False,
+        ),
+        BackendInvalidationCase(
+            "typed C binding metadata edit",
+            binding_metadata,
+            baseline,
+            ("matched",),
+            None,
+            False,
+            False,
+        ),
+        BackendInvalidationCase(
+            "define signature edit",
+            define_signature,
+            with_define,
+            ("no-prior-generation",),
+            True,
+            True,
+            False,
+        ),
+        BackendInvalidationCase(
+            "classpath shadow edit",
+            classpath_shadow,
+            with_shadow,
+            ("no-prior-generation",),
+            True,
+            True,
+            True,
+        ),
+        BackendInvalidationCase(
+            "removed and renamed module edit",
+            renamed_module,
+            with_shadow,
+            ("no-prior-generation",),
+            True,
+            True,
+            True,
+        ),
+        BackendInvalidationCase(
+            "declared macro dependency edit",
+            macro_dependency,
+            with_shadow,
+            ("matched",),
+            False,
+            True,
+            False,
+        ),
+    )
+
+
+def check_backend_invalidation_catalog() -> None:
+    """Compare every warm semantic mutation with a fresh-process generated tree."""
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-backend-invalidation-"
+    ) as temporary:
+        root = Path(temporary)
+        editable = root / "incremental"
+        shadow = root / "shadow"
+        output = root / "warm-generated"
+        shutil.copytree(FIXTURES / "incremental", editable)
+        environment = os.environ.copy()
+        environment.pop("HAXE_NO_SERVER", None)
+
+        def launch_server() -> tuple[subprocess.Popen[str], str]:
+            port = available_port()
+            endpoint = str(port)
+            process = subprocess.Popen(
+                [development_tool("haxe"), "--wait", endpoint],
+                cwd=ROOT,
+                env=environment,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            wait_for_server(process, port)
+            return process, endpoint
+
+        server, endpoint = launch_server()
+        try:
+            previous = compile_successful_incremental_fixture(
+                editable, connect=endpoint, output=output
+            )
+            for index, case in enumerate(backend_invalidation_cases(shadow), start=1):
+                case.mutate(editable, shadow)
+                if case.requires_server_restart:
+                    # The pinned preview can retain a module resolved from an old
+                    # classpath, or keep a removed module after a rename. The
+                    # developer-tool owner therefore treats classpath order and
+                    # module path-set changes like a compiler change: stop the
+                    # exact owned server before asking haxe.c to build.
+                    stop_server(server)
+                    server, endpoint = launch_server()
+                # Both requests read the same frozen fixture and write isolated
+                # output roots. Running this one warm/cold pair concurrently
+                # shortens the matrix without reordering its mutations or sharing
+                # compiler-process state.
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=2
+                ) as executor:
+                    warm_future = executor.submit(
+                        compile_successful_incremental_fixture,
+                        editable,
+                        connect=endpoint,
+                        output=output,
+                        configuration=case.configuration,
+                    )
+                    cold_future = executor.submit(
+                        compile_successful_incremental_fixture,
+                        editable,
+                        connect=None,
+                        output=root / f"cold-{index}",
+                        configuration=case.configuration,
+                    )
+                    warm = warm_future.result()
+                    cold = cold_future.result()
+                assert_cold_catalog_oracle(cold, case.label)
+                assert_equivalent_incremental_result(cold, warm, case.label)
+                assert_catalog_replay_scope(warm, case)
+                hxcir_changed = require_hxcir(
+                    previous, "prior catalog request"
+                ) != require_hxcir(warm, case.label)
+                if hxcir_changed is not case.hxcir_changes:
+                    raise TypedAstProbeFailure(
+                        f"{case.label} HxcIR change state was {hxcir_changed}, "
+                        f"expected {case.hxcir_changes}"
+                    )
+                if require_generated_tree(
+                    previous, "prior catalog request"
+                ) == require_generated_tree(warm, case.label):
+                    raise TypedAstProbeFailure(
+                        f"{case.label} did not change the generated project"
+                    )
+                previous = warm
+        finally:
+            stop_server(server)
 
 
 def check_compiler_server_rebuild_inventory() -> None:
@@ -1333,12 +1762,28 @@ def check_compiler_server_rebuild_inventory() -> None:
 
 def main() -> int:
     try:
-        check_expected_snapshot()
-        check_compiler_server_isolation()
-        check_compiler_server_rebuild_inventory()
+        arguments = sys.argv[1:]
+        if arguments == ["--invalidation-matrix"]:
+            check_backend_invalidation_catalog()
+        elif not arguments:
+            check_expected_snapshot()
+            check_compiler_server_isolation()
+            check_compiler_server_rebuild_inventory()
+        else:
+            raise TypedAstProbeFailure(
+                "usage: test/typed_ast/run.py [--invalidation-matrix]"
+            )
     except (OSError, json.JSONDecodeError, subprocess.TimeoutExpired, TypedAstProbeFailure) as error:
         print(f"typed-ast: ERROR: {error}", file=os.sys.stderr)
         return 1
+    if sys.argv[1:] == ["--invalidation-matrix"]:
+        print(
+            "typed-ast: OK: warm static initialization, hierarchy/dispatch, "
+            "generic specialization, runtime, binding metadata, define, "
+            "classpath, module rename/removal, and declared macro dependency "
+            "mutations matched fresh-process HxcIR and generated bytes"
+        )
+        return 0
     print(
         "typed-ast: OK: declarations/metadata/entry ownership, order determinism, "
         "inventory coverage, exact HXC1001 no-output, compiler-server isolation, "

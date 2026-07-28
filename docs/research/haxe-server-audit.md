@@ -66,6 +66,15 @@ form a signature, and a classpath change under that signature clears cached
 directory state and marks the context uninitialized
 (`server.ml:795-815`).
 
+That internal mechanism is not sufficient evidence for this pinned preview.
+The `test:incremental-backend` A-B catalog changed the effective classpath so
+an earlier root shadowed `ReplayDependency.hx`; the warm request still returned
+the old module, while a fresh process selected the shadow. Deleting and
+renaming a module produced the same kind of cold/warm mismatch. The repository
+therefore uses a stricter observable contract: changing classpath order or the
+set of `.hx` module paths replaces the exact owned server. Editing bytes inside
+an existing module remains a warm request.
+
 The server installs its parse/type hooks once, but `process` resets request
 state and calls the high-level compiler entry for every connection
 (`server.ml:944-973`). The long-lived loop then accepts the next complete
@@ -295,11 +304,15 @@ An automatic server is reusable only when its state matches at least:
 - scoped package/Haxelib resolution identity;
 - haxe.c and vendored Reflaxe identity;
 - macro and target activation sources;
-- base HXML, classpath, target, and server-state schema.
+- base HXML, ordered classpaths, target, and server-state schema; and
+- the path-only inventory of `.hx` modules below those project classpaths.
 
 Request-specific defines, main class, profile, layout, diagnostics, and output
-path still travel with every request. Haxe partitions or invalidates eligible
-frontend cache state; haxe.c creates a fresh target context.
+path still travel with every request. A classpath-order change, or adding,
+removing, or renaming a Haxe module, changes server compatibility and replaces
+the owned process. Haxe partitions or invalidates eligible frontend state for
+ordinary edits within an existing module; haxe.c creates a fresh target
+context in either case.
 
 Changing the compatible toolchain identity stops only the exactly recorded
 owned process and starts a new server. An occupied preferred port causes
@@ -352,8 +365,9 @@ The implementation owner must prove:
 
 1. cold A, server A, and repeated server A produce identical normal artifacts
    and diagnostics;
-2. A-B-A sequences across define, classpath, profile, runtime, and project
-   layout changes restore exact cold-A output;
+2. A-B-A sequences across define, profile, runtime, and project-layout changes
+   restore exact cold-A output, while classpath and module-path-set changes
+   restart the owned server and then match fresh-process bytes;
 3. success-failure-success does not leak symbols, runtime features, output
    files, or diagnostics;
 4. changing Haxe, haxe.c, Reflaxe, macro, or package identity rejects the old

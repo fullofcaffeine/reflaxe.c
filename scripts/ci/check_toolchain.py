@@ -291,6 +291,9 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_caxecraft_playable_script = "python3 examples/caxecraft/play.py --check-snapshots"
     expected_caxecraft_play_script = "python3 examples/caxecraft/play.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
+    expected_incremental_backend_script = (
+        "python3 test/typed_ast/run.py --invalidation-matrix"
+    )
     expected_c_import_script = "python3 test/c_import/run.py"
     expected_raylib_provisioning_script = "python3 test/raylib_provisioning/run.py"
     expected_raygui_binding_script = "python3 test/raygui_binding/test_binding.py"
@@ -301,7 +304,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
         "npm run test:hxc-config && npm run test:all-sources && npm run test:content-digest && "
-        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:c-ast && "
+        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:incremental-backend && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
         "npm run test:runtime-features && npm run test:array-runtime && npm run test:int-map && npm run test:string-map && npm run test:string-char-at && npm run test:string-null && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
@@ -642,6 +645,14 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:typed-ast") != expected_typed_ast_script
     ):
         errors.append("package.json must retain the typed-AST normalization gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:incremental-backend")
+        != expected_incremental_backend_script
+    ):
+        errors.append(
+            "package.json must retain the incremental-backend invalidation gate"
+        )
     if (
         not isinstance(scripts, dict)
         or scripts.get("snapshots:check") != expected_snapshot_script

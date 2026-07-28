@@ -23,7 +23,7 @@ from dev_build_state import (  # noqa: E402
     request_snapshot,
     validate_reuse,
 )
-from play import parse_args, play_build_inputs  # noqa: E402
+from play import haxe_module_path_inventory, parse_args, play_build_inputs  # noqa: E402
 
 
 class CaxecraftBuildStateTests(unittest.TestCase):
@@ -107,6 +107,27 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         decision = self.decision(self.request())
         self.assertFalse(decision.hit)
         self.assertEqual(decision.reason, "build input added: repo/source/Added.hx")
+
+    def test_haxe_server_identity_tracks_module_paths_not_body_bytes(self) -> None:
+        nested = self.source / "gameplay"
+        nested.mkdir()
+        module = nested / "Actor.hx"
+        module.write_text("class Actor {}\n", encoding="utf-8")
+        baseline = haxe_module_path_inventory(self.source)
+
+        module.write_text(
+            "class Actor { public static function changed():Bool return true; }\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(haxe_module_path_inventory(self.source), baseline)
+
+        renamed = nested / "RenamedActor.hx"
+        module.rename(renamed)
+        self.assertNotEqual(haxe_module_path_inventory(self.source), baseline)
+        self.assertEqual(
+            haxe_module_path_inventory(self.source),
+            ["Main.hx", "gameplay/RenamedActor.hx"],
+        )
 
     def test_configuration_and_tool_changes_are_misses(self) -> None:
         configuration = self.decision(self.request(layout="unity"))

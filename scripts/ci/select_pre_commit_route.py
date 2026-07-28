@@ -77,6 +77,16 @@ AFFECTED_BASE_OWNERS = (
 
 AFFECTED_OWNER_RULES = (
     (
+        re.compile(
+            r"^(?:src/reflaxe/c/lowering/(?:CBodyLowering|CBodyFunctionReplayCache)\.hx"
+            r"|test/typed_ast/(?:run\.py|fixtures/incremental/))"
+        ),
+        AffectedOwner(
+            "test:incremental-backend",
+            "semantic-function replay or its complete invalidation matrix changed",
+        ),
+    ),
+    (
         re.compile(r"^src/reflaxe/c/(?:ast/|lowering/|CCompiler\.hx)"),
         AffectedOwner("test:body-lowering", "C body construction or its semantic input changed"),
     ),

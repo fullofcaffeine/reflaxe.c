@@ -16,6 +16,7 @@ from profile_incremental_edit import (  # noqa: E402
     control_flow_cache_stats,
     hxcir_function_sections,
     hxcir_module_sections,
+    repeated_profile_report,
     replace_source_classpath,
     require_control_flow_cache_accounting,
     section_diff,
@@ -152,6 +153,53 @@ class IncrementalEditProfileTest(unittest.TestCase):
                 misses=0,
                 retained_functions=4,
             )
+
+    def test_repeated_report_summarizes_only_stable_evidence(self) -> None:
+        sample = {
+            "schemaVersion": 3,
+            "edit": {"source": "source.hx"},
+            "compiler": {"head": "abc"},
+            "haxe": {"version": "preview"},
+            "hxcir": {
+                "functions": {"changed": ["one"]},
+                "nonFunctionSkeleton": {
+                    "beforeSha256": "temporary-one",
+                    "afterSha256": "temporary-one",
+                    "changed": False,
+                },
+                "schemaAndDispatchSkeleton": {
+                    "beforeSha256": "stable",
+                    "afterSha256": "stable",
+                    "changed": False,
+                },
+            },
+            "backendReuse": {"semanticFunctions": "exact"},
+            "generatedArtifacts": {"changed": ["one.c"]},
+            "semanticSidecars": [],
+            "castTranslationUnits": {"changed": ["one.c"]},
+            "nativeProjection": {"measured": False},
+            "timing": {
+                "prime": {"wallDurationMs": 30.0},
+                "baseline": {"wallDurationMs": 10.0},
+                "edited": {"wallDurationMs": 12.0},
+            },
+            "host": {"condition": "representative"},
+        }
+        report = repeated_profile_report((sample, sample))
+        self.assertEqual(report["schemaVersion"], 4)
+        self.assertEqual(
+            report["summary"]["oneModuleEditWallMs"]["median"], 12.0
+        )
+        self.assertEqual(
+            report["measurement"]["replication"], "diagnostic-only"
+        )
+
+        changed = dict(sample)
+        changed["generatedArtifacts"] = {"changed": ["two.c"]}
+        with self.assertRaisesRegex(
+            IncrementalEditProfileFailure, "structural evidence"
+        ):
+            repeated_profile_report((sample, changed))
 
 
 if __name__ == "__main__":

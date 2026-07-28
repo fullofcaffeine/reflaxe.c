@@ -154,7 +154,51 @@ class BodyFunctionReplayCacheProbe {
 			&& changedInputStats.changedFunctionInputMisses == 1,
 			"changed-input miss reason drifted");
 
+		verifyBoundedReplacementSoak(build);
 		return macro null;
+	}
+
+	/**
+		Replace one complete generation repeatedly without retaining old requests.
+
+		Each cycle publishes two functions under a new program revision, then sends
+		an unchanged request that must replay both. Exact retained text sizes stay
+		constant across all 48 requests, proving the cache replaces one generation
+		instead of appending history. This focused structural soak is intentionally
+		cheap; the integrated server test separately owns real Haxe request order.
+	**/
+	static function verifyBoundedReplacementSoak(build:String->CBodyFunctionReplayData):Void {
+		final inputA = "soak-input-a";
+		final inputB = "soak-input-b";
+		final expectedInputCodeUnits = inputA.length + inputB.length;
+		for (cycle in 0...24) {
+			final revision = 'soak-program-$cycle';
+			CBodyFunctionReplayCache.beginRequest(true);
+			CBodyFunctionReplayCache.settleProgramRevision(revision);
+			CBodyFunctionReplayCache.resolve("function.soak.a", identity(inputA), () -> build("function.soak.a"));
+			CBodyFunctionReplayCache.resolve("function.soak.b", identity(inputB), () -> build("function.soak.b"));
+			final changed = CBodyFunctionReplayCache.completeRequest();
+			require(changed.programDecision == BRPDProgramChanged
+				&& changed.hits == 0
+				&& changed.misses == 2
+				&& changed.retainedFunctions == 2
+				&& changed.retainedInputCodeUnits == expectedInputCodeUnits
+				&& changed.retainedProgramRevisionCodeUnits == revision.length,
+				'soak cycle $cycle did not replace the complete generation');
+
+			CBodyFunctionReplayCache.beginRequest(true);
+			CBodyFunctionReplayCache.settleProgramRevision(revision);
+			CBodyFunctionReplayCache.resolve("function.soak.a", identity(inputA), () -> build("unexpected"));
+			CBodyFunctionReplayCache.resolve("function.soak.b", identity(inputB), () -> build("unexpected"));
+			final unchanged = CBodyFunctionReplayCache.completeRequest();
+			require(unchanged.programDecision == BRPDMatched
+				&& unchanged.hits == 2
+				&& unchanged.misses == 0
+				&& unchanged.retainedFunctions == 2
+				&& unchanged.retainedInputCodeUnits == expectedInputCodeUnits
+				&& unchanged.retainedProgramRevisionCodeUnits == revision.length,
+				'soak cycle $cycle did not replay one bounded generation');
+		}
 	}
 
 	/** Prove variable allocation is ignored while a real expression edit is kept. */

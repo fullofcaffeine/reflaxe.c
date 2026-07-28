@@ -50,6 +50,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:raylib-provisioning",
         "test:raygui-binding",
         "test:typed-ast",
+        "test:incremental-backend",
         "test:c-ast",
         "test:declaration-plan",
         "test:symbol-registry",

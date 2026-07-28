@@ -616,12 +616,14 @@ To inspect one realistic source edit instead of repeated unchanged builds, run:
 npm run profile:caxecraft-incremental-edit
 ```
 
-This diagnostic owns one temporary Caxecraft source copy and one Haxe server.
-It first performs a cold build, then an unchanged warm build, changes the
-damage constant in `Vitals.hx`, and performs one more warm build. It compares
-the frontend rebuild closure, every HxcIR function, every normal generated
-artifact, the semantic JSON reports, and every C translation unit. The report
-goes to ignored
+This diagnostic runs five independent sequences by default. Each sequence owns
+one temporary Caxecraft source copy and one Haxe server. It first performs a
+cold build, then an unchanged warm build, changes the damage constant in
+`Vitals.hx`, and performs one more warm build. It compares the frontend rebuild
+closure, every HxcIR function, every normal generated artifact, the semantic
+JSON reports, and every C translation unit. The report includes the median,
+median absolute deviation (the usual distance from the median), and 95th
+percentile for each request kind. It goes to ignored
 `examples/caxecraft/_build/incremental-edit-profile.json`; it contains logical
 repository paths but never the temporary checkout path.
 
