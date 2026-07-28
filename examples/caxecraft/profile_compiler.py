@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 8
+PROFILE_SCHEMA_VERSION = 9
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -129,6 +129,13 @@ CONTROL_FLOW_PLAN_COMPUTATION_DETAILS = frozenset(
         "body control-flow validation",
     }
 )
+SYMBOL_TABLE_COMPUTATION_DETAILS = frozenset(
+    {
+        "symbol draft construction",
+        "symbol collision resolution",
+        "symbol table materialization",
+    }
+)
 SEMANTIC_CHILDREN = (
     "HxcIR construction",
     "HxcIR validation",
@@ -199,6 +206,10 @@ PROFILE_COUNTERS = (
     "symbols.initial-candidates",
     "symbols.primary-request-sort-comparisons",
     "symbols.requests",
+    "symbols.table-cache-hits",
+    "symbols.table-cache-misses",
+    "symbols.table-cache-retained-key-code-units",
+    "symbols.table-cache-retained-requests",
     "symbols.table-records",
     "typed.declarations",
     "typed.expression-roots",
@@ -1294,29 +1305,37 @@ def validate_success_profile_contract(profile: StructuredCompilerProfile) -> Non
             raise CompilerProfileFailure(
                 f"successful compiler profile omitted detail {detail!r}"
             )
-    if tuple(name for name, _ in profile.counters) != PROFILE_COUNTERS:
+    actual_counters = tuple(name for name, _ in profile.counters)
+    if actual_counters != PROFILE_COUNTERS:
         raise CompilerProfileFailure(
-            "successful compiler profile counter inventory drifted"
+            "successful compiler profile counter inventory drifted: "
+            f"expected={PROFILE_COUNTERS!r} actual={actual_counters!r}"
         )
 
 
 def allowed_missing_detail_phases(
     profile: StructuredCompilerProfile,
 ) -> frozenset[str]:
-    """Recognize work deliberately skipped by an exact validated cache hit.
+    """Recognize computations deliberately skipped by exact validated hits.
 
     The broad control-flow-planning span still measures each lookup. Its seven
     internal computations are absent only when every function reused a prior
-    validated plan, so requiring fake zero-duration spans would misdescribe
-    work that did not run.
+    validated plan. Exact symbol-table reuse likewise keeps request ordering
+    but omits draft, collision, and table construction. Requiring fake
+    zero-duration spans would misdescribe work that did not run.
     """
 
     counters = dict(profile.counters)
     hits = counters.get("cast.control-flow-plan-cache-hits", 0.0)
     misses = counters.get("cast.control-flow-plan-cache-misses", 0.0)
+    missing: set[str] = set()
     if hits > 0.0 and misses == 0.0:
-        return CONTROL_FLOW_PLAN_COMPUTATION_DETAILS
-    return frozenset()
+        missing.update(CONTROL_FLOW_PLAN_COMPUTATION_DETAILS)
+    symbol_hits = counters.get("symbols.table-cache-hits", 0.0)
+    symbol_misses = counters.get("symbols.table-cache-misses", 0.0)
+    if symbol_hits > 0.0 and symbol_misses == 0.0:
+        missing.update(SYMBOL_TABLE_COMPUTATION_DETAILS)
+    return frozenset(missing)
 
 
 def exclusive_accounting(

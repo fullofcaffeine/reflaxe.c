@@ -159,7 +159,7 @@ contains HxcIR construction and validation, but its exclusive value does not
 count those children again.
 
 Each structured `HXC_PROFILE` JSON Lines record belongs to one request and
-uses the current closed schema 8. Span records carry monotonic wall time,
+uses the current closed schema 9. Span records carry monotonic wall time,
 process CPU time,
 allocation change when the Eval host exposes it, and resident-memory samples.
 The final request record reports total request time and peak observed resident
@@ -183,8 +183,9 @@ is diagnostic output, not a generated compiler artifact, and reports live
 under ignored `_build/`; normal generated files remain byte-deterministic. The
 Caxecraft profiler starts a fresh process for cold samples and owns an
 ephemeral loopback compiler server for post-prime warm samples. It never caches
-`TypedExpr`, `CompilationContext`, symbols, output ownership, or other mutable
-request state.
+`TypedExpr`, `CompilationContext`, a mutable symbol registry, output ownership,
+or other mutable request state. The bounded immutable result caches described
+below retain only the exact target-owned evidence named by their contracts.
 
 The separate `reflaxe_c_incremental_input_report` diagnostic describes what
 Haxe and Reflaxe supplied to one request. A cold request reports the complete
@@ -296,6 +297,42 @@ and validation child spans are absent because those computations did not run;
 the profile consumer accepts that absence only when the closed counters report
 at least one hit and exactly zero misses. Mixed or cold requests must retain
 the ordinary child spans.
+
+Schema 9 adds one-generation reuse for a completed C symbol table. Every
+request still creates a fresh `CSymbolRegistry`, registers its complete name
+set, validates authored exact names and duplicate semantic identities, and
+sorts the requests into canonical order. It can skip candidate-name
+construction, collision resolution, and report-record materialization only
+when the sorted sequence has the same length and every entry has both:
+
+1. the same stable semantic key; and
+2. the same naming fingerprint, which includes readable spelling, visibility,
+   and any exact `@:c.name`.
+
+That second comparison matters because two requests can name the same semantic
+symbol while asking for different C spelling. Such a disagreement must remain
+an error or cache miss, not silently inherit yesterday's name. A hit restores
+only immutable target-owned C identifiers and the already finalized symbol
+report. It does not retain Haxe types, source positions, HxcIR, a compilation
+context, or a registry instance.
+
+The request stages a replacement after ordinary finalization, but publishes it
+only in Reflaxe's `onOutputComplete` callback. A rejected compile or output
+failure therefore leaves the preceding successful table intact, and a
+successful request replaces rather than accumulates generations. The
+`reflaxe_c_test_disable_symbol_table_cache` define keeps the uncached naming
+path authoritative. Profile counters report one table hit or miss plus the
+retained request count and key size. On a hit, the draft, collision, and table
+materialization counters are zero and their child spans are absent because
+those algorithms did not run.
+
+This does **not** authorize reuse of a prior HxcIR function. Typed-body lowering
+currently also discovers anonymous layouts, globals, runtime requirements,
+late adapters, and symbol requests. Until those contributions are produced by
+a complete validated plan and frozen before body construction, skipping the
+body could yield plausible C with missing program facts. The symbol-table cache
+is safe precisely because its complete input and immutable output already have
+one explicit boundary.
 
 The same diagnostic boundary divides semantic analysis into helper selection,
 name-request registration, deterministic symbol finalization, representation

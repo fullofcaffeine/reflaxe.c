@@ -55,7 +55,7 @@ from run import (  # noqa: E402
 
 INCREMENTAL_PREFIX = "HXC_INCREMENTAL_INPUT="
 STATIC_INITIALIZATION_PREFIX = "HXC_STATIC_INITIALIZATION="
-REPORT_SCHEMA_VERSION = 2
+REPORT_SCHEMA_VERSION = 3
 SOURCE_RELATIVE_PATH = Path("caxecraft/domain/Vitals.hx")
 EDIT_BEFORE = "inline final ATTACK_SAFE_TICKS:Int = 20;"
 EDIT_AFTER = "inline final ATTACK_SAFE_TICKS:Int = 21;"
@@ -451,6 +451,83 @@ def require_control_flow_cache_accounting(
         )
 
 
+def symbol_table_cache_stats(
+    sample: Mapping[str, object], label: str
+) -> dict[str, int]:
+    """Read exact finalized-name reuse counters from one structured profile."""
+
+    profile = sample.get("profile")
+    if not isinstance(profile, dict):
+        raise IncrementalEditProfileFailure(
+            f"{label} omitted its structured compiler profile"
+        )
+    counters = profile.get("counters")
+    if not isinstance(counters, list):
+        raise IncrementalEditProfileFailure(
+            f"{label} omitted compiler counters"
+        )
+    values: dict[str, int] = {}
+    prefix = "symbols.table-cache-"
+    for entry in counters:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("name"), str)
+            or not entry["name"].startswith(prefix)
+        ):
+            continue
+        value = entry.get("value")
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or value < 0
+            or int(value) != value
+        ):
+            raise IncrementalEditProfileFailure(
+                f"{label} symbol-table cache counter is not a "
+                f"non-negative integer: {entry!r}"
+            )
+        values[entry["name"].removeprefix(prefix)] = int(value)
+    expected = {
+        "hits",
+        "misses",
+        "retained-requests",
+        "retained-key-code-units",
+    }
+    if set(values) != expected:
+        raise IncrementalEditProfileFailure(
+            f"{label} symbol-table cache counter inventory drifted: "
+            f"{sorted(values)!r}"
+        )
+    return values
+
+
+def require_symbol_table_cache_accounting(
+    stats: Mapping[str, int],
+    *,
+    label: str,
+    hits: int,
+    misses: int,
+    retained_requests: int,
+) -> None:
+    """Require one exact table result and its bounded retained generation."""
+
+    expected = {
+        "hits": hits,
+        "misses": misses,
+        "retained-requests": retained_requests,
+    }
+    for field, value in expected.items():
+        if stats.get(field) != value:
+            raise IncrementalEditProfileFailure(
+                f"{label} symbol-table cache {field} was "
+                f"{stats.get(field)!r}, expected {value}: {dict(stats)!r}"
+            )
+    if stats.get("retained-key-code-units", 0) <= 0:
+        raise IncrementalEditProfileFailure(
+            f"{label} omitted the symbol table's bounded retained-key size"
+        )
+
+
 def profile_incremental_edit() -> dict[str, object]:
     """Run the fixed Vitals edit and return path-free compiler evidence."""
 
@@ -572,6 +649,15 @@ def profile_incremental_edit() -> dict[str, object]:
         edited_cache = control_flow_cache_stats(
             edited.sample, "one-module edit"
         )
+        prime_symbol_cache = symbol_table_cache_stats(
+            prime.sample, "cold prime"
+        )
+        baseline_symbol_cache = symbol_table_cache_stats(
+            baseline.sample, "warm unchanged baseline"
+        )
+        edited_symbol_cache = symbol_table_cache_stats(
+            edited.sample, "one-module edit"
+        )
         require_control_flow_cache_accounting(
             prime_cache,
             label="cold prime",
@@ -592,6 +678,28 @@ def profile_incremental_edit() -> dict[str, object]:
             hits=function_count - changed_function_count,
             misses=changed_function_count,
             retained_functions=function_count,
+        )
+        symbol_request_count = prime_symbol_cache["retained-requests"]
+        require_symbol_table_cache_accounting(
+            prime_symbol_cache,
+            label="cold prime",
+            hits=0,
+            misses=1,
+            retained_requests=symbol_request_count,
+        )
+        require_symbol_table_cache_accounting(
+            baseline_symbol_cache,
+            label="warm unchanged baseline",
+            hits=1,
+            misses=0,
+            retained_requests=symbol_request_count,
+        )
+        require_symbol_table_cache_accounting(
+            edited_symbol_cache,
+            label="one-module edit",
+            hits=1,
+            misses=0,
+            retained_requests=symbol_request_count,
         )
         module_difference = section_diff(before_modules, after_modules)
         changed_c_sources = [
@@ -672,6 +780,15 @@ def profile_incremental_edit() -> dict[str, object]:
                     "key": (
                         "HxcIR schema, logical function identity, and exact "
                         "canonical semantic function text"
+                    ),
+                },
+                "symbolTable": {
+                    "coldPrime": prime_symbol_cache,
+                    "warmUnchanged": baseline_symbol_cache,
+                    "edited": edited_symbol_cache,
+                    "key": (
+                        "the complete canonical symbol-request sequence and "
+                        "each request's exact naming fingerprint"
                     ),
                 },
             },

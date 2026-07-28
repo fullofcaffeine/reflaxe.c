@@ -167,7 +167,7 @@ def compile_target(
     locale: str = "C",
     connect: str | None = None,
     report: bool = True,
-    digest_cache: bool = True,
+    backend_caches: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     command = [tool("haxe")]
     if connect is not None:
@@ -189,8 +189,15 @@ def compile_target(
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
-    if not digest_cache:
-        command.extend(["-D", "reflaxe_c_test_disable_generated_digest_cache"])
+    if not backend_caches:
+        command.extend(
+            [
+                "-D",
+                "reflaxe_c_test_disable_generated_digest_cache",
+                "-D",
+                "reflaxe_c_test_disable_symbol_table_cache",
+            ]
+        )
     command.extend(["--custom-target", f"c={output}"])
     return subprocess.run(
         command,
@@ -269,7 +276,7 @@ def render(
     reverse: bool = False,
     locale: str = "C",
     connect: str | None = None,
-    digest_cache: bool = True,
+    backend_caches: bool = True,
 ) -> Rendered:
     result = compile_target(
         output,
@@ -277,7 +284,7 @@ def render(
         reverse=reverse,
         locale=locale,
         connect=connect,
-        digest_cache=digest_cache,
+        backend_caches=backend_caches,
     )
     if result.returncode != 0 or result.stderr:
         raise LayoutFailure(
@@ -484,7 +491,7 @@ def determinism(first: dict[str, Rendered], root: Path) -> None:
             "split",
             "split warm-server cache-disabled render",
             connect=str(port),
-            digest_cache=False,
+            backend_caches=False,
         )
         assert_equal(first["split"], cache_disabled, "split cold/warm cache-disabled")
     finally:

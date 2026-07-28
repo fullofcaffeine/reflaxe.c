@@ -34,6 +34,7 @@ class SymbolRegistryGolden {
 				throw 'symbol `${request.sourceSymbol()}` changed with discovery order';
 			}
 		}
+		verifyWarmCacheLifecycle(requests);
 
 		final finalized = new TypedCNameFinalizer().finalizeNames(contract(false));
 		final reversedFinalized = new TypedCNameFinalizer().finalizeNames(contract(true));
@@ -197,6 +198,95 @@ class SymbolRegistryGolden {
 		result.registerAll(requests);
 		result.finalizeSymbols();
 		return result;
+	}
+
+	/**
+		Prove that warm reuse is exact, bounded, and failure-atomic.
+
+		The cache may skip expensive naming work only after the current canonical
+		request sequence matches the preceding successful sequence in full.
+		Discovery order is intentionally irrelevant; adding, removing, or changing
+		one naming fact is a miss. Aborting that miss must leave the prior exact
+		table available to the next request.
+	**/
+	static function verifyWarmCacheLifecycle(requests:Array<CSymbolRequest>):Void {
+		CSymbolRegistry.abortCacheRequest();
+
+		CSymbolRegistry.beginCacheRequest(true);
+		final cold = registry(requests);
+		final coldJson = cold.toJson();
+		final coldStats = CSymbolRegistry.completeCacheRequest();
+		requireCacheStats("cold", coldStats, true, 0, 1, requests.length);
+
+		final reversed = requests.copy();
+		reversed.reverse();
+		CSymbolRegistry.beginCacheRequest(true);
+		final warm = registry(reversed);
+		if (warm.toJson() != coldJson)
+			throw "warm symbol-table reuse changed the finalized report";
+		for (request in requests)
+			if (warm.identifierFor(request).value != cold.identifierFor(request).value)
+				throw 'warm symbol-table reuse changed `${request.sourceSymbol()}`';
+		requireCacheStats("reordered warm", CSymbolRegistry.completeCacheRequest(), true, 1, 0, requests.length);
+
+		final added = requests.concat([
+			new CSymbolRequest(CSKMethod, ["demo", "Worker", "newMethod"], CNSOrdinary("translation-unit"))
+		]);
+		CSymbolRegistry.beginCacheRequest(true);
+		registry(added);
+		requireCacheStats("added request", CSymbolRegistry.completeCacheRequest(), true, 0, 1, added.length);
+
+		// Replacing the one retained generation is observable: the older request
+		// set misses once, then becomes the sole new predecessor.
+		CSymbolRegistry.beginCacheRequest(true);
+		registry(requests);
+		requireCacheStats("bounded replacement", CSymbolRegistry.completeCacheRequest(), true, 0, 1, requests.length);
+
+		final removed = requests.copy();
+		removed.pop();
+		CSymbolRegistry.beginCacheRequest(true);
+		registry(removed);
+		CSymbolRegistry.abortCacheRequest();
+
+		final renamed = requests.copy();
+		renamed[0] = new CSymbolRequest(CSKPackage, ["demo"], CNSOrdinary("translation-unit"), CSVInternal, null, null, null, null, ["renamed"]);
+		CSymbolRegistry.beginCacheRequest(true);
+		registry(renamed);
+		CSymbolRegistry.abortCacheRequest();
+
+		CSymbolRegistry.beginCacheRequest(true);
+		registry(requests);
+		requireCacheStats("aborted misses preserve prior success", CSymbolRegistry.completeCacheRequest(), true, 1, 0, requests.length);
+
+		CSymbolRegistry.beginCacheRequest(true);
+		final failed = new CSymbolRegistry();
+		failed.register(new CSymbolRequest(CSKMethod, ["alpha", "open"], CNSOrdinary("translation-unit"), CSVPublic, "same_symbol"));
+		failed.register(new CSymbolRequest(CSKMethod, ["beta", "open"], CNSOrdinary("translation-unit"), CSVPublic, "same_symbol"));
+		expectRegistryFailure(() -> failed.finalizeSymbols());
+		CSymbolRegistry.abortCacheRequest();
+
+		CSymbolRegistry.beginCacheRequest(true);
+		registry(requests);
+		requireCacheStats("failed request preserves prior success", CSymbolRegistry.completeCacheRequest(), true, 1, 0, requests.length);
+
+		CSymbolRegistry.beginCacheRequest(false);
+		registry(requests);
+		requireCacheStats("disabled", CSymbolRegistry.completeCacheRequest(), false, 0, 0, requests.length);
+
+		CSymbolRegistry.beginCacheRequest(true);
+		registry(requests);
+		requireCacheStats("disabled request does not replace prior success", CSymbolRegistry.completeCacheRequest(), true, 1, 0, requests.length);
+	}
+
+	/** Check one lifecycle observation without exposing cache internals. */
+	static function requireCacheStats(label:String, stats:reflaxe.c.naming.CSymbolRegistry.CSymbolTableCacheStats, enabled:Bool, hits:Int, misses:Int,
+			retainedRequests:Int):Void {
+		if (stats.enabled != enabled
+			|| stats.hits != hits
+			|| stats.misses != misses
+			|| stats.retainedRequests != retainedRequests
+			|| stats.retainedKeyCodeUnits <= 0)
+			throw '$label symbol-table cache stats drifted: ${Json.stringify(stats)}';
 	}
 
 	static function collisionDiagnostic():SymbolRegistryFailureDump {

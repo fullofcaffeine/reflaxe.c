@@ -1410,6 +1410,59 @@ unchanged, and every compiler artifact is byte-identical. The timing direction
 is useful, but the saturated host means it must not be published as a p50,
 p95, or machine-independent speedup.
 
+### Warm finalized symbol-table reuse
+
+The next changed-Haxe profile showed that deterministic naming still repeated
+three settled operations after the first canonical request sort: constructing
+generated-name candidates, resolving their collisions, and materializing the
+same final records. Caxecraft registered 22,923 requests. Its fixed
+`Vitals.hx` implementation-only edit changed one HxcIR function and two normal
+artifacts, but did not change any naming input.
+
+`CSymbolRegistry` now retains exactly one preceding successful table. A new
+request still registers, validates, and canonically sorts the complete set.
+Reuse requires exact equality of every stable semantic key and every naming
+fingerprint; the latter covers readable spelling, visibility, and explicit
+names. A hit restores the immutable C spellings and report, while an
+added/removed/renamed request runs normal finalization. Publication occurs only
+after output ownership completes, so a failed request cannot replace the prior
+success. The cache-off path uses
+`reflaxe_c_test_disable_symbol_table_cache`.
+
+The focused naming corpus proves an exact hit despite reversed discovery order;
+added, removed, and fingerprint-changed misses; conflicting fact rejection;
+failed/aborted request rollback; bounded replacement; and disabled behavior.
+The integrated incremental probe additionally proves that the real Vitals edit
+keeps the table reusable while its changed semantic function and C source still
+rebuild.
+
+These are single-run **contended diagnostics** from one owned Haxe server, not
+an uncontended p50 or p95. They provide attributable phase and work evidence:
+the cold request performed all naming algorithms; both warm requests reported
+one exact table hit, zero misses, and zero candidate/collision/materialization
+work. All requests retained 22,923 entries, and the generated artifacts kept
+their expected byte differences.
+
+| Measured naming value | Cold prime | Warm unchanged | Warm Vitals edit |
+| --- | ---: | ---: | ---: |
+| Symbol finalization, wall | 1.562s | 0.316s | 0.467s |
+| Request ordering, wall | 0.152s | 0.161s | 0.242s |
+| Table cache hits / misses | 0 / 1 | 1 / 0 | 1 / 0 |
+| Candidate/collision/materialization work | performed | skipped | skipped |
+
+A separate schema-9 warm full-playable diagnostic emitted the same 229-artifact
+tree digest
+`8b9f8c206d1bcd719d86f011a76b2e0dfe2f5a9ea9c104efd0988392ae016015`
+and completed Haxe-to-generated-C in 13.977s on the contended host. That wall
+number is not a formal budget; the stable claim is the exact 22,923-request hit
+and removal of the three owned naming computations.
+
+Typed-body lowering remains the dominant warm target cost. It is not yet a
+safe analogue of the name table: building one body can discover layouts,
+runtime requirements, globals, late adapters, and additional symbol requests.
+Reusing an old body must wait until those program contributions have a complete
+validated freeze-and-replay boundary.
+
 ### Runtime feature-closure reuse
 
 Runtime planning answers a small but important question: after direct C and

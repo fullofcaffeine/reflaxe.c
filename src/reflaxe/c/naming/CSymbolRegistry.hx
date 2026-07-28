@@ -14,6 +14,14 @@ import reflaxe.c.naming.CSymbolRequest.CSymbolKind;
 import reflaxe.c.naming.CSymbolRequest.CSymbolNamespace;
 import reflaxe.c.naming.CSymbolRequest.CSymbolVisibility;
 
+/**
+	Defines deterministic C naming and its bounded warm-request reuse contract.
+
+	Every compilation still registers and validates its complete set of semantic
+	name requests. When that canonical set exactly matches the preceding
+	successful request, the registry can reuse the already finalized C spellings
+	instead of repeating candidate construction and collision resolution.
+**/
 typedef CSymbolNamespaceRecord = {
 	final kind:String;
 	final scope:String;
@@ -53,6 +61,34 @@ typedef CSymbolTableSnapshot = {
 	final algorithm:String;
 	final symbols:Array<CSymbolRecord>;
 	final collisions:Array<CSymbolCollisionRecord>;
+}
+
+/** One completed cache lookup, reported after output ownership succeeds. */
+typedef CSymbolTableCacheStats = {
+	final enabled:Bool;
+	final hits:Int;
+	final misses:Int;
+	final retainedRequests:Int;
+	final retainedKeyCodeUnits:Float;
+}
+
+private typedef PersistedCSymbolBinding = {
+	final stableKey:String;
+	final namingFingerprint:String;
+	final cName:String;
+}
+
+private typedef PersistedCSymbolGeneration = {
+	final bindings:Array<PersistedCSymbolBinding>;
+	final snapshot:CSymbolTableSnapshot;
+}
+
+private typedef CSymbolTableCacheRequest = {
+	final enabled:Bool;
+	final prior:Null<PersistedCSymbolGeneration>;
+	var staged:Null<PersistedCSymbolGeneration>;
+	var hits:Int;
+	var misses:Int;
 }
 
 private typedef GeneratedDraft = {
@@ -97,6 +133,14 @@ class CSymbolRegistry {
 	public static inline final SCHEMA_VERSION = 2;
 	public static inline final ALGORITHM = "hxc-c-symbol-v2";
 	public static inline final MAX_GENERATED_LENGTH = 120;
+
+	/**
+		Disable warm symbol-table reuse while preserving naming behavior.
+
+		Differential tests use this define to prove that the cache is an
+		optimization over normal finalization, never a second naming policy.
+	**/
+	public static inline final DISABLE_CACHE_DEFINE = "reflaxe_c_test_disable_symbol_table_cache";
 
 	static final C_KEYWORDS = [
 		"_Alignas",
@@ -160,11 +204,85 @@ class CSymbolRegistry {
 		"va_start"
 	];
 
+	#if (eval && macro)
+	@:persistent
+	#end
+	static var previousCacheGeneration:Null<PersistedCSymbolGeneration> = null;
+
+	static var activeCacheRequest:Null<CSymbolTableCacheRequest> = null;
+
 	final requestsByKey:Map<String, CSymbolRequest> = [];
 	final identifiersByKey:Map<String, CIdentifier> = [];
 	var finalizedSnapshot:Null<CSymbolTableSnapshot> = null;
 
 	public function new() {}
+
+	/**
+		Start one compiler request with an optional prior successful name table.
+
+		The prior generation contains only immutable target-owned strings and the
+		final symbol report. It never retains Haxe typed expressions, source
+		positions, a compilation context, or a mutable registry instance.
+	**/
+	@:noCompletion
+	public static function beginCacheRequest(enabled:Bool):Void {
+		activeCacheRequest = {
+			enabled: enabled,
+			prior: enabled ? previousCacheGeneration : null,
+			staged: null,
+			hits: 0,
+			misses: 0
+		};
+	}
+
+	/**
+		Publish the staged name table after generated-output ownership completes.
+
+		A request that fails before this call cannot replace the preceding
+		successful evidence. Only one generation is retained, which bounds memory
+		and makes the next request compare against one unambiguous predecessor.
+	**/
+	@:noCompletion
+	public static function completeCacheRequest():CSymbolTableCacheStats {
+		final request = activeCacheRequest;
+		if (request == null)
+			throw new haxe.Exception("symbol-table cache completed without an active request");
+		if (request.enabled) {
+			if (request.staged == null)
+				throw new haxe.Exception("symbol-table cache completed before symbol finalization");
+			previousCacheGeneration = request.staged;
+		}
+		final retained = previousCacheGeneration;
+		var retainedKeyCodeUnits = 0.0;
+		if (retained != null)
+			for (binding in retained.bindings)
+				retainedKeyCodeUnits += binding.stableKey.length + binding.namingFingerprint.length + binding.cName.length;
+		final stats:CSymbolTableCacheStats = {
+			enabled: request.enabled,
+			hits: request.hits,
+			misses: request.misses,
+			retainedRequests: retained == null ? 0 : retained.bindings.length,
+			retainedKeyCodeUnits: retainedKeyCodeUnits
+		};
+		activeCacheRequest = null;
+		#if (macro || reflaxe_runtime)
+		CPhaseTiming.setCounter(CPCounterSymbolTableCacheHits, stats.hits);
+		CPhaseTiming.setCounter(CPCounterSymbolTableCacheMisses, stats.misses);
+		CPhaseTiming.setCounter(CPCounterSymbolTableCacheRetainedRequests, stats.retainedRequests);
+		CPhaseTiming.setCounterFloat(CPCounterSymbolTableCacheRetainedKeyCodeUnits, stats.retainedKeyCodeUnits);
+		#end
+		return stats;
+	}
+
+	/**
+		Discard request-local lookup state without changing the last success.
+
+		This is intentionally safe when no request is active so error cleanup
+		cannot hide the compiler diagnostic that caused the abort.
+	**/
+	@:noCompletion
+	public static function abortCacheRequest():Void
+		activeCacheRequest = null;
 
 	public function register(request:CSymbolRequest):Void {
 		if (finalizedSnapshot != null) {
@@ -213,6 +331,8 @@ class CSymbolRegistry {
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(requestOrderingTimer);
 		#end
+		if (restoreCachedTable(requests))
+			return finalizedSnapshot ?? internalFailure("symbol-table cache restored no finalized snapshot", []);
 
 		#if (macro || reflaxe_runtime)
 		final draftConstructionTimer = CPhaseTiming.startDetail(CDTSymbolDraftConstruction);
@@ -418,6 +538,7 @@ class CSymbolRegistry {
 			symbols: records,
 			collisions: collisions
 		};
+		stageCurrentTable(requests, finalizedSnapshot);
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(tableMaterializationTimer);
 		#end
@@ -432,6 +553,80 @@ class CSymbolRegistry {
 
 	public function toJson():String
 		return Json.stringify(finalizeSymbols(), null, "  ") + "\n";
+
+	/**
+		Restore names only after every current naming fact matches exactly.
+
+		Stable semantic identity alone is insufficient because a readable source
+		name or explicit `@:c.name` can change the chosen C spelling without
+		changing that identity. The naming fingerprint includes those display and
+		policy facts, so one unequal field makes the request a normal cache miss.
+	**/
+	function restoreCachedTable(requests:Array<CSymbolRequest>):Bool {
+		final request = activeCacheRequest;
+		if (request == null || !request.enabled)
+			return false;
+		final prior = request.prior;
+		if (prior == null || prior.bindings.length != requests.length) {
+			return false;
+		}
+		for (index in 0...requests.length) {
+			final current = requests[index];
+			final cached = prior.bindings[index];
+			if (cached.stableKey != current.stableKey() || cached.namingFingerprint != current.namingFingerprint()) {
+				return false;
+			}
+		}
+		for (binding in prior.bindings)
+			identifiersByKey.set(binding.stableKey, new CIdentifier(binding.cName));
+		finalizedSnapshot = prior.snapshot;
+		request.staged = prior;
+		request.hits++;
+		#if reflaxe_c_phase_timing
+		// Keep the profile's counter inventory stable while reporting that the
+		// corresponding algorithms performed no work on this exact cache hit.
+		CPhaseTiming.setCounter(CPCounterSymbolAssignedSortComparisons, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortComparisons, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8Encodings, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolCandidateSortUtf8CodeUnits, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolInitialCandidates, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolCollisionRounds, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolCollisionCandidatesRechecked, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolCollisionStatesMoved, 0);
+		CPhaseTiming.setCounter(CPCounterSymbolTableRecords, requests.length);
+		#end
+		return true;
+	}
+
+	/**
+		Stage one immutable replacement; publication belongs to output completion.
+
+		The canonical request order is the cache key. The finalized report and C
+		spellings are already immutable compiler products, so retaining them avoids
+		rebuilding 22k-plus records while remaining independent of request-local
+		Haxe compiler objects.
+	**/
+	function stageCurrentTable(requests:Array<CSymbolRequest>, snapshot:CSymbolTableSnapshot):Void {
+		final request = activeCacheRequest;
+		if (request == null || !request.enabled)
+			return;
+		final bindings:Array<PersistedCSymbolBinding> = [];
+		for (item in requests) {
+			final stableKey = item.stableKey();
+			final identifier:CIdentifier = identifiersByKey.get(stableKey) ?? internalFailure('finalized symbol cache lost `${item.sourceSymbol()}`',
+				[item.sourceSymbol()]);
+			bindings.push({
+				stableKey: stableKey,
+				namingFingerprint: item.namingFingerprint(),
+				cName: identifier.value
+			});
+		}
+		request.staged = {
+			bindings: bindings,
+			snapshot: snapshot
+		};
+		request.misses++;
+	}
 
 	static function validateExactName(request:CSymbolRequest):Void {
 		final name = request.explicitName;

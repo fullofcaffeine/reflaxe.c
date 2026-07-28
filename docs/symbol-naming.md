@@ -74,6 +74,43 @@ longer than 120 characters are shortened with the same stable hash marker. No
 generated identifier begins with underscore or contains double underscore. The
 manifest records every escape and collision decision.
 
+## Warm exact-table reuse
+
+An interactive compiler-server request often registers exactly the same names
+as the preceding successful request. Repeating candidate construction,
+collision resolution, and construction of tens of thousands of report records
+would produce the same result. `CSymbolRegistry` therefore keeps one bounded
+generation of the finalized table for the next request.
+
+The cache does not trust a project timestamp, source filename, request count,
+or digest alone. The new request first performs normal registration, authored
+exact-name validation, duplicate checking, and canonical sorting. A hit then
+requires the complete sorted sequence to have the same length and every entry
+to match both its semantic key and naming fingerprint. The fingerprint includes
+the readable source name, visibility, and exact-name policy; changing one of
+those facts is a miss even if the symbol still denotes the same Haxe
+declaration.
+
+For example, changing an integer constant inside a function can leave every
+name request unchanged. The HxcIR function and its generated C body still
+rebuild, but the finalized name table may be reused. Renaming a local, changing
+an explicit `@:c.name`, adding a temporary, or removing a declaration changes
+the request set and runs the ordinary finalizer.
+
+Only the prior successful table is retained. A request stages a replacement
+after finalization and publishes it after Reflaxe completes generated-output
+ownership; compilation or output failure cannot replace the earlier evidence.
+The cache contains immutable target-owned strings, `CIdentifier` spellings,
+and the symbol report—not `TypedExpr`, Haxe `Type` or `Position`, HxcIR,
+`CompilationContext`, or a mutable registry. Use
+`-D reflaxe_c_test_disable_symbol_table_cache` to force the authoritative
+uncached path during differential verification.
+
+This narrow cache should not be generalized to typed-body reuse. Body lowering
+can still discover layouts, runtime requirements, adapters, globals, and new
+name requests while it builds HxcIR. Those effects need a separately validated
+freeze-and-replay boundary before an old body can be reused safely.
+
 The short prefix on locals and members is a correctness boundary, not decoration.
 The C preprocessor replaces macros before the compiler applies function or
 aggregate-member scopes. A header is therefore allowed to break a bare local
@@ -164,7 +201,8 @@ npm run snapshots:check
 The golden covers source-shaped tags, prefixed readable fields and locals,
 standard-header macro resistance, reserved-name escapes, genuine
 overload/specialization collisions, readable-name/semantic-key separation,
-packages, modules, methods,
+warm exact hits, reordered registration, key and fingerprint misses, failure
+rollback, one-generation replacement, cache-off behavior, packages, modules, methods,
 temporaries, overloads, specializations, closures/environments, tables,
 descriptors, reflection entries, static initializers, exports, and the
 runtime-private role. That synthetic role coverage does not request or link the
