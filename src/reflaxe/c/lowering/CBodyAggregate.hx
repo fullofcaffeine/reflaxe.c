@@ -606,6 +606,7 @@ class CBodyAggregateRegistry {
 	final optionalRegistry:CBodyOptionalRegistry;
 	final importRegistry:Null<CImportRegistry>;
 	final sourcePathsByModule:Map<String, String> = [];
+	final namedRecordSources:Null<reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourcePlan>;
 	final directPrimitiveValues:Map<String, CBodyValueType> = [];
 	final namedRecordValues:Map<String, CBodyValueType> = [];
 	final exactNominalValues:Map<String, CBodyValueType> = [];
@@ -617,6 +618,7 @@ class CBodyAggregateRegistry {
 	public function new(context:CompilationContext, ?program:TypedProgramInput, ?contract:TypedCContractSnapshot, runtimeCreatedStrings:Bool = false) {
 		this.context = context;
 		this.runtimeCreatedStrings = runtimeCreatedStrings;
+		this.namedRecordSources = program == null ? null : program.namedRecordSources;
 		if (program != null)
 			for (module in program.modules)
 				sourcePathsByModule.set(module.path, module.sourcePath);
@@ -792,12 +794,12 @@ class CBodyAggregateRegistry {
 		request, so later mentions can share its immutable layout and value plan.
 		This cache is deliberately request-local: Haxe's compilation server can
 		attach a named anonymous field to either its typedef declaration or one
-		rebuilt object-literal use in different requests. Reusing the plan here is
-		therefore not evidence that source positions may be cached across requests.
-		`haxe_c-5sd.8.4.1` owns the separate exact-provenance contract required
-		before incremental backend reuse. Generic typedefs and object literals
-		still take the complete structural path because their shape can depend on
-		type arguments or local typing context.
+		rebuilt object-literal use in different requests. The typed frontend
+		therefore supplies a separate content-keyed declaration-position plan;
+		reusing this value/layout plan is not permission to reuse Haxe `Position`
+		objects. Generic typedefs and object literals still take the complete
+		structural path because their shape can depend on type arguments or local
+		typing context.
 	**/
 	function anonymousValueType(reference:Ref<AnonType>, aliasOwner:Null<CBodyAggregateTypedefOwner>, position:Position, ownerModule:String,
 			sourcePath:String, fail:(Position, String) -> Void, node:String):CBodyValueType {
@@ -810,7 +812,10 @@ class CBodyAggregateRegistry {
 			}
 			namedRecordCacheMisses++;
 		}
-		final shape = anonymousShape(reference, [], position, ownerModule, sourcePath, fail, node);
+		final fieldSources = aliasOwner == null ? null : namedRecordSources == null ? reflaxe.c.frontend.NamedRecordSourceProvenance.planRecord(aliasOwner.displayName,
+			aliasOwner.position, reference) : namedRecordSources;
+		final shape = anonymousShape(reference, [], position, ownerModule, sourcePath, fail, node, fieldSources,
+			aliasOwner == null ? null : aliasOwner.displayName);
 		var aggregate = byShape.get(shape);
 		if (aggregate == null) {
 			final aggregateOwner = aliasOwner == null ? ownerModule : aliasOwner.modulePath;
@@ -819,7 +824,7 @@ class CBodyAggregateRegistry {
 				return rejected(fail, position, '$node:missing-source-for-aggregate-owner:$aggregateOwner');
 			final aggregatePosition = aliasOwner == null ? position : aliasOwner.position;
 			aggregate = prepareAggregate(reference, shape, aliasOwner == null ? null : aliasOwner.displayName, aggregatePosition, aggregateOwner,
-				aggregateSource, fail, node);
+				aggregateSource, fieldSources, fail, node);
 			byShape.set(shape, aggregate);
 		}
 		final prepared = CBodyValueType.aggregate(aggregate);
@@ -1085,7 +1090,8 @@ class CBodyAggregateRegistry {
 		return request == null ? null : symbols.identifierFor(request);
 
 	function prepareAggregate(reference:Ref<AnonType>, shape:String, displayName:Null<String>, position:Position, ownerModule:String, sourcePath:String,
-			fail:(Position, String) -> Void, node:String):CPreparedBodyAggregate {
+			fieldSources:Null<reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourcePlan>, fail:(Position, String) -> Void,
+			node:String):CPreparedBodyAggregate {
 		final digest = Sha256.encode(shape);
 		final source = HaxeSourceSpan.fromPosition(position, sourcePath);
 		final readableName = displayName == null ? ["anonymous", "record", digest.substr(0, 12)] : displayName.split(".");
@@ -1097,21 +1103,23 @@ class CBodyAggregateRegistry {
 		fields.sort((left, right) -> compareUtf8(left.name, right.name));
 		for (index in 0...fields.length) {
 			final field = fields[index];
-			final fieldType = valueType(field.type, field.pos, ownerModule, sourcePath, fail, '$node.field:${field.name}');
+			final fieldPosition = displayName == null ? field.pos : requireNamedRecordFieldPosition(fieldSources, displayName, field.name, field.pos);
+			final fieldType = valueType(field.type, fieldPosition, ownerModule, sourcePath, fail, '$node.field:${field.name}');
 			if (fieldType.spanElement() != null) {
-				return rejected(fail, field.pos, '$node.field:${field.name}:borrowed-span-field-escape');
+				return rejected(fail, fieldPosition, '$node.field:${field.name}:borrowed-span-field-escape');
 			}
 			if (fieldType.irType == IRTVoid) {
-				return rejected(fail, field.pos, '$node.field:${field.name}:Void-not-an-object-type');
+				return rejected(fail, fieldPosition, '$node.field:${field.name}:Void-not-an-object-type');
 			}
 			final mutable = switch field.kind {
 				case FVar(_, write): isWritable(write);
-				case FMethod(_): rejected(fail, field.pos, '$node.field:${field.name}:method');
+				case FMethod(_): rejected(fail, fieldPosition, '$node.field:${field.name}:method');
 			};
 			final request = new CSymbolRequest(CSKField, ["compiler", "closed-record", digest, field.name], CNSMember(aggregate.declarationId), CSVInternal,
 				null, [], [], index, [field.name]);
 			context.symbols.register(request);
-			aggregate.fields.push(new CPreparedBodyAggregateField(field.name, fieldType, mutable, HaxeSourceSpan.fromPosition(field.pos, sourcePath), request));
+			aggregate.fields.push(new CPreparedBodyAggregateField(field.name, fieldType, mutable, HaxeSourceSpan.fromPosition(fieldPosition, sourcePath),
+				request));
 		}
 		for (field in aggregate.fields) {
 			if (valueHasManagedLifetime(field.type)) {
@@ -1122,6 +1130,15 @@ class CBodyAggregateRegistry {
 		if (aggregate.managedLifetime)
 			registerAggregateLifecycle(aggregate);
 		return aggregate;
+	}
+
+	function requireNamedRecordFieldPosition(plan:Null<reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourcePlan>, declarationPath:String,
+			fieldName:String, fallback:Position):Position {
+		if (plan == null) {
+			throw new reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourceProvenanceError('Named record `$declarationPath` reached lowering without a typed-program source plan.',
+				fallback);
+		}
+		return plan.requireFieldPosition(declarationPath, fieldName, fallback);
 	}
 
 	static function valueHasManagedLifetime(value:CBodyValueType):Bool
@@ -1154,7 +1171,8 @@ class CBodyAggregateRegistry {
 	}
 
 	function anonymousShape(reference:Ref<AnonType>, stack:Array<Ref<AnonType>>, position:Position, ownerModule:String, sourcePath:String,
-			fail:(Position, String) -> Void, node:String):String {
+			fail:(Position, String) -> Void, node:String, ?fieldSources:reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourcePlan,
+			?declarationPath:String):String {
 		for (active in stack) {
 			if (active == reference) {
 				return rejected(fail, position, '$node:recursive-by-value-shape');
@@ -1179,13 +1197,14 @@ class CBodyAggregateRegistry {
 		nextStack.push(reference);
 		final parts:Array<String> = [];
 		for (field in fields) {
+			final fieldPosition = declarationPath == null ? field.pos : requireNamedRecordFieldPosition(fieldSources, declarationPath, field.name, field.pos);
 			final access = switch field.kind {
 				case FVar(read, write): 'var:${accessKey(read)}:${accessKey(write)}:${field.isFinal ? "final" : "nonfinal"}';
-				case FMethod(_): return rejected(fail, field.pos, '$node.field:${field.name}:method');
+				case FMethod(_): return rejected(fail, fieldPosition, '$node.field:${field.name}:method');
 			};
 			parts.push(canonicalPart(field.name)
 				+ canonicalPart(access)
-				+ canonicalPart(typeShape(field.type, nextStack, field.pos, ownerModule, sourcePath, fail, '$node.field:${field.name}')));
+				+ canonicalPart(typeShape(field.type, nextStack, fieldPosition, ownerModule, sourcePath, fail, '$node.field:${field.name}')));
 		}
 		return 'closed-record-v1(${parts.join("")})';
 	}

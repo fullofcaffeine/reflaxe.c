@@ -7,6 +7,7 @@ import haxe.macro.Type.EnumField;
 import haxe.macro.Type.ModuleType;
 import haxe.macro.Type.Type;
 import haxe.macro.Type.TypedExpr;
+import reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourcePlan;
 
 /** A normalized metadata entry whose arguments have stable source rendering. */
 typedef TypedAstMetadata = {
@@ -103,13 +104,22 @@ class TypedProgramInput {
 	public final entryPoint:Null<TypedAstEntryPoint>;
 	public final rawModules:Array<ModuleType>;
 
+	/**
+		Exact declaration coordinates for named anonymous-record fields.
+
+		The separate plan prevents Haxe compiler-server reuse from replacing a
+		typedef field's declaration position with an object-literal use position.
+	**/
+	public final namedRecordSources:NamedRecordSourcePlan;
+
 	public function new(modules:Array<TypedAstModule>, declarations:Array<TypedAstDeclaration>, expressionRoots:Array<TypedAstExpressionRoot>,
-			entryPoint:Null<TypedAstEntryPoint>, rawModules:Array<ModuleType>) {
+			entryPoint:Null<TypedAstEntryPoint>, rawModules:Array<ModuleType>, namedRecordSources:NamedRecordSourcePlan) {
 		this.modules = modules;
 		this.declarations = declarations;
 		this.expressionRoots = expressionRoots;
 		this.entryPoint = entryPoint;
 		this.rawModules = rawModules;
+		this.namedRecordSources = namedRecordSources;
 	}
 }
 #else

@@ -19,6 +19,7 @@ import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.emit.ReflaxeOutputWriter;
 import reflaxe.c.frontend.TypedAstNormalizer;
 import reflaxe.c.frontend.TypedProgramInput;
+import reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourceProvenanceError;
 
 /** Reflaxe adapter. Semantic lowering remains in `CCompiler`. */
 class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
@@ -44,7 +45,11 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			capturedModules.reverse();
 		}
 		final captureTimer = CPhaseTiming.start(CPTypedInputCapture);
-		pendingProgram = TypedAstNormalizer.normalize(capturedModules, getMainModule(), getMainExpr());
+		try {
+			pendingProgram = TypedAstNormalizer.normalize(capturedModules, getMainModule(), getMainExpr());
+		} catch (error:NamedRecordSourceProvenanceError) {
+			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, error.detail, error.position);
+		}
 		final captured = pendingProgram;
 		if (captured != null) {
 			CPhaseTiming.setCounter(CPCounterTypedModules, captured.modules.length);

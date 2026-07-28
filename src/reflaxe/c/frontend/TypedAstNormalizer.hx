@@ -11,6 +11,7 @@ import reflaxe.c.frontend.TypedProgramInput.TypedAstExpressionRoot;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstField;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstMetadata;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstModule;
+import reflaxe.c.frontend.NamedRecordSourceProvenance;
 
 /** Converts Haxe compiler objects into a stable whole-program input model. */
 class TypedAstNormalizer {
@@ -69,7 +70,7 @@ class TypedAstNormalizer {
 			expressionRoots.sort(compareExpressionRoots);
 		}
 
-		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules);
+		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules, NamedRecordSourceProvenance.plan(declarations));
 	}
 
 	static function captureEntryFunction(expression:TypedExpr):Null<TypedAstEntryFunction> {

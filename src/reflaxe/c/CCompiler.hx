@@ -339,6 +339,8 @@ class CCompiler {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, error.position, context.profile);
 		} catch (error:CBodyLoweringError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, error.position, context.profile);
+		} catch (error:reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourceProvenanceError) {
+			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, error.detail, error.position, context.profile);
 		} catch (error:HxcIRValidationError) {
 			final diagnostic = error.diagnostics[0];
 			// Keep the exact IR location even when the original macro Position is no

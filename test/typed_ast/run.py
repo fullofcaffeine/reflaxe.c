@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -19,6 +20,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 EXPECTED = Path(__file__).resolve().parent / "expected/typed-ast-inventory.json"
 REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
 INCREMENTAL_REPORT_PREFIX = "HXC_INCREMENTAL_INPUT="
+CONSTRUCTOR_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_EXPECTATIONS = {
     "rich": (
@@ -43,6 +45,8 @@ class CompileResult:
     report: dict[str, object]
     incremental_payload: str
     incremental_report: dict[str, object]
+    hxcir: str | None = None
+    generated_tree: dict[str, bytes] | None = None
 
 
 def development_tool(name: str) -> str:
@@ -446,14 +450,14 @@ def check_compiler_server_isolation() -> None:
 
 
 def compile_successful_incremental_fixture(
-    fixture_root: Path, *, connect: str, output: Path
+    fixture_root: Path, *, connect: str | None, output: Path
 ) -> CompileResult:
     """Compile one successful fixture so Haxe may commit its frontend cache."""
 
-    command = [
-        development_tool("haxe"),
-        "--connect",
-        connect,
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.extend([
         "-cp",
         str(fixture_root),
         "-lib",
@@ -462,13 +466,18 @@ def compile_successful_incremental_fixture(
         "hxc_runtime_diagnostics=off",
         "-D",
         "reflaxe_c_incremental_input_report",
+        "-D",
+        "reflaxe_c_constructor_lowering_report",
         "-main",
         "Main",
         "--custom-target",
         f"c={output}",
-    ]
+    ])
     environment = os.environ.copy()
-    environment.pop("HAXE_NO_SERVER", None)
+    if connect is None:
+        environment["HAXE_NO_SERVER"] = "1"
+    else:
+        environment.pop("HAXE_NO_SERVER", None)
     process = subprocess.run(
         command,
         cwd=ROOT,
@@ -497,17 +506,157 @@ def compile_successful_incremental_fixture(
         INCREMENTAL_REPORT_PREFIX,
         "successful incremental fixture",
     )
+    _, constructor_report = parse_report(
+        process.stdout,
+        CONSTRUCTOR_REPORT_PREFIX,
+        "successful incremental HxcIR",
+    )
+    hxcir = constructor_report.get("hxcir")
+    if not isinstance(hxcir, str) or not hxcir:
+        raise TypedAstProbeFailure("successful incremental fixture omitted HxcIR")
     return CompileResult(
         process,
         "",
         {},
         incremental_payload,
         incremental_report,
+        hxcir,
+        {
+            path.relative_to(output).as_posix(): path.read_bytes()
+            for path in sorted(output.rglob("*"))
+            if path.is_file() and path.name != "_GeneratedFiles.json"
+        },
     )
 
 
+def compile_failed_incremental_fixture(
+    fixture_root: Path, *, connect: str | None, output: Path
+) -> subprocess.CompletedProcess[str]:
+    """Compile one unsupported mutation without accepting stale generated output."""
+
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.extend(
+        [
+            "-cp",
+            str(fixture_root),
+            "-lib",
+            "reflaxe.c",
+            "-D",
+            "hxc_runtime_diagnostics=off",
+            "-main",
+            "Main",
+            "--custom-target",
+            f"c={output}",
+        ]
+    )
+    environment = os.environ.copy()
+    if connect is None:
+        environment["HAXE_NO_SERVER"] = "1"
+    else:
+        environment.pop("HAXE_NO_SERVER", None)
+    process = subprocess.run(
+        command,
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if process.returncode == 0 or "HXC1001" not in process.stderr:
+        raise TypedAstProbeFailure(
+            "unsupported named-record mutation did not fail with HXC1001\n"
+            f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
+        )
+    emitted = [
+        path
+        for path in output.rglob("*")
+        if path.is_file() and path.name != "_GeneratedFiles.json"
+    ]
+    if emitted:
+        raise TypedAstProbeFailure(
+            "unsupported named-record mutation emitted production files: "
+            + ", ".join(path.relative_to(output).as_posix() for path in emitted)
+        )
+    return process
+
+
+def require_hxcir(result: CompileResult, label: str) -> str:
+    """Return one successful request's semantic tree with an actionable failure."""
+
+    if not isinstance(result.hxcir, str) or not result.hxcir:
+        raise TypedAstProbeFailure(f"{label} omitted HxcIR")
+    return result.hxcir
+
+
+def require_generated_tree(result: CompileResult, label: str) -> dict[str, bytes]:
+    """Return one successful request's immutable generated-file snapshot."""
+
+    if not isinstance(result.generated_tree, dict) or not result.generated_tree:
+        raise TypedAstProbeFailure(f"{label} omitted its generated project")
+    return result.generated_tree
+
+
+def assert_equivalent_incremental_result(
+    expected: CompileResult, actual: CompileResult, label: str
+) -> None:
+    """Require semantic provenance and generated bytes to match exactly."""
+
+    if require_hxcir(expected, "expected result") != require_hxcir(actual, label):
+        raise TypedAstProbeFailure(f"{label} HxcIR differed from its cold oracle")
+    if require_generated_tree(
+        expected, "expected result"
+    ) != require_generated_tree(actual, label):
+        raise TypedAstProbeFailure(
+            f"{label} generated project differed from its cold oracle"
+        )
+
+
+def assert_worker_record_sources(
+    result: CompileResult, expected_fields: dict[str, tuple[int, int, int, int]], label: str
+) -> None:
+    """Prove record fields point to the typedef, never its object-literal use."""
+
+    hxcir = require_hxcir(result, label)
+    module_start = hxcir.find('module "WorkerResult"')
+    module_end = hxcir.find('end module "WorkerResult"', module_start)
+    if module_start < 0 or module_end < 0:
+        raise TypedAstProbeFailure(f"{label} omitted the WorkerResult HxcIR module")
+    section = hxcir[module_start:module_end]
+    fields: dict[str, tuple[int, int, int, int]] = {}
+    pattern = re.compile(
+        r'^\s+field "([^"]+)".* @"WorkerResult\.hx":'
+        r"(\d+):(\d+)-(\d+):(\d+)$",
+        re.MULTILINE,
+    )
+    for match in pattern.finditer(section):
+        fields[match.group(1)] = (
+            int(match.group(2)),
+            int(match.group(3)),
+            int(match.group(4)),
+            int(match.group(5)),
+        )
+    if fields != expected_fields:
+        raise TypedAstProbeFailure(
+            f"{label} named-record declaration sources drifted: {fields!r}"
+        )
+
+
+def stop_server(server: subprocess.Popen[str]) -> None:
+    """Stop exactly the Haxe server process created by this test."""
+
+    server.terminate()
+    try:
+        server.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        server.wait(timeout=5)
+
+
 def check_compiler_server_rebuild_inventory() -> None:
-    """Change one Haxe module and prove the server report's exact safe boundary."""
+    """Prove frontend invalidation and exact named-record provenance together."""
 
     all_classes = {
         "ChangedWorker",
@@ -550,6 +699,11 @@ def check_compiler_server_rebuild_inventory() -> None:
             edited = compile_successful_incremental_fixture(
                 editable, connect=endpoint, output=output
             )
+            edited_cold = compile_successful_incremental_fixture(
+                editable,
+                connect=None,
+                output=Path(temporary) / "edited-cold",
+            )
 
             assert_incremental_report(
                 prime.incremental_report,
@@ -591,13 +745,154 @@ def check_compiler_server_rebuild_inventory() -> None:
                 raise TypedAstProbeFailure(
                     "the edited request unexpectedly kept the same rebuild evidence"
                 )
+            original_fields = {
+                "changed": (12, 2, 12, 20),
+                "stable": (15, 2, 15, 19),
+            }
+            assert_worker_record_sources(prime, original_fields, "server prime")
+            assert_worker_record_sources(
+                unchanged, original_fields, "unchanged warm request"
+            )
+            assert_equivalent_incremental_result(
+                prime, unchanged, "unchanged warm request"
+            )
+            assert_worker_record_sources(
+                edited, original_fields, "implementation edit"
+            )
+            assert_equivalent_incremental_result(
+                edited_cold, edited, "implementation edit"
+            )
+
+            main_source = editable / "Main.hx"
+            original_main = main_source.read_text(encoding="utf-8")
+            public_record = (
+                original.replace("final stable:Int;", "final steady:Int;", 1)
+                .replace("stable: StableWorker.value()", "steady: StableWorker.value()", 1)
+            )
+            public_main = original_main.replace(
+                "result.changed + result.stable",
+                "result.changed + result.steady",
+                1,
+            )
+            if public_record == original or public_main == original_main:
+                raise TypedAstProbeFailure(
+                    "public typedef edit anchors were not found"
+                )
+            source.write_text(public_record, encoding="utf-8")
+            main_source.write_text(public_main, encoding="utf-8")
+            public_edit = compile_successful_incremental_fixture(
+                editable, connect=endpoint, output=output
+            )
+            public_cold = compile_successful_incremental_fixture(
+                editable,
+                connect=None,
+                output=Path(temporary) / "public-cold",
+            )
+            assert_worker_record_sources(
+                public_edit,
+                {
+                    "changed": (12, 2, 12, 20),
+                    "steady": (15, 2, 15, 19),
+                },
+                "public typedef edit",
+            )
+            assert_equivalent_incremental_result(
+                public_cold, public_edit, "public typedef edit"
+            )
+
+            unsupported = original.replace(
+                "final stable:Int;", "final stable:Dynamic;", 1
+            )
+            if unsupported == original:
+                raise TypedAstProbeFailure(
+                    "unsupported typedef edit anchor was not found"
+                )
+            source.write_text(unsupported, encoding="utf-8")
+            main_source.write_text(original_main, encoding="utf-8")
+            failure_output = Path(temporary) / "failed"
+            failed_first = compile_failed_incremental_fixture(
+                editable, connect=endpoint, output=failure_output
+            )
+            failed_warm = compile_failed_incremental_fixture(
+                editable, connect=endpoint, output=failure_output
+            )
+            failed_cold = compile_failed_incremental_fixture(
+                editable,
+                connect=None,
+                output=Path(temporary) / "failed-cold",
+            )
+            for label, failure in (
+                ("first server diagnostic", failed_first),
+                ("warm server diagnostic", failed_warm),
+                ("cold diagnostic", failed_cold),
+            ):
+                if "WorkerResult.hx:15: characters 2-23" not in failure.stderr:
+                    raise TypedAstProbeFailure(
+                        f"{label} did not point at the typedef field\n{failure.stderr}"
+                    )
+            if (
+                failed_first.stderr != failed_warm.stderr
+                or failed_first.stderr != failed_cold.stderr
+            ):
+                raise TypedAstProbeFailure(
+                    "cold and warm named-record diagnostics differed"
+                )
+
+            source.write_text(original, encoding="utf-8")
+            main_source.write_text(original_main, encoding="utf-8")
+            reverted = compile_successful_incremental_fixture(
+                editable, connect=endpoint, output=output
+            )
+            assert_equivalent_incremental_result(
+                prime, reverted, "request-order restoration"
+            )
+
+            second_worktree = Path(temporary) / "second-worktree"
+            shutil.copytree(editable, second_worktree)
+            second_result = compile_successful_incremental_fixture(
+                second_worktree, connect=endpoint, output=output
+            )
+            assert_equivalent_incremental_result(
+                prime, second_result, "second-worktree request"
+            )
         finally:
-            server.terminate()
-            try:
-                server.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait(timeout=5)
+            stop_server(server)
+
+        cold_without_server = compile_successful_incremental_fixture(
+            editable,
+            connect=None,
+            output=Path(temporary) / "cold-without-server",
+        )
+        assert_equivalent_incremental_result(
+            prime, cold_without_server, "cache-off cold request"
+        )
+
+        restarted_port = available_port()
+        restarted_endpoint = str(restarted_port)
+        restarted = subprocess.Popen(
+            [development_tool("haxe"), "--wait", restarted_endpoint],
+            cwd=ROOT,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(restarted, restarted_port)
+            restarted_first = compile_successful_incremental_fixture(
+                editable, connect=restarted_endpoint, output=output
+            )
+            restarted_warm = compile_successful_incremental_fixture(
+                editable, connect=restarted_endpoint, output=output
+            )
+            assert_equivalent_incremental_result(
+                prime, restarted_first, "restarted-server first request"
+            )
+            assert_equivalent_incremental_result(
+                prime, restarted_warm, "restarted-server warm request"
+            )
+        finally:
+            stop_server(restarted)
 
 
 def main() -> int:
@@ -611,7 +906,7 @@ def main() -> int:
     print(
         "typed-ast: OK: declarations/metadata/entry ownership, order determinism, "
         "inventory coverage, exact HXC1001 no-output, compiler-server isolation, "
-        "and one-module rebuild evidence"
+        "one-module rebuild evidence, and exact named-record provenance"
     )
     return 0
 

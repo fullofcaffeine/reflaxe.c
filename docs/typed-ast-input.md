@@ -69,6 +69,55 @@ reuse. The normalized metadata view removes only that framework-owned hook so a
 cold and cached request describe the same program. The raw compiler declaration
 is retained unchanged, and all source-authored metadata remains visible.
 
+### Exact record-field positions under the Haxe server
+
+A Haxe object-shaped typedef such as this is a **named anonymous record**:
+
+```haxe
+typedef Result = {
+  final value:Int;
+}
+```
+
+“Anonymous” means the value is structurally an object with those fields rather
+than a class instance; “named” means the typedef gives that shape the reusable
+source name `Result`.
+
+Haxe 5.0.0-preview.1 can reuse that typed shape in a compiler-server request
+while changing the `ClassField.pos` visible to a macro. A cold request points
+`value` at its declaration above. An unchanged warm request can instead point
+it at `value: compute()` in an object literal. The C field layout is the same,
+but a type error would highlight the wrong line and the HxcIR source span would
+change.
+
+`NamedRecordSourceProvenance` repairs this at the typed-input boundary:
+
+1. A cold or rebuilt typedef is trusted only when every field position lies
+   inside that typedef's own source range.
+2. The compiler records only field names and byte offsets. It keys that plain
+   data by a schema number, declaration path, the SHA-256 digest of the exact
+   source bytes, and the SHA-256 digest of the complete Haxe define set.
+3. `@:persistent` keeps this bounded plain-data cache across requests to the
+   same Eval-hosted Haxe server. The cache holds at most 2,048 records and never
+   retains a Haxe `Type`, `Position`, filename, or application value.
+4. A warm request rebuilds request-local `Position` values using the current
+   source file. A missing or mismatched record fails with `HXC9000` before
+   HxcIR construction and tells the user to make one fresh-process build.
+
+This is deliberately fail-closed: using the nearby typedef range or whichever
+object literal Haxe exposed would produce plausible output with false
+provenance. Exact source bytes and defines also make edits invalidate the
+record, while reconstructing the filename per request permits identical source
+in a second worktree without retaining the first worktree's host path.
+
+`npm run test:typed-ast` proves cold, unchanged-warm, implementation edit,
+public typedef edit, unsupported-type diagnostics, request restoration, server
+restart, server-off, and second-worktree behavior. It compares HxcIR and every
+normal generated file with a fresh-process oracle. Full `#line` and sidecar
+source-map policy is not shipped by this boundary; it remains planned under
+E8.T08. This plan preserves the exact coordinates that such mapping must later
+consume.
+
 ## Inventory report
 
 Defining `reflaxe_c_typed_ast_report` prints one path-stable JSON record prefixed

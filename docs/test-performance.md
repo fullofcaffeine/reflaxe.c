@@ -734,10 +734,27 @@ reported source position switches between a typedef declaration and an
 object-literal use. Four modules showed that position-only drift during the
 edited request, and 14 showed it during the unchanged cold-to-warm comparison.
 Normal generated artifacts stayed stable, but an optional HxcIR report changed.
-`haxe_c-5sd.8.4.1` owns exact source-provenance stability before any
-per-function backend cache is admitted. The compiler must not gain speed by
-coarsening positions, retaining stale macro objects, or treating diagnostic
-facts as semantically irrelevant.
+
+The typed frontend now captures exact declaration offsets from a cold or
+rebuilt typedef and retains only bounded, content-keyed plain data across Haxe
+server requests. It reconstructs request-local positions for warm requests and
+fails before HxcIR when exact source bytes, defines, type range, or field names
+do not match. The `test:typed-ast` server matrix covers unchanged, implementation
+and public-type edits, failure diagnostics, request order, restart, server-off,
+and a second worktree. HxcIR and normal generated files must match a
+fresh-process oracle byte for byte. This closes the position-drift prerequisite
+without treating source-map emission itself as shipped; E8.T08 still owns that
+later feature.
+
+The post-fix full Caxecraft profile found no cold-to-warm HxcIR difference:
+zero functions, zero modules, and neither non-function nor schema/dispatch
+skeleton changed. The same implementation edit then changed exactly
+`Vitals.applyAttack`, its one `caxecraft.domain.Vitals` module section,
+`Vitals.c`, and `hxc.manifest.json`. The cold/warm/edit requests took
+42.71s/22.20s/22.29s with one-minute host load starting above the Mac's 12
+logical CPUs, so those wall times are explicitly contended diagnostics rather
+than a replacement for the earlier benchmark. The exact changed sets are the
+reusable invalidation evidence.
 
 ### Caxecraft target-phase profile and duplicate-body removal
 

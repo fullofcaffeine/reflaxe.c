@@ -200,9 +200,14 @@ That separation matters for diagnostics as well as code generation. A warm
 Haxe graph can preserve the same anonymous-record layout while moving a field's
 reported position between its typedef and an object-literal use. Normal C may
 therefore be byte-identical even though diagnostic provenance differs.
-`haxe_c-5sd.8.4.1` owns the exact, content-invalidated provenance model required
-before the backend may reuse a supposedly unchanged function. Matching emitted
-C alone is not sufficient evidence for reusing source positions or source maps.
+The typed-input boundary now accepts a position only when it lies inside the
+named typedef, then retains a bounded plain-data record keyed by exact source
+bytes and the complete define set. A warm request reconstructs request-local
+positions from those verified offsets and its current filename; it never
+retains Haxe macro objects or a worktree path. Missing evidence fails with
+`HXC9000` before HxcIR construction. Matching emitted C alone remains
+insufficient evidence for reusing source positions or future source maps; the
+focused cold/warm mutation matrix owns that independent provenance proof.
 
 The broad HxcIR-construction phase has closed detail clocks for function
 preparation, representation planning, function construction, program assembly,

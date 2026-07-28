@@ -3,9 +3,9 @@
 
 	The typedef gives the two values one shared structural contract. The
 	incremental-input test uses that contract to connect its changed and stable
-	class dependencies; it does not infer reusable backend provenance from it.
-	`haxe_c-5sd.8.4.1` separately owns the exact field-position behavior across
-	cold and warm Haxe requests.
+	class dependencies. The same test requires every cold and warm HxcIR field
+	to keep these declaration lines, because a reused Haxe anonymous type can
+	otherwise expose the later object-literal positions below.
 **/
 typedef WorkerResult = {
 	/** Value changed by the probe's implementation-only edit. */
