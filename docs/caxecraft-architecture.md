@@ -55,11 +55,15 @@ capability, and vitals; a stable `EntityId`; a narrow `EntityStore`; and a
 entity store, the water simulation, voxel storage, and authored-item flags. The
 water simulation owns its pending-work marks because they form one invariant
 with its scheduler counters; it borrows the session's shared world only during
-each operation. `CaxecraftApp` commits its local character through the session,
-while the aquatics fixture advances a separate non-player character with the
-same movement and damage functions. This proves the first composition and
-storage boundary, but not yet the later multi-actor controllers,
-inventory/equipment composition, content runtime, or read-only game view.
+each operation. `CaxecraftApp` now requests revival, damage, recovery, and
+authored aquatic equipment through narrow semantic `GameSession` operations.
+The session reads and commits its owned character before returning a typed
+post-state, so another fixed tick cannot overwrite a change that existed only
+in an application variable. The aquatics fixture separately advances a
+non-player character with the same movement and damage functions. This proves
+the first composition and storage boundary, but not yet the later multi-actor
+controllers, inventory/equipment composition, content runtime, or complete
+read-only game view.
 
 ## The game loop
 
@@ -197,9 +201,30 @@ longer pass world storage or an authoritative tick number into the tick.
 
 `CaxecraftApp` no longer has friend access to this class. It cannot read
 `worldStorage`, `authoredItemStorage`, or `WaterSimulation`, and it cannot make
-a mutable span. Mining, placement, removal, and authored-item collection enter
-through public typed session operations, which preserve inventory atomicity and
-water scheduling before presentation invalidates a renderer cache.
+a mutable span. Mining, placement, removal, revival, damage, recovery, and
+authored aquatic-equipment collection enter through public typed session
+operations. Those operations preserve inventory or item atomicity, commit the
+owned character before a later fixed tick can read it, and report enough typed
+outcome data for presentation to invalidate a renderer cache or show feedback.
+
+There is deliberately no public whole-character replacement method. Before
+this boundary, the application calculated a complete `Character` snapshot and
+published it near the end of the rendered frame. If that frame contained
+another fixed tick first, the tick read the older stored character and could
+erase a newly equipped aquatic profile or hostile hit. The current direct
+methods instead perform this sequence inside the session:
+
+```text
+read the bound character -> run the shared mechanic -> commit by stable ID
+                         -> return the accepted post-state
+```
+
+Recovery still accepts and returns the current immutable `InventoryState`
+because inventory has not yet moved into runtime actor composition. It commits
+health before returning the consumed stack, so a failed character commit cannot
+consume berries. Bead `haxe_c-xge.20.4.2.4` owns moving inventory, equipment,
+NPCs, enemies, and other actor state into the shared content-driven runtime; the
+current command boundary does not claim that later slice is complete.
 
 Rendering and other bounded readers call `worldView()` directly as an argument
 to a read-only consumer. On C, haxe.c returns `const uint8_t *` and writes the
@@ -221,7 +246,11 @@ regressions owned by `haxe_c-xge.20.4.2.6.1`, plus the generated-C
 The session now owns the shipped `localPlayer` binding and deterministic
 completed-tick clock. It resolves the binding internally and advances the clock
 only after a successful commit; `view()` publishes the first immutable
-local-character/clock snapshot.
+local-character/clock snapshot. Semantic commands return `resolved: false` when
+that binding is unavailable or a stable-ID commit fails. Normal no-ops, such as
+trying an inactive item slot or recovering at full health, remain successfully
+resolved and carry their specific typed outcome instead of pretending that the
+session itself failed.
 The first presentation-owned `HudView` is also shipped: `CaxecraftApp` constructs it
 from committed values after fixed updates, and HUD drawing receives that value
 instead of a long positional parameter list. It is still a migration seam, not

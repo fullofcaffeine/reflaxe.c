@@ -9,6 +9,7 @@
 #include "hxc/modules/caxecraft/domain/PlayerAgent.h"
 #include "hxc/modules/caxecraft/domain/WaterSimulation.h"
 #include "hxc/modules/caxecraft/domain/WaterTickResult.h"
+#include "hxc/modules/caxecraft/gameplay/InventoryState.h"
 
 struct hxc_caxecraft_domain_GameSession {
   struct hxc_caxecraft_domain_EntityStore hxc_entities;
@@ -19,10 +20,28 @@ struct hxc_caxecraft_domain_GameSession {
   int32_t hxc_authoredItemStorage[256];
 };
 
+struct hxc_caxecraft_domain_LocalCharacterCommandResult {
+  struct hxc_caxecraft_domain_Character hxc_character;
+  bool hxc_resolved;
+};
+
 struct hxc_caxecraft_domain_GameTickInput {
   int32_t hxc_damagePolicy;
   struct hxc_caxecraft_domain_CharacterIntent hxc_intent;
   int32_t hxc_waterUpdateBudget;
+};
+
+struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult {
+  struct hxc_caxecraft_domain_Character hxc_character;
+  bool hxc_collected;
+  bool hxc_resolved;
+};
+
+struct hxc_caxecraft_domain_LocalRecoveryResult {
+  struct hxc_caxecraft_domain_Character hxc_character;
+  int32_t hxc_decision;
+  struct hxc_caxecraft_gameplay_InventoryState hxc_inventory;
+  bool hxc_resolved;
 };
 
 struct hxc_caxecraft_domain_GameTickResult {
@@ -44,7 +63,9 @@ const int32_t *hxc_caxecraft_domain_GameSession_authoredItemsView(struct hxc_cax
 
 bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_Character hxc_character);
 
-bool hxc_caxecraft_domain_GameSession_deactivateAuthoredItem(struct hxc_caxecraft_domain_GameSession *hxc_self, int32_t hxc_index);
+struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult hxc_caxecraft_domain_GameSession_collectAuthoredAquaticEquipment(struct hxc_caxecraft_domain_GameSession *hxc_self, int32_t hxc_index, struct hxc_caxecraft_domain_AquaticProfile hxc_replacement);
+
+struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_commitLocalCharacter(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_Character hxc_original, struct hxc_caxecraft_domain_Character hxc_replacement);
 
 struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_domain_GameSession_mineTerrain(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory);
 
@@ -54,11 +75,17 @@ bool hxc_caxecraft_domain_GameSession_placeTerrain(struct hxc_caxecraft_domain_G
 
 bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord);
 
+struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_receiveLocalPlayerAttack(struct hxc_caxecraft_domain_GameSession *hxc_self);
+
 bool hxc_caxecraft_domain_GameSession_removeTerrain(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord);
 
 void hxc_caxecraft_domain_GameSession_resetEmptyWorld(struct hxc_caxecraft_domain_GameSession *hxc_self);
 
+struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_reviveLocalPlayerAt(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_CharacterBody hxc_body);
+
 struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_GameTickInput hxc_input);
+
+struct hxc_caxecraft_domain_LocalRecoveryResult hxc_caxecraft_domain_GameSession_useSelectedRecovery(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory);
 
 struct hxc_caxecraft_domain_GameView hxc_caxecraft_domain_GameSession_view(struct hxc_caxecraft_domain_GameSession *hxc_self);
 

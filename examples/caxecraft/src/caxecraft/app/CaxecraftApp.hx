@@ -30,11 +30,7 @@ import caxecraft.app.MotionInterpolation.advance as advanceMotion;
 import caxecraft.app.MotionInterpolation.reset as resetMotion;
 import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
-import caxecraft.domain.Character.adoptProfile as adoptCharacterProfile;
-import caxecraft.domain.Character.applyAttack as applyCharacterAttack;
-import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
 import caxecraft.domain.Character.start as startCharacter;
-import caxecraft.domain.Character.withVitals as withCharacterVitals;
 import caxecraft.domain.CharacterDamagePolicy;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
@@ -70,9 +66,6 @@ import caxecraft.gameplay.MiningOutcome;
 import caxecraft.domain.VitalsState;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.Vitals.isDefeated as characterIsDefeated;
-import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
-import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
-import caxecraft.gameplay.Recovery.decide as decideRecovery;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.gameplay.SwordCombat;
 import caxecraft.gameplay.SwordCombatDecision;
@@ -338,9 +331,9 @@ final class CaxecraftApp {
 		// Its frequency may follow VSync, window load, or GPU speed without changing
 		// the duration of a gameplay tick.
 		while (!quit && !Raylib.WindowShouldClose()) {
-			// Work on one immutable view for this frame, then commit gameplay changes
-			// through the temporary migration seam below. Presentation never receives
-			// the mutable session or its entity store.
+			// Work on one immutable view for this frame. Every owned player change
+			// below enters through a semantic GameSession operation; presentation
+			// never receives the mutable session or its entity store.
 			final initialView = session.view();
 			if (!initialView.valid)
 				quit = true;
@@ -403,10 +396,15 @@ final class CaxecraftApp {
 				inventory = Inventory.cycle(inventory, hotbarCycle);
 			if (screenIsPlaying(screen) && interactPressed) {
 				if (characterIsDefeated(character.vitals)) {
-					character = reviveCharacterAt(character, spawnPlayer(session.worldView()));
-					cameraWaterBlend = 0.0;
-					accumulator = 0.0;
-					resetMotionThisFrame = true;
+					final revival = session.reviveLocalPlayerAt(spawnPlayer(session.worldView()));
+					character = revival.character;
+					if (!revival.resolved)
+						quit = true;
+					else {
+						cameraWaterBlend = 0.0;
+						accumulator = 0.0;
+						resetMotionThisFrame = true;
+					}
 				} else if (GuideNpc.isInRange(guide, character.body.x, character.body.z)) {
 					final sharesBerries = GuideNpc.sharesBerriesOnNextInteraction(guide);
 					if (sharesBerries) {
@@ -572,8 +570,11 @@ final class CaxecraftApp {
 							if (BaseContentPack.itemUseProfile(item) == ItemUseProfile.EquipAquatic
 								&& BaseContentPack.itemProvidesAquaticProfile(item)) {
 								final replacement = BaseContentPack.aquaticProfile(BaseContentPack.itemAquaticProfile(item));
-								if (session.deactivateAuthoredItem(pickupIndex)) {
-									character = adoptCharacterProfile(character, replacement);
+								final equipment = session.collectAuthoredAquaticEquipment(pickupIndex, replacement);
+								character = equipment.character;
+								if (!equipment.resolved)
+									quit = true;
+								else if (equipment.collected) {
 									aquaticEquipmentCode = itemCode;
 									aquaticEquipmentFrames = 120;
 								}
@@ -585,9 +586,14 @@ final class CaxecraftApp {
 				if (selectedMode == GameMode.Adventure) {
 					if (!characterIsDefeated(character.vitals)) {
 						final mosslingAttacked = Mossling.attacksThisTick(mossling, character.body.x, character.body.z);
-						character = applyCharacterAttack(character, mosslingAttacked);
-						if (mosslingAttacked)
-							enemyAttackFrames = 120;
+						if (mosslingAttacked) {
+							final damage = session.receiveLocalPlayerAttack();
+							character = damage.character;
+							if (!damage.resolved)
+								quit = true;
+							else
+								enemyAttackFrames = 120;
+						}
 						mossling = Mossling.step(session.worldView(), mossling, character.body.x, character.body.z, gameTick.tickIndex);
 					}
 					swordCombat = SwordCombat.step(swordCombat);
@@ -613,10 +619,6 @@ final class CaxecraftApp {
 			if (frameCount >= 2)
 				measuredUpdateMicroseconds += Std.int((Raylib.GetTime() - updateStarted) * 1000000.0);
 			#end
-			final committedView = session.view();
-			if (!committedView.valid)
-				quit = true;
-			final completedTicks = committedView.completedTicks;
 
 			// Selection is authoritative gameplay: it originates at the latest committed
 			// body, never at the presentation-only camera position below.
@@ -662,12 +664,14 @@ final class CaxecraftApp {
 			}
 			if (captured && secondaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
-					final recoveryDecision = decideRecovery(inventory, character.vitals);
-					if (recoveryDecision != RecoveryDecision.NotRecoveryItem) {
-						recoveryFeedback = recoveryDecision;
+					final recovery = session.useSelectedRecovery(inventory);
+					character = recovery.character;
+					if (!recovery.resolved)
+						quit = true;
+					else if (recovery.decision != RecoveryDecision.NotRecoveryItem) {
+						recoveryFeedback = recovery.decision;
 						recoveryFeedbackFrames = 90;
-						inventory = applyRecoveryInventory(recoveryDecision, inventory);
-						character = withCharacterVitals(character, applyRecoveryVitals(recoveryDecision, character.vitals));
+						inventory = recovery.inventory;
 					} else if (hit.hit) {
 						final placement = World.coord(hit.previousX, hit.previousY, hit.previousZ);
 						final selectedBlock = Inventory.selectedBlock(inventory);
@@ -724,11 +728,16 @@ final class CaxecraftApp {
 				recoveryFeedbackFrames--;
 			if (aquaticEquipmentFrames > 0)
 				aquaticEquipmentFrames--;
-			// Publish the complete frame result together. A mismatched ID indicates an
-			// engine ownership defect, so stop after this frame instead of overwriting
-			// another character.
-			if (!session.replaceLocalPlayer(character))
+			// Presentation samples the session after every semantic command. The app
+			// never publishes a whole replacement character, so a later fixed tick
+			// cannot overwrite damage, recovery, revival, or equipped capabilities
+			// that existed only in a temporary frame variable.
+			final committedView = session.view();
+			if (!committedView.valid)
 				quit = true;
+			else
+				character = committedView.localPlayer;
+			final completedTicks = committedView.completedTicks;
 			if (resetMotionThisFrame)
 				motionHistory = resetMotion(character.body);
 

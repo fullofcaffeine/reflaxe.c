@@ -98,7 +98,10 @@ inline function isFull(state:VitalsState):Bool
 function recover(state:VitalsState, amount:Int):VitalsState {
 	if (amount <= 0 || isDefeated(state) || isFull(state))
 		return state;
-	return make(state.health + amount, state.safeTicks);
+	var recoveredHealth = state.health + amount;
+	if (recoveredHealth > MAX_HEALTH)
+		recoveredHealth = MAX_HEALTH;
+	return make(recoveredHealth, state.safeTicks);
 }
 
 /** Start again with full health after the owning game rule permits revival. */

@@ -95,23 +95,77 @@ bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domai
   return false;
 }
 
-bool hxc_caxecraft_domain_GameSession_deactivateAuthoredItem(struct hxc_caxecraft_domain_GameSession *hxc_self, int32_t hxc_index)
+struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult hxc_caxecraft_domain_GameSession_collectAuthoredAquaticEquipment(struct hxc_caxecraft_domain_GameSession *hxc_self, int32_t hxc_index, struct hxc_caxecraft_domain_AquaticProfile hxc_replacement)
 {
   if (hxc_self == NULL)
   {
     abort();
   }
-  bool hxc_tmp_instance_call_result_n0 = hxc_caxecraft_domain_GameSession_authoredItemIsActive(hxc_self, hxc_index);
-  if (!!hxc_tmp_instance_call_result_n0)
+  struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_entities;
+  if (hxc_tmp_owned_class_field_address_n0 == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n1 = (*hxc_self).hxc_localPlayer;
+  struct hxc_caxecraft_domain_Character hxc_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_tmp_owned_class_field_address_n0, hxc_tmp_class_field_load_result_n1.hxc_characterId);
+  struct hxc_caxecraft_domain_Character hxc_original = hxc_tmp_instance_call_result_n3;
+  if (hxc_original.hxc_id <= 0)
+  {
+    return (struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult){ .hxc_character = hxc_original, .hxc_collected = false, .hxc_resolved = false };
+  }
+  bool hxc_tmp_instance_call_result_n7 = hxc_caxecraft_domain_GameSession_authoredItemIsActive(hxc_self, hxc_index);
+  if (!hxc_tmp_instance_call_result_n7)
+  {
+    return (struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult){ .hxc_character = hxc_original, .hxc_collected = false, .hxc_resolved = true };
+  }
+  struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n10 = hxc_original;
+  struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n12 = hxc_caxecraft_domain_Character_adoptProfile(hxc_original, hxc_replacement);
+  struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_tmp_instance_call_result_n13 = hxc_caxecraft_domain_GameSession_commitLocalCharacter(hxc_self, hxc_tmp_load_result_n10, hxc_tmp_call_result_n12);
+  struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_committed = hxc_tmp_instance_call_result_n13;
+  if (hxc_committed.hxc_resolved)
   {
     if (hxc_index < 0 || (size_t)hxc_index >= 256)
     {
       abort();
     }
     (*hxc_self).hxc_authoredItemStorage[(size_t)hxc_index] = 0;
-    return true;
   }
-  return false;
+  struct hxc_caxecraft_domain_Character hxc_tmp_record_field_load_result_n15 = hxc_committed.hxc_character;
+  bool hxc_tmp_record_field_load_result_n16 = hxc_committed.hxc_resolved;
+  return (struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult){ .hxc_character = hxc_tmp_record_field_load_result_n15, .hxc_collected = hxc_tmp_record_field_load_result_n16, .hxc_resolved = hxc_committed.hxc_resolved };
+}
+
+struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_commitLocalCharacter(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_Character hxc_original, struct hxc_caxecraft_domain_Character hxc_replacement)
+{
+  bool hxc_tmp_short_circuit_result_n4 = hxc_original.hxc_id > 0;
+  if (hxc_original.hxc_id > 0)
+  {
+    if (hxc_self == NULL)
+    {
+      abort();
+    }
+    struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n1 = &(*hxc_self).hxc_entities;
+    if (hxc_tmp_owned_class_field_address_n1 == NULL)
+    {
+      abort();
+    }
+    struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n2 = (*hxc_self).hxc_localPlayer;
+    bool hxc_tmp_instance_call_result_n4 = hxc_caxecraft_domain_EntityStore_replace(hxc_tmp_owned_class_field_address_n1, hxc_tmp_class_field_load_result_n2.hxc_characterId, hxc_replacement);
+    hxc_tmp_short_circuit_result_n4 = hxc_tmp_instance_call_result_n4;
+  }
+  bool hxc_resolved = hxc_tmp_short_circuit_result_n4;
+  bool hxc_tmp_load_result_n6 = hxc_resolved;
+  struct hxc_caxecraft_domain_Character hxc_tmp_conditional_result_n5;
+  if (hxc_tmp_load_result_n6)
+  {
+    hxc_tmp_conditional_result_n5 = hxc_replacement;
+  }
+  else
+  {
+    hxc_tmp_conditional_result_n5 = hxc_original;
+  }
+  struct hxc_caxecraft_domain_Character hxc_tmp_conditional_load_result_n7 = hxc_tmp_conditional_result_n5;
+  return (struct hxc_caxecraft_domain_LocalCharacterCommandResult){ .hxc_character = hxc_tmp_conditional_load_result_n7, .hxc_resolved = hxc_resolved };
 }
 
 struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_domain_GameSession_mineTerrain(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory)
@@ -187,6 +241,30 @@ bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_doma
   return hxc_tmp_instance_call_result_n1;
 }
 
+struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_receiveLocalPlayerAttack(struct hxc_caxecraft_domain_GameSession *hxc_self)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_entities;
+  if (hxc_tmp_owned_class_field_address_n0 == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n1 = (*hxc_self).hxc_localPlayer;
+  struct hxc_caxecraft_domain_Character hxc_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_tmp_owned_class_field_address_n0, hxc_tmp_class_field_load_result_n1.hxc_characterId);
+  struct hxc_caxecraft_domain_Character hxc_original = hxc_tmp_instance_call_result_n3;
+  if (!(hxc_original.hxc_id <= 0))
+  {
+    struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n7 = hxc_original;
+    struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n9 = hxc_caxecraft_domain_Character_applyAttack(hxc_original, true);
+    struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_tmp_instance_call_result_n10 = hxc_caxecraft_domain_GameSession_commitLocalCharacter(hxc_self, hxc_tmp_load_result_n7, hxc_tmp_call_result_n9);
+    return hxc_tmp_instance_call_result_n10;
+  }
+  return (struct hxc_caxecraft_domain_LocalCharacterCommandResult){ .hxc_character = hxc_original, .hxc_resolved = false };
+}
+
 bool hxc_caxecraft_domain_GameSession_removeTerrain(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord)
 {
   if (hxc_self == NULL)
@@ -234,6 +312,30 @@ void hxc_caxecraft_domain_GameSession_resetEmptyWorld(struct hxc_caxecraft_domai
   }
   hxc_caxecraft_domain_WaterSimulation_resetPending(hxc_tmp_owned_class_field_address_n3);
   return;
+}
+
+struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_reviveLocalPlayerAt(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_CharacterBody hxc_body)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_entities;
+  if (hxc_tmp_owned_class_field_address_n0 == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n1 = (*hxc_self).hxc_localPlayer;
+  struct hxc_caxecraft_domain_Character hxc_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_tmp_owned_class_field_address_n0, hxc_tmp_class_field_load_result_n1.hxc_characterId);
+  struct hxc_caxecraft_domain_Character hxc_original = hxc_tmp_instance_call_result_n3;
+  if (!(hxc_original.hxc_id <= 0))
+  {
+    struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n7 = hxc_original;
+    struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n9 = hxc_caxecraft_domain_Character_reviveAt(hxc_original, hxc_body);
+    struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_tmp_instance_call_result_n10 = hxc_caxecraft_domain_GameSession_commitLocalCharacter(hxc_self, hxc_tmp_load_result_n7, hxc_tmp_call_result_n9);
+    return hxc_tmp_instance_call_result_n10;
+  }
+  return (struct hxc_caxecraft_domain_LocalCharacterCommandResult){ .hxc_character = hxc_original, .hxc_resolved = false };
 }
 
 struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_GameTickInput hxc_input)
@@ -303,6 +405,58 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   int32_t hxc_tmp_record_field_load_result_n32 = hxc_characterResult.hxc_drowningDamage;
   struct hxc_caxecraft_domain_WaterTickResult hxc_tmp_load_result_n33 = hxc_waterResult;
   return (struct hxc_caxecraft_domain_GameTickResult){ .hxc_character = hxc_tmp_record_field_load_result_n30, .hxc_committed = hxc_committed, .hxc_drowningDamage = hxc_tmp_record_field_load_result_n32, .hxc_immersion = hxc_tmp_record_field_load_result_n31, .hxc_tickIndex = hxc_tmp_load_result_n29, .hxc_water = hxc_tmp_load_result_n33 };
+}
+
+struct hxc_caxecraft_domain_LocalRecoveryResult hxc_caxecraft_domain_GameSession_useSelectedRecovery(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_entities;
+  if (hxc_tmp_owned_class_field_address_n0 == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_class_field_load_result_n1 = (*hxc_self).hxc_localPlayer;
+  struct hxc_caxecraft_domain_Character hxc_tmp_instance_call_result_n3 = hxc_caxecraft_domain_EntityStore_read(hxc_tmp_owned_class_field_address_n0, hxc_tmp_class_field_load_result_n1.hxc_characterId);
+  struct hxc_caxecraft_domain_Character hxc_original = hxc_tmp_instance_call_result_n3;
+  if (hxc_original.hxc_id <= 0)
+  {
+    return (struct hxc_caxecraft_domain_LocalRecoveryResult){ .hxc_character = hxc_original, .hxc_decision = 0, .hxc_inventory = hxc_inventory, .hxc_resolved = false };
+  }
+  int32_t hxc_tmp_call_result_n8 = hxc_caxecraft_gameplay_Recovery_decide(hxc_inventory, hxc_original.hxc_vitals);
+  int32_t hxc_decision = hxc_tmp_call_result_n8;
+  if (hxc_decision != 1)
+  {
+    int32_t hxc_tmp_load_result_n10 = hxc_decision;
+    return (struct hxc_caxecraft_domain_LocalRecoveryResult){ .hxc_character = hxc_original, .hxc_decision = hxc_tmp_load_result_n10, .hxc_inventory = hxc_inventory, .hxc_resolved = true };
+  }
+  struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n14 = hxc_caxecraft_gameplay_Recovery_applyInventory(hxc_decision, hxc_inventory);
+  struct hxc_caxecraft_gameplay_InventoryState hxc_nextInventory = hxc_tmp_call_result_n14;
+  struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n15 = hxc_original;
+  int32_t hxc_tmp_load_result_n16 = hxc_decision;
+  struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n18 = hxc_caxecraft_gameplay_Recovery_applyVitals(hxc_tmp_load_result_n16, hxc_original.hxc_vitals);
+  struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n19 = hxc_caxecraft_domain_Character_withVitals(hxc_tmp_load_result_n15, hxc_tmp_call_result_n18);
+  struct hxc_caxecraft_domain_Character hxc_nextCharacter = hxc_tmp_call_result_n19;
+  struct hxc_caxecraft_domain_Character hxc_tmp_load_result_n20 = hxc_original;
+  struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_tmp_instance_call_result_n22 = hxc_caxecraft_domain_GameSession_commitLocalCharacter(hxc_self, hxc_tmp_load_result_n20, hxc_nextCharacter);
+  struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_committed = hxc_tmp_instance_call_result_n22;
+  int32_t hxc_tmp_record_field_decision_n7 = hxc_decision;
+  bool hxc_tmp_record_field_load_result_n24 = hxc_committed.hxc_resolved;
+  struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_conditional_result_n8;
+  if (hxc_tmp_record_field_load_result_n24)
+  {
+    hxc_tmp_conditional_result_n8 = hxc_nextInventory;
+  }
+  else
+  {
+    hxc_tmp_conditional_result_n8 = hxc_inventory;
+  }
+  struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_conditional_load_result_n26 = hxc_tmp_conditional_result_n8;
+  struct hxc_caxecraft_domain_Character hxc_tmp_record_field_load_result_n27 = hxc_committed.hxc_character;
+  bool hxc_tmp_record_field_load_result_n28 = hxc_committed.hxc_resolved;
+  return (struct hxc_caxecraft_domain_LocalRecoveryResult){ .hxc_character = hxc_tmp_record_field_load_result_n27, .hxc_decision = hxc_tmp_record_field_decision_n7, .hxc_inventory = hxc_tmp_conditional_load_result_n26, .hxc_resolved = hxc_tmp_record_field_load_result_n28 };
 }
 
 struct hxc_caxecraft_domain_GameView hxc_caxecraft_domain_GameSession_view(struct hxc_caxecraft_domain_GameSession *hxc_self)

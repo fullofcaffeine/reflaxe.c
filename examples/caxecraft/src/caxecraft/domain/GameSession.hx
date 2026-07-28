@@ -1,8 +1,12 @@
 package caxecraft.domain;
 
 import caxecraft.domain.Aquatics.observe as observeAquatics;
+import caxecraft.domain.Character.adoptProfile as adoptCharacterProfile;
+import caxecraft.domain.Character.applyAttack as applyCharacterAttack;
 import caxecraft.domain.Character.isValid as isValidCharacter;
+import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
 import caxecraft.domain.Character.step as stepCharacter;
+import caxecraft.domain.Character.withVitals as withCharacterVitals;
 import caxecraft.domain.PlayerAgent.bind as bindPlayerAgent;
 import caxecraft.domain.WaterCellCodec.isSolidCode as isSolidStorageCode;
 import caxecraft.gameplay.AuthoredItemSlots;
@@ -10,6 +14,10 @@ import caxecraft.gameplay.InventoryState;
 import caxecraft.gameplay.Mining.attempt as attemptMining;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.MiningResult;
+import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
+import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
+import caxecraft.gameplay.Recovery.decide as decideRecovery;
+import caxecraft.gameplay.RecoveryDecision;
 #if c
 import c.CArray;
 import c.ConstSpan;
@@ -45,6 +53,48 @@ typedef GameTickResult = {
 	final drowningDamage:Int;
 	final water:WaterTickResult;
 	final committed:Bool;
+}
+
+/**
+	The post-state of one semantic command targeting the session's local character.
+
+	`resolved` means the session found its bound character and either committed the
+	calculated replacement or completed an intentional no-op. A false value is an
+	ownership failure, so callers keep the returned pre-command snapshot and stop
+	instead of guessing which state became authoritative.
+**/
+typedef LocalCharacterCommandResult = {
+	final character:Character;
+	final resolved:Bool;
+}
+
+/**
+	The atomic result of trying the selected inventory item's recovery behavior.
+
+	The session commits health before it publishes the matching inventory value.
+	If the character is unavailable, `resolved` is false and both returned values
+	are unchanged. Ordinary decisions such as `HealthAlreadyFull` are successfully
+	resolved no-ops, so presentation can explain them without treating them as an
+	engine failure.
+**/
+typedef LocalRecoveryResult = {
+	final decision:RecoveryDecision;
+	final inventory:InventoryState;
+	final character:Character;
+	final resolved:Bool;
+}
+
+/**
+	The result of collecting one authored aquatic-equipment item.
+
+	`collected` is false for an invalid or already inactive item slot. `resolved`
+	separately states whether the session still owned a valid local character, so a
+	normal failed pickup cannot be confused with broken entity ownership.
+**/
+typedef AuthoredAquaticEquipmentResult = {
+	final character:Character;
+	final collected:Bool;
+	final resolved:Bool;
 }
 
 /**
@@ -139,14 +189,71 @@ final class GameSession {
 		return entities.read(localPlayer.characterId);
 
 	/**
-		Commit a temporary application-level change to the local character.
+		Revive the bound character at one already validated placement.
 
-		This migration seam retains the stable-ID check while interaction, recovery,
-		and combat move into `tick`. Remove it once those systems return session-owned
-		commands instead of allowing `CaxecraftApp` to construct a replacement snapshot.
+		The application chooses when the return-to-spawn action is requested, but the
+		session reads and replaces its own character. A later fixed tick therefore
+		cannot overwrite an uncommitted application snapshot.
 	**/
-	public inline function replaceLocalPlayer(character:Character):Bool
-		return entities.replace(localPlayer.characterId, character);
+	public function reviveLocalPlayerAt(body:CharacterBody):LocalCharacterCommandResult {
+		final original = readLocalPlayer();
+		if (!isValidCharacter(original))
+			return rejectedLocalCharacterCommand(original);
+		return commitLocalCharacter(original, reviveCharacterAt(original, body));
+	}
+
+	/**
+		Apply one confirmed hostile impact to the bound character.
+
+		Shared `Character` and `Vitals` rules still decide safe-time and defeat. The
+		session merely owns the read-calculate-commit sequence, making repeated fixed
+		ticks observe the hit immediately instead of reviving an older snapshot.
+	**/
+	public function receiveLocalPlayerAttack():LocalCharacterCommandResult {
+		final original = readLocalPlayer();
+		if (!isValidCharacter(original))
+			return rejectedLocalCharacterCommand(original);
+		return commitLocalCharacter(original, applyCharacterAttack(original, true));
+	}
+
+	/**
+		Resolve recovery against the bound character and caller-owned inventory.
+
+		Inventory has not yet joined the runtime actor composition, so it crosses this
+		boundary as an immutable value. The method calculates both halves through the
+		shared `Recovery` rules, commits health first, and returns the new inventory
+		only after that commit succeeds. This prevents consuming berries while leaving
+		health unchanged.
+	**/
+	public function useSelectedRecovery(inventory:InventoryState):LocalRecoveryResult {
+		final original = readLocalPlayer();
+		if (!isValidCharacter(original)) {
+			return {
+				decision: RecoveryDecision.NotRecoveryItem,
+				inventory: inventory,
+				character: original,
+				resolved: false
+			};
+		}
+		final decision = decideRecovery(inventory, original.vitals);
+		if (decision != RecoveryDecision.UseBerries) {
+			return {
+				decision: decision,
+				inventory: inventory,
+				character: original,
+				resolved: true
+			};
+		}
+		final nextInventory = applyRecoveryInventory(decision, inventory);
+		final nextCharacter = withCharacterVitals(original, applyRecoveryVitals(decision, original.vitals));
+		final committed = commitLocalCharacter(original, nextCharacter);
+		return {
+			decision: decision,
+			inventory: committed.resolved ? nextInventory : inventory,
+			character: committed.character,
+			resolved: committed.resolved
+		};
+	}
 
 	/**
 		Return authoritative simulation time as a count of completed fixed steps.
@@ -196,8 +303,8 @@ final class GameSession {
 		Lend authored-item activity flags to the native renderer for one call.
 
 		The renderer receives `const int *` plus length in generated C. Gameplay
-		changes a flag only through `deactivateAuthoredItem`, so drawing cannot
-		accidentally collect or restore an item.
+		changes a flag only through `collectAuthoredAquaticEquipment`, so drawing
+		cannot accidentally collect or restore an item.
 	**/
 	public function authoredItemsView():ConstSpan<Int>
 		return authoredItemStorage.constSpan();
@@ -304,17 +411,37 @@ final class GameSession {
 	}
 
 	/**
-		Deactivate one live authored item after its gameplay effect commits.
+		Collect one active authored item and adopt its validated aquatic capability.
 
-		Invalid or already-inactive slots leave the session unchanged. Returning
-		`false` lets callers keep their inventory/equipment update atomic with the
-		item disappearance.
+		The caller resolves content data into `replacement`; it never receives the
+		item buffer. The session first proves the item and character exist, then
+		commits the character profile, and only then clears the item flag. Rejection
+		leaves both character and item unchanged.
 	**/
-	public function deactivateAuthoredItem(index:Int):Bool {
-		if (!authoredItemIsActive(index))
-			return false;
-		authoredItemStorage[index] = 0;
-		return true;
+	public function collectAuthoredAquaticEquipment(index:Int, replacement:AquaticProfile):AuthoredAquaticEquipmentResult {
+		final original = readLocalPlayer();
+		if (!isValidCharacter(original)) {
+			return {
+				character: original,
+				collected: false,
+				resolved: false
+			};
+		}
+		if (!authoredItemIsActive(index)) {
+			return {
+				character: original,
+				collected: false,
+				resolved: true
+			};
+		}
+		final committed = commitLocalCharacter(original, adoptCharacterProfile(original, replacement));
+		if (committed.resolved)
+			authoredItemStorage[index] = 0;
+		return {
+			character: committed.character,
+			collected: committed.resolved,
+			resolved: committed.resolved
+		};
 	}
 
 	/**
@@ -418,4 +545,23 @@ final class GameSession {
 			committed: committed
 		};
 	}
+
+	/**
+		Commit one calculated local-character replacement through the stable ID.
+
+		Every public semantic command uses this single private write point. A failed
+		store check returns the original snapshot, so callers cannot accidentally
+		publish an unowned replacement as though the session accepted it.
+	**/
+	function commitLocalCharacter(original:Character, replacement:Character):LocalCharacterCommandResult {
+		final resolved = isValidCharacter(original) && entities.replace(localPlayer.characterId, replacement);
+		return {
+			character: resolved ? replacement : original,
+			resolved: resolved
+		};
+	}
+
+	/** Build the fail-closed result shared by commands with no bound character. */
+	static inline function rejectedLocalCharacterCommand(original:Character):LocalCharacterCommandResult
+		return {character: original, resolved: false};
 }

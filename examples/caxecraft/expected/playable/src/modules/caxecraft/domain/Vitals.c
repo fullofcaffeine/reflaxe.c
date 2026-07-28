@@ -50,12 +50,17 @@ struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_domain_Vitals_recover(stru
   {
     hxc_tmp_short_circuit_result_n3 = hxc_state.hxc_health >= 6;
   }
-  if (!hxc_tmp_short_circuit_result_n3)
+  if (hxc_tmp_short_circuit_result_n3)
   {
-    struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n6 = hxc_caxecraft_domain_Vitals_make(hxc_i32_add_wrapping(hxc_state.hxc_health, hxc_amount), hxc_state.hxc_safeTicks);
-    return hxc_tmp_call_result_n6;
+    return hxc_state;
   }
-  return hxc_state;
+  int32_t hxc_recoveredHealth = hxc_i32_add_wrapping(hxc_state.hxc_health, hxc_amount);
+  if (hxc_recoveredHealth > 6)
+  {
+    hxc_recoveredHealth = 6;
+  }
+  struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n8 = hxc_caxecraft_domain_Vitals_make(hxc_recoveredHealth, hxc_state.hxc_safeTicks);
+  return hxc_tmp_call_result_n8;
 }
 
 struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_domain_Vitals_step(struct hxc_caxecraft_domain_VitalsState hxc_state)

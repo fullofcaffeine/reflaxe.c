@@ -361,7 +361,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "2e16dad16750717a0b2e46eafe29e43da1673ad4ac3ccff8858d01a4b1139a5d",
+      "sha256": "8c7d08018e7c4d973b8e514c85fb096fc85f8a580ff2b75c8b87fca86abe265a",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -371,12 +371,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "222cb1822a357ac049ca027c73276762bb6821563f11f469bfe030b8640ea456",
+      "sha256": "78198ea81c4abfdbca1642ce96fa5e91be278a6665f3e11199b5154e8b603dad",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "0b8b525b460b9906081bfb7261b802c846b4ca87884f61757885aa02bc4100f8",
+      "sha256": "138929ba44e59551b3e0d5c9b5b53d0c28a0e978876f44acc6846cc9b11456dc",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -386,12 +386,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "e384808edfa3235eaa72d7dd3f33a7aabf951d215fb880fbee4ea6010d7bdfd4",
+      "sha256": "51dc46584f313cd65ee3e9274d52655d6abc630d2770b0e59bdd9607abe29a9b",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "31ed685bb2998fe863a8a07d3bec00097927804eb529c002592ad89a7030996a",
+      "sha256": "9c47182a6c67cca469ad9d5fe4eada25286feb477f2648f554920c40e09907b1",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -551,7 +551,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "0d065ce8ab091311cd28cba64e5a6d52b5fe86e56e8b8b4cf3073d6ca23eea19",
+      "sha256": "ed55c3641e5c528f5ba4470ecb45dc5bd5ea5935baeb5a8495b9f3d5bdf45e07",
       "path": "include/hxc/modules/caxecraft/domain/GameSession.h",
       "kind": "private-header"
     },
@@ -1131,7 +1131,7 @@
       "kind": "source"
     },
     {
-      "sha256": "a9b4870d7acac9d6af9eeedde237f78b605c5ddea98f6626f353f52b1dc7e24d",
+      "sha256": "02d2042ab2babb3a3e96435c856089be56472a73a82f5b22e83005e77484e839",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1146,7 +1146,7 @@
       "kind": "source"
     },
     {
-      "sha256": "32bd1c103121c46b656a14279ac62bf99ca344a103ff6235edd2a2b39e987af7",
+      "sha256": "f507facde0b0084b7197d2105dc3ec1cb3bbbc99eacef34023b8b7116150a69d",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -1241,7 +1241,7 @@
       "kind": "source"
     },
     {
-      "sha256": "2f4b1fe73b88ab55588cde2172c587eab1f6cad64b04544457d3d7af482f6681",
+      "sha256": "a9eb489c5024dcd3bf0044fd6fe40dba43039d74bb8a09c60606c2357d8ef10b",
       "path": "src/modules/caxecraft/domain/GameSession.c",
       "kind": "source"
     },
@@ -1251,7 +1251,7 @@
       "kind": "source"
     },
     {
-      "sha256": "c2090f30f1327e42c3bf6a4b6d226e8c93f7ae3edae464ff0bb058cccbbbacfb",
+      "sha256": "167f64ecb6955281e4b297f7d176ecd1462c5b79f7af1c38c946699280b75b47",
       "path": "src/modules/caxecraft/domain/Vitals.c",
       "kind": "source"
     },

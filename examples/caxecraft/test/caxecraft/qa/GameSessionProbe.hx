@@ -2,6 +2,7 @@ package caxecraft.qa;
 
 import caxecraft.content.FirstPlayableSessionLoader.loadCandidate;
 import caxecraft.content.BaseContentPack;
+import caxecraft.content.BaseContentPack.BaseAquaticProfile;
 import caxecraft.domain.Aquatics.input as aquaticInput;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.Character.start as startCharacter;
@@ -13,6 +14,7 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldRead.query as queryWorld;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.MiningOutcome;
+import caxecraft.gameplay.RecoveryDecision;
 
 /**
 	Executable specification for unpublished level assembly and session ownership.
@@ -61,8 +63,6 @@ function selfCheck():Int {
 		return 18;
 	if (session.removeTerrain(World.coord(16, 0, 16)))
 		return 19;
-	if (!session.deactivateAuthoredItem(0) || session.deactivateAuthoredItem(0) || session.authoredItemIsActive(0))
-		return 20;
 
 	final beforeRejectedRun = session.worldStateHash();
 	if (session.writeTerrainRunDuringLoad(World.VOLUME, 1, 1) != -1
@@ -74,6 +74,16 @@ function selfCheck():Int {
 	final unboundView = session.view();
 	if (unboundView.valid || unboundView.localPlayer.id.isValid() || unboundView.completedTicks != 0)
 		return 7;
+	final recoveryInventory = Inventory.make(5, 0, 0, 0, 0, 0, 2, 0, 0);
+	final rejectedRecovery = session.useSelectedRecovery(recoveryInventory);
+	if (rejectedRecovery.resolved
+		|| rejectedRecovery.character.id.isValid()
+		|| rejectedRecovery.inventory.berries != recoveryInventory.berries
+		|| !session.authoredItemIsActive(0))
+		return 20;
+	final rejectedAttack = session.receiveLocalPlayerAttack();
+	if (rejectedAttack.resolved || rejectedAttack.character.id.isValid())
+		return 21;
 	final pendingBeforeRejectedTick = session.pendingWaterWork();
 	final missingPlayerTick = session.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
@@ -97,25 +107,75 @@ function selfCheck():Int {
 	final boundView = session.view();
 	if (!boundView.valid || boundView.localPlayer.id != localId || boundView.completedTicks != 0)
 		return 10;
-	final otherId = EntityId.fromValidatedStorageCode(12);
-	if (session.replaceLocalPlayer(startCharacter(otherId, createBody(8.5, 2.0, 8.5), localProfile, 4)))
-		return 11;
+	final aquaticEquipment = session.collectAuthoredAquaticEquipment(0, BaseContentPack.aquaticProfile(BaseAquaticProfile.TideweaveAquatics));
+	if (!aquaticEquipment.resolved
+		|| !aquaticEquipment.collected
+		|| aquaticEquipment.character.id != localId
+		|| aquaticEquipment.character.aquaticProfile.maximumBreathTicks != 1200
+		|| session.authoredItemIsActive(0))
+		return 22;
+	final repeatedEquipment = session.collectAuthoredAquaticEquipment(0, localProfile);
+	if (!repeatedEquipment.resolved
+		|| repeatedEquipment.collected
+		|| repeatedEquipment.character.aquaticProfile.maximumBreathTicks != 1200
+		|| session.authoredItemIsActive(0))
+		return 23;
+	final damaged = session.receiveLocalPlayerAttack();
+	if (!damaged.resolved || damaged.character.vitals.health != 3 || damaged.character.vitals.safeTicks <= 0)
+		return 24;
+	final persistedDamage = session.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Survival,
+		waterUpdateBudget: 0
+	});
+	if (!persistedDamage.committed
+		|| persistedDamage.tickIndex != 0
+		|| persistedDamage.character.vitals.health != 3
+		|| persistedDamage.character.vitals.safeTicks != damaged.character.vitals.safeTicks - 1
+		|| persistedDamage.character.aquaticProfile.maximumBreathTicks != 1200)
+		return 29;
+	final recovered = session.useSelectedRecovery(recoveryInventory);
+	if (!recovered.resolved
+		|| recovered.decision != RecoveryDecision.UseBerries
+		|| recovered.inventory.berries != 1
+		|| recovered.character.vitals.health != 5
+		|| session.readLocalPlayer().vitals.health != 5)
+		return 25;
+	final recoveredAgain = session.useSelectedRecovery(recovered.inventory);
+	if (!recoveredAgain.resolved
+		|| recoveredAgain.decision != RecoveryDecision.UseBerries
+		|| recoveredAgain.inventory.berries != 0
+		|| recoveredAgain.character.vitals.health != 6)
+		return 26;
+	final fullHealthRecovery = session.useSelectedRecovery(Inventory.make(5, 0, 0, 0, 0, 0, 1, 0, 0));
+	if (!fullHealthRecovery.resolved
+		|| fullHealthRecovery.decision != RecoveryDecision.HealthAlreadyFull
+		|| fullHealthRecovery.inventory.berries != 1
+		|| fullHealthRecovery.character.vitals.health != 6)
+		return 27;
+	final revived = session.reviveLocalPlayerAt(createBody(4.5, 2.0, 4.5));
+	if (!revived.resolved
+		|| revived.character.id != localId
+		|| revived.character.body.x != 4.5
+		|| revived.character.vitals.health != 6
+		|| session.readLocalPlayer().body.x != 4.5)
+		return 28;
 	final firstTick = session.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
 		damagePolicy: CharacterDamagePolicy.Invulnerable,
 		waterUpdateBudget: 0
 	});
-	if (!firstTick.committed || firstTick.tickIndex != 0 || session.completedTickCount() != 1)
+	if (!firstTick.committed || firstTick.tickIndex != 1 || session.completedTickCount() != 2)
 		return 12;
 	final secondTick = session.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
 		damagePolicy: CharacterDamagePolicy.Invulnerable,
 		waterUpdateBudget: 0
 	});
-	if (!secondTick.committed || secondTick.tickIndex != 1 || session.completedTickCount() != 2)
+	if (!secondTick.committed || secondTick.tickIndex != 2 || session.completedTickCount() != 3)
 		return 13;
 	final committedView = session.view();
-	if (!committedView.valid || committedView.localPlayer.id != localId || committedView.completedTicks != 2)
+	if (!committedView.valid || committedView.localPlayer.id != localId || committedView.completedTicks != 3)
 		return 14;
 	return 0;
 }

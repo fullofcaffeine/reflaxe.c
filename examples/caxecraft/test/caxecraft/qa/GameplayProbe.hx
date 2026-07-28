@@ -12,6 +12,7 @@ import caxecraft.domain.Vitals.ATTACK_SAFE_TICKS;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.Vitals.applyAttack as applyVitalsAttack;
 import caxecraft.domain.Vitals.isDefeated as vitalsAreDefeated;
+import caxecraft.domain.Vitals.recover as recoverVitals;
 import caxecraft.domain.Vitals.revive as reviveVitals;
 import caxecraft.domain.Vitals.start as startVitals;
 import caxecraft.domain.Vitals.startAt as startVitalsAt;
@@ -201,6 +202,7 @@ final class GameplayProbe {
 		final safeTicksBeforeRecovery = vitals.safeTicks;
 		var recoveryDecision = decideRecovery(inventory, vitals);
 		require(recoveryDecision == RecoveryDecision.UseBerries, "damaged player can use selected berries");
+		require(recoverVitals(startVitalsAt(MAX_HEALTH - 1), BERRY_HEALTH).health == MAX_HEALTH, "recovery clamps an amount larger than the remaining health");
 		inventory = applyRecoveryInventory(recoveryDecision, inventory);
 		vitals = applyRecoveryVitals(recoveryDecision, vitals);
 		require(inventory.berries == berriesBeforeRecovery - 1

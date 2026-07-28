@@ -399,6 +399,21 @@ def check_outer_application_boundary() -> None:
             raise PilotFailure(f"CaxecraftApp lost native lifetime marker {required!r}")
     if "final session = new GameSession();" in app:
         raise PilotFailure("CaxecraftApp stopped owning its session as a final child")
+    for forbidden in (
+        "session.replaceLocalPlayer(",
+        "session.deactivateAuthoredItem(",
+        "adoptCharacterProfile(",
+        "applyCharacterAttack(",
+        "reviveCharacterAt(",
+        "withCharacterVitals(",
+        "decideRecovery(",
+        "applyRecoveryInventory(",
+        "applyRecoveryVitals(",
+    ):
+        if forbidden in app:
+            raise PilotFailure(
+                f"CaxecraftApp regained direct simulation mutation through {forbidden!r}"
+            )
 
 
 def check_motion_interpolation_boundary() -> None:

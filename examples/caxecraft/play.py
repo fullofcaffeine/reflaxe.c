@@ -1837,11 +1837,14 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "FirstPlayableSessionLoader_loadCandidate(",
         "GameSession_bindLocalPlayer(",
         "GameSession_authoredItemsView(",
-        "GameSession_deactivateAuthoredItem(",
+        "GameSession_collectAuthoredAquaticEquipment(",
         "GameSession_mineTerrain(",
         "GameSession_placeTerrain(",
+        "GameSession_receiveLocalPlayerAttack(",
         "GameSession_removeTerrain(",
+        "GameSession_reviveLocalPlayerAt(",
         "GameSession_tick(",
+        "GameSession_useSelectedRecovery(",
         "GameSession_view(",
         "GameSession_worldView(",
         "hxc_completedTicks",
@@ -1886,6 +1889,8 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "World_remove(",
         "World_replace(",
         "WorldStorage_writeCode(",
+        "GameSession_replaceLocalPlayer(",
+        "GameSession_deactivateAuthoredItem(",
     ):
         if forbidden in app:
             raise PlayFailure(
@@ -1934,10 +1939,13 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "GameSession_view(",
         "GameSession_worldView(",
         "GameSession_authoredItemsView(",
-        "GameSession_deactivateAuthoredItem(",
+        "GameSession_collectAuthoredAquaticEquipment(",
         "GameSession_mineTerrain(",
         "GameSession_placeTerrain(",
+        "GameSession_receiveLocalPlayerAttack(",
         "GameSession_removeTerrain(",
+        "GameSession_reviveLocalPlayerAt(",
+        "GameSession_useSelectedRecovery(",
         "hxc_completedTicks",
         "hxc_tickIndex",
         "GameSession_placeInitialWaterVolume(",
@@ -1950,6 +1958,14 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         if required not in session_source:
             raise PlayFailure(
                 f"generated Caxecraft session omitted fixed-tick call {required}"
+            )
+    for forbidden in (
+        "GameSession_replaceLocalPlayer(",
+        "GameSession_deactivateAuthoredItem(",
+    ):
+        if forbidden in session_source:
+            raise PlayFailure(
+                f"generated Caxecraft session retained broad mutation seam {forbidden}"
             )
     if not re.search(
         r"const uint8_t \*[^\n]*GameSession_worldView\([^\n]*size_t \*",
