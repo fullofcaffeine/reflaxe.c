@@ -25,6 +25,7 @@ import reflaxe.c.emit.CStaticFunctionProjectEmitter;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.frontend.TypedAstInventory;
+import reflaxe.c.frontend.IncrementalInputInventory;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryPoint;
@@ -137,6 +138,9 @@ class CCompiler {
 		}
 		if (Context.defined(TypedAstInventory.REPORT_DEFINE)) {
 			Sys.println(TypedAstInventory.REPORT_PREFIX + Json.stringify(TypedAstInventory.snapshot(program)));
+		}
+		if (Context.defined(IncrementalInputInventory.REPORT_DEFINE)) {
+			Sys.println(IncrementalInputInventory.REPORT_PREFIX + Json.stringify(IncrementalInputInventory.snapshot(program)));
 		}
 		final input:CBodyFunctionInput = switch mainBodyInput(program) {
 			case null:

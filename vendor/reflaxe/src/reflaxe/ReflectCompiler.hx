@@ -140,6 +140,33 @@ class ReflectCompiler {
 	}
 	#end
 
+	/**
+		Returns the class declarations rebuilt by the current Haxe server request.
+
+		A `null` result means this process has no prior request to reuse. On a
+		later request, the returned array is a sorted copy of the class paths
+		whose build macros ran again. An empty array therefore means Haxe restored
+		every class from its frontend cache; it does not prove that a target
+		compiler may reuse its own whole-program output. Non-class declarations
+		are absent because Haxe build macros cannot observe their rebuild status.
+	**/
+	public static function getRebuiltClassPaths(): Null<Array<String>> {
+		#if !reflaxe.disallow_build_cache_check
+		if(rebuiltClasses == null) {
+			return null;
+		}
+		final unique: Map<String, Bool> = [];
+		for(cls in rebuiltClasses) {
+			unique.set(cls.pack.concat([cls.name]).join("."), true);
+		}
+		final paths = [for(path in unique.keys()) path];
+		paths.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		return paths;
+		#else
+		return null;
+		#end
+	}
+
 	// =======================================================
 	// * Plugin System
 	// =======================================================

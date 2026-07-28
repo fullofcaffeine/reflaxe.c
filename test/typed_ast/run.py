@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 EXPECTED = Path(__file__).resolve().parent / "expected/typed-ast-inventory.json"
 REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
+INCREMENTAL_REPORT_PREFIX = "HXC_INCREMENTAL_INPUT="
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_EXPECTATIONS = {
     "rich": (
@@ -39,6 +41,8 @@ class CompileResult:
     process: subprocess.CompletedProcess[str]
     payload: str
     report: dict[str, object]
+    incremental_payload: str
+    incremental_report: dict[str, object]
 
 
 def development_tool(name: str) -> str:
@@ -51,7 +55,9 @@ def compile_fixture(
     *,
     reverse_modules: bool = False,
     connect: str | None = None,
+    fixture_root: Path | None = None,
 ) -> CompileResult:
+    selected_fixture_root = fixture_root or FIXTURES / fixture
     with tempfile.TemporaryDirectory(prefix=f"hxc-typed-ast-{fixture}-") as temporary:
         output = Path(temporary) / "generated"
         command = [development_tool("haxe")]
@@ -60,11 +66,13 @@ def compile_fixture(
         command.extend(
             [
                 "-cp",
-                str(FIXTURES / fixture),
+                str(selected_fixture_root),
                 "-lib",
                 "reflaxe.c",
                 "-D",
                 "reflaxe_c_typed_ast_report",
+                "-D",
+                "reflaxe_c_incremental_input_report",
             ]
         )
         if reverse_modules:
@@ -104,21 +112,45 @@ def compile_fixture(
             f"{fixture} missed its exact source-anchored HXC1001 boundary\n"
             f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
         )
+    typed_payload, typed_report = parse_report(
+        process.stdout, REPORT_PREFIX, f"{fixture} typed-AST"
+    )
+    incremental_payload, incremental_report = parse_report(
+        process.stdout, INCREMENTAL_REPORT_PREFIX, f"{fixture} incremental input"
+    )
+    return CompileResult(
+        process,
+        typed_payload,
+        typed_report,
+        incremental_payload,
+        incremental_report,
+    )
+
+
+def parse_report(
+    stdout: str, prefix: str, label: str
+) -> tuple[str, dict[str, object]]:
+    """Read one prefixed JSON report without accepting missing or duplicate data."""
+
     lines = [
-        line[len(REPORT_PREFIX) :]
-        for line in process.stdout.splitlines()
-        if line.startswith(REPORT_PREFIX)
+        line[len(prefix) :]
+        for line in stdout.splitlines()
+        if line.startswith(prefix)
     ]
     if len(lines) != 1:
         raise TypedAstProbeFailure(
-            f"{fixture} emitted {len(lines)} typed-AST reports, expected exactly one\n"
-            f"stdout:\n{process.stdout}"
+            f"{label} emitted {len(lines)} reports, expected exactly one\n"
+            f"stdout:\n{stdout}"
         )
     try:
         report = json.loads(lines[0])
     except json.JSONDecodeError as error:
-        raise TypedAstProbeFailure(f"{fixture} emitted invalid inventory JSON: {error}") from error
-    return CompileResult(process, lines[0], report)
+        raise TypedAstProbeFailure(
+            f"{label} emitted invalid JSON: {error}"
+        ) from error
+    if not isinstance(report, dict):
+        raise TypedAstProbeFailure(f"{label} report is not a JSON object")
+    return lines[0], report
 
 
 def count_map(report: dict[str, object], category: str) -> dict[str, int]:
@@ -214,6 +246,86 @@ def assert_fixture_classification(report: dict[str, object]) -> None:
         raise TypedAstProbeFailure("inventory leaked a host path")
 
 
+def text_array(
+    report: dict[str, object], field: str, *, label: str
+) -> list[str]:
+    """Validate one deterministic string-array field from a diagnostic report."""
+
+    value = report.get(field)
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise TypedAstProbeFailure(f"{label} has an invalid {field} array")
+    if value != sorted(set(value)):
+        raise TypedAstProbeFailure(f"{label} {field} is not sorted and unique")
+    return value
+
+
+def assert_incremental_report(
+    report: dict[str, object],
+    *,
+    mode: str,
+    required_rebuilt: set[str],
+    required_reused: set[str],
+    forbidden_rebuilt: set[str],
+    forbidden_reused: set[str],
+    require_empty_reused: bool = False,
+    required_non_classes: set[str] | None = None,
+) -> None:
+    """Check the bounded class evidence without treating it as backend reuse."""
+
+    label = f"{mode} incremental input report"
+    if report.get("schemaVersion") != 1 or report.get("mode") != mode:
+        raise TypedAstProbeFailure(f"{label} schema/mode drifted: {report!r}")
+    actual_rebuilt = set(
+        text_array(report, "rebuiltClassDeclarations", label=label)
+    )
+    actual_reused = set(
+        text_array(report, "frontendReusedClassDeclarations", label=label)
+    )
+    if (
+        not required_rebuilt.issubset(actual_rebuilt)
+        or not required_reused.issubset(actual_reused)
+        or forbidden_rebuilt.intersection(actual_rebuilt)
+        or forbidden_reused.intersection(actual_reused)
+        or actual_rebuilt.intersection(actual_reused)
+        or require_empty_reused
+        and actual_reused
+    ):
+        raise TypedAstProbeFailure(
+            f"{label} class partition drifted: "
+            f"rebuilt={sorted(actual_rebuilt)!r}, reused={sorted(actual_reused)!r}"
+        )
+    non_classes = set(
+        text_array(
+            report,
+            "conservativelyReconsideredNonClassDeclarations",
+            label=label,
+        )
+    )
+    if required_non_classes is None:
+        required_non_classes = {
+            "FixtureCounter",
+            "FixturePoint",
+            "FixtureState",
+        }
+    if not required_non_classes.issubset(non_classes):
+        raise TypedAstProbeFailure(
+            f"{label} stopped conservatively carrying non-class declarations: "
+            f"{sorted(non_classes)!r}"
+        )
+    unmatched = text_array(
+        report, "unmatchedHaxeRebuiltClassPaths", label=label
+    )
+    if unmatched:
+        raise TypedAstProbeFailure(
+            f"{label} contained target-external rebuilt classes: {unmatched!r}"
+        )
+    payload = json.dumps(report, sort_keys=True)
+    if str(ROOT) in payload:
+        raise TypedAstProbeFailure(
+            "incremental input inventory leaked a host path"
+        )
+
+
 def render_snapshot() -> CompileResult:
     forward = compile_fixture("rich")
     reverse = compile_fixture("rich", reverse_modules=True)
@@ -223,6 +335,22 @@ def render_snapshot() -> CompileResult:
     if forward.payload != repeated.payload:
         raise TypedAstProbeFailure("two cold typed-AST inventory renders differed")
     assert_fixture_classification(forward.report)
+    all_classes = {
+        "FixtureBox",
+        "FixtureMarker",
+        "FixtureNativeClock",
+        "FixtureTypes",
+        "Main",
+    }
+    assert_incremental_report(
+        forward.incremental_report,
+        mode="cold-complete",
+        required_rebuilt=all_classes,
+        required_reused=set(),
+        forbidden_rebuilt=set(),
+        forbidden_reused=all_classes,
+        require_empty_reused=True,
+    )
     return forward
 
 
@@ -317,16 +445,173 @@ def check_compiler_server_isolation() -> None:
             server.wait(timeout=5)
 
 
+def compile_successful_incremental_fixture(
+    fixture_root: Path, *, connect: str, output: Path
+) -> CompileResult:
+    """Compile one successful fixture so Haxe may commit its frontend cache."""
+
+    command = [
+        development_tool("haxe"),
+        "--connect",
+        connect,
+        "-cp",
+        str(fixture_root),
+        "-lib",
+        "reflaxe.c",
+        "-D",
+        "hxc_runtime_diagnostics=off",
+        "-D",
+        "reflaxe_c_incremental_input_report",
+        "-main",
+        "Main",
+        "--custom-target",
+        f"c={output}",
+    ]
+    environment = os.environ.copy()
+    environment.pop("HAXE_NO_SERVER", None)
+    process = subprocess.run(
+        command,
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if process.returncode != 0:
+        raise TypedAstProbeFailure(
+            "successful incremental fixture failed\n"
+            f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
+        )
+    emitted = [
+        path
+        for path in output.rglob("*")
+        if path.is_file() and path.name != "_GeneratedFiles.json"
+    ]
+    if not emitted:
+        raise TypedAstProbeFailure(
+            "successful incremental fixture emitted no C project"
+        )
+    incremental_payload, incremental_report = parse_report(
+        process.stdout,
+        INCREMENTAL_REPORT_PREFIX,
+        "successful incremental fixture",
+    )
+    return CompileResult(
+        process,
+        "",
+        {},
+        incremental_payload,
+        incremental_report,
+    )
+
+
+def check_compiler_server_rebuild_inventory() -> None:
+    """Change one Haxe module and prove the server report's exact safe boundary."""
+
+    all_classes = {
+        "ChangedWorker",
+        "Main",
+        "StableWorker",
+        "_WorkerResult.WorkerResult_Fields_",
+    }
+    with tempfile.TemporaryDirectory(prefix="hxc-typed-ast-edit-") as temporary:
+        editable = Path(temporary) / "incremental"
+        shutil.copytree(FIXTURES / "incremental", editable)
+        output = Path(temporary) / "generated"
+        port = available_port()
+        endpoint = str(port)
+        environment = os.environ.copy()
+        environment.pop("HAXE_NO_SERVER", None)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            prime = compile_successful_incremental_fixture(
+                editable, connect=endpoint, output=output
+            )
+            unchanged = compile_successful_incremental_fixture(
+                editable, connect=endpoint, output=output
+            )
+            source = editable / "WorkerResult.hx"
+            original = source.read_text(encoding="utf-8")
+            changed = original.replace("changed: 4,", "changed: 5,", 1)
+            if changed == original:
+                raise TypedAstProbeFailure(
+                    "incremental fixture edit anchor was not found"
+                )
+            source.write_text(changed, encoding="utf-8")
+            edited = compile_successful_incremental_fixture(
+                editable, connect=endpoint, output=output
+            )
+
+            assert_incremental_report(
+                prime.incremental_report,
+                mode="cold-complete",
+                required_rebuilt=all_classes,
+                required_reused=set(),
+                forbidden_rebuilt=set(),
+                forbidden_reused=all_classes,
+                require_empty_reused=True,
+                required_non_classes=set(),
+            )
+            assert_incremental_report(
+                unchanged.incremental_report,
+                mode="server-partial",
+                required_rebuilt=set(),
+                required_reused=all_classes,
+                forbidden_rebuilt=all_classes,
+                forbidden_reused=set(),
+                required_non_classes=set(),
+            )
+            assert_incremental_report(
+                edited.incremental_report,
+                mode="server-partial",
+                required_rebuilt={
+                    "ChangedWorker",
+                    "Main",
+                    "_WorkerResult.WorkerResult_Fields_",
+                },
+                required_reused={"StableWorker"},
+                forbidden_rebuilt={"StableWorker"},
+                forbidden_reused={
+                    "ChangedWorker",
+                    "Main",
+                    "_WorkerResult.WorkerResult_Fields_",
+                },
+                required_non_classes=set(),
+            )
+            if unchanged.incremental_payload == edited.incremental_payload:
+                raise TypedAstProbeFailure(
+                    "the edited request unexpectedly kept the same rebuild evidence"
+                )
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+
 def main() -> int:
     try:
         check_expected_snapshot()
         check_compiler_server_isolation()
+        check_compiler_server_rebuild_inventory()
     except (OSError, json.JSONDecodeError, subprocess.TimeoutExpired, TypedAstProbeFailure) as error:
         print(f"typed-ast: ERROR: {error}", file=os.sys.stderr)
         return 1
     print(
         "typed-ast: OK: declarations/metadata/entry ownership, order determinism, "
-        "inventory coverage, exact HXC1001 no-output, and compiler-server isolation"
+        "inventory coverage, exact HXC1001 no-output, compiler-server isolation, "
+        "and one-module rebuild evidence"
     )
     return 0
 

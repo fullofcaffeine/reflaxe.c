@@ -789,10 +789,15 @@ class CBodyAggregateRegistry {
 		Classify one anonymous record, reusing a proven named typedef when safe.
 
 		A non-generic typedef has one transparent Haxe definition for the whole
-		request. Its fields and their source positions do not vary by use, so later
-		mentions can share the immutable value plan. Generic typedefs and object
-		literals still take the complete structural path because their shape can
-		depend on type arguments or local typing context.
+		request, so later mentions can share its immutable layout and value plan.
+		This cache is deliberately request-local: Haxe's compilation server can
+		attach a named anonymous field to either its typedef declaration or one
+		rebuilt object-literal use in different requests. Reusing the plan here is
+		therefore not evidence that source positions may be cached across requests.
+		`haxe_c-5sd.8.4.1` owns the separate exact-provenance contract required
+		before incremental backend reuse. Generic typedefs and object literals
+		still take the complete structural path because their shape can depend on
+		type arguments or local typing context.
 	**/
 	function anonymousValueType(reference:Ref<AnonType>, aliasOwner:Null<CBodyAggregateTypedefOwner>, position:Position, ownerModule:String,
 			sourcePath:String, fail:(Position, String) -> Void, node:String):CBodyValueType {

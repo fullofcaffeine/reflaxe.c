@@ -41,7 +41,7 @@
       "name": "Reflaxe",
       "role": "compiler-framework-dependency",
       "usage": "bundled-compiler-only-source",
-      "selectionStatus": "version-revision-and-content-pinned",
+      "selectionStatus": "version-revision-local-patch-and-content-pinned",
       "version": "4.0.0-beta",
       "sourceRevision": "73a983112e039daad46b37912ab238df6bf0cf53",
       "observedRevision": "73a983112e039daad46b37912ab238df6bf0cf53",
@@ -56,6 +56,14 @@
         {
           "path": "vendor/reflaxe/LICENSE",
           "sha256": "091dcef3e01fc680736f7e8c28a10e2e65224cc0fda7ba8a614f2daa9b10702d"
+        }
+      ],
+      "localPatches": [
+        {
+          "path": "vendor/reflaxe/src/reflaxe/ReflectCompiler.hx",
+          "owner": "haxe_c-5sd.8.4",
+          "purpose": "Expose copied current-request class rebuild paths to the target's opt-in diagnostic inventory.",
+          "upstreamReference": "https://github.com/SomeRanDev/reflaxe/blob/73a983112e039daad46b37912ab238df6bf0cf53/src/reflaxe/ReflectCompiler.hx"
         }
       ]
     },

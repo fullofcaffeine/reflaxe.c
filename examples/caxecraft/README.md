@@ -610,6 +610,39 @@ Raylib, or launching the game. The Caxecraft native differential lanes exercise
 those later steps separately; keeping the boundaries separate tells us whether
 a delay belongs to Haxe-to-C generation or the native toolchain.
 
+To inspect one realistic source edit instead of repeated unchanged builds, run:
+
+```sh
+npm run profile:caxecraft-incremental-edit
+```
+
+This diagnostic owns one temporary Caxecraft source copy and one Haxe server.
+It first performs a cold build, then an unchanged warm build, changes the
+damage constant in `Vitals.hx`, and performs one more warm build. It compares
+the frontend rebuild closure, every HxcIR function, every normal generated
+artifact, the semantic JSON reports, and every C translation unit. The report
+goes to ignored
+`examples/caxecraft/_build/incremental-edit-profile.json`; it contains logical
+repository paths but never the temporary checkout path.
+
+The first run found the useful boundary for the next optimization. The edit
+made Haxe rebuild 14 of 135 Caxecraft class declarations, while haxe.c still
+lowered the complete program. Of 531 HxcIR functions, only
+`Vitals.applyAttack` changed. Of 229 generated artifacts, only
+`src/modules/caxecraft/domain/Vitals.c` and the manifest changed; all generated
+headers and 83 of 84 C translation units remained byte-identical. The native
+object and link projection is intentionally labelled **unmeasured** until the
+depfile-backed native cache proves the complete header and toolchain
+dependency closure.
+
+That experiment also found a separate correctness prerequisite: Haxe's warm
+typed graph can attach a named anonymous-record field to its typedef line in
+one request and to an object-literal line in another. Normal generated C
+remained stable, but optional HxcIR source provenance did not. Beads issue
+`haxe_c-5sd.8.4.1` owns the exact source-position contract required before
+per-function backend reuse. The profiler reports this drift instead of hiding
+it or pretending that matching C bytes makes cached diagnostics safe.
+
 The first optimized sample on a busy 12-logical-CPU Mac began at load 9.88.
 Fresh-process median was 18.408s and post-prime warm median was 16.486s. The
 remaining dominant phase was structural C-body construction at about 11.4-

@@ -23,7 +23,15 @@
       "src"
     ],
     "bundleFileCount": 62,
-    "bundleSha256": "2c14cc7364f069f5f00f50383136f88dc1836389f0f540e96dbf71a6fe0c70b8"
+    "bundleSha256": "c7e455b06d432fb9f80f9295d3f8c68bd327148d420c20d12519775353ab5a5b",
+    "localPatches": [
+      {
+        "path": "src/reflaxe/ReflectCompiler.hx",
+        "owner": "haxe_c-5sd.8.4",
+        "purpose": "Expose a sorted copy of Haxe's current-request rebuilt-class paths for opt-in invalidation diagnostics without retaining typed compiler objects.",
+        "upstreamReference": "https://github.com/SomeRanDev/reflaxe/blob/73a983112e039daad46b37912ab238df6bf0cf53/src/reflaxe/ReflectCompiler.hx"
+      }
+    ]
   },
   "tools": {
     "lix": {

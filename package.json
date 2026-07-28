@@ -58,6 +58,7 @@
     "test:caxecraft-domain": "python3 examples/caxecraft/run.py",
     "test:caxecraft-domain:full": "python3 examples/caxecraft/run.py --full",
     "profile:caxecraft-compiler": "python3 examples/caxecraft/profile_compiler.py",
+    "profile:caxecraft-incremental-edit": "python3 examples/caxecraft/profile_incremental_edit.py",
     "test:caxecraft-playable": "python3 examples/caxecraft/play.py --check-snapshots",
     "caxecraft:play": "python3 examples/caxecraft/play.py",
     "benchmark:caxecraft-renderer": "python3 examples/caxecraft/benchmark_renderer.py",

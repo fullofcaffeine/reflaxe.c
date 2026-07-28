@@ -159,11 +159,32 @@ performs zero Haxe requests, zero C compilations, and zero links when every
 reviewed input and output still matches
 (`docs/test-performance.md:512-552`).
 
-A one-Haxe-module edit cannot yet produce a truthful incremental native timing:
-the current runner regenerates the whole C project and recompiles every C
-translation unit. That measurement becomes meaningful only after
-`haxe_c-5sd.8.3` adds compiler depfiles and validated object reuse. Its
-acceptance criteria own the initial edit-to-launch budget.
+A one-Haxe-module edit now has a truthful **generation** inventory, but not yet
+a truthful incremental native timing. The opt-in
+`reflaxe_c_incremental_input_report` asks Reflaxe which class declarations Haxe
+rebuilt on the current server request; it does not claim that non-class module
+fields, HxcIR, CAST, or generated files were reused. The Caxecraft edit profiler
+then compares those later layers independently.
+
+In the first `Vitals.hx` experiment, Haxe rebuilt 14 of 135 Caxecraft class
+declarations. Only one of 531 HxcIR functions had a semantic body change, and
+only `Vitals.c` plus the project manifest changed among 229 normal generated
+artifacts. All generated headers were byte-identical, leaving one directly
+changed source candidate among 84 C translation units. This is actionable
+invalidation evidence; it is not an object-cache hit. The profiler labels the
+native projection unmeasured because only compiler depfiles plus exact
+compiler, flag, header, and library identities can prove which objects and link
+product are reusable. `haxe_c-5sd.8.3` owns that proof and its
+edit-to-launch budget.
+
+The same experiment found that Haxe's warm graph may report a named
+anonymous-record field at a typedef line in one request and at an object-literal
+line in another. Normal generated C remained byte-identical, but the optional
+HxcIR dump did not. `haxe_c-5sd.8.4.1` therefore blocks per-function backend
+reuse until source provenance is exact, revision-bound, and invalidated by
+source content. Coarsening the position or ignoring it would make cached
+diagnostics and source maps less trustworthy, so it is not an accepted speed
+optimization.
 
 ## Comparative designs
 

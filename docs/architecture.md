@@ -186,6 +186,24 @@ ephemeral loopback compiler server for post-prime warm samples. It never caches
 `TypedExpr`, `CompilationContext`, symbols, output ownership, or other mutable
 request state.
 
+The separate `reflaxe_c_incremental_input_report` diagnostic describes what
+Haxe and Reflaxe supplied to one request. A cold request reports the complete
+class set. A server request reports the exact class paths Haxe marked rebuilt,
+the class declarations they matched, and the remaining class declarations
+whose frontend representations were reused. Non-class declarations remain
+explicitly conservative because Haxe's server callback exposes a rebuilt-class
+set, not a complete changed-module proof. This inventory authorizes no HxcIR,
+CAST, artifact, or native reuse: each later layer must compare its own immutable
+facts and complete key.
+
+That separation matters for diagnostics as well as code generation. A warm
+Haxe graph can preserve the same anonymous-record layout while moving a field's
+reported position between its typedef and an object-literal use. Normal C may
+therefore be byte-identical even though diagnostic provenance differs.
+`haxe_c-5sd.8.4.1` owns the exact, content-invalidated provenance model required
+before the backend may reuse a supposedly unchanged function. Matching emitted
+C alone is not sufficient evidence for reusing source positions or source maps.
+
 The broad HxcIR-construction phase has closed detail clocks for function
 preparation, representation planning, function construction, program assembly,
 managed-root planning, and null-check coalescing. Function construction is

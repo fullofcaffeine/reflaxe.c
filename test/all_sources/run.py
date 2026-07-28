@@ -28,6 +28,7 @@ MACRO_BRANCH_MARKERS = (
     "Typing macro reflaxe.c.CReflaxeCompiler.onCompileEnd",
     "Typing macro reflaxe.c.frontend.TypedAstNormalizer.normalize",
     "Typing macro reflaxe.c.frontend.TypedAstInventory.snapshot",
+    "Typing macro reflaxe.c.frontend.IncrementalInputInventory.snapshot",
     "Typing macro reflaxe.c.CCompiler.compileModules",
     "Typing macro reflaxe.c.TargetPlatform.configure",
 )

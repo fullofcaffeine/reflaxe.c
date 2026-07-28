@@ -694,6 +694,51 @@ They show that frontend reuse is real, but also that roughly 26 seconds remain
 because haxe.c's request-local backend still runs. Native object reuse and
 request-local backend deduplication therefore remain necessary.
 
+### One-module incremental-edit inventory
+
+`npm run profile:caxecraft-incremental-edit` answers a narrower question than
+the repeated-build profiler: after one ordinary Haxe implementation edit, what
+actually changed at each layer? It uses one temporary source copy, one stable
+output root, and one owned Haxe server. The sequence is cold prime, unchanged
+warm baseline, edit `Vitals.hx`, and changed warm request. Every comparison is
+content based; Haxe's rebuilt-class report is frontend evidence rather than
+permission to reuse a later artifact.
+
+The first full-playable run produced this structural result:
+
+| Layer | Changed | Reusable candidate evidence |
+| --- | ---: | ---: |
+| Caxecraft class declarations | 14 of 135 rebuilt | 121 frontend class representations reused |
+| HxcIR functions | 1 of 531 changed | 530 function sections byte-identical |
+| Normal generated artifacts | 2 of 229 changed | 227 exact artifact digests reused |
+| Generated C translation units | 1 of 84 changed | 83 C source digests reused |
+| Generated headers | 0 changed | complete header set byte-identical |
+
+The changed normal artifacts were
+`src/modules/caxecraft/domain/Vitals.c` and `hxc.manifest.json`. The ABI,
+dispatch, initialization, runtime, specializations, standard-library, and
+symbol reports all retained exact bytes. These counts describe this checked
+edit, not a permanent project-size contract.
+
+The run began under one-minute host load above 21, so its 36.34-second cold,
+21.04-second unchanged-warm, and 19.52-second edited-warm durations are
+contention diagnostics, not a budget result. More importantly, this profiler
+stops after generated-project ownership. It lists one directly changed native
+source candidate but deliberately claims no object or link hit:
+`haxe_c-5sd.8.3` must prove that result using compiler depfiles and the complete
+native toolchain key.
+
+The inventory also exposed a cache-safety issue. Across cold and warm
+requests, named anonymous-record fields can retain the same layout while their
+reported source position switches between a typedef declaration and an
+object-literal use. Four modules showed that position-only drift during the
+edited request, and 14 showed it during the unchanged cold-to-warm comparison.
+Normal generated artifacts stayed stable, but an optional HxcIR report changed.
+`haxe_c-5sd.8.4.1` owns exact source-provenance stability before any
+per-function backend cache is admitted. The compiler must not gain speed by
+coarsening positions, retaining stale macro objects, or treating diagnostic
+facts as semantically irrelevant.
+
 ### Caxecraft target-phase profile and duplicate-body removal
 
 Beads issue `haxe_c-fbq` added an opt-in compiler profiler rather than guessing

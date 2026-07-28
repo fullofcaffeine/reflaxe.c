@@ -206,6 +206,14 @@ class CompilerProfileFailure(RuntimeError):
 
 
 @dataclass(frozen=True)
+class CompilerSampleObservation:
+    """One validated profile sample plus its opt-in diagnostic records."""
+
+    sample: dict[str, object]
+    stdout: str
+
+
+@dataclass(frozen=True)
 class TimerClock:
     scale: float
     kind: str
@@ -1532,14 +1540,14 @@ def compiler_command(
     return command
 
 
-def run_sample(
+def run_observed_sample(
     installation: HaxeInstallation,
     resolved: Sequence[str],
     clock: TimerClock,
     *,
     connection: HaxeServerConnection | None,
     timeout: int = 180,
-) -> dict[str, object]:
+) -> CompilerSampleObservation:
     environment = pinned_haxe_environment("C", installation)
     if connection is None:
         environment["HAXE_NO_SERVER"] = "1"
@@ -1574,7 +1582,7 @@ def run_sample(
     )
     legacy_accounting = accounting_durations(wall_us, phases)
     exclusive_wall, exclusive_cpu = exclusive_accounting(wall_us, structured)
-    return {
+    sample = {
         "wallDurationMs": round(wall_us / 1000.0, 3),
         "host": {
             "loadAverageOneMinuteStart": starting_load,
@@ -1609,6 +1617,26 @@ def run_sample(
         ],
         "haxeTimers": [row.to_json() for row in haxe_rows],
     }
+    return CompilerSampleObservation(sample, result.stdout)
+
+
+def run_sample(
+    installation: HaxeInstallation,
+    resolved: Sequence[str],
+    clock: TimerClock,
+    *,
+    connection: HaxeServerConnection | None,
+    timeout: int = 180,
+) -> dict[str, object]:
+    """Return the stable sample surface used by the repeated profiler."""
+
+    return run_observed_sample(
+        installation,
+        resolved,
+        clock,
+        connection=connection,
+        timeout=timeout,
+    ).sample
 
 
 def distribution(values: Sequence[float]) -> dict[str, float | int]:

@@ -141,7 +141,7 @@ AFFECTED_OWNER_RULES = (
     ),
     (
         re.compile(
-            r"^examples/caxecraft/(?!profile_compiler\.py$)|^docs/caxecraft-"
+            r"^examples/caxecraft/(?!profile_(?:compiler|incremental_edit)\.py$)|^docs/caxecraft-"
         ),
         AffectedOwner("test:caxecraft-domain", "the flagship compiler/product path changed"),
     ),
