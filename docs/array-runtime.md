@@ -3,8 +3,9 @@
 This document records both the bounded E4.T04 native `hxrt` array storage and
 the first E5.T03 ordinary-Haxe lowering that selects it. A program can now use
 empty or nonempty `Array<T>` literals, aliases, `length`, checked indexing,
-`push`, `pop`, `copy`, in-place `sort`, and source-order iteration for the admitted element types
-described below. An exact managed `Array<String>` also supports
+`push`, `pop`, `copy`, literal `resize(0)`, in-place `sort`, and source-order
+iteration for the admitted element types described below. An exact managed
+`Array<String>` also supports
 `join(separator)` with one explicit String separator. Elements may now be
 plain direct values,
 `haxe.io.Bytes`, another
@@ -25,8 +26,10 @@ copy entry points advanced the internal marker from 0.10.0 to 0.11.0. Adding
 the compiler-used in-place sort entry point advances the current marker to
 0.12.0. Adding the ownership-transferring pop entry points advances it to
 0.13.0; the intervening additions are recorded in their owning runtime
-documents. These are internal compatibility markers, not a stable application
-ABI or supported-release promise.
+documents. The bounded `resize(0)` lowering reuses the existing
+`hxc_array_resize` entry point, so it does not add a new ABI symbol or advance
+that marker. These are internal compatibility markers, not a stable
+application ABI or supported-release promise.
 
 ## Representation and specialization boundary
 
@@ -292,13 +295,23 @@ Destruction cannot fail. Callback context outlives the array, and callbacks may
 not re-enter or mutate that array. These rules make rollback reviewable without
 requiring object, collector, reflection, or dynamic-value machinery.
 
-Shrinking `resize` destroys removed elements in reverse order. Growing reserve
-copy-constructs each new slot from a caller-provided typed default and destroys
-any successfully constructed prefix if a later copy fails. A future broader
-Haxe lowering must supply the correct static-target default—zero, `0.0`,
-`false`, or null—after representation selection. The current compiler slice
-does not expose `resize`; the generic runtime never guesses a type or
-manufactures a boxed default.
+`values.resize(0)` now clears an admitted managed Array in place, so every
+alias observes length zero. The argument must be the literal integer `0` at the
+call site. “Literal” means the zero is written directly in source, rather than
+stored in a variable or computed by another expression. That small rule proves
+at compile time that the operation can only shrink: the compiler emits an
+explicit receiver null check in HxcIR, then C calls the existing
+`hxc_array_resize` with length zero and no default element. The runtime destroys
+removed elements in reverse order, which preserves the same nested ownership
+rules used when the whole Array is released.
+
+Other lengths remain unsupported. Growing an Array must copy-construct each new
+slot from the correct Haxe default for its static element type—zero, `0.0`,
+`false`, null, or a more structured default—and undo a partly completed growth
+if copying fails. A future broader lowering must model that decision after
+representation selection. The generic runtime never guesses a type or
+manufactures a boxed default, and a variable that happens to contain zero is
+still rejected until dynamic shrink/grow semantics have that complete plan.
 
 Borrowed pointers returned by `hxc_array_at` and `hxc_array_at_const` remain
 valid only while the array stays alive and no mutation can relocate or shift

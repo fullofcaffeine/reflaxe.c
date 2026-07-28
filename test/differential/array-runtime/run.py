@@ -269,6 +269,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="get-checked")',
         'runtime(feature="array",operation="push")',
         'runtime(feature="array",operation="pop")',
+        'runtime(feature="array",operation="resize-zero")',
         'runtime(feature="array",operation="sort")',
         'function-reference target="function.lambda.function.Main.main.',
         'implementation=program-local("array-element-lifecycle:instance.closed-record.',
@@ -421,6 +422,14 @@ def validate_generated_hxcir(hxcir: str) -> None:
         raise ArrayRuntimeFailure(
             "primitive Array.pop coverage no longer contains present, repeated, "
             "and empty mutations"
+        )
+    if (
+        entry.count('runtime(feature="array",operation="resize-zero")') != 2
+        or entry.count("array-resize-zero-receiver-null-check") != 2
+    ):
+        raise ArrayRuntimeFailure(
+            "Array.resize(0) lost its two typed clear operations or their "
+            "dominating receiver checks"
         )
     if (
         'action "optional-local.' not in entry
@@ -594,6 +603,7 @@ def validate_generated_project(output: Path) -> None:
         "pop",
         "push",
         "retain",
+        "resize-zero",
         "set",
         "sort",
     }
@@ -627,6 +637,7 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_push_copy",
         "hxc_array_ref_pop_move",
         "hxc_array_ref_get_copy",
+        "hxc_array_resize",
         "hxc_array_ref_sort",
         "hxc_array_string_join",
         "_element_copy(",
@@ -830,6 +841,8 @@ def run_generated_negative_cases(root: Path) -> None:
         "indirect_fresh_argument": "TCall(indirect-managed-argument-needs-explicit-ownership:0)",
         "join_non_string": "TCall(Array.join:element-not-managed-String:",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
+        "resize_dynamic": "TCall(Array.resize:only-literal-zero-admitted)",
+        "resize_nonzero": "TCall(Array.resize:only-literal-zero-admitted)",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
     }
     for name, marker in expected.items():

@@ -48,11 +48,12 @@ adapter, memory-model, collector-root, and race evidence.
 At this snapshot the ledger contains 183 source modules and 2,311 public API
 records. Exactly the typed `Std.int(Float):Int` row is `conformant`, based on the
 existing ADR 0008 differential, strict-C, optimization, and UBSan suite.
-Twenty-eight rows are `partial`: literal-only `Sys.println` and default
+Twenty-nine rows are `partial`: literal-only `Sys.println` and default
 `haxe.Log.trace`, ten bounded `haxe.io.Bytes` entries, eight bounded `String`
 entries, four bounded `StringBuf` entries, bounded `Array.copy`, `Array.sort`,
-and `Array<String>.join` entries, and one `Std.string` entry covering only typed
-`Bool`, `Int`, and String identity. The other 2,282 rows are `planned`. A partial row means only its named operation
+literal `Array.resize(0)`, and `Array<String>.join` entries, and one
+`Std.string` entry covering only typed `Bool`, `Int`, and String identity. The
+other 2,281 rows are `planned`. A partial row means only its named operation
 shapes have executable evidence; it does not claim the entire type or
 neighboring overloads. This deliberately preserves the current narrow compiler
 claim.

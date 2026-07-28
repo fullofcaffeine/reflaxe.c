@@ -127,6 +127,9 @@
   "invalidArrayPopShape": [
     "HXC9000 error [profile=portable] test/negative/InvalidArrayPopShape.hx:2:1-2:2 [module:invalid.InvalidArrayPopShape.function:invalid.InvalidArrayPopShape.main.block:entry.instruction:0:bad.pop] Invalid HxcIR: Array.pop requires one managed Array and returns either a tagged optional element or the same element carrier when that carrier represents null exactly Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "invalidArrayResizeNullProof": [
+    "HXC9000 error [profile=portable] test/negative/InvalidArrayResizeNullProof.hx:2:1-2:2 [module:invalid.InvalidArrayResizeNullProof.function:invalid.InvalidArrayResizeNullProof.main.block:entry.instruction:0:bad.resize] Invalid HxcIR: Array.resize(0) requires a preceding dominating receiver null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "loadTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/LoadTypeMismatch.hx:2:1-2:2 [module:invalid.LoadTypeMismatch.function:invalid.LoadTypeMismatch.main.block:entry.instruction:0:bad.load] Invalid HxcIR: load result type does not match its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

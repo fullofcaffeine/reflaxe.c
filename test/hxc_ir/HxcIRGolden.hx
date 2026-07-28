@@ -114,6 +114,7 @@ class HxcIRGolden {
 				invalidStringSubstringCall: invalidDiagnostics(invalidStringSubstringCallProgram()),
 				invalidStringMapShape: invalidDiagnostics(invalidStringMapShapeProgram()),
 				invalidArrayPopShape: invalidDiagnostics(invalidArrayPopShapeProgram()),
+				invalidArrayResizeNullProof: invalidDiagnostics(invalidArrayResizeNullProofProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
 				uninitializedCarrierReadBeforeBranch: invalidDiagnostics(uninitializedCarrierReadBeforeBranchProgram()),
@@ -2415,6 +2416,42 @@ class HxcIRGolden {
 		};
 		final program = minimalProgram("invalid.InvalidArrayPopShape", [
 			instruction("bad.pop", result("value.result", IRTBool), IRIOCall(call(IRCDRuntime("array", "pop"), ["value.array"], IRTBool, {
+				kind: IRFNativeStatus,
+				target: IRFTAbort,
+				arguments: [],
+				cleanup: []
+			})), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		program.modules[0].types.push(arrayType);
+		program.modules[0].typeInstances.push(arrayInstance);
+		program.modules[0].functions[0].parameters.push(parameter("value.array", IRTInstance(arrayInstance.id), file, 1));
+		return program;
+	}
+
+	/**
+		Reject an Array clear whose receiver has not passed an earlier null check.
+
+		The C projection reaches the low-level Array storage inside the managed
+		reference. HxcIR must therefore prove the reference is non-null before
+		the syntax layer is allowed to select that member access.
+	**/
+	static function invalidArrayResizeNullProofProgram():HxcIRProgram {
+		final file = "test/negative/InvalidArrayResizeNullProof.hx";
+		final arrayType:HxcIRTypeDeclaration = {
+			id: "type.invalid-array-resize",
+			displayName: "Array<Int>",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final arrayInstance:HxcIRTypeInstance = {
+			id: "instance.invalid-array-resize",
+			declarationId: arrayType.id,
+			arguments: [IRTInt(32, true)],
+			representation: IRRManaged("array"),
+			source: span(file, 1)
+		};
+		final program = minimalProgram("invalid.InvalidArrayResizeNullProof", [
+			instruction("bad.resize", null, IRIOCall(call(IRCDRuntime("array", "resize-zero"), ["value.array"], IRTVoid, {
 				kind: IRFNativeStatus,
 				target: IRFTAbort,
 				arguments: [],

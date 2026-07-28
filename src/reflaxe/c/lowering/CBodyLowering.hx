@@ -10825,6 +10825,27 @@ private class FunctionBuilder {
 				registerValueTemporary(result.id, "array-push-result");
 				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "push", "ordinary Haxe Array.push", source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
+			case "resize":
+				if (arguments.length != 1)
+					return unsupported(expression, 'TCall(Array.resize:argument-count=${arguments.length})');
+				// A literal zero can only shrink, so it needs no target-typed
+				// default element. Dynamic and nonzero lengths remain closed
+				// until growth has a complete construction and rollback plan.
+				if (constantInt(arguments[0]) != 0)
+					return unsupported(arguments[0], "TCall(Array.resize:only-literal-zero-admitted)");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-resize-zero-receiver-load");
+				appendInstruction(null, IRIONullCheck(callReceiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+					sourceSpan(access.receiver.pos), "array-resize-zero-receiver-null-check");
+				final source = sourceSpan(expression.pos);
+				appendInstruction(null, IRIOCall({
+					dispatch: IRCDRuntime("array", "resize-zero"),
+					arguments: [callReceiver.id],
+					returnType: IRTVoid,
+					failure: managedArrayFailure()
+				}), source, "array-resize-zero");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "resize-zero", "ordinary Haxe Array.resize(0) ownership-aware clear", source,
+					expression.pos));
+				null;
 			case "sort":
 				if (arguments.length != 1)
 					return unsupported(expression, 'TCall(Array.sort:argument-count=${arguments.length})');

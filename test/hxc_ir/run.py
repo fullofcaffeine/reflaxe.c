@@ -205,6 +205,7 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "invalidStringSubstringCall",
         "switchCaseTypeMismatch",
         "invalidStringMapShape",
+        "invalidArrayResizeNullProof",
         "uninitializedCarrierRead",
         "uninitializedCarrierReadBeforeBranch",
         "uninitializedSwitchCarrierRead",

@@ -5345,6 +5345,23 @@ class CBodyEmitter {
 			]), boundsAbortName, instruction.id, fn.id);
 			return;
 		}
+		if (operation == "resize-zero") {
+			if (call.arguments.length != 1 || call.returnType != IRTVoid)
+				return fail('Array resize-zero `${instruction.id}` in `${fn.id}` lost its receiver/Void signature');
+			final receiverType = valueType(fn, call.arguments[0]);
+			if (receiverType == null)
+				return fail('Array resize-zero `${instruction.id}` in `${fn.id}` lost its receiver type');
+			requireArrayPlan(requireArrayInstanceId(receiverType, instruction.id, fn.id));
+			final receiver = requireValue(values, call.arguments[0], fn.id);
+			final storage = EMember(receiver, CBodyRuntimeNames.identifier(CBRNArrayValueMember), true);
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayStorageResize)), [
+				EUnary(AddressOf, storage),
+				ECast(new CType(TSizeT), DName(null), EInt(CIntegerLiteral.decimal("0"))),
+				ENull
+			]), boundsAbortName, instruction.id, fn.id);
+			return;
+		}
 		final result = requireResult(instruction, fn.id);
 		final temporary = temporaryNames.get(result.id);
 		if (temporary == null)

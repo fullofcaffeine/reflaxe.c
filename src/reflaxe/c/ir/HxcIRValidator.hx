@@ -2454,10 +2454,13 @@ private class HxcIRValidationState {
 							nullProofs.set(valueId, true);
 						case IRTString | IRTManagedString:
 							nullProofs.set(valueId, true);
+						case value if (isManagedArrayReference(value)):
+							nullProofs.set(valueId, true);
 						case value if (isTaggedOptionalType(value)):
 							nullProofs.set(valueId, true);
 						case _:
-							add(path, "null check requires a nullable pointer, String, concrete-class reference, or tagged scalar, record, or enum",
+							add(path,
+								"null check requires a nullable pointer, String, concrete-class reference, managed Array reference, or tagged scalar, record, or enum",
 								instruction.source);
 					}
 				}
@@ -2576,7 +2579,7 @@ private class HxcIRValidationState {
 				if (featureId == "io") {
 					validateHostedOutputCall(call, argumentTypes, path, source);
 				} else if (featureId == "array") {
-					validateManagedArrayCall(call, argumentTypes, path, source);
+					validateManagedArrayCall(call, argumentTypes, path, source, nullProofs);
 				} else if (featureId == "string-map") {
 					validateStringMapCall(call, argumentTypes, path, source);
 				} else if (featureId == "int-map") {
@@ -2664,7 +2667,8 @@ private class HxcIRValidationState {
 		}
 	}
 
-	function validateManagedArrayCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+	function validateManagedArrayCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan,
+			nullProofs:Map<String, Bool>):Void {
 		final operationId = switch call.dispatch {
 			case IRCDRuntime("array", value): value;
 			case _: return;
@@ -2727,6 +2731,11 @@ private class HxcIRValidationState {
 					|| typeKey(call.returnType) != typeKey(IRTInt(32, true))) {
 					add(path, "Array.push requires managed Array + matching element and returns the new Haxe Int length", source);
 				}
+			case "resize-zero":
+				if (argumentTypes.length != 1 || receiverElement == null || call.returnType != IRTVoid)
+					add(path, "Array.resize(0) requires one managed Array and returns Void", source);
+				if (call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
+					add(path, "Array.resize(0) requires a preceding dominating receiver null check", source);
 			case "set":
 				if (argumentTypes.length != 3 || receiverElement == null || secondArgumentType == null || thirdArgumentType == null) {
 					add(path, "Array indexed assignment requires managed Array + Haxe Int + matching element", source);

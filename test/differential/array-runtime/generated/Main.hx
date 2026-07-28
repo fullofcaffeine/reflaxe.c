@@ -50,6 +50,9 @@ final class Main {
 		final values:Array<Int> = [10, 20];
 		final freshStaticLength = borrowedLength([2, 3, 5]);
 		final freshInstanceLength = new FreshArrayReader().length([7, 11]);
+		final clearedIntegers = [31, 32, 33];
+		final clearedIntegersAlias = clearedIntegers;
+		clearedIntegers.resize(0);
 		final firstConditionalValue = conditionalIndex(values, true);
 		final secondConditionalValue = conditionalIndex(values, false);
 		final emptyCopy = ([] : Array<Int>).copy();
@@ -140,6 +143,9 @@ final class Main {
 		records.push({commands: arguments});
 		final recordCopy = records[0];
 		recordCopy.commands.push(Number(11));
+		final clearedRecords:Array<ManagedRecord> = [{commands: [Number(17)]}, {commands: [Number(19), Number(23)]}];
+		final clearedRecordsAlias = clearedRecords;
+		clearedRecords.resize(0);
 		final nestedRecordCommandCount = countFirstEnabledRecord(records, true);
 		final nestedEnvelopeCommandCount = countFirstScheduledCommands(envelopes, true);
 		switch scheduled {
@@ -155,6 +161,8 @@ final class Main {
 		while (values.length != 3
 			|| freshStaticLength != 3
 			|| freshInstanceLength != 2
+			|| clearedIntegersAlias.length != 0
+			|| clearedRecordsAlias.length != 0
 			|| firstConditionalValue != 10
 			|| secondConditionalValue != 20
 			|| emptyCopy.length != 0

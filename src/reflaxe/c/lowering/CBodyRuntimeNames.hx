@@ -62,6 +62,7 @@ enum CBodyRuntimeName {
 	CBRNArrayRetain;
 	CBRNArrayRelease;
 	CBRNArrayStoragePushCopy;
+	CBRNArrayStorageResize;
 	CBRNArrayValueMember;
 	CBRNStringMapCreate;
 	CBRNStringMapCreateWithOps;
@@ -146,6 +147,7 @@ class CBodyRuntimeNames {
 			case CBRNArrayRetain: "hxc_array_ref_retain";
 			case CBRNArrayRelease: "hxc_array_ref_release";
 			case CBRNArrayStoragePushCopy: "hxc_array_push_copy";
+			case CBRNArrayStorageResize: "hxc_array_resize";
 			case CBRNArrayValueMember: "value";
 			case CBRNStringMapCreate: "hxc_string_map_ref_create";
 			case CBRNStringMapCreateWithOps: "hxc_string_map_ref_create_with_ops";

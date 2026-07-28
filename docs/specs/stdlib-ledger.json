@@ -1076,6 +1076,43 @@
       "notes": "The admitted element specializations create distinct Array storage and shallow-copy slots in source order through their exact copy or retain operation. Primitive, String, Bytes, nested Array, managed enum/record, and traced class-reference evidence covers independent outer mutation, shared element identity, returns, allocation failure, and partial-copy rollback. Unsupported element representations remain fail-closed."
     },
     {
+      "id": "array-resize-zero-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "resize",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(len : Int) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/negative/resize_dynamic/Main.hx",
+        "test/differential/array-runtime/negative/resize_nonzero/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted `resize(0)` form clears an existing Array in place, preserves alias identity, and destroys managed elements in reverse order through their exact lifecycle callbacks. Only a literal zero is accepted because it proves the operation cannot grow and therefore needs no target-typed default element. Dynamic and nonzero lengths remain source-positioned failures until growth and rollback have complete representation-aware evidence."
+    },
+    {
       "id": "array-sort-partial",
       "selector": {
         "module": "Array",
@@ -2781,12 +2818,9 @@
       "kind": "method",
       "signature": "(len : Int) -> Void",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -2794,20 +2828,23 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/negative/resize_dynamic/Main.hx",
+        "test/differential/array-runtime/negative/resize_nonzero/Main.hx",
+        "test/differential/array-runtime/run.py"
+      ],
+      "notes": "The admitted `resize(0)` form clears an existing Array in place, preserves alias identity, and destroys managed elements in reverse order through their exact lifecycle callbacks. Only a literal zero is accepted because it proves the operation cannot grow and therefore needs no target-typed default element. Dynamic and nonzero lengths remain source-positioned failures until growth and rollback have complete representation-aware evidence.",
+      "ruleId": "array-resize-zero-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:6192538040e07b7ee71ac1983de0bc451389463d67f3ed2a38d4bc1655ccbcc3",
