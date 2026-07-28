@@ -22,6 +22,7 @@ REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
 INCREMENTAL_REPORT_PREFIX = "HXC_INCREMENTAL_INPUT="
 CONSTRUCTOR_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
 CONTROL_FLOW_CACHE_REPORT_PREFIX = "HXC_CONTROL_FLOW_PLAN_CACHE="
+BODY_FUNCTION_REPLAY_REPORT_PREFIX = "HXC_BODY_FUNCTION_REPLAY_CACHE="
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_EXPECTATIONS = {
     "rich": (
@@ -49,6 +50,7 @@ class CompileResult:
     hxcir: str | None = None
     generated_tree: dict[str, bytes] | None = None
     control_flow_cache_report: dict[str, object] | None = None
+    body_function_replay_report: dict[str, object] | None = None
 
 
 def development_tool(name: str) -> str:
@@ -476,13 +478,22 @@ def compile_successful_incremental_fixture(
         "reflaxe_c_constructor_lowering_report",
         "-D",
         "reflaxe_c_control_flow_plan_cache_report",
+        "-D",
+        "reflaxe_c_body_function_replay_cache_report",
         "-main",
         "Main",
         "--custom-target",
         f"c={output}",
     ])
     if disable_control_flow_cache:
-        command.extend(["-D", "reflaxe_c_test_disable_control_flow_plan_cache"])
+        command.extend(
+            [
+                "-D",
+                "reflaxe_c_test_disable_control_flow_plan_cache",
+                "-D",
+                "reflaxe_c_test_disable_body_function_replay_cache",
+            ]
+        )
     environment = os.environ.copy()
     if connect is None:
         environment["HAXE_NO_SERVER"] = "1"
@@ -529,6 +540,11 @@ def compile_successful_incremental_fixture(
         CONTROL_FLOW_CACHE_REPORT_PREFIX,
         "successful incremental control-flow cache",
     )
+    _, body_function_replay_report = parse_report(
+        process.stdout,
+        BODY_FUNCTION_REPLAY_REPORT_PREFIX,
+        "successful incremental body-function replay cache",
+    )
     return CompileResult(
         process,
         "",
@@ -542,6 +558,7 @@ def compile_successful_incremental_fixture(
             if path.is_file() and path.name != "_GeneratedFiles.json"
         },
         control_flow_cache_report,
+        body_function_replay_report,
     )
 
 
@@ -695,6 +712,89 @@ def control_flow_function_count(result: CompileResult, label: str) -> int:
     return misses
 
 
+def require_body_function_replay_report(
+    result: CompileResult, label: str
+) -> dict[str, object]:
+    """Return one request's exact semantic-function replay accounting."""
+
+    report = result.body_function_replay_report
+    if not isinstance(report, dict):
+        raise TypedAstProbeFailure(
+            f"{label} omitted its body-function replay cache report"
+        )
+    return report
+
+
+def assert_body_function_replay(
+    result: CompileResult,
+    *,
+    label: str,
+    enabled: bool,
+    program_decision: str,
+    program_revision_matched: bool,
+    hits: int,
+    misses: int,
+    missing_function_misses: int,
+    changed_function_input_misses: int,
+    retained_functions: int,
+) -> None:
+    """Prove which complete HxcIR functions were replayed, rebuilt, and retained."""
+
+    report = require_body_function_replay_report(result, label)
+    expected = {
+        "enabled": enabled,
+        "programDecision": program_decision,
+        "programRevisionMatched": program_revision_matched,
+        "hits": hits,
+        "misses": misses,
+        "missingFunctionMisses": missing_function_misses,
+        "changedFunctionInputMisses": changed_function_input_misses,
+        "retainedFunctions": retained_functions,
+    }
+    for field, value in expected.items():
+        if report.get(field) != value:
+            raise TypedAstProbeFailure(
+                f"{label} body-function replay field {field} was "
+                f"{report.get(field)!r}, expected {value!r}: {report!r}"
+            )
+    retained_input_units = report.get("retainedInputCodeUnits")
+    retained_revision_units = report.get("retainedProgramRevisionCodeUnits")
+    expect_retained_text = retained_functions > 0
+    for field, value in (
+        ("retainedInputCodeUnits", retained_input_units),
+        ("retainedProgramRevisionCodeUnits", retained_revision_units),
+    ):
+        if not isinstance(value, (int, float)) or (
+            expect_retained_text and value <= 0
+        ) or (not expect_retained_text and value != 0):
+            raise TypedAstProbeFailure(
+                f"{label} reported an invalid bounded replay size for {field}: "
+                f"{report!r}"
+            )
+
+
+def body_function_count(result: CompileResult, label: str) -> int:
+    """Read the complete semantic-function generation size from a cold request."""
+
+    report = require_body_function_replay_report(result, label)
+    misses = report.get("misses")
+    retained = report.get("retainedFunctions")
+    if (
+        report.get("enabled") is not True
+        or report.get("programDecision") != "no-prior-generation"
+        or report.get("programRevisionMatched") is not False
+        or not isinstance(misses, int)
+        or misses <= 0
+        or retained != misses
+        or report.get("missingFunctionMisses") != 0
+        or report.get("changedFunctionInputMisses") != 0
+    ):
+        raise TypedAstProbeFailure(
+            f"{label} was not a complete cold body-function generation: {report!r}"
+        )
+    return misses
+
+
 def assert_worker_record_sources(
     result: CompileResult, expected_fields: dict[str, tuple[int, int, int, int]], label: str
 ) -> None:
@@ -770,6 +870,19 @@ def check_compiler_server_rebuild_inventory() -> None:
                 editable, connect=endpoint, output=output
             )
             function_count = control_flow_function_count(prime, "server prime")
+            replay_function_count = body_function_count(prime, "server prime")
+            assert_body_function_replay(
+                prime,
+                label="server prime",
+                enabled=True,
+                program_decision="no-prior-generation",
+                program_revision_matched=False,
+                hits=0,
+                misses=replay_function_count,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
+            )
             assert_control_flow_cache(
                 unchanged,
                 label="unchanged warm request",
@@ -777,6 +890,18 @@ def check_compiler_server_rebuild_inventory() -> None:
                 hits=function_count,
                 misses=0,
                 retained_functions=function_count,
+            )
+            assert_body_function_replay(
+                unchanged,
+                label="unchanged warm request",
+                enabled=True,
+                program_decision="matched",
+                program_revision_matched=True,
+                hits=replay_function_count,
+                misses=0,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
             )
             source = editable / "WorkerResult.hx"
             original = source.read_text(encoding="utf-8")
@@ -809,6 +934,30 @@ def check_compiler_server_rebuild_inventory() -> None:
                 hits=0,
                 misses=function_count,
                 retained_functions=function_count,
+            )
+            assert_body_function_replay(
+                edited,
+                label="implementation edit",
+                enabled=True,
+                program_decision="matched",
+                program_revision_matched=True,
+                hits=replay_function_count - 1,
+                misses=1,
+                missing_function_misses=0,
+                changed_function_input_misses=1,
+                retained_functions=replay_function_count,
+            )
+            assert_body_function_replay(
+                edited_cold,
+                label="cold implementation edit",
+                enabled=True,
+                program_decision="no-prior-generation",
+                program_revision_matched=False,
+                hits=0,
+                misses=replay_function_count,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
             )
 
             assert_incremental_report(
@@ -920,6 +1069,30 @@ def check_compiler_server_rebuild_inventory() -> None:
                     "public typedef edit did not conservatively invalidate its "
                     f"changed semantic functions: {public_report!r}"
                 )
+            assert_body_function_replay(
+                public_edit,
+                label="public typedef edit",
+                enabled=True,
+                program_decision="program-changed",
+                program_revision_matched=False,
+                hits=0,
+                misses=replay_function_count,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
+            )
+            assert_body_function_replay(
+                public_cold,
+                label="cold public typedef edit",
+                enabled=True,
+                program_decision="no-prior-generation",
+                program_revision_matched=False,
+                hits=0,
+                misses=replay_function_count,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
+            )
 
             unsupported = original.replace(
                 "final stable:Int;", "final stable:Dynamic;", 1
@@ -982,6 +1155,21 @@ def check_compiler_server_rebuild_inventory() -> None:
                     "success-failure-success restoration did not compare against "
                     f"the last successful generation: {reverted_report!r}"
                 )
+            assert_body_function_replay(
+                reverted,
+                label="success-failure-success restoration",
+                enabled=True,
+                # Haxe discards this macro context after the failed type shape.
+                # A fresh generation is the fail-closed outcome; the rejected
+                # request never becomes replay authority.
+                program_decision="no-prior-generation",
+                program_revision_matched=False,
+                hits=0,
+                misses=replay_function_count,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
+            )
 
             second_worktree = Path(temporary) / "second-worktree"
             shutil.copytree(editable, second_worktree)
@@ -998,6 +1186,18 @@ def check_compiler_server_rebuild_inventory() -> None:
                 hits=function_count,
                 misses=0,
                 retained_functions=function_count,
+            )
+            assert_body_function_replay(
+                second_result,
+                label="second-worktree request",
+                enabled=True,
+                program_decision="matched",
+                program_revision_matched=True,
+                hits=replay_function_count,
+                misses=0,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
             )
             cache_off = compile_successful_incremental_fixture(
                 editable,
@@ -1019,6 +1219,18 @@ def check_compiler_server_rebuild_inventory() -> None:
                 # enabled-cache state rather than borrowing another context's data.
                 retained_functions=0,
             )
+            assert_body_function_replay(
+                cache_off,
+                label="cache-disabled warm request",
+                enabled=False,
+                program_decision="disabled",
+                program_revision_matched=False,
+                hits=0,
+                misses=0,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=0,
+            )
         finally:
             stop_server(server)
 
@@ -1037,6 +1249,18 @@ def check_compiler_server_rebuild_inventory() -> None:
             hits=0,
             misses=function_count,
             retained_functions=function_count,
+        )
+        assert_body_function_replay(
+            cold_without_server,
+            label="fresh-process cold request",
+            enabled=True,
+            program_decision="no-prior-generation",
+            program_revision_matched=False,
+            hits=0,
+            misses=replay_function_count,
+            missing_function_misses=0,
+            changed_function_input_misses=0,
+            retained_functions=replay_function_count,
         )
 
         restarted_port = available_port()
@@ -1079,6 +1303,30 @@ def check_compiler_server_rebuild_inventory() -> None:
                 misses=0,
                 retained_functions=function_count,
             )
+            assert_body_function_replay(
+                restarted_first,
+                label="restarted-server first request",
+                enabled=True,
+                program_decision="no-prior-generation",
+                program_revision_matched=False,
+                hits=0,
+                misses=replay_function_count,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
+            )
+            assert_body_function_replay(
+                restarted_warm,
+                label="restarted-server warm request",
+                enabled=True,
+                program_decision="matched",
+                program_revision_matched=True,
+                hits=replay_function_count,
+                misses=0,
+                missing_function_misses=0,
+                changed_function_input_misses=0,
+                retained_functions=replay_function_count,
+            )
         finally:
             stop_server(restarted)
 
@@ -1095,7 +1343,7 @@ def main() -> int:
         "typed-ast: OK: declarations/metadata/entry ownership, order determinism, "
         "inventory coverage, exact HXC1001 no-output, compiler-server isolation, "
         "one-module rebuild evidence, exact named-record provenance, and exact "
-        "validated control-flow plan reuse"
+        "validated control-flow and semantic-function replay"
     )
     return 0
 

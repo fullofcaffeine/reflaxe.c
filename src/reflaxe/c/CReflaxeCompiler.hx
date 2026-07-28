@@ -22,6 +22,7 @@ import reflaxe.c.frontend.TypedAstNormalizer;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourceProvenanceError;
 import reflaxe.c.lowering.CBodyControlFlowPlanCache;
+import reflaxe.c.lowering.CBodyFunctionReplayCache;
 import reflaxe.c.naming.CSymbolRegistry;
 
 /** Reflaxe adapter. Semantic lowering remains in `CCompiler`. */
@@ -72,6 +73,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		CPhaseTiming.describeRequest(Std.string(profile), Std.string(buildMode));
 		GeneratedFileDigestCache.beginRequest(!Context.defined(GeneratedFileDigestCache.DISABLE_DEFINE));
 		CBodyControlFlowPlanCache.beginRequest(!Context.defined(CBodyControlFlowPlanCache.DISABLE_DEFINE));
+		CBodyFunctionReplayCache.beginRequest(!Context.defined(CBodyFunctionReplayCache.DISABLE_DEFINE));
 		CSymbolRegistry.beginCacheRequest(!Context.defined(CSymbolRegistry.DISABLE_CACHE_DEFINE));
 		compilationContext = new CompilationContext(profile, buildMode);
 		generatedFiles = [];
@@ -97,6 +99,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		if (output == null) {
 			GeneratedFileDigestCache.abortRequest();
 			CBodyControlFlowPlanCache.abortRequest();
+			CBodyFunctionReplayCache.abortRequest();
 			CSymbolRegistry.abortCacheRequest();
 			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "Reflaxe output manager is not initialized", Context.currentPos());
 			return;
@@ -110,6 +113,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			outputTimer = null;
 			GeneratedFileDigestCache.abortRequest();
 			CBodyControlFlowPlanCache.abortRequest();
+			CBodyFunctionReplayCache.abortRequest();
 			CSymbolRegistry.abortCacheRequest();
 			CDiagnostic.fatal(error.diagnosticId, error.detail, Context.currentPos());
 		}
@@ -127,9 +131,12 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 	override public function onOutputComplete():Void {
 		CPhaseTiming.stop(outputTimer);
 		outputTimer = null;
+		final functionReplayStats = CBodyFunctionReplayCache.completeRequest();
 		final controlFlowStats = CBodyControlFlowPlanCache.completeRequest();
 		GeneratedFileDigestCache.completeRequest(generatedFiles);
 		CSymbolRegistry.completeCacheRequest();
+		if (Context.defined(CBodyFunctionReplayCache.REPORT_DEFINE))
+			Sys.println(CBodyFunctionReplayCache.REPORT_PREFIX + Json.stringify(functionReplayStats));
 		if (Context.defined(CBodyControlFlowPlanCache.REPORT_DEFINE))
 			Sys.println(CBodyControlFlowPlanCache.REPORT_PREFIX + Json.stringify(controlFlowStats));
 		CPhaseTiming.finishRequest();

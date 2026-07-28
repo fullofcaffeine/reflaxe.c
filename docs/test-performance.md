@@ -710,6 +710,7 @@ The first full-playable run produced this structural result:
 | --- | ---: | ---: |
 | Caxecraft class declarations | 14 of 135 rebuilt | 121 frontend class representations reused |
 | HxcIR functions | 1 of 531 changed | 530 function sections byte-identical |
+| Replay-owned semantic functions | 1 of 509 rebuilt | 508 exact function payloads replayed |
 | Normal generated artifacts | 2 of 229 changed | 227 exact artifact digests reused |
 | Generated C translation units | 1 of 84 changed | 83 C source digests reused |
 | Generated headers | 0 changed | complete header set byte-identical |
@@ -753,8 +754,13 @@ skeleton changed. The same implementation edit then changed exactly
 `Vitals.c`, and `hxc.manifest.json`. The cold/warm/edit requests took
 42.71s/22.20s/22.29s with one-minute host load starting above the Mac's 12
 logical CPUs, so those wall times are explicitly contended diagnostics rather
-than a replacement for the earlier benchmark. The exact changed sets are the
-reusable invalidation evidence.
+than a replacement for the earlier benchmark. Later semantic-function replay
+keeps this same invalidation shape: the unchanged request reuses 509 of 509
+eligible functions, while the edit reuses 508 and rebuilds only
+`Vitals.applyAttack`. The other 22 HxcIR functions are small compiler-created
+adapters that remain on their ordinary deterministic construction path. The
+exact changed sets, rather than the contended wall values, are the reusable
+invalidation evidence.
 
 ### Exact warm control-flow plan reuse
 
@@ -1457,11 +1463,79 @@ and completed Haxe-to-generated-C in 13.977s on the contended host. That wall
 number is not a formal budget; the stable claim is the exact 22,923-request hit
 and removal of the three owned naming computations.
 
-Typed-body lowering remains the dominant warm target cost. It is not yet a
-safe analogue of the name table: building one body can discover layouts,
-runtime requirements, globals, late adapters, and additional symbol requests.
-Reusing an old body must wait until those program contributions have a complete
-validated freeze-and-replay boundary.
+### Exact warm semantic-function replay
+
+Typed-body lowering was the next dominant warm target cost, but skipping it
+was initially unsafe. Constructing one function could be the first operation
+to discover a shared anonymous layout, collection representation, C import,
+generated adapter, runtime requirement, enum-report reason, or C name request.
+Reusing only the old HxcIR function would then produce plausible output while
+silently omitting one of those other products.
+
+The compiler now separates those owners before lookup. A deterministic prepass
+settles shared layouts, globals, imports, callable/constructor signatures,
+dispatch, and adapters. It freezes a complete function-free HxcIR program
+revision and rejects any later shared contribution. Each function entry then
+owns exactly its HxcIR, C name requests, runtime requirements, and generic-enum
+provenance ranges. A hit restores fresh arrays and the current request's
+diagnostic positions before the ordinary managed-root, coalescing, HxcIR
+validation, naming, CAST, artifact, and output-ownership stages run.
+
+The key is deliberately exact rather than digest-only. Its program half holds
+the Haxe version and complete settled shared revision. Its function half holds
+the complete structural typed tree plus every stable source range. Haxe's
+request-local variable allocator can assign different numbers to the same
+bindings after a module edit, so the key renumbers only explicit
+argument/local binding IDs by first appearance. A focused macro test proves
+this keeps binding identity but still detects a changed expression. No Haxe
+`TypedExpr`, `Type`, `Position`, compilation context, output manager, generated
+C, or worktree path persists.
+
+The fixed `Vitals.hx` probe supplies the integrated invalidation proof:
+
+| Semantic-function replay evidence | Cold prime | Warm unchanged | Warm Vitals edit |
+| --- | ---: | ---: | ---: |
+| Shared program revision matched | no prior generation | yes | yes |
+| Cache hits / misses | 0 / 509 | 509 / 0 | 508 / 1 |
+| Canonical HxcIR functions changed | baseline | 0 | 1 |
+| Normal generated artifacts changed | baseline | 0 | 2 |
+
+The edited request rebuilds exactly `Vitals.applyAttack`; its other 508
+eligible functions replay, and the resulting output changes only `Vitals.c`
+plus the manifest that records its new digest. All headers and the other 83 C
+translation units remain byte-identical. The same probe rejects a replay miss
+count larger than the canonical HxcIR changed-function count, so a future
+request-local identifier leak cannot quietly turn precise invalidation back
+into a module-closure rebuild.
+
+One full-playable warm diagnostic on the contended Mac reported all 509 hits,
+zero misses, and zero time in typed-body lowering, function finalization,
+value coalescing, or value-plan application. The complete compile took about
+12.02 seconds in that sample, down from the preceding roughly 15-second warm
+diagnostic, but neither value is an uncontended p50 or p95. The attributable
+result is structural: 509 body constructions disappeared while all normal
+artifacts stayed byte-identical. Representation discovery, exact key
+construction, HxcIR validation, CAST projection, and artifact/output work still
+run and are the next measured owners rather than hidden behind this cache.
+The one retained generation held 5,931,151 Haxe string code units of exact
+per-function inputs and 931,570 code units for the shared program revision;
+these are bounded storage counts, not UTF-8 byte or total-memory claims.
+
+The cache retains one successful generation and replaces it only after
+Reflaxe completes output ownership. The focused macro probe covers exact hit,
+typed-input miss, whole-program miss, mutation isolation, aborted publication,
+deleted-function replacement, disabled behavior, and fail-closed recovery when
+a required current source position is absent. The ordered Haxe-server matrix
+also checks cold prime, unchanged reuse, a one-function implementation edit, a
+public typedef edit that invalidates the shared revision, failure followed by
+successful restoration, cache-off, a second worktree, and server restart.
+Machine-readable evidence names the program-wide reason and splits
+program-matched misses into a missing function versus a changed exact input,
+so tooling need not infer invalidation from elapsed time. Use
+`reflaxe_c_test_disable_body_function_replay_cache` for the authoritative
+ordinary construction path; use
+`reflaxe_c_body_function_replay_cache_report` when a server test needs the
+machine-readable lifecycle result.
 
 ### Function-build contribution inventory
 
@@ -1471,7 +1545,7 @@ function changes outside its own returned HxcIR. Returning only an old
 introduced a collection or optional representation, created a late adapter, or
 added names that later phases expect to find.
 
-Profile schema 10 therefore wraps every ordinary function build with two
+Profile schema 11 therefore wraps every ordinary function build with two
 shallow inventories. It first counts the shared facts, builds the function, and
 then counts the same closed set again. The difference is attributed to that
 function. The record separately counts function-owned HxcIR, runtime

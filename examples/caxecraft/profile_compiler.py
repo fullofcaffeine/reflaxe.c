@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 10
+PROFILE_SCHEMA_VERSION = 11
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -183,6 +183,14 @@ PROFILE_COUNTERS = (
     "hxcir.blocks",
     "hxcir.exact-nominal-cache-hits",
     "hxcir.exact-nominal-cache-misses",
+    "hxcir.function-replay-cache-changed-function-input-misses",
+    "hxcir.function-replay-cache-hits",
+    "hxcir.function-replay-cache-misses",
+    "hxcir.function-replay-cache-missing-function-misses",
+    "hxcir.function-replay-cache-program-revision-matched",
+    "hxcir.function-replay-cache-retained-functions",
+    "hxcir.function-replay-cache-retained-input-code-units",
+    "hxcir.function-replay-cache-retained-program-revision-code-units",
     "hxcir.functions",
     "hxcir.globals",
     "hxcir.instructions",
@@ -1577,6 +1585,17 @@ def allowed_missing_detail_phases(
     symbol_misses = counters.get("symbols.table-cache-misses", 0.0)
     if symbol_hits > 0.0 and symbol_misses == 0.0:
         missing.update(SYMBOL_TABLE_COMPUTATION_DETAILS)
+    function_hits = counters.get("hxcir.function-replay-cache-hits", 0.0)
+    function_misses = counters.get("hxcir.function-replay-cache-misses", 0.0)
+    if function_hits > 0.0 and function_misses == 0.0:
+        missing.update(
+            {
+                "HxcIR typed-body lowering",
+                "HxcIR function finalization",
+                "HxcIR value coalescing",
+                "HxcIR value-plan application",
+            }
+        )
     return frozenset(missing)
 
 

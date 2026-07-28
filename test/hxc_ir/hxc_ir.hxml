@@ -4,5 +4,6 @@
 -lib reflaxe.c
 
 --macro ControlFlowPlanCacheProbe.run()
+--macro BodyFunctionReplayCacheProbe.run()
 -main HxcIRGolden
 --interp

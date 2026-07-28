@@ -29,6 +29,7 @@ import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcIRManagedRootPlanner;
 import reflaxe.c.ir.HxcUtf8;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.HaxeSourceSpan;
 import reflaxe.c.lowering.HaxeSourceSpan.HaxeSourceSpanResolver;
 import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportFunction;
@@ -77,6 +78,10 @@ import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
+import reflaxe.c.lowering.CBodyFunctionReplayCache;
+import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayData;
+import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayEnumReason;
+import reflaxe.c.lowering.CBodyFunctionReplayCache.CBodyFunctionReplayIdentity;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperPlan;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperSelection;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
@@ -458,17 +463,45 @@ class CBodyLowering {
 		aggregateRegistry.completeManagedRepresentations(interfaceImplementations);
 		for (builder in builders)
 			builder.completeManagedRepresentations();
+		// Function replay needs the shared representation and C-import plan to be
+		// settled before any individual body can be skipped. Discover the narrow
+		// body-only families here, in the same canonical function/source order as
+		// ordinary lowering. The post-build assertion below remains authoritative:
+		// if this prepass misses a family, compilation stops instead of publishing a
+		// cache entry whose replay would silently omit program semantics.
+		for (builder in builders)
+			builder.discoverSharedBodySemantics();
+		// Materialize the shared type and global plan before any body lookup. The
+		// resulting function-free HxcIR snapshot is the program-wide half of the
+		// replay key: a layout, dispatch, global, profile, or callable-signature
+		// change makes every function take the ordinary construction path.
+		aggregateRegistry.completeClassLayouts();
+		final preparedGlobals = globalRegistry.canonicalGlobals();
+		final preparedAggregates = aggregateRegistry.canonicalAggregates();
+		final preparedEnums = aggregateRegistry.canonicalEnums();
+		final preparedClasses = aggregateRegistry.canonicalClasses();
+		final preparedInterfaces = aggregateRegistry.canonicalInterfaces();
+		final preparedArrays = aggregateRegistry.canonicalArrays();
+		final preparedIntMaps = aggregateRegistry.canonicalIntMaps();
+		final preparedStringMaps = aggregateRegistry.canonicalStringMaps();
+		final preparedBytes = aggregateRegistry.canonicalBytes();
+		final preparedImports = aggregateRegistry.canonicalImports();
+		final sharedProgram = buildProgram([], preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
+			preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
+		CBodyFunctionReplayCache.settleProgramRevision(functionReplayProgramRevision(sharedProgram, preparedById, constructorSignaturesById));
 		CPhaseTiming.stopDetail(representationTimer);
+		final settledFunctionBuildContributions = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
 		final functionConstructionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionConstruction);
 		final built:Array<BuiltBodyFunction> = [];
 		for (builder in builders) {
 			if (!CPhaseTiming.collectsWork()) {
-				built.push(builder.build());
+				built.push(builder.buildWithReplay().result);
 				continue;
 			}
 			final before = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
 			final functionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionBuild, builder.profileId());
-			final result = builder.build();
+			final replay = builder.buildWithReplay();
+			final result = replay.result;
 			final after = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
 			CPhaseTiming.setDetailWork(functionTimer, {
 				kind: "hxcir-function-build-contributions-v1",
@@ -490,19 +523,10 @@ class CBodyLowering {
 		for (adapter in enumConstructorAdapters.preparedFunctions())
 			if (!preparedById.exists(adapter.irId))
 				preparedById.set(adapter.irId, adapter);
+		requireSettledFunctionBuildContributions(settledFunctionBuildContributions,
+			functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals));
 		CPhaseTiming.stopDetail(functionConstructionTimer);
 		final programAssemblyTimer = CPhaseTiming.startDetail(CDTHxcIRProgramAssembly);
-		aggregateRegistry.completeClassLayouts();
-		final preparedGlobals = globalRegistry.canonicalGlobals();
-		final preparedAggregates = aggregateRegistry.canonicalAggregates();
-		final preparedEnums = aggregateRegistry.canonicalEnums();
-		final preparedClasses = aggregateRegistry.canonicalClasses();
-		final preparedInterfaces = aggregateRegistry.canonicalInterfaces();
-		final preparedArrays = aggregateRegistry.canonicalArrays();
-		final preparedIntMaps = aggregateRegistry.canonicalIntMaps();
-		final preparedStringMaps = aggregateRegistry.canonicalStringMaps();
-		final preparedBytes = aggregateRegistry.canonicalBytes();
-		final preparedImports = aggregateRegistry.canonicalImports();
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
 			preparedIntMaps, preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
 		CPhaseTiming.stopDetail(programAssemblyTimer);
@@ -671,6 +695,149 @@ class CBodyLowering {
 			completeHxcIRDump);
 	}
 
+	/**
+		Describe every shared fact that may change an unchanged function's HxcIR.
+
+		The function-free dump owns layouts, globals, imports, and dispatch. The
+		callable index adds signatures and typed defaults because a caller can
+		change when its callee changes even if the caller's own source text does
+		not. Complete length-prefixed values are retained and compared; the cache
+		does not trust a shortened digest as semantic evidence.
+	**/
+	function functionReplayProgramRevision(sharedProgram:HxcIRProgram, functionsById:Map<String, PreparedBodyFunction>,
+			constructorSignaturesById:Map<String, PreparedConstructorSignature>):String {
+		final haxeVersion = Context.definedValue("haxe");
+		final lines = [
+			'body-function-replay schema=${CBodyFunctionReplayCache.SCHEMA_VERSION}',
+			'haxe=${replayPart(haxeVersion == null || haxeVersion == "" ? "unknown" : haxeVersion)}',
+			'profile=${replayPart(Std.string(context.profile))}',
+			'build-mode=${replayPart(Std.string(context.buildMode))}',
+			"shared-program",
+			new HxcIRDumper().dump(sharedProgram),
+			"callables"
+		];
+		final functionIds = [for (id in functionsById.keys()) id];
+		functionIds.sort(compareUtf8);
+		for (id in functionIds) {
+			final fn = functionsById.get(id);
+			if (fn == null)
+				throw new CBodyEmissionError('function replay revision lost callable `$id`');
+			lines.push(preparedFunctionReplaySignature(fn));
+		}
+		final constructorIds = [for (id in constructorSignaturesById.keys()) id];
+		constructorIds.sort(compareUtf8);
+		lines.push("constructor-signatures");
+		for (id in constructorIds) {
+			final signature = constructorSignaturesById.get(id);
+			if (signature == null)
+				throw new CBodyEmissionError('function replay revision lost constructor `$id`');
+			final arguments = signature.arguments.map(preparedParameterReplaySignature).join("");
+			lines.push('constructor=${replayPart(id)} class=${replayPart(signature.classValue.instanceId)} self=${replayPart(FunctionBuilder.typeKey(signature.selfMapping.irType))} args=${replayPart(arguments)}');
+		}
+		return lines.join("\n");
+	}
+
+	static function preparedFunctionReplaySignature(fn:PreparedBodyFunction):String {
+		final role = switch fn.role {
+			case PBRFunction: "function";
+			case PBRConstructor(signature): 'constructor:${signature.classValue.instanceId}:${signature.input.canFail}';
+			case PBRClassInitializer: "class-initializer";
+			case PBRStaticFieldInitializer(globalId): 'static-field-initializer:$globalId';
+		};
+		final parameters = fn.parameters.map(preparedParameterReplaySignature).join("");
+		final closure = if (fn.closureEnvironment == null) {
+			"none";
+		} else {
+			final environment = fn.closureEnvironment;
+			final captures = environment.captures.map(capture -> [
+				replayPart(capture.sourceName),
+				replayPart(FunctionBuilder.typeKey(capture.mapping.irType)),
+				replayPart(capture.field.name)
+			].join("")).join("");
+			[
+				replayPart(environment.aggregate.instanceId),
+				replayPart(environment.contextParameterId),
+				replayPart(captures)
+			].join("");
+		}
+		return [
+			"callable=",
+			replayPart(fn.irId),
+			replayPart(fn.modulePath),
+			replayPart(fn.declarationPath),
+			replayPart(fn.fieldName),
+			replayPart(role),
+			replayPart(fn.functionRequest.stableKey()),
+			replayPart(fn.functionRequest.namingFingerprint()),
+			replayPart(parameters),
+			replayPart(FunctionBuilder.typeKey(fn.returnMapping.irType)),
+			replayPart(Std.string(fn.borrowedSpanReturn)),
+			replayPart(closure)
+		].join("");
+	}
+
+	static function preparedParameterReplaySignature(parameter:PreparedParameter):String {
+		final defaultValue = parameter.defaultValue == null ? "none" : typedExpressionReplayText(parameter.defaultValue, parameter.ir.source.file);
+		return [
+			replayPart(parameter.ir.id),
+			replayPart(FunctionBuilder.typeKey(parameter.ir.type)),
+			replayPart(parameter.ir.source.display()),
+			replayPart(Std.string(parameter.borrowedReference)),
+			replayPart(defaultValue)
+		].join("");
+	}
+
+	static function typedExpressionReplayText(expression:TypedExpr, fallbackPath:String):String {
+		final spans:Array<String> = [];
+		function visit(value:TypedExpr):Void {
+			spans.push(HaxeSourceSpan.fromPosition(value.pos, fallbackPath).display());
+			TypedExprTools.iter(value, visit);
+		}
+		visit(expression);
+		return replayPart(canonicalTypedExpressionText(expression)) + replayPart(spans.join("\n"));
+	}
+
+	/**
+		Print a fully typed tree with stable function-local binding identities.
+
+		Haxe's structural typed-expression printer includes each `TVar` compiler
+		ID. Those numbers distinguish shadowed variables within one request, but
+		the compiler server may allocate different numbers after retyping an
+		unrelated module. The printer spells every declaration and reference as a
+		`Var` or `Local` marker, so replacing each original ID with its first-seen
+		function-local number preserves binding equality while removing that
+		request-allocation noise. All expression kinds, resolved field owners, and
+		types remain in the structural text.
+	**/
+	@:noCompletion
+	public static function canonicalTypedExpressionText(expression:TypedExpr):String {
+		final variableIds:Map<String, Int> = [];
+		var nextVariableId = 0;
+		function stable(originalId:String):Int {
+			var stableId = variableIds.get(originalId);
+			if (stableId == null) {
+				stableId = nextVariableId++;
+				variableIds.set(originalId, stableId);
+			}
+			return stableId;
+		}
+		// Haxe 5's structural printer uses `name<id>(flags)`, while the pinned
+		// Haxe 4 reference uses `name(id)`. Supporting both keeps the target key
+		// stable across the documented frontend pins without erasing any other
+		// typed-tree field.
+		final angleMarker = ~/\[(Arg|Local|Var) ([^<\r\n]+)<([0-9]+)>/g;
+		final angleCanonical = angleMarker.map(TypedExprTools.toString(expression, false), marker -> {
+			return '[${marker.matched(1)} ${marker.matched(2)}<${stable(marker.matched(3))}>';
+		});
+		final parenthesizedMarker = ~/\[(Local|Var) ([^(\r\n]+)\(([0-9]+)\):/g;
+		return parenthesizedMarker.map(angleCanonical, marker -> {
+			return '[${marker.matched(1)} ${marker.matched(2)}(${stable(marker.matched(3))}):';
+		});
+	}
+
+	static inline function replayPart(value:String):String
+		return '${value.length}:$value';
+
 	function functionContributionSnapshot(aggregateRegistry:CBodyAggregateRegistry, enumConstructorAdapters:EnumConstructorAdapterRegistry,
 			functionLiterals:FunctionLiteralRegistry):CBodyFunctionContributionSnapshot {
 		return {
@@ -740,6 +907,49 @@ class CBodyLowering {
 		if (after < before)
 			throw new CBodyEmissionError('HxcIR function build unexpectedly removed $name from its shared program inventory');
 		return after - before;
+	}
+
+	/**
+		Reject a function build that changes the already-settled shared plan.
+
+		A replayed function restores function-owned HxcIR, name requests, runtime
+		requirements, and its generic-enum provenance ranges. Aggregate layouts,
+		collection representations, C imports, and generated adapters belong to the
+		program, so they must be discovered before cache lookup. Failing at this
+		boundary turns an incomplete prepass into a compiler error instead of a
+		plausible stale cache hit.
+	**/
+	static function requireSettledFunctionBuildContributions(before:CBodyFunctionContributionSnapshot, after:CBodyFunctionContributionSnapshot):Void {
+		final changes = functionBuildContributionChanges(before, after);
+		if (changes.length != 0)
+			throw new CBodyEmissionError("HxcIR function construction changed the settled shared semantic plan: " + changes.join(", "));
+	}
+
+	static function functionBuildContributionChanges(before:CBodyFunctionContributionSnapshot, after:CBodyFunctionContributionSnapshot):Array<String> {
+		final changes:Array<String> = [];
+		function changed(name:String, earlier:Int, later:Int):Void {
+			if (later != earlier)
+				changes.push('$name:$earlier->$later');
+		}
+		changed("aggregates", before.program.aggregates, after.program.aggregates);
+		changed("enums", before.program.enums, after.program.enums);
+		changed("classes", before.program.classes, after.program.classes);
+		changed("interfaces", before.program.interfaces, after.program.interfaces);
+		changed("arrays", before.program.arrays, after.program.arrays);
+		changed("IntMap representations", before.program.intMaps, after.program.intMaps);
+		changed("StringMap representations", before.program.stringMaps, after.program.stringMaps);
+		changed("Bytes representations", before.program.bytes, after.program.bytes);
+		changed("optional representations", before.program.optionals, after.program.optionals);
+		changed("import types", before.program.importTypes, after.program.importTypes);
+		changed("import functions", before.program.importFunctions, after.program.importFunctions);
+		changed("import constants", before.program.importConstants, after.program.importConstants);
+		changed("import owners", before.program.importOwners, after.program.importOwners);
+		changed("enum constructor adapters", before.enumConstructorAdapters, after.enumConstructorAdapters);
+		changed("function literals", before.functionLiterals, after.functionLiterals);
+		changed("static function adapters", before.staticFunctionAdapters, after.staticFunctionAdapters);
+		// Name requests owned by the function are expected to grow here and are
+		// replayed explicitly, so they are intentionally excluded.
+		return changes;
 	}
 
 	/**
@@ -1264,6 +1474,11 @@ private typedef BuiltBodyFunction = {
 	final tailArgumentRequests:Map<String, Array<CSymbolRequest>>;
 	final labelRequests:Map<String, CSymbolRequest>;
 	final runtimeRequirements:Array<CBodyRuntimeRequirement>;
+}
+
+private typedef BuiltBodyFunctionReplayResolution = {
+	final result:BuiltBodyFunction;
+	final reused:Bool;
 }
 
 /**
@@ -3156,6 +3371,7 @@ private class FunctionBuilder {
 	final prepared:PreparedBodyFunction;
 	final input:PreparedBodyFunction;
 	final functionsById:Map<String, PreparedBodyFunction>;
+	final programFunctionBaseIds:Map<String, Bool> = [];
 	final constructorSignaturesById:Map<String, PreparedConstructorSignature>;
 	final globalRegistry:BodyGlobalRegistry;
 	final aggregateRegistry:CBodyAggregateRegistry;
@@ -3264,6 +3480,10 @@ private class FunctionBuilder {
 		this.prepared = prepared;
 		this.input = prepared;
 		this.functionsById = functionsById;
+		for (candidate in functionsById) {
+			final baseId = candidate.specialization == null ? candidate.irId : candidate.specialization.baseFunctionId;
+			programFunctionBaseIds.set(baseId, true);
+		}
 		this.constructorSignaturesById = constructorSignaturesById;
 		this.globalRegistry = globalRegistry;
 		this.aggregateRegistry = aggregateRegistry;
@@ -3415,6 +3635,162 @@ private class FunctionBuilder {
 		}
 	}
 
+	/**
+		Settle shared facts that are first visible inside a typed function body.
+
+		Function preparation already owns signatures and most type layouts. This
+		prepass adds only facts whose first reachable use can occur in an
+		expression: imported C calls/constants, `Null<T>` wrappers, map
+		specializations, and extern or typedef-backed values that reveal one of
+		those families. It deliberately does not materialize every anonymous
+		literal; authoritative lowering may use such a literal only as input to an
+		imported C struct. It emits no HxcIR and retains no expression; ordinary
+		construction still validates and lowers the body afterward.
+	**/
+	public function discoverSharedBodySemantics():Void {
+		function visit(expression:TypedExpr):Void {
+			// `trace(value)` includes compiler-created source metadata whose Array
+			// is not application data. Match the representation prepass and inspect
+			// only the user value that ordinary trace lowering consumes.
+			switch expression.expr {
+				case TCall(callee, arguments) if (isHaxeLogTrace(callee)):
+					if (arguments.length > 0)
+						visit(arguments[0]);
+					return;
+				case _:
+			}
+			// Haxe types a fixed `CArray` literal as an ordinary Array expression
+			// before the destination abstract supplies its storage contract.
+			// Authoritative lowering consumes that literal contextually and the
+			// admitted element types are direct primitives, so entering its
+			// compiler-shaped subtree here would invent a managed Array and hxrt
+			// dependency that the program never uses.
+			switch expression.expr {
+				case TVar(variable, _) if (CBodyFixedArray.isCArrayType(applyCurrentSpecialization(variable.t))):
+					return;
+				case _:
+			}
+
+			switch expression.expr {
+				case TCall(callee, arguments):
+					aggregateRegistry.importFunction(callee, expression.pos, input.sourcePath);
+					switch unwrapExpression(callee).expr {
+						case TField(receiver, FInstance(owner, _, fieldReference))
+							if (CBodyArrayRecognition.isCoreArray(owner) && fieldReference.get().name == "sort"):
+							final receiverType = bodyValueType(receiver.t, receiver.pos, "shared-body-plan:Array.sort-receiver");
+							final array = receiverType.arrayValue();
+							if (array == null)
+								unsupportedAt(receiver.pos, "TCall(Array.sort:shared-plan-receiver-identity-lost)");
+							aggregateRegistry.requireArraySort(array);
+						case _:
+					}
+				case TField(_, FEnum(enumReference, enumField)) if (!isFunctionType(expression.t)):
+					aggregateRegistry.importEnumConstant(enumReference, enumField, expression.pos, input.sourcePath);
+				case TField(_, FStatic(classReference, fieldReference)) if (!isFunctionType(expression.t)):
+					aggregateRegistry.importStaticConstant(classReference, fieldReference, expression.pos, input.sourcePath);
+				case _:
+			}
+
+			// A type expression names a declaration; it is not itself a runtime
+			// value. Mapping its compiler-internal `Class<T>` carrier would invent a
+			// representation that ordinary body lowering never requests.
+			switch expression.expr {
+				case TTypeExpr(_):
+					return;
+				case _:
+			}
+			// A bare `null` carries no representation by itself. Its surrounding
+			// declaration, assignment, call parameter, or return contract supplies
+			// the value type that authoritative lowering must map. Trying to map
+			// the compiler-inferred `Null<T>` on the constant can instead inspect an
+			// unsupported `T` earlier than ordinary lowering and move the useful
+			// `CDiagnosticId.UnsupportedExpression` diagnostic to this output-inert
+			// discovery pass.
+			switch expression.expr {
+				case TConst(TNull):
+					return;
+				case _:
+			}
+			// A declaration expression itself is typed `Void`; the declared local
+			// carries the Map/optional type. Authoritative TVar lowering maps that
+			// type at the full declaration range before it lowers the initializer.
+			// Preserve both the discovery order and the useful source location,
+			// rather than first discovering the family at a narrow `[]` literal.
+			switch expression.expr {
+				case TVar(variable, _):
+					final variableType = applyCurrentSpecialization(variable.t);
+					if (mayDiscoverSharedBodyType(variableType))
+						bodyValueType(variable.t, expression.pos, 'shared-body-plan:TVar(${variable.name})');
+				case _:
+			}
+			if (mayDiscoverSharedBodyType(applyCurrentSpecialization(expression.t)))
+				bodyValueType(expression.t, expression.pos, 'shared-body-plan:${nodeName(expression)}');
+			switch expression.expr {
+				case TCall(callee, [argument]) if (isAbstractMethod(callee, "c.StructInit", "make")):
+					// StructInit uses the object literal only as named input for an
+					// imported C struct. Authoritative lowering maps the call's result
+					// type, then lowers each field against that imported layout; it
+					// never materializes the literal's anonymous Haxe record. Visit
+					// the field values but skip the wrapper so the replay prepass
+					// cannot add unused anonymous structs to generated headers.
+					visit(callee);
+					switch unwrapExpression(argument).expr {
+						case TObjectDecl(fields):
+							for (field in fields)
+								visit(field.expr);
+						case _:
+							visit(argument);
+					}
+				case _:
+					TypedExprTools.iter(expression, visit);
+			}
+		}
+		visit(prepared.bodyExpression);
+	}
+
+	/**
+		Identify only type families proven to be discovered during body lowering.
+
+		Primitive values and ordinary nominal classes/enums are already planned by
+		signature and managed-representation preparation. The contribution
+		inventory found body-time optionals, map carriers, and imported extern
+		values, but no new record or enum layouts. Typedefs and non-core abstracts
+		are unwrapped only so they can reveal one of those proven families. Mapping
+		every anonymous literal or enum expression would register unused layouts or
+		extra provenance merely because the prepass sees more nodes than
+		authoritative lowering.
+	**/
+	static function mayDiscoverSharedBodyType(type:Type, depth:Int = 0):Bool {
+		if (depth > 32)
+			return false;
+		return switch type {
+			case TMono(reference): final resolved = reference.get(); resolved != null && mayDiscoverSharedBodyType(resolved, depth + 1);
+			case TLazy(resolve):
+				mayDiscoverSharedBodyType(resolve(), depth + 1);
+			case TType(reference, parameters):
+				final value = reference.get();
+				mayDiscoverSharedBodyType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
+			case TAnonymous(_):
+				false;
+			case TAbstract(reference, parameters):
+				final value = reference.get();
+				final path = value.pack.concat([value.name]).join(".");
+				if (value.name == "Null" || value.name == "Map") {
+					true;
+				} else if (value.meta.has(":coreType") || value.pack.join(".") == "c") {
+					false;
+				} else {
+					mayDiscoverSharedBodyType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
+				}
+			case TInst(reference, _): final value = reference.get(); value.isExtern || (value.pack.join(".") == "haxe.ds"
+					&& (value.name == "IntMap" || value.name == "StringMap"));
+			case TEnum(_, _):
+				false;
+			case _:
+				false;
+		};
+	}
+
 	function discoverManagedExpression(expression:TypedExpr):Void {
 		// `trace(value)` arrives from Haxe as `haxe.Log.trace(value, info)`. The
 		// second argument is compiler-built source metadata; custom trace values are
@@ -3452,6 +3828,126 @@ private class FunctionBuilder {
 			case _:
 		}
 		TypedExprTools.iter(expression, discoverManagedExpression);
+	}
+
+	/**
+		Reuse this function's prior semantic result or build it normally.
+
+		Function preparation and the shared representation prepass still run on
+		every request. A hit skips only typed-body construction, then registers the
+		exact function-owned names in the fresh symbol registry so whole-program
+		collision resolution remains identical to a cold build.
+	**/
+	public function buildWithReplay():BuiltBodyFunctionReplayResolution {
+		final resolution = CBodyFunctionReplayCache.resolve(prepared.irId, replayIdentity(), () -> {
+			final reasonsBefore = aggregateRegistry.enumReasonSnapshot();
+			final built = build();
+			final enumReasons = addedEnumReasons(reasonsBefore, aggregateRegistry.enumReasonSnapshot());
+			return {
+				ir: built.ir,
+				localRequests: built.localRequests,
+				spanLengthRequests: built.spanLengthRequests,
+				temporaryRequests: built.temporaryRequests,
+				tailArgumentRequests: built.tailArgumentRequests,
+				labelRequests: built.labelRequests,
+				enumReasons: enumReasons,
+				runtimeRequirements: built.runtimeRequirements.map(requirement -> {
+					featureId: requirement.featureId,
+					operationId: requirement.operationId,
+					surface: requirement.surface,
+					source: requirement.source,
+					position: requirement.position,
+					kind: requirement.kind
+				})
+			};
+		});
+		final data = resolution.data;
+		registerReplayRequests(data);
+		for (reason in data.enumReasons)
+			aggregateRegistry.addEnumReason(reason.instanceId, reason.source);
+		return {
+			result: {
+				prepared: prepared,
+				ir: data.ir,
+				localRequests: data.localRequests,
+				spanLengthRequests: data.spanLengthRequests,
+				temporaryRequests: data.temporaryRequests,
+				tailArgumentRequests: data.tailArgumentRequests,
+				labelRequests: data.labelRequests,
+				runtimeRequirements: data.runtimeRequirements.map(requirement -> new CBodyRuntimeRequirement(requirement.featureId, requirement.operationId,
+					requirement.surface, requirement.source, requirement.position, requirement.kind))
+			},
+			reused: resolution.reused
+		};
+	}
+
+	/** Keep only provenance ranges this function added to the shared enum plan. */
+	static function addedEnumReasons(before:Map<String, Array<HxcSourceSpan>>, after:Map<String, Array<HxcSourceSpan>>):Array<CBodyFunctionReplayEnumReason> {
+		final result:Array<CBodyFunctionReplayEnumReason> = [];
+		for (instanceId => current in after) {
+			final prior = before.get(instanceId);
+			final priorDisplays:Map<String, Bool> = [];
+			if (prior != null)
+				for (source in prior)
+					priorDisplays.set(source.display(), true);
+			for (source in current)
+				if (!priorDisplays.exists(source.display()))
+					result.push({instanceId: instanceId, source: source});
+		}
+		result.sort((left, right) -> {
+			final byInstance = CBodyLowering.compareUtf8(left.instanceId, right.instanceId);
+			return byInstance != 0 ? byInstance : CBodyLowering.compareUtf8(left.source.display(), right.source.display());
+		});
+		return result;
+	}
+
+	/**
+		Build the complete per-function key without retaining compiler-owned nodes.
+
+		The printed typed tree proves resolved Haxe structure and types. The
+		separate pre-order range ledger makes comments, whitespace, and line moves
+		observable whenever they change diagnostic/source-map coordinates. It also
+		provides the current request's opaque positions for replayed diagnostics.
+	**/
+	function replayIdentity():CBodyFunctionReplayIdentity {
+		final positionsBySource:Map<String, Position> = [];
+		final spans:Array<String> = [];
+		function visit(expression:TypedExpr):Void {
+			final span = sourceSpans.resolve(expression.pos);
+			final key = span.display();
+			spans.push(key);
+			if (!positionsBySource.exists(key))
+				positionsBySource.set(key, expression.pos);
+			TypedExprTools.iter(expression, visit);
+		}
+		visit(prepared.sourceExpression);
+		final canonical = [
+			'body-function-input schema=${CBodyFunctionReplayCache.SCHEMA_VERSION}',
+			'id=${prepared.irId}',
+			'module=${prepared.modulePath}',
+			'declaration=${prepared.declarationPath}',
+			'source=${prepared.sourcePath}',
+			"typed-expression",
+			CBodyLowering.canonicalTypedExpressionText(prepared.sourceExpression),
+			"source-spans",
+			spans.join("\n")
+		].join("\n");
+		return new CBodyFunctionReplayIdentity(canonical, positionsBySource);
+	}
+
+	/** Register every name restored from the prior function in the current request. */
+	function registerReplayRequests(data:CBodyFunctionReplayData):Void {
+		for (request in data.localRequests)
+			context.symbols.register(request);
+		for (request in data.spanLengthRequests)
+			context.symbols.register(request);
+		for (request in data.temporaryRequests)
+			context.symbols.register(request);
+		for (requests in data.tailArgumentRequests)
+			for (request in requests)
+				context.symbols.register(request);
+		for (request in data.labelRequests)
+			context.symbols.register(request);
 	}
 
 	public function build():BuiltBodyFunction {

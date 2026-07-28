@@ -159,7 +159,7 @@ contains HxcIR construction and validation, but its exclusive value does not
 count those children again.
 
 Each structured `HXC_PROFILE` JSON Lines record belongs to one request and
-uses the current closed schema 10. Span records carry monotonic wall time,
+uses the current closed schema 11. Span records carry monotonic wall time,
 process CPU time,
 allocation change when the Eval host exposes it, and resident-memory samples.
 The final request record reports total request time and peak observed resident
@@ -178,7 +178,7 @@ unknown fields, duplicate IDs, missing parents, spans outside their parent,
 incorrect exclusive arithmetic, unsorted counters, and a mismatched request
 summary instead of trusting decoded JSON blindly.
 
-Schema 10 also gives every ordinary HxcIR function build a closed contribution
+Schema 11 also gives every ordinary HxcIR function build a closed contribution
 record. A **contribution** means that lowering this function was the first
 operation in the request to add a shared program fact, such as a C import,
 collection representation, optional representation, late adapter, or symbol
@@ -187,13 +187,13 @@ regions, runtime requirements, and name requests owned by the function itself.
 The profiler compares shallow counts immediately before and after the build; it
 does not retain typed expressions or mutable registries.
 
-This distinction is a cache-safety boundary, not cache permission. Reusing a
-previous function body would also have to restore every function-owned output
-and every shared contribution, under an exact input and program-plan identity,
-then run the same validation. A zero contribution count only answers “this
-function did not enlarge these shared inventories in this request.” It does not
-prove that the function had unchanged input, that it observed the same earlier
-facts, or that its old HxcIR remains valid.
+This distinction is a cache-safety boundary, not cache permission by itself. A
+zero contribution count answers only “this function did not enlarge these
+shared inventories in this request.” The semantic-function replay boundary
+described below adds the missing program identity, exact function identity,
+complete function-owned payload, and post-replay validation. A contributor must
+not infer that another result is reusable merely because its contribution
+record is empty.
 
 Normal builds create no profile state and emit no timing records. Profile data
 is diagnostic output, not a generated compiler artifact, and reports live
@@ -343,13 +343,68 @@ retained request count and key size. On a hit, the draft, collision, and table
 materialization counters are zero and their child spans are absent because
 those algorithms did not run.
 
-This does **not** authorize reuse of a prior HxcIR function. Typed-body lowering
-currently also discovers anonymous layouts, globals, runtime requirements,
-late adapters, and symbol requests. Until those contributions are produced by
-a complete validated plan and frozen before body construction, skipping the
-body could yield plausible C with missing program facts. The symbol-table cache
-is safe precisely because its complete input and immutable output already have
-one explicit boundary.
+The semantic-function replay cache now owns that formerly missing boundary.
+Before constructing any ordinary function body, `CBodyLowering` performs a
+read-only discovery pass over the typed bodies and settles every shared
+representation, global, C import, callable signature, constructor signature,
+dispatch fact, and generated adapter needed by the program. It then takes a
+function-free HxcIR snapshot. If ordinary construction later adds a shared
+layout, import, collection representation, or adapter, compilation stops
+instead of publishing incomplete replay evidence.
+
+Reuse requires two full-text comparisons:
+
+1. the **program revision** contains the replay schema, Haxe compiler version,
+   profile, build mode, complete function-free HxcIR, callable signatures and
+   defaults, constructor signatures, dispatch, globals, and representations;
+   and
+2. the **function input** contains the logical function owner, complete
+   structurally printed typed expression with resolved types, and the pre-order
+   stable source-range ledger.
+
+Haxe's variable IDs are allocator numbers, not source semantics: the same
+function can receive different IDs after the server retypes another module.
+The function key therefore renumbers only the structural printer's explicit
+`Arg`, `Var`, and `Local` binding markers by first appearance. This retains the
+distinction between shadowed variables and every use of the same binding while
+removing request-allocation noise. The focused macro probe proves that two
+equivalent typed trees with different Haxe IDs compare equal and a changed
+constant still compares unequal. Parameter and closure-capture compiler IDs
+are likewise excluded from the shared signature; stable source order, field
+identity, type, and ownership remain.
+
+A hit restores a fresh request-owned copy of the function's HxcIR, immutable
+symbol requests, runtime requirements, and generic-enum provenance ranges.
+Opaque Haxe `TypedExpr`, `Type`, and `Position` values never enter persistent
+state. Runtime diagnostics recover the current request's `Position` from the
+matching stable HxcIR source range. If a requirement originally had a Haxe
+position but that range is absent from the current request, restoration stops
+with an internal error instead of silently weakening the diagnostic. The
+loaded target-macro module owns the process-local state, so reloading changed
+compiler code creates new static storage; the explicit replay schema must also
+change whenever the retained payload or key contract changes. Managed-root
+planning, null-check coalescing, whole-program HxcIR validation, naming, CAST
+construction, printing, artifact planning, and output ownership still run
+normally, so replay skips typed-body construction rather than treating old
+generated C as authority.
+
+Only the prior successful generation is retained. The request constructs a
+complete replacement privately; Reflaxe's `onOutputComplete` hook publishes it
+after generated-file ownership succeeds. Aborted and failed transactions leave
+the preceding generation available, deleted functions disappear on
+replacement, and callers receive fresh mutable arrays so later planning cannot
+modify persistent evidence. The
+`reflaxe_c_test_disable_body_function_replay_cache` define always runs ordinary
+construction without replacing the prior generation.
+`reflaxe_c_body_function_replay_cache_report` and the structured profile expose
+hit, miss, shared-revision match, missing-function miss, changed-input miss,
+retained-function, retained-function-input, and retained-program-revision
+counts. The JSON report also names the closed program decision: disabled, no
+prior generation, schema changed, program changed, or matched. Sizes are Haxe
+string code units, not claimed UTF-8 bytes. Compiler-created adapter functions
+remain on their deterministic ordinary construction path; the cache currently
+owns the prepared source and function-literal builders whose complete inputs
+and outputs are explicit.
 
 The same diagnostic boundary divides semantic analysis into helper selection,
 name-request registration, deterministic symbol finalization, representation

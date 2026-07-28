@@ -51,15 +51,19 @@ class CBodyAggregate {
 }
 
 /**
-	Counts every shared semantic representation discovered before HxcIR assembly.
+	Counts shared representations and enum-provenance ranges before HxcIR assembly.
 
-	The profiler snapshots this request-local inventory around one function
-	build. A positive delta means a future cached function must replay that shared
-	program fact; the inventory itself is not a cache key or reusable plan.
+	The compiler snapshots this request-local inventory around function
+	construction. Layouts, imports, adapters, and collection representations must
+	already be settled; a later change stops compilation rather than publishing an
+	incomplete replay generation. Enum source ranges are the one explicit
+	function-owned addition and are retained with that function's replay payload.
+	The shallow inventory proves this boundary; it is not itself the cache key.
 **/
 typedef CBodyProgramContributionInventory = {
 	final aggregates:Int;
 	final enums:Int;
+	final enumReasons:Int;
 	final classes:Int;
 	final interfaces:Int;
 	final arrays:Int;
@@ -675,6 +679,7 @@ class CBodyAggregateRegistry {
 		return {
 			aggregates: countValues(byShape),
 			enums: enumRegistry.preparedCount(),
+			enumReasons: enumRegistry.totalReasonCount(),
 			classes: classRegistry.preparedCount(),
 			interfaces: interfaceRegistry.preparedCount(),
 			arrays: arrayRegistry.preparedCount(),
@@ -979,6 +984,14 @@ class CBodyAggregateRegistry {
 
 	public function canonicalEnums():Array<CPreparedBodyEnumInstance>
 		return enumRegistry.canonicalEnums();
+
+	/** Copy source provenance so one function can retain only its new ranges. */
+	public function enumReasonSnapshot():Map<String, Array<HxcSourceSpan>>
+		return enumRegistry.reasonSnapshot();
+
+	/** Restore one function-owned generic-enum provenance range. */
+	public function addEnumReason(instanceId:String, reason:HxcSourceSpan):Void
+		enumRegistry.addReason(instanceId, reason);
 
 	public function finalizeEnums(symbols:CSymbolRegistry):Array<CLoweredBodyEnum>
 		return enumRegistry.finalize(symbols);

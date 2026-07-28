@@ -528,6 +528,97 @@ def require_symbol_table_cache_accounting(
         )
 
 
+def function_replay_cache_stats(
+    sample: Mapping[str, object], label: str
+) -> dict[str, int]:
+    """Read exact semantic-function replay decisions from one compiler request."""
+
+    profile = sample.get("profile")
+    if not isinstance(profile, dict):
+        raise IncrementalEditProfileFailure(
+            f"{label} omitted its structured compiler profile"
+        )
+    counters = profile.get("counters")
+    if not isinstance(counters, list):
+        raise IncrementalEditProfileFailure(
+            f"{label} omitted compiler counters"
+        )
+    values: dict[str, int] = {}
+    prefix = "hxcir.function-replay-cache-"
+    for entry in counters:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("name"), str)
+            or not entry["name"].startswith(prefix)
+        ):
+            continue
+        value = entry.get("value")
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or value < 0
+            or int(value) != value
+        ):
+            raise IncrementalEditProfileFailure(
+                f"{label} function-replay counter is not a "
+                f"non-negative integer: {entry!r}"
+            )
+        values[entry["name"].removeprefix(prefix)] = int(value)
+    expected = {
+        "hits",
+        "misses",
+        "missing-function-misses",
+        "changed-function-input-misses",
+        "program-revision-matched",
+        "retained-functions",
+        "retained-program-revision-code-units",
+        "retained-input-code-units",
+    }
+    if set(values) != expected:
+        raise IncrementalEditProfileFailure(
+            f"{label} function-replay counter inventory drifted: "
+            f"{sorted(values)!r}"
+        )
+    return values
+
+
+def require_function_replay_accounting(
+    stats: Mapping[str, int],
+    *,
+    label: str,
+    hits: int,
+    misses: int,
+    missing_function_misses: int,
+    changed_function_input_misses: int,
+    program_revision_matched: bool,
+    retained_functions: int,
+) -> None:
+    """Require one complete replay generation and its exact decision split."""
+
+    expected = {
+        "hits": hits,
+        "misses": misses,
+        "missing-function-misses": missing_function_misses,
+        "changed-function-input-misses": changed_function_input_misses,
+        "program-revision-matched": int(program_revision_matched),
+        "retained-functions": retained_functions,
+    }
+    for field, value in expected.items():
+        if stats.get(field) != value:
+            raise IncrementalEditProfileFailure(
+                f"{label} function replay {field} was "
+                f"{stats.get(field)!r}, expected {value}: {dict(stats)!r}"
+            )
+    if stats.get("retained-input-code-units", 0) <= 0:
+        raise IncrementalEditProfileFailure(
+            f"{label} omitted the replay generation's bounded input size"
+        )
+    if stats.get("retained-program-revision-code-units", 0) <= 0:
+        raise IncrementalEditProfileFailure(
+            f"{label} omitted the shared program revision's bounded size"
+        )
+
+
 def profile_incremental_edit() -> dict[str, object]:
     """Run the fixed Vitals edit and return path-free compiler evidence."""
 
@@ -658,6 +749,15 @@ def profile_incremental_edit() -> dict[str, object]:
         edited_symbol_cache = symbol_table_cache_stats(
             edited.sample, "one-module edit"
         )
+        prime_function_replay = function_replay_cache_stats(
+            prime.sample, "cold prime"
+        )
+        baseline_function_replay = function_replay_cache_stats(
+            baseline.sample, "warm unchanged baseline"
+        )
+        edited_function_replay = function_replay_cache_stats(
+            edited.sample, "one-module edit"
+        )
         require_control_flow_cache_accounting(
             prime_cache,
             label="cold prime",
@@ -700,6 +800,46 @@ def profile_incremental_edit() -> dict[str, object]:
             hits=1,
             misses=0,
             retained_requests=symbol_request_count,
+        )
+        replay_function_count = prime_function_replay[
+            "retained-functions"
+        ]
+        require_function_replay_accounting(
+            prime_function_replay,
+            label="cold prime",
+            hits=0,
+            misses=replay_function_count,
+            missing_function_misses=0,
+            changed_function_input_misses=0,
+            program_revision_matched=False,
+            retained_functions=replay_function_count,
+        )
+        require_function_replay_accounting(
+            baseline_function_replay,
+            label="warm unchanged baseline",
+            hits=replay_function_count,
+            misses=0,
+            missing_function_misses=0,
+            changed_function_input_misses=0,
+            program_revision_matched=True,
+            retained_functions=replay_function_count,
+        )
+        edited_replay_misses = edited_function_replay["misses"]
+        if edited_replay_misses != changed_function_count:
+            raise IncrementalEditProfileFailure(
+                "the implementation edit rebuilt "
+                f"{edited_replay_misses} semantic functions, but exactly "
+                f"{changed_function_count} canonical HxcIR functions changed"
+            )
+        require_function_replay_accounting(
+            edited_function_replay,
+            label="one-module edit",
+            hits=replay_function_count - edited_replay_misses,
+            misses=edited_replay_misses,
+            missing_function_misses=0,
+            changed_function_input_misses=edited_replay_misses,
+            program_revision_matched=True,
+            retained_functions=replay_function_count,
         )
         module_difference = section_diff(before_modules, after_modules)
         changed_c_sources = [
@@ -789,6 +929,15 @@ def profile_incremental_edit() -> dict[str, object]:
                     "key": (
                         "the complete canonical symbol-request sequence and "
                         "each request's exact naming fingerprint"
+                    ),
+                },
+                "semanticFunctions": {
+                    "coldPrime": prime_function_replay,
+                    "warmUnchanged": baseline_function_replay,
+                    "edited": edited_function_replay,
+                    "key": (
+                        "the complete shared-program revision plus each "
+                        "function's exact typed tree and source-range ledger"
                     ),
                 },
             },

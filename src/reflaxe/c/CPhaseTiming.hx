@@ -120,6 +120,14 @@ enum abstract CProfileCounterId(String) to String {
 	var CPCounterHxcIRNamedRecordCacheMisses = "hxcir.named-record-cache-misses";
 	var CPCounterHxcIRExactNominalCacheHits = "hxcir.exact-nominal-cache-hits";
 	var CPCounterHxcIRExactNominalCacheMisses = "hxcir.exact-nominal-cache-misses";
+	var CPCounterHxcIRFunctionReplayCacheHits = "hxcir.function-replay-cache-hits";
+	var CPCounterHxcIRFunctionReplayCacheMisses = "hxcir.function-replay-cache-misses";
+	var CPCounterHxcIRFunctionReplayCacheMissingFunctionMisses = "hxcir.function-replay-cache-missing-function-misses";
+	var CPCounterHxcIRFunctionReplayCacheChangedFunctionInputMisses = "hxcir.function-replay-cache-changed-function-input-misses";
+	var CPCounterHxcIRFunctionReplayCacheProgramRevisionMatched = "hxcir.function-replay-cache-program-revision-matched";
+	var CPCounterHxcIRFunctionReplayCacheRetainedFunctions = "hxcir.function-replay-cache-retained-functions";
+	var CPCounterHxcIRFunctionReplayCacheRetainedProgramRevisionCodeUnits = "hxcir.function-replay-cache-retained-program-revision-code-units";
+	var CPCounterHxcIRFunctionReplayCacheRetainedInputCodeUnits = "hxcir.function-replay-cache-retained-input-code-units";
 	var CPCounterCASTFunctions = "cast.functions";
 	var CPCounterControlFlowPlanCacheHits = "cast.control-flow-plan-cache-hits";
 	var CPCounterControlFlowPlanCacheMisses = "cast.control-flow-plan-cache-misses";
@@ -474,7 +482,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 10;
+	public static inline final PROFILE_SCHEMA_VERSION = 11;
 
 	static var active:Null<CProfileRequestState> = null;
 

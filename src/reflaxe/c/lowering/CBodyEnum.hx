@@ -172,6 +172,7 @@ class CPreparedBodyEnumInstance {
 		this.payloadMemberRequest = payloadMemberRequest;
 	}
 
+	/** Retain one distinct source range that made this specialization reachable. */
 	public function addReason(reason:HxcSourceSpan):Void {
 		final display = reason.display();
 		if (reasonsByDisplay.exists(display))
@@ -337,6 +338,32 @@ class CBodyEnumRegistry {
 	@:noCompletion
 	public function preparedCount():Int
 		return countValues(byShape);
+
+	/** Count source ranges retained as provenance across all enum instances. */
+	public function totalReasonCount():Int {
+		var count = 0;
+		for (value in byShape)
+			count += value.reasonCount();
+		return count;
+	}
+
+	/** Copy current generic-enum provenance by stable instance identity. */
+	public function reasonSnapshot():Map<String, Array<HxcSourceSpan>> {
+		final result:Map<String, Array<HxcSourceSpan>> = [];
+		for (value in byShape)
+			result.set(value.instanceId, value.canonicalReasons());
+		return result;
+	}
+
+	/** Restore one source range discovered by a replayed function body. */
+	public function addReason(instanceId:String, reason:HxcSourceSpan):Void {
+		for (value in byShape)
+			if (value.instanceId == instanceId) {
+				value.addReason(reason);
+				return;
+			}
+		throw new CBodyEmissionError('enum provenance replay named unknown instance `$instanceId`');
+	}
 
 	public function valueType(reference:Ref<EnumType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,
 			fail:(Position, String) -> Void, node:String):CBodyValueType {
