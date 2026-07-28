@@ -16,6 +16,21 @@ typedef ManagedRecord = {
 	final commands:Array<ManagedCommand>;
 }
 
+/**
+	Reads an Array through an ordinary instance method without keeping it.
+
+	The instance gives the fixture a direct-method call boundary distinct from a
+	static function. Its parameter is borrowed only while `length` runs; the
+	caller remains responsible for a fresh Array literal passed to it.
+**/
+final class FreshArrayReader {
+	public function new() {}
+
+	/** Return the length of one caller-owned Array without retaining it. */
+	public function length(values:Array<Int>):Int
+		return values.length;
+}
+
 /** Ordinary-Haxe executable for typed managed-record Array elements. */
 final class Main {
 	static var joinSeparatorEvaluations:Int = 0;
@@ -33,6 +48,8 @@ final class Main {
 
 	static function main():Void {
 		final values:Array<Int> = [10, 20];
+		final freshStaticLength = borrowedLength([2, 3, 5]);
+		final freshInstanceLength = new FreshArrayReader().length([7, 11]);
 		final firstConditionalValue = conditionalIndex(values, true);
 		final secondConditionalValue = conditionalIndex(values, false);
 		final emptyCopy = ([] : Array<Int>).copy();
@@ -136,6 +153,8 @@ final class Main {
 		final absent = maybeValues(false);
 		final present = maybeValues(true);
 		while (values.length != 3
+			|| freshStaticLength != 3
+			|| freshInstanceLength != 2
 			|| firstConditionalValue != 10
 			|| secondConditionalValue != 20
 			|| emptyCopy.length != 0
@@ -318,6 +337,16 @@ final class Main {
 	/** Read one borrowed Array during a direct call without retaining a new alias. */
 	static function commandCount(commands:Array<ManagedCommand>):Int
 		return commands.length;
+
+	/**
+		Read a fresh Array literal through a direct static call.
+
+		The callee borrows `values` only for this call. Because the literal has no
+		Haxe local to own it, haxe.c must create one hidden caller-owned temporary,
+		pass a borrow here, and release that owner exactly once after use.
+	**/
+	static function borrowedLength(values:Array<Int>):Int
+		return values.length;
 
 	/**
 	 * Return a managed record copied from an Array whose local owners then end.

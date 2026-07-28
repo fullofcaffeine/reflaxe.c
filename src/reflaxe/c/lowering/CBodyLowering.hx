@@ -10033,6 +10033,7 @@ private class FunctionBuilder {
 			converted = stabilizeFreshManagedEnum(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedAggregate(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedOptional(converted, argumentExpression.pos, 'static-call-argument-$index');
+			converted = stabilizeFreshManagedArray(converted, argumentExpression.pos, 'static-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(converted.id))
@@ -11555,6 +11556,7 @@ private class FunctionBuilder {
 			value = stabilizeFreshManagedEnum(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedAggregate(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedOptional(value, argument.pos, 'instance-call-argument-$index');
+			value = stabilizeFreshManagedArray(value, argument.pos, 'instance-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(value.id))
 				return unsupported(argument, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedStringMapValueIds.exists(value.id))
@@ -11954,12 +11956,13 @@ private class FunctionBuilder {
 	/**
 		Give a fresh reference-counted Array a caller-owned lifetime around a call.
 
-		Constructor parameters borrow their Array value. If the callee stores that
-		value, its field takes a separate retain; it cannot consume an otherwise
-		ownerless literal from the caller. This temporary local owns the literal
-		until normal or failure cleanup, making both call-only and retained
-		constructor uses obey the same rule. Collector-managed Arrays already have
-		an exact root and therefore need no reference-count operation.
+		Direct Haxe calls and constructors borrow each Array argument for the call;
+		they do not consume the caller's owner. If a callee stores that value, the
+		destination takes a separate retain. An expression such as
+		`readLength([1, 2])` has no source local to own its fresh Array, so this
+		compiler local becomes that owner, lends the loaded value to the call, and
+		releases it during normal or failure cleanup. Collector-managed Arrays
+		already have an exact root and therefore need no reference-count operation.
 	**/
 	function stabilizeFreshManagedArray(value:LoweredValue, position:Position, role:String):LoweredValue {
 		final managed = value.mapping.arrayValue();
@@ -11975,8 +11978,7 @@ private class FunctionBuilder {
 			source: source
 		});
 		normalCleanupActionIds.push(cleanupId);
-		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "fresh ordinary Haxe Array constructor argument lifetime", source,
-			position));
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "fresh ordinary Haxe Array call argument lifetime", source, position));
 		return loadPlace({place: IRPLocal(ownerLocalId), mapping: value.mapping, mutable: false}, position, role + "-borrow");
 	}
 

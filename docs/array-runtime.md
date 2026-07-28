@@ -320,6 +320,19 @@ still rejected before C is emitted. Those operations need an explicit transfer
 of ownership; accepting them without that rule would either leak the copy or
 destroy it while another user still refers to it.
 
+A fresh Array literal passed to a known direct function or method has a simpler
+boundary. Ordinary Haxe callees borrow an Array argument for the duration of
+the call; they do not consume the caller's owner. Because an expression such as
+`readLength([1, 2])` has no source local to own the new Array, HxcIR creates one
+hidden automatic local in the caller, initializes it with the fresh Array,
+passes a loaded borrow to the callee, and registers one exactly-once release for
+normal and abrupt cleanup. If the callee stores the Array, that destination
+takes its own retain under the ordinary assignment rule. This applies to
+statically known functions and methods, where haxe.c can validate the exact
+signature. A function value is still rejected for a fresh Array argument:
+indirect calls need a separately modeled callable ownership contract before the
+compiler can know whether the hidden target only borrows the value.
+
 An ordinary Haxe `for (item in array)` is represented by the pinned Haxe
 compiler as a checked indexed read inside a `while` body. That body is now an
 explicit ownership boundary for managed record and managed enum elements.

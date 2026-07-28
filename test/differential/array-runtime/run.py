@@ -289,16 +289,25 @@ def validate_generated_hxcir(hxcir: str) -> None:
     # original Array/Bytes setup. Require the original actions as an ordered
     # subsequence of one return edge: newer owners may appear before them, but
     # the long-standing reverse-registration contract must remain unchanged.
-    original_cleanup_prefix = (
-        '"cleanup.construction"."construction.0.array-field.entries.release"',
-        '"cleanup.construction"."construction.0.initialized"',
-    )
     cleanup_lines = [
         line
         for line in hxcir.splitlines()
-        if "terminator return" in line and all(marker in line for marker in original_cleanup_prefix)
+        if "terminator return" in line
+        and ".array-field.entries.release" in line
     ]
     cleanup_line = "" if not cleanup_lines else cleanup_lines[0]
+    history_owner = re.search(
+        r'"cleanup\.construction"\."(construction\.\d+)\.array-field\.entries\.release"',
+        cleanup_line,
+    )
+    history_cleanup = (
+        ()
+        if history_owner is None
+        else (
+            f'"cleanup.construction"."{history_owner.group(1)}.array-field.entries.release"',
+            f'"cleanup.construction"."{history_owner.group(1)}.initialized"',
+        )
+    )
     byte_ids = [
         int(value)
         for value in re.findall(r'"cleanup\.construction"\."bytes-local\.(\d+)\.release"', cleanup_line)
@@ -309,13 +318,15 @@ def validate_generated_hxcir(hxcir: str) -> None:
     ]
     if (
         not cleanup_line
+        or len(history_cleanup) != 2
+        or any(marker not in cleanup_line for marker in history_cleanup)
         or len(byte_ids) < 2
         or byte_ids != sorted(byte_ids, reverse=True)
         or len(array_ids) < 3
         or array_ids != sorted(array_ids, reverse=True)
-        or cleanup_line.index(f'"bytes-local.{byte_ids[-1]}.release"') >= cleanup_line.index(original_cleanup_prefix[0])
-        or cleanup_line.index(original_cleanup_prefix[0]) >= cleanup_line.index(original_cleanup_prefix[1])
-        or cleanup_line.index(original_cleanup_prefix[1]) >= cleanup_line.index(f'"array-local.{array_ids[-1]}.release"')
+        or cleanup_line.index(f'"bytes-local.{byte_ids[-1]}.release"') >= cleanup_line.index(history_cleanup[0])
+        or cleanup_line.index(history_cleanup[0]) >= cleanup_line.index(history_cleanup[1])
+        or cleanup_line.index(history_cleanup[1]) >= cleanup_line.index(f'"array-local.{array_ids[-1]}.release"')
     ):
         raise ArrayRuntimeFailure(
             "generated Array HxcIR lost reverse ownership cleanup: "
@@ -346,6 +357,54 @@ def validate_generated_hxcir(hxcir: str) -> None:
     )
     entry = hxcir_function(hxcir, "function.Main.main")
     history_pop = hxcir_function(hxcir, "method.History.takeNewest")
+    for role, target in (
+        ("static-call-argument-0", "function.Main.borrowedLength"),
+        ("instance-call-argument-0", "method.FreshArrayReader.length"),
+    ):
+        owner = re.search(
+            rf'{role}-owner-initialize" result=- initialize '
+            r'place=local\("([^"]+)"\)',
+            entry,
+        )
+        if owner is None:
+            raise ArrayRuntimeFailure(
+                f"fresh direct Array call omitted its {role} owner"
+            )
+        owner_local = owner.group(1)
+        borrow = re.search(
+            rf'{role}-borrow" result="([^"]+)":[^\n]+'
+            rf'load place=local\("{re.escape(owner_local)}"\)',
+            entry,
+        )
+        if borrow is None:
+            raise ArrayRuntimeFailure(
+                f"fresh direct Array call omitted its {role} borrow"
+            )
+        borrowed_value = borrow.group(1)
+        call_lines = [
+            line
+            for line in entry.splitlines()
+            if f'dispatch=direct("{target}")' in line
+        ]
+        if (
+            len(call_lines) != 1
+            or f'"{borrowed_value}"' not in call_lines[0]
+        ):
+            raise ArrayRuntimeFailure(
+                f"fresh direct Array call did not pass its {role} borrow"
+            )
+        action = (
+            f'action "array-temporary.{owner_local}.release" '
+            f'idempotence=exactly-once release place=local("{owner_local}") '
+            'implementation=runtime("array")'
+        )
+        cleanup_step = (
+            f'"cleanup.construction"."array-temporary.{owner_local}.release"'
+        )
+        if entry.count(action) != 1 or cleanup_line.count(cleanup_step) != 1:
+            raise ArrayRuntimeFailure(
+                f"fresh direct Array call lost exactly-once {role} cleanup"
+            )
     if (
         history_pop.count('runtime(feature="array",operation="pop")') != 1
         or 'returns=nullable(tagged,instance("instance.closed-record.' not in history_pop
@@ -601,6 +660,31 @@ def render_generated_pair(root: Path) -> Path:
             )
     if generated_tree(normal) != generated_tree(reverse):
         raise ArrayRuntimeFailure("generated Array project changed under reversed discovery")
+    metal_normal = root / "generated-metal-normal"
+    metal_reverse = root / "generated-metal-reverse"
+    metal_defines = ("reflaxe_c_profile=metal",)
+    first_metal = compile_generated_haxe(
+        GENERATED, metal_normal, defines=metal_defines
+    )
+    second_metal = compile_generated_haxe(
+        GENERATED,
+        metal_reverse,
+        reverse=True,
+        defines=metal_defines,
+    )
+    for label, result in (
+        ("metal-normal", first_metal),
+        ("metal-reverse", second_metal),
+    ):
+        if result.returncode != 0:
+            raise ArrayRuntimeFailure(
+                f"{label} generated Array compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(metal_normal) != generated_tree(metal_reverse):
+        raise ArrayRuntimeFailure(
+            "generated metal Array project changed under reversed discovery"
+        )
     validate_generated_hxcir(extract_hxcir(first))
     server_first, server_second = render_server_pair(root)
     canonical = generated_tree(normal)
@@ -743,6 +827,7 @@ def render_managed_class_pair(root: Path) -> Path:
 
 def run_generated_negative_cases(root: Path) -> None:
     expected = {
+        "indirect_fresh_argument": "TCall(indirect-managed-argument-needs-explicit-ownership:0)",
         "join_non_string": "TCall(Array.join:element-not-managed-String:",
         "reassignment": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
