@@ -265,6 +265,7 @@ hxc_check_raylib_core_signatures(void)
     void (*const hxc_signature_EnableCursor)(void) = &EnableCursor;
     void (*const hxc_signature_EndDrawing)(void) = &EndDrawing;
     void (*const hxc_signature_EndMode3D)(void) = &EndMode3D;
+    bool (*const hxc_signature_FileExists)(const char *) = &FileExists;
     Color (*const hxc_signature_GetColor)(unsigned int) = &GetColor;
     int (*const hxc_signature_GetFPS)(void) = &GetFPS;
     float (*const hxc_signature_GetFrameTime)(void) = &GetFrameTime;
@@ -326,6 +327,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_EnableCursor;
     (void)hxc_signature_EndDrawing;
     (void)hxc_signature_EndMode3D;
+    (void)hxc_signature_FileExists;
     (void)hxc_signature_GetColor;
     (void)hxc_signature_GetFPS;
     (void)hxc_signature_GetFrameTime;

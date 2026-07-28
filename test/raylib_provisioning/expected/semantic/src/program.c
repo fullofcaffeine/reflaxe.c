@@ -67,6 +67,11 @@ void hxc_Main_main(void)
   DrawCube(hxc_tmp_load_result_n27, (float)1.0, (float)1.0, (float)1.0, hxc_accent);
   EndMode3D();
   DrawText("Caxe: direct C, nicer Haxe", (int32_t)4, (int32_t)4, (int32_t)10, DARKGRAY);
+  bool hxc_tmp_native_call_result_n29 = FileExists("hxc-raylib-semantic.capture");
+  if (hxc_tmp_native_call_result_n29)
+  {
+    DrawPixel((int32_t)0, (int32_t)0, hxc_accent);
+  }
   EndDrawing();
   CloseWindow();
   return;

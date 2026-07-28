@@ -126,6 +126,18 @@ class Raylib {
 		raylib.raw.Raylib.EndDrawing();
 
 	/**
+	 * Report whether one static C-string path names an existing filesystem entry.
+	 *
+	 * Raylib checks during this call and retains neither the path nor any file
+	 * handle. Caxecraft's bounded pilot uses the result immediately after
+	 * `TakeScreenshot`: native evidence can then distinguish “the capture
+	 * checkpoint ran but Raylib did not publish a file” from “the checkpoint was
+	 * never reached.” This is only an observation; it grants no file ownership.
+	 */
+	public static inline function FileExists(fileName:c.CString):Bool
+		return raylib.raw.Raylib.FileExists(fileName);
+
+	/**
 	 * Save the current framebuffer to a file named by a static C string.
 	 *
 	 * Raylib reads `fileName` only during this call; it does not keep the

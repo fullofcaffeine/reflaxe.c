@@ -49,6 +49,7 @@
     "EnableCursor",
     "EndDrawing",
     "EndMode3D",
+    "FileExists",
     "GetColor",
     "GetFPS",
     "GetFrameTime",

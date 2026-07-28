@@ -87,6 +87,8 @@ extern class Raylib {
 
 	public static function EndMode3D():Void;
 
+	public static function FileExists(fileName:c.CString):Bool;
+
 	public static function GetColor(hexValue:c.UInt32):Color;
 
 	public static function GetFPS():c.Int32;

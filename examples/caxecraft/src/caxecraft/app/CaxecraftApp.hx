@@ -321,6 +321,10 @@ final class CaxecraftApp {
 		var placedBlocks = 0;
 		var rejectedEdits = 0;
 		var interpolationObserved = false;
+		// The review capture happens before the final state frame. Keep Raylib's
+		// immediate filesystem observation so final telemetry can attribute a
+		// missing image to the native producer instead of leaving the host to guess.
+		var reviewScreenshotObserved = false;
 		#if caxecraft_render_benchmark
 		var measuredTerrainMicroseconds = 0;
 		var measuredTerrainFrames = 0;
@@ -855,15 +859,15 @@ final class CaxecraftApp {
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
-					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
-					rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds, measuredTerrainFrames,
-					measuredUpdateMicroseconds, measuredPreparationMicroseconds);
+					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
+					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid,
+					measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds);
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
-					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved, visibleTerrainFaces,
-					rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0);
+					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
+					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0);
 			#end
 			var capturePilotFrame = pilotComplete;
 			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
@@ -883,32 +887,33 @@ final class CaxecraftApp {
 			// the previous frame on a double-buffered desktop window.
 			if (capturePilotFrame)
 				Rlgl.FlushBatch();
-			if (pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
+			if (pilotName == PilotScriptName.LaunchSmoke && frameCount == 1) {
 				#if caxecraft_pilot_secondary_locale
-				Raylib.TakeScreenshot("caxecraft-secondary-locale.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-secondary-locale.png");
 				#else
-				Raylib.TakeScreenshot("caxecraft-smoke.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-smoke.png");
 				#end
-				if (pilotName == PilotScriptName.MoveJumpEdit && frameCount == 12)
-					Raylib.TakeScreenshot("caxecraft-pilot-move.png");
+			}
+			if (pilotName == PilotScriptName.MoveJumpEdit && frameCount == 12)
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-move.png");
 			if (pilotName == PilotScriptName.PauseRecapture && frameCount == 4)
-				Raylib.TakeScreenshot("caxecraft-pilot-pause.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-pause.png");
 			if (pilotName == PilotScriptName.CombatDrop && frameCount == 38)
-				Raylib.TakeScreenshot("caxecraft-pilot-combat.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-combat.png");
 			if (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
-				Raylib.TakeScreenshot("caxecraft-pilot-recovery.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-recovery.png");
 			if (pilotName == PilotScriptName.FullInventoryGift && frameCount == 2)
-				Raylib.TakeScreenshot("caxecraft-pilot-full-inventory.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-full-inventory.png");
 			if (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
-				Raylib.TakeScreenshot("caxecraft-pilot-full-mining.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-full-mining.png");
 			if (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
-				Raylib.TakeScreenshot("caxecraft-pilot-resize.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-resize.png");
 			if (pilotName == PilotScriptName.AquaticGear && frameCount == 92)
-				Raylib.TakeScreenshot("caxecraft-pilot-aquatic-gear.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-aquatic-gear.png");
 			if (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				Raylib.TakeScreenshot("caxecraft-pilot-smooth-motion.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-smooth-motion.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 2)
-				Raylib.TakeScreenshot("caxecraft-pilot-editor.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor.png");
 			if (pilotComplete)
 				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end
@@ -935,6 +940,21 @@ final class CaxecraftApp {
 			CaxecraftTextures.unload(titleTexture);
 		Raylib.CloseWindow();
 	}
+
+	#if caxecraft_pilot
+	/**
+	 * Capture one flushed review frame and immediately observe its published file.
+	 *
+	 * Raylib's screenshot function has no return value. Its `FileExists` query is
+	 * therefore the smallest native success observation available without adding
+	 * a second filesystem runtime to the game. The runner deletes stale evidence
+	 * before launch, so `true` can only describe this bounded process run.
+	 */
+	static inline function capturePilotScreenshot(fileName:c.CString):Bool {
+		Raylib.TakeScreenshot(fileName);
+		return Raylib.FileExists(fileName);
+	}
+	#end
 
 	/** Restore the validated authored spawn, then recover if later edits blocked it. */
 	static function spawnPlayer(cells:WorldView):CharacterBody {

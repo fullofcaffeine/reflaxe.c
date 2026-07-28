@@ -186,7 +186,7 @@ Native integration additionally:
 
 The probe asserts C `bool`, `float`, and `int` assumptions; every selected
 record size, alignment, and field offset; both aliases; all 143 constant
-values; and typed function-pointer compatibility for all 60 functions. This is
+values; and typed function-pointer compatibility for all 61 functions. This is
 ABI evidence for the selected target/configuration lanes, not a promise for an
 unprobed platform.
 

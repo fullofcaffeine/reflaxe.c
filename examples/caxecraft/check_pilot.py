@@ -131,6 +131,56 @@ def check_native_telemetry_decoder() -> None:
 
         expect_telemetry_failure(path, words, "has unknown color", unknown_color=True)
 
+        # A structurally valid final frame still fails when native code did not
+        # observe its review capture. This keeps the producer diagnosis ahead of
+        # the later host-side PNG checks.
+        report_words = list(words)
+        report_words[3] = playable.PILOT_SCRIPT_CODES["launch-smoke"]
+        report_words[5] = playable.PILOT_FRAME_LIMITS["launch-smoke"]
+        report_words[27] = 6
+        report_words[28] = 0
+        report_words[29] = 0
+        report_words[30] = 1
+        report_words[31] = 1  # Title visible, capture observation deliberately absent.
+        report_words[35] = 1
+        write_telemetry_fixture(path, report_words)
+        try:
+            playable.build_pilot_report(
+                state_path=path,
+                review_screenshot=Path(temporary) / "review.png",
+                pilot="launch-smoke",
+                platform_name="linux",
+                raylib_configuration="memory-software",
+                renderer="chunk-cache",
+                benchmark_renderer=False,
+                sanitizers=False,
+                cc="cc",
+                compiler_version="fixture compiler",
+            )
+        except playable.PlayFailure as error:
+            if "native Raylib FileExists check did not observe" not in str(error):
+                raise PilotFailure(f"native capture failure was not actionable: {error}") from error
+        else:
+            raise PilotFailure("pilot report admitted a missing native capture observation")
+
+        report_words[31] |= 64
+        write_telemetry_fixture(path, report_words)
+        report = playable.build_pilot_report(
+            state_path=path,
+            review_screenshot=Path(temporary) / "review.png",
+            pilot="launch-smoke",
+            platform_name="linux",
+            raylib_configuration="memory-software",
+            renderer="chunk-cache",
+            benchmark_renderer=False,
+            sanitizers=False,
+            cc="cc",
+            compiler_version="fixture compiler",
+        )
+        evidence = report.get("evidence")
+        if not isinstance(evidence, dict) or evidence.get("nativeObservedReviewScreenshot") is not True:
+            raise PilotFailure("pilot report omitted its positive native capture observation")
+
 
 def check_memory_software_capture_normalization() -> None:
     """Lock the pinned software renderer's vertical and channel conversion."""

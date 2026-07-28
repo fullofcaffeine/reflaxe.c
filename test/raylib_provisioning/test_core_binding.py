@@ -63,6 +63,10 @@ class RaylibCoreBindingTests(unittest.TestCase):
         self.assertIn("extern class Camera3D", rendered)
         self.assertIn("public var position:Vector3", rendered)
         self.assertIn("public static function BeginDrawing():Void", rendered)
+        self.assertIn(
+            "public static function FileExists(fileName:c.CString):Bool",
+            rendered,
+        )
 
     def test_texture_resource_contract_keeps_ownership_visible(self) -> None:
         lock = load_lock()

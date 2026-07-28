@@ -36,13 +36,15 @@ import raylib.Raylib;
  * Values use integers so the record is stable across JSON libraries and C
  * floating-point printers. Positions and velocities are rounded toward zero
  * to thousandths of a world unit. Hashes preserve their complete 32-bit bit
- * patterns even when Haxe `Int` represents them as negative numbers.
+ * patterns even when Haxe `Int` represents them as negative numbers. The
+ * `reviewScreenshotObserved` bit reports Raylib's immediate file observation;
+ * it does not replace the runner's independent image validation.
  */
 function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldView, selection:RaycastHit,
 		removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int, guidePhase:GuidePhase,
 		mosslingAlive:Bool, onTitle:Bool, onEditor:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool, interpolationObserved:Bool,
-		visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool, measuredTerrainMicroseconds:Int,
-		measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int):Void {
+		reviewScreenshotObserved:Bool, visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool,
+		measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int):Void {
 	var flags = 0;
 	if (onTitle)
 		flags |= 1;
@@ -56,10 +58,12 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 		flags |= 16;
 	if (onEditor)
 		flags |= 32;
+	if (reviewScreenshotObserved)
+		flags |= 64;
 
 	var word = 0;
 	word = drawWord(word, 0x43585054); // "CXPT": Caxecraft pilot telemetry.
-	word = drawWord(word, 6); // Protocol version.
+	word = drawWord(word, 7); // Protocol version.
 	word = drawWord(word, 40); // Number of words in this closed version.
 	word = drawWord(word, PilotScript.scriptCode(name));
 	word = drawWord(word, PilotScript.inputHash(name));

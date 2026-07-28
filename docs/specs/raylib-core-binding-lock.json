@@ -93,7 +93,7 @@
     },
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "fb88590483ce662be79453e5e32c343efcae4c6d801b869e19f50bd758b5197d",
+  "declarationSha256": "862b9d5506b54c437f286c82324fe3178d011ec125174f2698b5eaf6c387e815",
   "declarations": {
     "aliases": [
       {
@@ -1733,6 +1733,25 @@
         "sourceLine": 1051
       },
       {
+        "name": "FileExists",
+        "parameters": [
+          {
+            "name": "fileName",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1148
+      },
+      {
         "name": "GetColor",
         "parameters": [
           {
@@ -2799,7 +2818,7 @@
       "aliases": 2,
       "enumConstants": 143,
       "enums": 5,
-      "functions": 60,
+      "functions": 61,
       "omittedFamilies": 6,
       "records": 9
     },
@@ -2853,7 +2872,7 @@
         "validate": "IsTextureValid"
       }
     ],
-    "sha256": "46d7d50e077ff2191ec795dc237db643547e344a0033aff68bb9d4d66c96349f"
+    "sha256": "ed6664afc63b99039988d9ca86c8e2cf585a01fc88013dd8573e80f7e5d23fa8"
   },
   "upstream": {
     "apiVersion": 600,

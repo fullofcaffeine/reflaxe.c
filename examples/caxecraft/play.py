@@ -265,7 +265,7 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 6
+PILOT_TELEMETRY_VERSION = 7
 PILOT_TELEMETRY_WORDS = 40
 PILOT_TELEMETRY_COLORS = tuple(
     (
@@ -903,7 +903,7 @@ def build_pilot_report(
         raise PlayFailure("pilot telemetry render counters cannot be negative")
     if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 8 or not 0 <= signed[29] <= 2:
         raise PlayFailure("pilot telemetry gameplay carriers are outside their closed ranges")
-    if not 0 <= signed[31] <= 63:
+    if not 0 <= signed[31] <= 127:
         raise PlayFailure("pilot telemetry presentation flags contain unknown bits")
     if signed[32] < 0 or signed[33] < 0 or signed[34] < 0 or signed[35] not in (0, 1):
         raise PlayFailure("pilot telemetry terrain-cache counters are outside their closed ranges")
@@ -939,6 +939,13 @@ def build_pilot_report(
         raise PlayFailure("ordinary pilot unexpectedly retained renderer timing instrumentation")
     aquatic_gear_equipped = bool(signed[31] & 8)
     interpolation_observed = bool(signed[31] & 16)
+    review_screenshot_observed = bool(signed[31] & 64)
+    if not review_screenshot_observed:
+        raise PlayFailure(
+            f"pilot {pilot!r} reached its final state frame, but the native "
+            "Raylib FileExists check did not observe the review screenshot; "
+            "inspect Raylib's SYSTEM screenshot log and executable-directory permissions"
+        )
     if pilot == "editor-shell":
         if not editor_visible or title_visible:
             raise PlayFailure("editor-shell pilot did not finish on the native editor screen")
@@ -1040,7 +1047,10 @@ def build_pilot_report(
                 "configuration": raylib_configuration,
             },
         },
-        "evidence": {"reviewScreenshot": review_screenshot.name},
+        "evidence": {
+            "reviewScreenshot": review_screenshot.name,
+            "nativeObservedReviewScreenshot": review_screenshot_observed,
+        },
     }
     if benchmark_renderer:
         report["benchmarkSample"] = {
@@ -2953,10 +2963,26 @@ def main(argv: list[str]) -> int:
                 )
                 if args.raylib_configuration == "memory-software":
                     # Raylib 6.0's software readback has a documented, focused
-                    # conversion above. Normalize both captures before visual
-                    # checks and before reading the bottom-edge telemetry strip.
-                    normalize_memory_software_capture(screenshot)
+                    # conversion above. Normalize the state capture first so
+                    # native capture failure can be diagnosed before the host
+                    # attempts to open the possibly absent review image.
                     normalize_memory_software_capture(state_screenshot)
+                reports.append(
+                    build_pilot_report(
+                        state_path=state_screenshot,
+                        review_screenshot=screenshot,
+                        pilot=selected_pilot,
+                        platform_name=platform_name,
+                        raylib_configuration=args.raylib_configuration,
+                        renderer=args.renderer,
+                        benchmark_renderer=args.benchmark_renderer,
+                        sanitizers=args.sanitizers,
+                        cc=args.cc,
+                        compiler_version=compiler_version,
+                    )
+                )
+                if args.raylib_configuration == "memory-software":
+                    normalize_memory_software_capture(screenshot)
                 if selected_pilot in ("launch-smoke", "secondary-locale"):
                     width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
                 elif selected_pilot == "resize-layout":
@@ -2978,20 +3004,6 @@ def main(argv: list[str]) -> int:
                         expected_entities=selected_pilot == "full-inventory-gift",
                         expected_open_sky=selected_pilot != "move-jump-edit",
                     )
-                reports.append(
-                    build_pilot_report(
-                        state_path=state_screenshot,
-                        review_screenshot=screenshot,
-                        pilot=selected_pilot,
-                        platform_name=platform_name,
-                        raylib_configuration=args.raylib_configuration,
-                        renderer=args.renderer,
-                        benchmark_renderer=args.benchmark_renderer,
-                        sanitizers=args.sanitizers,
-                        cc=args.cc,
-                        compiler_version=compiler_version,
-                    )
-                )
                 screenshot_hashes.append(hashlib.sha256(screenshot.read_bytes()).hexdigest())
 
             semantic_reports: list[dict[str, object]] = []

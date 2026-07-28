@@ -174,7 +174,7 @@ The aquatic-gear pilot starts in Adventure mode and follows deterministic
 movement intent toward the Tideweave placement authored by the level data. The
 ordinary fixed tick, collision, generic world-item range check, content-pack
 item profile, aquatic-profile adoption, item removal, renderer, and HUD paths
-perform the result. Protocol version 6 records the `aquaticGearEquipped` flag
+perform the result. Protocol version 7 records the `aquaticGearEquipped` flag
 and appends exposed-face, current-rebuild, cumulative-rebuild, and cache-valid
 counters. A gameplay frame must report a valid initial sixteen-chunk build, and
 the edit pilot must report later rebuild work while its final steady frame
@@ -207,8 +207,8 @@ raygui implementation, Raylib framebuffer, and native window. The screenshot
 check looks for four independently placed regions—the toolbar, canvas,
 sidebar/tool list, and status bar—without demanding byte-identical font
 rasterization. Faster localization and editor-domain tests own exact labels
-and command behavior. Protocol version 6 adds a distinct editor-screen bit so
-a title or gameplay frame cannot accidentally satisfy this proof.
+and command behavior. Protocol version 7 retains a distinct editor-screen bit
+so a title or gameplay frame cannot accidentally satisfy this proof.
 
 ## How semantic state leaves the native game
 
@@ -219,11 +219,13 @@ frame capture. Each colored mark represents one hexadecimal digit. Forty
 fixed-width words carry a magic number, protocol version, script identity and
 input hash, completed frames and fixed ticks, player motion, world selection
 and edit counts, render counters, inventory/actor state, presentation flags,
-and four benchmark-only timing counters. Version 6 records exposed terrain
+and four benchmark-only timing counters. Version 7 records exposed terrain
 faces, dirty-chunk rebuilds, cumulative rebuilds, whether the fixed cache
-capacity remained valid, and whether the editor rather than title or gameplay
-is visible. Ordinary pilots require every timing counter to be zero, proving
-that their executable does not accidentally retain benchmark instrumentation.
+capacity remained valid, whether the editor rather than title or gameplay is
+visible, and whether Raylib could observe the review screenshot immediately
+after writing it. Ordinary pilots require every timing counter to be zero,
+proving that their executable does not accidentally retain benchmark
+instrumentation.
 
 This strip is test instrumentation, not game content or a public save format.
 It is used because it exercises the same real Raylib framebuffer without adding
@@ -232,6 +234,15 @@ generated game. The host runner accepts only the exact opaque colors, word
 count, version, logical framebuffer scale, and closed field ranges. Unknown
 colors, changed magic, unsupported versions, impossible counts, and unknown
 flags fail before a report is written.
+
+`TakeScreenshot` itself returns no status. The generated Haxe pilot therefore
+calls Raylib's typed `FileExists` query immediately afterward and carries that
+one result into the final telemetry frame. The runner deletes both old captures
+before every launch and decodes the final state image before it opens the review
+image. A missing capture can consequently say “the native checkpoint ran but
+Raylib did not publish the file” instead of looking like a generic host-side
+path failure. This observation neither creates file ownership nor replaces the
+runner's independent PNG and scene validation.
 
 The edit and render counters that feed the strip are also inside the
 `caxecraft_pilot` compile-time boundary. An interactive/release build therefore

@@ -38,6 +38,8 @@ class Main {
 		Raylib.DrawCube(origin, c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0), accent);
 		Raylib.EndMode3D();
 		Raylib.DrawText("Caxe: direct C, nicer Haxe", 4, 4, 10, Colors.DARKGRAY);
+		if (Raylib.FileExists("hxc-raylib-semantic.capture"))
+			Raylib.DrawPixel(0, 0, accent);
 		Raylib.EndDrawing();
 		Raylib.CloseWindow();
 	}
