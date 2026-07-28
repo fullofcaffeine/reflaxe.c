@@ -333,9 +333,21 @@ class CBodyEnumRegistry {
 		this.resolveValue = resolveValue;
 	}
 
+	/** Count enum specializations prepared so far without recomputing recursion. */
+	@:noCompletion
+	public function preparedCount():Int
+		return countValues(byShape);
+
 	public function valueType(reference:Ref<EnumType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,
 			fail:(Position, String) -> Void, node:String):CBodyValueType {
 		return CBodyValueType.enumeration(require(reference, parameters, position, ownerModule, ownerSourcePath, fail, node));
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	public function require(reference:Ref<EnumType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,

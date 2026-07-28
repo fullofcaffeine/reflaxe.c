@@ -106,6 +106,11 @@ class CBodyIntMapRegistry {
 		this.resolveValue = resolveValue;
 	}
 
+	/** Count IntMap specializations prepared so far without sorting them. */
+	@:noCompletion
+	public function preparedCount():Int
+		return countValues(bySemanticKey);
+
 	/**
 		Return null for unrelated types and reject unsupported IntMap values.
 
@@ -136,6 +141,13 @@ class CBodyIntMapRegistry {
 		final prepared = new CPreparedBodyIntMap(semanticKey, digest, value, ownerModule, HaxeSourceSpan.fromPosition(position, sourcePath), position);
 		bySemanticKey.set(semanticKey, prepared);
 		return prepared;
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	/** Return the one specialization in deterministic semantic-key order. */

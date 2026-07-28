@@ -222,9 +222,21 @@ class CBodyClassRegistry {
 		this.resolveValue = resolveValue;
 	}
 
+	/** Count class representations prepared so far without finalizing layout order. */
+	@:noCompletion
+	public function preparedCount():Int
+		return countValues(byPath);
+
 	public function valueType(reference:Ref<ClassType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,
 			fail:(Position, String) -> Void, node:String):CBodyValueType {
 		return CBodyValueType.classReference(require(reference, parameters, position, ownerModule, ownerSourcePath, fail, node));
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	public function require(reference:Ref<ClassType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,

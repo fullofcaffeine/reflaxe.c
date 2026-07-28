@@ -159,7 +159,7 @@ contains HxcIR construction and validation, but its exclusive value does not
 count those children again.
 
 Each structured `HXC_PROFILE` JSON Lines record belongs to one request and
-uses the current closed schema 9. Span records carry monotonic wall time,
+uses the current closed schema 10. Span records carry monotonic wall time,
 process CPU time,
 allocation change when the Eval host exposes it, and resident-memory samples.
 The final request record reports total request time and peak observed resident
@@ -177,6 +177,23 @@ ranking uses the structured exclusive records. The Caxecraft consumer rejects
 unknown fields, duplicate IDs, missing parents, spans outside their parent,
 incorrect exclusive arithmetic, unsorted counters, and a mismatched request
 summary instead of trusting decoded JSON blindly.
+
+Schema 10 also gives every ordinary HxcIR function build a closed contribution
+record. A **contribution** means that lowering this function was the first
+operation in the request to add a shared program fact, such as a C import,
+collection representation, optional representation, late adapter, or symbol
+request. The same record counts the HxcIR blocks, instructions, cleanup
+regions, runtime requirements, and name requests owned by the function itself.
+The profiler compares shallow counts immediately before and after the build; it
+does not retain typed expressions or mutable registries.
+
+This distinction is a cache-safety boundary, not cache permission. Reusing a
+previous function body would also have to restore every function-owned output
+and every shared contribution, under an exact input and program-plan identity,
+then run the same validation. A zero contribution count only answers “this
+function did not enlarge these shared inventories in this request.” It does not
+prove that the function had unchanged input, that it observed the same earlier
+facts, or that its old HxcIR remains valid.
 
 Normal builds create no profile state and emit no timing records. Profile data
 is diagnostic output, not a generated compiler artifact, and reports live

@@ -1463,6 +1463,57 @@ runtime requirements, globals, late adapters, and additional symbol requests.
 Reusing an old body must wait until those program contributions have a complete
 validated freeze-and-replay boundary.
 
+### Function-build contribution inventory
+
+The first prerequisite for a safe function-body cache is knowing what a
+function changes outside its own returned HxcIR. Returning only an old
+`HxcIRFunction` can be wrong when the original build also registered a C import,
+introduced a collection or optional representation, created a late adapter, or
+added names that later phases expect to find.
+
+Profile schema 10 therefore wraps every ordinary function build with two
+shallow inventories. It first counts the shared facts, builds the function, and
+then counts the same closed set again. The difference is attributed to that
+function. The record separately counts function-owned HxcIR, runtime
+requirements, and name requests. These are observations only: the profiler
+does not retain compiler objects and does not authorize reuse.
+
+One warm full-playable diagnostic produced the following inventory:
+
+| Function-build observation | Count |
+| --- | ---: |
+| Ordinary function builds | 509 |
+| Builds adding no representation/import/adapter semantics | 490 |
+| Builds adding representation/import/adapter semantics | 19 |
+| Builds adding only shared symbol requests | 452 |
+| Shared symbol requests added during builds | 17,446 |
+| Built HxcIR blocks / instructions | 5,734 / 35,050 |
+| Built cleanup regions / runtime requirements | 139 / 3,645 |
+
+The 19 semantic contributors introduced 50 imported functions, seven reached
+import owners, four imported types, nine optional representations, one
+`IntMap` representation, and one `StringMap` representation. No build added an
+aggregate, enum, class, interface, Array, Bytes, late enum-constructor adapter,
+function literal, or static callback adapter in this workload. This is useful
+evidence that representation discovery is already mostly settled before body
+construction, but it also identifies the exact remaining exceptions.
+
+The result rejects a direct “reuse the old HxcIR function” cache. Most builds
+still register names, and 19 builds enlarge other shared plans. A safe follow-up
+must either move those discoveries into a complete pre-build plan or retain and
+replay a closed, immutable contribution package alongside the function. It
+must also compare exact typed input and settled program-plan identity and run
+normal validation. Caching `TypedExpr`, a mutable registry, or an unexplained
+subset of these effects remains out of scope.
+
+The observed request was contended, so its 13.862s Haxe-to-generated-C wall
+time is diagnostic rather than a baseline. Within that request, the 509
+function-build spans contained 4.315s of typed-body lowering and 0.230s of
+exclusive work not already owned by a nested body span. The profiler reported
+byte-identical normal artifacts against its warm prime. Stable acceptance
+evidence is the closed 509-function accounting, the zero/nonzero contribution
+split, and the unchanged artifact bytes--not the wall-time number.
+
 ### Runtime feature-closure reuse
 
 Runtime planning answers a small but important question: after direct C and

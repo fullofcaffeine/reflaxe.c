@@ -477,6 +477,7 @@ class CStaticFunctionProjectEmitter {
 				kind: "c-printer-v1",
 				controlFlow: null,
 				typedBody: null,
+				functionBuild: null,
 				printer: printed.work
 			});
 			CPhaseTiming.stopDetail(timer);
@@ -496,6 +497,7 @@ class CStaticFunctionProjectEmitter {
 				kind: "c-printer-v1",
 				controlFlow: null,
 				typedBody: null,
+				functionBuild: null,
 				printer: printed.work
 			});
 			CPhaseTiming.stopDetail(timer);

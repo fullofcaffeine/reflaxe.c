@@ -14,6 +14,7 @@ import reflaxe.c.CompilationContext;
 import reflaxe.c.CPhaseTiming;
 import reflaxe.c.CPhaseTiming.CProfileCounterId;
 import reflaxe.c.CPhaseTiming.CDetailTimingId;
+import reflaxe.c.CPhaseTiming.CProfileFunctionBuildWork;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
@@ -35,6 +36,7 @@ import reflaxe.c.interop.CImportRegistry.CPreparedImportType;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry;
+import reflaxe.c.lowering.CBodyAggregate.CBodyProgramContributionInventory;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueKind;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
 import reflaxe.c.lowering.CBodyAggregate.CBodyStackClosureCapture;
@@ -459,8 +461,25 @@ class CBodyLowering {
 		CPhaseTiming.stopDetail(representationTimer);
 		final functionConstructionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionConstruction);
 		final built:Array<BuiltBodyFunction> = [];
-		for (builder in builders)
-			built.push(builder.build());
+		for (builder in builders) {
+			if (!CPhaseTiming.collectsWork()) {
+				built.push(builder.build());
+				continue;
+			}
+			final before = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
+			final functionTimer = CPhaseTiming.startDetail(CDTHxcIRFunctionBuild, builder.profileId());
+			final result = builder.build();
+			final after = functionContributionSnapshot(aggregateRegistry, enumConstructorAdapters, functionLiterals);
+			CPhaseTiming.setDetailWork(functionTimer, {
+				kind: "hxcir-function-build-contributions-v1",
+				controlFlow: null,
+				typedBody: null,
+				functionBuild: functionBuildWork(result, before, after),
+				printer: null
+			});
+			CPhaseTiming.stopDetail(functionTimer);
+			built.push(result);
+		}
 		for (adapter in functionLiterals.builtStaticAdapters())
 			built.push(adapter);
 		for (adapter in enumConstructorAdapters.builtFunctions())
@@ -650,6 +669,77 @@ class CBodyLowering {
 			loweredStringMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
 			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram,
 			completeHxcIRDump);
+	}
+
+	function functionContributionSnapshot(aggregateRegistry:CBodyAggregateRegistry, enumConstructorAdapters:EnumConstructorAdapterRegistry,
+			functionLiterals:FunctionLiteralRegistry):CBodyFunctionContributionSnapshot {
+		return {
+			program: aggregateRegistry.contributionInventory(),
+			enumConstructorAdapters: enumConstructorAdapters.preparedCount(),
+			functionLiterals: functionLiterals.preparedFunctionCount(),
+			staticFunctionAdapters: functionLiterals.preparedStaticAdapterCount(),
+			symbolRequests: context.symbols.registeredRequestCount()
+		};
+	}
+
+	static function functionBuildWork(result:BuiltBodyFunction, before:CBodyFunctionContributionSnapshot,
+			after:CBodyFunctionContributionSnapshot):CProfileFunctionBuildWork {
+		return {
+			builtLocals: result.ir.locals.length,
+			builtBlocks: result.ir.blocks.length,
+			builtInstructions: functionInstructionCount(result.ir),
+			builtCleanupRegions: result.ir.cleanupRegions.length,
+			builtRuntimeRequirements: result.runtimeRequirements.length,
+			builtLocalNameRequests: countValues(result.localRequests),
+			builtSpanLengthNameRequests: countValues(result.spanLengthRequests),
+			builtTemporaryNameRequests: countValues(result.temporaryRequests),
+			builtTailArgumentNameRequests: tailArgumentRequestCount(result.tailArgumentRequests),
+			builtLabelNameRequests: countValues(result.labelRequests),
+			addedAggregates: contributionDelta("aggregates", before.program.aggregates, after.program.aggregates),
+			addedEnums: contributionDelta("enums", before.program.enums, after.program.enums),
+			addedClasses: contributionDelta("classes", before.program.classes, after.program.classes),
+			addedInterfaces: contributionDelta("interfaces", before.program.interfaces, after.program.interfaces),
+			addedArrays: contributionDelta("arrays", before.program.arrays, after.program.arrays),
+			addedIntMaps: contributionDelta("IntMap representations", before.program.intMaps, after.program.intMaps),
+			addedStringMaps: contributionDelta("StringMap representations", before.program.stringMaps, after.program.stringMaps),
+			addedBytes: contributionDelta("Bytes representations", before.program.bytes, after.program.bytes),
+			addedOptionals: contributionDelta("optional representations", before.program.optionals, after.program.optionals),
+			addedImportTypes: contributionDelta("import types", before.program.importTypes, after.program.importTypes),
+			addedImportFunctions: contributionDelta("import functions", before.program.importFunctions, after.program.importFunctions),
+			addedImportConstants: contributionDelta("import constants", before.program.importConstants, after.program.importConstants),
+			addedImportOwners: contributionDelta("import owners", before.program.importOwners, after.program.importOwners),
+			addedEnumConstructorAdapters: contributionDelta("enum constructor adapters", before.enumConstructorAdapters, after.enumConstructorAdapters),
+			addedFunctionLiterals: contributionDelta("function literals", before.functionLiterals, after.functionLiterals),
+			addedStaticFunctionAdapters: contributionDelta("static function adapters", before.staticFunctionAdapters, after.staticFunctionAdapters),
+			addedSymbolRequests: contributionDelta("symbol requests", before.symbolRequests, after.symbolRequests)
+		};
+	}
+
+	static function functionInstructionCount(fn:HxcIRFunction):Int {
+		var count = 0;
+		for (block in fn.blocks)
+			count += block.instructions.length;
+		return count;
+	}
+
+	static function tailArgumentRequestCount(requests:Map<String, Array<CSymbolRequest>>):Int {
+		var count = 0;
+		for (values in requests)
+			count += values.length;
+		return count;
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
+	}
+
+	static function contributionDelta(name:String, before:Int, after:Int):Int {
+		if (after < before)
+			throw new CBodyEmissionError('HxcIR function build unexpectedly removed $name from its shared program inventory');
+		return after - before;
 	}
 
 	/**
@@ -1176,6 +1266,21 @@ private typedef BuiltBodyFunction = {
 	final runtimeRequirements:Array<CBodyRuntimeRequirement>;
 }
 
+/**
+	A before-or-after count of shared facts visible to one function build.
+
+	Only the opt-in profiler creates this shallow value. Comparing two snapshots
+	reveals dependencies that a future cache must replay without retaining any
+	typed Haxe expression, HxcIR node, or mutable registry.
+**/
+private typedef CBodyFunctionContributionSnapshot = {
+	final program:CBodyProgramContributionInventory;
+	final enumConstructorAdapters:Int;
+	final functionLiterals:Int;
+	final staticFunctionAdapters:Int;
+	final symbolRequests:Int;
+}
+
 private typedef BodyConstructedObject = {
 	final backingLocalId:String;
 	final partialActionId:String;
@@ -1592,6 +1697,10 @@ private class EnumConstructorAdapterRegistry {
 		this.aggregateRegistry = aggregateRegistry;
 	}
 
+	/** Count constructor adapters discovered so far without sorting them. */
+	public function preparedCount():Int
+		return countValues(byId);
+
 	/** Discover constructor values with the callback context proven by the source prepass. */
 	public function discover(owner:PreparedBodyFunction, functionLiterals:FunctionLiteralRegistry):Void {
 		function visit(expression:TypedExpr):Void {
@@ -1740,6 +1849,13 @@ private class EnumConstructorAdapterRegistry {
 		return result;
 	}
 
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
+	}
+
 	public function builtFunctions():Array<BuiltBodyFunction>
 		return preparedFunctions().map(build);
 
@@ -1853,6 +1969,14 @@ private class FunctionLiteralRegistry {
 		this.context = context;
 		this.aggregateRegistry = aggregateRegistry;
 	}
+
+	/** Count function literals discovered by the prepass. */
+	public function preparedFunctionCount():Int
+		return countValues(byKey);
+
+	/** Count context-discarding static adapters discovered by the prepass. */
+	public function preparedStaticAdapterCount():Int
+		return countValues(staticAdaptersById);
 
 	/**
 		Discover literals with the direct call's already-proven parameter mapping.
@@ -2014,6 +2138,13 @@ private class FunctionLiteralRegistry {
 		final result = [for (value in byKey) value];
 		result.sort((left, right) -> CBodyLowering.compareUtf8(left.irId, right.irId));
 		return result;
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	/** Return the context-discarding adapters required by static callback values. */
@@ -3204,6 +3335,15 @@ private class FunctionBuilder {
 	}
 
 	/**
+		Return the stable semantic function ID used as profiler context.
+
+		The outer lowering coordinator reads this diagnostic label without
+		exposing the builder's mutable implementation state.
+	**/
+	public function profileId():String
+		return prepared.irId;
+
+	/**
 		Recover typed capture places from the adapter's opaque context pointer.
 
 		The caller always supplies a non-null address for capturing literals. HxcIR
@@ -3389,6 +3529,7 @@ private class FunctionBuilder {
 				producedBlockCount: blocks.length - blockCountBefore,
 				producedInstructionCount: instructionOrdinal - instructionCountBefore
 			},
+			functionBuild: null,
 			printer: null
 		});
 		CPhaseTiming.stopDetail(typedBodyLoweringTimer);

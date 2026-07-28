@@ -213,9 +213,21 @@ class CSymbolRegistry {
 
 	final requestsByKey:Map<String, CSymbolRequest> = [];
 	final identifiersByKey:Map<String, CIdentifier> = [];
+	var registeredRequestTotal = 0;
 	var finalizedSnapshot:Null<CSymbolTableSnapshot> = null;
 
 	public function new() {}
+
+	/**
+		Count the semantic name requests registered in this compilation.
+
+		The contribution profiler reads this before and after one HxcIR function
+		build. It exposes only a request-local count and does not finalize names or
+		reveal mutable registry storage.
+	**/
+	@:noCompletion
+	public function registeredRequestCount():Int
+		return registeredRequestTotal;
 
 	/**
 		Start one compiler request with an optional prior successful name table.
@@ -299,6 +311,7 @@ class CSymbolRegistry {
 			return;
 		}
 		requestsByKey.set(key, request);
+		registeredRequestTotal++;
 	}
 
 	public function registerAll(requests:Array<CSymbolRequest>):Void {

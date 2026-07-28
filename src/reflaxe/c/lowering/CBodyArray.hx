@@ -266,6 +266,11 @@ class CBodyArrayRegistry {
 		this.resolveElement = resolveElement;
 	}
 
+	/** Count Array specializations prepared so far without sorting the final plan. */
+	@:noCompletion
+	public function preparedCount():Int
+		return countValues(bySemanticKey);
+
 	/** Return null when `type` is not the standard Haxe `Array<T>`. */
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):Null<CPreparedBodyArray> {
@@ -275,6 +280,13 @@ class CBodyArrayRegistry {
 			case _:
 				null;
 		};
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	function require(parameters:Array<Type>, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,

@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 9
+PROFILE_SCHEMA_VERSION = 10
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -68,6 +68,7 @@ DETAIL_PHASES = (
     "HxcIR function preparation",
     "HxcIR representation planning",
     "HxcIR function construction",
+    "HxcIR function build",
     "HxcIR typed-body lowering",
     "HxcIR function finalization",
     "HxcIR value coalescing",
@@ -374,6 +375,68 @@ class CompilerProfileTypedBodyWork:
 
 
 @dataclass(frozen=True)
+class CompilerProfileFunctionBuildWork:
+    built_locals: int
+    built_blocks: int
+    built_instructions: int
+    built_cleanup_regions: int
+    built_runtime_requirements: int
+    built_local_name_requests: int
+    built_span_length_name_requests: int
+    built_temporary_name_requests: int
+    built_tail_argument_name_requests: int
+    built_label_name_requests: int
+    added_aggregates: int
+    added_enums: int
+    added_classes: int
+    added_interfaces: int
+    added_arrays: int
+    added_int_maps: int
+    added_string_maps: int
+    added_bytes: int
+    added_optionals: int
+    added_import_types: int
+    added_import_functions: int
+    added_import_constants: int
+    added_import_owners: int
+    added_enum_constructor_adapters: int
+    added_function_literals: int
+    added_static_function_adapters: int
+    added_symbol_requests: int
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "builtLocals": self.built_locals,
+            "builtBlocks": self.built_blocks,
+            "builtInstructions": self.built_instructions,
+            "builtCleanupRegions": self.built_cleanup_regions,
+            "builtRuntimeRequirements": self.built_runtime_requirements,
+            "builtLocalNameRequests": self.built_local_name_requests,
+            "builtSpanLengthNameRequests": self.built_span_length_name_requests,
+            "builtTemporaryNameRequests": self.built_temporary_name_requests,
+            "builtTailArgumentNameRequests": self.built_tail_argument_name_requests,
+            "builtLabelNameRequests": self.built_label_name_requests,
+            "addedAggregates": self.added_aggregates,
+            "addedEnums": self.added_enums,
+            "addedClasses": self.added_classes,
+            "addedInterfaces": self.added_interfaces,
+            "addedArrays": self.added_arrays,
+            "addedIntMaps": self.added_int_maps,
+            "addedStringMaps": self.added_string_maps,
+            "addedBytes": self.added_bytes,
+            "addedOptionals": self.added_optionals,
+            "addedImportTypes": self.added_import_types,
+            "addedImportFunctions": self.added_import_functions,
+            "addedImportConstants": self.added_import_constants,
+            "addedImportOwners": self.added_import_owners,
+            "addedEnumConstructorAdapters": self.added_enum_constructor_adapters,
+            "addedFunctionLiterals": self.added_function_literals,
+            "addedStaticFunctionAdapters": self.added_static_function_adapters,
+            "addedSymbolRequests": self.added_symbol_requests,
+        }
+
+
+@dataclass(frozen=True)
 class CompilerProfilePrinterWork:
     declaration_count: int
     statement_count: int
@@ -410,6 +473,7 @@ class CompilerProfilePrinterWork:
 CompilerProfileSpanWork = (
     CompilerProfileControlFlowWork
     | CompilerProfileTypedBodyWork
+    | CompilerProfileFunctionBuildWork
     | CompilerProfilePrinterWork
 )
 
@@ -446,7 +510,13 @@ class CompilerProfileSpan:
                         else (
                             "typed-body-lowering-v1"
                             if isinstance(self.work, CompilerProfileTypedBodyWork)
-                            else "c-printer-v1"
+                            else (
+                                "hxcir-function-build-contributions-v1"
+                                if isinstance(
+                                    self.work, CompilerProfileFunctionBuildWork
+                                )
+                                else "c-printer-v1"
+                            )
                         )
                     ),
                     "controlFlow": (
@@ -457,6 +527,11 @@ class CompilerProfileSpan:
                     "typedBody": (
                         self.work.to_json()
                         if isinstance(self.work, CompilerProfileTypedBodyWork)
+                        else None
+                    ),
+                    "functionBuild": (
+                        self.work.to_json()
+                        if isinstance(self.work, CompilerProfileFunctionBuildWork)
                         else None
                     ),
                     "printer": (
@@ -547,7 +622,9 @@ SPAN_FIELDS = frozenset(
         "residentBytesAtEnd",
     }
 )
-SPAN_WORK_FIELDS = frozenset({"kind", "controlFlow", "typedBody", "printer"})
+SPAN_WORK_FIELDS = frozenset(
+    {"kind", "controlFlow", "typedBody", "functionBuild", "printer"}
+)
 CONTROL_FLOW_WORK_FIELDS = frozenset(
     {
         "blockCount",
@@ -596,6 +673,37 @@ TYPED_BODY_WORK_FIELDS = frozenset(
         "sourceSpanCpuMicroseconds",
         "producedBlockCount",
         "producedInstructionCount",
+    }
+)
+FUNCTION_BUILD_WORK_FIELDS = frozenset(
+    {
+        "builtLocals",
+        "builtBlocks",
+        "builtInstructions",
+        "builtCleanupRegions",
+        "builtRuntimeRequirements",
+        "builtLocalNameRequests",
+        "builtSpanLengthNameRequests",
+        "builtTemporaryNameRequests",
+        "builtTailArgumentNameRequests",
+        "builtLabelNameRequests",
+        "addedAggregates",
+        "addedEnums",
+        "addedClasses",
+        "addedInterfaces",
+        "addedArrays",
+        "addedIntMaps",
+        "addedStringMaps",
+        "addedBytes",
+        "addedOptionals",
+        "addedImportTypes",
+        "addedImportFunctions",
+        "addedImportConstants",
+        "addedImportOwners",
+        "addedEnumConstructorAdapters",
+        "addedFunctionLiterals",
+        "addedStaticFunctionAdapters",
+        "addedSymbolRequests",
     }
 )
 PRINTER_WORK_FIELDS = frozenset(
@@ -849,11 +957,13 @@ def parse_profile_records(
                 kind = profile_string(work_value, "kind")
                 control_flow_value = work_value.get("controlFlow")
                 typed_body_value = work_value.get("typedBody")
+                function_build_value = work_value.get("functionBuild")
                 printer_value = work_value.get("printer")
                 if kind == "normal-join-search-v1":
                     if (
                         not isinstance(control_flow_value, dict)
                         or typed_body_value is not None
+                        or function_build_value is not None
                         or printer_value is not None
                     ):
                         raise CompilerProfileFailure(
@@ -948,6 +1058,7 @@ def parse_profile_records(
                     if (
                         control_flow_value is not None
                         or not isinstance(typed_body_value, dict)
+                        or function_build_value is not None
                         or printer_value is not None
                     ):
                         raise CompilerProfileFailure(
@@ -1066,10 +1177,141 @@ def parse_profile_records(
                             "typed-body work belongs only to a function-scoped "
                             "HxcIR typed-body detail span"
                         )
+                elif kind == "hxcir-function-build-contributions-v1":
+                    if (
+                        control_flow_value is not None
+                        or typed_body_value is not None
+                        or not isinstance(function_build_value, dict)
+                        or printer_value is not None
+                    ):
+                        raise CompilerProfileFailure(
+                            "HxcIR function-build span work requires only a "
+                            "functionBuild payload"
+                        )
+                    require_profile_fields_without_schema(
+                        function_build_value,
+                        FUNCTION_BUILD_WORK_FIELDS,
+                        "HxcIR function-build span work",
+                    )
+                    work = CompilerProfileFunctionBuildWork(
+                        built_locals=profile_integer(
+                            function_build_value, "builtLocals", minimum=0
+                        ),
+                        built_blocks=profile_integer(
+                            function_build_value, "builtBlocks", minimum=1
+                        ),
+                        built_instructions=profile_integer(
+                            function_build_value, "builtInstructions", minimum=0
+                        ),
+                        built_cleanup_regions=profile_integer(
+                            function_build_value,
+                            "builtCleanupRegions",
+                            minimum=0,
+                        ),
+                        built_runtime_requirements=profile_integer(
+                            function_build_value,
+                            "builtRuntimeRequirements",
+                            minimum=0,
+                        ),
+                        built_local_name_requests=profile_integer(
+                            function_build_value,
+                            "builtLocalNameRequests",
+                            minimum=0,
+                        ),
+                        built_span_length_name_requests=profile_integer(
+                            function_build_value,
+                            "builtSpanLengthNameRequests",
+                            minimum=0,
+                        ),
+                        built_temporary_name_requests=profile_integer(
+                            function_build_value,
+                            "builtTemporaryNameRequests",
+                            minimum=0,
+                        ),
+                        built_tail_argument_name_requests=profile_integer(
+                            function_build_value,
+                            "builtTailArgumentNameRequests",
+                            minimum=0,
+                        ),
+                        built_label_name_requests=profile_integer(
+                            function_build_value,
+                            "builtLabelNameRequests",
+                            minimum=0,
+                        ),
+                        added_aggregates=profile_integer(
+                            function_build_value, "addedAggregates", minimum=0
+                        ),
+                        added_enums=profile_integer(
+                            function_build_value, "addedEnums", minimum=0
+                        ),
+                        added_classes=profile_integer(
+                            function_build_value, "addedClasses", minimum=0
+                        ),
+                        added_interfaces=profile_integer(
+                            function_build_value, "addedInterfaces", minimum=0
+                        ),
+                        added_arrays=profile_integer(
+                            function_build_value, "addedArrays", minimum=0
+                        ),
+                        added_int_maps=profile_integer(
+                            function_build_value, "addedIntMaps", minimum=0
+                        ),
+                        added_string_maps=profile_integer(
+                            function_build_value, "addedStringMaps", minimum=0
+                        ),
+                        added_bytes=profile_integer(
+                            function_build_value, "addedBytes", minimum=0
+                        ),
+                        added_optionals=profile_integer(
+                            function_build_value, "addedOptionals", minimum=0
+                        ),
+                        added_import_types=profile_integer(
+                            function_build_value, "addedImportTypes", minimum=0
+                        ),
+                        added_import_functions=profile_integer(
+                            function_build_value, "addedImportFunctions", minimum=0
+                        ),
+                        added_import_constants=profile_integer(
+                            function_build_value, "addedImportConstants", minimum=0
+                        ),
+                        added_import_owners=profile_integer(
+                            function_build_value, "addedImportOwners", minimum=0
+                        ),
+                        added_enum_constructor_adapters=profile_integer(
+                            function_build_value,
+                            "addedEnumConstructorAdapters",
+                            minimum=0,
+                        ),
+                        added_function_literals=profile_integer(
+                            function_build_value,
+                            "addedFunctionLiterals",
+                            minimum=0,
+                        ),
+                        added_static_function_adapters=profile_integer(
+                            function_build_value,
+                            "addedStaticFunctionAdapters",
+                            minimum=0,
+                        ),
+                        added_symbol_requests=profile_integer(
+                            function_build_value,
+                            "addedSymbolRequests",
+                            minimum=0,
+                        ),
+                    )
+                    if (
+                        category != "detail"
+                        or name != "HxcIR function build"
+                        or subject_value is None
+                    ):
+                        raise CompilerProfileFailure(
+                            "HxcIR function-build work belongs only to a "
+                            "function-scoped HxcIR function build detail span"
+                        )
                 elif kind == "c-printer-v1":
                     if (
                         control_flow_value is not None
                         or typed_body_value is not None
+                        or function_build_value is not None
                         or not isinstance(printer_value, dict)
                     ):
                         raise CompilerProfileFailure(
@@ -1370,6 +1612,81 @@ def exclusive_accounting(
     return wall, cpu
 
 
+def function_build_contribution_summary(
+    profile: StructuredCompilerProfile,
+) -> dict[str, object]:
+    """Summarize which function builds first discovered shared program facts.
+
+    Function-owned output counts explain the amount of HxcIR produced. Positive
+    ``added*`` values are the more important cache boundary: they identify facts
+    that cannot be recovered by returning only a previously built function.
+    """
+
+    fields = tuple(sorted(FUNCTION_BUILD_WORK_FIELDS))
+    shared_fields = tuple(field for field in fields if field.startswith("added"))
+    totals = {field: 0 for field in fields}
+    contributors: list[dict[str, object]] = []
+    function_count = 0
+    all_zero_shared_contribution_functions = 0
+    all_shared_contribution_functions = 0
+    zero_semantic_shared_contribution_functions = 0
+    symbol_request_only_functions = 0
+    for span in profile.spans:
+        if not isinstance(span.work, CompilerProfileFunctionBuildWork):
+            continue
+        if span.subject is None:
+            raise CompilerProfileFailure(
+                "HxcIR function-build contribution lost its function subject"
+            )
+        function_count += 1
+        values = span.work.to_json()
+        for field in fields:
+            value = values[field]
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise CompilerProfileFailure(
+                    f"HxcIR function-build contribution {field!r} is malformed"
+                )
+            totals[field] += value
+        added = {
+            field: values[field]
+            for field in shared_fields
+            if values[field] != 0
+        }
+        if added:
+            all_shared_contribution_functions += 1
+        else:
+            all_zero_shared_contribution_functions += 1
+        semantic_added = {
+            field: value
+            for field, value in added.items()
+            if field != "addedSymbolRequests"
+        }
+        if semantic_added:
+            contributors.append({"functionId": span.subject, "added": added})
+        else:
+            zero_semantic_shared_contribution_functions += 1
+            if "addedSymbolRequests" in added:
+                symbol_request_only_functions += 1
+    if function_count == 0:
+        raise CompilerProfileFailure(
+            "successful compiler profile contains no HxcIR function-build work"
+        )
+    return {
+        "functionCount": function_count,
+        "allZeroSharedContributionFunctions": (
+            all_zero_shared_contribution_functions
+        ),
+        "allSharedContributionFunctions": all_shared_contribution_functions,
+        "zeroSemanticSharedContributionFunctions": (
+            zero_semantic_shared_contribution_functions
+        ),
+        "semanticSharedContributionFunctions": len(contributors),
+        "symbolRequestOnlyFunctions": symbol_request_only_functions,
+        "totals": totals,
+        "contributors": contributors,
+    }
+
+
 def elapsed_microseconds(started_ns: int) -> int:
     return max(0, (time.monotonic_ns() - started_ns + 500) // 1_000)
 
@@ -1655,6 +1972,9 @@ def run_observed_sample(
             ),
         },
         "profile": structured.to_json(),
+        "functionBuildContributions": function_build_contribution_summary(
+            structured
+        ),
         "phases": [
             {"name": phase, "durationMs": round(phases[phase] / 1000.0, 3)}
             for phase in PHASES

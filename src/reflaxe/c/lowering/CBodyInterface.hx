@@ -71,6 +71,11 @@ class CBodyInterfaceRegistry {
 				sourcePathsByModule.set(module.path, module.sourcePath);
 	}
 
+	/** Count interface representations prepared so far without sorting them. */
+	@:noCompletion
+	public function preparedCount():Int
+		return countValues(byPath);
+
 	public function require(reference:Ref<ClassType>, parameters:Array<Type>, position:Position, ownerSourcePath:String, fail:(Position, String) -> Void,
 			node:String):CPreparedBodyInterface {
 		final definition = reference.get();
@@ -104,6 +109,13 @@ class CBodyInterfaceRegistry {
 		final prepared = new CPreparedBodyInterface(semanticKey, digest, path, definition.module, HaxeSourceSpan.fromPosition(definition.pos, sourcePath));
 		byPath.set(path, prepared);
 		return prepared;
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	public function canonicalInterfaces():Array<CPreparedBodyInterface> {

@@ -27,6 +27,20 @@ import reflaxe.c.naming.CSymbolRequest;
 
 typedef CImportValueTypeResolver = (Type, Position, String, String, (Position, String) -> Void, String) -> CBodyValueType;
 
+/**
+	Bounded counts of imported facts discovered during semantic lowering.
+
+	The values are profiler evidence, not an import plan or cache key. They let
+	the compiler attribute a newly reached C ABI fact to the function build that
+	first required it.
+**/
+typedef CImportContributionInventory = {
+	final types:Int;
+	final functions:Int;
+	final constants:Int;
+	final reachedOwners:Int;
+}
+
 /** The exact C spelling category of one header-owned nominal type. */
 enum CImportTypeKind {
 	CITStruct;
@@ -298,6 +312,23 @@ class CImportRegistry {
 	final preparedConstants:Map<String, CPreparedImportConstant> = [];
 	final reachedOwners:Map<String, Bool> = [];
 
+	/**
+		Count the imported facts discovered so far in this compiler request.
+
+		The profiler compares two snapshots around one function build. These
+		counts expose whether that function was the first user of a header-owned
+		type, call, constant, or build-fact owner without serializing compiler
+		objects or forcing the final import plan to sort early.
+	**/
+	@:noCompletion
+	public function contributionInventory():CImportContributionInventory
+		return {
+			types: countValues(preparedTypes),
+			functions: countValues(preparedFunctions),
+			constants: countValues(preparedConstants),
+			reachedOwners: countValues(reachedOwners)
+		};
+
 	public function new(context:CompilationContext, program:TypedProgramInput, snapshot:TypedCContractSnapshot, resolveValueType:CImportValueTypeResolver) {
 		this.context = context;
 		this.snapshot = snapshot;
@@ -322,6 +353,13 @@ class CImportRegistry {
 				facts.push(fact);
 			}
 		}
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	/** Recognize a nominal import or the literal-only CString boundary. */

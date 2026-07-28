@@ -57,6 +57,11 @@ class CBodyBytesRegistry {
 
 	public function new() {}
 
+	/** Report whether the one bounded Bytes representation has been prepared. */
+	@:noCompletion
+	public function preparedCount():Int
+		return prepared == null ? 0 : 1;
+
 	/** Return null for every type except the exact standard `haxe.io.Bytes`. */
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String):Null<CPreparedBodyBytes> {
 		if (!CBodyBytesRecognition.isCoreBytesType(type))

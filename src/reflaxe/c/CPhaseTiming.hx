@@ -51,6 +51,7 @@ enum abstract CDetailTimingId(String) to String {
 	var CDTHxcIRFunctionPreparation = "HxcIR function preparation";
 	var CDTHxcIRRepresentationPlanning = "HxcIR representation planning";
 	var CDTHxcIRFunctionConstruction = "HxcIR function construction";
+	var CDTHxcIRFunctionBuild = "HxcIR function build";
 	var CDTHxcIRTypedBodyLowering = "HxcIR typed-body lowering";
 	var CDTHxcIRFunctionFinalization = "HxcIR function finalization";
 	var CDTHxcIRValueCoalescing = "HxcIR value coalescing";
@@ -192,7 +193,48 @@ typedef CProfileSpanWork = {
 	final kind:String;
 	final controlFlow:Null<CProfileControlFlowWork>;
 	final typedBody:Null<CProfileTypedBodyWork>;
+	final functionBuild:Null<CProfileFunctionBuildWork>;
 	final printer:Null<CProfilePrinterWork>;
+}
+
+/**
+	Closed output and shared-program deltas for one HxcIR function build.
+
+	The `built*` fields describe the function-owned result. Every `added*` field
+	compares a shared request-local inventory immediately before and after that
+	function. A positive shared delta identifies semantic work that a future
+	function cache would have to reproduce; a zero delta does not by itself
+	authorize reuse because input identity and validation remain separate proofs.
+**/
+@:noCompletion
+typedef CProfileFunctionBuildWork = {
+	final builtLocals:Int;
+	final builtBlocks:Int;
+	final builtInstructions:Int;
+	final builtCleanupRegions:Int;
+	final builtRuntimeRequirements:Int;
+	final builtLocalNameRequests:Int;
+	final builtSpanLengthNameRequests:Int;
+	final builtTemporaryNameRequests:Int;
+	final builtTailArgumentNameRequests:Int;
+	final builtLabelNameRequests:Int;
+	final addedAggregates:Int;
+	final addedEnums:Int;
+	final addedClasses:Int;
+	final addedInterfaces:Int;
+	final addedArrays:Int;
+	final addedIntMaps:Int;
+	final addedStringMaps:Int;
+	final addedBytes:Int;
+	final addedOptionals:Int;
+	final addedImportTypes:Int;
+	final addedImportFunctions:Int;
+	final addedImportConstants:Int;
+	final addedImportOwners:Int;
+	final addedEnumConstructorAdapters:Int;
+	final addedFunctionLiterals:Int;
+	final addedStaticFunctionAdapters:Int;
+	final addedSymbolRequests:Int;
 }
 
 /**
@@ -432,7 +474,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 9;
+	public static inline final PROFILE_SCHEMA_VERSION = 10;
 
 	static var active:Null<CProfileRequestState> = null;
 

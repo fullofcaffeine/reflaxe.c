@@ -519,6 +519,7 @@ class CBodyEmitter {
 				prefixDisjointBlockVisits: work.prefixDisjointBlockVisits
 			},
 			typedBody: null,
+			functionBuild: null,
 			printer: null
 		});
 		CPhaseTiming.stopDetail(controlFlowTimer);

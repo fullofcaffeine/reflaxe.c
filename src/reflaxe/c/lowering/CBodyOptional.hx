@@ -105,6 +105,11 @@ class CBodyOptionalRegistry {
 		this.context = context;
 	}
 
+	/** Count optional representations prepared so far without finalizing names. */
+	@:noCompletion
+	public function preparedCount():Int
+		return countValues(bySemanticKey);
+
 	/**
 		Prepare the optional wrapper for one already-admitted direct value.
 
@@ -146,6 +151,13 @@ class CBodyOptionalRegistry {
 			registerLifecycle(prepared);
 		bySemanticKey.set(semanticKey, prepared);
 		return prepared;
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	public function canonicalOptionals():Array<CPreparedBodyOptional> {

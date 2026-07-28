@@ -211,6 +211,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "prefixDisjointBlockVisits": 8,
                     },
                     "typedBody": None,
+                    "functionBuild": None,
                     "printer": None,
                 },
             }
@@ -266,6 +267,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                         "producedBlockCount": 2,
                         "producedInstructionCount": 9,
                     },
+                    "functionBuild": None,
                     "printer": None,
                 },
             }
@@ -307,6 +309,125 @@ class CaxecraftTimingTests(unittest.TestCase):
                 )
             )
 
+        function_build_child = dict(child)
+        function_build_child.update(
+            {
+                "category": "detail",
+                "name": "HxcIR function build",
+                "subject": "method.demo.Main.run",
+                "work": {
+                    "kind": "hxcir-function-build-contributions-v1",
+                    "controlFlow": None,
+                    "typedBody": None,
+                    "functionBuild": {
+                        "builtLocals": 2,
+                        "builtBlocks": 3,
+                        "builtInstructions": 8,
+                        "builtCleanupRegions": 1,
+                        "builtRuntimeRequirements": 2,
+                        "builtLocalNameRequests": 2,
+                        "builtSpanLengthNameRequests": 0,
+                        "builtTemporaryNameRequests": 3,
+                        "builtTailArgumentNameRequests": 1,
+                        "builtLabelNameRequests": 2,
+                        "addedAggregates": 1,
+                        "addedEnums": 0,
+                        "addedClasses": 0,
+                        "addedInterfaces": 0,
+                        "addedArrays": 1,
+                        "addedIntMaps": 0,
+                        "addedStringMaps": 0,
+                        "addedBytes": 0,
+                        "addedOptionals": 0,
+                        "addedImportTypes": 1,
+                        "addedImportFunctions": 0,
+                        "addedImportConstants": 0,
+                        "addedImportOwners": 1,
+                        "addedEnumConstructorAdapters": 0,
+                        "addedFunctionLiterals": 0,
+                        "addedStaticFunctionAdapters": 0,
+                        "addedSymbolRequests": 5,
+                    },
+                    "printer": None,
+                },
+            }
+        )
+        function_build_profile = profiler.parse_profile_records(
+            "\n".join(
+                (
+                    record(function_build_child),
+                    record(parent),
+                    record(counter),
+                    record(request),
+                )
+            ),
+            expected_status="ok",
+        )
+        self.assertEqual(
+            function_build_profile.spans[0].work.built_instructions, 8
+        )
+        contribution_summary = profiler.function_build_contribution_summary(
+            function_build_profile
+        )
+        self.assertEqual(contribution_summary["functionCount"], 1)
+        self.assertEqual(
+            contribution_summary["semanticSharedContributionFunctions"], 1
+        )
+        self.assertEqual(
+            contribution_summary["zeroSemanticSharedContributionFunctions"], 0
+        )
+        self.assertEqual(
+            contribution_summary["totals"]["addedSymbolRequests"], 5
+        )
+        self.assertEqual(
+            contribution_summary["contributors"],
+            [
+                {
+                    "functionId": "method.demo.Main.run",
+                    "added": {
+                        "addedAggregates": 1,
+                        "addedArrays": 1,
+                        "addedImportOwners": 1,
+                        "addedImportTypes": 1,
+                        "addedSymbolRequests": 5,
+                    },
+                }
+            ],
+        )
+        zero_function_build_child = json.loads(
+            json.dumps(function_build_child)
+        )
+        for field in profiler.FUNCTION_BUILD_WORK_FIELDS:
+            if field.startswith("added"):
+                zero_function_build_child["work"]["functionBuild"][field] = 0
+        zero_function_build_profile = profiler.parse_profile_records(
+            "\n".join(
+                (
+                    record(zero_function_build_child),
+                    record(parent),
+                    record(counter),
+                    record(request),
+                )
+            ),
+            expected_status="ok",
+        )
+        zero_contribution_summary = (
+            profiler.function_build_contribution_summary(
+                zero_function_build_profile
+            )
+        )
+        self.assertEqual(
+            zero_contribution_summary[
+                "zeroSemanticSharedContributionFunctions"
+            ],
+            1,
+        )
+        self.assertEqual(
+            zero_contribution_summary["allZeroSharedContributionFunctions"],
+            1,
+        )
+        self.assertEqual(zero_contribution_summary["contributors"], [])
+
         printer_child = dict(child)
         printer_child.update(
             {
@@ -317,6 +438,7 @@ class CaxecraftTimingTests(unittest.TestCase):
                     "kind": "c-printer-v1",
                     "controlFlow": None,
                     "typedBody": None,
+                    "functionBuild": None,
                     "printer": {
                         "declarationCount": 3,
                         "statementCount": 9,
@@ -371,6 +493,7 @@ class CaxecraftTimingTests(unittest.TestCase):
             "kind": "future-unregistered-work-v1",
             "controlFlow": None,
             "typedBody": None,
+            "functionBuild": None,
             "printer": None,
         }
         with self.assertRaisesRegex(

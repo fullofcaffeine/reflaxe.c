@@ -12,6 +12,7 @@ import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.interop.CImportRegistry;
+import reflaxe.c.interop.CImportRegistry.CImportContributionInventory;
 import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportConstant;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportFunction;
@@ -47,6 +48,29 @@ import reflaxe.c.semantics.CPrimitiveTypes;
 /** Module anchor for the closed anonymous-record lowering model. */
 class CBodyAggregate {
 	private function new() {}
+}
+
+/**
+	Counts every shared semantic representation discovered before HxcIR assembly.
+
+	The profiler snapshots this request-local inventory around one function
+	build. A positive delta means a future cached function must replay that shared
+	program fact; the inventory itself is not a cache key or reusable plan.
+**/
+typedef CBodyProgramContributionInventory = {
+	final aggregates:Int;
+	final enums:Int;
+	final classes:Int;
+	final interfaces:Int;
+	final arrays:Int;
+	final intMaps:Int;
+	final stringMaps:Int;
+	final bytes:Int;
+	final optionals:Int;
+	final importTypes:Int;
+	final importFunctions:Int;
+	final importConstants:Int;
+	final importOwners:Int;
 }
 
 /** A closed body value category; aggregate values never enter primitive semantics. */
@@ -631,6 +655,45 @@ class CBodyAggregateRegistry {
 		this.bytesRegistry = new CBodyBytesRegistry();
 		this.optionalRegistry = new CBodyOptionalRegistry(context);
 		this.importRegistry = program == null || contract == null ? null : new CImportRegistry(context, program, contract, valueType);
+	}
+
+	/**
+		Snapshot shared representation counts without finalizing or sorting plans.
+
+		This method is called only by opt-in profiling. It deliberately reports
+		counts rather than compiler objects, so the diagnostic remains bounded
+		and cannot become an accidental cross-request cache.
+	**/
+	@:noCompletion
+	public function contributionInventory():CBodyProgramContributionInventory {
+		final imports:CImportContributionInventory = importRegistry == null ? {
+			types: 0,
+			functions: 0,
+			constants: 0,
+			reachedOwners: 0
+		} : importRegistry.contributionInventory();
+		return {
+			aggregates: countValues(byShape),
+			enums: enumRegistry.preparedCount(),
+			classes: classRegistry.preparedCount(),
+			interfaces: interfaceRegistry.preparedCount(),
+			arrays: arrayRegistry.preparedCount(),
+			intMaps: intMapRegistry.preparedCount(),
+			stringMaps: stringMapRegistry.preparedCount(),
+			bytes: bytesRegistry.preparedCount(),
+			optionals: optionalRegistry.preparedCount(),
+			importTypes: imports.types,
+			importFunctions: imports.functions,
+			importConstants: imports.constants,
+			importOwners: imports.reachedOwners
+		};
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,

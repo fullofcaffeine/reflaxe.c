@@ -204,6 +204,11 @@ class CBodyStringMapRegistry {
 		this.resolveValue = resolveValue;
 	}
 
+	/** Count StringMap specializations prepared so far without sorting them. */
+	@:noCompletion
+	public function preparedCount():Int
+		return countValues(bySemanticKey);
+
 	/** Return null when the type is not Haxe's Map<String, V> specialization. */
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):Null<CPreparedBodyStringMap> {
@@ -252,6 +257,13 @@ class CBodyStringMapRegistry {
 			position, copyRequest, assignRequest, destroyRequest, copyParameters, assignParameters, destroyParameters, copyStatus, assignStatus);
 		bySemanticKey.set(semanticKey, prepared);
 		return prepared;
+	}
+
+	static function countValues<T>(values:Map<String, T>):Int {
+		var count = 0;
+		for (_ in values)
+			count++;
+		return count;
 	}
 
 	/**
