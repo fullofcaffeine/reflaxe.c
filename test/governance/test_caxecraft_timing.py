@@ -66,6 +66,21 @@ class CaxecraftTimingTests(unittest.TestCase):
                 for index, detail in enumerate(profiler.DETAIL_PHASES)
             },
         )
+        hit_only_lines = "\n".join(
+            f"HXC_DETAIL_TIMING\t{detail}\t{index + 1}"
+            for index, detail in enumerate(profiler.DETAIL_PHASES)
+            if detail not in profiler.CONTROL_FLOW_PLAN_COMPUTATION_DETAILS
+        )
+        with self.assertRaisesRegex(
+            profiler.CompilerProfileFailure, "compiler detail report omitted"
+        ):
+            profiler.parse_detail_records(hit_only_lines)
+        hit_only_records = profiler.parse_detail_records(
+            hit_only_lines,
+            allowed_missing=profiler.CONTROL_FLOW_PLAN_COMPUTATION_DETAILS,
+        )
+        for detail in profiler.CONTROL_FLOW_PLAN_COMPUTATION_DETAILS:
+            self.assertEqual(hit_only_records[detail], 0)
 
         table = "\n".join(
             (

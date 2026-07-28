@@ -45,7 +45,6 @@ import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
 import reflaxe.c.macros.TypedCContractMacro;
 import reflaxe.c.ir.HxcIRValidationError;
-import reflaxe.c.ir.HxcIRDumper;
 import reflaxe.c.ir.HxcIR.HxcIRProgram;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CStaticInitializationError;
@@ -185,8 +184,11 @@ class CCompiler {
 			}
 			CPhaseTiming.stop(analysisTimer);
 			final loweringTimer = CPhaseTiming.start(CPSemanticLowering);
+			final captureHxcIRDump = Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)
+				|| Context.defined(CONSTRUCTOR_LOWERING_REPORT_DEFINE)
+				|| Context.defined(VIRTUAL_DISPATCH_REPORT_DEFINE);
 			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors,
-				graph.dispatch, program, typedCContract);
+				graph.dispatch, program, typedCContract, captureHxcIRDump);
 			CPhaseTiming.stop(loweringTimer);
 			final projectLayout = layoutPlanner.plan(configuration.projectLayout, loweredProjectModulePaths(lowered));
 			final dispatchReport = new CDispatchReportBuilder().build(graph.dispatch, lowered.dispatch);
@@ -195,7 +197,7 @@ class CCompiler {
 				final inspection:StaticInitializationInspection = {
 					schemaVersion: 1,
 					plan: staticInitialization.snapshot,
-					hxcir: new HxcIRDumper().dump(lowered.program)
+					hxcir: requireHxcIRDump(lowered)
 				};
 				Sys.println(STATIC_INITIALIZATION_REPORT_PREFIX + Json.stringify(inspection));
 			}
@@ -211,7 +213,7 @@ class CCompiler {
 						canFail: value.canFail,
 						cName: value.cName == null ? null : value.cName.value
 					}),
-					hxcir: new HxcIRDumper().dump(lowered.program)
+					hxcir: requireHxcIRDump(lowered)
 				};
 				Sys.println(CONSTRUCTOR_LOWERING_REPORT_PREFIX + Json.stringify(inspection));
 			}
@@ -220,7 +222,7 @@ class CCompiler {
 					schemaVersion: 1,
 					profile: Std.string(context.profile),
 					dispatch: dispatchReport,
-					hxcir: new HxcIRDumper().dump(lowered.program)
+					hxcir: requireHxcIRDump(lowered)
 				};
 				Sys.println(VIRTUAL_DISPATCH_REPORT_PREFIX + Json.stringify(inspection));
 			}
@@ -356,6 +358,21 @@ class CCompiler {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, input.expression.pos, context.profile);
 		}
 		return [];
+	}
+
+	/**
+		Return the complete semantic dump captured during the one lowering walk.
+
+		Report defines ask `CBodyLowering` to retain this text before emission.
+		Reaching a report without it means the compiler's own phase contract was
+		broken, so failing here is safer than silently rendering HxcIR a second
+		time and hiding the ownership mistake.
+	**/
+	static function requireHxcIRDump(lowered:CBodyLoweringResult):String {
+		final value = lowered.hxcirDump;
+		if (value == null)
+			throw new CBodyEmissionError("an enabled semantic report reached artifact planning without its captured HxcIR dump");
+		return value;
 	}
 
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,

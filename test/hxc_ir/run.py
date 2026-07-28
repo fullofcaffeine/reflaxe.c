@@ -241,7 +241,8 @@ def main() -> int:
 
     print(
         "hxc-ir: OK: deterministic source-aware dumps, explicit side effects/cleanup, "
-        "typed dispatch/runtime intent, Float32 conversions, switch validation, and stable negative diagnostics"
+        "typed dispatch/runtime intent, Float32 conversions, switch validation, "
+        "exact warm-plan keys, and stable negative diagnostics"
     )
     return 0
 

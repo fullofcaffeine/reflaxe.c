@@ -316,6 +316,10 @@ class CBodyControlFlowWorkReport {
 		this.immediatePostDominatorComputations = immediatePostDominatorComputations;
 		this.immediatePostDominatorCacheHits = immediatePostDominatorCacheHits;
 	}
+
+	/** Report that an exact cache hit performed no graph searches this request. */
+	public static function zero():CBodyControlFlowWorkReport
+		return new CBodyControlFlowWorkReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /**

@@ -6,17 +6,43 @@ import reflaxe.c.ir.HxcIR;
 /** Canonical, source-aware text dump for semantic review and golden tests. */
 class HxcIRDumper {
 	var output:Array<String> = [];
+	var functionRanges:Array<HxcIRFunctionDumpRange> = [];
 
 	public function new() {}
 
+	/** Render the complete canonical program text used by reports and snapshots. */
 	public function dump(program:HxcIRProgram):String {
+		final snapshot = dumpSnapshot(program, true);
+		final complete = snapshot.complete;
+		if (complete == null)
+			throw new haxe.Exception("complete HxcIR dump was not captured");
+		return complete;
+	}
+
+	/**
+		Render every function once and retain its exact canonical fragment.
+
+		Incremental compiler evidence needs a function-sized semantic key, while
+		diagnostic reports need the complete program. Recording line ranges during
+		the ordinary dump gives both consumers one exhaustive HxcIR traversal
+		instead of inventing a second hash walker or rendering the program again.
+	**/
+	public function dumpSnapshot(program:HxcIRProgram, includeComplete:Bool):HxcIRDumpSnapshot {
 		output = ['hxcir schema=${program.schemaVersion}'];
+		functionRanges = [];
 		if (program.dispatch.layouts.length > 0 || program.dispatch.slots.length > 0 || program.dispatch.tables.length > 0)
 			dumpDispatch(program.dispatch);
 		for (module in sorted(program.modules, item -> item.id)) {
 			dumpModule(module);
 		}
-		return output.join("\n") + "\n";
+		final functions:Array<HxcIRFunctionDump> = [];
+		for (range in functionRanges) {
+			functions.push({
+				id: range.id,
+				text: output.slice(range.start, range.end).join("\n") + "\n"
+			});
+		}
+		return new HxcIRDumpSnapshot(includeComplete ? output.join("\n") + "\n" : null, functions);
 	}
 
 	function dumpDispatch(plan:HxcIRDispatchPlan):Void {
@@ -83,6 +109,7 @@ class HxcIRDumper {
 	}
 
 	function dumpFunction(fn:HxcIRFunction):Void {
+		final start = output.length;
 		final borrowedReturn = fn.borrowedSpanReturn == null ? "" : ' borrowed-span-return=${borrowedSpanReturn(fn.borrowedSpanReturn)}';
 		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)}$borrowedReturn failure=${functionFailure(fn.failureConvention)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
 		final managedRoots = fn.managedRoots == null ? [] : fn.managedRoots;
@@ -120,6 +147,7 @@ class HxcIRDumper {
 			dumpBlock(block);
 		}
 		line('  end function ${quote(fn.id)}');
+		functionRanges.push({id: fn.id, start: start, end: output.length});
 	}
 
 	function dumpBlock(block:HxcIRBlock):Void {
@@ -496,4 +524,34 @@ class HxcIRDumper {
 	static function compareUtf8(left:String, right:String):Int {
 		return reflaxe.c.CUtf8Order.compare(left, right);
 	}
+}
+
+/** One function's complete canonical semantic text. */
+typedef HxcIRFunctionDump = {
+	final id:String;
+	final text:String;
+}
+
+/**
+	One exhaustive HxcIR rendering shared by reports and incremental evidence.
+
+	`complete` is absent when the caller needs only function fragments. The
+	fragments remain ordered by module and function identity exactly like the
+	complete dump.
+**/
+class HxcIRDumpSnapshot {
+	public final complete:Null<String>;
+	public final functions:Array<HxcIRFunctionDump>;
+
+	/** Copy the bounded fragment array so callers cannot change dumper state. */
+	public function new(complete:Null<String>, functions:Array<HxcIRFunctionDump>) {
+		this.complete = complete;
+		this.functions = functions.copy();
+	}
+}
+
+private typedef HxcIRFunctionDumpRange = {
+	final id:String;
+	final start:Int;
+	final end:Int;
 }

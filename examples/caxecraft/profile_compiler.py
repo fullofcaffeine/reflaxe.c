@@ -43,7 +43,7 @@ from run import (  # noqa: E402
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
 DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
-PROFILE_SCHEMA_VERSION = 7
+PROFILE_SCHEMA_VERSION = 8
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PROFILE_WORKLOADS = ("runtime-free", "playable")
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
@@ -118,6 +118,17 @@ DETAIL_PHASES = (
     "artifact build-adapter construction",
     "artifact manifest construction",
 )
+CONTROL_FLOW_PLAN_COMPUTATION_DETAILS = frozenset(
+    {
+        "body control-flow analysis",
+        "body control-flow indexing",
+        "body control-flow dominators",
+        "body control-flow post-dominators",
+        "body control-flow loop analysis",
+        "body control-flow construction",
+        "body control-flow validation",
+    }
+)
 SEMANTIC_CHILDREN = (
     "HxcIR construction",
     "HxcIR validation",
@@ -156,6 +167,10 @@ PROFILE_COUNTERS = (
     "artifacts.digest-cache-retained-bytes",
     "artifacts.digest-cache-retained-entries",
     "artifacts.files",
+    "cast.control-flow-plan-cache-hits",
+    "cast.control-flow-plan-cache-misses",
+    "cast.control-flow-plan-cache-retained-functions",
+    "cast.control-flow-plan-cache-retained-key-code-units",
     "cast.functions",
     "hxcir.blocks",
     "hxcir.exact-nominal-cache-hits",
@@ -1273,8 +1288,9 @@ def validate_success_profile_contract(profile: StructuredCompilerProfile) -> Non
                 f"successful compiler profile expected one {phase!r} span"
             )
     details = [span.name for span in profile.spans if span.category == "detail"]
+    allowed_missing = allowed_missing_detail_phases(profile)
     for detail in DETAIL_PHASES:
-        if detail not in details:
+        if detail not in details and detail not in allowed_missing:
             raise CompilerProfileFailure(
                 f"successful compiler profile omitted detail {detail!r}"
             )
@@ -1282,6 +1298,25 @@ def validate_success_profile_contract(profile: StructuredCompilerProfile) -> Non
         raise CompilerProfileFailure(
             "successful compiler profile counter inventory drifted"
         )
+
+
+def allowed_missing_detail_phases(
+    profile: StructuredCompilerProfile,
+) -> frozenset[str]:
+    """Recognize work deliberately skipped by an exact validated cache hit.
+
+    The broad control-flow-planning span still measures each lookup. Its seven
+    internal computations are absent only when every function reused a prior
+    validated plan, so requiring fake zero-duration spans would misdescribe
+    work that did not run.
+    """
+
+    counters = dict(profile.counters)
+    hits = counters.get("cast.control-flow-plan-cache-hits", 0.0)
+    misses = counters.get("cast.control-flow-plan-cache-misses", 0.0)
+    if hits > 0.0 and misses == 0.0:
+        return CONTROL_FLOW_PLAN_COMPUTATION_DETAILS
+    return frozenset()
 
 
 def exclusive_accounting(
@@ -1383,7 +1418,9 @@ def parse_phase_records(stdout: str) -> dict[str, int]:
     return records
 
 
-def parse_detail_records(stdout: str) -> dict[str, int]:
+def parse_detail_records(
+    stdout: str, *, allowed_missing: frozenset[str] = frozenset()
+) -> dict[str, int]:
     records = {detail: 0 for detail in DETAIL_PHASES}
     counts = {detail: 0 for detail in DETAIL_PHASES}
     for line in stdout.splitlines():
@@ -1411,7 +1448,11 @@ def parse_detail_records(stdout: str) -> dict[str, int]:
             )
         records[detail] += duration
         counts[detail] += 1
-    missing = [detail for detail in DETAIL_PHASES if counts[detail] == 0]
+    missing = [
+        detail
+        for detail in DETAIL_PHASES
+        if counts[detail] == 0 and detail not in allowed_missing
+    ]
     if missing:
         raise CompilerProfileFailure(
             f"compiler detail report omitted {', '.join(missing)}"
@@ -1573,9 +1614,12 @@ def run_observed_sample(
         )
     validate_haxe_timer_stream(result.stderr)
     phases = parse_phase_records(result.stdout)
-    details = parse_detail_records(result.stdout)
     structured = parse_profile_records(result.stdout, expected_status="ok")
     validate_success_profile_contract(structured)
+    details = parse_detail_records(
+        result.stdout,
+        allowed_missing=allowed_missing_detail_phases(structured),
+    )
     haxe_rows = parse_haxe_timer_rows(
         result.stdout + "\n" + result.stderr,
         clock,

@@ -31,7 +31,10 @@ import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlan;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlanner;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowRegion;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowSwitchArm;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowWorkReport;
 import reflaxe.c.lowering.CBodyControlFlow.CBodySwitchLabel;
+import reflaxe.c.lowering.CBodyControlFlowPlanCache;
+import reflaxe.c.lowering.CBodyControlFlowPlanCache.CBodyControlFlowPlanResolution;
 import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlan;
 import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlanner;
 import reflaxe.c.lowering.CBodyLowering.CManagedProgramNames;
@@ -483,10 +486,50 @@ class CBodyEmitter {
 	}
 	#end
 
+	/**
+		Resolve and profile the structural plan once for every emitted function.
+
+		A line-mapped diagnostic body and the ordinary body share this result.
+		When canonical HxcIR text is available, the cache may return the previous
+		successful request's already-validated plan; direct structural probes use
+		the ordinary planner by passing no key.
+	**/
+	public static function resolveControlFlow(fn:HxcIRFunction, canonicalFunction:Null<String>):CBodyControlFlowPlanResolution {
+		final controlFlowTimer = CPhaseTiming.startDetail(CDTBodyControlFlowPlanning, fn.id);
+		final resolution = canonicalFunction == null ? new CBodyControlFlowPlanResolution(new CBodyControlFlowPlanner().planWithWorkReport(fn),
+			false) : CBodyControlFlowPlanCache.resolve(fn.id, canonicalFunction, () -> new CBodyControlFlowPlanner().planWithWorkReport(fn));
+		final work = resolution.reused ? CBodyControlFlowWorkReport.zero() : resolution.planning.work;
+		CPhaseTiming.setDetailWork(controlFlowTimer, {
+			kind: "normal-join-search-v1",
+			controlFlow: {
+				blockCount: fn.blocks.length,
+				normalJoinSearches: work.normalJoinSearches,
+				normalJoinCandidateProofs: work.normalJoinCandidateProofs,
+				normalJoinDistanceSearches: work.normalJoinDistanceSearches,
+				normalJoinDistanceBlockVisits: work.normalJoinDistanceBlockVisits,
+				completionSetSearches: work.completionSetSearches,
+				completionSetInitialBlockScans: work.completionSetInitialBlockScans,
+				completionSetWorklistDequeues: work.completionSetWorklistDequeues,
+				abruptCompletionSetSearches: work.abruptCompletionSetSearches,
+				abruptCompletionSetInitialBlockScans: work.abruptCompletionSetInitialBlockScans,
+				abruptCompletionSetWorklistDequeues: work.abruptCompletionSetWorklistDequeues,
+				forwardReachabilitySearches: work.forwardReachabilitySearches,
+				forwardReachabilityBlockVisits: work.forwardReachabilityBlockVisits,
+				prefixDisjointSearches: work.prefixDisjointSearches,
+				prefixDisjointBlockVisits: work.prefixDisjointBlockVisits
+			},
+			typedBody: null,
+			printer: null
+		});
+		CPhaseTiming.stopDetail(controlFlowTimer);
+		return resolution;
+	}
+
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
 			helperNames:Map<String, CIdentifier>, lineDirectives:Bool, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
-			?nonReturningFunctionIds:Map<String, Bool>, ?spanLengthNames:Map<String, CIdentifier>, ?boundsAbortName:CIdentifier):CStmt {
+			?nonReturningFunctionIds:Map<String, Bool>, ?spanLengthNames:Map<String, CIdentifier>, ?boundsAbortName:CIdentifier,
+			?controlFlowResolution:CBodyControlFlowPlanResolution):CStmt {
 		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id) {
 			fail('body lowering requires an entry-first block graph in `${fn.id}`');
 		}
@@ -494,32 +537,7 @@ class CBodyEmitter {
 		validateConstructionCleanupRegions(fn);
 		final resolvedSpanLengthNames:Map<String, CIdentifier> = spanLengthNames == null ? [] : spanLengthNames;
 		final coalescing = new CBodyValueCoalescingPlanner().plan(fn);
-		final controlFlowTimer = CPhaseTiming.startDetail(CDTBodyControlFlowPlanning, fn.id);
-		final controlFlow = new CBodyControlFlowPlanner().planWithWorkReport(fn);
-		CPhaseTiming.setDetailWork(controlFlowTimer, {
-			kind: "normal-join-search-v1",
-			controlFlow: {
-				blockCount: fn.blocks.length,
-				normalJoinSearches: controlFlow.work.normalJoinSearches,
-				normalJoinCandidateProofs: controlFlow.work.normalJoinCandidateProofs,
-				normalJoinDistanceSearches: controlFlow.work.normalJoinDistanceSearches,
-				normalJoinDistanceBlockVisits: controlFlow.work.normalJoinDistanceBlockVisits,
-				completionSetSearches: controlFlow.work.completionSetSearches,
-				completionSetInitialBlockScans: controlFlow.work.completionSetInitialBlockScans,
-				completionSetWorklistDequeues: controlFlow.work.completionSetWorklistDequeues,
-				abruptCompletionSetSearches: controlFlow.work.abruptCompletionSetSearches,
-				abruptCompletionSetInitialBlockScans: controlFlow.work.abruptCompletionSetInitialBlockScans,
-				abruptCompletionSetWorklistDequeues: controlFlow.work.abruptCompletionSetWorklistDequeues,
-				forwardReachabilitySearches: controlFlow.work.forwardReachabilitySearches,
-				forwardReachabilityBlockVisits: controlFlow.work.forwardReachabilityBlockVisits,
-				prefixDisjointSearches: controlFlow.work.prefixDisjointSearches,
-				prefixDisjointBlockVisits: controlFlow.work.prefixDisjointBlockVisits
-			},
-			typedBody: null,
-			printer: null
-		});
-		CPhaseTiming.stopDetail(controlFlowTimer);
-		final plan = controlFlow.plan;
+		final plan = (controlFlowResolution == null ? resolveControlFlow(fn, null) : controlFlowResolution).planning.plan;
 		final statements:Array<CStmt> = [];
 		final state:CBodyEmissionState = {
 			values: [],

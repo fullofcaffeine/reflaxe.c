@@ -756,12 +756,59 @@ logical CPUs, so those wall times are explicitly contended diagnostics rather
 than a replacement for the earlier benchmark. The exact changed sets are the
 reusable invalidation evidence.
 
+### Exact warm control-flow plan reuse
+
+The first backend reuse boundary now acts on that exact per-function evidence.
+Control-flow planning decides how one validated HxcIR function becomes
+structured C branches and loops. An unchanged warm request no longer repeats
+that work: it compares the HxcIR schema, logical function ID, and complete
+canonical function text with the previous successful generation. It then
+reuses only the already validated target-owned plan. The current request still
+builds and validates HxcIR and still emits CAST and C using its current names,
+representations, runtime plan, and project layout.
+
+This is deliberately narrower than caching HxcIR or generated C. The retained
+generation contains no Haxe `TypedExpr`, `Type`, `Position`, compiler context,
+output manager, host path, or partial failed result. Full-text comparison makes
+hash collisions irrelevant. Publication happens only after Reflaxe completes
+generated-output ownership, and the next success replaces rather than appends
+the generation.
+
+One full-playable schema-8 profile on a **contended** 12-logical-CPU Mac
+produced the same 229 normal artifacts with SHA-256 tree digest
+`8b9f8c206d1bcd719d86f011a76b2e0dfe2f5a9ea9c104efd0988392ae016015`.
+The exact counters and owned planning phase show the attributable result:
+
+| Control-flow plan evidence | Cold request | Exact warm request |
+| --- | ---: | ---: |
+| Cache hits / misses | 0 / 531 | 531 / 0 |
+| Retained generation | 531 functions | 531 functions |
+| Retained exact-key size | 11,423,746 Haxe string code units | 11,423,746 |
+| All-function planning wall | 2.481s | 6.6ms |
+| Haxe-to-generated-C wall | 30.355s | 15.158s |
+
+Only the planning reduction belongs directly to this cache. The full wall
+difference also contains Haxe frontend reuse and other warm-process effects,
+and host load ranged from 6.95 to 8.17, so these single samples are diagnostic
+rather than a new p50 or p95 claim.
+
+The fixed Caxecraft `Vitals.hx` edit supplies the changed-program proof. Its
+cold prime recorded 531 misses, its unchanged request recorded 531 hits, and
+the edit recorded 530 hits plus exactly one miss for
+`Vitals.applyAttack`. The same request changed exactly one HxcIR function, one
+C translation unit, and the manifest; all generated headers and the other 83 C
+translation units remained byte-identical. The focused `test:typed-ast` server
+matrix additionally owns public-type edits, cache-disabled behavior,
+success-failure-success ordering, restart, a second worktree, and cold
+generated-C/HxcIR parity.
+
 ### Caxecraft target-phase profile and duplicate-body removal
 
 Beads issue `haxe_c-fbq` added an opt-in compiler profiler rather than guessing
 from whole-suite wall time. A *phase* here means one named portion of the build,
-such as “turn validated HxcIR into structural C bodies.” The current schema-6
-`HXC_PROFILE` stream records phases as a checked parent/child tree only when
+such as “turn validated HxcIR into structural C bodies.” The original schema-6
+`HXC_PROFILE` stream introduced the checked parent/child tree retained by the
+current schema 8. It records phases only when
 `reflaxe_c_phase_timing` is enabled. Inclusive time contains nested work;
 exclusive time subtracts it. Bottleneck ranking uses exclusive wall and CPU
 time, so a broad parent cannot make the same work look expensive twice.

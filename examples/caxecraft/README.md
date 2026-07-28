@@ -625,23 +625,31 @@ goes to ignored
 `examples/caxecraft/_build/incremental-edit-profile.json`; it contains logical
 repository paths but never the temporary checkout path.
 
-The first run found the useful boundary for the next optimization. The edit
-made Haxe rebuild 14 of 135 Caxecraft class declarations, while haxe.c still
-lowered the complete program. Of 531 HxcIR functions, only
-`Vitals.applyAttack` changed. Of 229 generated artifacts, only
-`src/modules/caxecraft/domain/Vitals.c` and the manifest changed; all generated
-headers and 83 of 84 C translation units remained byte-identical. The native
+The same run now verifies the first backend reuse boundary rather than merely
+listing a future opportunity. The cold prime must plan every function, the
+unchanged warm request must reuse every validated control-flow plan, and the
+fixed `Vitals.hx` edit must miss exactly the one HxcIR function whose semantic
+text changed. Generated artifacts are still compared independently, so cache
+statistics cannot substitute for byte parity.
+
+The first run established the boundary now used by the cache. The edit made
+Haxe rebuild 14 of 135 Caxecraft class declarations, but only
+`Vitals.applyAttack` changed among 531 HxcIR functions. The backend therefore
+reuses 530 plans and rebuilds the changed one. Of 229 generated artifacts, only
+`src/modules/caxecraft/domain/Vitals.c` and the manifest change; all generated
+headers and 83 of 84 C translation units remain byte-identical. The native
 object and link projection is intentionally labelled **unmeasured** until the
 depfile-backed native cache proves the complete header and toolchain
 dependency closure.
 
-That experiment also found a separate correctness prerequisite: Haxe's warm
-typed graph can attach a named anonymous-record field to its typedef line in
-one request and to an object-literal line in another. Normal generated C
-remained stable, but optional HxcIR source provenance did not. Beads issue
-`haxe_c-5sd.8.4.1` owns the exact source-position contract required before
-per-function backend reuse. The profiler reports this drift instead of hiding
-it or pretending that matching C bytes makes cached diagnostics safe.
+That experiment also found and forced closure of a correctness prerequisite.
+Haxe's warm typed graph could attach a named anonymous-record field to its
+typedef line in one request and to an object-literal line in another. Normal C
+remained stable, but HxcIR source provenance did not. Beads issue
+`haxe_c-5sd.8.4.1` now owns the implemented exact declaration-position
+contract. The cache key includes that corrected canonical HxcIR text, and the
+profiler fails if cold and warm provenance drifts instead of pretending that
+matching C bytes is sufficient.
 
 The first optimized sample on a busy 12-logical-CPU Mac began at load 9.88.
 Fresh-process median was 18.408s and post-prime warm median was 16.486s. The

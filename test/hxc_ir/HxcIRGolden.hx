@@ -21,6 +21,7 @@ class HxcIRGolden {
 		final semantic = semanticProgram(false);
 		validator.requireValid(semantic, PROFILE);
 		final semanticDump = dumper.dump(semantic);
+		verifyDumpSnapshot(dumper, semantic, semanticDump);
 		final reorderedDump = dumper.dump(semanticProgram(true));
 		if (semanticDump != reorderedDump) {
 			throw "HxcIR dump changed when unordered program collections were reversed";
@@ -131,6 +132,37 @@ class HxcIRGolden {
 						.render()]
 			}
 		}));
+	}
+
+	/**
+		Prove one exhaustive rendering can serve both reports and function keys.
+
+		The warm control-flow cache must use exactly the same semantic text as the
+		review dump, not a second partial serializer that could forget a new HxcIR
+		child. This check also proves key-only mode does not retain the full
+		program string.
+	**/
+	static function verifyDumpSnapshot(dumper:HxcIRDumper, program:HxcIRProgram, expectedComplete:String):Void {
+		final complete = dumper.dumpSnapshot(program, true);
+		if (complete.complete != expectedComplete)
+			throw "complete HxcIR snapshot differed from the canonical dump";
+		final keyOnly = dumper.dumpSnapshot(program, false);
+		if (keyOnly.complete != null)
+			throw "key-only HxcIR snapshot retained complete report text";
+		if (complete.functions.length == 0 || complete.functions.length != keyOnly.functions.length)
+			throw "HxcIR snapshot omitted function fragments";
+		final seen:Map<String, Bool> = [];
+		for (index in 0...complete.functions.length) {
+			final reported = complete.functions[index];
+			final keyed = keyOnly.functions[index];
+			if (reported.id != keyed.id || reported.text != keyed.text)
+				throw "complete and key-only HxcIR snapshots disagreed";
+			if (seen.exists(reported.id))
+				throw 'HxcIR snapshot repeated function `${reported.id}`';
+			seen.set(reported.id, true);
+			if (expectedComplete.indexOf(reported.text) < 0)
+				throw 'HxcIR snapshot function `${reported.id}` was not exact report text';
+		}
 	}
 
 	static function semanticProgram(reverse:Bool):HxcIRProgram {

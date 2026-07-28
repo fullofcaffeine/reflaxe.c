@@ -23,6 +23,7 @@ import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
 import reflaxe.c.ir.HxcIRDiagnostic;
+import reflaxe.c.ir.HxcIRDumper;
 import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcIRManagedRootPlanner;
 import reflaxe.c.ir.HxcUtf8;
@@ -298,13 +299,14 @@ class CBodyLoweringResult {
 	public final boundsAbortName:Null<CIdentifier>;
 	public final runtimeRequirements:Array<CBodyRuntimeRequirement>;
 	public final managedProgram:Null<CManagedProgramNames>;
+	public final hxcirDump:Null<String>;
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
 			intMaps:Array<CPreparedBodyIntMap>, stringMaps:Array<CLoweredBodyStringMap>, bytes:Array<CPreparedBodyBytes>,
 			optionals:Array<CLoweredBodyOptional>, constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports,
 			helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>) {
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>, ?hxcirDump:String) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
@@ -325,6 +327,7 @@ class CBodyLoweringResult {
 		this.boundsAbortName = boundsAbortName;
 		this.runtimeRequirements = runtimeRequirements.copy();
 		this.managedProgram = managedProgram;
+		this.hxcirDump = hxcirDump;
 	}
 }
 
@@ -340,7 +343,7 @@ class CBodyLowering {
 
 	public function lower(inputFunctions:Array<CBodyFunctionInput>, ?inputGlobals:Array<CBodyGlobalInput>, ?inputInitializers:Array<CBodyInitializerInput>,
 			?inputConstructors:Array<CBodyConstructorInput>, ?inputDispatch:CBodyDispatchGraph, ?typedProgram:TypedProgramInput,
-			?typedContract:TypedCContractSnapshot):CBodyLoweringResult {
+			?typedContract:TypedCContractSnapshot, captureHxcIRDump:Bool = false):CBodyLoweringResult {
 		if (inputFunctions.length == 0) {
 			throw new CBodyEmissionError("body lowering requires at least one typed function input");
 		}
@@ -499,6 +502,18 @@ class CBodyLowering {
 		final hxcIRValidationTimer = CPhaseTiming.start(CPHxcIRValidation);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
 		CPhaseTiming.stop(hxcIRValidationTimer);
+		final canonicalFunctions:Map<String, String> = [];
+		var completeHxcIRDump:Null<String> = null;
+		if (captureHxcIRDump || CBodyControlFlowPlanCache.needsFunctionKeys()) {
+			final snapshot = new HxcIRDumper().dumpSnapshot(program, captureHxcIRDump);
+			completeHxcIRDump = snapshot.complete;
+			for (fn in snapshot.functions)
+				// The function fragment deliberately omits the program header so reports
+				// can assemble one canonical document. Reuse keys must retain the schema:
+				// a schema change can alter a planner contract even when the printed
+				// function body happens to remain byte-identical.
+				canonicalFunctions.set(fn.id, 'hxcir schema=${program.schemaVersion}\n${fn.text}');
+		}
 		final analysisTimer = CPhaseTiming.start(CPSemanticAnalysesAndNaming);
 		final helperSelectionTimer = CPhaseTiming.startDetail(CDTSemanticHelperSelection);
 		final helperSelection = new CPrimitiveHelperSelection();
@@ -558,6 +573,7 @@ class CBodyLowering {
 			loweredOptionals, loweredDispatch, loweredImports, managedProgram);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
+			final controlFlow = CBodyEmitter.resolveControlFlow(item.ir, canonicalFunctions.get(item.ir.id));
 			final parameterNames:Map<String, CIdentifier> = [];
 			for (parameterId => request in item.prepared.parameterRequests) {
 				parameterNames.set(parameterId, context.symbols.identifierFor(request));
@@ -584,9 +600,9 @@ class CBodyLowering {
 			}
 			final preparedFunction = item.prepared;
 			final body = emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, false,
-				tailArgumentNames, labelNames, null, spanLengthNames, boundsAbortName);
+				tailArgumentNames, labelNames, null, spanLengthNames, boundsAbortName, controlFlow);
 			final lineMappedBody = sourceMappingMode == CBSMNormalAndLineMapped ? emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames,
-				functionNames, globalNames, helperNames, true, tailArgumentNames, labelNames, null, spanLengthNames, boundsAbortName) : null;
+				functionNames, globalNames, helperNames, true, tailArgumentNames, labelNames, null, spanLengthNames, boundsAbortName, controlFlow) : null;
 			lowered.push(new CLoweredBodyFunction(preparedFunction.modulePath, preparedFunction.declarationPath, preparedFunction.displayName, item.ir,
 				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, spanLengthNames, temporaryNames, tailArgumentNames,
 				labelNames, emitter.requiredHeaders(item.ir), body, lineMappedBody));
@@ -632,7 +648,8 @@ class CBodyLowering {
 		CPhaseTiming.setCounter(CPCounterRuntimeRequirements, runtimeRequirements.length);
 		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedIntMaps,
 			loweredStringMaps, preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
-			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram);
+			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram,
+			completeHxcIRDump);
 	}
 
 	/**

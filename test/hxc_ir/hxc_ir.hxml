@@ -3,5 +3,6 @@
 -cp test/hxc_ir/
 -lib reflaxe.c
 
+--macro ControlFlowPlanCacheProbe.run()
 -main HxcIRGolden
 --interp

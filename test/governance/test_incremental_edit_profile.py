@@ -13,9 +13,11 @@ sys.path.insert(0, str(CAXECRAFT))
 from profile_incremental_edit import (  # noqa: E402
     IncrementalEditProfileFailure,
     artifact_diff,
+    control_flow_cache_stats,
     hxcir_function_sections,
     hxcir_module_sections,
     replace_source_classpath,
+    require_control_flow_cache_accounting,
     section_diff,
 )
 
@@ -107,6 +109,49 @@ class IncrementalEditProfileTest(unittest.TestCase):
         self.assertIn("reflaxe_c_incremental_input_report", result)
         with self.assertRaises(IncrementalEditProfileFailure):
             replace_source_classpath(("-cp", "/compiler/src"), source)
+
+    def test_control_flow_cache_accounting_is_complete(self) -> None:
+        sample = {
+            "profile": {
+                "counters": [
+                    {
+                        "name": "cast.control-flow-plan-cache-hits",
+                        "value": 3.0,
+                    },
+                    {
+                        "name": "cast.control-flow-plan-cache-misses",
+                        "value": 1.0,
+                    },
+                    {
+                        "name": "cast.control-flow-plan-cache-retained-functions",
+                        "value": 4.0,
+                    },
+                    {
+                        "name": "cast.control-flow-plan-cache-retained-key-code-units",
+                        "value": 512.0,
+                    },
+                    {"name": "typed.modules", "value": 2.0},
+                ]
+            }
+        }
+        stats = control_flow_cache_stats(sample, "fixture")
+        require_control_flow_cache_accounting(
+            stats,
+            label="fixture",
+            hits=3,
+            misses=1,
+            retained_functions=4,
+        )
+        with self.assertRaisesRegex(
+            IncrementalEditProfileFailure, "cache hits"
+        ):
+            require_control_flow_cache_accounting(
+                stats,
+                label="fixture",
+                hits=4,
+                misses=0,
+                retained_functions=4,
+            )
 
 
 if __name__ == "__main__":

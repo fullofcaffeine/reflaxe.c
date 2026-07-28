@@ -1,6 +1,7 @@
 package reflaxe.c;
 
 #if (macro || reflaxe_runtime)
+import haxe.Json;
 import haxe.macro.Context;
 import haxe.macro.Type;
 import reflaxe.GenericCompiler;
@@ -20,6 +21,7 @@ import reflaxe.c.emit.ReflaxeOutputWriter;
 import reflaxe.c.frontend.TypedAstNormalizer;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.NamedRecordSourceProvenance.NamedRecordSourceProvenanceError;
+import reflaxe.c.lowering.CBodyControlFlowPlanCache;
 
 /** Reflaxe adapter. Semantic lowering remains in `CCompiler`. */
 class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
@@ -68,6 +70,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		final buildMode = BuildModeResolver.resolve(profile);
 		CPhaseTiming.describeRequest(Std.string(profile), Std.string(buildMode));
 		GeneratedFileDigestCache.beginRequest(!Context.defined(GeneratedFileDigestCache.DISABLE_DEFINE));
+		CBodyControlFlowPlanCache.beginRequest(!Context.defined(CBodyControlFlowPlanCache.DISABLE_DEFINE));
 		compilationContext = new CompilationContext(profile, buildMode);
 		generatedFiles = [];
 		currentProgram = pendingProgram;
@@ -91,6 +94,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 	override public function generateFilesManually():Void {
 		if (output == null) {
 			GeneratedFileDigestCache.abortRequest();
+			CBodyControlFlowPlanCache.abortRequest();
 			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "Reflaxe output manager is not initialized", Context.currentPos());
 			return;
 		}
@@ -102,6 +106,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			CPhaseTiming.stop(outputTimer);
 			outputTimer = null;
 			GeneratedFileDigestCache.abortRequest();
+			CBodyControlFlowPlanCache.abortRequest();
 			CDiagnostic.fatal(error.diagnosticId, error.detail, Context.currentPos());
 		}
 	}
@@ -118,7 +123,10 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 	override public function onOutputComplete():Void {
 		CPhaseTiming.stop(outputTimer);
 		outputTimer = null;
+		final controlFlowStats = CBodyControlFlowPlanCache.completeRequest();
 		GeneratedFileDigestCache.completeRequest(generatedFiles);
+		if (Context.defined(CBodyControlFlowPlanCache.REPORT_DEFINE))
+			Sys.println(CBodyControlFlowPlanCache.REPORT_PREFIX + Json.stringify(controlFlowStats));
 		CPhaseTiming.finishRequest();
 	}
 

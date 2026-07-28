@@ -21,6 +21,7 @@ EXPECTED = Path(__file__).resolve().parent / "expected/typed-ast-inventory.json"
 REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
 INCREMENTAL_REPORT_PREFIX = "HXC_INCREMENTAL_INPUT="
 CONSTRUCTOR_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
+CONTROL_FLOW_CACHE_REPORT_PREFIX = "HXC_CONTROL_FLOW_PLAN_CACHE="
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_EXPECTATIONS = {
     "rich": (
@@ -47,6 +48,7 @@ class CompileResult:
     incremental_report: dict[str, object]
     hxcir: str | None = None
     generated_tree: dict[str, bytes] | None = None
+    control_flow_cache_report: dict[str, object] | None = None
 
 
 def development_tool(name: str) -> str:
@@ -450,7 +452,11 @@ def check_compiler_server_isolation() -> None:
 
 
 def compile_successful_incremental_fixture(
-    fixture_root: Path, *, connect: str | None, output: Path
+    fixture_root: Path,
+    *,
+    connect: str | None,
+    output: Path,
+    disable_control_flow_cache: bool = False,
 ) -> CompileResult:
     """Compile one successful fixture so Haxe may commit its frontend cache."""
 
@@ -468,11 +474,15 @@ def compile_successful_incremental_fixture(
         "reflaxe_c_incremental_input_report",
         "-D",
         "reflaxe_c_constructor_lowering_report",
+        "-D",
+        "reflaxe_c_control_flow_plan_cache_report",
         "-main",
         "Main",
         "--custom-target",
         f"c={output}",
     ])
+    if disable_control_flow_cache:
+        command.extend(["-D", "reflaxe_c_test_disable_control_flow_plan_cache"])
     environment = os.environ.copy()
     if connect is None:
         environment["HAXE_NO_SERVER"] = "1"
@@ -514,6 +524,11 @@ def compile_successful_incremental_fixture(
     hxcir = constructor_report.get("hxcir")
     if not isinstance(hxcir, str) or not hxcir:
         raise TypedAstProbeFailure("successful incremental fixture omitted HxcIR")
+    _, control_flow_cache_report = parse_report(
+        process.stdout,
+        CONTROL_FLOW_CACHE_REPORT_PREFIX,
+        "successful incremental control-flow cache",
+    )
     return CompileResult(
         process,
         "",
@@ -526,6 +541,7 @@ def compile_successful_incremental_fixture(
             for path in sorted(output.rglob("*"))
             if path.is_file() and path.name != "_GeneratedFiles.json"
         },
+        control_flow_cache_report,
     )
 
 
@@ -614,6 +630,71 @@ def assert_equivalent_incremental_result(
         )
 
 
+def require_control_flow_cache_report(
+    result: CompileResult, label: str
+) -> dict[str, object]:
+    """Return one successful request's fail-closed cache evidence."""
+
+    report = result.control_flow_cache_report
+    if not isinstance(report, dict):
+        raise TypedAstProbeFailure(
+            f"{label} omitted its control-flow plan cache report"
+        )
+    return report
+
+
+def assert_control_flow_cache(
+    result: CompileResult,
+    *,
+    label: str,
+    enabled: bool,
+    hits: int,
+    misses: int,
+    retained_functions: int,
+) -> None:
+    """Check exact cache accounting instead of inferring reuse from elapsed time."""
+
+    report = require_control_flow_cache_report(result, label)
+    expected = {
+        "enabled": enabled,
+        "hits": hits,
+        "misses": misses,
+        "retainedFunctions": retained_functions,
+    }
+    for field, value in expected.items():
+        if report.get(field) != value:
+            raise TypedAstProbeFailure(
+                f"{label} cache field {field} was {report.get(field)!r}, "
+                f"expected {value!r}: {report!r}"
+            )
+    retained_key_units = report.get("retainedKeyCodeUnits")
+    expected_positive_key_size = retained_functions > 0
+    if not isinstance(retained_key_units, (int, float)) or (
+        expected_positive_key_size and retained_key_units <= 0
+    ) or (not expected_positive_key_size and retained_key_units != 0):
+        raise TypedAstProbeFailure(
+            f"{label} did not report a bounded retained key size: {report!r}"
+        )
+
+
+def control_flow_function_count(result: CompileResult, label: str) -> int:
+    """Read the complete successful generation size from its first-request misses."""
+
+    report = require_control_flow_cache_report(result, label)
+    misses = report.get("misses")
+    retained = report.get("retainedFunctions")
+    if (
+        report.get("enabled") is not True
+        or not isinstance(misses, int)
+        or misses <= 0
+        or retained != misses
+    ):
+        raise TypedAstProbeFailure(
+            f"{label} was not a complete cold cache generation: {report!r}"
+        )
+    return misses
+
+
 def assert_worker_record_sources(
     result: CompileResult, expected_fields: dict[str, tuple[int, int, int, int]], label: str
 ) -> None:
@@ -688,6 +769,15 @@ def check_compiler_server_rebuild_inventory() -> None:
             unchanged = compile_successful_incremental_fixture(
                 editable, connect=endpoint, output=output
             )
+            function_count = control_flow_function_count(prime, "server prime")
+            assert_control_flow_cache(
+                unchanged,
+                label="unchanged warm request",
+                enabled=True,
+                hits=function_count,
+                misses=0,
+                retained_functions=function_count,
+            )
             source = editable / "WorkerResult.hx"
             original = source.read_text(encoding="utf-8")
             changed = original.replace("changed: 4,", "changed: 5,", 1)
@@ -703,6 +793,22 @@ def check_compiler_server_rebuild_inventory() -> None:
                 editable,
                 connect=None,
                 output=Path(temporary) / "edited-cold",
+            )
+            assert_control_flow_cache(
+                edited,
+                label="implementation edit",
+                enabled=True,
+                hits=function_count - 1,
+                misses=1,
+                retained_functions=function_count,
+            )
+            assert_control_flow_cache(
+                edited_cold,
+                label="cold implementation edit",
+                enabled=True,
+                hits=0,
+                misses=function_count,
+                retained_functions=function_count,
             )
 
             assert_incremental_report(
@@ -799,6 +905,21 @@ def check_compiler_server_rebuild_inventory() -> None:
             assert_equivalent_incremental_result(
                 public_cold, public_edit, "public typedef edit"
             )
+            public_report = require_control_flow_cache_report(
+                public_edit, "public typedef edit"
+            )
+            public_hits = public_report.get("hits")
+            public_misses = public_report.get("misses")
+            if (
+                not isinstance(public_hits, int)
+                or not isinstance(public_misses, int)
+                or public_misses <= 0
+                or public_hits + public_misses != function_count
+            ):
+                raise TypedAstProbeFailure(
+                    "public typedef edit did not conservatively invalidate its "
+                    f"changed semantic functions: {public_report!r}"
+                )
 
             unsupported = original.replace(
                 "final stable:Int;", "final stable:Dynamic;", 1
@@ -846,6 +967,21 @@ def check_compiler_server_rebuild_inventory() -> None:
             assert_equivalent_incremental_result(
                 prime, reverted, "request-order restoration"
             )
+            reverted_report = require_control_flow_cache_report(
+                reverted, "request-order restoration"
+            )
+            reverted_hits = reverted_report.get("hits")
+            reverted_misses = reverted_report.get("misses")
+            if (
+                not isinstance(reverted_hits, int)
+                or not isinstance(reverted_misses, int)
+                or reverted_misses <= 0
+                or reverted_hits + reverted_misses != function_count
+            ):
+                raise TypedAstProbeFailure(
+                    "success-failure-success restoration did not compare against "
+                    f"the last successful generation: {reverted_report!r}"
+                )
 
             second_worktree = Path(temporary) / "second-worktree"
             shutil.copytree(editable, second_worktree)
@@ -854,6 +990,34 @@ def check_compiler_server_rebuild_inventory() -> None:
             )
             assert_equivalent_incremental_result(
                 prime, second_result, "second-worktree request"
+            )
+            assert_control_flow_cache(
+                second_result,
+                label="second-worktree request",
+                enabled=True,
+                hits=function_count,
+                misses=0,
+                retained_functions=function_count,
+            )
+            cache_off = compile_successful_incremental_fixture(
+                editable,
+                connect=endpoint,
+                output=output,
+                disable_control_flow_cache=True,
+            )
+            assert_equivalent_incremental_result(
+                prime, cache_off, "cache-disabled warm request"
+            )
+            assert_control_flow_cache(
+                cache_off,
+                label="cache-disabled warm request",
+                enabled=False,
+                hits=0,
+                misses=0,
+                # Haxe gives a changed define signature its own persistent macro
+                # context. The disabled request must therefore expose no retained
+                # enabled-cache state rather than borrowing another context's data.
+                retained_functions=0,
             )
         finally:
             stop_server(server)
@@ -865,6 +1029,14 @@ def check_compiler_server_rebuild_inventory() -> None:
         )
         assert_equivalent_incremental_result(
             prime, cold_without_server, "cache-off cold request"
+        )
+        assert_control_flow_cache(
+            cold_without_server,
+            label="fresh-process cold request",
+            enabled=True,
+            hits=0,
+            misses=function_count,
+            retained_functions=function_count,
         )
 
         restarted_port = available_port()
@@ -891,6 +1063,22 @@ def check_compiler_server_rebuild_inventory() -> None:
             assert_equivalent_incremental_result(
                 prime, restarted_warm, "restarted-server warm request"
             )
+            assert_control_flow_cache(
+                restarted_first,
+                label="restarted-server first request",
+                enabled=True,
+                hits=0,
+                misses=function_count,
+                retained_functions=function_count,
+            )
+            assert_control_flow_cache(
+                restarted_warm,
+                label="restarted-server warm request",
+                enabled=True,
+                hits=function_count,
+                misses=0,
+                retained_functions=function_count,
+            )
         finally:
             stop_server(restarted)
 
@@ -906,7 +1094,8 @@ def main() -> int:
     print(
         "typed-ast: OK: declarations/metadata/entry ownership, order determinism, "
         "inventory coverage, exact HXC1001 no-output, compiler-server isolation, "
-        "one-module rebuild evidence, and exact named-record provenance"
+        "one-module rebuild evidence, exact named-record provenance, and exact "
+        "validated control-flow plan reuse"
     )
     return 0
 
