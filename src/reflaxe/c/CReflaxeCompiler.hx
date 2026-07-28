@@ -14,6 +14,7 @@ import reflaxe.c.CPhaseTiming.CProfileCounterId;
 import reflaxe.c.CPhaseTiming.CPhaseTimer;
 import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.emit.GeneratedFile;
+import reflaxe.c.emit.GeneratedFileDigestCache;
 import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.emit.ReflaxeOutputWriter;
 import reflaxe.c.frontend.TypedAstNormalizer;
@@ -26,6 +27,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 	var generatedFiles:Array<GeneratedFile> = [];
 	var compilationContext:Null<CompilationContext> = null;
 	var targetTimer:Null<CPhaseTimer> = null;
+	var outputTimer:Null<CPhaseTimer> = null;
 
 	public function new() {
 		super();
@@ -60,6 +62,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		final profile = ProfileResolver.resolve();
 		final buildMode = BuildModeResolver.resolve(profile);
 		CPhaseTiming.describeRequest(Std.string(profile), Std.string(buildMode));
+		GeneratedFileDigestCache.beginRequest(!Context.defined(GeneratedFileDigestCache.DISABLE_DEFINE));
 		compilationContext = new CompilationContext(profile, buildMode);
 		generatedFiles = [];
 		currentProgram = pendingProgram;
@@ -82,19 +85,36 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 
 	override public function generateFilesManually():Void {
 		if (output == null) {
+			GeneratedFileDigestCache.abortRequest();
 			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "Reflaxe output manager is not initialized", Context.currentPos());
 			return;
 		}
 
-		final outputTimer = CPhaseTiming.start(CPOutputOwnership);
+		outputTimer = CPhaseTiming.start(CPOutputOwnership);
 		try {
 			new ReflaxeOutputWriter().write(output, generatedFiles);
-			CPhaseTiming.stop(outputTimer);
-			CPhaseTiming.finishRequest();
 		} catch (error:ProjectEmissionError) {
 			CPhaseTiming.stop(outputTimer);
+			outputTimer = null;
+			GeneratedFileDigestCache.abortRequest();
 			CDiagnostic.fatal(error.diagnosticId, error.detail, Context.currentPos());
 		}
+	}
+
+	/**
+		Commit warm digest evidence only after Reflaxe finishes output ownership.
+
+		`generateFilesManually` writes the planned artifacts, but Reflaxe still
+		has to apply its stale-file policy and write ownership metadata afterward.
+		`onOutputComplete` is the first hook after that whole
+		transaction. A failure before this hook therefore leaves the previous
+		successful cache generation untouched.
+	**/
+	override public function onOutputComplete():Void {
+		CPhaseTiming.stop(outputTimer);
+		outputTimer = null;
+		GeneratedFileDigestCache.completeRequest(generatedFiles);
+		CPhaseTiming.finishRequest();
 	}
 
 	public function generateOutputIterator():Iterator<DataAndFileInfo<StringOrBytes>> {

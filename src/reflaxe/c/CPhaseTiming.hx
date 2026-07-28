@@ -132,6 +132,10 @@ enum abstract CProfileCounterId(String) to String {
 	var CPCounterSymbolPrimaryRequestSortComparisons = "symbols.primary-request-sort-comparisons";
 	var CPCounterSymbolRequests = "symbols.requests";
 	var CPCounterSymbolTableRecords = "symbols.table-records";
+	var CPCounterGeneratedDigestCacheHits = "artifacts.digest-cache-hits";
+	var CPCounterGeneratedDigestCacheMisses = "artifacts.digest-cache-misses";
+	var CPCounterGeneratedDigestCacheRetainedBytes = "artifacts.digest-cache-retained-bytes";
+	var CPCounterGeneratedDigestCacheRetainedEntries = "artifacts.digest-cache-retained-entries";
 	var CPCounterGeneratedFiles = "artifacts.files";
 	var CPCounterGeneratedBytes = "artifacts.bytes";
 	var CPCounterPriorOwnedFiles = "output.prior-owned-files";
@@ -420,7 +424,7 @@ class CPhaseTiming {
 	public static inline final REPORT_PREFIX = "HXC_PHASE_TIMING\t";
 	public static inline final DETAIL_REPORT_PREFIX = "HXC_DETAIL_TIMING\t";
 	public static inline final PROFILE_REPORT_PREFIX = "HXC_PROFILE\t";
-	public static inline final PROFILE_SCHEMA_VERSION = 6;
+	public static inline final PROFILE_SCHEMA_VERSION = 7;
 
 	static var active:Null<CProfileRequestState> = null;
 

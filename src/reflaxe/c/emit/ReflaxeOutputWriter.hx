@@ -49,11 +49,11 @@ class ReflaxeOutputWriter {
 		CPhaseTiming.setCounter(CPCounterPlannedOutputFiles, files.length);
 		var previous:Null<String> = null;
 		for (file in files) {
-			// `GeneratedFile` validates and hashes its final String in the
-			// constructor. Both fields are immutable, so hashing the complete
-			// content again here cannot discover an intervening typed mutation.
-			// Avoiding that duplicate pass matters for large audit sidecars while
-			// preserving the exact content address used by the manifest below.
+			// `GeneratedFile` validates and content-addresses its final String in
+			// the constructor. It may compute SHA-256 or reuse the exact prior
+			// request's address, but its text, digest, and byte length are all
+			// immutable here. Hashing the complete content again therefore cannot
+			// discover an intervening typed mutation.
 			if (previous == file.relativePath) {
 				fail('duplicate generated artifact path `${file.relativePath}`', [file.relativePath]);
 			}

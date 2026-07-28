@@ -1,8 +1,5 @@
 package reflaxe.c.emit;
 
-import haxe.io.Bytes;
-import reflaxe.c.emit.CContentDigest.sha256Hex;
-
 /** Stable artifact roles admitted by the project emitter. */
 enum abstract GeneratedFileKind(String) to String {
 	var PublicHeader = "public-header";
@@ -31,17 +28,18 @@ class GeneratedFile {
 	public final kind:GeneratedFileKind;
 	public final contentSha256:String;
 
-	/** UTF-8 payload size captured with the bytes already needed for hashing. */
+	/** Exact UTF-8 payload size computed or reused with the content address. */
 	public final contentByteLength:Int;
 
 	/**
 		Validate and content-address one compiler-owned artifact.
 
 		Haxe strings are immutable and every stored field is `final`, so the
-		digest and byte length remain valid for this object's whole lifetime.
-		Later project planning may safely reuse them instead of hashing the same
-		large generated C payload again. Filesystem output is a separate trust
-		boundary with its own ownership and path checks.
+		digest and byte length remain valid for this object's whole lifetime. A
+		warm compiler-server request may reuse both only when the prior completed
+		request has the same path, artifact role, and complete text. Otherwise the
+		constructor computes SHA-256 from fresh UTF-8 bytes. Filesystem output is
+		a separate trust boundary with its own ownership and path checks.
 	**/
 	public function new(relativePath:String, contents:String, kind:GeneratedFileKind) {
 		if (!isNormalizedRelativePath(relativePath) || relativePath == OWNERSHIP_MANIFEST) {
@@ -57,9 +55,9 @@ class GeneratedFile {
 		this.relativePath = relativePath;
 		this.contents = contents;
 		this.kind = kind;
-		final encoded = Bytes.ofString(contents);
-		this.contentSha256 = sha256Hex(encoded);
-		this.contentByteLength = encoded.length;
+		final address = GeneratedFileDigestCache.address(relativePath, contents, kind);
+		this.contentSha256 = address.sha256;
+		this.contentByteLength = address.byteLength;
 	}
 
 	public static function isNormalizedRelativePath(value:String):Bool {
