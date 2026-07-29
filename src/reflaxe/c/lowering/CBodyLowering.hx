@@ -10957,6 +10957,28 @@ private class FunctionBuilder {
 				runtimeRequirements.push(new CBodyRuntimeRequirement("array", operation, 'ordinary Haxe Array.$method with nullable ownership transfer',
 					source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
+			case "splice":
+				if (arguments.length != 2)
+					return unsupported(expression, 'TCall(Array.splice:argument-count=${arguments.length})');
+				if (materializeResult)
+					return unsupported(expression, "TCall(Array.splice:returned-Array-not-yet-admitted)");
+				if (constantInt(arguments[1]) != 1)
+					return unsupported(arguments[1], "TCall(Array.splice:only-discarded-one-element-form-admitted)");
+				final indexMapping = bodyValueType(arguments[0].t, arguments[0].pos, "TCall(Array.splice:index-type)");
+				if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
+					return unsupported(arguments[0], 'TCall(Array.splice:index-must-be-Haxe-Int:${indexMapping.cSpelling})');
+				final index = coerce(lowerValue(arguments[0], indexMapping), indexMapping, arguments[0].pos, "TCall(Array.splice:index)");
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-splice-one-discard-receiver-load");
+				final source = sourceSpan(expression.pos);
+				appendInstruction(null, IRIOCall({
+					dispatch: IRCDRuntime("array", "splice-one-discard"),
+					arguments: [callReceiver.id, index.id],
+					returnType: IRTVoid,
+					failure: managedArrayFailure()
+				}), source, "array-splice-one-discard");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "splice-one-discard",
+					"ordinary Haxe Array.splice(pos, 1) mutation when the removed Array result is discarded", source, expression.pos));
+				null;
 			case "push":
 				if (arguments.length != 1)
 					return unsupported(expression, 'TCall(Array.push:argument-count=${arguments.length})');

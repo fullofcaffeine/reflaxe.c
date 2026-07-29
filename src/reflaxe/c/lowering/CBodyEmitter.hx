@@ -5369,6 +5369,23 @@ class CBodyEmitter {
 			]), boundsAbortName, instruction.id, fn.id);
 			return;
 		}
+		if (operation == "splice-one-discard") {
+			if (call.arguments.length != 2 || call.returnType != IRTVoid)
+				return fail('Array splice-one-discard `${instruction.id}` in `${fn.id}` lost its receiver/index/Void signature');
+			final receiverType = valueType(fn, call.arguments[0]);
+			if (receiverType == null)
+				return fail('Array splice-one-discard `${instruction.id}` in `${fn.id}` lost its receiver type');
+			requireArrayPlan(requireArrayInstanceId(receiverType, instruction.id, fn.id));
+			final indexType = valueType(fn, call.arguments[1]);
+			if (indexType == null || exactTypeKey(indexType) != exactTypeKey(IRTInt(32, true)))
+				return fail('Array splice-one-discard `${instruction.id}` in `${fn.id}` lost its Haxe Int position');
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySpliceOneDiscard)), [
+				requireValue(values, call.arguments[0], fn.id),
+				requireValue(values, call.arguments[1], fn.id)
+			]), boundsAbortName, instruction.id, fn.id);
+			return;
+		}
 		final result = requireResult(instruction, fn.id);
 		final temporary = temporaryNames.get(result.id);
 		if (temporary == null)

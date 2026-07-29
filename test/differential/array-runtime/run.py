@@ -176,6 +176,26 @@ def run_oracle() -> str:
     return outputs[0]
 
 
+def run_generated_eval_oracle() -> None:
+    """Run the ordinary-Haxe ownership fixture before compiling it to C."""
+
+    result = subprocess.run(
+        [development_tool("haxe"), "oracle.hxml"],
+        cwd=GENERATED,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ArrayRuntimeFailure(
+            "ordinary-Haxe Array Eval oracle drifted\n"
+            f"exit={result.returncode} stdout={result.stdout!r} "
+            f"stderr={result.stderr!r}"
+        )
+
+
 def haxe_environment(*, server: bool = False) -> dict[str, str]:
     environment = os.environ.copy()
     if server:
@@ -270,6 +290,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="push")',
         'runtime(feature="array",operation="pop")',
         'runtime(feature="array",operation="shift")',
+        'runtime(feature="array",operation="splice-one-discard")',
         'runtime(feature="array",operation="resize-zero")',
         'runtime(feature="array",operation="sort")',
         'function-reference target="function.lambda.function.Main.main.',
@@ -428,6 +449,12 @@ def validate_generated_hxcir(hxcir: str) -> None:
         raise ArrayRuntimeFailure(
             "Array.shift coverage no longer contains primitive and managed "
             "present, repeated, and empty ownership transfers"
+        )
+    if entry.count('runtime(feature="array",operation="splice-one-discard")') != 6:
+        raise ArrayRuntimeFailure(
+            "discarded Array.splice coverage no longer contains primitive "
+            "middle/negative/out-of-range/clamped/empty cases plus one managed "
+            "String removal"
         )
     if (
         entry.count('runtime(feature="array",operation="resize-zero")') != 2
@@ -640,6 +667,7 @@ def validate_generated_project(output: Path) -> None:
         "set",
         "shift",
         "sort",
+        "splice-one-discard",
     }
     if operations != expected:
         raise ArrayRuntimeFailure(
@@ -671,6 +699,7 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_push_copy",
         "hxc_array_ref_pop_move",
         "hxc_array_ref_shift_move",
+        "hxc_array_ref_splice_one_discard",
         "hxc_array_ref_get_copy",
         "hxc_array_resize",
         "hxc_array_ref_sort",
@@ -879,6 +908,7 @@ def run_generated_negative_cases(root: Path) -> None:
         "resize_dynamic": "TCall(Array.resize:only-literal-zero-admitted)",
         "resize_nonzero": "TCall(Array.resize:only-literal-zero-admitted)",
         "sort_capturing_comparator": "TFunction(capturing-closure:outer-local:direction)",
+        "splice_return": "TCall(Array.splice:returned-Array-not-yet-admitted)",
     }
     for name, marker in expected.items():
         output = root / f"negative-{name}"
@@ -1125,6 +1155,7 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_array_ref_pop_move",
         "hxc_array_shift_move",
         "hxc_array_ref_shift_move",
+        "hxc_array_ref_splice_one_discard",
         "hxc_array_resize",
         "hxc_array_remove_at",
     ):
@@ -1240,6 +1271,8 @@ def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
         expected_trace = EXPECTED_TRACE if args.native_only else run_oracle()
+        if not args.native_only:
+            run_generated_eval_oracle()
         toolchains = selected_toolchains(args.toolchain)
         run_native(toolchains, expected_trace, generated_haxe=not args.native_only)
     except (

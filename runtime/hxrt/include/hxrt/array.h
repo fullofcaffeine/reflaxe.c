@@ -388,6 +388,19 @@ HXC_API hxc_status hxc_array_ref_shift_move(
   bool *out_present
 );
 
+/**
+ * Remove one element using Haxe's `Array.splice(position, 1)` index rules.
+ *
+ * The removed Array result is intentionally discarded, so this operation
+ * destroys the removed slot instead of allocating another container. A
+ * negative position counts from the end and clamps to zero; a position at or
+ * beyond the length is a successful no-op. Every alias observes the mutation.
+ */
+HXC_API hxc_status hxc_array_ref_splice_one_discard(
+  hxc_array_ref *array,
+  int32_t position
+);
+
 /** Append one trivial element and return the new Haxe Int length. */
 HXC_API hxc_status hxc_array_ref_push_copy(
   hxc_array_ref *array,

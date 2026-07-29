@@ -138,6 +138,17 @@ final class Main {
 		final shiftedSeven = shiftedIntegers.shift();
 		final shiftedEight = shiftedIntegers.shift();
 		final shiftedEmpty = shiftedIntegers.shift();
+		final splicedIntegers = [10, 20, 30, 40];
+		final splicedIntegersAlias = splicedIntegers;
+		splicedIntegers.splice(1, 1);
+		splicedIntegers.splice(-1, 1);
+		splicedIntegers.splice(99, 1);
+		splicedIntegers.splice(-99, 1);
+		final emptySplice:Array<Int> = [];
+		emptySplice.splice(0, 1);
+		final splicedLabels = labels.copy();
+		final splicedLabelsAlias = splicedLabels;
+		splicedLabels.splice(1, 1);
 
 		final row:Array<Int> = [1];
 		final rows:Array<Array<Int>> = [row];
@@ -259,6 +270,12 @@ final class Main {
 			|| shiftedEight != 8
 			|| shiftedEmpty != null
 			|| shiftedIntegersAlias.length != 0
+			|| splicedIntegersAlias.length != 1
+			|| splicedIntegersAlias[0] != 30
+			|| emptySplice.length != 0
+			|| splicedLabelsAlias.length != 2
+			|| splicedLabelsAlias[0] != "ready"
+			|| splicedLabelsAlias[1] != "a\u0000b"
 			|| managedPayloadLength != 3
 			|| recordCopy.commands.length != 3
 			|| firstShiftedRecord == null

@@ -941,6 +941,33 @@ hxc_status hxc_array_ref_shift_move(
   return hxc_array_shift_move(&array->value, out_element, out_present);
 }
 
+hxc_status hxc_array_ref_splice_one_discard(
+  hxc_array_ref *array,
+  int32_t position
+) {
+  int64_t normalized;
+  size_t index;
+
+  if (!hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->value.length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  normalized = (int64_t)position;
+  if (normalized < 0) {
+    normalized += (int64_t)array->value.length;
+    if (normalized < 0) {
+      normalized = 0;
+    }
+  }
+  index = (size_t)normalized;
+  if (index >= array->value.length) {
+    return HXC_STATUS_OK;
+  }
+  return hxc_array_remove_at(&array->value, index);
+}
+
 hxc_status hxc_array_ref_push_copy(
   hxc_array_ref *array,
   const void *element,

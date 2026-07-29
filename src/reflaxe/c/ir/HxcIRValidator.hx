@@ -2875,6 +2875,14 @@ private class HxcIRValidationState {
 						'Array.$operationId requires one managed Array and returns either a tagged optional element or the same element carrier when that carrier represents null exactly',
 						source);
 				}
+			case "splice-one-discard":
+				if (argumentTypes.length != 2
+					|| receiverElement == null
+					|| secondArgumentType == null
+					|| typeKey(secondArgumentType) != typeKey(IRTInt(32, true))
+					|| call.returnType != IRTVoid) {
+					add(path, "discarded Array.splice(pos, 1) requires one managed Array plus a Haxe Int position and returns Void", source);
+				}
 			case "get-checked":
 				if (argumentTypes.length != 2 || receiverElement == null || secondArgumentType == null) {
 					add(path, "checked Array indexing requires managed Array + Haxe Int and returns its element type", source);
