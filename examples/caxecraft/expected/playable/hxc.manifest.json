@@ -56,6 +56,7 @@
       "src/modules/caxecraft/domain/WorldRead.c",
       "src/modules/caxecraft/domain/WorldStorage.c",
       "src/modules/caxecraft/editor/EditorCommandReducer.c",
+      "src/modules/caxecraft/editor/EditorFocus.c",
       "src/modules/caxecraft/editor/EditorHistory.c",
       "src/modules/caxecraft/editor/EditorObservationPlan.c",
       "src/modules/caxecraft/editor/EditorPolicy.c",
@@ -157,6 +158,7 @@
       "include/hxc/modules/caxecraft/domain/WorldRead.h",
       "include/hxc/modules/caxecraft/domain/WorldStorage.h",
       "include/hxc/modules/caxecraft/editor/EditorCommandReducer.h",
+      "include/hxc/modules/caxecraft/editor/EditorFocus.h",
       "include/hxc/modules/caxecraft/editor/EditorHistory.h",
       "include/hxc/modules/caxecraft/editor/EditorObservationPlan.h",
       "include/hxc/modules/caxecraft/editor/EditorPolicy.h",
@@ -367,7 +369,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "17c4472fb0eaf6017ec3103e37540759a4ad44d19471511468ab5264ad38fc21",
+      "sha256": "618ab2d780bc7a38bb17360dc852c1a6f18331097175a84930aecce7bcd7da29",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -377,7 +379,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "a7b881050ddd5cc13533f81a080e4a579d715196fe5371a0352d7c0d46471b96",
+      "sha256": "331d46bee9e146b961568c8dd21df1636cb603ead9f55081954a6b2cc4acbc3b",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -387,12 +389,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "1e165541a7d22247503dd943741cdc2bdd98612c60c31a110638158b67d0eb2e",
+      "sha256": "fccf1c00d98e63c08ba4d550810c31bae38a65b3f408028d8b9ce1c6a638ad89",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "8c24bc9cd742654ca3889dea5da10710496f1126d94c84ffbf91647abbb34024",
+      "sha256": "6d2ad53f72d94a53212311e097f12361df31bcbdef937c131a14232ac05f0530",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -402,7 +404,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "affbd6c4c47025407fedbbb93a07ba9556494aab1bd9893eefda6a4eaec43b16",
+      "sha256": "b7ecd237bdd37ea425a1d98e10f125165bfcad149c6219b274d07120c696d79a",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -432,7 +434,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "b4d7121803f092cafb72e000552fff2e946c99c207e737556b6c5e772fc27f29",
+      "sha256": "7922728f2f435e831e9b99c4b0351e7f88c54e6b06abe04e7b26d6e2af847e00",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftEditorScreen.h",
       "kind": "private-header"
     },
@@ -649,6 +651,11 @@
     {
       "sha256": "d0b11b93b29e1e6c43ef383d60cf2ce8ac4fb3a43d7f5b71590e64a6d3c29f7c",
       "path": "include/hxc/modules/caxecraft/editor/EditorCommandReducer.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "5ffa952590fc84701b08fa6ea901514891f74fd565ece68cbaed1f1186789533",
+      "path": "include/hxc/modules/caxecraft/editor/EditorFocus.h",
       "kind": "private-header"
     },
     {
@@ -977,7 +984,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "ecdd757819b41716ca0a44dd1772386a7704d983e8d062998b6adf3c0c403834",
+      "sha256": "712aa8bcb0d5530164dd7505602479d32e11038a1bb571e14fae96f7311e706d",
       "path": "include/hxc/modules/raygui/GuiListViewState.h",
       "kind": "private-header"
     },
@@ -1037,12 +1044,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "a8904c221958ff99d7f45d6bb4c9f4803fe024fd8117adcca5b9f717d2f49edf",
+      "sha256": "191a4fad6e6d150557d10001bb9e5e94db3742a1c23ebea25b2f0f87d634e79f",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "f36eaf92f06abe3852611e4e6bcabbe02a8fa7e62318807f3baa2731447847a0",
+      "sha256": "8e4d83c0d5024387d65ba28f8aaf0c5f669a34ceecb706ed2bb7ee42bb2c0530",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1192,7 +1199,7 @@
       "kind": "source"
     },
     {
-      "sha256": "122629729efc6a41e5b3d99002131aaf55a1e4cb74f68ee7bf1da13fc3990c38",
+      "sha256": "9c67d6697c1955283a8c303fd0d7f7181092dcba4554bece3d231d549ac673e2",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1217,7 +1224,7 @@
       "kind": "source"
     },
     {
-      "sha256": "3d0b4eee7c30f5b7032c41c31f985e15e81a2d8f6a48912a4711a22c2eff8576",
+      "sha256": "d5526c5393adef96fc9e4c6b51d5c25708352706caa08bca69119ecafe6302a4",
       "path": "src/modules/caxecraft/app/CaxecraftEditorScreen.c",
       "kind": "source"
     },
@@ -1349,6 +1356,11 @@
     {
       "sha256": "6895db0da5b2e135dd32d79a44072e32b91e0ff1dbc05b7b773a0daa69fcf36c",
       "path": "src/modules/caxecraft/editor/EditorCommandReducer.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "d290934f9ad42cfaf00748a14a8b76f2c06ddd68f3d439667c7ef849b8a0d264",
+      "path": "src/modules/caxecraft/editor/EditorFocus.c",
       "kind": "source"
     },
     {
@@ -1567,7 +1579,7 @@
       "kind": "source"
     },
     {
-      "sha256": "3c521f13079286dad3fec50ccffb67aa3ba9596e87dee079f752d2da6a2e6468",
+      "sha256": "290ab2c4c225f34248d943aa94e0c55219446bc13423c393e8e4c4bab6c2aafe",
       "path": "src/modules/raygui/GuiListViewState.c",
       "kind": "source"
     },

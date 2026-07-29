@@ -1104,7 +1104,9 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     flat-color counts therefore prove that the perspective view contains sky,
     ground, the solid voxel, and its selection outline without prescribing
     exact camera pixels. The focused sidebar subregion proves the first owned
-    text box is presented; exact edit semantics remain owned by faster tests.
+    text box is presented. The exact yellow focus-ring color proves the
+    device-neutral focus selected by the pilot reached the native toolbar;
+    exact edit semantics remain owned by faster tests.
     """
     width, height, pixels = decode_rgba_png(path, "editor")
     logical_width, logical_height = 1280, 720
@@ -1168,6 +1170,18 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             failures.append(
                 f"3d-{label}=pixels:{matching},minimum:{minimum * scale * scale}"
             )
+    focus_pixels = 0
+    for row in range(52 * scale, 94 * scale):
+        row_at = row * width * 4
+        for column in range(32 * scale, 672 * scale):
+            at = row_at + column * 4
+            if tuple(pixels[at : at + 3]) == (255, 216, 92):
+                focus_pixels += 1
+    minimum_focus_pixels = 150 * scale * scale
+    if focus_pixels < minimum_focus_pixels:
+        failures.append(
+            f"toolbar-focus-ring=pixels:{focus_pixels},minimum:{minimum_focus_pixels}"
+        )
     if failures:
         raise PlayFailure(
             "Caxecraft editor framebuffer is blank or missing a working region "

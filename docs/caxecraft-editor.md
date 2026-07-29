@@ -7,10 +7,12 @@ with a fly camera and typed voxel picking. The editor core also provides
 revision-checked mutations, bounded atomic command batches, and copy-owned
 observations for visual and future automation clients. Its World Name field now
 commits literal titles through that same typed command/history boundary. It
-still edits layer zero only. Native map-file persistence, localized
-message-title editing, JSONL/MCP adapters, multi-layer controls, controller
-navigation, object gizmos, and the fuller child-friendly authoring experience
-remain separate work.
+also has one device-neutral focus order: Tab and Shift-Tab move through every
+current control, Enter or Space activates the focused control, and a
+high-contrast ring shows where the next activation will go. It still edits
+layer zero only. Native map-file persistence, localized message-title editing,
+JSONL/MCP adapters, multi-layer controls, game-controller input, object gizmos,
+and the fuller child-friendly authoring experience remain separate work.
 
 ## What this layer owns
 
@@ -150,11 +152,22 @@ leave both the draft and its presentation cache unchanged.
 
 The current controls are:
 
+- use Tab and Shift-Tab to move the visible focus ring through editor controls;
+- press Enter or Space to activate the focused control;
 - hold the right mouse button and move the pointer to look;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
 - use the wheel to move along the view direction;
 - press F to restore the deterministic whole-world view; and
 - left-click to apply the selected tool.
+
+The focus order is target-neutral: it names editor actions, not Raylib key
+codes or screen coordinates. The native screen translates keyboard input into
+forward movement, backward movement, or activation. The list control then moves
+its own selected item when it receives activation. This separation lets the
+planned game-controller adapter reuse the same order without creating a second
+set of editor navigation rules. Controller polling itself is not implemented
+yet; issue `haxe_c-xge.19.6.1.6` owns the required pinned Raylib binding and
+native proof.
 
 The localized viewport heading shows these controls in English and
 Mexican Spanish. Camera state and the current hover are presentation values:

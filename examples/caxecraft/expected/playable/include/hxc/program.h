@@ -49,6 +49,7 @@
 #include "hxc/modules/caxecraft/domain/WorldRead.h"
 #include "hxc/modules/caxecraft/domain/WorldStorage.h"
 #include "hxc/modules/caxecraft/editor/EditorCommandReducer.h"
+#include "hxc/modules/caxecraft/editor/EditorFocus.h"
 #include "hxc/modules/caxecraft/editor/EditorHistory.h"
 #include "hxc/modules/caxecraft/editor/EditorObservationPlan.h"
 #include "hxc/modules/caxecraft/editor/EditorPolicy.h"

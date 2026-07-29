@@ -37,6 +37,26 @@ final class GuiListViewState {
 		return c.IntConvert.exact(scrollIndex);
 
 	/**
+	 * Move the active item without fabricating pointer or keyboard input.
+	 *
+	 * A screen uses this for semantic keyboard/controller navigation after it
+	 * has chosen the visible list's exact item count. The selection wraps so a
+	 * child can keep pressing one direction. Invalid counts and a zero movement
+	 * leave state unchanged and report `false`.
+	 */
+	public function moveSelection(itemCount:Int, delta:Int):Bool {
+		if (itemCount <= 0 || delta == 0)
+			return false;
+		var next = activeIndex() + delta;
+		while (next < 0)
+			next += itemCount;
+		while (next >= itemCount)
+			next -= itemCount;
+		active = c.IntConvert.exact(next);
+		return true;
+	}
+
+	/**
 	 * Draw the list and update this state from mouse or keyboard input.
 	 *
 	 * `items` follows raygui's compact `item;item;item` spelling. Both pointers

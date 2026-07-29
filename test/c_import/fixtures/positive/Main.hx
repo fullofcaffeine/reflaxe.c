@@ -21,6 +21,15 @@ class Main {
 	static function localizedMessage(message:Int):c.CString
 		return message == 0 ? "c-import-é" : "other-message";
 
+	/**
+	 * Forward one borrowed C string through ordinary non-inline Haxe code.
+	 *
+	 * This focused shape proves deterministic symbol planning recognizes a
+	 * `c.CString` parameter before the body emits the direct imported call.
+	 */
+	static function verifyPoint(left:Point, right:Point, dot:c.Int64, component:Coord, axis:Axis, label:c.CString):Bool
+		return PointLib.verify(left, right, dot, component, axis, label);
+
 	static function neverReachUnusedImport():c.Int32 {
 		return UnusedLib.value;
 	}
@@ -80,7 +89,7 @@ class Main {
 		var locale = 0;
 		while (!flipped
 			|| !resources.ready
-			|| !PointLib.verify(left, right, dot, component, axis, localizedLabel(locale, 0))
+			|| !verifyPoint(left, right, dot, component, axis, localizedLabel(locale, 0))
 			|| !PointLib.verifyFloat32(floatPoint, floatDot, widened, tie, subnormal, positiveInfinity, nan, negativeZero, finiteOverflow)
 			|| !InlineFloat32Probe.run()) {}
 	}

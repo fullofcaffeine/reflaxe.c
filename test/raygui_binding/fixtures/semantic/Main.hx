@@ -19,6 +19,14 @@ class Main {
 		final button = Rectangle.fromFloat(24.0, 72.0, 120.0, 32.0);
 		final advanced = new GuiToggleState(false);
 		final tools = new GuiListViewState();
+		if (!tools.moveSelection(3, 1) || tools.activeIndex() != 1)
+			while (true) {}
+		if (!tools.moveSelection(3, -2) || tools.activeIndex() != 2)
+			while (true) {}
+		if (!tools.moveSelection(3, 1) || tools.activeIndex() != 0)
+			while (true) {}
+		if (tools.moveSelection(0, 1) || tools.moveSelection(3, 0) || tools.activeIndex() != 0)
+			while (true) {}
 		final maybeName = GuiTextBoxState.create(64, "Bosque nevado");
 		if (maybeName == null)
 			while (true) {}

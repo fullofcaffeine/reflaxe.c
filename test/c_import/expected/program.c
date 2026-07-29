@@ -147,8 +147,8 @@ void hxc_Main_main(void)
       pointlib_coord hxc_tmp_load_result_n33 = hxc_component;
       pointlib_axis hxc_tmp_load_result_n34 = hxc_axis;
       const char *hxc_tmp_call_result_n36 = hxc_Main_localizedLabel(hxc_locale, 0);
-      bool hxc_tmp_native_call_result_n37 = pointlib_point_verify(hxc_tmp_load_result_n30, hxc_tmp_load_result_n31, hxc_tmp_load_result_n32, hxc_tmp_load_result_n33, hxc_tmp_load_result_n34, hxc_tmp_call_result_n36);
-      hxc_tmp_short_circuit_result_n20 = !hxc_tmp_native_call_result_n37;
+      bool hxc_tmp_call_result_n37 = hxc_Main_verifyPoint(hxc_tmp_load_result_n30, hxc_tmp_load_result_n31, hxc_tmp_load_result_n32, hxc_tmp_load_result_n33, hxc_tmp_load_result_n34, hxc_tmp_call_result_n36);
+      hxc_tmp_short_circuit_result_n20 = !hxc_tmp_call_result_n37;
     }
     bool hxc_tmp_short_circuit_load_result_n38 = hxc_tmp_short_circuit_result_n20;
     bool hxc_tmp_short_circuit_result_n21 = hxc_tmp_short_circuit_load_result_n38;
@@ -198,6 +198,12 @@ struct pointlib_point hxc_Main_selectPoint(bool hxc_useLeft, struct pointlib_poi
   }
   struct pointlib_point hxc_selected = hxc_tmp_conditional_result_n4;
   return hxc_selected;
+}
+
+bool hxc_Main_verifyPoint(struct pointlib_point hxc_left, struct pointlib_point hxc_right, int64_t hxc_dot, pointlib_coord hxc_component, pointlib_axis hxc_axis, const char *hxc_label)
+{
+  bool hxc_tmp_native_call_result_n0 = pointlib_point_verify(hxc_left, hxc_right, hxc_dot, hxc_component, hxc_axis, hxc_label);
+  return hxc_tmp_native_call_result_n0;
 }
 
 void hxc_init_compiler_static_initialization_InlineFloat32Probe_static_field_sideEffectCount(void)

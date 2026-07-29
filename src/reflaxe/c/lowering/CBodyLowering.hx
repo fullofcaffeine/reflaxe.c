@@ -3185,6 +3185,7 @@ private class FunctionPreparer {
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8-static-view";
 			case IRTManagedString: "string-utf8-managed-view";
+			case IRTCString: "cstring-borrowed-literal";
 			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${valueTypeKey(element)}>';
 			case IRTVoid: "void";
@@ -3192,7 +3193,8 @@ private class FunctionPreparer {
 			case IRTPointer(IRTInstance(instanceId), nullable): 'class-reference:${nullable ? "nullable" : "nonnull"}:$instanceId';
 			case IRTNullable(inner, representation): 'nullable:$representation<${valueTypeKey(inner)}>';
 			case IRTFunction(parameters, result): 'function(${parameters.map(valueTypeKey).join(",")})->${valueTypeKey(result)}';
-			case _: throw new CBodyEmissionError("function signature contains a non-admitted body type");
+			case _:
+				throw new CBodyEmissionError('function signature contains non-admitted HxcIR type `${Std.string(type)}`');
 		};
 	}
 }

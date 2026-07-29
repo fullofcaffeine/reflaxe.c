@@ -21,6 +21,10 @@ final class CaxecraftPalette {
 	public static inline function selection():Color
 		return Color.rgba(255, 132, 47);
 
+	/** High-contrast keyboard/controller focus ring for editor controls. */
+	public static inline function editorFocus():Color
+		return Color.rgba(255, 216, 92);
+
 	public static inline function hudPanel():Color
 		return Color.rgba(15, 27, 39, 220);
 

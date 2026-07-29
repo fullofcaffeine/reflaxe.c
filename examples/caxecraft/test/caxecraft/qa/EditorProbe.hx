@@ -1,6 +1,10 @@
 package caxecraft.qa;
 
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
+import caxecraft.editor.EditorFocus.EditorFocusMove;
+import caxecraft.editor.EditorFocus.EditorFocusTarget;
+import caxecraft.editor.EditorFocus.initialFocus;
+import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
 import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
@@ -93,6 +97,7 @@ final class EditorProbe {
 	static function main():Void {
 		checkActionPalette();
 		final protocolChecks = checkRevisionedProtocol() + checkTitleProtocol();
+		final focusChecks = checkFocusNavigation();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
 		final session = open(defaultEditorSettings());
@@ -162,8 +167,8 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
 	}
 
 	static function checkActionPalette():Void {
@@ -196,6 +201,52 @@ final class EditorProbe {
 			require(descriptor.editorHelp.text() == 'editor.action.${expected[index]}.help', "editor action help key drifted");
 			require(flowActionArgumentRoles(descriptor.schema).length > 0, "editor action lost its typed form fields");
 		}
+	}
+
+	/**
+	 * Prove every editor control is reachable in both semantic directions.
+	 *
+	 * This test deliberately knows nothing about keyboard keys, controllers, or
+	 * screen coordinates. Device adapters may change independently, while this
+	 * closed order remains the shared accessibility contract.
+	 */
+	static function checkFocusNavigation():Int {
+		final forward:Array<EditorFocusTarget> = [
+			EditorFocusTarget.Undo,
+			EditorFocusTarget.Redo,
+			EditorFocusTarget.Validate,
+			EditorFocusTarget.TestPlay,
+			EditorFocusTarget.ToolList,
+			EditorFocusTarget.AdvancedTools,
+			EditorFocusTarget.WorldName,
+			EditorFocusTarget.Back,
+			EditorFocusTarget.NewWorld
+		];
+		final backward:Array<EditorFocusTarget> = [
+			EditorFocusTarget.Back,
+			EditorFocusTarget.WorldName,
+			EditorFocusTarget.AdvancedTools,
+			EditorFocusTarget.ToolList,
+			EditorFocusTarget.TestPlay,
+			EditorFocusTarget.Validate,
+			EditorFocusTarget.Redo,
+			EditorFocusTarget.Undo,
+			EditorFocusTarget.NewWorld
+		];
+		var checks = 1;
+		var focus = initialFocus();
+		require(focus == EditorFocusTarget.NewWorld, "editor focus did not start on the first toolbar action");
+		for (expected in forward) {
+			focus = moveFocus(focus, EditorFocusMove.Forward);
+			require(focus == expected, "forward editor focus order drifted");
+			checks++;
+		}
+		for (expected in backward) {
+			focus = moveFocus(focus, EditorFocusMove.Backward);
+			require(focus == expected, "backward editor focus order drifted");
+			checks++;
+		}
+		return checks;
 	}
 
 	/**

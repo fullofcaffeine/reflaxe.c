@@ -78,6 +78,7 @@ import caxecraft.localization.UiCatalog.LocaleCursor;
 import caxecraft.localization.UiCatalog.UiMessage;
 #if caxecraft_pilot
 import caxecraft.app.PilotTelemetry.drawPilotTelemetry;
+import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorViewport.EditorTool;
 import raylib.Rlgl;
 #end
@@ -500,7 +501,14 @@ final class CaxecraftApp {
 			// operating system's keyboard and mouse delivery so repeated
 			// headless runs remain deterministic. Selecting the newly painted
 			// cell also gives the framebuffer oracle a specific 3D outline.
+			// Three semantic focus moves land on Validate, proving that the
+			// production focus order also paints an observable native ring.
 			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
+				editorScreen.applyPilotFocusMove(EditorFocusMove.Forward);
+				editorScreen.applyPilotFocusMove(EditorFocusMove.Forward);
+				editorScreen.applyPilotFocusMove(EditorFocusMove.Forward);
+				if (editorScreen.applyPilotFocusedAction() != EditorScreenAction.StayInEditor)
+					rejectedEdits++;
 				if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
 					rejectedEdits++;
 				if (!editorScreen.applyPilotCamera({

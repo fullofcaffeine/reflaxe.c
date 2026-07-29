@@ -52,6 +52,13 @@ until `GuiListView` returns. A class is useful for this control because its
 small state has a real lifetime across frames; stateless buttons remain simple
 facade calls and do not become pretend widget objects.
 
+Its `moveSelection(itemCount, delta)` method lets an application move that
+selection from a semantic keyboard or controller action without fabricating a
+mouse click or a pointer. The application supplies the exact visible item
+count, and the selection wraps at either end. RayguiHx deliberately does not
+choose keys, buttons, focus order, or labels: those are screen-level decisions,
+while this class owns only the list state that survives between frames.
+
 `GuiTextBoxState` owns the more substantial state required by `GuiTextBox`.
 Haxe allocates one fixed-size `Bytes` value, keeps at least one NUL terminator
 inside it, and stores the control's edit flag beside that allocation. On each

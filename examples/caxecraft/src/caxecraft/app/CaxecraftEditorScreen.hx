@@ -6,6 +6,10 @@ import caxecraft.content.BaseContentPack.BaseBlock;
 import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.editor.EditorScenarioFactory.createBlank as createBlankEditorScenario;
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorFocus.EditorFocusMove;
+import caxecraft.editor.EditorFocus.EditorFocusTarget;
+import caxecraft.editor.EditorFocus.initialFocus;
+import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
@@ -82,6 +86,7 @@ final class CaxecraftEditorScreen {
 	var projection:Null<EditorWorldProjection>;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
+	var focusedControl:EditorFocusTarget;
 	final advancedTools:GuiToggleState;
 	final toolList:GuiListViewState;
 
@@ -101,6 +106,7 @@ final class CaxecraftEditorScreen {
 		projection = null;
 		camera = null;
 		selection = null;
+		focusedControl = initialFocus();
 		advancedTools = new GuiToggleState(false);
 		toolList = new GuiListViewState();
 		worldName = GuiTextBoxState.create(64);
@@ -111,33 +117,36 @@ final class CaxecraftEditorScreen {
 	public function draw(locale:LocaleCursor):EditorScreenAction {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
+		final keyboardActivation = readKeyboardActivation();
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
-		if (Raygui.WindowBox(outer, UiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed))
+		if (Raygui.WindowBox(outer, UiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
+			focusedControl = EditorFocusTarget.Back;
 			return ReturnToTitle;
+		}
 
 		final toolbarTop = 56.0;
 		final buttonWidth = 116.0;
 		final buttonGap = 10.0;
 		var buttonLeft = 32.0;
-		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorNewWorld))) {
+		if (focusedButton(EditorFocusTarget.NewWorld, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorNewWorld))) {
 			session = openNewWorld();
 			notice = Ready;
 			refreshProjection(true);
 		}
 		buttonLeft += buttonWidth + buttonGap;
-		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorUndo)))
+		if (focusedButton(EditorFocusTarget.Undo, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorUndo)))
 			undo();
 		buttonLeft += buttonWidth + buttonGap;
-		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorRedo)))
+		if (focusedButton(EditorFocusTarget.Redo, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorRedo)))
 			redo();
 		buttonLeft += buttonWidth + buttonGap;
-		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorValidate)))
+		if (focusedButton(EditorFocusTarget.Validate, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorValidate)))
 			validate();
 		buttonLeft += buttonWidth + buttonGap;
 		final testing = session != null && session.testPlay() != null;
 		final testLabel = testing ? UiMessage.EditorStopTest : UiMessage.EditorTest;
-		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, testLabel)))
+		if (focusedButton(EditorFocusTarget.TestPlay, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, testLabel)))
 			toggleTestPlay();
 
 		final viewportTop = 104.0;
@@ -146,17 +155,29 @@ final class CaxecraftEditorScreen {
 			UiCatalog.text(locale, UiMessage.EditorCanvasHelp));
 		Raygui.Panel(Rectangle.fromFloat(width - sidebarWidth - 32.0, viewportTop, sidebarWidth, height - viewportTop - 70.0),
 			UiCatalog.text(locale, UiMessage.EditorReady));
-		toolList.draw(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 44.0, sidebarWidth - 32.0, 116.0),
+		final toolLeft = width - sidebarWidth - 16;
+		final toolWidth = sidebarWidth - 32;
+		final toolListResult = toolList.draw(Rectangle.fromFloat(toolLeft, viewportTop + 44.0, toolWidth, 116.0),
 			UiCatalog.text(locale, UiMessage.EditorToolList));
-		Raygui.Toggle(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 172.0, sidebarWidth - 32.0, 32.0),
+		if (toolListResult.has(GuiResult.Pressed))
+			focusedControl = EditorFocusTarget.ToolList;
+		drawFocusRing(EditorFocusTarget.ToolList, toolLeft, Std.int(viewportTop + 44.0), toolWidth, 116);
+		final toggleResult = Raygui.Toggle(Rectangle.fromFloat(toolLeft, viewportTop + 172.0, toolWidth, 32.0),
 			UiCatalog.text(locale, UiMessage.EditorAdvanced), advancedTools);
+		if (toggleResult.has(GuiResult.Pressed))
+			focusedControl = EditorFocusTarget.AdvancedTools;
+		drawFocusRing(EditorFocusTarget.AdvancedTools, toolLeft, Std.int(viewportTop + 172.0), toolWidth, 32);
 		Raygui.Label(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 216.0, sidebarWidth - 32.0, 24.0),
 			UiCatalog.text(locale, UiMessage.EditorName));
 		final name = worldName;
 		if (name != null) {
-			final result = name.draw(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 242.0, sidebarWidth - 32.0, 32.0));
-			if (result.has(GuiResult.Pressed) && !name.isEditing())
-				commitWorldName(name.text());
+			final result = name.draw(Rectangle.fromFloat(toolLeft, viewportTop + 242.0, toolWidth, 32.0));
+			if (result.has(GuiResult.Pressed)) {
+				focusedControl = EditorFocusTarget.WorldName;
+				if (!name.isEditing())
+					commitWorldName(name.text());
+			}
+			drawFocusRing(EditorFocusTarget.WorldName, toolLeft, Std.int(viewportTop + 242.0), toolWidth, 32);
 		}
 		drawWorldViewport(48, 144, width - sidebarWidth - 112, height - 230);
 
@@ -167,13 +188,95 @@ final class CaxecraftEditorScreen {
 			case Testing: UiMessage.EditorTesting;
 		};
 		Raygui.StatusBar(Rectangle.fromFloat(32.0, height - 54.0, width - 190.0, 28.0), UiCatalog.text(locale, status));
-		if (button(width - 142.0, height - 54.0, 110.0, UiCatalog.text(locale, UiMessage.EditorBack)))
+		if (focusedButton(EditorFocusTarget.Back, width - 142.0, height - 54.0, 110.0, UiCatalog.text(locale, UiMessage.EditorBack)))
 			return ReturnToTitle;
+		if (keyboardActivation)
+			return activateFocusedControl();
 		return StayInEditor;
 	}
 
 	static inline function button(x:Float, y:Float, width:Float, text:c.CString):Bool
 		return Raygui.Button(Rectangle.fromFloat(x, y, width, 32.0), text).has(GuiResult.Pressed);
+
+	/**
+	 * Draw one button, remember pointer focus, and paint keyboard focus.
+	 *
+	 * Raygui still owns hit testing for the immediate native control. This
+	 * screen owns semantic focus, so mouse and keyboard routes converge before
+	 * the existing editor action runs.
+	 */
+	function focusedButton(target:EditorFocusTarget, x:Float, y:Float, width:Float, text:c.CString):Bool {
+		final pressed = button(x, y, width, text);
+		if (pressed)
+			focusedControl = target;
+		drawFocusRing(target, Std.int(x), Std.int(y), Std.int(width), 32);
+		return pressed;
+	}
+
+	/**
+	 * Read one semantic keyboard action without stealing text-box input.
+	 *
+	 * Tab moves forward and Shift-Tab moves backward. Enter or Space activates
+	 * the focused control. While the World Name buffer is editing, Raygui keeps
+	 * those keys so Enter can finish text entry instead of pressing a toolbar
+	 * action in the same frame.
+	 */
+	function readKeyboardActivation():Bool {
+		final name = worldName;
+		if (name != null && name.isEditing())
+			return false;
+		if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
+			final backward = Raylib.IsKeyDown(KeyboardKey.LeftShift) || Raylib.IsKeyDown(KeyboardKey.RightShift);
+			focusedControl = moveFocus(focusedControl, backward ? Backward : Forward);
+			return false;
+		}
+		return Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space);
+	}
+
+	/** Draw a two-line high-contrast ring around the current semantic target. */
+	function drawFocusRing(target:EditorFocusTarget, x:Int, y:Int, width:Int, height:Int):Void {
+		if (focusedControl != target)
+			return;
+		final color = CaxecraftPalette.editorFocus();
+		Raylib.DrawRectangleLines(x - 2, y - 2, width + 4, height + 4, color);
+		Raylib.DrawRectangleLines(x - 3, y - 3, width + 6, height + 6, color);
+	}
+
+	/**
+	 * Route one semantic activation to the action named by current focus.
+	 *
+	 * Keyboard, and the deterministic graphical pilot, enter through this one
+	 * exhaustive switch. Pointer clicks still call the same small action
+	 * methods after Raygui hit testing. Adding a focus target therefore cannot
+	 * silently leave keyboard activation without an owner.
+	 */
+	function activateFocusedControl():EditorScreenAction {
+		switch focusedControl {
+			case NewWorld:
+				session = openNewWorld();
+				notice = Ready;
+				refreshProjection(true);
+			case Undo:
+				undo();
+			case Redo:
+				redo();
+			case Validate:
+				validate();
+			case TestPlay:
+				toggleTestPlay();
+			case ToolList:
+				toolList.moveSelection(4, 1);
+			case AdvancedTools:
+				advancedTools.active = !advancedTools.active;
+			case WorldName:
+				final name = worldName;
+				if (name != null)
+					name.setEditing(true);
+			case Back:
+				return ReturnToTitle;
+		}
+		return StayInEditor;
+	}
 
 	function undo():Void {
 		final current = session;
@@ -463,6 +566,14 @@ final class CaxecraftEditorScreen {
 	}
 
 	#if caxecraft_pilot
+	/** Move the production focus model from deterministic pilot input. */
+	public function applyPilotFocusMove(direction:EditorFocusMove):Void
+		focusedControl = moveFocus(focusedControl, direction);
+
+	/** Activate the focused control through the production keyboard route. */
+	public function applyPilotFocusedAction():EditorScreenAction
+		return activateFocusedControl();
+
 	/**
 	 * Commit one deterministic title through the production text-field path.
 	 *
