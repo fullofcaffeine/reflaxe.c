@@ -248,6 +248,8 @@ struct hxc_Rule hxc_EnumFixture_copyRule(struct hxc_Rule hxc_value);
 
 bool hxc_EnumFixture_envelopeIsWrapped(struct hxc_RuleEnvelope hxc_value);
 
+struct hxc_array_ref *hxc_EnumFixture_envelopeLiteral(struct hxc_Rule hxc_fresh, struct hxc_RuleEnvelope hxc_borrowed);
+
 int32_t hxc_EnumFixture_envelopeValue(struct hxc_RuleEnvelope hxc_value);
 
 int32_t hxc_EnumFixture_guardedValue(struct hxc_Option_h95f1c4a28dac hxc_value_ha201421511a7);

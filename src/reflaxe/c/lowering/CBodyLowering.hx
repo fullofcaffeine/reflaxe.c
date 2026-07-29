@@ -10595,6 +10595,7 @@ private class FunctionBuilder {
 			loweredElement = stabilizeFreshManagedString(loweredElement, element.pos, 'array-literal-element-$index');
 			loweredElement = stabilizeFreshManagedArray(loweredElement, element.pos, 'array-literal-element-$index');
 			loweredElement = stabilizeFreshManagedBytes(loweredElement, element.pos, 'array-literal-element-$index');
+			loweredElement = stabilizeFreshManagedEnum(loweredElement, element.pos, 'array-literal-element-$index');
 			loweredElement = stabilizeFreshManagedAggregate(loweredElement, element.pos, 'array-literal-element-$index');
 			arguments.push(loweredElement.id);
 		}

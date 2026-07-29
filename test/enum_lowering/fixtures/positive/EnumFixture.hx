@@ -229,6 +229,18 @@ class EnumFixture {
 		return rules.length + ruleValue(borrowed);
 	}
 
+	/**
+		Return an Array literal containing fresh and borrowed managed enums.
+
+		`WrappedRule(fresh)` creates a new enum value whose active payload owns a
+		managed record. The Array's copy operation gives its slot a separate
+		owner, so haxe.c must keep the temporary enum alive until that copy
+		completes and release it afterward. `borrowed` proves the neighboring
+		caller-owned value is copied without transferring its caller's owner.
+	**/
+	static function envelopeLiteral(fresh:Rule, borrowed:RuleEnvelope):Array<RuleEnvelope>
+		return [WrappedRule(fresh), borrowed, MissingRule];
+
 	static function main():Void {
 		var mode = On;
 		var present:Option<Int> = Some(identity(7));
@@ -245,6 +257,7 @@ class EnumFixture {
 		rules.push(copiedRule);
 		var envelopes:Array<RuleEnvelope> = [];
 		envelopes.push(copiedEnvelope);
+		var literalEnvelopes = envelopeLiteral(copiedRule, copiedEnvelope);
 		while (!(modeValue(mode) == 1
 			&& modeIsOn(mode)
 			&& modeEquality()
@@ -264,6 +277,7 @@ class EnumFixture {
 			&& optionalRuleValue(optionalRule) == 10
 			&& ruleLiteralValue(Link(1, End(2)), ChoiceValues(choices), actions, copiedRule) == 12
 			&& envelopes.length == 1
+			&& literalEnvelopes.length == 3
 			&& rules.length == 1)) {}
 	}
 }
