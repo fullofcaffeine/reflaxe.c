@@ -5873,18 +5873,24 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Materialize an unnamed constructed object for one immediate method call.
+		Materialize an unnamed constructed object for one proven synchronous call.
 
-		Haxe permits `new Reader(input).read()` without naming `Reader`. For a
+		Haxe permits both `new Reader(input).read()` and
+		`validate(value, new Resolver())` without naming the fresh object. For a
 		non-escaping class, C still needs an addressable object, so haxe.c creates
 		one compiler-owned automatic local and marks the returned pointer as a
-		borrow. The surrounding instance-call lowering may consume that borrow as
-		its receiver, while existing return, assignment, and forwarding checks
-		prevent the pointer from escaping the object's lexical lifetime.
+		borrow. The surrounding direct-call lowering may consume that borrow as a
+		receiver or as a parameter whose typed callee body proves it cannot retain
+		the reference. Existing return, assignment, virtual-call, and unknown-call
+		checks continue to reject uses that could outlive the automatic storage.
 
-		This first slice stays in the unconditional entry block. Branch-local
-		object destruction needs the separate path-sensitive constructor work
-		tracked by the existing conditional-construction issues.
+		The surrounding call closes every temporary owner immediately after the
+		call. The storage may therefore be initialized in any reachable block:
+		constructor failure cleans the partial object on its explicit failure
+		edge, while successful construction and use end together in the same
+		block. This is narrower than a named branch-local object, whose lifetime
+		could continue through later statements and still needs path-sensitive
+		scope ownership.
 	**/
 	function lowerConstructedReceiver(expression:TypedExpr, construction:BodyNewExpression):LoweredValue {
 		final sourceMapping = bodyValueType(expression.t, expression.pos, "TNew(receiver-result-type)");
@@ -5893,8 +5899,6 @@ private class FunctionBuilder {
 			return unsupported(expression, "TNew(receiver-not-concrete-class)");
 		if (classValue.managedByCollector)
 			return lowerManagedConstructedValue(expression, construction, sourceMapping);
-		if (currentBlock.id != "entry" || blocks.length != 1)
-			return unsupported(expression, "TNew(stack-construction-requires-unconditional-entry-block)");
 
 		final classDefinition = construction.classReference.get();
 		final classPath = CBodyConstructor.classPath(construction.classReference);
@@ -5932,6 +5936,24 @@ private class FunctionBuilder {
 		final reference = coerce(self, sourceMapping, expression.pos, 'TNew(receiver-result:$targetId)');
 		borrowedReferenceValueIds.set(reference.id, true);
 		return reference;
+	}
+
+	/**
+		Lower one direct-call argument after the callee has proved a bounded borrow.
+
+		The generic expression path rejects an unmanaged `new Class(...)` because
+		it cannot know who owns the resulting pointer. A direct parameter marked
+		`borrowedReference` supplies that missing fact: the known callee may use the
+		object only until this call returns. Reusing the unnamed-receiver
+		construction path preserves constructor evaluation, partial cleanup, and
+		class-to-interface conversion without making the Haxe author introduce a
+		C-shaped temporary local.
+	**/
+	function lowerDirectCallArgument(expression:TypedExpr, parameter:PreparedParameter, role:String):LoweredValue {
+		final construction = newExpression(expression);
+		final value = construction != null
+			&& parameter.borrowedReference ? lowerConstructedReceiver(expression, construction) : lowerValue(expression, parameter.mapping);
+		return coerce(value, parameter.mapping, expression.pos, role);
 	}
 
 	/**
@@ -6119,7 +6141,15 @@ private class FunctionBuilder {
 		return result;
 	}
 
-	/** Emit branch-local releases before leaving the C lexical scope that owns them. */
+	/**
+		Emit the concrete operations that end owners introduced after `depth`.
+
+		Control-flow builders call this before leaving a branch. Direct calls also
+		use it after a fresh call-bounded object has served its one proven use.
+		Release actions become runtime calls; a direct object's destroy action is
+		a semantic lifetime transition because its field releases already did the
+		observable work and the C bytes themselves need no destructor.
+	**/
 	function appendScopedCleanupInstructions(depth:Int):Void {
 		var index = normalCleanupActionIds.length;
 		while (index > depth) {
@@ -6136,10 +6166,19 @@ private class FunctionBuilder {
 					// original owner expression remains the reason it exists.
 					// Runtime provenance is matched by exact source span.
 					appendInstruction(null, IRIORelease(place, implementation), found.source, "release-branch-local-owner");
+				case IRCADestroy(place, from, to):
+					appendInstruction(null, IRIOLifetime(place, from, to, "call-bounded or branch-local owner lifetime ended"), found.source,
+						"destroy-scoped-class-owner");
 				case _:
-					throw new CBodyEmissionError('branch-local cleanup `$actionId` in `${prepared.irId}` is not a managed release');
+					throw new CBodyEmissionError('scoped cleanup `$actionId` in `${prepared.irId}` is outside release/destroy ownership');
 			}
 		}
+	}
+
+	/** End temporary argument owners after their synchronous call has returned. */
+	function finishCallBoundedOwners(depth:Int):Void {
+		appendScopedCleanupInstructions(depth);
+		restoreCleanupDepth(depth);
 	}
 
 	/** Stop branch-local owners from leaking into later sibling or join cleanup. */
@@ -10286,6 +10325,8 @@ private class FunctionBuilder {
 			}
 		}
 		final argumentExpressions = completeDirectCallArguments(expression, call.arguments, target.parameters, 0, targetId, "argument");
+		final callCleanupDepth = normalCleanupActionIds.length;
+		final callConstructionCount = constructedObjects.length;
 		final stagedArguments:Array<StagedFlowValue> = [];
 		for (index in 0...argumentExpressions.length) {
 			final argumentExpression = argumentExpressions[index];
@@ -10293,8 +10334,7 @@ private class FunctionBuilder {
 			if (referencesStackConstructedValue(argumentExpression) && !parameter.borrowedReference) {
 				return unsupported(argumentExpression, 'TNew(stack-reference-escape:static-call-argument:$index,target=$targetId)');
 			}
-			final value = lowerValue(argumentExpression, parameter.mapping);
-			var converted = coerce(value, parameter.mapping, argumentExpression.pos, 'TCall(argument:$index,target=$targetId)');
+			var converted = lowerDirectCallArgument(argumentExpression, parameter, 'TCall(argument:$index,target=$targetId)');
 			converted = stabilizeFreshManagedString(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedBytes(converted, argumentExpression.pos, 'static-call-argument-$index');
 			converted = stabilizeFreshManagedEnum(converted, argumentExpression.pos, 'static-call-argument-$index');
@@ -10322,6 +10362,8 @@ private class FunctionBuilder {
 			}), source, "call");
 			currentBlock.instructions.push(callInstruction);
 			registerTailArguments(targetId, callInstruction.id, arguments.length);
+			if (constructedObjects.length > callConstructionCount)
+				finishCallBoundedOwners(callCleanupDepth);
 			return null;
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: returnType};
@@ -10333,6 +10375,8 @@ private class FunctionBuilder {
 		}), source, "call");
 		currentBlock.instructions.push(callInstruction);
 		registerTailArguments(targetId, callInstruction.id, arguments.length);
+		if (constructedObjects.length > callConstructionCount)
+			finishCallBoundedOwners(callCleanupDepth);
 		if (materializeResult) {
 			final ordinal = temporaryOrdinal++;
 			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "call-result"]),
@@ -11902,6 +11946,8 @@ private class FunctionBuilder {
 
 	function lowerInstanceCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, argumentExpressions:Array<TypedExpr>,
 			materializeResult:Bool):Null<LoweredValue> {
+		final callCleanupDepth = normalCleanupActionIds.length;
+		final callConstructionCount = constructedObjects.length;
 		final declaration = CBodyDispatchCatalog.declaringClass(access.owner, access.field);
 		final field = access.field.get();
 		final baseTargetId = CBodyDispatchCatalog.methodIdForAccess(access.owner, access.field);
@@ -11988,8 +12034,12 @@ private class FunctionBuilder {
 			final argument = effectiveArgumentExpressions[index];
 			if (referencesStackConstructedValue(argument) && !explicitBorrowedClasses[index])
 				return unsupported(argument, 'TNew(stack-reference-escape:instance-call-argument:$index,target=$targetId)');
-			var value = coerce(lowerValue(argument, explicitMappings[index]), explicitMappings[index], argument.pos,
-				'TCall(instance-argument:$index,target=$targetId)');
+			var value = if (directTarget == null) {
+				coerce(lowerValue(argument, explicitMappings[index]), explicitMappings[index], argument.pos,
+					'TCall(instance-argument:$index,target=$targetId)');
+			} else {
+				lowerDirectCallArgument(argument, directTarget.parameters[index + 1], 'TCall(instance-argument:$index,target=$targetId)');
+			}
 			value = stabilizeFreshManagedString(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedBytes(value, argument.pos, 'instance-call-argument-$index');
 			value = stabilizeFreshManagedEnum(value, argument.pos, 'instance-call-argument-$index');
@@ -12026,6 +12076,8 @@ private class FunctionBuilder {
 			currentBlock.instructions.push(callInstruction);
 			if (directReason != null)
 				registerTailArguments(targetId, callInstruction.id, callArguments.length);
+			if (constructedObjects.length > callConstructionCount)
+				finishCallBoundedOwners(callCleanupDepth);
 			return null;
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: returnMapping.irType};
@@ -12039,6 +12091,8 @@ private class FunctionBuilder {
 		currentBlock.instructions.push(callInstruction);
 		if (directReason != null)
 			registerTailArguments(targetId, callInstruction.id, callArguments.length);
+		if (constructedObjects.length > callConstructionCount)
+			finishCallBoundedOwners(callCleanupDepth);
 		if (materializeResult) {
 			final ordinal = temporaryOrdinal++;
 			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "instance-call-result"]),

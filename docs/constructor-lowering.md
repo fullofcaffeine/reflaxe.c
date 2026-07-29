@@ -159,10 +159,11 @@ local solely to satisfy C storage rules.
 Constructor arguments still run first and exactly once. If a nested call
 creates a fresh managed value such as an `Array`, the caller gives it a short
 owner before construction. The constructor may retain it into a field; cleanup
-then releases the receiver's field and the short argument owner once each. A
-managed method result follows the ordinary function-return contract: the
-callee returns one owner, so the caller transfers that owner rather than
-retaining it again.
+then releases the receiver's field and the short argument owner once each,
+immediately after the method returns. A managed method result follows the
+ordinary function-return contract: the callee returns one owner, so the caller
+transfers that owner before ending the receiver and argument lifetimes rather
+than retaining it again.
 
 A method receiver and each earlier argument are also saved when a later
 argument creates an `if` or `switch` join. HxcIR values belong to one basic
@@ -170,13 +171,54 @@ block, so the join cannot name the original receiver value directly. A typed
 automatic local carries the already checked pointer through the branches,
 preserves whether it is a parent-bound borrow, and reloads it once for the
 call. The validator carries the receiver's non-null proof through that local;
-generated C does not need a duplicate runtime check after the join.
+generated C does not need a duplicate runtime check after the join. Because
+the object has exactly one immediate call use, haxe.c can also construct it in
+a reachable branch or after an earlier guard: constructor failure owns the
+partial cleanup edge, and a successful call ends the temporary lifetime in the
+same generated block. A named object declared inside a branch is still a
+different, unsupported case because later statements in that branch may keep
+using it and its scope needs a separate path-sensitive lifetime.
 
-This first direct-receiver slice remains limited to the function's
-unconditional entry block. Constructing the receiver inside a branch needs
-path-specific destruction at the branch exit; until that separate lifetime
-work is implemented, haxe.c reports `HXC1001` instead of extending the
-receiver's lifetime or leaking it.
+### Fresh objects passed directly to calls
+
+Natural Haxe also permits a fresh object to be an argument:
+
+```haxe
+final plans = planActorComposition(objects, new BaseContentRegistry());
+```
+
+Before this capability, haxe.c rejected the `new` expression unless the author
+first assigned it to a named local. That rewrite was safe but artificial: the
+name existed only to expose addressable storage to C, not because the Haxe
+program needed a longer-lived registry.
+
+A **call-bounded borrow** means the known callee may read or mutate the object
+while that call is running but cannot store, return, throw, capture, or forward
+the reference into an unproved call. haxe.c establishes that rule from the
+callee's typed body before lowering the caller. For a qualifying direct
+function or final-method call, it then:
+
+1. evaluates arguments from left to right;
+2. creates compiler-owned automatic storage for the fresh class;
+3. calls its constructor and cleans every initialized field if construction
+   fails;
+4. converts the pointer to the exact class or interface parameter value;
+5. performs the known synchronous call; and
+6. releases temporary argument owners and object fields in reverse creation
+   order immediately after the call.
+
+For an interface parameter, the conversion in step 4 produces the ordinary
+by-value `{ object, table }` pair. The object pointer still refers to the same
+automatic storage; the interface table only selects the correct method
+implementation and does not extend the object's lifetime.
+
+This rule does not make every call synchronous or safe by assumption. The
+compiler admits it only when it has the exact target and the target's parameter
+has passed the no-escape proof. Virtual dispatch, function values, constructors
+that retain the parameter, and other unknown forwarding remain
+source-positioned `HXC1001` failures for an unmanaged fresh object. A class
+that whole-program analysis already placed in collector-managed storage uses
+that stable representation instead of this bounded automatic-storage path.
 
 An owned child is a direct `IRTInstance` field in HxcIR rather than the
 `IRTPointer` used for an ordinary Haxe class reference. That explicit semantic
@@ -493,8 +535,10 @@ object's managed fields in reverse order, marks the partial object destroyed,
 and then executes older cleanup actions in reverse construction order. Fields
 the constructor did not reach still contain their zero/null defaults, and each
 admitted release operation is null-safe; no hidden per-field “was initialized”
-flags are needed. Normal returns execute the initialized object's field
-releases and lifetime action in the same strict reverse registration order.
+flags are needed. Named objects execute their initialized field releases and
+lifetime action on normal return in the same strict reverse registration
+order. An unnamed object with one proven synchronous call use executes that
+same sequence immediately after the call returns.
 Direct scalar/class-reference storage currently needs no native destructor
 statement, but the validated HxcIR order is still mandatory; owned fields
 consume these edges without trying to recover lifetime facts from C lexical
@@ -517,8 +561,8 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
 - a mutable owned-child field or a mismatched declared child type;
 - branch-, loop-, or switch-local automatic class construction whose
   destruction would occur before the surrounding function exits;
-- an unnamed immediate constructed receiver outside the unconditional entry
-  block;
+- an unmanaged fresh object passed to a virtual, indirect, retaining, or
+  otherwise unproved call;
 - constructor dependency cycles, with the canonical nominal cycle path;
 - extern or `@:c.layout` native construction, because imported construction
   and destruction policy is not inferred from a Haxe declaration;
@@ -552,6 +596,7 @@ Run:
 npm run test:constructor-lowering
 npm run test:constructor-early-exit
 npm run test:constructor-direct-receiver
+npm run test:constructor-direct-argument
 npm run test:virtual-dispatch
 npm run test:class-layout
 npm run test:hxc-ir
@@ -565,6 +610,13 @@ slice. It runs that slice's complete Eval, layout, order, compiler-server,
 native, sanitizer, C++ header, and escape matrix without recompiling unrelated
 constructor families. `test:constructor-lowering` remains the exhaustive
 reference gate before integration.
+
+Use `test:constructor-direct-argument` for the neighboring call-argument rule.
+It proves direct class and interface parameters, final instance methods,
+left-to-right evaluation around fresh managed arguments, fallible-constructor
+cleanup, immediate reverse cleanup after the call, split/package/unity output,
+warm-server determinism, strict GCC/Clang C11 at `-O0` and `-O2`, and
+sanitizers without running unrelated constructor fixtures.
 
 Use `test:constructor-early-exit` for the smaller root-guard lifetime rule. Its
 positive fixture returns before construction on one path, constructs and uses a
@@ -611,6 +663,11 @@ warm compiler-server reuse; strict GCC and Clang at `-O0` and `-O2`; C++17
 header consumption; and sanitizer execution. `direct_receiver_failure` proves
 that a constructor which throws after retaining its Array field releases both
 that field and the caller's fresh argument owner before the fail-closed abort.
+`direct_argument` proves `consume(left, new Resolver(), right)` for concrete
+class and interface parameters plus a final instance method. Its generated C
+keeps left-to-right evaluation, cleans a failed partial resolver together with
+earlier arguments, and on success releases the right argument, resolver field,
+and left argument immediately after the call in reverse creation order.
 `factory_return` proves a validated `Null<Class>` factory, class-reference
 pass-through, and a child returned from a temporary parent across Eval,
 split/package/unity output, reversed discovery, warm compiler-server reuse,

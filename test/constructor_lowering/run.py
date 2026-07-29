@@ -37,6 +37,7 @@ ENUM_PARAMETER = FIXTURES / "enum_parameter"
 ENUM_PAYLOAD_PARAMETER = FIXTURES / "enum_payload_parameter"
 DIRECT_RECEIVER = FIXTURES / "direct_receiver"
 DIRECT_RECEIVER_FAILURE = FIXTURES / "direct_receiver_failure"
+DIRECT_ARGUMENT = FIXTURES / "direct_argument"
 OWNED_FALLIBLE = FIXTURES / "owned_fallible"
 FACTORY_RETURN = FIXTURES / "factory_return"
 EARLY_EXIT = FIXTURES / "early_exit"
@@ -86,6 +87,7 @@ NEGATIVE_CASES = {
         "TFunction(constructor-argument:callback):"
         "payload-requires-direct-unmanaged-value:direct-function:()->int32_t"
     ),
+    "direct_argument_escape": "TNew(stack-construction-requires-direct-local)",
     "escape_alias": "TNew(stack-reference-escape:assignment)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
     "instance_parameter": "function-exit:unowned-fresh-managed-enum-value",
@@ -202,6 +204,17 @@ DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE = frozenset(
     {
         "constructor-direct-receiver-partial-cleanup",
         "constructor-direct-receiver-throw",
+    }
+)
+DIRECT_ARGUMENT_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-direct-argument-automatic-storage",
+        "constructor-direct-argument-class-borrow",
+        "constructor-direct-argument-interface-borrow",
+        "constructor-direct-argument-instance-method",
+        "constructor-direct-argument-left-to-right-order",
+        "constructor-direct-argument-partial-cleanup",
+        "constructor-direct-argument-immediate-cleanup",
     }
 )
 OWNED_FALLIBLE_NATIVE_COVERAGE = frozenset(
@@ -810,6 +823,98 @@ def validate_direct_receiver_failure_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "throwing direct receiver did not release its initialized field and nested argument before abort"
         )
+
+
+def validate_direct_argument_project(output: Path) -> None:
+    """Prove fresh call arguments stay borrowed, ordered, and call-bounded."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    main_start = source.find("void hxc_Main_main(void)")
+    concrete_function = source.find("int32_t hxc_Main_readConcrete(")
+    if min(main_start, concrete_function) < 0:
+        raise ConstructorLoweringFailure(
+            "direct-argument fixture omitted its entry point or concrete target"
+        )
+    main_body = source[main_start:concrete_function]
+    concrete_call = main_body.find("hxc_Main_readConcrete(")
+    concrete_right_release = main_body.find(
+        "hxc_array_ref_release(hxc_tmp_static_call_argument_2_owner_",
+        concrete_call,
+    )
+    concrete_object_release = main_body.find(
+        "hxc_array_ref_release(hxc_tmp_object_storage_", concrete_right_release
+    )
+    concrete_left_release = main_body.find(
+        "hxc_array_ref_release(hxc_tmp_static_call_argument_0_owner_",
+        concrete_object_release,
+    )
+    concrete_result_owner = main_body.find("int32_t hxc_concrete =", concrete_left_release)
+    if not (
+        0
+        <= concrete_call
+        < concrete_right_release
+        < concrete_object_release
+        < concrete_left_release
+        < concrete_result_owner
+    ):
+        raise ConstructorLoweringFailure(
+            "direct class argument lost call-bounded reverse cleanup order"
+        )
+    if (
+        source.count("struct hxc_OffsetResolver hxc_tmp_object_storage_") != 3
+        or source.count("if (!hxc_compiler_constructor_OffsetResolver(") != 3
+        or "struct hxc_OffsetResolver *hxc_resolver" not in headers
+        or "struct hxc_compiler_interface_dispatch_ScoreResolver_value hxc_resolver"
+        not in headers
+        or "hxc_Main_readInterface(" not in main_body
+        or "hxc_ScoreSink_read(" not in main_body
+        or ".object = hxc_tmp_class_object_address_" not in main_body
+        or ".table = &hxc_itable_compiler_interface_dispatch_OffsetResolver_itable_layout_ScoreResolver"
+        not in main_body
+        or "static_call_argument_0_owner_" not in main_body
+        or "static_call_argument_2_owner_" not in main_body
+    ):
+        raise ConstructorLoweringFailure(
+            "direct argument lost automatic storage, class/interface conversion, "
+            "managed neighbors, or direct-instance use"
+        )
+    first_failure = main_body.find("if (!hxc_compiler_constructor_OffsetResolver(")
+    first_failure_end = main_body.find(
+        "struct hxc_array_ref *hxc_tmp_array_create_result_", first_failure
+    )
+    if (
+        first_failure < 0
+        or first_failure_end < 0
+        or "hxc_array_ref_release(hxc_tmp_object_storage_"
+        not in main_body[first_failure:first_failure_end]
+        or "hxc_array_ref_release(hxc_tmp_static_call_argument_0_owner_"
+        not in main_body[first_failure:first_failure_end]
+        or main_body[first_failure:first_failure_end].count("abort();") < 3
+    ):
+        raise ConstructorLoweringFailure(
+            "fallible direct argument lost partial object or earlier-argument cleanup"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    if (
+        plan.get("features") != ["runtime-base", "status", "alloc", "array"]
+        or "bounded-stack-construction" not in plan.get("directDecisions", [])
+        or "managed-haxe-arrays" not in plan.get("directDecisions", [])
+        or "gc" in plan.get("features", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "direct argument lost its bounded stack and dependency-closed Array plan"
+        )
+    for forbidden in ("goto ", "malloc(", "calloc(", "realloc("):
+        if forbidden in source.lower():
+            raise ConstructorLoweringFailure(
+                f"direct-argument application module emitted forbidden shape {forbidden!r}"
+            )
 
 
 def validate_owned_fallible_project(output: Path) -> None:
@@ -1983,6 +2088,13 @@ def check_native(
             direct_receiver_failure_project = (
                 render_direct_receiver_failure_project(fixture_root)
             )
+            direct_argument_projects = render_parameter_projects(
+                fixture_root,
+                fixture=DIRECT_ARGUMENT,
+                slug="direct-argument",
+                coverage=DIRECT_ARGUMENT_NATIVE_COVERAGE,
+                validate_project=validate_direct_argument_project,
+            )
             owned_fallible_projects = render_parameter_projects(
                 fixture_root,
                 fixture=OWNED_FALLIBLE,
@@ -2008,6 +2120,7 @@ def check_native(
                 + enum_payload_parameter_projects
                 + direct_receiver_projects
                 + (direct_receiver_failure_project,)
+                + direct_argument_projects
                 + owned_fallible_projects
                 + factory_return_projects
             )
@@ -2039,6 +2152,7 @@ def check_native(
                     | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
+                    | DIRECT_ARGUMENT_NATIVE_COVERAGE
                     | OWNED_FALLIBLE_NATIVE_COVERAGE
                     | FACTORY_RETURN_NATIVE_COVERAGE
                 )
@@ -2088,6 +2202,7 @@ def check_native(
                     | ENUM_PAYLOAD_PARAMETER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
+                    | DIRECT_ARGUMENT_NATIVE_COVERAGE
                     | OWNED_FALLIBLE_NATIVE_COVERAGE
                     | FACTORY_RETURN_NATIVE_COVERAGE
                 ),
@@ -2158,6 +2273,7 @@ def check_eval_oracle() -> None:
         ("string-parameter oracle", STRING_PARAMETER),
         ("enum-parameter oracle", ENUM_PARAMETER),
         ("enum-payload-parameter oracle", ENUM_PAYLOAD_PARAMETER),
+        ("direct-call-argument oracle", DIRECT_ARGUMENT),
         ("fallible-inline-child oracle", OWNED_FALLIBLE),
         ("validated-factory oracle", FACTORY_RETURN),
     ):
@@ -2555,6 +2671,85 @@ def check_direct_receiver_only(*, requested_toolchain: str) -> None:
         )
 
 
+def check_direct_argument_only(*, requested_toolchain: str) -> None:
+    """Run the fresh synchronous call-argument contract without unrelated fixtures."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(DIRECT_ARGUMENT),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe direct-argument oracle failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-direct-argument-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        projects = tuple(
+            sorted(
+                render_parameter_projects(
+                    fixture_root,
+                    fixture=DIRECT_ARGUMENT,
+                    slug="direct-argument",
+                    coverage=DIRECT_ARGUMENT_NATIVE_COVERAGE,
+                    validate_project=validate_direct_argument_project,
+                ),
+                key=lambda project: project.identifier.encode("utf-8"),
+            )
+        )
+        required_coverage = DIRECT_ARGUMENT_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-direct-argument-{optimization[1:].lower()}",
+                projects=projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in projects
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-direct-argument-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required_coverage)
+
+
 def check_owned_fallible_only(*, requested_toolchain: str) -> None:
     """Run the retained parent and fallible inline-child slice by itself."""
 
@@ -2672,6 +2867,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--direct-receiver-only", action="store_true")
+    parser.add_argument("--direct-argument-only", action="store_true")
     parser.add_argument("--owned-fallible-only", action="store_true")
     parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--early-exit-only", action="store_true")
@@ -2699,6 +2895,13 @@ def main(arguments: Iterable[str] = ()) -> int:
             print(
                 "constructor-lowering: OK: direct fresh receiver Eval/C11/C++17/"
                 "sanitizer/determinism matrix passed"
+            )
+            return 0
+        if args.direct_argument_only:
+            check_direct_argument_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: direct fresh call argument Eval/C11/"
+                "sanitizer/layout/server/determinism matrix passed"
             )
             return 0
         if args.owned_fallible_only:
