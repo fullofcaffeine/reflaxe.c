@@ -39,6 +39,7 @@ DIRECT_RECEIVER = FIXTURES / "direct_receiver"
 DIRECT_RECEIVER_FAILURE = FIXTURES / "direct_receiver_failure"
 OWNED_FALLIBLE = FIXTURES / "owned_fallible"
 FACTORY_RETURN = FIXTURES / "factory_return"
+EARLY_EXIT = FIXTURES / "early_exit"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -79,7 +80,7 @@ NEGATIVE_CASES = {
         "TCall(owned-class-borrow-escape:instance-call-argument:0,"
         "target=method.BorrowedForwardSink.consume)"
     ),
-    "conditional": "TNew(stack-construction-requires-unconditional-entry-block)",
+    "conditional": "TNew(stack-construction-requires-function-lifetime-sequence)",
     "cycle": "TNew(constructor-cycle:CycleA -> CycleB -> CycleA)",
     "default_callable": (
         "TFunction(constructor-argument:callback):"
@@ -218,6 +219,13 @@ FACTORY_RETURN_NATIVE_COVERAGE = frozenset(
         "constructor-validated-factory-guard",
         "constructor-returned-class-stable-storage",
         "constructor-returned-class-gc",
+    }
+)
+EARLY_EXIT_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-root-guard-early-exit",
+        "constructor-root-guard-stack-storage",
+        "constructor-root-guard-cleanup",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -1358,6 +1366,37 @@ def extract_report(
     return payload, report
 
 
+def emitted_constructor_report(
+    result: subprocess.CompletedProcess[str], label: str
+) -> tuple[str, dict[str, object]]:
+    """Decode one report without assuming the broad snapshot artifact set."""
+
+    lines = [
+        line for line in result.stdout.splitlines() if line.startswith(REPORT_PREFIX)
+    ]
+    unexpected = [
+        line
+        for line in result.stdout.splitlines()
+        if not line.startswith(REPORT_PREFIX)
+    ]
+    if (
+        result.returncode != 0
+        or result.stderr
+        or unexpected
+        or len(lines) != 1
+    ):
+        raise ConstructorLoweringFailure(
+            f"{label} emitted an invalid focused constructor report\n"
+            f"exit={result.returncode}\nstdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+    payload = lines[0][len(REPORT_PREFIX) :]
+    report = json.loads(payload)
+    if not isinstance(report, dict):
+        raise ConstructorLoweringFailure(f"{label} report is not an object")
+    return payload, report
+
+
 def render(
     label: str,
     *,
@@ -2146,6 +2185,203 @@ def check_eval_oracle() -> None:
     check_direct_receiver_oracles()
 
 
+def check_early_exit_oracle() -> None:
+    """Prove the focused guard behavior first with Haxe's Eval interpreter."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(EARLY_EXIT),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe early-exit constructor oracle failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def validate_early_exit_project(
+    output: Path, report: dict[str, object]
+) -> None:
+    """Prove the guard path omits cleanup while the later path owns it."""
+
+    hxcir = required_text(report.get("hxcir"), "early-exit HxcIR")
+    section = function_section(hxcir, "function.Main.run")
+    sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*.c"))
+    )
+    plan = json.loads(
+        (output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+    )
+    ordered(
+        section,
+        (
+            'terminator return value="value.2" cleanup=[]',
+            "class-default-initialize",
+            'dispatch=direct("constructor.GuardedValue")',
+            "constructor-complete",
+            'cleanup=["cleanup.construction"."construction.0.initialized"]',
+        ),
+        "guarded stack construction",
+    )
+    constructors = required_objects(
+        report.get("constructors"), "early-exit constructors"
+    )
+    if (
+        not hxcir.startswith("hxcir schema=21\n")
+        or len(constructors) != 1
+        or constructors[0].get("id") != "constructor.GuardedValue"
+        or section.count('"construction.0.initialized"') < 2
+        or plan.get("features") != []
+        or "bounded-stack-construction" not in plan.get("directDecisions", [])
+        or "if (" not in sources
+        or "hxc_compiler_constructor_GuardedValue" not in sources
+        or " = { 0 };" not in sources
+    ):
+        raise ConstructorLoweringFailure(
+            "early-exit constructor lost its typed guard, stack storage, or "
+            "runtime-free lifetime plan"
+        )
+    for forbidden in ("goto ", "malloc(", "calloc(", "realloc(", "hxrt"):
+        if forbidden in sources.lower():
+            raise ConstructorLoweringFailure(
+                f"early-exit constructor emitted forbidden shape {forbidden!r}"
+            )
+
+
+def render_early_exit_project(fixture_root: Path) -> CFixtureProject:
+    """Render one split project twice and compare typed-module order."""
+
+    normal = fixture_root / "early-exit-split"
+    reverse = fixture_root / "early-exit-split-reverse"
+    reports: list[tuple[str, dict[str, object]]] = []
+    for label, output, reverse_input in (
+        ("early-exit constructor", normal, False),
+        ("reversed early-exit constructor", reverse, True),
+    ):
+        result = custom_target(
+            EARLY_EXIT,
+            output,
+            reverse=reverse_input,
+            report=True,
+            layout="split",
+            runtime_diagnostics="off",
+        )
+        reports.append(emitted_constructor_report(result, label))
+    if (
+        reports[0][0] != reports[1][0]
+        or generated_tree(normal) != generated_tree(reverse)
+    ):
+        raise ConstructorLoweringFailure(
+            "early-exit constructor output changed with typed-module order"
+        )
+    validate_early_exit_project(normal, reports[0][1])
+    return CFixtureProject(
+        "constructor-early-exit",
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in sorted(normal.rglob("*.c"))
+        ),
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in sorted((normal / "include").rglob("*.h"))
+        ),
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in (
+                normal / "include",
+                normal / "runtime" / "include",
+            )
+            if path.is_dir()
+        ),
+        "",
+        tuple(sorted((*EARLY_EXIT_NATIVE_COVERAGE, "strict-c11"))),
+    )
+
+
+def check_conditional_construction_negative() -> None:
+    """Keep truly branch-local automatic class storage fail-closed."""
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-constructor-conditional-negative-"
+    ) as temporary:
+        output = Path(temporary) / "generated"
+        result = custom_target(FIXTURES / "conditional", output)
+        combined = result.stdout + result.stderr
+        expected = NEGATIVE_CASES["conditional"]
+        if (
+            result.returncode == 0
+            or "HXC1001" not in combined
+            or expected not in combined
+            or generated_files(output)
+        ):
+            raise ConstructorLoweringFailure(
+                "branch-local constructor did not retain its exact fail-closed "
+                f"boundary\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+
+
+def check_early_exit_only(
+    *, requested_toolchain: str, include_conditional_negative: bool = True
+) -> None:
+    """Run the complete root-guard constructor slice without older fixtures."""
+
+    check_early_exit_oracle()
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-early-exit-constructor-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        project = render_early_exit_project(fixture_root)
+        required_coverage = EARLY_EXIT_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-early-exit-{optimization[1:].lower()}",
+                projects=(project,),
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized = replace(
+                project,
+                link_arguments=("-fsanitize=address,undefined",),
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-early-exit-sanitized",
+                projects=(sanitized,),
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required_coverage)
+    if include_conditional_negative:
+        check_conditional_construction_negative()
+
+
 def check_factory_return_only(*, requested_toolchain: str) -> None:
     """Run the guarded factory's complete lifetime slice without older fixtures."""
 
@@ -2438,6 +2674,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--direct-receiver-only", action="store_true")
     parser.add_argument("--owned-fallible-only", action="store_true")
     parser.add_argument("--factory-return-only", action="store_true")
+    parser.add_argument("--early-exit-only", action="store_true")
     parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
 
@@ -2478,6 +2715,14 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "sanitizer/determinism/managed-lifetime matrix passed"
             )
             return 0
+        if args.early_exit_only:
+            check_early_exit_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: root guard Eval/C11/sanitizer/"
+                "determinism matrix passed and branch-local construction "
+                "remained fail-closed"
+            )
+            return 0
         if args.negative_only:
             check_negative_cases()
             print(
@@ -2507,6 +2752,10 @@ def main(arguments: Iterable[str] = ()) -> int:
                 )
         check_snapshots(first)
         check_eval_oracle()
+        check_early_exit_only(
+            requested_toolchain=args.toolchain,
+            include_conditional_negative=False,
+        )
         check_minimal_example()
         check_native(first, requested_toolchain=args.toolchain)
         check_negative_cases()

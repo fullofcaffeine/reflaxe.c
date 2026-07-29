@@ -3539,6 +3539,30 @@ private class FunctionBuilder {
 	var valueOrdinal = 0;
 	var blockOrdinal = 0;
 	var currentBlock:MutableBodyBlock;
+
+	/**
+	 * Count active statement sequences so construction can distinguish a
+	 * function-level declaration from storage created inside an expression.
+	 *
+	 * A function's outer `TBlock` is depth one. Haxe can also place statement
+	 * prefixes inside value-producing blocks, such as a conditional expression;
+	 * those enter a second sequence and cannot own function-lifetime automatic
+	 * class storage yet.
+	 */
+	var statementSequenceDepth = 0;
+
+	/**
+	 * Count branch, loop, and switch bodies whose cleanup ends at that body.
+	 *
+	 * A local declared after a completed root-level guard still runs on every
+	 * surviving path and may live until the function exits. A local declared
+	 * inside one control-flow arm is different: the arm can rejoin while the
+	 * object must already be destroyed. The current cleanup model handles only
+	 * managed release actions at such arm exits, so this depth keeps class
+	 * destruction fail-closed until path-scoped destroy actions are admitted.
+	 */
+	var nestedControlBodyDepth = 0;
+
 	final collectProfileWork:Bool;
 	var profileStatementLoweringCalls = 0;
 	var profileValueLoweringCalls = 0;
@@ -4995,6 +5019,7 @@ private class FunctionBuilder {
 	 * source local even though every generated branch assigns it.
 	 */
 	function lowerStatementSequence(expressions:Array<TypedExpr>, endExclusive:Int):Void {
+		statementSequenceDepth++;
 		var index = 0;
 		while (index < endExclusive) {
 			if (index + 1 < endExclusive && tryLowerSpanLoop(expressions[index], expressions[index + 1])) {
@@ -5013,6 +5038,38 @@ private class FunctionBuilder {
 			}
 			index++;
 		}
+		statementSequenceDepth--;
+	}
+
+	/**
+	 * Lower one body whose local owners end before its surrounding join or loop.
+	 *
+	 * The control-flow builder already restores managed cleanup depth after this
+	 * call. Recording the body nesting separately prevents a stack-constructed
+	 * class from being mistaken for a function-lifetime local merely because its
+	 * typed body contains no explicit `TBlock`.
+	 */
+	function lowerNestedControlStatement(expression:TypedExpr):Void {
+		nestedControlBodyDepth++;
+		lowerStatement(expression);
+		nestedControlBodyDepth--;
+	}
+
+	/**
+	 * Decide whether a nonescaping class may use function-lifetime C storage.
+	 *
+	 * The original one-block case remains valid. The additional case admits a
+	 * declaration in the function's outer statement sequence after earlier
+	 * guards have already branched or returned. Each early exit copied its
+	 * cleanup list before this object existed; every later exit copies the list
+	 * after construction registered the object. HxcIR therefore states exactly
+	 * which paths destroy it, while the C emitter may safely hoist only the
+	 * backing declaration and keep initialization at the original source point.
+	 */
+	function canUseFunctionLifetimeStackStorage():Bool {
+		final originalEntryCase = currentBlock.id == "entry" && blocks.length == 1;
+		final outerSequenceAfterControlFlow = statementSequenceDepth == 1 && nestedControlBodyDepth == 0;
+		return originalEntryCase || outerSequenceAfterControlFlow;
 	}
 
 	/**
@@ -5202,9 +5259,8 @@ private class FunctionBuilder {
 			}
 		}, pattern.sourceExpression.pos, "span-loop-element");
 		parameterValuesByCompilerId.set(pattern.loopVariable.id, element);
-		for (expression in pattern.body) {
-			lowerStatement(expression);
-		}
+		for (expression in pattern.body)
+			lowerNestedControlStatement(expression);
 		parameterValuesByCompilerId.remove(pattern.loopVariable.id);
 		loopControlStack.pop();
 		final bodyEnd = currentBlock;
@@ -5509,8 +5565,8 @@ private class FunctionBuilder {
 
 	function lowerConstructedVariable(variable:TVar, expression:TypedExpr, construction:BodyNewExpression, position:Position, ordinal:Int,
 			localId:String):Void {
-		if (currentBlock.id != "entry" || blocks.length != 1) {
-			unsupported(expression, "TNew(stack-construction-requires-unconditional-entry-block)");
+		if (!canUseFunctionLifetimeStackStorage()) {
+			unsupported(expression, "TNew(stack-construction-requires-function-lifetime-sequence)");
 		}
 		final classDefinition = construction.classReference.get();
 		final classPath = CBodyConstructor.classPath(construction.classReference);
@@ -7197,7 +7253,7 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(trueBlock.id), edge(joinBlock.id)), source: source};
 			currentBlock = trueBlock;
 			final trueCleanupDepth = normalCleanupActionIds.length;
-			lowerStatement(whenTrue);
+			lowerNestedControlStatement(whenTrue);
 			if (currentBlock.terminator == null) {
 				appendScopedCleanupInstructions(trueCleanupDepth);
 				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
@@ -7214,7 +7270,7 @@ private class FunctionBuilder {
 
 		currentBlock = trueBlock;
 		final trueCleanupDepth = normalCleanupActionIds.length;
-		lowerStatement(whenTrue);
+		lowerNestedControlStatement(whenTrue);
 		final trueEnd = currentBlock;
 		if (trueEnd.terminator == null)
 			appendScopedCleanupInstructions(trueCleanupDepth);
@@ -7222,7 +7278,7 @@ private class FunctionBuilder {
 
 		currentBlock = falseBlock;
 		final falseCleanupDepth = normalCleanupActionIds.length;
-		lowerStatement(falseExpression);
+		lowerNestedControlStatement(falseExpression);
 		final falseEnd = currentBlock;
 		if (falseEnd.terminator == null)
 			appendScopedCleanupInstructions(falseCleanupDepth);
@@ -7273,7 +7329,7 @@ private class FunctionBuilder {
 		final control = loopControl(exitBlock.id, conditionBlock.id, bodyCleanupDepth);
 		loopControlStack.push(control);
 		currentBlock = bodyBlock;
-		lowerStatement(body);
+		lowerNestedControlStatement(body);
 		loopControlStack.pop();
 		if (currentBlock.terminator == null) {
 			appendScopedCleanupInstructions(bodyCleanupDepth);
@@ -7294,7 +7350,7 @@ private class FunctionBuilder {
 		final control = loopControl(exitBlock.id, conditionBlock.id, bodyCleanupDepth);
 		loopControlStack.push(control);
 		currentBlock = bodyBlock;
-		lowerStatement(body);
+		lowerNestedControlStatement(body);
 		loopControlStack.pop();
 		final bodyEnd = currentBlock;
 		final reachesCondition = bodyEnd.terminator == null || control.usedContinue;
@@ -7372,14 +7428,14 @@ private class FunctionBuilder {
 
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
-			lowerStatement(cases[index].expr);
+			lowerNestedControlStatement(cases[index].expr);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
 			}
 		}
 		if (defaultExpression != null && defaultBlock != null) {
 			currentBlock = defaultBlock;
-			lowerStatement(defaultExpression);
+			lowerNestedControlStatement(defaultExpression);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
 			}
@@ -7463,7 +7519,7 @@ private class FunctionBuilder {
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
 			final cleanupDepth = normalCleanupActionIds.length;
-			lowerStatement(cases[index].expr);
+			lowerNestedControlStatement(cases[index].expr);
 			if (currentBlock.terminator == null) {
 				appendScopedCleanupInstructions(cleanupDepth);
 				openEnds.push(currentBlock);
@@ -7473,7 +7529,7 @@ private class FunctionBuilder {
 		if (defaultExpression != null && defaultBlock != null) {
 			currentBlock = defaultBlock;
 			final cleanupDepth = normalCleanupActionIds.length;
-			lowerStatement(defaultExpression);
+			lowerNestedControlStatement(defaultExpression);
 			if (currentBlock.terminator == null) {
 				appendScopedCleanupInstructions(cleanupDepth);
 				openEnds.push(currentBlock);
@@ -7539,7 +7595,7 @@ private class FunctionBuilder {
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
 			final cleanupDepth = normalCleanupActionIds.length;
-			lowerStatement(cases[index].expr);
+			lowerNestedControlStatement(cases[index].expr);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
 				appendScopedCleanupInstructions(cleanupDepth);
@@ -7549,7 +7605,7 @@ private class FunctionBuilder {
 		if (defaultExpression != null && defaultBlock != null) {
 			currentBlock = defaultBlock;
 			final cleanupDepth = normalCleanupActionIds.length;
-			lowerStatement(defaultExpression);
+			lowerNestedControlStatement(defaultExpression);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
 				appendScopedCleanupInstructions(cleanupDepth);
@@ -7602,7 +7658,7 @@ private class FunctionBuilder {
 		for (index in 0...cases.length) {
 			currentBlock = caseBlocks[index];
 			final cleanupDepth = normalCleanupActionIds.length;
-			lowerStatement(cases[index].expr);
+			lowerNestedControlStatement(cases[index].expr);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
 				appendScopedCleanupInstructions(cleanupDepth);
@@ -7612,7 +7668,7 @@ private class FunctionBuilder {
 		if (defaultExpression != null && defaultBlock != null) {
 			currentBlock = defaultBlock;
 			final cleanupDepth = normalCleanupActionIds.length;
-			lowerStatement(defaultExpression);
+			lowerNestedControlStatement(defaultExpression);
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
 				appendScopedCleanupInstructions(cleanupDepth);

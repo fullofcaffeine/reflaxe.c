@@ -665,11 +665,11 @@
       ],
       "status": "active",
       "assertions": [
-        "direct unconditional local new expressions receive default-initialized automatic class storage and ordinary private C constructor functions without selecting hxrt; a target-native fixture proves static-platform integer, Boolean, floating, and reference defaults",
+        "direct nonescaping local new expressions in the function's outer statement sequence receive default-initialized automatic class storage and ordinary private C constructor functions without selecting hxrt; one focused fixture proves exact cleanup when an earlier guard returns before construction, and a target-native fixture proves static-platform integer, Boolean, floating, and reference defaults",
         "constructor arguments, pinned-Haxe derived field initializers, super calls, base fields/bodies, and derived bodies retain exact observable order against the Eval oracle",
         "empty zero-argument constructor chains elide their C symbols and calls only after preserving source argument evaluation",
         "throwing constructors use explicit HxcIR status conventions and failure edges whose partial and initialized cleanup steps execute in validated reverse order",
-        "a proven direct helper may borrow a caller-owned class object for one call; a constructor may publish this only into its own collector-managed class field and the native fixture proves that self-cycle after collection; return, unproved local alias, unrelated field storage, constructor capture, unproven forwarding, assignment, conditional construction, dependency cycles, native layouts, and generic classes fail closed with source-positioned HXC1001 and no plausible artifact",
+        "a proven direct helper may borrow a caller-owned class object for one call; a constructor may publish this only into its own collector-managed class field and the native fixture proves that self-cycle after collection; return, unproved local alias, unrelated field storage, constructor capture, unproven forwarding, assignment, branch/loop/switch-local automatic construction, dependency cycles, native layouts, and generic classes fail closed with source-positioned HXC1001 and no plausible artifact",
         "portable, metal, reversed-input, repeated, and explicit runtime-none projects are byte-identical; strict GCC and Clang O0/O2 C11 execution, fail-stop status, and a C++17 private-header consumer pass"
       ]
     },

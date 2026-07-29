@@ -767,7 +767,21 @@ class CProjectEmitter {
 		if (initialization.executionOrder.length > 0) {
 			expectedDirectDecisions.push("compiler-planned-eager-static-initialization");
 		}
-		if (runtimePlan.features.indexOf("string-literal") != -1) {
+		/*
+		 * `features` is dependency-closed: Bytes can select the String-literal
+		 * runtime artifact even when reachable HxcIR contains no literal value.
+		 * The direct decision is narrower. It promises that the program itself
+		 * required compiler-owned UTF-8 bytes, so rebuild it from root evidence
+		 * rather than mistaking a transitive implementation dependency for
+		 * source behavior.
+		 */
+		var hasDirectStringLiteral = false;
+		for (reason in runtimePlan.rootReasons)
+			if (reason.featureId == "string-literal") {
+				hasDirectStringLiteral = true;
+				break;
+			}
+		if (hasDirectStringLiteral) {
 			expectedDirectDecisions.push("direct-utf8-string-literals");
 		}
 		if (runtimePlan.features.indexOf("string-scalar") != -1)

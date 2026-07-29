@@ -668,6 +668,14 @@ Failure edges carry the already-ordered partial and initialized cleanup steps;
 the emitter never reconstructs them from C lexical scope. See [bounded
 constructor lowering](constructor-lowering.md).
 
+A root-level guard may return before that storage is initialized. The return
+edge captures the cleanup actions that exist at that source point, so it cannot
+name the later object. Construction registers its action before subsequent
+statements, and later return or failure edges include it. This permits ordinary
+validation-first Haxe without pretending that a branch-local object has
+function lifetime; nested branch, loop, and switch construction remains
+fail-closed until those body exits can carry class-destruction actions.
+
 For E3.T06, the whole-program dispatch plan contains only reachable hierarchy
 slots and tables for constructed concrete dynamic classes. The hierarchy root
 selects the one virtual-layout header, construction binds a named table before
@@ -889,9 +897,10 @@ behavior without claiming construction or ownership.
 The constructor-lowering suite adds source-backed `new`, ordinary private C
 constructor functions, exact pinned-Haxe field/`super`/body ordering,
 default-initialized automatic storage, trivial-chain elision, typed status
-propagation, and ordered partial-initialization cleanup. It remains bounded to
-unconditional nonescaping locals and does not claim heap allocation, general
-exceptions, dispatch, object runtime, or public ABI.
+propagation, ordered partial-initialization cleanup, and root-sequenced
+nonescaping locals created after an earlier guard return. It does not admit
+branch-, loop-, or switch-local class destruction and does not claim general
+exceptions, broad dispatch, an unconditional object runtime, or public ABI.
 The enum suite includes a nominal abstract-over-String payload and proves
 construction, copy, projection, and byte-content equality across all project
 layouts. The separate string-output suite selects only the four-feature

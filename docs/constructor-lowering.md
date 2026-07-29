@@ -11,11 +11,27 @@ ABI.
 
 This is deliberately a useful but narrow construction model. A direct local
 initializer such as `var item = new Item(7)` receives automatic C storage when
-it is in the function's unconditional entry block and the reference cannot
-escape that function. A nonescaping parent may also own a child created by a
-`final` field initializer such as `public final inventory = new Inventory()`.
-The child is stored directly inside the parent's C struct, so it has a stable
-address for the complete parent lifetime without a heap allocation.
+it is in the function's outer statement sequence and the reference cannot
+escape that function. An earlier guard may return before the declaration:
+
+```haxe
+if (!inputIsValid)
+  return fallback;
+final item = new Item(7);
+return item.read();
+```
+
+The early return records its cleanup before `item` exists. Construction then
+registers `item` for every later exit, so HxcIR can prove exactly which paths
+destroy it without moving the constructor before the guard. This is different
+from declaring the object inside one branch, loop body, or switch arm. Such an
+object must be destroyed when that nested body ends, and path-scoped class
+destruction is not admitted yet.
+
+A nonescaping parent may also own a child created by a `final` field initializer
+such as `public final inventory = new Inventory()`. The child is stored
+directly inside the parent's C struct, so it has a stable address for the
+complete parent lifetime without a heap allocation.
 
 Assigning an otherwise local reference into longer-lived storage, conditionally
 constructing an object that still uses automatic storage, or storing `this`
@@ -499,7 +515,10 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
 - an assigned or reassigned owned-child reference, or a bounded
   alias that later outlives or becomes independent from its parent;
 - a mutable owned-child field or a mismatched declared child type;
-- conditional or otherwise non-entry local construction;
+- branch-, loop-, or switch-local automatic class construction whose
+  destruction would occur before the surrounding function exits;
+- an unnamed immediate constructed receiver outside the unconditional entry
+  block;
 - constructor dependency cycles, with the canonical nominal cycle path;
 - extern or `@:c.layout` native construction, because imported construction
   and destruction policy is not inferred from a Haxe declaration;
@@ -531,6 +550,7 @@ Run:
 
 ```sh
 npm run test:constructor-lowering
+npm run test:constructor-early-exit
 npm run test:constructor-direct-receiver
 npm run test:virtual-dispatch
 npm run test:class-layout
@@ -546,8 +566,18 @@ native, sanitizer, C++ header, and escape matrix without recompiling unrelated
 constructor families. `test:constructor-lowering` remains the exhaustive
 reference gate before integration.
 
+Use `test:constructor-early-exit` for the smaller root-guard lifetime rule. Its
+positive fixture returns before construction on one path, constructs and uses a
+nonescaping object on the surviving path, and proves that only the later return
+owns cleanup. The same focused command recompiles the existing branch-local
+negative so the broader unsafe case cannot become accepted accidentally.
+
 `test/constructor_lowering/fixtures/minimal/Main.hx` is the small readable
-example. The focused `record_parameter` fixture proves a direct closed record
+example. The `early_exit` fixture proves function-lifetime automatic storage
+after a validated root-level guard, exact per-exit HxcIR cleanup, runtime-free
+structured C, Eval parity, reversed-input determinism, strict C11 at both
+optimization levels, and sanitizer execution. The focused `record_parameter`
+fixture proves a direct closed record
 argument in split, package, and unity output, reversed discovery, warm compiler
 server reuse, and strict native execution. `interface_parameter` proves the
 same output and native matrix for a by-value interface pair whose constructor
