@@ -594,6 +594,33 @@ def validate_generated_project(output: Path) -> None:
     reasons = plan.get("rootReasons")
     if not isinstance(reasons, list) or not reasons:
         raise ArrayRuntimeFailure("generated Array program omitted typed runtime reasons")
+    retain_surfaces_by_source: dict[str, set[str]] = {}
+    for reason in reasons:
+        if (
+            isinstance(reason, dict)
+            and reason.get("featureId") == "string"
+            and reason.get("operationId") == "retain"
+            and isinstance(reason.get("surface"), str)
+            and isinstance(reason.get("source"), dict)
+        ):
+            source_key = json.dumps(
+                reason["source"], ensure_ascii=False, sort_keys=True
+            )
+            retain_surfaces_by_source.setdefault(source_key, set()).add(
+                str(reason["surface"])
+            )
+    expected_same_span_surfaces = {
+        "ordinary Haxe String local alias",
+        "managed String captured by a closed record",
+    }
+    if not any(
+        expected_same_span_surfaces.issubset(surfaces)
+        for surfaces in retain_surfaces_by_source.values()
+    ):
+        raise ArrayRuntimeFailure(
+            "same-span catalog copy lost its distinct local-alias and "
+            "record-field String ownership reasons"
+        )
     operations = {
         reason.get("operationId")
         for reason in reasons

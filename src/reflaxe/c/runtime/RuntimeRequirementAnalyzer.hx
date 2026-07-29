@@ -36,23 +36,42 @@ private class RuntimeIntentObservation {
 }
 
 /**
- * Pairs one typed source requirement with its precomputed reconciliation key.
+ * Pairs one typed source requirement with its two reconciliation keys.
  *
  * This is request-local derived data, not a cache shared between compilations.
- * Keeping the key beside the candidate preserves deterministic sorting while
- * avoiding repeated source-span formatting in the comparator.
+ * `observationIdentity` matches the HxcIR operation. `reasonIdentity` also
+ * includes the descriptive kind, surface, and alternative, so exact duplicate
+ * reasons collapse while distinct reasons at one source point remain visible.
+ * Keeping both strings beside the candidate avoids rebuilding source spans in
+ * hot comparators.
  */
 private class RuntimeCandidateEntry {
 	public final candidate:RuntimeRequirementCandidate;
-	public final identity:String;
+	public final observationIdentity:String;
+	public final reasonIdentity:String;
 
 	public function new(candidate:RuntimeRequirementCandidate) {
 		this.candidate = candidate;
-		this.identity = '${candidate.featureId.text()}\x00${candidate.operationId}\x00${candidate.source.display()}';
+		this.observationIdentity = '${candidate.featureId.text()}\x00${candidate.operationId}\x00${candidate.source.display()}';
+		this.reasonIdentity = '$observationIdentity\x00${candidate.kind}\x00${candidate.surface}\x00${candidate.alternative == null ? "" : candidate.alternative}';
 	}
 }
 
-/** Reconciles every reachable HxcIR runtime intent with one typed source root. */
+/**
+ * Proves that source-level runtime reasons describe work that survived in HxcIR.
+ *
+ * A source span identifies a location in a Haxe file; it does not uniquely
+ * identify one semantic operation. For example, constructing one record at one
+ * expression can retain a local String and separately retain that String for
+ * the record field. Both HxcIR instructions legitimately carry the same span.
+ *
+ * Reconciliation therefore counts operations by feature, operation, and span.
+ * Exact duplicate source reasons collapse, while distinct descriptions remain
+ * legal only when the validated HxcIR contains at least that many matching
+ * operations. Missing reasons, orphan reasons, and excess distinct reasons are
+ * internal compiler errors, so runtime selection can never be guessed from
+ * source text alone.
+ */
 class RuntimeRequirementAnalyzer {
 	public static inline final ANALYSIS_SCHEMA_VERSION = 1;
 
@@ -107,22 +126,36 @@ class RuntimeRequirementAnalyzer {
 
 		final candidates = canonicalCandidates(input);
 		final uniqueObservations = canonicalObservations(observations);
-		final candidateByIdentity:Map<String, RuntimeRequirementCandidate> = [];
-		for (entry in candidates)
-			candidateByIdentity.set(entry.identity, entry.candidate);
+		final observationCounts = countObservations(observations);
+		final candidatesByObservation:Map<String, Array<RuntimeRequirementCandidate>> = [];
+		for (entry in candidates) {
+			var matching = candidatesByObservation.get(entry.observationIdentity);
+			if (matching == null) {
+				matching = [];
+				candidatesByObservation.set(entry.observationIdentity, matching);
+			}
+			matching.push(entry.candidate);
+		}
 		final observedIdentities:Map<String, Bool> = [];
 		final reasons:Array<RuntimeRequirementReason> = [];
-		for (index in 0...uniqueObservations.length) {
-			final observation = uniqueObservations[index];
-			final candidate = candidateFor(candidateByIdentity, observation);
+		for (observation in uniqueObservations) {
+			final matching = candidatesFor(candidatesByObservation, observation);
+			final observationCount = requiredCount(observationCounts, observation.identity);
+			if (matching.length > observationCount) {
+				internal('${matching.length} distinct runtime source reasons describe only $observationCount reachable `${observation.operationId}` operation(s) at `${observation.source.display()}`',
+					[observation.featureId]);
+			}
 			observedIdentities.set(observation.identity, true);
-			reasons.push(new RuntimeRequirementReason('runtime.${observation.featureId}.${observation.operationId}.$index',
-				RuntimeFeatureId.parse(observation.featureId), observation.operationId, candidate.kind, candidate.surface, observation.source,
-				candidate.alternative));
+			for (candidate in matching) {
+				final index = reasons.length;
+				reasons.push(new RuntimeRequirementReason('runtime.${observation.featureId}.${observation.operationId}.$index',
+					RuntimeFeatureId.parse(observation.featureId), observation.operationId, candidate.kind, candidate.surface, observation.source,
+					candidate.alternative));
+			}
 		}
 		for (entry in candidates) {
 			final candidate = entry.candidate;
-			if (!observedIdentities.exists(entry.identity)) {
+			if (!observedIdentities.exists(entry.observationIdentity)) {
 				internal('runtime source reason for `${candidate.operationId}` at `${candidate.source.display()}` has no reachable HxcIR runtime intent',
 					[candidate.featureId.text()]);
 			}
@@ -210,23 +243,23 @@ class RuntimeRequirementAnalyzer {
 
 	static function canonicalCandidates(input:Array<RuntimeRequirementCandidate>):Array<RuntimeCandidateEntry> {
 		final candidates = input.map(candidate -> new RuntimeCandidateEntry(candidate));
-		candidates.sort((left, right) -> RuntimeFeatureRegistry.compareUtf8(left.identity, right.identity));
+		candidates.sort((left, right) -> RuntimeFeatureRegistry.compareUtf8(left.reasonIdentity, right.reasonIdentity));
 		final result:Array<RuntimeCandidateEntry> = [];
 		for (entry in candidates) {
-			if (result.length == 0 || result[result.length - 1].identity != entry.identity) {
+			if (result.length == 0 || result[result.length - 1].reasonIdentity != entry.reasonIdentity) {
 				result.push(entry);
-				continue;
-			}
-			final candidate = entry.candidate;
-			final previous = result[result.length - 1].candidate;
-			if (previous.kind != candidate.kind
-				|| previous.surface != candidate.surface
-				|| previous.alternative != candidate.alternative) {
-				internal('conflicting runtime source reasons describe `${candidate.operationId}` at `${candidate.source.display()}`',
-					[candidate.featureId.text()]);
 			}
 		}
 		return result;
+	}
+
+	static function countObservations(input:Array<RuntimeIntentObservation>):Map<String, Int> {
+		final counts:Map<String, Int> = [];
+		for (observation in input) {
+			final previous = counts.get(observation.identity);
+			counts.set(observation.identity, previous == null ? 1 : previous + 1);
+		}
+		return counts;
 	}
 
 	static function canonicalObservations(input:Array<RuntimeIntentObservation>):Array<RuntimeIntentObservation> {
@@ -241,13 +274,21 @@ class RuntimeRequirementAnalyzer {
 		return result;
 	}
 
-	static function candidateFor(candidates:Map<String, RuntimeRequirementCandidate>, observation:RuntimeIntentObservation):RuntimeRequirementCandidate {
-		final candidate = candidates.get(observation.identity);
-		if (candidate != null)
-			return candidate;
+	static function candidatesFor(candidates:Map<String, Array<RuntimeRequirementCandidate>>,
+			observation:RuntimeIntentObservation):Array<RuntimeRequirementCandidate> {
+		final matching = candidates.get(observation.identity);
+		if (matching != null)
+			return matching;
 		return
 			internal('reachable HxcIR runtime intent `${observation.featureId}/${observation.operationId}` at `${observation.source.display()}` has no typed source reason',
 			[observation.featureId]);
+	}
+
+	static function requiredCount(counts:Map<String, Int>, identity:String):Int {
+		final count = counts.get(identity);
+		if (count != null)
+			return count;
+		return internal('canonical runtime observation `$identity` lost its raw occurrence count');
 	}
 
 	static function internal<T>(detail:String, ?featureIds:Array<String>):T

@@ -984,8 +984,12 @@ idiomatic C, a program-local specialized helper, the narrowest dependency-closed
 `RuntimeFeatureRegistry` now validates stable definitions, artifact and symbol
 ownership, environment availability, and an acyclic dependency graph.
 `RuntimeRequirementAnalyzer` walks every reachable validated HxcIR runtime
-intent and reconciles it one-to-one with typed operation/surface/source
-candidates; raw typed-input sightings do not become requirements.
+intent and reconciles it with typed operation/surface/source candidates. A
+source span identifies a location rather than one unique semantic operation,
+so exact source reasons are deduplicated while distinct same-span reasons are
+bounded by the number of matching HxcIR operations. Missing, orphaned, or
+over-counted reasons fail internally; raw typed-input sightings do not become
+requirements.
 `RuntimeFeaturePlanner` resolves source-rooted requests deterministically while
 preserving root-versus-transitive provenance; every selected feature and edge
 retains at least one root reason ID. `RuntimeFeaturePackager` turns exactly the

@@ -73,7 +73,7 @@ validated HxcIR with IRIStatic / IRIProgramLocal / IRIRuntime intent
         |
         v
 RuntimeRequirementAnalyzer
-  reconciles each reachable IRIRuntime(feature) with one typed source reason
+  reconciles reachable IRIRuntime(feature) operations with typed source reasons
         |
         v
 root feature reasons + source spans
@@ -95,9 +95,12 @@ The boundaries are intentional:
 - Seeing a type or import during typed-AST collection selects nothing.
 - `TypedExpr` lowering must first choose and record direct, program-local, or
   named runtime intent in HxcIR. It cannot infer a runtime from a C fragment.
-- Every reachable runtime intent must match exactly one source-rooted candidate,
-  and every candidate must still exist in reachable HxcIR. A mismatch is an
-  internal compiler error, not permission to guess.
+- Every reachable runtime intent needs a source-rooted candidate, and every
+  candidate must still exist in reachable HxcIR. A source span is a location,
+  not a unique operation ID, so several real operations may share it. The
+  analyzer deduplicates exact reasons and admits distinct reasons only up to the
+  number of matching HxcIR operations at that location. Missing, orphaned, or
+  excess reasons are internal compiler errors, not permission to guess.
 - The planner propagates each root reason through every dependency edge. A
   transitive feature never invents a second warning or appear without a reason.
 - The packager rereads only the selected files, checks their registered hashes,

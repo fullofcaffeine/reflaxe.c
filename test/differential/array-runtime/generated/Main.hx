@@ -17,6 +17,18 @@ typedef ManagedRecord = {
 }
 
 /**
+	A String identifier plus a managed Array field, matching editor catalog data.
+
+	Copying this record through one comprehension makes two ownership operations
+	share the `value.id` source span. That is intentional regression pressure for
+	runtime-reason reconciliation, not a reason to split natural Haxe source.
+**/
+typedef CatalogRecord = {
+	final id:String;
+	final commands:Array<ManagedCommand>;
+}
+
+/**
 	Reads an Array through an ordinary instance method without keeping it.
 
 	The instance gives the fixture a direct-method call boundary distinct from a
@@ -71,6 +83,7 @@ final class Main {
 		pushConditional(conditionalLabels, false);
 		final labelsCopy = labels.copy();
 		labelsCopy.push(fromCode(0x1F680));
+		final catalogCopies = copyCatalogs([{id: "en", commands: [Number(41)]}]);
 		final emptySorted:Array<Int> = [];
 		emptySorted.sort((left, right) -> left - right);
 		final singletonSorted = [7];
@@ -192,6 +205,9 @@ final class Main {
 			|| labelsCopy[2] != "café"
 			|| labelsCopy[3] != "ready"
 			|| labels[0] != "ready"
+			|| catalogCopies.length != 1
+			|| catalogCopies[0].id != "en"
+			|| catalogCopies[0].commands.length != 1
 			|| emptySorted.length != 0
 			|| singletonSorted[0] != 7
 			|| alreadySorted[0] != 1
@@ -298,6 +314,20 @@ final class Main {
 		copied.push(77);
 		return copied;
 	}
+
+	/**
+		Copy catalog values through ordinary Haxe record construction.
+
+		The `id` field read both obtains a managed String value and initializes an
+		owned record field. HxcIR keeps both retain operations even though Haxe maps
+		them to the same characters; the runtime planner must preserve both
+		descriptions instead of treating a source position as a unique operation.
+	**/
+	static function copyCatalogs(values:Array<CatalogRecord>):Array<CatalogRecord>
+		return [
+			for (value in values)
+				{id: value.id, commands: [for (command in value.commands) command]}
+		];
 
 	/**
 		Keep a copied inner Array alive while a nested branch borrows it.

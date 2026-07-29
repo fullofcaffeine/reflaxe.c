@@ -3,6 +3,7 @@ import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementCandidate;
+import reflaxe.c.runtime.RuntimeFeatureError;
 import reflaxe.c.runtime.RuntimeRequirementAnalyzer;
 
 /**
@@ -42,7 +43,85 @@ class RuntimeRequirementReconciliationGolden {
 				"fixture:string-literal", source));
 		}
 		final source = new HxcSourceSpan("test/runtime/runtime-feature-graph/ReconciliationFixture.hx", 1, 1, FIXTURE_SIZE + 1, 1);
-		final program:HxcIRProgram = {
+		final program = programWith(instructions, source);
+		final analyzer = new RuntimeRequirementAnalyzer();
+		final forward = analyzer.analyze(program, candidates);
+		candidates.reverse();
+		final reversed = analyzer.analyze(program, candidates);
+		if (forward.reasons.length != FIXTURE_SIZE
+			|| reversed.reasons.length != FIXTURE_SIZE
+			|| forward.reachability.runtimeIntentCount != FIXTURE_SIZE
+			|| reversed.reachability.runtimeIntentCount != FIXTURE_SIZE) {
+			throw "large runtime-requirement reconciliation lost an observation, reason, or reachability count";
+		}
+		for (index in 0...FIXTURE_SIZE) {
+			final left = forward.reasons[index];
+			final right = reversed.reasons[index];
+			if (left.id != right.id
+				|| left.featureId.text() != right.featureId.text()
+				|| left.operationId != right.operationId
+				|| left.kind != right.kind
+				|| left.surface != right.surface
+				|| left.source.display() != right.source.display()
+				|| left.alternative != right.alternative) {
+				throw 'runtime-requirement reconciliation changed canonical reason $index with discovery order';
+			}
+		}
+		verifySameSpanReasons(analyzer);
+		next();
+	}
+
+	/**
+		Prove that source spans are locations, not unique semantic identities.
+
+		One Haxe expression can create two ownership operations at the same
+		characters—for example, retaining a local String and retaining that String
+		inside a new record. Two HxcIR observations may therefore keep two distinct
+		diagnostic reasons. One observation may not: that would leave a source
+		reason unsupported by reachable semantic work.
+	**/
+	static function verifySameSpanReasons(analyzer:RuntimeRequirementAnalyzer):Void {
+		final source = new HxcSourceSpan("test/runtime/runtime-feature-graph/SameSpanReasons.hx", 4, 7, 4, 15);
+		final observations:Array<HxcIRInstruction> = [
+			{
+				id: "retain.local",
+				result: null,
+				kind: IRIORetain(IRPLocal("local.alias"), IRIRuntime("array")),
+				source: source
+			},
+			{
+				id: "retain.record",
+				result: null,
+				kind: IRIORetain(IRPLocal("local.record-field"), IRIRuntime("array")),
+				source: source
+			}
+		];
+		final first = new RuntimeRequirementCandidate(RuntimeFeatureId.parse("array"), "retain", "runtime-operation", "ordinary Haxe Array local alias",
+			source);
+		final second = new RuntimeRequirementCandidate(RuntimeFeatureId.parse("array"), "retain", "runtime-operation",
+			"managed Array captured by a closed record", source);
+		final candidates = [second, first, first];
+		final analysis = analyzer.analyze(programWith(observations, source), candidates);
+		if (analysis.reasons.length != 2
+			|| analysis.reachability.runtimeIntentCount != 2
+			|| analysis.reasons[0].surface != "managed Array captured by a closed record"
+			|| analysis.reasons[1].surface != "ordinary Haxe Array local alias") {
+			throw "same-span runtime reconciliation lost distinct reasons, exact deduplication, or canonical order";
+		}
+
+		var rejected = false;
+		try {
+			analyzer.analyze(programWith([observations[0]], source), candidates);
+		} catch (error:RuntimeFeatureError) {
+			rejected = error.message.indexOf("2 distinct runtime source reasons describe only 1 reachable `retain` operation") >= 0;
+		}
+		if (!rejected)
+			throw "one runtime observation incorrectly admitted two distinct source reasons";
+	}
+
+	/** Build the smallest HxcIR program needed by reconciliation-only tests. */
+	static function programWith(instructions:Array<HxcIRInstruction>, source:HxcSourceSpan):HxcIRProgram {
+		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
 			dispatch: {layouts: [], slots: [], tables: []},
 			modules: [
@@ -83,29 +162,5 @@ class RuntimeRequirementReconciliationGolden {
 				}
 			]
 		};
-		final analyzer = new RuntimeRequirementAnalyzer();
-		final forward = analyzer.analyze(program, candidates);
-		candidates.reverse();
-		final reversed = analyzer.analyze(program, candidates);
-		if (forward.reasons.length != FIXTURE_SIZE
-			|| reversed.reasons.length != FIXTURE_SIZE
-			|| forward.reachability.runtimeIntentCount != FIXTURE_SIZE
-			|| reversed.reachability.runtimeIntentCount != FIXTURE_SIZE) {
-			throw "large runtime-requirement reconciliation lost an observation, reason, or reachability count";
-		}
-		for (index in 0...FIXTURE_SIZE) {
-			final left = forward.reasons[index];
-			final right = reversed.reasons[index];
-			if (left.id != right.id
-				|| left.featureId.text() != right.featureId.text()
-				|| left.operationId != right.operationId
-				|| left.kind != right.kind
-				|| left.surface != right.surface
-				|| left.source.display() != right.source.display()
-				|| left.alternative != right.alternative) {
-				throw 'runtime-requirement reconciliation changed canonical reason $index with discovery order';
-			}
-		}
-		next();
 	}
 }

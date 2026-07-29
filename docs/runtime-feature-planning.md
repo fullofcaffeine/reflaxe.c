@@ -106,11 +106,26 @@ contains:
 `RuntimeRequirementAnalyzer` first walks the complete reachable, validated
 HxcIR. It recognizes explicit runtime calls, runtime implementations on
 operations/allocation/lifetime work, runtime-managed representations, and
-runtime cleanup actions. Every observed intent must match exactly one typed
-source candidate, and every candidate must match reachable IR. Identical source
-roots are deduplicated before stable reason IDs are assigned. A type or import
-that was merely seen in typed input cannot select a helper because it creates no
-reachable HxcIR runtime intent.
+runtime cleanup actions. Each observed intent needs a typed source candidate,
+and every candidate must match reachable IR.
+
+A **source span** is only a location--a file plus a range of characters. It is
+not a unique operation ID. One Haxe expression can produce several semantic
+operations at the same location. For example, copying a record can retain a
+local String and separately retain that String for the new record field. The
+analyzer groups observations by feature, operation, and source span, then
+compares counts:
+
+- exact duplicate source reasons collapse;
+- distinct source reasons remain visible when the validated HxcIR contains
+  enough matching operations at that location;
+- a missing reason, a reason with no surviving operation, or more distinct
+  reasons than operations is an internal compiler error.
+
+This count-based rule preserves useful diagnostic details such as the consumed
+typed surface without pretending that character positions identify compiler
+operations. A type or import that was merely seen in typed input still cannot
+select a helper because it creates no reachable HxcIR runtime intent.
 
 `RuntimeFeaturePlanner` retains the reconciled roots separately from dependency edges.
 Every selected root and every transitive feature inherits at least one root
