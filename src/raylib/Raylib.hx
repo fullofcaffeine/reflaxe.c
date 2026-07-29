@@ -156,6 +156,20 @@ class Raylib {
 	public static inline function EndMode3D():Void
 		raylib.raw.Raylib.EndMode3D();
 
+	/**
+	 * Clip following 2D or 3D drawing to one screen-space rectangle.
+	 *
+	 * Raylib stores this render state until `EndScissorMode`; it retains no Haxe
+	 * value or pointer. The editor uses the pair to keep its perspective world
+	 * inside the canvas instead of drawing over immediate-mode controls.
+	 */
+	public static inline function BeginScissorMode(x:Int, y:Int, width:Int, height:Int):Void
+		raylib.raw.Raylib.BeginScissorMode(c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(width), c.IntConvert.exact(height));
+
+	/** End the matching screen-space clip region. */
+	public static inline function EndScissorMode():Void
+		raylib.raw.Raylib.EndScissorMode();
+
 	public static inline function DrawPixel(x:Int, y:Int, color:Color):Void
 		raylib.raw.Raylib.DrawPixel(c.IntConvert.exact(x), c.IntConvert.exact(y), color);
 

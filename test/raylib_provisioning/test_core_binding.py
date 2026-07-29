@@ -64,6 +64,12 @@ class RaylibCoreBindingTests(unittest.TestCase):
         self.assertIn("public var position:Vector3", rendered)
         self.assertIn("public static function BeginDrawing():Void", rendered)
         self.assertIn(
+            "public static function BeginScissorMode("
+            "x:c.Int32, y:c.Int32, width:c.Int32, height:c.Int32):Void",
+            rendered,
+        )
+        self.assertIn("public static function EndScissorMode():Void", rendered)
+        self.assertIn(
             "public static function FileExists(fileName:c.CString):Bool",
             rendered,
         )

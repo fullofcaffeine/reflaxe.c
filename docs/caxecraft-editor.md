@@ -2,9 +2,11 @@
 
 Status: the renderer-independent command, history, validation, and test-play
 layer is implemented under `haxe_c-xge.19.5`. The first native Raylib/Raygui
-slice now displays and edits one bounded top-down voxel layer. Native map-file
-persistence, multi-layer navigation, and the fuller child-friendly authoring
-experience remain separate work.
+slice now presents the complete finite draft in a clipped perspective viewport,
+with a fly camera and typed voxel picking. It still edits layer zero only.
+Native map-file persistence, multi-layer controls, controller navigation,
+object gizmos, and the fuller child-friendly authoring experience remain
+separate work.
 
 ## What this layer owns
 
@@ -37,35 +39,60 @@ Raygui tool input into these commands. `PaintVoxels` and `EraseVoxels` commit
 one bounded drag as one edit, rather than creating history on every rendered
 frame.
 
-## First visual viewport
+## First 3D visual viewport
 
-The first visual slice deliberately has one small job: show one horizontal
-world layer and let Select, Paint, Erase, and Fill use the existing command
-language. It does not introduce a second editable grid.
+The first 3D slice lets a creator see depth, fly around the finite voxel world,
+and use Select, Paint, Erase, or Fill without creating a second editable copy
+of the map.
 
 ```text
-CAXEMAP draft
+current CAXEMAP draft
     |
     | accepted edit / undo / redo / New World
     v
-cached read-only layer projection
+cached read-only voxel volume
     |
-    +-- draw colored cells and selection
-    |
-pointer pixel -> typed VoxelPoint -> EditorCommand -> EditorSession.apply
+    +-- perspective drawing
+    +-- camera ray -> visible voxel or empty floor cell
+                         |
+                         v
+                 EditorCommand -> EditorSession.apply
 ```
 
-`EditorViewport.project` decodes the complete draft and copies only the visible
-layer into a compact array. `CaxecraftEditorScreen` caches that projection. A
-steady frame only reads the cached cells; it does not serialize the CAXEMAP
-draft or allocate a replacement projection. The cache is rebuilt after New
-World or after an accepted edit, undo, or redo.
+A **projection** means a read-only shape prepared for presentation.
+`EditorWorldViewport.projectWorld` decodes the complete finite draft into one
+volume ordered as `(z * height + y) * width + x`.
+`CaxecraftEditorScreen` caches that projection. A normal displayed frame reads
+the cache; it does not serialize the CAXEMAP draft or allocate a replacement
+volume. New World, an accepted edit, undo, or redo rebuilds the cache from the
+session's new draft.
 
-The same integer `EditorViewportLayout` controls drawing and hit testing. Its
-right and bottom edges are excluded, so a pixel on a cell boundary has one
-deterministic meaning in Eval tests and generated C. An invalid tool gesture
-does not touch the draft or cache and changes the visible status to the invalid
-notice.
+Raylib turns one screen pixel into a **ray**: a starting point and direction in
+the 3D world. `EditorWorldViewport.pickWorld` tests that ray against visible
+solid voxel boxes and chooses the nearest hit. If no solid is hit, it intersects
+the floor of the current editable layer so a creator can paint an empty cell.
+The result is a typed `VoxelPoint`; the selected tool then creates the same
+`EditorCommand` used by tests and history. Invalid picks and rejected commands
+leave both the draft and its presentation cache unchanged.
+
+The current controls are:
+
+- hold the right mouse button and move the pointer to look;
+- use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
+- use the wheel to move along the view direction;
+- press F to restore the deterministic whole-world view; and
+- left-click to apply the selected tool.
+
+The localized viewport heading shows these controls in English and
+Mexican Spanish. Camera state and the current hover are presentation values:
+they are not saved in CAXEMAP, do not participate in undo, and cannot mutate
+terrain. Raylib's scissor region clips all 3D drawing to the canvas, so even a
+nearby voxel cannot cover the toolbar, sidebar, or status bar.
+
+The older renderer-independent `EditorViewport` module still owns exact
+top-down layer projection and pixel-edge mapping. It remains tested as the
+foundation for a later optional planning view or minimap, but the shipped
+native canvas no longer uses it as the primary editor.
 
 The built-in blank world is 12 by 1 by 12 cells. Caxecraft supplies its Air and
 Grass content IDs at the application composition edge; the reusable editor
@@ -190,9 +217,10 @@ npm run test:caxecraft-editor
 The probe builds a small complete scenario through the public command API. It
 checks exact undo and redo for every command family, canonical
 serialize/reload, invalid-draft recovery, deterministic history eviction, byte
-and gesture limits, two independent test-play sessions, viewport projection,
-pixel-edge mapping, and all four tool translations. It runs under C and a
-second installed locale (Spanish when available) and scans the reusable editor
+and gesture limits, two independent test-play sessions, the optional top-down
+projection, complete-volume projection, camera bounds, solid and empty-space
+ray picking, and all four tool translations. It runs under C and a second
+installed locale (Spanish when available) and scans the reusable editor
 sources for C, Raylib, target-condition, raw-code, and untyped-boundary leakage.
 
 The native graphical proof uses the real renderer in Raylib's deterministic
@@ -205,9 +233,12 @@ python3 examples/caxecraft/play.py \
   --allow-network
 ```
 
-That pilot compiles the application through haxe.c, submits one typed Paint
-gesture through `CaxecraftEditorScreen` and `EditorSession`, observes exactly
-one accepted edit, validates the visible editor pixels and telemetry, captures
-two byte-identical screenshots, and exits within the bounded timeout. It proves
-this first viewport slice, not native map-file save, multi-layer editing, or the
-complete planned visual event/cutscene editor.
+That pilot compiles the application through haxe.c, moves the production
+camera, submits typed Paint and Select gestures through
+`CaxecraftEditorScreen` and `EditorSession`, and observes exactly one terrain
+edit. Its framebuffer check requires the real toolbar and sidebar plus broad
+3D evidence: sky, a perspective ground plane, one solid voxel, and its distinct
+selection outline. It repeats semantic execution, captures the review frame,
+and exits within the bounded timeout. It proves this first perspective
+viewport slice, not native map-file save, multi-layer controls, controller
+navigation, or the complete planned visual event/cutscene editor.

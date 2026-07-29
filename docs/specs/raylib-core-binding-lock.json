@@ -93,7 +93,7 @@
     },
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "862b9d5506b54c437f286c82324fe3178d011ec125174f2698b5eaf6c387e815",
+  "declarationSha256": "3547628d9a1bd031e412e352264b444aeb77d1133efc5e5594cc7f5230deb13f",
   "declarations": {
     "aliases": [
       {
@@ -888,6 +888,49 @@
           "haxeType": "Void"
         },
         "sourceLine": 1050
+      },
+      {
+        "name": "BeginScissorMode",
+        "parameters": [
+          {
+            "name": "x",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "y",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "width",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1058
       },
       {
         "name": "CheckCollisionBoxes",
@@ -1731,6 +1774,16 @@
           "haxeType": "Void"
         },
         "sourceLine": 1051
+      },
+      {
+        "name": "EndScissorMode",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1059
       },
       {
         "name": "FileExists",
@@ -2818,7 +2871,7 @@
       "aliases": 2,
       "enumConstants": 143,
       "enums": 5,
-      "functions": 61,
+      "functions": 63,
       "omittedFamilies": 6,
       "records": 9
     },
@@ -2872,7 +2925,7 @@
         "validate": "IsTextureValid"
       }
     ],
-    "sha256": "ed6664afc63b99039988d9ca86c8e2cf585a01fc88013dd8573e80f7e5d23fa8"
+    "sha256": "161edc328a35ed884eb207d581383ffac9b61cc1d8e4222b70867ad5440c91ae"
   },
   "upstream": {
     "apiVersion": 600,

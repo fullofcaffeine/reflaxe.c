@@ -25,6 +25,7 @@
   "functions": [
     "BeginDrawing",
     "BeginMode3D",
+    "BeginScissorMode",
     "CheckCollisionBoxes",
     "ClearBackground",
     "CloseWindow",
@@ -49,6 +50,7 @@
     "EnableCursor",
     "EndDrawing",
     "EndMode3D",
+    "EndScissorMode",
     "FileExists",
     "GetColor",
     "GetFPS",

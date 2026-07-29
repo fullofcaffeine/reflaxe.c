@@ -94,7 +94,7 @@ final class UiCatalog {
 			case DebugVisible: "VISIBLE";
 			case EditorAdvanced: "ADVANCED TOOLS";
 			case EditorBack: "BACK";
-			case EditorCanvasHelp: "WORLD VIEWPORT — LEFT CLICK TO APPLY THE SELECTED TOOL";
+			case EditorCanvasHelp: "3D WORLD — LMB TOOL · RMB LOOK · WASD/QE FLY · WHEEL · F FOCUS";
 			case EditorInvalid: "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY";
 			case EditorName: "WORLD NAME";
 			case EditorNewWorld: "NEW WORLD";
@@ -136,7 +136,7 @@ final class UiCatalog {
 			case DebugVisible: "VISIBLES";
 			case EditorAdvanced: "HERRAMIENTAS AVANZADAS";
 			case EditorBack: "VOLVER";
-			case EditorCanvasHelp: "VISTA DEL MUNDO — CLIC IZQUIERDO PARA USAR LA HERRAMIENTA";
+			case EditorCanvasHelp: "MUNDO 3D — CLIC IZQ USAR · CLIC DER MIRAR · WASD/QE VOLAR · RUEDA · F ENFOCAR";
 			case EditorInvalid: "CORRIGE EL BORRADOR ANTES DE PROBARLO";
 			case EditorName: "NOMBRE DEL MUNDO";
 			case EditorNewWorld: "MUNDO NUEVO";

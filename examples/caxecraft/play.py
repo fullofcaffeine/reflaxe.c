@@ -1094,14 +1094,16 @@ def validate_presented_screenshot(
 
 
 def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
-    """Prove the native editor drew its toolbar, canvas, text entry, and status.
+    """Prove the native editor drew its controls and first real 3D world.
 
     This is a structural framebuffer check, not a pixel golden. It admits small
     driver and font-rendering differences while still rejecting a blank frame,
-    a gameplay frame, or an editor missing one of its main working regions. The
-    focused sidebar subregion proves the first owned text box is actually
-    presented; exact copy and edit semantics remain owned by the faster
-    localization and Raygui binding tests.
+    a gameplay frame, a flat placeholder canvas, or an editor missing one of
+    its main working regions. The pilot paints and selects one real voxel. Broad
+    flat-color counts therefore prove that the perspective view contains sky,
+    ground, the solid voxel, and its selection outline without prescribing
+    exact camera pixels. The focused sidebar subregion proves the first owned
+    text box is presented; exact edit semantics remain owned by faster tests.
     """
     width, height, pixels = decode_rgba_png(path, "editor")
     logical_width, logical_height = 1280, 720
@@ -1147,6 +1149,24 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
         for label, (changed, colors), threshold in zip(labels, evidence, minimum_changed)
         if changed < threshold or colors < 3
     ]
+    canvas_colors = {
+        "sky": ((126, 190, 201), 50_000),
+        "ground": ((26, 43, 50), 15_000),
+        "painted-voxel": ((83, 145, 92), 100),
+        "selection-outline": ((255, 132, 47), 20),
+    }
+    for label, (expected, minimum) in canvas_colors.items():
+        matching = 0
+        for row in range(104 * scale, 650 * scale):
+            row_at = row * width * 4
+            for column in range(32 * scale, 1018 * scale):
+                at = row_at + column * 4
+                if tuple(pixels[at : at + 3]) == expected:
+                    matching += 1
+        if matching < minimum * scale * scale:
+            failures.append(
+                f"3d-{label}=pixels:{matching},minimum:{minimum * scale * scale}"
+            )
     if failures:
         raise PlayFailure(
             "Caxecraft editor framebuffer is blank or missing a working region "
@@ -1783,6 +1803,28 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
     if not app_path.is_file():
         raise PlayFailure(f"generated Caxecraft {layout} app source is missing: {app_relative}")
     app = app_path.read_text(encoding="utf-8")
+    editor_relative = {
+        "split": "src/modules/caxecraft/app/CaxecraftEditorScreen.c",
+        "package": "src/packages/caxecraft/app/package.c",
+        "unity": "src/program.c",
+    }[layout]
+    editor_path = generated / editor_relative
+    if not editor_path.is_file():
+        raise PlayFailure(
+            f"generated Caxecraft editor source is missing: {editor_relative}"
+        )
+    editor = editor_path.read_text(encoding="utf-8")
+    for required in (
+        "BeginScissorMode(",
+        "EndScissorMode(",
+        "BeginMode3D(",
+        "GetScreenToWorldRay(",
+        "EditorSession_apply(",
+    ):
+        if required not in editor:
+            raise PlayFailure(
+                f"generated Caxecraft editor omitted required 3D ownership call {required}"
+            )
     if layout == "split":
         entry_relative = "src/modules/caxecraft/app/Main.c"
         entry_path = generated / entry_relative

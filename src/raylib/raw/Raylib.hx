@@ -33,6 +33,8 @@ extern class Raylib {
 
 	public static function BeginMode3D(camera:Camera3D):Void;
 
+	public static function BeginScissorMode(x:c.Int32, y:c.Int32, width:c.Int32, height:c.Int32):Void;
+
 	public static function CheckCollisionBoxes(box1:BoundingBox, box2:BoundingBox):Bool;
 
 	public static function ClearBackground(color:Color):Void;
@@ -86,6 +88,8 @@ extern class Raylib {
 	public static function EndDrawing():Void;
 
 	public static function EndMode3D():Void;
+
+	public static function EndScissorMode():Void;
 
 	public static function FileExists(fileName:c.CString):Bool;
 

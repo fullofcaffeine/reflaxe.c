@@ -56,6 +56,37 @@ strings and retained foreign pointers remain unsupported.
 Begin/End calls stay explicit. A callback-style scope helper would need proven
 closure inlining and cleanup on every exit before making the same claim.
 
+### 3D picking and canvas clipping
+
+The Caxecraft editor needs two small operations that are easy to express
+directly in raylib but should not leak raw C declarations into editor logic:
+
+```haxe
+final ray = Raylib.GetScreenToWorldRay(mouse, camera);
+final origin = ray.position;
+final direction = ray.direction;
+
+Raylib.BeginScissorMode(left, top, width, height);
+Raylib.BeginMode3D(camera);
+// Draw the world.
+Raylib.EndMode3D();
+Raylib.EndScissorMode();
+```
+
+`raylib.Ray` is a transparent view of raylib's by-value C struct. Its
+`position` and `direction` properties read the two `Vector3` fields without
+allocating or changing representation. A renderer adapter can therefore pass
+plain numeric coordinates into target-neutral picking logic instead of making
+that logic import `raylib.raw`.
+
+A **scissor region** is a screen rectangle outside which the graphics device
+discards drawing. `BeginScissorMode` enables that region until the matching
+`EndScissorMode`. Caxecraft uses it so a 3D voxel near the camera cannot paint
+over the editor toolbar or sidebar. The pair changes Raylib render state during
+those calls; it does not retain a Haxe pointer or create a resource owner. The
+semantic fixture and generated C snapshot prove direct `Ray.position`,
+`Ray.direction`, `BeginScissorMode`, and `EndScissorMode` lowering.
+
 ### Texture ownership stays visible
 
 `raylib.Texture2D` and `raylib.Rectangle` are curated zero-cost views used to

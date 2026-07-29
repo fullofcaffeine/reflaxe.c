@@ -13,13 +13,18 @@ import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
-import caxecraft.editor.EditorViewport.EditorViewportProjection;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
-import caxecraft.editor.EditorViewport.layout as layoutViewport;
-import caxecraft.editor.EditorViewport.paletteCodeAt;
-import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
-import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.toolFromIndex;
+import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
+import caxecraft.editor.EditorWorldViewport.EditorCameraState;
+import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
+import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
+import caxecraft.editor.EditorWorldViewport.cameraTarget;
+import caxecraft.editor.EditorWorldViewport.focusCamera;
+import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
+import caxecraft.editor.EditorWorldViewport.pickWorld;
+import caxecraft.editor.EditorWorldViewport.projectWorld;
+import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.localization.UiCatalog;
 import caxecraft.localization.UiCatalog.LocaleCursor;
 import caxecraft.localization.UiCatalog.UiMessage;
@@ -34,9 +39,14 @@ import raygui.GuiResult;
 import raygui.GuiTextBoxState;
 import raygui.GuiToggleState;
 import raygui.Raygui;
+import raylib.Camera3D;
+import raylib.CameraProjection;
 import raylib.Color;
+import raylib.KeyboardKey;
+import raylib.MouseButton;
 import raylib.Raylib;
 import raylib.Rectangle;
+import raylib.Vector3;
 
 /** What the application should do after handling one editor frame. */
 enum EditorScreenAction {
@@ -57,18 +67,21 @@ private enum EditorNotice {
  * This stateful class owns one mutable draft/session and small presentation
  * state. Raygui remains immediate-mode: every frame redraws controls, while
  * `EditorSession` continues to own validation, undo/redo, and disposable test
- * play. A cached `EditorViewportProjection` reads one terrain layer after a
- * successful edit; steady frames draw that cache instead of serializing the
- * draft or maintaining a second editable world.
+ * play. A cached `EditorWorldProjection` reads the complete finite terrain
+ * volume after a successful edit; steady frames draw and pick that cache
+ * instead of serializing the draft or maintaining a second editable world.
  *
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
- * composition edge; the reusable editor package knows neither. Native
- * save/load and multi-layer navigation remain planned separately.
+ * composition edge; the reusable editor package knows neither. The first 3D
+ * slice edits layer zero while the cache and camera already describe a volume.
+ * Native save/load, layer controls, object gizmos, and cinematic tools remain
+ * planned separately.
  */
 final class CaxecraftEditorScreen {
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
-	var projection:Null<EditorViewportProjection>;
+	var projection:Null<EditorWorldProjection>;
+	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
 	final advancedTools:GuiToggleState;
 	final toolList:GuiListViewState;
@@ -86,11 +99,12 @@ final class CaxecraftEditorScreen {
 		session = openNewWorld();
 		notice = Ready;
 		projection = null;
+		camera = null;
 		selection = null;
 		advancedTools = new GuiToggleState(false);
 		toolList = new GuiListViewState();
 		worldName = GuiTextBoxState.create(64);
-		refreshProjection();
+		refreshProjection(true);
 	}
 
 	/** Draw one responsive editor frame and apply controls to the real session. */
@@ -112,7 +126,7 @@ final class CaxecraftEditorScreen {
 			final name = worldName;
 			if (name != null)
 				name.clear();
-			refreshProjection();
+			refreshProjection(true);
 		}
 		buttonLeft += buttonWidth + buttonGap;
 		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorUndo)))
@@ -144,7 +158,7 @@ final class CaxecraftEditorScreen {
 		final name = worldName;
 		if (name != null)
 			name.draw(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 242.0, sidebarWidth - 32.0, 32.0));
-		drawViewport(48, 144, width - sidebarWidth - 112, height - 230);
+		drawWorldViewport(48, 144, width - sidebarWidth - 112, height - 230);
 
 		final status = switch notice {
 			case Ready: UiMessage.EditorReady;
@@ -213,62 +227,106 @@ final class CaxecraftEditorScreen {
 	}
 
 	/**
-	 * Draw and operate one cached top-down terrain layer.
+	 * Draw and operate the cached draft through a clipped perspective viewport.
 	 *
-	 * The pointer mapper and command translator are renderer-independent. This
-	 * method only reads native mouse state, paints pixels, and submits the
-	 * resulting typed command through `applyToolAt`.
+	 * Raylib supplies device state, a screen ray, clipping, and drawing. Camera
+	 * movement, volume lookup, ray picking, and command translation remain
+	 * renderer-independent. The right mouse button looks around, WASD/QE flies,
+	 * the wheel moves along the view, and F restores the deterministic world
+	 * focus. Left click submits the selected tool through `applyToolAt`.
 	 */
-	function drawViewport(left:Int, top:Int, width:Int, height:Int):Void {
+	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int):Void {
 		var current = projection;
-		if (current == null)
+		var currentCamera = camera;
+		if (current == null || currentCamera == null || width <= 0 || height <= 0)
 			return;
-		var grid = layoutViewport(left, top, width, height, current);
-		if (grid == null)
-			return;
-
 		final mouse = Raylib.GetMousePosition();
-		var hover = viewportPointAt(current, grid, Std.int(mouse.x.toFloat()), Std.int(mouse.y.toFloat()));
-		if (hover != null && Raylib.IsMouseButtonPressed(raylib.MouseButton.Left)) {
+		final mouseX = Std.int(mouse.x.toFloat());
+		final mouseY = Std.int(mouse.y.toFloat());
+		final inside = mouseX >= left && mouseY >= top && mouseX < left + width && mouseY < top + height;
+		final name = worldName;
+		final cameraInputEnabled = inside && (name == null || !name.isEditing());
+		if (cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.F))
+			currentCamera = focusCamera(current);
+		else if (cameraInputEnabled) {
+			final delta = Raylib.GetMouseDelta();
+			final looking = Raylib.IsMouseButtonDown(MouseButton.Right);
+			currentCamera = stepCamera(current, currentCamera, {
+				forward: axis(Raylib.IsKeyDown(KeyboardKey.W), Raylib.IsKeyDown(KeyboardKey.S)),
+				right: axis(Raylib.IsKeyDown(KeyboardKey.D), Raylib.IsKeyDown(KeyboardKey.A)),
+				vertical: axis(Raylib.IsKeyDown(KeyboardKey.E), Raylib.IsKeyDown(KeyboardKey.Q)),
+				yaw: looking ? -delta.x.toFloat() * 0.004 : 0.0,
+				pitch: looking ? -delta.y.toFloat() * 0.004 : 0.0,
+				wheel: Raylib.GetMouseWheelMove().toFloat()
+			}, Raylib.GetFrameTime().toFloat());
+		}
+		camera = currentCamera;
+		final target = cameraTarget(currentCamera);
+		final nativeCamera = Camera3D.make(Vector3.fromFloat(currentCamera.x, currentCamera.y, currentCamera.z),
+			Vector3.fromFloat(target.x, target.y, target.z), Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(52.0), CameraProjection.Perspective);
+		var hover:Null<EditorWorldHit> = null;
+		if (inside) {
+			final ray = Raylib.GetScreenToWorldRay(mouse, nativeCamera);
+			final origin = ray.position;
+			final direction = ray.direction;
+			hover = pickWorld(current, {x: origin.x.toFloat(), y: origin.y.toFloat(), z: origin.z.toFloat()}, {
+				x: direction.x.toFloat(),
+				y: direction.y.toFloat(),
+				z: direction.z.toFloat()
+			}, 0, 512.0);
+		}
+		if (hover != null && Raylib.IsMouseButtonPressed(MouseButton.Left)) {
 			final tool = toolFromIndex(toolList.activeIndex());
 			if (tool == null)
 				notice = Invalid;
 			else
-				applyToolAt(tool, hover);
+				applyToolAt(tool, hover.point);
 			current = projection;
 			if (current == null)
 				return;
-			grid = layoutViewport(left, top, width, height, current);
-			if (grid == null)
-				return;
-			hover = viewportPointAt(current, grid, Std.int(mouse.x.toFloat()), Std.int(mouse.y.toFloat()));
 		}
 
-		final inset = grid.cellSize > 2 ? 1 : 0;
-		final fillSize = grid.cellSize - inset * 2;
+		Raylib.DrawRectangle(left, top, width, height, CaxecraftPalette.sky());
+		Raylib.BeginScissorMode(left, top, width, height);
+		Raylib.BeginMode3D(nativeCamera);
+		Raylib.DrawCube(Vector3.fromFloat(current.width * 0.5, -0.04, current.depth * 0.5), c.Float32.fromFloat(current.width), c.Float32.fromFloat(0.08),
+			c.Float32.fromFloat(current.depth), Color.rgba(26, 43, 50));
+		for (x in 0...current.width + 1)
+			Raylib.DrawLine3D(Vector3.fromFloat(x, 0.002, 0.0), Vector3.fromFloat(x, 0.002, current.depth), Color.rgba(55, 79, 85));
+		for (z in 0...current.depth + 1)
+			Raylib.DrawLine3D(Vector3.fromFloat(0.0, 0.002, z), Vector3.fromFloat(current.width, 0.002, z), Color.rgba(55, 79, 85));
 		for (z in 0...current.depth)
-			for (x in 0...current.width) {
-				final cellLeft = grid.left + x * grid.cellSize;
-				final cellTop = grid.top + z * grid.cellSize;
-				final code = paletteCodeAt(current, x, z);
-				final color = if (code == 0) {
-					if ((x + z) % 2 == 0)
-						Color.rgba(29, 47, 55)
-					else
-						Color.rgba(35, 55, 63);
-				} else if (code == 1) {
-					Color.rgba(83, 145, 92);
-				} else {
-					Color.rgba(91, 107, 117);
-				};
-				Raylib.DrawRectangle(cellLeft + inset, cellTop + inset, fillSize, fillSize, color);
-				Raylib.DrawRectangleLines(cellLeft, cellTop, grid.cellSize, grid.cellSize, Color.rgba(49, 72, 79));
-				if (selectedCell(x, current.layerY, z))
-					Raylib.DrawRectangleLines(cellLeft + 2, cellTop + 2, grid.cellSize - 4, grid.cellSize - 4, CaxecraftPalette.selection());
-			}
-		if (hover != null)
-			Raylib.DrawRectangleLines(grid.left + hover.x * grid.cellSize, grid.top + hover.z * grid.cellSize, grid.cellSize, grid.cellSize,
-				Color.rgba(109, 223, 232));
+			for (y in 0...current.height)
+				for (x in 0...current.width) {
+					final code = paletteCodeAtWorld(current, x, y, z);
+					if (code != 0)
+						Raylib.DrawCube(Vector3.fromFloat(x + 0.5, y + 0.5, z + 0.5), c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0),
+							c.Float32.fromFloat(1.0), code == 1 ? Color.rgba(83, 145, 92) : Color.rgba(91, 107, 117));
+					if (selectedCell(x, y, z))
+						drawCellOutline(x, y, z, code != 0, CaxecraftPalette.selection(), 1.05);
+				}
+		if (hover != null && !selectedCell(hover.point.x, hover.point.y, hover.point.z))
+			drawCellOutline(hover.point.x, hover.point.y, hover.point.z, hover.solid, Color.rgba(109, 223, 232), 1.08);
+		Raylib.EndMode3D();
+		Raylib.EndScissorMode();
+	}
+
+	/** Draw one visible solid box or a shallow empty-cell cursor. */
+	static function drawCellOutline(x:Int, y:Int, z:Int, solid:Bool, color:Color, scale:Float):Void {
+		if (solid) {
+			Raylib.DrawCubeWires(Vector3.fromFloat(x + 0.5, y + 0.5, z + 0.5), c.Float32.fromFloat(scale), c.Float32.fromFloat(scale),
+				c.Float32.fromFloat(scale), color);
+		} else {
+			Raylib.DrawCubeWires(Vector3.fromFloat(x + 0.5, y + 0.04, z + 0.5), c.Float32.fromFloat(scale), c.Float32.fromFloat(0.08),
+				c.Float32.fromFloat(scale), color);
+		}
+	}
+
+	/** Convert two held keys into one closed negative/zero/positive axis. */
+	static inline function axis(positive:Bool, negative:Bool):Float {
+		if (positive == negative)
+			return 0.0;
+		return positive ? 1.0 : -1.0;
 	}
 
 	/** True when one displayed cell lies inside the session's current selection. */
@@ -325,19 +383,27 @@ final class CaxecraftEditorScreen {
 	 * intentionally called after New World, an accepted edit, undo, or redo—not
 	 * from every frame.
 	 */
-	function refreshProjection():Void {
+	function refreshProjection(resetCamera:Bool = false):Void {
 		final current = session;
 		if (current == null) {
 			projection = null;
+			camera = null;
 			selection = null;
 			notice = Invalid;
 			return;
 		}
 		final draft = current.draftSnapshot();
-		projection = projectViewport(draft.world, 0);
+		final previous = projection;
+		projection = projectWorld(draft.world);
 		selection = current.selectedBounds();
-		if (projection == null)
+		final next = projection;
+		if (next == null) {
+			camera = null;
 			notice = Invalid;
+		} else if (resetCamera || camera == null || previous == null || previous.width != next.width || previous.height != next.height
+			|| previous.depth != next.depth) {
+			camera = focusCamera(next);
+		}
 	}
 
 	#if caxecraft_pilot
@@ -350,6 +416,22 @@ final class CaxecraftEditorScreen {
 	 */
 	public function applyPilotTool(tool:EditorTool, point:VoxelPoint):Bool
 		return applyToolAt(tool, point);
+
+	/**
+	 * Move the production camera from deterministic pilot input.
+	 *
+	 * This bypasses only operating-system device delivery. The same
+	 * renderer-neutral camera step is used by interactive keyboard and mouse
+	 * input, and ordinary builds omit the method.
+	 */
+	public function applyPilotCamera(input:EditorCameraInput, frameSeconds:Float):Bool {
+		final currentProjection = projection;
+		final currentCamera = camera;
+		if (currentProjection == null || currentCamera == null)
+			return false;
+		camera = stepCamera(currentProjection, currentCamera, input, frameSeconds);
+		return true;
+	}
 	#end
 
 	/** Create the built-in blank draft without teaching the generic editor a pack ID. */

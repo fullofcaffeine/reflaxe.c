@@ -90,7 +90,7 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale0(int32_t hxc_message
       }
     case 11:
       {
-        return "WORLD VIEWPORT \342\200\224 LEFT CLICK TO APPLY THE SELECTED TOOL";
+        return "3D WORLD \342\200\224 LMB TOOL \302\267 RMB LOOK \302\267 WASD/QE FLY \302\267 WHEEL \302\267 F FOCUS";
       }
     case 12:
       {
@@ -241,7 +241,7 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale1(int32_t hxc_message
       }
     case 11:
       {
-        return "VISTA DEL MUNDO \342\200\224 CLIC IZQUIERDO PARA USAR LA HERRAMIENTA";
+        return "MUNDO 3D \342\200\224 CLIC IZQ USAR \302\267 CLIC DER MIRAR \302\267 WASD/QE VOLAR \302\267 RUEDA \302\267 F ENFOCAR";
       }
     case 12:
       {

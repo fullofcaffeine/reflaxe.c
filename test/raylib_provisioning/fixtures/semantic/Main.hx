@@ -24,6 +24,8 @@ class Main {
 			CameraProjection.Perspective);
 		final cursor = Vector2.fromFloat(32.0, 32.0);
 		final ray = Raylib.GetScreenToWorldRay(cursor, camera);
+		final rayOrigin = ray.position;
+		final rayDirection = ray.direction;
 		final keyDown = Raylib.IsKeyDown(KeyboardKey.W);
 		final mouseDown = Raylib.IsMouseButtonDown(MouseButton.Left);
 		final accent = Color.rgba(245, 166, 35);
@@ -33,11 +35,15 @@ class Main {
 
 		Raylib.BeginDrawing();
 		Raylib.ClearBackground(Colors.RAYWHITE);
+		Raylib.BeginScissorMode(0, 0, 64, 64);
 		Raylib.DrawRectangle(0, 0, 64, 64, fade);
 		Raylib.BeginMode3D(camera);
 		Raylib.DrawCube(origin, c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0), accent);
 		Raylib.EndMode3D();
+		Raylib.EndScissorMode();
 		Raylib.DrawText("Caxe: direct C, nicer Haxe", 4, 4, 10, Colors.DARKGRAY);
+		if (rayOrigin.x.toFloat() + rayDirection.x.toFloat() > 1000000.0)
+			Raylib.DrawPixel(1, 0, accent);
 		if (Raylib.FileExists("hxc-raylib-semantic.capture"))
 			Raylib.DrawPixel(0, 0, accent);
 		Raylib.EndDrawing();

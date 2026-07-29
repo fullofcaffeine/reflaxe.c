@@ -787,15 +787,19 @@ npm run test:caxecraft-editor
 
 It creates a complete small map through public typed commands and proves exact
 undo/redo, bounded history and gestures, canonical in-memory reload,
-last-playable recovery, disposable test play, one-layer projection, exact pixel
-mapping, and Select/Paint/Erase/Fill translation under C and a second installed
-locale (Spanish when available). The reusable editor package imports no Raylib
-or C target API.
+last-playable recovery, disposable test play, complete-volume projection,
+bounded fly-camera steps, solid and empty-space ray picking, the optional
+top-down projection, and Select/Paint/Erase/Fill translation under C and a
+second installed locale (Spanish when available). The reusable editor package
+imports no Raylib or C target API.
 
 The title screen's Editor button now opens the first native Raylib/Raygui
-viewport: a bounded 12-by-12 top-down layer whose pointer gestures become the
-same typed `EditorCommand` values. The screen caches a read-only projection
-between accepted edits; it does not serialize the draft every frame. Its
+perspective viewport. A creator can fly with WASD/QE, look while holding the
+right mouse button, move with the wheel, focus the whole world with F, and
+left-click a visible voxel or empty floor cell. Every pointer gesture becomes
+the same typed `EditorCommand` used by history and tests. The screen caches a
+read-only complete-volume projection between accepted edits; it does not
+serialize the draft every frame or let rendering code write terrain. Its
 deterministic generated-C graphical proof is:
 
 ```sh
@@ -805,9 +809,12 @@ python3 examples/caxecraft/play.py \
   --allow-network
 ```
 
-This is the first truthful visual editing slice, not a claim that native file
-save, multi-layer navigation, or the complete child-friendly event/cutscene
-tools are available. Its design is explained in
+The pilot moves the real editor camera, paints and selects one voxel, and
+requires a clipped perspective frame with sky, ground depth, solid volume, and
+a selection outline. This is the first truthful 3D editing slice, not a claim
+that native file save, multi-layer controls, controller navigation, object
+gizmos, or the complete child-friendly event/cutscene tools are available. Its
+design is explained in
 [the editor semantics guide](../../docs/caxecraft-editor.md).
 
 Native persistence and the remaining visual editor work continue as ordered

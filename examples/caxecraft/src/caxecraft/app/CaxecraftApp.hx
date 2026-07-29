@@ -497,11 +497,24 @@ final class CaxecraftApp {
 			#if caxecraft_pilot
 			// The editor pilot submits one typed gesture through the same screen
 			// method used by native pointer input. It bypasses only the operating
-			// system's mouse event so repeated headless runs remain deterministic.
+			// system's keyboard and mouse delivery so repeated headless runs
+			// remain deterministic. Selecting the newly painted cell also gives
+			// the framebuffer oracle a specific 3D outline to recognize.
 			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
-				if (editorScreen.applyPilotTool(EditorTool.PaintTool, {x: 2, y: 0, z: 2}))
+				if (!editorScreen.applyPilotCamera({
+					forward: 0.5,
+					right: -0.25,
+					vertical: 0.1,
+					yaw: 0.08,
+					pitch: 0.02,
+					wheel: 0.0
+				}, 0.05))
+					rejectedEdits++;
+				if (editorScreen.applyPilotTool(EditorTool.PaintTool, {x: 2, y: 0, z: 2})) {
 					placedBlocks++;
-				else
+					if (!editorScreen.applyPilotTool(EditorTool.SelectTool, {x: 2, y: 0, z: 2}))
+						rejectedEdits++;
+				} else
 					rejectedEdits++;
 			}
 			#end

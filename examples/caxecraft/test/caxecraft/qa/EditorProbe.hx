@@ -22,6 +22,12 @@ import caxecraft.editor.EditorViewport.paletteCodeAt;
 import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
 import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.toolFromIndex;
+import caxecraft.editor.EditorWorldViewport.cameraTarget;
+import caxecraft.editor.EditorWorldViewport.focusCamera;
+import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
+import caxecraft.editor.EditorWorldViewport.pickWorld;
+import caxecraft.editor.EditorWorldViewport.projectWorld;
+import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
@@ -81,6 +87,7 @@ final class EditorProbe {
 	static function main():Void {
 		checkActionPalette();
 		final viewportChecks = checkViewport();
+		final worldViewportChecks = checkWorldViewport();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, ResizeWorld({width: 4, height: 2, depth: 4}), WorldShape);
@@ -147,8 +154,8 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (viewportChecks * 4099) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $viewportChecks viewport checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
 	}
 
 	static function checkActionPalette():Void {
@@ -249,6 +256,87 @@ final class EditorProbe {
 		}
 		return 12;
 	}
+
+	/**
+	 * Prove full-volume projection, fly-camera bounds, and deterministic picking.
+	 *
+	 * Raylib supplies native screen rays, but it does not decide which authored
+	 * cell they mean. These target-neutral checks keep the 3D editor and future
+	 * automation on the same finite CAXEMAP coordinates.
+	 */
+	static function checkWorldViewport():Int {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "3D viewport world size");
+		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "3D viewport palette");
+		expectApplied(session.apply(PaintVoxel({x: 1, y: 0, z: 1}, 1)), Voxel, "3D viewport lower block");
+		expectApplied(session.apply(PaintVoxel({x: 1, y: 1, z: 1}, 1)), Voxel, "3D viewport upper block");
+		expectApplied(session.apply(PaintVoxel({x: 3, y: 0, z: 2}, 1)), Voxel, "3D viewport distant block");
+		final projection = projectWorld(session.draftSnapshot().world);
+		require(projection != null && projection.width == 4 && projection.height == 2 && projection.depth == 3 && projection.cells.length == 24,
+			"3D viewport projection lost finite volume dimensions");
+		require(paletteCodeAtWorld(projection, 1, 0, 1) == 1
+			&& paletteCodeAtWorld(projection, 1, 1, 1) == 1
+			&& paletteCodeAtWorld(projection, 0, 0, 0) == 0
+			&& paletteCodeAtWorld(projection, 4, 0, 0) == -1,
+			"3D viewport projection lost solid, air, or excluded coordinates");
+
+		final focused = focusCamera(projection);
+		require(close(focused.x, 2.0)
+			&& close(focused.y, 5.6)
+			&& close(focused.z, 5.6)
+			&& close(focused.lookX, 0.0)
+			&& close(focused.lookY, -0.5)
+			&& close(focused.lookZ, -0.8660254037844386),
+			"3D viewport focus did not frame the finite world deterministically");
+		final target = cameraTarget(focused);
+		require(close(target.x, focused.x + focused.lookX)
+			&& close(target.y, focused.y + focused.lookY)
+			&& close(target.z, focused.z + focused.lookZ),
+			"3D camera target drifted from its direction snapshot");
+		final moved = stepCamera(projection, focused, {
+			forward: 1.0,
+			right: 0.5,
+			vertical: 0.25,
+			yaw: 0.10,
+			pitch: 0.05,
+			wheel: 1.0
+		}, 0.05);
+		require(moved.x != focused.x && moved.y != focused.y && moved.z != focused.z && moved.lookX < 0.0 && moved.lookY > focused.lookY,
+			"3D camera step ignored movement or look input");
+		final clamped = stepCamera(projection, moved, {
+			forward: 10000.0,
+			right: -10000.0,
+			vertical: -10000.0,
+			yaw: 10.0,
+			pitch: -10.0,
+			wheel: 10000.0
+		}, 10.0);
+		require(clamped.x >= -128.0
+			&& clamped.x <= projection.width + 128.0
+			&& clamped.y >= 0.25
+			&& clamped.y <= projection.height + 128.0
+			&& clamped.z >= -128.0
+			&& clamped.z <= projection.depth + 128.0
+			&& close(clamped.lookY, -0.90),
+			"3D camera failed to clamp frame time, position, yaw, or pitch");
+
+		final stacked = pickWorld(projection, {x: 1.5, y: 4.0, z: 1.5}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0);
+		require(stacked != null && stacked.solid && stacked.point.x == 1 && stacked.point.y == 1 && stacked.point.z == 1 && close(stacked.distance, 2.0),
+			"3D picking did not choose the nearest visible solid");
+		final emptyFloor = pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0);
+		require(emptyFloor != null && !emptyFloor.solid && emptyFloor.point.x == 0 && emptyFloor.point.y == 0 && emptyFloor.point.z == 0
+			&& close(emptyFloor.distance, 4.0),
+			"3D picking did not preserve an editable empty-floor cell");
+		require(pickWorld(projection, {x: -1.0, y: 2.0, z: -1.0}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0) == null,
+			"3D picking admitted a floor point outside the draft");
+		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 1.0, y: 0.0, z: 0.0}, 0, 16.0) == null,
+			"3D picking invented a floor point for a parallel ray");
+		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 2, 16.0) == null, "3D picking admitted an unavailable edit layer");
+		return 16;
+	}
+
+	static inline function close(actual:Float, expected:Float):Bool
+		return actual > expected - 0.000001 && actual < expected + 0.000001;
 
 	static function checkTestPlayIsolation(session:EditorSession):Void {
 		requireTestStarted(session.enterTestPlay(), "first test play");

@@ -99,8 +99,8 @@
       "id": "editor_canvas_help",
       "symbol": "EditorCanvasHelp",
       "text": {
-        "en": "WORLD VIEWPORT — LEFT CLICK TO APPLY THE SELECTED TOOL",
-        "es-MX": "VISTA DEL MUNDO — CLIC IZQUIERDO PARA USAR LA HERRAMIENTA"
+        "en": "3D WORLD — LMB TOOL · RMB LOOK · WASD/QE FLY · WHEEL · F FOCUS",
+        "es-MX": "MUNDO 3D — CLIC IZQ USAR · CLIC DER MIRAR · WASD/QE VOLAR · RUEDA · F ENFOCAR"
       }
     },
     {
