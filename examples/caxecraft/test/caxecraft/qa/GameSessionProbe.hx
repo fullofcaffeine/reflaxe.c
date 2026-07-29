@@ -1,8 +1,12 @@
 package caxecraft.qa;
 
-import caxecraft.content.FirstPlayableSessionLoader.loadCandidate;
+import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanError;
+import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanResult;
+import caxecraft.content.ActorIdentityPlanner.actorEntityId;
+import caxecraft.content.ActorIdentityPlanner.planActorIdentities;
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.BaseAquaticProfile;
+import caxecraft.content.FirstPlayableSessionLoader.loadCandidate;
 import caxecraft.domain.Aquatics.input as aquaticInput;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.Character.start as startCharacter;
@@ -15,6 +19,7 @@ import caxecraft.domain.WorldRead.query as queryWorld;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.RecoveryDecision;
+import caxecraft.scenario.ScenarioId;
 
 /**
 	Executable specification for unpublished level assembly and session ownership.
@@ -36,6 +41,10 @@ function main():Void {
 
 /** Return zero, or the stable number of the first broken assembly invariant. */
 function selfCheck():Int {
+	final identityFailure = checkActorIdentityPlanning();
+	if (identityFailure != 0)
+		return identityFailure;
+
 	final session = new GameSession();
 	final loaded = loadCandidate(session);
 	if (!loaded.valid)
@@ -198,6 +207,75 @@ function selfCheck():Int {
 	final committedView = session.view();
 	if (!committedView.valid || committedView.localPlayer.id != localId || committedView.completedTicks != 3)
 		return 14;
+	return 0;
+}
+
+/**
+	Prove authored actor IDs stay stable and fail closed before session mutation.
+
+	The two `actor.a…` values below are valid CAXEMAP identifiers and an actual
+	collision for the production FNV-1a mapping. Keeping that pair here exercises
+	the real algorithm; the test does not gain a privileged hash override.
+**/
+function checkActorIdentityPlanning():Int {
+	final nia = new ScenarioId("guide.nia");
+	final mossling = new ScenarioId("enemy.mossling");
+	final ivvy = new ScenarioId("companion.ivvy");
+	final niaId = actorEntityId(nia);
+	final mosslingId = actorEntityId(mossling);
+	if (!niaId.isValid() || !mosslingId.isValid() || niaId == mosslingId)
+		return 34;
+
+	final first = switch planActorIdentities([nia, mossling]) {
+		case Planned(bindings): bindings;
+		case Rejected(_): return 35;
+	};
+	final reordered = switch planActorIdentities([mossling, nia]) {
+		case Planned(bindings): bindings;
+		case Rejected(_): return 36;
+	};
+	final extended = switch planActorIdentities([ivvy, nia, mossling]) {
+		case Planned(bindings): bindings;
+		case Rejected(_): return 37;
+	};
+	if (first.length != 2
+		|| first[0].authoredId.text() != "guide.nia"
+		|| first[0].entityId != niaId
+		|| first[1].authoredId.text() != "enemy.mossling"
+		|| first[1].entityId != mosslingId)
+		return 38;
+	if (reordered[0].entityId != mosslingId || reordered[1].entityId != niaId || extended[1].entityId != niaId || extended[2].entityId != mosslingId)
+		return 39;
+
+	switch planActorIdentities([]) {
+		case Planned(bindings) if (bindings.length == 0):
+		case _:
+			return 40;
+	}
+	switch planActorIdentities([nia, nia]) {
+		case Rejected(DuplicateAuthoredId(id)) if (id.text() == "guide.nia"):
+		case _:
+			return 41;
+	}
+
+	final collisionLeft = new ScenarioId("actor.abn8u2c");
+	final collisionRight = new ScenarioId("actor.aowprp4");
+	switch planActorIdentities([collisionLeft, collisionRight]) {
+		case Rejected(StorageCodeCollision(firstId, secondId, storageCode))
+			if (firstId.text() == "actor.abn8u2c" && secondId.text() == "actor.aowprp4" && storageCode == 2001336683):
+		case _:
+			return 42;
+	}
+
+	final tooMany:Array<ScenarioId> = [];
+	for (index in 0...caxecraft.domain.EntityStore.MAX_CHARACTERS + 1)
+		tooMany.push(new ScenarioId('actor.a$index'));
+	switch planActorIdentities(tooMany) {
+		case Rejected(CharacterCapacityExceeded(count, maximum))
+			if (count == caxecraft.domain.EntityStore.MAX_CHARACTERS + 1 && maximum == caxecraft.domain.EntityStore.MAX_CHARACTERS):
+		case _:
+			return 43;
+	}
 	return 0;
 }
 

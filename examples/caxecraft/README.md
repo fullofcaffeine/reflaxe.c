@@ -87,6 +87,14 @@ tests select exactly `runtime-base`, `status`, `alloc`, and `array`; other
 runtime-free Caxecraft cases still require an empty runtime plan. See
 [the domain guide](../../docs/caxecraft-domain.md#array-representation-and-allocation)
 for the concrete allocation behavior.
+`ActorIdentityPlanner` now performs the preceding identity-only loading step:
+it converts already validated CaxeMap actor IDs into stable positive
+`EntityId` values, detects duplicate text IDs or integer hash collisions, and
+rejects a candidate larger than the 64-character store before session state is
+changed. Reordering content or inserting an unrelated actor therefore cannot
+rename an existing actor. This does not yet create or publish a `Character`;
+parent task `haxe_c-xge.20.4.2.4` owns combining an identity with authored
+placement and mechanics and committing the complete actor to `GameSession`.
 The playable advances water on the fixed clock, draws translucent surfaces,
 swims, applies Adventure drowning damage, fades the underwater camera, and shows
 fixed-tick breath bubbles. `WaterSnapshot` preserves mutable water for the future

@@ -59,6 +59,21 @@ separate Array when a caller asks to observe every character. `GameSession`
 can advance either kind of character through the same movement, water, and
 damage function, then commit the replacement under the same ID.
 
+The content boundary now also plans actor identities before construction.
+`ActorIdentityPlanner` hashes each already validated CaxeMap text ID into one
+positive `EntityId`, then checks the complete bounded candidate for duplicate
+text IDs, integer collisions, and store capacity. It returns either every
+binding in authored order or one closed rejection, so a loader cannot publish
+half a candidate. The hash is derived from identity rather than array position:
+reordering actors or inserting Ivvy cannot silently rename Nia in a save or
+runtime lookup.
+
+This is deliberately an identity-only step. It does not interpret an actor's
+behavior profile, construct a `Character`, or mutate `GameSession`. Parent task
+`haxe_c-xge.20.4.2.4` owns that later composition boundary: combine the checked
+identity with validated placement and reusable mechanics, then publish the
+complete player, NPC, or enemy through the session's typed operations.
+
 The water simulation owns its pending-work marks because they form one
 invariant with its scheduler counters; it borrows the session's shared world
 only during each operation. `CaxecraftApp` now requests revival, damage,

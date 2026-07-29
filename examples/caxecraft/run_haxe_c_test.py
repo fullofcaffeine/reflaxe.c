@@ -39,6 +39,15 @@ SANITIZER_FLAGS = (
 
 
 @dataclass(frozen=True)
+class GeneratedSourceCheck:
+    """One split-output module and the readable C shapes it must preserve."""
+
+    path: str
+    required_markers: tuple[str, ...]
+    forbidden_markers: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class HaxeCTestCase:
     """Closed host-side facts for one Haxe-authored native test."""
 
@@ -52,6 +61,7 @@ class HaxeCTestCase:
     output_line_count: int
     success_line: str
     expected_runtime_features: tuple[str, ...] = ()
+    split_source_checks: tuple[GeneratedSourceCheck, ...] = ()
 
 
 CASES = {
@@ -137,7 +147,26 @@ CASES = {
         ),
         output_line_count=2,
         success_line="0",
-        expected_runtime_features=("runtime-base", "status", "alloc", "array"),
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "string-scalar",
+            "string",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ActorIdentityPlanner.c",
+                required_markers=(
+                    "ActorIdentityPlanner_actorEntityId",
+                    "ActorIdentityPlanner_planActorIdentities",
+                    "ActorIdentityPlanResult_Rejected",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+        ),
     ),
     "terrain-chunks": HaxeCTestCase(
         case_id="terrain-chunks",
@@ -468,6 +497,29 @@ def execute(
                 raise HaxeCTestFailure(
                     f"{test_case.case_id} omitted {test_case.generated_source}"
                 )
+            for source_check in test_case.split_source_checks:
+                checked_path = generated.joinpath(
+                    *checked_relative_parts(
+                        source_check.path, "checked generated source path"
+                    )
+                )
+                if not checked_path.is_file():
+                    raise HaxeCTestFailure(
+                        f"{test_case.case_id} omitted {source_check.path}"
+                    )
+                checked_text = checked_path.read_text(encoding="utf-8")
+                for marker in source_check.required_markers:
+                    if marker not in checked_text:
+                        raise HaxeCTestFailure(
+                            f"{test_case.case_id} {source_check.path} omitted "
+                            f"{marker!r}"
+                        )
+                for marker in source_check.forbidden_markers:
+                    if marker in checked_text:
+                        raise HaxeCTestFailure(
+                            f"{test_case.case_id} {source_check.path} retained "
+                            f"{marker!r}"
+                        )
             source_text = generated_source.read_text(encoding="utf-8")
         else:
             layout_sources = generated_sources(generated)
