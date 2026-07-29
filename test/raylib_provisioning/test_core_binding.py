@@ -40,7 +40,7 @@ class RaylibCoreBindingTests(unittest.TestCase):
         first = render_files(lock)
         second = render_files(lock)
         self.assertEqual(first, second)
-        self.assertEqual(len(first), 17)
+        self.assertEqual(len(first), 19)
         check_rendered(RAW_ROOT, first)
 
     def test_raw_layer_has_no_unsafe_or_target_foreign_shortcut(self) -> None:
@@ -71,6 +71,15 @@ class RaylibCoreBindingTests(unittest.TestCase):
         self.assertIn("public static function EndScissorMode():Void", rendered)
         self.assertIn(
             "public static function FileExists(fileName:c.CString):Bool",
+            rendered,
+        )
+        self.assertIn(
+            "public static function IsGamepadAvailable(gamepad:c.Int32):Bool",
+            rendered,
+        )
+        self.assertIn(
+            "public static function GetGamepadAxisMovement("
+            "gamepad:c.Int32, axis:c.Int32):c.Float32",
             rendered,
         )
 

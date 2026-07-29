@@ -3,6 +3,8 @@ import raylib.CameraProjection;
 import raylib.Color;
 import raylib.Colors;
 import raylib.ConfigFlags;
+import raylib.GamepadAxis;
+import raylib.GamepadButton;
 import raylib.KeyboardKey;
 import raylib.MouseButton;
 import raylib.Raylib;
@@ -28,6 +30,10 @@ class Main {
 		final rayDirection = ray.direction;
 		final keyDown = Raylib.IsKeyDown(KeyboardKey.W);
 		final mouseDown = Raylib.IsMouseButtonDown(MouseButton.Left);
+		final gamepadAvailable = Raylib.IsGamepadAvailable(0);
+		final gamepadConfirm = gamepadAvailable && Raylib.IsGamepadButtonPressed(0, GamepadButton.FaceDown);
+		final gamepadHeld = gamepadAvailable && Raylib.IsGamepadButtonDown(0, GamepadButton.DpadDown);
+		final gamepadVertical = gamepadAvailable ? Raylib.GetGamepadAxisMovement(0, GamepadAxis.LeftY).toFloat() : 0.0;
 		final accent = Color.rgba(245, 166, 35);
 		// Width is deliberately a run-time value. The semantic facade must clamp
 		// it before narrowing to Raylib's byte-sized alpha channel.
@@ -46,6 +52,8 @@ class Main {
 			Raylib.DrawPixel(1, 0, accent);
 		if (Raylib.FileExists("hxc-raylib-semantic.capture"))
 			Raylib.DrawPixel(0, 0, accent);
+		if (gamepadConfirm || gamepadHeld || gamepadVertical > 2.0)
+			Raylib.DrawPixel(2, 0, accent);
 		Raylib.EndDrawing();
 		Raylib.CloseWindow();
 	}

@@ -18,6 +18,8 @@
   "enums": [
     "CameraProjection",
     "ConfigFlags",
+    "GamepadAxis",
+    "GamepadButton",
     "KeyboardKey",
     "MouseButton",
     "TraceLogLevel"
@@ -55,6 +57,7 @@
     "GetColor",
     "GetFPS",
     "GetFrameTime",
+    "GetGamepadAxisMovement",
     "GetMouseDelta",
     "GetMousePosition",
     "GetMouseWheelMove",
@@ -66,6 +69,9 @@
     "GetTime",
     "InitWindow",
     "IsCursorHidden",
+    "IsGamepadAvailable",
+    "IsGamepadButtonDown",
+    "IsGamepadButtonPressed",
     "IsKeyDown",
     "IsKeyPressed",
     "IsKeyReleased",

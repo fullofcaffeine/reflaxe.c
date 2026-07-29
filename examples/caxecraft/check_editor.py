@@ -11,6 +11,9 @@ from pathlib import Path
 CASE = Path(__file__).resolve().parent
 ROOT = CASE.parents[1]
 EDITOR = CASE / "src/caxecraft/editor"
+NAVIGATION = CASE / "src/caxecraft/input/NavigationInput.hx"
+RAYLIB_NAVIGATION = CASE / "src/caxecraft/app/RaylibNavigationInput.hx"
+EDITOR_SCREEN = CASE / "src/caxecraft/app/CaxecraftEditorScreen.hx"
 sys.path.insert(0, str(CASE))
 
 from run import (  # noqa: E402
@@ -24,8 +27,9 @@ from run import (  # noqa: E402
 
 EXPECTED_TRACE = (
     "caxemap-editor: 23 command round trips, 50 protocol checks, 19 focus checks, "
+    "18 navigation checks, "
     "12 2D checks, 16 3D checks, 1890 canonical bytes; bounded "
-    "history/test-play/recovery; trace=150593504\n"
+    "history/test-play/recovery; trace=150575006\n"
 )
 FORBIDDEN_EDITOR_TEXT = (
     re.compile(r"#if\b"),
@@ -61,6 +65,34 @@ def check_target_neutral_boundary() -> None:
                 )
 
 
+def check_navigation_boundaries() -> None:
+    """Keep policy target-neutral and raw numeric gamepad calls out of the app."""
+
+    policy = NAVIGATION.read_text(encoding="utf-8")
+    for pattern in FORBIDDEN_EDITOR_TEXT:
+        if pattern.search(policy):
+            raise EditorFailure(
+                "device-neutral navigation policy crosses its target boundary: "
+                f"{pattern.pattern}"
+            )
+    adapter = RAYLIB_NAVIGATION.read_text(encoding="utf-8")
+    if "raylib.raw." in adapter:
+        raise EditorFailure("Caxecraft gamepad adapter bypasses the semantic Raylib facade")
+    for pattern in (
+        re.compile(r"IsGamepadButton(?:Down|Pressed)\([^,]+,\s*[0-9]"),
+        re.compile(r"GetGamepadAxisMovement\([^,]+,\s*[0-9]"),
+    ):
+        if pattern.search(adapter):
+            raise EditorFailure(
+                "Caxecraft gamepad adapter uses a raw numeric button or axis identity"
+            )
+    screen = EDITOR_SCREEN.read_text(encoding="utf-8")
+    if "Gamepad" in screen or "Controller" in screen:
+        raise EditorFailure(
+            "editor screen learned a device-specific command instead of semantic navigation"
+        )
+
+
 def run_probe(locale: str) -> str:
     installation = pinned_haxe_installation()
     verify_pinned_haxe(installation)
@@ -89,6 +121,7 @@ def run_probe(locale: str) -> str:
 def main() -> int:
     try:
         check_target_neutral_boundary()
+        check_navigation_boundaries()
         locale = alternate_locale()
         if locale == "C":
             raise EditorFailure("no alternate locale is installed for the editor lane")

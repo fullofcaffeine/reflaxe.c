@@ -6,7 +6,6 @@ import caxecraft.content.BaseContentPack.BaseBlock;
 import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.editor.EditorScenarioFactory.createBlank as createBlankEditorScenario;
 import caxecraft.editor.EditorSession;
-import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
@@ -28,6 +27,7 @@ import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
+import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.localization.UiCatalog;
 import caxecraft.localization.UiCatalog.LocaleCursor;
 import caxecraft.localization.UiCatalog.UiMessage;
@@ -113,11 +113,21 @@ final class CaxecraftEditorScreen {
 		refreshProjection(true);
 	}
 
-	/** Draw one responsive editor frame and apply controls to the real session. */
-	public function draw(locale:LocaleCursor):EditorScreenAction {
+	/**
+	 * Draw one responsive editor frame and apply device-neutral navigation.
+	 *
+	 * The application supplies controller or pilot navigation as one semantic
+	 * command. This screen reads keyboard input into the same command set, then
+	 * routes both sources through `applyNavigation`.
+	 */
+	public function draw(locale:LocaleCursor, externalNavigation:NavigationCommand):EditorScreenAction {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
-		final keyboardActivation = readKeyboardActivation();
+		final keyboardNavigation = readKeyboardNavigation();
+		final navigation = externalNavigation != NavigationCommand.None ? externalNavigation : keyboardNavigation;
+		final navigationAction = applyNavigation(navigation);
+		if (navigationAction == ReturnToTitle)
+			return ReturnToTitle;
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
 		if (Raygui.WindowBox(outer, UiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
@@ -190,8 +200,6 @@ final class CaxecraftEditorScreen {
 		Raygui.StatusBar(Rectangle.fromFloat(32.0, height - 54.0, width - 190.0, 28.0), UiCatalog.text(locale, status));
 		if (focusedButton(EditorFocusTarget.Back, width - 142.0, height - 54.0, 110.0, UiCatalog.text(locale, UiMessage.EditorBack)))
 			return ReturnToTitle;
-		if (keyboardActivation)
-			return activateFocusedControl();
 		return StayInEditor;
 	}
 
@@ -214,23 +222,49 @@ final class CaxecraftEditorScreen {
 	}
 
 	/**
-	 * Read one semantic keyboard action without stealing text-box input.
+	 * Read one device-neutral keyboard command without stealing text-box input.
 	 *
 	 * Tab moves forward and Shift-Tab moves backward. Enter or Space activates
 	 * the focused control. While the World Name buffer is editing, Raygui keeps
 	 * those keys so Enter can finish text entry instead of pressing a toolbar
 	 * action in the same frame.
 	 */
-	function readKeyboardActivation():Bool {
+	function readKeyboardNavigation():NavigationCommand {
 		final name = worldName;
 		if (name != null && name.isEditing())
-			return false;
+			return NavigationCommand.None;
 		if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
 			final backward = Raylib.IsKeyDown(KeyboardKey.LeftShift) || Raylib.IsKeyDown(KeyboardKey.RightShift);
-			focusedControl = moveFocus(focusedControl, backward ? Backward : Forward);
-			return false;
+			return backward ? NavigationCommand.Up : NavigationCommand.Down;
 		}
-		return Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space);
+		if (Raylib.IsKeyPressed(KeyboardKey.Escape))
+			return NavigationCommand.Cancel;
+		if (Raylib.IsKeyPressed(KeyboardKey.Enter) || Raylib.IsKeyPressed(KeyboardKey.Space))
+			return NavigationCommand.Confirm;
+		return NavigationCommand.None;
+	}
+
+	/**
+	 * Apply one navigation command to the editor's existing focus and actions.
+	 *
+	 * Up/left and down/right traverse the same cyclic order used by Tab.
+	 * Confirm invokes the focused action, and Cancel returns to the title
+	 * through the same typed screen transition as the keyboard Escape key.
+	 * Keyboard, controller, and pilot commands all enter this one handler.
+	 */
+	public function applyNavigation(command:NavigationCommand):EditorScreenAction {
+		switch command {
+			case Up | Left:
+				focusedControl = moveFocus(focusedControl, Backward);
+			case Right | Down:
+				focusedControl = moveFocus(focusedControl, Forward);
+			case Confirm:
+				return activateFocusedControl();
+			case Cancel:
+				return ReturnToTitle;
+			case None:
+		}
+		return StayInEditor;
 	}
 
 	/** Draw a two-line high-contrast ring around the current semantic target. */
@@ -566,14 +600,6 @@ final class CaxecraftEditorScreen {
 	}
 
 	#if caxecraft_pilot
-	/** Move the production focus model from deterministic pilot input. */
-	public function applyPilotFocusMove(direction:EditorFocusMove):Void
-		focusedControl = moveFocus(focusedControl, direction);
-
-	/** Activate the focused control through the production keyboard route. */
-	public function applyPilotFocusedAction():EditorScreenAction
-		return activateFocusedControl();
-
 	/**
 	 * Commit one deterministic title through the production text-field path.
 	 *

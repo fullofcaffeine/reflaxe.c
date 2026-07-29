@@ -11,8 +11,8 @@ also has one device-neutral focus order: Tab and Shift-Tab move through every
 current control, Enter or Space activates the focused control, and a
 high-contrast ring shows where the next activation will go. It still edits
 layer zero only. Native map-file persistence, localized message-title editing,
-JSONL/MCP adapters, multi-layer controls, game-controller input, object gizmos,
-and the fuller child-friendly authoring experience remain separate work.
+JSONL/MCP adapters, multi-layer controls, object gizmos, and the fuller
+child-friendly authoring experience remain separate work.
 
 ## What this layer owns
 
@@ -154,6 +154,8 @@ The current controls are:
 
 - use Tab and Shift-Tab to move the visible focus ring through editor controls;
 - press Enter or Space to activate the focused control;
+- use a connected controller's D-pad or left stick to move the same ring;
+- press the south face button to activate or the east face button to return;
 - hold the right mouse button and move the pointer to look;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
 - use the wheel to move along the view direction;
@@ -161,13 +163,35 @@ The current controls are:
 - left-click to apply the selected tool.
 
 The focus order is target-neutral: it names editor actions, not Raylib key
-codes or screen coordinates. The native screen translates keyboard input into
-forward movement, backward movement, or activation. The list control then moves
-its own selected item when it receives activation. This separation lets the
-planned game-controller adapter reuse the same order without creating a second
-set of editor navigation rules. Controller polling itself is not implemented
-yet; issue `haxe_c-xge.19.6.1.6` owns the required pinned Raylib binding and
-native proof.
+codes, controller brands, or screen coordinates. Keyboard and controller
+adapters produce the same small navigation commands. Up/left move backward,
+down/right move forward, Confirm activates, and Cancel returns to the title.
+The list control then moves its own selected item when it receives activation.
+
+Controller sampling and interaction policy have separate owners:
+
+```text
+Raylib device state
+  -> normalized direction/button snapshot
+  -> dead zone + held-direction repeat
+  -> device-neutral navigation command
+  -> editor focus/action
+```
+
+A **dead zone** is the quiet center of an analog stick. Caxecraft ignores the
+inner 35% so small hardware drift cannot move focus. A new direction moves
+immediately, repeats after 350 ms, then at 100 ms intervals. One rendered frame
+can produce at most one repeated move, so a stall cannot jump across several
+controls. Releasing the stick, pressing opposite directions, changing screens,
+or disconnecting resets the repeat clock. Reconnecting therefore starts with
+one fresh move instead of inheriting an invisible held action.
+
+The deterministic Haxe editor probe owns those timing and disconnect rules on
+Eval. The real native editor pilot feeds controller-shaped snapshots through
+the same repeater and screen handler, then verifies the visible focus ring and
+activation result. The pinned Raylib integration separately compiles strict
+C11 and C++17 consumers of the exact gamepad ABI. No automated test claims to
+press a particular physical controller through the host operating system.
 
 The localized viewport heading shows these controls in English and
 Mexican Spanish. Camera state and the current hover are presentation values:

@@ -22,6 +22,7 @@ FIXTURE = SUITE / "fixtures/smoke"
 SEMANTIC_FIXTURE = SUITE / "fixtures/semantic"
 SUPPORT_INCLUDE = SUITE / "support/include"
 ABI_PROBE = SUITE / "native/core_abi_probe.c"
+CPP_CONSUMER = SUITE / "native/core_consumer.cpp"
 RLGL_ABI_PROBE = SUITE / "native/rlgl_abi_probe.c"
 MEMORY_CLOCK_PROBE = SUITE / "native/memory_clock_probe.c"
 EXPECTED = SUITE / "expected"
@@ -91,6 +92,31 @@ STRICT_CLANG_CL_FLAGS = (
     "/clang:-Wimplicit-fallthrough",
     "/clang:-Wcast-align",
     "/clang:-Wcast-qual",
+)
+STRICT_CPP_FLAGS = (
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wpedantic",
+    "-Wshadow",
+    "-Wconversion",
+    "-Wsign-conversion",
+    "-Wundef",
+    "-Wformat=2",
+    # raylib.h checks __STDC_VERSION__ in C++ mode. Keep that upstream
+    # diagnostic visible without letting it hide consumer-owned warnings.
+    "-Wno-error=undef",
+)
+STRICT_CLANG_CL_CPP_FLAGS = (
+    "/W4",
+    "/WX",
+    "/clang:-pedantic",
+    "/clang:-Wshadow",
+    "/clang:-Wconversion",
+    "/clang:-Wsign-conversion",
+    "/clang:-Wundef",
+    "/clang:-Wformat=2",
+    "/clang:-Wno-error=undef",
 )
 CLANG_CL_RUNTIME_FLAG = "/MD"
 EXPECTED_HEADLESS_STDOUT = "INFO: RLSW: Software renderer initialized successfully\n"
@@ -649,6 +675,55 @@ def clang_cl_abi_compile_arguments(
     return arguments, object_file
 
 
+def gcc_like_cpp_compile_arguments(
+    compiler: str,
+    source: Path,
+    include_directory: Path,
+    native_root: Path,
+) -> tuple[list[str], Path]:
+    object_file = native_root / f"{source.stem}-cpp.o"
+    return (
+        [
+            compiler,
+            "-std=c++17",
+            *STRICT_CPP_FLAGS,
+            "-DRAYLIB_NO_DEPRECATED",
+            "-I",
+            str(include_directory),
+            "-c",
+            str(source),
+            "-o",
+            str(object_file),
+        ],
+        object_file,
+    )
+
+
+def clang_cl_cpp_compile_arguments(
+    compiler: str,
+    source: Path,
+    include_directory: Path,
+    native_root: Path,
+) -> tuple[list[str], Path]:
+    object_file = native_root / f"{source.stem}-cpp.obj"
+    return (
+        [
+            compiler,
+            "/nologo",
+            "/TP",
+            "/std:c++17",
+            CLANG_CL_RUNTIME_FLAG,
+            *STRICT_CLANG_CL_CPP_FLAGS,
+            "/DRAYLIB_NO_DEPRECATED",
+            f"/I{include_directory}",
+            "/c",
+            str(source),
+            f"/Fo{object_file}",
+        ],
+        object_file,
+    )
+
+
 def gcc_like_link_arguments(
     compiler: str,
     object_file: Path,
@@ -921,6 +996,87 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
                 "exercised": True,
                 "stdoutText": abi_stdout,
                 "stderrText": abi_stderr,
+            }
+        )
+
+    cpp_source = native_root / "core_consumer.cpp"
+    cpp_source.write_bytes(CPP_CONSUMER.read_bytes())
+    if family == "clang-cl":
+        cpp_compile_arguments, cpp_object = clang_cl_cpp_compile_arguments(
+            args.cxx,
+            cpp_source,
+            source_build.include_directory,
+            native_root,
+        )
+    else:
+        cpp_compile_arguments, cpp_object = gcc_like_cpp_compile_arguments(
+            args.cxx,
+            cpp_source,
+            source_build.include_directory,
+            native_root,
+        )
+    cpp_compile_result = run_command(
+        cpp_compile_arguments,
+        cwd=native_root,
+        replacements=replacements,
+        timeout=120,
+        label="strict raylib C++17 consumer compile",
+    )
+    cpp_executable = native_root / (
+        "raylib-cpp-consumer.exe" if args.platform == "windows" else "raylib-cpp-consumer"
+    )
+    if family == "clang-cl":
+        cpp_link_arguments = clang_cl_link_arguments(
+            args.cxx,
+            cpp_object,
+            source_build.library_file,
+            libraries,
+            cpp_executable,
+        )
+    else:
+        cpp_link_arguments = gcc_like_link_arguments(
+            args.cxx,
+            cpp_object,
+            source_build.library_file,
+            libraries,
+            frameworks,
+            cpp_executable,
+        )
+    cpp_link_result = run_command(
+        cpp_link_arguments,
+        cwd=native_root,
+        replacements=replacements,
+        timeout=120,
+        label="raylib C++17 consumer link",
+    )
+    cpp_run_evidence: dict[str, object] = {"exercised": False}
+    if args.run:
+        cpp_run_result = run_command(
+            [str(cpp_executable)],
+            cwd=native_root,
+            replacements=replacements,
+            timeout=30,
+            label="raylib C++17 consumer run",
+        )
+        cpp_stdout = normalize_text(
+            cpp_run_result.process.stdout.decode("utf-8", errors="replace"),
+            replacements,
+        )
+        cpp_stderr = normalize_text(
+            cpp_run_result.process.stderr.decode("utf-8", errors="replace"),
+            replacements,
+        )
+        if cpp_stdout != "raylib-cpp-consumer: OK\n" or cpp_stderr != "":
+            raise RaylibTestFailure(
+                f"raylib C++17 consumer output drifted: stdout={cpp_stdout!r}, "
+                f"stderr={cpp_stderr!r}"
+            )
+        cpp_run_evidence = dict(cpp_run_result.evidence)
+        cpp_run_evidence.update(
+            {
+                "exercised": True,
+                "stdoutText": cpp_stdout,
+                "stderrText": cpp_stderr,
             }
         )
 
@@ -1204,6 +1360,22 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
                 "sizeBytes": abi_executable.stat().st_size,
             },
         },
+        "cppConsumer": {
+            "sourceSha256": sha256_file(cpp_source),
+            "compile": cpp_compile_result.evidence,
+            "link": cpp_link_result.evidence,
+            "run": cpp_run_evidence,
+            "object": {
+                "path": normalize_text(str(cpp_object), replacements),
+                "sha256": sha256_file(cpp_object),
+                "sizeBytes": cpp_object.stat().st_size,
+            },
+            "executable": {
+                "path": normalize_text(str(cpp_executable), replacements),
+                "sha256": sha256_file(cpp_executable),
+                "sizeBytes": cpp_executable.stat().st_size,
+            },
+        },
         "rlglAbiProbe": {
             "sourceSha256": sha256_file(rlgl_abi_source),
             "compile": rlgl_abi_compile_result.evidence,
@@ -1226,6 +1398,7 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
             "networkAfterProvision": False,
             "generatedCCompiled": True,
             "coreAbiVerified": True,
+            "cppConsumerVerified": True,
             "rlglAbiVerified": True,
             "memoryClockVerified": bool(
                 args.run and args.configuration == "memory-software"

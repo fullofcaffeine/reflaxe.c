@@ -93,7 +93,7 @@
     },
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "3547628d9a1bd031e412e352264b444aeb77d1133efc5e5594cc7f5230deb13f",
+  "declarationSha256": "46de16440fb0d1d5ff97fd167e579219c339441a0cb134692e0bd58b5b319774",
   "declarations": {
     "aliases": [
       {
@@ -210,6 +210,140 @@
         ],
         "name": "ConfigFlags",
         "sourceLine": 553,
+        "underlyingCanonicalCType": "int"
+      },
+      {
+        "constants": [
+          {
+            "name": "GAMEPAD_AXIS_LEFT_X",
+            "sourceLine": 759,
+            "value": 0
+          },
+          {
+            "name": "GAMEPAD_AXIS_LEFT_Y",
+            "sourceLine": 760,
+            "value": 1
+          },
+          {
+            "name": "GAMEPAD_AXIS_RIGHT_X",
+            "sourceLine": 761,
+            "value": 2
+          },
+          {
+            "name": "GAMEPAD_AXIS_RIGHT_Y",
+            "sourceLine": 762,
+            "value": 3
+          },
+          {
+            "name": "GAMEPAD_AXIS_LEFT_TRIGGER",
+            "sourceLine": 763,
+            "value": 4
+          },
+          {
+            "name": "GAMEPAD_AXIS_RIGHT_TRIGGER",
+            "sourceLine": 764,
+            "value": 5
+          }
+        ],
+        "name": "GamepadAxis",
+        "sourceLine": 758,
+        "underlyingCanonicalCType": "int"
+      },
+      {
+        "constants": [
+          {
+            "name": "GAMEPAD_BUTTON_UNKNOWN",
+            "sourceLine": 737,
+            "value": 0
+          },
+          {
+            "name": "GAMEPAD_BUTTON_LEFT_FACE_UP",
+            "sourceLine": 738,
+            "value": 1
+          },
+          {
+            "name": "GAMEPAD_BUTTON_LEFT_FACE_RIGHT",
+            "sourceLine": 739,
+            "value": 2
+          },
+          {
+            "name": "GAMEPAD_BUTTON_LEFT_FACE_DOWN",
+            "sourceLine": 740,
+            "value": 3
+          },
+          {
+            "name": "GAMEPAD_BUTTON_LEFT_FACE_LEFT",
+            "sourceLine": 741,
+            "value": 4
+          },
+          {
+            "name": "GAMEPAD_BUTTON_RIGHT_FACE_UP",
+            "sourceLine": 742,
+            "value": 5
+          },
+          {
+            "name": "GAMEPAD_BUTTON_RIGHT_FACE_RIGHT",
+            "sourceLine": 743,
+            "value": 6
+          },
+          {
+            "name": "GAMEPAD_BUTTON_RIGHT_FACE_DOWN",
+            "sourceLine": 744,
+            "value": 7
+          },
+          {
+            "name": "GAMEPAD_BUTTON_RIGHT_FACE_LEFT",
+            "sourceLine": 745,
+            "value": 8
+          },
+          {
+            "name": "GAMEPAD_BUTTON_LEFT_TRIGGER_1",
+            "sourceLine": 746,
+            "value": 9
+          },
+          {
+            "name": "GAMEPAD_BUTTON_LEFT_TRIGGER_2",
+            "sourceLine": 747,
+            "value": 10
+          },
+          {
+            "name": "GAMEPAD_BUTTON_RIGHT_TRIGGER_1",
+            "sourceLine": 748,
+            "value": 11
+          },
+          {
+            "name": "GAMEPAD_BUTTON_RIGHT_TRIGGER_2",
+            "sourceLine": 749,
+            "value": 12
+          },
+          {
+            "name": "GAMEPAD_BUTTON_MIDDLE_LEFT",
+            "sourceLine": 750,
+            "value": 13
+          },
+          {
+            "name": "GAMEPAD_BUTTON_MIDDLE",
+            "sourceLine": 751,
+            "value": 14
+          },
+          {
+            "name": "GAMEPAD_BUTTON_MIDDLE_RIGHT",
+            "sourceLine": 752,
+            "value": 15
+          },
+          {
+            "name": "GAMEPAD_BUTTON_LEFT_THUMB",
+            "sourceLine": 753,
+            "value": 16
+          },
+          {
+            "name": "GAMEPAD_BUTTON_RIGHT_THUMB",
+            "sourceLine": 754,
+            "value": 17
+          }
+        ],
+        "name": "GamepadButton",
+        "sourceLine": 736,
         "underlyingCanonicalCType": "int"
       },
       {
@@ -1844,6 +1978,33 @@
         "sourceLine": 1093
       },
       {
+        "name": "GetGamepadAxisMovement",
+        "parameters": [
+          {
+            "name": "gamepad",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "axis",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "float",
+          "canonicalCType": "float",
+          "haxeType": "c.Float32"
+        },
+        "sourceLine": 1217
+      },
+      {
         "name": "GetMouseDelta",
         "parameters": [],
         "returnType": {
@@ -2036,6 +2197,79 @@
           "haxeType": "Bool"
         },
         "sourceLine": 1039
+      },
+      {
+        "name": "IsGamepadAvailable",
+        "parameters": [
+          {
+            "name": "gamepad",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1209
+      },
+      {
+        "name": "IsGamepadButtonDown",
+        "parameters": [
+          {
+            "name": "gamepad",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "button",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1212
+      },
+      {
+        "name": "IsGamepadButtonPressed",
+        "parameters": [
+          {
+            "name": "gamepad",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "button",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1211
       },
       {
         "name": "IsKeyDown",
@@ -2849,6 +3083,8 @@
     "src/raylib/raw/CameraProjection.hx",
     "src/raylib/raw/Color.hx",
     "src/raylib/raw/ConfigFlags.hx",
+    "src/raylib/raw/GamepadAxis.hx",
+    "src/raylib/raw/GamepadButton.hx",
     "src/raylib/raw/KeyboardKey.hx",
     "src/raylib/raw/MouseButton.hx",
     "src/raylib/raw/Ray.hx",
@@ -2869,9 +3105,9 @@
   "selection": {
     "counts": {
       "aliases": 2,
-      "enumConstants": 143,
-      "enums": 5,
-      "functions": 63,
+      "enumConstants": 167,
+      "enums": 7,
+      "functions": 67,
       "omittedFamilies": 6,
       "records": 9
     },
@@ -2925,7 +3161,7 @@
         "validate": "IsTextureValid"
       }
     ],
-    "sha256": "161edc328a35ed884eb207d581383ffac9b61cc1d8e4222b70867ad5440c91ae"
+    "sha256": "1bec7ee358ab28908fd9479b11c2489b3c313ecefd31a1194b28941927945c74"
   },
   "upstream": {
     "apiVersion": 600,

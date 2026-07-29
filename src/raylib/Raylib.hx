@@ -65,6 +65,35 @@ class Raylib {
 	public static inline function GetTime():Float
 		return raylib.raw.Raylib.GetTime();
 
+	/**
+	 * Report whether Raylib currently exposes one zero-based controller slot.
+	 *
+	 * A controller may disappear between frames, so callers sample this before
+	 * reading buttons or axes and reset their own held/repeat state when it
+	 * becomes false. Raylib retains no Haxe value and this check allocates
+	 * nothing in generated C.
+	 */
+	public static inline function IsGamepadAvailable(gamepad:Int):Bool
+		return raylib.raw.Raylib.IsGamepadAvailable(c.IntConvert.exact(gamepad));
+
+	/** Report the one-frame press edge for a platform-neutral button position. */
+	public static inline function IsGamepadButtonPressed(gamepad:Int, button:GamepadButton):Bool
+		return raylib.raw.Raylib.IsGamepadButtonPressed(c.IntConvert.exact(gamepad), c.IntConvert.exact(button));
+
+	/** Report whether a platform-neutral button position remains held now. */
+	public static inline function IsGamepadButtonDown(gamepad:Int, button:GamepadButton):Bool
+		return raylib.raw.Raylib.IsGamepadButtonDown(c.IntConvert.exact(gamepad), c.IntConvert.exact(button));
+
+	/**
+	 * Read one normalized analog axis as C binary32.
+	 *
+	 * Raylib returns values in the nominal `-1.0` to `1.0` range. This facade
+	 * deliberately does not choose a dead zone or repeat rate: those are
+	 * application interaction policies, not properties of the C ABI.
+	 */
+	public static inline function GetGamepadAxisMovement(gamepad:Int, axis:GamepadAxis):c.Float32
+		return raylib.raw.Raylib.GetGamepadAxisMovement(c.IntConvert.exact(gamepad), c.IntConvert.exact(axis));
+
 	public static inline function SetExitKey(key:KeyboardKey):Void
 		raylib.raw.Raylib.SetExitKey(c.IntConvert.exact(key));
 

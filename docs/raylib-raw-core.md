@@ -8,8 +8,8 @@ Caxecraft:
 
 - 9 by-value records plus the direct `Camera`/`Camera3D` and
   `Texture2D`/`Texture` typedef aliases;
-- 5 integer enum domains containing 143 constants; and
-- 59 window, timing, input, camera, collision, primitive drawing, texture,
+- 7 integer enum domains containing 167 constants; and
+- 67 window, timing, input, camera, collision, primitive drawing, texture,
   HUD, and screenshot functions.
 
 The machine authorities are:
@@ -180,13 +180,14 @@ Native integration additionally:
 1. provisions the exact raylib source and library;
 2. re-extracts the selected declarations with Clang;
 3. compiles the generated Haxe consumer through the production C target;
-4. compiles and links the independent core and `rlgl` native ABI probes; and
-5. in the memory/software lane, runs both probes and the generated executable
-   and checks exact output.
+4. compiles and links the independent strict C11 core/`rlgl` ABI probes and a
+   handwritten C++17 gamepad consumer; and
+5. in the memory/software lane, runs all three native consumers plus the
+   generated executable and checks exact output.
 
 The probe asserts C `bool`, `float`, and `int` assumptions; every selected
-record size, alignment, and field offset; both aliases; all 143 constant
-values; and typed function-pointer compatibility for all 61 functions. This is
+record size, alignment, and field offset; both aliases; all 167 constant
+values; and typed function-pointer compatibility for all 67 functions. This is
 ABI evidence for the selected target/configuration lanes, not a promise for an
 unprobed platform.
 

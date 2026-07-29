@@ -864,7 +864,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A version-locked public raylib.raw core is generated from Clang declaration facts and consumed directly by generated Haxe/C.",
-      "scope": "The coherent Caxecraft core covers 9 by-value records, 2 direct struct aliases, 5 integer enum domains with 143 constants, and 61 fixed-arity raylib 6.0 functions. A closed selection and binding lock retain upstream/header/Clang/target/declaration provenance; deterministic raw Haxe, five build-plan snapshots, a generated direct consumer, and a compiled independent ABI probe remain runtime-free.",
+      "scope": "The coherent Caxecraft core covers 9 by-value records, 2 direct struct aliases, 7 integer enum domains with 167 constants, and 67 fixed-arity raylib 6.0 functions. A closed selection and binding lock retain upstream/header/Clang/target/declaration provenance; deterministic raw Haxe, five build-plan snapshots, a generated direct consumer, a compiled independent C11 ABI probe, and a handwritten C++17 gamepad consumer remain runtime-free.",
       "evidence": [
         "docs/raylib-raw-core.md",
         "docs/specs/raylib-core-selection.json",
@@ -872,6 +872,7 @@
         "scripts/raylib/core_binding.py",
         "src/raylib/raw/Raylib.hx",
         "test/raylib_provisioning/native/core_abi_probe.c",
+        "test/raylib_provisioning/native/core_consumer.cpp",
         "test/raylib_provisioning/run.py"
       ],
       "owners": [
@@ -890,12 +891,14 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A curated raylib facade adds typed domains, direct value constructors, named colors, and inline forwarding with zero runtime cost.",
-      "scope": "The C-only semantic core wraps the locked raw slice with transparent value abstracts, five distinct integer domains, 26 named color macros, and direct PascalCase forwarding. Deterministic emitted-C snapshots prove imported struct compound literals and the same raylib calls with no allocation, reflection, virtual dispatch, or hxrt selection; negative fixtures reject mixed domains, embedded NUL, invalid color literals, invalid dimension types, and use of deliberately omitted resource-loading APIs.",
+      "scope": "The C-only semantic core wraps the locked raw slice with transparent value abstracts, seven distinct integer domains, 26 named color macros, and direct PascalCase forwarding. Deterministic emitted-C snapshots prove imported struct compound literals and direct window, drawing, keyboard, mouse, and gamepad calls with no allocation, reflection, virtual dispatch, or hxrt selection; negative fixtures reject mixed domains, embedded NUL, invalid color literals, invalid dimension types, and use of deliberately omitted resource-loading APIs.",
       "evidence": [
         "docs/raylib-semantic-core.md",
         "src/raylib/Raylib.hx",
         "src/raylib/Color.hx",
         "src/raylib/Colors.hx",
+        "src/raylib/GamepadAxis.hx",
+        "src/raylib/GamepadButton.hx",
         "std/c/StructInit.hx",
         "test/raylib_provisioning/expected/semantic/src/program.c",
         "test/raylib_provisioning/run.py"

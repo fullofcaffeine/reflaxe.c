@@ -176,6 +176,11 @@ declaration counts, ABI policy, and deliberate omissions.
 The integration runner provisions real Raylib, invokes the production custom C
 target, verifies the neutral plan and empty `hxrt` plan, compiles the emitted C
 under the strict warning policy, and links it with the reviewed native facts.
+It also compiles the generated strict C11 core/`rlgl` ABI probes and a
+handwritten strict C++17 consumer of the selected gamepad functions. The
+handwritten consumer is independent evidence: if the generated Haxe and lock
+made the same signature mistake, the public `raylib.h` still determines whether
+that C++ program compiles and links.
 For example, after acquiring an exact offline source tree:
 
 ```sh

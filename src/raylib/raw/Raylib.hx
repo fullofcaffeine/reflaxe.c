@@ -99,6 +99,8 @@ extern class Raylib {
 
 	public static function GetFrameTime():c.Float32;
 
+	public static function GetGamepadAxisMovement(gamepad:c.Int32, axis:c.Int32):c.Float32;
+
 	public static function GetMouseDelta():Vector2;
 
 	public static function GetMousePosition():Vector2;
@@ -120,6 +122,12 @@ extern class Raylib {
 	public static function InitWindow(width:c.Int32, height:c.Int32, title:c.CString):Void;
 
 	public static function IsCursorHidden():Bool;
+
+	public static function IsGamepadAvailable(gamepad:c.Int32):Bool;
+
+	public static function IsGamepadButtonDown(gamepad:c.Int32, button:c.Int32):Bool;
+
+	public static function IsGamepadButtonPressed(gamepad:c.Int32, button:c.Int32):Bool;
 
 	public static function IsKeyDown(key:c.Int32):Bool;
 

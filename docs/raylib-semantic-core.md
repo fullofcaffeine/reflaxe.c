@@ -14,6 +14,30 @@ under `test/raylib_provisioning/expected/semantic` shows that:
 - colors such as `Colors.RAYWHITE` remain the original raylib macros; and
 - no wrapper, allocation, virtual call, reflection, or `hxrt` is emitted.
 
+### Gamepad input stays policy-free
+
+The reviewed gamepad surface reports facts about one controller slot:
+
+```haxe
+if (Raylib.IsGamepadAvailable(0)) {
+	final down = Raylib.IsGamepadButtonDown(0, GamepadButton.DpadDown);
+	final y = Raylib.GetGamepadAxisMovement(0, GamepadAxis.LeftY);
+}
+```
+
+`GamepadButton` uses physical positions such as `DpadDown` and `FaceDown`
+instead of controller-brand labels. `GamepadAxis` names the two sticks and
+analog triggers. Both are integer-backed Haxe domains with the exact values
+from the pinned raylib 6.0 header. Inline facade calls convert them to C
+`int32_t` and make the same direct Raylib call shown in the semantic C
+snapshot.
+
+RaylibHx does not choose what a face button means, how much stick noise to
+ignore, or how quickly a held direction repeats. Those are interaction rules
+owned by the application. It also does not promise that a controller remains
+connected: an application checks availability each frame and clears any held
+state when the device disappears.
+
 `raylib.raw` remains public. Use it when a reviewed helper is absent and the
 program can satisfy the raw C lifetime, ownership, and safety rules. The facade
 does not pretend callbacks, variadics, pointers, handles, or resource ownership
@@ -149,4 +173,6 @@ Run `npm run test:c-import`, `npm run test:raylib-provisioning`, and
 `npm run test:all-sources`. The suite keeps separate raw and semantic snapshots,
 rejects mixed enum domains, embedded-NUL titles, out-of-range color literals,
 invalid dimension types, and the deliberately omitted *semantic* owning
-resource API, and proves deterministic runtime-free output.
+resource API, and proves deterministic runtime-free output. The source-backed
+integration lane also compiles the generated C, the generated strict C11 ABI
+probe, and a handwritten C++17 gamepad consumer against the pinned library.

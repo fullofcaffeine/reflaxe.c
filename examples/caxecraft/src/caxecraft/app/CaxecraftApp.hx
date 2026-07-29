@@ -76,9 +76,12 @@ import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
 import caxecraft.localization.UiCatalog;
 import caxecraft.localization.UiCatalog.LocaleCursor;
 import caxecraft.localization.UiCatalog.UiMessage;
+import caxecraft.input.NavigationInput.NavigationCommand;
+import caxecraft.input.NavigationInput.NavigationRepeater;
+import caxecraft.input.NavigationInput.NavigationSample;
+import caxecraft.app.RaylibNavigationInput.samplePrimaryGamepad;
 #if caxecraft_pilot
 import caxecraft.app.PilotTelemetry.drawPilotTelemetry;
-import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorViewport.EditorTool;
 import raylib.Rlgl;
 #end
@@ -128,6 +131,9 @@ final class CaxecraftApp {
 	/** Native visual editor shell over the shared renderer-independent session. */
 	final editorScreen:CaxecraftEditorScreen;
 
+	/** Held-direction clock shared by real controller input and native pilots. */
+	final editorNavigation:NavigationRepeater;
+
 	/**
 	 * Create the application and its single simulation owner.
 	 *
@@ -137,6 +143,7 @@ final class CaxecraftApp {
 	 */
 	public function new() {
 		editorScreen = new CaxecraftEditorScreen();
+		editorNavigation = new NavigationRepeater();
 	}
 
 	/**
@@ -346,6 +353,15 @@ final class CaxecraftApp {
 			// across a pause, or from a defeated position back to the authored spawn.
 			var resetMotionThisFrame = false;
 			#if caxecraft_pilot
+			// Pilots own an exact display cadence; interactive builds read the same
+			// Raylib frame clock once and share it between UI repeat and simulation.
+			var frameSeconds = PilotScript.frameDurationMilliseconds(pilotName, frameCount) / 1000.0;
+			#else
+			var frameSeconds = Raylib.GetFrameTime().toFloat();
+			#end
+			if (frameSeconds > MAX_FRAME_SECONDS)
+				frameSeconds = MAX_FRAME_SECONDS;
+			#if caxecraft_pilot
 			final requestedWindowWidth = PilotScript.requestedWindowWidth(pilotName, frameCount);
 			// Keep both conditional results stable before the native call. haxe_c-af1
 			// owns the compiler fix that will make this explicit local unnecessary.
@@ -465,12 +481,7 @@ final class CaxecraftApp {
 				resetMotionThisFrame = true;
 				Raylib.EnableCursor();
 			}
-			if (screenShowsEditor(screen) && focused && pausePressed) {
-				screen = closeEditor(screen);
-				accumulator = 0.0;
-				resetMotionThisFrame = true;
-				Raylib.EnableCursor();
-			} else if (!screenShowsTitle(screen) && focused && pausePressed) {
+			if (!screenShowsTitle(screen) && !screenShowsEditor(screen) && focused && pausePressed) {
 				screen = togglePause(screen);
 				accumulator = 0.0;
 				resetMotionThisFrame = true;
@@ -495,19 +506,55 @@ final class CaxecraftApp {
 			final onEditor = screenShowsEditor(screen);
 			final paused = screenPausesSimulation(screen);
 			final captured = screenCapturesPointer(screen);
+			var editorNavigationCommand = NavigationCommand.None;
+			#if !caxecraft_pilot
+			if (onEditor)
+				editorNavigationCommand = editorNavigation.advance(samplePrimaryGamepad(), frameSeconds);
+			else
+				editorNavigation.release();
+			#end
 			#if caxecraft_pilot
 			// The editor pilot submits a title and voxel gestures through the
 			// same screen methods used by native input. It bypasses only the
 			// operating system's keyboard and mouse delivery so repeated
 			// headless runs remain deterministic. Selecting the newly painted
 			// cell also gives the framebuffer oracle a specific 3D outline.
-			// Three semantic focus moves land on Validate, proving that the
-			// production focus order also paints an observable native ring.
+			// One held controller direction moves immediately, repeats after the
+			// production delay, then repeats at the production interval. The
+			// resulting three moves land on Validate before the south face button
+			// confirms it through the same device-neutral screen handler.
 			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
-				editorScreen.applyPilotFocusMove(EditorFocusMove.Forward);
-				editorScreen.applyPilotFocusMove(EditorFocusMove.Forward);
-				editorScreen.applyPilotFocusMove(EditorFocusMove.Forward);
-				if (editorScreen.applyPilotFocusedAction() != EditorScreenAction.StayInEditor)
+				final heldDown:NavigationSample = {
+					connected: true,
+					up: false,
+					right: false,
+					down: true,
+					left: false,
+					confirmPressed: false,
+					cancelPressed: false,
+					horizontal: 0.0,
+					vertical: 0.0
+				};
+				editorScreen.applyNavigation(editorNavigation.advance(heldDown, 0.0));
+				editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS));
+				editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS));
+				final confirm:NavigationSample = {
+					connected: true,
+					up: false,
+					right: false,
+					down: false,
+					left: false,
+					confirmPressed: true,
+					cancelPressed: false,
+					horizontal: 0.0,
+					vertical: 0.0
+				};
+				if (editorScreen.applyNavigation(editorNavigation.advance(confirm, 0.0)) != EditorScreenAction.StayInEditor)
+					rejectedEdits++;
+				// Observe cancel through the same handler without changing the
+				// application's screen here; the pilot must keep the editor visible
+				// long enough to capture its focus ring.
+				if (editorScreen.applyNavigation(NavigationCommand.Cancel) != EditorScreenAction.ReturnToTitle)
 					rejectedEdits++;
 				if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
 					rejectedEdits++;
@@ -549,16 +596,6 @@ final class CaxecraftApp {
 					jumpQueued = true;
 			}
 
-			#if caxecraft_pilot
-			// Ordinary pilots supply one exact 50 ms step per frame. SmoothMotion
-			// supplies a deterministic display cadence that crosses those fixed-tick
-			// boundaries with a remainder. Interactive builds use Raylib's clock.
-			var frameSeconds = PilotScript.frameDurationMilliseconds(pilotName, frameCount) / 1000.0;
-			#else
-			var frameSeconds = Raylib.GetFrameTime().toFloat();
-			#end
-			if (frameSeconds > MAX_FRAME_SECONDS)
-				frameSeconds = MAX_FRAME_SECONDS;
 			if (captured
 				&& !recapturedThisFrame
 				&& primaryPressed
@@ -814,7 +851,7 @@ final class CaxecraftApp {
 			if (onTitle) {
 				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale);
 			} else if (onEditor) {
-				if (editorScreen.draw(locale) == EditorScreenAction.ReturnToTitle)
+				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
 					screen = closeEditor(screen);
 			} else {
 				Raylib.ClearBackground(CaxecraftPalette.sky());

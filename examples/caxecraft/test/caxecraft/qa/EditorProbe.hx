@@ -38,6 +38,9 @@ import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
+import caxecraft.input.NavigationInput.NavigationCommand;
+import caxecraft.input.NavigationInput.NavigationRepeater;
+import caxecraft.input.NavigationInput.NavigationSample;
 import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
@@ -98,6 +101,7 @@ final class EditorProbe {
 		checkActionPalette();
 		final protocolChecks = checkRevisionedProtocol() + checkTitleProtocol();
 		final focusChecks = checkFocusNavigation();
+		final navigationChecks = checkNavigationInput();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
 		final session = open(defaultEditorSettings());
@@ -167,8 +171,8 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
 	}
 
 	static function checkActionPalette():Void {
@@ -248,6 +252,75 @@ final class EditorProbe {
 		}
 		return checks;
 	}
+
+	/**
+	 * Prove device-neutral dead-zone, repeat, edge, and disconnect behavior.
+	 *
+	 * These deterministic snapshots exercise the same `NavigationRepeater`
+	 * instance used by the native Raylib editor. Eval owns the interaction rule;
+	 * the graphical pilot separately proves that a resulting command reaches the
+	 * rendered focus ring and production editor action.
+	 */
+	static function checkNavigationInput():Int {
+		final repeater = new NavigationRepeater();
+		var checks = 0;
+		require(repeater.advance(navigation(false), 0.0) == NavigationCommand.None, "disconnected navigation produced an action");
+		checks++;
+		require(repeater.advance(navigation(true, 0.34, -0.34), 0.0) == NavigationCommand.None, "stick noise inside the dead zone moved focus");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.0) == NavigationCommand.Down, "new analog direction did not move immediately");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.34) == NavigationCommand.None, "held direction repeated before its initial delay");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.01) == NavigationCommand.Down, "held direction did not repeat at its initial delay");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.09) == NavigationCommand.None, "held direction repeated before its steady interval");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.01) == NavigationCommand.Down, "held direction did not repeat at its steady interval");
+		checks++;
+		require(repeater.advance(navigation(true), 0.0) == NavigationCommand.None, "released direction produced an action");
+		checks++;
+		require(repeater.advance(navigation(true, -0.8), 0.0) == NavigationCommand.Left, "new direction after release did not move immediately");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.0, true, false, true, false), 0.0) == NavigationCommand.None,
+			"opposite vertical directions did not cancel");
+		checks++;
+		require(repeater.advance(navigation(true, 0.8, 0.8), 0.0) == NavigationCommand.Down, "diagonal input did not use deterministic vertical priority");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8, false, false, false, false, true), 0.0) == NavigationCommand.Confirm,
+			"confirm edge did not take priority over held movement");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8, false, false, false, false, false, true), 0.0) == NavigationCommand.Cancel,
+			"cancel edge did not take priority over held movement");
+		checks++;
+		require(repeater.advance(navigation(false), 0.0) == NavigationCommand.None, "disconnect did not suppress input");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.0) == NavigationCommand.Down, "reconnect inherited stale repeat state");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 2.0) == NavigationCommand.Down, "stalled frame lost its bounded repeat");
+		checks++;
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.0) == NavigationCommand.None, "stalled frame queued a burst of repeat actions");
+		checks++;
+		repeater.release();
+		require(repeater.advance(navigation(true, 0.0, 0.8), 0.0) == NavigationCommand.Down, "screen release did not clear the repeat clock");
+		checks++;
+		return checks;
+	}
+
+	/** Build one complete normalized input snapshot with concise test defaults. */
+	static function navigation(connected:Bool, horizontal:Float = 0.0, vertical:Float = 0.0, up:Bool = false, right:Bool = false, down:Bool = false,
+			left:Bool = false, confirmPressed:Bool = false, cancelPressed:Bool = false):NavigationSample
+		return {
+			connected: connected,
+			up: up,
+			right: right,
+			down: down,
+			left: left,
+			confirmPressed: confirmPressed,
+			cancelPressed: cancelPressed,
+			horizontal: horizontal,
+			vertical: vertical
+		};
 
 	/**
 	 * Prove stale-edit rejection, atomic batches, and copy-owned observations.

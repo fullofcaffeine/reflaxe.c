@@ -103,6 +103,34 @@ _Static_assert(FLAG_BORDERLESS_WINDOWED_MODE == 32768, "FLAG_BORDERLESS_WINDOWED
 _Static_assert(FLAG_MSAA_4X_HINT == 32, "FLAG_MSAA_4X_HINT value drifted");
 _Static_assert(FLAG_INTERLACED_HINT == 65536, "FLAG_INTERLACED_HINT value drifted");
 
+_Static_assert(sizeof(GamepadAxis) == sizeof(int), "GamepadAxis underlying ABI drifted");
+_Static_assert(GAMEPAD_AXIS_LEFT_X == 0, "GAMEPAD_AXIS_LEFT_X value drifted");
+_Static_assert(GAMEPAD_AXIS_LEFT_Y == 1, "GAMEPAD_AXIS_LEFT_Y value drifted");
+_Static_assert(GAMEPAD_AXIS_RIGHT_X == 2, "GAMEPAD_AXIS_RIGHT_X value drifted");
+_Static_assert(GAMEPAD_AXIS_RIGHT_Y == 3, "GAMEPAD_AXIS_RIGHT_Y value drifted");
+_Static_assert(GAMEPAD_AXIS_LEFT_TRIGGER == 4, "GAMEPAD_AXIS_LEFT_TRIGGER value drifted");
+_Static_assert(GAMEPAD_AXIS_RIGHT_TRIGGER == 5, "GAMEPAD_AXIS_RIGHT_TRIGGER value drifted");
+
+_Static_assert(sizeof(GamepadButton) == sizeof(int), "GamepadButton underlying ABI drifted");
+_Static_assert(GAMEPAD_BUTTON_UNKNOWN == 0, "GAMEPAD_BUTTON_UNKNOWN value drifted");
+_Static_assert(GAMEPAD_BUTTON_LEFT_FACE_UP == 1, "GAMEPAD_BUTTON_LEFT_FACE_UP value drifted");
+_Static_assert(GAMEPAD_BUTTON_LEFT_FACE_RIGHT == 2, "GAMEPAD_BUTTON_LEFT_FACE_RIGHT value drifted");
+_Static_assert(GAMEPAD_BUTTON_LEFT_FACE_DOWN == 3, "GAMEPAD_BUTTON_LEFT_FACE_DOWN value drifted");
+_Static_assert(GAMEPAD_BUTTON_LEFT_FACE_LEFT == 4, "GAMEPAD_BUTTON_LEFT_FACE_LEFT value drifted");
+_Static_assert(GAMEPAD_BUTTON_RIGHT_FACE_UP == 5, "GAMEPAD_BUTTON_RIGHT_FACE_UP value drifted");
+_Static_assert(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT == 6, "GAMEPAD_BUTTON_RIGHT_FACE_RIGHT value drifted");
+_Static_assert(GAMEPAD_BUTTON_RIGHT_FACE_DOWN == 7, "GAMEPAD_BUTTON_RIGHT_FACE_DOWN value drifted");
+_Static_assert(GAMEPAD_BUTTON_RIGHT_FACE_LEFT == 8, "GAMEPAD_BUTTON_RIGHT_FACE_LEFT value drifted");
+_Static_assert(GAMEPAD_BUTTON_LEFT_TRIGGER_1 == 9, "GAMEPAD_BUTTON_LEFT_TRIGGER_1 value drifted");
+_Static_assert(GAMEPAD_BUTTON_LEFT_TRIGGER_2 == 10, "GAMEPAD_BUTTON_LEFT_TRIGGER_2 value drifted");
+_Static_assert(GAMEPAD_BUTTON_RIGHT_TRIGGER_1 == 11, "GAMEPAD_BUTTON_RIGHT_TRIGGER_1 value drifted");
+_Static_assert(GAMEPAD_BUTTON_RIGHT_TRIGGER_2 == 12, "GAMEPAD_BUTTON_RIGHT_TRIGGER_2 value drifted");
+_Static_assert(GAMEPAD_BUTTON_MIDDLE_LEFT == 13, "GAMEPAD_BUTTON_MIDDLE_LEFT value drifted");
+_Static_assert(GAMEPAD_BUTTON_MIDDLE == 14, "GAMEPAD_BUTTON_MIDDLE value drifted");
+_Static_assert(GAMEPAD_BUTTON_MIDDLE_RIGHT == 15, "GAMEPAD_BUTTON_MIDDLE_RIGHT value drifted");
+_Static_assert(GAMEPAD_BUTTON_LEFT_THUMB == 16, "GAMEPAD_BUTTON_LEFT_THUMB value drifted");
+_Static_assert(GAMEPAD_BUTTON_RIGHT_THUMB == 17, "GAMEPAD_BUTTON_RIGHT_THUMB value drifted");
+
 _Static_assert(sizeof(KeyboardKey) == sizeof(int), "KeyboardKey underlying ABI drifted");
 _Static_assert(KEY_NULL == 0, "KEY_NULL value drifted");
 _Static_assert(KEY_APOSTROPHE == 39, "KEY_APOSTROPHE value drifted");
@@ -271,6 +299,7 @@ hxc_check_raylib_core_signatures(void)
     Color (*const hxc_signature_GetColor)(unsigned int) = &GetColor;
     int (*const hxc_signature_GetFPS)(void) = &GetFPS;
     float (*const hxc_signature_GetFrameTime)(void) = &GetFrameTime;
+    float (*const hxc_signature_GetGamepadAxisMovement)(int, int) = &GetGamepadAxisMovement;
     Vector2 (*const hxc_signature_GetMouseDelta)(void) = &GetMouseDelta;
     Vector2 (*const hxc_signature_GetMousePosition)(void) = &GetMousePosition;
     float (*const hxc_signature_GetMouseWheelMove)(void) = &GetMouseWheelMove;
@@ -282,6 +311,9 @@ hxc_check_raylib_core_signatures(void)
     double (*const hxc_signature_GetTime)(void) = &GetTime;
     void (*const hxc_signature_InitWindow)(int, int, const char *) = &InitWindow;
     bool (*const hxc_signature_IsCursorHidden)(void) = &IsCursorHidden;
+    bool (*const hxc_signature_IsGamepadAvailable)(int) = &IsGamepadAvailable;
+    bool (*const hxc_signature_IsGamepadButtonDown)(int, int) = &IsGamepadButtonDown;
+    bool (*const hxc_signature_IsGamepadButtonPressed)(int, int) = &IsGamepadButtonPressed;
     bool (*const hxc_signature_IsKeyDown)(int) = &IsKeyDown;
     bool (*const hxc_signature_IsKeyPressed)(int) = &IsKeyPressed;
     bool (*const hxc_signature_IsKeyReleased)(int) = &IsKeyReleased;
@@ -335,6 +367,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_GetColor;
     (void)hxc_signature_GetFPS;
     (void)hxc_signature_GetFrameTime;
+    (void)hxc_signature_GetGamepadAxisMovement;
     (void)hxc_signature_GetMouseDelta;
     (void)hxc_signature_GetMousePosition;
     (void)hxc_signature_GetMouseWheelMove;
@@ -346,6 +379,9 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_GetTime;
     (void)hxc_signature_InitWindow;
     (void)hxc_signature_IsCursorHidden;
+    (void)hxc_signature_IsGamepadAvailable;
+    (void)hxc_signature_IsGamepadButtonDown;
+    (void)hxc_signature_IsGamepadButtonPressed;
     (void)hxc_signature_IsKeyDown;
     (void)hxc_signature_IsKeyPressed;
     (void)hxc_signature_IsKeyReleased;
