@@ -696,12 +696,12 @@ def render_haxe(pack: ContentPack) -> str:
         "",
         "import caxecraft.domain.AquaticProfile;",
         "import caxecraft.domain.Aquatics.profile as createAquaticProfile;",
+        "import caxecraft.domain.ActorControllerProfile;",
         "import caxecraft.scenario.ContentId;",
         "import caxecraft.scenario.ScenarioContentRegistry;",
         "import caxecraft.content.ActorContentResolver;",
         "import caxecraft.content.ActorContentResolver.ActorContentKind;",
         "import caxecraft.content.ActorContentResolver.ActorContentResolution;",
-        "import caxecraft.content.ActorContentResolver.ActorControllerProfile;",
         "",
     ]
     for name, values, is_content in (

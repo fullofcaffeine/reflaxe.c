@@ -525,11 +525,21 @@ level. Duplicate IDs, stable-ID collisions, capacity overflow, unknown content,
 wrong content kinds, and invalid mechanics reject the complete candidate set.
 Eval and strict generated C run the same focused specification.
 
-`haxe_c-xge.20.4.2.4.4` owns the next boundary: construct temporary
-`Character` and controller state from the complete plan, then replace the live
-session only if every construction succeeds. Keeping planning and publication
-separate makes failure atomic—the old session remains usable instead of
-requiring rollback from a half-created actor set.
+The next boundary is also executable. `ActorPublication` constructs temporary
+`Character` values and typed controller bindings from the complete plan.
+`GameSession` then checks that every binding names its matching character and
+asks `EntityStore` to validate the complete replacement before changing its
+private Array. The local player remains first; authored actors retain authored
+order. No callback or public observation can run during the short synchronous
+commit, so callers see either the previous actor generation after rejection or
+the complete replacement after success. The focused test proves rejection,
+ordered publication, retry, and removal on both Eval and generated native C.
+
+Publication records controller recipes; it does not execute artificial
+intelligence. The current playable still advances its earlier Nia and Mossling
+paths. `haxe_c-xge.20.4.2.4.5` owns the fixed-tick scheduler that will turn the
+published recipes into ordinary `CharacterIntent` values and remove those
+content-specific update branches.
 
 One engine capability must connect all authoring surfaces without becoming
 five implementations:

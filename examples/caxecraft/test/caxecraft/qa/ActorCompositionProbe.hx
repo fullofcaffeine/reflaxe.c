@@ -5,15 +5,22 @@ import caxecraft.content.ActorCompositionPlanner.ActorCompositionResult;
 import caxecraft.content.ActorCompositionPlanner.CharacterSpawnPlan;
 import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.ActorCompositionPlanner.planActorComposition;
+import caxecraft.content.ActorPublication.ActorPublicationError;
+import caxecraft.content.ActorPublication.ActorPublicationResult;
+import caxecraft.content.ActorPublication.publishActorPlans;
 import caxecraft.content.ActorContentResolver;
 import caxecraft.content.ActorContentResolver.ActorContentKind;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
-import caxecraft.content.ActorContentResolver.ActorControllerProfile;
 import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanError;
 import caxecraft.content.ActorIdentityPlanner.actorEntityId;
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.domain.Aquatics.profile as aquaticProfile;
+import caxecraft.domain.ActorControllerProfile;
+import caxecraft.domain.Character.start as startCharacter;
+import caxecraft.domain.CharacterPhysics.body as createBody;
+import caxecraft.domain.EntityId;
+import caxecraft.domain.GameSession;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioId;
@@ -21,12 +28,12 @@ import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 
 /**
-	Executable specification for content-driven actor composition planning.
+	Executable specification for content-driven actor planning and publication.
 
 	Eval and generated native C feed the same validated-shaped placements into
-	the production planner. The test covers ordered success and every rejection
-	family without constructing or mutating a `GameSession`; publication belongs
-	to the next actor-composition task.
+	the production planner and publication boundary. The test covers ordered
+	success, rejected construction and replacement, unchanged prior state, retry,
+	and empty replacement through a real `GameSession`.
 **/
 var observed:Int = 0;
 
@@ -133,6 +140,95 @@ function selfCheck():Int {
 		case _:
 			return 10;
 	}
+
+	final session = new GameSession();
+	final localId = EntityId.fromValidatedStorageCode(77);
+	if (!session.bindLocalPlayer(startCharacter(localId, createBody(8.5, 2.0, 8.5), aquaticProfile(120, 4, 0.35, 14.0, 20.0, 12.0, 0.18, 20, false, false), 8)))
+		return 11;
+	switch publishActorPlans(session, first) {
+		case ActorsPublished(2):
+		case _:
+			return 12;
+	}
+	if (!publishedInOrder(session, localId, first))
+		return 13;
+
+	final beforeRejectedCharacters = session.characterSnapshots();
+	final beforeRejectedControllers = session.actorControllerSnapshots();
+	final invalidPlan:CharacterSpawnPlan = {
+		authoredId: first[0].authoredId,
+		entityId: first[0].entityId,
+		contentId: first[0].contentId,
+		transform: first[0].transform,
+		maximumHealth: 0,
+		aquaticProfile: first[0].aquaticProfile,
+		controller: first[0].controller,
+		role: first[0].role
+	};
+	switch publishActorPlans(session, [invalidPlan]) {
+		case ActorPublicationRejected(InvalidRuntimePlan(0)):
+		case _:
+			return 14;
+	}
+	if (!samePublishedState(session, beforeRejectedCharacters, beforeRejectedControllers))
+		return 15;
+	final invalidControllerPlan:CharacterSpawnPlan = {
+		authoredId: first[1].authoredId,
+		entityId: first[1].entityId,
+		contentId: first[1].contentId,
+		transform: first[1].transform,
+		maximumHealth: first[1].maximumHealth,
+		aquaticProfile: first[1].aquaticProfile,
+		controller: WanderChaseMelee({
+			noticeRadiusMilli: 1,
+			strikeRadiusMilli: 1,
+			attackRadiusMilli: 1,
+			windupTicks: 1,
+			recoveryTicks: 1,
+			stepMilli: 1,
+			drop: new ContentId("caxecraft:berries")
+		}),
+		role: first[1].role
+	};
+	switch publishActorPlans(session, [invalidControllerPlan]) {
+		case ActorPublicationRejected(InvalidRuntimePlan(0)):
+		case _:
+			return 16;
+	}
+	if (!samePublishedState(session, beforeRejectedCharacters, beforeRejectedControllers))
+		return 17;
+	switch publishActorPlans(session, [first[0], first[0]]) {
+		case ActorPublicationRejected(SessionPublicationRejected):
+		case _:
+			return 18;
+	}
+	if (!samePublishedState(session, beforeRejectedCharacters, beforeRejectedControllers))
+		return 19;
+	final overCapacity:Array<CharacterSpawnPlan> = [];
+	for (index in 0...caxecraft.domain.EntityStore.MAX_CHARACTERS)
+		overCapacity.push(withEntityId(first[1], EntityId.fromValidatedStorageCode(1000 + index)));
+	switch publishActorPlans(session, overCapacity) {
+		case ActorPublicationRejected(SessionPublicationRejected):
+		case _:
+			return 20;
+	}
+	if (!samePublishedState(session, beforeRejectedCharacters, beforeRejectedControllers))
+		return 21;
+
+	switch publishActorPlans(session, [first[1], first[0]]) {
+		case ActorsPublished(2):
+		case _:
+			return 22;
+	}
+	if (!publishedInOrder(session, localId, [first[1], first[0]]))
+		return 23;
+	switch publishActorPlans(session, []) {
+		case ActorsPublished(0):
+		case _:
+			return 24;
+	}
+	if (session.characterCount() != 1 || session.readLocalPlayer().id != localId || session.actorControllerSnapshots().length != 0)
+		return 25;
 	return 0;
 }
 
@@ -206,6 +302,49 @@ function transform(xMilli:Int, yMilli:Int, zMilli:Int, yawDegrees:Int):ScenarioT
 /** Compare all authored transform fields without converting to floating point. */
 function sameTransform(left:ScenarioTransform, right:ScenarioTransform):Bool
 	return left.xMilli == right.xMilli && left.yMilli == right.yMilli && left.zMilli == right.zMilli && left.yawDegrees == right.yawDegrees;
+
+/** Copy one otherwise valid plan under a different stable runtime identity. */
+function withEntityId(plan:CharacterSpawnPlan, entityId:EntityId):CharacterSpawnPlan
+	return {
+		authoredId: plan.authoredId,
+		entityId: entityId,
+		contentId: plan.contentId,
+		transform: plan.transform,
+		maximumHealth: plan.maximumHealth,
+		aquaticProfile: plan.aquaticProfile,
+		controller: plan.controller,
+		role: plan.role
+	};
+
+/** Check the session's local-first character order and matching controller IDs. */
+function publishedInOrder(session:GameSession, localId:EntityId, plans:Array<CharacterSpawnPlan>):Bool {
+	final characters = session.characterSnapshots();
+	final controllers = session.actorControllerSnapshots();
+	if (characters.length != plans.length + 1 || controllers.length != plans.length || characters[0].id != localId)
+		return false;
+	for (index in 0...plans.length)
+		if (characters[index + 1].id != plans[index].entityId
+			|| controllers[index].characterId != plans[index].entityId
+			|| characters[index + 1].vitals.health != plans[index].maximumHealth)
+			return false;
+	return true;
+}
+
+/** Prove a rejected publication retained both authoritative arrays unchanged. */
+function samePublishedState(session:GameSession, characters:Array<caxecraft.domain.Character>,
+		controllers:Array<caxecraft.domain.ActorControllerBinding>):Bool {
+	final currentCharacters = session.characterSnapshots();
+	final currentControllers = session.actorControllerSnapshots();
+	if (currentCharacters.length != characters.length || currentControllers.length != controllers.length)
+		return false;
+	for (index in 0...characters.length)
+		if (currentCharacters[index].id != characters[index].id)
+			return false;
+	for (index in 0...controllers.length)
+		if (currentControllers[index].characterId != controllers[index].characterId)
+			return false;
+	return true;
+}
 
 /**
 	A deliberately faulty content adapter used to prove defensive rejection.

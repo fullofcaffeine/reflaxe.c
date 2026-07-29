@@ -2,12 +2,13 @@ package caxecraft.content;
 
 import caxecraft.content.ActorContentResolver.ActorContentKind;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
-import caxecraft.content.ActorContentResolver.ActorControllerProfile;
 import caxecraft.content.ActorContentResolver.ActorMechanicsProfile;
 import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanError;
 import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanResult;
 import caxecraft.content.ActorIdentityPlanner.planActorIdentities;
+import caxecraft.content.ActorMechanicsValidation.isValidActorMechanics;
 import caxecraft.domain.AquaticProfile;
+import caxecraft.domain.ActorControllerProfile;
 import caxecraft.domain.EntityId;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
@@ -24,10 +25,11 @@ import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 	therefore safe to report without undoing partially created `GameSession`
 	state—this module never mutates a session in the first place.
 
-	“Spawn” means construction information here, not a live actor. The next
-	transactional publication task, `haxe_c-xge.20.4.2.4.4`, will convert these
-	immutable values into `Character` and controller state and commit them
-	together.
+	“Spawn” means construction information here, not a live actor.
+	`ActorPublication.publishActorPlans` converts a complete plan into temporary
+	`Character` and controller values; `GameSession` publishes those values only
+	after its ownership checks pass. Controller execution is a later step owned
+	by `haxe_c-xge.20.4.2.4.5`.
 **/
 /** Why one actor appears in the level and which placement-only data it carries. */
 enum CharacterSpawnRole {
@@ -135,7 +137,7 @@ function planActorComposition(objects:Array<ScenarioObject>, resolver:ActorConte
 			case WrongActorContentKind(actual):
 				return ActorCompositionRejected(PlacedActorKindMismatch(candidate.authoredId, candidate.contentId, candidate.expected, actual));
 		};
-		if (!validMechanics(mechanics))
+		if (!isValidActorMechanics(mechanics))
 			return ActorCompositionRejected(InvalidActorMechanics(candidate.authoredId, candidate.contentId));
 		plans.push({
 			authoredId: candidate.authoredId,
@@ -149,38 +151,4 @@ function planActorComposition(objects:Array<ScenarioObject>, resolver:ActorConte
 		});
 	}
 	return ActorCompositionPlanned(plans);
-}
-
-/**
-	Defend the construction boundary even when a custom resolver is faulty.
-
-	Built-in JSON validation already enforces these limits. Rechecking the small
-	live profile prevents a future runtime pack adapter or test resolver from
-	creating impossible health, water movement, or controller timing values.
-**/
-private function validMechanics(profile:ActorMechanicsProfile):Bool {
-	if (profile.maximumHealth < 1 || profile.maximumHealth > 10000)
-		return false;
-	final aquatic = profile.aquaticProfile;
-	if (aquatic.maximumBreathTicks < 1 || aquatic.maximumBreathTicks > 12000 || aquatic.breathRecoveryPerTick < 1 || aquatic.breathRecoveryPerTick > 120
-		|| aquatic.horizontalControl < 0.0 || aquatic.horizontalControl > 1.0 || aquatic.ascentAcceleration < 0.0 || aquatic.ascentAcceleration > 40.0
-		|| aquatic.descentAcceleration < 0.0 || aquatic.descentAcceleration > 40.0 || aquatic.buoyancyAcceleration < 0.0
-		|| aquatic.buoyancyAcceleration > 30.0 || aquatic.dragPerTick < 0.0 || aquatic.dragPerTick > 0.9 || aquatic.drowningIntervalTicks < 1
-		|| aquatic.drowningIntervalTicks > 1200)
-		return false;
-	return switch profile.controller {
-		case StationaryDialogue(radius): radius >= 250 && radius <= 32000;
-		case WanderChaseMelee(controller):
-			controller.noticeRadiusMilli >= 250
-			&& controller.noticeRadiusMilli <= 64000
-			&& controller.strikeRadiusMilli >= controller.attackRadiusMilli
-			&& controller.noticeRadiusMilli >= controller.strikeRadiusMilli
-			&& controller.attackRadiusMilli >= 250
-			&& controller.windupTicks >= 1
-			&& controller.windupTicks <= 1200
-			&& controller.recoveryTicks >= 1
-			&& controller.recoveryTicks <= 1200
-			&& controller.stepMilli >= 1
-			&& controller.stepMilli <= 10000;
-	};
 }

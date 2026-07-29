@@ -90,12 +90,36 @@ CASES = {
         ),
         split_source_checks=(
             GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ActorMechanicsValidation.c",
+                required_markers=("ActorMechanicsValidation_isValidActorMechanics",),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ActorPublication.c",
+                required_markers=(
+                    "ActorPublication_publishActorPlans",
+                    "ActorPublicationResult_ActorsPublished",
+                    "ActorPublicationResult_ActorPublicationRejected",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
                 path="src/modules/caxecraft/content/BaseContentPack.c",
                 required_markers=(
                     "BaseContentRegistry_resolveNpc",
                     "BaseContentRegistry_resolveEnemy",
                     "ActorContentResolution_ActorContentResolved",
                 ),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/domain/EntityStore.c",
+                required_markers=("EntityStore_replaceOthers",),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/domain/GameSession.c",
+                required_markers=("GameSession_replaceAuthoredActors",),
                 forbidden_markers=("goto ",),
             ),
         ),

@@ -142,6 +142,9 @@ final class GameSession {
 	/** All live character state, owned for exactly this session's lifetime. */
 	final entities:EntityStore = new EntityStore();
 
+	/** Controller recipes for authored non-player characters, in actor order. */
+	var actorControllers:Array<ActorControllerBinding> = [];
+
 	/** Human-control binding; it names the store entry and owns no character copy. */
 	var localPlayer:PlayerAgent;
 
@@ -233,6 +236,36 @@ final class GameSession {
 	**/
 	public inline function characterSnapshots():Array<Character>
 		return entities.snapshots();
+
+	/** Return copy-owned controller bindings in the same order as authored actors. */
+	public function actorControllerSnapshots():Array<ActorControllerBinding>
+		return actorControllers.copy();
+
+	/**
+		Atomically replace authored non-player characters and their controllers.
+
+		Both input arrays are copied and cross-checked before `EntityStore` changes.
+		After that preflight no remaining operation can reject. The synchronous
+		commit invokes no callback and exposes no intermediate observation, so a
+		caller receives either rejection with the old state or success with the
+		complete new state.
+	**/
+	public function replaceAuthoredActors(characters:Array<Character>, controllers:Array<ActorControllerBinding>):Bool {
+		if (!hasLocalPlayer() || characters.length != controllers.length)
+			return false;
+		final ownedCharacters = characters.copy();
+		final ownedControllers = controllers.copy();
+		for (index in 0...ownedCharacters.length)
+			if (ownedControllers[index].characterId != ownedCharacters[index].id)
+				return false;
+		if (!entities.replaceOthers(localPlayer.characterId, ownedCharacters))
+			return false;
+		while (actorControllers.length > 0)
+			actorControllers.pop();
+		for (controller in ownedControllers)
+			actorControllers.push(controller);
+		return true;
+	}
 
 	/**
 		Remove a non-player character by stable identity.

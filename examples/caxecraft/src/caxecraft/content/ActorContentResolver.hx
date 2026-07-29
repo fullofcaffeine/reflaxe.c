@@ -1,6 +1,7 @@
 package caxecraft.content;
 
 import caxecraft.domain.AquaticProfile;
+import caxecraft.domain.ActorControllerProfile;
 import caxecraft.scenario.ContentId;
 
 /**
@@ -29,33 +30,6 @@ interface ActorContentResolver {
 enum ActorContentKind {
 	NpcContent;
 	EnemyContent;
-}
-
-/**
-	A controller recipe selected by validated content.
-
-	A controller turns world observations into ordinary `CharacterIntent` values
-	during later simulation ticks. This value stores only reviewed parameters; it
-	does not execute artificial intelligence, dialogue, combat, or CaxeFlow while
-	a level is being planned.
-**/
-enum ActorControllerProfile {
-	/** Remain at the authored transform and offer dialogue within this radius. */
-	StationaryDialogue(interactionRadiusMilli:Int);
-
-	/** Wander, pursue, and perform a timed melee attack using bounded pack data. */
-	WanderChaseMelee(profile:WanderChaseMeleeProfile);
-}
-
-/** Validated parameters for the reusable wander/chase/melee controller. */
-typedef WanderChaseMeleeProfile = {
-	final noticeRadiusMilli:Int;
-	final strikeRadiusMilli:Int;
-	final attackRadiusMilli:Int;
-	final windupTicks:Int;
-	final recoveryTicks:Int;
-	final stepMilli:Int;
-	final drop:ContentId;
 }
 
 /**

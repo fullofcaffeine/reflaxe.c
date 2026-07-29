@@ -98,17 +98,23 @@ and content-owned health, aquatic, and controller profiles. It plans NPCs and
 enemies generically—there is no Nia or Mossling branch—and rejects the complete
 candidate set on duplicate/colliding identities, capacity overflow, unknown or
 wrong-kind content, or invalid mechanics. The resulting immutable spawn plans
-still do not create or publish live `Character` values.
-`haxe_c-xge.20.4.2.4.4` owns constructing temporary characters/controllers and
-replacing the `GameSession` actor set only after every construction succeeds.
+still do not mutate a session.
+`ActorPublication` now constructs temporary `Character` values and typed
+controller bindings, then asks `GameSession` to replace its authored actors.
+The session checks the complete replacement first, preserves the local player,
+and exposes either the old actor set after rejection or the complete new actor
+set after success. Its focused Eval/native-C test also proves that a retry
+replaces the prior generation exactly once. The playable has not yet switched
+its Nia and Mossling update loop to these bindings; controller execution is
+owned by `haxe_c-xge.20.4.2.4.5`.
 The playable advances water on the fixed clock, draws translucent surfaces,
 swims, applies Adventure drowning damage, fades the underwater camera, and shows
 fixed-tick breath bubbles. `WaterSnapshot` preserves mutable water for the future
 complete save format. Tideweave pickup/equipment is connected through validated
 content and the deterministic pilot protocol; its display-backed visual
 checkpoint is still pending on a runner with a usable desktop session.
-Content-driven actor construction, NPC/enemy controllers, audio, and native
-runtime map loading remain later work.
+NPC/enemy controller execution, audio, and native runtime map loading remain
+later work.
 
 After editing the built-in pack, run:
 

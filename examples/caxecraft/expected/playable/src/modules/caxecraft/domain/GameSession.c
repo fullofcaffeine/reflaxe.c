@@ -5,16 +5,22 @@ void hxc_compiler_constructor_caxecraft_domain_GameSession(struct hxc_caxecraft_
   struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_water;
   hxc_compiler_constructor_caxecraft_domain_WaterSimulation(hxc_tmp_owned_class_field_address_n0);
   (*hxc_self).hxc_completedTicks = 0;
-  struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n1 = &(*hxc_self).hxc_entities;
-  hxc_compiler_constructor_caxecraft_domain_EntityStore(hxc_tmp_owned_class_field_address_n1);
-  struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_call_result_n2 = hxc_caxecraft_domain_PlayerAgent_bind(0);
-  (*hxc_self).hxc_localPlayer = hxc_tmp_call_result_n2;
-  struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n3 = &(*hxc_self).hxc_water;
-  if (hxc_tmp_owned_class_field_address_n3 == NULL)
+  struct hxc_array_ref *hxc_tmp_array_create_result_n1 = NULL;
+  if (hxc_array_ref_create(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_caxecraft_domain_ActorControllerBinding), _Alignof(struct hxc_caxecraft_domain_ActorControllerBinding), NULL, hxc_array_622f12db_element_copy, hxc_array_622f12db_element_assign, hxc_array_622f12db_element_destroy }, &hxc_tmp_array_create_result_n1) != HXC_STATUS_OK)
   {
     abort();
   }
-  hxc_caxecraft_domain_WaterSimulation_resetPending(hxc_tmp_owned_class_field_address_n3);
+  (*hxc_self).hxc_actorControllers = hxc_tmp_array_create_result_n1;
+  struct hxc_caxecraft_domain_EntityStore *hxc_tmp_owned_class_field_address_n2 = &(*hxc_self).hxc_entities;
+  hxc_compiler_constructor_caxecraft_domain_EntityStore(hxc_tmp_owned_class_field_address_n2);
+  struct hxc_caxecraft_domain_PlayerAgent hxc_tmp_call_result_n3 = hxc_caxecraft_domain_PlayerAgent_bind(0);
+  (*hxc_self).hxc_localPlayer = hxc_tmp_call_result_n3;
+  struct hxc_caxecraft_domain_WaterSimulation *hxc_tmp_owned_class_field_address_n4 = &(*hxc_self).hxc_water;
+  if (hxc_tmp_owned_class_field_address_n4 == NULL)
+  {
+    abort();
+  }
+  hxc_caxecraft_domain_WaterSimulation_resetPending(hxc_tmp_owned_class_field_address_n4);
   return;
 }
 

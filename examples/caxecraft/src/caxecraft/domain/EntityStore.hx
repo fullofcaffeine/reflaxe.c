@@ -86,6 +86,35 @@ final class EntityStore {
 		return true;
 	}
 
+	/**
+		Replace every non-retained character as one validated store transaction.
+
+		The local character named by `retained` remains first. All replacements
+		are checked and copied before commit begins, so duplicate, invalid, or
+		over-capacity input leaves the previous store untouched. Commit mutates the
+		private Array in place; no callback or observation can run midway through
+		this synchronous operation.
+	**/
+	public function replaceOthers(retained:EntityId, replacements:Array<Character>):Bool {
+		final retainedCharacter = read(retained);
+		if (!isValidCharacter(retainedCharacter) || replacements.length + 1 > MAX_CHARACTERS)
+			return false;
+		final next:Array<Character> = [retainedCharacter];
+		for (replacement in replacements) {
+			if (!isValidCharacter(replacement) || replacement.id == retained)
+				return false;
+			for (accepted in next)
+				if (accepted.id == replacement.id)
+					return false;
+			next.push(replacement);
+		}
+		while (characters.length > 0)
+			characters.pop();
+		for (character in next)
+			characters.push(character);
+		return true;
+	}
+
 	/** Number of live character snapshots currently owned by this store. */
 	public inline function count():Int
 		return characters.length;

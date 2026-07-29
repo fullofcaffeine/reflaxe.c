@@ -21,6 +21,8 @@
 #include "hxc/modules/caxecraft/content/BaseContentPack.h"
 #include "hxc/modules/caxecraft/content/FirstPlayableLevel.h"
 #include "hxc/modules/caxecraft/content/FirstPlayableSessionLoader.h"
+#include "hxc/modules/caxecraft/domain/ActorControllerBinding.h"
+#include "hxc/modules/caxecraft/domain/ActorControllerProfile.h"
 #include "hxc/modules/caxecraft/domain/AquaticProfile.h"
 #include "hxc/modules/caxecraft/domain/AquaticState.h"
 #include "hxc/modules/caxecraft/domain/AquaticStep.h"
