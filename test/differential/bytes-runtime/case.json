@@ -44,6 +44,7 @@
     "test/differential/bytes-runtime/negative/runtime_string_operation/Main.hx",
     "test/differential/bytes-runtime/negative/raw_native_encoding/Main.hx",
     "test/differential/bytes-runtime/negative/unsupported_method/Main.hx",
+    "test/differential/bytes-runtime/return_string/Main.hx",
     "test/differential/bytes-runtime/run.py"
   ],
   "runner": {
@@ -52,7 +53,7 @@
       "run.py"
     ],
     "workingDirectory": "test/differential/bytes-runtime",
-    "timeoutSeconds": 180,
+    "timeoutSeconds": 240,
     "network": false
   },
   "expected": {

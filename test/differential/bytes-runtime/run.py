@@ -18,6 +18,7 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parents[3]
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
+RETURN_STRING = CASE / "return_string"
 NATIVE_BUFFER = CASE / "native_buffer"
 NATIVE_BUFFER_SOURCE = CASE / "native/mutable_text.c"
 NATIVE_BUFFER_INCLUDE = CASE / "native/include"
@@ -142,6 +143,31 @@ def run_eval_oracle() -> None:
         outputs.append((execution.returncode, execution.stdout, execution.stderr))
     if outputs != [(0, "", ""), (0, "", "")]:
         raise BytesRuntimeFailure(f"pinned Eval Bytes oracle drifted: {outputs!r}")
+    return_outputs: list[tuple[int, str, str]] = []
+    for _ in range(2):
+        execution = subprocess.run(
+            [
+                development_tool("haxe"),
+                "-cp",
+                str(RETURN_STRING),
+                "-main",
+                "Main",
+                "--interp",
+            ],
+            cwd=ROOT,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        return_outputs.append(
+            (execution.returncode, execution.stdout, execution.stderr)
+        )
+    if return_outputs != [(0, "", ""), (0, "", "")]:
+        raise BytesRuntimeFailure(
+            f"pinned Eval Bytes-returned-String oracle drifted: {return_outputs!r}"
+        )
 
 
 def compile_haxe(
@@ -463,6 +489,65 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise BytesRuntimeFailure("the structured Bytes fixture unexpectedly emitted goto")
 
 
+def validate_return_string_project(output: Path, hxcir: str) -> None:
+    """Prove Bytes decoding owns and transfers a managed String result."""
+
+    decode_tail = hxcir_function(hxcir, "function.Main.decodeTail")
+    decode_whole = hxcir_function(hxcir, "function.Main.decodeWhole")
+    for name, function in (
+        ("decodeTail", decode_tail),
+        ("decodeWhole", decode_whole),
+    ):
+        if (
+            "returns=managed-string-utf8" not in function
+            or 'runtime(feature="bytes-string",operation="get-string-utf8")'
+            not in function
+            or "terminator return value=" not in function
+        ):
+            raise BytesRuntimeFailure(
+                f"{name} lost its managed Bytes-to-String return contract"
+            )
+    main = hxcir_function(hxcir, "function.Main.main")
+    if (
+        main.count('call dispatch=direct("function.Main.decode') != 2
+        or main.count('action "string-local.') != 2
+        or main.count('implementation=runtime("string")') < 2
+    ):
+        raise BytesRuntimeFailure(
+            "Bytes-to-String callers lost returned owners or String cleanup"
+        )
+
+    plan = json.loads(
+        (output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+    )
+    if plan.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "bytes",
+        "string-scalar",
+        "string",
+        "bytes-string",
+    ]:
+        raise BytesRuntimeFailure(
+            "returned Bytes snapshot selected the wrong runtime closure"
+        )
+    sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*.c"))
+    )
+    if (
+        "hxc_bytes_ref_get_string_utf8" not in sources
+        or "hxc_string_release" not in sources
+        or "goto " in sources
+        or str(ROOT) in sources
+    ):
+        raise BytesRuntimeFailure(
+            "returned Bytes snapshot lost structural managed-String C emission"
+        )
+
+
 def validate_mutable_buffer_project(output: Path, hxcir: str) -> None:
     """Prove the semantic borrow is visible and has one native consumer."""
     main = hxcir_function(hxcir, "function.Main.main")
@@ -519,6 +604,31 @@ def render_generated_projects(root: Path) -> dict[str, Path]:
             )
         validate_generated_project(normal, extract_hxcir(first))
         projects[layout] = normal
+    # The existing broad fixture already proves both split and unity project
+    # layouts. This focused ownership regression needs only split output: one
+    # normal and one reversed discovery compile prove deterministic helper/call
+    # signatures without adding two redundant full compiler executions.
+    normal = root / "return-string-split-normal"
+    reverse = root / "return-string-split-reverse"
+    first = compile_haxe(RETURN_STRING, normal, layout="split", report=True)
+    second = compile_haxe(
+        RETURN_STRING, reverse, layout="split", reverse=True
+    )
+    for label, result in (
+        ("return-string-split-normal", first),
+        ("return-string-split-reverse", second),
+    ):
+        if result.returncode != 0:
+            raise BytesRuntimeFailure(
+                f"{label} compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise BytesRuntimeFailure(
+            "returned Bytes String split project changed under reversed discovery"
+        )
+    validate_return_string_project(normal, extract_hxcir(first))
+    projects["return-string-split"] = normal
     return projects
 
 
@@ -805,8 +915,10 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                     SANITIZER_FLAGS,
                     ("HXC_FREESTANDING=1",),
                 )
-                if projects:
-                    generated = projects["split"]
+                for project_name in ("split", "return-string-split"):
+                    if project_name not in projects:
+                        continue
+                    generated = projects[project_name]
                     generated_sources = sorted(
                         (generated / "runtime/src").glob("*.c")
                     ) + sorted((generated / "src").rglob("*.c"))
@@ -814,7 +926,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         toolchain.compiler,
                         generated_sources,
                         [generated / "include", generated / "runtime/include"],
-                        build / "bytes-generated-sanitized",
+                        build / f"bytes-generated-{project_name}-sanitized",
                         SANITIZER_FLAGS,
                     )
                 if mutable_buffer is not None:

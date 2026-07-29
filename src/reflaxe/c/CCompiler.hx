@@ -419,13 +419,12 @@ class CCompiler {
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
-		if (hasRuntimeFeature(runtimeRequirements, "string-literal")
-			|| hasRuntimeFeature(runtimeRequirements, "string-scalar")
-			|| hasRuntimeFeature(runtimeRequirements, "string-split")
-			|| hasRuntimeFeature(runtimeRequirements, "array-join")
-			|| hasRuntimeFeature(runtimeRequirements, "io")
-			|| hasRuntimeFeature(runtimeRequirements, "string-map")
-			|| hasRuntimeFeature(runtimeRequirements, "bytes")) {
+		// This decision describes compiler-owned static UTF-8 bytes, not every
+		// runtime value that happens to use the hxc_string carrier. Bytes decoding
+		// can create a fully managed String in a program with no String literal at
+		// all, so deriving this from the exact literal feature keeps the compiler
+		// plan aligned with the independently validated dependency closure.
+		if (hasRuntimeFeature(runtimeRequirements, "string-literal")) {
 			directDecisions.push("direct-utf8-string-literals");
 		}
 		if (hasRuntimeFeature(runtimeRequirements, "array")
@@ -438,9 +437,14 @@ class CCompiler {
 			directDecisions.push("managed-haxe-int-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
 			directDecisions.push("managed-haxe-bytes");
+		// These root features all select `string-scalar` through the catalog's
+		// dependency graph. Keep the direct evidence projection in sync with that
+		// closure until runtime planning owns this derivation in one place.
 		if (hasRuntimeFeature(runtimeRequirements, "string-scalar")
+			|| hasRuntimeFeature(runtimeRequirements, "string")
 			|| hasRuntimeFeature(runtimeRequirements, "string-split")
-			|| hasRuntimeFeature(runtimeRequirements, "array-join"))
+			|| hasRuntimeFeature(runtimeRequirements, "array-join")
+			|| hasRuntimeFeature(runtimeRequirements, "bytes-string"))
 			directDecisions.push("allocation-free-unicode-scalar-strings");
 		if (hasRuntimeFeature(runtimeRequirements, "gc"))
 			directDecisions.push("exact-traced-haxe-object-graph");

@@ -473,6 +473,15 @@ exists, then validates that the complete range is well-formed UTF-8, and
 finally copies it into a separately owned immutable Haxe `String`. Mutating or
 releasing the original `Bytes` value cannot change the returned text.
 
+When a helper returns that decoded String, haxe.c selects the managed String
+return convention before it lowers either the helper or its callers. The helper
+moves the new owner across the call; the caller becomes responsible for its
+eventual release. The `bytes-string` root also selects the scalar String
+dependency used to validate and describe that immutable text, while the plan's
+`directDecisions` still distinguishes compiler-owned literal bytes from a
+runtime-created String. Project emission compares those two independently
+derived views and reports both lists if they disagree.
+
 Keeping this work outside the basic `bytes` feature matters for binary-only
 programs: storing images, packets, or world data does not pull in String
 allocation and UTF-8 decoding merely because it uses `Bytes`. Explicit

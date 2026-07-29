@@ -784,7 +784,8 @@ class CProjectEmitter {
 			expectedDirectDecisions.push("exact-traced-haxe-object-graph");
 		expectedDirectDecisions.sort(compareUtf8);
 		if (runtimePlan.directDecisions.join("\n") != expectedDirectDecisions.join("\n")) {
-			fail("direct executable runtime analysis differs from compiler-owned direct and program-local decisions");
+			fail("direct executable runtime analysis differs from compiler-owned direct and program-local decisions: "
+				+ 'expected=[${expectedDirectDecisions.join(", ")}], actual=[${runtimePlan.directDecisions.join(", ")}]');
 		}
 	}
 

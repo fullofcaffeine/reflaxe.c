@@ -1414,12 +1414,14 @@ class CBodyLowering {
 			if (found)
 				return;
 			final creates = switch expression.expr {
-				case TCall(callee, arguments): isStringFromCharCode(callee) || isArrayJoinCall(callee) || (arguments.length == 1
-						&& isStdStringCall(callee)
-						&& switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
-							case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
-							case _: false;
-						});
+				case TCall(callee, arguments):
+					isStringFromCharCode(callee)
+					|| isArrayJoinCall(callee)
+					|| isBytesStringCall(callee)
+					|| (arguments.length == 1 && isStdStringCall(callee) && switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
+						case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
+						case _: false;
+					});
 				case TBinop(OpAdd, _, _) | TBinop(OpAssignOp(OpAdd), _, _):
 					CBodyAggregateRegistry.staticStringIdentity(expression.t) != null;
 				case _: false;
@@ -1441,6 +1443,31 @@ class CBodyLowering {
 					.name == "join";
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				isArrayJoinCall(inner);
+			case _:
+				false;
+		};
+	}
+
+	/**
+	 * Recognize the two pinned `haxe.io.Bytes` operations that create Strings.
+	 *
+	 * Both methods validate and copy mutable byte storage into a fresh immutable
+	 * String owner. Discovering that ownership before function signatures are
+	 * prepared ensures a helper returning the result uses the managed String ABI
+	 * at both the producer and every caller.
+	 */
+	static function isBytesStringCall(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FInstance(reference, _, field)):
+				final owner = reference.get();
+				final name = field.get().name;
+				owner.pack.length == 2
+				&& owner.pack[0] == "haxe"
+				&& owner.pack[1] == "io"
+				&& owner.name == "Bytes"
+				&& (name == "getString" || name == "toString");
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isBytesStringCall(inner);
 			case _:
 				false;
 		};

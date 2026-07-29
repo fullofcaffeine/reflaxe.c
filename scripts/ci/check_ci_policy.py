@@ -148,6 +148,7 @@ REQUIRED_GATE_FILES = (
     "test/differential/bytes-runtime/case.json",
     "test/differential/bytes-runtime/generated/Main.hx",
     "test/differential/bytes-runtime/generated/oracle.hxml",
+    "test/differential/bytes-runtime/return_string/Main.hx",
     "test/differential/bytes-runtime/run.py",
     "test/differential/string-runtime/StringRuntimeOracle.hx",
     "test/differential/string-runtime/case.json",

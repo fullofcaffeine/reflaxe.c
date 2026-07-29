@@ -160,6 +160,17 @@ String owner into the caller's normal HxcIR cleanup plan. A malformed range
 therefore cannot become plausible text, and a successful result remains valid
 after the source Bytes owner changes or is released.
 
+That ownership also crosses an ordinary Haxe function boundary. For example,
+`function snapshot(bytes:Bytes):String return bytes.toString()` returns a new
+immutable String owner rather than a pointer into the function's temporary
+storage. Before haxe.c fixes function signatures, it scans reachable bodies for
+the exact Bytes decoding operations. The helper and its callers therefore
+agree on the managed String return convention from the start: the helper moves
+the fresh owner out, the caller receives it into a cleanup-capable local, and
+the caller releases it after its last use. This early decision matters because
+C cannot safely change a function's return representation after call sites
+have already been lowered.
+
 Fresh Bytes results are admitted at compiler-known direct, indirect, instance,
 constructor, super-constructor, and supported Bytes-operation borrow
 boundaries. Unknown calls and APIs still fail closed rather than guessing
@@ -188,10 +199,11 @@ a workaround for a missing compiler feature.
 
 The runner also checks reversed typed-module discovery independently for split
 and unity projects, HxcIR ownership markers for borrowed and fresh String
-sources and fresh decoded String results, valid ASCII and multibyte UTF-8
+sources and fresh decoded String results, including helper returns whose caller
+mutates the source Bytes afterward. It checks valid ASCII and multibyte UTF-8
 snapshots, malformed UTF-8 and range failures, the exact runtime feature
 closure, strict C11 execution at `-O0` and `-O2`, C++17 header consumption,
 AddressSanitizer and UndefinedBehaviorSanitizer on both the direct runtime
-contract and generated split project where Clang is available, selective linked
-symbols, forced allocation rollback, negative diagnostics, and
+contract and generated split projects where Clang is available, selective
+linked symbols, forced allocation rollback, negative diagnostics, and
 `hxc_runtime=none` rejection.

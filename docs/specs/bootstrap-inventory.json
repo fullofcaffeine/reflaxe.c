@@ -986,7 +986,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage, checked UTF-8 text snapshots, and compiler-owned lifetimes.",
-      "scope": "Bytes.alloc, Bytes.ofString from literal, borrowed, or freshly created admitted immutable String expressions, UTF-8 Bytes.getString and Bytes.toString, length, get, set, sub, blit, fill, compare, owned returns, fresh results borrowed by compiler-known calls and Bytes operations, and private tagged-enum payload ownership lower through validated HxcIR into the exact dependency closure required by each source operation. Strict C11 and Eval evidence cover fresh concatenation and Array<String>.join sources, non-ASCII and embedded-NUL binary copies, independent UTF-8 String snapshots, malformed-text and range failure, byte masking, copy independence, overlap, allocation rollback, left-to-right nested calls, early-return and reverse temporary cleanup, shared mutation through an enum projection, active-tag retain/destroy behavior, deterministic output, and cleanup.",
+      "scope": "Bytes.alloc, Bytes.ofString from literal, borrowed, or freshly created admitted immutable String expressions, UTF-8 Bytes.getString and Bytes.toString, length, get, set, sub, blit, fill, compare, owned returns, fresh results borrowed by compiler-known calls and Bytes operations, and private tagged-enum payload ownership lower through validated HxcIR into the exact dependency closure required by each source operation. A helper may return a fresh String decoded from Bytes: producer and caller use the same managed return convention, and caller cleanup owns the independent snapshot. Strict C11 and Eval evidence cover fresh concatenation and Array<String>.join sources, non-ASCII and embedded-NUL binary copies, independent UTF-8 String snapshots across a helper boundary, source mutation after the return, malformed-text and range failure, byte masking, copy independence, overlap, allocation rollback, left-to-right nested calls, early-return and reverse temporary cleanup, shared mutation through an enum projection, active-tag retain/destroy behavior, deterministic output, and cleanup.",
       "evidence": [
         "docs/bytes-runtime.md",
         "docs/enum-lowering.md",
@@ -999,6 +999,7 @@
         "test/differential/bytes-runtime/bytes_runtime.c",
         "test/differential/bytes-runtime/case.json",
         "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/return_string/Main.hx",
         "test/differential/bytes-runtime/run.py",
         "test/enum_lowering/fixtures/bytes_payload/Main.hx",
         "test/enum_lowering/run.py"
