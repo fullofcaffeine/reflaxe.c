@@ -2631,6 +2631,8 @@ class CBodyEmitter {
 				{type: new CType(TStruct(new CIdentifier("hxc_bytes_ref"))), declarator: DPointer(inner, [])};
 			case IRTCString:
 				{type: new CType(TChar(null), [QConst]), declarator: DPointer(inner, [])};
+			case IRTMutableCStringBuffer:
+				{type: new CType(TChar(null)), declarator: DPointer(inner, [])};
 			case IRTSpan(element, mutable):
 				final nested:CTypedDeclarator = {
 					type: mutable ? cType(element) : constType(element),
@@ -4804,7 +4806,7 @@ class CBodyEmitter {
 				for (parameter in parameters)
 					addTypeHeaders(headers, parameter, visited);
 				addTypeHeaders(headers, result, visited);
-			case IRTVoid | IRTFloat(32) | IRTFloat(64):
+			case IRTVoid | IRTFloat(32) | IRTFloat(64) | IRTMutableCStringBuffer:
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` has no admitted strict-C direct-value header mapping');
 		}
@@ -5822,6 +5824,8 @@ class CBodyEmitter {
 				runtimeName = CBRNBytesFill;
 			case "compare":
 				runtimeName = CBRNBytesCompare;
+			case "borrow-mutable-cstring":
+				runtimeName = CBRNBytesBorrowMutableCString;
 			case _:
 				return fail('managed Bytes call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
 		}
@@ -5846,7 +5850,7 @@ class CBodyEmitter {
 			alignments: [],
 			type: declaration.type,
 			declarator: declaration.declarator,
-			initializer: ownsBytes ? IExpr(ENull) : null,
+			initializer: ownsBytes || result.type == IRTMutableCStringBuffer ? IExpr(ENull) : null,
 			attributes: []
 		}));
 		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
@@ -6569,6 +6573,7 @@ class CBodyEmitter {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(_, nullable): 'pointer:${nullable ? "nullable" : "non-null"}';
@@ -6590,6 +6595,7 @@ class CBodyEmitter {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring";
+			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "non-null"}<${exactTypeKey(pointee)}>';

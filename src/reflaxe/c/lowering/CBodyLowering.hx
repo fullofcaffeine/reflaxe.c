@@ -3152,6 +3152,7 @@ private class FunctionPreparer {
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8-static-view";
 			case IRTManagedString: "string-utf8-managed-view";
+			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${valueTypeKey(element)}>';
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
@@ -3860,8 +3861,11 @@ private class FunctionBuilder {
 				} else {
 					mayDiscoverSharedBodyType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
 				}
-			case TInst(reference, _): final value = reference.get(); value.meta.has(":c.layout") || (value.pack.join(".") == "haxe.ds"
-					&& (value.name == "IntMap" || value.name == "StringMap"));
+			case TInst(reference, _): final value = reference.get(); final packageName = value.pack.join("."); value.meta.has(":c.layout") || (packageName == "haxe.ds"
+					&& (value.name == "IntMap" || value.name == "StringMap")) // A local may be the program's first and only Bytes owner. Register
+				// that managed representation during the output-inert prepass so
+				// authoritative lowering cannot change the settled replay plan.
+				|| (packageName == "haxe.io" && value.name == "Bytes");
 			case TEnum(_, _):
 				false;
 			case _:
@@ -6749,7 +6753,7 @@ private class FunctionBuilder {
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
 					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
 						CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
-						CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
+						CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -9953,6 +9957,8 @@ private class FunctionBuilder {
 		}
 		if (isAbstractMethod(call.callee, "c.Ref", "to"))
 			return unsupported(expression, "TCall(c.Ref.to:requires-direct-import-argument)");
+		if (isAbstractMethod(call.callee, "c.CStringBufferRef", "to"))
+			return unsupported(expression, "TCall(c.CStringBufferRef.to:requires-direct-import-argument)");
 		final bytesStaticMethod = coreBytesStaticMethod(call.callee);
 		if (bytesStaticMethod != null)
 			return lowerManagedBytesStaticCall(expression, bytesStaticMethod, call.arguments);
@@ -10317,6 +10323,7 @@ private class FunctionBuilder {
 			final expected = target.parameters[index];
 			final value = switch expected.kind {
 				case CBVKNativeRef(pointee): lowerNativeRefArgument(argument, expected, pointee, target, index);
+				case CBVKCStringBufferRef: lowerCStringBufferRefArgument(argument, expected, target, index);
 				case _: expected.isCString() ? lowerBorrowedCString(argument, target,
 						index) : coerce(lowerValue(argument, expected), expected, argument.pos, 'native-call:${target.id}:argument:$index');
 			};
@@ -10378,6 +10385,61 @@ private class FunctionBuilder {
 		appendInstruction(result, IRIOAddress(place.place), sourceSpan(expression.pos), "native-call-ref");
 		registerValueTemporary(result.id, "native-call-ref");
 		return {id: result.id, type: result.type, mapping: expected};
+	}
+
+	/**
+		Borrow one managed Bytes allocation as mutable C text for this native call.
+
+		The intrinsic is consumed here, beside its one permitted use. HxcIR keeps a
+		distinct temporary between the checked hxrt borrow and the direct import, so
+		validation can reject storage, returns, indirect calls, or a second native
+		consumer before C syntax is selected. The Bytes value remains the owner and
+		its cleanup still runs after the imported call.
+	**/
+	function lowerCStringBufferRefArgument(expression:TypedExpr, expected:CBodyValueType, target:CPreparedImportFunction, argumentIndex:Int):LoweredValue {
+		final ownerExpression = switch unwrapExpression(expression).expr {
+			case TCall(callee, [value]) if (isAbstractMethod(callee, "c.CStringBufferRef", "to")): value;
+			case TCall(callee, arguments) if (isAbstractMethod(callee, "c.CStringBufferRef", "to")):
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires c.CStringBufferRef.to with exactly one Bytes owner.');
+			case _:
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires an explicit c.CStringBufferRef.to(bytes) call.');
+		};
+		if (!isNamedCStringBufferOwner(ownerExpression))
+			return invalidAbi(ownerExpression,
+				'Imported C function `${target.haxePath}` argument $argumentIndex can only borrow an existing Bytes local or field; a temporary owner cannot be inspected after the C call.');
+		final ownerMapping = bodyValueType(ownerExpression.t, ownerExpression.pos, "TCall(c.CStringBufferRef.to:owner-type)");
+		if (ownerMapping.bytesValue() == null)
+			return invalidAbi(ownerExpression, 'Imported C function `${target.haxePath}` argument $argumentIndex requires a haxe.io.Bytes owner.');
+		final owner = coerce(lowerValue(ownerExpression, ownerMapping), ownerMapping, ownerExpression.pos, "TCall(c.CStringBufferRef.to:owner)");
+		final source = sourceSpan(expression.pos);
+		final result:HxcIRResult = {id: nextValueId(), type: expected.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("bytes", "borrow-mutable-cstring"),
+			arguments: [owner.id],
+			returnType: expected.irType,
+			failure: managedBytesFailure()
+		}), source, "bytes-borrow-mutable-cstring");
+		registerValueTemporary(result.id, "bytes-borrow-mutable-cstring-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "borrow-mutable-cstring",
+			"call-scoped mutable C text borrowed from an ordinary haxe.io.Bytes owner", source, expression.pos));
+		return {id: result.id, type: result.type, mapping: expected};
+	}
+
+	/**
+		Require a source name that remains useful after native mutation.
+
+		A local or field has a durable Haxe owner whose bytes the caller can read
+		after C returns. Rejecting a fresh constructor here also produces a focused
+		diagnostic instead of accepting a mutation that the Haxe program immediately
+		throws away.
+	**/
+	static function isNamedCStringBufferOwner(expression:TypedExpr):Bool {
+		return switch unwrapExpression(expression).expr {
+			case TLocal(_) | TField(_, _): true;
+			case _: false;
+		};
 	}
 
 	/**
@@ -12819,7 +12881,7 @@ private class FunctionBuilder {
 				profileCallableOptionalTypeClassifications++;
 				profileCallableOptionalTypeCpuSeconds += cpuSeconds;
 			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
-				CBVKClosureContext:
+				CBVKCStringBufferRef | CBVKClosureContext:
 				profileOtherTypeClassifications++;
 				profileOtherTypeCpuSeconds += cpuSeconds;
 		}
@@ -12992,6 +13054,7 @@ private class FunctionBuilder {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';

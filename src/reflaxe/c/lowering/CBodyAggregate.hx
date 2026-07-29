@@ -128,6 +128,15 @@ enum CBodyValueKind {
 	**/
 	CBVKNativeRef(pointee:CBodyValueType);
 
+	/**
+		Mutable NUL-terminated bytes borrowed from one managed `haxe.io.Bytes`.
+
+		Unlike `CBVKNativeRef`, this does not take the address of a scalar place.
+		Lowering asks hxrt for the backing byte address, then HxcIR permits that
+		address only as one direct imported `char *` argument.
+	**/
+	CBVKCStringBufferRef;
+
 	/** The opaque `void *` passed from a closure carrier to its typed adapter. */
 	CBVKClosureContext;
 
@@ -210,6 +219,9 @@ class CBodyValueType {
 			case CBVKNativeRef(pointee):
 				this.irType = IRTPointer(pointee.irType, false);
 				this.cSpelling = 'native-call-ref<${pointee.cSpelling}>';
+			case CBVKCStringBufferRef:
+				this.irType = IRTMutableCStringBuffer;
+				this.cSpelling = "native-call-mutable-cstring-buffer";
 			case CBVKClosureContext:
 				this.irType = IRTPointer(IRTVoid, true);
 				this.cSpelling = "stack-closure-context:void-pointer";
@@ -281,6 +293,9 @@ class CBodyValueType {
 	public static function nativeRef(pointee:CBodyValueType):CBodyValueType
 		return new CBodyValueType(CBVKNativeRef(pointee));
 
+	public static function cStringBufferRef():CBodyValueType
+		return new CBodyValueType(CBVKCStringBufferRef);
+
 	public static function closureContext():CBodyValueType
 		return new CBodyValueType(CBVKClosureContext);
 
@@ -292,7 +307,8 @@ class CBodyValueType {
 			case CBVKPrimitive(mapping): mapping;
 			case CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
 				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
-				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext |
+				CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -328,6 +344,9 @@ class CBodyValueType {
 	public function isCString():Bool
 		return kind == CBVKCString;
 
+	public function isCStringBufferRef():Bool
+		return kind == CBVKCStringBufferRef;
+
 	public function importedValue():Null<CPreparedImportType> {
 		return switch kind {
 			case CBVKImport(value): value;
@@ -346,7 +365,7 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKOwnedClass(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
-				CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -356,7 +375,8 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) |
-				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKOptional(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext |
+				CBVKStackClosure(_, _, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
@@ -365,7 +385,8 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKFunction(_,
+					_) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
 		};
 	}
@@ -440,7 +461,8 @@ class CBodyValueType {
 			case CBVKClass(_, nullable): nullable;
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
 				CBVKAggregate(_) | CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
-				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
+				CBVKFunction(_,
+					_) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _): null;
 		};
 	}
 
@@ -709,6 +731,9 @@ class CBodyAggregateRegistry {
 		final nativeRef = nativeRefValueType(type, position, fail, node);
 		if (nativeRef != null)
 			return nativeRef;
+		final cStringBufferRef = cStringBufferRefValueType(type);
+		if (cStringBufferRef != null)
+			return cStringBufferRef;
 		final directPrimitive = directPrimitiveValueType(type);
 		if (directPrimitive != null)
 			return directPrimitive;
@@ -954,6 +979,16 @@ class CBodyAggregateRegistry {
 				if (pointee == null || pointee.irType == IRTVoid)
 					rejected(fail, position, '$node:c.Ref-pointee-requires-direct-non-Void-scalar');
 				CBodyValueType.nativeRef(pointee);
+			case _: null;
+		};
+	}
+
+	/** Recognize the one call-scoped mutable `char *` carrier. */
+	static function cStringBufferRefValueType(type:Type):Null<CBodyValueType> {
+		return switch type {
+			case TAbstract(reference, parameters)
+				if (parameters.length == 0 && reference.get().pack.join(".") == "c" && reference.get().name == "CStringBufferRef"):
+				CBodyValueType.cStringBufferRef();
 			case _: null;
 		};
 	}

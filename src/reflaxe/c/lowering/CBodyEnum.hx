@@ -533,6 +533,8 @@ class CBodyEnumRegistry {
 				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
 			case CBVKCString:
 				rejected(fail, position, '$node:borrowed-c-string-payload-escape');
+			case CBVKCStringBufferRef:
+				rejected(fail, position, '$node:call-scoped-mutable-c-string-buffer-escape');
 			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKOptional(_) |
 				CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKClosureContext | CBVKStackClosure(_, _, _):
 				rejectDirectReference(sourceType, position, fail, node);

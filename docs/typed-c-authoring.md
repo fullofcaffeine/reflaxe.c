@@ -37,9 +37,13 @@ closed Haxe record may contain one of those already admitted by-value structs;
 the imported header still owns its layout, and the containing generated record
 remains a private Haxe implementation detail. A direct imported call may also
 receive `c.Ref.to(localOrField)` for one mutable scalar out-parameter whose C
-callee uses the address only until that call returns. Other `c.*` operations
-remain fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority
-markers until their owning safety and inspection work is complete.
+callee uses the address only until that call returns. A runtime-backed call may
+similarly use `c.CStringBufferRef.to(bytes)` to lend one managed byte allocation
+as mutable text to exactly one direct imported call; unlike `c.Ref`, that
+carrier selects the narrow Bytes runtime and never exposes a general pointer.
+Other `c.*` operations remain fail-closed. `c.Syntax` and `c.Unsafe` are
+deliberately empty authority markers until their owning safety and inspection
+work is complete.
 
 Profile-aware validation now rejects `@:c.pack(...)` on a
 `@:c.layout(c.Layout.Struct|Union)` declaration in `metal` with `HXC5002`.
@@ -207,6 +211,42 @@ callee's call-only lifetime explicitly: Clang can prove that a header says
 `bool *`, but C type spelling alone cannot prove that the library does not keep
 the pointer.
 
+### Call-scoped mutable text buffers
+
+C text editors such as Raygui's text box receive a mutable `char *` plus a byte
+capacity. The C function edits storage supplied by its caller and promises not
+to retain the pointer. Haxe keeps that storage under an ordinary `Bytes` owner:
+
+```haxe
+extern class NativeText {
+	public static function edit(text:c.CStringBufferRef, capacity:Int):Bool;
+}
+
+final text = haxe.io.Bytes.alloc(64);
+// Initialize valid UTF-8 and leave a NUL byte inside the allocation.
+NativeText.edit(c.CStringBufferRef.to(text), text.length);
+```
+
+`CStringBufferRef.to(text)` is a compiler intrinsic: it describes a lowering
+operation and creates no Haxe wrapper at run time. haxe.c emits a checked hxrt
+call that validates the live, non-empty `Bytes` owner and finds a NUL byte
+inside its bounds. HxcIR then permits that `char *` result as exactly one
+argument to the direct imported C call. It cannot become a local field, return
+value, control-flow argument, indirect-call receiver, or second call argument.
+The owner and its normal cleanup remain unchanged, so Haxe reads the native
+mutation through the same `Bytes` value after the call.
+
+This low-level carrier proves storage and call lifetime; it cannot infer an
+arbitrary C API's capacity convention. The typed library wrapper must reserve
+space for the final NUL, pass the allocation's exact byte length, preserve
+valid UTF-8, and document that the native function does not retain the pointer.
+Passing a larger capacity than the real allocation is an unsafe wrapper bug.
+A binding generator must therefore record the pointer/capacity relationship
+from the reviewed API contract instead of treating any neighboring integer as
+proof. The focused Bytes fixture uses an independent C implementation that
+checks this relationship and runs under strict C11, C++17 header consumption,
+AddressSanitizer, and UndefinedBehaviorSanitizer.
+
 ### Exact C `float` values
 
 Haxe `Float` deliberately remains binary64 `double`, so a foreign C `float`
@@ -297,7 +337,7 @@ escape hatch.
 | Exact C binary32 value | `c.Float32`, with explicit `fromFloat`/`toFloat` | Haxe `Float` remains binary64; a lossy foreign narrowing must be visible and target-qualified. |
 | Integer value conversion | `c.IntConvert.exact(value)`, `c.IntConvert.modulo(value)` | Conversion intent stays distinct from an unchecked type assertion; the inferred target is admitted only when the compiler proves the named direct semantics. |
 | Pointers and qualifiers | `c.Ptr<T>`, `ConstPtr<T>`, `NullablePtr<T>`, `Ref<T>`, `ConstRef<T>`, `RestrictPtr<T>`, `VolatilePtr<T>` | Nullability, borrow shape, mutability, and aliasing obligations stay visible in types. |
-| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. The admitted fixed-array slice preserves `N` for direct nonempty literals and bounded compiler-known `CArray.zero` storage, then lowers local span views without runtime objects; broader forms remain reserved. |
+| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `CStringBufferRef`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. The admitted fixed-array slice preserves `N` for direct nonempty literals and bounded compiler-known `CArray.zero` storage, then lowers local span views without runtime objects. `CStringBufferRef.to(bytes)` is the separate runtime-backed one-call mutable-text borrow described above; broader forms remain reserved. |
 | Ownership and allocation | `c.Owned<T>`, `Borrowed<T>`, `Allocator`, `Arena`, `Result<T, E>` | Ownership and failure cannot disappear behind a convenient call. |
 | Struct, union, enum, or opaque intent | ordinary declaration plus `@:c.layout(c.Layout.*)` | Layout is a declaration fact that Haxe syntax alone cannot state. |
 | Header group and stable native name | `@:c.header("path.h", c.Header.Public\|Private)` and `@:c.name("symbol")` | The compiler can derive guards, forward declarations, dependencies, and ordering. |

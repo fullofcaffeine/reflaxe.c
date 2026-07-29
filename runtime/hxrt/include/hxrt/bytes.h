@@ -110,6 +110,18 @@ HXC_API hxc_status hxc_bytes_ref_compare(
   int32_t *out_order
 );
 
+/**
+ * Lend the backing storage as mutable C text for one synchronous foreign call.
+ *
+ * The Bytes value remains the owner. The borrow succeeds only for non-empty
+ * storage that already contains a NUL terminator, so a C string consumer cannot
+ * read beyond the allocation while searching for its end.
+ */
+HXC_API hxc_status hxc_bytes_ref_borrow_mutable_cstring(
+  hxc_bytes_ref *bytes,
+  char **out_text
+);
+
 #if defined(__cplusplus)
 } /* extern "C" */
 #endif

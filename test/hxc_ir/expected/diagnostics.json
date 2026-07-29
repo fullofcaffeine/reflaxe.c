@@ -26,6 +26,9 @@
   "uncheckedClassDereference": [
     "HXC9000 error [profile=portable] test/negative/UncheckedClassDereference.hx:3:1-3:2 [module:invalid.UncheckedClassDereference.function:invalid.UncheckedClassDereference.main.block:entry.instruction:0:bad.load.place.base] Invalid HxcIR: nullable pointer `value.object` requires a preceding dominating null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "mutableCStringBufferStorage": [
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:4:1-4:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.local:local.mutable-buffer.type] Invalid HxcIR: local storage cannot own a call-scoped mutable C-string buffer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "managedStringCarrierLifecycleMismatch": [
     "HXC9000 error [profile=portable] test/negative/ManagedStringCarrierLifecycleMismatch.hx:2:1-2:2 [module:invalid.ManagedStringCarrierLifecycleMismatch.function:fn.invalid.managed-string-carrier.block:entry.instruction:0:managed.declare] Invalid HxcIR: managed String carrier destroy requires the string runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -224,6 +227,14 @@
   "initializerTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/InitializerTypeMismatch.hx:3:1-3:2 [module:invalid.InitializerTypeMismatch.function:invalid.InitializerTypeMismatch.main.block:entry.instruction:1:bad.initialize] Invalid HxcIR: initializer value type does not match its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "mutableCStringBufferIndirectUse": [
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:2:1-2:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.mutableCStringBuffer:value.mutable-buffer] Invalid HxcIR: call-scoped mutable C-string buffer requires exactly one direct native consumer; found 0 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:3:1-3:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.block:entry.instruction:1:escape.indirect] Invalid HxcIR: closure call value `value.mutable-buffer` does not have a callable representation Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:3:1-3:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.mutableCStringBuffer:value.mutable-buffer] Invalid HxcIR: call-scoped mutable C-string buffer cannot be a dispatch receiver or callable Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "mutableCStringBufferDoubleUse": [
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:2:1-2:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.mutableCStringBuffer:value.mutable-buffer] Invalid HxcIR: call-scoped mutable C-string buffer requires exactly one direct native consumer; found 2 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "stringByteLengthMismatch": [
     "HXC9000 error [profile=portable] test/negative/StringByteLengthMismatch.hx:2:1-2:2 [module:invalid.StringByteLengthMismatch.function:invalid.StringByteLengthMismatch.main.block:entry.instruction:0:bad.string.constant] Invalid HxcIR: string constant records UTF-8 byte length 3 but encodes to 6 byte(s) Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -262,6 +273,11 @@
   ],
   "borrowedClassStore": [
     "HXC9000 error [profile=portable] test/negative/BorrowedClassStore.hx:3:1-3:2 [module:invalid.BorrowedClassStore.function:invalid.BorrowedClassStore.main.block:entry.instruction:0:bad.store] Invalid HxcIR: borrowed reference value `value.borrowed` escapes through an initializer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "mutableCStringBufferReturn": [
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:1:1-8:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.returnType] Invalid HxcIR: a function cannot return a call-scoped mutable C-string buffer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:2:1-2:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.mutableCStringBuffer:value.mutable-buffer] Invalid HxcIR: call-scoped mutable C-string buffer requires exactly one direct native consumer; found 0 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/MutableCStringBuffer.hx:7:1-7:2 [module:fixture.MutableCStringBuffer.function:fixture.MutableCStringBuffer.main.mutableCStringBuffer:value.mutable-buffer] Invalid HxcIR: call-scoped mutable C-string buffer escapes through control flow or return Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "aggregateConstructionMismatch": [
     "HXC9000 error [profile=portable] test/negative/AggregateConstructionMismatch.hx:4:1-4:2 [module:invalid.AggregateConstructionMismatch.function:invalid.AggregateConstructionMismatch.main.block:entry.instruction:2:bad.construct] Invalid HxcIR: aggregate construction fields must follow declaration order Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",

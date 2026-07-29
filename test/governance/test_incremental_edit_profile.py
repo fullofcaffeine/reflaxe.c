@@ -23,7 +23,7 @@ from profile_incremental_edit import (  # noqa: E402
 )
 
 
-SAMPLE = """hxcir schema=20
+SAMPLE = """hxcir schema=21
 dispatch
 end dispatch
 module "alpha.Main" @"alpha/Main.hx":1:1-3:1
@@ -71,7 +71,7 @@ class IncrementalEditProfileTest(unittest.TestCase):
         modules, skeleton = hxcir_module_sections(SAMPLE)
         self.assertEqual(set(modules), {"alpha.Main", "beta.Main"})
         self.assertEqual(
-            skeleton, "hxcir schema=20\ndispatch\nend dispatch\n"
+            skeleton, "hxcir schema=21\ndispatch\nend dispatch\n"
         )
 
     def test_unclosed_section_fails_closed(self) -> None:

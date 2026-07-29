@@ -91,6 +91,15 @@ enum HxcIRTypeRef {
 	/** Borrowed NUL-terminated bytes backed by stable C string-literal storage. */
 	IRTCString;
 
+	/**
+		A mutable `char *` borrowed from one live managed Bytes owner.
+
+		This is not a general pointer. Its only legal producer is the checked
+		`bytes/borrow-mutable-cstring` runtime operation, and its only legal use is
+		one direct imported-C call argument in the same basic block.
+	**/
+	IRTMutableCStringBuffer;
+
 	IRTVoid;
 	IRTInstance(instanceId:String);
 	IRTPointer(pointee:HxcIRTypeRef, nullable:Bool);
@@ -643,7 +652,7 @@ typedef HxcIRFunction = {
 		How this function may lend a read-only span across its return boundary.
 
 		The optional field preserves compatibility with older hand-built HxcIR
-		fixtures. Compiler-produced schema-20 functions always supply either the
+		fixtures. Compiler-produced schema-21 functions always supply either the
 		closed receiver-field contract or `null`.
 	**/
 	final ?borrowedSpanReturn:HxcIRBorrowedSpanReturn;

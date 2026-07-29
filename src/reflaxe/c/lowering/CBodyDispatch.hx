@@ -1194,6 +1194,7 @@ class CBodyDispatchPreparer {
 			case IRTString: "string";
 			case IRTManagedString: "managed-string";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}:${typeKey(pointee)}';

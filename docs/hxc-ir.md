@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 20
+the structural C AST. Its schema is internal to the compiler: schema version 21
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
 
@@ -162,6 +162,15 @@ calls, and public/native boundaries remain illegal. C emission returns
 `const T *` and writes the exact element count through a compiler-private
 `size_t *` out-parameter. The receiver still owns the storage, so this adds no
 copy, allocation, wrapper object, garbage-collector root, or public ABI.
+Schema version 21 adds a mutable C-string buffer that exists only between one
+checked Bytes runtime operation and one direct native call. The distinct
+`IRTMutableCStringBuffer` type is not a general pointer: it cannot appear in a
+function signature, local, field, aggregate, tagged payload, global, block
+edge, return, indirect call, or second native call. Whole-function validation
+checks its exact producer and consumer before CAST maps it to `char *`. The
+ordinary managed `Bytes` value remains the owner and keeps its existing cleanup
+plan; hxrt validates live, non-empty storage and an in-bounds NUL terminator
+before publishing the pointer.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by

@@ -104,6 +104,24 @@ slices. Operations that build a runtime String select their own narrow String
 dependencies; `Bytes.ofString` does not select a generic text runtime merely
 because it receives a String.
 
+One deliberately narrow interop operation can lend that private allocation to
+a synchronous C text function. `c.CStringBufferRef.to(bytes)` lowers to
+`hxc_bytes_ref_borrow_mutable_cstring`, which accepts only a live, non-empty
+Bytes value whose allocation already contains a NUL byte. It publishes a
+`char *` only after those checks pass. The pointer has no owner of its own:
+schema-21 HxcIR requires the checked borrow as its producer and exactly one
+direct native-call argument as its consumer, in the same basic block. Storage,
+return, forwarding, indirect calls, and a second consumer are validation
+errors before C emission.
+
+This check prevents an unbounded C string read, but it does not know how a
+particular library interprets a separate capacity integer. The typed wrapper
+still must pass the real allocation length, reserve the final NUL, and validate
+the edited bytes as UTF-8 where its user-facing API promises text. That
+division is intentional: hxrt owns memory validity, HxcIR owns the one-call
+lifetime, and the library binding owns its API-specific pointer/capacity
+relationship.
+
 `Bytes.ofString` accepts the length-delimited String view by value and copies
 its logical bytes immediately. It therefore preserves non-ASCII scalars, empty
 text, and embedded NUL without needing a C-string terminator. The resulting

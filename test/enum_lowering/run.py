@@ -470,10 +470,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         record.get("representation") == "tagged-union" for record in records
     )
     if (
-        not hxcir.startswith("hxcir schema=20\n")
+        not hxcir.startswith("hxcir schema=21\n")
         or hxcir.count(" representation=tagged ") != tagged_instance_count
     ):
-        raise EnumLoweringFailure("schema-20 tagged-union HxcIR inventory drifted")
+        raise EnumLoweringFailure("schema-21 tagged-union HxcIR inventory drifted")
     option_section = function_section(hxcir, "optionValue")
     option_single_case_section = function_section(hxcir, "optionHasPositiveValue")
     recursive_section = function_section(hxcir, "recursiveLocal")

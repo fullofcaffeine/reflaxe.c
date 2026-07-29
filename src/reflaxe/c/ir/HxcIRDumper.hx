@@ -337,6 +337,7 @@ class HxcIRDumper {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance(${quote(instanceId)})';
 			case IRTPointer(pointee, nullable): 'pointer(${nullable ? "nullable" : "nonnull"},${typeRef(pointee)})';

@@ -1,4 +1,4 @@
-hxcir schema=20
+hxcir schema=21
 module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-268:3
   type "type.closed-record.9cf5e05f308370a2c28b66c1e9376e2a3710243ce6b526391445c17c201ad93c" name="EnumFixture.StackClosure" kind=aggregate @"test/enum_lowering/fixtures/positive/EnumFixture.hx":108:3-108:28
     field "invoke" type=function(pointer(nullable,void),i32)->instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") mutable=false @"test/enum_lowering/fixtures/positive/EnumFixture.hx":108:3-108:28

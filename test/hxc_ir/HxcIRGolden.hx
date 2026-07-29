@@ -33,6 +33,7 @@ class HxcIRGolden {
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
 		validator.requireValid(borrowedSpanReturnProgram(false), PROFILE);
+		validator.requireValid(mutableCStringBufferProgram(1, false, false), PROFILE);
 		validator.requireValid(managedRootProgram(false), PROFILE);
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
@@ -86,6 +87,10 @@ class HxcIRGolden {
 				borrowedInterfaceStore: invalidDiagnostics(borrowedInterfaceStoreProgram()),
 				borrowedSpanLocalReturn: invalidDiagnostics(borrowedSpanReturnProgram(true)),
 				borrowedSpanCallerRetention: invalidDiagnostics(borrowedSpanCallerRetentionProgram()),
+				mutableCStringBufferDoubleUse: invalidDiagnostics(mutableCStringBufferProgram(2, false, false)),
+				mutableCStringBufferIndirectUse: invalidDiagnostics(mutableCStringBufferProgram(0, false, true)),
+				mutableCStringBufferReturn: invalidDiagnostics(mutableCStringBufferProgram(0, true, false)),
+				mutableCStringBufferStorage: invalidDiagnostics(mutableCStringBufferProgram(1, false, false, true)),
 				invalidManagedRoot: invalidDiagnostics(managedRootProgram(true)),
 				invalidManagedRootProjection: invalidDiagnostics(invalidManagedRootProjectionProgram()),
 				deferredInitializerMissingWrite: invalidDiagnostics(deferredInitializerMissingWriteProgram()),
@@ -589,7 +594,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-20 exact-root contract without involving C emission.
+		Exercise the schema-21 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -744,6 +749,12 @@ class HxcIRGolden {
 			arguments: [],
 			cleanup: []
 		};
+		final bytesBorrowFailure:HxcIRFailureEdge = {
+			kind: IRFNativeStatus,
+			target: IRFTAbort,
+			arguments: [],
+			cleanup: []
+		};
 		final resultFailure:HxcIRFailureEdge = {
 			kind: IRFResultError,
 			target: IRFTBlock("result-error"),
@@ -760,7 +771,8 @@ class HxcIRGolden {
 				parameter("value.argument", IRTInt(32, true), COVERAGE_SOURCE, 16),
 				parameter("value.float-input", IRTFloat(64), COVERAGE_SOURCE, 16),
 				parameter("value.size", IRTAbiInteger(IRAKSize), COVERAGE_SOURCE, 16),
-				parameter("value.nullable-reference", IRTNullable(IRTInstance("instance.object"), IRNPointer), COVERAGE_SOURCE, 16)
+				parameter("value.nullable-reference", IRTNullable(IRTInstance("instance.object"), IRNPointer), COVERAGE_SOURCE, 16),
+				parameter("value.bytes", IRTInstance("instance.managed-bytes"), COVERAGE_SOURCE, 16)
 			],
 			borrowedClassParameterIds: [],
 			borrowedInterfaceParameterIds: ["value.interface-parameter"],
@@ -855,6 +867,11 @@ class HxcIRGolden {
 							IRIOCall(call(IRCDClosure("value.callable"), ["value.argument"], IRTInt(32, true))), COVERAGE_SOURCE, 23),
 						instruction("c06.native", result("value.native", IRTInt(32, true)),
 							IRIOCall(call(IRCDNative("native.status"), ["value.argument"], IRTInt(32, true), nativeFailure)), COVERAGE_SOURCE, 24),
+						instruction("c06.mutable-buffer-borrow", result("value.mutable-buffer", IRTMutableCStringBuffer),
+							IRIOCall(call(IRCDRuntime("bytes", "borrow-mutable-cstring"), ["value.bytes"], IRTMutableCStringBuffer, bytesBorrowFailure)),
+							COVERAGE_SOURCE, 24),
+						instruction("c06.mutable-buffer-consume", null, IRIOCall(call(IRCDNative("native.mutable-text"), ["value.mutable-buffer"], IRTVoid)),
+							COVERAGE_SOURCE, 24),
 						instruction("c07.runtime", null, IRIOCall(call(IRCDRuntime("exception", "checkpoint"), [], IRTVoid)), COVERAGE_SOURCE, 25),
 						instruction("c08.intrinsic", result("value.intrinsic", IRTInt(32, true)),
 							IRIOCall(call(IRCDIntrinsic("haxe.i32.clamp"), ["value.argument"], IRTInt(32, true))), COVERAGE_SOURCE, 26),
@@ -2805,6 +2822,58 @@ class HxcIRGolden {
 			arguments: [],
 			cleanup: []
 		}), file, 3), [], [], file);
+	}
+
+	/**
+		Build the smallest independently validated mutable-Bytes borrow.
+
+		One native consumer is valid. The variants deliberately add a second
+		consumer, use the pointer as an indirect callable, or return it so the
+		validator—not source-pattern recognition—proves the one-call lifetime.
+	**/
+	static function mutableCStringBufferProgram(nativeConsumers:Int, returnBuffer:Bool, indirect:Bool, stored:Bool = false):HxcIRProgram {
+		final invalid = returnBuffer || indirect || stored || nativeConsumers != 1;
+		final file = invalid ? "test/negative/MutableCStringBuffer.hx" : "test/hxc_ir/fixtures/MutableCStringBuffer.hx";
+		final bytesType:HxcIRTypeDeclaration = {
+			id: "type.mutable-buffer-bytes",
+			displayName: "haxe.io.Bytes",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final bytesInstance:HxcIRTypeInstance = {
+			id: "instance.mutable-buffer-bytes",
+			declarationId: bytesType.id,
+			arguments: [],
+			representation: IRRManaged("bytes"),
+			source: span(file, 1)
+		};
+		final failure:HxcIRFailureEdge = {
+			kind: IRFNativeStatus,
+			target: IRFTAbort,
+			arguments: [],
+			cleanup: []
+		};
+		final instructions:Array<HxcIRInstruction> = [
+			instruction("borrow.mutable-buffer", result("value.mutable-buffer", IRTMutableCStringBuffer),
+				IRIOCall(call(IRCDRuntime("bytes", "borrow-mutable-cstring"), ["value.bytes"], IRTMutableCStringBuffer, failure)), file, 2)
+		];
+		if (indirect) {
+			instructions.push(instruction("escape.indirect", null, IRIOCall(call(IRCDClosure("value.mutable-buffer"), [], IRTVoid)), file, 3));
+		} else {
+			for (index in 0...nativeConsumers)
+				instructions.push(instruction('consume.native.$index', null,
+					IRIOCall(call(IRCDNative('native.mutable-buffer.$index'), ["value.mutable-buffer"], IRTVoid)), file, 3 + index));
+		}
+		final locals = stored ? [
+			local("local.mutable-buffer", IRTMutableCStringBuffer, IRLSAutomatic, IRISUninitialized, file, 4)
+		] : [];
+		final program = minimalProgram("fixture.MutableCStringBuffer", instructions,
+			terminator(IRTReturn(returnBuffer ? "value.mutable-buffer" : null, []), file, 7), locals, [], file,
+			returnBuffer ? IRTMutableCStringBuffer : IRTVoid);
+		program.modules[0].types.push(bytesType);
+		program.modules[0].typeInstances.push(bytesInstance);
+		program.modules[0].functions[0].parameters.push(parameter("value.bytes", IRTInstance(bytesInstance.id), file, 1));
+		return program;
 	}
 
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,

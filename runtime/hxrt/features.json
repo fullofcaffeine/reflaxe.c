@@ -307,7 +307,7 @@
           "test/runtime/runtime-feature-graph/run.py"
         ],
         "directAlternative": "Compiler-known immutable byte tables can remain direct const C data when Haxe identity and mutation are unobservable.",
-        "contract": "Implements exact-length arbitrary byte buffers, alias-visible mutation, checked copying, and explicit UTF-8 String-to-bytes copying.",
+        "contract": "Implements exact-length arbitrary byte buffers, alias-visible mutation, checked copying, explicit UTF-8 String-to-bytes copying, and a validated one-call mutable C-string borrow.",
         "programLocalAlternative": "A closed bounded buffer can use a program-local specialization when it preserves the same alias and bounds contract."
       },
       "dependencies": [
@@ -318,6 +318,7 @@
       "availability": "compiler-selectable",
       "symbols": [
         "hxc_bytes_ref_blit",
+        "hxc_bytes_ref_borrow_mutable_cstring",
         "hxc_bytes_ref_compare",
         "hxc_bytes_ref_create_copy",
         "hxc_bytes_ref_create_utf8_copy",
@@ -333,13 +334,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693",
+          "sourceSha256": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/bytes.h",
           "sourcePath": "runtime/hxrt/include/hxrt/bytes.h"
         },
         {
-          "sourceSha256": "4db5d3ddcaf32684e900abe7d81ffe3a008edc53806573aaebe84089c0c6a787",
+          "sourceSha256": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8",
           "kind": "runtime-source",
           "outputPath": "runtime/src/bytes.c",
           "sourcePath": "runtime/hxrt/src/bytes.c"
@@ -1198,7 +1199,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "2f7d33d05a7f70093248813042f90de32526382f9401e718acfbb82dac8c2c08",
+      "sourceSetSha256": "a6b921b2061eec1478ab312569810bb2f99b9ed50ae79e85be223dd1cecea3ce",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

@@ -259,6 +259,28 @@ hxc_status hxc_bytes_ref_set(
   return HXC_STATUS_OK;
 }
 
+hxc_status hxc_bytes_ref_borrow_mutable_cstring(
+  hxc_bytes_ref *bytes,
+  char **out_text
+) {
+  size_t index;
+  uint8_t *storage;
+  if (out_text == NULL
+    || *out_text != NULL
+    || !hxc_bytes_ref_is_valid(bytes)
+    || bytes->length == 0u) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  storage = (uint8_t *)bytes->storage.memory;
+  for (index = 0u; index < bytes->length; index++) {
+    if (storage[index] == UINT8_C(0)) {
+      *out_text = (char *)storage;
+      return HXC_STATUS_OK;
+    }
+  }
+  return HXC_STATUS_BORROW_UNAVAILABLE;
+}
+
 hxc_status hxc_bytes_ref_sub(
   const hxc_bytes_ref *bytes,
   int32_t position,

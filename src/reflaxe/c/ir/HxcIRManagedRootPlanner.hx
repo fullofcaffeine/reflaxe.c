@@ -20,7 +20,7 @@ class HxcIRManagedRootPlanner {
 		for (module in program.modules)
 			for (fn in module.functions) {
 				if (fn.managedRoots == null)
-					throw new HxcIRManagedRootPlanningError('function `${fn.id}` has no schema-20 managed-root list');
+					throw new HxcIRManagedRootPlanningError('function `${fn.id}` has no schema-21 managed-root list');
 				fn.managedRoots.resize(0);
 				var ordinal = 0;
 				for (parameter in fn.parameters)

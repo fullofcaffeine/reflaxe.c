@@ -20437,6 +20437,7 @@
       "availability": "compiler-selectable",
       "symbols": [
         "hxc_bytes_ref_blit",
+        "hxc_bytes_ref_borrow_mutable_cstring",
         "hxc_bytes_ref_compare",
         "hxc_bytes_ref_create_copy",
         "hxc_bytes_ref_create_utf8_copy",
@@ -44510,6 +44511,7 @@
     "hxc_array_string_join",
     "hxc_byte_view_from_cstring",
     "hxc_bytes_ref_blit",
+    "hxc_bytes_ref_borrow_mutable_cstring",
     "hxc_bytes_ref_compare",
     "hxc_bytes_ref_create_copy",
     "hxc_bytes_ref_create_utf8_copy",

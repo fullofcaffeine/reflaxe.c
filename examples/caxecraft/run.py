@@ -688,7 +688,7 @@ def validate_hxcir(hxcir: str, projection: dict[str, object]) -> None:
         projection, "caxecraft.domain.CharacterPhysics.step"
     )
     for marker in (
-        "hxcir schema=20",
+        "hxcir schema=21",
         'function "function.caxecraft.domain.World.generate"',
         'function "function.caxecraft.domain.VoxelRaycast.trace"',
         f'function "{player_step_id}"',

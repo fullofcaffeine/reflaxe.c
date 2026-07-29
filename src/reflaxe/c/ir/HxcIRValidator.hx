@@ -43,7 +43,7 @@ private enum HxcIRDispatchLayoutKind {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 20;
+	public static inline final SCHEMA_VERSION = 21;
 
 	public function new() {}
 
@@ -580,6 +580,7 @@ private class HxcIRValidationState {
 					validateSpan(field.source, '$fieldPath.source');
 					validateTypeRef(field.type, '$fieldPath.type', field.source, false);
 					rejectStoredSpanType(field.type, '$fieldPath.type', field.source, "aggregate field");
+					rejectStoredCStringBufferType(field.type, '$fieldPath.type', field.source, "aggregate field");
 					if (names.exists(field.name)) {
 						add(fieldPath, 'duplicate aggregate field `${field.name}`', field.source);
 					} else {
@@ -613,6 +614,7 @@ private class HxcIRValidationState {
 						validateSpan(payload.source, '$payloadPath.source');
 						validateTypeRef(payload.type, '$payloadPath.type', payload.source, false);
 						rejectStoredSpanType(payload.type, '$payloadPath.type', payload.source, "tagged-union payload");
+						rejectStoredCStringBufferType(payload.type, '$payloadPath.type', payload.source, "tagged-union payload");
 						if (payloadNames.exists(payload.name)) {
 							add(payloadPath, 'duplicate payload name `${payload.name}` in tagged-union case `${tag.name}`', payload.source);
 						} else {
@@ -646,6 +648,7 @@ private class HxcIRValidationState {
 					validateSpan(field.source, '$fieldPath.source');
 					validateTypeRef(field.type, '$fieldPath.type', field.source, false);
 					rejectStoredSpanType(field.type, '$fieldPath.type', field.source, "class field");
+					rejectStoredCStringBufferType(field.type, '$fieldPath.type', field.source, "class field");
 					if (names.exists(field.name)) {
 						add(fieldPath, 'duplicate class storage field `${field.name}`', field.source);
 					} else {
@@ -755,6 +758,7 @@ private class HxcIRValidationState {
 		validateSpan(global.source, '$path.source');
 		validateTypeRef(global.type, '$path.type', global.source, false);
 		rejectStoredSpanType(global.type, '$path.type', global.source, "global");
+		rejectStoredCStringBufferType(global.type, '$path.type', global.source, "global");
 		switch global.initialization {
 			case IRGIUninitialized:
 			case IRGIConstant(value):
@@ -801,10 +805,18 @@ private class HxcIRValidationState {
 		}
 	}
 
+	/** Keep a one-call native text borrow out of every independently owned slot. */
+	function rejectStoredCStringBufferType(type:HxcIRTypeRef, path:String, source:HxcSourceSpan, owner:String):Void {
+		if (type == IRTMutableCStringBuffer)
+			add(path, '$owner storage cannot own a call-scoped mutable C-string buffer', source);
+	}
+
 	function validateFunction(fn:HxcIRFunction, path:String):Void {
 		validateSpan(fn.source, '$path.source');
 		validateText(fn.displayName, '$path.displayName', fn.source);
 		validateTypeRef(fn.returnType, '$path.returnType', fn.source, true);
+		if (fn.returnType == IRTMutableCStringBuffer)
+			add('$path.returnType', "a function cannot return a call-scoped mutable C-string buffer", fn.source);
 		switch fn.failureConvention {
 			case IRFCInfallible:
 			case IRFCStatus(_):
@@ -820,6 +832,8 @@ private class HxcIRValidationState {
 		for (index => parameter in fn.parameters) {
 			final parameterPath = '$path.parameter:$index:${parameter.id}';
 			validateParameter(parameter, parameterPath);
+			if (parameter.type == IRTMutableCStringBuffer)
+				add('$parameterPath.type', "a function parameter cannot receive a call-scoped mutable C-string buffer", parameter.source);
 			indexValue(values, parameter.id, parameter.type, parameterPath, parameter.source);
 			parametersById.set(parameter.id, parameter);
 		}
@@ -869,6 +883,7 @@ private class HxcIRValidationState {
 			validateStableId(local.id, '$localPath.id', local.source);
 			validateSpan(local.source, '$localPath.source');
 			validateTypeRef(local.type, '$localPath.type', local.source, false);
+			rejectStoredCStringBufferType(local.type, '$localPath.type', local.source, "local");
 			if (locals.exists(local.id)) {
 				add(localPath, 'duplicate local place ID `${local.id}`', local.source);
 			} else {
@@ -981,6 +996,7 @@ private class HxcIRValidationState {
 
 		validateBorrowedSpanReturn(fn, path, parametersById, valueSites);
 		validateManagedRoots(fn, path, values, parametersById, valueSites, blockParameterIds);
+		validateCallScopedCStringBuffers(fn, path, values, valueSites, blockParameterIds);
 
 		if (!blocks.exists(fn.entryBlockId)) {
 			add(path, 'function `${fn.id}` entry block `${fn.entryBlockId}` does not exist', fn.source);
@@ -1099,7 +1115,7 @@ private class HxcIRValidationState {
 	/**
 		Prove that every function root names one exact collector-managed value.
 
-		Block parameters are deliberately rejected in schema 20. Their value changes
+		Block parameters are deliberately rejected in schema 21. Their value changes
 		on incoming edges, so they need an edge-owned root update rather than the
 		simpler "store immediately after definition" rule used for parameters and
 		instruction results.
@@ -1107,7 +1123,7 @@ private class HxcIRValidationState {
 	function validateManagedRoots(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, parameters:Map<String, HxcIRParameter>,
 			valueSites:Map<String, HxcIRInstructionSite>, blockParameterIds:Map<String, Bool>):Void {
 		if (fn.managedRoots == null) {
-			add('$path.managedRoots', "function has no explicit managed-root plan for schema 20", fn.source);
+			add('$path.managedRoots', "function has no explicit managed-root plan for schema 21", fn.source);
 			return;
 		}
 		final rootIds:Map<String, Bool> = [];
@@ -1160,6 +1176,146 @@ private class HxcIRValidationState {
 					add('$path.managedRoots', 'managed value `$valueId` is missing exact root path `$projectionKey`', fn.source);
 			}
 		}
+	}
+
+	/**
+		Prove that each mutable C-string pointer exists for exactly one native call.
+
+		The runtime operation exposes storage owned by a managed `Bytes` value; it
+		does not create a new owner. Therefore the result may not enter a local,
+		control-flow edge, return, indirect call, or second native call. This
+		whole-function check is independent of source syntax, so a malformed or
+		hand-built HxcIR program cannot bypass the call-scoped lifetime.
+	**/
+	function validateCallScopedCStringBuffers(fn:HxcIRFunction, path:String, values:Map<String, HxcIRTypeRef>, valueSites:Map<String, HxcIRInstructionSite>,
+			blockParameterIds:Map<String, Bool>):Void {
+		for (valueId => type in values) {
+			if (type != IRTMutableCStringBuffer)
+				continue;
+			final valuePath = '$path.mutableCStringBuffer:$valueId';
+			if (blockParameterIds.exists(valueId))
+				add(valuePath, "a call-scoped mutable C-string buffer cannot cross a block edge", fn.source);
+			final origin = valueSites.get(valueId);
+			if (origin == null) {
+				add(valuePath, "a call-scoped mutable C-string buffer has no checked Bytes borrow producer", fn.source);
+				continue;
+			}
+			final validOrigin = switch origin.instruction.kind {
+				case IRIOCall({
+					dispatch: IRCDRuntime("bytes", "borrow-mutable-cstring"),
+					arguments: [_],
+					returnType: IRTMutableCStringBuffer
+				}): true;
+				case _: false;
+			};
+			if (!validOrigin)
+				add(valuePath, "a call-scoped mutable C-string buffer must originate at the checked Bytes borrow operation", origin.instruction.source);
+
+			var nativeUses = 0;
+			for (block in fn.blocks) {
+				for (instruction in block.instructions) {
+					switch instruction.kind {
+						case IRIOCall(call):
+							for (index => argument in call.arguments)
+								if (argument == valueId) {
+									switch call.dispatch {
+										case IRCDNative(_):
+											nativeUses++;
+											if (block.id != origin.block.id) add(valuePath,
+												"the native consumer must remain in the borrow producer's basic block", instruction.source);
+										case _:
+											add(valuePath, 'call-scoped mutable C-string buffer escapes through a non-native call argument $index',
+												instruction.source);
+									}
+								}
+							for (dispatchUse in dispatchValueUses(call.dispatch))
+								if (dispatchUse == valueId)
+									add(valuePath, "call-scoped mutable C-string buffer cannot be a dispatch receiver or callable", instruction.source);
+							if (call.failure != null)
+								for (argument in call.failure.arguments)
+									if (argument == valueId)
+										add(valuePath, "call-scoped mutable C-string buffer cannot enter a failure edge", instruction.source);
+						case other:
+							for (use in nonCallInstructionValueUses(other))
+								if (use == valueId)
+									add(valuePath, "call-scoped mutable C-string buffer escapes through another HxcIR operation", instruction.source);
+					}
+				}
+				if (block.terminator != null)
+					for (use in terminatorValueUses(block.terminator.kind))
+						if (use == valueId)
+							add(valuePath, "call-scoped mutable C-string buffer escapes through control flow or return", block.terminator.source);
+			}
+			if (nativeUses != 1)
+				add(valuePath, 'call-scoped mutable C-string buffer requires exactly one direct native consumer; found $nativeUses', origin.instruction.source);
+		}
+	}
+
+	static function dispatchValueUses(dispatch:HxcIRCallDispatch):Array<String>
+		return switch dispatch {
+			case IRCDVirtual(_, receiver) | IRCDInterface(_, _, receiver) | IRCDClosure(receiver): [receiver];
+			case IRCDDirect(_) | IRCDNative(_) | IRCDRuntime(_, _) | IRCDIntrinsic(_): [];
+		};
+
+	/** Enumerate every SSA value consumed by a non-call instruction. */
+	static function nonCallInstructionValueUses(kind:HxcIRInstructionKind):Array<String> {
+		return switch kind {
+			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_): [];
+			case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
+				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODeclareManagedCarrier(place, _) |
+				IRIOMoveManagedCarrier(place) | IRIODefaultInitialize(place, _, _) | IRIOZeroInitializeFixedArray(place, _, _) | IRIOBorrowSpan(place) |
+				IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
+				placeValueUses(place);
+			case IRIOStore(place, valueId) | IRIOInitialize(place, valueId, _, _) | IRIOAcquireManagedCarrier(place, valueId, _):
+				placeValueUses(place).concat([valueId]);
+			case IRIOUnary(_, valueId, _) | IRIOProject(valueId, _) | IRIOMatchTag(valueId, _) | IRIOProjectTag(valueId, _, _, _) | IRIONullCheck(valueId, _):
+				[valueId];
+			case IRIOConvert(valueId, _, _, _, failure):
+				failure == null ? [valueId] : [valueId].concat(failure.arguments);
+			case IRIOAllocate(_, _, _, failure):
+				failure == null ? [] : failure.arguments.copy();
+			case IRIOBinary(_, left, right, _): [left, right];
+			case IRIOConstructAggregate(_, fields): fields.map(field -> field.valueId);
+			case IRIOConstructInterface(_, objectValueId, _): [objectValueId];
+			case IRIOConstructTag(_, _, payload): payload.copy();
+			case IRIOInitializeFixedArray(place, valueIds, _, _): placeValueUses(place).concat(valueIds);
+			case IRIOInitializeSpan(place, sourceArray, _, _): placeValueUses(place).concat(placeValueUses(sourceArray));
+			case IRIOBoundsCheck(collection, indexValueId, _): placeValueUses(collection).concat([indexValueId]);
+			case IRIOCall(_): [];
+		};
+	}
+
+	static function placeValueUses(place:HxcIRPlace):Array<String> {
+		return switch place {
+			case IRPLocal(_) | IRPGlobal(_): [];
+			case IRPDereference(valueId): [valueId];
+			case IRPField(base, _): placeValueUses(base);
+			case IRPIndex(base, indexValueId): placeValueUses(base).concat([indexValueId]);
+		};
+	}
+
+	static function terminatorValueUses(kind:HxcIRTerminatorKind):Array<String> {
+		function edgeUses(edge:HxcIRBlockEdge):Array<String>
+			return edge.arguments.copy();
+		return switch kind {
+			case IRTJump(edge): edgeUses(edge);
+			case IRTBranch(condition, whenTrue, whenFalse): [condition].concat(edgeUses(whenTrue)).concat(edgeUses(whenFalse));
+			case IRTSwitch(valueId, cases, defaultEdge):
+				final result = [valueId];
+				for (item in cases)
+					for (argument in edgeUses(item.edge))
+						result.push(argument);
+				result.concat(edgeUses(defaultEdge));
+			case IRTTagSwitch(valueId, cases, defaultEdge):
+				final result = [valueId];
+				for (item in cases)
+					for (argument in edgeUses(item.edge))
+						result.push(argument);
+				defaultEdge == null ? result : result.concat(edgeUses(defaultEdge));
+			case IRTReturn(valueId, _): valueId == null ? [] : [valueId];
+			case IRTThrow(valueId, edge): [valueId].concat(edge.arguments);
+			case IRTUnreachable: [];
+		};
 	}
 
 	/**
@@ -3004,6 +3160,9 @@ private class HxcIRValidationState {
 			case "fill":
 				if (argumentTypes.length != 4 || !isBytes(0) || !isInt(1) || !isInt(2) || !isInt(3) || call.returnType != IRTVoid)
 					add(path, "Bytes.fill requires managed Bytes, position, length, and value and returns Void", source);
+			case "borrow-mutable-cstring":
+				if (argumentTypes.length != 1 || !isBytes(0) || call.returnType != IRTMutableCStringBuffer)
+					add(path, "mutable C-string borrowing requires one managed Bytes owner and returns one call-scoped mutable buffer", source);
 			case _:
 				add(path, 'bytes runtime call names unsupported operation `$operationId`', source);
 		}
@@ -3724,7 +3883,8 @@ private class HxcIRValidationState {
 						}
 					}
 				}
-			case IRTManagedString | IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _) | IRTDynamic:
+			case IRTManagedString | IRTMutableCStringBuffer | IRTVoid | IRTPointer(_, _) | IRTNullable(_, _) | IRTFunction(_, _) | IRTFixedArray(_, _, _) |
+				IRTSpan(_, _) | IRTDynamic:
 				false;
 		};
 	}
@@ -4158,7 +4318,7 @@ private class HxcIRValidationState {
 			case IRTNullable(inner, IRNTagged) | IRTFixedArray(inner, _, _):
 				collectDirectLayoutDependencies(inner, result);
 			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTManagedString | IRTCString | IRTVoid | IRTPointer(_, _) |
-				IRTNullable(_, IRNPointer) | IRTFunction(_, _) | IRTSpan(_, _) | IRTDynamic:
+				IRTMutableCStringBuffer | IRTNullable(_, IRNPointer) | IRTFunction(_, _) | IRTSpan(_, _) | IRTDynamic:
 		}
 	}
 
@@ -4590,7 +4750,7 @@ private class HxcIRValidationState {
 
 	function validateTypeRef(type:HxcIRTypeRef, path:String, source:HxcSourceSpan, allowVoid:Bool):Void {
 		switch type {
-			case IRTBool | IRTString | IRTManagedString | IRTCString | IRTDynamic:
+			case IRTBool | IRTString | IRTManagedString | IRTCString | IRTMutableCStringBuffer | IRTDynamic:
 			case IRTInt(width, _):
 				if (width != 8 && width != 16 && width != 32 && width != 64) {
 					add(path, 'integer width $width is unsupported; expected 8, 16, 32, or 64', source);
@@ -4615,7 +4775,7 @@ private class HxcIRValidationState {
 				switch inner {
 					case IRTNullable(_, _):
 						add(path, "nested nullable values must be canonicalized to one nullable layer", source);
-					case IRTVoid | IRTFunction(_, _) | IRTString | IRTManagedString | IRTCString | IRTDynamic:
+					case IRTVoid | IRTFunction(_, _) | IRTString | IRTManagedString | IRTCString | IRTMutableCStringBuffer | IRTDynamic:
 						add(path, "Void, string views, function, and Dynamic types cannot use a primitive nullable representation", source);
 					case _:
 				}
@@ -4782,6 +4942,7 @@ private class HxcIRValidationState {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';

@@ -1,4 +1,4 @@
-hxcir schema=20
+hxcir schema=21
 module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":2:45-113:3
   type "type.closed-record.155aa813c1c5ab50f5236b6c4eb50ea07d553c576ccb72fac37da5af0fc87bd9" name="FunctionFixture.StackClosure" kind=aggregate @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:59-34:3
     field "invoke" type=function(pointer(nullable,void),i32)->i32 mutable=false @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:59-34:3

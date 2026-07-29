@@ -458,7 +458,11 @@ saved before the destination changes. The slice depends on `alloc` for
 run-time-sized ownership and on `string-literal` for the immutable String
 carrier consumed by `Bytes.ofString`. Runtime-created sources select their own
 construction and cleanup features independently. See
-[Bytes runtime](bytes-runtime.md).
+[Bytes runtime](bytes-runtime.md). The same feature also owns the checked
+`hxc_bytes_ref_borrow_mutable_cstring` boundary: it publishes a mutable
+`char *` only for live, non-empty storage containing a NUL byte. Schema-21
+HxcIR restricts that pointer to one direct imported-C call; the typed binding
+remains responsible for the foreign API's separate capacity convention.
 
 <!-- hxrt-feature:string-literal -->
 ### `string-literal`

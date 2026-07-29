@@ -18,6 +18,9 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parents[3]
 CASE = Path(__file__).resolve().parent
 GENERATED = CASE / "generated"
+NATIVE_BUFFER = CASE / "native_buffer"
+NATIVE_BUFFER_SOURCE = CASE / "native/mutable_text.c"
+NATIVE_BUFFER_INCLUDE = CASE / "native/include"
 NEGATIVE = CASE / "negative"
 FIXTURE = CASE / "bytes_runtime.c"
 INCLUDE = ROOT / "runtime/hxrt/include"
@@ -455,6 +458,43 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise BytesRuntimeFailure("the structured Bytes fixture unexpectedly emitted goto")
 
 
+def validate_mutable_buffer_project(output: Path, hxcir: str) -> None:
+    """Prove the semantic borrow is visible and has one native consumer."""
+    main = hxcir_function(hxcir, "function.Main.main")
+    borrow_marker = 'runtime(feature="bytes",operation="borrow-mutable-cstring")'
+    native_marker = 'native("native.function.MutableTextApi.replace")'
+    typed_borrows = [
+        line
+        for line in main.splitlines()
+        if "result=" in line and ":mutable-cstring-buffer-call-borrow" in line
+    ]
+    if len(typed_borrows) != 1:
+        raise BytesRuntimeFailure("mutable-buffer HxcIR lost its one distinct result type")
+    if main.count(borrow_marker) != 1 or main.count(native_marker) != 1:
+        raise BytesRuntimeFailure("mutable-buffer HxcIR lost its borrow or native consumer")
+    if main.index(borrow_marker) >= main.index(native_marker):
+        raise BytesRuntimeFailure("mutable-buffer HxcIR consumed the pointer before its checked borrow")
+
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict) and reason.get("featureId") == "bytes"
+    }
+    if "borrow-mutable-cstring" not in operations:
+        raise BytesRuntimeFailure("mutable-buffer project omitted its exact runtime operation")
+
+    sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    if sources.count("fixture_replace_mutable_text(") != 1:
+        raise BytesRuntimeFailure("generated C lost the one direct mutable-text call")
+    if "hxc_bytes_ref_borrow_mutable_cstring" not in sources:
+        raise BytesRuntimeFailure("generated C bypassed the checked Bytes borrow")
+    if "raw" in main or str(ROOT) in main:
+        raise BytesRuntimeFailure("mutable-buffer lowering used raw syntax or leaked the checkout path")
+
+
 def render_generated_projects(root: Path) -> dict[str, Path]:
     projects: dict[str, Path] = {}
     for layout in LAYOUTS:
@@ -477,16 +517,39 @@ def render_generated_projects(root: Path) -> dict[str, Path]:
     return projects
 
 
+def render_mutable_buffer_project(root: Path) -> Path:
+    normal = root / "mutable-buffer-normal"
+    reverse = root / "mutable-buffer-reverse"
+    first = compile_haxe(NATIVE_BUFFER, normal, report=True)
+    second = compile_haxe(NATIVE_BUFFER, reverse, reverse=True)
+    for label, result in (("normal", first), ("reverse", second)):
+        if result.returncode != 0:
+            raise BytesRuntimeFailure(
+                f"mutable-buffer {label} compile failed\n"
+                f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise BytesRuntimeFailure("mutable-buffer project changed under reversed discovery")
+    validate_mutable_buffer_project(normal, extract_hxcir(first))
+    return normal
+
+
 def run_negative_cases(root: Path) -> None:
     expected = {
-        "return_escape": "TReturn(managed-Bytes-borrowed-return-needs-retain)",
-        "runtime_string_operation": "TCall(String.toUpperCase:not-yet-admitted)",
-        "unsupported_method": "TCall(Bytes.getInt32:not-yet-admitted)",
+        "buffer_escape": ("HXC1001", "TCall(c.CStringBufferRef.to:requires-direct-import-argument)"),
+        "buffer_missing_intrinsic": ("HXC3000", "requires an explicit c.CStringBufferRef.to(bytes) call"),
+        "buffer_parameter_mismatch": ("c.CStringBufferRef should be c.CString", "CStringBufferRef.to(bytes)"),
+        "buffer_return": ("HXC3000", "Pointer and retained-borrow lifetimes are outside this direct by-value slice."),
+        "buffer_temporary": ("HXC3000", "can only borrow an existing Bytes local or field"),
+        "buffer_wrong_carrier": ("Int should be haxe.io.Bytes", "CStringBufferRef.to(value)"),
+        "return_escape": ("HXC1001", "TReturn(managed-Bytes-borrowed-return-needs-retain)"),
+        "runtime_string_operation": ("HXC1001", "TCall(String.toUpperCase:not-yet-admitted)"),
+        "unsupported_method": ("HXC1001", "TCall(Bytes.getInt32:not-yet-admitted)"),
     }
-    for name, marker in expected.items():
+    for name, (diagnostic_id, marker) in expected.items():
         output = root / f"negative-{name}"
         result = compile_haxe(NEGATIVE / name, output)
-        if result.returncode == 0 or "HXC1001" not in result.stderr or marker not in result.stderr:
+        if result.returncode == 0 or diagnostic_id not in result.stderr or marker not in result.stderr:
             raise BytesRuntimeFailure(f"negative Bytes case {name} drifted: {result.stderr!r}")
         if output.exists() and any(output.rglob("*")):
             raise BytesRuntimeFailure(f"negative Bytes case {name} left plausible output")
@@ -605,6 +668,45 @@ def validate_cpp_header(
         )
 
 
+def validate_mutable_buffer_cpp_header(project: Path, build: Path, family: str) -> None:
+    """Compile a C++17 consumer of both generated and independent C headers."""
+    compiler = shutil.which("clang++" if family == "clang" else "g++")
+    if compiler is None:
+        raise BytesRuntimeFailure(f"{family} evidence requires its C++ compiler")
+    source = build / "mutable-buffer-header.cpp"
+    executable = build / "mutable-buffer-header"
+    source.write_text(
+        '#include "hxc/program.h"\n'
+        '#include "mutable_text.h"\n'
+        "int main() { return 0; }\n",
+        encoding="utf-8",
+    )
+    command = [
+        compiler,
+        *CPP_STRICT_FLAGS,
+        "-O0",
+        f"-I{project / 'include'}",
+        f"-I{project / 'runtime/include'}",
+        f"-I{NATIVE_BUFFER_INCLUDE}",
+        str(source),
+        "-o",
+        str(executable),
+    ]
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise BytesRuntimeFailure(
+            "mutable-buffer C++17 header consumer failed\n"
+            f"command={command!r}\nstdout={result.stdout!r}\nstderr={result.stderr!r}"
+        )
+
+
 def inspect_symbols(executable: Path, family: str) -> None:
     nm = shutil.which("nm")
     if nm is None:
@@ -624,6 +726,7 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-bytes-runtime-") as temporary:
         root = Path(temporary)
         projects = render_generated_projects(root) if generated_haxe else {}
+        mutable_buffer = render_mutable_buffer_project(root) if generated_haxe else None
         if generated_haxe:
             run_negative_cases(root)
         for toolchain in toolchains:
@@ -666,6 +769,27 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         build,
                         (optimization,),
                     )
+            if mutable_buffer is not None:
+                mutable_sources = sorted(
+                    (mutable_buffer / "runtime/src").glob("*.c")
+                ) + sorted((mutable_buffer / "src").rglob("*.c"))
+                for optimization in ("-O0", "-O2"):
+                    compile_and_run(
+                        toolchain.compiler,
+                        [*mutable_sources, NATIVE_BUFFER_SOURCE],
+                        [
+                            mutable_buffer / "include",
+                            mutable_buffer / "runtime/include",
+                            NATIVE_BUFFER_INCLUDE,
+                        ],
+                        build / f"mutable-buffer-{optimization[1:].lower()}",
+                        (optimization,),
+                    )
+                validate_mutable_buffer_cpp_header(
+                    mutable_buffer,
+                    build,
+                    toolchain.family,
+                )
             if toolchain.family == "clang":
                 compile_and_run(
                     toolchain.compiler,
@@ -685,6 +809,21 @@ def run_native(toolchains: list[Toolchain], *, generated_haxe: bool) -> None:
                         generated_sources,
                         [generated / "include", generated / "runtime/include"],
                         build / "bytes-generated-sanitized",
+                        SANITIZER_FLAGS,
+                    )
+                if mutable_buffer is not None:
+                    mutable_sources = sorted(
+                        (mutable_buffer / "runtime/src").glob("*.c")
+                    ) + sorted((mutable_buffer / "src").rglob("*.c"))
+                    compile_and_run(
+                        toolchain.compiler,
+                        [*mutable_sources, NATIVE_BUFFER_SOURCE],
+                        [
+                            mutable_buffer / "include",
+                            mutable_buffer / "runtime/include",
+                            NATIVE_BUFFER_INCLUDE,
+                        ],
+                        build / "mutable-buffer-sanitized",
                         SANITIZER_FLAGS,
                     )
 
@@ -710,7 +849,7 @@ def main(argv: Iterable[str] = ()) -> int:
     mode = "native contract" if args.native_only else "Eval plus generated ordinary-Haxe Bytes"
     print(
         "bytes-runtime: OK: "
-        f"{families}; {mode}; C11 O0/O2 and C++17 header consumers, aliasing, overlap, bounds, allocation rollback, ownership, sanitizers, and selective symbols passed"
+        f"{families}; {mode}; C11 O0/O2 and C++17 header consumers, aliasing, overlap, bounds, call-scoped mutable C text, allocation rollback, ownership, sanitizers, and selective symbols passed"
     )
     return 0
 

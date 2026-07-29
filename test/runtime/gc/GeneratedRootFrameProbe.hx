@@ -110,7 +110,7 @@ class GeneratedRootFrameProbe {
 		final preparedDispatch = new CPreparedBodyDispatch(CBodyDispatchGraph.empty(), [], [], [], [], [], []);
 		final dispatch = new CLoweredBodyDispatch(preparedDispatch, [], [], [], []);
 		final program:HxcIRProgram = {
-			schemaVersion: 20,
+			schemaVersion: 21,
 			dispatch: {layouts: [], slots: [], tables: []},
 			modules: [
 				{

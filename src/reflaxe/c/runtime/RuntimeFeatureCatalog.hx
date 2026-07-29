@@ -230,16 +230,17 @@ class RuntimeFeatureCatalog {
 					"hxc_bytes_ref_sub",
 					"hxc_bytes_ref_blit",
 					"hxc_bytes_ref_fill",
-					"hxc_bytes_ref_compare"
+					"hxc_bytes_ref_compare",
+					"hxc_bytes_ref_borrow_mutable_cstring"
 				],
 				[], [],
-				documentation("Implements exact-length arbitrary byte buffers, alias-visible mutation, checked copying, and explicit UTF-8 String-to-bytes copying.",
+				documentation("Implements exact-length arbitrary byte buffers, alias-visible mutation, checked copying, explicit UTF-8 String-to-bytes copying, and a validated one-call mutable C-string borrow.",
 					[
-					new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-						"A reachable haxe.io.Bytes value whose contents or identity live at run time."),
-					new RuntimeFeatureSelectionRoot("binary-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-						"A reachable admitted Bytes allocation, range, copy, comparison, or mutation operation.")
-				],
+						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable haxe.io.Bytes value whose contents or identity live at run time."),
+						new RuntimeFeatureSelectionRoot("binary-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable admitted Bytes allocation, range, copy, comparison, or mutation operation.")
+					],
 					"Compiler-known immutable byte tables can remain direct const C data when Haxe identity and mutation are unobservable.",
 					"A closed bounded buffer can use a program-local specialization when it preserves the same alias and bounds contract.",
 					"General Bytes values have run-time size and shared mutable identity. The selected slice owns that storage without treating arbitrary bytes as text or boxed integers.",
@@ -484,7 +485,7 @@ class RuntimeFeatureCatalog {
 			case "array.h": "7225f00813a72474d5d2e1c2b24fbdb030ba0ab8e606c1e934fbd1a2fe381bfd";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "dc35f17737269475435e107909d582bd37a0827095fcf74bd4e878adbb491290";
-			case "bytes.h": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693";
+			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
 			case "int_map.h": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080";
@@ -507,7 +508,7 @@ class RuntimeFeatureCatalog {
 			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
 			case "array.c": "a07fc5f847912cfec1c02f0edcc51dae97089b521da49601aab4fbcf9e2b7b55";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
-			case "bytes.c": "4db5d3ddcaf32684e900abe7d81ffe3a008edc53806573aaebe84089c0c6a787";
+			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c";
 			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";

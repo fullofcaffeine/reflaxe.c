@@ -12,7 +12,7 @@
   } while (0)
 
 #define HXC_TEST_BANK_SIZE 512u
-#define HXC_TEST_BANK_COUNT 10u
+#define HXC_TEST_BANK_COUNT 12u
 
 typedef union hxc_test_bank {
   max_align_t alignment;
@@ -116,7 +116,10 @@ int main(void) {
   hxc_bytes_ref *copy = NULL;
   hxc_bytes_ref *shorter = NULL;
   hxc_bytes_ref *text = NULL;
+  hxc_bytes_ref *empty = NULL;
+  hxc_bytes_ref *unterminated = NULL;
   hxc_bytes_ref *failed = NULL;
+  char *borrowed_text = NULL;
   hxc_string owned_source = HXC_STRING_INITIALIZER;
   int32_t value = -1;
   int32_t order = 7;
@@ -153,6 +156,30 @@ int main(void) {
   HXC_TEST_CHECK(hxc_bytes_ref_compare(copy, copy, &order) == HXC_STATUS_OK && order == 0);
   HXC_TEST_CHECK(hxc_bytes_ref_create_utf8_copy(allocator, text_view, &text) == HXC_STATUS_OK);
   HXC_TEST_CHECK(!hxc_expect_byte(text, 0, 72) && !hxc_expect_byte(text, 1, 0) && !hxc_expect_byte(text, 2, 120));
+  HXC_TEST_CHECK(hxc_bytes_ref_borrow_mutable_cstring(text, &borrowed_text) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(borrowed_text == (char *)text->storage.memory);
+  borrowed_text[0] = 'C';
+  HXC_TEST_CHECK(!hxc_expect_byte(text, 0, (int32_t)'C'));
+  borrowed_text = NULL;
+
+  HXC_TEST_CHECK(hxc_bytes_ref_create_zeroed(allocator, 0, &empty) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_borrow_mutable_cstring(empty, &borrowed_text)
+      == HXC_STATUS_INVALID_ARGUMENT
+      && borrowed_text == NULL
+  );
+  HXC_TEST_CHECK(hxc_bytes_ref_create_copy(allocator, shorter_data, 1u, &unterminated) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_borrow_mutable_cstring(unterminated, &borrowed_text)
+      == HXC_STATUS_BORROW_UNAVAILABLE
+      && borrowed_text == NULL
+  );
+  borrowed_text = (char *)text->storage.memory;
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_borrow_mutable_cstring(text, &borrowed_text)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  borrowed_text = NULL;
 
   value = 99;
   HXC_TEST_CHECK(hxc_bytes_ref_get(bytes, -1, &value) == HXC_STATUS_OUT_OF_RANGE && value == 99);
@@ -184,6 +211,8 @@ int main(void) {
   arena.failure_armed = false;
 
   HXC_TEST_CHECK(hxc_bytes_ref_release(text) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_bytes_ref_release(unterminated) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_bytes_ref_release(empty) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(shorter) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(copy) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(bytes) == HXC_STATUS_OK);

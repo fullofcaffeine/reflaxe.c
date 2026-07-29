@@ -179,7 +179,7 @@ correctness-first backend, not a high-performance or low-latency collector.
 
 E4.T06 owns the backend, exact root/pin contracts, pressure behavior, reports,
 and selective `runtime-base + status + alloc + object + gc` package. HxcIR
-schema 20 records exact managed parameters, instruction results, and typed
+schema 21 records exact managed parameters, instruction results, and typed
 paths to managed references embedded in direct records, enums, or optionals; and
 generated functions emit balanced frames for normal and early propagated
 returns. The project emitter owns one request-local collector and main
