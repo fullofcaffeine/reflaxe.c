@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://reflaxe.c.dev/schemas/raygui-core-selection.schema.json",
-  "title": "Curated raygui 5.0 editor-shell selection with reviewed borrows",
+  "title": "Curated raygui 5.0 editor-shell selection with reviewed mutable borrows",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,7 +13,7 @@
     "omissions"
   ],
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "functions": { "$ref": "#/$defs/names" },
     "borrowedMutableParameters": {
       "type": "array",
@@ -61,15 +61,51 @@
       "items": { "$ref": "#/$defs/name" }
     },
     "borrowedMutableParameter": {
+      "oneOf": [
+        { "$ref": "#/$defs/scalarBorrow" },
+        { "$ref": "#/$defs/textBufferBorrow" }
+      ]
+    },
+    "scalarBorrow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["function", "parameter", "canonicalCType", "haxeType", "lifetime"],
+      "required": ["kind", "function", "parameter", "canonicalCType", "haxeType", "direction", "lifetime"],
       "properties": {
+        "kind": { "const": "scalar-inout" },
         "function": { "$ref": "#/$defs/name" },
         "parameter": { "$ref": "#/$defs/name" },
-        "canonicalCType": { "type": "string", "minLength": 1 },
+        "canonicalCType": { "enum": ["_Bool *", "int *"] },
         "haxeType": { "type": "string", "pattern": "^c\\.Ref<.+>$" },
+        "direction": { "const": "inout" },
         "lifetime": { "const": "call" }
+      }
+    },
+    "textBufferBorrow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "function",
+        "parameter",
+        "canonicalCType",
+        "haxeType",
+        "direction",
+        "lifetime",
+        "capacityParameter",
+        "capacityUnit",
+        "textEncoding"
+      ],
+      "properties": {
+        "kind": { "const": "nul-terminated-utf8-buffer" },
+        "function": { "$ref": "#/$defs/name" },
+        "parameter": { "$ref": "#/$defs/name" },
+        "canonicalCType": { "const": "char *" },
+        "haxeType": { "const": "c.CStringBufferRef" },
+        "direction": { "const": "inout" },
+        "lifetime": { "const": "call" },
+        "capacityParameter": { "$ref": "#/$defs/name" },
+        "capacityUnit": { "const": "bytes-including-final-nul" },
+        "textEncoding": { "const": "utf-8" }
       }
     },
     "omission": {

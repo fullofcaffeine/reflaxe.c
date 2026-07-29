@@ -53,6 +53,11 @@ class RayguiBindingTests(unittest.TestCase):
             "scrollIndex:c.Ref<c.Int32>, active:c.Ref<c.Int32>)",
             rendered,
         )
+        self.assertIn(
+            "GuiTextBox(bounds:raylib.raw.Rectangle, text:c.CStringBufferRef, "
+            "textSize:c.Int32, editMode:Bool)",
+            rendered,
+        )
         functions = load_lock()["declarations"]["functions"]
         toggle = next(function for function in functions if function["name"] == "GuiToggle")
         active = next(parameter for parameter in toggle["parameters"] if parameter["name"] == "active")
@@ -63,7 +68,25 @@ class RayguiBindingTests(unittest.TestCase):
                 item for item in list_view["parameters"] if item["name"] == parameter_name
             )
             self.assertEqual(parameter["type"]["haxeType"], "c.Ref<c.Int32>")
+            self.assertEqual(parameter["type"]["borrowKind"], "scalar-inout")
+            self.assertEqual(parameter["type"]["borrowDirection"], "inout")
             self.assertEqual(parameter["type"]["borrowLifetime"], "call")
+        text_box = next(function for function in functions if function["name"] == "GuiTextBox")
+        text = next(parameter for parameter in text_box["parameters"] if parameter["name"] == "text")
+        self.assertEqual(
+            text["type"],
+            {
+                "cType": "char *",
+                "canonicalCType": "char *",
+                "haxeType": "c.CStringBufferRef",
+                "borrowKind": "nul-terminated-utf8-buffer",
+                "borrowDirection": "inout",
+                "borrowLifetime": "call",
+                "capacityParameter": "textSize",
+                "capacityUnit": "bytes-including-final-nul",
+                "textEncoding": "utf-8",
+            },
+        )
         for forbidden in ("@:c.name(", "Dynamic", "untyped", "__c__", "@:native"):
             self.assertNotIn(forbidden, rendered)
 
@@ -178,8 +201,28 @@ class RayguiBindingTests(unittest.TestCase):
             self.assertIn("GuiPanel", program)
             self.assertIn("GuiToggle", program)
             self.assertIn("GuiListView", program)
+            self.assertIn("GuiTextBox", program)
+            self.assertIn("hxc_bytes_ref_borrow_mutable_cstring", program)
+            self.assertIn("hxc_bytes_ref_get_string", program)
             self.assertIn(" = &", program)
-            self.assertNotIn("hxrt", program)
+            self.assertNotIn("__c__", program)
+
+    def test_text_owner_has_target_neutral_haxe_value_semantics(self) -> None:
+        fixture = ROOT / "test/raygui_binding/fixtures/text_state"
+        haxe = ROOT / "node_modules/.bin/haxe"
+        environment = os.environ.copy()
+        environment["HAXE_NO_SERVER"] = "1"
+        environment["LC_ALL"] = "C"
+        result = subprocess.run(
+            [str(haxe), "--cwd", str(fixture), "build.hxml"],
+            cwd=ROOT,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

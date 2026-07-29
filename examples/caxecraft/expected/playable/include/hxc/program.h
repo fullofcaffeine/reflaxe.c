@@ -113,6 +113,7 @@
 #include "hxc/modules/caxecraft/scenario/ScenarioWorldValidator.h"
 #include "hxc/modules/caxecraft/scenario/ScenarioWriter.h"
 #include "hxc/modules/raygui/GuiListViewState.h"
+#include "hxc/modules/raygui/GuiTextBoxState.h"
 #include "hxc/modules/raygui/GuiToggleState.h"
 #include "hxc/modules/raylib/raw/Camera.h"
 #include "hxc/modules/raylib/raw/Camera3D.h"

@@ -523,7 +523,7 @@ void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc
       if (hxc_recoveryFeedback == 2)
       {
         struct Color hxc_this1_h14181b01f12e = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-        const char *hxc_tmp_call_result_n240 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 24);
+        const char *hxc_tmp_call_result_n240 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 25);
         int32_t hxc_tmp_load_result_n241 = hxc_centerX;
         int32_t hxc_tmp_load_result_n242 = hxc_centerY;
         DrawText(hxc_tmp_call_result_n240, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n241, 96), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n242, 24), (int32_t)18, hxc_this1_h14181b01f12e);
@@ -586,11 +586,11 @@ void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc
     int32_t hxc_tmp_load_result_n289 = hxc_centerX;
     int32_t hxc_tmp_load_result_n290 = hxc_centerY;
     DrawRectangleLines((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n289, 170), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n290, 48), (int32_t)340, (int32_t)96, hxc_this1_h2da40acfc183);
-    const char *hxc_tmp_call_result_n293 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 31);
+    const char *hxc_tmp_call_result_n293 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 32);
     int32_t hxc_tmp_load_result_n294 = hxc_centerX;
     int32_t hxc_tmp_load_result_n295 = hxc_centerY;
     DrawText(hxc_tmp_call_result_n293, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n294, 48), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n295, 30), (int32_t)24, hxc_text);
-    const char *hxc_tmp_call_result_n298 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 30);
+    const char *hxc_tmp_call_result_n298 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 31);
     int32_t hxc_tmp_load_result_n299 = hxc_centerX;
     int32_t hxc_tmp_load_result_n300 = hxc_centerY;
     DrawText(hxc_tmp_call_result_n298, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n299, 160), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n300, 8), (int32_t)16, hxc_text);
@@ -600,7 +600,7 @@ void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc
     if (hxc_placementBlocked)
     {
       struct Color hxc_this1_hd3e7783e1e00 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-      const char *hxc_tmp_call_result_n305 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 32);
+      const char *hxc_tmp_call_result_n305 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 33);
       int32_t hxc_tmp_load_result_n306 = hxc_centerX;
       int32_t hxc_tmp_load_result_n307 = hxc_centerY;
       DrawText(hxc_tmp_call_result_n305, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n306, 170), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n307, 26), (int32_t)14, hxc_this1_hd3e7783e1e00);
@@ -618,7 +618,7 @@ void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc
       {
         if (!hxc_hit.hxc_hit)
         {
-          const char *hxc_tmp_call_result_n317 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 29);
+          const char *hxc_tmp_call_result_n317 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 30);
           int32_t hxc_tmp_load_result_n318 = hxc_centerX;
           int32_t hxc_tmp_load_result_n319 = hxc_centerY;
           DrawText(hxc_tmp_call_result_n317, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n318, 105), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n319, 26), (int32_t)14, hxc_text);
@@ -1983,7 +1983,7 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
       {
         int32_t hxc_x_h816c403bd509 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1325c6b7f9b7, (double)2)), 92);
         struct Color hxc_this1_hc86b72b59215 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-        const char *hxc_tmp_call_result_n665 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 33);
+        const char *hxc_tmp_call_result_n665 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 34);
         int32_t hxc_tmp_load_result_n666 = hxc_x_h816c403bd509;
         DrawText(hxc_tmp_call_result_n665, (int32_t)hxc_tmp_load_result_n666, (int32_t)52, (int32_t)34, hxc_this1_hc86b72b59215);
       }
@@ -2012,7 +2012,7 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
         DrawRectangleLines((int32_t)hxc_tmp_load_result_n684, (int32_t)hxc_tmp_load_result_n685, (int32_t)360, (int32_t)54, hxc_this1_heaf911b4ee44);
       }
       struct Color hxc_this1_h9a26e2fc1bb7 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-      const char *hxc_tmp_call_result_n689 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 26);
+      const char *hxc_tmp_call_result_n689 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 27);
       int32_t hxc_tmp_load_result_n690 = hxc_left_hf521c2abcb23;
       int32_t hxc_tmp_load_result_n691 = hxc_firstTop;
       DrawText(hxc_tmp_call_result_n689, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n690, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n691, 16), (int32_t)21, hxc_this1_h9a26e2fc1bb7);
@@ -2041,7 +2041,7 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
         DrawRectangleLines((int32_t)hxc_tmp_load_result_n709, (int32_t)hxc_tmp_load_result_n710, (int32_t)360, (int32_t)54, hxc_this1_h13ceef808fa9);
       }
       struct Color hxc_this1_h457f972477cc = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-      const char *hxc_tmp_call_result_n714 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 25);
+      const char *hxc_tmp_call_result_n714 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 26);
       int32_t hxc_tmp_load_result_n715 = hxc_left_hc91e9543fa78;
       int32_t hxc_tmp_load_result_n716 = hxc_top_h99234b839368;
       DrawText(hxc_tmp_call_result_n714, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n715, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n716, 16), (int32_t)21, hxc_this1_h457f972477cc);
@@ -2056,13 +2056,13 @@ void hxc_caxecraft_app_CaxecraftApp_run(struct hxc_caxecraft_app_CaxecraftApp *h
       int32_t hxc_tmp_load_result_n726 = hxc_top_h4ce089c42c1c;
       DrawRectangleLines((int32_t)hxc_tmp_load_result_n725, (int32_t)hxc_tmp_load_result_n726, (int32_t)360, (int32_t)54, hxc_this1_hf44ef30c1828);
       struct Color hxc_this1_h65866ca13a5a = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-      const char *hxc_tmp_call_result_n730 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 27);
+      const char *hxc_tmp_call_result_n730 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 28);
       int32_t hxc_tmp_load_result_n731 = hxc_left_h9e704a6de798;
       int32_t hxc_tmp_load_result_n732 = hxc_top_h4ce089c42c1c;
       DrawText(hxc_tmp_call_result_n730, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n731, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n732, 16), (int32_t)21, hxc_this1_h65866ca13a5a);
       int32_t hxc_x_hf110c4cb1cf3 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1325c6b7f9b7, (double)2)), 285);
       struct Color hxc_this1_h4705f486231e = (struct Color){ .r = 229, .g = 241, .b = 235, .a = 255 };
-      const char *hxc_tmp_call_result_n737 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 28);
+      const char *hxc_tmp_call_result_n737 = hxc_caxecraft_localization_UiCatalog_text(hxc_locale, 29);
       int32_t hxc_tmp_load_result_n738 = hxc_x_hf110c4cb1cf3;
       int32_t hxc_tmp_load_result_n739 = hxc_height_h36a32e337843;
       DrawText(hxc_tmp_call_result_n737, (int32_t)hxc_tmp_load_result_n738, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n739, 58), (int32_t)16, hxc_this1_h4705f486231e);

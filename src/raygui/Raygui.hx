@@ -13,9 +13,9 @@ package raygui;
  * instances would imply ownership and lifetimes that do not exist. Each inline
  * method becomes the corresponding C call. `Toggle` borrows one Boolean field
  * for the duration of the native call. Stateful list views use
- * `GuiListViewState`, which keeps their exact C integers private. Text boxes
- * remain absent until buffer capacity and text ownership have equally explicit
- * contracts.
+ * `GuiListViewState`, which keeps their exact C integers private. Stateful text
+ * entry uses `GuiTextBoxState`, whose fixed UTF-8 buffer keeps the native
+ * pointer, byte capacity, and editing lifetime behind one Haxe owner.
  */
 class Raygui {
 	public static inline function Enable():Void

@@ -1094,13 +1094,14 @@ def validate_presented_screenshot(
 
 
 def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
-    """Prove the native editor drew its toolbar, canvas, sidebar, and status bar.
+    """Prove the native editor drew its toolbar, canvas, text entry, and status.
 
     This is a structural framebuffer check, not a pixel golden. It admits small
     driver and font-rendering differences while still rejecting a blank frame,
-    a gameplay frame, or an editor missing one of its main working regions.
-    Exact labels and button behavior remain owned by the faster localization
-    and editor tests.
+    a gameplay frame, or an editor missing one of its main working regions. The
+    focused sidebar subregion proves the first owned text box is actually
+    presented; exact copy and edit semantics remain owned by the faster
+    localization and Raygui binding tests.
     """
     width, height, pixels = decode_rgba_png(path, "editor")
     logical_width, logical_height = 1280, 720
@@ -1130,15 +1131,17 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     toolbar = region_evidence(32, 52, 672, 94)
     canvas = region_evidence(32, 104, 1018, 650)
     sidebar = region_evidence(1018, 104, 1248, 650)
+    text_entry = region_evidence(1030, 320, 1234, 385)
     status = region_evidence(32, 660, 1248, 700)
     minimum_changed = (
         2_000 * scale * scale,
         25_000 * scale * scale,
         8_000 * scale * scale,
+        8_000 * scale * scale,
         2_000 * scale * scale,
     )
-    evidence = (toolbar, canvas, sidebar, status)
-    labels = ("toolbar", "canvas", "sidebar", "status")
+    evidence = (toolbar, canvas, sidebar, text_entry, status)
+    labels = ("toolbar", "canvas", "sidebar", "text-entry", "status")
     failures = [
         f"{label}=changed:{changed},colors:{colors}"
         for label, (changed, colors), threshold in zip(labels, evidence, minimum_changed)

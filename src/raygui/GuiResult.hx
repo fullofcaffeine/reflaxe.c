@@ -8,7 +8,7 @@ package raygui;
  * every frame. The abstract keeps that efficient representation in generated
  * C while giving Haxe code named values and a readable `has(...)` query.
  * Ordinary application code cannot construct an arbitrary result integer.
- * Only the two reviewed ABI adapters named by `@:allow` below can convert a
+ * Only the reviewed ABI adapters named by `@:allow` below can convert a
  * foreign return value. This narrow compile-time friendship keeps the raw
  * constructor sealed without exposing mutable application state or granting
  * any run-time ownership.
@@ -25,6 +25,7 @@ enum abstract GuiResult(Int) to Int {
 
 	@:allow(raygui.Raygui)
 	@:allow(raygui.GuiListViewState)
+	@:allow(raygui.GuiTextBoxState)
 	private static inline function fromRaw(value:Int):GuiResult
 		return new GuiResult(value);
 

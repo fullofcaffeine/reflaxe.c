@@ -4,7 +4,7 @@
     "languageStandard": "c11",
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "4454888e130f0fab12d91938f80c6ff0ac3a961bb7bf1a0e1cde272b59e2a3e8",
+  "declarationSha256": "cd5c5e9ba4f8fafa9467ba08533286fa1f4a3afb5ae14883c2a08ea39f614b0f",
   "declarations": {
     "functions": [
       {
@@ -277,6 +277,8 @@
           {
             "name": "scrollIndex",
             "type": {
+              "borrowDirection": "inout",
+              "borrowKind": "scalar-inout",
               "borrowLifetime": "call",
               "cType": "int *",
               "canonicalCType": "int *",
@@ -286,6 +288,8 @@
           {
             "name": "active",
             "type": {
+              "borrowDirection": "inout",
+              "borrowKind": "scalar-inout",
               "borrowLifetime": "call",
               "cType": "int *",
               "canonicalCType": "int *",
@@ -448,6 +452,55 @@
         "sourceLine": 853
       },
       {
+        "name": "GuiTextBox",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "borrowDirection": "inout",
+              "borrowKind": "nul-terminated-utf8-buffer",
+              "borrowLifetime": "call",
+              "cType": "char *",
+              "canonicalCType": "char *",
+              "capacityParameter": "textSize",
+              "capacityUnit": "bytes-including-final-nul",
+              "haxeType": "c.CStringBufferRef",
+              "textEncoding": "utf-8"
+            }
+          },
+          {
+            "name": "textSize",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "editMode",
+            "type": {
+              "cType": "bool",
+              "canonicalCType": "_Bool",
+              "haxeType": "Bool"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 848
+      },
+      {
         "name": "GuiToggle",
         "parameters": [
           {
@@ -469,6 +522,8 @@
           {
             "name": "active",
             "type": {
+              "borrowDirection": "inout",
+              "borrowKind": "scalar-inout",
               "borrowLifetime": "call",
               "cType": "bool *",
               "canonicalCType": "_Bool *",
@@ -549,7 +604,7 @@
     "src/raygui/raw/Raygui.hx"
   ],
   "generator": {
-    "algorithm": "hxc-raygui-clang-core-v3",
+    "algorithm": "hxc-raygui-clang-core-v4",
     "path": "scripts/raygui/core_binding.py"
   },
   "implementation": {
@@ -558,10 +613,10 @@
     "sourceTemplateSha256": "3c206e58f97342b6b2359be7e28c49620b9045efc9b04fa89fe70102d0b7ce73",
     "translationUnits": 1
   },
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "selection": {
     "counts": {
-      "functions": 23,
+      "functions": 24,
       "omittedFamilies": 3
     },
     "coverageState": "coherent-editor-shell-core",
@@ -569,7 +624,7 @@
       {
         "family": "pointer-mutating-controls",
         "owner": "haxe_c-xge.19.6.1",
-        "reason": "GuiToggle and GuiListView now use reviewed call-scoped scalar borrows. Text boxes, extended lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts."
+        "reason": "GuiToggle and GuiListView use reviewed call-scoped scalar borrows, while GuiTextBox uses one reviewed mutable UTF-8 buffer whose byte capacity includes the final NUL. Extended lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, capacity, aggregate, or returned-view contracts."
       },
       {
         "family": "style-and-icon-file-loading",
@@ -583,7 +638,7 @@
       }
     ],
     "path": "docs/specs/raygui-core-selection.json",
-    "sha256": "47cb23935533cbfb36d90d6ccc3fb1581c2766f3a17a59012939b52f696f0eb2"
+    "sha256": "ac6d17e7da5ed037889b0154f32aa940beee62548939662004f7940513f9f613"
   },
   "upstream": {
     "archive": {

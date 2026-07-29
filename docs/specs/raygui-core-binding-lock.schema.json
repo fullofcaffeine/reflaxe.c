@@ -17,14 +17,14 @@
     "generatedPaths"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "generator": {
       "type": "object",
       "additionalProperties": false,
       "required": ["path", "algorithm"],
       "properties": {
         "path": { "const": "scripts/raygui/core_binding.py" },
-        "algorithm": { "const": "hxc-raygui-clang-core-v3" }
+        "algorithm": { "const": "hxc-raygui-clang-core-v4" }
       }
     },
     "upstream": { "$ref": "#/$defs/upstream" },
@@ -166,7 +166,14 @@
         "cType": { "type": "string", "minLength": 1 },
         "canonicalCType": { "type": "string", "minLength": 1 },
         "haxeType": { "type": "string", "minLength": 1 },
-        "borrowLifetime": { "const": "call" }
+        "borrowKind": {
+          "enum": ["scalar-inout", "nul-terminated-utf8-buffer"]
+        },
+        "borrowDirection": { "const": "inout" },
+        "borrowLifetime": { "const": "call" },
+        "capacityParameter": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+        "capacityUnit": { "const": "bytes-including-final-nul" },
+        "textEncoding": { "const": "utf-8" }
       }
     },
     "parameter": {

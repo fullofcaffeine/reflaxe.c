@@ -21,27 +21,28 @@ enum abstract UiMessage(Int) {
 	var EditorBack = 10;
 	var EditorCanvasHelp = 11;
 	var EditorInvalid = 12;
-	var EditorNewWorld = 13;
-	var EditorReady = 14;
-	var EditorRedo = 15;
-	var EditorStopTest = 16;
-	var EditorTest = 17;
-	var EditorTesting = 18;
-	var EditorTitle = 19;
-	var EditorToolList = 20;
-	var EditorUndo = 21;
-	var EditorValid = 22;
-	var EditorValidate = 23;
-	var HealthFull = 24;
-	var MenuAdventure = 25;
-	var MenuCreative = 26;
-	var MenuEditor = 27;
-	var MenuInstructions = 28;
-	var NoBlockInReach = 29;
-	var PauseHelp = 30;
-	var PauseTitle = 31;
-	var PlaceBlocked = 32;
-	var TitleFallback = 33;
+	var EditorName = 13;
+	var EditorNewWorld = 14;
+	var EditorReady = 15;
+	var EditorRedo = 16;
+	var EditorStopTest = 17;
+	var EditorTest = 18;
+	var EditorTesting = 19;
+	var EditorTitle = 20;
+	var EditorToolList = 21;
+	var EditorUndo = 22;
+	var EditorValid = 23;
+	var EditorValidate = 24;
+	var HealthFull = 25;
+	var MenuAdventure = 26;
+	var MenuCreative = 27;
+	var MenuEditor = 28;
+	var MenuInstructions = 29;
+	var NoBlockInReach = 30;
+	var PauseHelp = 31;
+	var PauseTitle = 32;
+	var PlaceBlocked = 33;
+	var TitleFallback = 34;
 }
 
 /**
@@ -69,7 +70,7 @@ final class UiCatalog {
 
 	/** Reject an unknown raw message code before constructing a typed ID. */
 	public static inline function isValidMessageStorageCode(code:Int):Bool
-		return code >= 0 && code < 34;
+		return code >= 0 && code < 35;
 
 	public static function text(locale:LocaleCursor, message:UiMessage):LocalizationText {
 		return switch (locale) {
@@ -95,6 +96,7 @@ final class UiCatalog {
 			case EditorBack: "BACK";
 			case EditorCanvasHelp: "WORLD VIEWPORT — LEFT CLICK TO APPLY THE SELECTED TOOL";
 			case EditorInvalid: "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY";
+			case EditorName: "WORLD NAME";
 			case EditorNewWorld: "NEW WORLD";
 			case EditorReady: "READY — EDITS USE THE REAL CAXEMAP SESSION";
 			case EditorRedo: "REDO";
@@ -136,6 +138,7 @@ final class UiCatalog {
 			case EditorBack: "VOLVER";
 			case EditorCanvasHelp: "VISTA DEL MUNDO — CLIC IZQUIERDO PARA USAR LA HERRAMIENTA";
 			case EditorInvalid: "CORRIGE EL BORRADOR ANTES DE PROBARLO";
+			case EditorName: "NOMBRE DEL MUNDO";
 			case EditorNewWorld: "MUNDO NUEVO";
 			case EditorReady: "LISTO — LOS CAMBIOS USAN LA SESION CAXEMAP REAL";
 			case EditorRedo: "REHACER";

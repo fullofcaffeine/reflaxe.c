@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "functions": [
     "GuiButton",
     "GuiDisable",
@@ -21,31 +21,50 @@
     "GuiSetState",
     "GuiSetStyle",
     "GuiStatusBar",
+    "GuiTextBox",
     "GuiToggle",
     "GuiUnlock",
     "GuiWindowBox"
   ],
   "borrowedMutableParameters": [
     {
+      "kind": "scalar-inout",
       "function": "GuiToggle",
       "parameter": "active",
       "canonicalCType": "_Bool *",
       "haxeType": "c.Ref<Bool>",
+      "direction": "inout",
       "lifetime": "call"
     },
     {
+      "kind": "scalar-inout",
       "function": "GuiListView",
       "parameter": "scrollIndex",
       "canonicalCType": "int *",
       "haxeType": "c.Ref<c.Int32>",
+      "direction": "inout",
       "lifetime": "call"
     },
     {
+      "kind": "scalar-inout",
       "function": "GuiListView",
       "parameter": "active",
       "canonicalCType": "int *",
       "haxeType": "c.Ref<c.Int32>",
+      "direction": "inout",
       "lifetime": "call"
+    },
+    {
+      "kind": "nul-terminated-utf8-buffer",
+      "function": "GuiTextBox",
+      "parameter": "text",
+      "canonicalCType": "char *",
+      "haxeType": "c.CStringBufferRef",
+      "direction": "inout",
+      "lifetime": "call",
+      "capacityParameter": "textSize",
+      "capacityUnit": "bytes-including-final-nul",
+      "textEncoding": "utf-8"
     }
   ],
   "implementation": {
@@ -62,7 +81,7 @@
   "omissions": [
     {
       "family": "pointer-mutating-controls",
-      "reason": "GuiToggle and GuiListView now use reviewed call-scoped scalar borrows. Text boxes, extended lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, buffer-capacity, or returned-view contracts.",
+      "reason": "GuiToggle and GuiListView use reviewed call-scoped scalar borrows, while GuiTextBox uses one reviewed mutable UTF-8 buffer whose byte capacity includes the final NUL. Extended lists, toggle groups, sliders, color controls, grids, scroll panels, tabs, and message boxes still require additional element, capacity, aggregate, or returned-view contracts.",
       "owner": "haxe_c-xge.19.6.1"
     },
     {

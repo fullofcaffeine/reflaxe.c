@@ -112,6 +112,14 @@
       }
     },
     {
+      "id": "editor_name",
+      "symbol": "EditorName",
+      "text": {
+        "en": "WORLD NAME",
+        "es-MX": "NOMBRE DEL MUNDO"
+      }
+    },
+    {
       "id": "editor_new_world",
       "symbol": "EditorNewWorld",
       "text": {

@@ -31,6 +31,7 @@ import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
 import raygui.GuiListViewState;
 import raygui.GuiResult;
+import raygui.GuiTextBoxState;
 import raygui.GuiToggleState;
 import raygui.Raygui;
 import raylib.Color;
@@ -72,6 +73,15 @@ final class CaxecraftEditorScreen {
 	final advancedTools:GuiToggleState;
 	final toolList:GuiListViewState;
 
+	/**
+	 * Owns the visible draft-name text without claiming persistence support.
+	 *
+	 * This first field proves safe native editing and localization-aware layout.
+	 * It deliberately does not rename the CAXEMAP yet: a later typed session
+	 * command must make that change undoable, validated, and serializable.
+	 */
+	final worldName:Null<GuiTextBoxState>;
+
 	public function new() {
 		session = openNewWorld();
 		notice = Ready;
@@ -79,6 +89,7 @@ final class CaxecraftEditorScreen {
 		selection = null;
 		advancedTools = new GuiToggleState(false);
 		toolList = new GuiListViewState();
+		worldName = GuiTextBoxState.create(64);
 		refreshProjection();
 	}
 
@@ -98,6 +109,9 @@ final class CaxecraftEditorScreen {
 		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorNewWorld))) {
 			session = openNewWorld();
 			notice = Ready;
+			final name = worldName;
+			if (name != null)
+				name.clear();
 			refreshProjection();
 		}
 		buttonLeft += buttonWidth + buttonGap;
@@ -125,6 +139,11 @@ final class CaxecraftEditorScreen {
 			UiCatalog.text(locale, UiMessage.EditorToolList));
 		Raygui.Toggle(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 172.0, sidebarWidth - 32.0, 32.0),
 			UiCatalog.text(locale, UiMessage.EditorAdvanced), advancedTools);
+		Raygui.Label(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 216.0, sidebarWidth - 32.0, 24.0),
+			UiCatalog.text(locale, UiMessage.EditorName));
+		final name = worldName;
+		if (name != null)
+			name.draw(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 242.0, sidebarWidth - 32.0, 32.0));
 		drawViewport(48, 144, width - sidebarWidth - 112, height - 230);
 
 		final status = switch notice {

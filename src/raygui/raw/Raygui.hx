@@ -73,6 +73,8 @@ extern class Raygui {
 
 	public static function GuiStatusBar(bounds:raylib.raw.Rectangle, text:c.CString):c.Int32;
 
+	public static function GuiTextBox(bounds:raylib.raw.Rectangle, text:c.CStringBufferRef, textSize:c.Int32, editMode:Bool):c.Int32;
+
 	public static function GuiToggle(bounds:raylib.raw.Rectangle, text:c.CString, active:c.Ref<Bool>):c.Int32;
 
 	public static function GuiUnlock():Void;

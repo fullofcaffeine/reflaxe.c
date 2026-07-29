@@ -12,7 +12,8 @@
  */
 int main(void) {
   int (*list_view)(Rectangle, const char *, int *, int *) = &GuiListView;
-  if (list_view == NULL) {
+  int (*text_box)(Rectangle, char *, int, bool) = &GuiTextBox;
+  if ((list_view == NULL) || (text_box == NULL)) {
     return 3;
   }
   GuiLoadStyleDefault();

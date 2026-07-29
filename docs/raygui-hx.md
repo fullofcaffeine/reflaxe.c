@@ -6,13 +6,14 @@ RayguiHx is the Haxe-facing boundary for the pinned raygui 5.0 header. It is
 being built first for Caxecraft's visual editor, menus, settings, pause screen,
 inventory panels, and loading screens. The first checked slice is deliberately
 small: panels, labels, buttons, a Boolean toggle, a selectable scrolling list,
-status bars, shared state, and shared style.
+an owned single-line UTF-8 text box, status bars, shared state, and shared
+style.
 
-This is not a claim that all of raygui is supported. Text boxes, extended lists
-whose items arrive as a `char **`, sliders, file-loaded styles, and other
-pointer- or resource-owning controls are still omitted. Each will be added only
-with its element type, buffer size, lifetime, ownership, failure, and cleanup
-rules made explicit in Haxe.
+This is not a claim that all of raygui is supported. Extended lists whose items
+arrive as a `char **`, multi-button text dialogs, sliders, file-loaded styles,
+and other pointer- or resource-owning controls are still omitted. Each will be
+added only with its element type, buffer size, lifetime, ownership, failure,
+and cleanup rules made explicit in Haxe.
 
 ## Why there are two Haxe layers
 
@@ -51,12 +52,32 @@ until `GuiListView` returns. A class is useful for this control because its
 small state has a real lifetime across frames; stateless buttons remain simple
 facade calls and do not become pretend widget objects.
 
+`GuiTextBoxState` owns the more substantial state required by `GuiTextBox`.
+Haxe allocates one fixed-size `Bytes` value, keeps at least one NUL terminator
+inside it, and stores the control's edit flag beside that allocation. On each
+frame, `draw` lends the bytes through `c.CStringBufferRef` and passes the exact
+allocation length as raygui's `textSize`. Raygui may edit those bytes only
+during that call. Application code reads an independently owned `String`
+snapshot afterward, so neither a `char *` nor mutable binary storage escapes
+into game or editor logic.
+
+The size is a byte capacity, not a character count. A capacity of 64 can hold
+at most 63 UTF-8 bytes because C needs the last byte for NUL; a non-ASCII
+character may use more than one byte. `create` and `replace` reject text that
+does not fit or contains an embedded NUL, and a failed replacement leaves the
+previous text unchanged. The pinned raygui code inserts and pastes complete
+UTF-8 code points that fit before the terminator. haxe.c validates the edited
+bytes again when it creates the immutable `String` snapshot.
+
 The extra binding policy matters because Clang can prove that the header says
-`bool *` or `int *`, but a C type does not say whether the library keeps that pointer.
+`bool *`, `int *`, or `char *`, but a C type does not say whether the library
+keeps that pointer.
 [`raygui-core-selection.json`](specs/raygui-core-selection.json) therefore
-names every admitted mutable parameter together with its call-only lifetime.
-The generator fails if the pinned header no longer matches that reviewed
-contract.
+names every admitted mutable parameter together with its call-only lifetime
+and read/write direction. The text-buffer record additionally binds the
+pointer to `textSize`, defines that size as bytes including the final NUL, and
+records UTF-8 as the text encoding. The generator fails if the pinned header no
+longer matches that reviewed contract.
 
 ## Why the package is `#if c`
 
@@ -134,5 +155,24 @@ Static-library order matters because raygui calls Raylib. The generated build
 manifest must request exactly that reviewed dependency set; the Python build
 driver does not silently add raygui when Haxe did not reach the binding.
 
-Real rendered editor evidence is still required before the visual editor is
-described as complete.
+Caxecraft uses `GuiTextBoxState` for the localized World Name field in its
+native editor sidebar. That field is presentation state in this slice: it
+proves safe input and rendering, but it does not yet rename or save the
+CAXEMAP. Persistence must arrive through an `EditorSession` command so the
+change becomes validated, undoable, and serializable rather than bypassing the
+editor's state owner.
+
+Run the rendered proof without opening a desktop window:
+
+```bash
+npm run caxecraft:play -- \
+  --raylib-configuration memory-software \
+  --pilot editor-shell
+```
+
+The pilot compiles the real Haxe application through haxe.c, links the pinned
+Raygui/Raylib archives, applies one typed editor gesture, captures the presented
+framebuffer, and checks that the toolbar, canvas, sidebar text-entry region, and
+status bar are visible before bounded exit. This is executable evidence for the
+current shell and text field; it is not a claim that the planned 3D editor,
+persistence, logic tools, or campaign authoring are complete.

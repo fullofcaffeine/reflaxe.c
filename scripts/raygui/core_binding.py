@@ -95,36 +95,54 @@ def load_selection(path: Path = SELECTION_PATH) -> dict[str, object]:
         ),
         "raygui selection",
     )
-    if selection.get("schemaVersion") != 2:
-        raise BindingFailure("raygui selection schemaVersion must be 2")
+    if selection.get("schemaVersion") != 3:
+        raise BindingFailure("raygui selection schemaVersion must be 3")
     require_names(selection.get("functions"), "selection.functions")
     borrowed = selection.get("borrowedMutableParameters")
     expected_borrowed = [
         {
+            "kind": "scalar-inout",
             "function": "GuiToggle",
             "parameter": "active",
             "canonicalCType": "_Bool *",
             "haxeType": "c.Ref<Bool>",
+            "direction": "inout",
             "lifetime": "call",
         },
         {
+            "kind": "scalar-inout",
             "function": "GuiListView",
             "parameter": "scrollIndex",
             "canonicalCType": "int *",
             "haxeType": "c.Ref<c.Int32>",
+            "direction": "inout",
             "lifetime": "call",
         },
         {
+            "kind": "scalar-inout",
             "function": "GuiListView",
             "parameter": "active",
             "canonicalCType": "int *",
             "haxeType": "c.Ref<c.Int32>",
+            "direction": "inout",
             "lifetime": "call",
+        },
+        {
+            "kind": "nul-terminated-utf8-buffer",
+            "function": "GuiTextBox",
+            "parameter": "text",
+            "canonicalCType": "char *",
+            "haxeType": "c.CStringBufferRef",
+            "direction": "inout",
+            "lifetime": "call",
+            "capacityParameter": "textSize",
+            "capacityUnit": "bytes-including-final-nul",
+            "textEncoding": "utf-8",
         },
     ]
     if borrowed != expected_borrowed:
         raise BindingFailure(
-            "raygui mutable parameters must retain the reviewed call-scoped scalar contracts"
+            "raygui mutable parameters must retain the reviewed call-scoped scalar and text-buffer contracts"
         )
     implementation = require_mapping(selection.get("implementation"), "selection.implementation")
     require_exact_keys(
@@ -174,7 +192,9 @@ def extract_selected_functions(
     Clang proves the exact C type, but a header spelling alone cannot prove how
     long a callee keeps a pointer. The selection therefore has to name every
     pointer parameter and its lifetime. The admitted controls may borrow only
-    caller-owned scalar fields for the duration of one call.
+    caller-owned state for the duration of one call. Scalar fields and text
+    buffers remain distinct reviewed policy variants because only the buffer
+    also couples its pointer to a byte-capacity parameter.
     """
 
     nodes = named_nodes(ast, "FunctionDecl")
@@ -213,6 +233,7 @@ def extract_selected_functions(
                 reviewed_c_type = {
                     "_Bool *": "bool *",
                     "int *": "int *",
+                    "char *": "char *",
                 }.get(policy["canonicalCType"])
                 if reviewed_c_type is None:
                     raise BindingFailure(
@@ -222,8 +243,18 @@ def extract_selected_functions(
                     "cType": reviewed_c_type,
                     "canonicalCType": policy["canonicalCType"],
                     "haxeType": policy["haxeType"],
+                    "borrowKind": policy["kind"],
+                    "borrowDirection": policy["direction"],
                     "borrowLifetime": policy["lifetime"],
                 }
+                if policy["kind"] == "nul-terminated-utf8-buffer":
+                    parameter_type.update(
+                        {
+                            "capacityParameter": policy["capacityParameter"],
+                            "capacityUnit": policy["capacityUnit"],
+                            "textEncoding": policy["textEncoding"],
+                        }
+                    )
                 used.add((name, parameter_name))
             parameters.append({"name": parameter_name, "type": parameter_type})
         result.append(
@@ -320,10 +351,10 @@ def extract_lock(raygui_source: Path, raylib_source: Path, clang: str) -> dict[s
     functions = extract_selected_functions(ast, selection)
     declarations = {"functions": functions}
     lock: dict[str, object] = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "generator": {
             "path": GENERATOR_PATH,
-            "algorithm": "hxc-raygui-clang-core-v3",
+            "algorithm": "hxc-raygui-clang-core-v4",
         },
         "upstream": {
             "name": "raygui",
@@ -392,12 +423,12 @@ def validate_lock(lock: Mapping[str, object]) -> None:
         ),
         "raygui binding lock",
     )
-    if lock.get("schemaVersion") != 1:
-        raise BindingFailure("raygui binding lock schemaVersion must be 1")
+    if lock.get("schemaVersion") != 2:
+        raise BindingFailure("raygui binding lock schemaVersion must be 2")
     generator = require_mapping(lock.get("generator"), "lock.generator")
     if generator != {
         "path": GENERATOR_PATH,
-        "algorithm": "hxc-raygui-clang-core-v3",
+        "algorithm": "hxc-raygui-clang-core-v4",
     }:
         raise BindingFailure("raygui binding generator identity drifted")
     upstream = require_mapping(lock.get("upstream"), "lock.upstream")
@@ -465,6 +496,83 @@ def validate_lock(lock: Mapping[str, object]) -> None:
     actual_names = [item.get("name") for item in functions if isinstance(item, dict)]
     if actual_names != selection["functions"]:
         raise BindingFailure("raygui locked functions do not exactly match the selection")
+    locked_functions = {
+        item["name"]: item
+        for item in functions
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    }
+    rendered_c_types = {
+        "_Bool *": "bool *",
+        "int *": "int *",
+        "char *": "char *",
+    }
+    for policy in selection["borrowedMutableParameters"]:
+        function = require_mapping(
+            locked_functions.get(policy["function"]),
+            f"lock function {policy['function']}",
+        )
+        parameters = function.get("parameters")
+        if not isinstance(parameters, list):
+            raise BindingFailure(
+                f"locked function {policy['function']} has malformed parameters"
+            )
+        parameter = next(
+            (
+                item
+                for item in parameters
+                if isinstance(item, dict) and item.get("name") == policy["parameter"]
+            ),
+            None,
+        )
+        locked_type = require_mapping(
+            require_mapping(
+                parameter,
+                f"lock function {policy['function']}.{policy['parameter']}",
+            ).get("type"),
+            f"lock function {policy['function']}.{policy['parameter']}.type",
+        )
+        expected_type = {
+            "cType": rendered_c_types[policy["canonicalCType"]],
+            "canonicalCType": policy["canonicalCType"],
+            "haxeType": policy["haxeType"],
+            "borrowKind": policy["kind"],
+            "borrowDirection": policy["direction"],
+            "borrowLifetime": policy["lifetime"],
+        }
+        if policy["kind"] == "nul-terminated-utf8-buffer":
+            expected_type.update(
+                {
+                    "capacityParameter": policy["capacityParameter"],
+                    "capacityUnit": policy["capacityUnit"],
+                    "textEncoding": policy["textEncoding"],
+                }
+            )
+            capacity = next(
+                (
+                    item
+                    for item in parameters
+                    if isinstance(item, dict)
+                    and item.get("name") == policy["capacityParameter"]
+                ),
+                None,
+            )
+            capacity_type = require_mapping(
+                require_mapping(
+                    capacity,
+                    f"lock function {policy['function']}.{policy['capacityParameter']}",
+                ).get("type"),
+                f"lock function {policy['function']}.{policy['capacityParameter']}.type",
+            )
+            if capacity_type.get("canonicalCType") != "int":
+                raise BindingFailure(
+                    f"reviewed text capacity {policy['function']}."
+                    f"{policy['capacityParameter']} must remain one C int"
+                )
+        if locked_type != expected_type:
+            raise BindingFailure(
+                f"locked mutable parameter {policy['function']}."
+                f"{policy['parameter']} drifted from its reviewed ownership contract"
+            )
     if lock.get("declarationSha256") != digest_json(declarations):
         raise BindingFailure("raygui declaration digest drifted")
     if lock.get("generatedPaths") != ["src/raygui/raw/Raygui.hx"]:
