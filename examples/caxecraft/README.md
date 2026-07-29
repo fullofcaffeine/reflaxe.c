@@ -92,9 +92,15 @@ it converts already validated CaxeMap actor IDs into stable positive
 `EntityId` values, detects duplicate text IDs or integer hash collisions, and
 rejects a candidate larger than the 64-character store before session state is
 changed. Reordering content or inserting an unrelated actor therefore cannot
-rename an existing actor. This does not yet create or publish a `Character`;
-parent task `haxe_c-xge.20.4.2.4` owns combining an identity with authored
-placement and mechanics and committing the complete actor to `GameSession`.
+rename an existing actor.
+`ActorCompositionPlanner` now joins those identities with authored transforms
+and content-owned health, aquatic, and controller profiles. It plans NPCs and
+enemies generically—there is no Nia or Mossling branch—and rejects the complete
+candidate set on duplicate/colliding identities, capacity overflow, unknown or
+wrong-kind content, or invalid mechanics. The resulting immutable spawn plans
+still do not create or publish live `Character` values.
+`haxe_c-xge.20.4.2.4.4` owns constructing temporary characters/controllers and
+replacing the `GameSession` actor set only after every construction succeeds.
 The playable advances water on the fixed clock, draws translucent surfaces,
 swims, applies Adventure drowning damage, fades the underwater camera, and shows
 fixed-tick breath bubbles. `WaterSnapshot` preserves mutable water for the future
@@ -109,6 +115,7 @@ After editing the built-in pack, run:
 ```sh
 python3 examples/caxecraft/content_pack.py
 npm run test:caxecraft-content-pack
+npm run test:caxecraft-actor-composition
 npm run test:caxecraft-water
 npm run test:caxecraft-aquatics
 npm run test:caxecraft-terrain-chunks

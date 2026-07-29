@@ -77,7 +77,7 @@ ITEM_KEYS = {
     "aquaticProfile",
     "icon",
 }
-NPC_KEYS = {"id", "behaviorProfile", "interactionRadiusMilli", "presentation"}
+NPC_KEYS = {"id", "behaviorProfile", "maxHealth", "interactionRadiusMilli", "presentation"}
 ENEMY_KEYS = {
     "id",
     "behaviorProfile",
@@ -200,6 +200,7 @@ class Item:
 class Npc:
     content_id: str
     behavior_profile: str
+    max_health: int
     interaction_radius_milli: int
     presentation: Presentation
 
@@ -492,6 +493,7 @@ def validate_document(document: dict[str, object], asset_document: dict[str, obj
         return Npc(
             content_id(raw["id"], f"{coordinate}.id"),
             profile(raw["behaviorProfile"], f"{coordinate}.behaviorProfile", NPC_BEHAVIOR_PROFILES),
+            require_integer(raw["maxHealth"], f"{coordinate}.maxHealth", 1, 10_000),
             require_integer(raw["interactionRadiusMilli"], f"{coordinate}.interactionRadiusMilli", 250, 32_000),
             parse_presentation(raw["presentation"], f"{coordinate}.presentation", assets),
         )
@@ -696,6 +698,10 @@ def render_haxe(pack: ContentPack) -> str:
         "import caxecraft.domain.Aquatics.profile as createAquaticProfile;",
         "import caxecraft.scenario.ContentId;",
         "import caxecraft.scenario.ScenarioContentRegistry;",
+        "import caxecraft.content.ActorContentResolver;",
+        "import caxecraft.content.ActorContentResolver.ActorContentKind;",
+        "import caxecraft.content.ActorContentResolver.ActorContentResolution;",
+        "import caxecraft.content.ActorContentResolver.ActorControllerProfile;",
         "",
     ]
     for name, values, is_content in (
@@ -898,6 +904,7 @@ def render_haxe(pack: ContentPack) -> str:
     )
     lines.extend(switch_function("npcId", "BaseNpc", "ContentId", pack.npcs, lambda value: f"new ContentId({haxe_string(value.content_id)})"))
     lines.extend(switch_function("npcBehaviorProfile", "BaseNpc", "NpcBehaviorProfile", pack.npcs, lambda value: profile_symbol(value.behavior_profile)))
+    lines.extend(switch_function("npcMaxHealth", "BaseNpc", "Int", pack.npcs, lambda value: str(value.max_health)))
     lines.extend(switch_function("npcInteractionRadiusMilli", "BaseNpc", "Int", pack.npcs, lambda value: str(value.interaction_radius_milli)))
     lines.extend(
         switch_function(
@@ -954,7 +961,7 @@ def render_haxe(pack: ContentPack) -> str:
             "}",
             "",
             "/** Scenario/editor lookup over the same generated definitions. */",
-            "final class BaseContentRegistry implements ScenarioContentRegistry {",
+            "final class BaseContentRegistry implements ScenarioContentRegistry implements ActorContentResolver {",
             "\tpublic function new() {}",
             "",
             f"\tpublic function supportsFeature(id:ContentId):Bool\n\t\treturn id.text() == {haxe_string(pack.features[0])};",
@@ -997,6 +1004,54 @@ def render_haxe(pack: ContentPack) -> str:
     lines.extend(["\t\treturn -1;", "\t}", ""])
     registry_membership("hasEntity", enemy_ids)
     registry_membership("hasNpc", npc_ids)
+    lines.extend(["\tpublic function resolveNpc(id:ContentId):ActorContentResolution {"])
+    for npc in pack.npcs:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(npc.content_id)})",
+                "\t\t\treturn ActorContentResolved({",
+                f"\t\t\t\tmaximumHealth: {npc.max_health},",
+                "\t\t\t\taquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()),",
+                f"\t\t\t\tcontroller: StationaryDialogue({npc.interaction_radius_milli})",
+                "\t\t\t});",
+            ]
+        )
+    for enemy in pack.enemies:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(enemy.content_id)})",
+                "\t\t\treturn WrongActorContentKind(EnemyContent);",
+            ]
+        )
+    lines.extend(["\t\treturn UnknownActorContent;", "\t}", ""])
+    lines.extend(["\tpublic function resolveEnemy(id:ContentId):ActorContentResolution {"])
+    for enemy in pack.enemies:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(enemy.content_id)})",
+                "\t\t\treturn ActorContentResolved({",
+                f"\t\t\t\tmaximumHealth: {enemy.max_health},",
+                "\t\t\t\taquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()),",
+                "\t\t\t\tcontroller: WanderChaseMelee({",
+                f"\t\t\t\t\tnoticeRadiusMilli: {enemy.notice_radius_milli},",
+                f"\t\t\t\t\tstrikeRadiusMilli: {enemy.strike_radius_milli},",
+                f"\t\t\t\t\tattackRadiusMilli: {enemy.attack_radius_milli},",
+                f"\t\t\t\t\twindupTicks: {enemy.windup_ticks},",
+                f"\t\t\t\t\trecoveryTicks: {enemy.recovery_ticks},",
+                f"\t\t\t\t\tstepMilli: {enemy.step_milli},",
+                f"\t\t\t\t\tdrop: new ContentId({haxe_string(enemy.drop)})",
+                "\t\t\t\t})",
+                "\t\t\t});",
+            ]
+        )
+    for npc in pack.npcs:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(npc.content_id)})",
+                "\t\t\treturn WrongActorContentKind(NpcContent);",
+            ]
+        )
+    lines.extend(["\t\treturn UnknownActorContent;", "\t}", ""])
     for method in ("hasPrefab", "hasStatefulObject", "hasState", "hasSignal"):
         lines.extend([f"\tpublic function {method}(id:ContentId):Bool", "\t\treturn false;", ""])
     registry_membership("hasEffect", effect_ids)

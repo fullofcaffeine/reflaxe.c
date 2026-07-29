@@ -1189,6 +1189,11 @@ def validate() -> list[str]:
     ):
         errors.append("package.json must retain the validated Caxecraft content-pack gate")
     if (
+        scripts.get("test:caxecraft-actor-composition")
+        != "python3 examples/caxecraft/run_haxe_c_test.py actor-composition"
+    ):
+        errors.append("package.json must retain the Caxecraft actor-composition gate")
+    if (
         scripts.get("test:caxecraft-level-adapter")
         != "python3 examples/caxecraft/level_adapter.py --check"
     ):
@@ -1350,6 +1355,12 @@ def validate() -> list[str]:
         scripts.get("test:toolchain", "")
     ):
         errors.append("package.json test:toolchain must execute test:caxecraft-content-pack")
+    if "npm run test:caxecraft-actor-composition" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:caxecraft-actor-composition"
+        )
     if "npm run test:caxecraft-level-adapter" not in str(
         scripts.get("test:toolchain", "")
     ):

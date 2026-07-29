@@ -509,6 +509,28 @@ Content selects registered mechanics; it cannot embed arbitrary Haxe, C, shell
 code, or pointers. Runtime loading is owned by `haxe_c-xge.39`, and
 content-to-actor composition by `haxe_c-xge.20.4`.
 
+The first actor-composition stage is now executable. `ActorCompositionPlanner`
+reads the already validated CaxeMap objects in authored order, selects only
+character-like `Npc` and `Entity` placements, asks `ActorIdentityPlanner` for
+stable runtime IDs, and resolves each content ID through
+`ActorContentResolver`. The generated base-pack registry implements that
+resolver from the reviewed content JSON. It supplies health, aquatic behavior,
+and one typed controller recipe without teaching the planner names such as Nia
+or Mossling.
+
+The result is an immutable `CharacterSpawnPlan` for every admitted placement.
+A spawn plan is construction information, not a live actor: planning does not
+run artificial intelligence, mutate `GameSession`, or publish a partly built
+level. Duplicate IDs, stable-ID collisions, capacity overflow, unknown content,
+wrong content kinds, and invalid mechanics reject the complete candidate set.
+Eval and strict generated C run the same focused specification.
+
+`haxe_c-xge.20.4.2.4.4` owns the next boundary: construct temporary
+`Character` and controller state from the complete plan, then replace the live
+session only if every construction succeeds. Keeping planning and publication
+separate makes failure atomic—the old session remains usable instead of
+requiring rollback from a half-created actor set.
+
 One engine capability must connect all authoring surfaces without becoming
 five implementations:
 

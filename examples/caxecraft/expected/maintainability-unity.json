@@ -64,13 +64,13 @@
     },
     {
       "path": "src/program.c",
-      "sha256": "5baf5842caddb379c19fedd6833351ae6c3b93d19c887f6a3a1f476778d7fba8"
+      "sha256": "e9ba95da32200ebeeb69f57592634ca1c15fe68e18e59355277b167dcbd9267c"
     }
   ],
   "summary": {
     "artifactCount": 2,
-    "physicalLineCount": 2478,
-    "codeLineCount": 2295,
+    "physicalLineCount": 2475,
+    "codeLineCount": 2292,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -86,7 +86,7 @@
     "branchCount": 270,
     "temporaryDeclarationCount": 531,
     "temporaryReferenceCount": 770,
-    "temporaryDeclarationsPerKFunctionCodeLines": 251,
+    "temporaryDeclarationsPerKFunctionCodeLines": 252,
     "maxIdentifier": {
       "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
       "bytes": 53,
@@ -407,23 +407,23 @@
     },
     {
       "path": "src/program.c",
-      "sha256": "5baf5842caddb379c19fedd6833351ae6c3b93d19c887f6a3a1f476778d7fba8",
+      "sha256": "e9ba95da32200ebeeb69f57592634ca1c15fe68e18e59355277b167dcbd9267c",
       "owner": {
         "kind": "amalgamation",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 2238,
-      "codeLineCount": 2119,
+      "physicalLineCount": 2235,
+      "codeLineCount": 2116,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 5256,
+      "identifierCount": 5255,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
         "bytes": 53,
-        "line": 1479,
+        "line": 1476,
         "column": 43
       },
       "temporaryDeclarationCount": 531,
@@ -1642,17 +1642,17 @@
             "endColumn": 2
           },
           "startLine": 1295,
-          "endLine": 1384,
-          "physicalLineCount": 90,
-          "codeLineCount": 90,
-          "bodyCodeLineCount": 87,
+          "endLine": 1381,
+          "physicalLineCount": 87,
+          "codeLineCount": 87,
+          "bodyCodeLineCount": 84,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
           "branchCount": 9,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 16,
           "temporaryReferenceCount": 22,
-          "temporaryDeclarationsPerKCodeLines": 178
+          "temporaryDeclarationsPerKCodeLines": 184
         },
         {
           "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.overlaps",
@@ -1676,8 +1676,8 @@
             "endLine": 198,
             "endColumn": 2
           },
-          "startLine": 1386,
-          "endLine": 1451,
+          "startLine": 1383,
+          "endLine": 1448,
           "physicalLineCount": 66,
           "codeLineCount": 66,
           "bodyCodeLineCount": 63,
@@ -1711,8 +1711,8 @@
             "endLine": 86,
             "endColumn": 2
           },
-          "startLine": 1453,
-          "endLine": 1477,
+          "startLine": 1450,
+          "endLine": 1474,
           "physicalLineCount": 25,
           "codeLineCount": 25,
           "bodyCodeLineCount": 22,
@@ -1746,8 +1746,8 @@
             "endLine": 132,
             "endColumn": 2
           },
-          "startLine": 1479,
-          "endLine": 1532,
+          "startLine": 1476,
+          "endLine": 1529,
           "physicalLineCount": 54,
           "codeLineCount": 54,
           "bodyCodeLineCount": 51,
@@ -1781,8 +1781,8 @@
             "endLine": 97,
             "endColumn": 2
           },
-          "startLine": 1534,
-          "endLine": 1571,
+          "startLine": 1531,
+          "endLine": 1568,
           "physicalLineCount": 38,
           "codeLineCount": 38,
           "bodyCodeLineCount": 35,
@@ -1816,8 +1816,8 @@
             "endLine": 30,
             "endColumn": 2
           },
-          "startLine": 1573,
-          "endLine": 1588,
+          "startLine": 1570,
+          "endLine": 1585,
           "physicalLineCount": 16,
           "codeLineCount": 16,
           "bodyCodeLineCount": 13,
@@ -1851,8 +1851,8 @@
             "endLine": 22,
             "endColumn": 2
           },
-          "startLine": 1590,
-          "endLine": 1600,
+          "startLine": 1587,
+          "endLine": 1597,
           "physicalLineCount": 11,
           "codeLineCount": 11,
           "bodyCodeLineCount": 8,
@@ -1886,8 +1886,8 @@
             "endLine": 210,
             "endColumn": 3
           },
-          "startLine": 1602,
-          "endLine": 1622,
+          "startLine": 1599,
+          "endLine": 1619,
           "physicalLineCount": 21,
           "codeLineCount": 21,
           "bodyCodeLineCount": 18,
@@ -1921,8 +1921,8 @@
             "endLine": 50,
             "endColumn": 3
           },
-          "startLine": 1624,
-          "endLine": 1629,
+          "startLine": 1621,
+          "endLine": 1626,
           "physicalLineCount": 6,
           "codeLineCount": 6,
           "bodyCodeLineCount": 3,
@@ -1956,8 +1956,8 @@
             "endLine": 215,
             "endColumn": 3
           },
-          "startLine": 1631,
-          "endLine": 1644,
+          "startLine": 1628,
+          "endLine": 1641,
           "physicalLineCount": 14,
           "codeLineCount": 14,
           "bodyCodeLineCount": 11,
@@ -1991,8 +1991,8 @@
             "endLine": 202,
             "endColumn": 3
           },
-          "startLine": 1646,
-          "endLine": 2232,
+          "startLine": 1643,
+          "endLine": 2229,
           "physicalLineCount": 587,
           "codeLineCount": 587,
           "bodyCodeLineCount": 584,
@@ -2014,8 +2014,8 @@
             "source": null
           },
           "source": null,
-          "startLine": 2234,
-          "endLine": 2238,
+          "startLine": 2231,
+          "endLine": 2235,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,

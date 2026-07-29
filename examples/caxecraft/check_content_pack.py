@@ -233,6 +233,20 @@ def check_malformed_inputs() -> None:
         lambda value: object_array(value, "aquaticProfiles")[0].__setitem__("underwaterMining", 1),
         "must be true or false",
     )
+    expect_invalid(
+        "missing NPC maximum health",
+        source,
+        assets,
+        lambda value: object_array(value, "npcs")[0].pop("maxHealth"),
+        "missing=['maxHealth']",
+    )
+    expect_invalid(
+        "non-positive NPC maximum health",
+        source,
+        assets,
+        lambda value: object_array(value, "npcs")[0].__setitem__("maxHealth", 0),
+        ".maxHealth must be an integer from 1 through 10000",
+    )
 
 
 def check_eval_oracle() -> None:

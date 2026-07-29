@@ -4,6 +4,10 @@ import caxecraft.domain.AquaticProfile;
 import caxecraft.domain.Aquatics.profile as createAquaticProfile;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioContentRegistry;
+import caxecraft.content.ActorContentResolver;
+import caxecraft.content.ActorContentResolver.ActorContentKind;
+import caxecraft.content.ActorContentResolver.ActorContentResolution;
+import caxecraft.content.ActorContentResolver.ActorControllerProfile;
 
 enum abstract BaseBlock(Int) {
 	var Air = 0;
@@ -446,6 +450,11 @@ final class BaseContentPack {
 			case Nia: StationaryDialogue;
 		}
 
+	public static function npcMaxHealth(value:BaseNpc):Int
+		return switch (value) {
+			case Nia: 6;
+		}
+
 	public static function npcInteractionRadiusMilli(value:BaseNpc):Int
 		return switch (value) {
 			case Nia: 3500;
@@ -551,7 +560,7 @@ final class BaseContentPack {
 }
 
 /** Scenario/editor lookup over the same generated definitions. */
-final class BaseContentRegistry implements ScenarioContentRegistry {
+final class BaseContentRegistry implements ScenarioContentRegistry implements ActorContentResolver {
 	public function new() {}
 
 	public function supportsFeature(id:ContentId):Bool
@@ -674,6 +683,38 @@ final class BaseContentRegistry implements ScenarioContentRegistry {
 		if (id.text() == "caxecraft:nia")
 			return true;
 		return false;
+	}
+
+	public function resolveNpc(id:ContentId):ActorContentResolution {
+		if (id.text() == "caxecraft:nia")
+			return ActorContentResolved({
+				maximumHealth: 6,
+				aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()),
+				controller: StationaryDialogue(3500)
+			});
+		if (id.text() == "caxecraft:mossling")
+			return WrongActorContentKind(EnemyContent);
+		return UnknownActorContent;
+	}
+
+	public function resolveEnemy(id:ContentId):ActorContentResolution {
+		if (id.text() == "caxecraft:mossling")
+			return ActorContentResolved({
+				maximumHealth: 3,
+				aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()),
+				controller: WanderChaseMelee({
+					noticeRadiusMilli: 6000,
+					strikeRadiusMilli: 3000,
+					attackRadiusMilli: 1400,
+					windupTicks: 8,
+					recoveryTicks: 12,
+					stepMilli: 80,
+					drop: new ContentId("caxecraft:mossling-berries")
+				})
+			});
+		if (id.text() == "caxecraft:nia")
+			return WrongActorContentKind(NpcContent);
+		return UnknownActorContent;
 	}
 
 	public function hasPrefab(id:ContentId):Bool

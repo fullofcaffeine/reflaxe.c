@@ -137,7 +137,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
-      "sha256": "d1b49386532dae559f41894cd12e701231074b5beda34ceec78199397147f8f6"
+      "sha256": "fc636b9fdf291a29fba307de792a924e4d9b04ba1a7e2a58f757e8a20d32853a"
     },
     {
       "path": "src/modules/caxecraft/domain/VoxelRaycast.c",
@@ -162,8 +162,8 @@
   ],
   "summary": {
     "artifactCount": 24,
-    "physicalLineCount": 2592,
-    "codeLineCount": 2376,
+    "physicalLineCount": 2589,
+    "codeLineCount": 2373,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -179,7 +179,7 @@
     "branchCount": 270,
     "temporaryDeclarationCount": 531,
     "temporaryReferenceCount": 770,
-    "temporaryDeclarationsPerKFunctionCodeLines": 251,
+    "temporaryDeclarationsPerKFunctionCodeLines": 252,
     "maxIdentifier": {
       "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
       "bytes": 53,
@@ -1230,23 +1230,23 @@
     },
     {
       "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
-      "sha256": "d1b49386532dae559f41894cd12e701231074b5beda34ceec78199397147f8f6",
+      "sha256": "fc636b9fdf291a29fba307de792a924e4d9b04ba1a7e2a58f757e8a20d32853a",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.CharacterPhysics",
         "source": null
       },
-      "physicalLineCount": 344,
-      "codeLineCount": 334,
+      "physicalLineCount": 341,
+      "codeLineCount": 331,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 867,
+      "identifierCount": 866,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
         "bytes": 53,
-        "line": 252,
+        "line": 249,
         "column": 43
       },
       "temporaryDeclarationCount": 67,
@@ -1450,17 +1450,17 @@
             "endColumn": 2
           },
           "startLine": 68,
-          "endLine": 157,
-          "physicalLineCount": 90,
-          "codeLineCount": 90,
-          "bodyCodeLineCount": 87,
+          "endLine": 154,
+          "physicalLineCount": 87,
+          "codeLineCount": 87,
+          "bodyCodeLineCount": 84,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
           "branchCount": 9,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 16,
           "temporaryReferenceCount": 22,
-          "temporaryDeclarationsPerKCodeLines": 178
+          "temporaryDeclarationsPerKCodeLines": 184
         },
         {
           "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.overlaps",
@@ -1484,8 +1484,8 @@
             "endLine": 198,
             "endColumn": 2
           },
-          "startLine": 159,
-          "endLine": 224,
+          "startLine": 156,
+          "endLine": 221,
           "physicalLineCount": 66,
           "codeLineCount": 66,
           "bodyCodeLineCount": 63,
@@ -1519,8 +1519,8 @@
             "endLine": 86,
             "endColumn": 2
           },
-          "startLine": 226,
-          "endLine": 250,
+          "startLine": 223,
+          "endLine": 247,
           "physicalLineCount": 25,
           "codeLineCount": 25,
           "bodyCodeLineCount": 22,
@@ -1554,8 +1554,8 @@
             "endLine": 132,
             "endColumn": 2
           },
-          "startLine": 252,
-          "endLine": 305,
+          "startLine": 249,
+          "endLine": 302,
           "physicalLineCount": 54,
           "codeLineCount": 54,
           "bodyCodeLineCount": 51,
@@ -1589,8 +1589,8 @@
             "endLine": 97,
             "endColumn": 2
           },
-          "startLine": 307,
-          "endLine": 344,
+          "startLine": 304,
+          "endLine": 341,
           "physicalLineCount": 38,
           "codeLineCount": 38,
           "bodyCodeLineCount": 35,

@@ -393,12 +393,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "74d9e7069a770c490f114bc22d8d2513514517a00e16f03c7e3538a1c8a6fc43",
+      "sha256": "7cf02abfeebabf58a0ddaff5375083128665c0a97e6b4fb4a189991e3d5cbbe9",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "ddf1f8fc502e6abf6696306992ebde85ff1e2695e0c9ecdcd1ea6dcebae92897",
+      "sha256": "3247a577c1744daaa15d8aec667e3d522aba80a72a62c4b5d80137cc9ad2f9cd",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -408,7 +408,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "179dfb0c1f19f6efb019323ca702f8495862e9e455714a10accf59d247d53c25",
+      "sha256": "0e625c5cd30662a9f0918a08accc2cbe5fe6bdacc95000ddc100d9658c687c90",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -1318,7 +1318,7 @@
       "kind": "source"
     },
     {
-      "sha256": "e32fbd45093508e04d7c7258bc7df2d859a0ab722e06e17119c60e115c7c5440",
+      "sha256": "5c62fba45cca9c968a08d927dda5e838d70bef347d263d3e38e3499be30d5e1e",
       "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
       "kind": "source"
     },
@@ -1383,12 +1383,12 @@
       "kind": "source"
     },
     {
-      "sha256": "227c76a94a28a16408d71d91f0c5599948bc91f86a209243695ad40db3570a32",
+      "sha256": "2f2c940568a043b1f5fdbff96f744c796c2af59d7f79a2eb831d3b386b782d56",
       "path": "src/modules/caxecraft/editor/EditorHistory.c",
       "kind": "source"
     },
     {
-      "sha256": "e7df5db11b13c33029e4318d08c866c9f64d5b5c3bb3cc9bcce5ceb744f98a75",
+      "sha256": "6f677a0fbca1daebc31a71228226b16531b666d45db06aaa9c1dae735b15a7a2",
       "path": "src/modules/caxecraft/editor/EditorObservationPlan.c",
       "kind": "source"
     },
@@ -1593,7 +1593,7 @@
       "kind": "source"
     },
     {
-      "sha256": "c09070aea22474dc4caa8fc223ab6335c9a4655e83c90b2ace15731416c0d5d4",
+      "sha256": "686fbc4227b34cb1196d7690b3871a2e3c1705b003d804869ace684e970a0b71",
       "path": "src/modules/caxecraft/scenario/ScenarioWorldValidator.c",
       "kind": "source"
     },

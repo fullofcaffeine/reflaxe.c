@@ -65,6 +65,41 @@ class HaxeCTestCase:
 
 
 CASES = {
+    "actor-composition": HaxeCTestCase(
+        case_id="actor-composition",
+        eval_hxml="actor-composition.hxml",
+        c_hxml="actor-composition-c.hxml",
+        native_harness="test/native/actor_composition_harness.c",
+        generated_source="src/modules/caxecraft/content/ActorCompositionPlanner.c",
+        required_source_markers=(
+            "ActorCompositionPlanner_planActorComposition",
+            "ActorCompositionResult_ActorCompositionPlanned",
+            "ActorCompositionResult_ActorCompositionRejected",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=1,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "string-scalar",
+            "string",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/BaseContentPack.c",
+                required_markers=(
+                    "BaseContentRegistry_resolveNpc",
+                    "BaseContentRegistry_resolveEnemy",
+                    "ActorContentResolution_ActorContentResolved",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+        ),
+    ),
     "app-screen": HaxeCTestCase(
         case_id="app-screen",
         eval_hxml="app-screen.hxml",
