@@ -144,7 +144,7 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "A reachable ordinary Haxe Array length, checked indexing, push, or pop operation.",
+            "description": "A reachable ordinary Haxe Array length, checked indexing, push, pop, or shift operation.",
             "id": "collection-operation",
             "kind": "hxc-ir-operation"
           },
@@ -203,21 +203,23 @@
         "hxc_array_ref_release",
         "hxc_array_ref_retain",
         "hxc_array_ref_set_copy",
+        "hxc_array_ref_shift_move",
         "hxc_array_ref_sort",
         "hxc_array_remove_at",
         "hxc_array_reserve",
         "hxc_array_resize",
-        "hxc_array_set_copy"
+        "hxc_array_set_copy",
+        "hxc_array_shift_move"
       ],
       "artifacts": [
         {
-          "sourceSha256": "9fe9bde12296c7cdbe00c7b68076027da371f7bb3488aae4f248241ab5c3b040",
+          "sourceSha256": "7225f00813a72474d5d2e1c2b24fbdb030ba0ab8e606c1e934fbd1a2fe381bfd",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "5d93d31a817070722b7f437c2ad898a108f8d3c595bfa541bbd3c2e2cd54d064",
+          "sourceSha256": "a07fc5f847912cfec1c02f0edcc51dae97089b521da49601aab4fbcf9e2b7b55",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -671,7 +673,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "996bb3ef9546d3b921cca8ba43a80b0a45b3320e5e69308245591bdeeeab91db",
+          "sourceSha256": "dc35f17737269475435e107909d582bd37a0827095fcf74bd4e878adbb491290",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -1159,7 +1161,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 13
+      "minor": 14
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -1196,7 +1198,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "2a06df668ff4f499d40d2a6fbcc3df95258f6787c59319a001025b5a9112fb20",
+      "sourceSetSha256": "2f7d33d05a7f70093248813042f90de32526382f9401e718acfbb82dac8c2c08",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

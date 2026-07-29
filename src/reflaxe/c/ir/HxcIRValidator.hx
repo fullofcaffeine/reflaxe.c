@@ -2701,7 +2701,7 @@ private class HxcIRValidationState {
 			case "length":
 				if (argumentTypes.length != 1 || receiverElement == null || typeKey(call.returnType) != typeKey(IRTInt(32, true)))
 					add(path, "Array.length requires one managed Array argument and returns Haxe Int", source);
-			case "pop":
+			case "pop" | "shift":
 				final taggedPayload = switch call.returnType {
 					case IRTNullable(payload, IRNTagged): payload;
 					case _: null;
@@ -2714,7 +2714,7 @@ private class HxcIRValidationState {
 					&& hasExactNullCarrier(receiverElement);
 				if (argumentTypes.length != 1 || receiverElement == null || (!returnsTaggedElement && !returnsExactNullableElement)) {
 					add(path,
-						"Array.pop requires one managed Array and returns either a tagged optional element or the same element carrier when that carrier represents null exactly",
+						'Array.$operationId requires one managed Array and returns either a tagged optional element or the same element carrier when that carrier represents null exactly',
 						source);
 				}
 			case "get-checked":

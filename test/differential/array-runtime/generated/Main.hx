@@ -119,6 +119,12 @@ final class Main {
 		final poppedFive = poppedIntegers.pop();
 		final poppedFour = poppedIntegers.pop();
 		final poppedEmpty = poppedIntegers.pop();
+		final shiftedIntegers = [6, 7, 8];
+		final shiftedIntegersAlias = shiftedIntegers;
+		final shiftedSix = shiftedIntegers.shift();
+		final shiftedSeven = shiftedIntegers.shift();
+		final shiftedEight = shiftedIntegers.shift();
+		final shiftedEmpty = shiftedIntegers.shift();
 
 		final row:Array<Int> = [1];
 		final rows:Array<Array<Int>> = [row];
@@ -143,6 +149,11 @@ final class Main {
 		records.push({commands: arguments});
 		final recordCopy = records[0];
 		recordCopy.commands.push(Number(11));
+		final shiftedRecords:Array<ManagedRecord> = [{commands: [Number(29)]}, {commands: [Number(31), Number(37)]}];
+		final shiftedRecordsAlias = shiftedRecords;
+		final firstShiftedRecord = shiftedRecords.shift();
+		final secondShiftedRecord = shiftedRecords.shift();
+		final absentShiftedRecord = shiftedRecords.shift();
 		final clearedRecords:Array<ManagedRecord> = [{commands: [Number(17)]}, {commands: [Number(19), Number(23)]}];
 		final clearedRecordsAlias = clearedRecords;
 		clearedRecords.resize(0);
@@ -227,8 +238,19 @@ final class Main {
 			|| poppedFour != 4
 			|| poppedEmpty != null
 			|| poppedIntegersAlias.length != 0
+			|| shiftedSix != 6
+			|| shiftedSeven != 7
+			|| shiftedEight != 8
+			|| shiftedEmpty != null
+			|| shiftedIntegersAlias.length != 0
 			|| managedPayloadLength != 3
 			|| recordCopy.commands.length != 3
+			|| firstShiftedRecord == null
+			|| firstShiftedRecord.commands.length != 1
+			|| secondShiftedRecord == null
+			|| secondShiftedRecord.commands.length != 2
+			|| absentShiftedRecord != null
+			|| shiftedRecordsAlias.length != 0
 			|| nestedRecordCommandCount != 3
 			|| nestedEnvelopeCommandCount != 3
 			|| returnedRecord.commands.length != 1

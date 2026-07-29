@@ -114,6 +114,7 @@ class HxcIRGolden {
 				invalidStringSubstringCall: invalidDiagnostics(invalidStringSubstringCallProgram()),
 				invalidStringMapShape: invalidDiagnostics(invalidStringMapShapeProgram()),
 				invalidArrayPopShape: invalidDiagnostics(invalidArrayPopShapeProgram()),
+				invalidArrayShiftShape: invalidDiagnostics(invalidArrayShiftShapeProgram()),
 				invalidArrayResizeNullProof: invalidDiagnostics(invalidArrayResizeNullProofProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				uninitializedCarrierRead: invalidDiagnostics(uninitializedCarrierReadProgram()),
@@ -2416,6 +2417,43 @@ class HxcIRGolden {
 		};
 		final program = minimalProgram("invalid.InvalidArrayPopShape", [
 			instruction("bad.pop", result("value.result", IRTBool), IRIOCall(call(IRCDRuntime("array", "pop"), ["value.array"], IRTBool, {
+				kind: IRFNativeStatus,
+				target: IRFTAbort,
+				arguments: [],
+				cleanup: []
+			})), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		program.modules[0].types.push(arrayType);
+		program.modules[0].typeInstances.push(arrayInstance);
+		program.modules[0].functions[0].parameters.push(parameter("value.array", IRTInstance(arrayInstance.id), file, 1));
+		return program;
+	}
+
+	/**
+		Reject an Array.shift operation whose result cannot represent Haxe null.
+
+		Like `pop`, an empty `shift` returns `null`, while a nonempty operation
+		transfers the exact element owner. Keeping a separate malformed operation
+		proves the validator does not accidentally admit `shift` merely because
+		its C projection resembles the older `pop` path.
+	**/
+	static function invalidArrayShiftShapeProgram():HxcIRProgram {
+		final file = "test/negative/InvalidArrayShiftShape.hx";
+		final arrayType:HxcIRTypeDeclaration = {
+			id: "type.invalid-array-shift",
+			displayName: "Array<Int>",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final arrayInstance:HxcIRTypeInstance = {
+			id: "instance.invalid-array-shift",
+			declarationId: arrayType.id,
+			arguments: [IRTInt(32, true)],
+			representation: IRRManaged("array"),
+			source: span(file, 1)
+		};
+		final program = minimalProgram("invalid.InvalidArrayShiftShape", [
+			instruction("bad.shift", result("value.result", IRTBool), IRIOCall(call(IRCDRuntime("array", "shift"), ["value.array"], IRTBool, {
 				kind: IRFNativeStatus,
 				target: IRFTAbort,
 				arguments: [],

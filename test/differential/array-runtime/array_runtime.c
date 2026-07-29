@@ -850,6 +850,173 @@ static int hxc_test_pop(
   return 0;
 }
 
+/**
+ * Prove that Array.shift transfers the first owner and preserves suffix order.
+ *
+ * The primitive case also observes the mutation through an alias. The managed
+ * case freezes allocation and lifecycle counters around the operation:
+ * relocating the suffix must move representation bytes, not retain, copy,
+ * assign, destroy, or allocate logical elements.
+ */
+static int hxc_test_shift(
+  hxc_test_arena *arena,
+  const hxc_allocator *allocator
+) {
+  hxc_array_ref *values = NULL;
+  hxc_array_ref *alias = NULL;
+  hxc_array_ref *managed = NULL;
+  hxc_test_lifecycle lifecycle = {0};
+  hxc_test_object first = {31, 1u};
+  hxc_test_object second = {37, 1u};
+  hxc_test_object *first_value = &first;
+  hxc_test_object *second_value = &second;
+  hxc_test_object *managed_output = NULL;
+  hxc_array_element_ops managed_elements = hxc_test_ref_ops(&lifecycle);
+  const void *remaining = NULL;
+  int32_t seven = 7;
+  int32_t eleven = 11;
+  int32_t thirteen = 13;
+  int32_t output = -1;
+  int32_t pushed_length = -1;
+  bool present = true;
+  size_t allocations;
+  size_t reallocations;
+  size_t copies;
+  size_t assignments;
+  size_t destructions;
+  void *live_slot = NULL;
+
+  HXC_TEST_CHECK(
+    hxc_array_shift_move(NULL, &output, &present)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(NULL, &output, &present)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(output == -1 && present);
+  HXC_TEST_CHECK(
+    hxc_array_ref_create_trivial(
+      *allocator,
+      sizeof(int32_t),
+      HXC_ALIGNOF(int32_t),
+      &values
+    ) == HXC_STATUS_OK
+  );
+  alias = values;
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(values, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == -1 && !present && alias->value.length == 0u);
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &seven, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &eleven, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(values, &thirteen, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_at(&values->value, 0u, &live_slot) == HXC_STATUS_OK
+  );
+  present = false;
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(values, live_slot, &present)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(!present && alias->value.length == 3u);
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(values, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == 7 && present && alias->value.length == 2u);
+  HXC_TEST_CHECK(
+    hxc_array_at_const(&alias->value, 0u, &remaining) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(*(const int32_t *)remaining == 11);
+  output = -1;
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(alias, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == 11 && present && values->value.length == 1u);
+  output = -1;
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(alias, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == 13 && present && values->value.length == 0u);
+  output = -1;
+  present = true;
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(alias, &output, &present) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(output == -1 && !present);
+  HXC_TEST_CHECK(hxc_array_ref_release(values) == HXC_STATUS_OK);
+  values = NULL;
+  alias = NULL;
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_create(*allocator, managed_elements, &managed)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &first_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &second_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  allocations = arena->allocation_count;
+  reallocations = arena->reallocation_count;
+  copies = lifecycle.copies;
+  assignments = lifecycle.assignments;
+  destructions = lifecycle.destructions;
+  HXC_TEST_CHECK(
+    hxc_array_ref_shift_move(managed, &managed_output, NULL)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    managed_output == &first
+    && managed->value.length == 1u
+    && lifecycle.copies == copies
+    && lifecycle.assignments == assignments
+    && lifecycle.destructions == destructions
+    && arena->allocation_count == allocations
+    && arena->reallocation_count == reallocations
+    && first.references == 2u
+    && second.references == 2u
+  );
+  HXC_TEST_CHECK(
+    hxc_array_at_const(&managed->value, 0u, &remaining) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(*(hxc_test_object *const *)remaining == &second);
+  HXC_TEST_CHECK(hxc_array_ref_release(managed) == HXC_STATUS_OK);
+  managed = NULL;
+  HXC_TEST_CHECK(
+    first.references == 2u
+    && second.references == 1u
+    && lifecycle.destructions == destructions + 1u
+  );
+  managed_elements.destroy(managed_elements.context, &managed_output);
+  HXC_TEST_CHECK(
+    managed_output == NULL
+    && first.references == 1u
+    && lifecycle.destructions == destructions + 2u
+  );
+  hxc_test_drop(&lifecycle, &first);
+  hxc_test_drop(&lifecycle, &second);
+  HXC_TEST_CHECK(
+    first.references == 0u
+    && second.references == 0u
+    && !lifecycle.invalid_release
+    && !arena->invalid_release
+  );
+  return 0;
+}
+
 /** Exercise the shared identity wrapper selected by generated Haxe Array<T>. */
 static int hxc_test_shared_array(
   hxc_test_arena *arena,
@@ -1095,6 +1262,7 @@ int main(void) {
 
   HXC_TEST_CHECK(hxc_test_sort(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_pop(&arena, &allocator) == 0);
+  HXC_TEST_CHECK(hxc_test_shift(&arena, &allocator) == 0);
   HXC_TEST_CHECK(hxc_test_shared_array(&arena, &allocator) == 0);
   HXC_TEST_CHECK(!arena.invalid_release);
   HXC_TEST_CHECK(arena.allocation_count == arena.release_count);

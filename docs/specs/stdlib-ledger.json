@@ -1150,6 +1150,43 @@
       "notes": "The admitted Array specializations sort in place through one exact non-capturing `(T, T) -> Int` comparator. Receiver and comparator evaluation happen once, aliases observe the reorder, and allocation-free slot relocation preserves managed element ownership. Haxe does not promise a stable Array.sort; capturing closures and unsupported element representations remain source-positioned failures."
     },
     {
+      "id": "array-shift-partial",
+      "selector": {
+        "module": "Array",
+        "type": "Array",
+        "member": "shift",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> Null<Array.T>"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "array"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T03",
+      "testOwnerBeads": "E5.T12",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py",
+        "test/hxc_ir/HxcIRGolden.hx"
+      ],
+      "notes": "Every already-admitted Array element specialization supports empty, present, and repeated `shift()` calls. A present operation moves the first element owner into the nullable result, relocates the remaining elements left without changing their order, and preserves shared Array identity without element lifecycle or allocation churn. Unsupported element representations remain fail-closed."
+    },
+    {
       "id": "array-string-join-partial",
       "selector": {
         "module": "Array",
@@ -2896,12 +2933,9 @@
       "kind": "method",
       "signature": "() -> Null<Array.T>",
       "isStatic": false,
-      "owner": "target-source-override",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
-        "alloc",
-        "array",
-        "gc",
-        "object"
+        "array"
       ],
       "profiles": [
         "portable",
@@ -2909,20 +2943,23 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T03",
       "testOwnerBeads": "E5.T12",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Known element/key/value types should specialize to direct typed storage; allocation and tracing remain explicit reachability decisions.",
-      "ruleId": "collection-storage"
+      "tests": [
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/generated/Main.hx",
+        "test/differential/array-runtime/run.py",
+        "test/hxc_ir/HxcIRGolden.hx"
+      ],
+      "notes": "Every already-admitted Array element specialization supports empty, present, and repeated `shift()` calls. A present operation moves the first element owner into the nullable result, relocates the remaining elements left without changing their order, and preserves shared Array identity without element lifecycle or allocation churn. Unsupported element representations remain fail-closed.",
+      "ruleId": "array-shift-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:bc5cebb90639c6a5648f9c011fdb90cc993139e585cca1945d8bf63e2b36d9cd",

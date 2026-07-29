@@ -242,7 +242,7 @@ strategy is selected, as required by
 
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.13.0. Generated
+The runtime ABI is internal and versioned, currently 0.14.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no
@@ -319,12 +319,15 @@ select it transitively; arbitrary generated allocation remains unsupported. See
 
 Compiler-selectable resizable unboxed array storage built on `alloc`. The first
 ordinary-Haxe slice adds shared identity, local retain/release ownership,
-literals, length, checked indexing, push, ownership-transferring pop, shallow
-copy, in-place sort, and source-order iteration for admitted elements. Generated
+literals, length, checked indexing, push, ownership-transferring `pop` and
+`shift`, shallow copy, in-place sort, and source-order iteration for admitted
+elements. Generated
 Bytes elements and closed records containing Bytes use typed program-local
 copy/assign/destroy callbacks; they remain unboxed and do not select reflection
-or a collector. Pop moves the last live element into the caller's nullable
-result without invoking those callbacks. The native layer additionally proves
+or a collector. `pop` moves the last live element and `shift` moves the first
+one into the caller's nullable result without invoking those callbacks.
+`shift` then relocates the remaining suffix left while keeping its order. The
+native layer additionally proves
 alias-safe insert/resize paths that generated Haxe does not yet expose. Fixed
 arrays and spans stay direct and runtime-free. See
 [array runtime](array-runtime.md).

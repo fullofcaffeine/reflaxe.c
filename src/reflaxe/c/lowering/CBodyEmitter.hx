@@ -5478,21 +5478,25 @@ class CBodyEmitter {
 				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayLength, boundsAbortName, fn);
 			case "get-checked":
 				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayGetCopy, boundsAbortName, fn);
-			case "pop":
+			case "pop" | "shift":
+				final operation = switch call.dispatch {
+					case IRCDRuntime(_, runtimeOperation): runtimeOperation;
+					case _: "array-edge-removal";
+				};
 				if (call.arguments.length != 1)
-					return fail('Array pop `${instruction.id}` in `${fn.id}` lost its receiver');
+					return fail('Array $operation `${instruction.id}` in `${fn.id}` lost its receiver');
 				final receiverType = valueType(fn, call.arguments[0]);
 				final elementType = receiverType == null ? null : switch receiverType {
 					case IRTInstance(instanceId): arrayElementTypes.get(instanceId);
 					case _: null;
 				};
 				if (elementType == null)
-					return fail('Array pop `${instruction.id}` in `${fn.id}` lost its exact element type');
+					return fail('Array $operation `${instruction.id}` in `${fn.id}` lost its exact element type');
 				final declaration = typedDeclarator(result.type, DName(temporary));
-				final popOutputs:{output:CExpr, presence:CExpr} = switch result.type {
+				final removalOutputs:{output:CExpr, presence:CExpr} = switch result.type {
 					case IRTNullable(payload, IRNTagged):
 						if (exactTypeKey(payload) != exactTypeKey(elementType))
-							return fail('Array pop `${instruction.id}` in `${fn.id}` has a mismatched optional payload');
+							return fail('Array $operation `${instruction.id}` in `${fn.id}` has a mismatched optional payload');
 						final optional = requireOptional(result.type);
 						{
 							output: EUnary(AddressOf, EMember(EIdentifier(temporary), optional.payloadName, false)),
@@ -5501,7 +5505,7 @@ class CBodyEmitter {
 					case exact if (exactTypeKey(exact) == exactTypeKey(elementType)):
 						{output: EUnary(AddressOf, EIdentifier(temporary)), presence: ENull};
 					case _:
-						return fail('Array pop `${instruction.id}` in `${fn.id}` has a non-nullable result carrier');
+						return fail('Array $operation `${instruction.id}` in `${fn.id}` has a non-nullable result carrier');
 				}
 				statements.push(SDecl({
 					storage: [],
@@ -5511,10 +5515,11 @@ class CBodyEmitter {
 					initializer: IExpr(constantExpressionForType(IRCNull, result.type)),
 					attributes: []
 				}));
-				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayPopMove)), [
+				final runtimeName = operation == "shift" ? CBRNArrayShiftMove : CBRNArrayPopMove;
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), [
 					requireValue(values, call.arguments[0], fn.id),
-					popOutputs.output,
-					popOutputs.presence
+					removalOutputs.output,
+					removalOutputs.presence
 				]), boundsAbortName, instruction.id, fn.id);
 				values.set(result.id, EIdentifier(temporary));
 			case "push":

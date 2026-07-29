@@ -227,6 +227,21 @@ HXC_API hxc_status hxc_array_pop_move(
   bool *out_present
 );
 
+/**
+ * Move the first live element into uninitialized caller-owned storage.
+ *
+ * This has the same ownership and empty-Array contract as
+ * `hxc_array_pop_move`, then byte-relocates the remaining live elements one
+ * slot toward the front. Their order does not change. No element lifecycle
+ * callback runs: the caller receives the first element's existing owner, and
+ * the relocated suffix keeps its existing owners.
+ */
+HXC_API hxc_status hxc_array_shift_move(
+  hxc_array *array,
+  void *out_element,
+  bool *out_present
+);
+
 /** Transfer a valid owner and reset the source to `HXC_ARRAY_INITIALIZER`. */
 HXC_API hxc_status hxc_array_move(
   hxc_array *source,
@@ -355,6 +370,19 @@ HXC_API hxc_status hxc_array_ref_get_copy(
  * without an extra retain, copy, release, or allocation.
  */
 HXC_API hxc_status hxc_array_ref_pop_move(
+  hxc_array_ref *array,
+  void *out_element,
+  bool *out_present
+);
+
+/**
+ * Remove the first element from one shared Haxe Array identity.
+ *
+ * This is the reference-wrapper form of `hxc_array_shift_move`. Aliases
+ * observe the shorter length and the unchanged order of the remaining
+ * elements.
+ */
+HXC_API hxc_status hxc_array_ref_shift_move(
   hxc_array_ref *array,
   void *out_element,
   bool *out_present

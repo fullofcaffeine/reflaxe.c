@@ -511,12 +511,21 @@ hxc_status hxc_array_remove_at(hxc_array *array, size_t index) {
   return HXC_STATUS_OK;
 }
 
-hxc_status hxc_array_pop_move(
+/*
+ * Transfer one edge element without invoking its lifecycle callbacks.
+ *
+ * Array.pop() and Array.shift() have the same ownership rule: the caller
+ * receives the existing logical element owner, rather than a retained copy.
+ * Keeping that rule here prevents the two public operations from drifting.
+ */
+static hxc_status hxc_array_remove_edge_move(
   hxc_array *array,
+  bool remove_front,
   void *out_element,
   bool *out_present
 ) {
   size_t source_index;
+  size_t shifted_size;
   if (out_element == NULL || !hxc_array_is_valid(array)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
@@ -535,21 +544,59 @@ hxc_status hxc_array_pop_move(
     }
     return HXC_STATUS_OK;
   }
-  source_index = array->length - 1u;
+  source_index = remove_front ? 0u : array->length - 1u;
   hxc_array_copy_bytes(
     out_element,
     hxc_array_slot_const(array, source_index),
     array->elements.size
   );
+  if (remove_front) {
+    shifted_size = (array->length - 1u) * array->elements.size;
+    /*
+     * Copying toward the start is overlap safe when bytes are visited in
+     * ascending order. The duplicate bytes in the old tail become non-live.
+     */
+    hxc_array_copy_bytes(
+      hxc_array_slot(array, 0u),
+      hxc_array_slot_const(array, 1u),
+      shifted_size
+    );
+  }
   /*
    * The old slot is now outside the live range. Do not destroy it: its logical
    * owner moved to out_element, and the stale private bytes are never read.
    */
-  array->length = source_index;
+  array->length--;
   if (out_present != NULL) {
     *out_present = true;
   }
   return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_pop_move(
+  hxc_array *array,
+  void *out_element,
+  bool *out_present
+) {
+  return hxc_array_remove_edge_move(
+    array,
+    false,
+    out_element,
+    out_present
+  );
+}
+
+hxc_status hxc_array_shift_move(
+  hxc_array *array,
+  void *out_element,
+  bool *out_present
+) {
+  return hxc_array_remove_edge_move(
+    array,
+    true,
+    out_element,
+    out_present
+  );
 }
 
 hxc_status hxc_array_move(
@@ -881,6 +928,17 @@ hxc_status hxc_array_ref_pop_move(
     return HXC_STATUS_INVALID_ARGUMENT;
   }
   return hxc_array_pop_move(&array->value, out_element, out_present);
+}
+
+hxc_status hxc_array_ref_shift_move(
+  hxc_array_ref *array,
+  void *out_element,
+  bool *out_present
+) {
+  if (!hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  return hxc_array_shift_move(&array->value, out_element, out_present);
 }
 
 hxc_status hxc_array_ref_push_copy(

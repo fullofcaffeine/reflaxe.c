@@ -56,6 +56,7 @@ enum CBodyRuntimeName {
 	CBRNArrayGetCopy;
 	CBRNArrayLength;
 	CBRNArrayPopMove;
+	CBRNArrayShiftMove;
 	CBRNArrayPushCopy;
 	CBRNArraySetCopy;
 	CBRNArraySort;
@@ -141,6 +142,7 @@ class CBodyRuntimeNames {
 			case CBRNArrayGetCopy: "hxc_array_ref_get_copy";
 			case CBRNArrayLength: "hxc_array_ref_length";
 			case CBRNArrayPopMove: "hxc_array_ref_pop_move";
+			case CBRNArrayShiftMove: "hxc_array_ref_shift_move";
 			case CBRNArrayPushCopy: "hxc_array_ref_push_copy";
 			case CBRNArraySetCopy: "hxc_array_ref_set_copy";
 			case CBRNArraySort: "hxc_array_ref_sort";

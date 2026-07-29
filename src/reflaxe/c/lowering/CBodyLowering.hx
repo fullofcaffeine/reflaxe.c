@@ -10778,29 +10778,30 @@ private class FunctionBuilder {
 				runtimeRequirements.push(new CBodyRuntimeRequirement("array-join", "join",
 					"ordinary Haxe Array<String>.join with ordered managed String composition", source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
-			case "pop":
+			case "pop" | "shift":
 				if (arguments.length != 0)
-					return unsupported(expression, 'TCall(Array.pop:argument-count=${arguments.length})');
-				final resultMapping = bodyValueType(expression.t, expression.pos, "TCall(Array.pop:result-type)");
+					return unsupported(expression, 'TCall(Array.$method:argument-count=${arguments.length})');
+				final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(Array.$method:result-type)');
 				final optional = resultMapping.optionalValue();
 				final exactElementResult = resultMapping.hasExactNullCarrier()
 					&& typeKey(resultMapping.irType) == typeKey(array.element.irType);
 				final taggedElementResult = optional != null && typeKey(optional.payload.irType) == typeKey(array.element.irType);
 				if (!exactElementResult && !taggedElementResult)
-					return unsupported(expression, 'TCall(Array.pop:result-must-be-nullable-${array.element.cSpelling}:${resultMapping.cSpelling})');
-				final callReceiver = restoreStagedLoweredValue(stagedReceiver, "array-pop-receiver-load");
+					return unsupported(expression, 'TCall(Array.$method:result-must-be-nullable-${array.element.cSpelling}:${resultMapping.cSpelling})');
+				final operation = method;
+				final callReceiver = restoreStagedLoweredValue(stagedReceiver, 'array-$operation-receiver-load');
 				final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
 				final source = sourceSpan(expression.pos);
 				appendInstruction(result, IRIOCall({
-					dispatch: IRCDRuntime("array", "pop"),
+					dispatch: IRCDRuntime("array", operation),
 					arguments: [callReceiver.id],
 					returnType: result.type,
 					failure: managedArrayFailure()
-				}), source, "array-pop");
-				registerValueTemporary(result.id, "array-pop-result");
-				markFreshArrayPopResult(result.id, resultMapping);
-				runtimeRequirements.push(new CBodyRuntimeRequirement("array", "pop", "ordinary Haxe Array.pop with nullable ownership transfer", source,
-					expression.pos));
+				}), source, 'array-$operation');
+				registerValueTemporary(result.id, 'array-$operation-result');
+				markFreshArrayRemovalResult(result.id, resultMapping, 'Array.$method result');
+				runtimeRequirements.push(new CBodyRuntimeRequirement("array", operation, 'ordinary Haxe Array.$method with nullable ownership transfer',
+					source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
 			case "push":
 				if (arguments.length != 1)
@@ -10884,14 +10885,15 @@ private class FunctionBuilder {
 	}
 
 	/**
-		Record the owner moved out of an `Array.pop()` result.
+		Record the owner moved out of an Array edge-removal result.
 
-		`pop` does not copy its element; it transfers the Array slot's existing
-		owner into the returned nullable value. Marking that value as fresh lets a
-		local, return, or later call consume the owner without adding a retain.
-		Collector-managed class references need no explicit retain/release marker.
+		`pop` and `shift` do not copy their returned element; each transfers one
+		Array slot's existing owner into a nullable result. Marking that result as
+		fresh lets a local, return, or later call consume the owner without adding
+		a retain. Collector-managed class references need no explicit
+		retain/release marker.
 	**/
-	function markFreshArrayPopResult(resultId:String, mapping:CBodyValueType):Void {
+	function markFreshArrayRemovalResult(resultId:String, mapping:CBodyValueType, role:String):Void {
 		final optional = mapping.optionalValue();
 		if (optional != null && optional.managedLifetime) {
 			freshManagedOptionalValueIds.set(resultId, true);
@@ -10899,7 +10901,7 @@ private class FunctionBuilder {
 		}
 		if (mapping.irType == IRTManagedString) {
 			freshManagedStringValueIds.set(resultId, true);
-			freshManagedStringValueRoles.set(resultId, "Array.pop result");
+			freshManagedStringValueRoles.set(resultId, role);
 		}
 		final resultArray = mapping.arrayValue();
 		if (resultArray != null && !resultArray.managedByCollector)

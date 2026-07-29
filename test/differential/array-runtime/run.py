@@ -269,6 +269,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
         'runtime(feature="array",operation="get-checked")',
         'runtime(feature="array",operation="push")',
         'runtime(feature="array",operation="pop")',
+        'runtime(feature="array",operation="shift")',
         'runtime(feature="array",operation="resize-zero")',
         'runtime(feature="array",operation="sort")',
         'function-reference target="function.lambda.function.Main.main.',
@@ -423,6 +424,11 @@ def validate_generated_hxcir(hxcir: str) -> None:
             "primitive Array.pop coverage no longer contains present, repeated, "
             "and empty mutations"
         )
+    if entry.count('runtime(feature="array",operation="shift")') != 7:
+        raise ArrayRuntimeFailure(
+            "Array.shift coverage no longer contains primitive and managed "
+            "present, repeated, and empty ownership transfers"
+        )
     if (
         entry.count('runtime(feature="array",operation="resize-zero")') != 2
         or entry.count("array-resize-zero-receiver-null-check") != 2
@@ -436,7 +442,7 @@ def validate_generated_hxcir(hxcir: str) -> None:
         or "optional-lifecycle:optional." not in entry
     ):
         raise ArrayRuntimeFailure(
-            "managed Array.pop result lost its independently owned optional cleanup"
+            "managed Array edge-removal result lost independently owned optional cleanup"
         )
     if (
         'string-temporary.' not in entry
@@ -605,6 +611,7 @@ def validate_generated_project(output: Path) -> None:
         "retain",
         "resize-zero",
         "set",
+        "shift",
         "sort",
     }
     if operations != expected:
@@ -636,6 +643,7 @@ def validate_generated_project(output: Path) -> None:
         "hxc_array_ref_release",
         "hxc_array_ref_push_copy",
         "hxc_array_ref_pop_move",
+        "hxc_array_ref_shift_move",
         "hxc_array_ref_get_copy",
         "hxc_array_resize",
         "hxc_array_ref_sort",
@@ -1088,6 +1096,8 @@ def inspect_symbols(executable: Path, family: str) -> None:
         "hxc_array_ref_retain",
         "hxc_array_pop_move",
         "hxc_array_ref_pop_move",
+        "hxc_array_shift_move",
+        "hxc_array_ref_shift_move",
         "hxc_array_resize",
         "hxc_array_remove_at",
     ):
