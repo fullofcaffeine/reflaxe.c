@@ -93,7 +93,7 @@ final class UiCatalog {
 			case DebugVisible: "VISIBLE";
 			case EditorAdvanced: "ADVANCED TOOLS";
 			case EditorBack: "BACK";
-			case EditorCanvasHelp: "WORLD VIEWPORT — VISUAL BLOCK TOOLS ARE NEXT";
+			case EditorCanvasHelp: "WORLD VIEWPORT — LEFT CLICK TO APPLY THE SELECTED TOOL";
 			case EditorInvalid: "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY";
 			case EditorNewWorld: "NEW WORLD";
 			case EditorReady: "READY — EDITS USE THE REAL CAXEMAP SESSION";
@@ -134,7 +134,7 @@ final class UiCatalog {
 			case DebugVisible: "VISIBLES";
 			case EditorAdvanced: "HERRAMIENTAS AVANZADAS";
 			case EditorBack: "VOLVER";
-			case EditorCanvasHelp: "VISTA DEL MUNDO — HERRAMIENTAS DE BLOQUES MUY PRONTO";
+			case EditorCanvasHelp: "VISTA DEL MUNDO — CLIC IZQUIERDO PARA USAR LA HERRAMIENTA";
 			case EditorInvalid: "CORRIGE EL BORRADOR ANTES DE PROBARLO";
 			case EditorNewWorld: "MUNDO NUEVO";
 			case EditorReady: "LISTO — LOS CAMBIOS USAN LA SESION CAXEMAP REAL";

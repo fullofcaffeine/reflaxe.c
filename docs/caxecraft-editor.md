@@ -1,14 +1,17 @@
 # Caxecraft editor semantics
 
 Status: the renderer-independent command, history, validation, and test-play
-layer is implemented under `haxe_c-xge.19.5`. Native map-file persistence and
-the child-friendly Raylib interface remain separate work.
+layer is implemented under `haxe_c-xge.19.5`. The first native Raylib/Raygui
+slice now displays and edits one bounded top-down voxel layer. Native map-file
+persistence, multi-layer navigation, and the fuller child-friendly authoring
+experience remain separate work.
 
 ## What this layer owns
 
 The editor core answers “what does this edit mean?” without knowing how a
-button, mouse drag, controller focus ring, or voxel highlight is drawn. Both a
-headless test and the future Raylib interface use the same public operations:
+button, mouse drag, controller focus ring, or voxel highlight is drawn. Both the
+headless test and the current first Raylib viewport use the same public
+operations:
 
 ```text
 Scenario -> EditorSession -> closed EditorCommand -> updated draft
@@ -29,9 +32,45 @@ callers handle new command kinds intentionally. The first command set covers:
 - explicit recovery to the last validated playable scenario.
 
 The command model deliberately contains no Raylib event, C pointer, file path,
-raw target text, or `Dynamic` payload. A future UI translates input gestures
-into these commands. `PaintVoxels` and `EraseVoxels` commit one bounded drag as
-one edit, rather than creating history on every rendered frame.
+raw target text, or `Dynamic` payload. The native screen translates pointer and
+Raygui tool input into these commands. `PaintVoxels` and `EraseVoxels` commit
+one bounded drag as one edit, rather than creating history on every rendered
+frame.
+
+## First visual viewport
+
+The first visual slice deliberately has one small job: show one horizontal
+world layer and let Select, Paint, Erase, and Fill use the existing command
+language. It does not introduce a second editable grid.
+
+```text
+CAXEMAP draft
+    |
+    | accepted edit / undo / redo / New World
+    v
+cached read-only layer projection
+    |
+    +-- draw colored cells and selection
+    |
+pointer pixel -> typed VoxelPoint -> EditorCommand -> EditorSession.apply
+```
+
+`EditorViewport.project` decodes the complete draft and copies only the visible
+layer into a compact array. `CaxecraftEditorScreen` caches that projection. A
+steady frame only reads the cached cells; it does not serialize the CAXEMAP
+draft or allocate a replacement projection. The cache is rebuilt after New
+World or after an accepted edit, undo, or redo.
+
+The same integer `EditorViewportLayout` controls drawing and hit testing. Its
+right and bottom edges are excluded, so a pixel on a cell boundary has one
+deterministic meaning in Eval tests and generated C. An invalid tool gesture
+does not touch the draft or cache and changes the visible status to the invalid
+notice.
+
+The built-in blank world is 12 by 1 by 12 cells. Caxecraft supplies its Air and
+Grass content IDs at the application composition edge; the reusable editor
+factory receives those typed values and does not know game-specific content
+names.
 
 ## Draft versus playable scenario
 
@@ -80,11 +119,11 @@ bounds may be selected when opening a session, which makes device- or
 mode-specific limits testable without weakening the format limits.
 
 This full-snapshot strategy favors simple, trustworthy recovery for the first
-bounded editor. The Raylib UI task must measure real map sizes and gesture
-latency. If snapshots become the bottleneck, it may introduce typed
+bounded editor. Later editor slices must measure real map sizes and gesture
+latency. If snapshots become the bottleneck, they may introduce typed
 command-specific inverse data while retaining bounded paint gestures, exact
-undo bytes, hard memory limits, and the same public commands. It must not trade
-correctness for an unmeasured optimization.
+undo bytes, hard memory limits, and the same public commands. A later
+optimization must not trade correctness for an unmeasured speedup.
 
 ## Reversible test play
 
@@ -151,10 +190,24 @@ npm run test:caxecraft-editor
 The probe builds a small complete scenario through the public command API. It
 checks exact undo and redo for every command family, canonical
 serialize/reload, invalid-draft recovery, deterministic history eviction, byte
-and gesture limits, and two independent test-play sessions. It runs under C
-and a second installed locale (Spanish when available) and scans the editor
+and gesture limits, two independent test-play sessions, viewport projection,
+pixel-edge mapping, and all four tool translations. It runs under C and a
+second installed locale (Spanish when available) and scans the reusable editor
 sources for C, Raylib, target-condition, raw-code, and untyped-boundary leakage.
 
-This is Eval evidence for shared editor semantics. It does not claim that the
-Raylib interface exists, that maps are written to disk, or that the complete
-editor already runs as generated C. Those proofs retain their separate owners.
+The native graphical proof uses the real renderer in Raylib's deterministic
+in-memory configuration:
+
+```sh
+python3 examples/caxecraft/play.py \
+  --pilot editor-shell \
+  --raylib-configuration memory-software \
+  --allow-network
+```
+
+That pilot compiles the application through haxe.c, submits one typed Paint
+gesture through `CaxecraftEditorScreen` and `EditorSession`, observes exactly
+one accepted edit, validates the visible editor pixels and telemetry, captures
+two byte-identical screenshots, and exits within the bounded timeout. It proves
+this first viewport slice, not native map-file save, multi-layer editing, or the
+complete planned visual event/cutscene editor.

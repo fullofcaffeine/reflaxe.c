@@ -206,6 +206,116 @@ bool hxc_caxecraft_content_BaseContentPack_aquaticUnderwaterMining(int32_t hxc_v
   return false;
 }
 
+hxc_string hxc_caxecraft_content_BaseContentPack_blockId(int32_t hxc_value)
+{
+  hxc_string hxc_tmp_returned_string_owner_n10 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n2 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n3 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n4 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n5 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n6 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n7 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n8 = { 0 };
+  hxc_string hxc_tmp_returned_string_owner_n9 = { 0 };
+  switch (hxc_value) {
+    case 0:
+      {
+        break;
+      }
+    case 1:
+      {
+        hxc_tmp_returned_string_owner_n2 = (hxc_string){ (const uint8_t *)"caxecraft:ash", 13, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n2) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n2;
+      }
+    case 2:
+      {
+        hxc_tmp_returned_string_owner_n3 = (hxc_string){ (const uint8_t *)"caxecraft:bedrock", 17, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n3) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n3;
+      }
+    case 3:
+      {
+        hxc_tmp_returned_string_owner_n4 = (hxc_string){ (const uint8_t *)"caxecraft:dirt", 14, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n4) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n4;
+      }
+    case 4:
+      {
+        hxc_tmp_returned_string_owner_n5 = (hxc_string){ (const uint8_t *)"caxecraft:grass", 15, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n5) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n5;
+      }
+    case 5:
+      {
+        hxc_tmp_returned_string_owner_n6 = (hxc_string){ (const uint8_t *)"caxecraft:leaves", 16, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n6) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n6;
+      }
+    case 6:
+      {
+        hxc_tmp_returned_string_owner_n7 = (hxc_string){ (const uint8_t *)"caxecraft:sand", 14, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n7) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n7;
+      }
+    case 7:
+      {
+        hxc_tmp_returned_string_owner_n8 = (hxc_string){ (const uint8_t *)"caxecraft:snow", 14, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n8) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n8;
+      }
+    case 8:
+      {
+        hxc_tmp_returned_string_owner_n9 = (hxc_string){ (const uint8_t *)"caxecraft:stone", 15, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n9) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n9;
+      }
+    case 9:
+      {
+        hxc_tmp_returned_string_owner_n10 = (hxc_string){ (const uint8_t *)"caxecraft:wood", 14, true, NULL };
+        if (hxc_string_retain(hxc_tmp_returned_string_owner_n10) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_tmp_returned_string_owner_n10;
+      }
+    default:
+      {
+        abort();
+      }
+  }
+  hxc_string hxc_tmp_returned_string_owner_n1 = (hxc_string){ (const uint8_t *)"caxecraft:air", 13, true, NULL };
+  if (hxc_string_retain(hxc_tmp_returned_string_owner_n1) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return hxc_tmp_returned_string_owner_n1;
+}
+
 int32_t hxc_caxecraft_content_BaseContentPack_itemAquaticProfile(int32_t hxc_value)
 {
   switch (hxc_value) {

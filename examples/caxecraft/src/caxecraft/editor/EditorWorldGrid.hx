@@ -146,7 +146,17 @@ private function validSize(size:VoxelSize):Bool {
 	return cells > 0 && cells <= ScenarioLimits.MAX_WORLD_CELLS;
 }
 
-private function decode(world:ScenarioWorld):Null<Array<Int>> {
+/**
+	Expand a complete chunk set into one temporary z/y/x-addressed cell array.
+
+	Editor commands and read-only viewport projections share this one decoder so
+	they agree on chunk ordering, overlap rejection, and missing-cell rejection.
+	The returned array is a fresh working copy: callers may read or rewrite it
+	without changing the CAXEMAP draft. This remains an internal editor building
+	block; `EditorSession` is the supported mutation boundary.
+**/
+@:noCompletion
+function decode(world:ScenarioWorld):Null<Array<Int>> {
 	if (!validSize(world.size))
 		return null;
 	final cells = [for (_ in 0...volume(world.size)) -1];
@@ -235,13 +245,23 @@ private inline function remaining(edge:Int, origin:Int):Int {
 	return available < ScenarioLimits.MAX_CHUNK_EDGE ? available : ScenarioLimits.MAX_CHUNK_EDGE;
 }
 
+/**
+	Compress one nonempty-or-empty cell sequence into deterministic value runs.
+
+	The first value starts the active run; the loop then reads the remaining
+	values in place. Reading by index avoids allocating and copying a temporary
+	tail Array merely to skip element zero, which matters when every edited chunk
+	is encoded again.
+**/
 private function runs(values:Array<Int>):Array<VoxelRun> {
 	final result:Array<VoxelRun> = [];
 	if (values.length == 0)
 		return result;
 	var code = values[0];
 	var count = 1;
-	for (entry in values.slice(1)) {
+	var valueIndex = 1;
+	while (valueIndex < values.length) {
+		final entry = values[valueIndex];
 		if (entry == code) {
 			count++;
 		} else {
@@ -249,6 +269,7 @@ private function runs(values:Array<Int>):Array<VoxelRun> {
 			code = entry;
 			count = 1;
 		}
+		valueIndex++;
 	}
 	result.push({paletteCode: code, count: count});
 	return result;

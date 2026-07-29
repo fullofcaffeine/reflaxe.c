@@ -99,8 +99,8 @@
       "id": "editor_canvas_help",
       "symbol": "EditorCanvasHelp",
       "text": {
-        "en": "WORLD VIEWPORT — VISUAL BLOCK TOOLS ARE NEXT",
-        "es-MX": "VISTA DEL MUNDO — HERRAMIENTAS DE BLOQUES MUY PRONTO"
+        "en": "WORLD VIEWPORT — LEFT CLICK TO APPLY THE SELECTED TOOL",
+        "es-MX": "VISTA DEL MUNDO — CLIC IZQUIERDO PARA USAR LA HERRAMIENTA"
       }
     },
     {

@@ -778,7 +778,8 @@ compares normal versus reversed rule registration. It is target-neutral Eval
 evidence today, not yet proof that the complete executor compiles and runs in
 the playable generated-C application.
 
-The renderer-independent editor core also has a focused command:
+The renderer-independent editor core and first viewport rules have a focused
+command:
 
 ```sh
 npm run test:caxecraft-editor
@@ -786,13 +787,30 @@ npm run test:caxecraft-editor
 
 It creates a complete small map through public typed commands and proves exact
 undo/redo, bounded history and gestures, canonical in-memory reload,
-last-playable recovery, and disposable test play under C and a second installed
-locale (Spanish when available). It imports no Raylib or C target API. This is
-the semantic foundation for the future UI, not a claim that an in-game editor
-or native file save is already available. Its design is explained in
+last-playable recovery, disposable test play, one-layer projection, exact pixel
+mapping, and Select/Paint/Erase/Fill translation under C and a second installed
+locale (Spanish when available). The reusable editor package imports no Raylib
+or C target API.
+
+The title screen's Editor button now opens the first native Raylib/Raygui
+viewport: a bounded 12-by-12 top-down layer whose pointer gestures become the
+same typed `EditorCommand` values. The screen caches a read-only projection
+between accepted edits; it does not serialize the draft every frame. Its
+deterministic generated-C graphical proof is:
+
+```sh
+python3 examples/caxecraft/play.py \
+  --pilot editor-shell \
+  --raylib-configuration memory-software \
+  --allow-network
+```
+
+This is the first truthful visual editing slice, not a claim that native file
+save, multi-layer navigation, or the complete child-friendly event/cutscene
+tools are available. Its design is explained in
 [the editor semantics guide](../../docs/caxecraft-editor.md).
 
-Native persistence and the visual Raylib editor remain ordered
+Native persistence and the remaining visual editor work continue as ordered
 `haxe_c-xge.19.*` slices. The readable
 [CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.
 

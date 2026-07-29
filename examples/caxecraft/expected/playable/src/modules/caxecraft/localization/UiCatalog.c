@@ -90,7 +90,7 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale0(int32_t hxc_message
       }
     case 11:
       {
-        return "WORLD VIEWPORT \342\200\224 VISUAL BLOCK TOOLS ARE NEXT";
+        return "WORLD VIEWPORT \342\200\224 LEFT CLICK TO APPLY THE SELECTED TOOL";
       }
     case 12:
       {
@@ -237,7 +237,7 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale1(int32_t hxc_message
       }
     case 11:
       {
-        return "VISTA DEL MUNDO \342\200\224 HERRAMIENTAS DE BLOQUES MUY PRONTO";
+        return "VISTA DEL MUNDO \342\200\224 CLIC IZQUIERDO PARA USAR LA HERRAMIENTA";
       }
     case 12:
       {

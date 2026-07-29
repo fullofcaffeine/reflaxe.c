@@ -949,6 +949,11 @@ def build_pilot_report(
     if pilot == "editor-shell":
         if not editor_visible or title_visible:
             raise PlayFailure("editor-shell pilot did not finish on the native editor screen")
+        if signed[22] != 0 or signed[23] != 1 or signed[24] != 0:
+            raise PlayFailure(
+                "editor-shell pilot did not commit exactly one typed paint gesture "
+                f"(removed={signed[22]}, placed={signed[23]}, rejected={signed[24]})"
+            )
     elif editor_visible:
         raise PlayFailure(f"pilot {pilot!r} unexpectedly finished on the editor screen")
     if pilot == "aquatic-gear" and not aquatic_gear_equipped:

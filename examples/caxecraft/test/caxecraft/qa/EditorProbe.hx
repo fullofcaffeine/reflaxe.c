@@ -14,6 +14,14 @@ import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
+import caxecraft.editor.EditorViewport.EditorTool;
+import caxecraft.editor.EditorViewport.EditorToolCommandResult;
+import caxecraft.editor.EditorViewport.commandFor as commandForTool;
+import caxecraft.editor.EditorViewport.layout as layoutViewport;
+import caxecraft.editor.EditorViewport.paletteCodeAt;
+import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
+import caxecraft.editor.EditorViewport.project as projectViewport;
+import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
@@ -29,6 +37,8 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
+import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
+import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioMessages;
@@ -70,6 +80,7 @@ final class EditorProbe {
 
 	static function main():Void {
 		checkActionPalette();
+		final viewportChecks = checkViewport();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, ResizeWorld({width: 4, height: 2, depth: 4}), WorldShape);
@@ -136,8 +147,8 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (viewportChecks * 4099) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $viewportChecks viewport checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
 	}
 
 	static function checkActionPalette():Void {
@@ -170,6 +181,73 @@ final class EditorProbe {
 			require(descriptor.editorHelp.text() == 'editor.action.${expected[index]}.help', "editor action help key drifted");
 			require(flowActionArgumentRoles(descriptor.schema).length > 0, "editor action lost its typed form fields");
 		}
+	}
+
+	/**
+	 * Prove one cached layer, its pixel mapping, and all four visual tools.
+	 *
+	 * These checks run without Raylib. The native editor consumes the same
+	 * projection and command functions, so a changed grid edge or tool index is
+	 * caught before a graphical pilot has to diagnose it from pixels.
+	 */
+	static function checkViewport():Int {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "viewport world size");
+		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "viewport palette");
+		expectApplied(session.apply(PaintVoxel({x: 3, y: 1, z: 2}, 1)), Voxel, "viewport upper-layer paint");
+		final upper = projectViewport(session.draftSnapshot().world, 1);
+		require(upper != null && upper.width == 4 && upper.depth == 3 && upper.cells.length == 12, "viewport projection lost its exact layer dimensions");
+		require(paletteCodeAt(upper, 3, 2) == 1 && paletteCodeAt(upper, 0, 0) == 0 && paletteCodeAt(upper, 4, 0) == -1,
+			"viewport projection lost painted, air, or out-of-range cell semantics");
+		require(projectViewport(session.draftSnapshot().world, 2) == null, "viewport admitted a layer outside the world");
+
+		final grid = layoutViewport(10, 20, 410, 180, upper);
+		require(grid != null && grid.left == 95 && grid.top == 20 && grid.width == 240 && grid.height == 180 && grid.cellSize == 60,
+			"viewport did not center the largest square-cell grid");
+		final first = viewportPointAt(upper, grid, 95, 20);
+		final last = viewportPointAt(upper, grid, 334, 199);
+		require(first != null && first.x == 0 && first.y == 1 && first.z == 0, "viewport mapped its included top-left pixel incorrectly");
+		require(last != null && last.x == 3 && last.y == 1 && last.z == 2, "viewport mapped its included bottom-right pixel incorrectly");
+		require(viewportPointAt(upper, grid, 335, 199) == null
+			&& viewportPointAt(upper, grid, 94, 20) == null, "viewport admitted an excluded grid edge");
+
+		require(toolFromIndex(0) == SelectTool && toolFromIndex(1) == PaintTool && toolFromIndex(2) == EraseTool && toolFromIndex(3) == FillTool
+			&& toolFromIndex(-1) == null && toolFromIndex(4) == null,
+			"raygui tool indices drifted from the closed editor tool type");
+
+		final point:VoxelPoint = {x: 2, y: 1, z: 1};
+		switch commandForTool(SelectTool, point, 1, null) {
+			case ToolCommandReady(Select(bounds)):
+				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
+					&& bounds.size.depth == 1,
+					"select tool did not create one exact voxel selection");
+			case _:
+				throw "select tool did not produce a Select command";
+		}
+		switch commandForTool(PaintTool, point, 1, null) {
+			case ToolCommandReady(PaintVoxel(actual, 1)):
+				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "paint tool changed the pointed voxel");
+			case _:
+				throw "paint tool did not produce a PaintVoxel command";
+		}
+		switch commandForTool(EraseTool, point, 1, null) {
+			case ToolCommandReady(EraseVoxel(actual)):
+				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "erase tool changed the pointed voxel");
+			case _:
+				throw "erase tool did not produce an EraseVoxel command";
+		}
+		switch commandForTool(FillTool, point, 1, null) {
+			case ToolCommandRejected(NoSelection):
+			case _:
+				throw "fill tool did not reject a missing selection exactly";
+		}
+		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
+		switch commandForTool(FillTool, point, 1, selected) {
+			case ToolCommandReady(FillSelection(1)):
+			case _:
+				throw "fill tool did not reuse the current typed selection";
+		}
+		return 12;
 	}
 
 	static function checkTestPlayIsolation(session:EditorSession):Void {

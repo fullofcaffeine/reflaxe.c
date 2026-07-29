@@ -78,6 +78,7 @@ import caxecraft.localization.UiCatalog.LocaleCursor;
 import caxecraft.localization.UiCatalog.UiMessage;
 #if caxecraft_pilot
 import caxecraft.app.PilotTelemetry.drawPilotTelemetry;
+import caxecraft.editor.EditorViewport.EditorTool;
 import raylib.Rlgl;
 #end
 import caxecraft.pilot.GameInputFrame;
@@ -493,6 +494,17 @@ final class CaxecraftApp {
 			final onEditor = screenShowsEditor(screen);
 			final paused = screenPausesSimulation(screen);
 			final captured = screenCapturesPointer(screen);
+			#if caxecraft_pilot
+			// The editor pilot submits one typed gesture through the same screen
+			// method used by native pointer input. It bypasses only the operating
+			// system's mouse event so repeated headless runs remain deterministic.
+			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
+				if (editorScreen.applyPilotTool(EditorTool.PaintTool, {x: 2, y: 0, z: 2}))
+					placedBlocks++;
+				else
+					rejectedEdits++;
+			}
+			#end
 			if (captured) {
 				var yawDelta = lookYaw;
 				if (yawDelta > 0.25)
