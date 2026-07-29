@@ -17,7 +17,8 @@ import caxecraft.domain.World;
 	session changes; the session performs a second ownership preflight before its
 	synchronous commit. A controller binding records which reusable behavior was
 	selected, but this module does not run that behavior; the fixed-tick scheduler
-	owned by `haxe_c-xge.20.4.2.4.5` will turn it into `CharacterIntent` values.
+	turns it into `CharacterIntent` values after the complete actor set is
+	published.
 **/
 /** Success count or the exact stage that rejected an actor publication. */
 enum ActorPublicationResult {

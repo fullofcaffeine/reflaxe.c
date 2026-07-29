@@ -14,6 +14,7 @@
 struct hxc_caxecraft_domain_GameSession {
   struct hxc_caxecraft_domain_EntityStore hxc_entities;
   struct hxc_array_ref *hxc_actorControllers;
+  struct hxc_array_ref *hxc_actorControllerEvents;
   struct hxc_caxecraft_domain_PlayerAgent hxc_localPlayer;
   int32_t hxc_completedTicks;
   struct hxc_caxecraft_domain_WaterSimulation hxc_water;

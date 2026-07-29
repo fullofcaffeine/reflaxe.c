@@ -1,6 +1,11 @@
 package caxecraft.domain;
 
 import caxecraft.domain.Aquatics.observe as observeAquatics;
+import caxecraft.domain.ActorControllerDecision.ActorControllerDecision;
+import caxecraft.domain.ActorControllerScheduler.planActorController;
+import caxecraft.domain.ActorControllerScheduler.startActorController;
+import caxecraft.domain.ActorControllerTick.ActorControllerTickResult;
+import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
 import caxecraft.domain.Character.adoptProfile as adoptCharacterProfile;
 import caxecraft.domain.Character.applyAttack as applyCharacterAttack;
 import caxecraft.domain.Character.isValid as isValidCharacter;
@@ -142,8 +147,11 @@ final class GameSession {
 	/** All live character state, owned for exactly this session's lifetime. */
 	final entities:EntityStore = new EntityStore();
 
-	/** Controller recipes for authored non-player characters, in actor order. */
-	var actorControllers:Array<ActorControllerBinding> = [];
+	/** Controller runtime snapshots for authored non-player characters, in order. */
+	var actorControllers:Array<ActorControllerState> = [];
+
+	/** Typed observations emitted by the most recent authored-controller pass. */
+	final actorControllerEvents:Array<ActorControllerEvent> = [];
 
 	/** Human-control binding; it names the store entry and owns no character copy. */
 	var localPlayer:PlayerAgent;
@@ -228,7 +236,7 @@ final class GameSession {
 		return entities.count();
 
 	/**
-		Publish copy-owned character snapshots for saves, tests, and later schedulers.
+		Publish copy-owned character snapshots for saves, tests, and schedulers.
 
 		The returned Array may be changed by its caller without changing the live
 		store. Its `Character` elements are immutable value snapshots, so this
@@ -238,8 +246,20 @@ final class GameSession {
 		return entities.snapshots();
 
 	/** Return copy-owned controller bindings in the same order as authored actors. */
-	public function actorControllerSnapshots():Array<ActorControllerBinding>
+	public function actorControllerSnapshots():Array<ActorControllerBinding> {
+		final result:Array<ActorControllerBinding> = [];
+		for (controller in actorControllers)
+			result.push({characterId: controller.characterId, profile: controller.profile});
+		return result;
+	}
+
+	/** Return copy-owned controller execution state in stable authored order. */
+	public function actorControllerStateSnapshots():Array<ActorControllerState>
 		return actorControllers.copy();
+
+	/** Return copy-owned typed events from the most recent controller pass. */
+	public function actorControllerEventSnapshots():Array<ActorControllerEvent>
+		return actorControllerEvents.copy();
 
 	/**
 		Atomically replace authored non-player characters and their controllers.
@@ -255,16 +275,64 @@ final class GameSession {
 			return false;
 		final ownedCharacters = characters.copy();
 		final ownedControllers = controllers.copy();
+		final ownedStates:Array<ActorControllerState> = [];
 		for (index in 0...ownedCharacters.length)
 			if (ownedControllers[index].characterId != ownedCharacters[index].id)
 				return false;
+			else
+				ownedStates.push(startActorController(ownedControllers[index], ownedCharacters[index]));
 		if (!entities.replaceOthers(localPlayer.characterId, ownedCharacters))
 			return false;
 		while (actorControllers.length > 0)
 			actorControllers.pop();
-		for (controller in ownedControllers)
-			actorControllers.push(controller);
+		for (state in ownedStates)
+			actorControllers.push(state);
+		clearActorControllerEvents();
 		return true;
+	}
+
+	/**
+		Advance every published actor controller once in stable authored order.
+
+		All decisions observe the same local-player snapshot from the tick start.
+		Each accepted intent then enters `stepCharacter`, so player, NPC, enemy,
+		cutscene, and test movement share collision, water, breath, and vitals rules.
+		The method stops at the first ownership/model/command failure; the returned
+		processed count names the valid committed prefix.
+	**/
+	public function stepAuthoredActorControllers(tickNumber:Int, damagePolicy:CharacterDamagePolicy):ActorControllerTickResult {
+		clearActorControllerEvents();
+		final observedLocalPlayer = readLocalPlayer();
+		var processed = 0;
+		for (index in 0...actorControllers.length) {
+			final state = actorControllers[index];
+			final character = readCharacter(state.characterId);
+			if (!isValidCharacter(character))
+				return actorControllerTick(ControlledCharacterMissing(state.characterId), processed);
+			final decision = planActorController(state, character, observedLocalPlayer, tickNumber);
+			switch decision {
+				case ControllerPlanRejected(error):
+					return actorControllerTick(ControllerModelRejected(state.characterId, error), processed);
+				case ControllerPlanned(next, intent, event):
+					switch event {
+						case LocalPlayerAttack(source):
+							final attack = receiveLocalPlayerAttack();
+							if (!attack.resolved) return actorControllerTick(LocalAttackCommandRejected(source), processed);
+						case NoControllerEvent | InteractionAvailable(_) | DropRequested(_, _):
+					}
+					final step = stepCharacter(state.characterId, intent, damagePolicy);
+					if (!step.resolved)
+						return actorControllerTick(CharacterCommandRejected(state.characterId), processed);
+					actorControllers[index] = next;
+					switch event {
+						case NoControllerEvent:
+						case InteractionAvailable(_) | LocalPlayerAttack(_) | DropRequested(_, _):
+							actorControllerEvents.push(event);
+					}
+					processed++;
+			}
+		}
+		return actorControllerTick(ControllersAdvanced, processed);
 	}
 
 	/**
@@ -322,6 +390,23 @@ final class GameSession {
 		if (!isValidCharacter(original))
 			return rejectedLocalCharacterCommand(original);
 		return commitLocalCharacter(original, applyCharacterAttack(original, true));
+	}
+
+	/**
+		Apply one confirmed hostile impact to any character owned by this session.
+
+		Player weapons, NPC combat, traps, and tests can share the same vitals rule
+		without receiving `EntityStore` mutation authority. A missing identity
+		returns `resolved == false`; an accepted attack commits through the same
+		stable-ID replacement check used by fixed-tick movement.
+	**/
+	public function receiveCharacterAttack(id:EntityId):LocalCharacterCommandResult {
+		final original = readCharacter(id);
+		if (!isValidCharacter(original))
+			return rejectedLocalCharacterCommand(original);
+		final replacement = applyCharacterAttack(original, true);
+		final resolved = entities.replace(id, replacement);
+		return {character: resolved ? replacement : original, resolved: resolved};
 	}
 
 	/**
@@ -695,6 +780,16 @@ final class GameSession {
 			resolved: resolved
 		};
 	}
+
+	/** Clear last-tick events without replacing the session-owned Array identity. */
+	function clearActorControllerEvents():Void {
+		while (actorControllerEvents.length > 0)
+			actorControllerEvents.pop();
+	}
+
+	/** Build one compact controller-pass summary from the session event buffer. */
+	function actorControllerTick(status:ActorControllerTickStatus, processed:Int):ActorControllerTickResult
+		return {status: status, processed: processed, emittedEvents: actorControllerEvents.length};
 
 	/** Build the fail-closed result shared by commands with no bound character. */
 	static inline function rejectedLocalCharacterCommand(original:Character):LocalCharacterCommandResult

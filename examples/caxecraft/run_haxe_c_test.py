@@ -119,7 +119,20 @@ CASES = {
             ),
             GeneratedSourceCheck(
                 path="src/modules/caxecraft/domain/GameSession.c",
-                required_markers=("GameSession_replaceAuthoredActors",),
+                required_markers=(
+                    "GameSession_replaceAuthoredActors",
+                    "GameSession_stepAuthoredActorControllers",
+                    "GameSession_stepCharacter",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/domain/ActorControllerScheduler.c",
+                required_markers=(
+                    "ActorControllerScheduler_startActorController",
+                    "ActorControllerScheduler_planActorController",
+                    "ActorControllerScheduler_planWanderChaseMelee",
+                ),
                 forbidden_markers=("goto ",),
             ),
         ),

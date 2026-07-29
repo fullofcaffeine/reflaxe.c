@@ -3,9 +3,9 @@ package caxecraft.domain;
 /**
 	Binds one live character identity to its validated controller recipe.
 
-	The binding is immutable construction state. The later scheduler may own
-	mutable phase/timer state, but it will still address the same character by
-	`EntityId` and produce ordinary `CharacterIntent` values.
+	The binding is immutable construction state. `ActorControllerScheduler`
+	creates a separate phase/timer snapshot, but it still addresses the same
+	character by `EntityId` and produces ordinary `CharacterIntent` values.
 **/
 typedef ActorControllerBinding = {
 	final characterId:EntityId;

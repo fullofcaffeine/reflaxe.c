@@ -229,6 +229,9 @@ function selfCheck():Int {
 	}
 	if (session.characterCount() != 1 || session.readLocalPlayer().id != localId || session.actorControllerSnapshots().length != 0)
 		return 25;
+	final controllerResult = ActorControllerProbe.selfCheck();
+	if (controllerResult != 0)
+		return 100 + controllerResult;
 	return 0;
 }
 

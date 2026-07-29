@@ -5,7 +5,7 @@ import caxecraft.scenario.ContentId;
 /**
 	Describes the reusable controller selected for one authored character.
 
-	Content chooses one closed profile, while the later actor scheduler turns it
+	Content chooses one closed profile, while the actor scheduler turns it
 	into `CharacterIntent` values. Keeping this value in the domain lets
 	`GameSession` own controller bindings without depending on content loaders.
 **/

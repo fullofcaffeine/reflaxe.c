@@ -442,9 +442,23 @@ player and a generic non-player in the same store. Both advance through the
 same `Character.step` movement, water, and health rules, while their IDs keep
 the committed states independent. The probes also cover deterministic
 observation order, duplicate and missing IDs, removal, and the 64-character
-limit. This is a real multi-character storage boundary, but it is not yet a
-content-driven actor loader, controller scheduler, or a claim that inventory,
-equipment, weapons, and effects have completed the same migration.
+limit.
+
+Validated CaxeMap actor placements can now become complete generic characters
+and controller states through `ActorCompositionPlanner`, `ActorPublication`,
+and the session's transactional replacement command. The first controller
+scheduler is also executable: stationary interaction and
+wander/chase/melee produce ordinary `CharacterIntent` values, and the session
+commits them through the same character step used by the local player. It emits
+typed observations for interaction, a completed attack, and a one-shot drop
+request; dialogue, rewards, inventory changes, and presentation remain separate
+consumers rather than hidden controller side effects.
+
+This is not yet the playable migration. `CaxecraftApp` still owns its earlier
+Nia and Mossling fields until `haxe_c-xge.20.4.2.4.5.2` adds the missing authored
+enemy placement and replaces those application branches. Inventory, equipment,
+weapons, and effects likewise have not all completed the shared-entity
+migration.
 
 ### Array representation and allocation
 

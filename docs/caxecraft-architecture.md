@@ -535,11 +535,35 @@ commit, so callers see either the previous actor generation after rejection or
 the complete replacement after success. The focused test proves rejection,
 ordered publication, retry, and removal on both Eval and generated native C.
 
-Publication records controller recipes; it does not execute artificial
-intelligence. The current playable still advances its earlier Nia and Mossling
-paths. `haxe_c-xge.20.4.2.4.5` owns the fixed-tick scheduler that will turn the
-published recipes into ordinary `CharacterIntent` values and remove those
-content-specific update branches.
+The first generic execution boundary is now executable too.
+`ActorControllerScheduler` is a pure module: it reads immutable controller,
+character, and tick-start local-player snapshots, then returns one next
+controller state, one ordinary `CharacterIntent`, and at most one typed event.
+It does not mutate `GameSession`, inspect a content ID, run dialogue, add an
+item, or draw anything. This keeps stationary interaction and
+wander/chase/melee timing identical under Eval, generated C, saves, and replay
+tools.
+
+`GameSession.stepAuthoredActorControllers` is the stateful commit boundary. It
+visits the published states in authored order, sends every movement intent
+through `stepCharacter`, applies a completed attack through the shared local
+character command, and publishes interaction, attack, or one-shot drop
+observations only after their simulation work succeeds. All actors see the same
+local-player snapshot from the start of the pass, so an earlier actor cannot
+silently change a later actor's decision. A session admits at most 64
+characters including the local player, which bounds one complete controller
+pass to 63 actor updates; there is no frame-dependent partial artificial
+intelligence budget.
+
+The focused Eval/native-C specification proves empty passes, stable event and
+save order, stationary behavior, deterministic wander/chase/return,
+wind-up/impact/recovery, cancellation after leaving attack range, one-shot
+defeat drops, missing actors, model mismatch, and rejected shared commands. The
+current playable still advances its earlier Nia and Mossling fields.
+`haxe_c-xge.20.4.2.4.5.2` owns adding the missing authored Mossling placement
+and switching that application/presentation path to these published generic
+states; this distinction prevents the focused engine proof from being
+advertised as a completed playable migration.
 
 One engine capability must connect all authoring surfaces without becoming
 five implementations:

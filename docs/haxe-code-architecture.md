@@ -177,10 +177,13 @@ item changes instead use typed session commands. This rule prevents two
 
 The intended dependency flow makes platform input, artificial intelligence,
 cutscenes, and pilots produce the same semantic intent. The first player and
-non-player fixtures already share the intent and character mechanics; general
-runtime actor controllers remain planned. The session consumes the intent and
-presentation observes the committed result. Raylib stays at the edge rather
-than inside collision or health rules:
+non-player fixtures share the intent and character mechanics. The first generic
+runtime actor scheduler now turns immutable stationary-dialogue and
+wander/chase/melee recipes into that same intent, while `GameSession` remains
+the only commit owner. Migrating the playable's earlier Nia/Mossling fields to
+that path is still planned under `haxe_c-xge.20.4.2.4.5.2`. Presentation
+observes the committed result; Raylib stays at the edge rather than inside
+collision or health rules:
 
 ```text
 keyboard / controller / AI / pilot
