@@ -79,6 +79,7 @@ class RuntimeFeatureGraphGolden {
 		final stringMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-map", "string-map")], []));
 		final stringSplit = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-split", "string-split")], []));
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
+		final bytesString = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes-string", "bytes-string")], []));
 		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
 		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
 		final stringScalar = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-scalar", "string-scalar")], []));
@@ -105,6 +106,7 @@ class RuntimeFeatureGraphGolden {
 		final stringMapFiles = packager.packageFiles(stringMap, repositorySource);
 		final stringSplitFiles = packager.packageFiles(stringSplit, repositorySource);
 		final bytesFiles = packager.packageFiles(bytes, repositorySource);
+		final bytesStringFiles = packager.packageFiles(bytesString, repositorySource);
 		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
 		final gcFiles = packager.packageFiles(gc, repositorySource);
 		final stringScalarFiles = packager.packageFiles(stringScalar, repositorySource);
@@ -156,6 +158,7 @@ class RuntimeFeatureGraphGolden {
 			stringMap: stringMap,
 			stringSplit: stringSplit,
 			bytes: bytes,
+			bytesString: bytesString,
 			object: objectPlan,
 			gc: gc,
 			stringScalar: stringScalar,
@@ -202,6 +205,7 @@ class RuntimeFeatureGraphGolden {
 			stringMap: packageRecords(stringMapFiles),
 			stringSplit: packageRecords(stringSplitFiles),
 			bytes: packageRecords(bytesFiles),
+			bytesString: packageRecords(bytesStringFiles),
 			object: packageRecords(objectFiles),
 			gc: packageRecords(gcFiles),
 			stringScalar: packageRecords(stringScalarFiles),

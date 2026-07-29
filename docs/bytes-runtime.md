@@ -17,7 +17,11 @@ The first haxe.c slice supports ordinary Haxe calls to:
 - `Bytes.ofString` when its input is an admitted immutable Haxe String view and
   the optional encoding is absent or `null`. The expression may be a source
   literal, local, alias, parameter, or an admitted operation that creates a
-  fresh String, including concatenation and `Array<String>.join`.
+  fresh String, including concatenation and `Array<String>.join`;
+- `getString(position, length)` and `toString()`, using UTF-8. The selected
+  range must be in bounds and contain complete, well-formed UTF-8. The returned
+  immutable String owns its own copy, so later mutation of the Bytes value
+  cannot alter text that has already been published.
 
 Assignment shares the same mutable Bytes value. `sub` is different: it creates
 an independent copy. `set` and `fill` keep the low eight bits of the supplied
@@ -29,6 +33,12 @@ This is a deliberately bounded implementation, not a claim that all of
 `haxe.io.Bytes`, `BytesBuffer`, `Input`, or `Output` is complete. Unsupported
 methods fail at their Haxe source position with `HXC1001` and leave no plausible
 generated project.
+
+The optional `getString` encoding may be omitted, `null`, or exactly
+`Encoding.UTF8`. `Encoding.RawNative` is intentionally rejected rather than
+given a misleading cross-platform meaning: Haxe defines it in terms of the
+host's native encoding, while haxe.c does not yet have a reviewed platform
+encoding contract.
 
 `compare` follows the pinned executable Haxe implementations: it compares the
 shared prefix byte by byte, then compares lengths only when that prefix is
@@ -141,6 +151,15 @@ that the caller's managed String remains valid and independently releasable.
 This admission does not imply support for an unrelated String producer:
 `value.toUpperCase()` still fails at its own unimplemented String boundary.
 
+The reverse conversion selects a separate `bytes-string` runtime feature.
+`getString` passes its byte position and byte length to one checked runtime
+operation; `toString` uses the same operation with position zero and the
+buffer's complete length. The operation validates bounds before pointer
+arithmetic, validates UTF-8 before publishing a result, and moves the fresh
+String owner into the caller's normal HxcIR cleanup plan. A malformed range
+therefore cannot become plausible text, and a successful result remains valid
+after the source Bytes owner changes or is released.
+
 Fresh Bytes results are admitted at compiler-known direct, indirect, instance,
 constructor, super-constructor, and supported Bytes-operation borrow
 boundaries. Unknown calls and APIs still fail closed rather than guessing
@@ -169,8 +188,10 @@ a workaround for a missing compiler feature.
 
 The runner also checks reversed typed-module discovery independently for split
 and unity projects, HxcIR ownership markers for borrowed and fresh String
-sources, the exact runtime feature closure, strict C11 execution at `-O0` and
-`-O2`, C++17 header consumption, AddressSanitizer and UndefinedBehaviorSanitizer
-on both the direct runtime contract and generated split project where Clang is
-available, selective linked symbols, forced allocation rollback, negative
-diagnostics, and `hxc_runtime=none` rejection.
+sources and fresh decoded String results, valid ASCII and multibyte UTF-8
+snapshots, malformed UTF-8 and range failures, the exact runtime feature
+closure, strict C11 execution at `-O0` and `-O2`, C++17 header consumption,
+AddressSanitizer and UndefinedBehaviorSanitizer on both the direct runtime
+contract and generated split project where Clang is available, selective linked
+symbols, forced allocation rollback, negative diagnostics, and
+`hxc_runtime=none` rejection.

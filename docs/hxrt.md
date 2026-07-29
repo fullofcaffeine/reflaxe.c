@@ -464,6 +464,23 @@ construction and cleanup features independently. See
 HxcIR restricts that pointer to one direct imported-C call; the typed binding
 remains responsible for the foreign API's separate capacity convention.
 
+<!-- hxrt-feature:bytes-string -->
+### `bytes-string`
+
+Selected when ordinary Haxe calls `Bytes.getString(position, length)` or
+`Bytes.toString()`. This composition first checks that the requested byte range
+exists, then validates that the complete range is well-formed UTF-8, and
+finally copies it into a separately owned immutable Haxe `String`. Mutating or
+releasing the original `Bytes` value cannot change the returned text.
+
+Keeping this work outside the basic `bytes` feature matters for binary-only
+programs: storing images, packets, or world data does not pull in String
+allocation and UTF-8 decoding merely because it uses `Bytes`. Explicit
+`Encoding.RawNative` remains unsupported because its platform-dependent
+meaning needs a separate target contract; it is not silently treated as UTF-8.
+See [Bytes runtime](bytes-runtime.md) for the source API, ownership steps, and
+failure evidence.
+
 <!-- hxrt-feature:string-literal -->
 ### `string-literal`
 
@@ -570,6 +587,7 @@ them.
 | `include/hxrt/int_map.h`, `src/int_map.c` | Compiler-selectable Int-keyed shared `Map<Int, Bool>` storage with exact unboxed keys, values, and membership. |
 | `include/hxrt/string_map.h`, `src/string_map.c` | Compiler-selectable String-keyed shared map storage with copied keys and exact unboxed values. |
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
+| `include/hxrt/bytes_string.h`, `src/bytes_string.c` | Compiler-selectable checked UTF-8 decoding from mutable Bytes into a separately owned String. |
 | `include/hxrt/gc.h`, `src/gc.c` | Compiler-selectable precise non-moving collector, exact roots/pins, pressure policy, and observable reports. |
 | `include/hxrt/object.h`, `src/object.c` | Compiler-selectable immutable managed-payload descriptors and exact trace/finalizer dispatch; no allocation or collection. |
 | `include/hxrt/string_literal.h` | Compiler-selectable dependency-only direct literal layout. |

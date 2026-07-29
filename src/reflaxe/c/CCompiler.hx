@@ -542,7 +542,7 @@ class CCompiler {
 		for (requirement in requirements) {
 			final module = switch requirement.featureId {
 				case "array": "Array";
-				case "bytes": "haxe.io.Bytes";
+				case "bytes" | "bytes-string": "haxe.io.Bytes";
 				case "string-literal" | "string-scalar" | "string-split": "String";
 				case "io" if (requirement.operationId == "trace-literal"): "haxe.Log";
 				case "io": "Sys";

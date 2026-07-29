@@ -811,6 +811,7 @@ class CProjectEmitter {
 					}):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):
 				case "array-join" if (reason.kind == "runtime-operation" && reason.operationId == "join"):
+				case "bytes-string" if (reason.kind == "runtime-operation" && reason.operationId == "get-string-utf8"):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
 				case "int-map" if (reason.kind == "runtime-operation"):

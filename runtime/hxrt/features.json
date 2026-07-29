@@ -357,6 +357,57 @@
     },
     {
       "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable ordinary Bytes.getString or Bytes.toString interprets run-time binary storage as UTF-8.",
+            "id": "get-string-utf8",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "General Bytes and String values have separate owners. This composition validates the selected bytes, copies them once, and publishes a String whose lifetime no longer depends on later buffer mutation.",
+        "evidence": [
+          "test/differential/bytes-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Compiler-known immutable valid UTF-8 bytes may become a direct literal-backed String when mutation and identity are unobservable.",
+        "contract": "Copies one checked Bytes range into a fresh immutable String only after the range is valid UTF-8.",
+        "programLocalAlternative": "A closed fixed-capacity buffer may use a program-local checked decoder when that preserves bounds, malformed-input failure, and String ownership."
+      },
+      "dependencies": [
+        "bytes",
+        "string"
+      ],
+      "id": "bytes-string",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_bytes_ref_get_string_utf8"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/bytes_string.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/bytes_string.h"
+        },
+        {
+          "sourceSha256": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/bytes_string.c",
+          "sourcePath": "runtime/hxrt/src/bytes_string.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Checked UTF-8 decoding from mutable Bytes into an independently owned Haxe String.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
         "referencePath": "docs/gc-runtime.md",
         "selectionRoots": [
           {
@@ -1143,6 +1194,7 @@
     "array",
     "array-join",
     "bytes",
+    "bytes-string",
     "gc",
     "int-map",
     "io",
@@ -1199,7 +1251,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "a6b921b2061eec1478ab312569810bb2f99b9ed50ae79e85be223dd1cecea3ce",
+      "sourceSetSha256": "cf48406156a048cb9234c36f6294043492e752af1ffc6c015178e19e0a871f6e",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

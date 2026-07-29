@@ -90,6 +90,7 @@ enum CBodyRuntimeName {
 	CBRNBytesFill;
 	CBRNBytesCompare;
 	CBRNBytesBorrowMutableCString;
+	CBRNBytesGetStringUtf8;
 	CBRNBytesRetain;
 	CBRNBytesRelease;
 }
@@ -177,6 +178,7 @@ class CBodyRuntimeNames {
 			case CBRNBytesFill: "hxc_bytes_ref_fill";
 			case CBRNBytesCompare: "hxc_bytes_ref_compare";
 			case CBRNBytesBorrowMutableCString: "hxc_bytes_ref_borrow_mutable_cstring";
+			case CBRNBytesGetStringUtf8: "hxc_bytes_ref_get_string_utf8";
 			case CBRNBytesRetain: "hxc_bytes_ref_retain";
 			case CBRNBytesRelease: "hxc_bytes_ref_release";
 		});

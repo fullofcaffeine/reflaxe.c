@@ -55,6 +55,516 @@
     "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "profile-preset:portable"
   },
+  "bytesString": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-base",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/base.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/status.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
+          "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "string-literal",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/string_literal.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "string-literal"
+        ],
+        "id": "bytes",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_bytes_ref_blit",
+          "hxc_bytes_ref_borrow_mutable_cstring",
+          "hxc_bytes_ref_compare",
+          "hxc_bytes_ref_create_copy",
+          "hxc_bytes_ref_create_utf8_copy",
+          "hxc_bytes_ref_create_zeroed",
+          "hxc_bytes_ref_fill",
+          "hxc_bytes_ref_get",
+          "hxc_bytes_ref_is_valid",
+          "hxc_bytes_ref_length",
+          "hxc_bytes_ref_release",
+          "hxc_bytes_ref_retain",
+          "hxc_bytes_ref_set",
+          "hxc_bytes_ref_sub"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/bytes.h",
+          "runtime/src/bytes.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status",
+          "string-literal"
+        ],
+        "id": "string-scalar",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_string_char_at",
+          "hxc_string_char_code_at",
+          "hxc_string_compare",
+          "hxc_string_hash",
+          "hxc_string_haxe_length",
+          "hxc_string_index_of",
+          "hxc_string_is_valid",
+          "hxc_string_last_index_of",
+          "hxc_string_scalar_at",
+          "hxc_string_scalar_length",
+          "hxc_string_slice",
+          "hxc_string_substring",
+          "hxc_utf8_validate"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/string_decode.h",
+          "runtime/include/hxrt/string_scalar.h",
+          "runtime/src/string_scalar.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc",
+          "string-scalar"
+        ],
+        "id": "string",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_byte_view_from_cstring",
+          "hxc_owned_cstring_dispose",
+          "hxc_owned_string_dispose",
+          "hxc_string_borrow_cstring",
+          "hxc_string_buffer_append_scalar",
+          "hxc_string_buffer_append_utf8_checked",
+          "hxc_string_buffer_dispose",
+          "hxc_string_buffer_finish",
+          "hxc_string_buffer_finish_ref",
+          "hxc_string_buffer_init",
+          "hxc_string_buffer_view",
+          "hxc_string_concat",
+          "hxc_string_concat_ref",
+          "hxc_string_copy",
+          "hxc_string_from_int32",
+          "hxc_string_from_scalar",
+          "hxc_string_from_utf8_checked",
+          "hxc_string_from_utf8_lossy",
+          "hxc_string_release",
+          "hxc_string_retain",
+          "hxc_string_to_cstring_owned"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/string.h",
+          "runtime/src/string.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "bytes",
+          "string"
+        ],
+        "id": "bytes-string",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [
+          "hxc_bytes_ref_get_string_utf8"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/bytes_string.h",
+          "runtime/src/bytes_string.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "bytes",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "bytes",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "string-literal"
+      },
+      {
+        "featureId": "bytes-string",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "bytes"
+      },
+      {
+        "featureId": "bytes-string",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "string"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "string",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "string",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "string-scalar"
+      },
+      {
+        "featureId": "string-literal",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "runtime-base"
+      },
+      {
+        "featureId": "string-scalar",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "string-scalar",
+        "reasonIds": [
+          "fixture.bytes-string"
+        ],
+        "dependencyId": "string-literal"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-base",
+      "status",
+      "alloc",
+      "string-literal",
+      "bytes",
+      "string-scalar",
+      "string",
+      "bytes-string"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "runtime-base",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "bytes",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/bytes.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/bytes.h"
+      },
+      {
+        "featureId": "bytes-string",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/bytes_string.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/bytes_string.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "string",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/string.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/string.h"
+      },
+      {
+        "featureId": "string-scalar",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/string_decode.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/string_decode.h"
+      },
+      {
+        "featureId": "string-literal",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/string_literal.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/string_literal.h"
+      },
+      {
+        "featureId": "string-scalar",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/string_scalar.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/string_scalar.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "bytes",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/bytes.c",
+        "sourcePath": "runtime/hxrt/src/bytes.c"
+      },
+      {
+        "featureId": "bytes-string",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/bytes_string.c",
+        "sourcePath": "runtime/hxrt/src/bytes_string.c"
+      },
+      {
+        "featureId": "string",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/string.c",
+        "sourcePath": "runtime/hxrt/src/string.c"
+      },
+      {
+        "featureId": "string-scalar",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/string_scalar.c",
+        "sourcePath": "runtime/hxrt/src/string_scalar.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 2,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
+      "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
+      "hxc_byte_view_from_cstring",
+      "hxc_bytes_ref_blit",
+      "hxc_bytes_ref_borrow_mutable_cstring",
+      "hxc_bytes_ref_compare",
+      "hxc_bytes_ref_create_copy",
+      "hxc_bytes_ref_create_utf8_copy",
+      "hxc_bytes_ref_create_zeroed",
+      "hxc_bytes_ref_fill",
+      "hxc_bytes_ref_get",
+      "hxc_bytes_ref_get_string_utf8",
+      "hxc_bytes_ref_is_valid",
+      "hxc_bytes_ref_length",
+      "hxc_bytes_ref_release",
+      "hxc_bytes_ref_retain",
+      "hxc_bytes_ref_set",
+      "hxc_bytes_ref_sub",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_owned_cstring_dispose",
+      "hxc_owned_string_dispose",
+      "hxc_realloc",
+      "hxc_size_add",
+      "hxc_size_mul",
+      "hxc_string_borrow_cstring",
+      "hxc_string_buffer_append_scalar",
+      "hxc_string_buffer_append_utf8_checked",
+      "hxc_string_buffer_dispose",
+      "hxc_string_buffer_finish",
+      "hxc_string_buffer_finish_ref",
+      "hxc_string_buffer_init",
+      "hxc_string_buffer_view",
+      "hxc_string_char_at",
+      "hxc_string_char_code_at",
+      "hxc_string_compare",
+      "hxc_string_concat",
+      "hxc_string_concat_ref",
+      "hxc_string_copy",
+      "hxc_string_from_int32",
+      "hxc_string_from_scalar",
+      "hxc_string_from_utf8_checked",
+      "hxc_string_from_utf8_lossy",
+      "hxc_string_hash",
+      "hxc_string_haxe_length",
+      "hxc_string_index_of",
+      "hxc_string_is_valid",
+      "hxc_string_last_index_of",
+      "hxc_string_release",
+      "hxc_string_retain",
+      "hxc_string_scalar_at",
+      "hxc_string_scalar_length",
+      "hxc_string_slice",
+      "hxc_string_substring",
+      "hxc_string_to_cstring_owned",
+      "hxc_utf8_validate"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/bytes.h",
+      "runtime/include/hxrt/bytes_string.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/include/hxrt/string.h",
+      "runtime/include/hxrt/string_decode.h",
+      "runtime/include/hxrt/string_literal.h",
+      "runtime/include/hxrt/string_scalar.h",
+      "runtime/src/allocator.c",
+      "runtime/src/bytes.c",
+      "runtime/src/bytes_string.c",
+      "runtime/src/string.c",
+      "runtime/src/string_scalar.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "bytes-string",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.bytes-string",
+        "operationId": "fixture-runtime-operation",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 82,
+            "column": 2
+          },
+          "start": {
+            "line": 82,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v2",
+    "policyProvenance": "fixture:explicit-policy"
+  },
   "stringScalar": {
     "selectedFeatures": [
       {
@@ -263,11 +773,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 84,
+            "line": 85,
             "column": 2
           },
           "start": {
-            "line": 84,
+            "line": 85,
             "column": 1
           }
         }
@@ -391,11 +901,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 82,
+            "line": 83,
             "column": 2
           },
           "start": {
-            "line": 82,
+            "line": 83,
             "column": 1
           }
         }
@@ -464,11 +974,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 308,
+            "line": 312,
             "column": 2
           },
           "start": {
-            "line": 308,
+            "line": 312,
             "column": 1
           }
         }
@@ -1049,11 +1559,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 83,
+            "line": 84,
             "column": 2
           },
           "start": {
-            "line": 83,
+            "line": 84,
             "column": 1
           }
         }
@@ -1484,11 +1994,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 321,
+              "line": 325,
               "column": 2
             },
             "start": {
-              "line": 321,
+              "line": 325,
               "column": 1
             }
           }
@@ -1510,11 +2020,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 321,
+              "line": 325,
               "column": 2
             },
             "start": {
-              "line": 321,
+              "line": 325,
               "column": 1
             }
           }
@@ -1529,7 +2039,7 @@
         "string-scalar"
       ],
       "id": "HXC2000",
-      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:321:1-321:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-scalar -> status -> runtime-base; string -> string-scalar -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:321:1-321:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
+      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:325:1-325:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-scalar -> status -> runtime-base; string -> string-scalar -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:325:1-325:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
     }
   },
   "compilerIo": {
@@ -1708,11 +2218,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 279,
+            "line": 283,
             "column": 2
           },
           "start": {
-            "line": 279,
+            "line": 283,
             "column": 1
           }
         }
@@ -2096,11 +2606,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 94,
+            "line": 95,
             "column": 2
           },
           "start": {
-            "line": 94,
+            "line": 95,
             "column": 1
           }
         }
@@ -3195,11 +3705,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 86,
+            "line": 87,
             "column": 2
           },
           "start": {
-            "line": 86,
+            "line": 87,
             "column": 1
           }
         }
@@ -3214,11 +3724,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 85,
+            "line": 86,
             "column": 2
           },
           "start": {
-            "line": 85,
+            "line": 86,
             "column": 1
           }
         }

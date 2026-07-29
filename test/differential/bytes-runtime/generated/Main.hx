@@ -1,4 +1,5 @@
 import haxe.io.Bytes;
+import haxe.io.Encoding;
 
 /**
  * Exercises the first ordinary-Haxe `Bytes` slice without target-specific code.
@@ -114,6 +115,14 @@ final class Main {
 		final emptyCopy = copyText("");
 		final freshCopy = copyFreshText();
 		final joinedCopy = copyJoinedLines();
+		final decodedBytes = Bytes.ofString("prefix:hé🙂");
+		final decodedAscii = decodedBytes.getString(0, 6);
+		final decodedSlice = decodedBytes.getString(7, decodedBytes.length - 7);
+		final decodedNullEncoding = decodedBytes.getString(0, decodedBytes.length, null);
+		final explicitUtf8 = decodedBytes.getString(0, decodedBytes.length, Encoding.UTF8);
+		final decodedWhole = decodedBytes.toString();
+		final decodedEmpty = Bytes.alloc(0).toString();
+		decodedBytes.set(7, "X".code);
 
 		while (bytes.length != 8
 			|| bytes.get(0) != 0x41
@@ -146,6 +155,13 @@ final class Main {
 			|| freshCopy.compare(runtimeCopy) != 0
 			|| joinedCopy.length != 11
 			|| joinedCopy.get(4) != 0x0a
-			|| joinedCopy.get(10) != 0x0a) {}
+			|| joinedCopy.get(10) != 0x0a
+			|| decodedAscii != "prefix"
+			|| decodedSlice != "hé🙂"
+			|| decodedNullEncoding != "prefix:hé🙂"
+			|| explicitUtf8 != "prefix:hé🙂"
+			|| decodedWhole != "prefix:hé🙂"
+			|| decodedEmpty != ""
+			|| decodedBytes.get(7) != "X".code) {}
 	}
 }

@@ -2744,6 +2744,8 @@ private class HxcIRValidationState {
 					validateManagedBytesCall(call, argumentTypes, path, source);
 					if (operationId == "of-string-utf8" && call.arguments.length > 0 && !nullProofs.exists(call.arguments[0]))
 						add(path, "Bytes.ofString requires a preceding dominating String null check", source);
+				} else if (featureId == "bytes-string") {
+					validateBytesStringCall(call, argumentTypes, path, source);
 				} else if (featureId == "string") {
 					validateManagedStringCall(call, argumentTypes, path, source);
 				} else if (featureId == "string-scalar") {
@@ -3167,6 +3169,26 @@ private class HxcIRValidationState {
 				add(path, 'bytes runtime call names unsupported operation `$operationId`', source);
 		}
 		validateCleanupFreeStatusAbort(call.failure, path, source, "managed Bytes operation");
+	}
+
+	/** Validate the one Bytes/String composition before C symbol selection. */
+	function validateBytesStringCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("bytes-string", value): value;
+			case _: return;
+		};
+		final intType = typeKey(IRTInt(32, true));
+		final isInt = (index:Int) -> {
+			if (index >= argumentTypes.length)
+				return false;
+			final type = argumentTypes[index];
+			return type != null && typeKey(type) == intType;
+		};
+		final valid = operationId == "get-string-utf8" && argumentTypes.length == 3 && isManagedBytes(argumentTypes[0]) && isInt(1) && isInt(2)
+			&& call.returnType == IRTManagedString;
+		if (!valid)
+			add(path, "Bytes UTF-8 decoding requires managed Bytes, Haxe Int position/length, and returns one managed String", source);
+		validateCleanupFreeStatusAbort(call.failure, path, source, "Bytes UTF-8 decoding");
 	}
 
 	/** Validate allocation-backed String calls before C symbol selection. */

@@ -27,6 +27,7 @@ class RuntimeFeatureCatalog {
 		final intMap = RuntimeFeatureId.parse("int-map");
 		final stringMap = RuntimeFeatureId.parse("string-map");
 		final bytes = RuntimeFeatureId.parse("bytes");
+		final bytesString = RuntimeFeatureId.parse("bytes-string");
 		final object = RuntimeFeatureId.parse("object");
 		final gc = RuntimeFeatureId.parse("gc");
 		final stringLiteral = RuntimeFeatureId.parse("string-literal");
@@ -244,6 +245,21 @@ class RuntimeFeatureCatalog {
 					"Compiler-known immutable byte tables can remain direct const C data when Haxe identity and mutation are unobservable.",
 					"A closed bounded buffer can use a program-local specialization when it preserves the same alias and bounds contract.",
 					"General Bytes values have run-time size and shared mutable identity. The selected slice owns that storage without treating arbitrary bytes as text or boxed integers.",
+					"docs/hxrt.md",
+					[
+						"test/differential/bytes-runtime/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(bytesString, "Checked UTF-8 decoding from mutable Bytes into an independently owned Haxe String.",
+				CompilerSelectable, true, environments, [bytes, string], [header("bytes_string.h"), source("bytes_string.c")],
+				["hxc_bytes_ref_get_string_utf8"], [], [],
+				documentation("Copies one checked Bytes range into a fresh immutable String only after the range is valid UTF-8.", [
+					new RuntimeFeatureSelectionRoot("get-string-utf8", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable ordinary Bytes.getString or Bytes.toString interprets run-time binary storage as UTF-8.")
+				],
+					"Compiler-known immutable valid UTF-8 bytes may become a direct literal-backed String when mutation and identity are unobservable.",
+					"A closed fixed-capacity buffer may use a program-local checked decoder when that preserves bounds, malformed-input failure, and String ownership.",
+					"General Bytes and String values have separate owners. This composition validates the selected bytes, copies them once, and publishes a String whose lifetime no longer depends on later buffer mutation.",
 					"docs/hxrt.md",
 					[
 						"test/differential/bytes-runtime/run.py",
@@ -486,6 +502,7 @@ class RuntimeFeatureCatalog {
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
 			case "base.h": "dc35f17737269475435e107909d582bd37a0827095fcf74bd4e878adbb491290";
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
+			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
 			case "int_map.h": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080";
@@ -509,6 +526,7 @@ class RuntimeFeatureCatalog {
 			case "array.c": "a07fc5f847912cfec1c02f0edcc51dae97089b521da49601aab4fbcf9e2b7b55";
 			case "array_join.c": "b158708b62c7e407f9da21c24a1b3306d4b41baa6b63f2d8019f631a98008fde";
 			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
+			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c";
 			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";

@@ -30,6 +30,7 @@ ARRAY_CONSUMER = CASE / "array_consumer.c"
 INT_MAP_CONSUMER = ROOT / "test/differential/int-map/int_map_runtime.c"
 STRING_MAP_CONSUMER = ROOT / "test/differential/string-map/string_map_runtime.c"
 BYTES_CONSUMER = CASE / "bytes_consumer.c"
+BYTES_STRING_CONSUMER = CASE / "bytes_string_consumer.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
@@ -174,6 +175,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array",
         "array-join",
         "bytes",
+        "bytes-string",
         "gc",
         "int-map",
         "io",
@@ -234,6 +236,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-map",
         "string-split",
         "bytes",
+        "bytes-string",
         "gc",
         "object",
         "string-literal",
@@ -254,6 +257,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-map": ["alloc", "string-literal"],
         "string-split": ["array", "string"],
         "bytes": ["alloc", "string-literal"],
+        "bytes-string": ["bytes", "string"],
         "gc": ["alloc", "object"],
         "object": ["runtime-base"],
         "string-literal": ["runtime-base"],
@@ -273,6 +277,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-map": "compiler-selectable",
         "string-split": "compiler-selectable",
         "bytes": "compiler-selectable",
+        "bytes-string": "compiler-selectable",
         "gc": "compiler-selectable",
         "object": "compiler-selectable",
         "string-literal": "compiler-selectable",
@@ -512,6 +517,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     string_map = record(plans.get("stringMap"), "StringMap plan")
     string_split = record(plans.get("stringSplit"), "String split plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
+    bytes_string = record(plans.get("bytesString"), "Bytes-to-String plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
     string_scalar = record(plans.get("stringScalar"), "string scalar plan")
@@ -545,6 +551,17 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("String.split closure is incomplete or nondeterministic")
     if bytes_plan.get("features") != ["runtime-base", "status", "alloc", "string-literal", "bytes"]:
         raise RuntimeFeatureFailure("Bytes closure is incomplete or nondeterministic")
+    if bytes_string.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "bytes",
+        "string-scalar",
+        "string",
+        "bytes-string",
+    ]:
+        raise RuntimeFeatureFailure("Bytes-to-String closure is incomplete or nondeterministic")
     if object_plan.get("features") != ["runtime-base", "object"]:
         raise RuntimeFeatureFailure("object descriptor closure is incomplete or nondeterministic")
     if gc_plan.get("features") != ["runtime-base", "status", "alloc", "object", "gc"]:
@@ -571,6 +588,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     validate_selected_reasons(string_map, "StringMap")
     validate_selected_reasons(string_split, "String.split")
     validate_selected_reasons(bytes_plan, "Bytes")
+    validate_selected_reasons(bytes_string, "Bytes-to-String")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
     validate_selected_reasons(string_scalar, "string scalar")
@@ -611,6 +629,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("StringMap build plan omitted its selected source")
     if "runtime/src/bytes.c" not in text_list(bytes_plan.get("artifacts"), "Bytes artifacts"):
         raise RuntimeFeatureFailure("Bytes build plan omitted its selected source")
+    if "runtime/src/bytes_string.c" not in text_list(
+        bytes_string.get("artifacts"), "Bytes-to-String artifacts"
+    ):
+        raise RuntimeFeatureFailure("Bytes-to-String build plan omitted its selected source")
     if "runtime/src/object.c" not in text_list(object_plan.get("artifacts"), "object artifacts"):
         raise RuntimeFeatureFailure("object build plan omitted its selected source")
     if "runtime/src/gc.c" not in text_list(gc_plan.get("artifacts"), "gc artifacts"):
@@ -619,6 +641,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("array build plan omitted its selected symbol")
     if "hxc_string_copy" not in text_list(string.get("symbols"), "string symbols"):
         raise RuntimeFeatureFailure("string build plan omitted its selected symbol")
+    if "hxc_bytes_ref_get_string_utf8" not in text_list(
+        bytes_string.get("symbols"), "Bytes-to-String symbols"
+    ):
+        raise RuntimeFeatureFailure("Bytes-to-String build plan omitted its selected decoder")
     if "hxc_string_char_at" not in text_list(string_scalar.get("symbols"), "string scalar symbols"):
         raise RuntimeFeatureFailure("string scalar build plan omitted its selected charAt symbol")
     overrides = records(minimal.get("manualOverrides"), "minimal overrides")
@@ -694,7 +720,20 @@ def validate_plans(plans: dict[str, object]) -> None:
 
 
 def validate_package(package: dict[str, object], plans: dict[str, object]) -> None:
-    for name in ("alloc", "array", "intMap", "stringMap", "stringSplit", "bytes", "object", "gc", "stringScalar", "string", "io"):
+    for name in (
+        "alloc",
+        "array",
+        "intMap",
+        "stringMap",
+        "stringSplit",
+        "bytes",
+        "bytesString",
+        "object",
+        "gc",
+        "stringScalar",
+        "string",
+        "io",
+    ):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
@@ -893,7 +932,20 @@ def package_from_snapshots(
     catalog: dict[str, object], plans: dict[str, object]
 ) -> dict[str, object]:
     package: dict[str, object] = {}
-    for name in ("alloc", "array", "intMap", "stringMap", "stringSplit", "bytes", "object", "gc", "stringScalar", "string", "io"):
+    for name in (
+        "alloc",
+        "array",
+        "intMap",
+        "stringMap",
+        "stringSplit",
+        "bytes",
+        "bytesString",
+        "object",
+        "gc",
+        "stringScalar",
+        "string",
+        "io",
+    ):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []
@@ -990,6 +1042,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     int_map = records(package.get("intMap"), "IntMap package")
     string_map = records(package.get("stringMap"), "StringMap package")
     bytes_package = records(package.get("bytes"), "Bytes package")
+    bytes_string_package = records(package.get("bytesString"), "Bytes-to-String package")
     object_package = records(package.get("object"), "object package")
     gc_package = records(package.get("gc"), "gc package")
     string_scalar = records(package.get("stringScalar"), "string scalar package")
@@ -1004,6 +1057,14 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
             run_native_case(toolchain, "int-map", int_map, INT_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "string-map", string_map, STRING_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "bytes", bytes_package, BYTES_CONSUMER, "runtime-feature-bytes: OK\n", family_root)
+            run_native_case(
+                toolchain,
+                "bytes-string",
+                bytes_string_package,
+                BYTES_STRING_CONSUMER,
+                "runtime-feature-bytes-string: OK\n",
+                family_root,
+            )
             run_native_case(toolchain, "object", object_package, OBJECT_CONSUMER, "runtime-feature-object: OK\n", family_root)
             run_native_case(
                 toolchain,

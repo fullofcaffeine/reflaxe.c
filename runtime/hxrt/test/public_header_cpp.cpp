@@ -98,6 +98,19 @@ static_assert(
   std::is_same<decltype(&hxc_bytes_ref_release), hxc_status (*)(hxc_bytes_ref *)>::value,
   "shared Bytes release signature must agree in C++"
 );
+static_assert(
+  std::is_same<
+    decltype(&hxc_bytes_ref_get_string_utf8),
+    hxc_status (*)(
+      const hxc_bytes_ref *,
+      int32_t,
+      int32_t,
+      hxc_allocator,
+      hxc_string *
+    )
+  >::value,
+  "checked Bytes-to-String signature must agree in C++"
+);
 static_assert(std::is_standard_layout<hxc_string>::value, "private string value must be C-compatible");
 static_assert(std::is_trivially_copyable<hxc_string>::value, "private string value must cross internal C ABI calls by value");
 static_assert(std::is_standard_layout<hxc_owned_string>::value, "owned string must be C-compatible");

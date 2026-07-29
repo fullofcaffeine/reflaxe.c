@@ -1469,6 +1469,43 @@
       "notes": "A checked position returns an ordinary Haxe Int in the inclusive range 0 through 255; haxe.c preserves the nominal call with its target source declaration."
     },
     {
+      "id": "bytes-get-string-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "getString",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int, len : Int, ?encoding : Null<haxe.io.Encoding>) -> String"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes-string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/negative/raw_native_encoding/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked byte range is validated as UTF-8 and copied into an independently owned immutable String. Omitted, null, and explicit UTF8 encodings are admitted; RawNative and unrelated encodings remain source-positioned boundaries."
+    },
+    {
       "id": "bytes-length-partial",
       "selector": {
         "module": "haxe.io.Bytes",
@@ -1607,6 +1644,42 @@
         "test/differential/bytes-runtime/run.py"
       ],
       "notes": "A checked range creates an independent owned copy; fresh results may bind to locals or cross an owned return boundary, while unsupported nested temporary shapes fail closed."
+    },
+    {
+      "id": "bytes-to-string-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "toString",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "() -> String"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes-string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "The complete fixed-length buffer is validated as UTF-8 and copied into an independently owned immutable String; malformed binary data cannot become plausible text."
     },
     {
       "id": "string-char-at-partial",
@@ -40211,9 +40284,7 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "bytes",
-        "io"
+        "bytes-string"
       ],
       "profiles": [
         "portable",
@@ -40221,20 +40292,23 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/negative/raw_native_encoding/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked byte range is validated as UTF-8 and copied into an independently owned immutable String. Omitted, null, and explicit UTF8 encodings are admitted; RawNative and unrelated encodings remain source-positioned boundaries.",
+      "ruleId": "bytes-get-string-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:1037fbf91e6a1471829953eafc5c7880fba798b6cf3591ebe41abdf98a9c8532",
@@ -40739,9 +40813,7 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "bytes",
-        "io"
+        "bytes-string"
       ],
       "profiles": [
         "portable",
@@ -40749,20 +40821,22 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "The complete fixed-length buffer is validated as UTF-8 and copied into an independently owned immutable String; malformed binary data cannot become plausible text.",
+      "ruleId": "bytes-to-string-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:179f388136eb83c7a4786576f791d02b0285f06684ddb0753be59243f94a2f37",

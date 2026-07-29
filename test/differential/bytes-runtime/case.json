@@ -13,9 +13,11 @@
   "sources": [
     "docs/bytes-runtime.md",
     "runtime/hxrt/include/hxrt/bytes.h",
+    "runtime/hxrt/include/hxrt/bytes_string.h",
     "runtime/hxrt/include/hxrt/string.h",
     "runtime/hxrt/include/hxrt/string_scalar.h",
     "runtime/hxrt/src/bytes.c",
+    "runtime/hxrt/src/bytes_string.c",
     "runtime/hxrt/src/string.c",
     "runtime/hxrt/src/string_scalar.c",
     "std/c/CStringBufferRef.hx",
@@ -40,6 +42,7 @@
     "test/differential/bytes-runtime/negative/buffer_wrong_carrier/MutableTextApi.hx",
     "test/differential/bytes-runtime/negative/return_escape/Main.hx",
     "test/differential/bytes-runtime/negative/runtime_string_operation/Main.hx",
+    "test/differential/bytes-runtime/negative/raw_native_encoding/Main.hx",
     "test/differential/bytes-runtime/negative/unsupported_method/Main.hx",
     "test/differential/bytes-runtime/run.py"
   ],

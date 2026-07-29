@@ -1,4 +1,5 @@
 #include "hxrt/bytes.h"
+#include "hxrt/bytes_string.h"
 #include "hxrt/string.h"
 
 #include <stdio.h>
@@ -12,7 +13,7 @@
   } while (0)
 
 #define HXC_TEST_BANK_SIZE 512u
-#define HXC_TEST_BANK_COUNT 12u
+#define HXC_TEST_BANK_COUNT 16u
 
 typedef union hxc_test_bank {
   max_align_t alignment;
@@ -118,13 +119,22 @@ int main(void) {
   hxc_bytes_ref *text = NULL;
   hxc_bytes_ref *empty = NULL;
   hxc_bytes_ref *unterminated = NULL;
+  hxc_bytes_ref *utf8 = NULL;
+  hxc_bytes_ref *invalid_utf8 = NULL;
   hxc_bytes_ref *failed = NULL;
   char *borrowed_text = NULL;
   hxc_string owned_source = HXC_STRING_INITIALIZER;
+  hxc_string decoded = HXC_STRING_INITIALIZER;
   int32_t value = -1;
   int32_t order = 7;
   const uint8_t shorter_data[] = {UINT8_C(255)};
   const uint8_t text_data[] = {UINT8_C(72), UINT8_C(0), UINT8_C(120)};
+  const uint8_t utf8_data[] = {
+    UINT8_C('x'),
+    UINT8_C(0xc3), UINT8_C(0xa9),
+    UINT8_C(0xf0), UINT8_C(0x9f), UINT8_C(0x99), UINT8_C(0x82)
+  };
+  const uint8_t invalid_utf8_data[] = {UINT8_C(0xc3), UINT8_C(0x28)};
   const hxc_string text_view = {text_data, 3u, true, NULL};
   const hxc_string source_left = HXC_STRING_LITERAL("fresh:");
   const hxc_string source_right = HXC_STRING_LITERAL("source");
@@ -181,6 +191,46 @@ int main(void) {
   );
   borrowed_text = NULL;
 
+  HXC_TEST_CHECK(hxc_bytes_ref_create_copy(allocator, utf8_data, 7u, &utf8) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_get_string_utf8(utf8, 1, 6, allocator, &decoded)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_string_is_valid(decoded)
+      && decoded.byte_length == 6u
+      && decoded.data[0] == UINT8_C(0xc3)
+      && decoded.data[5] == UINT8_C(0x82)
+  );
+  HXC_TEST_CHECK(hxc_bytes_ref_set(utf8, 1, (int32_t)'X') == HXC_STATUS_OK);
+  HXC_TEST_CHECK(decoded.data[0] == UINT8_C(0xc3));
+  HXC_TEST_CHECK(hxc_string_release(&decoded) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_get_string_utf8(utf8, -1, 1, allocator, &decoded)
+      == HXC_STATUS_OUT_OF_RANGE
+      && decoded.data == NULL
+  );
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_get_string_utf8(utf8, 6, 2, allocator, &decoded)
+      == HXC_STATUS_OUT_OF_RANGE
+      && decoded.data == NULL
+  );
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_create_copy(
+      allocator,
+      invalid_utf8_data,
+      sizeof(invalid_utf8_data),
+      &invalid_utf8
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_bytes_ref_get_string_utf8(invalid_utf8, 0, 2, allocator, &decoded)
+      == HXC_STATUS_INVALID_UTF8
+      && decoded.data == NULL
+      && decoded.owner == NULL
+  );
+
   value = 99;
   HXC_TEST_CHECK(hxc_bytes_ref_get(bytes, -1, &value) == HXC_STATUS_OUT_OF_RANGE && value == 99);
   HXC_TEST_CHECK(hxc_bytes_ref_get(bytes, 8, &value) == HXC_STATUS_OUT_OF_RANGE && value == 99);
@@ -211,6 +261,8 @@ int main(void) {
   arena.failure_armed = false;
 
   HXC_TEST_CHECK(hxc_bytes_ref_release(text) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_bytes_ref_release(invalid_utf8) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_bytes_ref_release(utf8) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(unterminated) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(empty) == HXC_STATUS_OK);
   HXC_TEST_CHECK(hxc_bytes_ref_release(shorter) == HXC_STATUS_OK);

@@ -303,7 +303,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
 | `runtime-array-contract` | `implemented` | The bounded array slice provides checked native storage plus a first compiler-selected ordinary-Haxe Array path. |
-| `runtime-bytes-contract` | `implemented` | A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage and compiler-owned lifetimes. |
+| `runtime-bytes-contract` | `implemented` | A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage, checked UTF-8 text snapshots, and compiler-owned lifetimes. |
 | `runtime-collector-contract` | `implemented` | A selective precise, non-moving collector backend reclaims cyclic managed graphs through exact roots and descriptors. |
 | `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract. |
 | `runtime-hxrt-seed` | `scaffold-only` | Hardened allocator, UTF-8 scalar string, typed array, Bytes, status, hosted output, object descriptor, and collector slices coexist with other provisional runtime seeds. |

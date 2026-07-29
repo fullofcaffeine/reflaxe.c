@@ -2713,6 +2713,8 @@ class CBodyEmitter {
 						addUnique(headers, "hxrt/string_split.h");
 					case IRIOCall({dispatch: IRCDRuntime("array-join", "join")}):
 						addUnique(headers, "hxrt/array_join.h");
+					case IRIOCall({dispatch: IRCDRuntime("bytes-string", "get-string-utf8")}):
+						addUnique(headers, "hxrt/bytes_string.h");
 					case IRIOBinary("haxe.string.equal" | "haxe.string.equal.left-non-null" | "haxe.string.equal.right-non-null" | "haxe.string.equal.non-null" | "haxe.string.not-equal" | "haxe.string.not-equal.left-non-null" | "haxe.string.not-equal.right-non-null" | "haxe.string.not-equal.non-null",
 						_, _, IRIStatic):
 						addUnique(headers, "string.h");
@@ -5028,6 +5030,9 @@ class CBodyEmitter {
 			case IRCDRuntime("array-join", "join"):
 				emitArrayJoinCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
+			case IRCDRuntime("bytes-string", "get-string-utf8"):
+				emitBytesStringCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case IRCDRuntime("string-scalar", "char-at"):
 				if (call.failure != null
 					|| call.arguments.length != 2
@@ -5666,6 +5671,43 @@ class CBodyEmitter {
 		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayStringJoin)), [
 			requireValue(values, call.arguments[0], fn.id),
 			requireValue(values, call.arguments[1], fn.id),
+			ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+			EUnary(AddressOf, EIdentifier(temporary))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
+	/**
+	 * Emit one checked Bytes-range-to-String ownership transfer.
+	 *
+	 * HxcIR carries the byte owner plus exact byte bounds. This projection adds
+	 * the selected allocator and output address required by hxrt; the runtime
+	 * publishes a fresh String only after bounds and UTF-8 validation succeed.
+	 */
+	function emitBytesStringCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		if (call.arguments.length != 3 || result.type != IRTManagedString || call.returnType != IRTManagedString)
+			return fail('Bytes.getString call `${instruction.id}` in `${fn.id}` lost its Bytes/Int/Int -> managed String signature');
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('Bytes.getString call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IExpr(stringNullExpression()),
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesGetStringUtf8)), [
+			requireValue(values, call.arguments[0], fn.id),
+			requireValue(values, call.arguments[1], fn.id),
+			requireValue(values, call.arguments[2], fn.id),
 			ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
 			EUnary(AddressOf, EIdentifier(temporary))
 		]), boundsAbortName, instruction.id, fn.id);

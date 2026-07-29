@@ -11447,6 +11447,8 @@ private class FunctionBuilder {
 			materializeResult:Bool):Null<LoweredValue> {
 		final method = access.field.get().name;
 		final receiver = lowerManagedBytesReceiver(access.receiver, method);
+		if (method == "getString" || method == "toString")
+			return lowerManagedBytesStringCall(expression, receiver, method, arguments);
 		final loweredArguments:Array<String> = [receiver.id];
 		var operation = method;
 		switch method {
@@ -11518,6 +11520,74 @@ private class FunctionBuilder {
 			freshManagedBytesValueIds.set(result.id, true);
 		runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", operation, 'ordinary haxe.io.Bytes.$method', source, expression.pos));
 		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/**
+		Decode a checked `Bytes` range into a fresh immutable Haxe String.
+
+		`Bytes` stores arbitrary mutable data, so this boundary cannot return a
+		view into the original allocation. HxcIR records the receiver and exact
+		byte range; the selected `bytes-string` runtime validates UTF-8, copies it,
+		and publishes a separately owned String only after all checks succeed.
+	**/
+	function lowerManagedBytesStringCall(expression:TypedExpr, receiver:LoweredValue, method:String, arguments:Array<TypedExpr>):LoweredValue {
+		final source = sourceSpan(expression.pos);
+		final loweredArguments:Array<String> = [receiver.id];
+		if (method == "getString") {
+			if (arguments.length < 2 || arguments.length > 3)
+				return unsupported(expression, 'TCall(Bytes.getString:argument-count=${arguments.length})');
+			if (arguments.length == 3 && !isNullExpression(arguments[2]) && !isUtf8Encoding(arguments[2]))
+				return unsupported(arguments[2], "TCall(Bytes.getString:encoding-not-UTF8)");
+			loweredArguments.push(lowerBytesIntArgument(arguments[0], "Bytes.getString:position").id);
+			loweredArguments.push(lowerBytesIntArgument(arguments[1], "Bytes.getString:length").id);
+		} else {
+			if (arguments.length != 0)
+				return unsupported(expression, 'TCall(Bytes.toString:argument-count=${arguments.length})');
+			final zero:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
+			appendInstruction(zero, IRIOConstant(IRCInt("0")), source, "bytes-to-string-position");
+			final length:HxcIRResult = {id: nextValueId(), type: IRTInt(32, true)};
+			appendInstruction(length, IRIOCall({
+				dispatch: IRCDRuntime("bytes", "length"),
+				arguments: [receiver.id],
+				returnType: length.type,
+				failure: managedArrayFailure()
+			}), source, "bytes-to-string-length");
+			registerValueTemporary(length.id, "bytes-to-string-length-result");
+			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "length", "ordinary haxe.io.Bytes.toString full byte range", source, expression.pos));
+			loweredArguments.push(zero.id);
+			loweredArguments.push(length.id);
+		}
+		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(Bytes.$method:result-type)');
+		if (resultMapping.irType != IRTManagedString)
+			return unsupported(expression, 'TCall(Bytes.$method:result-requires-managed-String:${resultMapping.cSpelling})');
+		final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("bytes-string", "get-string-utf8"),
+			arguments: loweredArguments,
+			returnType: IRTManagedString,
+			failure: managedArrayFailure()
+		}), source, "bytes-get-string-utf8");
+		registerValueTemporary(result.id, "bytes-get-string-utf8-result");
+		freshManagedStringValueIds.set(result.id, true);
+		freshManagedStringValueRoles.set(result.id, 'Bytes.$method result');
+		runtimeRequirements.push(new CBodyRuntimeRequirement("bytes-string", "get-string-utf8", 'ordinary Haxe Bytes.$method checked UTF-8 snapshot', source,
+			expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
+	/** True only for the exact portable UTF-8 member of `haxe.io.Encoding`. */
+	static function isUtf8Encoding(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FEnum(reference, field)):
+				final type = reference.get();
+				type.pack.length == 2
+				&& type.pack[0] == "haxe"
+				&& type.pack[1] == "io"
+				&& type.name == "Encoding"
+				&& field.name == "UTF8";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isUtf8Encoding(inner);
+			case _: false;
+		};
 	}
 
 	function lowerManagedBytesReceiver(expression:TypedExpr, operation:String):LoweredValue {

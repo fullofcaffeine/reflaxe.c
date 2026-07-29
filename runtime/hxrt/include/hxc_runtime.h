@@ -16,6 +16,7 @@
 #include "hxrt/abi.h"
 #include "hxrt/array.h"
 #include "hxrt/bytes.h"
+#include "hxrt/bytes_string.h"
 #include "hxrt/gc.h"
 #include "hxrt/int_map.h"
 #include "hxrt/io.h"
