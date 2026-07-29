@@ -64,6 +64,8 @@ extern const struct hxc_compiler_interface_dispatch_ResetView_table_layout hxc_i
 
 void hxc_compiler_constructor_Counter(struct hxc_Counter *hxc_self, int32_t hxc_base);
 
+int32_t hxc_Main_inspect(struct hxc_compiler_interface_dispatch_CounterView_value hxc_counter);
+
 void hxc_Main_main(void);
 
 int32_t hxc_Counter_doubled(struct hxc_Counter *hxc_self);

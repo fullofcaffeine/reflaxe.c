@@ -65,7 +65,7 @@
   "calls": [
     {
       "methodFunctionId": "method.ReadableView.read",
-      "callerFunctionId": "function.Main.main",
+      "callerFunctionId": "function.Main.inspect",
       "id": "dispatch.call.0",
       "reason": "ordinary-interface-method",
       "receiverStaticClass": "CounterView",
@@ -73,16 +73,16 @@
       "targetFunctionId": null,
       "dispatch": "interface",
       "source": {
-        "startLine": 9,
+        "startLine": 11,
         "file": "Main.hx",
         "startColumn": 10,
-        "endLine": 9,
+        "endLine": 11,
         "endColumn": 25
       }
     },
     {
       "methodFunctionId": "method.CounterView.doubled",
-      "callerFunctionId": "function.Main.main",
+      "callerFunctionId": "function.Main.inspect",
       "id": "dispatch.call.1",
       "reason": "ordinary-interface-method",
       "receiverStaticClass": "CounterView",
@@ -90,27 +90,61 @@
       "targetFunctionId": null,
       "dispatch": "interface",
       "source": {
-        "startLine": 9,
+        "startLine": 11,
+        "file": "Main.hx",
+        "startColumn": 28,
+        "endLine": 11,
+        "endColumn": 45
+      }
+    },
+    {
+      "methodFunctionId": "method.ReadableView.read",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.2",
+      "reason": "ordinary-interface-method",
+      "receiverStaticClass": "CounterView",
+      "slotId": "interface-slot.CounterView.read",
+      "targetFunctionId": null,
+      "dispatch": "interface",
+      "source": {
+        "startLine": 19,
+        "file": "Main.hx",
+        "startColumn": 10,
+        "endLine": 19,
+        "endColumn": 25
+      }
+    },
+    {
+      "methodFunctionId": "method.CounterView.doubled",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.3",
+      "reason": "ordinary-interface-method",
+      "receiverStaticClass": "CounterView",
+      "slotId": "interface-slot.CounterView.doubled",
+      "targetFunctionId": null,
+      "dispatch": "interface",
+      "source": {
+        "startLine": 19,
         "file": "Main.hx",
         "startColumn": 35,
-        "endLine": 9,
+        "endLine": 19,
         "endColumn": 52
       }
     },
     {
       "methodFunctionId": "method.ResetView.resetValue",
       "callerFunctionId": "function.Main.main",
-      "id": "dispatch.call.2",
+      "id": "dispatch.call.4",
       "reason": "ordinary-interface-method",
       "receiverStaticClass": "ResetView",
       "slotId": "interface-slot.ResetView.resetValue",
       "targetFunctionId": null,
       "dispatch": "interface",
       "source": {
-        "startLine": 9,
+        "startLine": 19,
         "file": "Main.hx",
         "startColumn": 62,
-        "endLine": 9,
+        "endLine": 19,
         "endColumn": 80
       }
     }
@@ -135,9 +169,9 @@
     }
   ],
   "summary": {
-    "indirectCalls": 3,
+    "indirectCalls": 5,
     "slots": 3,
-    "instanceCalls": 3,
+    "instanceCalls": 5,
     "tables": 2,
     "directCalls": 0,
     "adapters": 3,

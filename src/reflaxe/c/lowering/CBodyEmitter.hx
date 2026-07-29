@@ -1909,8 +1909,8 @@ class CBodyEmitter {
 	 *
 	 * Moving a fresh value needs only the structural C assignment. Copying a
 	 * borrowed value immediately calls the matching String/Array runtime retain
-	 * operation or an enum's active-tag retain helper, so later branch cleanup
-	 * cannot invalidate the joined payload.
+	 * operation or a record/enum type-specific retain helper, so later branch
+	 * cleanup cannot invalidate the joined payload.
 	 */
 	function emitManagedCarrierAcquisition(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, place:HxcIRPlace, valueId:String,
 			acquisition:HxcIRManagedCarrierAcquisition, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,

@@ -148,9 +148,9 @@ private typedef CBodyStringSwitchDispatchCase = {
  *
  * Haxe may replace a block-valued `if` or `switch` with an empty local,
  * assignments in every normal arm, and one later read. The binding keeps the
- * local's exact String, reference-counted Array, or tagged-enum lifecycle
- * beside that compiler ID so assignments can acquire one owner and the read
- * can move it out once.
+ * local's exact String, reference-counted Array, closed-record, or tagged-enum
+ * lifecycle beside that compiler ID so assignments can acquire one owner and
+ * the read can move it out once.
  */
 private typedef CBodyManagedFlowCarrier = {
 	final localId:String;
@@ -2862,11 +2862,17 @@ private class FunctionPreparer {
 			final enumArgument = mapping.enumValue();
 			final parameterId = 'parameter.$index';
 			final source = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
+			final callBoundedReference = mapping.classValue() != null || mapping.interfaceValue() != null;
 			parameters.push({
 				compilerId: argument.v.id,
 				ir: {id: parameterId, type: mapping.irType, source: source},
 				mapping: mapping,
-				borrowedReference: mapping.classValue() != null && parameterCanBorrow(functionValue.expr, argument.v.id),
+				// A direct static function can borrow either a concrete class
+				// pointer or a class-plus-table interface value when its typed body
+				// proves the reference never leaves the call. This lets ordinary
+				// Haxe pass a stack-constructed final object through an interface
+				// without pretending the callee owns or retains it.
+				borrowedReference: callBoundedReference && parameterCanBorrow(functionValue.expr, argument.v.id),
 				defaultValue: argument.value
 			});
 		}
@@ -3006,7 +3012,7 @@ private class FunctionPreparer {
 	}
 
 	/**
-		Decide whether one class parameter can safely accept caller-owned storage.
+		Decide whether one class or interface parameter can borrow caller-owned storage.
 
 		Returning, storing, aliasing, throwing, or constructor-capturing the exact
 		reference would let it outlive the call, so those uses keep the ordinary
@@ -3853,12 +3859,13 @@ private class FunctionBuilder {
 				case TVar(variable, _):
 					final variableType = applyCurrentSpecialization(variable.t);
 					// A local can be the first storage boundary that makes a
-					// non-signature enum layout reachable. Discover the layout at
-					// this same full declaration range that authoritative TVar
-					// lowering uses. Mapping every enum-valued child instead would
-					// retain extra provenance for expressions that need no separate
-					// storage and would make cold output depend on prepass coverage.
-					if (isLocalEnumType(variableType) || mayDiscoverSharedBodyType(variableType))
+					// non-signature enum or closed-record layout reachable. Discover
+					// the layout at this same full declaration range that
+					// authoritative TVar lowering uses. This is deliberately about
+					// the declared local, not every object-literal child: an imported
+					// C struct may consume a literal contextually without ever
+					// materializing that anonymous Haxe record.
+					if (isLocalEnumType(variableType) || isLocalAggregateType(variableType) || mayDiscoverSharedBodyType(variableType))
 						bodyValueType(variable.t, expression.pos, 'shared-body-plan:TVar(${variable.name})');
 				case _:
 			}
@@ -3946,6 +3953,37 @@ private class FunctionBuilder {
 				isLocalEnumType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
 			case TEnum(_, _):
 				true;
+			case _:
+				false;
+		};
+	}
+
+	/** Recognize a closed-record type whose first real storage is a local. */
+	static function isLocalAggregateType(type:Type, depth:Int = 0):Bool {
+		if (depth > 32)
+			return false;
+		return switch type {
+			case TMono(reference): final resolved = reference.get(); resolved != null && isLocalAggregateType(resolved, depth + 1);
+			case TLazy(resolve):
+				isLocalAggregateType(resolve(), depth + 1);
+			case TType(reference, parameters):
+				final value = reference.get();
+				isLocalAggregateType(TypeTools.applyTypeParameters(value.type, value.params, parameters), depth + 1);
+			case TAnonymous(reference):
+				final anonymous = reference.get();
+				switch anonymous.status {
+					case AClosed | AConst:
+						var dataOnly = anonymous.fields.length > 0;
+						for (field in anonymous.fields)
+							switch field.kind {
+								case FVar(_, _):
+								case FMethod(_):
+									dataOnly = false;
+							}
+						dataOnly;
+					case AOpened | AExtend(_) | AClassStatics(_) | AEnumStatics(_) | AAbstractStatics(_):
+						false;
+				}
 			case _:
 				false;
 		};
@@ -5384,8 +5422,18 @@ private class FunctionBuilder {
 		// instead, so it remains outside this retain/release carrier protocol.
 		final managedFlowCarrierArray = compilerFlowCarrier ? localMapping.arrayValue() : null;
 		final managedArrayFlowCarrier = managedFlowCarrierArray != null && !managedFlowCarrierArray.managedByCollector;
+		// A managed closed record has the same join requirement as a managed
+		// String or enum: copying its C struct does not create owners for the
+		// managed fields inside it. The generated record lifecycle helper
+		// retains those fields with rollback on failure, so each normal branch
+		// can safely give the join exactly one complete record owner.
+		final managedFlowCarrierAggregate = compilerFlowCarrier ? localMapping.aggregateValue() : null;
+		final managedAggregateFlowCarrier = managedFlowCarrierAggregate != null && managedFlowCarrierAggregate.managedLifetime;
 		final managedFlowCarrier = compilerFlowCarrier
-			&& (localMapping.irType == IRTManagedString || managedArrayFlowCarrier || managedFlowCarrierEnum != null);
+			&& (localMapping.irType == IRTManagedString
+				|| managedArrayFlowCarrier
+				|| managedAggregateFlowCarrier
+				|| managedFlowCarrierEnum != null);
 		final directFlowCarrier = compilerFlowCarrier && conditionalDirectValue(localMapping);
 		// A switch-pattern binding views the active payload while its enum owner
 		// remains live for the branch. Ref-counted Array and Bytes values therefore
@@ -5546,7 +5594,7 @@ private class FunctionBuilder {
 			enumCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 		}
 		final managedAggregate = localMapping.aggregateValue();
-		if (managedAggregate != null && managedAggregate.managedLifetime) {
+		if (managedAggregate != null && managedAggregate.managedLifetime && !managedFlowCarrier) {
 			final retainId = managedAggregate.retainImplementationId();
 			final destroyId = managedAggregate.destroyImplementationId();
 			if (retainId == null || destroyId == null)
@@ -6459,6 +6507,11 @@ private class FunctionBuilder {
 	function definitelyAssignsOrTerminatesLocal(expression:TypedExpr, compilerId:Int):Bool {
 		return switch expression.expr {
 			case TThrow(_) | TReturn(_): true;
+			case TBreak | TContinue:
+				// Haxe only types these nodes inside an enclosing loop. The active
+				// lowering stack names their real break/continue target, so this arm
+				// cannot reach the flow carrier's later read in the current iteration.
+				loopControlStack.length > 0;
 			case TBinop(OpAssign, left, _): isLocalTarget(left, compilerId);
 			case TBlock(expressions): expressions.length > 0 && definitelyAssignsOrTerminatesLocal(expressions[expressions.length - 1], compilerId);
 			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsOrTerminatesLocal(whenTrue,
@@ -7227,9 +7280,31 @@ private class FunctionBuilder {
 		return {id: result.id, type: result.type, mapping: field.type};
 	}
 
+	/**
+	 * Find stable storage for a closed-record field read.
+	 *
+	 * Most record locals already map directly to one C struct local. A record
+	 * selected by `if` or `switch` is different: its first source read moves the
+	 * selected branch owner out of a short-lived carrier and into an ordinary
+	 * cleanup-owned local. Every later field read must use that materialized
+	 * owner. Returning the carrier itself after the move would make generated C
+	 * read storage whose ownership has already been transferred.
+	 */
 	function aggregateReadPlace(expression:TypedExpr):Null<HxcIRPlace> {
 		return switch expression.expr {
-			case TLocal(variable): final localId = localIdsByCompilerId.get(variable.id); final localType = localTypesByCompilerId.get(variable.id); localId != null && localType != null && localType.aggregateValue() != null ? IRPLocal(localId) : null;
+			case TLocal(variable):
+				final localType = localTypesByCompilerId.get(variable.id);
+				if (localType == null || localType.aggregateValue() == null) {
+					null;
+				} else {
+					final carrier = managedFlowCarriersByCompilerId.get(variable.id);
+					if (carrier != null) {
+						IRPLocal(materializeManagedFlowCarrierOwner(variable.id, carrier, expression.pos));
+					} else {
+						final localId = localIdsByCompilerId.get(variable.id);
+						localId == null ? null : IRPLocal(localId);
+					}
+				}
 			case TField(base, FAnon(fieldReference)):
 				final basePlace = aggregateReadPlace(base);
 				basePlace == null ? null : IRPField(basePlace, fieldReference.get().name);
@@ -8618,11 +8693,14 @@ private class FunctionBuilder {
 			arrayCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release",
 				"ordinary Haxe Array selected by control flow and read through a local owner", source, position));
+		} else if (binding.mapping.aggregateValue() != null) {
+			freshManagedAggregateValueIds.remove(moved.id);
+			aggregateCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
 		} else if (binding.managedEnum != null) {
 			freshManagedEnumValueIds.remove(moved.id);
 			enumCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
 		} else {
-			throw new CBodyEmissionError("materialized managed flow carrier lost its String, Array, or enum lifetime plan");
+			throw new CBodyEmissionError("materialized managed flow carrier lost its String, Array, record, or enum lifetime plan");
 		}
 		materializedManagedFlowCarrierLocalIds.set(compilerId, localId);
 		return localId;
@@ -9869,8 +9947,8 @@ private class FunctionBuilder {
 	 *
 	 * Fresh constructors and owned call results move directly. Parameters,
 	 * locals, and other borrowed values are copied and retained through the
-	 * matching String/Array runtime or enum active-tag helper before branch-local
-	 * cleanup runs.
+	 * matching String/Array runtime, closed-record helper, or enum active-tag
+	 * helper before branch-local cleanup runs.
 	 */
 	function appendManagedCarrierAcquire(localId:String, value:LoweredValue, mapping:CBodyValueType, managedEnum:Null<CPreparedBodyEnumInstance>,
 			source:HxcSourceSpan, position:Position, role:String):Void {
@@ -9879,6 +9957,8 @@ private class FunctionBuilder {
 			freshManagedStringValueIds.remove(value.id);
 		} else if (mapping.arrayValue() != null) {
 			freshManagedArrayValueIds.remove(value.id);
+		} else if (mapping.aggregateValue() != null) {
+			freshManagedAggregateValueIds.remove(value.id);
 		} else if (managedEnum != null) {
 			freshManagedEnumValueIds.remove(value.id);
 		} else {
@@ -9904,8 +9984,15 @@ private class FunctionBuilder {
 		final array = mapping.arrayValue();
 		if (array != null && !array.managedByCollector)
 			return IRIRuntime("array");
+		final aggregate = mapping.aggregateValue();
+		if (aggregate != null && aggregate.managedLifetime) {
+			final implementationId = retain ? aggregate.retainImplementationId() : aggregate.destroyImplementationId();
+			if (implementationId == null)
+				throw new CBodyEmissionError('managed record `${aggregate.instanceId}` lost its ${retain ? "retain" : "destroy"} plan');
+			return IRIProgramLocal(implementationId);
+		}
 		if (managedEnum == null)
-			throw new CBodyEmissionError("managed carrier lost its supported String, Array, or enum lifetime plan");
+			throw new CBodyEmissionError("managed carrier lost its supported String, Array, record, or enum lifetime plan");
 		final implementationId = retain ? managedEnum.retainImplementationId() : managedEnum.destroyImplementationId();
 		if (implementationId == null)
 			throw new CBodyEmissionError('managed enum `${managedEnum.instanceId}` lost its ${retain ? "retain" : "destroy"} plan');
@@ -9932,10 +10019,12 @@ private class FunctionBuilder {
 			freshManagedStringValueRoles.set(result.id, role);
 		} else if (binding.mapping.arrayValue() != null) {
 			freshManagedArrayValueIds.set(result.id, true);
+		} else if (binding.mapping.aggregateValue() != null) {
+			freshManagedAggregateValueIds.set(result.id, true);
 		} else if (binding.managedEnum != null) {
 			freshManagedEnumValueIds.set(result.id, true);
 		} else {
-			throw new CBodyEmissionError('managed flow carrier `$role` lost its String, Array, or enum ownership plan');
+			throw new CBodyEmissionError('managed flow carrier `$role` lost its String, Array, record, or enum ownership plan');
 		}
 		return {id: result.id, type: result.type, mapping: binding.mapping};
 	}

@@ -138,6 +138,27 @@ class FlowCarrierFixture {
 		return false;
 	}
 
+	/**
+	 * Keep only switch arms that produce a direct record.
+	 *
+	 * Haxe lowers `candidate` into an empty local followed by a switch. The two
+	 * selected arms assign it; the default continues the loop and can never reach
+	 * the later field read. HxcIR must preserve that path fact instead of inventing
+	 * a default record or rejecting the ordinary Haxe source.
+	 */
+	static function switchCarrierWithContinue():Bool {
+		var total = 0;
+		for (code in 0...4) {
+			final candidate:FlowCarrierSelection = switch code {
+				case 1: {amount: 7};
+				case 3: {amount: 11};
+				default: continue;
+			};
+			total += candidate.amount;
+		}
+		return total == 18;
+	}
+
 	/** Returns two only when both lazy chains preserve skip and evaluation order. */
 	static function run():UInt {
 		observedCalls = 0;
@@ -169,6 +190,8 @@ class FlowCarrierFixture {
 			return 102;
 		if (!consecutiveInlineCarriers())
 			return 103;
+		if (!switchCarrierWithContinue())
+			return 104;
 		return observedCalls;
 	}
 
@@ -180,6 +203,10 @@ private typedef FlowCarrierState = {
 	final health:Int;
 	final modeCode:Int;
 	final phaseTicks:Int;
+}
+
+private typedef FlowCarrierSelection = {
+	final amount:Int;
 }
 
 private enum abstract FlowCarrierMode(Int) to Int {

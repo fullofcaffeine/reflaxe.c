@@ -56,6 +56,9 @@
   "mismatchedFunctionReference": [
     "HXC9000 error [profile=portable] test/negative/MismatchedFunctionReference.hx:2:1-2:2 [module:invalid.MismatchedFunctionReference.function:invalid.MismatchedFunctionReference.main.block:entry.instruction:0:bad.function-reference] Invalid HxcIR: function reference target `function.target` has a different parameter count Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "managedAggregateCarrierLifecycleMismatch": [
+    "HXC9000 error [profile=portable] test/negative/ManagedAggregateCarrier.hx:2:1-2:2 [module:invalid.ManagedAggregateCarrierLifecycle.function:fn.coverage.managed-record-carrier.block:entry.instruction:0:record.declare] Invalid HxcIR: managed record carrier and destroy plan differ Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "zeroFixedArrayNonAutomatic": [
     "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayNonAutomatic.hx:2:1-2:2 [module:invalid.ZeroFixedArrayNonAutomatic.function:invalid.ZeroFixedArrayNonAutomatic.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage must be an automatic local Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

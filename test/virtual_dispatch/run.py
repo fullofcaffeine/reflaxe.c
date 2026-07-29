@@ -617,9 +617,9 @@ def validate_interface_project(
         or report.get("runtimeFeatures") != []
         or report.get("summary")
         != {
-            "instanceCalls": 3,
+            "instanceCalls": 5,
             "directCalls": 0,
-            "indirectCalls": 3,
+            "indirectCalls": 5,
             "layouts": 2,
             "slots": 3,
             "tables": 2,
@@ -633,6 +633,8 @@ def validate_interface_project(
         for value in require_list(report.get("calls"), "interface dispatch calls")
     ]
     expected_calls = (
+        ("CounterView", "method.ReadableView.read", "interface-slot.CounterView.read"),
+        ("CounterView", "method.CounterView.doubled", "interface-slot.CounterView.doubled"),
         ("CounterView", "method.ReadableView.read", "interface-slot.CounterView.read"),
         ("CounterView", "method.CounterView.doubled", "interface-slot.CounterView.doubled"),
         ("ResetView", "method.ResetView.resetValue", "interface-slot.ResetView.resetValue"),
@@ -713,9 +715,9 @@ def validate_interface_project(
     ):
         if marker not in hxcir:
             raise VirtualDispatchFailure(f"interface HxcIR omitted {marker!r}")
-    if hxcir.count("construct-interface interface=") != 2 or hxcir.count(
+    if hxcir.count("construct-interface interface=") != 3 or hxcir.count(
         'dispatch=interface(type="instance.interface.'
-    ) != 3:
+    ) != 5:
         raise VirtualDispatchFailure("interface HxcIR cardinality drifted")
 
     for layout in layouts.values():
@@ -734,7 +736,7 @@ def validate_interface_project(
             raise VirtualDispatchFailure(f"interface table {table_id!r} was not emitted")
     if (
         project.source.count("void *hxc_receiver") != 6
-        or project.source.count(".table->") != 3
+        or project.source.count(".table->") != 5
         or "UnusedView" in project.header
         or "UnusedView" in project.source
         or "UnusedView" in hxcir

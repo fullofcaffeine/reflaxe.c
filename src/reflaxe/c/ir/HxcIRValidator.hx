@@ -1532,15 +1532,54 @@ private class HxcIRValidationState {
 		return instanceId == null || plannedId != instanceId ? null : instanceId;
 	}
 
+	/** Require one closed record whose generated helper owns its managed fields. */
+	function requireManagedAggregate(type:HxcIRTypeRef, path:String, source:HxcSourceSpan):Null<String> {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _:
+				add(path, "managed carrier requires one closed-record instance", source);
+				return null;
+		};
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		if (instance == null || declaration == null || instance.representation != IRRDirect) {
+			add(path, "managed carrier requires one direct closed-record instance", source);
+			return null;
+		}
+		return switch declaration.kind {
+			case IRTKAggregate(_): instanceId;
+			case _:
+				add(path, "managed carrier requires one closed-record instance", source);
+				null;
+		};
+	}
+
+	/** Match a managed carrier's retain/destroy helper to its exact record. */
+	function requireManagedAggregateLifecycle(type:HxcIRTypeRef, selected:HxcIRImplementation, operation:String, path:String,
+			source:HxcSourceSpan):Null<String> {
+		final instanceId = requireManagedAggregate(type, path, source);
+		final plannedId = switch selected {
+			case IRIProgramLocal(helperId): aggregateLifecycleInstanceId(helperId, operation);
+			case _:
+				add(path, 'managed record carrier $operation requires one program-local record lifecycle plan', source);
+				null;
+		};
+		if (plannedId == null)
+			add(path, 'managed record carrier has a malformed $operation plan', source);
+		else if (instanceId != null && plannedId != instanceId)
+			add(path, 'managed record carrier and $operation plan differ', source);
+		return instanceId == null || plannedId != instanceId ? null : instanceId;
+	}
+
 	/**
 	 * Match a join carrier with the lifecycle implementation for its exact type.
 	 *
 	 * Managed Strings and ordinary Haxe Arrays use their matching runtime
-	 * retain/release operations. Tagged enums instead use one generated,
-	 * type-specific lifecycle helper because the active payload decides what
-	 * must be retained or destroyed. Keeping this check at the HxcIR boundary
-	 * prevents a generic-looking carrier from pairing a value with the wrong
-	 * ownership protocol.
+	 * retain/release operations. Closed records and tagged enums instead use
+	 * generated, type-specific lifecycle helpers because their managed fields or
+	 * active payload decide what must be retained or destroyed. Keeping this
+	 * check at the HxcIR boundary prevents a generic-looking carrier from
+	 * pairing a value with the wrong ownership protocol.
 	 */
 	function requireManagedCarrierLifecycle(type:HxcIRTypeRef, selected:HxcIRImplementation, operation:String, path:String, source:HxcSourceSpan):Bool {
 		if (type == IRTManagedString) {
@@ -1561,6 +1600,12 @@ private class HxcIRValidationState {
 			add(path, 'collector-backed Array cannot use the retain/release managed-carrier lifecycle', source);
 			return false;
 		}
+		final aggregateId = switch selected {
+			case IRIProgramLocal(helperId): aggregateLifecycleInstanceId(helperId, operation);
+			case _: null;
+		};
+		if (aggregateId != null)
+			return requireManagedAggregateLifecycle(type, selected, operation, path, source) != null;
 		return requireManagedEnumLifecycle(type, selected, operation, path, source) != null;
 	}
 
@@ -1573,6 +1618,20 @@ private class HxcIRValidationState {
 		if (isManagedArrayReference(type)) {
 			add(path, "collector-backed Array cannot use the retain/release managed-carrier lifecycle", source);
 			return false;
+		}
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _: null;
+		};
+		if (instanceId != null) {
+			final instance = typeInstances.get(instanceId);
+			final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+			if (instance != null && declaration != null && instance.representation == IRRDirect)
+				switch declaration.kind {
+					case IRTKAggregate(_):
+						return true;
+					case _:
+				}
 		}
 		return requireManagedTaggedEnum(type, path, source) != null;
 	}
@@ -4025,6 +4084,17 @@ private class HxcIRValidationState {
 			var assigned = state.assigned;
 			for (instruction in current.instructions) {
 				switch instruction.kind {
+					case IRIODeclareUninitialized(IRPLocal(targetId)) if (targetId == localId):
+						// A compiler carrier declared inside a loop is one static
+						// HxcIR local but fresh automatic storage on each dynamic
+						// iteration. `continue` may reach this declaration without
+						// assigning the prior iteration; a normal path may reach it
+						// after reading the prior value. Both cases start the new
+						// iteration unassigned. A declaration in any other block
+						// would be a second storage owner and remains invalid.
+						if (current.id != declarationBlock.id)
+							unsafeRead = true;
+						assigned = false;
 					case IRIOStore(IRPLocal(targetId), _) if (targetId == localId):
 						assigned = true;
 						sawStore = true;
@@ -4033,6 +4103,7 @@ private class HxcIRValidationState {
 						if (!assigned)
 							unsafeRead = true;
 					case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) if (placeContainsLocal(place, localId)):
+						sawLoad = true;
 						if (!assigned)
 							unsafeRead = true;
 					case IRIOStore(place, _) if (placeContainsLocal(place, localId)):
@@ -4125,11 +4196,11 @@ private class HxcIRValidationState {
 					case IRIODeclareManagedCarrier(IRPLocal(targetId), _) if (targetId == localId):
 						// A carrier declared inside a loop is the same static IR
 						// local on every visit, but each dynamic iteration starts
-						// a new ownership protocol. Re-entry is safe only after the
-						// previous iteration moved its owner out. Seeing the
-						// declaration while empty would be a duplicate declaration;
-						// seeing it while owned would abandon that owner.
-						if (current.id != declarationBlock.id || phase != IRMCMoved)
+						// a new ownership protocol. Re-entry is safe after the prior
+						// iteration moved its owner, and it is also safe when a
+						// `continue` arm acquired nothing. Re-entering while owned
+						// would abandon that owner and remains invalid.
+						if (current.id != declarationBlock.id || phase == IRMCOwned)
 							invalidFlow = true;
 						phase = IRMCEmpty;
 					case IRIOAcquireManagedCarrier(IRPLocal(targetId), _, _) if (targetId == localId):
@@ -4193,17 +4264,17 @@ private class HxcIRValidationState {
 	 * Check the ownership source claimed by `move-fresh`.
 	 *
 	 * A move is safe only when the value-producing instruction gives its caller
-	 * the one owner. Managed enum construction, an owned call result (including
-	 * a managed String), and a nested carrier move have that contract. A load
-	 * does not: it borrows the owner still held by a local or parameter and must
-	 * use retain-borrowed.
+	 * the one owner. Managed record/enum construction, an owned call result
+	 * (including a managed String), and a nested carrier move have that contract.
+	 * A load does not: it borrows the owner still held by a local or parameter
+	 * and must use retain-borrowed.
 	 */
 	static function isFreshManagedCarrierValue(valueId:String, valueSites:Map<String, HxcIRInstructionSite>):Bool {
 		final site = valueSites.get(valueId);
 		if (site == null)
 			return false;
 		return switch site.instruction.kind {
-			case IRIOConstructTag(_, _, _) | IRIOCall(_) | IRIOMoveManagedCarrier(_): true;
+			case IRIOConstructAggregate(_, _) | IRIOConstructTag(_, _, _) | IRIOCall(_) | IRIOMoveManagedCarrier(_): true;
 			case _:
 				false;
 		};

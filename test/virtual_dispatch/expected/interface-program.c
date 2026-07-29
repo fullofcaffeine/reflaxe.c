@@ -37,6 +37,13 @@ void hxc_compiler_constructor_Counter(struct hxc_Counter *hxc_self, int32_t hxc_
   return;
 }
 
+int32_t hxc_Main_inspect(struct hxc_compiler_interface_dispatch_CounterView_value hxc_counter)
+{
+  int32_t hxc_tmp_instance_call_result_n0 = hxc_counter.table->hxc_interface_slot_CounterView_read(hxc_counter.object, 2);
+  int32_t hxc_tmp_instance_call_result_n1 = hxc_counter.table->hxc_interface_slot_CounterView_doubled(hxc_counter.object);
+  return hxc_i32_add_wrapping(hxc_tmp_instance_call_result_n0, hxc_tmp_instance_call_result_n1);
+}
+
 void hxc_Main_main(void)
 {
   struct hxc_Counter hxc_tmp_object_storage_n1 = { 0 };
@@ -73,7 +80,20 @@ void hxc_Main_main(void)
       int32_t hxc_tmp_instance_call_result_n11 = hxc_reset.table->hxc_interface_slot_ResetView_resetValue(hxc_reset.object);
       hxc_tmp_short_circuit_result_n5 = hxc_tmp_instance_call_result_n11 != 0;
     }
-    if (!hxc_tmp_short_circuit_result_n5)
+    bool hxc_tmp_short_circuit_load_result_n12 = hxc_tmp_short_circuit_result_n5;
+    bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n12;
+    if (!hxc_tmp_short_circuit_load_result_n12)
+    {
+      struct hxc_Counter *hxc_tmp_load_result_n13 = hxc_concrete;
+      if (hxc_tmp_load_result_n13 == NULL)
+      {
+        abort();
+      }
+      struct hxc_compiler_interface_dispatch_CounterView_value hxc_tmp_interface_value_n14 = (struct hxc_compiler_interface_dispatch_CounterView_value){ .object = hxc_tmp_load_result_n13, .table = &hxc_itable_compiler_interface_dispatch_Counter_itable_layout_CounterView };
+      int32_t hxc_tmp_call_result_n15 = hxc_Main_inspect(hxc_tmp_interface_value_n14);
+      hxc_tmp_short_circuit_result_n6 = hxc_tmp_call_result_n15 != 122;
+    }
+    if (!hxc_tmp_short_circuit_result_n6)
     {
       break;
     }

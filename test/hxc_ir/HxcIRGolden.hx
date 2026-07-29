@@ -38,6 +38,7 @@ class HxcIRGolden {
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
 		validator.requireValid(arrayCarrierValidationProgram(false, false), PROFILE);
+		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
 		final coverageDump = dumper.dump(coverage);
 
@@ -134,6 +135,7 @@ class HxcIRGolden {
 				managedStringCarrierLifecycleMismatch: invalidDiagnostics(managedStringCarrierLifecycleMismatchProgram()),
 				arrayCarrierLifecycleMismatch: invalidDiagnostics(arrayCarrierValidationProgram(true, false)),
 				collectorArrayCarrier: invalidDiagnostics(arrayCarrierValidationProgram(false, true)),
+				managedAggregateCarrierLifecycleMismatch: invalidDiagnostics(managedAggregateCarrierValidationProgram(true)),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
 				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
 				throwWithoutStatus: invalidDiagnostics(throwWithoutStatusProgram()),
@@ -2813,6 +2815,100 @@ class HxcIRGolden {
 					id: wrongLifecycle ? "invalid.ManagedArrayCarrierLifecycle" : collectorBacked ? "invalid.CollectorArrayCarrier" : "coverage.ArrayCarrier",
 					types: [arrayType],
 					typeInstances: [arrayInstance],
+					globals: [],
+					functions: [fn],
+					source: span(file, 1, 5)
+				}
+			]
+		};
+	}
+
+	/**
+	 * Build one managed closed-record carrier and optionally mismatch its helper.
+	 *
+	 * The fresh arm constructs a record whose String field already has one owner;
+	 * the borrowed arm uses the record's generated retain helper. The join then
+	 * moves exactly one complete record owner. This isolates the record-specific
+	 * lifecycle contract from the larger Caxecraft program that exposed it.
+	 */
+	static function managedAggregateCarrierValidationProgram(wrongLifecycle:Bool):HxcIRProgram {
+		final file = wrongLifecycle ? "test/negative/ManagedAggregateCarrier.hx" : COVERAGE_SOURCE;
+		final aggregateType:HxcIRTypeDeclaration = {
+			id: "type.managed-record",
+			displayName: "coverage.ManagedRecord",
+			kind: IRTKAggregate([
+				{
+					name: "text",
+					type: IRTManagedString,
+					mutable: false,
+					source: span(file, 1)
+				}
+			]),
+			source: span(file, 1)
+		};
+		final aggregateInstance:HxcIRTypeInstance = {
+			id: "instance.managed-record",
+			declarationId: aggregateType.id,
+			arguments: [],
+			representation: IRRDirect,
+			source: span(file, 1)
+		};
+		final aggregateRef = IRTInstance(aggregateInstance.id);
+		final retain = IRIProgramLocal("aggregate-lifecycle:instance.managed-record:retain");
+		final destroy = IRIProgramLocal(wrongLifecycle ? "aggregate-lifecycle:instance.other:destroy" : "aggregate-lifecycle:instance.managed-record:destroy");
+		final carrierPlace = IRPLocal("local.record-result");
+		final fn:HxcIRFunction = {
+			id: "fn.coverage.managed-record-carrier",
+			displayName: "coverage.IR.managedRecordCarrier",
+			parameters: [
+				parameter("value.condition", IRTBool, file, 1),
+				parameter("value.borrowed", aggregateRef, file, 1),
+				parameter("value.text", IRTManagedString, file, 1)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [
+				local("local.record-result", aggregateRef, IRLSAutomatic, IRISUninitialized, file, 2)
+			],
+			returnType: aggregateRef,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				block("entry", [
+					instruction("record.declare", null, IRIODeclareManagedCarrier(carrierPlace, destroy), file, 2)
+				], IRTBranch("value.condition", edge("fresh"), edge("borrowed")), file,
+					2),
+				block("fresh", [
+					instruction("record.construct", result("value.fresh-record", aggregateRef), IRIOConstructAggregate(aggregateInstance.id,
+						[
+							{
+								name: "text",
+								valueId: "value.text"
+							}
+						]),
+						file, 3),
+					instruction("record.acquire-fresh", null, IRIOAcquireManagedCarrier(carrierPlace, "value.fresh-record", IRMCAMoveFresh), file, 3)
+				], IRTJump(edge("join")), file, 3),
+				block("borrowed", [
+					instruction("record.acquire-borrowed", null, IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(retain)), file,
+						4)
+				], IRTJump(edge("join")), file, 4),
+				block("join", [
+					instruction("record.move", result("value.record-result", aggregateRef), IRIOMoveManagedCarrier(carrierPlace), file, 5)
+				], IRTReturn("value.record-result", []), file, 5)
+			],
+			cleanupRegions: [],
+			source: span(file, 1, 5)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: wrongLifecycle ? "invalid.ManagedAggregateCarrierLifecycle" : "coverage.ManagedAggregateCarrier",
+					types: [aggregateType],
+					typeInstances: [aggregateInstance],
 					globals: [],
 					functions: [fn],
 					source: span(file, 1, 5)

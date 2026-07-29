@@ -585,11 +585,13 @@ private class CBodyControlFlowBuilder {
 
 	function findNormalJoin(starts:Array<String>, allowed:Map<String, Bool>, loop:Null<CBodyLoopContext>, preferredCandidate:Null<String>):Null<String> {
 		final escapeTargets:Map<String, Bool> = [];
+		final iterationBypassTargets:Map<String, Bool> = [];
 		if (loop != null) {
 			escapeTargets.set(loop.breakTargetBlockId, true);
 			escapeTargets.set(loop.iterationBoundaryBlockId, true);
+			iterationBypassTargets.set(loop.iterationBoundaryBlockId, true);
 		}
-		return analysis.normalJoin(starts, allowed, escapeTargets, planned, preferredCandidate);
+		return analysis.normalJoin(starts, allowed, escapeTargets, iterationBypassTargets, planned, preferredCandidate);
 	}
 
 	function buildLoop(loop:CBodyNaturalLoop, outerAllowed:Map<String, Bool>):{final node:CBodyControlFlowNode; final exitBlockId:String;} {
@@ -1217,12 +1219,20 @@ private class CBodyControlFlowPlanValidator {
 		return result;
 	}
 
+	/** Name the one escape that skips work by starting the next iteration. */
+	static function iterationBypassTargets(loop:Null<CBodyLoopContext>):Map<String, Bool> {
+		final result:Map<String, Bool> = [];
+		if (loop != null)
+			result.set(loop.iterationBoundaryBlockId, true);
+		return result;
+	}
+
 	/** Recheck the exact ordinary-join or enclosing-iteration-boundary proof. */
 	function isNormalOrBoundaryJoin(candidate:String, starts:Array<String>, loop:Null<CBodyLoopContext>):Bool {
 		final escapes = escapeTargets(loop);
 		return loop != null
 			&& candidate == loop.iterationBoundaryBlockId ? analysis.isBoundaryJoin(candidate, starts, analysis.reachable,
-				escapes) : analysis.isNormalJoin(candidate, starts, analysis.reachable, escapes);
+				escapes) : analysis.isNormalJoin(candidate, starts, analysis.reachable, escapes, iterationBypassTargets(loop));
 	}
 
 	function requireRegionEntry(region:CBodyControlFlowRegion, expectedBlockId:String, ownerBlockId:String, fallthroughTarget:Null<String>):Void {
@@ -1642,8 +1652,8 @@ private class CBodyControlFlowAnalysis {
 		would duplicate the shared block. Prefer a valid enclosing stop so a
 		nested plan cannot consume its parent's continuation.
 	**/
-	public function normalJoin(starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>, unavailable:Map<String, Bool>,
-			preferredCandidate:Null<String>):Null<String> {
+	public function normalJoin(starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>, iterationBypassTargets:Map<String, Bool>,
+			unavailable:Map<String, Bool>, preferredCandidate:Null<String>):Null<String> {
 		normalJoinSearches++;
 		var abruptCompletion:Null<Map<String, Bool>> = null;
 		function requireAbruptCompletion():Map<String, Bool> {
@@ -1661,7 +1671,8 @@ private class CBodyControlFlowAnalysis {
 			&& allowed.exists(preferredCandidate)
 			&& !escapeTargets.exists(preferredCandidate)
 			&& !unavailable.exists(preferredCandidate)
-			&& isNormalJoinWithAvailability(preferredCandidate, starts, allowed, escapeTargets, unavailable, distances, requireAbruptCompletion))
+			&& isNormalJoinWithAvailability(preferredCandidate, starts, allowed, escapeTargets, iterationBypassTargets, unavailable, distances,
+				requireAbruptCompletion))
 			return preferredCandidate;
 
 		final candidates:Array<CBodyNormalJoinCandidate> = [];
@@ -1703,14 +1714,17 @@ private class CBodyControlFlowAnalysis {
 			return compareBlockIds(left.blockId, right.blockId);
 		});
 		for (candidate in candidates)
-			if (isNormalJoinWithAvailability(candidate.blockId, starts, allowed, escapeTargets, unavailable, distances, requireAbruptCompletion))
+			if (isNormalJoinWithAvailability(candidate.blockId, starts, allowed, escapeTargets, iterationBypassTargets, unavailable, distances,
+				requireAbruptCompletion))
 				return candidate.blockId;
 		return null;
 	}
 
-	public function isNormalJoin(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Bool {
+	public function isNormalJoin(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
+			iterationBypassTargets:Map<String, Bool>):Bool {
 		final unavailable:Map<String, Bool> = [];
-		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable, distancesForStarts(starts, allowed, escapeTargets), null);
+		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, iterationBypassTargets, unavailable,
+			distancesForStarts(starts, allowed, escapeTargets), null);
 	}
 
 	/**
@@ -1735,19 +1749,29 @@ private class CBodyControlFlowAnalysis {
 		for (target in escapeTargets.keys())
 			if (target != candidate)
 				remainingEscapes.set(target, true);
-		return isNormalJoinWithAvailability(candidate, starts, allowed, remainingEscapes, unavailable, distancesForStarts(starts, allowed, remainingEscapes),
-			null);
+		final noIterationBypasses:Map<String, Bool> = [];
+		return isNormalJoinWithAvailability(candidate, starts, allowed, remainingEscapes, noIterationBypasses, unavailable,
+			distancesForStarts(starts, allowed, remainingEscapes), null);
 	}
 
 	function isNormalJoinWithAvailability(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
-			unavailable:Map<String, Bool>, distances:Array<Map<String, Int>>, abruptCompletion:Null<Void->Map<String, Bool>>):Bool {
+			iterationBypassTargets:Map<String, Bool>, unavailable:Map<String, Bool>, distances:Array<Map<String, Int>>,
+			abruptCompletion:Null<Void->Map<String, Bool>>):Bool {
 		normalJoinCandidateProofs++;
 		if (!allowed.exists(candidate) || escapeTargets.exists(candidate))
 			return false;
 		if (isLinearEscapePrefix(candidate, allowed, escapeTargets)) {
 			final abrupt = abruptCompletion == null ? abruptCompletionSet(allowed) : abruptCompletion();
 			for (index => distance in distances)
-				if (!distance.exists(candidate) && !abrupt.exists(starts[index]))
+				// A switch may have value-producing arms that share work before
+				// `continue` and a default arm that continues directly. Moving the
+				// shared work after the switch is safe only for that next-iteration
+				// edge. A loop `break` or return remains inside its own switch arm;
+				// treating either as a missing normal arm can turn a readable
+				// `continue` into switch fallthrough.
+				if (!distance.exists(candidate)
+					&& !abrupt.exists(starts[index])
+					&& !isLinearEscapePrefix(starts[index], allowed, iterationBypassTargets))
 					return false;
 		}
 		final continuation = forwardReachable(candidate, allowed, escapeTargets);
