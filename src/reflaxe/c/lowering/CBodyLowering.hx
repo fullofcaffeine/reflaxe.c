@@ -148,8 +148,9 @@ private typedef CBodyStringSwitchDispatchCase = {
  *
  * Haxe may replace a block-valued `if` or `switch` with an empty local,
  * assignments in every normal arm, and one later read. The binding keeps the
- * local's exact String or tagged-enum lifecycle beside that compiler ID so
- * assignments can acquire one owner and the read can move it out once.
+ * local's exact String, reference-counted Array, or tagged-enum lifecycle
+ * beside that compiler ID so assignments can acquire one owner and the read
+ * can move it out once.
  */
 private typedef CBodyManagedFlowCarrier = {
 	final localId:String;
@@ -5020,6 +5021,7 @@ private class FunctionBuilder {
 	 */
 	function lowerStatementSequence(expressions:Array<TypedExpr>, endExclusive:Int):Void {
 		statementSequenceDepth++;
+		final pendingManagedCarriers:Array<Int> = [];
 		var index = 0;
 		while (index < endExclusive) {
 			if (index + 1 < endExclusive && tryLowerSpanLoop(expressions[index], expressions[index + 1])) {
@@ -5033,12 +5035,44 @@ private class FunctionBuilder {
 						unsupported(nested, 'unreachable ${nodeName(nested)}');
 					}
 					lowerVariable(variable, null, nested.pos, true);
+					if (managedFlowCarriersByCompilerId.exists(variable.id))
+						pendingManagedCarriers.push(variable.id);
 				case _:
 					lowerStatement(nested);
 			}
+			materializeCompletedManagedFlowCarriers(nested, pendingManagedCarriers);
 			index++;
 		}
+		if (pendingManagedCarriers.length != 0)
+			throw new CBodyEmissionError('statement sequence ended before ${pendingManagedCarriers.length} managed flow carrier(s) acquired an owner');
 		statementSequenceDepth--;
+	}
+
+	/**
+	 * Give a completed compiler-generated join an ordinary local owner immediately.
+	 *
+	 * Haxe may postpone the first source read of a joined value until after later
+	 * statements. Those later statements can return early. Leaving the owner in
+	 * its temporary carrier would either leak on that return or require releasing
+	 * an uninitialized carrier on a branch that never assigned it. Once the exact
+	 * `if` or `switch` that fills the carrier has completed, every continuing path
+	 * owns a value, so moving it into a normal cleanup-managed local is safe.
+	 */
+	function materializeCompletedManagedFlowCarriers(expression:TypedExpr, pending:Array<Int>):Void {
+		var index = 0;
+		while (index < pending.length) {
+			final compilerId = pending[index];
+			if (!followingFlowInitializesLocal(expression, compilerId)) {
+				index++;
+				continue;
+			}
+			final binding = managedFlowCarriersByCompilerId.get(compilerId);
+			if (binding == null)
+				throw new CBodyEmissionError('completed managed flow carrier `$compilerId` lost its lowering binding');
+			if (currentBlock.terminator == null)
+				materializeManagedFlowCarrierOwner(compilerId, binding, expression.pos);
+			pending.splice(index, 1);
+		}
 	}
 
 	/**
@@ -5344,7 +5378,14 @@ private class FunctionBuilder {
 				return unsupportedAt(position, 'TVar(${variable.name}:managed-flow-carrier-fallible-retain-not-admitted)');
 			case _: null;
 		};
-		final managedFlowCarrier = compilerFlowCarrier && (localMapping.irType == IRTManagedString || managedFlowCarrierEnum != null);
+		// An ordinary Array is a small reference-counted handle. Each branch can
+		// therefore give the join one owner by moving a fresh handle or retaining
+		// a borrowed one. Collector-backed Array<Class> storage uses traced roots
+		// instead, so it remains outside this retain/release carrier protocol.
+		final managedFlowCarrierArray = compilerFlowCarrier ? localMapping.arrayValue() : null;
+		final managedArrayFlowCarrier = managedFlowCarrierArray != null && !managedFlowCarrierArray.managedByCollector;
+		final managedFlowCarrier = compilerFlowCarrier
+			&& (localMapping.irType == IRTManagedString || managedArrayFlowCarrier || managedFlowCarrierEnum != null);
 		final directFlowCarrier = compilerFlowCarrier && conditionalDirectValue(localMapping);
 		// A switch-pattern binding views the active payload while its enum owner
 		// remains live for the branch. Ref-counted Array and Bytes values therefore
@@ -5400,7 +5441,7 @@ private class FunctionBuilder {
 			appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
 		}
 		final localArray = localMapping.arrayValue();
-		if (localArray != null && !localArray.managedByCollector && !borrowedEnumManagedPayload) {
+		if (localArray != null && !localArray.managedByCollector && !borrowedEnumManagedPayload && !managedFlowCarrier) {
 			final transferredFreshOwner = value != null && freshManagedArrayValueIds.remove(value.id);
 			if (!transferredFreshOwner) {
 				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("array")), source, "retain-array-alias");
@@ -8513,7 +8554,6 @@ private class FunctionBuilder {
 					"managed-flow-owner-load");
 			if (movedManagedFlowCarrierIds.exists(variable.id))
 				return unsupported(expression, 'TLocal(${variable.name}:managed-flow-carrier-read-after-move)');
-			movedManagedFlowCarrierIds.set(variable.id, true);
 			return materializeManagedFlowCarrier(variable.id, managedCarrier, expression.pos);
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
@@ -8537,6 +8577,24 @@ private class FunctionBuilder {
 	 * the existing local-return rule.
 	 */
 	function materializeManagedFlowCarrier(compilerId:Int, binding:CBodyManagedFlowCarrier, position:Position):LoweredValue {
+		final localId = materializeManagedFlowCarrierOwner(compilerId, binding, position);
+		return loadPlace({place: IRPLocal(localId), mapping: binding.mapping, mutable: false}, position, "managed-flow-owner-load");
+	}
+
+	/**
+	 * Move one fully acquired carrier into a local whose cleanup owns the value.
+	 *
+	 * This is separate from reading the local because a statement boundary may
+	 * need to establish cleanup before a later source expression actually reads
+	 * the value.
+	 */
+	function materializeManagedFlowCarrierOwner(compilerId:Int, binding:CBodyManagedFlowCarrier, position:Position):String {
+		final existing = materializedManagedFlowCarrierLocalIds.get(compilerId);
+		if (existing != null)
+			return existing;
+		if (movedManagedFlowCarrierIds.exists(compilerId))
+			throw new CBodyEmissionError('managed flow carrier `$compilerId` was moved before its owner local was materialized');
+		movedManagedFlowCarrierIds.set(compilerId, true);
 		final source = sourceSpan(position);
 		final moved = moveManagedCarrier(binding, source, "managed-flow-carrier");
 		final localId = createFlowLocal(binding.mapping, moved.id, source, "managed-flow-owner");
@@ -8555,14 +8613,19 @@ private class FunctionBuilder {
 			stringCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "cleanup-release",
 				"managed String selected by control flow and read through a local owner", source, position));
+		} else if (binding.mapping.arrayValue() != null) {
+			freshManagedArrayValueIds.remove(moved.id);
+			arrayCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release",
+				"ordinary Haxe Array selected by control flow and read through a local owner", source, position));
 		} else if (binding.managedEnum != null) {
 			freshManagedEnumValueIds.remove(moved.id);
 			enumCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
 		} else {
-			throw new CBodyEmissionError("materialized managed flow carrier lost its String or enum lifetime plan");
+			throw new CBodyEmissionError("materialized managed flow carrier lost its String, Array, or enum lifetime plan");
 		}
 		materializedManagedFlowCarrierLocalIds.set(compilerId, localId);
-		return loadPlace({place: IRPLocal(localId), mapping: binding.mapping, mutable: false}, position, "managed-flow-owner-load");
+		return localId;
 	}
 
 	function lowerStaticField(expression:TypedExpr, classReference:Ref<ClassType>, fieldReference:Ref<ClassField>):LoweredValue {
@@ -9711,11 +9774,14 @@ private class FunctionBuilder {
 			case _: null;
 		};
 		final managedStringResult = resultMapping.irType == IRTManagedString;
-		final managedCarrierResult = managedStringResult || managedEnumResult != null;
+		final arrayResult = resultMapping.arrayValue();
+		final managedArrayResult = arrayResult != null && !arrayResult.managedByCollector;
+		final managedCarrierResult = managedStringResult || managedArrayResult || managedEnumResult != null;
 		final branchInitializesResult = conditionalDirectValue(resultMapping);
 		if (resultMapping.primitiveMapping() == null
 			&& !resultMapping.isCString()
 			&& resultMapping.irType != IRTManagedString
+			&& !managedArrayResult
 			&& optionalResult == null
 			&& managedEnumResult == null
 			&& !branchInitializesResult)
@@ -9787,6 +9853,8 @@ private class FunctionBuilder {
 		}
 		if (managedEnumResult != null)
 			freshManagedEnumValueIds.set(loaded.id, true);
+		if (managedArrayResult)
+			freshManagedArrayValueIds.set(loaded.id, true);
 		if (managedStringResult)
 			freshManagedStringValueIds.set(loaded.id, true);
 		if (managedStringResult)
@@ -9801,13 +9869,16 @@ private class FunctionBuilder {
 	 *
 	 * Fresh constructors and owned call results move directly. Parameters,
 	 * locals, and other borrowed values are copied and retained through the
-	 * String runtime or enum active-tag helper before branch-local cleanup runs.
+	 * matching String/Array runtime or enum active-tag helper before branch-local
+	 * cleanup runs.
 	 */
 	function appendManagedCarrierAcquire(localId:String, value:LoweredValue, mapping:CBodyValueType, managedEnum:Null<CPreparedBodyEnumInstance>,
 			source:HxcSourceSpan, position:Position, role:String):Void {
 		final fresh = if (mapping.irType == IRTManagedString) {
 			freshManagedStringValueRoles.remove(value.id);
 			freshManagedStringValueIds.remove(value.id);
+		} else if (mapping.arrayValue() != null) {
+			freshManagedArrayValueIds.remove(value.id);
 		} else if (managedEnum != null) {
 			freshManagedEnumValueIds.remove(value.id);
 		} else {
@@ -9821,6 +9892,8 @@ private class FunctionBuilder {
 		appendInstruction(null, IRIOAcquireManagedCarrier(IRPLocal(localId), value.id, acquisition), source, role);
 		if (mapping.irType == IRTManagedString && !fresh) {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "borrowed managed String selected by control flow", source, position));
+		} else if (mapping.arrayValue() != null && !fresh) {
+			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "retain", "borrowed ordinary Haxe Array selected by control flow", source, position));
 		}
 	}
 
@@ -9828,8 +9901,11 @@ private class FunctionBuilder {
 	function managedCarrierImplementation(mapping:CBodyValueType, managedEnum:Null<CPreparedBodyEnumInstance>, retain:Bool):HxcIRImplementation {
 		if (mapping.irType == IRTManagedString)
 			return IRIRuntime("string");
+		final array = mapping.arrayValue();
+		if (array != null && !array.managedByCollector)
+			return IRIRuntime("array");
 		if (managedEnum == null)
-			throw new CBodyEmissionError("managed carrier lost its supported String or enum lifetime plan");
+			throw new CBodyEmissionError("managed carrier lost its supported String, Array, or enum lifetime plan");
 		final implementationId = retain ? managedEnum.retainImplementationId() : managedEnum.destroyImplementationId();
 		if (implementationId == null)
 			throw new CBodyEmissionError('managed enum `${managedEnum.instanceId}` lost its ${retain ? "retain" : "destroy"} plan');
@@ -9854,10 +9930,12 @@ private class FunctionBuilder {
 		if (binding.mapping.irType == IRTManagedString) {
 			freshManagedStringValueIds.set(result.id, true);
 			freshManagedStringValueRoles.set(result.id, role);
+		} else if (binding.mapping.arrayValue() != null) {
+			freshManagedArrayValueIds.set(result.id, true);
 		} else if (binding.managedEnum != null) {
 			freshManagedEnumValueIds.set(result.id, true);
 		} else {
-			throw new CBodyEmissionError('managed flow carrier `$role` lost its String or enum ownership plan');
+			throw new CBodyEmissionError('managed flow carrier `$role` lost its String, Array, or enum ownership plan');
 		}
 		return {id: result.id, type: result.type, mapping: binding.mapping};
 	}

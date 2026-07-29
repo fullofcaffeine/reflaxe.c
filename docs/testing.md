@@ -602,7 +602,7 @@ generated-Haxe `String` lowering or public layout stability. See the
 [string runtime contract](string-runtime.md).
 
 `test/differential/array-runtime` registers the E4.T04 internal array boundary
-across differential, runtime, and ABI evidence lanes. A static custom allocator
+across differential, runtime, ABI, and generated-Haxe evidence lanes. A static custom allocator
 forces every capacity growth to relocate and injects allocation failure. The C
 fixture covers primitive and reference elements, exact-slot aliasing across
 growth and insertion shifts, checked capacity overflow, failure-atomic reserve,
@@ -611,9 +611,12 @@ after failed insert/partial resize construction. GCC and Clang run it at O0/O2
 and under address/undefined sanitizers, while link inspection rejects string,
 object, collector, reflection, and dynamic symbol families. A pinned Eval trace
 checks the common mutation sequence; static-target default initialization is
-asserted directly because Eval is a dynamic target. This proves the native
-runtime slice, not generated Haxe `Array<T>` lowering, full collection parity,
-or a public layout. See the [array runtime contract](array-runtime.md).
+asserted directly because Eval is a dynamic target. The generated-Haxe fixture
+also checks reference-counted Array conditionals and value switches: fresh arms
+move one owner, borrowed arms retain one owner, and a later early return still
+releases an earlier joined local. This proves the listed generated
+`Array<T>` ownership paths and the native runtime slice, not full collection
+parity or a public layout. See the [array runtime contract](array-runtime.md).
 
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real

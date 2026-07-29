@@ -467,9 +467,10 @@ enum HxcIRInstructionKind {
 	/**
 		Declare the one owner that all normal paths into a managed-value join fill.
 
-		The destroy plan identifies the exact managed tagged-enum family. A
-		matching acquire operation initializes the carrier on each selected path,
-		and one move operation transfers that owner out at the join.
+		The destroy plan identifies the matching String/Array runtime lifecycle or
+		the exact managed tagged-enum family. A matching acquire operation
+		initializes the carrier on each selected path, and one move operation
+		transfers that owner out at the join.
 	**/
 	IRIODeclareManagedCarrier(place:HxcIRPlace, destroyImplementation:HxcIRImplementation);
 

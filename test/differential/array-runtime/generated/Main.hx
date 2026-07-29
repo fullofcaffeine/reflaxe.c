@@ -11,6 +11,18 @@ enum ManagedEnvelope {
 	Schedule(arguments:Array<ManagedCommand>);
 }
 
+/**
+	Small result value that reproduces an Array selected by an exhaustive switch.
+
+	The `Planned` payload stays owned by the enclosing enum while its switch arm
+	reads it. A value-producing switch must retain the selected Array before that
+	enum owner is destroyed.
+**/
+enum ArrayPlan {
+	PlanRejected;
+	Planned(values:Array<Int>);
+}
+
 /** Closed record used to exercise an Array owner nested inside another Array element. */
 typedef ManagedRecord = {
 	final commands:Array<ManagedCommand>;
@@ -193,6 +205,13 @@ final class Main {
 		after.set(0, 11);
 		final absent = maybeValues(false);
 		final present = maybeValues(true);
+		final borrowedPlanValues = [17, 19];
+		final conditionalFresh = chooseArray(true, borrowedPlanValues);
+		final conditionalBorrowed = chooseArray(false, borrowedPlanValues);
+		final conditionalArgumentFresh = selectedPairSum(true, borrowedPlanValues);
+		final conditionalArgumentBorrowed = selectedPairSum(false, borrowedPlanValues);
+		final delayedPlanSuccess = delayedPlanLength(true, borrowedPlanValues);
+		final delayedPlanFailure = delayedPlanLength(false, borrowedPlanValues);
 		while (values.length != 3
 			|| freshStaticLength != 3
 			|| freshInstanceLength != 2
@@ -291,6 +310,13 @@ final class Main {
 			|| present == null
 			|| nullableLength(absent) != -1
 			|| nullableLength(present) != 2
+			|| conditionalFresh.length != 2
+			|| conditionalFresh[0] != 23
+			|| conditionalBorrowed != borrowedPlanValues
+			|| conditionalArgumentFresh != 33
+			|| conditionalArgumentBorrowed != 19
+			|| delayedPlanSuccess != 72
+			|| delayedPlanFailure != -2
 			|| rows.length != 1
 			|| rowsCopy.length != 2
 			|| row.length != 2
@@ -462,5 +488,52 @@ final class Main {
 		if (values == null)
 			return -1;
 		return values.length;
+	}
+
+	/**
+		Select either a newly allocated Array or a caller-owned Array.
+
+		The fresh arm transfers its one owner into the join. The borrowed arm
+		retains the shared Array identity so both the caller and result remain
+		valid after the branch ends.
+	**/
+	static function chooseArray(useFresh:Bool, borrowed:Array<Int>):Array<Int> {
+		final selected = useFresh ? [23, 29] : borrowed;
+		return selected;
+	}
+
+	/**
+	 * Consume one joined Array through both a call argument and an indexed read.
+	 *
+	 * The selected local owns exactly one Array reference while the direct call
+	 * and index operation borrow it. Cleanup releases that owner after both uses.
+	 */
+	static function selectedPairSum(useFresh:Bool, borrowed:Array<Int>):Int {
+		final selected = useFresh ? [31, 37] : borrowed;
+		return borrowedLength(selected) + selected[0];
+	}
+
+	/** Produce one managed result whose successful payload remains enum-owned. */
+	static function planArray(accepted:Bool, borrowed:Array<Int>):ArrayPlan
+		return accepted ? Planned(borrowed) : PlanRejected;
+
+	/**
+		Keep one joined Array alive across a second switch that may return early.
+
+		Haxe declares each switch result as an empty compiler temporary. After the
+		first switch succeeds, haxe.c must transfer that carrier into a normal
+		cleanup-owned local before evaluating the second switch. Otherwise the
+		`return -2` path would leak the first retained Array owner.
+	**/
+	static function delayedPlanLength(secondAccepted:Bool, borrowed:Array<Int>):Int {
+		final first = switch planArray(true, borrowed) {
+			case Planned(values): values;
+			case PlanRejected: return -1;
+		};
+		final second = switch planArray(secondAccepted, borrowed) {
+			case Planned(values): values;
+			case PlanRejected: return -2;
+		};
+		return first[0] + first[1] + second[0] + second[1];
 	}
 }

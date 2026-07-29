@@ -921,6 +921,7 @@
         "exact existing-slot sources survive allocator relocation and insertion shifts, and output borrows are unchanged on bounds or validation failure",
         "allocation and size-overflow failures preserve the old logical sequence while failed insertion and partial resize construction roll back lifecycle work",
         "reference assignment retains before release, shrink/disposal destroy in reverse order, and all allocator/reference ownership balances at exit",
+        "ordinary Haxe reference-counted Array conditionals and value switches move fresh owners, retain borrowed owners, transfer joined results into cleanup-owned locals, and release an earlier result across a later early return",
         "strict GCC and Clang O0/O2/sanitizer lanes match the common pinned Haxe mutation trace and link no string, object, GC, reflection, or dynamic symbol family"
       ]
     },

@@ -89,6 +89,11 @@
   "mismatchedClassInheritanceStorage": [
     "HXC9000 error [profile=portable] test/negative/MismatchedClassInheritanceStorage.hx:1:1-1:2 [module:invalid.MismatchedClassInheritanceStorage.instance:instance.class.leaf] Invalid HxcIR: class instance `instance.class.leaf` and base `instance.class.root` must use the same direct or managed(gc) storage model Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "arrayCarrierLifecycleMismatch": [
+    "HXC9000 error [profile=portable] test/negative/ManagedArrayCarrier.hx:2:1-2:2 [module:invalid.ManagedArrayCarrierLifecycle.function:fn.coverage.array-carrier.block:entry.instruction:0:array.declare] Invalid HxcIR: managed Array carrier destroy requires the array runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/ManagedArrayCarrier.hx:3:1-3:2 [module:invalid.ManagedArrayCarrierLifecycle.function:fn.coverage.array-carrier.block:true.instruction:0:array.acquire-true] Invalid HxcIR: managed Array carrier retain requires the array runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/ManagedArrayCarrier.hx:4:1-4:2 [module:invalid.ManagedArrayCarrierLifecycle.function:fn.coverage.array-carrier.block:false.instruction:0:array.acquire-false] Invalid HxcIR: managed Array carrier retain requires the array runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "voidReturnWithValue": [
     "HXC9000 error [profile=portable] test/negative/VoidReturnWithValue.hx:3:1-3:2 [module:invalid.VoidReturnWithValue.function:invalid.VoidReturnWithValue.main.block:entry.terminator] Invalid HxcIR: void function return carries a value Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -157,6 +162,12 @@
   ],
   "borrowedClassAliasEscape": [
     "HXC9000 error [profile=portable] test/negative/BorrowedClassAliasEscape.hx:5:1-5:2 [module:invalid.BorrowedClassAliasEscape.function:invalid.BorrowedClassAliasEscape.main.block:entry.instruction:2:bad.initialize] Invalid HxcIR: borrowed reference value `value.reloaded` escapes through an initializer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "collectorArrayCarrier": [
+    "HXC9000 error [profile=portable] test/negative/ManagedArrayCarrier.hx:2:1-2:2 [module:invalid.CollectorArrayCarrier.function:fn.coverage.array-carrier.block:entry.instruction:0:array.declare] Invalid HxcIR: collector-backed Array cannot use the retain/release managed-carrier lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/ManagedArrayCarrier.hx:3:1-3:2 [module:invalid.CollectorArrayCarrier.function:fn.coverage.array-carrier.block:true.instruction:0:array.acquire-true] Invalid HxcIR: collector-backed Array cannot use the retain/release managed-carrier lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/ManagedArrayCarrier.hx:4:1-4:2 [module:invalid.CollectorArrayCarrier.function:fn.coverage.array-carrier.block:false.instruction:0:array.acquire-false] Invalid HxcIR: collector-backed Array cannot use the retain/release managed-carrier lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/ManagedArrayCarrier.hx:5:1-5:2 [module:invalid.CollectorArrayCarrier.function:fn.coverage.array-carrier.block:join.instruction:0:array.move] Invalid HxcIR: collector-backed Array cannot use the retain/release managed-carrier lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "nullableUnwrapWithoutFailure": [
     "HXC9000 error [profile=portable] test/negative/NullableUnwrapWithoutFailure.hx:3:1-3:2 [module:invalid.NullableUnwrapWithoutFailure.function:invalid.NullableUnwrapWithoutFailure.main.block:entry.instruction:1:bad.unwrap] Invalid HxcIR: checked or nullable-unwrapping conversion requires an explicit failure edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

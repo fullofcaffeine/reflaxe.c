@@ -1535,11 +1535,12 @@ private class HxcIRValidationState {
 	/**
 	 * Match a join carrier with the lifecycle implementation for its exact type.
 	 *
-	 * Managed Strings use the shared `string` runtime retain/release operations.
-	 * Tagged enums instead use one generated, type-specific lifecycle helper
-	 * because the active payload decides what must be retained or destroyed.
-	 * Keeping this check at the HxcIR boundary prevents a generic-looking carrier
-	 * from pairing a value with the wrong ownership protocol.
+	 * Managed Strings and ordinary Haxe Arrays use their matching runtime
+	 * retain/release operations. Tagged enums instead use one generated,
+	 * type-specific lifecycle helper because the active payload decides what
+	 * must be retained or destroyed. Keeping this check at the HxcIR boundary
+	 * prevents a generic-looking carrier from pairing a value with the wrong
+	 * ownership protocol.
 	 */
 	function requireManagedCarrierLifecycle(type:HxcIRTypeRef, selected:HxcIRImplementation, operation:String, path:String, source:HxcSourceSpan):Bool {
 		if (type == IRTManagedString) {
@@ -1549,6 +1550,17 @@ private class HxcIRValidationState {
 			}
 			return true;
 		}
+		if (isReferenceCountedArray(type)) {
+			if (!isArrayRuntimeImplementation(selected)) {
+				add(path, 'managed Array carrier $operation requires the array runtime lifecycle', source);
+				return false;
+			}
+			return true;
+		}
+		if (isManagedArrayReference(type)) {
+			add(path, 'collector-backed Array cannot use the retain/release managed-carrier lifecycle', source);
+			return false;
+		}
 		return requireManagedEnumLifecycle(type, selected, operation, path, source) != null;
 	}
 
@@ -1556,6 +1568,12 @@ private class HxcIRValidationState {
 	function requireManagedCarrierType(type:HxcIRTypeRef, path:String, source:HxcSourceSpan):Bool {
 		if (type == IRTManagedString)
 			return true;
+		if (isReferenceCountedArray(type))
+			return true;
+		if (isManagedArrayReference(type)) {
+			add(path, "collector-backed Array cannot use the retain/release managed-carrier lifecycle", source);
+			return false;
+		}
 		return requireManagedTaggedEnum(type, path, source) != null;
 	}
 
@@ -2991,6 +3009,27 @@ private class HxcIRValidationState {
 	/** True when an HxcIR instance is the managed pointer carrier for Array<T>. */
 	function isManagedArrayReference(type:HxcIRTypeRef):Bool
 		return managedArrayElement(type) != null;
+
+	/**
+	 * Whether an Array uses explicit retain/release rather than collector roots.
+	 *
+	 * Both representations are managed pointers, but only `managed("array")`
+	 * can cross a join through the runtime Array lifecycle. A
+	 * `managed("gc")` Array must remain visible to the precise collector instead.
+	 */
+	function isReferenceCountedArray(type:HxcIRTypeRef):Bool {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _: return false;
+		};
+		final instance = typeInstances.get(instanceId);
+		if (instance == null || instance.arguments.length != 1)
+			return false;
+		return switch instance.representation {
+			case IRRManaged("array"): true;
+			case _: false;
+		};
+	}
 
 	static function isArrayRuntimeImplementation(implementation:HxcIRImplementation):Bool
 		return switch implementation {

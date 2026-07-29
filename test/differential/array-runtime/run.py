@@ -380,6 +380,38 @@ def validate_generated_hxcir(hxcir: str) -> None:
     )
     entry = hxcir_function(hxcir, "function.Main.main")
     history_pop = hxcir_function(hxcir, "method.History.takeNewest")
+    choose_array = hxcir_function(hxcir, "function.Main.chooseArray")
+    selected_pair_sum = hxcir_function(hxcir, "function.Main.selectedPairSum")
+    delayed_plan = hxcir_function(hxcir, "function.Main.delayedPlanLength")
+    if (
+        "declare-managed-carrier" not in choose_array
+        or "ownership=move-fresh" not in choose_array
+        or 'ownership=retain-borrowed(runtime("array"))' not in choose_array
+        or "move-managed-carrier" not in choose_array
+    ):
+        raise ArrayRuntimeFailure(
+            "Array conditional lost its exact fresh-move/borrowed-retain join"
+        )
+    if (
+        "declare-managed-carrier" not in selected_pair_sum
+        or 'dispatch=direct("function.Main.borrowedLength")' not in selected_pair_sum
+        or '"array-local.' not in selected_pair_sum
+        or "array-get-checked" not in selected_pair_sum
+        or 'cleanup=["cleanup.construction"."array-local.' not in selected_pair_sum
+    ):
+        raise ArrayRuntimeFailure(
+            "joined Array lost its cleanup-owned argument/index consumption"
+        )
+    if (
+        delayed_plan.count("declare-managed-carrier") != 2
+        or delayed_plan.count('ownership=retain-borrowed(runtime("array"))') != 2
+        or delayed_plan.count("move-managed-carrier") != 2
+        or delayed_plan.count("managed-flow-owner") < 2
+        or 'implementation=runtime("array")' not in delayed_plan
+    ):
+        raise ArrayRuntimeFailure(
+            "sequential Array switch carriers lost their cleanup-owned local transfer"
+        )
     for role, target in (
         ("static-call-argument-0", "function.Main.borrowedLength"),
         ("instance-call-argument-0", "method.FreshArrayReader.length"),

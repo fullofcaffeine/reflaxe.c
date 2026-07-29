@@ -524,12 +524,16 @@ C syntax. Closed records compose field lifetimes in one typed helper plan;
 recursive enums use uniquely owned allocator-backed tree links. Copies clone a
 recursive tree, cleanup destroys it, and graphs that require cycle collection
 remain rejected.
-Schema 19 also gives managed enum conditionals an explicit three-step
-ownership protocol. HxcIR declares one empty join carrier, records whether the
-chosen arm moves a fresh owner or retains a borrowed value, and then moves the
-single joined owner onward. Validation proves this protocol before CAST emits a
-plain C local and structured `if`/`else`; the C printer never guesses whether a
-copy needs retaining.
+Schema 19 also defines an explicit three-step ownership protocol for managed
+conditional and value-switch results. HxcIR declares one empty join carrier,
+records whether the chosen arm moves a fresh owner or retains a borrowed value,
+and then moves the single joined owner onward. Managed enums, managed Strings,
+and reference-counted Arrays use their exact lifecycle; collector-backed Arrays
+remain on their precise-root path. When a joined value initializes an ordinary
+local, lowering transfers it into a cleanup-owned local before the next
+statement so a later early return cannot leak it. Validation proves this
+protocol before CAST emits a plain C local and structured `if`/`else`; the C
+printer never guesses whether a copy needs retaining.
 Schema 20 adds one separately owned lifetime rule: a final instance method may
 return a read-only span borrowed from an immediate fixed-array field of its
 receiver. HxcIR records the field origin and matching direct-call contract,

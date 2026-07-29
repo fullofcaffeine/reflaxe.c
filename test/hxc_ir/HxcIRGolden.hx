@@ -37,6 +37,7 @@ class HxcIRGolden {
 		validator.requireValid(managedRootProgram(false), PROFILE);
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
+		validator.requireValid(arrayCarrierValidationProgram(false, false), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
 		final coverageDump = dumper.dump(coverage);
 
@@ -131,6 +132,8 @@ class HxcIRGolden {
 				managedSwitchCarrierMissingAcquire: invalidDiagnostics(managedSwitchCarrierMissingAcquireProgram()),
 				managedCarrierLifecycleMismatch: invalidDiagnostics(managedCarrierLifecycleMismatchProgram()),
 				managedStringCarrierLifecycleMismatch: invalidDiagnostics(managedStringCarrierLifecycleMismatchProgram()),
+				arrayCarrierLifecycleMismatch: invalidDiagnostics(arrayCarrierValidationProgram(true, false)),
+				collectorArrayCarrier: invalidDiagnostics(arrayCarrierValidationProgram(false, true)),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
 				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
 				throwWithoutStatus: invalidDiagnostics(throwWithoutStatusProgram()),
@@ -2726,6 +2729,92 @@ class HxcIRGolden {
 					typeInstances: [],
 					globals: [],
 					functions: [functionPlan],
+					source: span(file, 1, 5)
+				}
+			]
+		};
+	}
+
+	/**
+	 * Build one Array carrier and optionally give it the wrong ownership model.
+	 *
+	 * A reference-counted Array must use the Array runtime for both retain and
+	 * release. A collector-backed Array instead belongs to the precise root
+	 * planner and cannot be treated as a reference-counted carrier merely because
+	 * both representations use a C pointer.
+	 */
+	static function arrayCarrierValidationProgram(wrongLifecycle:Bool, collectorBacked:Bool):HxcIRProgram {
+		final file = wrongLifecycle || collectorBacked ? "test/negative/ManagedArrayCarrier.hx" : COVERAGE_SOURCE;
+		final arrayType:HxcIRTypeDeclaration = {
+			id: "type.carrier-array",
+			displayName: "Array<Int>",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final arrayInstance:HxcIRTypeInstance = {
+			id: "instance.carrier-array",
+			declarationId: arrayType.id,
+			arguments: [IRTInt(32, true)],
+			representation: IRRManaged(collectorBacked ? "gc" : "array"),
+			source: span(file, 1)
+		};
+		final arrayRef = IRTInstance(arrayInstance.id);
+		final lifecycle = IRIRuntime(wrongLifecycle ? "string" : "array");
+		final carrierPlace = IRPLocal("local.array-result");
+		final fn:HxcIRFunction = {
+			id: "fn.coverage.array-carrier",
+			displayName: "coverage.IR.arrayCarrier",
+			parameters: [
+				parameter("value.condition", IRTBool, file, 1),
+				parameter("value.borrowed", arrayRef, file, 1)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: collectorBacked ? [
+				{
+					id: "root.array-parameter",
+					valueId: "value.borrowed",
+					projections: [],
+					source: span(file, 1)
+				},
+				{
+					id: "root.array-result",
+					valueId: "value.array-result",
+					projections: [],
+					source: span(file, 5)
+				}
+			] : [],
+			locals: [local("local.array-result", arrayRef, IRLSAutomatic, IRISUninitialized, file, 2)],
+			returnType: arrayRef,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				block("entry", [
+					instruction("array.declare", null, IRIODeclareManagedCarrier(carrierPlace, lifecycle), file, 2)
+				], IRTBranch("value.condition", edge("true"), edge("false")), file, 2),
+				block("true", [
+					instruction("array.acquire-true", null, IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(lifecycle)), file, 3)
+				], IRTJump(edge("join")), file, 3),
+				block("false", [
+					instruction("array.acquire-false", null, IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(lifecycle)), file, 4)
+				], IRTJump(edge("join")), file, 4),
+				block("join", [
+					instruction("array.move", result("value.array-result", arrayRef), IRIOMoveManagedCarrier(carrierPlace), file, 5)
+				], IRTReturn("value.array-result", []), file, 5)
+			],
+			cleanupRegions: [],
+			source: span(file, 1, 5)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: wrongLifecycle ? "invalid.ManagedArrayCarrierLifecycle" : collectorBacked ? "invalid.CollectorArrayCarrier" : "coverage.ArrayCarrier",
+					types: [arrayType],
+					typeInstances: [arrayInstance],
+					globals: [],
+					functions: [fn],
 					source: span(file, 1, 5)
 				}
 			]

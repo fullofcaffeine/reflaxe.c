@@ -123,26 +123,37 @@ can therefore emit the familiar handwritten shape `T selected; if (condition)
 selected = left; else selected = right;` without fabricating a zero value.
 Managed conditional joins remain a separate ownership problem because selecting
 a branch may require retain, transfer, and cleanup.
-Schema version 19 solves that separate problem for managed tagged enums and
-managed Strings. It declares one initially empty carrier before a branch or
-value switch, then records how each normal arm gives that carrier exactly one
-owner. This applies whether haxe.c receives a direct conditional or Haxe's
+Schema version 19 solves that separate problem with a general managed-carrier
+protocol. The first admitted users were managed tagged enums and managed
+Strings; reference-counted `Array<T>` values now use the same already-serialized
+instruction family and therefore do not change the schema shape. The protocol
+declares one initially empty carrier before a branch or value switch, then
+records how each normal arm gives that carrier exactly one owner. This applies
+whether haxe.c receives a direct conditional or Haxe's
 empty-local/arm-assignment/read form. A newly constructed value or owned call
 result moves into the carrier; a parameter, local, static String literal, or
 other borrowed value is copied and retained. Strings use the shared String
-runtime lifecycle. An enum uses its generated, type-specific helper because the
-active case decides which payload needs ownership work. A `throw`, `return`, or
-unreachable arm ends before the join and therefore neither acquires nor invents
-an owner. Recursive managed enums remain rejected because their deep retain can
-allocate and fail, while this carrier protocol is deliberately infallible.
+runtime lifecycle. Reference-counted Arrays use the Array runtime's retain and
+release operations. An enum uses its generated, type-specific helper because
+the active case decides which payload needs ownership work. A `throw`, `return`,
+or unreachable arm ends before the join and therefore neither acquires nor
+invents an owner. Recursive managed enums remain rejected because their deep
+retain can allocate and fail, while this carrier protocol is deliberately
+infallible. Collector-backed `Array<Class>` values are also excluded: their
+outer storage follows precise garbage-collector roots rather than the
+retain/release lifecycle this protocol validates.
 
-The join moves the one owner out. Validation follows both branch and switch
-edges and rejects an unowned normal arm, two acquisitions, a borrowed value
-mislabeled as fresh, a String paired with an enum helper, ordinary loads or
-stores of the carrier, a second move, or a path that abandons an acquired
-owner. This lets C emission use an ordinary local plus structured `if`/`else`
-or `switch` while keeping retain, cleanup, and transfer decisions explicit
-before C syntax is chosen.
+The join moves the one owner out. If that owner belongs to an ordinary Haxe
+local, lowering immediately transfers it into a cleanup-owned local before
+starting the next statement. This matters when a later statement returns
+early: the earlier Array still receives exactly one release even if source code
+does not read it again. Validation follows both branch and switch edges and
+rejects an unowned normal arm, two acquisitions, a borrowed value mislabeled as
+fresh, a value paired with the wrong lifecycle, ordinary loads or stores of the
+carrier, a second move, or a path that abandons an acquired owner. This lets C
+emission use an ordinary local plus structured `if`/`else` or `switch` while
+keeping retain, cleanup, and transfer decisions explicit before C syntax is
+chosen.
 The same schema's existing `IRTThrow` and `HxcIRFailureEdge` now have a bounded
 ordinary-function producer. When reachability contains no admitted `TTry`, the
 frontend knows the throw cannot be caught: it evaluates the payload once,

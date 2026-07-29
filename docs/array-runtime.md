@@ -392,6 +392,19 @@ fail-closed. Those sibling paths do not yet have independent typed cleanup
 scopes, so adding the arm-local owner to the function-wide cleanup list could
 release an uninitialized value on the other path.
 
+An Array selected by a conditional or value switch has a different lifetime:
+the selected value must continue after the branches rejoin. HxcIR declares an
+empty managed carrier before the split. A fresh Array moves its owner into that
+carrier, while a caller-owned or enum-owned Array is borrowed and retained.
+Exactly one continuing arm can fill the carrier, and the join moves that one
+owner into the result. When the result initializes a local, haxe.c immediately
+transfers it into a cleanup-owned local. A later statement can then return
+early without leaking the earlier Array, even when source code never reads it.
+The HxcIR validator rejects missing, duplicate, mismatched, or abandoned
+ownership before C syntax is selected. This protocol applies to
+reference-counted Arrays; `Array<Class>` uses precise collector roots and does
+not pretend to have the same retain/release lifecycle.
+
 ## Feature and capability boundary
 
 The `array` feature is compiler-selectable and depends exactly on `alloc`, whose
@@ -442,6 +455,13 @@ The fixture proves:
   including an injected failure after the first copied reference;
 - unchanged logical contents after allocation failure; and
 - absence of string, object, GC, reflection, and dynamic symbol families.
+
+The ordinary-Haxe generated fixture additionally proves both sides of an Array
+join: a fresh literal moves its owner, while a borrowed Array is retained. A
+pair of sequential value switches proves that the first joined local is
+released when the second switch returns early. The same source runs under Eval
+and generated native C, while the HxcIR shape check confirms the ownership
+decision is made before CAST and printing.
 
 A pinned Haxe Eval trace covers the common observable mutation sequence. Eval
 is a dynamic target, so the oracle pushes explicit zero values instead of using
