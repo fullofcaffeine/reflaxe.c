@@ -226,7 +226,7 @@ Dynamic, open, reference, class, anonymous-record, function, nullable, and
 native-pointer arguments remain exact source-positioned `HXC1001` boundaries.
 The compiler also rejects a 65th generic function or enum instance and a project
 whose conservative specialization estimate exceeds 524,288 C bytes. Successful
-generic builds emit the schema-1 `hxc.specializations.json` sidecar and remain
+generic builds emit the schema-2 `hxc.specializations.json` sidecar and remain
 runtime-free. See [deterministic generic
 specialization](generic-specialization.md).
 

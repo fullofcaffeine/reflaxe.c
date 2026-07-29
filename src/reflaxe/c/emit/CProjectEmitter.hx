@@ -964,8 +964,8 @@ class CProjectEmitter {
 			|| report.summary.mergedTypeReasons != typeReasons
 			|| report.summary.recursiveSpecializations != recursiveCount
 			|| report.summary.specializedFunctionDefinitionBytes != functionBytes
-			|| report.summary.dependencyClosedEnumDefinitionBytes < 0
-			|| report.summary.estimatedSpecializationCBytes != functionBytes + report.summary.dependencyClosedEnumDefinitionBytes
+			|| report.summary.specializedEnumDefinitionBytes < 0
+			|| report.summary.estimatedSpecializationCBytes != functionBytes + report.summary.specializedEnumDefinitionBytes
 			|| report.summary.estimatedSpecializationCBytes > report.limits.maxEstimatedSpecializationCBytes
 			|| report.summary.generatedPayloadArtifacts != payloadArtifacts
 			|| report.summary.generatedPayloadBytes != payloadBytes

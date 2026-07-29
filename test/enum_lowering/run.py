@@ -1007,8 +1007,8 @@ def validate_production(root: Path, *, layout: str, profile: str, policy: str) -
         not in runtime_plan.get("directDecisions", [])
         or "closed-anonymous-value-records" not in runtime_plan.get("directDecisions", [])
         or "managed-haxe-arrays" not in runtime_plan.get("directDecisions", [])
-        or specializations.get("schemaVersion") != 1
-        or specializations.get("algorithm") != "hxc-generic-specialization-v1"
+        or specializations.get("schemaVersion") != 2
+        or specializations.get("algorithm") != "hxc-generic-specialization-v2"
         or specializations.get("status") != "analyzed-closed-specializations"
         or specializations.get("functionSpecializations") != []
         or not isinstance(specializations.get("typeSpecializations"), list)

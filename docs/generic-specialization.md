@@ -116,20 +116,102 @@ The report records:
 - isolated strict-C11 function-definition bytes, hashes, and HxcIR block and
   instruction counts;
 - structural constructor/payload units for enum layouts;
-- conservative dependency-closed enum-definition bytes and total estimated
-  specialization C bytes; and
+- exact reachable specialized-enum declaration/assertion bytes and total
+  estimated specialization C bytes; and
 - the complete generated payload artifact count and byte total.
 
-The current build limit is 524,288 estimated specialization C bytes. Finalized
-structural function definitions are attributed individually. Enum layout bytes
-are intentionally conservative because their emitted definition block can
-contain shared dependencies and assertions; the report says so instead of
-pretending to have an exact per-type partition. The emitter revalidates report
-identity, counts,
-keys, digests, ordering, source normalization, reason totals, code-size
-arithmetic, and payload totals before it accepts the project. The focused suite
-also extracts every specialized definition from the emitted C and independently
-recomputes its exact UTF-8 byte length and SHA-256 digest.
+The current build limit is 524,288 bytes, or 512 KiB, of estimated specialized
+C **source text**. This is not a limit on the program's memory, final executable
+size, or game content. It is a cheap, repeatable early warning for code
+explosion: a recursive generic pattern could otherwise keep asking haxe.c to
+create new concrete C functions or types until the generated project overwhelms
+the C compiler. The native C compiler may later remove or combine code, so this
+source-text measurement is deliberately a safety estimate rather than a
+prediction of machine-code size.
+
+Compiler theory and practice justify having a finite guard because
+specialization can multiply or recursively discover concrete instances. They do
+not prescribe this exact number. The 512 KiB threshold is a conservative haxe.c
+engineering policy introduced with the bounded specialization slice; the
+repository does not claim that it came from the C standard, a universal
+compiler rule, or a benchmark-derived optimum. It complements the separate
+64-function and 64-type limits by catching a smaller number of unusually large
+specialized definitions. Future measured workloads may justify revisiting the
+number, but a change must retain a deterministic fail-closed runaway guard.
+
+### Comparable safeguards in other compilers
+
+haxe.c's exact source-byte formula is target-owned, but limiting recursive or
+expanding compile-time work is established compiler practice:
+
+- [GCC's `-ftemplate-depth`](https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Dialect-Options.html#index-ftemplate-depth)
+  bounds recursively nested C++ template instantiations so endless recursion
+  cannot consume the compiler indefinitely.
+- [Clang's implementation limits](https://clang.llvm.org/docs/UsersManual.html#controlling-implementation-limits)
+  separately bound template depth and compile-time evaluation steps.
+- [Rust's compile-time limits](https://doc.rust-lang.org/reference/attributes/limits.html)
+  include a recursion limit and a type-length limit that counts substitutions
+  used to construct a concrete type during monomorphization. The latter is
+  currently enforced only by a nightly compiler option, so it is useful
+  precedent for the cost dimension rather than an identical stable policy.
+- [GHC's optimization controls](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/using-optimisation.html#cmdoption-fspec-constr-count)
+  cap specializations per function, apply a specialization size threshold, and
+  use a work counter scaled by program size to stop a diverging optimizer.
+
+These examples support haxe.c's layered approach: stable instance identity,
+finite discovery, count limits, and a separate work/size guard. They do not
+make generated C text the only valid cost model or justify 512 KiB
+specifically. A future revision can use a more formatting-independent
+structural cost—such as HxcIR instruction and type units—while retaining emitted
+C bytes as observable evidence and preserving a hard termination boundary.
+That calibration is tracked by Beads issue `haxe_c-5sd.11`.
+
+### Why this is not a universal Reflaxe rule
+
+The guard belongs to haxe.c's current lowering strategy, not to Reflaxe itself.
+C11 has no language-level generics, so haxe.c creates concrete C definitions
+for the closed type combinations it admits. The target must discover those
+definitions, avoid creating the same one twice, and stop a recursively growing
+set before it exhausts compiler resources.
+
+Sibling targets face different pressure in the checked repositories:
+
+- `haxe.rust` normally emits Rust generic parameters, bounds, and type
+  arguments. Rust's compiler performs the later native monomorphization and
+  owns its recursion/type-complexity limits. Reflaxe.Rust does perform bounded
+  typed substitution for concrete inherited surfaces, but it does not maintain
+  a haxe.c-style reachable-copy byte budget.
+- `haxe.elixir.codex` and `haxe.ruby` target dynamically typed runtimes. Their
+  current compilers do not generally emit a separate target function for every
+  Haxe generic argument combination, so the same code-copy worklist does not
+  arise.
+- `haxe.go` emits concrete typed helpers for selected native `go.Chan`,
+  `go.Slice`, `go.Map`, and `go.Result` call sites. The current implementation
+  deduplicates those already-observed concrete types in small target-owned maps;
+  it has no recursive general-generic discovery loop or equivalent emitted-byte
+  budget. Broader specialization would need its own measured guard rather than
+  copying haxe.c's number.
+- Reflaxe.OCaml/hxhx mostly preserves target polymorphism or specializes
+  bounded source declarations and selected hot paths. Its current compiler has
+  no equivalent whole-program generated-copy budget.
+
+This comparison is deliberately about the checked implementations, not a claim
+that dynamic, Rust, Go, or OCaml targets can never need resource limits. Each
+compiler should add the smallest guard justified by the work it actually owns.
+
+Caxecraft exposed an error in the first version of this measurement. Its real
+generic function and type counts stayed fixed, but adding ordinary game enums
+made the reported estimate cross the limit. The report had counted the complete
+program-wide enum block whenever any generic enum existed. Schema 2 now
+attributes finalized function definitions individually and counts only the
+forward declarations, complete definitions, and layout assertions for reachable
+generic enum instances. Nested generic payloads are already members of that
+closed specialization set and are counted once; unrelated ordinary enums are
+not charged to the specialization budget. The emitter revalidates report
+identity, counts, keys, digests, ordering, source normalization, reason totals,
+code-size arithmetic, and payload totals before it accepts the project. The
+focused suite also extracts every specialized definition from the emitted C and
+independently recomputes its exact UTF-8 byte length and SHA-256 digest.
 
 The sidecar is omitted when no generic instance is reachable. It is itself
 listed and hashed in `hxc.manifest.json`, but it is not counted as generated C

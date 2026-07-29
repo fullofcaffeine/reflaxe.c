@@ -901,19 +901,19 @@
   ],
   "keyEncoding": "length-prefixed-utf8-full-semantic-key",
   "status": "analyzed-closed-specializations",
-  "schemaVersion": 1,
-  "codeSizeAttribution": "function definitions are isolated; enum bytes conservatively include the dependency-closed emitted enum block",
+  "schemaVersion": 2,
+  "codeSizeAttribution": "function definitions are isolated; enum bytes include only reachable specialized enum declarations and assertions",
   "summary": {
     "recursiveSpecializations": 1,
     "functionSpecializations": 16,
+    "specializedEnumDefinitionBytes": 5771,
     "typeSpecializations": 3,
     "generatedPayloadArtifacts": 3,
     "specializedFunctionDefinitionBytes": 2458,
     "mergedTypeReasons": 21,
     "generatedPayloadBytes": 16626,
-    "dependencyClosedEnumDefinitionBytes": 5771,
     "mergedFunctionReasons": 24,
     "estimatedSpecializationCBytes": 8229
   },
-  "algorithm": "hxc-generic-specialization-v1"
+  "algorithm": "hxc-generic-specialization-v2"
 }

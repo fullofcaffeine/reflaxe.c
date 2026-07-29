@@ -4,12 +4,12 @@ import haxe.io.Bytes;
 
 /** Target-neutral identity and hard bounds for the generic specialization report. */
 class CGenericSpecializationContract {
-	public static inline final REPORT_SCHEMA_VERSION = 1;
-	public static inline final REPORT_ALGORITHM = "hxc-generic-specialization-v1";
+	public static inline final REPORT_SCHEMA_VERSION = 2;
+	public static inline final REPORT_ALGORITHM = "hxc-generic-specialization-v2";
 	public static inline final REPORT_STATUS = "analyzed-closed-specializations";
 	public static inline final KEY_ENCODING = "length-prefixed-utf8-full-semantic-key";
 	public static inline final COMPACT_NAME_DIGEST = "sha256-with-full-key-collision-check";
-	public static inline final CODE_SIZE_ATTRIBUTION = "function definitions are isolated; enum bytes conservatively include the dependency-closed emitted enum block";
+	public static inline final CODE_SIZE_ATTRIBUTION = "function definitions are isolated; enum bytes include only reachable specialized enum declarations and assertions";
 	public static inline final MAX_FUNCTION_SPECIALIZATIONS = 64;
 	public static inline final MAX_TYPE_SPECIALIZATIONS = 64;
 	public static inline final MAX_ESTIMATED_SPECIALIZATION_C_BYTES = 524288;

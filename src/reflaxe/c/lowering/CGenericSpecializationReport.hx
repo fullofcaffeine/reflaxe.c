@@ -16,6 +16,7 @@ import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
+import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
@@ -101,7 +102,7 @@ typedef CGenericSpecializationSummarySnapshot = {
 	final mergedTypeReasons:Int;
 	final recursiveSpecializations:Int;
 	final specializedFunctionDefinitionBytes:Int;
-	final dependencyClosedEnumDefinitionBytes:Int;
+	final specializedEnumDefinitionBytes:Int;
 	final estimatedSpecializationCBytes:Int;
 	final generatedPayloadArtifacts:Int;
 	final generatedPayloadBytes:Int;
@@ -231,7 +232,7 @@ class CGenericSpecializationReportBuilder {
 
 		functionRecords.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.specializationKey, right.specializationKey));
 		typeRecords.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.specializationKey, right.specializationKey));
-		final enumText = genericEnums.length == 0 ? "" : enumDefinitionText(bodyEmitter, printer);
+		final enumText = enumDefinitionText(genericEnums, bodyEmitter, printer);
 		final enumBytes = Bytes.ofString(enumText).length;
 		final estimatedBytes = specializedFunctionBytes + enumBytes;
 		final effectiveCodeSizeLimit = codeSizeLimit();
@@ -271,7 +272,7 @@ class CGenericSpecializationReportBuilder {
 				mergedTypeReasons: mergedTypeReasons,
 				recursiveSpecializations: recursiveCount,
 				specializedFunctionDefinitionBytes: specializedFunctionBytes,
-				dependencyClosedEnumDefinitionBytes: enumBytes,
+				specializedEnumDefinitionBytes: enumBytes,
 				estimatedSpecializationCBytes: estimatedBytes,
 				generatedPayloadArtifacts: payloadArtifacts,
 				generatedPayloadBytes: payloadBytes
@@ -304,8 +305,38 @@ class CGenericSpecializationReportBuilder {
 			endColumn: source.endColumn
 		};
 
-	static function enumDefinitionText(emitter:CBodyEmitter, printer:CASTPrinter):String {
-		final declarations = emitter.enumDefinitions().concat(emitter.enumLayoutAssertions());
+	/**
+		Print only the C declarations caused by reachable generic enum instances.
+
+		The former report printed the complete program enum block whenever one
+		generic enum existed. As a game added unrelated ordinary enums, that global
+		block grew until it tripped the specialization budget even though the
+		number and size of specializations had not changed. The generic registry
+		has already discovered nested generic payload instances, so selecting its
+		closed instance set counts every specialized forward, definition, and
+		layout assertion exactly once without charging unrelated program types.
+	**/
+	static function enumDefinitionText(genericEnums:Array<CLoweredBodyEnum>, emitter:CBodyEmitter, printer:CASTPrinter):String {
+		if (genericEnums.length == 0)
+			return "";
+		final selected:Map<String, Bool> = [];
+		for (value in genericEnums)
+			selected.set(value.prepared.instanceId, true);
+		final declarations:Array<CDecl> = [];
+		var emittedInstances = 0;
+		for (instanceId in emitter.orderedEnumInstanceIds()) {
+			if (!selected.exists(instanceId))
+				continue;
+			emittedInstances++;
+			for (declaration in emitter.enumForwardDeclarationsFor(instanceId))
+				declarations.push(declaration);
+			for (declaration in emitter.enumDefinitionsFor(instanceId))
+				declarations.push(declaration);
+			for (declaration in emitter.enumLayoutAssertionsFor(instanceId))
+				declarations.push(declaration);
+		}
+		if (emittedInstances != genericEnums.length)
+			throw new CBodyEmissionError('generic specialization report found $emittedInstances of ${genericEnums.length} enum instances');
 		return declarations.map(printer.printDecl).join("\n\n") + "\n";
 	}
 

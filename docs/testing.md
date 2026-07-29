@@ -430,9 +430,11 @@ positive/negative/snapshot/runtime suite. A real typed program shares
 typedef-equivalent `identity<Int>` calls, keeps all four admitted primitive
 families distinct, records a two-argument key, discovers nested and recursive
 generic calls, and records a
-generic enum instance plus its finite same-nominal nested instance. Its schema-1 report proves full-key/digest identity, sorted merged
+generic enum instance plus its finite same-nominal nested instance. Its schema-2 report proves full-key/digest identity, sorted merged
 source reasons, recursion, isolated function bytes and hashes, conservative
-dependency-closed enum bytes, payload totals, and the 64/64/524,288 hard limits.
+specialized enum declaration/assertion bytes, payload totals, and the
+64/64/524,288 hard limits. An unrelated ordinary enum cannot consume that
+specialization budget.
 Repeated isolated roots, reversed typed modules, another locale, a warm
 compiler server before and after rejection, and portable/metal/runtime-none
 payloads must be byte-identical; a successful non-generic same-root replacement

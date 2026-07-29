@@ -158,8 +158,8 @@ def validate_schema_document() -> None:
         or schema.get("$id")
         != "https://reflaxe-c.dev/schemas/generic-specialization-report.schema.json"
         or schema.get("additionalProperties") is not False
-        or version.get("const") != 1
-        or algorithm.get("const") != "hxc-generic-specialization-v1"
+        or version.get("const") != 2
+        or algorithm.get("const") != "hxc-generic-specialization-v2"
     ):
         raise GenericSpecializationFailure(
             "generic-specialization report schema identity or closed shape drifted"
@@ -300,8 +300,8 @@ def emitted_function_definition(
 def validate_positive(project: RenderedProject) -> None:
     report = project.report
     if (
-        report.get("schemaVersion") != 1
-        or report.get("algorithm") != "hxc-generic-specialization-v1"
+        report.get("schemaVersion") != 2
+        or report.get("algorithm") != "hxc-generic-specialization-v2"
         or report.get("status") != "analyzed-closed-specializations"
         or report.get("keyEncoding") != "length-prefixed-utf8-full-semantic-key"
         or report.get("compactNameDigest")
@@ -511,7 +511,7 @@ def validate_positive(project: RenderedProject) -> None:
         raise GenericSpecializationFailure(
             "finite nested generic enum specialization did not remain distinct"
         )
-    enum_definition_bytes = summary.get("dependencyClosedEnumDefinitionBytes")
+    enum_definition_bytes = summary.get("specializedEnumDefinitionBytes")
 
     manifest_artifacts = require_list(
         project.manifest.get("artifacts"), "manifest artifacts"
@@ -750,6 +750,57 @@ def check_conditional_sidecar_ownership() -> None:
             raise GenericSpecializationFailure(
                 "non-generic replacement retained stale specialization ownership"
             )
+
+
+def check_specialization_size_attribution() -> None:
+    """Prove an ordinary enum cannot consume the generic code-size budget."""
+
+    with tempfile.TemporaryDirectory(prefix="hxc-generic-attribution-") as temporary:
+        root = Path(temporary)
+        reports: dict[str, dict[str, object]] = {}
+        artifacts: dict[str, dict[str, bytes]] = {}
+        for fixture in ("attribution_base", "attribution_neighbor"):
+            output = root / fixture
+            result = compile_fixture(fixture, output)
+            if result.returncode != 0 or result.stdout or result.stderr:
+                raise GenericSpecializationFailure(
+                    f"{fixture} compile failed or emitted diagnostics\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
+            reports[fixture] = load_json(
+                output / "hxc.specializations.json",
+                f"{fixture} specialization report",
+            )
+            artifacts[fixture] = read_artifacts(output)
+
+    base_summary = require_dict(
+        reports["attribution_base"].get("summary"), "baseline attribution summary"
+    )
+    neighbor_summary = require_dict(
+        reports["attribution_neighbor"].get("summary"), "neighbor attribution summary"
+    )
+    owned_fields = (
+        "functionSpecializations",
+        "typeSpecializations",
+        "specializedFunctionDefinitionBytes",
+        "specializedEnumDefinitionBytes",
+        "estimatedSpecializationCBytes",
+    )
+    if any(base_summary.get(field) != neighbor_summary.get(field) for field in owned_fields):
+        raise GenericSpecializationFailure(
+            "an unrelated ordinary enum changed specialization-owned code-size totals"
+        )
+    base_payload = int(base_summary.get("generatedPayloadBytes", 0))
+    neighbor_payload = int(neighbor_summary.get("generatedPayloadBytes", 0))
+    neighbor_c = b"\n".join(
+        content
+        for path, content in artifacts["attribution_neighbor"].items()
+        if path.endswith((".c", ".h"))
+    )
+    if neighbor_payload <= base_payload or b"Unrelated" not in neighbor_c:
+        raise GenericSpecializationFailure(
+            "attribution neighbor did not add independently emitted ordinary-enum C"
+        )
 
 
 def payload_tree(project: RenderedProject) -> dict[str, bytes]:
@@ -1105,6 +1156,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_nominal_abstract_record(args.toolchain)
         check_server_isolation()
         check_conditional_sidecar_ownership()
+        check_specialization_size_attribution()
         check_profile_and_runtime_policy()
         families = check_native(args.toolchain)
     except (
@@ -1120,7 +1172,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "generic-specialization: OK: closed primitive/function/enum/Array/record identities, "
         "nominal abstracts with admitted carriers, "
         "alias sharing, finite recursion, full-key collision checks, bounded code-size "
-        f"reports, exact dynamic/open/function/type-count/code-size HXC1001, stale ownership, profile/policy isolation, and strict "
+        f"reports, ordinary-enum attribution isolation, exact dynamic/open/function/type-count/code-size HXC1001, stale ownership, profile/policy isolation, and strict "
         f"{'/'.join(families)} C11 O0/O2 passed"
     )
     return 0

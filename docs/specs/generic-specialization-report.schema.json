@@ -17,13 +17,13 @@
     "typeSpecializations"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "algorithm": { "const": "hxc-generic-specialization-v1" },
+    "schemaVersion": { "const": 2 },
+    "algorithm": { "const": "hxc-generic-specialization-v2" },
     "status": { "const": "analyzed-closed-specializations" },
     "keyEncoding": { "const": "length-prefixed-utf8-full-semantic-key" },
     "compactNameDigest": { "const": "sha256-with-full-key-collision-check" },
     "codeSizeAttribution": {
-      "const": "function definitions are isolated; enum bytes conservatively include the dependency-closed emitted enum block"
+      "const": "function definitions are isolated; enum bytes include only reachable specialized enum declarations and assertions"
     },
     "limits": { "$ref": "#/$defs/limits" },
     "summary": { "$ref": "#/$defs/summary" },
@@ -265,7 +265,7 @@
         "mergedTypeReasons",
         "recursiveSpecializations",
         "specializedFunctionDefinitionBytes",
-        "dependencyClosedEnumDefinitionBytes",
+        "specializedEnumDefinitionBytes",
         "estimatedSpecializationCBytes",
         "generatedPayloadArtifacts",
         "generatedPayloadBytes"
@@ -277,7 +277,7 @@
         "mergedTypeReasons": { "type": "integer", "minimum": 0 },
         "recursiveSpecializations": { "type": "integer", "minimum": 0 },
         "specializedFunctionDefinitionBytes": { "type": "integer", "minimum": 0 },
-        "dependencyClosedEnumDefinitionBytes": { "type": "integer", "minimum": 0 },
+        "specializedEnumDefinitionBytes": { "type": "integer", "minimum": 0 },
         "estimatedSpecializationCBytes": { "type": "integer", "minimum": 1 },
         "generatedPayloadArtifacts": { "type": "integer", "minimum": 1 },
         "generatedPayloadBytes": { "type": "integer", "minimum": 1 }

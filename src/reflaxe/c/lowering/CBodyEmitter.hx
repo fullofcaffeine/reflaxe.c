@@ -4471,10 +4471,22 @@ class CBodyEmitter {
 	public function enumForwardDeclarations():Array<CDecl> {
 		final result:Array<CDecl> = [];
 		for (instanceId in enumInstanceOrder)
-			if (requireEnumRepresentation(instanceId) == CBECTagged)
-				result.push(DForwardStruct(requireEnumValueTag(instanceId), []));
+			for (declaration in enumForwardDeclarationsFor(instanceId))
+				result.push(declaration);
 		return result;
 	}
+
+	/**
+		Return the strict-C forward declaration owned by one enum instance.
+
+		A tagged union has a struct tag that can be declared before its complete
+		layout. A native C enum cannot be forward-declared in ISO C11, so it
+		returns an empty list. Exposing the per-instance form lets reports measure
+		only the specialized layouts they own instead of charging unrelated enums
+		to the generic code-size budget.
+	**/
+	public function enumForwardDeclarationsFor(instanceId:String):Array<CDecl>
+		return requireEnumRepresentation(instanceId) == CBECTagged ? [DForwardStruct(requireEnumValueTag(instanceId), [])] : [];
 
 	/**
 		Whether a generated instance has a strict-C11 forward declaration.
@@ -4667,54 +4679,68 @@ class CBodyEmitter {
 
 	public function enumLayoutAssertions():Array<CDecl> {
 		final result:Array<CDecl> = [];
-		for (instanceId in enumInstanceOrder) {
-			for (caseName in requireEnumCaseOrder(instanceId)) {
-				result.push(DStaticAssert(EBinary(Equal, EIdentifier(requireEnumCaseDiscriminant(instanceId, caseName)),
-					EInt(CIntegerLiteral.decimal(Std.string(requireEnumCaseValue(instanceId, caseName))))),
-					'enum ${requireEnumValueTag(instanceId).value} case $caseName retains its Haxe discriminant'));
-			}
-			if (requireEnumRepresentation(instanceId) == CBECNative)
+		for (instanceId in enumInstanceOrder)
+			for (declaration in enumLayoutAssertionsFor(instanceId))
+				result.push(declaration);
+		return result;
+	}
+
+	/**
+		Return the layout proofs emitted for one concrete enum instance.
+
+		Keeping this as the single per-instance implementation prevents the full
+		project emitter and the generic-specialization report from drifting. The
+		full-project method above merely concatenates these same declarations in
+		stable semantic order.
+	**/
+	public function enumLayoutAssertionsFor(instanceId:String):Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (caseName in requireEnumCaseOrder(instanceId)) {
+			result.push(DStaticAssert(EBinary(Equal, EIdentifier(requireEnumCaseDiscriminant(instanceId, caseName)),
+				EInt(CIntegerLiteral.decimal(Std.string(requireEnumCaseValue(instanceId, caseName))))),
+				'enum ${requireEnumValueTag(instanceId).value} case $caseName retains its Haxe discriminant'));
+		}
+		if (requireEnumRepresentation(instanceId) == CBECNative)
+			return result;
+		final structType = new CType(TStruct(requireEnumValueTag(instanceId)));
+		final tagType = new CType(TEnum(requireEnumDiscriminantTag(instanceId)));
+		final unionType = new CType(TUnion(requireEnumPayloadUnionTag(instanceId)));
+		final tagMember = requireEnumTagMember(instanceId);
+		final payloadMember = requireEnumPayloadMember(instanceId);
+		result.push(DStaticAssert(EBinary(Equal, EOffsetOf(structType, DName(null), tagMember), EInt(CIntegerLiteral.decimal("0"))),
+			'tagged enum ${requireEnumValueTag(instanceId).value} begins with its discriminant'));
+		result.push(DStaticAssert(EBinary(GreaterEqual, EOffsetOf(structType, DName(null), payloadMember), ESizeOfType(tagType, DName(null))),
+			'tagged enum ${requireEnumValueTag(instanceId).value} payload follows its discriminant'));
+		result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)),
+			EBinary(Add, EOffsetOf(structType, DName(null), payloadMember), ESizeOfType(unionType, DName(null)))),
+			'tagged enum ${requireEnumValueTag(instanceId).value} contains its payload union'));
+		for (caseName in requireEnumCaseOrder(instanceId)) {
+			final payloadNames = requireEnumPayloadNames(instanceId, caseName);
+			if (payloadNames.length == 0)
 				continue;
-			final structType = new CType(TStruct(requireEnumValueTag(instanceId)));
-			final tagType = new CType(TEnum(requireEnumDiscriminantTag(instanceId)));
-			final unionType = new CType(TUnion(requireEnumPayloadUnionTag(instanceId)));
-			final tagMember = requireEnumTagMember(instanceId);
-			final payloadMember = requireEnumPayloadMember(instanceId);
-			result.push(DStaticAssert(EBinary(Equal, EOffsetOf(structType, DName(null), tagMember), EInt(CIntegerLiteral.decimal("0"))),
-				'tagged enum ${requireEnumValueTag(instanceId).value} begins with its discriminant'));
-			result.push(DStaticAssert(EBinary(GreaterEqual, EOffsetOf(structType, DName(null), payloadMember), ESizeOfType(tagType, DName(null))),
-				'tagged enum ${requireEnumValueTag(instanceId).value} payload follows its discriminant'));
-			result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)),
-				EBinary(Add, EOffsetOf(structType, DName(null), payloadMember), ESizeOfType(unionType, DName(null)))),
-				'tagged enum ${requireEnumValueTag(instanceId).value} contains its payload union'));
-			for (caseName in requireEnumCaseOrder(instanceId)) {
-				final payloadNames = requireEnumPayloadNames(instanceId, caseName);
-				if (payloadNames.length == 0)
-					continue;
-				final caseStructType = new CType(TStruct(requireEnumCasePayloadStructTag(instanceId, caseName)));
-				final unionMember = requireEnumCaseUnionMember(instanceId, caseName);
-				result.push(DStaticAssert(EBinary(Equal, EOffsetOf(unionType, DName(null), unionMember), EInt(CIntegerLiteral.decimal("0"))),
-					'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName begins at union offset zero'));
-				for (index in 0...payloadNames.length) {
-					final payloadName = payloadNames[index];
-					final fieldName = requireEnumPayloadFieldName(instanceId, caseName, payloadName);
-					final fieldType = requireEnumPayloadFieldType(instanceId, caseName, payloadName);
-					final typed = typedDeclarator(fieldType, DName(null));
-					final offset = EOffsetOf(caseStructType, DName(null), fieldName);
-					if (index == 0) {
-						result.push(DStaticAssert(EBinary(Equal, offset, EInt(CIntegerLiteral.decimal("0"))),
-							'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName first payload begins at zero'));
-					} else {
-						final previousName = payloadNames[index - 1];
-						final previousField = requireEnumPayloadFieldName(instanceId, caseName, previousName);
-						final previousType = typedDeclarator(requireEnumPayloadFieldType(instanceId, caseName, previousName), DName(null));
-						result.push(DStaticAssert(EBinary(GreaterEqual, offset,
-							EBinary(Add, EOffsetOf(caseStructType, DName(null), previousField), ESizeOfType(previousType.type, previousType.declarator))),
-							'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName payload $index follows its predecessor'));
-					}
-					result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(caseStructType, DName(null)), EAlignOfType(typed.type, typed.declarator)),
-						'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName admits payload $index alignment'));
+			final caseStructType = new CType(TStruct(requireEnumCasePayloadStructTag(instanceId, caseName)));
+			final unionMember = requireEnumCaseUnionMember(instanceId, caseName);
+			result.push(DStaticAssert(EBinary(Equal, EOffsetOf(unionType, DName(null), unionMember), EInt(CIntegerLiteral.decimal("0"))),
+				'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName begins at union offset zero'));
+			for (index in 0...payloadNames.length) {
+				final payloadName = payloadNames[index];
+				final fieldName = requireEnumPayloadFieldName(instanceId, caseName, payloadName);
+				final fieldType = requireEnumPayloadFieldType(instanceId, caseName, payloadName);
+				final typed = typedDeclarator(fieldType, DName(null));
+				final offset = EOffsetOf(caseStructType, DName(null), fieldName);
+				if (index == 0) {
+					result.push(DStaticAssert(EBinary(Equal, offset, EInt(CIntegerLiteral.decimal("0"))),
+						'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName first payload begins at zero'));
+				} else {
+					final previousName = payloadNames[index - 1];
+					final previousField = requireEnumPayloadFieldName(instanceId, caseName, previousName);
+					final previousType = typedDeclarator(requireEnumPayloadFieldType(instanceId, caseName, previousName), DName(null));
+					result.push(DStaticAssert(EBinary(GreaterEqual, offset,
+						EBinary(Add, EOffsetOf(caseStructType, DName(null), previousField), ESizeOfType(previousType.type, previousType.declarator))),
+						'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName payload $index follows its predecessor'));
 				}
+				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(caseStructType, DName(null)), EAlignOfType(typed.type, typed.declarator)),
+					'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName admits payload $index alignment'));
 			}
 		}
 		return result;

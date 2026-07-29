@@ -204,7 +204,7 @@ The emitter owns these independently versioned sidecars:
   `analyzed-selected-stdlib-use` record. The latter currently admits only
   literal `Sys.println` and default `haxe.Log.trace` capabilities;
 - `hxc.specializations.json`: omitted when no generic instance is reachable;
-  otherwise a schema-1 `hxc-generic-specialization-v1` record containing full
+  otherwise a schema-2 `hxc-generic-specialization-v2` record containing full
   collision-checked semantic keys, normalized arguments, source-rooted reasons,
   recursion, hard limits, and conservative function/enum code-size attribution.
   The emitter revalidates its counts, order, hashes, sources, reason totals, and
