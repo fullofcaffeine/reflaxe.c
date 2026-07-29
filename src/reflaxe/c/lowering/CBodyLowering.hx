@@ -6473,25 +6473,21 @@ private class FunctionBuilder {
 		};
 	}
 
+	/**
+	 * Prove the next compiler-generated branch settles one empty result carrier.
+	 *
+	 * A branch settles the carrier when every path that can reach the later read
+	 * assigns it. A path that returns, throws, breaks, or continues cannot reach
+	 * that read and needs no invented default value. HxcIR later validates the
+	 * emitted control-flow graph independently, so this recognition does not admit
+	 * arbitrary uninitialized source locals.
+	 */
 	function followingFlowInitializesLocal(expression:TypedExpr, compilerId:Int):Bool {
 		return switch expression.expr {
-			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsLocal(whenTrue,
-					compilerId) && definitelyAssignsLocal(whenFalse, compilerId);
+			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsOrTerminatesLocal(whenTrue,
+					compilerId) && definitelyAssignsOrTerminatesLocal(whenFalse, compilerId);
 			case TSwitch(subject, cases, defaultExpression): switchArmsAssignLocal(subject, cases, defaultExpression, compilerId);
 			case TParenthesis(inner) | TMeta(_, inner): followingFlowInitializesLocal(inner, compilerId);
-			case _: false;
-		};
-	}
-
-	function definitelyAssignsLocal(expression:TypedExpr, compilerId:Int):Bool {
-		return switch expression.expr {
-			case TBinop(OpAssign, left, _):
-				isLocalTarget(left, compilerId);
-			case TBlock(expressions): expressions.length > 0 && definitelyAssignsLocal(expressions[expressions.length - 1], compilerId);
-			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsLocal(whenTrue,
-					compilerId) && definitelyAssignsLocal(whenFalse, compilerId);
-			case TSwitch(subject, cases, defaultExpression): switchArmsAssignLocal(subject, cases, defaultExpression, compilerId);
-			case TParenthesis(inner) | TMeta(_, inner): definitelyAssignsLocal(inner, compilerId);
 			case _: false;
 		};
 	}
@@ -7041,6 +7037,7 @@ private class FunctionBuilder {
 			return unsupported(expression, 'enum-constructor:${enumField.name}:argument-count=${arguments.length},expected=${tagCase.payload.length}');
 		}
 		final payloadIds:Array<String> = [];
+		final stagedDirectPayloads:Array<{index:Int, value:StagedFlowValue}> = [];
 		final source = sourceSpan(expression.pos);
 		for (index in 0...arguments.length) {
 			final payload = tagCase.payload[index];
@@ -7050,6 +7047,8 @@ private class FunctionBuilder {
 			final ownedPayload = captureManagedValue(lowered, payload.valueType, argument.pos, 'enum-payload-$index');
 			final payloadSource = sourceSpan(argument.pos);
 			if (payload.indirect) {
+				if (laterExpressionCreatesFlow(arguments, index))
+					return unsupported(argument, 'enum-constructor:${enumField.name}:recursive-payload-before-flow:$index');
 				final pointer:HxcIRResult = {id: nextValueId(), type: payload.storageType()};
 				appendInstruction(pointer, IRIOAllocate(payload.valueType.irType, IRAOwned, IRIRuntime("alloc"), {
 					kind: IRFAllocationFailure,
@@ -7062,9 +7061,13 @@ private class FunctionBuilder {
 				runtimeRequirements.push(new CBodyRuntimeRequirement("alloc", "allocation", "recursive Haxe enum payload", payloadSource, argument.pos));
 				payloadIds.push(pointer.id);
 			} else {
-				payloadIds.push(ownedPayload.id);
+				final staged = stageFlowValue(ownedPayload, argument, laterExpressionCreatesFlow(arguments, index), 'enum-payload-$index');
+				payloadIds.push("");
+				stagedDirectPayloads.push({index: index, value: staged});
 			}
 		}
+		for (staged in stagedDirectPayloads)
+			payloadIds[staged.index] = restoreStagedValue(staged.value, 'enum-payload-${staged.index}-load');
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOConstructTag(value.instanceId, tagCase.name, payloadIds), source, "construct-enum");
 		registerValueTemporary(result.id, "enum-result");

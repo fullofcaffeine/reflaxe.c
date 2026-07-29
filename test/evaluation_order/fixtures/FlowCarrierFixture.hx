@@ -159,6 +159,35 @@ class FlowCarrierFixture {
 		return total == 18;
 	}
 
+	/**
+		Keep a guarded switch result whose fallback leaves the function immediately.
+
+		Haxe wraps the guard's own lazy-value temporaries and the assigning switch
+		inside a block after declaring `selected`. Every path that reaches the final
+		field read has assigned the carrier; the other arm returns and cannot rejoin.
+	**/
+	static function switchCarrierWithGuardedReturn(code:Int):Int {
+		final selected:FlowCarrierSelection = switch code {
+			case 1 if (near(1.0, 1.0) && near(2.0, 2.0)): {amount: 13};
+			case _: return 0;
+		};
+		return selected.amount;
+	}
+
+	/**
+		Preserve an earlier enum payload while a later payload creates a branch.
+
+		Haxe evaluates constructor arguments from left to right. The record must
+		therefore be saved before the conditional moves lowering into new blocks,
+		then reloaded exactly once at the join where the enum is constructed.
+	**/
+	static function enumPayloadAcrossConditional(enabled:Bool):Int {
+		final value = FlowCarrierEnvelope.Selected({amount: 17}, enabled ? 4 : 9);
+		return switch value {
+			case Selected(selection, suffix): selection.amount + suffix;
+		};
+	}
+
 	/** Returns two only when both lazy chains preserve skip and evaluation order. */
 	static function run():UInt {
 		observedCalls = 0;
@@ -192,6 +221,10 @@ class FlowCarrierFixture {
 			return 103;
 		if (!switchCarrierWithContinue())
 			return 104;
+		if (switchCarrierWithGuardedReturn(1) != 13 || switchCarrierWithGuardedReturn(2) != 0)
+			return 105;
+		if (enumPayloadAcrossConditional(true) != 21 || enumPayloadAcrossConditional(false) != 26)
+			return 106;
 		return observedCalls;
 	}
 
@@ -207,6 +240,11 @@ private typedef FlowCarrierState = {
 
 private typedef FlowCarrierSelection = {
 	final amount:Int;
+}
+
+/** One direct enum payload before one branch-producing scalar payload. */
+private enum FlowCarrierEnvelope {
+	Selected(selection:FlowCarrierSelection, suffix:Int);
 }
 
 private enum abstract FlowCarrierMode(Int) to Int {
