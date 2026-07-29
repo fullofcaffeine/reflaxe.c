@@ -59,6 +59,14 @@ static void hxc_LeafRecord_trace(const void *hxc_LeafRecord_trace_object, hxc_tr
   }
 }
 
+_Static_assert(sizeof(struct hxc_EmptyBase) % _Alignof(struct hxc_EmptyBase) == 0, "descriptor `class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911` payload size must be a multiple of alignment");
+
+const struct hxc_type_descriptor hxc_EmptyBase_descriptor = { .abi_version = HXC_TYPE_DESCRIPTOR_ABI_VERSION, .flags = 0, .object_size = sizeof(struct hxc_EmptyBase), .object_alignment = _Alignof(struct hxc_EmptyBase), .trace = NULL, .finalize = NULL };
+
+_Static_assert(sizeof(struct hxc_EmptyLeaf) % _Alignof(struct hxc_EmptyLeaf) == 0, "descriptor `class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a` payload size must be a multiple of alignment");
+
+const struct hxc_type_descriptor hxc_EmptyLeaf_descriptor = { .abi_version = HXC_TYPE_DESCRIPTOR_ABI_VERSION, .flags = 0, .object_size = sizeof(struct hxc_EmptyLeaf), .object_alignment = _Alignof(struct hxc_EmptyLeaf), .trace = NULL, .finalize = NULL };
+
 _Static_assert(sizeof(struct hxc_MiddleRecord) % _Alignof(struct hxc_MiddleRecord) == 0, "descriptor `class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53` payload size must be a multiple of alignment");
 
 const struct hxc_type_descriptor hxc_MiddleRecord_descriptor = { .abi_version = HXC_TYPE_DESCRIPTOR_ABI_VERSION, .flags = 0, .object_size = sizeof(struct hxc_MiddleRecord), .object_alignment = _Alignof(struct hxc_MiddleRecord), .trace = NULL, .finalize = NULL };
@@ -73,6 +81,17 @@ const struct hxc_type_descriptor hxc_RootRecord_descriptor = { .abi_version = HX
 
 struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *hxc_value)
 {
+  const void *hxc_gc_roots[2] = { (const void *)hxc_value, NULL };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_gc_roots[1] = (const void *)(hxc_value == NULL ? NULL : &hxc_value->hxc_base);
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
   return hxc_value == NULL ? NULL : &hxc_value->hxc_base;
 }
 
@@ -186,9 +205,9 @@ bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_value)
 
 void hxc_ClassLayoutFixture_main(void)
 {
-  const void *hxc_gc_roots[14] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  const void *hxc_gc_roots[19] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
   struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 14, &hxc_gc_frame) != HXC_STATUS_OK)
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 19, &hxc_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
@@ -202,33 +221,38 @@ void hxc_ClassLayoutFixture_main(void)
   struct hxc_MiddleRecord *hxc_tmp_call_result_n3 = hxc_ClassLayoutFixture_asMiddle(hxc_leaf);
   hxc_gc_roots[4] = (const void *)hxc_tmp_call_result_n3;
   struct hxc_MiddleRecord *hxc_middle = hxc_tmp_call_result_n3;
+  hxc_gc_roots[5] = (const void *)NULL;
   struct hxc_EmptyLeaf *hxc_emptyLeaf = NULL;
+  hxc_gc_roots[6] = (const void *)hxc_emptyLeaf;
   struct hxc_EmptyBase *hxc_tmp_call_result_n5 = hxc_ClassLayoutFixture_asEmptyBase(hxc_emptyLeaf);
+  hxc_gc_roots[7] = (const void *)hxc_tmp_call_result_n5;
   struct hxc_EmptyBase *hxc_emptyBase = hxc_tmp_call_result_n5;
   while (1)
   {
     struct hxc_RootRecord *hxc_tmp_load_result_n6 = hxc_root;
-    hxc_gc_roots[5] = (const void *)hxc_tmp_load_result_n6;
-    hxc_gc_roots[6] = (const void *)NULL;
+    hxc_gc_roots[8] = (const void *)hxc_tmp_load_result_n6;
+    hxc_gc_roots[9] = (const void *)NULL;
     bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_load_result_n6 == NULL;
     if (hxc_tmp_load_result_n6 == NULL)
     {
-      hxc_gc_roots[7] = (const void *)hxc_middle;
-      hxc_gc_roots[8] = (const void *)NULL;
+      hxc_gc_roots[10] = (const void *)hxc_middle;
+      hxc_gc_roots[11] = (const void *)NULL;
       hxc_tmp_short_circuit_result_n5 = hxc_middle == NULL;
     }
     bool hxc_tmp_short_circuit_load_result_n8 = hxc_tmp_short_circuit_result_n5;
     bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n8;
     if (hxc_tmp_short_circuit_load_result_n8)
     {
+      hxc_gc_roots[12] = (const void *)hxc_emptyBase;
+      hxc_gc_roots[13] = (const void *)NULL;
       hxc_tmp_short_circuit_result_n6 = hxc_emptyBase == NULL;
     }
     bool hxc_tmp_short_circuit_load_result_n10 = hxc_tmp_short_circuit_result_n6;
     bool hxc_tmp_short_circuit_result_n7 = hxc_tmp_short_circuit_load_result_n10;
     if (hxc_tmp_short_circuit_load_result_n10)
     {
-      hxc_gc_roots[9] = (const void *)hxc_root;
-      hxc_gc_roots[10] = (const void *)NULL;
+      hxc_gc_roots[14] = (const void *)hxc_root;
+      hxc_gc_roots[15] = (const void *)NULL;
       bool hxc_tmp_call_result_n12 = hxc_ClassLayoutFixture_same(hxc_root, NULL);
       hxc_tmp_short_circuit_result_n7 = hxc_tmp_call_result_n12;
     }
@@ -236,8 +260,8 @@ void hxc_ClassLayoutFixture_main(void)
     bool hxc_tmp_short_circuit_result_n8 = hxc_tmp_short_circuit_load_result_n13;
     if (hxc_tmp_short_circuit_load_result_n13)
     {
-      hxc_gc_roots[11] = (const void *)hxc_root;
-      hxc_gc_roots[12] = (const void *)NULL;
+      hxc_gc_roots[16] = (const void *)hxc_root;
+      hxc_gc_roots[17] = (const void *)NULL;
       bool hxc_tmp_call_result_n15 = hxc_ClassLayoutFixture_different(hxc_root, NULL);
       hxc_tmp_short_circuit_result_n8 = !hxc_tmp_call_result_n15;
     }
@@ -245,7 +269,7 @@ void hxc_ClassLayoutFixture_main(void)
     bool hxc_tmp_short_circuit_result_n9 = hxc_tmp_short_circuit_load_result_n16;
     if (hxc_tmp_short_circuit_load_result_n16)
     {
-      hxc_gc_roots[13] = (const void *)hxc_root;
+      hxc_gc_roots[18] = (const void *)hxc_root;
       bool hxc_tmp_call_result_n18 = hxc_ClassLayoutFixture_isNull(hxc_root);
       hxc_tmp_short_circuit_result_n9 = hxc_tmp_call_result_n18;
     }

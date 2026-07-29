@@ -1,9 +1,9 @@
 hxcir schema=21
 module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-103:3
   type "type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" name="EmptyBase" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-1:19
-    class-layout base=none header=none
+    class-layout base=none header=runtime("gc")
   type "type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" name="EmptyLeaf" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":2:1-2:37
-    class-layout base="instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" header=none
+    class-layout base="instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" header=runtime("gc")
   type "type.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" name="MiddleRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":8:1-10:2
     class-layout base="instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" header=runtime("gc")
     field "enabled" type=bool mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":9:2-9:26
@@ -14,12 +14,14 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
   type "type.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" name="RootRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":4:1-6:2
     class-layout base=none header=runtime("gc")
     field "rootValue" type=i32 mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":5:2-5:27
-  instance "instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" declaration="type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-1:19
-  instance "instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" declaration="type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":2:1-2:37
+  instance "instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" declaration="type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-1:19
+  instance "instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" declaration="type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":2:1-2:37
   instance "instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" declaration="type.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":8:1-10:2
   instance "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" declaration="type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":12:1-15:2
   instance "instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" declaration="type.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" arguments=[] representation=managed("gc") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":4:1-6:2
   function "function.ClassLayoutFixture.asEmptyBase" name="ClassLayoutFixture.asEmptyBase" returns=pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) failure=infallible entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":80:57-82:3
+    managed-root "root.0" value="parameter.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":80:57-82:3
+    managed-root "root.1" value="value.0" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":81:10-81:15
     parameter "parameter.0" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) ownership=owned-or-value @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":80:57-82:3
     block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":80:57-82:3
       instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) convert value="parameter.0" kind=representation target=pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) implementation=static failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":81:10-81:15
@@ -105,15 +107,20 @@ module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFix
     managed-root "root.2" value="value.2" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":98:25-98:37
     managed-root "root.3" value="value.3" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":99:38-99:42
     managed-root "root.4" value="value.4" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":99:29-99:43
-    managed-root "root.5" value="value.8" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:12-102:16
-    managed-root "root.6" value="value.9" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:20-102:24
-    managed-root "root.7" value="value.11" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:28-102:34
-    managed-root "root.8" value="value.12" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:38-102:42
-    managed-root "root.9" value="value.19" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:72-102:76
-    managed-root "root.10" value="value.20" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:78-102:82
-    managed-root "root.11" value="value.23" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:98-102:102
-    managed-root "root.12" value="value.24" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:104-102:108
-    managed-root "root.13" value="value.28" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:120-102:124
+    managed-root "root.5" value="value.5" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":100:29-100:33
+    managed-root "root.6" value="value.6" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":101:41-101:50
+    managed-root "root.7" value="value.7" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":101:29-101:51
+    managed-root "root.8" value="value.8" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:12-102:16
+    managed-root "root.9" value="value.9" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:20-102:24
+    managed-root "root.10" value="value.11" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:28-102:34
+    managed-root "root.11" value="value.12" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:38-102:42
+    managed-root "root.12" value="value.15" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:46-102:55
+    managed-root "root.13" value="value.16" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:59-102:63
+    managed-root "root.14" value="value.19" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:72-102:76
+    managed-root "root.15" value="value.20" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:78-102:82
+    managed-root "root.16" value="value.23" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:98-102:102
+    managed-root "root.17" value="value.24" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:104-102:108
+    managed-root "root.18" value="value.28" path="" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":102:120-102:124
     local "local.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":97:3-97:30
     local "local.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":98:3-98:38
     local "local.2" type=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) ownership=owned-or-value storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":99:3-99:44

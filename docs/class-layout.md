@@ -6,7 +6,9 @@ concrete C structs, while Haxe class values remain nullable references to that
 storage. A class proven not to escape keeps this direct, runtime-free form. The
 bounded `Array<Class>` graph path and retained-interface-field path instead
 give the same payload an exact traced representation backed by the selective
-collector. Neither form establishes a public C ABI.
+collector. A concrete class that crosses a reachable function return uses that
+managed representation too, because the caller may keep it after the callee's
+automatic C storage has ended. Neither form establishes a public C ABI.
 
 This task defines storage and reference operations. E3.T05 adds bounded `new`
 paths for unconditional nonescaping locals and admitted retained graphs,
@@ -89,9 +91,18 @@ element of a reachable `Array<Class>`, that array can hold aliases and cycles,
 so reference counting alone is insufficient. A class that retains an
 interface value has the same lifetime pressure: the interface stores an object
 pointer for later dispatch, and a caller-owned stack object could disappear
-first. The array graph, a retained-interface owner, and the reachable concrete
-implementations therefore use `IRRManaged("gc")`. A class that enters neither
-graph remains ordinary C storage and keeps the collector out of the program.
+first. A class reference in a reachable function return has the same
+requirement: returning a pointer to a callee-local C struct would leave a
+dangling pointer as soon as that function ended. The array graph, a
+retained-interface owner and its concrete implementations, and returned class
+families therefore use `IRRManaged("gc")`. A class that enters none of those
+graphs remains ordinary C storage and keeps the collector out of the program.
+
+Representation is currently settled per concrete class and inheritance family,
+not per individual `new` expression. This conservative choice guarantees that
+every producer and consumer agrees on one C layout. A later escape-analysis
+optimization may recover direct storage for proven local allocations without
+changing the Haxe API.
 
 A managed `new` allocates the exact class payload through `hxc_gc_allocate`.
 Generated HxcIR publishes the returned pointer in an exact root slot before it
@@ -103,13 +114,13 @@ trying to release collector-owned links. A generated `Array<Class>` descriptor
 visits each live pointer slot and disposes only its backing element buffer when
 the array payload itself is swept.
 
-This is deliberately a bounded graph path, not a claim of general heap-class
-support. A retained interface is admitted only as the first initialization of
-the constructing object's own field. Managed class-virtual headers, inline
-owned-class fields, generic classes, and other unproved escape shapes still
-fail with a source-positioned diagnostic. They must gain their own
-representation and lifetime evidence rather than inheriting this result by
-accident.
+This is deliberately a bounded graph path, not a claim of every heap-class
+shape. A retained interface is admitted only as the first initialization of
+the constructing object's own field. Managed construction, returned class
+references, virtual headers, and inline owned fields each have focused
+evidence; generic classes and other unproved escape shapes still fail with a
+source-positioned diagnostic. They must gain their own representation and
+lifetime evidence rather than inheriting this result by accident.
 
 ## Layout and ABI boundary
 
@@ -136,9 +147,10 @@ interface paths. The object descriptor/header contract comes from E4.T05, and
 E4.T06 owns managed allocation, explicit roots, tracing, and collection;
 `haxe_c-53k.2.1.2` first connected that backend to the bounded concrete
 `Array<Class>` graph. E3.T05 constructors now select either direct stack
-storage or the already-settled collector representation. Generic class
-specialization, dynamic methods, reflection, dynamic casts/type tests, broader
-escaping ownership, and public class ABI remain fail-closed.
+storage or the already-settled collector representation, including class
+families selected by reachable return signatures. Generic class specialization,
+dynamic methods, reflection, dynamic casts/type tests, broader escaping
+ownership, and public class ABI remain fail-closed.
 
 ## Evidence
 

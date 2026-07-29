@@ -2400,6 +2400,52 @@
       "naming": "generated",
       "sourceOrdinal": 0,
       "readableName": [
+        "EmptyBase",
+        "descriptor"
+      ],
+      "requestedName": null,
+      "cName": "hxc_EmptyBase_descriptor",
+      "semanticKey": "15:type-descriptor|28:ordinary:16:translation-unit|5:8:compiler2:gc5:class9:EmptyBase10:descriptor|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "type-descriptor",
+      "specializationArguments": [],
+      "baseName": "hxc_EmptyBase_descriptor",
+      "sourceSymbol": "compiler.gc.class.EmptyBase.descriptor#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "EmptyLeaf",
+        "descriptor"
+      ],
+      "requestedName": null,
+      "cName": "hxc_EmptyLeaf_descriptor",
+      "semanticKey": "15:type-descriptor|28:ordinary:16:translation-unit|5:8:compiler2:gc5:class9:EmptyLeaf10:descriptor|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "type-descriptor",
+      "specializationArguments": [],
+      "baseName": "hxc_EmptyLeaf_descriptor",
+      "sourceSymbol": "compiler.gc.class.EmptyLeaf.descriptor#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
         "LeafRecord",
         "descriptor"
       ],
@@ -2508,6 +2554,52 @@
       "specializationArguments": [],
       "baseName": "hxc_program_gc",
       "sourceSymbol": "compiler.gc.collector#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "gc",
+        "frame"
+      ],
+      "requestedName": null,
+      "cName": "hxc_gc_frame",
+      "semanticKey": "15:runtime-private|208:ordinary:195:6:method|28:ordinary:16:translation-unit|2:18:ClassLayoutFixture11:asEmptyBase|1:104:class-reference:nullable:instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a|0:|0:|4:8:compiler2:gc39:function.ClassLayoutFixture.asEmptyBase5:frame|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:18:ClassLayoutFixture11:asEmptyBase|1:104:class-reference:nullable:instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_gc_frame",
+      "sourceSymbol": "compiler.gc.function.ClassLayoutFixture.asEmptyBase.frame#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "gc",
+        "roots"
+      ],
+      "requestedName": null,
+      "cName": "hxc_gc_roots",
+      "semanticKey": "15:runtime-private|208:ordinary:195:6:method|28:ordinary:16:translation-unit|2:18:ClassLayoutFixture11:asEmptyBase|1:104:class-reference:nullable:instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a|0:|0:|4:8:compiler2:gc39:function.ClassLayoutFixture.asEmptyBase5:roots|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:18:ClassLayoutFixture11:asEmptyBase|1:104:class-reference:nullable:instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "runtime-private",
+      "specializationArguments": [],
+      "baseName": "hxc_gc_roots",
+      "sourceSymbol": "compiler.gc.function.ClassLayoutFixture.asEmptyBase.roots#0"
     },
     {
       "overloadSignature": [],

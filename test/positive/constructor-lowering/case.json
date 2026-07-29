@@ -13,9 +13,11 @@
     "src/reflaxe/c/lowering/CBodyConstructor.hx",
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "test/constructor_lowering/fixtures/factory_return/Main.hx",
     "test/constructor_lowering/fixtures/positive/Main.hx",
     "test/constructor_lowering/fixtures/minimal/Main.hx",
     "test/constructor_lowering/fixtures/oracle/Main.hx",
+    "test/constructor_lowering/native/factory_return_header_cpp.cpp",
     "test/constructor_lowering/run.py"
   ],
   "runner": {

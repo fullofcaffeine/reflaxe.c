@@ -582,6 +582,23 @@ class CBodyClassRegistry {
 				registerManagedNames(value);
 	}
 
+	/**
+	 * Give every class reference crossing a function return stable storage.
+	 *
+	 * A caller may keep a returned object after the callee has finished. The C
+	 * implementation therefore cannot return a pointer to automatic storage in
+	 * the callee, even when the `new` expression first appears in a local after a
+	 * validation guard. This output-inert planning step marks the concrete class,
+	 * plus class references nested in admitted direct records or optionals, for
+	 * collector storage before any function body chooses stack versus heap
+	 * construction.
+	 *
+	 * The method changes only representation planning. HxcIR construction still
+	 * proves allocation, constructor order, exact roots, and return behavior.
+	 */
+	public function requireEscapingReturnClasses(type:CBodyValueType):Void
+		markCollectorClasses(type, []);
+
 	/** Mark every class reference reachable through one finite direct value. */
 	function markCollectorClasses(type:CBodyValueType, visitedEnums:Map<String, Bool>, ?visitedOwnedClasses:Map<String, Bool>):Bool {
 		final ownedClasses = visitedOwnedClasses == null ? new Map<String, Bool>() : visitedOwnedClasses;

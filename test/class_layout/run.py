@@ -386,13 +386,13 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise ClassLayoutFailure(f"{label} leaked a host path")
     if (
         hxcir.count(" kind=class ") != 5
-        or hxcir.count(' header=runtime("gc")') != 3
-        or hxcir.count(' representation=managed("gc") ') != 3
-        or hxcir.count(" header=none") != 2
-        or hxcir.count(" representation=direct ") != 2
+        or hxcir.count(' header=runtime("gc")') != 5
+        or hxcir.count(' representation=managed("gc") ') != 5
+        or " header=none" in hxcir
+        or " representation=direct " in hxcir
     ):
         raise ClassLayoutFailure(
-            "HxcIR lost the precise managed retained graph or unrelated direct classes"
+            "HxcIR lost the stable managed representation required by returned classes"
         )
     if "#include <hxrt/gc.h>" not in header:
         raise ClassLayoutFailure("managed class header omitted its exact GC contract")
@@ -844,7 +844,7 @@ def generated_files(root: Path) -> set[str]:
 
 def require_compile_success(result: subprocess.CompletedProcess[str], label: str) -> None:
     expected_runtime_summary = (
-        "HXC2001: hxrt selected 5 dependency-closed feature(s) for 30 typed "
+        "HXC2001: hxrt selected 5 dependency-closed feature(s) for 41 typed "
         "runtime root(s): runtime-base, status, alloc, object, gc."
     )
     if (

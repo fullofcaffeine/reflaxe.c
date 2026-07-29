@@ -1078,6 +1078,15 @@ class CBodyAggregateRegistry {
 	public function completeClassLayouts():Void
 		classRegistry.completeLayouts();
 
+	/**
+	 * Select stable collector storage for class references returned to a caller.
+	 *
+	 * Function signatures are prepared before body lowering, so this pass can
+	 * settle the representation once for every producer and consumer.
+	 */
+	public function requireEscapingReturnClasses(type:CBodyValueType):Void
+		classRegistry.requireEscapingReturnClasses(type);
+
 	/** Settle the selective GC graph before any function chooses stack or heap construction. */
 	public function completeManagedRepresentations(interfaceImplementations:Array<CBodyInterfaceImplementation>):Void
 		classRegistry.completeManagedRepresentations(arrayRegistry.canonicalArrays(), enumRegistry.canonicalEnums(), interfaceImplementations);

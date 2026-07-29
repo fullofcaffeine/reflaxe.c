@@ -37,8 +37,8 @@ ENUM_PARAMETER = FIXTURES / "enum_parameter"
 ENUM_PAYLOAD_PARAMETER = FIXTURES / "enum_payload_parameter"
 DIRECT_RECEIVER = FIXTURES / "direct_receiver"
 DIRECT_RECEIVER_FAILURE = FIXTURES / "direct_receiver_failure"
-DIRECT_RECEIVER_ESCAPE = FIXTURES / "direct_receiver_escape"
 OWNED_FALLIBLE = FIXTURES / "owned_fallible"
+FACTORY_RETURN = FIXTURES / "factory_return"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -79,19 +79,13 @@ NEGATIVE_CASES = {
         "TCall(owned-class-borrow-escape:instance-call-argument:0,"
         "target=method.BorrowedForwardSink.consume)"
     ),
-    "borrowed_return": (
-        "TNew(stack-reference-escape:static-call-argument:0,"
-        "target=function.Main.expose)"
-    ),
     "conditional": "TNew(stack-construction-requires-unconditional-entry-block)",
     "cycle": "TNew(constructor-cycle:CycleA -> CycleB -> CycleA)",
     "default_callable": (
         "TFunction(constructor-argument:callback):"
         "payload-requires-direct-unmanaged-value:direct-function:()->int32_t"
     ),
-    "direct_receiver_escape": "TVar(escaped:owned-class-borrow-escape)",
     "escape_alias": "TNew(stack-reference-escape:assignment)",
-    "escape_return": "TNew(stack-reference-escape:return)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
     "instance_parameter": "function-exit:unowned-fresh-managed-enum-value",
     "recursive_enum_parameter": "function-exit:unowned-fresh-managed-enum-value",
@@ -102,7 +96,6 @@ NEGATIVE_CASES = {
     "array_parameter_escape": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
     "owned_mutable": "field:child:owned-class-field-must-be-final",
-    "owned_return": "TVar(escaped:owned-class-borrow-escape)",
 }
 REQUIRED_NATIVE_COVERAGE = frozenset(
     {
@@ -218,6 +211,13 @@ OWNED_FALLIBLE_NATIVE_COVERAGE = frozenset(
         "constructor-managed-parent-retained-after-call",
         "constructor-self-reference-cycle",
         "constructor-self-reference-trace",
+    }
+)
+FACTORY_RETURN_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-validated-factory-guard",
+        "constructor-returned-class-stable-storage",
+        "constructor-returned-class-gc",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -873,6 +873,29 @@ def validate_owned_fallible_project(output: Path) -> None:
     ):
         raise ConstructorLoweringFailure(
             "fallible inline child lost its dependency-closed Array/GC runtime plan"
+        )
+
+
+def validate_factory_return_project(output: Path) -> None:
+    """Prove a guarded factory returns collector storage, not a stack address."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    features = plan.get("features")
+    if (
+        "hxc_gc_allocate(" not in source
+        or "ValidatedValue" not in source
+        or "hxc_Main_create(" not in source
+        or "hxc_Main_forward(" not in source
+        or "hxc_ValueContainer_expose(" not in source
+        or not isinstance(features, list)
+        or "gc" not in features
+        or "object" not in features
+    ):
+        raise ConstructorLoweringFailure(
+            "validated factory lost its guarded collector-owned return"
         )
 
 
@@ -1928,6 +1951,13 @@ def check_native(
                 coverage=OWNED_FALLIBLE_NATIVE_COVERAGE,
                 validate_project=validate_owned_fallible_project,
             )
+            factory_return_projects = render_parameter_projects(
+                fixture_root,
+                fixture=FACTORY_RETURN,
+                slug="factory-return",
+                coverage=FACTORY_RETURN_NATIVE_COVERAGE,
+                validate_project=validate_factory_return_project,
+            )
             parameter_projects = (
                 record_projects
                 + interface_projects
@@ -1940,6 +1970,7 @@ def check_native(
                 + direct_receiver_projects
                 + (direct_receiver_failure_project,)
                 + owned_fallible_projects
+                + factory_return_projects
             )
             projects.extend(parameter_projects)
         ordered_projects = tuple(
@@ -1970,6 +2001,7 @@ def check_native(
                     | DIRECT_RECEIVER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
                     | OWNED_FALLIBLE_NATIVE_COVERAGE
+                    | FACTORY_RETURN_NATIVE_COVERAGE
                 )
             validate_report(native_report, required_coverage=required_coverage)
             encoded = report_json(native_report, compact=True)
@@ -2018,6 +2050,7 @@ def check_native(
                     | DIRECT_RECEIVER_NATIVE_COVERAGE
                     | DIRECT_RECEIVER_FAILURE_NATIVE_COVERAGE
                     | OWNED_FALLIBLE_NATIVE_COVERAGE
+                    | FACTORY_RETURN_NATIVE_COVERAGE
                 ),
             )
         check_cpp_header(
@@ -2087,6 +2120,7 @@ def check_eval_oracle() -> None:
         ("enum-parameter oracle", ENUM_PARAMETER),
         ("enum-payload-parameter oracle", ENUM_PAYLOAD_PARAMETER),
         ("fallible-inline-child oracle", OWNED_FALLIBLE),
+        ("validated-factory oracle", FACTORY_RETURN),
     ):
         result = subprocess.run(
             [
@@ -2110,6 +2144,100 @@ def check_eval_oracle() -> None:
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
     check_direct_receiver_oracles()
+
+
+def check_factory_return_only(*, requested_toolchain: str) -> None:
+    """Run the guarded factory's complete lifetime slice without older fixtures."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(FACTORY_RETURN),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe validated-factory oracle failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-factory-return-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        projects = render_parameter_projects(
+            fixture_root,
+            fixture=FACTORY_RETURN,
+            slug="factory-return",
+            coverage=FACTORY_RETURN_NATIVE_COVERAGE,
+            validate_project=validate_factory_return_project,
+        )
+        ordered_projects = tuple(
+            sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
+        )
+        required_coverage = FACTORY_RETURN_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-factory-return-{optimization[1:].lower()}",
+                projects=ordered_projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required_coverage)
+
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in ordered_projects
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-factory-return-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required_coverage)
+
+        check_cpp_consumers(
+            root / "cxx-build",
+            requested_toolchain=requested_toolchain,
+            consumers=(
+                (
+                    "factory-return",
+                    (
+                        fixture_root / "factory-return-split/include",
+                        fixture_root / "factory-return-split/runtime/include",
+                    ),
+                    NATIVE / "factory_return_header_cpp.cpp",
+                ),
+            ),
+        )
 
 
 def check_direct_receiver_only(*, requested_toolchain: str) -> None:
@@ -2189,19 +2317,6 @@ def check_direct_receiver_only(*, requested_toolchain: str) -> None:
                 ),
             ),
         )
-        escape_output = root / "direct-receiver-escape"
-        escape = custom_target(DIRECT_RECEIVER_ESCAPE, escape_output)
-        combined = escape.stdout + escape.stderr
-        if (
-            escape.returncode == 0
-            or "HXC1001" not in combined
-            or "TVar(escaped:owned-class-borrow-escape)" not in combined
-            or generated_files(escape_output)
-        ):
-            raise ConstructorLoweringFailure(
-                "direct receiver escape did not fail closed with no output\n"
-                f"stdout:\n{escape.stdout}\nstderr:\n{escape.stderr}"
-            )
 
 
 def check_owned_fallible_only(*, requested_toolchain: str) -> None:
@@ -2322,6 +2437,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--direct-receiver-only", action="store_true")
     parser.add_argument("--owned-fallible-only", action="store_true")
+    parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
 
@@ -2345,7 +2461,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             check_direct_receiver_only(requested_toolchain=args.toolchain)
             print(
                 "constructor-lowering: OK: direct fresh receiver Eval/C11/C++17/"
-                "sanitizer/determinism/escape matrix passed"
+                "sanitizer/determinism matrix passed"
             )
             return 0
         if args.owned_fallible_only:
@@ -2353,6 +2469,13 @@ def main(arguments: Iterable[str] = ()) -> int:
             print(
                 "constructor-lowering: OK: fallible inline child and retained "
                 "collector parent layout/determinism/native/sanitizer matrix passed"
+            )
+            return 0
+        if args.factory_return_only:
+            check_factory_return_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: validated factory Eval/C11/C++17/"
+                "sanitizer/determinism/managed-lifetime matrix passed"
             )
             return 0
         if args.negative_only:

@@ -13,6 +13,10 @@ extern struct hxc_gc hxc_program_gc;
 
 extern struct hxc_gc_thread hxc_program_gc_thread;
 
+extern const struct hxc_type_descriptor hxc_EmptyBase_descriptor;
+
+extern const struct hxc_type_descriptor hxc_EmptyLeaf_descriptor;
+
 extern const struct hxc_type_descriptor hxc_MiddleRecord_descriptor;
 
 extern const struct hxc_type_descriptor hxc_LeafRecord_descriptor;

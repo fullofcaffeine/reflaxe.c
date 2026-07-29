@@ -1,12 +1,13 @@
 # Bounded constructor lowering
 
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
-complete object lifetime is proven inside one generated C function. The
-compiler lowers the real pinned-Haxe `TypedExpr` through schema-21 HxcIR and
-structural C AST nodes. The direct scalar/class slice does not allocate or
-select `hxrt`; an independently admitted managed parameter or field selects
-only its dependency-closed runtime features. No path uses C++ constructor
-syntax or establishes a public C ABI.
+complete object lifetime is proven. The compiler lowers the real pinned-Haxe
+`TypedExpr` through schema-21 HxcIR and structural C AST nodes. A class whose
+object stays inside one function can remain allocation-free. A class reference
+that crosses a function return or is retained by another object instead selects
+the dependency-closed object and garbage-collector runtime features needed for
+stable storage. No path uses C++ constructor syntax or establishes a public C
+ABI.
 
 This is deliberately a useful but narrow construction model. A direct local
 initializer such as `var item = new Item(7)` receives automatic C storage when
@@ -16,23 +17,27 @@ escape that function. A nonescaping parent may also own a child created by a
 The child is stored directly inside the parent's C struct, so it has a stable
 address for the complete parent lifetime without a heap allocation.
 
-Returning a local or owned-child reference, assigning it into longer-lived
-storage, constructing a local conditionally, or storing `this` into a field
-fails with source-positioned `HXC1001`. One same-function automatic alias is
-safe: `var second = first` merely names the same stack object, and Haxe may
-generate the equivalent `_this` alias when it inlines a method. The compiler
-keeps that alias marked as stack-backed, so returning, storing, throwing, or
-forwarding it still fails rather than losing the original lifetime.
+Assigning an otherwise local reference into longer-lived storage, conditionally
+constructing an object that still uses automatic storage, or storing `this`
+into an unsupported field fails with
+source-positioned `HXC1001`. One same-function automatic alias is safe:
+`var second = first` merely names the same stack object, and Haxe may generate
+the equivalent `_this` alias when it inlines a method. The compiler keeps that
+alias marked as stack-backed, so storing, throwing, or forwarding it beyond a
+proved call still fails rather than losing the original lifetime.
 
-A local or owned child may also be passed to a known ordinary Haxe function:
-the callee receives a checked caller-owned parameter, which means it may read
-and mutate the object only for that call. This separate parameter-borrow slice
-still forbids creating another local alias inside the callee, as well as
-returning, storing, throwing, capturing in a constructor, or forwarding the
-borrow to an unproven call. HxcIR records function parameters as
-`ownership=borrowed-class` and validates their no-escape rule before C is
-chosen. The generated private C function receives an ordinary pointer; neither
-form adds allocation or reference-counting machinery.
+A local or owned child may also be passed to a known ordinary Haxe function.
+When that concrete class has no longer-lived use anywhere in the reachable
+program, the callee receives a checked caller-owned parameter: it may read and
+mutate the object only for that call. This parameter-borrow slice still forbids
+creating another local alias inside the callee, as well as storing, throwing,
+capturing in a constructor, or forwarding the borrow to an unproven call.
+HxcIR records such function parameters as `ownership=borrowed-class` and
+validates their no-escape rule before C is chosen. If a reachable signature
+returns that class, whole-program planning instead selects the managed
+representation described below, so passing and returning the stable pointer is
+safe. The generated private C function still receives an ordinary typed
+pointer in either case.
 
 An owned-child field must be `final` and have the exact concrete class type.
 Its constructor may fail: the generated call propagates the status through the
@@ -47,6 +52,44 @@ that pointer from the owner. This is the conservative correct baseline for an
 object that can outlive its creating call; later escape analysis may recover
 inline storage only when it proves the alias never exceeds the parent's
 lifetime.
+
+### Class references returned to a caller
+
+A returned object must remain valid after the function that created it has
+finished. In C terms, that means a factory cannot return the address of an
+ordinary local variable: the local's storage ends when the function returns,
+so the pointer would immediately dangle.
+
+Haxe makes this lifetime visible in the function signature:
+
+```haxe
+static function create(value:Int):Null<ValidatedValue> {
+  if (value <= 0)
+    return null;
+  return new ValidatedValue(value);
+}
+```
+
+Before lowering any body, haxe.c inspects every prepared return type. When a
+return can carry a class reference—including through an admitted nullable or
+closed record—it promotes that concrete class to stable collector storage.
+The guarded `new` can then run only on the successful path, and generated C
+returns a typed pointer owned by the collector instead of the address of a
+callee-local struct. The caller records an exact root while it keeps the
+result, so later collections cannot reclaim the object too early.
+
+The representation choice is currently conservative for the whole concrete
+class. If one reachable function returns `ValidatedValue`, other reachable
+instances of that same class also use the managed representation. This keeps
+all producers and consumers on one C layout and is correct before more precise
+per-allocation escape analysis exists. It may allocate more instances than a
+future optimizer would need to; that is a performance opportunity, not a
+reason to expose an unsafe pointer.
+
+Passing an already managed instance through a helper preserves the same object
+identity. It does not copy the object or create a second owner. HxcIR still
+validates allocation, construction order, roots, and each return edge before
+the compiler selects C syntax.
 
 ## Discovery and order
 
@@ -451,9 +494,9 @@ cleanup exactly enough for the bounded no-catch graph.
 
 The compiler reports exact `HXC1001` diagnostics and emits no project for:
 
-- an assigned or returned stack reference, or an automatic alias that is later
-  stored, thrown, captured, or forwarded beyond a known borrow contract;
-- an assigned, reassigned, or returned owned-child reference, or a bounded
+- an assigned stack reference, or an automatic alias that is later stored,
+  thrown, captured, or forwarded beyond a known borrow contract;
+- an assigned or reassigned owned-child reference, or a bounded
   alias that later outlives or becomes independent from its parent;
 - a mutable owned-child field or a mismatched declared child type;
 - conditional or otherwise non-entry local construction;
@@ -538,8 +581,11 @@ warm compiler-server reuse; strict GCC and Clang at `-O0` and `-O2`; C++17
 header consumption; and sanitizer execution. `direct_receiver_failure` proves
 that a constructor which throws after retaining its Array field releases both
 that field and the caller's fresh argument owner before the fail-closed abort.
-`direct_receiver_escape` keeps a child borrowed through the temporary parent
-from becoming an independent local. The revised
+`factory_return` proves a validated `Null<Class>` factory, class-reference
+pass-through, and a child returned from a temporary parent across Eval,
+split/package/unity output, reversed discovery, warm compiler-server reuse,
+strict C11, C++17 header consumption, O0/O2, allocation pressure, and
+sanitizers. The revised
 `instance_parameter` negative reaches the more precise
 `function-exit:unowned-fresh-managed-enum-value` boundary: the constructor can
 read its admitted payload enum, but the caller cannot yet transfer or release
@@ -554,7 +600,7 @@ inner temporary, empty-constructor elision, a same-function stack alias, and a
 parent with an inline owned child whose constructor, stable identity, and later mutation are observed. It
 compares Eval with repeated, reversed-input, portable, metal, and explicit
 runtime-none production builds. Negative fixtures keep child reassignment,
-return, storing a bounded alias, unsafe borrow forwarding, constructor capture,
+storing a bounded alias, unsafe borrow forwarding, constructor capture,
 and recursive direct layout fail-closed. The promoted `owned_fallible` fixture
 keeps a fallible child inline inside a collector-managed parent, proves
 recursive cleanup of the child's Array field, and retains a self-reference

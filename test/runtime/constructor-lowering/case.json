@@ -13,7 +13,9 @@
     "scripts/test/c_fixture_harness.py",
     "test/constructor_lowering/fixtures/default_runtime/Main.hx",
     "test/constructor_lowering/fixtures/failure_runtime/Main.hx",
+    "test/constructor_lowering/fixtures/factory_return/Main.hx",
     "test/constructor_lowering/native/constructor_header_cpp.cpp",
+    "test/constructor_lowering/native/factory_return_header_cpp.cpp",
     "test/constructor_lowering/expected/program.h",
     "test/constructor_lowering/expected/program.c",
     "test/constructor_lowering/run.py"

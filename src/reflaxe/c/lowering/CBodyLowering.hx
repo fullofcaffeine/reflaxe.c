@@ -454,6 +454,12 @@ class CBodyLowering {
 		final representationTimer = CPhaseTiming.startDetail(CDTHxcIRRepresentationPlanning);
 		for (builder in builders)
 			builder.discoverManagedRepresentations();
+		// A returned class outlives its callee regardless of where its constructor
+		// appears in that body. Mark these signature-proven escape boundaries before
+		// the fixed point so a factory may validate input, allocate the object, and
+		// return it without ever exposing a pointer to automatic C storage.
+		for (fn in prepared)
+			aggregateRegistry.requireEscapingReturnClasses(fn.returnMapping);
 		final interfaceImplementations:Array<CBodyInterfaceImplementation> = [];
 		for (table in preparedDispatch.tables) {
 			final interfaceValue = table.layout.rootInterface;
