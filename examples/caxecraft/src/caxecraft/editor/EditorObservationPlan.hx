@@ -18,6 +18,7 @@ import caxecraft.scenario.Scenario;
 /** Return the semantic identities one accepted command may change. */
 function changesFor(command:EditorCommand):Array<EditorChangeId> {
 	return switch command {
+		case SetTitle(_): [ChangedTitle];
 		case ResizeWorld(_): [ChangedWorldShape];
 		case SetPaletteEntry(code, _): [ChangedPalette(code)];
 		case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillSelection(_): [ChangedTerrain];
@@ -213,6 +214,11 @@ private function sameChange(left:EditorChangeId, right:EditorChangeId):Bool {
 		case ChangedDocument:
 			switch right {
 				case ChangedDocument: true;
+				case _: false;
+			}
+		case ChangedTitle:
+			switch right {
+				case ChangedTitle: true;
 				case _: false;
 			}
 		case ChangedWorldShape:

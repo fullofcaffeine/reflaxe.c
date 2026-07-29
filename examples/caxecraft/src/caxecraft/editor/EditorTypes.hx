@@ -16,6 +16,7 @@ import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioTag;
+import caxecraft.scenario.ScenarioText;
 import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
 import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
@@ -33,6 +34,15 @@ typedef EditorSettings = {
 
 /** The editor's closed, renderer-independent command vocabulary. */
 enum EditorCommand {
+	/**
+		Replace the authored scenario title through the normal history boundary.
+
+		The payload remains `ScenarioText`, so a text editor or later
+		localization tool can preserve either a literal title or a message
+		reference instead of flattening both forms into display text.
+	**/
+	SetTitle(title:ScenarioText);
+
 	ResizeWorld(size:VoxelSize);
 	SetPaletteEntry(code:Int, blockType:ContentId);
 	PaintVoxel(point:VoxelPoint, paletteCode:Int);
@@ -63,6 +73,7 @@ enum EditorCommand {
 
 /** Stable command groups used by history, UI labels, and acceptance traces. */
 enum EditorCommandFamily {
+	DocumentMetadata;
 	WorldShape;
 	Voxel;
 	Selection;
@@ -88,6 +99,7 @@ enum EditorCommandFamily {
 **/
 enum EditorChangeId {
 	ChangedDocument;
+	ChangedTitle;
 	ChangedWorldShape;
 	ChangedTerrain;
 	ChangedPalette(code:Int);
@@ -175,6 +187,7 @@ enum EditorError {
 	NestedChoiceIsNotRepresentable;
 	DraftWorldIsNotEditable;
 	NotEditing;
+	InvalidTitle;
 	InvalidWorldSize(size:VoxelSize);
 	PointOutsideWorld(point:VoxelPoint);
 	BoundsOutsideWorld(bounds:VoxelBounds);

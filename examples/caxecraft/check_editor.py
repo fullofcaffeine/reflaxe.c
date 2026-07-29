@@ -23,9 +23,9 @@ from run import (  # noqa: E402
 )
 
 EXPECTED_TRACE = (
-    "caxemap-editor: 22 command round trips, 42 protocol checks, 12 2D checks, "
-    "16 3D checks, 1894 canonical bytes; bounded history/test-play/recovery; "
-    "trace=-1312016295\n"
+    "caxemap-editor: 23 command round trips, 50 protocol checks, 12 2D checks, "
+    "16 3D checks, 1890 canonical bytes; bounded history/test-play/recovery; "
+    "trace=150554559\n"
 )
 FORBIDDEN_EDITOR_TEXT = (
     re.compile(r"#if\b"),

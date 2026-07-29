@@ -86,11 +86,12 @@ final class CaxecraftEditorScreen {
 	final toolList:GuiListViewState;
 
 	/**
-	 * Owns the visible draft-name text without claiming persistence support.
+	 * Owns the temporary native editing bytes for the authored scenario title.
 	 *
-	 * This first field proves safe native editing and localization-aware layout.
-	 * It deliberately does not rename the CAXEMAP yet: a later typed session
-	 * command must make that change undoable, validated, and serializable.
+	 * Raygui edits this buffer during one frame, but `EditorSession` remains the
+	 * document owner. Leaving edit mode submits one revision-checked `SetTitle`
+	 * command, so validation, canonical CAXEMAP output, undo, and redo all see
+	 * the same change. Rejected input is replaced with the accepted draft title.
 	 */
 	final worldName:Null<GuiTextBoxState>;
 
@@ -122,9 +123,6 @@ final class CaxecraftEditorScreen {
 		if (button(buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorNewWorld))) {
 			session = openNewWorld();
 			notice = Ready;
-			final name = worldName;
-			if (name != null)
-				name.clear();
 			refreshProjection(true);
 		}
 		buttonLeft += buttonWidth + buttonGap;
@@ -155,8 +153,11 @@ final class CaxecraftEditorScreen {
 		Raygui.Label(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 216.0, sidebarWidth - 32.0, 24.0),
 			UiCatalog.text(locale, UiMessage.EditorName));
 		final name = worldName;
-		if (name != null)
-			name.draw(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 242.0, sidebarWidth - 32.0, 32.0));
+		if (name != null) {
+			final result = name.draw(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 242.0, sidebarWidth - 32.0, 32.0));
+			if (result.has(GuiResult.Pressed) && !name.isEditing())
+				commitWorldName(name.text());
+		}
 		drawWorldViewport(48, 144, width - sidebarWidth - 112, height - 230);
 
 		final status = switch notice {
@@ -229,6 +230,36 @@ final class CaxecraftEditorScreen {
 			case TestPlayStarted: Testing;
 			case TestPlayRejected(_) | TestPlayBlocked(_): Invalid;
 		};
+	}
+
+	/**
+		Commit the temporary text-box value through the shared editor model.
+
+		This is the boundary between presentation state and authored content:
+		the screen proposes one literal title, while `EditorSession` decides
+		whether it becomes canonical history. Every result resynchronizes the
+		text field from the accepted draft so rejected or undone text cannot
+		survive as a hidden second document.
+	**/
+	function commitWorldName(value:String):Bool {
+		final current = session;
+		if (current == null) {
+			notice = Invalid;
+			return false;
+		}
+		final accepted = switch current.mutate({
+			baseRevision: current.revision(),
+			mutation: Apply(SetTitle(ScenarioText.Literal(value)))
+		}) {
+			case MutationApplied(_, _, _, _, _) | MutationUnchanged(_, _):
+				notice = Ready;
+				true;
+			case MutationRejected(_, _):
+				notice = Invalid;
+				false;
+		};
+		refreshProjection();
+		return accepted;
 	}
 
 	/**
@@ -398,6 +429,7 @@ final class CaxecraftEditorScreen {
 			return;
 		}
 		final draft = current.draftSnapshot();
+		syncWorldName(draft.title);
 		final previous = projection;
 		projection = projectWorld(draft.world);
 		selection = current.selectedBounds();
@@ -411,7 +443,41 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
+	/**
+		Copy an authored literal title into Raygui's temporary editing buffer.
+
+		Message-backed titles keep their localization identity in the document.
+		This first text field edits only literal titles; a later localization
+		panel can resolve and edit message catalogs without replacing a message
+		reference with whichever language happened to be displayed.
+	**/
+	function syncWorldName(title:ScenarioText):Void {
+		final name = worldName;
+		if (name == null)
+			return;
+		switch title {
+			case Literal(value):
+				name.replace(value);
+			case Message(_):
+		}
+	}
+
 	#if caxecraft_pilot
+	/**
+	 * Commit one deterministic title through the production text-field path.
+	 *
+	 * The graphical pilot bypasses only operating-system keyboard delivery. It
+	 * still writes the owned Raygui buffer and submits the same typed session
+	 * command that an Enter key or outside click confirms.
+	 */
+	public function applyPilotWorldName(value:String):Bool {
+		final name = worldName;
+		if (name == null || !name.replace(value))
+			return false;
+		name.setEditing(false);
+		return commitWorldName(name.text());
+	}
+
 	/**
 	 * Submit one deterministic pilot gesture through the production tool path.
 	 *

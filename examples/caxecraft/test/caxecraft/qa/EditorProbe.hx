@@ -92,11 +92,12 @@ final class EditorProbe {
 
 	static function main():Void {
 		checkActionPalette();
-		final protocolChecks = checkRevisionedProtocol();
+		final protocolChecks = checkRevisionedProtocol() + checkTitleProtocol();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
+		commandChecks += roundTrip(session, SetTitle(Literal("Ivvy's workshop")), DocumentMetadata);
 		commandChecks += roundTrip(session, ResizeWorld({width: 4, height: 2, depth: 4}), WorldShape);
 		commandChecks += roundTrip(session, PutFluid({
 			id: WATER_SOURCE,
@@ -413,6 +414,57 @@ final class EditorProbe {
 		return 42;
 	}
 
+	/**
+	 * Prove a visible title edit is canonical, reversible, and revision-safe.
+	 *
+	 * The native text box owns only temporary bytes. This renderer-free check
+	 * exercises the `EditorSession` command it confirms, including the exact
+	 * change identity later used by visual and automation clients.
+	 */
+	static function checkTitleProtocol():Int {
+		final session = open(defaultEditorSettings());
+		final before = session.canonicalDraft();
+		switch session.mutate({baseRevision: 0, mutation: Apply(SetTitle(Literal("Bosque de Ivvy")))}) {
+			case MutationApplied(families, changes, 1, 1, 0):
+				require(families.length == 1 && families[0] == DocumentMetadata, "title mutation lost its document-metadata family");
+				require(changes.length == 1 && isTitleChange(changes[0]), "title mutation lost its stable changed-title identity");
+			case _:
+				throw "title mutation did not commit exactly once";
+		}
+		final renamed = session.canonicalDraft();
+		require(before.compare(renamed) != 0 && hasLiteralTitle(session.draftSnapshot(), "Bosque de Ivvy"),
+			"title mutation did not reach canonical CAXEMAP state");
+		switch session.mutate({baseRevision: 0, mutation: Apply(SetTitle(Literal("stale")))}) {
+			case MutationRejected(RevisionConflict(1, 0), 1):
+			case _:
+				throw "stale title mutation did not fail before changing the draft";
+		}
+		switch session.mutate({baseRevision: 1, mutation: Apply(SetTitle(Literal("")))}) {
+			case MutationRejected(InvalidTitle, 1):
+			case _:
+				throw "empty title mutation did not fail closed";
+		}
+		require(session.canonicalDraft().compare(renamed) == 0
+			&& session.undoDepth() == 1, "rejected title input changed canonical state or history");
+		switch session.mutate({baseRevision: 1, mutation: Undo}) {
+			case MutationApplied(families, changes, 2, 0, 1):
+				require(families.length == 1 && families[0] == DocumentMetadata && changes.length == 1 && isTitleChange(changes[0]),
+					"title undo lost its family or changed identity");
+			case _:
+				throw "title undo did not restore the original draft";
+		}
+		require(session.canonicalDraft().compare(before) == 0, "title undo changed unrelated canonical bytes");
+		switch session.mutate({baseRevision: 2, mutation: Redo}) {
+			case MutationApplied(families, changes, 3, 1, 0):
+				require(families.length == 1 && families[0] == DocumentMetadata && changes.length == 1 && isTitleChange(changes[0]),
+					"title redo lost its family or changed identity");
+			case _:
+				throw "title redo did not restore the accepted title";
+		}
+		require(session.canonicalDraft().compare(renamed) == 0, "title redo did not restore exact canonical bytes");
+		return 8;
+	}
+
 	static function expectedTreeNodes(scenario:Scenario):Int {
 		var localeRecords = 0;
 		switch scenario.messages {
@@ -469,6 +521,18 @@ final class EditorProbe {
 		return switch value {
 			case ChangedWorldShape: true;
 			case _: false;
+		};
+
+	static function isTitleChange(value:EditorChangeId):Bool
+		return switch value {
+			case ChangedTitle: true;
+			case _: false;
+		};
+
+	static function hasLiteralTitle(scenario:Scenario, expected:String):Bool
+		return switch scenario.title {
+			case Literal(value): value == expected;
+			case Message(_): false;
 		};
 
 	static function isPaletteChange(value:EditorChangeId, code:Int):Bool

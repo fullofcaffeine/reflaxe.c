@@ -15,6 +15,7 @@
       "runtime/src/array.c",
       "runtime/src/array_join.c",
       "runtime/src/bytes.c",
+      "runtime/src/bytes_string.c",
       "runtime/src/gc.c",
       "runtime/src/int_map.c",
       "runtime/src/object.c",
@@ -342,6 +343,7 @@
       "runtime/include/hxrt/array_join.h",
       "runtime/include/hxrt/base.h",
       "runtime/include/hxrt/bytes.h",
+      "runtime/include/hxrt/bytes_string.h",
       "runtime/include/hxrt/gc.h",
       "runtime/include/hxrt/int_map.h",
       "runtime/include/hxrt/object.h",
@@ -365,7 +367,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "cacaec56849378d5dab9b22927b14c6b7f31ce3b1ce8cabfe6810c5a2b5c4658",
+      "sha256": "17c4472fb0eaf6017ec3103e37540759a4ad44d19471511468ab5264ad38fc21",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -375,7 +377,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "87acd2eeec9d3893eeb71f15a040d72a672f7558c65cd2188e1cb6d21584d007",
+      "sha256": "a7b881050ddd5cc13533f81a080e4a579d715196fe5371a0352d7c0d46471b96",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -385,27 +387,27 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "4360a227393161b6810ae9d57416848650850e5116d9a52d48f0facca4028f6b",
+      "sha256": "1e165541a7d22247503dd943741cdc2bdd98612c60c31a110638158b67d0eb2e",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "4c6388083431c92802c793dd8804b1a87723ebfaa514dea54a2981fa910f8e8c",
+      "sha256": "8c24bc9cd742654ca3889dea5da10710496f1126d94c84ffbf91647abbb34024",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
     {
-      "sha256": "1a134646637ff3f5246ef8f13ba82fc8cb26028a54360e936012365df00de991",
+      "sha256": "804edea3a4cb5325854bdc084b15e839538021bf7acc8ac4c330c45e19c7a32d",
       "path": "hxc.stdlib-report.json",
       "kind": "stdlib-report"
     },
     {
-      "sha256": "693ad043ab4032447b1a7e3d0237482d028aafdc6497ba0fd411919e9acd5302",
+      "sha256": "affbd6c4c47025407fedbbb93a07ba9556494aab1bd9893eefda6a4eaec43b16",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "654f540ad780fccfa5b96b7a58d268438bee0383e83fd9310bca1207b070a15e",
+      "sha256": "70c8c3574ec068289a26c2495ad6c99b1cf1570e0a1cb448ac3b52e416253c0b",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -430,7 +432,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "94c64176fc68ee995215e2c2ca2a2ed5e9422f7ec3418e3df873e6cb54873268",
+      "sha256": "b4d7121803f092cafb72e000552fff2e946c99c207e737556b6c5e772fc27f29",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftEditorScreen.h",
       "kind": "private-header"
     },
@@ -645,7 +647,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "8cd423e188fdc7a7c9799b5336c3f6e61ec49d6ef0bfc2717b16b1bfa2aa4aef",
+      "sha256": "d0b11b93b29e1e6c43ef383d60cf2ce8ac4fb3a43d7f5b71590e64a6d3c29f7c",
       "path": "include/hxc/modules/caxecraft/editor/EditorCommandReducer.h",
       "kind": "private-header"
     },
@@ -685,7 +687,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "a15d7b0562af0afc36fe26ec1639127f4d68e7efc6c45d609f6f5fcd1917e3de",
+      "sha256": "0b6ac0b75a183669b646962558fc6d4fadc03265ac9c053ad03aaa72c232a4e9",
       "path": "include/hxc/modules/caxecraft/editor/EditorTypes.h",
       "kind": "private-header"
     },
@@ -980,7 +982,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "484707f1746e0b6f49b8f3bf083c7a52713223471577dfd34350a8e38cf8b1f1",
+      "sha256": "6022b1b022f5aec5f1bcbb6a5073dbe1a6d54bbc4d6d58f01e2bde2e7554bef5",
       "path": "include/hxc/modules/raygui/GuiTextBoxState.h",
       "kind": "private-header"
     },
@@ -1040,7 +1042,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "cc86f5f8b6c346d513c8df3f9b8ffb7494f711b821e1ca44ed011045a38c76e2",
+      "sha256": "f36eaf92f06abe3852611e4e6bcabbe02a8fa7e62318807f3baa2731447847a0",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1067,6 +1069,11 @@
     {
       "sha256": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d",
       "path": "runtime/include/hxrt/bytes.h",
+      "kind": "runtime-header"
+    },
+    {
+      "sha256": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40",
+      "path": "runtime/include/hxrt/bytes_string.h",
       "kind": "runtime-header"
     },
     {
@@ -1140,6 +1147,11 @@
       "kind": "runtime-source"
     },
     {
+      "sha256": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6",
+      "path": "runtime/src/bytes_string.c",
+      "kind": "runtime-source"
+    },
+    {
       "sha256": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc",
       "path": "runtime/src/gc.c",
       "kind": "runtime-source"
@@ -1180,7 +1192,7 @@
       "kind": "source"
     },
     {
-      "sha256": "ec43df8682198e2ebdc9941b3b2c6b63fc707aa8532baf8ae06ba3277c02a6f7",
+      "sha256": "122629729efc6a41e5b3d99002131aaf55a1e4cb74f68ee7bf1da13fc3990c38",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1205,7 +1217,7 @@
       "kind": "source"
     },
     {
-      "sha256": "071883500dba9ff159e06967d62b1c1c85721850f4338c33dbff625abe659bdc",
+      "sha256": "3d0b4eee7c30f5b7032c41c31f985e15e81a2d8f6a48912a4711a22c2eff8576",
       "path": "src/modules/caxecraft/app/CaxecraftEditorScreen.c",
       "kind": "source"
     },
@@ -1335,7 +1347,7 @@
       "kind": "source"
     },
     {
-      "sha256": "986857a1ecfbc985a12d5f847033c6deba2d89e707847f0d018795985fdb5199",
+      "sha256": "6895db0da5b2e135dd32d79a44072e32b91e0ff1dbc05b7b773a0daa69fcf36c",
       "path": "src/modules/caxecraft/editor/EditorCommandReducer.c",
       "kind": "source"
     },
@@ -1345,7 +1357,7 @@
       "kind": "source"
     },
     {
-      "sha256": "143a6d4aaea270e53b5dc5f0f8a2343d2baec97ec29b2950fc94ad5655a206f2",
+      "sha256": "e7df5db11b13c33029e4318d08c866c9f64d5b5c3bb3cc9bcce5ceb744f98a75",
       "path": "src/modules/caxecraft/editor/EditorObservationPlan.c",
       "kind": "source"
     },
@@ -1560,7 +1572,7 @@
       "kind": "source"
     },
     {
-      "sha256": "907cdac8a6123ba73dad4f15cbc1986497b70574c6d9d1389766696c542323de",
+      "sha256": "8eca8d585e70335443b8aa6cf3bb77b412d9f87afb4c245df28535e9d0a2627f",
       "path": "src/modules/raygui/GuiTextBoxState.c",
       "kind": "source"
     },

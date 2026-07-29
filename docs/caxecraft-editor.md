@@ -5,10 +5,12 @@ layer is implemented under `haxe_c-xge.19.5`. The first native Raylib/Raygui
 slice now presents the complete finite draft in a clipped perspective viewport,
 with a fly camera and typed voxel picking. The editor core also provides
 revision-checked mutations, bounded atomic command batches, and copy-owned
-observations for visual and future automation clients. It still edits layer
-zero only. Native map-file persistence, JSONL/MCP adapters, multi-layer
-controls, controller navigation, object gizmos, and the fuller child-friendly
-authoring experience remain separate work.
+observations for visual and future automation clients. Its World Name field now
+commits literal titles through that same typed command/history boundary. It
+still edits layer zero only. Native map-file persistence, localized
+message-title editing, JSONL/MCP adapters, multi-layer controls, controller
+navigation, object gizmos, and the fuller child-friendly authoring experience
+remain separate work.
 
 ## What this layer owns
 
@@ -27,6 +29,7 @@ An `EditorCommand` is a closed Haxe enum. Closed means the possible edit kinds
 are listed in the type rather than encoded as strings. Haxe can therefore make
 callers handle new command kinds intentionally. The first command set covers:
 
+- the authored scenario title, with a stable changed-title identity;
 - bounded world resize, palette entries, fluid sources, and initial fluid
   volumes;
 - single-voxel and bounded multi-voxel paint/erase plus selection fill;
@@ -310,12 +313,13 @@ python3 examples/caxecraft/play.py \
   --allow-network
 ```
 
-That pilot compiles the application through haxe.c, moves the production
-camera, submits typed Paint and Select gestures through
-`CaxecraftEditorScreen` and `EditorSession`, and observes exactly one terrain
-edit. Its framebuffer check requires the real toolbar and sidebar plus broad
-3D evidence: sky, a perspective ground plane, one solid voxel, and its distinct
-selection outline. It repeats semantic execution, captures the review frame,
-and exits within the bounded timeout. It proves this first perspective
-viewport slice, not native map-file save, multi-layer controls, controller
-navigation, or the complete planned visual event/cutscene editor.
+That pilot compiles the application through haxe.c, confirms one literal title,
+moves the production camera, and submits typed Paint and Select gestures
+through `CaxecraftEditorScreen` and `EditorSession`. The rejected-edit counter
+must stay zero, while the terrain counter observes exactly one paint. Its
+framebuffer check requires the real toolbar and sidebar plus broad 3D evidence:
+sky, a perspective ground plane, one solid voxel, and its distinct selection
+outline. It repeats semantic execution, captures the review frame, and exits
+within the bounded timeout. It proves this first perspective viewport and title
+slice, not native map-file save, localized-title editing, multi-layer controls,
+controller navigation, or the complete planned visual event/cutscene editor.

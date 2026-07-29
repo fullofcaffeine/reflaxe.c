@@ -178,6 +178,7 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "string",
     "array-join",
     "bytes",
+    "bytes-string",
     "object",
     "gc",
     "int-map",

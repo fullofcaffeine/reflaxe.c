@@ -495,12 +495,14 @@ final class CaxecraftApp {
 			final paused = screenPausesSimulation(screen);
 			final captured = screenCapturesPointer(screen);
 			#if caxecraft_pilot
-			// The editor pilot submits one typed gesture through the same screen
-			// method used by native pointer input. It bypasses only the operating
-			// system's keyboard and mouse delivery so repeated headless runs
-			// remain deterministic. Selecting the newly painted cell also gives
-			// the framebuffer oracle a specific 3D outline to recognize.
+			// The editor pilot submits a title and voxel gestures through the
+			// same screen methods used by native input. It bypasses only the
+			// operating system's keyboard and mouse delivery so repeated
+			// headless runs remain deterministic. Selecting the newly painted
+			// cell also gives the framebuffer oracle a specific 3D outline.
 			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
+				if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
+					rejectedEdits++;
 				if (!editorScreen.applyPilotCamera({
 					forward: 0.5,
 					right: -0.25,

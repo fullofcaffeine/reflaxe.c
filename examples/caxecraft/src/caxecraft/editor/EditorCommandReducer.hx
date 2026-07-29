@@ -23,6 +23,7 @@ import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioTag;
+import caxecraft.scenario.ScenarioText;
 import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
 import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
@@ -62,6 +63,8 @@ enum EditorReductionResult {
 @:noCompletion
 function apply(scenario:Scenario, selection:Null<VoxelBounds>, command:EditorCommand, settings:EditorSettings):EditorReductionResult {
 	return switch command {
+		case SetTitle(title):
+			setTitle(scenario, selection, title);
 		case ResizeWorld(size):
 			switch resizeWorld(scenario.world, size) {
 				case WorldRejected(error): ReductionRejected(error);
@@ -120,6 +123,26 @@ function apply(scenario:Scenario, selection:Null<VoxelBounds>, command:EditorCom
 		case RestoreLastPlayable:
 			ReductionRejected(NoPlayableScenario);
 	}
+}
+
+/**
+	Replace document metadata without exposing the mutable editor draft.
+
+	An empty literal would produce a blank name in the campaign tree and native
+	editor, so the command rejects it before a candidate snapshot is created.
+	Message-backed titles keep their typed message identity and are validated by
+	the ordinary scenario validator when the draft is prepared for play.
+**/
+private function setTitle(scenario:Scenario, selection:Null<VoxelBounds>, title:ScenarioText):EditorReductionResult {
+	switch title {
+		case Literal(text):
+			if (text.length == 0)
+				return ReductionRejected(InvalidTitle);
+		case Message(_):
+	}
+	return ready(copy(scenario, scenario.messages, title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives,
+		scenario.flow.rules),
+		selection, DocumentMetadata);
 }
 
 private function setDefaultLocale(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId):EditorReductionResult {
@@ -453,7 +476,7 @@ private inline function same(left:ScenarioId, right:ScenarioId):Bool
 	return left.text() == right.text();
 
 private function withWorld(scenario:Scenario, world:caxecraft.scenario.ScenarioWorld):Scenario
-	return copy(scenario, scenario.messages, world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
+	return copy(scenario, scenario.messages, scenario.title, world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
 
 private function withFluids(scenario:Scenario, fluids:Array<ScenarioFluid>):Scenario
 	return withWorld(scenario, {
@@ -464,21 +487,21 @@ private function withFluids(scenario:Scenario, fluids:Array<ScenarioFluid>):Scen
 	});
 
 private function withObjects(scenario:Scenario, objects:Array<ScenarioObject>):Scenario
-	return copy(scenario, scenario.messages, scenario.world, objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
+	return copy(scenario, scenario.messages, scenario.title, scenario.world, objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
 
 private function withDialogues(scenario:Scenario, dialogues:Array<ScenarioDialogue>):Scenario
-	return copy(scenario, scenario.messages, scenario.world, scenario.objects, dialogues, scenario.story.objectives, scenario.flow.rules);
+	return copy(scenario, scenario.messages, scenario.title, scenario.world, scenario.objects, dialogues, scenario.story.objectives, scenario.flow.rules);
 
 private function withObjectives(scenario:Scenario, objectives:Array<ScenarioObjective>):Scenario
-	return copy(scenario, scenario.messages, scenario.world, scenario.objects, scenario.story.dialogues, objectives, scenario.flow.rules);
+	return copy(scenario, scenario.messages, scenario.title, scenario.world, scenario.objects, scenario.story.dialogues, objectives, scenario.flow.rules);
 
 private function withRules(scenario:Scenario, rules:Array<FlowRule>):Scenario
-	return copy(scenario, scenario.messages, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, rules);
+	return copy(scenario, scenario.messages, scenario.title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, rules);
 
 private function withMessages(scenario:Scenario, messages:ScenarioMessages):Scenario
-	return copy(scenario, messages, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
+	return copy(scenario, messages, scenario.title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
 
-private function copy(scenario:Scenario, messages:ScenarioMessages, world:caxecraft.scenario.ScenarioWorld, objects:Array<ScenarioObject>,
+private function copy(scenario:Scenario, messages:ScenarioMessages, title:ScenarioText, world:caxecraft.scenario.ScenarioWorld, objects:Array<ScenarioObject>,
 		dialogues:Array<ScenarioDialogue>, objectives:Array<ScenarioObjective>, rules:Array<FlowRule>):Scenario {
 	return {
 		formatVersion: scenario.formatVersion,
@@ -487,7 +510,7 @@ private function copy(scenario:Scenario, messages:ScenarioMessages, world:caxecr
 		id: scenario.id,
 		assetPack: scenario.assetPack,
 		messages: messages,
-		title: scenario.title,
+		title: title,
 		mode: scenario.mode,
 		world: world,
 		objects: objects,

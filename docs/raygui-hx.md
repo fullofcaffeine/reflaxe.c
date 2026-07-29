@@ -155,12 +155,19 @@ Static-library order matters because raygui calls Raylib. The generated build
 manifest must request exactly that reviewed dependency set; the Python build
 driver does not silently add raygui when Haxe did not reach the binding.
 
-Caxecraft uses `GuiTextBoxState` for the localized World Name field in its
-native editor sidebar. That field is presentation state in this slice: it
-proves safe input and rendering, but it does not yet rename or save the
-CAXEMAP. Persistence must arrive through an `EditorSession` command so the
-change becomes validated, undoable, and serializable rather than bypassing the
-editor's state owner.
+Caxecraft uses `GuiTextBoxState` for the World Name field in its native editor
+sidebar. The buffer is temporary presentation state while the user types.
+Leaving edit mode submits a revision-checked `SetTitle` command to
+`EditorSession`; an accepted title therefore enters the same validation,
+canonical CAXEMAP, undo, redo, and changed-ID path as terrain or object edits.
+Rejected text is replaced with the title still owned by the draft.
+
+This first field edits literal titles. A title stored as a localization message
+reference keeps that reference unchanged rather than replacing it with the
+currently displayed language. Editing message-backed titles belongs in the
+planned localization panel, where every language can be changed deliberately.
+Writing the accepted canonical bytes to disk remains a separate planned
+persistence boundary.
 
 Run the rendered proof without opening a desktop window:
 
@@ -171,8 +178,9 @@ npm run caxecraft:play -- \
 ```
 
 The pilot compiles the real Haxe application through haxe.c, links the pinned
-Raygui/Raylib archives, applies one typed editor gesture, captures the presented
-framebuffer, and checks that the toolbar, canvas, sidebar text-entry region, and
-status bar are visible before bounded exit. This is executable evidence for the
-current shell and text field; it is not a claim that the planned 3D editor,
-persistence, logic tools, or campaign authoring are complete.
+Raygui/Raylib archives, confirms one title through the production text-field
+path, applies typed voxel gestures, captures the presented framebuffer, and
+checks that the toolbar, 3D viewport, sidebar text-entry region, and status bar
+are visible before bounded exit. This is executable evidence for the current
+shell, title command, and first 3D editing slice; it is not a claim that native
+file persistence, logic tools, or complete campaign authoring are finished.
