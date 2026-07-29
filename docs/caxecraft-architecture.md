@@ -50,20 +50,25 @@ Ivvy, saves, audio, cutscenes, the editor, and a later second player would
 multiply that coordination.
 
 The implemented slice now has a `Character` value that composes body, aquatics,
-capability, and vitals; a stable `EntityId`; a narrow `EntityStore`; and a
-`PlayerAgent` that adds only the local-player binding. `GameSession` owns that
-entity store, the water simulation, voxel storage, and authored-item flags. The
-water simulation owns its pending-work marks because they form one invariant
-with its scheduler counters; it borrows the session's shared world only during
-each operation. `CaxecraftApp` now requests revival, damage, recovery, and
-authored aquatic equipment through narrow semantic `GameSession` operations.
-The session reads and commits its owned character before returning a typed
-post-state, so another fixed tick cannot overwrite a change that existed only
-in an application variable. The aquatics fixture separately advances a
-non-player character with the same movement and damage functions. This proves
-the first composition and storage boundary, but not yet the later multi-actor
-controllers, inventory/equipment composition, content runtime, or complete
-read-only game view.
+capability, and vitals; a stable `EntityId`; a bounded multi-character
+`EntityStore`; and a `PlayerAgent` that adds only the local-player binding.
+`GameSession` owns that entity store, the water simulation, voxel storage, and
+authored-item flags. The store keeps player and generic non-player snapshots in
+deterministic insertion order, rejects invalid or duplicate IDs, and returns a
+separate Array when a caller asks to observe every character. `GameSession`
+can advance either kind of character through the same movement, water, and
+damage function, then commit the replacement under the same ID.
+
+The water simulation owns its pending-work marks because they form one
+invariant with its scheduler counters; it borrows the session's shared world
+only during each operation. `CaxecraftApp` now requests revival, damage,
+recovery, and authored aquatic equipment through narrow semantic `GameSession`
+operations. The session reads and commits its owned character before returning
+a typed post-state, so another fixed tick cannot overwrite a change that
+existed only in an application variable. This proves the shared storage and
+mechanics boundary. It does not yet prove content-driven actor construction,
+NPC/enemy controllers, an actor scheduler, inventory/equipment composition, or
+a complete read-only game view.
 
 ## The game loop
 
@@ -155,7 +160,10 @@ smaller owners, but they are no longer disguised as entry-point work.
 - `CaxecraftApp` owns Raylib startup/shutdown, presentation resources, input
   sampling, the outer game loop, the current screen, and one final
   `GameSession`. Haxe.c embeds that session directly in the generated
-  application struct; this ownership boundary adds no heap allocation.
+  application struct, so the session object itself needs no separate heap
+  allocation. Its ordinary Haxe actor Array still owns the managed resizable
+  buffer described below; direct embedding does not erase that independent
+  collection cost.
 - The shipped target-neutral `AppScreen` enum now represents the implemented
   `Title`, `Playing`, and `Paused` states instead of three mutable Boolean
   values. Its exhaustive functions own valid transitions and answer whether
@@ -275,21 +283,24 @@ inventory, equipment, and weapon rules must not be player-only implementations.
 Player-controlled, artificial-intelligence-controlled, companion, cutscene, and
 boss characters reuse the same primitive state and systems.
 
-A design sketch is:
+The implemented core currently uses this value-and-owner shape:
 
 ```haxe
-final class Character {
-	public final id:EntityId;
-	public var body:KinematicBodyState;
-	public var aquatics:AquaticState;
-	public var vitals:VitalsState;
-	public var inventory:InventoryState;
-	public var equipment:EquipmentState;
-	public var combat:CombatState;
+typedef Character = {
+	final id:EntityId;
+	final body:CharacterBody;
+	final aquatic:AquaticState;
+	final aquaticProfile:AquaticProfile;
+	final vitals:VitalsState;
 }
 
 typedef PlayerAgent = {
 	final characterId:EntityId;
+}
+
+final class EntityStore {
+	final characters:Array<Character>;
+	// Validated operations read or replace by EntityId.
 }
 ```
 
@@ -300,7 +311,9 @@ model to an artificial-intelligence, dialogue, companion, or scripted
 controller. Empty equipment, a disabled combat profile, water immunity, or no
 usable inventory are ordinary validated capability states, not reasons to
 create another movement, weapon, life, or water implementation. The exact
-component names and storage are earned by vertical migrations.
+component names and storage are earned by vertical migrations. Inventory,
+equipment, and combat therefore remain separate current systems rather than
+appearing in this example as if their actor migration had shipped.
 
 The shipped `PlayerAgent` is deliberately an immutable typedef because it only
 names the controlled character. Controller assignment, input buffering, and

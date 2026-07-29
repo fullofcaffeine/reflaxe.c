@@ -3,6 +3,7 @@ package caxecraft.qa;
 import caxecraft.domain.AquaticProfile;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.Character.applyAttack as applyCharacterAttack;
+import caxecraft.domain.Character.empty as emptyCharacter;
 import caxecraft.domain.Character.isValid as isValidCharacter;
 import caxecraft.domain.Character.start as startCharacter;
 import caxecraft.domain.Character.step as stepCharacter;
@@ -183,26 +184,24 @@ function selfCheck():Int {
 /**
 	Prove player and non-player controllers share one character implementation.
 
-	The two stores deliberately begin with equal component state but different
-	stable IDs. Equal intents must produce equal movement, water, and health; the
-	player binding contains only the local ID and cannot replace the NPC slot.
+	One store deliberately begins with equal component state but different stable
+	IDs. Equal intents must produce equal movement, water, and health; the player
+	binding contains only the local ID and cannot replace the NPC snapshot.
 **/
 private function sharedCharacterCheck(cells:WorldView, capability:AquaticProfile):Int {
-	final localStore = new EntityStore();
-	final npcStore = new EntityStore();
+	final store = new EntityStore();
 	final localId = EntityId.fromValidatedStorageCode(1);
 	final npcId = EntityId.fromValidatedStorageCode(2);
 	final localAgent = bindPlayer(localId);
 	final startBody = createPlayer(8.5, 1.2, 8.5);
-	if (!localStore.put(startCharacter(localId, startBody, capability, 6))
-		|| !npcStore.put(startCharacter(npcId, startBody, capability, 6)))
+	if (!store.put(startCharacter(localId, startBody, capability, 6)) || !store.put(startCharacter(npcId, startBody, capability, 6)))
 		return 1;
-	if (!localStore.contains(localAgent.characterId) || npcStore.contains(localAgent.characterId))
+	if (!store.contains(localAgent.characterId) || !store.contains(npcId) || store.count() != 2)
 		return 2;
 
 	final intent = aquaticInput(0.5, -0.25, true, false);
-	final localStep = stepCharacter(cells, localStore.read(localAgent.characterId), intent, CharacterDamagePolicy.Survival);
-	final npcStep = stepCharacter(cells, npcStore.read(npcId), intent, CharacterDamagePolicy.Survival);
+	final localStep = stepCharacter(cells, store.read(localAgent.characterId), intent, CharacterDamagePolicy.Survival);
+	final npcStep = stepCharacter(cells, store.read(npcId), intent, CharacterDamagePolicy.Survival);
 	if (localStep.character.body.x != npcStep.character.body.x
 		|| localStep.character.body.y != npcStep.character.body.y
 		|| localStep.character.body.z != npcStep.character.body.z
@@ -210,16 +209,35 @@ private function sharedCharacterCheck(cells:WorldView, capability:AquaticProfile
 		|| localStep.character.aquatic.breathTicks != npcStep.character.aquatic.breathTicks
 		|| localStep.character.vitals.health != npcStep.character.vitals.health)
 		return 3;
-	if (!localStore.replace(localAgent.characterId, localStep.character) || !npcStore.replace(npcId, npcStep.character))
+	if (!store.replace(localAgent.characterId, localStep.character) || !store.replace(npcId, npcStep.character))
 		return 4;
-	if (localStore.replace(localAgent.characterId, npcStep.character) || npcStore.put(localStep.character))
+	if (store.replace(localAgent.characterId, npcStep.character) || store.put(localStep.character))
 		return 5;
-	final attackedLocal = applyCharacterAttack(localStore.read(localAgent.characterId), true);
-	final attackedNpc = applyCharacterAttack(npcStore.read(npcId), true);
-	if (attackedLocal.vitals.health != attackedNpc.vitals.health || attackedLocal.vitals.safeTicks != attackedNpc.vitals.safeTicks)
+	final snapshots = store.snapshots();
+	if (snapshots.length != 2 || snapshots[0].id != localId || snapshots[1].id != npcId)
 		return 6;
-	if (isValidCharacter(localStore.read(npcId)) || isValidCharacter(npcStore.read(localId)))
+	snapshots.push(localStep.character);
+	if (store.count() != 2)
 		return 7;
+	final attackedLocal = applyCharacterAttack(store.read(localAgent.characterId), true);
+	final attackedNpc = applyCharacterAttack(store.read(npcId), true);
+	if (attackedLocal.vitals.health != attackedNpc.vitals.health || attackedLocal.vitals.safeTicks != attackedNpc.vitals.safeTicks)
+		return 8;
+	final missingId = EntityId.fromValidatedStorageCode(99);
+	if (store.put(emptyCharacter())
+		|| store.contains(EntityId.invalid())
+		|| store.replace(missingId, startCharacter(missingId, startBody, capability, 6))
+		|| store.remove(missingId))
+		return 9;
+	if (!store.remove(npcId) || store.remove(npcId) || store.count() != 1 || !store.contains(localId) || isValidCharacter(store.read(npcId)))
+		return 10;
+	final bounded = new EntityStore();
+	for (code in 1...(EntityStore.MAX_CHARACTERS + 1))
+		if (!bounded.put(startCharacter(EntityId.fromValidatedStorageCode(code), startBody, capability, 6)))
+			return 11;
+	if (bounded.count() != EntityStore.MAX_CHARACTERS
+		|| bounded.put(startCharacter(EntityId.fromValidatedStorageCode(EntityStore.MAX_CHARACTERS + 1), startBody, capability, 6)))
+		return 12;
 	return 0;
 }
 

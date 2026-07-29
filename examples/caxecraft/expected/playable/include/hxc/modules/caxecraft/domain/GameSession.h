@@ -37,6 +37,13 @@ struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult {
   bool hxc_resolved;
 };
 
+struct hxc_caxecraft_domain_CharacterCommandStepResult {
+  struct hxc_caxecraft_domain_Character hxc_character;
+  int32_t hxc_drowningDamage;
+  struct hxc_caxecraft_domain_Immersion hxc_immersion;
+  bool hxc_resolved;
+};
+
 struct hxc_caxecraft_domain_LocalRecoveryResult {
   struct hxc_caxecraft_domain_Character hxc_character;
   int32_t hxc_decision;
@@ -82,6 +89,8 @@ bool hxc_caxecraft_domain_GameSession_removeTerrain(struct hxc_caxecraft_domain_
 void hxc_caxecraft_domain_GameSession_resetEmptyWorld(struct hxc_caxecraft_domain_GameSession *hxc_self);
 
 struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_reviveLocalPlayerAt(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_CharacterBody hxc_body);
+
+struct hxc_caxecraft_domain_CharacterCommandStepResult hxc_caxecraft_domain_GameSession_stepStoredCharacter(struct hxc_caxecraft_domain_GameSession *hxc_self, const uint8_t *hxc_readCells, size_t hxc_length, struct hxc_caxecraft_domain_Character hxc_original, struct hxc_caxecraft_domain_CharacterIntent hxc_intent, int32_t hxc_damagePolicy);
 
 struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick(struct hxc_caxecraft_domain_GameSession *hxc_self, struct hxc_caxecraft_domain_GameTickInput hxc_input);
 

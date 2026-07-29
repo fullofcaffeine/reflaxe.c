@@ -45,10 +45,11 @@ function start(id:EntityId, body:CharacterBody, aquaticProfile:AquaticProfile, h
 }
 
 /**
-	Create the invalid value held by an unoccupied `EntityStore`.
+	Create the invalid sentinel returned when a character lookup misses.
 
-	It is storage initialization, not a playable default. `EntityStore.put`
-	rejects it, and validated content supplies every live character fact.
+	It is an explicit failed-observation value, not a playable default or a slot
+	inside the multi-character store. `EntityStore.put` rejects it, and callers
+	can use `isValid` without receiving nullable or dynamically typed storage.
 **/
 function empty():Character {
 	final emptyProfile = Aquatics.profile(1, 1, 0.0, 0.0, 0.0, 0.0, 0.0, 1, false, false);

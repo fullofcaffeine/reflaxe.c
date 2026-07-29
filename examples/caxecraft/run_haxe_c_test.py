@@ -51,6 +51,7 @@ class HaxeCTestCase:
     forbidden_source_markers: tuple[str, ...]
     output_line_count: int
     success_line: str
+    expected_runtime_features: tuple[str, ...] = ()
 
 
 CASES = {
@@ -82,6 +83,7 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=2,
         success_line="0",
+        expected_runtime_features=("runtime-base", "status", "alloc", "array"),
     ),
     "presentation": HaxeCTestCase(
         case_id="presentation",
@@ -135,6 +137,7 @@ CASES = {
         ),
         output_line_count=2,
         success_line="0",
+        expected_runtime_features=("runtime-base", "status", "alloc", "array"),
     ),
     "terrain-chunks": HaxeCTestCase(
         case_id="terrain-chunks",
@@ -301,17 +304,99 @@ def compile_native(
     harness: Path,
     executable: Path,
     *,
+    layout: str,
     sanitized: bool,
 ) -> None:
     """Compile one generated test plus its independent native ABI consumer."""
 
     flags = [*STRICT_FLAGS, *(SANITIZER_FLAGS if sanitized else ())]
+    include_roots = [generated / "include"]
+    runtime_include = generated / "runtime/include"
+    if runtime_include.is_dir():
+        include_roots.append(runtime_include)
+    include_flags = [
+        argument
+        for include_root in include_roots
+        for argument in ("-I", str(include_root))
+    ]
+    if layout == "unity":
+        objects: list[Path] = []
+        for index, source in enumerate(sources):
+            generated_object = executable.parent / f"generated-{index}.o"
+            is_unity_program = (
+                source.relative_to(generated).as_posix() == "src/program.c"
+            )
+            if is_unity_program:
+                # Strictly check the untouched unity source first. Renaming its
+                # standard `main` below is only how this independent harness
+                # avoids a second entry point; Clang no longer exempts the
+                # renamed function from -Wmissing-prototypes.
+                run(
+                    [
+                        compiler,
+                        *flags,
+                        *include_flags,
+                        "-fsyntax-only",
+                        str(source),
+                    ],
+                    cwd=ROOT,
+                    timeout=60,
+                    label=f"{'sanitized ' if sanitized else ''}strict unity source check",
+                )
+            run(
+                [
+                    compiler,
+                    *flags,
+                    *include_flags,
+                    *(
+                        ("-Dmain=hxc_generated_main", "-Wno-missing-prototypes")
+                        if is_unity_program
+                        else ()
+                    ),
+                    "-c",
+                    str(source),
+                    "-o",
+                    str(generated_object),
+                ],
+                cwd=ROOT,
+                timeout=60,
+                label=f"{'sanitized ' if sanitized else ''}unity generated object",
+            )
+            objects.append(generated_object)
+        harness_object = executable.parent / "native-harness.o"
+        run(
+            [
+                compiler,
+                *flags,
+                *include_flags,
+                "-c",
+                str(harness),
+                "-o",
+                str(harness_object),
+            ],
+            cwd=ROOT,
+            timeout=60,
+            label=f"{'sanitized ' if sanitized else ''}unity native harness object",
+        )
+        run(
+            [
+                compiler,
+                *flags,
+                *(str(path) for path in objects),
+                str(harness_object),
+                "-o",
+                str(executable),
+            ],
+            cwd=ROOT,
+            timeout=60,
+            label=f"{'sanitized ' if sanitized else ''}unity native link",
+        )
+        return
     run(
         [
             compiler,
             *flags,
-            "-I",
-            str(generated / "include"),
+            *include_flags,
             *(str(path) for path in sources),
             str(harness),
             "-o",
@@ -323,8 +408,10 @@ def compile_native(
     )
 
 
-def execute(test_case: HaxeCTestCase, requested_compiler: str | None) -> bool:
-    """Run one Haxe test on Eval, haxe.c, strict C, and optional sanitizers."""
+def execute(
+    test_case: HaxeCTestCase, requested_compiler: str | None, layout: str
+) -> bool:
+    """Run one Haxe test on Eval, one C layout, strict C, and sanitizers."""
 
     eval_hxml = checked_case_path(test_case.eval_hxml, "Eval HXML")
     c_hxml = checked_case_path(test_case.c_hxml, "C HXML")
@@ -347,6 +434,8 @@ def execute(test_case: HaxeCTestCase, requested_compiler: str | None) -> bool:
                 "--cwd",
                 str(CASE_ROOT),
                 c_hxml.name,
+                "-D",
+                f"hxc_project_layout={layout}",
                 "--custom-target",
                 f"c={generated}",
             ],
@@ -361,19 +450,34 @@ def execute(test_case: HaxeCTestCase, requested_compiler: str | None) -> bool:
             raise HaxeCTestFailure(
                 f"{test_case.case_id} runtime plan is not a JSON object"
             )
-        if runtime_plan.get("features") != []:
-            raise HaxeCTestFailure(f"{test_case.case_id} unexpectedly selected hxrt")
-
-        generated_source = generated.joinpath(
-            *checked_relative_parts(
-                test_case.generated_source, "generated source path"
-            )
-        )
-        if not generated_source.is_file():
+        expected_runtime_features = list(test_case.expected_runtime_features)
+        if runtime_plan.get("features") != expected_runtime_features:
             raise HaxeCTestFailure(
-                f"{test_case.case_id} omitted {test_case.generated_source}"
+                f"{test_case.case_id} selected an unexpected hxrt feature closure: "
+                f"expected={expected_runtime_features!r}, "
+                f"actual={runtime_plan.get('features')!r}"
             )
-        source_text = generated_source.read_text(encoding="utf-8")
+
+        if layout == "split":
+            generated_source = generated.joinpath(
+                *checked_relative_parts(
+                    test_case.generated_source, "generated source path"
+                )
+            )
+            if not generated_source.is_file():
+                raise HaxeCTestFailure(
+                    f"{test_case.case_id} omitted {test_case.generated_source}"
+                )
+            source_text = generated_source.read_text(encoding="utf-8")
+        else:
+            layout_sources = generated_sources(generated)
+            if not layout_sources:
+                raise HaxeCTestFailure(
+                    f"{test_case.case_id} {layout} layout emitted no C sources"
+                )
+            source_text = "\n".join(
+                source.read_text(encoding="utf-8") for source in layout_sources
+            )
         for marker in test_case.required_source_markers:
             if marker not in source_text:
                 raise HaxeCTestFailure(
@@ -388,7 +492,13 @@ def execute(test_case: HaxeCTestCase, requested_compiler: str | None) -> bool:
         sources = generated_sources(generated)
         executable = temporary_root / test_case.case_id
         compile_native(
-            compiler, generated, sources, harness, executable, sanitized=False
+            compiler,
+            generated,
+            sources,
+            harness,
+            executable,
+            layout=layout,
+            sanitized=False,
         )
         native_output = run(
             [str(executable)],
@@ -406,7 +516,13 @@ def execute(test_case: HaxeCTestCase, requested_compiler: str | None) -> bool:
         if sanitizer_ran:
             sanitized = temporary_root / f"{test_case.case_id}-sanitized"
             compile_native(
-                compiler, generated, sources, harness, sanitized, sanitized=True
+                compiler,
+                generated,
+                sources,
+                harness,
+                sanitized,
+                layout=layout,
+                sanitized=True,
             )
             sanitized_output = run(
                 [str(sanitized)],
@@ -432,6 +548,12 @@ def parse_args() -> argparse.Namespace:
         "--cc",
         help="explicit C compiler command or path; the default keeps the focused local lane fast",
     )
+    parser.add_argument(
+        "--layout",
+        choices=("split", "package", "unity"),
+        default="split",
+        help="generated project layout; package/unity are optional focused parity checks",
+    )
     return parser.parse_args()
 
 
@@ -439,7 +561,7 @@ def main() -> int:
     args = parse_args()
     test_case = CASES[args.case]
     try:
-        sanitizer_ran = execute(test_case, args.cc)
+        sanitizer_ran = execute(test_case, args.cc, args.layout)
     except (HaxeCTestFailure, OSError, UnicodeError, json.JSONDecodeError) as error:
         print(
             f"caxecraft-haxe-c-test: ERROR [{test_case.case_id}]: {error}",
@@ -447,9 +569,15 @@ def main() -> int:
         )
         return 1
     sanitizer_status = "ran" if sanitizer_ran else "unavailable"
+    runtime_status = (
+        "+".join(test_case.expected_runtime_features)
+        if test_case.expected_runtime_features
+        else "none"
+    )
     print(
-        f"caxecraft-haxe-c-test: OK [{test_case.case_id}]: "
-        f"Haxe assertions passed on Eval/native C; runtime-free; sanitizers={sanitizer_status}"
+        f"caxecraft-haxe-c-test: OK [{test_case.case_id}/{args.layout}]: "
+        f"Haxe assertions passed on Eval/native C; runtime={runtime_status}; "
+        f"sanitizers={sanitizer_status}"
     )
     return 0
 

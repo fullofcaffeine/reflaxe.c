@@ -2,4 +2,8 @@
 -cp test
 -lib reflaxe.c
 --main caxecraft.qa.GameSessionProbe
--D hxc_runtime=none
+# GameSession owns EntityStore, whose ordinary Haxe Array needs the bounded
+# Array runtime. Automatic selection is still fail-closed: the shared runner
+# checks the exact reviewed feature closure rather than accepting arbitrary
+# runtime growth.
+-D hxc_runtime=auto

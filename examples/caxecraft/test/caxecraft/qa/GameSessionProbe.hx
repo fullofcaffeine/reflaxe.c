@@ -107,6 +107,27 @@ function selfCheck():Int {
 	final boundView = session.view();
 	if (!boundView.valid || boundView.localPlayer.id != localId || boundView.completedTicks != 0)
 		return 10;
+	final npcId = EntityId.fromValidatedStorageCode(12);
+	final npcStart = startCharacter(npcId, createBody(10.5, 2.0, 8.5), localProfile, 4);
+	if (!session.addCharacter(npcStart)
+		|| session.addCharacter(npcStart)
+		|| session.characterCount() != 2
+		|| session.readCharacter(npcId).id != npcId)
+		return 30;
+	final localBeforeNpcStep = session.readLocalPlayer();
+	final npcStep = session.stepCharacter(npcId, aquaticInput(-0.5, 0.0, false, false), CharacterDamagePolicy.Survival);
+	if (!npcStep.resolved
+		|| npcStep.character.id != npcId
+		|| npcStep.character.body.x == npcStart.body.x
+		|| session.readCharacter(npcId).body.x != npcStep.character.body.x
+		|| session.readLocalPlayer().body.x != localBeforeNpcStep.body.x)
+		return 31;
+	final characterSnapshots = session.characterSnapshots();
+	if (characterSnapshots.length != 2 || characterSnapshots[0].id != localId || characterSnapshots[1].id != npcId)
+		return 32;
+	characterSnapshots.push(npcStart);
+	if (session.characterCount() != 2 || session.removeCharacter(localId) || !session.removeCharacter(npcId) || session.characterCount() != 1)
+		return 33;
 	final aquaticEquipment = session.collectAuthoredAquaticEquipment(0, BaseContentPack.aquaticProfile(BaseAquaticProfile.TideweaveAquatics));
 	if (!aquaticEquipment.resolved
 		|| !aquaticEquipment.collected

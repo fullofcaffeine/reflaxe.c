@@ -2,4 +2,8 @@
 -cp test
 -lib reflaxe.c
 --main caxecraft.qa.AquaticsProbe
--D hxc_runtime=none
+# EntityStore deliberately uses ordinary Haxe Array semantics for a bounded,
+# variable-size actor population. Let haxe.c select the smallest proved hxrt
+# feature closure, and let run_haxe_c_test.py reject any feature beyond that
+# case's exact reviewed list.
+-D hxc_runtime=auto

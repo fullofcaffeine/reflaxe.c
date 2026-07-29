@@ -383,7 +383,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "2f8a149b2205cb095aa90b54633ea69f20b603440ac01e63223d85ba4adbf44d",
+      "sha256": "e1c309d3f2578a4e218db3b3a88527ea4ae30e214c6cb5d69b99dc6e83324632",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -393,12 +393,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "90c289d740484a5ec4f098c494c326e116d77095f3ac3f7e63a87e035ca3a89d",
+      "sha256": "d263ea31c110f02ab610f74c72b1e21aed6b47b6aaaa020cf36a805d795ff82d",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "50f65b3418fce0555f57df0617c4135dbed16f8a9b004b4c8010241a1f39ebc1",
+      "sha256": "ddf1f8fc502e6abf6696306992ebde85ff1e2695e0c9ecdcd1ea6dcebae92897",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -408,12 +408,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "410056fc7ef67f3d3967445fb0a88f87fd2b3ca4aa78e6209e221485c31b8553",
+      "sha256": "179dfb0c1f19f6efb019323ca702f8495862e9e455714a10accf59d247d53c25",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "d5259ef126616864227e91a19476dc4c023fb4aae0ae4503c81512182128abb4",
+      "sha256": "7a6e44cdcdc6596fe98148d65255a40935a022fc772f8606a8aa60c599cbf3a4",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -573,12 +573,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "f5fc5fa003c57c7ac0c6420ada860152b8936d13d46e121399adfa019af7d6a9",
+      "sha256": "4a8e85d3c143ad2ca12a2908fe419e70c67d5f21938aeccd65d96db55a1162fd",
       "path": "include/hxc/modules/caxecraft/domain/EntityStore.h",
       "kind": "private-header"
     },
     {
-      "sha256": "ed55c3641e5c528f5ba4470ecb45dc5bd5ea5935baeb5a8495b9f3d5bdf45e07",
+      "sha256": "53454078e40694df4689556dcfcdf3c0b55c0f19565a6862e013ca244a87ad2a",
       "path": "include/hxc/modules/caxecraft/domain/GameSession.h",
       "kind": "private-header"
     },
@@ -1073,7 +1073,7 @@
       "kind": "runtime-header"
     },
     {
-      "sha256": "7225f00813a72474d5d2e1c2b24fbdb030ba0ab8e606c1e934fbd1a2fe381bfd",
+      "sha256": "bf8775c44da8ab2c851cdb2e675d14320423f1a90b8fc4b13055e73e92445eed",
       "path": "runtime/include/hxrt/array.h",
       "kind": "runtime-header"
     },
@@ -1083,7 +1083,7 @@
       "kind": "runtime-header"
     },
     {
-      "sha256": "dc35f17737269475435e107909d582bd37a0827095fcf74bd4e878adbb491290",
+      "sha256": "773e4abd4315361bb820277a3899dd766372cb6471d146c1900d3527f2bad64e",
       "path": "runtime/include/hxrt/base.h",
       "kind": "runtime-header"
     },
@@ -1153,7 +1153,7 @@
       "kind": "runtime-source"
     },
     {
-      "sha256": "a07fc5f847912cfec1c02f0edcc51dae97089b521da49601aab4fbcf9e2b7b55",
+      "sha256": "8e0e6042aca21a231da5addd8a83562ec66c10dcedeb383477ae8ce27070baee",
       "path": "runtime/src/array.c",
       "kind": "runtime-source"
     },
@@ -1213,7 +1213,7 @@
       "kind": "source"
     },
     {
-      "sha256": "1aa13a2c82fb44c92d533c9c6a4e30193b3cbb4603bbbe8978704d5d63471128",
+      "sha256": "391b6d5fcac71a5bfe17ea15519e940d568a2c99a90f32ddb5d7e87ecdc639da",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1323,12 +1323,12 @@
       "kind": "source"
     },
     {
-      "sha256": "2821eec60dd617613d4fd8c63eb5b2786c12e61e8f87bf184a73496d43bcf668",
+      "sha256": "49ffb770652ee0c74454fa07145a2a37c913c5cc71c6cca8e30dfd4e00e33fc5",
       "path": "src/modules/caxecraft/domain/EntityStore.c",
       "kind": "source"
     },
     {
-      "sha256": "a9eb489c5024dcd3bf0044fd6fe40dba43039d74bb8a09c60606c2357d8ef10b",
+      "sha256": "f0c8aeec38efb7ecca08aa8709873369abe3c6158649bd1658f3f38eac135d0c",
       "path": "src/modules/caxecraft/domain/GameSession.c",
       "kind": "source"
     },

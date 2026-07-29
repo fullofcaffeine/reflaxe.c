@@ -5,7 +5,7 @@ import caxecraft.domain.Character.adoptProfile as adoptCharacterProfile;
 import caxecraft.domain.Character.applyAttack as applyCharacterAttack;
 import caxecraft.domain.Character.isValid as isValidCharacter;
 import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
-import caxecraft.domain.Character.step as stepCharacter;
+import caxecraft.domain.Character.step as advanceCharacterState;
 import caxecraft.domain.Character.withVitals as withCharacterVitals;
 import caxecraft.domain.PlayerAgent.bind as bindPlayerAgent;
 import caxecraft.domain.WaterCellCodec.isSolidCode as isSolidStorageCode;
@@ -69,6 +69,21 @@ typedef LocalCharacterCommandResult = {
 }
 
 /**
+	The result of advancing any stored character through shared simulation rules.
+
+	`resolved` is false when the stable ID is missing or the calculated
+	replacement cannot be committed. Player, non-player, cutscene, and test
+	controllers can therefore use one movement/aquatics/vitals path without
+	receiving direct access to `EntityStore`.
+**/
+typedef CharacterCommandStepResult = {
+	final character:Character;
+	final immersion:Immersion;
+	final drowningDamage:Int;
+	final resolved:Bool;
+}
+
+/**
 	The atomic result of trying the selected inventory item's recovery behavior.
 
 	The session commits health before it publishes the matching inventory value.
@@ -103,9 +118,11 @@ typedef AuthoredAquaticEquipmentResult = {
 	`EntityStore` and `WaterSimulation` are real child objects embedded directly
 	inside this session by haxe.c. The session owns the world and authored-item
 	flags; the water child owns the queue that must agree with its scheduler
-	counters. They have one stable lifetime, require no heap allocation, and cannot
-	escape as independent owned values. This is ordinary Haxe composition; the
-	compiler selects the safe, readable C representation.
+	counters. The child objects have one stable lifetime and cannot escape as
+	independent owned values. Embedding them needs no separate class allocation;
+	`EntityStore`'s ordinary Haxe Array separately owns a managed resizable buffer.
+	This is ordinary Haxe composition; the compiler selects the safe, readable C
+	representation and its exact runtime support.
 
 	A class is used instead of a record because the session is the stable mutable
 	owner: callers must update and observe the same loaded simulation across many
@@ -113,12 +130,13 @@ typedef AuthoredAquaticEquipmentResult = {
 	and content, not hidden session subclasses. Haxe.c emits one parent C struct
 	with direct child storage and pointer-receiver methods.
 
-	The C build uses compact `CArray` fields. Eval uses ordinary Haxe arrays as an
-	independent behavior oracle. Haxe removes the inactive representation branch
-	at compile time; simulation methods below are shared. Public readers receive a
-	zero-copy `WorldView` that cannot write and is valid only for the direct call.
-	World and item mutations remain session commands, so the application cannot
-	bypass water scheduling or retain a mutable storage view.
+	The C build uses compact `CArray` fields for the fixed world and water work
+	buffers. Eval uses ordinary Haxe arrays for those fields as an independent
+	behavior oracle. Haxe removes the inactive representation branch at compile
+	time; simulation methods below are shared. Public readers receive a zero-copy
+	`WorldView` that cannot write and is valid only for the direct call. World and
+	item mutations remain session commands, so the application cannot bypass water
+	scheduling or retain a mutable storage view.
 **/
 final class GameSession {
 	/** All live character state, owned for exactly this session's lifetime. */
@@ -180,6 +198,16 @@ final class GameSession {
 		return true;
 	}
 
+	/**
+		Add one non-player or not-yet-controlled character to this simulation.
+
+		Validated level composition supplies the stable identity and component
+		snapshot. The session delegates duplicate and capacity checks to its sole
+		`EntityStore`; no role name or content ID changes storage behavior.
+	**/
+	public inline function addCharacter(character:Character):Bool
+		return entities.put(character);
+
 	/** True only when the binding still names the character owned by this session. */
 	public inline function hasLocalPlayer():Bool
 		return localPlayer.characterId.isValid() && entities.contains(localPlayer.characterId);
@@ -187,6 +215,53 @@ final class GameSession {
 	/** Read the committed local-character snapshot without exposing its store key. */
 	public inline function readLocalPlayer():Character
 		return entities.read(localPlayer.characterId);
+
+	/** Read any committed character snapshot by stable identity. */
+	public inline function readCharacter(id:EntityId):Character
+		return entities.read(id);
+
+	/** Number of committed characters in deterministic insertion order. */
+	public inline function characterCount():Int
+		return entities.count();
+
+	/**
+		Publish copy-owned character snapshots for saves, tests, and later schedulers.
+
+		The returned Array may be changed by its caller without changing the live
+		store. Its `Character` elements are immutable value snapshots, so this
+		observation grants no simulation mutation authority.
+	**/
+	public inline function characterSnapshots():Array<Character>
+		return entities.snapshots();
+
+	/**
+		Remove a non-player character by stable identity.
+
+		The locally controlled character cannot disappear through this generic
+		command because input and presentation still name it. A dedicated
+		level-transition or player-rebinding operation must settle that ownership
+		first.
+	**/
+	public function removeCharacter(id:EntityId):Bool
+		return id != localPlayer.characterId && entities.remove(id);
+
+	/**
+		Advance any stored character against the current world and commit the result.
+
+		This operation runs the same `Character.step` function as the local fixed
+		tick. It intentionally does not advance water or the session clock: the
+		caller is a deterministic controller/scheduler operating inside one fixed
+		tick boundary. The later actor scheduler can call this for every admitted
+		intent without creating player- and NPC-specific physics.
+	**/
+	public function stepCharacter(id:EntityId, intent:CharacterIntent, damagePolicy:CharacterDamagePolicy):CharacterCommandStepResult {
+		#if c
+		var readCells:WorldView = worldStorage.constSpan();
+		#else
+		var readCells:WorldView = WorldView.borrow(worldStorage);
+		#end
+		return stepStoredCharacter(readCells, entities.read(id), intent, damagePolicy);
+	}
 
 	/**
 		Revive the bound character at one already validated placement.
@@ -531,8 +606,8 @@ final class GameSession {
 		}
 
 		final waterResult = water.tick(cells, input.waterUpdateBudget);
-		final characterResult = stepCharacter(readCells, original, input.intent, input.damagePolicy);
-		final committed = entities.replace(characterId, characterResult.character);
+		final characterResult = stepStoredCharacter(readCells, original, input.intent, input.damagePolicy);
+		final committed = characterResult.resolved;
 		final tickIndex = committed ? completedTicks : -1;
 		if (committed)
 			completedTicks++;
@@ -543,6 +618,33 @@ final class GameSession {
 			drowningDamage: characterResult.drowningDamage,
 			water: waterResult,
 			committed: committed
+		};
+	}
+
+	/**
+		Calculate and commit one already-resolved character against a world view.
+
+		The caller performs the ID lookup once. Reusing that snapshot here avoids a
+		second linear store search inside the same fixed tick; replacement still
+		rechecks the stable ID before it changes authoritative state.
+	**/
+	function stepStoredCharacter(readCells:WorldView, original:Character, intent:CharacterIntent,
+			damagePolicy:CharacterDamagePolicy):CharacterCommandStepResult {
+		if (!isValidCharacter(original)) {
+			return {
+				character: original,
+				immersion: observeAquatics(readCells, original.body),
+				drowningDamage: 0,
+				resolved: false
+			};
+		}
+		final result = advanceCharacterState(readCells, original, intent, damagePolicy);
+		final resolved = entities.replace(original.id, result.character);
+		return {
+			character: resolved ? result.character : original,
+			immersion: result.immersion,
+			drowningDamage: result.drowningDamage,
+			resolved: resolved
 		};
 	}
 

@@ -422,12 +422,13 @@ spawn column.
 ## First shared character composition
 
 `Character` now groups the reusable body, aquatic state and profile, and
-vitals under one stable `EntityId`. `EntityStore` owns the committed value
+vitals under one stable `EntityId`. `EntityStore` owns every committed character
 between frames; callers read a value snapshot, run explicit systems, and commit
-the newer value under the same ID. The first store deliberately holds one
-character because haxe.c does not yet admit an allocation-free fixed C array of
-aggregate records. Its private storage can grow later without changing the ID
-or system APIs.
+the newer value under the same ID. It accepts at most 64 live values, rejects
+invalid or duplicate IDs, preserves insertion order, and can remove a character
+without changing the order of the remaining values. `snapshots()` returns a
+different Array container, so adding to that observation cannot add to the
+live simulation.
 
 `PlayerAgent` adds only the local-character ID. `GameSession` owns that binding,
 installs it only after `EntityStore` accepts the character, and resolves it
@@ -436,13 +437,41 @@ count, so artificial intelligence, saves, tests, the HUD, and telemetry share
 one simulation clock regardless of rendered frame rate. `Main` therefore
 carries neither a second agent value, a character ID, nor a mutable gameplay
 update counter. The binding does not copy position, breath, health, input,
-camera, or HUD state. The focused aquatics probe creates a separate non-player
-character and advances both through the same
-`Character.step` and damage functions. Equal starting components and intent
-produce equal movement, water, and health results, while cross-ID writes fail.
-This is the executable boundary for the first slice; it is not yet a general
-multi-actor store or a claim that inventory, equipment, weapons, and effects
-have completed the same migration.
+camera, or HUD state. The focused aquatics and session probes place a local
+player and a generic non-player in the same store. Both advance through the
+same `Character.step` movement, water, and health rules, while their IDs keep
+the committed states independent. The probes also cover deterministic
+observation order, duplicate and missing IDs, removal, and the 64-character
+limit. This is a real multi-character storage boundary, but it is not yet a
+content-driven actor loader, controller scheduler, or a claim that inventory,
+equipment, weapons, and effects have completed the same migration.
+
+### Array representation and allocation
+
+The store uses an ordinary Haxe `Array<Character>` because a loaded level has a
+variable number of characters and callers expect normal Haxe copy behavior.
+With automatic runtime selection, haxe.c represents that Array as one managed
+`struct hxc_array_ref *`. “Managed” means the runtime owns the resizable buffer
+and releases it when its last Haxe owner leaves scope. Each `Character` remains
+an unboxed C struct inside that buffer; this value contains only direct fields,
+so copying an element needs no nested retain or destructor callback.
+
+The exact selected feature closure is `runtime-base`, `status`, `alloc`, and
+`array`. The aquatics and session runners reject either a missing feature or an
+unexpected extra feature. Construction allocates the Array container, and
+insertion can allocate when the backing buffer grows. `snapshots()` deliberately
+allocates a second container and buffer because Haxe `Array.copy()` requires an
+independent Array. After loading has stopped and the buffer has room,
+`contains`, `read`, `replace`, `remove`, and the shared character step do not
+allocate. This repeated-update period is what “steady state” means here.
+Removal uses the typed discarded-result `splice(index, 1)` helper: it shifts
+later elements in place and does not create the removed-values Array that the
+source program chose not to observe.
+
+The limit of 64 is a validation rule, not a promise that C stores a fixed
+64-element array. Choosing the ordinary managed representation keeps the Haxe
+API natural and leaves a future packed store as a measured internal
+optimization rather than a requirement imposed on game code.
 
 `GameSession.view()` is the first presentation boundary. It returns an
 immutable `GameView` containing the committed local-character value and tick

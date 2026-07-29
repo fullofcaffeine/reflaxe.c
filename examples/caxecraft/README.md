@@ -80,14 +80,21 @@ the validated CaxeMap. That adapter is a bounded experiment: it proves the
 validated authored model can drive the native loop, but it is not the intended
 loading architecture. `haxe_c-xge.39` owns replacing it with runtime CAXEMAP
 loading so the game and editor can open changed content without invoking Haxe.
+`EntityStore` now keeps a local player and generic non-player in one
+deterministically ordered `Array<Character>`, and `GameSession` advances either
+through the same movement, water, and health rules. Its two focused generated-C
+tests select exactly `runtime-base`, `status`, `alloc`, and `array`; other
+runtime-free Caxecraft cases still require an empty runtime plan. See
+[the domain guide](../../docs/caxecraft-domain.md#array-representation-and-allocation)
+for the concrete allocation behavior.
 The playable advances water on the fixed clock, draws translucent surfaces,
 swims, applies Adventure drowning damage, fades the underwater camera, and shows
 fixed-tick breath bubbles. `WaterSnapshot` preserves mutable water for the future
 complete save format. Tideweave pickup/equipment is connected through validated
 content and the deterministic pilot protocol; its display-backed visual
-checkpoint is still pending on a runner with a usable desktop session. Audio,
-the broader actor/rule composition, and native runtime map loading remain later
-work.
+checkpoint is still pending on a runner with a usable desktop session.
+Content-driven actor construction, NPC/enemy controllers, audio, and native
+runtime map loading remain later work.
 
 After editing the built-in pack, run:
 
