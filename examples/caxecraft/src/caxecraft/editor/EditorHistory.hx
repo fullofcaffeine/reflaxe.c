@@ -1,6 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
+import caxecraft.editor.EditorTypes.EditorChangeId;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import haxe.io.Bytes;
@@ -14,6 +15,7 @@ import haxe.io.Bytes;
 @:noCompletion
 typedef EditorHistoryEntry = {
 	final family:EditorCommandFamily;
+	final changes:Array<EditorChangeId>;
 	final before:Bytes;
 	final beforeSelection:Null<VoxelBounds>;
 	final after:Bytes;

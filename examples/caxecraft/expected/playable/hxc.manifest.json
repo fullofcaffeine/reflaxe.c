@@ -56,6 +56,7 @@
       "src/modules/caxecraft/domain/WorldStorage.c",
       "src/modules/caxecraft/editor/EditorCommandReducer.c",
       "src/modules/caxecraft/editor/EditorHistory.c",
+      "src/modules/caxecraft/editor/EditorObservationPlan.c",
       "src/modules/caxecraft/editor/EditorPolicy.c",
       "src/modules/caxecraft/editor/EditorScenarioFactory.c",
       "src/modules/caxecraft/editor/EditorScenarioSnapshot.c",
@@ -156,6 +157,7 @@
       "include/hxc/modules/caxecraft/domain/WorldStorage.h",
       "include/hxc/modules/caxecraft/editor/EditorCommandReducer.h",
       "include/hxc/modules/caxecraft/editor/EditorHistory.h",
+      "include/hxc/modules/caxecraft/editor/EditorObservationPlan.h",
       "include/hxc/modules/caxecraft/editor/EditorPolicy.h",
       "include/hxc/modules/caxecraft/editor/EditorScenarioFactory.h",
       "include/hxc/modules/caxecraft/editor/EditorScenarioSnapshot.h",
@@ -363,7 +365,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "b2cb8bbeee87645acf910d0890d0e1e5a3c9c1d143e4c92185c49dba376e2d73",
+      "sha256": "cacaec56849378d5dab9b22927b14c6b7f31ce3b1ce8cabfe6810c5a2b5c4658",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -373,7 +375,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "01af4453808c05f8adae5f1e5ff0501d0c86f008ee12afdf2b9cffba0ee4f02a",
+      "sha256": "87acd2eeec9d3893eeb71f15a040d72a672f7558c65cd2188e1cb6d21584d007",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -383,12 +385,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "8943e5bc07f4b2dd9e6b83af5dc82cd6457cea8c9fccf345440513f3671e26e0",
+      "sha256": "4360a227393161b6810ae9d57416848650850e5116d9a52d48f0facca4028f6b",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "59a7c734fd4c859ecc48bc4508c33a0549a8914177a483a7ba6b83833f15346c",
+      "sha256": "4c6388083431c92802c793dd8804b1a87723ebfaa514dea54a2981fa910f8e8c",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -398,12 +400,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "b58ee261e2bea573c5a7d72fb995293456a772d34dc24c1c2f886283b6f312b5",
+      "sha256": "693ad043ab4032447b1a7e3d0237482d028aafdc6497ba0fd411919e9acd5302",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "a871edbc5733fcaa6211b2381a56a75163207233d84ba6c17e84b72232170fb5",
+      "sha256": "654f540ad780fccfa5b96b7a58d268438bee0383e83fd9310bca1207b070a15e",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -648,8 +650,13 @@
       "kind": "private-header"
     },
     {
-      "sha256": "6b5cf23fa7e5f766f3102ed6e2431b9733d518dc6725f06d19671ea66f4b54b0",
+      "sha256": "2938a257223ed553c918c58590c1fed964edd2aaaf9d93b3a90ef0341815ff40",
       "path": "include/hxc/modules/caxecraft/editor/EditorHistory.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "ef8dbeb0616e310f83b926c7cd0703bba83650ce75cdf2bf2348bff0b33a5651",
+      "path": "include/hxc/modules/caxecraft/editor/EditorObservationPlan.h",
       "kind": "private-header"
     },
     {
@@ -668,7 +675,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "8b9065b36c158ab007391a9ddf28df2597c669a128f448f6d6de4212ed62f62a",
+      "sha256": "809ab2ac705c702f3210b622e7ed94b65f01bc1e444c9b5699b5a7333b0b7b96",
       "path": "include/hxc/modules/caxecraft/editor/EditorSession.h",
       "kind": "private-header"
     },
@@ -678,7 +685,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "52fa9004087c5f38a421c9e67f651c6b92ff118d28c856b6d4238b35dde9382f",
+      "sha256": "a15d7b0562af0afc36fe26ec1639127f4d68e7efc6c45d609f6f5fcd1917e3de",
       "path": "include/hxc/modules/caxecraft/editor/EditorTypes.h",
       "kind": "private-header"
     },
@@ -1028,12 +1035,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "cd8125a39fcd65dc4647c76209cc119bdda0a2be86b533a1f9c81e5749592e63",
+      "sha256": "a8904c221958ff99d7f45d6bb4c9f4803fe024fd8117adcca5b9f717d2f49edf",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "1b269b377df7df31795e559029ca60eb6e22e6f0f39954c9c51349943ac64c62",
+      "sha256": "cc86f5f8b6c346d513c8df3f9b8ffb7494f711b821e1ca44ed011045a38c76e2",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1173,7 +1180,7 @@
       "kind": "source"
     },
     {
-      "sha256": "9116f10e224739a1fe8a5c0425303eda213b9e4c8f0ab1703ab429a97f873414",
+      "sha256": "ec43df8682198e2ebdc9941b3b2c6b63fc707aa8532baf8ae06ba3277c02a6f7",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1333,8 +1340,13 @@
       "kind": "source"
     },
     {
-      "sha256": "6d93051364b2710b3d83c96da38c2659bf03762d8535ebe4f687b157bfa5a0f9",
+      "sha256": "227c76a94a28a16408d71d91f0c5599948bc91f86a209243695ad40db3570a32",
       "path": "src/modules/caxecraft/editor/EditorHistory.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "143a6d4aaea270e53b5dc5f0f8a2343d2baec97ec29b2950fc94ad5655a206f2",
+      "path": "src/modules/caxecraft/editor/EditorObservationPlan.c",
       "kind": "source"
     },
     {
@@ -1353,7 +1365,7 @@
       "kind": "source"
     },
     {
-      "sha256": "1591d731a8d9a7fe82fc205b2fc27602e773e45ae5ea672a312e02f85a20b7f9",
+      "sha256": "3d0e488f9946468a533d417f81acb45d4c1f3ad49e96b4ae51162221e2ef1286",
       "path": "src/modules/caxecraft/editor/EditorSession.c",
       "kind": "source"
     },

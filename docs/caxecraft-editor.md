@@ -78,16 +78,33 @@ Transactions are limited to 128 commands by default and can never exceed 256;
 the limit bounds one request's CPU, memory, and history work.
 
 `EditorSession.query` is the matching read-only side. Its closed `EditorQuery`
-values return small session state, a deep typed draft, or copied canonical
-bytes. Every observation carries the revision it describes. Returned arrays
+values return small session state, a deep typed draft, copied canonical bytes,
+or a deterministic campaign tree. The tree is a flat list with explicit typed
+parent references: a toolbar can draw it hierarchically without receiving
+nested mutable arrays, and each palette, chunk, fluid, object, story record,
+flow record, locale, message, and extension retains its real semantic ID.
+`InspectNode` returns one compact row by that typed ID, while
+`InspectValidation` returns fresh playable bytes or source-linked diagnostics
+without updating the session's last-known-playable recovery snapshot. Every
+observation carries the revision it describes. Returned arrays, diagnostics,
 and bytes belong to the caller, so changing them cannot change the live editor.
-The native 3D screen now sends voxel edits, undo, and redo through this
-revision-aware path.
+
+An applied mutation also returns a typed `EditorChangeId` list. For example,
+two replacements of the same object in one transaction report that object once
+in first-command order. The exact list is stored with the history entry, so
+undo and redo can identify the restored object set without asking a UI or
+automation adapter to compare two complete maps. Whole-document recovery says
+`ChangedDocument` explicitly because pretending to know a narrower change
+would be misleading. The native 3D screen sends voxel edits, undo, and redo
+through this revision-aware path.
 
 This is the implemented in-process semantic boundary, not a claim that remote
 automation already ships. A planned local JSON Lines adapter will validate
-bounded external requests into these closed Haxe types. A later optional MCP
-adapter may translate discoverable tools into the same operations; neither
+bounded external requests into these closed Haxe types. It must use the general
+`haxe.Json` and hosted input/file capabilities owned by `haxe_c-0bx` and
+`haxe_c-fwg`; a Caxecraft-only JSON parser or direct libc input shim would be a
+compiler-shaped workaround, not the intended architecture. A later optional
+MCP adapter may translate discoverable tools into the same operations. Neither
 adapter will receive a private mutation path, arbitrary code execution, or
 unrestricted filesystem and network access. Issue `haxe_c-xge.19.6.3` owns
 those later adapters and the broader authoring surface.

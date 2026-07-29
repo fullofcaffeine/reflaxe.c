@@ -8,14 +8,17 @@ import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
+import caxecraft.editor.EditorTypes.EditorChangeId;
 import caxecraft.editor.EditorTypes.EditorEditResult;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.editor.EditorTypes.EditorHistoryResult;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
+import caxecraft.editor.EditorTypes.EditorNodeRef;
 import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
+import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
@@ -210,13 +213,20 @@ final class EditorProbe {
 		};
 		require(initialState.revision == 0 && initialState.editing && initialState.undoDepth == 0 && initialState.redoDepth == 0,
 			"new editor protocol state was not revision zero");
+		switch session.query(InspectValidation) {
+			case ValidationObserved(0, DraftPlayable(bytes)):
+				require(bytes.length > 0, "playable validation observation lost its canonical bytes");
+			case _:
+				throw "initial valid draft did not produce a playable validation observation";
+		}
 
 		switch session.mutate({
 			baseRevision: initialState.revision,
 			mutation: Apply(ResizeWorld({width: 2, height: 1, depth: 2}))
 		}) {
-			case MutationApplied(families, 1, 1, 0):
+			case MutationApplied(families, changes, 1, 1, 0):
 				require(families.length == 1 && families[0] == WorldShape, "single mutation lost its command family");
+				require(changes.length == 1 && isWorldShapeChange(changes[0]), "single mutation lost its changed world identity");
 			case _:
 				throw "revisioned single mutation did not commit exactly once";
 		}
@@ -234,9 +244,11 @@ final class EditorProbe {
 			baseRevision: 1,
 			mutation: ApplyBatch([SetPaletteEntry(1, STONE), PaintVoxel({x: 0, y: 0, z: 0}, 1), Select(selection)])
 		}) {
-			case MutationApplied(families, 2, 2, 0):
+			case MutationApplied(families, changes, 2, 2, 0):
 				require(families.length == 3 && families[0] == Voxel && families[1] == Voxel && families[2] == Selection,
 					"atomic mutation lost its ordered command families");
+				require(changes.length == 3 && isPaletteChange(changes[0], 1) && isTerrainChange(changes[1]) && isSelectionChange(changes[2]),
+					"atomic mutation did not deduplicate changed semantic identities in command order");
 			case _:
 				throw "atomic editor mutation did not commit as one revision";
 		}
@@ -283,15 +295,17 @@ final class EditorProbe {
 		}
 
 		switch session.mutate({baseRevision: 2, mutation: Undo}) {
-			case MutationApplied(families, 3, 1, 1):
+			case MutationApplied(families, changes, 3, 1, 1):
 				require(families.length == 1 && families[0] == Transaction, "transaction undo lost its history family");
+				require(changes.length == 3, "transaction undo lost the stored changed identities");
 			case _:
 				throw "transaction undo did not advance one revision";
 		}
 		require(session.canonicalDraft().compare(afterResize) == 0, "transaction undo restored a partial batch");
 		switch session.mutate({baseRevision: 3, mutation: Redo}) {
-			case MutationApplied(families, 4, 2, 0):
+			case MutationApplied(families, changes, 4, 2, 0):
 				require(families.length == 1 && families[0] == Transaction, "transaction redo lost its history family");
+				require(changes.length == 3, "transaction redo lost the stored changed identities");
 			case _:
 				throw "transaction redo did not advance one revision";
 		}
@@ -320,8 +334,166 @@ final class EditorProbe {
 			case _: throw "second draft query lost its revision";
 		};
 		require(objectCount > 0 && freshDraft.objects.length == objectCount, "mutating an observed scenario changed the editor draft");
-		return 19;
+
+		final tree = switch session.query(InspectTree) {
+			case TreeObserved(4, nodes): nodes;
+			case _: throw "campaign-tree query lost its revision";
+		};
+		final currentDraft = session.draftSnapshot();
+		require(tree.length == expectedTreeNodes(currentDraft), "campaign-tree projection omitted or duplicated authored records");
+		require(hasTreeRoot(tree, currentDraft.id) && hasPaletteNode(tree, 1), "campaign-tree projection lost its root hierarchy or edited palette entry");
+		tree.resize(0);
+		final freshTree = switch session.query(InspectTree) {
+			case TreeObserved(4, nodes): nodes;
+			case _: throw "second campaign-tree query lost its revision";
+		};
+		require(freshTree.length == expectedTreeNodes(currentDraft), "mutating an observed campaign tree changed the editor session");
+
+		final objectId = id("tree.agent-marker");
+		switch session.mutate({
+			baseRevision: 4,
+			mutation: ApplyBatch([
+				PutObject({id: objectId, tags: [], placement: Checkpoint(transform(1000, 0, 1000))}),
+				PutObject({id: objectId, tags: [new ScenarioTag("updated")], placement: Checkpoint(transform(2000, 0, 1000))})
+			])
+		}) {
+			case MutationApplied(_, changes, 5, _, _):
+				require(changes.length == 1 && isObjectChange(changes[0], objectId), "replacement batch did not deduplicate its stable object identity");
+			case _:
+				throw "replacement batch did not commit";
+		}
+		final addedTree = switch session.query(InspectTree) {
+			case TreeObserved(5, nodes): nodes;
+			case _: throw "tree after object creation lost its revision";
+		};
+		require(hasObjectNode(addedTree, objectId), "campaign tree did not expose a newly authored object");
+		switch session.query(InspectNode(ObjectNode(objectId))) {
+			case NodeObserved(5, node):
+				require(node != null && node.childCount == 0, "object property query returned the wrong compact tree row");
+			case _:
+				throw "object property query lost its revision";
+		}
+		switch session.query(InspectNode(ObjectNode(id("missing.tree-object")))) {
+			case NodeObserved(5, null):
+			case _:
+				throw "missing object property query did not return an explicit empty result";
+		}
+		switch session.mutate({baseRevision: 5, mutation: Apply(RemoveObject(objectId))}) {
+			case MutationApplied(_, changes, 6, _, _):
+				require(changes.length == 1 && isObjectChange(changes[0], objectId), "object deletion lost its stable identity");
+			case _:
+				throw "object deletion did not commit";
+		}
+		switch session.mutate({baseRevision: 6, mutation: Undo}) {
+			case MutationApplied(_, changes, 7, _, _):
+				require(changes.length == 1 && isObjectChange(changes[0], objectId), "deletion undo lost its stored object identity");
+			case _:
+				throw "object deletion undo did not commit";
+		}
+		require(hasObjectNode(switch session.query(InspectTree) {
+			case TreeObserved(7, nodes): nodes;
+			case _: throw "tree after deletion undo lost its revision";
+		}, objectId), "undo did not restore the authored object to the campaign tree");
+		final invalid = open(defaultEditorSettings());
+		expectApplied(invalid.apply(RemoveMessage(EN, OBJECTIVE_BODY_MESSAGE)), Localization, "prepare invalid validation observation");
+		final diagnostics = switch invalid.query(InspectValidation) {
+			case ValidationObserved(1, DraftInvalid(values)): values;
+			case _:
+				throw "invalid draft did not expose validation diagnostics";
+		};
+		final diagnosticCount = diagnostics.length;
+		require(diagnosticCount > 0, "invalid validation observation contained no diagnostics");
+		diagnostics.resize(0);
+		switch invalid.query(InspectValidation) {
+			case ValidationObserved(1, DraftInvalid(values)):
+				require(values.length == diagnosticCount, "mutating observed diagnostics changed later validation state");
+			case _:
+				throw "second invalid validation observation changed shape";
+		}
+		return 42;
 	}
+
+	static function expectedTreeNodes(scenario:Scenario):Int {
+		var localeRecords = 0;
+		switch scenario.messages {
+			case NoMessageCatalog:
+			case EmbeddedMessageCatalog(catalog):
+				for (locale in catalog.locales)
+					localeRecords += 1 + locale.messages.length;
+		}
+		return 1 + 6 + 3 + scenario.world.palette.length + scenario.world.chunks.length + scenario.world.fluids.length + scenario.objects.length + 4
+			+ scenario.story.dialogues.length + scenario.story.journal.length + scenario.story.objectives.length + scenario.story.routes.length + 3
+			+ scenario.flow.variables.length + scenario.flow.sequences.length + scenario.flow.rules.length + localeRecords + scenario.extensions.length;
+	}
+
+	static function hasTreeRoot(nodes:Array<caxecraft.editor.EditorTypes.EditorTreeNode>, id:ScenarioId):Bool {
+		for (node in nodes)
+			switch node.ref {
+				case ScenarioNode(actual):
+					if (actual.text() == id.text() && node.parent == null && node.childCount == 6)
+						return true;
+				case _:
+			}
+		return false;
+	}
+
+	static function hasPaletteNode(nodes:Array<caxecraft.editor.EditorTypes.EditorTreeNode>, code:Int):Bool {
+		for (node in nodes)
+			switch node.ref {
+				case PaletteNode(actual):
+					if (actual == code)
+						return switch node.parent {
+							case SectionNode(Palette): node.childCount == 0;
+							case _: false;
+						};
+				case _:
+			}
+		return false;
+	}
+
+	static function hasObjectNode(nodes:Array<caxecraft.editor.EditorTypes.EditorTreeNode>, id:ScenarioId):Bool {
+		for (node in nodes)
+			switch node.ref {
+				case ObjectNode(actual):
+					if (actual.text() == id.text())
+						return switch node.parent {
+							case SectionNode(Objects): node.childCount == 0;
+							case _: false;
+						};
+				case _:
+			}
+		return false;
+	}
+
+	static function isWorldShapeChange(value:EditorChangeId):Bool
+		return switch value {
+			case ChangedWorldShape: true;
+			case _: false;
+		};
+
+	static function isPaletteChange(value:EditorChangeId, code:Int):Bool
+		return switch value {
+			case ChangedPalette(actual): actual == code;
+			case _: false;
+		};
+
+	static function isTerrainChange(value:EditorChangeId):Bool
+		return switch value {
+			case ChangedTerrain: true;
+			case _: false;
+		};
+
+	static function isSelectionChange(value:EditorChangeId):Bool
+		return switch value {
+			case ChangedSelection: true;
+			case _: false;
+		};
+
+	static function isObjectChange(value:EditorChangeId, id:ScenarioId):Bool
+		return switch value {
+			case ChangedObject(actual): actual.text() == id.text();
+			case _: false;
+		};
 
 	/**
 	 * Prove one cached layer, its pixel mapping, and all four visual tools.
@@ -759,7 +931,7 @@ final class EditorProbe {
 
 	static function expectApplied(result:EditorEditResult, family:EditorCommandFamily, label:String):Void {
 		switch result {
-			case EditApplied(actual, _, _):
+			case EditApplied(actual, _, _, _):
 				require(actual == family, '$label reported the wrong command family');
 			case EditUnchanged(_):
 				throw '$label unexpectedly made no change';
@@ -770,7 +942,7 @@ final class EditorProbe {
 
 	static function expectHistory(result:EditorHistoryResult, family:EditorCommandFamily, label:String):Void {
 		switch result {
-			case HistoryApplied(actual, _, _):
+			case HistoryApplied(actual, _, _, _):
 				require(actual == family, '$label reported the wrong command family');
 			case HistoryRejected(error):
 				throw '$label was rejected: $error';

@@ -79,6 +79,87 @@ enum EditorCommandFamily {
 	Transaction;
 }
 
+/**
+	Stable semantic identities reported after a committed editor mutation.
+
+	The variants preserve each identifier's real type instead of flattening
+	everything into a prefixed string. `ChangedDocument` deliberately means the
+	whole draft, which is the honest result for restoring a complete snapshot.
+**/
+enum EditorChangeId {
+	ChangedDocument;
+	ChangedWorldShape;
+	ChangedTerrain;
+	ChangedPalette(code:Int);
+	ChangedSelection;
+	ChangedFluid(id:ScenarioId);
+	ChangedObject(id:ScenarioId);
+	ChangedDialogue(id:ScenarioId);
+	ChangedObjective(id:ScenarioId);
+	ChangedRule(id:ScenarioId);
+	ChangedLocalization;
+	ChangedLocale(id:LocaleId);
+	ChangedMessage(locale:LocaleId, message:MessageId);
+}
+
+/** Fixed editor-tree groups whose children retain their own semantic IDs. */
+enum EditorSection {
+	World;
+	Palette;
+	Chunks;
+	Fluids;
+	Objects;
+	Story;
+	Dialogues;
+	Journal;
+	Objectives;
+	Routes;
+	Flow;
+	Variables;
+	Sequences;
+	Rules;
+	Localization;
+	Extensions;
+}
+
+/**
+	One typed identity in the editor's flat campaign-tree projection.
+
+	A flat list plus explicit `parent` links is easy to render as a tree without
+	giving callers nested mutable arrays. Every authored record present in the
+	current CAXEMAP schema has a distinct variant.
+**/
+enum EditorNodeRef {
+	ScenarioNode(id:ScenarioId);
+	SectionNode(section:EditorSection);
+	PaletteNode(code:Int);
+	ChunkNode(id:ScenarioId);
+	FluidNode(id:ScenarioId);
+	ObjectNode(id:ScenarioId);
+	DialogueNode(id:ScenarioId);
+	JournalNode(id:ScenarioId);
+	ObjectiveNode(id:ScenarioId);
+	RouteNode(id:ScenarioId);
+	VariableNode(id:ScenarioId);
+	SequenceNode(id:ScenarioId);
+	RuleNode(id:ScenarioId);
+	LocaleNode(id:LocaleId);
+	MessageNode(locale:LocaleId, message:MessageId);
+	ExtensionNode(feature:ContentId, id:ScenarioId);
+}
+
+/**
+	One copy-owned row in the deterministic campaign-tree projection.
+
+	`childCount` lets a compact UI draw disclosure controls without rescanning
+	the complete draft. The source arrays retain canonical CAXEMAP order.
+**/
+typedef EditorTreeNode = {
+	final ref:EditorNodeRef;
+	final parent:Null<EditorNodeRef>;
+	final childCount:Int;
+}
+
 enum EditorSetting {
 	HistoryEntries;
 	HistoryBytes;
@@ -165,11 +246,12 @@ typedef EditorMutationRequest = {
 	Result of one revision-checked mutation.
 
 	An applied result advances the revision exactly once. `families` lists the
-	individual command groups for a batch; undo and redo report the single
-	history family they restored.
+	individual command groups for a batch. `changes` is a deterministic,
+	deduplicated list of semantic identities stored with history and therefore
+	available again on undo and redo.
 **/
 enum EditorMutationResult {
-	MutationApplied(families:Array<EditorCommandFamily>, revision:Int, undoDepth:Int, redoDepth:Int);
+	MutationApplied(families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, revision:Int, undoDepth:Int, redoDepth:Int);
 	MutationUnchanged(families:Array<EditorCommandFamily>, revision:Int);
 	MutationRejected(error:EditorError, revision:Int);
 }
@@ -184,6 +266,22 @@ enum EditorQuery {
 
 	/** Read one copied deterministic CAXEMAP spelling of the current draft. */
 	InspectCanonicalDraft;
+
+	/** Read every authored record as a deterministic flat tree. */
+	InspectTree;
+
+	/** Read one compact tree/property row by its typed semantic identity. */
+	InspectNode(ref:EditorNodeRef);
+
+	/** Validate the draft without changing the last-known-playable snapshot. */
+	InspectValidation;
+}
+
+/** Read-only validation state returned without mutating editor recovery state. */
+enum EditorValidationObservation {
+	DraftPlayable(canonical:Bytes);
+	DraftInvalid(diagnostics:Array<ScenarioDiagnostic>);
+	DraftUnreadable(error:EditorError);
 }
 
 /**
@@ -213,6 +311,9 @@ enum EditorObservation {
 	StateObserved(state:EditorStateObservation);
 	DraftObserved(revision:Int, draft:Scenario);
 	CanonicalDraftObserved(revision:Int, canonical:Bytes);
+	TreeObserved(revision:Int, nodes:Array<EditorTreeNode>);
+	NodeObserved(revision:Int, node:Null<EditorTreeNode>);
+	ValidationObserved(revision:Int, validation:EditorValidationObservation);
 }
 
 enum EditorOpenResult {
@@ -221,13 +322,13 @@ enum EditorOpenResult {
 }
 
 enum EditorEditResult {
-	EditApplied(family:EditorCommandFamily, undoDepth:Int, redoDepth:Int);
+	EditApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, undoDepth:Int, redoDepth:Int);
 	EditUnchanged(family:EditorCommandFamily);
 	EditRejected(error:EditorError);
 }
 
 enum EditorHistoryResult {
-	HistoryApplied(family:EditorCommandFamily, undoDepth:Int, redoDepth:Int);
+	HistoryApplied(family:EditorCommandFamily, changes:Array<EditorChangeId>, undoDepth:Int, redoDepth:Int);
 	HistoryRejected(error:EditorError);
 }
 

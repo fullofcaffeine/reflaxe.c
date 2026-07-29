@@ -179,7 +179,7 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return;
 		switch current.mutate({baseRevision: current.revision(), mutation: Undo}) {
-			case MutationApplied(_, _, _, _):
+			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
 				refreshProjection();
 			case MutationUnchanged(_, _):
@@ -194,7 +194,7 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return;
 		switch current.mutate({baseRevision: current.revision(), mutation: Redo}) {
-			case MutationApplied(_, _, _, _):
+			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
 				refreshProjection();
 			case MutationUnchanged(_, _):
@@ -367,7 +367,7 @@ final class CaxecraftEditorScreen {
 				false;
 			case ToolCommandReady(value):
 				switch current.mutate({baseRevision: current.revision(), mutation: Apply(value)}) {
-					case MutationApplied(_, _, _, _):
+					case MutationApplied(_, _, _, _, _):
 						notice = Ready;
 						refreshProjection();
 						true;

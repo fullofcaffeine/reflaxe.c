@@ -3,6 +3,10 @@ package caxecraft.editor;
 import caxecraft.editor.EditorCommandReducer.EditorReductionResult;
 import caxecraft.editor.EditorCommandReducer.apply as reduceCommand;
 import caxecraft.editor.EditorHistory.EditorHistoryEntry;
+import caxecraft.editor.EditorObservationPlan.buildTree;
+import caxecraft.editor.EditorObservationPlan.changesFor;
+import caxecraft.editor.EditorObservationPlan.findNode;
+import caxecraft.editor.EditorObservationPlan.mergeChanges;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPolicy.validate as validateEditorSettings;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
@@ -11,6 +15,7 @@ import caxecraft.editor.EditorScenarioSnapshot.capture as captureScenario;
 import caxecraft.editor.EditorScenarioSnapshot.restore as restoreScenario;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
+import caxecraft.editor.EditorTypes.EditorChangeId;
 import caxecraft.editor.EditorTypes.EditorEditResult;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.editor.EditorTypes.EditorHistoryResult;
@@ -21,6 +26,7 @@ import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorQuery;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
+import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
@@ -129,6 +135,30 @@ final class EditorSession {
 				DraftObserved(currentRevision, draftSnapshot());
 			case InspectCanonicalDraft:
 				CanonicalDraftObserved(currentRevision, canonicalDraft());
+			case InspectTree:
+				TreeObserved(currentRevision, buildTree(draft));
+			case InspectNode(ref):
+				NodeObserved(currentRevision, findNode(draft, ref));
+			case InspectValidation:
+				ValidationObserved(currentRevision, inspectValidation());
+		}
+	}
+
+	/**
+		Validate for observation without changing the recovery snapshot.
+
+		The mutating `validate` command records a new last-known-playable draft.
+		A property panel or agent query must not gain that side effect merely by
+		inspecting diagnostics, so this path returns fresh copied evidence only.
+	**/
+	function inspectValidation():EditorValidationObservation {
+		return switch captureScenario(draft) {
+			case ImageRejected(error): DraftUnreadable(error);
+			case ImageReady(image):
+				switch ScenarioValidator.validate(image.parsed, registry) {
+					case ReadError(diagnostics): DraftInvalid(diagnostics.copy());
+					case ReadOk(_): DraftPlayable(image.bytes.sub(0, image.bytes.length));
+				}
 		}
 	}
 
@@ -161,6 +191,7 @@ final class EditorSession {
 		var staged = before;
 		var stagedSelection = copySelection(selection);
 		final families:Array<EditorCommandFamily> = [];
+		final changes:Array<EditorChangeId> = [];
 		for (command in commands) {
 			switch command {
 				case RestoreLastPlayable:
@@ -173,6 +204,7 @@ final class EditorSession {
 							staged = image;
 							stagedSelection = null;
 							families.push(Recovery);
+							mergeChanges(changes, [ChangedDocument]);
 					}
 				case _:
 					switch reduceCommand(staged.parsed.candidate, stagedSelection, command, settings) {
@@ -186,13 +218,14 @@ final class EditorSession {
 									staged = image;
 									stagedSelection = copySelection(reduction.selection);
 									families.push(reduction.family);
+									mergeChanges(changes, changesFor(command));
 							}
 					}
 			}
 		}
-		return switch accept(before, selection, staged, stagedSelection, Transaction) {
-			case EditApplied(_, undoDepth, redoDepth):
-				MutationApplied(families.copy(), currentRevision, undoDepth, redoDepth);
+		return switch accept(before, selection, staged, stagedSelection, Transaction, changes) {
+			case EditApplied(_, committedChanges, undoDepth, redoDepth):
+				MutationApplied(families.copy(), committedChanges, currentRevision, undoDepth, redoDepth);
 			case EditUnchanged(_):
 				MutationUnchanged(families.copy(), currentRevision);
 			case EditRejected(error):
@@ -202,8 +235,8 @@ final class EditorSession {
 
 	function mutationFromEdit(result:EditorEditResult):EditorMutationResult {
 		return switch result {
-			case EditApplied(family, undoDepth, redoDepth):
-				MutationApplied([family], currentRevision, undoDepth, redoDepth);
+			case EditApplied(family, changes, undoDepth, redoDepth):
+				MutationApplied([family], changes, currentRevision, undoDepth, redoDepth);
 			case EditUnchanged(family):
 				MutationUnchanged([family], currentRevision);
 			case EditRejected(error):
@@ -213,8 +246,8 @@ final class EditorSession {
 
 	function mutationFromHistory(result:EditorHistoryResult):EditorMutationResult {
 		return switch result {
-			case HistoryApplied(family, undoDepth, redoDepth):
-				MutationApplied([family], currentRevision, undoDepth, redoDepth);
+			case HistoryApplied(family, changes, undoDepth, redoDepth):
+				MutationApplied([family], changes, currentRevision, undoDepth, redoDepth);
 			case HistoryRejected(error):
 				MutationRejected(error, currentRevision);
 		}
@@ -231,7 +264,7 @@ final class EditorSession {
 			case ReductionReady(reduction):
 				switch captureScenario(reduction.scenario) {
 					case ImageRejected(error): EditRejected(error);
-					case ImageReady(after): accept(before, selection, after, reduction.selection, reduction.family);
+					case ImageReady(after): accept(before, selection, after, reduction.selection, reduction.family, changesFor(command));
 				}
 		}
 	}
@@ -259,7 +292,7 @@ final class EditorSession {
 				draft = image.parsed.candidate;
 				selection = copySelection(entry.beforeSelection);
 				advanceRevision();
-				HistoryApplied(entry.family, history.undoDepth(), history.redoDepth());
+				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
 		}
 	}
 
@@ -285,7 +318,7 @@ final class EditorSession {
 				draft = image.parsed.candidate;
 				selection = copySelection(entry.afterSelection);
 				advanceRevision();
-				HistoryApplied(entry.family, history.undoDepth(), history.redoDepth());
+				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
 		}
 	}
 
@@ -376,12 +409,12 @@ final class EditorSession {
 			return EditRejected(NoPlayableScenario);
 		return switch captureScenario(lastPlayable) {
 			case ImageRejected(error): EditRejected(error);
-			case ImageReady(after): accept(before, selection, after, null, Recovery);
+			case ImageReady(after): accept(before, selection, after, null, Recovery, [ChangedDocument]);
 		}
 	}
 
 	function accept(before:EditorScenarioImage, beforeSelection:Null<VoxelBounds>, after:EditorScenarioImage, afterSelection:Null<VoxelBounds>,
-			family:EditorCommandFamily):EditorEditResult {
+			family:EditorCommandFamily, changes:Array<EditorChangeId>):EditorEditResult {
 		if (before.bytes.compare(after.bytes) == 0 && selectionsEqual(beforeSelection, afterSelection))
 			return EditUnchanged(family);
 		if (currentRevision == 2147483647)
@@ -391,6 +424,7 @@ final class EditorSession {
 			return EditRejected(HistoryEntryTooLarge(byteCost, settings.historyBytes));
 		final entry:EditorHistoryEntry = {
 			family: family,
+			changes: changes.copy(),
 			before: before.bytes.sub(0, before.bytes.length),
 			beforeSelection: copySelection(beforeSelection),
 			after: after.bytes.sub(0, after.bytes.length),
@@ -401,7 +435,7 @@ final class EditorSession {
 		draft = after.parsed.candidate;
 		selection = copySelection(afterSelection);
 		advanceRevision();
-		return EditApplied(family, history.undoDepth(), history.redoDepth());
+		return EditApplied(family, changes.copy(), history.undoDepth(), history.redoDepth());
 	}
 
 	/**
