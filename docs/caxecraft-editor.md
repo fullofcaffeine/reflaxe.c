@@ -3,10 +3,12 @@
 Status: the renderer-independent command, history, validation, and test-play
 layer is implemented under `haxe_c-xge.19.5`. The first native Raylib/Raygui
 slice now presents the complete finite draft in a clipped perspective viewport,
-with a fly camera and typed voxel picking. It still edits layer zero only.
-Native map-file persistence, multi-layer controls, controller navigation,
-object gizmos, and the fuller child-friendly authoring experience remain
-separate work.
+with a fly camera and typed voxel picking. The editor core also provides
+revision-checked mutations, bounded atomic command batches, and copy-owned
+observations for visual and future automation clients. It still edits layer
+zero only. Native map-file persistence, JSONL/MCP adapters, multi-layer
+controls, controller navigation, object gizmos, and the fuller child-friendly
+authoring experience remain separate work.
 
 ## What this layer owns
 
@@ -39,6 +41,57 @@ Raygui tool input into these commands. `PaintVoxels` and `EraseVoxels` commit
 one bounded drag as one edit, rather than creating history on every rendered
 frame.
 
+## One command boundary for humans and automation
+
+The visual editor and a future agent must not have different rules for changing
+a map. Both use `EditorSession.mutate`, which combines an operation with the
+draft revision its caller inspected:
+
+```text
+query state -> revision 12
+                  |
+                  v
+mutate(base 12, commands [place house, place trigger, connect rule])
+                  |
+          +-------+--------+
+          | all succeed    | any command fails
+          v                v
+   revision 13       revision remains 12
+   one undo entry    no draft/history change
+```
+
+A **revision** is a non-negative counter for committed draft changes. A caller
+includes its last observed revision with a mutation. If the editor is already
+at a newer revision, it returns `RevisionConflict` before applying anything.
+This prevents an agent, delayed UI gesture, or second editor view from
+overwriting work created after it last read the draft. Successful single edits,
+transactions, undo, and redo each advance the counter once. Rejected and
+semantically unchanged work does not.
+
+An **atomic transaction** means a group of typed `EditorCommand` values becomes
+visible all at once or not at all. `EditorSession` applies each command to a
+private deep scenario image, passes every intermediate result through the
+ordinary reducer and canonical CAXEMAP snapshot boundary, and publishes one
+history entry only after the complete group succeeds. A later failing command
+therefore cannot leave an earlier terrain, object, or rule edit behind.
+Transactions are limited to 128 commands by default and can never exceed 256;
+the limit bounds one request's CPU, memory, and history work.
+
+`EditorSession.query` is the matching read-only side. Its closed `EditorQuery`
+values return small session state, a deep typed draft, or copied canonical
+bytes. Every observation carries the revision it describes. Returned arrays
+and bytes belong to the caller, so changing them cannot change the live editor.
+The native 3D screen now sends voxel edits, undo, and redo through this
+revision-aware path.
+
+This is the implemented in-process semantic boundary, not a claim that remote
+automation already ships. A planned local JSON Lines adapter will validate
+bounded external requests into these closed Haxe types. A later optional MCP
+adapter may translate discoverable tools into the same operations; neither
+adapter will receive a private mutation path, arbitrary code execution, or
+unrestricted filesystem and network access. Issue `haxe_c-xge.19.6.3` owns
+those later adapters and the broader authoring surface.
+
 ## First 3D visual viewport
 
 The first 3D slice lets a creator see depth, fly around the finite voxel world,
@@ -56,7 +109,7 @@ cached read-only voxel volume
     +-- camera ray -> visible voxel or empty floor cell
                          |
                          v
-                 EditorCommand -> EditorSession.apply
+                 EditorCommand -> EditorSession.mutate
 ```
 
 A **projection** means a read-only shape prepared for presentation.
@@ -145,6 +198,11 @@ duplicate points; it is the editor's shared “one gesture” work budget. Small
 bounds may be selected when opening a session, which makes device- or
 mode-specific limits testable without weakening the format limits.
 
+The separate transaction-command bound limits how many typed commands may be
+grouped into one all-or-nothing edit. It does not raise the voxel gesture,
+selection, history-entry, or history-byte bounds: every command inside the
+transaction must still satisfy those existing limits.
+
 This full-snapshot strategy favors simple, trustworthy recovery for the first
 bounded editor. Later editor slices must measure real map sizes and gesture
 latency. If snapshots become the bottleneck, they may introduce typed
@@ -215,13 +273,15 @@ npm run test:caxecraft-editor
 ```
 
 The probe builds a small complete scenario through the public command API. It
-checks exact undo and redo for every command family, canonical
-serialize/reload, invalid-draft recovery, deterministic history eviction, byte
-and gesture limits, two independent test-play sessions, the optional top-down
-projection, complete-volume projection, camera bounds, solid and empty-space
-ray picking, and all four tool translations. It runs under C and a second
-installed locale (Spanish when available) and scans the reusable editor
-sources for C, Raylib, target-condition, raw-code, and untyped-boundary leakage.
+checks revision advancement, stale-request rejection, complete batch rollback,
+one-entry transaction undo/redo, copied observations, exact undo and redo for
+every command family, canonical serialize/reload, invalid-draft recovery,
+deterministic history eviction, byte and gesture limits, two independent
+test-play sessions, the optional top-down projection, complete-volume
+projection, camera bounds, solid and empty-space ray picking, and all four tool
+translations. It runs under C and a second installed locale (Spanish when
+available) and scans the reusable editor sources for C, Raylib,
+target-condition, raw-code, and untyped-boundary leakage.
 
 The native graphical proof uses the real renderer in Raylib's deterministic
 in-memory configuration:

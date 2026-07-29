@@ -373,7 +373,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "3edfe171aba3cdcd7cfaa69f7563733314420f645c9d0eac9f95e3f8dc9b5770",
+      "sha256": "01af4453808c05f8adae5f1e5ff0501d0c86f008ee12afdf2b9cffba0ee4f02a",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -383,12 +383,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "10bb77b559de969175913986406ce41d4d9e9d83c742955792bd76dd99b0fe5c",
+      "sha256": "8943e5bc07f4b2dd9e6b83af5dc82cd6457cea8c9fccf345440513f3671e26e0",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "e5396b936f3cda5a382a47c1ca70d299c2a06c924f350478594f3e0d04c0347e",
+      "sha256": "59a7c734fd4c859ecc48bc4508c33a0549a8914177a483a7ba6b83833f15346c",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -398,12 +398,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "db6648ec10b6804081e391bc6a17c7383bb43e2d9f49e64a0191022c99f3714a",
+      "sha256": "b58ee261e2bea573c5a7d72fb995293456a772d34dc24c1c2f886283b6f312b5",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "8e5b2b08c8344ae653dfb6a6238d84f4b5e011fed2274cea612326f6741d9d16",
+      "sha256": "a871edbc5733fcaa6211b2381a56a75163207233d84ba6c17e84b72232170fb5",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -668,7 +668,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "01c4531e6aac6f02e29019360534cc2f01664d3e16fdbef202723b5c1b5376a6",
+      "sha256": "8b9065b36c158ab007391a9ddf28df2597c669a128f448f6d6de4212ed62f62a",
       "path": "include/hxc/modules/caxecraft/editor/EditorSession.h",
       "kind": "private-header"
     },
@@ -678,7 +678,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "1c6c8a3a61983433a8822a451736e08ef9e25b41aa90eec527d54818fbbc6bb3",
+      "sha256": "52fa9004087c5f38a421c9e67f651c6b92ff118d28c856b6d4238b35dde9382f",
       "path": "include/hxc/modules/caxecraft/editor/EditorTypes.h",
       "kind": "private-header"
     },
@@ -913,7 +913,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "d1350f490f830d2450c46abb3d2587837dd63107b42c93401bf0d2e63aeff89b",
+      "sha256": "61fa13c962ec1f641baec3cd73915f3ee074a09ad4eb5021fca7ad60bdc57761",
       "path": "include/hxc/modules/caxecraft/scenario/ScenarioStory.h",
       "kind": "private-header"
     },
@@ -1173,7 +1173,7 @@
       "kind": "source"
     },
     {
-      "sha256": "474b8641fddf2906fe62599ee47d41fd22a0b720070d8fbe3215974ad517fd3f",
+      "sha256": "9116f10e224739a1fe8a5c0425303eda213b9e4c8f0ab1703ab429a97f873414",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1198,7 +1198,7 @@
       "kind": "source"
     },
     {
-      "sha256": "1cb665ec85275a2f44314e6709ff132625f922b43ae7dd6c058b2f2b7b77785d",
+      "sha256": "071883500dba9ff159e06967d62b1c1c85721850f4338c33dbff625abe659bdc",
       "path": "src/modules/caxecraft/app/CaxecraftEditorScreen.c",
       "kind": "source"
     },
@@ -1328,7 +1328,7 @@
       "kind": "source"
     },
     {
-      "sha256": "d322bfbb3968c0bf75d718d5ed82b806379d8a41674714a1729b901d7b28b25b",
+      "sha256": "986857a1ecfbc985a12d5f847033c6deba2d89e707847f0d018795985fdb5199",
       "path": "src/modules/caxecraft/editor/EditorCommandReducer.c",
       "kind": "source"
     },
@@ -1338,7 +1338,7 @@
       "kind": "source"
     },
     {
-      "sha256": "139fa57b48ab8457582f0fe372107cd39d83771f138e0c4be3125016358effa6",
+      "sha256": "de016a67c350aa865e7cd2bf378957ee9245edd67004c176d931907b72a4393f",
       "path": "src/modules/caxecraft/editor/EditorPolicy.c",
       "kind": "source"
     },
@@ -1353,7 +1353,7 @@
       "kind": "source"
     },
     {
-      "sha256": "fd4029a7c1dbc3f5592ee50714244ae44f89b5bb0c7c6541555e6d97e6014230",
+      "sha256": "1591d731a8d9a7fe82fc205b2fc27602e773e45ae5ea672a312e02f85a20b7f9",
       "path": "src/modules/caxecraft/editor/EditorSession.c",
       "kind": "source"
     },

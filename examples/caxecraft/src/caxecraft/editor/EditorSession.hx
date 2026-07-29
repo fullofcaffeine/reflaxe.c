@@ -14,7 +14,11 @@ import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorEditResult;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.editor.EditorTypes.EditorHistoryResult;
+import caxecraft.editor.EditorTypes.EditorMutationRequest;
+import caxecraft.editor.EditorTypes.EditorMutationResult;
+import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
+import caxecraft.editor.EditorTypes.EditorQuery;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
@@ -40,6 +44,7 @@ final class EditorSession {
 	var selection:Null<VoxelBounds>;
 	var lastPlayable:Null<Scenario>;
 	var activeTestPlay:Null<EditorTestPlay>;
+	var currentRevision:Int;
 
 	function new(image:EditorScenarioImage, registry:ScenarioContentRegistry, settings:EditorSettings) {
 		this.registry = registry;
@@ -49,6 +54,7 @@ final class EditorSession {
 		this.selection = null;
 		this.lastPlayable = validatedScenario(image);
 		this.activeTestPlay = null;
+		this.currentRevision = 0;
 	}
 
 	/** Open even a semantically invalid draft so the editor can repair it. */
@@ -63,12 +69,154 @@ final class EditorSession {
 		}
 	}
 
+	/**
+		Apply one command against the session's current in-process draft.
+
+		This is the small convenience API for code that already owns the session
+		and performs one synchronous edit. It still records history and advances
+		the revision. A UI view, automation client, or future remote adapter must
+		use `mutate` instead so a revision check can reject stale work.
+	**/
 	public function apply(command:EditorCommand):EditorEditResult {
 		if (activeTestPlay != null)
 			return EditRejected(NotEditing);
 		return switch captureScenario(draft) {
 			case ImageRejected(error): EditRejected(error);
 			case ImageReady(before): applyToImage(before, command);
+		}
+	}
+
+	/**
+		Apply one revision-checked operation through the shared editor boundary.
+
+		A caller first reads a revision with `query`, then sends that value here.
+		If another human or tool changed the draft meanwhile, the request is
+		rejected before touching the draft or history. A batch stages every
+		command on a private deep copy and publishes one history entry only after
+		the complete list succeeds.
+	**/
+	public function mutate(request:EditorMutationRequest):EditorMutationResult {
+		if (request.baseRevision != currentRevision)
+			return MutationRejected(RevisionConflict(currentRevision, request.baseRevision), currentRevision);
+		return switch request.mutation {
+			case Apply(command): mutationFromEdit(apply(command));
+			case ApplyBatch(commands): applyBatch(commands);
+			case Undo: mutationFromHistory(undo());
+			case Redo: mutationFromHistory(redo());
+		}
+	}
+
+	/**
+		Return a copy-owned answer tagged with the revision it describes.
+
+		The query is synchronous: the revision and copied value come from the
+		same editor state. Future JSONL or MCP adapters may encode this answer,
+		but transport types and permissions do not enter the editor core.
+	**/
+	public function query(request:EditorQuery):EditorObservation {
+		return switch request {
+			case InspectState:
+				StateObserved({
+					revision: currentRevision,
+					selection: copySelection(selection),
+					undoDepth: history.undoDepth(),
+					redoDepth: history.redoDepth(),
+					historyEntries: history.entryCount(),
+					historyBytes: history.byteCount(),
+					editing: activeTestPlay == null
+				});
+			case InspectDraft:
+				DraftObserved(currentRevision, draftSnapshot());
+			case InspectCanonicalDraft:
+				CanonicalDraftObserved(currentRevision, canonicalDraft());
+		}
+	}
+
+	/** Current revision for an in-process caller preparing its next mutation. */
+	public inline function revision():Int
+		return currentRevision;
+
+	/**
+		Stage a bounded command list and commit it as one reversible edit.
+
+		Each intermediate command still passes the ordinary reducer and canonical
+		CAXEMAP snapshot boundary. If any step fails, only the private staged
+		image was touched; the live draft, selection, history, and revision remain
+		exactly as they were before the call.
+	**/
+	function applyBatch(commands:Array<EditorCommand>):EditorMutationResult {
+		if (activeTestPlay != null)
+			return MutationRejected(NotEditing, currentRevision);
+		if (commands.length == 0)
+			return MutationRejected(EmptyTransaction, currentRevision);
+		if (commands.length > settings.transactionCommands)
+			return MutationRejected(TransactionTooLarge(commands.length, settings.transactionCommands), currentRevision);
+		return switch captureScenario(draft) {
+			case ImageRejected(error): MutationRejected(error, currentRevision);
+			case ImageReady(before): stageBatch(before, commands);
+		}
+	}
+
+	function stageBatch(before:EditorScenarioImage, commands:Array<EditorCommand>):EditorMutationResult {
+		var staged = before;
+		var stagedSelection = copySelection(selection);
+		final families:Array<EditorCommandFamily> = [];
+		for (command in commands) {
+			switch command {
+				case RestoreLastPlayable:
+					if (lastPlayable == null)
+						return MutationRejected(NoPlayableScenario, currentRevision);
+					switch captureScenario(lastPlayable) {
+						case ImageRejected(error):
+							return MutationRejected(error, currentRevision);
+						case ImageReady(image):
+							staged = image;
+							stagedSelection = null;
+							families.push(Recovery);
+					}
+				case _:
+					switch reduceCommand(staged.parsed.candidate, stagedSelection, command, settings) {
+						case ReductionRejected(error):
+							return MutationRejected(error, currentRevision);
+						case ReductionReady(reduction):
+							switch captureScenario(reduction.scenario) {
+								case ImageRejected(error):
+									return MutationRejected(error, currentRevision);
+								case ImageReady(image):
+									staged = image;
+									stagedSelection = copySelection(reduction.selection);
+									families.push(reduction.family);
+							}
+					}
+			}
+		}
+		return switch accept(before, selection, staged, stagedSelection, Transaction) {
+			case EditApplied(_, undoDepth, redoDepth):
+				MutationApplied(families.copy(), currentRevision, undoDepth, redoDepth);
+			case EditUnchanged(_):
+				MutationUnchanged(families.copy(), currentRevision);
+			case EditRejected(error):
+				MutationRejected(error, currentRevision);
+		}
+	}
+
+	function mutationFromEdit(result:EditorEditResult):EditorMutationResult {
+		return switch result {
+			case EditApplied(family, undoDepth, redoDepth):
+				MutationApplied([family], currentRevision, undoDepth, redoDepth);
+			case EditUnchanged(family):
+				MutationUnchanged([family], currentRevision);
+			case EditRejected(error):
+				MutationRejected(error, currentRevision);
+		}
+	}
+
+	function mutationFromHistory(result:EditorHistoryResult):EditorMutationResult {
+		return switch result {
+			case HistoryApplied(family, undoDepth, redoDepth):
+				MutationApplied([family], currentRevision, undoDepth, redoDepth);
+			case HistoryRejected(error):
+				MutationRejected(error, currentRevision);
 		}
 	}
 
@@ -88,9 +236,18 @@ final class EditorSession {
 		}
 	}
 
+	/**
+		Restore the state before the newest history entry.
+
+		A successful restore advances the revision because observers now see a
+		different draft. Use `mutate({mutation: Undo, ...})` when the caller does
+		not exclusively own this in-process session.
+	**/
 	public function undo():EditorHistoryResult {
 		if (activeTestPlay != null)
 			return HistoryRejected(NotEditing);
+		if (currentRevision == 2147483647)
+			return HistoryRejected(RevisionExhausted);
 		final entry = history.takeUndo();
 		if (entry == null)
 			return HistoryRejected(NothingToUndo);
@@ -101,13 +258,22 @@ final class EditorSession {
 			case ImageReady(image):
 				draft = image.parsed.candidate;
 				selection = copySelection(entry.beforeSelection);
+				advanceRevision();
 				HistoryApplied(entry.family, history.undoDepth(), history.redoDepth());
 		}
 	}
 
+	/**
+		Reapply the newest entry removed by `undo`.
+
+		Like every committed state change, a successful redo advances the
+		revision. Revision-aware callers should request it through `mutate`.
+	**/
 	public function redo():EditorHistoryResult {
 		if (activeTestPlay != null)
 			return HistoryRejected(NotEditing);
+		if (currentRevision == 2147483647)
+			return HistoryRejected(RevisionExhausted);
 		final entry = history.takeRedo();
 		if (entry == null)
 			return HistoryRejected(NothingToRedo);
@@ -118,6 +284,7 @@ final class EditorSession {
 			case ImageReady(image):
 				draft = image.parsed.candidate;
 				selection = copySelection(entry.afterSelection);
+				advanceRevision();
 				HistoryApplied(entry.family, history.undoDepth(), history.redoDepth());
 		}
 	}
@@ -217,6 +384,8 @@ final class EditorSession {
 			family:EditorCommandFamily):EditorEditResult {
 		if (before.bytes.compare(after.bytes) == 0 && selectionsEqual(beforeSelection, afterSelection))
 			return EditUnchanged(family);
+		if (currentRevision == 2147483647)
+			return EditRejected(RevisionExhausted);
 		final byteCost = before.bytes.length + after.bytes.length;
 		if (!history.canRecord(byteCost))
 			return EditRejected(HistoryEntryTooLarge(byteCost, settings.historyBytes));
@@ -231,7 +400,19 @@ final class EditorSession {
 		history.record(entry);
 		draft = after.parsed.candidate;
 		selection = copySelection(afterSelection);
+		advanceRevision();
 		return EditApplied(family, history.undoDepth(), history.redoDepth());
+	}
+
+	/**
+		Advance the in-process edit counter after one committed state change.
+
+		Haxe `Int` lowers to a signed 32-bit value in generated C. The mutation
+		paths reject revision exhaustion before changing state, so this increment
+		cannot wrap to a negative value that could match an old request.
+	**/
+	function advanceRevision():Void {
+		currentRevision++;
 	}
 
 	function validatedScenario(image:EditorScenarioImage):Null<Scenario> {

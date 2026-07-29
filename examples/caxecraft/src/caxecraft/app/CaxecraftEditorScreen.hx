@@ -6,8 +6,7 @@ import caxecraft.content.BaseContentPack.BaseBlock;
 import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.editor.EditorScenarioFactory.createBlank as createBlankEditorScenario;
 import caxecraft.editor.EditorSession;
-import caxecraft.editor.EditorTypes.EditorEditResult;
-import caxecraft.editor.EditorTypes.EditorHistoryResult;
+import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
@@ -176,25 +175,31 @@ final class CaxecraftEditorScreen {
 		return Raygui.Button(Rectangle.fromFloat(x, y, width, 32.0), text).has(GuiResult.Pressed);
 
 	function undo():Void {
-		if (session == null)
+		final current = session;
+		if (current == null)
 			return;
-		switch session.undo() {
-			case HistoryApplied(_, _, _):
+		switch current.mutate({baseRevision: current.revision(), mutation: Undo}) {
+			case MutationApplied(_, _, _, _):
 				notice = Ready;
 				refreshProjection();
-			case HistoryRejected(_):
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
 				notice = Invalid;
 		}
 	}
 
 	function redo():Void {
-		if (session == null)
+		final current = session;
+		if (current == null)
 			return;
-		switch session.redo() {
-			case HistoryApplied(_, _, _):
+		switch current.mutate({baseRevision: current.revision(), mutation: Redo}) {
+			case MutationApplied(_, _, _, _):
 				notice = Ready;
 				refreshProjection();
-			case HistoryRejected(_):
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
 				notice = Invalid;
 		}
 	}
@@ -361,15 +366,15 @@ final class CaxecraftEditorScreen {
 				notice = Invalid;
 				false;
 			case ToolCommandReady(value):
-				switch current.apply(value) {
-					case EditApplied(_, _, _):
+				switch current.mutate({baseRevision: current.revision(), mutation: Apply(value)}) {
+					case MutationApplied(_, _, _, _):
 						notice = Ready;
 						refreshProjection();
 						true;
-					case EditUnchanged(_):
+					case MutationUnchanged(_, _):
 						notice = Ready;
 						true;
-					case EditRejected(_):
+					case MutationRejected(_, _):
 						notice = Invalid;
 						false;
 				}
@@ -411,8 +416,9 @@ final class CaxecraftEditorScreen {
 	 * Submit one deterministic pilot gesture through the production tool path.
 	 *
 	 * The graphical runner bypasses only operating-system pointer delivery. It
-	 * still exercises command translation, `EditorSession.apply`, history, cache
-	 * refresh, and the real renderer. Ordinary builds omit this method.
+	 * still exercises command translation, revision checking, `EditorSession`
+	 * history, cache refresh, and the real renderer. Ordinary builds omit this
+	 * method.
 	 */
 	public function applyPilotTool(tool:EditorTool, point:VoxelPoint):Bool
 		return applyToolAt(tool, point);

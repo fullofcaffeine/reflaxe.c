@@ -20,12 +20,16 @@ inline final MAX_HISTORY_BYTES:Int = 67108864;
 /** Largest voxel selection one editor command may process. */
 inline final MAX_SELECTION_CELLS:Int = 65536;
 
+/** Largest command count one all-or-nothing editor transaction may process. */
+inline final MAX_TRANSACTION_COMMANDS:Int = 256;
+
 /** Create the conservative settings used when a caller supplies no override. */
 function defaults():EditorSettings
 	return {
 		historyEntries: 64,
 		historyBytes: 33554432,
-		selectionCells: 65536
+		selectionCells: 65536,
+		transactionCommands: 128
 	};
 
 /** Return the first invalid bound, or `null` when all settings are safe. */
@@ -36,5 +40,7 @@ function validate(settings:EditorSettings):Null<EditorError> {
 		return InvalidSetting(HistoryBytes, 1, MAX_HISTORY_BYTES);
 	if (settings.selectionCells < 1 || settings.selectionCells > MAX_SELECTION_CELLS)
 		return InvalidSetting(SelectionCells, 1, MAX_SELECTION_CELLS);
+	if (settings.transactionCommands < 1 || settings.transactionCommands > MAX_TRANSACTION_COMMANDS)
+		return InvalidSetting(TransactionCommands, 1, MAX_TRANSACTION_COMMANDS);
 	return null;
 }

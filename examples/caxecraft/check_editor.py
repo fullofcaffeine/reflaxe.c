@@ -23,8 +23,9 @@ from run import (  # noqa: E402
 )
 
 EXPECTED_TRACE = (
-    "caxemap-editor: 22 command round trips, 12 2D checks, 16 3D checks, "
-    "1894 canonical bytes; bounded history/test-play/recovery; trace=-1312225393\n"
+    "caxemap-editor: 22 command round trips, 19 protocol checks, 12 2D checks, "
+    "16 3D checks, 1894 canonical bytes; bounded history/test-play/recovery; "
+    "trace=-1312073630\n"
 )
 FORBIDDEN_EDITOR_TEXT = (
     re.compile(r"#if\b"),
@@ -106,8 +107,8 @@ def main() -> int:
         return 1
 
     print(
-        "caxemap-editor: OK: public commands, exact undo/redo, validation, "
-        f"bounded history, and reversible test play agree under C/{locale}"
+        "caxemap-editor: OK: revisioned commands, atomic batches, copy-owned "
+        f"observations, undo/redo, validation, and test play agree under C/{locale}"
     )
     return 0
 

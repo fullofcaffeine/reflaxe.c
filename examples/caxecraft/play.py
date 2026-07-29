@@ -1819,7 +1819,7 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "EndScissorMode(",
         "BeginMode3D(",
         "GetScreenToWorldRay(",
-        "EditorSession_apply(",
+        "EditorSession_mutate(",
     ):
         if required not in editor:
             raise PlayFailure(

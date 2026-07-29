@@ -2,6 +2,7 @@ package caxecraft.qa;
 
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
 import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
+import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorSession;
@@ -10,6 +11,8 @@ import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorEditResult;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.editor.EditorTypes.EditorHistoryResult;
+import caxecraft.editor.EditorTypes.EditorMutationResult;
+import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
@@ -86,6 +89,7 @@ final class EditorProbe {
 
 	static function main():Void {
 		checkActionPalette();
+		final protocolChecks = checkRevisionedProtocol();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
 		final session = open(defaultEditorSettings());
@@ -154,8 +158,8 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
 	}
 
 	static function checkActionPalette():Void {
@@ -188,6 +192,135 @@ final class EditorProbe {
 			require(descriptor.editorHelp.text() == 'editor.action.${expected[index]}.help', "editor action help key drifted");
 			require(flowActionArgumentRoles(descriptor.schema).length > 0, "editor action lost its typed form fields");
 		}
+	}
+
+	/**
+	 * Prove stale-edit rejection, atomic batches, and copy-owned observations.
+	 *
+	 * This is the transport-independent contract a visual editor, local JSONL
+	 * process, or later MCP adapter will share. A batch deliberately stages one
+	 * valid edit before a failing edit below; the unchanged live bytes prove
+	 * that staging never exposes a partial result.
+	 */
+	static function checkRevisionedProtocol():Int {
+		final session = open(defaultEditorSettings());
+		final initialState = switch session.query(InspectState) {
+			case StateObserved(value): value;
+			case _: throw "state query returned the wrong observation";
+		};
+		require(initialState.revision == 0 && initialState.editing && initialState.undoDepth == 0 && initialState.redoDepth == 0,
+			"new editor protocol state was not revision zero");
+
+		switch session.mutate({
+			baseRevision: initialState.revision,
+			mutation: Apply(ResizeWorld({width: 2, height: 1, depth: 2}))
+		}) {
+			case MutationApplied(families, 1, 1, 0):
+				require(families.length == 1 && families[0] == WorldShape, "single mutation lost its command family");
+			case _:
+				throw "revisioned single mutation did not commit exactly once";
+		}
+		final afterResize = session.canonicalDraft();
+		switch session.mutate({baseRevision: 0, mutation: Apply(SetPaletteEntry(1, STONE))}) {
+			case MutationRejected(RevisionConflict(1, 0), 1):
+			case _:
+				throw "stale editor request did not report required and supplied revisions";
+		}
+		require(session.canonicalDraft().compare(afterResize) == 0
+			&& session.undoDepth() == 1, "stale editor request changed draft or history");
+
+		final selection:VoxelBounds = {origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}};
+		switch session.mutate({
+			baseRevision: 1,
+			mutation: ApplyBatch([SetPaletteEntry(1, STONE), PaintVoxel({x: 0, y: 0, z: 0}, 1), Select(selection)])
+		}) {
+			case MutationApplied(families, 2, 2, 0):
+				require(families.length == 3 && families[0] == Voxel && families[1] == Voxel && families[2] == Selection,
+					"atomic mutation lost its ordered command families");
+			case _:
+				throw "atomic editor mutation did not commit as one revision";
+		}
+		final afterBatch = session.canonicalDraft();
+		require(session.historyEntries() == 2, "three-command transaction created more than one history entry");
+		switch session.mutate({baseRevision: 2, mutation: Apply(Select(selection))}) {
+			case MutationUnchanged(families, 2):
+				require(families.length == 1 && families[0] == Selection, "unchanged mutation lost its family");
+			case _:
+				throw "unchanged editor mutation advanced the revision";
+		}
+
+		final rollbackBytes = session.canonicalDraft();
+		final rollbackSelection = selectionKey(session);
+		final rollbackUndo = session.undoDepth();
+		final rollbackRedo = session.redoDepth();
+		switch session.mutate({
+			baseRevision: 2,
+			mutation: ApplyBatch([PaintVoxel({x: 1, y: 0, z: 0}, 1), PaintVoxel({x: 99, y: 0, z: 0}, 1)])
+		}) {
+			case MutationRejected(PointOutsideWorld(_), 2):
+			case _:
+				throw "failing atomic editor mutation returned the wrong rejection";
+		}
+		require(session.canonicalDraft().compare(rollbackBytes) == 0
+			&& selectionKey(session) == rollbackSelection
+			&& session.undoDepth() == rollbackUndo
+			&& session.redoDepth() == rollbackRedo
+			&& session.revision() == 2,
+			"failing atomic mutation leaked staged state");
+
+		switch session.mutate({baseRevision: 2, mutation: ApplyBatch([])}) {
+			case MutationRejected(EmptyTransaction, 2):
+			case _:
+				throw "empty editor transaction did not fail closed";
+		}
+		final oversized:Array<EditorCommand> = [];
+		for (_ in 0...defaultEditorSettings().transactionCommands + 1)
+			oversized.push(ClearSelection);
+		switch session.mutate({baseRevision: 2, mutation: ApplyBatch(oversized)}) {
+			case MutationRejected(TransactionTooLarge(129, 128), 2):
+			case _:
+				throw "oversized editor transaction did not report its exact bound";
+		}
+
+		switch session.mutate({baseRevision: 2, mutation: Undo}) {
+			case MutationApplied(families, 3, 1, 1):
+				require(families.length == 1 && families[0] == Transaction, "transaction undo lost its history family");
+			case _:
+				throw "transaction undo did not advance one revision";
+		}
+		require(session.canonicalDraft().compare(afterResize) == 0, "transaction undo restored a partial batch");
+		switch session.mutate({baseRevision: 3, mutation: Redo}) {
+			case MutationApplied(families, 4, 2, 0):
+				require(families.length == 1 && families[0] == Transaction, "transaction redo lost its history family");
+			case _:
+				throw "transaction redo did not advance one revision";
+		}
+		require(session.canonicalDraft().compare(afterBatch) == 0, "transaction redo did not restore the complete batch");
+
+		final observedBytes = switch session.query(InspectCanonicalDraft) {
+			case CanonicalDraftObserved(4, value): value;
+			case _: throw "canonical query lost its revision";
+		};
+		final originalByte = observedBytes.get(0);
+		observedBytes.set(0, originalByte == 0 ? 1 : 0);
+		final freshBytes = switch session.query(InspectCanonicalDraft) {
+			case CanonicalDraftObserved(4, value): value;
+			case _: throw "second canonical query lost its revision";
+		};
+		require(freshBytes.compare(afterBatch) == 0, "mutating observed bytes changed the editor draft");
+
+		final observedDraft = switch session.query(InspectDraft) {
+			case DraftObserved(4, value): value;
+			case _: throw "draft query lost its revision";
+		};
+		final objectCount = observedDraft.objects.length;
+		observedDraft.objects.resize(0);
+		final freshDraft = switch session.query(InspectDraft) {
+			case DraftObserved(4, value): value;
+			case _: throw "second draft query lost its revision";
+		};
+		require(objectCount > 0 && freshDraft.objects.length == objectCount, "mutating an observed scenario changed the editor draft");
+		return 19;
 	}
 
 	/**
@@ -410,7 +543,12 @@ final class EditorProbe {
 	}
 
 	static function checkHardBounds():Void {
-		final settings:EditorSettings = {historyEntries: 3, historyBytes: 1048576, selectionCells: 4};
+		final settings:EditorSettings = {
+			historyEntries: 3,
+			historyBytes: 1048576,
+			selectionCells: 4,
+			transactionCommands: 3
+		};
 		final session = open(settings);
 		expectApplied(session.apply(ResizeWorld({width: 3, height: 1, depth: 3})), WorldShape, "bounded resize");
 		for (x in 0...3)
@@ -434,7 +572,12 @@ final class EditorProbe {
 			case _: false;
 		}, "oversized paint gesture");
 
-		final tiny = open({historyEntries: 3, historyBytes: 1, selectionCells: 4});
+		final tiny = open({
+			historyEntries: 3,
+			historyBytes: 1,
+			selectionCells: 4,
+			transactionCommands: 3
+		});
 		final before = tiny.canonicalDraft();
 		expectRejected(tiny.apply(ResizeWorld({width: 2, height: 1, depth: 1})), error -> switch error {
 			case HistoryEntryTooLarge(_, 1): true;
@@ -445,12 +588,25 @@ final class EditorProbe {
 		final invalidSettings:EditorSettings = {
 			historyEntries: MAX_HISTORY_ENTRIES + 1,
 			historyBytes: 1,
-			selectionCells: 1
+			selectionCells: 1,
+			transactionCommands: 1
 		};
 		switch EditorSession.open(baseScenario(), new Registry(), invalidSettings) {
 			case EditorOpenRejected(InvalidSetting(HistoryEntries, 1, MAX_HISTORY_ENTRIES)):
 			case _:
 				throw "editor accepted settings above the hard history-entry bound";
+		}
+
+		final invalidTransactionSettings:EditorSettings = {
+			historyEntries: 1,
+			historyBytes: 1,
+			selectionCells: 1,
+			transactionCommands: MAX_TRANSACTION_COMMANDS + 1
+		};
+		switch EditorSession.open(baseScenario(), new Registry(), invalidTransactionSettings) {
+			case EditorOpenRejected(InvalidSetting(TransactionCommands, 1, MAX_TRANSACTION_COMMANDS)):
+			case _:
+				throw "editor accepted settings above the hard transaction-command bound";
 		}
 	}
 
