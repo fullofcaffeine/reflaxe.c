@@ -467,7 +467,7 @@ jobs:
             --run \
             --report "$raylib_report"
 
-      - name: Compile first Caxecraft playable through the Windows C target
+      - name: Compile Windows Caxecraft with explicit unsupported package capability
         if: matrix.platform == 'windows'
         shell: bash
         run: |

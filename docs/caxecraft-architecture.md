@@ -754,6 +754,32 @@ tasks instead of hiding them behind an application-owned C shim. The former
 `examples/caxecraft/native/posix` implementation was removed once haxe.c could
 represent its exact operations.
 
+This store does not replace Haxe's standard `sys.io.File` API. Ordinary
+application code should use that API for ordinary reads and writes once
+`haxe_c-fwg` implements its hosted contract. A content package needs a stronger
+boundary than `File.getBytes(path)`: it accepts a path supplied by an editor or
+mod, keeps every component below one application-selected directory, refuses
+symbolic links, rejects detected identity, size, or modification-time changes
+during the read, and returns no partial bytes. The standard file API
+intentionally does not promise that directory-capability and no-follow policy.
+
+The two APIs therefore have different positive jobs:
+
+- `sys.io.File` will be haxe.c's general implementation of Haxe filesystem
+  behavior for trusted application paths; and
+- `ContentPackageStore` is the confined reader for untrusted package-relative
+  paths. Its shared validation and result model remain target-neutral Haxe,
+  while the lowest safe host calls differ by operating system.
+
+Linux and macOS currently opt into the Haxe-authored POSIX adapter. POSIX means
+the common Unix-style system interface that provides calls such as `openat`,
+`fstat`, `read`, and `close`. Windows does not provide that interface, so its C
+build now selects the typed `UnsupportedCapability` result and emits no POSIX
+source. A Windows-native Haxe adapter remains planned under
+`haxe_c-xge.20.4.3` and the reusable standard-library filesystem work remains
+owned by `haxe_c-fwg`. This explicit rejection is safer than producing plausible
+Windows C that was never able to compile or confine a path.
+
 The public `ContentPackageStore` owns the target-neutral result and error model;
 CaxeMap parsing, validation, defaults, actor construction, and gameplay also
 remain Haxe. Consequently:
@@ -766,9 +792,11 @@ remain Haxe. Consequently:
   first-playable facts.
 
 The focused `npm run test:caxecraft-package-store` command currently proves this
-boundary on Eval and generated native C, including confinement, exact reads,
-bounded changed-file retry, injected read/short-read/close failures, strict C,
-and sanitizers. A small handwritten C harness remains because it has two
+boundary on Eval and POSIX generated native C, including confinement, exact
+reads, bounded changed-file retry, injected read/short-read/close failures,
+strict C, and sanitizers. The Windows compile-only lane separately proves that
+the POSIX module is absent and the typed unsupported branch remains. A small
+handwritten C harness remains because it has two
 independent evidence jobs: the native compiler checks that Haxe's exact integer
 carriers match the host POSIX ABI, and a non-haxe.c consumer checks the exported
 result envelope. It contains no package-store behavior.

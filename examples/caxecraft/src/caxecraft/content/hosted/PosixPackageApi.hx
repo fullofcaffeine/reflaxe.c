@@ -15,6 +15,12 @@ import haxe.io.Bytes;
 	Keeping those decisions in Haxe exercises haxe.c's metal surface while
 	leaving ordinary game and editor code unaware of POSIX.
 
+	This is not the general Haxe filesystem API. `sys.io.File` is the natural
+	future haxe.c surface for trusted ordinary paths; this module exists because
+	an untrusted content path additionally needs directory confinement,
+	no-symlink traversal, and changed-during-read rejection that `File.getBytes`
+	does not promise.
+
 	Every managed allocation happens before opening a descriptor or after all
 	descriptors close. Small primitive records carry live descriptors between
 	helpers without allocating a managed object.

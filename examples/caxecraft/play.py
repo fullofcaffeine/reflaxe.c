@@ -233,6 +233,45 @@ def remove_owned_stale_stage_files(
         if directory.is_dir() and not directory.is_symlink() and not any(directory.iterdir()):
             directory.rmdir()
 
+
+def reject_staged_tree_symlinks(stage_root: Path, label: str) -> None:
+    """Reject every existing alias before an owned staging transaction writes."""
+
+    symlinks = sorted(
+        path.relative_to(stage_root).as_posix()
+        for path in stage_root.rglob("*")
+        if path.is_symlink()
+    )
+    if symlinks:
+        raise PlayFailure(f"{label} contains symlinks: {symlinks}")
+
+
+def prepare_stage_destination(
+    stage_root: Path,
+    relative: PurePosixPath,
+    label: str,
+) -> Path:
+    """Create real directory prefixes and return one non-symlink file target."""
+
+    current = stage_root
+    if current.is_symlink():
+        raise PlayFailure(f"{label} root is a symlink")
+    current.mkdir(parents=True, exist_ok=True)
+    for component in relative.parts[:-1]:
+        current = current / component
+        if current.is_symlink():
+            raise PlayFailure(f"{label} has a symlinked directory")
+        if current.exists() and not current.is_dir():
+            raise PlayFailure(f"{label} has a non-directory prefix")
+        current.mkdir(exist_ok=True)
+    target = stage_root.joinpath(*relative.parts)
+    if target.is_symlink():
+        raise PlayFailure(f"{label} destination is a symlink")
+    if target.exists() and not target.is_file():
+        raise PlayFailure(f"{label} destination is not a regular file")
+    return target
+
+
 # Exact full-opacity colors sampled from the reviewed front-facing entity cells.
 # We count a small family instead of one pixel so a driver may interpolate
 # sprite edges without making a present, recognizable actor disappear from the
@@ -376,13 +415,14 @@ def stage_runtime_assets(destination: Path) -> None:
         expected_files.add(raw_path)
         selected.append({"id": asset_id, "path": raw_path, "sha256": expected_hash})
 
-    if stage_root.exists():
+    if stage_root.exists() or stage_root.is_symlink():
         if stage_root.is_symlink() or not stage_root.is_dir():
             raise PlayFailure("Caxecraft staged asset root is not a real directory")
+        reject_staged_tree_symlinks(stage_root, "Caxecraft staged asset tree")
         existing_files = {
             path.relative_to(stage_root).as_posix()
             for path in stage_root.rglob("*")
-            if path.is_file() or path.is_symlink()
+            if path.is_file()
         }
         unexpected = sorted(existing_files - expected_files)
         if unexpected:
@@ -392,11 +432,13 @@ def stage_runtime_assets(destination: Path) -> None:
                 unexpected,
                 unowned_error=f"unowned files occupy the Caxecraft staged asset root: {unexpected}",
             )
-    stage_root.mkdir(parents=True, exist_ok=True)
     for record in selected:
         relative = validated_relative(record["path"], f"runtime asset {record['id']} path")
-        target = stage_root.joinpath(*relative.parts)
-        target.parent.mkdir(parents=True, exist_ok=True)
+        target = prepare_stage_destination(
+            stage_root,
+            relative,
+            f"Caxecraft runtime asset {record['id']}",
+        )
         shutil.copyfile(source_root.joinpath(*relative.parts), target)
 
     report = {
@@ -404,7 +446,11 @@ def stage_runtime_assets(destination: Path) -> None:
         "packId": manifest.get("packId"),
         "assets": selected,
     }
-    (stage_root / RUNTIME_ASSET_REPORT).write_text(
+    prepare_stage_destination(
+        stage_root,
+        PurePosixPath(RUNTIME_ASSET_REPORT),
+        "Caxecraft runtime asset report",
+    ).write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
         newline="\n",
@@ -423,13 +469,14 @@ def stage_content_catalogs(destination: Path) -> None:
 
     stage_root = destination / "content"
     expected = set(RUNTIME_CONTENT_FILES)
-    if stage_root.exists():
+    if stage_root.exists() or stage_root.is_symlink():
         if stage_root.is_symlink() or not stage_root.is_dir():
             raise PlayFailure("Caxecraft staged content root is not a real directory")
+        reject_staged_tree_symlinks(stage_root, "Caxecraft staged content tree")
         existing = {
             path.relative_to(stage_root).as_posix()
             for path in stage_root.rglob("*")
-            if path.is_file() or path.is_symlink()
+            if path.is_file()
         }
         unexpected = sorted(existing - expected)
         if unexpected:
@@ -444,8 +491,11 @@ def stage_content_catalogs(destination: Path) -> None:
         source = CASE.joinpath(*relative.parts)
         if source.is_symlink() or not source.is_file():
             raise PlayFailure(f"Caxecraft runtime content is missing or a symlink: {raw_path}")
-        target = stage_root.joinpath(*relative.parts)
-        target.parent.mkdir(parents=True, exist_ok=True)
+        target = prepare_stage_destination(
+            stage_root,
+            relative,
+            f"Caxecraft runtime content {raw_path}",
+        )
         shutil.copyfile(source, target)
 
 
@@ -1507,9 +1557,19 @@ def hosted_content_compile_flags(platform_name: str) -> tuple[str, ...]:
 
 
 def hosted_content_haxe_defines(platform_name: str) -> tuple[str, ...]:
-    """Select the system-header field spellings and exact ABI carriers."""
+    """Select the admitted hosted package adapter and exact ABI carriers.
 
-    return ("caxecraft_posix_darwin",) if platform_name == "macos" else ()
+    Linux and macOS opt into the POSIX implementation. Windows deliberately
+    omits that capability until it has its own typed Haxe-authored adapter, so
+    haxe.c emits the closed ``UnsupportedCapability`` branch instead of POSIX C
+    that cannot compile against Windows system headers.
+    """
+
+    if platform_name == "macos":
+        return ("caxecraft_posix_hosted", "caxecraft_posix_darwin")
+    if platform_name == "linux":
+        return ("caxecraft_posix_hosted",)
+    return ()
 
 
 def validate_renderer_pilot(raylib_configuration: str, pilot: str | None) -> None:
@@ -1708,18 +1768,72 @@ def compile_haxe(
                 "Caxecraft Haxe-to-C compile failed with exit "
                 f"{result.returncode}{suffix}"
             )
-    return validate_compiled_haxe(
+    manifest = validate_compiled_haxe(
         generated,
         layout=layout,
+        platform_name=platform_name,
         pilot=pilot,
         renderer=renderer,
     )
+    validate_content_platform_output(generated, manifest, platform_name)
+    return manifest
+
+
+def validate_content_platform_output(
+    generated: Path,
+    manifest: dict[str, object],
+    platform_name: str,
+) -> None:
+    """Reject a generated project that selects the wrong content adapter.
+
+    The current native package reader is POSIX-only. Linux and macOS select it
+    explicitly; Windows must compile the typed `UnsupportedCapability` branch.
+    This check makes the Windows compile-only lane useful: it rejects POSIX
+    source or headers even though that lane does not yet link the full game.
+    """
+
+    if platform_name != "windows":
+        return
+    build = manifest.get("build")
+    if not isinstance(build, dict):
+        raise PlayFailure("generated Windows Caxecraft manifest omitted its build plan")
+    source_values = text_array(
+        build.get("sources"),
+        "generated Windows Caxecraft sources",
+    )
+    manifest_text = json.dumps(manifest, ensure_ascii=False, sort_keys=True)
+    if "caxecraft/content/hosted/Posix" in manifest_text:
+        raise PlayFailure(
+            "generated Windows Caxecraft project selected the unsupported POSIX package adapter"
+        )
+    sources: list[str] = []
+    for index, source_value in enumerate(source_values):
+        relative = validated_relative(
+            source_value,
+            f"generated Windows source {index}",
+        )
+        source = generated.joinpath(*relative.parts)
+        if not source.is_file():
+            raise PlayFailure(
+                f"generated Windows Caxecraft source is missing: {source_value}"
+            )
+        sources.append(source.read_text(encoding="utf-8"))
+    combined = "\n".join(sources)
+    if "<unistd.h>" in combined or "openat(" in combined or "fstatat(" in combined:
+        raise PlayFailure(
+            "generated Windows Caxecraft sources contain POSIX package calls"
+        )
+    if "UnsupportedCapability" not in combined:
+        raise PlayFailure(
+            "generated Windows Caxecraft sources omitted the typed unsupported package capability"
+        )
 
 
 def validate_compiled_haxe(
     generated: Path,
     *,
     layout: str,
+    platform_name: str,
     pilot: str | None,
     renderer: str,
 ) -> dict[str, object]:
@@ -1793,6 +1907,7 @@ def validate_compiled_haxe(
     validate_generated_playable(
         generated,
         layout=layout,
+        platform_name=platform_name,
         pilot=pilot,
         renderer=renderer,
     )
@@ -1803,6 +1918,7 @@ def validate_generated_playable(
     generated: Path,
     *,
     layout: str,
+    platform_name: str,
     pilot: str | None,
     renderer: str,
 ) -> None:
@@ -2088,18 +2204,19 @@ def validate_generated_playable(
     ):
         if required not in loader_source:
             raise PlayFailure(f"native Caxecraft level loader omitted {required}")
-    posix_relative = {
-        "split": "src/modules/caxecraft/content/hosted/PosixPackageApi.c",
-        "package": "src/packages/caxecraft/content/hosted/package.c",
-        "unity": "src/program.c",
-    }[layout]
-    posix_source = generated.joinpath(posix_relative).read_text(encoding="utf-8")
-    for required in ("openat(", "fstatat(", "read("):
-        if required not in posix_source:
-            raise PlayFailure(
-                "Haxe-authored package reader omitted typed POSIX call "
-                f"{required}"
-            )
+    if platform_name in ("linux", "macos"):
+        posix_relative = {
+            "split": "src/modules/caxecraft/content/hosted/PosixPackageApi.c",
+            "package": "src/packages/caxecraft/content/hosted/package.c",
+            "unity": "src/program.c",
+        }[layout]
+        posix_source = generated.joinpath(posix_relative).read_text(encoding="utf-8")
+        for required in ("openat(", "fstatat(", "read("):
+            if required not in posix_source:
+                raise PlayFailure(
+                    "Haxe-authored package reader omitted typed POSIX call "
+                    f"{required}"
+                )
     for forbidden in ("caxecraft_package_posix_", "LoadFileData("):
         if forbidden in combined:
             raise PlayFailure(
@@ -2914,6 +3031,7 @@ def main(argv: list[str]) -> int:
             manifest = validate_compiled_haxe(
                 generated,
                 layout=args.layout,
+                platform_name=platform_name,
                 pilot=selected_pilot,
                 renderer=args.renderer,
             )

@@ -237,13 +237,12 @@ at 30-second intervals, then full logs are replayed in canonical shard order so
 interleaving cannot hide the first useful failure. All scheduled shards finish
 to retain independent evidence even when one fails.
 
-The exhaustive pre-commit fallback also queues native smoke in this same worker
-pool. It does not start an unbounded fifth worker: four toolchain shards plus
-native smoke are five pieces of work sharing the selected one, two, or four
-workers. Native smoke starts as soon as a worker becomes free, so it no longer
-waits for every shard to finish. Its isolated log is replayed after the four
-shard logs and failures remain attributed to `native`. The canonical serial
-`test:toolchain` and standalone `test:native` commands are unchanged.
+The explicit exhaustive local command can also queue native smoke in this same
+worker pool. It does not start an unbounded fifth worker: four toolchain shards
+plus native smoke are five pieces of work sharing the selected one, two, or
+four workers. Native smoke starts as soon as a worker becomes free. This mode
+is useful when reproducing hosted CI, but the commit hook never starts it
+automatically.
 
 Local commits now have three explicit routes:
 
@@ -276,7 +275,8 @@ work; pre-commit deliberately uses `--smoke-owners`.
 
 An established root compiler module must be named explicitly before it can use
 the affected route. `CPhaseTiming.hx` is one such reviewed module; a new
-unrecognized root file or subdirectory still takes the exhaustive fallback.
+unrecognized root file or subdirectory takes the same conservative four-owner
+smoke route.
 Changes to specialization provenance select the generic-specialization owner.
 The established direct-C interop layer and `c.Ref` select the C-import owner;
 the reviewed Raygui generator, lock, raw binding, and typed surface select the
@@ -287,9 +287,11 @@ affect.
 Changing only Caxecraft's compiler-profile consumer does not select the full
 game-domain suite: the governance tests own its timing schema and parser,
 whereas actual game source and content still select the Caxecraft owner.
-The consumer's exact parser test travels on that same affected route. Other
-governance and fixture-policy changes remain unknown cross-cutting inputs and
-therefore retain the exhaustive fallback.
+The consumer's exact parser test travels on that same affected route. All files
+under `scripts/ci/`, `scripts/test/`, `scripts/hooks/`, and `test/governance/`
+take the conservative route, including newly added files. This prevents new
+test infrastructure from silently receiving only the focused route before it
+has a more specific owner.
 
 The change was prompted by an interrupted local commit that had spent more
 than 55 minutes in the one-worker exhaustive route under heavy host contention

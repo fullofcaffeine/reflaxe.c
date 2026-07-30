@@ -72,6 +72,9 @@ class ToolchainShardTests(unittest.TestCase):
     def test_unknown_cross_cutting_paths_use_conservative_affected_route(self) -> None:
         for path in (
             "scripts/ci/run_toolchain_shard.py",
+            "scripts/ci/new_check.py",
+            "scripts/test/new_helper.py",
+            "test/governance/test_new_policy.py",
             ".github/workflows/governance.yml",
             "package.json",
             "src/reflaxe/c/new_layer/FuturePass.hx",

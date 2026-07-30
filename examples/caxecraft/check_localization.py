@@ -179,6 +179,53 @@ def check_native_package_boundary() -> None:
         else:
             raise LocalizationCheckFailure("unowned staged content was deleted or accepted")
 
+    with tempfile.TemporaryDirectory(prefix="caxecraft-localization-file-link-") as temporary:
+        destination = Path(temporary) / "stage"
+        outside = Path(temporary) / "outside-map.caxemap"
+        outside.write_text("outside sentinel\n", encoding="utf-8", newline="\n")
+        target = destination / "content/scenarios/first-playable/map.caxemap"
+        target.parent.mkdir(parents=True)
+        try:
+            target.symlink_to(outside)
+        except (NotImplementedError, OSError):
+            pass
+        else:
+            try:
+                stage_content_catalogs(destination)
+            except PlayFailure as error:
+                if "staged content tree contains symlinks" not in str(error):
+                    raise LocalizationCheckFailure(
+                        f"expected-path symlink produced the wrong diagnostic: {error}"
+                    ) from error
+            else:
+                raise LocalizationCheckFailure("expected-path symlink was followed during staging")
+            if outside.read_text(encoding="utf-8") != "outside sentinel\n":
+                raise LocalizationCheckFailure("content staging overwrote an outside symlink target")
+
+    with tempfile.TemporaryDirectory(prefix="caxecraft-localization-prefix-link-") as temporary:
+        destination = Path(temporary) / "stage"
+        outside = Path(temporary) / "outside-directory"
+        outside.mkdir()
+        content_root = destination / "content"
+        content_root.mkdir(parents=True)
+        prefix = content_root / "scenarios"
+        try:
+            prefix.symlink_to(outside, target_is_directory=True)
+        except (NotImplementedError, OSError):
+            pass
+        else:
+            try:
+                stage_content_catalogs(destination)
+            except PlayFailure as error:
+                if "staged content tree contains symlinks" not in str(error):
+                    raise LocalizationCheckFailure(
+                        f"symlinked content prefix produced the wrong diagnostic: {error}"
+                    ) from error
+            else:
+                raise LocalizationCheckFailure("symlinked content prefix was followed during staging")
+            if any(outside.iterdir()):
+                raise LocalizationCheckFailure("content staging wrote through an outside directory symlink")
+
 
 def main() -> int:
     try:

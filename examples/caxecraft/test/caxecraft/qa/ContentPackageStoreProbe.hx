@@ -6,7 +6,7 @@ import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackagePath;
 import caxecraft.content.ContentPackagePath.ContentPackagePathError;
 import caxecraft.content.ContentPackageStore;
-#if c
+#if (c && caxecraft_posix_hosted)
 import caxecraft.content.hosted.PosixPackageApi.setTestFault as setPosixTestFault;
 import caxecraft.content.hosted.PosixPackageApi.testLiveDescriptors as posixLiveDescriptors;
 import caxecraft.content.hosted.PosixPackageApi.PosixPackageTestFault;
@@ -45,7 +45,7 @@ inline final FIXTURE_ROOT = "test/fixtures/package-store/root";
 	the store must transparently succeed on its one permitted retry.
 **/
 function main():Void {
-	#if c
+	#if (c && caxecraft_posix_hosted)
 	setPosixTestFault(ChangedOnce);
 	var status = selfCheck();
 	if (status == 0)
@@ -60,7 +60,7 @@ function main():Void {
 	#end
 }
 
-#if c
+#if (c && caxecraft_posix_hosted)
 /**
 	Prove Haxe closes every descriptor on injected native failure.
 

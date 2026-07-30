@@ -23,7 +23,14 @@ from dev_build_state import (  # noqa: E402
     request_snapshot,
     validate_reuse,
 )
-from play import haxe_module_path_inventory, parse_args, play_build_inputs  # noqa: E402
+from play import (  # noqa: E402
+    PlayFailure,
+    haxe_module_path_inventory,
+    hosted_content_haxe_defines,
+    parse_args,
+    play_build_inputs,
+    validate_content_platform_output,
+)
 
 
 class CaxecraftBuildStateTests(unittest.TestCase):
@@ -155,6 +162,42 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         staged.write_text("new authored world\n", encoding="utf-8")
         decision = self.decision()
         self.assertTrue(decision.hit)
+
+    def test_windows_generation_selects_typed_unsupported_package_capability(
+        self,
+    ) -> None:
+        self.assertEqual(
+            hosted_content_haxe_defines("linux"),
+            ("caxecraft_posix_hosted",),
+        )
+        self.assertEqual(
+            hosted_content_haxe_defines("macos"),
+            ("caxecraft_posix_hosted", "caxecraft_posix_darwin"),
+        )
+        self.assertEqual(hosted_content_haxe_defines("windows"), ())
+
+        generated = self.root / "windows-generated"
+        source = generated / "src/program.c"
+        source.parent.mkdir(parents=True)
+        source.write_text(
+            "/* typed ContentPackageError_UnsupportedCapability */\n",
+            encoding="utf-8",
+        )
+        manifest: dict[str, object] = {
+            "build": {"sources": ["src/program.c"]},
+            "files": [{"path": "src/program.c"}],
+        }
+        validate_content_platform_output(generated, manifest, "windows")
+
+        source.write_text(
+            "#include <unistd.h>\nint bad(void) { return openat(0, \"x\", 0); }\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+            PlayFailure,
+            "generated Windows Caxecraft sources contain POSIX package calls",
+        ):
+            validate_content_platform_output(generated, manifest, "windows")
 
     def test_generated_level_bridge_cannot_reenter_the_play_build(self) -> None:
         removed_paths = (

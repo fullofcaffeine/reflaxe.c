@@ -254,7 +254,10 @@ CASES = {
                 forbidden_markers=("caxecraft_package_posix_", "goto "),
             ),
         ),
-        haxe_defines=("caxecraft_package_store_testing",),
+        haxe_defines=(
+            "caxecraft_package_store_testing",
+            "caxecraft_posix_hosted",
+        ),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
     ),

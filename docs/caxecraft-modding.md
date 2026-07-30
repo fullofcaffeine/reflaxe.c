@@ -25,6 +25,15 @@ result envelope. It owns no file algorithm, CaxeMap grammar, defaults, or
 gameplay.
 `npm run test:caxecraft-package-store` is the focused executable evidence.
 
+This is intentionally separate from the future general `sys.io.File`
+implementation owned by `haxe_c-fwg`. `File.getBytes(path)` is the natural API
+for a trusted ordinary file, but it does not promise that an editor- or
+mod-supplied path stays below one selected directory or that no path component
+is a symbolic link. The package store adds exactly those confinement rules.
+Linux and macOS currently provide the required POSIX calls; Windows explicitly
+returns `UnsupportedCapability` until it has an equivalent Haxe-authored
+adapter. It never emits POSIX calls and pretends they are portable Windows C.
+
 The ordinary `caxecraft:play` command is wired to that byte path. Its unchanged
 build check excludes the runtime map, republishes current content before every
 launch, and two diagnostic runs prepared a no-change launch in 378.4 ms and

@@ -7,7 +7,7 @@ import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
 import haxe.io.Bytes;
-#if c
+#if (c && caxecraft_posix_hosted)
 import caxecraft.content.hosted.PosixPackageApi.inspect as inspectPosixFile;
 import caxecraft.content.hosted.PosixPackageApi.openRoot as openPosixRoot;
 import caxecraft.content.hosted.PosixPackageApi.readExact as readPosixFile;
@@ -23,8 +23,10 @@ import sys.io.File;
 
 	The application first selects one root and a diagnostic label. Each read then
 	accepts only a validated logical path below that root. Eval uses the standard
-	Haxe host filesystem as a semantic oracle; hosted C uses the confined POSIX
-	adapter. Other profiles reject the capability explicitly.
+	Haxe host filesystem as a semantic oracle. A C build must explicitly select
+	`caxecraft_posix_hosted` to use the confined POSIX adapter; Windows and other
+	profiles return `UnsupportedCapability` instead of emitting plausible calls
+	to unavailable POSIX headers.
 
 	The native path deliberately separates inspection from reading. Inspection
 	closes every descriptor before Haxe allocates the output buffer. The read
@@ -39,14 +41,14 @@ final class ContentPackageStore {
 	final rootLabel:String;
 	final maximumBytes:Int;
 
-	#if c
+	#if (c && caxecraft_posix_hosted)
 	final rootBuffer:Bytes;
 	final rootInspection:PosixRootInspection;
 	#elseif eval
 	final canonicalRoot:String;
 	#end
 
-	#if c
+	#if (c && caxecraft_posix_hosted)
 	private function new(rootLabel:String, maximumBytes:Int, rootBuffer:Bytes, rootInspection:PosixRootInspection) {
 		this.rootLabel = rootLabel;
 		this.maximumBytes = maximumBytes;
@@ -79,7 +81,7 @@ final class ContentPackageStore {
 		if (rootPath.length == 0 || rootPath.indexOf("\x00") >= 0 || rootLabel.length == 0)
 			return PackageStoreRejected(RootUnavailable);
 
-		#if c
+		#if (c && caxecraft_posix_hosted)
 		final rootBuffer = nulTerminated(rootPath);
 		final inspection = openPosixRoot(rootBuffer);
 		if (inspection.status == PosixOk)
@@ -115,7 +117,7 @@ final class ContentPackageStore {
 			case PathRejected(error):
 				PackageBytesRejected(InvalidLogicalPath(error));
 			case PathAccepted(path):
-				#if c
+				#if (c && caxecraft_posix_hosted)
 				readNative(path);
 				#elseif eval
 				readEval(path);
@@ -125,7 +127,7 @@ final class ContentPackageStore {
 		}
 	}
 
-	#if c
+	#if (c && caxecraft_posix_hosted)
 	/**
 		Attempt a complete inspect/allocate/read transaction at most twice.
 

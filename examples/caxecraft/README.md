@@ -526,25 +526,31 @@ one package.
 The shared native String/Bytes codec and the first confined POSIX package-byte
 store now pass focused Eval/generated-C tests. The POSIX store behavior itself
 is Haxe lowered through haxe.c; typed extern declarations are the only operating
-system boundary. The private level resolver and atomic generation owner also
+system boundary. It is narrower than the future `sys.io.File` implementation:
+the store confines editor/mod paths below one selected directory and rejects
+symlinks, while the standard API will own ordinary trusted file operations.
+Linux and macOS select this adapter; Windows currently returns the typed
+`UnsupportedCapability` result instead of emitting POSIX calls. The private
+level resolver and atomic generation owner also
 pass focused Eval/generated-C/sanitizer tests: a failed fresh candidate cannot
 change the selected session, while a complete newer candidate publishes through
-one reference swap. The ordinary game has not yet connected package bytes to
-that owner or its localization generation, so the
-build still validates the CaxeMap's embedded catalog and generates a
-renderer-independent typed lookup. Eval receives ordinary Haxe `String`; C
-receives only a `c.CString` selected from generated literals with static
-lifetime. The application owns Raylib drawing and never learns the supported
-locale names.
+one reference swap. Ordinary Linux/macOS play now connects the staged
+`map.caxemap` bytes to that owner before Raylib opens. The build still validates
+the CaxeMap's embedded catalog and generates a renderer-independent typed
+lookup because the reusable UI catalog is not runtime-loaded yet. Eval receives
+ordinary Haxe `String`; C receives only a `c.CString` selected from generated
+literals with static lifetime. The application owns Raylib drawing and never
+learns the supported locale names.
 
 The source catalogs are copied to `bin/content/` as part of native packaging
-(the reusable UI JSON plus the complete scenario CaxeMap), but the running
-binary still uses the validated embedded mirror. This is a documented
-transition, not a claim that runtime catalog loading or the complete bilingual
-game is finished. `npm run test:caxecraft-package-store` proves the byte
-boundary, and `npm run test:caxecraft-content-generation` proves candidate
-ownership/publication; `haxe_c-xge.20.4.3` owns connecting those paths in
-ordinary play.
+(the reusable UI JSON plus the complete scenario CaxeMap). The running
+Linux/macOS binary reads the map from that directory, while the reusable UI
+JSON still uses its validated embedded mirror. This is a documented transition,
+not a claim that runtime UI-catalog loading or the complete bilingual game is
+finished. `npm run test:caxecraft-package-store` proves the byte boundary, and
+`npm run test:caxecraft-content-generation` proves candidate
+ownership/publication; `haxe_c-xge.20.4.3` owns completing the bounded runtime
+pack.
 
 After editing the UI catalog or embedded CaxeMap messages, regenerate and check
 the temporary built-in lookup catalog with:
