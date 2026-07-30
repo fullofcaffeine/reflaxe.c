@@ -33,6 +33,79 @@ rings:
 | R2 — hosted pull-request gate | After the commit is ready for independent verification | The required `Governance` workflow: all four complete toolchain shards plus independent native, build-adapter, platform, provenance, and security jobs. |
 | R3 — cold/scheduled authority | On relevant path changes, weekly, release preparation, or explicit investigation | Independent cold snapshot rendering and comparison through `snapshots:check`. |
 
+An agent should not wait twice for the same expensive test against the same
+checkout. For example, when it runs `test:hxc-ir` while finishing a change, the
+pre-commit hook may accept that exact passing run instead of immediately
+running `test:hxc-ir` again. The planner therefore routes an R0 owner through
+`test:local-gate` when it is also one of the expensive R1 sentinels. The initial
+reviewed set is `test:all-sources`, `test:hxc-ir`, and the Haxe-only
+`test:project-emitter`; native, repository-wide, and nonduplicated owners
+remain ordinary direct commands.
+`test:governance` remains cold because its broad scanners and transitive tool
+inputs do not yet have a cheap complete evidence key. `test:hello` remains
+cold. Project-emitter semantics and native build-adapter execution are separate
+owners: the former can be keyed exactly from Haxe inputs, while
+`test:build-adapters:local` always executes the available native consumers
+because its selected compiler, system development kit, linker, and build-system
+dependency closure is not yet cheap to hash completely. Hosted CI uses the
+stricter `test:build-adapters` owner, which requires every declared tool.
+
+The wrapper runs the named owner normally. After a stable pass it writes a
+short-lived local *receipt* under `.cache/local-gates/`: a small record saying
+which test passed against which exact inputs. At R1 the hook may reuse that
+receipt only for the same owner and the same staged tree, unstaged and relevant
+untracked inputs, every file in that owner's Haxe classpath trees (including
+ignored files), package command, dependency locks, tool binaries, environment,
+host, hook, and evidence-runner implementation. The receipt records work
+already done; it is not a claim that the test or a broader CI lane is
+unnecessary.
+
+Git and the reviewed Beads hook add transport-only environment values while
+starting pre-commit. The wrapper removes those values from both the direct and
+hook test processes: the reviewed `bd` path entry (even when npm places its
+own `node_modules/.bin` entry before it), Git's normal index,
+commit-author fields, and the noninteractive `GIT_EDITOR=:` value. A partial
+commit's temporary index is not normalized, and every remaining environment
+difference still changes the receipt key. Reusable owners also run with
+`PYTHONDONTWRITEBYTECODE=1`, so importing a repository test helper cannot
+create an ignored `__pycache__` input halfway through its own evidence run.
+
+To make the direct run reusable, stage the intended task boundary first, then
+run the planner's `test:local-gate` command, and finally commit without changing
+those inputs. A test run from before `git add` remains valid task evidence, but
+the hook deliberately runs it again because moving bytes between the unstaged
+worktree and the staged tree changes the exact key.
+
+A missing, expired, corrupt, incomplete, or mismatched receipt is a visible
+cache miss and runs the owner. A failing command or a command whose inputs
+change while it runs publishes nothing. One operating-system lock serializes
+each owner's read, run, and publish transaction, so simultaneous agents cannot
+race a pass against a failure or publish out of order. Performance/timing owners are never reused.
+`CI` and the explicit cold form always execute:
+
+```sh
+npm run --silent test:local-gate -- --cold test:hxc-ir
+```
+
+The hook reuses only an exact duplicate R0/R1 owner. It does not let one focused
+test stand in for another owner, a full shard, native/platform evidence, or the
+hosted required check.
+
+One July 30, 2026 diagnostic sample on the declared local worktree measured the
+split project owners as follows. This is a before/after observation, not a
+percentile budget:
+
+| Operation | Wall time |
+| --- | ---: |
+| Cold `test:project-emitter` semantic owner | 434.73s |
+| Exact hook receipt validation for that owner | 1.29s |
+| Always-cold local native build-adapter owner | 58.28s |
+
+The receipt removed only the immediate 434-second duplicate. The independent
+native owner still compiled and executed three generated projects through the
+raw manifest and CMake; Meson was unavailable locally and remains mandatory in
+the hosted `test:build-adapters` job.
+
 For an AI-agent loop, “focused owner passes” is the normal signal to continue
 implementation. “R1 passes” is the normal signal to create the task commit.
 R2/R3 are independent hosted evidence: an agent reports them as pending unless
@@ -169,6 +242,17 @@ GitHub Actions partitions that same sequence into four isolated shards:
 | `lowering-objects` | bodies, functions, aggregates, classes, constructors, dispatch, enums, and generics | no filesystem or process state is shared with another shard |
 | `lowering-semantics` | evaluation order, initialization, arithmetic, differential corpus, spans, and project layouts | native/compiler-server work remains serial inside this shard but isolated from the others |
 | `caxecraft` | the target-neutral CAXEMAP model, fixed-tick CaxeFlow, and bounded editor command/history/test-play contracts; separate locale/cold/warm-server codec determinism; complete split/package/unity, oracle, native, optimized, and sanitizer showcase lane; then the snapshot ownership catalog | its long end-to-end proof receives its own resource budget; the fast model/rule/editor checks, repeated codec, and catalog checks stay separately visible |
+
+Project-emission semantics and native build consumption have different
+authorities. `test:project-emitter` proves deterministic artifacts, ownership,
+negative diagnostics, compiler-server parity, and the production failure
+boundary without invoking a native compiler. The independent
+`test:build-adapters:local` command generates only the three consumer projects
+and executes each native consumer available on the workstation. The stricter
+hosted `test:build-adapters` owner requires raw-manifest, CMake, and Meson
+execution and runs once per required compiler family. Keeping these owners
+separate avoids repeating the several-minute semantic matrix inside each
+native build job without dropping either proof.
 
 The matrix uses `fail-fast: false`, so one failure does not erase evidence from
 the other shards. A small `pinned-toolchain` aggregate job runs with `always()`

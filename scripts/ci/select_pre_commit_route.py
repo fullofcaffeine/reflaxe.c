@@ -27,9 +27,12 @@ from typing import Any
 
 FOCUSED = "focused"
 AFFECTED = "affected"
-PLAN_SCHEMA_VERSION = 1
+PLAN_SCHEMA_VERSION = 2
 HOSTED_REQUIRED_CHECK = "Governance"
 OFFICIAL_HAXE_READINESS_OWNER = "haxe_c-6k7"
+LOCALLY_REUSABLE_SCRIPTS = frozenset(
+    ("test:all-sources", "test:hxc-ir", "test:project-emitter")
+)
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_JSON = ROOT / "package.json"
 
@@ -104,8 +107,21 @@ AFFECTED_OWNER_RULES = (
         AffectedOwner("test:body-lowering", "C body construction or its semantic input changed"),
     ),
     (
-        re.compile(r"^src/reflaxe/c/(?:emit/|plan/|CCompiler\.hx)"),
+        re.compile(
+            r"^(?:src/reflaxe/c/(?:emit/|plan/|CCompiler\.hx)"
+            r"|test/project_emitter/)"
+        ),
         AffectedOwner("test:project-emitter", "project or artifact planning changed"),
+    ),
+    (
+        re.compile(
+            r"^(?:src/reflaxe/c/(?:emit/|plan/|CCompiler\.hx)"
+            r"|test/project_emitter/)"
+        ),
+        AffectedOwner(
+            "test:build-adapters:local",
+            "generated projects must still compile through native build consumers",
+        ),
     ),
     (
         re.compile(r"^src/reflaxe/c/CUtf8Order\.hx"),
@@ -182,11 +198,18 @@ AFFECTED_OWNER_RULES = (
         ),
     ),
     (
+        re.compile(r"^examples/hello/"),
+        AffectedOwner(
+            "test:hello",
+            "the generated hello product example or its exact expectation changed",
+        ),
+    ),
+    (
         re.compile(
             r"^(?:docs/test-performance\.md"
             r"|package(?:-lock)?\.json"
-            r"|scripts/ci/(?:check_ci_policy|select_pre_commit_route)\.py"
-            r"|test/governance/test_toolchain_shard\.py)"
+            r"|scripts/ci/(?:check_ci_policy|run_local_gate|select_pre_commit_route)\.py"
+            r"|test/governance/test_(?:local_gate_evidence|toolchain_shard)\.py)"
         ),
         AffectedOwner(
             "test:governance",
@@ -323,7 +346,15 @@ def build_test_plan(paths: Iterable[str]) -> dict[str, Any]:
         "route": route,
         "changedPaths": list(normalized),
         "taskOwners": [
-            {"script": owner.script, "reason": owner.reason}
+            {
+                "script": owner.script,
+                "reason": owner.reason,
+                "localCommand": (
+                    f"npm run --silent test:local-gate -- {owner.script}"
+                    if owner.script in LOCALLY_REUSABLE_SCRIPTS
+                    else f"npm run {owner.script}"
+                ),
+            }
             for owner in task_owners
         ],
         "taskOwnerSelection": (
@@ -332,7 +363,15 @@ def build_test_plan(paths: Iterable[str]) -> dict[str, Any]:
             else "required-from-owning-issue-or-nearest-package-script"
         ),
         "localCommitSmoke": [
-            {"script": owner.script, "reason": owner.reason}
+            {
+                "script": owner.script,
+                "reason": owner.reason,
+                "localCommand": (
+                    f"npm run --silent test:local-gate -- --hook {owner.script}"
+                    if owner.script in LOCALLY_REUSABLE_SCRIPTS
+                    else f"npm run {owner.script}"
+                ),
+            }
             for owner in local_smoke
         ],
         "hostedRequired": {
@@ -360,7 +399,7 @@ def print_human_plan(plan: dict[str, Any]) -> None:
     task_owners = plan["taskOwners"]
     if task_owners:
         for owner in task_owners:
-            print(f"  npm run {owner['script']}  # {owner['reason']}")
+            print(f"  {owner['localCommand']}  # {owner['reason']}")
     else:
         print(
             "  choose the owning issue's narrow package script; "
@@ -370,7 +409,7 @@ def print_human_plan(plan: dict[str, Any]) -> None:
     local_smoke = plan["localCommitSmoke"]
     if local_smoke:
         for owner in local_smoke:
-            print(f"  npm run {owner['script']}  # {owner['reason']}")
+            print(f"  {owner['localCommand']}  # {owner['reason']}")
     else:
         print("  use the existing path-specific pre-commit checks")
     print("R2 hosted required evidence:")

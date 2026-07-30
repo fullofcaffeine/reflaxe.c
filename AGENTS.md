@@ -22,8 +22,8 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 > (`.beads/dolt/`); cross-machine sync uses the guarded
 > `scripts/beads/push-safe.sh` wrapper and `bd dolt pull` (a git-compatible
 > protocol), stored under `refs/dolt/data` on your git remote — separate from
-> `refs/heads/*` where your code lives. The wrapper scans decoded current and
-> historical Beads records before it delegates to `bd dolt push`.
+> `refs/heads/*` where your code lives. The wrapper scans the complete current
+> decoded Beads export before it delegates to `bd dolt push`.
 > `.beads/issues.jsonl` is a passive export, not the wire protocol.
 >
 > See [SYNC_CONCEPTS.md](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
@@ -38,7 +38,7 @@ bd ready              # Find available work
 bd show <id>          # View issue details
 bd update <id> --claim  # Claim work atomically
 bd close <id>         # Complete work
-npm run beads:push     # Scan and push Beads data to remote
+npm run beads:push     # Scan current records and push Beads data
 ```
 
 ## Commit Messages
@@ -1135,14 +1135,13 @@ missing-metadata or missing-adapter assumptions.
 - Do not use `bd import` for normal synchronization. Use `bd dolt pull/push`
   only when a Dolt remote is actually configured and policy authorizes it.
 
-#### Reviewed Beads 1.1.0 client and schema
+#### Reviewed Beads 1.1.2 client and schema
 
-- The shared database is on schema v53 and requires Beads 1.1.0 from revision
-  `8e4e59d39`. Resolve it through `scripts/beads/resolve-reviewed.py`; do not
-  trust whichever `bd` happens to appear first on `PATH`.
-- Hooks and guarded publication must verify the reviewed client before any
-  Beads operation. A failure must leave `.beads/issues.jsonl`, the Git index,
-  the Dolt working set, and reusable test receipts unchanged.
+- The shared database is on schema v53 and uses the stock Beads 1.1.2 release.
+  `scripts/hooks/install.sh` checks the installed client once; tracked hooks
+  and repository scripts then call stock `bd` directly.
+- A failed passive export must leave `.beads/issues.jsonl`, the Git index, the
+  Dolt working set, and reusable test receipts unchanged.
 - The one authorized v32-to-v53 migration was completed and published on
   2026-07-21. Other clones must adopt that remote database with `bd bootstrap`
   after preserving any unpushed local issue work. Never set
@@ -1202,9 +1201,10 @@ exact formatter haxelib is required when repository-owned Haxe files are
 staged. The tracked pre-push hook fetches the non-branch `refs/dolt/data` ref,
 scans every reachable Git revision with the same narrow Gitleaks policy, and
 revalidates security-tool/workflow pins. Because Dolt rows are opaque Git
-chunks, `scripts/beads/push-safe.sh` separately scans decoded current records
-and every historical issue version before synchronizing Beads. Never run `bd
-dolt push` directly. Public CI checks all repository-owned Haxe formatting,
+chunks, `scripts/beads/push-safe.sh` separately scans the complete current
+decoded export before synchronizing Beads. Retrospective database-history
+forensics are not part of every developer push. Never run `bd dolt push`
+directly. Public CI checks all repository-owned Haxe formatting,
 installs Gitleaks only after a reviewed SHA-256 match, fetches the Dolt ref,
 scans full history from a depth-zero checkout, and pins every external GitHub
 Action to a full reviewed commit. Run `npm run public:preflight` before any
@@ -1213,7 +1213,7 @@ secret-scan allowlist to a whole generated file when a path-and-match rule can
 identify deterministic non-secret bytes. Do not bypass a hook to publish a
 failing change; record and fix the underlying gate instead.
 
-Every tracked hook first selects the reviewed Beads 1.1.0 client. This happens
+Every tracked hook first selects the reviewed Beads 1.1.2 client. This happens
 outside Beads' marker-managed hook section, so `bd hooks install --beads` may
 upgrade its own integration without deleting the repository guard. The passive
 export writes temporary files beside `.beads/issues.jsonl` and stages the final

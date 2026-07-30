@@ -2500,9 +2500,9 @@ Performance claims in the README require reproducible benchmark definitions and 
   SHA-256 matches, checks the exact Haxe formatter, and scans a depth-zero
   checkout across all reachable Git history, including `refs/dolt/data`. Local
   pre-commit scans staged content while pre-push fetches the custom Dolt ref and
-  repeats the full-history scan. Beads publication additionally scans decoded
-  current records and every historical issue version before Dolt sync because
-  database chunks are opaque to ordinary Git diff scanners.
+  repeats the full-history scan. Beads publication additionally scans the
+  complete current decoded export before Dolt sync because database chunks are
+  opaque to ordinary Git diff scanners.
 - `docs/specs/third-party-provenance.json` is the fail-closed distribution
   inventory. External development tools are distinguished from redistributed
   source/binaries; reserved vendor/runtime roots reject unowned files; and every

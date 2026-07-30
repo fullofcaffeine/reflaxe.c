@@ -87,7 +87,11 @@ if [ "$PRE_COMMIT_ROUTE" = "affected" ]; then
       continue
     fi
     echo "[pre-commit] Running $owner_script: $owner_reason"
-    npm run "$owner_script"
+    if [ "$owner_script" = "test:all-sources" ] || [ "$owner_script" = "test:hxc-ir" ] || [ "$owner_script" = "test:project-emitter" ]; then
+      npm run --silent test:local-gate -- --hook "$owner_script"
+    else
+      npm run "$owner_script"
+    fi
   done < <(
     printf '%s\n' "$STAGED_FILES" |
       python3 "$ROOT_DIR/scripts/ci/select_pre_commit_route.py" --smoke-owners
@@ -134,7 +138,7 @@ fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|docs/specs/toolchain-lock\.json|scripts/ci/check_toolchain\.py|vendor/reflaxe/|haxe_libraries/|extraParams\.hxml|src/.*\.hx$|std/c/.*\.hx$|test/all_sources/|.*\.hxml$)'; then
 	echo "[pre-commit] Type-checking every target-owned Haxe source..."
-	python3 "$ROOT_DIR/test/all_sources/run.py"
+	npm run --silent test:local-gate -- --hook test:all-sources
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|extraParams\.hxml|haxe_libraries/|vendor/reflaxe/|src/c/Init\.hx|src/reflaxe/c/(BuildDetection|BuildModeResolver|CBuildMode|CCompiler|CompilationContext|CompilerBootstrap|CompilerInit|CProfile|CReflaxeCompiler|ProfileResolver|TargetPlatform)\.hx|src/reflaxe/c/emit/|test/bootstrap/)'; then
@@ -179,7 +183,8 @@ fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxeCompiler|CompilationContext)\.hx|src/reflaxe/c/(contract|emit|naming|plan)/|test/project_emitter/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running deterministic multi-file project ownership probes..."
-  python3 "$ROOT_DIR/test/project_emitter/run.py"
+  npm run --silent test:local-gate -- --hook test:project-emitter
+  npm run test:build-adapters:local
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CompilationContext|CEnvironment|CRuntimeDiagnostics|CRuntimePolicy)\.hx|src/reflaxe/c/(emit|runtime)/|runtime/hxrt/|test/(runtime/runtime-feature-graph|string_output)/|docs/(architecture|array-runtime|bytes-runtime|configuration|project-emission|runtime-feature-planning|string-runtime|testing)\.md|docs/specs/(fixture-taxonomy|runtime-features).*\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
@@ -239,7 +244,7 @@ fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ir/|test/hxc_ir/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running HxcIR semantic invariant and golden probes..."
-  python3 "$ROOT_DIR/test/hxc_ir/run.py"
+  npm run --silent test:local-gate -- --hook test:hxc-ir
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(ir|semantics)/|test/primitive_semantics/|docs/(adr/0008-primitive-representations-and-conversions|primitive-semantics)\.md|docs/specs/primitive-semantics.*\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then

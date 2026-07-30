@@ -20,8 +20,8 @@ scripts/hooks/install.sh
 bd prime
 ```
 
-The issue database requires Beads 1.1.0 from revision `8e4e59d39`. The hooks
-verify that exact client before touching the database or its passive JSONL
+The issue database uses the stock Beads 1.1.2 release. The hooks verify that
+reviewed client before touching the database or its passive JSONL
 export. See [Beads toolchain and shared database](docs/beads-toolchain.md) for
 installation overrides, clone adoption, migration safety, and recovery.
 
@@ -103,7 +103,7 @@ scans staged content; pre-push independently scans the complete reachable Git
 history, including the non-branch Beads Dolt ref. CI repeats both checks with
 checksum-verified Gitleaks and full-commit GitHub Action pins. Dolt database
 chunks are opaque to Git scanners, so always use `npm run beads:push`; it scans
-decoded current records and every historical issue version before sync. Never
+the complete current decoded records before sync. Never
 bypass these gates or use a whole-file secret allowlist for generated output.
 
 A close reason must name the requirement IDs, exact commands and their results,

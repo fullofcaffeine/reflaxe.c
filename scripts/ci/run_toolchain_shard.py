@@ -210,6 +210,7 @@ RELEVANT_UNTRACKED_ROOTS = (
     "src",
     "std",
     "test",
+    "vendor",
 )
 
 
@@ -561,7 +562,10 @@ def host_identity_digest() -> str:
     )
 
 
-def resolve_evidence_tool(tool: str) -> str | None:
+def resolve_evidence_tool(
+    tool: str,
+    environment: Mapping[str, str] | None = None,
+) -> str | None:
     """Resolve a tool the same way an npm script does.
 
     npm prepends this checkout's `node_modules/.bin` directory to PATH. The
@@ -570,13 +574,122 @@ def resolve_evidence_tool(tool: str) -> str | None:
     """
 
     local_executable = ROOT / "node_modules/.bin" / tool
-    return str(local_executable) if local_executable.is_file() else shutil.which(tool)
+    selected_path = None if environment is None else environment.get("PATH")
+    return (
+        str(local_executable)
+        if local_executable.is_file()
+        else shutil.which(tool, path=selected_path)
+    )
 
 
-def tool_identity_digest() -> str:
+def digest_evidence_tree(root: Path) -> str:
+    """Hash one immutable tool tree by relative path, mode, and file bytes."""
+    if root.is_symlink() or not root.is_dir():
+        raise ToolchainShardFailure(
+            f"evidence tool tree is missing or unsafe: {root}"
+        )
+    digest = hashlib.sha256()
+    paths = sorted(
+        (path for path in root.rglob("*") if path.is_file() or path.is_symlink()),
+        key=lambda path: path.relative_to(root).as_posix().encode("utf-8"),
+    )
+    for path in paths:
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            raise ToolchainShardFailure(
+                f"evidence tool tree must not contain a symlink: {path}"
+            )
+        try:
+            payload = path.read_bytes()
+            mode = path.lstat().st_mode
+        except OSError as error:
+            raise ToolchainShardFailure(
+                f"cannot hash evidence tool input {path}: {error}"
+            ) from error
+        encoded = relative.encode("utf-8")
+        digest.update(len(encoded).to_bytes(8, "big"))
+        digest.update(encoded)
+        digest.update(mode.to_bytes(8, "big"))
+        digest.update(len(payload).to_bytes(8, "big"))
+        digest.update(payload)
+    return digest.hexdigest()
+
+
+def lix_haxe_installation_identity(
+    environment: Mapping[str, str],
+) -> dict[str, object]:
+    """Identify the real compiler and standard library selected by Lix."""
+    try:
+        configuration = json.loads((ROOT / ".haxerc").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ToolchainShardFailure(f"cannot read scoped Haxe selection: {error}") from error
+    version = configuration.get("version") if isinstance(configuration, dict) else None
+    if not isinstance(version, str) or not version:
+        raise ToolchainShardFailure("scoped Haxe selection has no version")
+
+    roots = [
+        Path(value).expanduser()
+        for name in ("HAXE_ROOT", "HAXESHIM_ROOT")
+        if (value := environment.get(name))
+    ]
+    home_name = "APPDATA" if os.name == "nt" else "HOME"
+    home = environment.get(home_name)
+    if home:
+        roots.append(Path(home) / "haxe")
+    if not roots:
+        raise ToolchainShardFailure(
+            f"cannot resolve Lix Haxe root without {home_name}, "
+            "HAXE_ROOT, or HAXESHIM_ROOT"
+        )
+
+    executable_name = "haxe.exe" if os.name == "nt" else "haxe"
+    installation: Path | None = None
+    for root in roots:
+        # The Lix shim treats each configured root as a version scope, even
+        # when the path itself happens to contain a Haxe executable. Mirror
+        # that selection exactly so a nested or stale compiler cannot stand in
+        # for the one the owner process actually executes.
+        candidate = root / "versions" / version
+        if (candidate / executable_name).is_file():
+            installation = candidate
+            break
+    if installation is None:
+        raise ToolchainShardFailure(
+            f"cannot locate the Lix-pinned Haxe {version} installation"
+        )
+
+    compiler = installation / executable_name
+    # Lix's local shim selects this installation and then supplies its own
+    # standard-library path to Haxe. A caller's HAXE_STD_PATH remains part of
+    # the environment identity, but it must not replace the effective Lix std
+    # tree here or a changed installation could reuse stale evidence.
+    standard_library = installation / "std"
+    if compiler.is_symlink() or not compiler.is_file():
+        raise ToolchainShardFailure(
+            f"selected Haxe compiler is missing or unsafe: {compiler}"
+        )
+    try:
+        compiler_digest = sha256_bytes(compiler.read_bytes())
+    except OSError as error:
+        raise ToolchainShardFailure(
+            f"cannot hash selected Haxe compiler {compiler}: {error}"
+        ) from error
+    return {
+        "version": version,
+        "compilerPath": str(compiler.resolve()),
+        "compilerSha256": compiler_digest,
+        "standardLibraryPath": str(standard_library.resolve()),
+        "standardLibrarySha256": digest_evidence_tree(standard_library),
+    }
+
+
+def tool_identity_digest(
+    environment: Mapping[str, str] | None = None,
+) -> str:
+    selected_environment = os.environ if environment is None else environment
     identities: dict[str, object] = {}
     for tool in EVIDENCE_TOOLS:
-        executable = resolve_evidence_tool(tool)
+        executable = resolve_evidence_tool(tool, selected_environment)
         if executable is None:
             identities[tool] = {"available": False}
             continue
@@ -590,6 +703,7 @@ def tool_identity_digest() -> str:
             result = subprocess.run(
                 [executable, version_argument],
                 cwd=ROOT,
+                env=dict(selected_environment),
                 check=False,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -603,11 +717,16 @@ def tool_identity_digest() -> str:
             "versionExitCode": result.returncode,
             "versionOutputSha256": sha256_bytes(result.stdout),
         }
+        if tool == "haxe" and (ROOT / "node_modules/.bin/haxe").is_file():
+            identities[tool]["lixInstallation"] = lix_haxe_installation_identity(
+                selected_environment
+            )
         if tool in ("cc", "gcc", "g++", "clang", "clang++"):
             try:
                 target = subprocess.run(
                     [executable, "-dumpmachine"],
                     cwd=ROOT,
+                    env=dict(selected_environment),
                     check=False,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,

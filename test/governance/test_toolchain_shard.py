@@ -286,14 +286,20 @@ class ToolchainShardTests(unittest.TestCase):
         plan = self.route_selector.build_test_plan(
             (
                 "scripts/ci/select_pre_commit_route.py",
+                "scripts/ci/run_local_gate.py",
                 "docs/test-performance.md",
+                "test/governance/test_local_gate_evidence.py",
             )
         )
-        self.assertEqual(plan["schemaVersion"], 1)
+        self.assertEqual(plan["schemaVersion"], 2)
         self.assertEqual(plan["route"], self.route_selector.AFFECTED)
         self.assertEqual(
             [owner["script"] for owner in plan["taskOwners"]],
             ["test:governance"],
+        )
+        self.assertEqual(
+            plan["taskOwners"][0]["localCommand"],
+            "npm run test:governance",
         )
         self.assertEqual(
             [owner["script"] for owner in plan["localCommitSmoke"]],
@@ -328,12 +334,52 @@ class ToolchainShardTests(unittest.TestCase):
             [owner["script"] for owner in plan["taskOwners"]],
             ["test:body-lowering"],
         )
+        self.assertEqual(
+            plan["taskOwners"][0]["localCommand"],
+            "npm run test:body-lowering",
+        )
         hxc_ir_plan = self.route_selector.build_test_plan(
             ("src/reflaxe/c/ir/HxcIR.hx",)
         )
         self.assertIn(
             "test:hxc-ir",
             [owner["script"] for owner in hxc_ir_plan["taskOwners"]],
+        )
+        hxc_ir_owner = next(
+            owner
+            for owner in hxc_ir_plan["taskOwners"]
+            if owner["script"] == "test:hxc-ir"
+        )
+        self.assertEqual(
+            hxc_ir_owner["localCommand"],
+            "npm run --silent test:local-gate -- test:hxc-ir",
+        )
+        hello_plan = self.route_selector.build_test_plan(
+            ("examples/hello/run.py",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in hello_plan["taskOwners"]],
+            ["test:hello"],
+        )
+        self.assertEqual(
+            hello_plan["taskOwners"][0]["localCommand"],
+            "npm run test:hello",
+        )
+        project_plan = self.route_selector.build_test_plan(
+            ("test/project_emitter/run.py",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in project_plan["taskOwners"]],
+            ["test:project-emitter", "test:build-adapters:local"],
+        )
+        project_owner = next(
+            owner
+            for owner in project_plan["taskOwners"]
+            if owner["script"] == "test:project-emitter"
+        )
+        self.assertEqual(
+            project_owner["localCommand"],
+            "npm run --silent test:local-gate -- test:project-emitter",
         )
         shared_runner_plan = self.route_selector.build_test_plan(
             ("test/typed_ast/run.py",)
@@ -1120,6 +1166,111 @@ class ToolchainShardTests(unittest.TestCase):
                     self.runner.resolve_evidence_tool("haxe"),
                     str(expected),
                 )
+                self.runner.shutil.which.reset_mock()
+                self.assertEqual(
+                    self.runner.resolve_evidence_tool(
+                        "missing-tool",
+                        {"PATH": "/reviewed/tools"},
+                    ),
+                    "/unrelated/global/haxe",
+                )
+                self.runner.shutil.which.assert_called_once_with(
+                    "missing-tool",
+                    path="/reviewed/tools",
+                )
+
+    def test_lix_haxe_identity_hashes_real_compiler_and_standard_library(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            isolated_root = Path(temporary) / "checkout"
+            isolated_root.mkdir()
+            (isolated_root / ".haxerc").write_text(
+                '{"version":"5.0.0-preview.1"}\n',
+                encoding="utf-8",
+            )
+            scope = Path(temporary) / "scope"
+            installation = scope / "versions/5.0.0-preview.1"
+            compiler = installation / "haxe"
+            standard = installation / "std"
+            standard.mkdir(parents=True)
+            compiler.write_bytes(b"compiler-one")
+            (standard / "Std.hx").write_text(
+                "class Std {}\n",
+                encoding="utf-8",
+            )
+            environment = {"HAXE_ROOT": str(scope), "PATH": "/usr/bin:/bin"}
+            with mock.patch.object(self.runner, "ROOT", isolated_root):
+                baseline = self.runner.lix_haxe_installation_identity(
+                    environment
+                )
+                compiler.write_bytes(b"compiler-two")
+                compiler_changed = self.runner.lix_haxe_installation_identity(
+                    environment
+                )
+                (standard / "Std.hx").write_text(
+                    "class Std { static var changed = true; }\n",
+                    encoding="utf-8",
+                )
+                standard_changed = self.runner.lix_haxe_installation_identity(
+                    environment
+                )
+            self.assertNotEqual(
+                baseline["compilerSha256"],
+                compiler_changed["compilerSha256"],
+            )
+            self.assertNotEqual(
+                compiler_changed["standardLibrarySha256"],
+                standard_changed["standardLibrarySha256"],
+            )
+            override = Path(temporary) / "override-std"
+            override.mkdir()
+            (override / "Std.hx").write_text(
+                "class Std { static var override = true; }\n",
+                encoding="utf-8",
+            )
+            override_environment = {
+                "HAXE_ROOT": str(scope),
+                "HAXE_STD_PATH": str(override),
+                "PATH": "/usr/bin:/bin",
+            }
+            with mock.patch.object(self.runner, "ROOT", isolated_root):
+                override_identity = self.runner.lix_haxe_installation_identity(
+                    override_environment
+                )
+                (standard / "Std.hx").write_text(
+                    "class Std { static var changedAgain = true; }\n",
+                    encoding="utf-8",
+                )
+                override_installation_standard_changed = (
+                    self.runner.lix_haxe_installation_identity(
+                        override_environment
+                    )
+                )
+            self.assertEqual(
+                override_identity["compilerSha256"],
+                standard_changed["compilerSha256"],
+            )
+            self.assertEqual(
+                override_identity["standardLibraryPath"],
+                str(standard.resolve()),
+            )
+            self.assertNotEqual(
+                override_identity["standardLibrarySha256"],
+                override_installation_standard_changed["standardLibrarySha256"],
+            )
+
+            with mock.patch.object(self.runner, "ROOT", isolated_root):
+                with self.assertRaisesRegex(
+                    self.runner.ToolchainShardFailure,
+                    "cannot locate the Lix-pinned Haxe",
+                ):
+                    self.runner.lix_haxe_installation_identity(
+                        {
+                            "HAXE_ROOT": str(installation),
+                            "PATH": "/usr/bin:/bin",
+                        }
+                    )
 
     def test_input_drift_during_execution_fails_without_writing_evidence(self) -> None:
         scripts = self.runner.load_scripts()
@@ -1274,7 +1425,27 @@ class ToolchainShardTests(unittest.TestCase):
             hook,
         )
         self.assertIn('select_pre_commit_route.py" --smoke-owners', hook)
+        self.assertIn(
+            'npm run --silent test:local-gate -- --hook "$owner_script"',
+            hook,
+        )
         self.assertIn('npm run "$owner_script"', hook)
+        self.assertIn(
+            "npm run test:governance",
+            hook,
+        )
+        for reusable_owner in (
+            "test:all-sources",
+            "test:hxc-ir",
+            "test:project-emitter",
+        ):
+            with self.subTest(reusable_owner=reusable_owner):
+                self.assertIn(
+                    f"test:local-gate -- --hook {reusable_owner}",
+                    hook,
+                )
+        self.assertIn('python3 "$ROOT_DIR/examples/hello/run.py"', hook)
+        self.assertIn("npm run test:build-adapters:local", hook)
         self.assertIn("scripts/ci/select_pre_commit_route.py", hook)
         for uncached_check in (
             "Exporting Beads issues",

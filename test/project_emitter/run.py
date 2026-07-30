@@ -1486,7 +1486,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--build-adapters",
         choices=("auto", "required", "off"),
-        default="auto",
+        default="off",
         help="Run raw/CMake/Meson builds when available, require all tools, or disable native adapter builds.",
     )
     parser.add_argument(
@@ -1495,13 +1495,22 @@ def parse_arguments() -> argparse.Namespace:
         default="auto",
         help="Select the C compiler used by executable build-adapter proofs.",
     )
-    parser.add_argument(
+    execution_mode = parser.add_mutually_exclusive_group()
+    execution_mode.add_argument(
         "--snapshot-only",
         action="store_true",
         help=(
             "Render one canonical project and validate its exact snapshot and manifest. "
-            "The default command retains the exhaustive ownership, server, adapter, "
-            "and negative matrix."
+            "The default command retains the exhaustive ownership, server, project-seed, "
+            "and negative matrix; native adapter execution has its own owner."
+        ),
+    )
+    execution_mode.add_argument(
+        "--build-adapters-only",
+        action="store_true",
+        help=(
+            "Generate and execute only the raw, CMake, and Meson consumer "
+            "projects. The semantic project-emission owner runs separately."
         ),
     )
     return parser.parse_args()
@@ -1516,6 +1525,23 @@ def main() -> int:
         print("project-emitter: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if arguments.build_adapters_only:
+            if arguments.build_adapters == "off":
+                raise ProjectEmitterFailure(
+                    "--build-adapters-only requires auto or required adapter execution"
+                )
+            adapter_lanes = check_build_adapters(
+                arguments.build_adapters, arguments.toolchain
+            )
+            print(
+                "project-emitter: BUILD-ADAPTERS-ONLY: generated and executed "
+                + (
+                    ", ".join(adapter_lanes)
+                    if adapter_lanes
+                    else "no available native adapter lanes"
+                )
+            )
+            return 0
         if arguments.snapshot_only:
             with tempfile.TemporaryDirectory(
                 prefix="reflaxe-c-project-snapshot-validation-"

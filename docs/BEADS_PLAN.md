@@ -79,10 +79,10 @@ bd close <id> --reason "Acceptance criteria satisfied; tests: <commands>"
 npm run beads:push
 ```
 
-The guarded push command decodes and scans every current Beads record and
-historical issue version before delegating to Dolt. This is required because
-the Git objects under `refs/dolt/data` store opaque database chunks that an
-ordinary Git-diff secret scan cannot interpret.
+The guarded push command decodes and scans the complete current Beads export
+before delegating to Dolt. This complements staged-file and Git-history scans
+because the Git objects under `refs/dolt/data` store opaque database chunks
+that an ordinary Git scanner cannot interpret.
 
 Only `E0.T01` is initially ready. That is deliberate: it ratifies the license, C baseline, string encoding, memory-management, exception, and platform decisions that would otherwise harden accidentally in implementation.
 

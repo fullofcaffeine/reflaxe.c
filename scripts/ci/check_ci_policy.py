@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,7 @@ meson==1.11.1 \\
 """
 PUBLIC_PREFLIGHT_COMMAND = (
     "npm run format:haxe:check && npm run security:gitleaks && "
-    "npm run security:beads-history && npm run test:security-tooling && "
+    "npm run security:beads-current && npm run test:security-tooling && "
     "npm run test:governance"
 )
 
@@ -38,7 +39,6 @@ REQUIRED_GATE_FILES = (
     "scripts/hooks/pre-push",
     "scripts/beads/export-passive.sh",
     "scripts/beads/push-safe.sh",
-    "scripts/beads/resolve-reviewed.py",
     "scripts/lint/hx_format_guard.sh",
     "scripts/lint/local_path_guard_staged.sh",
     "scripts/security/run-gitleaks.sh",
@@ -46,8 +46,10 @@ REQUIRED_GATE_FILES = (
     "scripts/ci/install-gitleaks.sh",
     "scripts/ci/check_security_tooling.py",
     "scripts/ci/check_agent_instruction_links.py",
+    "scripts/ci/run_local_gate.py",
     "scripts/ci/run_toolchain_shard.py",
     ".github/workflows/snapshot-audit.yml",
+    "test/governance/test_local_gate_evidence.py",
     "test/governance/test_toolchain_shard.py",
     "test/governance/test_caxecraft_timing.py",
     "test/governance/test_agent_instruction_links.py",
@@ -1072,10 +1074,10 @@ def validate() -> list[str]:
     ):
         errors.append("package.json must retain the staged Gitleaks gate")
     if (
-        scripts.get("security:beads-history")
+        scripts.get("security:beads-current")
         != "bash scripts/security/run-beads-gitleaks.sh"
     ):
-        errors.append("package.json must retain the decoded Beads history scan")
+        errors.append("package.json must retain the current decoded Beads scan")
     if scripts.get("beads:push") != "bash scripts/beads/push-safe.sh":
         errors.append("package.json must retain the guarded Beads push entry point")
     if (
@@ -1114,9 +1116,16 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:project-emitter entry point")
     if (
         scripts.get("test:build-adapters")
-        != "python3 test/project_emitter/run.py --build-adapters required"
+        != "python3 test/project_emitter/run.py --build-adapters required --build-adapters-only"
     ):
         errors.append("package.json must retain the required build-adapter entry point")
+    if (
+        scripts.get("test:build-adapters:local")
+        != "python3 test/project_emitter/run.py --build-adapters auto --build-adapters-only"
+    ):
+        errors.append(
+            "package.json must retain the available native build-adapter local entry point"
+        )
     if scripts.get("test:runtime-features") != "python3 test/runtime/runtime-feature-graph/run.py":
         errors.append("package.json must retain the test:runtime-features entry point")
     if scripts.get("test:array-runtime") != "python3 test/differential/array-runtime/run.py":
@@ -1286,6 +1295,11 @@ def validate() -> list[str]:
         != "python3 scripts/ci/select_pre_commit_route.py --plan"
     ):
         errors.append("package.json must retain the explain-only agent test-plan command")
+    if (
+        scripts.get("test:local-gate")
+        != "python3 scripts/ci/run_local_gate.py"
+    ):
+        errors.append("package.json must retain exact local-gate evidence reuse")
     if (
         scripts.get("test:toolchain-shards")
         != "python3 scripts/ci/run_toolchain_shard.py --check"
@@ -1517,6 +1531,19 @@ def validate() -> list[str]:
             errors.append(
                 "test performance policy lost required contract: " + contract
             )
+    normalized_performance_policy = re.sub(r"\s+", " ", performance_policy)
+    for contract in (
+        ".cache/local-gates/",
+        "same staged tree, unstaged and relevant untracked inputs",
+        "A missing, expired, corrupt, incomplete, or mismatched receipt",
+        "Performance/timing owners are never reused.",
+        "The hook reuses only an exact duplicate R0/R1 owner.",
+    ):
+        if contract not in normalized_performance_policy:
+            errors.append(
+                "test performance local-evidence policy lost required contract: "
+                + contract
+            )
 
     workflow = read_text(WORKFLOW, errors)
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:
@@ -1559,8 +1586,10 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the declaration planning golden test")
     if "test/symbol_registry/run.py" not in pre_commit:
         errors.append("pre-commit must run the deterministic symbol registry test")
-    if "test/project_emitter/run.py" not in pre_commit:
+    if "test:local-gate -- --hook test:project-emitter" not in pre_commit:
         errors.append("pre-commit must run the deterministic project emitter test")
+    if "npm run test:build-adapters:local" not in pre_commit:
+        errors.append("pre-commit must run native build-adapter execution")
     if "test/runtime/runtime-feature-graph/run.py" not in pre_commit:
         errors.append("pre-commit must run the selective runtime feature test")
     if "test/differential/array-runtime/run.py" not in pre_commit:
@@ -1579,11 +1608,11 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the UTF-8 scalar string runtime test")
     if "test/string_output/run.py" not in pre_commit:
         errors.append("pre-commit must run the generated literal-output test")
-    if "examples/hello/run.py" not in pre_commit:
+    if 'python3 "$ROOT_DIR/examples/hello/run.py"' not in pre_commit:
         errors.append("pre-commit must run the generated hello product example")
     if "examples/caxecraft/run.py" not in pre_commit:
         errors.append("pre-commit must run the generated Caxecraft domain example")
-    if "test/hxc_ir/run.py" not in pre_commit:
+    if "test:local-gate -- --hook test:hxc-ir" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed primitive semantic test")
@@ -1643,7 +1672,9 @@ def validate() -> list[str]:
         "Running conservative local smoke; focused owners remain task evidence"
         not in pre_commit
         or 'select_pre_commit_route.py" --smoke-owners' not in pre_commit
+        or 'test:local-gate -- --hook "$owner_script"' not in pre_commit
         or 'npm run "$owner_script"' not in pre_commit
+        or "npm run test:governance" not in pre_commit
         or "complete cold coverage remains required in CI" not in pre_commit
     ):
         errors.append(

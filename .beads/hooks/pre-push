@@ -5,10 +5,6 @@ if [ "${BD_GIT_HOOK:-}" = "1" ]; then
 fi
 
 ROOT_DIR="$(git rev-parse --show-toplevel)"
-HXC_BD_BIN="$(python3 "$ROOT_DIR/scripts/beads/resolve-reviewed.py")" || exit $?
-export HXC_BD_BIN
-PATH="$(dirname "$HXC_BD_BIN"):$PATH"
-export PATH
 if [ -x "$ROOT_DIR/scripts/hooks/pre-push" ]; then
   "$ROOT_DIR/scripts/hooks/pre-push" "$@"
   _repository_exit=$?

@@ -1,10 +1,4 @@
 #!/usr/bin/env sh
-ROOT_DIR="$(git rev-parse --show-toplevel)"
-HXC_BD_BIN="$(python3 "$ROOT_DIR/scripts/beads/resolve-reviewed.py")" || exit $?
-export HXC_BD_BIN
-PATH="$(dirname "$HXC_BD_BIN"):$PATH"
-export PATH
-
 # --- BEGIN BEADS INTEGRATION v1.1.0 ---
 # This section is managed by beads. Do not remove these markers.
 if command -v bd >/dev/null 2>&1; then
