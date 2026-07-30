@@ -62,6 +62,10 @@ class HaxeCTestCase:
     success_line: str
     expected_runtime_features: tuple[str, ...] = ()
     split_source_checks: tuple[GeneratedSourceCheck, ...] = ()
+    runs_generated_main: bool = False
+    embedded_source_path: str | None = None
+    embedded_haxe_path: str | None = None
+    embedded_source_functions: tuple[str, ...] = ()
 
 
 CASES = {
@@ -181,6 +185,55 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+    ),
+    "scenario-native-codec": HaxeCTestCase(
+        case_id="scenario-native-codec",
+        eval_hxml="scenario-native-codec.hxml",
+        c_hxml="scenario-native-codec-c.hxml",
+        native_harness="test/native/scenario_native_codec_harness.c",
+        generated_source="src/modules/caxecraft/scenario/ScenarioLexer.c",
+        required_source_markers=(
+            "ScenarioLexer_read",
+            "ScenarioLexer_decodeUtf8",
+            "ScenarioLexer_tokenize",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=10,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "object",
+            "gc",
+            "int-map",
+            "string-scalar",
+            "string",
+            "string-map",
+            "string-split",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/scenario/ScenarioParser.c",
+                required_markers=("ScenarioParser_parse",),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/scenario/ScenarioValidator.c",
+                required_markers=("ScenarioValidator_validate",),
+                forbidden_markers=("goto ",),
+            ),
+        ),
+        runs_generated_main=True,
+        embedded_source_path="scenarios/first-playable/map.caxemap",
+        embedded_haxe_path="test/caxecraft/qa/ScenarioNativeCodecProbe.hx",
+        embedded_source_functions=(
+            "firstPlayablePrefix",
+            "firstPlayableSuffix",
+        ),
     ),
     "water": HaxeCTestCase(
         case_id="water",
@@ -363,6 +416,60 @@ def validate_oracle(test_case: HaxeCTestCase, output: str) -> None:
         )
 
 
+def validate_embedded_source(test_case: HaxeCTestCase) -> None:
+    """Require fixture-only String chunks to equal their authored byte source."""
+
+    if test_case.embedded_source_path is None:
+        if test_case.embedded_haxe_path is not None or test_case.embedded_source_functions:
+            raise HaxeCTestFailure(
+                f"{test_case.case_id} has an incomplete embedded-source contract"
+            )
+        return
+    if (
+        test_case.embedded_haxe_path is None
+        or not test_case.embedded_source_functions
+    ):
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} has an incomplete embedded-source contract"
+        )
+    authored = checked_case_path(
+        test_case.embedded_source_path, "embedded authored source"
+    ).read_bytes()
+    haxe_source = checked_case_path(
+        test_case.embedded_haxe_path, "embedded Haxe source"
+    ).read_text(encoding="utf-8")
+    chunks: list[bytes] = []
+    for function_name in test_case.embedded_source_functions:
+        marker = f"function {function_name}():String\n\treturn "
+        start = haxe_source.find(marker)
+        if start < 0:
+            raise HaxeCTestFailure(
+                f"{test_case.case_id} omitted embedded source function "
+                f"{function_name!r}"
+            )
+        literal_start = start + len(marker)
+        literal_end = haxe_source.find(";\n", literal_start)
+        if literal_end < 0:
+            raise HaxeCTestFailure(
+                f"{test_case.case_id} has an unterminated embedded source "
+                f"function {function_name!r}"
+            )
+        literal = haxe_source[literal_start:literal_end]
+        decoded = json.loads(literal)
+        if not isinstance(decoded, str):
+            raise HaxeCTestFailure(
+                f"{test_case.case_id} embedded source function "
+                f"{function_name!r} is not one String literal"
+            )
+        chunks.append(decoded.encode("utf-8"))
+    embedded = b"".join(chunks)
+    if embedded != authored:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} embedded {len(embedded)} bytes but "
+            f"{test_case.embedded_source_path} contains {len(authored)} bytes"
+        )
+
+
 def sanitizer_supported(compiler: str, root: Path) -> bool:
     """Ask whether the selected compiler can link Address/Undefined sanitizers."""
 
@@ -407,6 +514,7 @@ def compile_native(
     *,
     layout: str,
     sanitized: bool,
+    runs_generated_main: bool,
 ) -> None:
     """Compile one generated test plus its independent native ABI consumer."""
 
@@ -493,6 +601,30 @@ def compile_native(
             label=f"{'sanitized ' if sanitized else ''}unity native link",
         )
         return
+    generated_main_object: Path | None = None
+    if runs_generated_main:
+        generated_main = generated / "src/hxc/main.c"
+        if not generated_main.is_file():
+            raise HaxeCTestFailure(
+                "generated-main lifecycle test omitted src/hxc/main.c"
+            )
+        generated_main_object = executable.parent / "generated-main.o"
+        run(
+            [
+                compiler,
+                *flags,
+                *include_flags,
+                "-Dmain=hxc_generated_main",
+                "-Wno-missing-prototypes",
+                "-c",
+                str(generated_main),
+                "-o",
+                str(generated_main_object),
+            ],
+            cwd=ROOT,
+            timeout=60,
+            label=f"{'sanitized ' if sanitized else ''}generated main object",
+        )
     run(
         [
             compiler,
@@ -500,6 +632,7 @@ def compile_native(
             *include_flags,
             *(str(path) for path in sources),
             str(harness),
+            *((str(generated_main_object),) if generated_main_object else ()),
             "-o",
             str(executable),
         ],
@@ -514,6 +647,7 @@ def execute(
 ) -> bool:
     """Run one Haxe test on Eval, one C layout, strict C, and sanitizers."""
 
+    validate_embedded_source(test_case)
     eval_hxml = checked_case_path(test_case.eval_hxml, "Eval HXML")
     c_hxml = checked_case_path(test_case.c_hxml, "C HXML")
     harness = checked_case_path(test_case.native_harness, "native harness")
@@ -623,6 +757,7 @@ def execute(
             executable,
             layout=layout,
             sanitized=False,
+            runs_generated_main=test_case.runs_generated_main,
         )
         native_output = run(
             [str(executable)],
@@ -647,6 +782,7 @@ def execute(
                 sanitized,
                 layout=layout,
                 sanitized=True,
+                runs_generated_main=test_case.runs_generated_main,
             )
             sanitized_output = run(
                 [str(sanitized)],
