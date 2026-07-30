@@ -255,8 +255,14 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_caxecraft_actor_composition_script = (
         "python3 examples/caxecraft/run_haxe_c_test.py actor-composition"
     )
-    expected_caxecraft_level_adapter_script = (
-        "python3 examples/caxecraft/level_adapter.py --check"
+    expected_caxecraft_resolved_level_plan_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py resolved-level-plan"
+    )
+    expected_caxecraft_content_generation_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py content-generation"
+    )
+    expected_caxecraft_runtime_level_loader_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py runtime-level-loader"
     )
     expected_caxecraft_scenario_model_script = (
         "python3 examples/caxecraft/check_scenario_model.py"
@@ -313,7 +319,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-localization && npm run test:caxecraft-content-pack && npm run test:caxecraft-actor-composition && npm run test:caxecraft-level-adapter && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-session && npm run test:caxecraft-app-screen && npm run test:caxecraft-presentation && npm run test:caxecraft-terrain-chunks && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-localization && npm run test:caxecraft-content-pack && npm run test:caxecraft-actor-composition && npm run test:caxecraft-package-store && npm run test:caxecraft-resolved-level-plan && npm run test:caxecraft-content-generation && npm run test:caxecraft-runtime-level-loader && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-session && npm run test:caxecraft-app-screen && npm run test:caxecraft-presentation && npm run test:caxecraft-terrain-chunks && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -542,10 +548,28 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json must retain the Caxecraft actor-composition gate")
     if (
         not isinstance(scripts, dict)
-        or scripts.get("test:caxecraft-level-adapter")
-        != expected_caxecraft_level_adapter_script
+        or scripts.get("test:caxecraft-package-store")
+        != "python3 examples/caxecraft/run_haxe_c_test.py package-store"
     ):
-        errors.append("package.json must retain the authored Caxecraft level-adapter gate")
+        errors.append("package.json must retain the Caxecraft package-store gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-resolved-level-plan")
+        != expected_caxecraft_resolved_level_plan_script
+    ):
+        errors.append("package.json must retain the Caxecraft resolved-level-plan gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-content-generation")
+        != expected_caxecraft_content_generation_script
+    ):
+        errors.append("package.json must retain the Caxecraft content-generation gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-runtime-level-loader")
+        != expected_caxecraft_runtime_level_loader_script
+    ):
+        errors.append("package.json must retain the Caxecraft runtime-level-loader gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:caxecraft-water") != expected_caxecraft_water_script

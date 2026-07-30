@@ -15,5 +15,16 @@ package c;
  */
 @:coreType
 extern abstract StructInit {
+	/**
+	 * Create a completely zero-initialized header-owned C struct.
+	 *
+	 * The result type is inferred from the surrounding assignment or return.
+	 * haxe.c emits C's structural `(struct T){0}` initializer, which initializes
+	 * padding-independent field values without pretending that an out-parameter
+	 * may read uninitialized storage.
+	 */
+	public static function zero<Result>():Result;
+
+	/** Construct every field explicitly from one direct object literal. */
 	public static function make<Fields, Result>(fields:Fields):Result;
 }

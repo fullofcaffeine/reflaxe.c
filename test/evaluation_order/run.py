@@ -462,7 +462,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     # Concrete C spellings are a naming-registry decision. Tests follow the
     # semantic source identity instead of freezing an obsolete generated prefix.
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise EvaluationOrderFailure("finalized symbol table is missing")
     run_name = symbol_name(symbols, "EvaluationFixture.run")
     set_flag_name = symbol_name(symbols, "EvaluationFixture.setCallFlag")
@@ -598,7 +598,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     barrier_c_end = source.find("\n}\n", barrier_c_start)
     barrier_c = source[barrier_c_start:barrier_c_end]
     materialized_global = re.search(
-        rf"int32_t (hxc_tmp_[A-Za-z0-9_]+) = {re.escape(barrier_global_name)};",
+        rf"int32_t (hxc_l_tmp_[A-Za-z0-9_]+) = {re.escape(barrier_global_name)};",
         barrier_c,
     )
     barrier_c_call = barrier_c.find(f"{barrier_overwrite_name}(")

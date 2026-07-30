@@ -122,7 +122,7 @@ class SpanLoweringProbe {
 		}
 		functions.sort((left, right) -> compareStrings(left.field, right.field));
 		final record:SpanLoweringProbeRecord = {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			status: "typed-zero-fixed-arrays-and-span-parameters-runtime-free",
 			profile: Std.string(profile),
 			buildMode: Std.string(buildMode),

@@ -40,16 +40,21 @@ and effective namespace/scope match.
 
 ## Generated defaults
 
-Generated names use algorithm `hxc-c-symbol-v2`. Its rule is simple: start with
+Generated names use algorithm `hxc-c-symbol-v3`. Its rule is simple: start with
 the most recognizable source spelling, then add machinery only when C requires
 it.
 
 - Translation-unit compiler-private names begin `hxc_`, public defaults begin
   `hxc_api_`, and generic external defaults begin `hxc_external_`.
-- A generated local or structure/union member keeps the short source word after
-  the compiler ownership prefix: Haxe `value` becomes `hxc_value`, and record
-  field `x` becomes `hxc_x`. A generated public member uses the corresponding
-  `hxc_api_` prefix until the authored export-ABI policy gives it an exact name.
+- A generated function parameter, local, or temporary begins `hxc_l_`: Haxe
+  `status` becomes `hxc_l_status`. The extra `l` means “function-local.” It
+  prevents that block declaration from shadowing a file-level runtime typedef
+  such as `hxc_status`, which strict GCC rejects even though ISO C permits the
+  inner declaration. A structure/union member instead keeps the short source
+  word after `hxc_`, so record field `x` remains `hxc_x`; C gives each
+  aggregate's members a separate namespace. A generated public member uses the
+  corresponding `hxc_api_` prefix until the authored export-ABI policy gives it
+  an exact name.
 - Named types and functions use their readable package/type/member path without
   encoded compiler-role words. Compiler-created concepts with no source name,
   such as a vtable or closure environment, retain a short role word.
@@ -111,15 +116,16 @@ can still discover layouts, runtime requirements, adapters, globals, and new
 name requests while it builds HxcIR. Those effects need a separately validated
 freeze-and-replay boundary before an old body can be reused safely.
 
-The short prefix on locals and members is a correctness boundary, not decoration.
+The scoped prefixes on locals and members are correctness boundaries, not decoration.
 The C preprocessor replaces macros before the compiler applies function or
 aggregate-member scopes. A header is therefore allowed to break a bare local
 named `bool` or member named `NULL`/`NAN`, even though those names would not
-collide during ordinary C scope lookup. Keeping `hxc_` preserves the recognizable
-source word while isolating generated names from current and future header
-macros. The focused native probe includes `<stdbool.h>`, `<stddef.h>`, and
-`<math.h>` and compiles generated `hxc_bool`, `hxc_NULL`, and `hxc_NAN` names
-under strict C11.
+collide during ordinary C scope lookup. Keeping the compiler prefix preserves
+the recognizable source word while isolating generated names from current and
+future header macros. The focused native probe includes `<stdbool.h>`,
+`<stddef.h>`, `<math.h>`, and hxrt's status header. It compiles generated
+`hxc_l_bool`, `hxc_l_status`, `hxc_NULL`, and `hxc_NAN` names under strict C11
+with shadowing warnings treated as errors.
 
 The generated public default is deterministic and inspectable, but public ABI
 compatibility is not yet promised: E7 owns the final export model and E10.T09

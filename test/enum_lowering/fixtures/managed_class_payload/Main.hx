@@ -26,6 +26,17 @@ final class Main {
 	static function copyEvent(value:SessionEvent):SessionEvent
 		return value;
 
+	/**
+	 * Select one fresh or borrowed collector-bearing enum through a direct join.
+	 *
+	 * The join carrier must start in a trace-safe zero state before either arm
+	 * can allocate, then contain exactly the selected tagged value.
+	 */
+	static function chooseEvent(useFresh:Bool, borrowed:SessionEvent):SessionEvent {
+		final selected = useFresh ? makeEvent(19) : borrowed;
+		return copyEvent(selected);
+	}
+
 	static function makeEnvelope(value:Int):SessionEnvelope
 		return {event: makeEvent(value)};
 
@@ -53,6 +64,8 @@ final class Main {
 		var assigned:SessionEvent = Closed;
 		assigned = direct;
 		final nullable = MaybeOpened(null);
+		final selectedFresh = chooseEvent(true, direct);
+		final selectedBorrowed = chooseEvent(false, direct);
 		final envelope = makeEnvelope(11);
 		final events = makeEventArray(13);
 		final envelopes = makeEnvelopeArray(17);
@@ -64,7 +77,7 @@ final class Main {
 				session.add(5);
 			case Closed | MaybeOpened(_):
 		}
-		while (read(direct) != 12 || read(assigned) != 12 || read(nullable) != -2 || read(envelope.event) != 11 || read(events[0]) != 13
-			|| read(events[1]) != -1 || read(events[2]) != -2 || read(envelopes[0].event) != 17) {}
+		while (read(direct) != 12 || read(assigned) != 12 || read(nullable) != -2 || read(selectedFresh) != 19 || read(selectedBorrowed) != 12
+			|| read(envelope.event) != 11 || read(events[0]) != 13 || read(events[1]) != -1 || read(events[2]) != -2 || read(envelopes[0].event) != 17) {}
 	}
 }

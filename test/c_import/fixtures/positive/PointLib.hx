@@ -47,14 +47,42 @@ extern class PointLib {
 	@:c.name("pointlib_point_make")
 	public static function make(x:Coord, y:Coord):Point;
 
+	/** Verify every field of one structurally zero-initialized point. */
+	@:c.name("pointlib_point_is_zero")
+	public static function isZero(point:Point):Bool;
+
 	@:c.name("pointlib_point_translate")
 	public static function translate(point:Point, dx:Coord, dy:Coord):Point;
+
+	/**
+		Mutate one initialized header-owned point during this call.
+
+		The point remains caller-owned. The imported function may use its address
+		only until it returns and cannot retain it.
+	**/
+	@:c.name("pointlib_point_translate_in_place")
+	public static function translateInPlace(point:c.Ref<Point>, dx:Coord, dy:Coord):Void;
+
+	/**
+		Call a variadic header declaration without supplying optional arguments.
+
+		The fixed prefix has an exact ABI. haxe.c keeps calls with actual optional
+		arguments closed until C default promotions and their ownership rules have
+		a typed model.
+	**/
+	@:c.variadic
+	@:c.name("pointlib_variadic_fixed_prefix_verify")
+	public static function verifyVariadicFixedPrefix(expected:Coord):Bool;
 
 	@:c.name("pointlib_point_alias_identity")
 	public static function aliasIdentity(point:PointAlias):PointAlias;
 
 	@:c.name("pointlib_point_dot")
 	public static function dot(left:Point, right:Point):c.Int64;
+
+	/** Return one header-owned enum without replacing it with an integer carrier. */
+	@:c.name("pointlib_axis_identity")
+	public static function axisIdentity(axis:Axis):Axis;
 
 	@:c.name("pointlib_point_component")
 	public static function component(point:Point, axis:Axis):Coord;

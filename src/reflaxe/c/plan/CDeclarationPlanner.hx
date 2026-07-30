@@ -163,8 +163,8 @@ private class PlanningState {
 	public function new(snapshot:TypedCContractSnapshot) {
 		this.snapshot = snapshot;
 		declarations = snapshot.declarations.copy();
-		if (snapshot.schemaVersion != 2) {
-			throw new CDeclarationPlanningError('typed C contract schema ${snapshot.schemaVersion} is unsupported by declaration planning; expected schema 2');
+		if (snapshot.schemaVersion != 3) {
+			throw new CDeclarationPlanningError('typed C contract schema ${snapshot.schemaVersion} is unsupported by declaration planning; expected schema 3');
 		}
 
 		declarations.sort((left, right) -> compareUtf8(left.modulePath, right.modulePath));

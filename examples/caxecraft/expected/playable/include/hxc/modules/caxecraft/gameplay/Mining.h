@@ -3,8 +3,8 @@
 
 #include "hxc/detail/program_types.h"
 
-struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_attempt(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_coordinate, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory);
+struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_attempt(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coordinate, struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory);
 
-struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_collect(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_coordinate, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory, enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_gameplay_ItemKind hxc_item);
+struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_collect(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coordinate, struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory, enum hxc_caxecraft_domain_BlockKind hxc_l_kind, enum hxc_caxecraft_gameplay_ItemKind hxc_l_item);
 
 #endif /* HXC_CAXECRAFT_GAMEPLAY_MINING_H_INCLUDED */

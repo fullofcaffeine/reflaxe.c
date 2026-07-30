@@ -30,9 +30,11 @@ int main(void) {
   left = pointlib_point_translate(left, POINTLIB_COORD_ONE, POINTLIB_COORD_FIVE);
   const pointlib_point_alias point_alias = pointlib_point_alias_identity(left);
   const int64_t dot = pointlib_point_dot(left, right);
-  const pointlib_coord component = pointlib_point_component(left, POINTLIB_AXIS_Y);
+  const pointlib_axis axis = pointlib_axis_identity(POINTLIB_AXIS_Y);
+  const pointlib_coord component = pointlib_point_component(left, axis);
   if (point_alias.x != left.x || point_alias.y != left.y
-      || !pointlib_point_verify(left, right, dot, component, POINTLIB_AXIS_Y, "c-import-é")) {
+      || axis != POINTLIB_AXIS_Y || axis == POINTLIB_AXIS_X
+      || !pointlib_point_verify(left, right, dot, component, axis, "c-import-é")) {
     return 1;
   }
   pointlib_float_point float_point = pointlib_float_point_make(POINTLIB_FLOAT_ONE_POINT_FIVE, POINTLIB_FLOAT_NEGATIVE_TWO);

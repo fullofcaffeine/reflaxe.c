@@ -3,11 +3,11 @@
 
 #include "hxc/detail/program_types.h"
 
-void hxc_caxecraft_qa_DomainProbe_clear(uint8_t *hxc_cells, size_t hxc_length);
+void hxc_caxecraft_qa_DomainProbe_clear(uint8_t *hxc_l_cells, size_t hxc_l_length);
 
 void hxc_caxecraft_qa_DomainProbe_main(void);
 
-bool hxc_caxecraft_qa_DomainProbe_near(double hxc_left, double hxc_right);
+bool hxc_caxecraft_qa_DomainProbe_near(double hxc_l_left, double hxc_l_right);
 
 int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void);
 

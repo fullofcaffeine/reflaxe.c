@@ -28,8 +28,12 @@ explicit nullable-reference checks, inherited field access, identity, safe
 upcasts, structural assertions, and independent C/C++17 layout agreement.
 The constructor-lowering suite adds real `new`/`super`/field/body ordering,
 default automatic storage, ordinary C constructor functions, trivial-chain
-elision, status propagation, partial-initialization cleanup, escape/cycle
-negatives, and strict C11/C++17 native evidence.
+elision, status propagation, partial-initialization cleanup, fresh managed
+record arguments with separate caller/callee ownership, escape/cycle negatives,
+and strict C11/C++17 native evidence. Its focused
+`test:constructor-managed-record-argument` command proves named, immediate,
+inline-child, `super`, collector-managed, and throwing paths without rebuilding
+unrelated constructor families.
 The virtual-dispatch suite adds reachable ordinary instance methods,
 direct-call preservation, deterministic hierarchy slots, root-only minimal
 tables, representation-checked override adapters, a production explanation
@@ -76,9 +80,11 @@ consumers, layout/discovery determinism, and sanitizers cover the positive
 path; a nearby unsupported String-producing method remains fail-closed.
 The enum suite also carries a nominal abstract-over-String literal through
 construction, copy, projection, and content equality. The string-output suite
-adds the narrow generated-Haxe `Sys.println` and default `trace` proof. These
-are bounded literal-backed String tests, not general runtime-created String
-support. The declared `examples/hello` product proof composes that
+adds the narrow generated-Haxe output proof. It checks literal
+`Sys.println`/default `trace`, statically typed borrowed and freshly managed
+String values, one-time evaluation, exact cleanup on success, and cleanup
+before output fail-stop. It does not claim Dynamic formatting or general
+`Sys.print`. The declared `examples/hello` product proof composes that
 same reusable compiler slice into the first ordinary Haxe-to-C executable. The
 declared `examples/caxecraft` domain proof adds a realistic 16 KiB finite voxel
 world, deterministic terrain/edits/DDA/fixed-step collision, a shared Eval
@@ -345,9 +351,11 @@ runtime-free E2.T03 project. See
 [primitive function-body lowering](body-lowering.md).
 
 `test/function_lowering` is the focused positive/negative/snapshot/runtime suite
-for typed primitive parameters, explicit HxcIR conversion/call order, direct
-static calls, direct self-tail lowering, mutually recursive source partitioning,
-recursive prototype planning, and executable entry emission. It
+for typed primitive parameters, initialized local carriers for the parameters
+ordinary Haxe reassigns, unchanged direct values for read-only parameters,
+explicit HxcIR conversion/call order, direct static calls, direct self-tail
+lowering, mutually recursive source partitioning, recursive prototype planning,
+and executable entry emission. It
 checks deterministic portable/metal renders, compile-time completion of direct
 optional/default calls across primitive/string/record/enum/class-safe values,
 scoped rest `HXC1001`, byte-identical production roots, explicit
@@ -412,7 +420,7 @@ compiles as C++17. See [closed-world virtual dispatch](virtual-dispatch.md).
 positive/negative/snapshot/runtime suite. It distinguishes native fieldless
 enums from payload tagged unions, emits two concrete primitive generic
 instances, preserves constructor operand order, and records checked projection
-plus exhaustive tag-switch edges in schema-21 HxcIR. Recursive values use
+plus exhaustive tag-switch edges in schema-23 HxcIR. Recursive values use
 allocator-backed uniquely owned tree edges, and closed records compose managed
 enum fields through explicit retain/release helpers. Cycle-capable graphs,
 unsupported reference payloads, and non-exhaustive source patterns fail closed
@@ -420,9 +428,11 @@ without artifacts.
 Generated private layout assertions compile under strict C11; independent C
 and C++17 consumers verify tags, size, alignment, offsets, construction, and
 recursive layout at O0/O2 under GCC/G++ and Clang/Clang++. Unmanaged enum
-programs remain runtime-free. The managed fixture proves dependency-closed
-runtime selection, normal/reversed/cold/warm-server determinism, unity/split/
-package execution, and AddressSanitizer plus UndefinedBehaviorSanitizer. See
+programs remain runtime-free. The managed fixture also selects fresh and
+borrowed collector-bearing enum values through one zero-initialized,
+tag-aware-rooted conditional carrier. It proves dependency-closed runtime
+selection, normal/reversed/cold/warm-server determinism, unity/split/package
+execution, and AddressSanitizer plus UndefinedBehaviorSanitizer. See
 [Haxe enum lowering](enum-lowering.md).
 
 `test/generic_specialization` is the focused E3.T03
@@ -479,11 +489,13 @@ positive/snapshot/runtime/differential suite for E2.T05. It lowers real typed
 `Int`, `UInt`, and `Float` operators, compound/update forms, and `Std.int` into
 explicit HxcIR implementation decisions. Its managed snapshots show the helper
 dependency closure, structural private header, direct unsigned fast paths,
-exact `m` build fact, and finalized symbols. It compares the common defined
-subset with Eval, then checks target refinements for overflow, zero divisors,
-`INT32_MIN / -1`, negative and oversized shifts, bit operations, NaN,
-infinities, signed zero, and floating-to-integer bounds. Required GCC and Clang
-lanes run `-O0`, `-O2`, and eligible UBSan builds and reject an out-of-line
+exact `m` build fact, finalized symbols, and an initialized mutable local for an
+`Int +=` parameter update. The generated C check proves the update writes that
+local carrier rather than the immutable incoming C parameter. It compares the
+common defined subset with Eval, then checks target refinements for overflow,
+zero divisors, `INT32_MIN / -1`, negative and oversized shifts, bit operations,
+NaN, infinities, signed zero, and floating-to-integer bounds. Required GCC and
+Clang lanes run `-O0`, `-O2`, and eligible UBSan builds and reject an out-of-line
 helper in optimized assembly. See [UB-safe primitive
 arithmetic](arithmetic-semantics.md).
 
@@ -511,7 +523,7 @@ a 32 × 16 × 32 `UInt8` volume; mutable and const local borrows; direct indexin
 ordinary-Haxe three-dimensional linearization; and exact-width span `for`
 iteration. Repeated and reversed renders cover both profiles and all three
 build modes. The suite keeps zero initialization and checked/static/loop bounds
-policies visible in schema-21 HxcIR, executes mutation and iteration at O0/O2,
+policies visible in schema-23 HxcIR, executes mutation and iteration at O0/O2,
 and runs dynamic negative and upper fail-stop paths across the six-way
 configuration matrix. Exact-span negatives reject zero/negative/nonconstant/
 overflowing/over-budget lengths, unsupported element storage, static out-of-
@@ -623,7 +635,7 @@ parity or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-21 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-23 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

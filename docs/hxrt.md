@@ -550,11 +550,13 @@ support out of String programs that never split.
 <!-- hxrt-feature:io -->
 ### `io`
 
-One current generated-Haxe semantic root family. Reachable
-`sys-println-literal` and `trace-literal` HxcIR operations select this hosted
+One generated-Haxe semantic root family. Reachable `sys-println-literal`,
+`sys-println-string`, and `trace-literal` HxcIR operations select this hosted
 exact-length write-and-flush service. It depends on `status` and
-`string-literal`, exposes only `hxc_io_println`, and pulls in neither allocation
-nor full strings.
+`string-literal` and exposes only `hxc_io_println`. Literal-only programs still
+pull in neither allocation nor full strings; runtime-String programs select
+their separate String dependencies according to the expression that produced
+the value.
 
 <!-- hxrt-feature:object -->
 ### `object`
@@ -603,7 +605,7 @@ them.
 | `include/hxrt/string_scalar.h`, `include/hxrt/string_decode.h`, `src/string_scalar.c` | Compiler-selectable allocation-free UTF-8 scalar inspection, including ordinary Haxe `String.charAt`; the decoder header is an internal implementation shared with the broader String seed. |
 | `include/hxrt/string_split.h`, `src/string_split.c` | Compiler-selectable Unicode-scalar `String.split` composition over managed Array storage and retained String slices. |
 | `include/hxrt/string.h`, `src/string.c` | Native-seed owned UTF-8 construction, builders, lossy decoding, and CString machinery. |
-| `include/hxrt/io.h`, `src/io.c` | Hosted compiler-selectable literal output and explicit status. |
+| `include/hxrt/io.h`, `src/io.c` | Hosted compiler-selectable length-delimited String output and explicit status. |
 
 Each file begins with a local source contract naming its feature, selection
 mode, callers, dependencies, and important ownership/failure/thread/ABI effects.

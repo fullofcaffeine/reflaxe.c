@@ -8,8 +8,10 @@ owners selected by the staged paths. The complete cold matrix remains a
 separate pull-request, nightly, release, and explicit local command.
 
 Unknown cross-cutting compiler or test-infrastructure paths fail closed to the
-complete bounded shard runner. The selector never caches a test or changes the
-canonical CI partition.
+same conservative base sentinels. They do not silently select no evidence, but
+they also do not make a local commit wait for the complete repository matrix.
+Hosted CI keeps that cold exhaustive responsibility. The selector never caches
+a test or changes the canonical CI partition.
 """
 
 from __future__ import annotations
@@ -22,7 +24,6 @@ from collections.abc import Iterable
 
 FOCUSED = "focused"
 AFFECTED = "affected"
-PARALLEL_EXHAUSTIVE = "parallel-exhaustive"
 
 KNOWN_AFFECTED_PATH = re.compile(
     r"^(?:"
@@ -182,7 +183,10 @@ def select_route(paths: Iterable[str]) -> str:
             saw_affected = True
             continue
         if UNKNOWN_CROSS_CUTTING_PATH.match(path):
-            return PARALLEL_EXHAUSTIVE
+            # Unknown central paths still run the conservative base owners.
+            # The pull-request matrix, rather than a developer's commit hook,
+            # owns the complete exhaustive replay.
+            saw_affected = True
     return AFFECTED if saw_affected else FOCUSED
 
 
@@ -201,6 +205,14 @@ def select_affected_owners(paths: Iterable[str]) -> tuple[AffectedOwner, ...]:
     return tuple(owners)
 
 
+def select_smoke_owners(paths: Iterable[str]) -> tuple[AffectedOwner, ...]:
+    """Return the fixed bounded owners that every central local change runs."""
+    normalized = tuple(path.strip() for path in paths if path.strip())
+    if select_route(normalized) != AFFECTED:
+        raise ValueError("smoke owners require the affected pre-commit route")
+    return AFFECTED_BASE_OWNERS
+
+
 def main(arguments: Iterable[str] | None = None) -> int:
     selected_arguments = tuple(sys.argv[1:] if arguments is None else arguments)
     paths = tuple(sys.stdin)
@@ -208,8 +220,14 @@ def main(arguments: Iterable[str] | None = None) -> int:
         for owner in select_affected_owners(paths):
             print(f"{owner.script}\t{owner.reason}")
         return 0
+    if selected_arguments == ("--smoke-owners",):
+        for owner in select_smoke_owners(paths):
+            print(f"{owner.script}\t{owner.reason}")
+        return 0
     if selected_arguments:
-        raise SystemExit("usage: select_pre_commit_route.py [--owners]")
+        raise SystemExit(
+            "usage: select_pre_commit_route.py [--owners|--smoke-owners]"
+        )
     print(select_route(paths))
     return 0
 

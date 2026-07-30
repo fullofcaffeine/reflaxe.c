@@ -162,23 +162,32 @@ class CPreparedImportType {
 	}
 }
 
-/** One exact, non-variadic imported C function. */
+/**
+	One exact imported C function.
+
+	For a variadic declaration, `parameters` contains only the fixed prefix.
+	haxe.c may call that prefix without optional arguments; supplying any
+	variadic argument remains fail-closed until typed default promotions and
+	ownership are modeled.
+**/
 class CPreparedImportFunction {
 	public final id:String;
 	public final ownerModule:String;
 	public final haxePath:String;
 	public final parameters:Array<CBodyValueType>;
 	public final returnType:CBodyValueType;
+	public final variadic:Bool;
 	public final source:HxcSourceSpan;
 	public final request:CSymbolRequest;
 
-	public function new(id:String, ownerModule:String, haxePath:String, parameters:Array<CBodyValueType>, returnType:CBodyValueType, source:HxcSourceSpan,
-			request:CSymbolRequest) {
+	public function new(id:String, ownerModule:String, haxePath:String, parameters:Array<CBodyValueType>, returnType:CBodyValueType, variadic:Bool,
+			source:HxcSourceSpan, request:CSymbolRequest) {
 		this.id = id;
 		this.ownerModule = ownerModule;
 		this.haxePath = haxePath;
 		this.parameters = parameters.copy();
 		this.returnType = returnType;
+		this.variadic = variadic;
 		this.source = source;
 		this.request = request;
 	}
@@ -333,9 +342,9 @@ class CImportRegistry {
 		this.context = context;
 		this.snapshot = snapshot;
 		this.resolveValueType = resolveValueType;
-		if (snapshot.schemaVersion != 2)
+		if (snapshot.schemaVersion != 3)
 			throw new CBodyLoweringError(HxcIRDiagnostic.invalidAbiBoundary(Std.string(context.profile), "C import contract",
-				'Unsupported typed C contract schema ${snapshot.schemaVersion}; expected schema 2.', fallbackSource(program)),
+				'Unsupported typed C contract schema ${snapshot.schemaVersion}; expected schema 3.', fallbackSource(program)),
 				fallbackPosition(program));
 		for (declaration in program.declarations)
 			declarationsByPath.set(declaration.path, declaration);
@@ -569,14 +578,16 @@ class CImportRegistry {
 		validateFunctionPolicy(contract, contractField, field, declaration.sourcePath);
 		final signature = functionType(field.type, field.pos, declaration.sourcePath, '$ownerPath.${field.name}');
 		final parameters:Array<CBodyValueType> = [];
+		final variadic = contractField.variadic;
 		for (index in 0...signature.arguments.length) {
 			final argument = signature.arguments[index];
 			if (argument.opt)
 				abiFailure(field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`',
 					'Optional parameter `${argument.name}` has no exact C ABI.');
-			if (isRestType(argument.t))
+			if (isRestType(argument.t)) {
 				abiFailure(field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`',
-					"Variadic functions are outside the admitted direct slice.");
+					'Use `@:c.variadic` with only the admitted fixed-prefix parameters. Haxe Rest values are managed arrays, not C variadic arguments.');
+			}
 			validateBoundaryType(argument.t, field.pos, declaration.sourcePath, '$ownerPath.${field.name} parameter $index', true);
 			final mapping = resolveValueType(argument.t, field.pos, declaration.ownerModulePath, declaration.sourcePath, abiRejectFor(declaration.sourcePath),
 				'imported-function:$ownerPath.${field.name}:argument:$index');
@@ -593,7 +604,7 @@ class CImportRegistry {
 		final cName = externalName(contractField.cName, field.name, field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`');
 		final request = new CSymbolRequest(CSKMethod, ownerPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVExternal, cName);
 		context.symbols.register(request);
-		final prepared = new CPreparedImportFunction(id, declaration.ownerModulePath, '$ownerPath.${field.name}', parameters, returnType,
+		final prepared = new CPreparedImportFunction(id, declaration.ownerModulePath, '$ownerPath.${field.name}', parameters, returnType, variadic,
 			HaxeSourceSpan.fromPosition(field.pos, declaration.sourcePath), request);
 		preparedFunctions.set(id, prepared);
 		reach(ownerPath);

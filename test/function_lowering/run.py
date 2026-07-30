@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove typed static functions, direct calls, recursive prototypes, and production entry emission."""
+"""Prove typed functions, mutable parameters, calls, recursion, closures, and entry emission."""
 
 from __future__ import annotations
 
@@ -175,7 +175,7 @@ def required_source(report: dict[str, object], path: str) -> str:
 
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
-        report.get("schemaVersion") != 2
+        report.get("schemaVersion") != 3
         or report.get("status") != "typed-static-functions-direct-calls-runtime-free"
         or report.get("profile") != profile
         or report.get("runtimeFeatures") != []
@@ -253,6 +253,80 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise FunctionLoweringFailure(
                 f"stack-closure HxcIR omitted semantic marker {marker!r}"
             )
+    mutable_start = hxcir.find(
+        'function "function.FunctionFixture.mutateParameters"'
+    )
+    mutable_end = hxcir.find(
+        'end function "function.FunctionFixture.mutateParameters"', mutable_start
+    )
+    mutable_ir = hxcir[mutable_start:mutable_end]
+    if mutable_start == -1 or mutable_end == -1:
+        raise FunctionLoweringFailure("mutable-parameter HxcIR function is missing")
+    mutable_initializers = re.findall(
+        r'mutable-parameter-initialize" result=- initialize '
+        r'place=local\("([^"]+)"\) value="parameter\.([0-9]+)"',
+        mutable_ir,
+    )
+    mutable_places = {
+        int(parameter_id): local_id
+        for local_id, parameter_id in mutable_initializers
+    }
+    if set(mutable_places) != {0, 1, 2} or len(set(mutable_places.values())) != 3:
+        raise FunctionLoweringFailure(
+            "mutable parameters did not receive three distinct initialized HxcIR locals"
+        )
+    for parameter_id, local_id in mutable_places.items():
+        if f'load place=local("{local_id}")' not in mutable_ir:
+            raise FunctionLoweringFailure(
+                f"mutable parameter {parameter_id} did not read from its initialized local"
+            )
+    first_mutable_load = mutable_ir.find("mutable-parameter-load")
+    last_parameter_initialize = max(
+        mutable_ir.find(f'value="parameter.{parameter_id}"')
+        for parameter_id in mutable_places
+    )
+    if first_mutable_load == -1 or last_parameter_initialize > first_mutable_load:
+        raise FunctionLoweringFailure(
+            "mutable parameter storage was not initialized before its first read"
+        )
+    read_only_start = hxcir.find(
+        'function "function.FunctionFixture.readOnlyParameters"'
+    )
+    read_only_end = hxcir.find(
+        'end function "function.FunctionFixture.readOnlyParameters"',
+        read_only_start,
+    )
+    read_only_ir = hxcir[read_only_start:read_only_end]
+    if (
+        read_only_start == -1
+        or read_only_end == -1
+        or "mutable-parameter" in read_only_ir
+    ):
+        raise FunctionLoweringFailure(
+            "read-only parameters gained unnecessary mutable storage"
+        )
+    mutable_float_start = hxcir.find(
+        'function "function.FunctionFixture.mutateFloat"'
+    )
+    mutable_float_end = hxcir.find(
+        'end function "function.FunctionFixture.mutateFloat"',
+        mutable_float_start,
+    )
+    mutable_float_ir = hxcir[mutable_float_start:mutable_float_end]
+    if (
+        mutable_float_start == -1
+        or mutable_float_end == -1
+        or not re.search(
+            r'mutable-parameter-initialize" result=- initialize '
+            r'place=local\("([^"]+)"\) value="parameter\.0"',
+            mutable_float_ir,
+        )
+        or 'binary operation="haxe.f64.add"' not in mutable_float_ir
+        or "compound-store" not in mutable_float_ir
+    ):
+        raise FunctionLoweringFailure(
+            "compound Float parameter reassignment lost its initialized HxcIR carrier"
+        )
 
     header = required_text(report, "header")
     program_source = sources["src/program.c"]
@@ -305,7 +379,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "hxc_FunctionFixture_mutualLeft(" not in mutual_right_source
         or "while (1)" not in recursive_source
         or "continue;" not in recursive_source
-        or "hxc_tmp_tail_argument" not in recursive_source
+        or "hxc_l_tmp_tail_argument" not in recursive_source
         or recursive_source.count("hxc_FunctionFixture_recursive(") != 1
     ):
         raise FunctionLoweringFailure(
@@ -314,10 +388,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     tail_steps = [
         recursive_source.find(marker)
         for marker in (
-            "hxc_tmp_tail_argument_n0 = hxc_right;",
-            "hxc_tmp_tail_argument_n1 = hxc_left;",
-            "hxc_left = hxc_tmp_tail_argument_n0;",
-            "hxc_right = hxc_tmp_tail_argument_n1;",
+            "hxc_l_tmp_tail_argument_n0 = hxc_l_right;",
+            "hxc_l_tmp_tail_argument_n1 = hxc_l_left;",
+            "hxc_l_left = hxc_l_tmp_tail_argument_n0;",
+            "hxc_l_right = hxc_l_tmp_tail_argument_n1;",
         )
     ]
     if any(index == -1 for index in tail_steps) or tail_steps != sorted(tail_steps):
@@ -348,19 +422,84 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
     for marker in (
         "struct hxc_FunctionFixture_StackClosure",
-        "hxc_operation.hxc_invoke(hxc_operation.hxc_context",
+        "hxc_l_operation.hxc_invoke(hxc_l_operation.hxc_context",
         "struct hxc_FunctionFixture_captureRoundTrip_LambdaEnvironment",
-        "if (hxc_context == NULL)",
-        "(void *)hxc_tmp_stack_closure_environment_address",
-        "(void)hxc_context;",
+        "if (hxc_l_context == NULL)",
+        "(void *)hxc_l_tmp_stack_closure_environment_address",
+        "(void)hxc_l_context;",
     ):
         if marker not in program_source:
             raise FunctionLoweringFailure(
                 f"generated C omitted stack-closure evidence {marker!r}"
             )
+    mutable_source_start = program_source.find(
+        "int32_t hxc_FunctionFixture_mutateParameters("
+    )
+    mutable_source_end = program_source.find("\n}\n", mutable_source_start)
+    mutable_source = program_source[mutable_source_start:mutable_source_end]
+    parameter_carriers = re.findall(
+        r"\b(?:int32_t|bool) (hxc_[A-Za-z0-9_]+) = "
+        r"hxc_l_(seed|remaining|flag);",
+        mutable_source,
+    )
+    if (
+        mutable_source_start == -1
+        or mutable_source_end == -1
+        or {parameter for _, parameter in parameter_carriers}
+        != {"seed", "remaining", "flag"}
+        or len({carrier for carrier, _ in parameter_carriers}) != 3
+    ):
+        raise FunctionLoweringFailure(
+            "generated C did not initialize one distinct carrier for each mutable parameter"
+        )
+    for parameter in ("seed", "remaining", "flag"):
+        if re.search(rf"^\s+hxc_l_{parameter}\s*=", mutable_source, re.MULTILINE):
+            raise FunctionLoweringFailure(
+                f"generated C assigned directly to immutable parameter {parameter!r}"
+            )
+    read_only_source_start = program_source.find(
+        "int32_t hxc_FunctionFixture_readOnlyParameters("
+    )
+    read_only_source_end = program_source.find("\n}\n", read_only_source_start)
+    read_only_source = program_source[
+        read_only_source_start:read_only_source_end
+    ]
+    if (
+        read_only_source_start == -1
+        or read_only_source_end == -1
+        or re.search(
+            r"\b(?:int32_t|bool) hxc_[A-Za-z0-9_]+ = "
+            r"hxc_l_(?:left|right|enabled);",
+            read_only_source,
+        )
+    ):
+        raise FunctionLoweringFailure(
+            "generated C gave read-only parameters unnecessary local carriers"
+        )
+    mutable_float_source_start = program_source.find(
+        "double hxc_FunctionFixture_mutateFloat("
+    )
+    mutable_float_source_end = program_source.find(
+        "\n}\n", mutable_float_source_start
+    )
+    mutable_float_source = program_source[
+        mutable_float_source_start:mutable_float_source_end
+    ]
+    if (
+        mutable_float_source_start == -1
+        or mutable_float_source_end == -1
+        or not re.search(
+            r"\bdouble (hxc_l_[A-Za-z0-9_]+) = hxc_l_value;",
+            mutable_float_source,
+        )
+        or re.search(r"^\s+hxc_l_value\s*=", mutable_float_source, re.MULTILINE)
+    ):
+        raise FunctionLoweringFailure(
+            "generated C did not isolate compound Float parameter reassignment"
+        )
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 18:
+    if not isinstance(functions, list) or len(functions) != 21:
         raise FunctionLoweringFailure("function report omitted admitted functions")
     by_field = {
         entry.get("field"): entry
@@ -368,12 +507,15 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if isinstance(entry, dict) and isinstance(entry.get("field"), str)
     }
     if (
-        len(by_field) != 18
+        len(by_field) != 21
         or by_field.get("main", {}).get("parameters") != []
         or len(by_field.get("first", {}).get("parameters", [])) != 2
         or len(by_field.get("apply", {}).get("parameters", [])) != 2
         or len(by_field.get("applyTwice", {}).get("parameters", [])) != 2
         or len(by_field.get("captureRoundTrip", {}).get("parameters", [])) != 1
+        or len(by_field.get("mutateParameters", {}).get("parameters", [])) != 3
+        or len(by_field.get("mutateFloat", {}).get("parameters", [])) != 1
+        or len(by_field.get("readOnlyParameters", {}).get("parameters", [])) != 3
         or not any(
             "captureRoundTrip lambda" in field for field in by_field
         )
@@ -387,7 +529,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise FunctionLoweringFailure("direct call result was not materialized as a C temporary")
 
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise FunctionLoweringFailure("function lowering omitted its finalized symbol table")
     entries = symbols.get("symbols")
     if not isinstance(entries, list):
@@ -1521,7 +1663,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         print(f"function-lowering: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "function-lowering: OK: typed parameters/calls/conversions, recursive private "
+        "function-lowering: OK: typed read-only/mutable parameters, calls/conversions, recursive private "
         "prototypes/unity+split+package source partitions, readable module-level functions, direct optional/default completion, exact rest diagnostics, strict int main(void), "
         "and zero-runtime production artifacts passed"
     )

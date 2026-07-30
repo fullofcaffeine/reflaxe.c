@@ -2,14 +2,14 @@
 
 void hxc_Main_main(void)
 {
-  hxc_string hxc_tmp_call_result_n0 = hxc_Main_selectLabel(true);
-  bool hxc_tmp_short_circuit_result_n0 = hxc_tmp_call_result_n0.data != NULL && (hxc_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.byte_length && (hxc_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.data, hxc_tmp_call_result_n0.byte_length) == 0));
-  if (hxc_tmp_call_result_n0.data != NULL && (hxc_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.byte_length && (hxc_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.data, hxc_tmp_call_result_n0.byte_length) == 0)))
+  hxc_string hxc_l_tmp_call_result_n0 = hxc_Main_selectLabel(true);
+  bool hxc_l_tmp_short_circuit_result_n0 = hxc_l_tmp_call_result_n0.data != NULL && (hxc_l_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.byte_length && (hxc_l_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.data, hxc_l_tmp_call_result_n0.byte_length) == 0));
+  if (hxc_l_tmp_call_result_n0.data != NULL && (hxc_l_tmp_call_result_n0.byte_length == (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.byte_length && (hxc_l_tmp_call_result_n0.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n0.data, (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }.data, hxc_l_tmp_call_result_n0.byte_length) == 0)))
   {
-    hxc_string hxc_tmp_call_result_n2 = hxc_Main_selectLabel(false);
-    hxc_tmp_short_circuit_result_n0 = hxc_tmp_call_result_n2.data != NULL && (hxc_tmp_call_result_n2.byte_length == (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.byte_length && (hxc_tmp_call_result_n2.byte_length == 0 || memcmp(hxc_tmp_call_result_n2.data, (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.data, hxc_tmp_call_result_n2.byte_length) == 0));
+    hxc_string hxc_l_tmp_call_result_n2 = hxc_Main_selectLabel(false);
+    hxc_l_tmp_short_circuit_result_n0 = hxc_l_tmp_call_result_n2.data != NULL && (hxc_l_tmp_call_result_n2.byte_length == (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.byte_length && (hxc_l_tmp_call_result_n2.byte_length == 0 || memcmp(hxc_l_tmp_call_result_n2.data, (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL }.data, hxc_l_tmp_call_result_n2.byte_length) == 0));
   }
-  if (hxc_tmp_short_circuit_result_n0)
+  if (hxc_l_tmp_short_circuit_result_n0)
   {
     if (hxc_io_println((hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL }) != HXC_STATUS_OK)
     {
@@ -38,19 +38,19 @@ void hxc_Main_main(void)
   return;
 }
 
-hxc_string hxc_Main_selectLabel(bool hxc_primary)
+hxc_string hxc_Main_selectLabel(bool hxc_l_primary)
 {
-  hxc_string hxc_tmp_conditional_result_n2;
-  if (hxc_primary)
+  hxc_string hxc_l_tmp_conditional_result_n2 = { 0 };
+  if (hxc_l_primary)
   {
-    hxc_tmp_conditional_result_n2 = (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL };
+    hxc_l_tmp_conditional_result_n2 = (hxc_string){ (const uint8_t *)"ASCII", 5, true, NULL };
   }
   else
   {
-    hxc_tmp_conditional_result_n2 = (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL };
+    hxc_l_tmp_conditional_result_n2 = (hxc_string){ (const uint8_t *)"fallback", 8, true, NULL };
   }
-  hxc_string hxc_selected = hxc_tmp_conditional_result_n2;
-  return hxc_selected;
+  hxc_string hxc_l_selected = hxc_l_tmp_conditional_result_n2;
+  return hxc_l_selected;
 }
 
 int main(void)

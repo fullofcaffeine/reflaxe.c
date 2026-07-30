@@ -8,6 +8,7 @@ import copy
 import difflib
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -405,6 +406,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             "Option<bool>",
             "Option<i32>",
             "RuleEnvelope",
+            "StrictCarrier",
             option_rule_names[0],
         ]
     )
@@ -423,6 +425,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     identity_kind = enum_by_name(report, "IdentityKind")
     identity_value = enum_by_name(report, "IdentityValue")
     rule_envelope = enum_by_name(report, "RuleEnvelope")
+    strict_carrier = enum_by_name(report, "StrictCarrier")
     if (
         mode.get("representation") != "native-enum"
         or mode.get("recursive") is not False
@@ -438,6 +441,9 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or rule_envelope.get("representation") != "tagged-union"
         or rule_envelope.get("recursive") is not False
         or rule_envelope.get("scopedLifetime") is not False
+        or strict_carrier.get("representation") != "tagged-union"
+        or strict_carrier.get("recursive") is not False
+        or strict_carrier.get("scopedLifetime") is not False
     ):
         raise EnumLoweringFailure("enum representation or recursion policy drifted")
     link_next = payload_by_name(case_by_name(chain, "Link"), "next")
@@ -466,14 +472,27 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     for label, value in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in value or "\\" in value:
             raise EnumLoweringFailure(f"{label} leaked a host path")
+    strict_carrier_section = c_function_section(
+        source, "hxc_EnumFixture_strictCarrierHolder"
+    )
+    mode_value_c = c_function_section(source, "hxc_EnumFixture_modeValue")
+    if (
+        "struct hxc_StrictCarrier hxc_l_tmp_conditional_result_n2 = { 0 };"
+        not in strict_carrier_section
+        or "default:" not in mode_value_c
+        or "abort();" not in mode_value_c
+    ):
+        raise EnumLoweringFailure(
+            "direct enum joins lost inert C storage or exhaustive-tag fail-stop"
+        )
     tagged_instance_count = sum(
         record.get("representation") == "tagged-union" for record in records
     )
     if (
-        not hxcir.startswith("hxcir schema=21\n")
+        not hxcir.startswith("hxcir schema=23\n")
         or hxcir.count(" representation=tagged ") != tagged_instance_count
     ):
-        raise EnumLoweringFailure("schema-21 tagged-union HxcIR inventory drifted")
+        raise EnumLoweringFailure("schema-23 tagged-union HxcIR inventory drifted")
     option_section = function_section(hxcir, "optionValue")
     option_single_case_section = function_section(hxcir, "optionHasPositiveValue")
     recursive_section = function_section(hxcir, "recursiveLocal")
@@ -588,7 +607,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "_Some_synchronous_callback_adapter" not in source
         or "_Some_adapter(" in source
         or ".hxc_context = NULL" not in source
-        or "(void)hxc_context;" not in source
+        or "(void)hxc_l_context;" not in source
     ):
         raise EnumLoweringFailure("structural enum CAST emission or checks drifted")
     record_retain_start = source.find("hxc_status hxc_record_")
@@ -608,14 +627,14 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         record_retain.count("_retain(") < 3
         or record_retain.count("hxc_array_ref_release(") < 2
         or "_destroy(&" not in record_retain
-        or record_retain.count("return hxc_operation_status;") < 3
+        or record_retain.count("return hxc_l_operation_status;") < 3
         or "hxc_free(" not in recursive_clone
     ):
         raise EnumLoweringFailure(
             "managed record or recursive clone lost failure rollback before ownership transfer"
         )
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise EnumLoweringFailure("enum report omitted its finalized symbol table")
 
 
@@ -1269,10 +1288,31 @@ def check_string_payload(*, requested_toolchain: str) -> None:
                 or any(
                     not isinstance(reason, dict)
                     or reason.get("featureId") != "string-literal"
-                    or reason.get("operationId") != "static-value"
-                    or reason.get("kind") != "direct-string-value"
+                    or (
+                        (
+                            reason.get("operationId"),
+                            reason.get("kind"),
+                        )
+                        not in {
+                            ("static-value", "direct-string-value"),
+                            ("type-carrier", "runtime-representation"),
+                        }
+                    )
                     for reason in reasons
                 )
+                or not any(
+                    reason.get("operationId") == "static-value"
+                    and reason.get("kind") == "direct-string-value"
+                    for reason in reasons
+                )
+                or sum(
+                    reason.get("operationId") == "type-carrier"
+                    and reason.get("kind") == "runtime-representation"
+                    and reason.get("surface")
+                    == "Haxe enum `Message` payload `Text.value`"
+                    for reason in reasons
+                )
+                != 1
             ):
                 raise EnumLoweringFailure(
                     f"{layout} String payload lost its typed literal-storage reasons"
@@ -1419,6 +1459,7 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
         )
         for marker in (
             b"hxc_SessionEvent",
+            b"hxc_l_tmp_conditional_traced_result",
             b"hxc_gc_root_frame_push",
             b"hxc_SessionEvent_Opened",
             b"hxc_array_",
@@ -1428,6 +1469,13 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
                 raise EnumLoweringFailure(
                     f"managed-class enum generated C omitted {marker!r}"
                 )
+        if re.search(
+            rb"struct hxc_SessionEvent hxc_l_tmp_conditional_traced_result_[A-Za-z0-9_]+ = \{ 0 \};",
+            generated_c,
+        ) is None:
+            raise EnumLoweringFailure(
+                "managed-class enum conditional omitted its trace-safe zero initializer"
+            )
 
         def project(output: Path, label: str) -> CFixtureProject:
             return CFixtureProject(
@@ -1768,11 +1816,10 @@ def check_bytes_payload(*, requested_toolchain: str) -> None:
         before_switch = family_c[: family_c.find("switch")]
         if (
             "switch" not in family_c
-            or "=" in before_switch
-            or "{0}" in before_switch
+            or before_switch.count("= { 0 };") != 1
         ):
             raise EnumLoweringFailure(
-                "Main.familyForChoice C declaration gained a fabricated initializer"
+                "Main.familyForChoice C declaration lost its one inert representation initializer"
             )
         if " raw" in hxcir or str(ROOT) in hxcir:
             raise EnumLoweringFailure(
@@ -1964,6 +2011,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--bytes-payload-only", action="store_true")
+    parser.add_argument("--managed-class-payload-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -1985,6 +2033,14 @@ def main(arguments: Iterable[str] = ()) -> int:
             print(
                 "enum-lowering: OK: Bytes payload ownership, active-tag cleanup, "
                 "determinism, native safety, and unsupported-reference rejection passed"
+            )
+            return 0
+        if args.managed_class_payload_only:
+            check_managed_class_payload(requested_toolchain=args.toolchain)
+            print(
+                "enum-lowering: OK: collector-bearing enum payloads, traced "
+                "conditional joins, deterministic layouts, strict C11/C++17, "
+                "and sanitizer evidence passed"
             )
             return 0
 

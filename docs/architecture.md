@@ -511,7 +511,7 @@ complete rationale, direct-lowering alternative, sibling comparison, extraction
 criteria, and implementation-language analysis are in [the HxcIR semantic
 contract](hxc-ir.md#why-a-second-ir-when-haxe-already-has-one).
 
-The schema-21 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-23 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -785,7 +785,11 @@ may use native C enums; payload declarations become discriminant enums,
 constructor payload structs, a payload union, and an outer value struct.
 Constructor operands remain ordered before named HxcIR construction, payload
 projection retains a profile/build tag check, and exhaustive Haxe matches use
-typed tag-switch edges. Equality and inequality on the same fieldless enum are
+typed tag-switch edges. Their generated C adds a fail-stop default for an
+invalid foreign/corrupt tag while HxcIR retains no semantic default edge.
+Direct join storage starts with inert zeroed bytes so strict C compilers never
+copy indeterminate inactive-union storage before the selected arm assigns the
+real Haxe value. Equality and inequality on the same fieldless enum are
 explicit validated enum-tag operations and become direct C tag comparisons;
 payload-enum equality remains fail-closed rather than comparing C structs.
 Recursive payload edges use explicit pointers to uniquely owned
@@ -824,7 +828,10 @@ registers every helper/parameter/standard symbol before sealing the
 per-compilation symbol registry. Function requests use translation-unit
 ordinary namespace; locals use the finalized function scope plus lexical source
 ordinals, so shadowing remains stable even though routine C spellings preserve
-recognizable Haxe source words. Those display words are separate from the full
+recognizable Haxe source words. Function-scope ordinary names use the dedicated
+`hxc_l_` prefix, so they cannot equal a file-scope `hxc_` runtime typedef or
+object when GCC's strict shadowing warning is enabled. Members and labels keep
+their separate C namespace rules. Those display words are separate from the full
 semantic identity retained in `hxc.symbols.json`; a compact hash appears only
 when the whole-program namespace pass finds a real collision or length limit.
 `CBodyEmitter` receives only validated HxcIR and finalized `CIdentifier` values,
@@ -1017,8 +1024,10 @@ whole-program proof with zero runtime intents and no `hxrt` include, source,
 define, library, or symbol in the build. `hxc_runtime=none` instead reports one
 sorted `HXC2000` containing every root operation, typed surface, source span,
 dependency chain, and available alternative before output. E2.T07 adds one exact compiler-selected
-edge: literal-only hosted `Sys.println` and default `trace` request `io`, whose
-closure is `runtime-base + status + string-literal + io`. The bounded
+edge: hosted `Sys.println` and literal default `trace` request `io`. A
+literal-only program's closure is
+`runtime-base + status + string-literal + io`; a runtime String keeps the
+separate features that created its value. The bounded
 ordinary-Haxe scalar String operations request `string-scalar`; their closure
 adds the shared UTF-8 decoder and allocation-free inspection without `alloc` or
 the owned-string source. `charAt` and `substring` return views into the

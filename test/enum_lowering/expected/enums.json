@@ -233,6 +233,78 @@
     "discriminantTag": "hxc_IdentityKind"
   },
   {
+    "instanceId": "instance.enum.b0fb5c4b474c92ec4ac47d4ae0747115a61b124cdfd43901cb75c9098476ea52",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.b0fb5c4b474c92ec4ac47d4ae0747115a61b124cdfd43901cb75c9098476ea52",
+    "displayName": "StrictCarrier",
+    "digest": "b0fb5c4b474c92ec4ac47d4ae0747115a61b124cdfd43901cb75c9098476ea52",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_StrictCarrier_payload",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "StrictEmpty",
+        "discriminant": "hxc_StrictCarrier_StrictEmpty",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_StrictSmall",
+        "semanticName": "StrictSmall",
+        "discriminant": "hxc_StrictCarrier_StrictSmall",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_value",
+            "indirect": false,
+            "type": "i32"
+          }
+        ],
+        "payloadStructTag": "hxc_StrictCarrier_StrictSmall_payload"
+      },
+      {
+        "tagValue": 2,
+        "unionMember": "hxc_StrictWide",
+        "semanticName": "StrictWide",
+        "discriminant": "hxc_StrictCarrier_StrictWide",
+        "payload": [
+          {
+            "semanticName": "first",
+            "cName": "hxc_first",
+            "indirect": false,
+            "type": "i32"
+          },
+          {
+            "semanticName": "second",
+            "cName": "hxc_second",
+            "indirect": false,
+            "type": "i32"
+          },
+          {
+            "semanticName": "third",
+            "cName": "hxc_third",
+            "indirect": false,
+            "type": "i32"
+          },
+          {
+            "semanticName": "fourth",
+            "cName": "hxc_fourth",
+            "indirect": false,
+            "type": "i32"
+          }
+        ],
+        "payloadStructTag": "hxc_StrictCarrier_StrictWide_payload"
+      }
+    ],
+    "valueTag": "hxc_StrictCarrier",
+    "tagMember": "hxc_tag",
+    "payloadMember": "hxc_payload",
+    "discriminantTag": "hxc_StrictCarrier_tag"
+  },
+  {
     "instanceId": "instance.enum.d215f6115399f1aee252ec00f591b14438842533b70cc7cb0061b31863d2d2ce",
     "representation": "tagged-union",
     "recursive": false,

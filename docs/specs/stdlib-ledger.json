@@ -2155,7 +2155,7 @@
       "notes": "Typed Std.int lowering and its defined NaN, infinity, overflow, and truncation behavior are covered by ADR 0008 differential, strict-C, optimization, and UBSan evidence for the hosted production environment; other environment adapters are not yet claimed."
     },
     {
-      "id": "literal-sys-println-partial",
+      "id": "string-sys-println-partial",
       "selector": {
         "module": "Sys",
         "type": "Sys",
@@ -2185,10 +2185,11 @@
       ],
       "tests": [
         "test/string_output/fixtures/positive/Main.hx",
+        "test/string_output/fixtures/nonliteral/Main.hx",
         "test/string_output/fixtures/nonstring/Main.hx",
         "test/string_output/run.py"
       ],
-      "notes": "Only a compiler-known valid String literal is admitted. It emits a byte-counted UTF-8 value and selects the hosted io closure; general Dynamic or runtime String values remain source-positioned HXC1001 boundaries."
+      "notes": "A statically typed String is admitted, including a fresh runtime-created owner. The compiler evaluates it once, emits one exact-length hosted write, and releases a fresh owner on success or output failure. Literal calls retain the allocation-free minimal closure; non-String Dynamic values remain source-positioned HXC1001 boundaries."
     },
     {
       "id": "literal-trace-partial",
@@ -10464,11 +10465,12 @@
       ],
       "tests": [
         "test/string_output/fixtures/positive/Main.hx",
+        "test/string_output/fixtures/nonliteral/Main.hx",
         "test/string_output/fixtures/nonstring/Main.hx",
         "test/string_output/run.py"
       ],
-      "notes": "Only a compiler-known valid String literal is admitted. It emits a byte-counted UTF-8 value and selects the hosted io closure; general Dynamic or runtime String values remain source-positioned HXC1001 boundaries.",
-      "ruleId": "literal-sys-println-partial"
+      "notes": "A statically typed String is admitted, including a fresh runtime-created owner. The compiler evaluates it once, emits one exact-length hosted write, and releases a fresh owner on success or output failure. Literal calls retain the allocation-free minimal closure; non-String Dynamic values remain source-positioned HXC1001 boundaries.",
+      "ruleId": "string-sys-println-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:ac1b7d8a8c1f2960c63ff9e76ff5433af43c3816fc1188baac396a8eda3f0f11",

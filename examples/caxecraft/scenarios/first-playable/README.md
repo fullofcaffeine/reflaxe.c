@@ -7,23 +7,24 @@ English and Mexican Spanish prose.
 Nia's lines are scenario content: they do not belong in the reusable game UI
 catalog or in the Haxe game loop.
 
-The current playable derives its terrain, initial fluid cells, fluid atlas
-selection, and player spawn from this file through a checked-in typed Haxe
-adapter. It does not yet parse the file at run time, and actor/item placements
-and CaxeFlow composition still have temporary application wiring. That partial
-bridge is not a second accepted content format. The durable scenario package is:
+The current playable reads this file after startup, validates it through the
+shared Haxe CaxeMap codec, resolves its content IDs, and builds a complete
+candidate session before opening Raylib. Actor/item placements and some
+CaxeFlow presentation still have temporary application wiring, but there is no
+second generated level format. The scenario package is:
 
 ```text
 first-playable/
   map.caxemap       # terrain, fluids, objects, CaxeFlow, and embedded locales
 ```
 
-The editor reads, validates, and writes this same model. Until native file
-loading is available, build-time Haxe tools generate narrow typed localization
-and level adapters, and packaging copies the complete CaxeMap beside the native
-executable. Edit `map.caxemap`, run `python3 examples/caxecraft/localization_catalog.py`
-and `python3 examples/caxecraft/level_adapter.py`, then run their focused tests.
-Never hand-edit either generated Haxe adapter.
+The editor reads, validates, and writes this same model. Packaging copies the
+complete CaxeMap beside the native executable, and a map edit is picked up on
+the next launch without running Haxe or a C compiler. After editing
+`map.caxemap`, run `npm run test:caxecraft-scenario-model` and
+`npm run test:caxecraft-runtime-level-loader`. Embedded localization still uses
+the separately owned generated lookup catalog until runtime catalog loading
+lands.
 
 `fluid ... source` records place permanent simulation sources. `fluid ...
 volume` records fill a finite box once when the level starts, so that water may

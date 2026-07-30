@@ -21,24 +21,24 @@ struct hxc_caxecraft_app_TerrainChunkPreparation {
   int32_t hxc_visibleBlocks;
 };
 
-void hxc_compiler_constructor_caxecraft_app_TerrainChunkCache(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self);
+void hxc_compiler_constructor_caxecraft_app_TerrainChunkCache(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk, int32_t hxc_count, enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face, int32_t hxc_x, int32_t hxc_y, int32_t hxc_z, int32_t hxc_neighborX, int32_t hxc_neighborY, int32_t hxc_neighborZ);
+int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, const uint8_t *hxc_l_cells, size_t hxc_l_length, int32_t hxc_l_chunk, int32_t hxc_l_count, enum hxc_caxecraft_domain_BlockKind hxc_l_kind, enum hxc_caxecraft_app_VoxelFace hxc_l_face, int32_t hxc_l_x, int32_t hxc_l_y, int32_t hxc_l_z, int32_t hxc_l_neighborX, int32_t hxc_l_neighborY, int32_t hxc_l_neighborZ);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, int32_t hxc_chunk);
+int32_t hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, int32_t hxc_l_chunk);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_coord);
+int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord);
 
-void hxc_caxecraft_app_TerrainChunkCache_invalidateAll(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self);
+void hxc_caxecraft_app_TerrainChunkCache_invalidateAll(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self);
 
-bool hxc_caxecraft_app_TerrainChunkCache_invalidateBrokenChunk(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, int32_t hxc_chunk);
+bool hxc_caxecraft_app_TerrainChunkCache_invalidateBrokenChunk(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, int32_t hxc_l_chunk);
 
-struct hxc_caxecraft_app_TerrainChunkPreparation hxc_caxecraft_app_TerrainChunkCache_prepare(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length);
+struct hxc_caxecraft_app_TerrainChunkPreparation hxc_caxecraft_app_TerrainChunkCache_prepare(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, const uint8_t *hxc_l_cells, size_t hxc_l_length);
 
-bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, const uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_chunk);
+bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, const uint8_t *hxc_l_cells, size_t hxc_l_length, int32_t hxc_l_chunk);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_totalFaces(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self);
+int32_t hxc_caxecraft_app_TerrainChunkCache_totalFaces(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_visibleBlocks(struct hxc_caxecraft_app_TerrainChunkCache *hxc_self, enum hxc_caxecraft_app_TerrainSheet hxc_sheet);
+int32_t hxc_caxecraft_app_TerrainChunkCache_visibleBlocks(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, enum hxc_caxecraft_app_TerrainSheet hxc_l_sheet);
 
 #endif /* HXC_CAXECRAFT_APP_TERRAIN_CHUNK_CACHE_H_INCLUDED */

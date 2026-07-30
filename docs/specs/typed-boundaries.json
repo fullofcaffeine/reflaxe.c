@@ -129,6 +129,36 @@
       "testEvidence": [
         "test/hxc_ir/run.py"
       ]
+    },
+    {
+      "path": "test/virtual_dispatch/fixtures/interface_downcast/Main.hx",
+      "line": 44,
+      "column": 29,
+      "construct": "unchecked-cast",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main",
+      "typedModel": "CBodyValueType nominal interface identity",
+      "sourceLine": "final child:MutableView = cast value;",
+      "justification": "The negative interface fixture must present the real Haxe parent-to-child cast so haxe.c can prove that a fat interface value is never reinterpreted without the future runtime type proof.",
+      "validation": "CBodyLowering rejects the cast at its exact source position with unsafe-interface-downcast-needs-runtime-type-proof, and the virtual-dispatch suite requires HXC1001 with no generated artifact.",
+      "testEvidence": [
+        "test/virtual_dispatch/run.py"
+      ]
+    },
+    {
+      "path": "test/virtual_dispatch/fixtures/interface_unrelated/Main.hx",
+      "line": 38,
+      "column": 27,
+      "construct": "unchecked-cast",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main",
+      "typedModel": "CBodyValueType nominal interface identity",
+      "sourceLine": "final reset:ResetView = cast value;",
+      "justification": "The negative interface fixture must present a real Haxe cast between unrelated interfaces so matching C carrier shapes cannot erase their nominal source-language identities.",
+      "validation": "CBodyLowering rejects the cast at its exact source position with unrelated-interface-conversion, and the virtual-dispatch suite requires HXC1001 with no generated artifact.",
+      "testEvidence": [
+        "test/virtual_dispatch/run.py"
+      ]
     }
   ]
 }

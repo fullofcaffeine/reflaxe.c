@@ -371,6 +371,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
             registered_sources.add(source_path)
     if [root.get("id") for root in records(record(features["io"].get("documentation"), "io documentation").get("selectionRoots"), "io roots")] != [
         "sys-println-literal",
+        "sys-println-string",
         "trace-literal",
     ]:
         raise RuntimeFeatureFailure("io documented HxcIR roots drifted")

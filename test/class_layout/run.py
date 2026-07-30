@@ -456,7 +456,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if c_function_section(source, names["fn_branchProofDoesNotEscape"]).count("== NULL") != 4:
         raise ClassLayoutFailure("generated C incorrectly reused a branch-local receiver guard")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise ClassLayoutFailure("class-layout report omitted its finalized symbol table")
 
 

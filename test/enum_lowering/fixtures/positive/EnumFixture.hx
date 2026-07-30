@@ -30,6 +30,24 @@ enum IdentityValue {
 	SecondValue(value:Int);
 }
 
+/**
+	A direct tagged value with deliberately different payload widths.
+
+	The wider inactive constructor makes strict C compilers inspect whether a
+	smaller selected constructor leaves any copied representation bytes
+	indeterminate.
+**/
+enum StrictCarrier {
+	StrictEmpty;
+	StrictSmall(value:Int);
+	StrictWide(first:Int, second:Int, third:Int, fourth:Int);
+}
+
+/** One outer record that forces a selected tagged value to be copied whole. */
+typedef StrictCarrierHolder = {
+	final value:StrictCarrier;
+}
+
 /** One FlowRule-shaped value used to prove composed record ownership. */
 typedef Rule = {
 	final chain:Chain<Int>;
@@ -60,6 +78,12 @@ class EnumFixture {
 		return same && different;
 	}
 
+	/**
+		Match every source-level constructor of one closed enum.
+
+		HxcIR needs no semantic default edge. Generated C still emits a fail-stop
+		default so an invalid foreign/corrupt tag cannot fall through.
+	**/
 	static function modeValue(value:Mode):Int {
 		return switch value {
 			case Off: 0;
@@ -130,15 +154,36 @@ class EnumFixture {
 
 		Haxe expands this paired pattern into an outer switch that covers both
 		`IdentityKind` tags, then checks `IdentityValue` inside each case. The
-		wildcard still handles a mismatched pair, but no unknown outer enum tag
-		exists; haxe.c must not emit an unreachable default on the exhaustive
-		HxcIR tag switch.
+		wildcard still handles a mismatched pair, but no unknown outer Haxe enum
+		tag exists. HxcIR therefore has no semantic default edge; generated C
+		adds a fail-stop `default` so corrupt or foreign tags cannot expose an
+		uninitialized join value.
 	**/
 	static function pairedIdentityValue(kind:IdentityKind, value:IdentityValue):Int
 		return switch [kind, value] {
 			case [FirstIdentity, FirstValue(item)]: item;
 			case [SecondIdentity, SecondValue(item)]: item;
 			case _: -1;
+		};
+
+	/**
+		Select a tagged value in conditional control flow, then copy it into a record.
+
+		This isolates the representation half of the real application failure:
+		GNU GCC inspects bytes beyond `StrictSmall` inside the wider payload
+		union when the complete value is copied.
+	**/
+	static function strictCarrierHolder(kind:IdentityKind):StrictCarrierHolder {
+		final selected = kind == FirstIdentity ? StrictEmpty : StrictSmall(23);
+		return {value: selected};
+	}
+
+	/** Read the selected strict-carrier payload after its whole-record copy. */
+	static function strictCarrierValue(holder:StrictCarrierHolder):Int
+		return switch holder.value {
+			case StrictEmpty: 0;
+			case StrictSmall(value): value;
+			case StrictWide(first, second, third, fourth): first + second + third + fourth;
 		};
 
 	static function recursiveLocal():Int {
@@ -270,6 +315,8 @@ class EnumFixture {
 			&& pairedIdentityValue(FirstIdentity, FirstValue(12)) == 12
 			&& pairedIdentityValue(FirstIdentity, SecondValue(12)) == -1
 			&& pairedIdentityValue(SecondIdentity, SecondValue(14)) == 14
+			&& strictCarrierValue(strictCarrierHolder(FirstIdentity)) == 0
+			&& strictCarrierValue(strictCarrierHolder(SecondIdentity)) == 23
 			&& recursiveLocal() == 3
 			&& ruleValue(copiedRule) == 10
 			&& envelopeValue(copiedEnvelope) == 10

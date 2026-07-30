@@ -76,6 +76,16 @@ NEGATIVE_CASES = {
         "virtual-override-representation-mismatch:slot=slot.ReturnBase.duplicate:",
         ":return:expected=pointer:nullable:instance:instance.class.",
     ),
+    "interface_downcast": (
+        "Main.hx:44: characters 29-39",
+        "TCast(interface):unsafe-interface-downcast-needs-runtime-type-proof:",
+        "ReadableView->MutableView",
+    ),
+    "interface_unrelated": (
+        "Main.hx:38: characters 27-37",
+        "TCast(interface):unrelated-interface-conversion:",
+        "ReadableView->ResetView",
+    ),
 }
 REQUIRED_NATIVE_COVERAGE = frozenset(
     {
@@ -89,6 +99,7 @@ REQUIRED_NATIVE_COVERAGE = frozenset(
 )
 REQUIRED_INTERFACE_NATIVE_COVERAGE = frozenset(
     {
+        "child-interface-upcast",
         "inherited-interface-method",
         "multiple-interface-views",
         "program-local-interface-tables",
@@ -478,7 +489,7 @@ def validate_dispatch(report: dict[str, object]) -> None:
 def validate_hxcir(project: RenderedProject) -> None:
     hxcir = project.hxcir
     required = (
-        "hxcir schema=21\n",
+        "hxcir schema=23\n",
         'layout "vtable.layout.BaseWorker"',
         'slot "slot.BaseWorker.value"',
         'table "vtable.LeafWorker"',
@@ -492,7 +503,7 @@ def validate_hxcir(project: RenderedProject) -> None:
         "class-layout base=none header=none",
     )
     if not hxcir.startswith(required[0]) or any(marker not in hxcir for marker in required[1:]):
-        raise VirtualDispatchFailure("schema-21 dispatch HxcIR lost a structural marker")
+        raise VirtualDispatchFailure("schema-23 dispatch HxcIR lost a structural marker")
     if hxcir.count('dispatch=virtual(slot="slot.BaseWorker.value"') != 3:
         raise VirtualDispatchFailure("HxcIR did not retain exactly three indirect calls")
     if str(ROOT) in hxcir or "\\" in hxcir or "hxrt" in hxcir.lower():
@@ -586,7 +597,7 @@ def validate_project(project: RenderedProject, *, expected_profile: str) -> None
     validate_hxcir(project)
     validate_generated_c(project)
     validate_product_sidecars(project, expected_profile)
-    if project.symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if project.symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise VirtualDispatchFailure("dispatch project omitted finalized symbols")
     for path, content in project.artifacts.items():
         if str(ROOT).encode() in content or b"\\" in content or b"hxrt" in content.lower():
@@ -620,10 +631,10 @@ def validate_interface_project(
             "instanceCalls": 5,
             "directCalls": 0,
             "indirectCalls": 5,
-            "layouts": 2,
-            "slots": 3,
-            "tables": 2,
-            "adapters": 3,
+            "layouts": 3,
+            "slots": 4,
+            "tables": 5,
+            "adapters": 7,
         }
     ):
         raise VirtualDispatchFailure("interface dispatch report identity or summary drifted")
@@ -633,10 +644,10 @@ def validate_interface_project(
         for value in require_list(report.get("calls"), "interface dispatch calls")
     ]
     expected_calls = (
+        ("ReadableView", "method.ReadableView.read", "interface-slot.ReadableView.read"),
         ("CounterView", "method.ReadableView.read", "interface-slot.CounterView.read"),
         ("CounterView", "method.CounterView.doubled", "interface-slot.CounterView.doubled"),
         ("CounterView", "method.ReadableView.read", "interface-slot.CounterView.read"),
-        ("CounterView", "method.CounterView.doubled", "interface-slot.CounterView.doubled"),
         ("ResetView", "method.ResetView.resetValue", "interface-slot.ResetView.resetValue"),
     )
     for index, (call, expected) in enumerate(zip(calls, expected_calls, strict=True)):
@@ -674,16 +685,31 @@ def validate_interface_project(
         )
     }
     if (
-        set(layouts) != {"itable.layout.CounterView", "itable.layout.ResetView"}
+        set(layouts)
+        != {
+            "itable.layout.CounterView",
+            "itable.layout.ReadableView",
+            "itable.layout.ResetView",
+        }
         or set(slots)
         != {
             "interface-slot.CounterView.doubled",
             "interface-slot.CounterView.read",
+            "interface-slot.ReadableView.read",
             "interface-slot.ResetView.resetValue",
         }
-        or set(tables) != {"itable.Counter.CounterView", "itable.Counter.ResetView"}
+        or set(tables)
+        != {
+            "itable.AlternateCounter.CounterView",
+            "itable.AlternateCounter.ReadableView",
+            "itable.Counter.CounterView",
+            "itable.Counter.ReadableView",
+            "itable.Counter.ResetView",
+        }
         or layouts["itable.layout.CounterView"].get("slotIds")
         != ["interface-slot.CounterView.doubled", "interface-slot.CounterView.read"]
+        or layouts["itable.layout.ReadableView"].get("slotIds")
+        != ["interface-slot.ReadableView.read"]
         or layouts["itable.layout.ResetView"].get("slotIds")
         != ["interface-slot.ResetView.resetValue"]
     ):
@@ -707,17 +733,24 @@ def validate_interface_project(
     for marker in (
         'type "type.interface.',
         'layout "itable.layout.CounterView"',
+        'layout "itable.layout.ReadableView"',
         'layout "itable.layout.ResetView"',
+        'table "itable.AlternateCounter.CounterView"',
+        'table "itable.AlternateCounter.ReadableView"',
         'table "itable.Counter.CounterView"',
+        'table "itable.Counter.ReadableView"',
         'table "itable.Counter.ResetView"',
         "construct-interface interface=",
+        "upcast-interface value=",
         'dispatch=interface(type="instance.interface.',
     ):
         if marker not in hxcir:
             raise VirtualDispatchFailure(f"interface HxcIR omitted {marker!r}")
-    if hxcir.count("construct-interface interface=") != 3 or hxcir.count(
-        'dispatch=interface(type="instance.interface.'
-    ) != 5:
+    if (
+        hxcir.count("construct-interface interface=") != 3
+        or hxcir.count("upcast-interface value=") != 2
+        or hxcir.count('dispatch=interface(type="instance.interface.') != 5
+    ):
         raise VirtualDispatchFailure("interface HxcIR cardinality drifted")
 
     for layout in layouts.values():
@@ -735,8 +768,9 @@ def validate_interface_project(
         if f"&{c_name}" not in project.source or f" {c_name} =" not in project.source:
             raise VirtualDispatchFailure(f"interface table {table_id!r} was not emitted")
     if (
-        project.source.count("void *hxc_receiver") != 6
+        project.source.count("void *hxc_l_receiver") != 14
         or project.source.count(".table->") != 5
+        or "? &" not in project.source
         or "UnusedView" in project.header
         or "UnusedView" in project.source
         or "UnusedView" in hxcir
@@ -756,7 +790,7 @@ def validate_interface_project(
         != "lowered-direct-value-executable"
         or project.abi.get("status") != "analyzed-no-public-exports"
         or project.abi.get("exports") != []
-        or project.symbols.get("algorithm") != "hxc-c-symbol-v2"
+        or project.symbols.get("algorithm") != "hxc-c-symbol-v3"
     ):
         raise VirtualDispatchFailure("interface runtime, manifest, ABI, or symbols drifted")
     for path, content in project.artifacts.items():
@@ -875,6 +909,33 @@ def check_interface_determinism(*, connect: str) -> RenderedProject:
     return first
 
 
+def check_interface_eval(*, connect: str) -> None:
+    """Run the same child-interface program on Haxe's Eval reference target."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "--connect",
+            connect,
+            "--cwd",
+            str(INTERFACE_POSITIVE),
+            "build.hxml",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(connect=connect),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise VirtualDispatchFailure(
+            "interface dispatch Eval reference failed or produced unexpected output\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
 def snapshot_values(project: RenderedProject) -> dict[str, object]:
     return {
         "dispatch.hxcir": project.hxcir,
@@ -958,7 +1019,7 @@ def check_negative_cases(*, connect: str) -> None:
                 or generated_files(output)
             ):
                 raise VirtualDispatchFailure(
-                    f"{fixture} did not fail closed at override representation validation\n"
+                    f"{fixture} did not fail closed at dispatch/interface validation\n"
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
 
@@ -1301,6 +1362,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             print("virtual-dispatch: OK: required class/interface native matrix passed")
             return 0
         with haxe_server() as endpoint:
+            check_interface_eval(connect=endpoint)
             project = check_determinism_and_policy(connect=endpoint)
             interface_project = check_interface_determinism(connect=endpoint)
             check_snapshots(project, interface_project)
@@ -1334,7 +1396,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         print(f"virtual-dispatch: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "virtual-dispatch: OK: direct-call preservation, minimal root-only tables, "
+        "virtual-dispatch: OK: Eval/native parity, direct-call preservation, minimal root-only tables, "
         "inherited/multiple-interface tables, deterministic slots, "
         "representation-checked overrides, explanatory reports, "
         "runtime-free strict C11/C++17 split/unity consumers, and fail-closed variance passed"

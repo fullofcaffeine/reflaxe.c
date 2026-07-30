@@ -7,25 +7,20 @@ later ordered `haxe_c-xge.19.*` slices.
 
 CAXEMAP is Caxecraft's public map and story format. Today the target-neutral
 codec, validator, editor semantics, and first-playable authored source use the
-same typed model. The native first playable currently packages that source and
-uses deterministic generated localization lookup, level, and content adapters
-derived from validated source data. Localization selects text without owning
-Raylib drawing. The level adapter supplies terrain, initial fluids,
-fluid presentation, and player spawn to the real game loop. It is a temporary
-learning bridge, not the intended loading architecture: it proves validated
-authored data can drive the native game while `haxe_c-xge.20.4.3` adds runtime
-CAXEMAP loading and removes this adapter from the required play path. New
-features must not treat the generated module as a durable content API. The
-`asset-pack` path resolves through the schema-2
+same typed model. The normal native first playable reads the staged map after
+startup, validates it, resolves its typed content references, and publishes a
+complete session before opening Raylib. The generated level adapter has been
+removed: the normal play command has one level authority, the packaged CAXEMAP
+file. The `asset-pack` path resolves through the schema-2
 built-in manifest at `packs/caxecraft/base/content.json`; direct native JSON
 loading is not implemented yet. Authored NPC and enemy placements now enter
 the generic actor planner, publisher, and session controller scheduler.
 Starting inventory, item behavior, dialogue progress, and encounter wiring
 still contain temporary Haxe scaffolding. `haxe_c-xge.20.4` owns replacing
-that coupling with one validated composition path. Direct native CAXEMAP
-loading (`haxe_c-xge.20.4.3`), Creative mode (`haxe_c-xge.20`), and the visual
-in-game editor (`haxe_c-xge.19.6`) remain planned work. Built-in content must
-not keep a private source-code-only representation.
+that coupling with one validated composition path. Runtime pack/UI loading
+remains under `haxe_c-xge.20.4.3`; Creative mode (`haxe_c-xge.20`) and the
+visual in-game editor (`haxe_c-xge.19.6`) remain planned work. Built-in content
+must not keep a private source-code-only representation.
 
 This reference uses a few technical terms:
 

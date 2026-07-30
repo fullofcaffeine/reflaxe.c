@@ -152,6 +152,9 @@ class CPrimitiveSemantics {
 	/** Decide operand coercions, result type, and direct/helper ownership for a binary operation. */
 	public static function binaryOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
 			result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		final directCInteger = directCIntegerOperation(operation, left, right, result);
+		if (directCInteger != null)
+			return directCInteger;
 		if (!isOrdinaryNonNullable(left) || !isOrdinaryNonNullable(right) || !isOrdinaryNonNullable(result)) {
 			return CPBOperationRejected("primitive binary operations require ordinary non-null Haxe scalar operands and results");
 		}
@@ -172,6 +175,47 @@ class CPrimitiveSemantics {
 			case CPBOLess | CPBOLessEqual | CPBOGreater | CPBOGreaterEqual:
 				comparisonOperation(operation, left, right, result);
 		};
+	}
+
+	/**
+		Admit representation-preserving operations on matching exact C integers.
+
+		These values deliberately do not join Haxe's ordinary numeric promotion
+		rules. Equality, ordering, and bitwise operations keep the same reviewed
+		width and signedness, so C emission can use the operator directly without
+		an implicit conversion or runtime helper.
+	**/
+	static function directCIntegerOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):Null<CPrimitiveBinaryOperationResult> {
+		final sameOperands = left.nullability == CPNonNullable && right.nullability == CPNonNullable && sameValueType(left, right) && switch left.sourceType {
+			case CPCExactInteger(_, _) | CPCSize | CPCPtrDiff | CPCIntPtr | CPCUIntPtr: true;
+			case _: false;
+		};
+		if (!sameOperands)
+			return null;
+		final suffix = switch operation {
+			case CPBOEqual: "equal";
+			case CPBONotEqual: "not-equal";
+			case CPBOLess: "less";
+			case CPBOLessEqual: "less-equal";
+			case CPBOGreater: "greater";
+			case CPBOGreaterEqual: "greater-equal";
+			case CPBOBitAnd: "bit-and";
+			case CPBOBitOr: "bit-or";
+			case CPBOBitXor: "bit-xor";
+			case _: return null;
+		};
+		final comparison = switch operation {
+			case CPBOEqual | CPBONotEqual | CPBOLess | CPBOLessEqual | CPBOGreater | CPBOGreaterEqual: true;
+			case _: false;
+		};
+		if (comparison) {
+			if (result.sourceType != CPHaxeBool || result.nullability != CPNonNullable)
+				return CPBOperationRejected("exact C integer comparison requires a Bool result");
+		} else if (!sameMapping(left, result)) {
+			return CPBOperationRejected("exact C integer bitwise operation must preserve its carrier");
+		}
+		return binaryAllowed(left, right, result, 'haxe.c-integer.$suffix', null);
 	}
 
 	public static function helperId(kind:CPrimitiveHelperKind):String {

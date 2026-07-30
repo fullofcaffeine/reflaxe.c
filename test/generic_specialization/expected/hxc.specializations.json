@@ -33,8 +33,8 @@
       "cName": "hxc_Main_choose",
       "displayName": "choose<Int, Float>",
       "codeSize": {
-        "definitionSha256": "121b85e7776a53d392cb4c64f2cdebefbddd8934e373b586c465eb5f4d04840d",
-        "definitionBytes": 132,
+        "definitionSha256": "26855709661e2845e922eb6d8208e5dd0b0574d07b646f0bfd83374c78acf2d8",
+        "definitionBytes": 140,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -69,8 +69,8 @@
       "cName": "hxc_Main_forward",
       "displayName": "forward<Int>",
       "codeSize": {
-        "definitionSha256": "911d1960eeeaabee8b7bb6a6d0affd04db8a2985baa70d59ebc599ef698e8bb9",
-        "definitionBytes": 159,
+        "definitionSha256": "2eeedd8f4eb363110903a7d3a4351302584f8793bdad555e60a48423d71e2271",
+        "definitionBytes": 167,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -105,8 +105,8 @@
       "cName": "hxc_Main_guarded",
       "displayName": "guarded<Int>",
       "codeSize": {
-        "definitionSha256": "73f97b29601ad50f1b614e98c7f718832cb958f6b29190be71d319f2a70bb965",
-        "definitionBytes": 239,
+        "definitionSha256": "4c36de937935da63cfa5d540628ea549e1a0100260a4ae1260dfe06ceb2e4cce",
+        "definitionBytes": 253,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 2,
         "irBlocks": 3
@@ -141,8 +141,8 @@
       "cName": "hxc_Main_identity_h9c14f7dfbb57",
       "displayName": "identity<GenericBox<Float>>",
       "codeSize": {
-        "definitionSha256": "f168f784e4fae795b8c1c8aca1fb172c92099db466c9e32984ba1c11efa244fe",
-        "definitionBytes": 138,
+        "definitionSha256": "8a3a857cfd2c1c61134d2e3951d4b1ffee30de31a891f936817076e57004853e",
+        "definitionBytes": 142,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -197,8 +197,8 @@
       "cName": "hxc_Main_identity_h769597c6fca5",
       "displayName": "identity<GenericBox<Int>>",
       "codeSize": {
-        "definitionSha256": "7de683e387aa9cc6e36d2f20b1880a8d72b69fdb38e9ddef8153f3302653c8e8",
-        "definitionBytes": 138,
+        "definitionSha256": "8e511e01bddb9f013d03de6b7c84954af5a3d4bacbe3163a226040b8e1b70801",
+        "definitionBytes": 142,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -253,8 +253,8 @@
       "cName": "hxc_Main_identity_h1296fdd09874",
       "displayName": "identity<Float>",
       "codeSize": {
-        "definitionSha256": "c1c24d5e69b280107ba9571552951cfb9ef42e7156f74652d70fd461a55fb2f8",
-        "definitionBytes": 80,
+        "definitionSha256": "4f71d83ed4e1c026b67a4ccb7f5b36cb2fb19ccf0a00318a01447b3bf9ccfe21",
+        "definitionBytes": 84,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -309,8 +309,8 @@
       "cName": "hxc_Main_identity_he5684aaf2cae",
       "displayName": "identity<Int>",
       "codeSize": {
-        "definitionSha256": "03ece65137e7aaf016d9963767b62455d5470f85cf3d975ac1c1c97bd4079259",
-        "definitionBytes": 82,
+        "definitionSha256": "c9f2040c87a262b8cbf850cbc76499fc1a4b2f92490ec200aba684e6afa738b4",
+        "definitionBytes": 86,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -355,8 +355,8 @@
       "cName": "hxc_Main_identity_h37d46ac9dd5d",
       "displayName": "identity<UInt>",
       "codeSize": {
-        "definitionSha256": "8007d753a8542c4edd56253df3b1ab98555e90c573b6037c6b4c76e6ef92ba5b",
-        "definitionBytes": 84,
+        "definitionSha256": "371360ca17f9130c311dcfc9a961e0f0a1564e4107179befc2e0661247847509",
+        "definitionBytes": 88,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -391,8 +391,8 @@
       "cName": "hxc_Main_identity_ha2f2aee34deb",
       "displayName": "identity<Bool>",
       "codeSize": {
-        "definitionSha256": "1b25412b8830fe75e15bc975c54e525053780cc80ce87413686ef7ef4187a439",
-        "definitionBytes": 76,
+        "definitionSha256": "0c23999d098b2cbef3ca0621a19c98a218dc261517af8ec3d35030fb38c7c0a2",
+        "definitionBytes": 80,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -427,8 +427,8 @@
       "cName": "hxc_Main_identity_hf2cfc11a476b",
       "displayName": "identity<GenericBox<GenericBox<Int>>>",
       "codeSize": {
-        "definitionSha256": "e09cac46f8da5d9aed29879583a74c2e278e8807429bdb162239a5b6d2432f7a",
-        "definitionBytes": 138,
+        "definitionSha256": "6c39257cf7b0d4a54418ada14e5a2f55e23f588550a219680b78fedb216336cf",
+        "definitionBytes": 142,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -473,8 +473,8 @@
       "cName": "hxc_Main_recursive",
       "displayName": "recursive<Int>",
       "codeSize": {
-        "definitionSha256": "377159b2172ec6ee47dfce6a483cacaf65bfe66f9a87d4cb6caa12f6acb5ae98",
-        "definitionBytes": 185,
+        "definitionSha256": "b926da2f743a078d0b7e567715d15fbdb8ce2aa367a1e97367015c33618120f1",
+        "definitionBytes": 195,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -509,8 +509,8 @@
       "cName": "hxc_GenericCursor_echo_haaef745b4b9b",
       "displayName": "echo<Int>",
       "codeSize": {
-        "definitionSha256": "8912de799c9968bb81d5380b23b57f6f04ce0819d82317cd0df9eddc99f663ef",
-        "definitionBytes": 141,
+        "definitionSha256": "0edca7f6ac20dac8202b2b88b613f5606a018de24989be82c3ba3d6437704427",
+        "definitionBytes": 149,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -545,8 +545,8 @@
       "cName": "hxc_GenericCursor_echo_h795c670d817f",
       "displayName": "echo<Bool>",
       "codeSize": {
-        "definitionSha256": "d8cf81151ff67a49b8270fe5940c0d40e6e1ab401a43ca2ce07614f1be384aa3",
-        "definitionBytes": 135,
+        "definitionSha256": "54dd96cc5f8399e5e06ad90840889451a5ec7cd2a55129c095e44e786d7fb4e6",
+        "definitionBytes": 143,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -581,8 +581,8 @@
       "cName": "hxc_GenericCursor_empty_hd69866324f00",
       "displayName": "empty<Float>",
       "codeSize": {
-        "definitionSha256": "5e463d7ea98ed1b1698be5891c4a6a6e7854a9e9ac93dcbdd5af0298015180d4",
-        "definitionBytes": 228,
+        "definitionSha256": "e1681d79ebb035ca1117c341480238a8392608b9ccfeaac853a5317469679adf",
+        "definitionBytes": 232,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -617,8 +617,8 @@
       "cName": "hxc_GenericCursor_empty_h704fd570bfe7",
       "displayName": "empty<Int>",
       "codeSize": {
-        "definitionSha256": "601665b8c3183040d9e9f6540d48a2f562e5cc11fbf0fa18a0dc2aab29971ef4",
-        "definitionBytes": 228,
+        "definitionSha256": "28610334354c48de9964fe85212a5884ee100c0a8def27305d8629b919cf32d8",
+        "definitionBytes": 232,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -653,8 +653,8 @@
       "cName": "hxc_GenericCursor_emptyAt",
       "displayName": "emptyAt<Int>",
       "codeSize": {
-        "definitionSha256": "24453222a899b454fd77a61ce44c4298308d02f5e7ca17dd0ed6b4d3cc8c72e6",
-        "definitionBytes": 275,
+        "definitionSha256": "cc5b127cb27cda97d60bed4e40120a59f10b0db25137d196e70db8db00410f35",
+        "definitionBytes": 283,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -909,11 +909,11 @@
     "specializedEnumDefinitionBytes": 5771,
     "typeSpecializations": 3,
     "generatedPayloadArtifacts": 3,
-    "specializedFunctionDefinitionBytes": 2458,
+    "specializedFunctionDefinitionBytes": 2558,
     "mergedTypeReasons": 21,
-    "generatedPayloadBytes": 16626,
+    "generatedPayloadBytes": 17068,
     "mergedFunctionReasons": 24,
-    "estimatedSpecializationCBytes": 8229
+    "estimatedSpecializationCBytes": 8329
   },
   "algorithm": "hxc-generic-specialization-v2"
 }

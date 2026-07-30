@@ -4,16 +4,14 @@ package caxecraft.app;
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.ItemUseProfile;
 import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
-import caxecraft.content.FirstPlayableLevel.itemCount;
-import caxecraft.content.FirstPlayableLevel.itemStorageCode;
-import caxecraft.content.FirstPlayableLevel.itemXMilli;
-import caxecraft.content.FirstPlayableLevel.itemYMilli;
-import caxecraft.content.FirstPlayableLevel.itemZMilli;
-import caxecraft.content.FirstPlayableLevel.spawnXMilli;
-import caxecraft.content.FirstPlayableLevel.spawnYMilli;
-import caxecraft.content.FirstPlayableLevel.spawnZMilli;
-import caxecraft.content.FirstPlayableSessionLoader.LoadedActorBinding;
-import caxecraft.content.FirstPlayableSessionLoader.loadCandidate as loadFirstPlayableSession;
+import caxecraft.content.ActiveContent;
+import caxecraft.content.BaseContentPack.BaseContentRegistry;
+import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
+import caxecraft.content.ContentPackageStore;
+import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
+import caxecraft.content.RuntimeLevelLoader.RuntimeLevelLoadResult;
+import caxecraft.content.RuntimeLevelLoader.RuntimeLevelSource;
+import caxecraft.content.RuntimeLevelLoader.loadRuntimeLevel;
 import caxecraft.app.AppScreen;
 import caxecraft.app.AppScreen.capturesPointer as screenCapturesPointer;
 import caxecraft.app.AppScreen.closeEditor;
@@ -50,6 +48,7 @@ import caxecraft.domain.RaycastHit;
 import caxecraft.domain.VoxelRaycast;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldView;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
@@ -124,6 +123,12 @@ private typedef PlayableActorSelection = {
 	final enemyActorId:EntityId;
 }
 
+/** Minimal actor capability view retained by the current fixed HUD slots. */
+private typedef PlayableActorBinding = {
+	final entityId:EntityId;
+	final role:CharacterSpawnRole;
+}
+
 /**
  * Runs Caxecraft's current Raylib application and game loop.
  *
@@ -148,9 +153,6 @@ final class CaxecraftApp {
 	static inline final MAX_FRAME_SECONDS:Float = 0.25;
 	static inline final PICK_DISTANCE:Float = 7.0;
 
-	/** The one loaded simulation owned for this application's lifetime. */
-	final session:GameSession = new GameSession();
-
 	/** Persistent terrain faces rebuilt only after successful world edits. */
 	final terrainRenderer:TerrainRenderer = new TerrainRenderer();
 
@@ -161,11 +163,10 @@ final class CaxecraftApp {
 	final editorNavigation:NavigationRepeater;
 
 	/**
-	 * Create the application and its single simulation owner.
+	 * Create the application shell before selecting one complete content generation.
 	 *
-	 * Haxe.c embeds this final child directly in the generated application struct;
-	 * neither object needs a heap allocation. Native presentation resources are
-	 * acquired later by `run`, after the candidate level validates.
+	 * Native presentation resources are acquired later by `run`, after package
+	 * bytes have produced a complete candidate session.
 	 */
 	public function new() {
 		editorScreen = new CaxecraftEditorScreen();
@@ -213,16 +214,54 @@ final class CaxecraftApp {
 		initialHealth = PilotScript.initialHealth(pilotName);
 		#end
 
-		// This temporary bridge reads only generated facts derived from the checked-in
-		// map. The runtime package path removes it under haxe_c-xge.20.4.3.6; actor
-		// planning, publication, and controller execution already use general systems.
-		final loadedLevel = loadFirstPlayableSession(session, initialHealth);
-		if (!loadedLevel.valid)
+		// The executable runs from its distribution directory. `content` is the
+		// application-selected capability root staged beside it by play.py.
+		final contentStore = switch ContentPackageStore.open("content", "staged-content", ContentPackageStore.MAXIMUM_PACKAGE_BYTES) {
+			case PackageStoreOpened(store): store;
+			case PackageStoreRejected(_):
+				Sys.println("caxecraft: runtime content root rejected");
+				return;
+		};
+		final loadedCandidate = switch loadRuntimeLevel(NativePackageFile(contentStore, "scenarios/first-playable/map.caxemap"),
+			ContentGenerationId.fromSequence(1), new BaseContentRegistry(), {
+				entityId: EntityId.fromValidatedStorageCode(1),
+				initialHealth: initialHealth,
+				aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile())
+			}) {
+				case RuntimeLevelReady(candidate): candidate;
+				case RuntimeLevelRejected(_):
+					Sys.println("caxecraft: runtime level rejected");
+					return;
+			};
+		final activeContent = new ActiveContent(loadedCandidate.generation());
+		final session = activeContent.session();
+		final actorBindings:Array<PlayableActorBinding> = [];
+		for (binding in loadedCandidate.generation().actorBindings())
+			actorBindings.push({entityId: binding.entityId, role: binding.role});
+		final loadedItems:Array<LoadedWorldItem> = [];
+		for (binding in loadedCandidate.generation().itemBindings())
+			loadedItems.push({
+				storageCode: binding.storage.value(),
+				xMilli: binding.transform.xMilli,
+				yMilli: binding.transform.yMilli,
+				zMilli: binding.transform.zMilli
+			});
+		final spawnTransform = loadedCandidate.generation().plan().player().transform;
+		final fluidPresentation = loadedCandidate.generation().presentation().fluidRequests();
+		if (fluidPresentation.length == 0)
 			return;
-		final actors = selectPlayableActors(loadedLevel.actors);
+		final waterPresentationCell = fluidPresentation[0].cellIndex;
+		for (request in fluidPresentation)
+			if (request.cellIndex != waterPresentationCell)
+				return;
+		final receipt = loadedCandidate.receipt();
+		Sys.println("caxecraft: content-source=runtime-package");
+		Sys.println("caxecraft: content-path=" + receipt.logicalPath);
+		Sys.println("caxecraft: content-input-hash=" + Std.string(receipt.inputHash));
+		Sys.println("caxecraft: content-generation=" + Std.string(activeContent.generationId().value()));
+		final actors = selectPlayableActors(actorBindings);
 		if (!actors.valid)
 			return;
-		final waterPresentationCell = loadedLevel.waterPresentationCell;
 		final dialogueActorId = actors.dialogueActorId;
 		final enemyActorId = actors.enemyActorId;
 
@@ -448,7 +487,7 @@ final class CaxecraftApp {
 				inventory = Inventory.cycle(inventory, hotbarCycle);
 			if (screenIsPlaying(screen) && interactPressed) {
 				if (characterIsDefeated(character.vitals)) {
-					final revival = session.reviveLocalPlayerAt(spawnPlayer(session.worldView()));
+					final revival = session.reviveLocalPlayerAt(spawnPlayer(session.worldView(), spawnTransform));
 					character = revival.character;
 					if (!revival.resolved)
 						quit = true;
@@ -667,11 +706,12 @@ final class CaxecraftApp {
 					quit = true;
 				if (!characterIsDefeated(character.vitals)) {
 					var pickupIndex = 0;
-					while (pickupIndex < itemCount()) {
+					while (pickupIndex < loadedItems.length) {
+						final loadedItem = loadedItems[pickupIndex];
 						if (session.authoredItemIsActive(pickupIndex)
-							&& authoredItemIsInRange(character.body.x, character.body.y, character.body.z, itemXMilli(pickupIndex), itemYMilli(pickupIndex),
-								itemZMilli(pickupIndex))) {
-							final itemCode = itemStorageCode(pickupIndex);
+							&& authoredItemIsInRange(character.body.x, character.body.y, character.body.z, loadedItem.xMilli, loadedItem.yMilli,
+								loadedItem.zMilli)) {
+							final itemCode = loadedItem.storageCode;
 							final item = BaseContentPack.itemFromValidatedStorageCode(itemCode);
 							if (BaseContentPack.itemUseProfile(item) == ItemUseProfile.EquipAquatic
 								&& BaseContentPack.itemProvidesAquaticProfile(item)) {
@@ -947,7 +987,7 @@ final class CaxecraftApp {
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
 				drawActors(camera, entityTexture, entityTextureReady, dialogueActor, enemyActor, enemyPhase.phase, berryDrop);
-				AuthoredItemRenderer.drawWorldItems(camera, session.authoredItemsView(), itemTexture, itemTextureReady, adventureItemTexture,
+				AuthoredItemRenderer.drawWorldItems(camera, session.authoredItemsView(), loadedItems, itemTexture, itemTextureReady, adventureItemTexture,
 					adventureItemTextureReady);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
@@ -1102,10 +1142,10 @@ final class CaxecraftApp {
 	#end
 
 	/** Restore the validated authored spawn, then recover if later edits blocked it. */
-	static function spawnPlayer(cells:WorldView):CharacterBody {
-		final spawnX = spawnXMilli() / 1000.0;
-		final spawnY = spawnYMilli() / 1000.0;
-		final spawnZ = spawnZMilli() / 1000.0;
+	static function spawnPlayer(cells:WorldView, transform:ScenarioTransform):CharacterBody {
+		final spawnX = transform.xMilli / 1000.0;
+		final spawnY = transform.yMilli / 1000.0;
+		final spawnZ = transform.zMilli / 1000.0;
 		return recoverPlayerSpawn(cells, createPlayer(spawnX, spawnY, spawnZ));
 	}
 
@@ -1117,7 +1157,7 @@ final class CaxecraftApp {
 		application boundary requires exactly one dialogue NPC and one enemy. It
 		never checks a character name, content ID, map path, or generated module.
 	**/
-	static function selectPlayableActors(bindings:Array<LoadedActorBinding>):PlayableActorSelection {
+	static function selectPlayableActors(bindings:Array<PlayableActorBinding>):PlayableActorSelection {
 		var dialogueActorId = EntityId.invalid();
 		var enemyActorId = EntityId.invalid();
 		for (binding in bindings)

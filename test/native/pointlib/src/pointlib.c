@@ -8,10 +8,23 @@ pointlib_point pointlib_point_make(pointlib_coord x, pointlib_coord y) {
   return result;
 }
 
+bool pointlib_point_is_zero(pointlib_point point) {
+  return point.x == POINTLIB_COORD_ZERO && point.y == POINTLIB_COORD_ZERO;
+}
+
 pointlib_point pointlib_point_translate(pointlib_point point, pointlib_coord dx, pointlib_coord dy) {
   point.x += dx;
   point.y += dy;
   return point;
+}
+
+void pointlib_point_translate_in_place(pointlib_point *point, pointlib_coord dx, pointlib_coord dy) {
+  point->x += dx;
+  point->y += dy;
+}
+
+bool pointlib_variadic_fixed_prefix_verify(pointlib_coord expected, ...) {
+  return expected == POINTLIB_COORD_ONE;
 }
 
 pointlib_point_alias pointlib_point_alias_identity(pointlib_point_alias point) {
@@ -21,6 +34,10 @@ pointlib_point_alias pointlib_point_alias_identity(pointlib_point_alias point) {
 int64_t pointlib_point_dot(pointlib_point left, pointlib_point right) {
   return ((int64_t)left.x * (int64_t)right.x)
     + ((int64_t)left.y * (int64_t)right.y);
+}
+
+pointlib_axis pointlib_axis_identity(pointlib_axis axis) {
+  return axis;
 }
 
 pointlib_coord pointlib_point_component(pointlib_point point, pointlib_axis axis) {

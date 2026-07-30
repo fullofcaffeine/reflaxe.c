@@ -26,9 +26,9 @@ CONFIGURATION_DIAGNOSTIC_ID = "HXC0003"
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_DETAIL = (
     "Unsupported typed Haxe node "
-    "`TCall(Sys.println(String literal):requires-String-literal)`"
+    "`TField(static:global.BootstrapProbe.bootstrap:outside-captured-program)`"
 )
-LOWERING_SOURCE = "BootstrapProbe.hx:40: lines 40-41"
+LOWERING_SOURCE = "BootstrapProbe.hx:40: characters 30-39"
 DIAGNOSTIC_PROFILE = re.compile(r"\[profile=(?:portable|metal|unresolved)\]")
 
 

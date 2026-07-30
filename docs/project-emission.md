@@ -164,7 +164,7 @@ The emitter owns these independently versioned sidecars:
 - `hxc.manifest.json`: resolved logical configuration, the typed neutral build
   plan, artifact kinds, and SHA-256 digests;
 - `hxc.symbols.json`: by default, the finalized schema-2
-  `hxc-c-symbol-v2` table, retaining full semantic keys separately from
+  `hxc-c-symbol-v3` table, retaining full semantic keys separately from
   readable emitted names and explaining every collision suffix. An explicit
   `-D hxc_symbol_report=summary` developer build instead writes a smaller
   `hxc-c-symbol-summary-v1` document with total counts and the complete
@@ -201,8 +201,9 @@ The emitter owns these independently versioned sidecars:
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
   executable's exact `analyzed-no-stdlib-use` or bounded
-  `analyzed-selected-stdlib-use` record. The latter currently admits only
-  literal `Sys.println` and default `haxe.Log.trace` capabilities;
+  `analyzed-selected-stdlib-use` record. The latter currently admits statically
+  typed String `Sys.println` and literal default `haxe.Log.trace`
+  capabilities;
 - `hxc.specializations.json`: omitted when no generic instance is reachable;
   otherwise a schema-2 `hxc-generic-specialization-v2` record containing full
   collision-checked semantic keys, normalized arguments, source-rooted reasons,

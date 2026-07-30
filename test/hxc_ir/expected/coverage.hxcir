@@ -1,4 +1,4 @@
-hxcir schema=21
+hxcir schema=23
 dispatch
   layout "itable.layout.coverage.Interface" root="instance.interface" slots=["slot.measure"] @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
   layout "vtable.layout.coverage.Object" root="instance.object" slots=["slot.render"] @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
@@ -87,6 +87,7 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
       instruction "c08.intrinsic" result="value.intrinsic":i32 call dispatch=intrinsic("haxe.i32.clamp") arguments=["value.argument"] returns=i32 failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":26:1-26:2
       instruction "c09.unary" result="value.negative":i32 unary operation="haxe.i32.negate" value="value.one" implementation=static @"test/hxc_ir/fixtures/IRCoverage.hx":27:1-27:2
       instruction "c10.record" result="value.record":instance("instance.record") construct-aggregate instance="instance.record" fields=["x"="value.one"] @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
+      instruction "c10.record-zero" result="value.zero-record":instance("instance.record") zero-aggregate instance="instance.record" @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
       instruction "c10.record-initialize" result=- initialize place=local("local.record") value="value.record" transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
       instruction "c10.field-address" result="value.field-address":pointer(nonnull,i32) address place=field(local("local.record"),"x") @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
       instruction "c10.field-load" result="value.field-load":i32 load place=dereference("value.field-address") @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2

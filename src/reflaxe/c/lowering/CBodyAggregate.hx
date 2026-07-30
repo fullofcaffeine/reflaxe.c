@@ -467,6 +467,36 @@ class CBodyValueType {
 	}
 
 	/**
+		Report whether zero initialization is needed before this value becomes a GC root.
+
+		A direct record can group collector-managed class references without owning
+		retain/release work. If such a record is used as a compiler-created branch
+		carrier, its pointer fields must start as null before any allocation can
+		trigger tracing. This is different from `managedLifetime`: collector roots
+		are traced, while managed-lifetime values need explicit lifecycle helpers.
+	**/
+	public function containsCollectorManagedReference():Bool {
+		return switch kind {
+			case CBVKClass(value, _): value.managedByCollector;
+			case CBVKAggregate(value):
+				var found = false;
+				for (field in value.fields)
+					if (field.type.containsCollectorManagedReference()) {
+						found = true;
+						break;
+					}
+				found;
+			case CBVKEnum(value): value.collectorPayload;
+			case CBVKOptional(value): value.payload.containsCollectorManagedReference();
+			case CBVKArray(value): value.managedByCollector;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
+				CBVKInterface(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
+				CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _) | CBVKOwnedClass(_):
+				false;
+		};
+	}
+
+	/**
 		Whether this value's selected C carrier already represents absence exactly.
 
 		A nullable class reference, an ordinary Haxe `Array<T>`, and an ordinary
@@ -728,7 +758,7 @@ class CBodyAggregateRegistry {
 		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (imported != null)
 			return imported;
-		final nativeRef = nativeRefValueType(type, position, fail, node);
+		final nativeRef = nativeRefValueType(type, position, ownerModule, sourcePath, fail, node);
 		if (nativeRef != null)
 			return nativeRef;
 		final cStringBufferRef = cStringBufferRefValueType(type);
@@ -966,18 +996,22 @@ class CBodyAggregateRegistry {
 	/**
 		Classify the narrow mutable pointer accepted by direct imported-C calls.
 
-		The first slice admits exact scalar carriers because their address has one
-		unambiguous C type and no ownership lifecycle. Aggregates, managed values,
-		nullable carriers, nested pointers, and `Void` remain fail-closed.
+		Exact scalar carriers and direct header-owned structs have one unambiguous
+		C address and no target-owned lifetime. A struct must already be a
+		complete, initialized Haxe value; `Ref.to` only lends that caller-owned
+		storage to one direct call. Haxe-owned aggregates, managed values, nullable
+		carriers, nested pointers, and `Void` remain fail-closed.
 	**/
-	function nativeRefValueType(type:Type, position:Position, fail:(Position, String) -> Void, node:String):Null<CBodyValueType> {
+	function nativeRefValueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):Null<CBodyValueType> {
 		return switch type {
 			case TAbstract(reference, parameters) if (reference.get().pack.join(".") == "c" && reference.get().name == "Ref"):
 				if (parameters.length != 1)
 					rejected(fail, position, '$node:c.Ref-requires-one-pointee');
-				final pointee = directPrimitiveValueType(parameters[0]);
-				if (pointee == null || pointee.irType == IRTVoid)
-					rejected(fail, position, '$node:c.Ref-pointee-requires-direct-non-Void-scalar');
+				final primitive = directPrimitiveValueType(parameters[0]);
+				final pointee = primitive == null ? valueType(parameters[0], position, ownerModule, sourcePath, fail, '$node:c.Ref-pointee') : primitive;
+				if (pointee.irType == IRTVoid || (primitive == null && pointee.importedStructValue() == null))
+					rejected(fail, position, '$node:c.Ref-pointee-requires-direct-scalar-or-imported-struct');
 				CBodyValueType.nativeRef(pointee);
 			case _: null;
 		};
@@ -1341,6 +1375,29 @@ class CBodyAggregateRegistry {
 		final resolvedImport = importRegistry == null ? null : importRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
 		if (resolvedImport != null)
 			return importedTypeShape(resolvedImport);
+		final exactNominal = exactNominalValueType(resolved, position, ownerModule, sourcePath, fail, node);
+		if (exactNominal != null) {
+			return switch exactNominal.kind {
+				case CBVKClass(value, nullable):
+					/*
+						A closed record stores an ordinary Haxe class as one typed
+						reference, not by copying the object. Include the nominal class
+						identity and pointer nullability in the structural key so two
+						otherwise identical records cannot share an incompatible C
+						struct definition.
+
+						This describes representation only. `lowerAggregateLiteral`
+						separately rejects a reference to stack-owned class storage;
+						collector-managed references remain rooted through the
+						aggregate's HxcIR type paths.
+					 */
+					'haxe-class-reference(${canonicalPart(value.instanceId)}${canonicalPart(nullable ? "nullable" : "non-null")})';
+				case CBVKInterface(_):
+					return rejected(fail, position, '$node:interface-reference-record-field-not-admitted');
+				case _:
+					return rejected(fail, position, '$node:unexpected-exact-nominal-record-field:${exactNominal.cSpelling}');
+			};
+		}
 		final array = arrayRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
 		if (array != null)
 			return 'haxe-array-reference(${canonicalPart(array.semanticKey)})';
@@ -1517,6 +1574,13 @@ class CBodyAggregateRegistry {
 		return switch type {
 			case IRTBool: "bool";
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
+			case IRTAbiInteger(kind):
+				switch kind {
+					case IRAKSize: "abi-size";
+					case IRAKPtrDiff: "abi-ptrdiff";
+					case IRAKIntPtr: "abi-intptr";
+					case IRAKUIntPtr: "abi-uintptr";
+				}
 			case IRTFloat(width): 'f$width';
 			case IRTVoid: "void";
 			case _: throw new CBodyEmissionError("anonymous record field resolved to a non-direct primitive type");

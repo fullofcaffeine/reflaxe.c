@@ -7,7 +7,7 @@ extern int32_t hxc_ModuleFunctions_base;
 
 int32_t hxc_ModuleFunctions_answer(void);
 
-int32_t hxc_ModuleFunctions_doubled(int32_t hxc_value);
+int32_t hxc_ModuleFunctions_doubled(int32_t hxc_l_value);
 
 void hxc_ModuleFunctions_main(void);
 

@@ -250,22 +250,29 @@ Local commits now have three explicit routes:
 1. A narrow fixture, target-library surface, or focused document runs its
    existing path-owned checks.
 2. A known compiler semantic layer or Caxecraft change runs governance plus a
-   small, deterministic set of affected owners. The base sentinels type-check
-   all target-owned Haxe, validate HxcIR, compile and run the small Hello
-   product, and verify snapshot ownership. Staged paths then add only relevant
-   owners such as body lowering, runtime planning, spans, or Caxecraft.
-3. An unknown compiler subdirectory or cross-cutting test/CI input fails closed
-   to the complete bounded shard and native matrix.
+   fixed four-owner smoke set. The sentinels type-check all target-owned Haxe,
+   validate HxcIR, compile and run the small Hello product, and verify snapshot
+   ownership. During implementation, contributors still run the relevant
+   focused owner—such as body lowering, runtime planning, spans, or
+   Caxecraft—before the change reaches the hook.
+3. An unknown compiler subdirectory or cross-cutting test/CI input runs
+   governance plus those same conservative base sentinels. “Fail closed” means
+   the route cannot silently select no evidence; it does not mean making every
+   local commit replay the whole repository.
 
-This is a cadence boundary, not weaker proof. Every pull request, nightly run,
-and release still runs the complete cold matrix; developers can run the same
-proof explicitly with
+This separates quick local defect detection from complete merge evidence.
+Every pull request, nightly run, and release still runs the complete cold
+matrix on hosted machines; developers can run the same proof explicitly with
 `npm run test:toolchain:parallel -- --with-native`. The local route answers the
-smaller question “did this known semantic change preserve its direct owners?”
-without pretending that a 61-command repository replay is useful after every
-edit. [`select_pre_commit_route.py`](../scripts/ci/select_pre_commit_route.py)
-keeps classifications and owner order explicit, deduplicated, fail-closed, and
-unit-tested.
+smaller question “does the repository still type-check, validate HxcIR, build a
+small native product, and retain valid snapshot ownership?” Focused task tests
+answer whether the changed subsystem preserved its direct contract. CI answers
+the larger cross-repository question. A local commit never launches the
+complete matrix automatically.
+[`select_pre_commit_route.py`](../scripts/ci/select_pre_commit_route.py) keeps
+classifications and owner order explicit, deduplicated, fail-closed, and
+unit-tested. Its `--owners` output lists the relevant focused owners for task
+work; pre-commit deliberately uses `--smoke-owners`.
 
 An established root compiler module must be named explicitly before it can use
 the affected route. `CPhaseTiming.hx` is one such reviewed module; a new
@@ -295,18 +302,20 @@ run is below the initial eight-minute target, but one run cannot establish a
 p95; publish repeated uncontended measurements before claiming that budget has
 been achieved.
 
-The exhaustive fallback still runs governance before the complete canonical
-partition and native-smoke queue. It does not omit evidence or run commands
-concurrently inside a shard. On a busy host it may choose one worker; safe
-resume then avoids discarding completed shards when the same unchanged staged
-tree is retried.
+The complete canonical partition and native-smoke queue remain explicit local
+commands and required hosted-CI jobs. They do not run from pre-commit. This
+keeps a one-line compiler fix from blocking the next edit for hours while the
+CI machine independently verifies all compiler families, layouts, sanitizers,
+platforms, and integrated products.
 
-### Safe local resume
+### Safe explicit local resume
 
-The hook opts into `--resume` so a retry after one failed or timed-out shard
-does not discard the other three successes. A reusable record is not a general
-test cache. It is a local, ignored receipt saying one exact shard passed one
-exact set of inputs, and it expires after 24 hours.
+Developers may opt into `npm run test:toolchain:parallel -- --resume
+--with-native` when they deliberately run the complete local matrix. A retry
+after one failed or timed-out shard then does not discard the other successes.
+Pre-commit never starts this command. A reusable record is not a general test
+cache. It is a local, ignored receipt saying one exact shard passed one exact
+set of inputs, and it expires after 24 hours.
 
 The receipt key includes:
 
@@ -384,8 +393,8 @@ comparable before and after sample.
 
 The Caxecraft shard starts with focused, isolated contracts for localization,
 content, bounded voxel water, aquatic movement and breath, inventory, actors,
-and deterministic pilot input before the broader scenario, editor, and full
-generated-C lanes. These commands
+private level resolution, atomic content generations, and deterministic pilot
+input before the broader scenario, editor, and full generated-C lanes. These commands
 make a local gameplay regression cheap to reproduce; the later full lane remains
 the integrated authority and is not replaced by them. Water and aquatics use
 the shared focused Haxe-to-C runner: their Haxe probes own behavior while the
@@ -393,6 +402,12 @@ host only coordinates Eval, native C, exact trace parity, and sanitizers. These
 focused lanes run their shared Haxe rules under Eval and generated C, then
 perform one strict native build plus an AddressSanitizer/UndefinedBehaviorSanitizer
 run when the selected compiler can provide them.
+
+`npm run test:caxecraft-content-generation` is the focused ownership proof. It
+builds fresh sessions, injects rejection before every named construction stage,
+performs repeated successful owner swaps, rejects stale publication, compares
+Eval/native semantic traces, and runs the native result under sanitizers. It
+does not launch Raylib or repeat the full playable compile.
 
 The successful Caxecraft command embeds its own phase report, also described by
 [`caxecraft-timing.schema.json`](specs/caxecraft-timing.schema.json). It keeps
@@ -537,16 +552,23 @@ beside that build variant. On the next request it performs these checks in
 order:
 
 1. hash every reviewed Haxe, nested HXML, compiler, Reflaxe, runtime, binding,
-   build-script, asset, localization, content-pack, scenario, pinned Haxe, and
+   build-script, asset, compiled localization/content-pack, pinned Haxe, and
    standard-library input;
 2. compare the requested configuration, selected native tools, flags, and
    environment with the request that produced the executable;
 3. re-hash the exact Raylib/Raygui headers and libraries used by that native
    build; and
-4. re-hash the complete generated project, staged assets/content, and linked
-   executable.
+4. re-hash the complete generated project, staged assets, and linked
+   executable; and
+5. republish the current runtime content files before launch.
 
-Only an exact match launches the existing executable. A missing, malformed,
+The staged map is intentionally not a compiler/build input: the executable
+parses it after startup, so changing it must preserve the code hit. Restaging
+still copies the exact repository bytes through the existing fail-closed owned
+directory check. The pack and UI catalog remain compiler inputs until their
+runtime-loading slice lands.
+
+Only an exact code/configuration match launches the existing executable. A missing, malformed,
 partial, or corrupt record is a visible miss. The ordinary build then runs and
 publishes replacement state only after Haxe-to-C generation, native compilation
 and linking, content staging, and a second input snapshot all succeed. If an
@@ -568,7 +590,16 @@ logical CPUs because unrelated compiler and operating-system work was active,
 so these are conservative contention diagnostics rather than the parent's
 authoritative unsaturated baseline. They do demonstrate the intended structural
 result: an unchanged launch performs zero Haxe requests, zero C compilations,
-and zero links.
+and zero links. After runtime map authority landed, one observed hit including
+current-content restaging reached launch preparation in 378.4ms and a later
+final-state check reached it in 646.8ms on the same development checkout.
+The generated-level removal gate then changed the authored map text, observed
+a different runtime content hash, and still reached launch preparation after
+662.2ms of validation and 1.35s for the complete command. That request started
+no Haxe process, C compiler, or linker. The local shell had no usable desktop
+display, so Raylib rejected window creation after the content had loaded; this
+sample proves the build/content boundary and startup path, not graphical play.
+These are diagnostic samples, not a percentile claim.
 
 ### Caxecraft immutable generated projects
 

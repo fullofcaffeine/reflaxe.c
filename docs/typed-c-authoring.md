@@ -169,8 +169,9 @@ import has these properties:
   cycles, and cross-family aliases remain fail-closed;
 - functions are static extern, fixed-arity, non-callback C calls whose admitted
   parameter and result types are exact scalars or by-value imported values.
-  One direct scalar parameter may instead use the call-scoped `c.Ref` contract
-  described below;
+  One direct scalar or complete imported-struct parameter may instead use the
+  call-scoped `c.Ref` contract described below. An explicitly marked variadic
+  declaration may be called with its fixed prefix only;
 - imported struct fields are ordinary typed HxcIR places, so reads and writes
   stay structural rather than becoming C fragments;
 - a `String` literal, or a conditional/switch whose every reachable result is a
@@ -198,15 +199,18 @@ NativeToggle.update(c.Ref.to(active));
 ```
 
 `c.Ref.to(active)` does not allocate a pointer wrapper. haxe.c proves that
-`active` is a mutable local, field, or indexed element with the exact scalar C
-carrier, emits its address with C's `&` operator, and lets the imported function
-use that address until the call returns. The Haxe value remains the owner of
-the storage.
+`active` is a mutable local, field, or indexed element with the exact C carrier,
+emits its address with C's `&` operator, and lets the imported function use that
+address until the call returns. The Haxe value remains the owner of the
+storage. The same rule admits a fully initialized, complete imported struct
+such as a header-owned `struct stat`; the callee may update it during that call
+but may not retain its address.
 
 This first contract is intentionally smaller than a general borrow checker.
 The reference cannot be stored in another Haxe value, returned, passed through
 an indirect function, made from a temporary such as `c.Ref.to(true)`, or used
-for an aggregate or managed value. A binding generator must also record the
+for a managed value. Ordinary Haxe records and partial or uninitialized
+imported structs are not admitted. A binding generator must also record the
 callee's call-only lifetime explicitly: Clang can prove that a header says
 `bool *`, but C type spelling alone cannot prove that the library does not keep
 the pointer.
@@ -314,6 +318,41 @@ literal has the exact nominal layout owned by that C header” without an
 unchecked cast or duplicated ABI declaration. See the runtime-free use in
 [the Raylib semantic core](raylib-semantic-core.md).
 
+Use `c.StructInit.zero()` when a system function needs initialized storage but
+the Haxe implementation does not know or care about each header-owned field:
+
+```haxe
+var facts:PosixStat = c.StructInit.zero();
+PosixSystem.inspectDescriptor(descriptor, c.Ref.to(facts));
+```
+
+haxe.c emits the structural C initializer `(struct stat){0}`. This gives every
+field a defined zero value before the system call without pretending that Haxe
+may read uninitialized memory. The intrinsic is restricted to complete,
+wholly unmanaged imported structs. It does not zero ordinary Haxe records,
+managed fields, opaque structs, pointers to unknown storage, or arbitrary byte
+ranges. Schema-22 HxcIR records the operation explicitly as `zero-aggregate`,
+so validation and later analyses see the lifetime-safe initialization rather
+than an opaque C fragment.
+
+### Calls to variadic declarations without optional arguments
+
+Some system declarations use C's `...` even when a particular mode needs no
+optional argument, such as `open(path, O_RDONLY)`. Mark that reviewed header
+fact explicitly:
+
+```haxe
+@:c.variadic
+public static function openPath(path:c.CStringBufferRef, flags:Int):Int;
+```
+
+The Haxe signature names only the fixed prefix. haxe.c admits a direct call with
+exactly those arguments and emits the header-owned variadic call unchanged.
+Passing even one optional argument remains unsupported because C's default
+argument promotions and the optional value's ownership still need a typed
+contract. Haxe rest parameters are not an alternative: they describe a Haxe
+collection, not the C ABI.
+
 The identity default is still an exact ABI fact, not a generated-name
 heuristic. `CSymbolRegistry` validates it against C spelling, reserved names,
 and namespace collisions and records it as the requested external name. A
@@ -322,7 +361,7 @@ implicit; non-default conventions remain explicit metadata. This is why a raw
 binding can write `public static function BeginDrawing():Void` without repeating
 either `@:c.name("BeginDrawing")` or `@:c.callingConvention(C)`.
 
-Callbacks, variadics, native pointers, retained strings, opaque resource
+Callbacks, optional variadic arguments, native pointers, retained strings, opaque resource
 ownership, unions, bit fields, packed layouts, source preprocessor definitions,
 C++, and inferred or exported ABI remain outside this slice. They fail with source-positioned `HXC3000` and
 leave no plausible artifact; adding an unsafe cast or raw C string is not an

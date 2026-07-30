@@ -36,7 +36,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:faddInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:faddInt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -46,7 +46,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.faddInt.left#0"
     },
     {
@@ -58,7 +58,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:faddInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:faddInt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -68,7 +68,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.faddInt.right#1"
     },
     {
@@ -106,7 +106,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fdivInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fdivInt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -116,7 +116,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.fdivInt.left#0"
     },
     {
@@ -128,7 +128,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fdivInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fdivInt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -138,7 +138,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.fdivInt.right#1"
     },
     {
@@ -176,7 +176,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:feq|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture3:feq4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -186,7 +186,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.feq.left#0"
     },
     {
@@ -198,7 +198,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:feq|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture3:feq5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -208,7 +208,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.feq.right#1"
     },
     {
@@ -245,7 +245,7 @@
         "value"
       ],
       "requestedName": null,
-      "cName": "hxc_value",
+      "cName": "hxc_l_value",
       "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:fint|1:3:f64|0:|0:|3:28:PrimitiveDifferentialFixture4:fint5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -255,7 +255,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_value",
+      "baseName": "hxc_l_value",
       "sourceSymbol": "PrimitiveDifferentialFixture.fint.value#0"
     },
     {
@@ -293,7 +293,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:flt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture3:flt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -303,7 +303,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.flt.left#0"
     },
     {
@@ -315,7 +315,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:flt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture3:flt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -325,7 +325,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.flt.right#1"
     },
     {
@@ -363,7 +363,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fmodInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fmodInt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -373,7 +373,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.fmodInt.left#0"
     },
     {
@@ -385,7 +385,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fmodInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fmodInt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -395,7 +395,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.fmodInt.right#1"
     },
     {
@@ -433,7 +433,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fmulInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fmulInt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -443,7 +443,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.fmulInt.left#0"
     },
     {
@@ -455,7 +455,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fmulInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fmulInt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -465,7 +465,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.fmulInt.right#1"
     },
     {
@@ -503,7 +503,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fsubInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fsubInt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -513,7 +513,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.fsubInt.left#0"
     },
     {
@@ -525,7 +525,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:fsubInt|2:3:f643:f64|0:|0:|3:28:PrimitiveDifferentialFixture7:fsubInt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -535,7 +535,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.fsubInt.right#1"
     },
     {
@@ -573,7 +573,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:iadd|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:iadd4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -583,7 +583,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.iadd.left#0"
     },
     {
@@ -595,7 +595,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:iadd|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:iadd5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -605,7 +605,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.iadd.right#1"
     },
     {
@@ -643,7 +643,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:iand|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:iand4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -653,7 +653,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.iand.left#0"
     },
     {
@@ -665,7 +665,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:iand|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:iand5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -675,7 +675,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.iand.right#1"
     },
     {
@@ -713,7 +713,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:idivInt|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture7:idivInt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -723,7 +723,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.idivInt.left#0"
     },
     {
@@ -735,7 +735,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture7:idivInt|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture7:idivInt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -745,7 +745,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.idivInt.right#1"
     },
     {
@@ -783,7 +783,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ieq|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture3:ieq4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -793,7 +793,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ieq.left#0"
     },
     {
@@ -805,7 +805,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ieq|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture3:ieq5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -815,7 +815,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ieq.right#1"
     },
     {
@@ -853,7 +853,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ilt|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture3:ilt4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -863,7 +863,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ilt.left#0"
     },
     {
@@ -875,7 +875,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ilt|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture3:ilt5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -885,7 +885,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ilt.right#1"
     },
     {
@@ -923,7 +923,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:imod|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:imod4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -933,7 +933,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.imod.left#0"
     },
     {
@@ -945,7 +945,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:imod|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:imod5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -955,7 +955,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.imod.right#1"
     },
     {
@@ -993,7 +993,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:imul|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:imul4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1003,7 +1003,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.imul.left#0"
     },
     {
@@ -1015,7 +1015,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:imul|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:imul5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1025,7 +1025,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.imul.right#1"
     },
     {
@@ -1062,7 +1062,7 @@
         "value"
       ],
       "requestedName": null,
-      "cName": "hxc_value",
+      "cName": "hxc_l_value",
       "semanticKey": "5:local|106:ordinary:94:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:inot|1:3:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:inot5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1072,7 +1072,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_value",
+      "baseName": "hxc_l_value",
       "sourceSymbol": "PrimitiveDifferentialFixture.inot.value#0"
     },
     {
@@ -1110,7 +1110,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ior|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture3:ior4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1120,7 +1120,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ior.left#0"
     },
     {
@@ -1132,7 +1132,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ior|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture3:ior5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1142,7 +1142,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ior.right#1"
     },
     {
@@ -1182,7 +1182,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ishl|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ishl4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1192,7 +1192,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ishl.left#0"
     },
     {
@@ -1204,7 +1204,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ishl|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ishl5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1214,7 +1214,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ishl.right#1"
     },
     {
@@ -1254,7 +1254,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ishr|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ishr4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1264,7 +1264,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ishr.left#0"
     },
     {
@@ -1276,7 +1276,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ishr|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ishr5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1286,7 +1286,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ishr.right#1"
     },
     {
@@ -1326,7 +1326,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:isub|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:isub4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1336,7 +1336,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.isub.left#0"
     },
     {
@@ -1348,7 +1348,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:isub|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:isub5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1358,7 +1358,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.isub.right#1"
     },
     {
@@ -1396,7 +1396,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|113:ordinary:100:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture5:iushr|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture5:iushr4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1406,7 +1406,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.iushr.left#0"
     },
     {
@@ -1418,7 +1418,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|113:ordinary:100:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture5:iushr|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture5:iushr5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1428,7 +1428,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.iushr.right#1"
     },
     {
@@ -1466,7 +1466,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ixor|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ixor4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1476,7 +1476,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ixor.left#0"
     },
     {
@@ -1488,7 +1488,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ixor|2:3:i323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ixor5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1498,7 +1498,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ixor.right#1"
     },
     {
@@ -1559,7 +1559,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:uadd|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:uadd4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1569,7 +1569,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.uadd.left#0"
     },
     {
@@ -1581,7 +1581,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:uadd|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:uadd5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1591,7 +1591,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.uadd.right#1"
     },
     {
@@ -1629,7 +1629,7 @@
         "aNeg"
       ],
       "requestedName": null,
-      "cName": "hxc_aNeg",
+      "cName": "hxc_l_aNeg",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ult|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture3:ult4:aNeg|0:|0:|1:2",
       "escapeReasons": [],
       "namespace": {
@@ -1639,7 +1639,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_aNeg",
+      "baseName": "hxc_l_aNeg",
       "sourceSymbol": "PrimitiveDifferentialFixture.ult.aNeg#2"
     },
     {
@@ -1651,7 +1651,7 @@
         "bNeg"
       ],
       "requestedName": null,
-      "cName": "hxc_bNeg",
+      "cName": "hxc_l_bNeg",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ult|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture3:ult4:bNeg|0:|0:|1:3",
       "escapeReasons": [],
       "namespace": {
@@ -1661,7 +1661,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_bNeg",
+      "baseName": "hxc_l_bNeg",
       "sourceSymbol": "PrimitiveDifferentialFixture.ult.bNeg#3"
     },
     {
@@ -1725,7 +1725,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ult|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture3:ult4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1735,7 +1735,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ult.left#0"
     },
     {
@@ -1748,7 +1748,7 @@
         "load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_load_result_n0",
+      "cName": "hxc_l_tmp_load_result_n0",
       "semanticKey": "9:temporary|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ult|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture3:ult11:load-result|0:|0:|1:0",
       "escapeReasons": [
         "non-c-identifier-byte",
@@ -1761,7 +1761,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_load_result_n0",
+      "baseName": "hxc_l_tmp_load_result_n0",
       "sourceSymbol": "PrimitiveDifferentialFixture.ult.load-result#0"
     },
     {
@@ -1773,7 +1773,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture3:ult|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture3:ult5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -1783,7 +1783,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ult.right#1"
     },
     {
@@ -1822,7 +1822,7 @@
         "binary-left"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_binary_left_n5",
+      "cName": "hxc_l_tmp_binary_left_n5",
       "semanticKey": "9:temporary|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod11:binary-left|0:|0:|1:5",
       "escapeReasons": [
         "non-c-identifier-byte",
@@ -1835,7 +1835,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_binary_left_n5",
+      "baseName": "hxc_l_tmp_binary_left_n5",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.binary-left#5"
     },
     {
@@ -2004,7 +2004,7 @@
         "conditional-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_conditional_load_result_n7",
+      "cName": "hxc_l_tmp_conditional_load_result_n7",
       "semanticKey": "9:temporary|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod23:conditional-load-result|0:|0:|1:7",
       "escapeReasons": [
         "non-c-identifier-byte",
@@ -2017,7 +2017,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_conditional_load_result_n7",
+      "baseName": "hxc_l_tmp_conditional_load_result_n7",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.conditional-load-result#7"
     },
     {
@@ -2030,7 +2030,7 @@
         "conditional-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_conditional_result_n4",
+      "cName": "hxc_l_tmp_conditional_result_n4",
       "semanticKey": "9:temporary|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod18:conditional-result|0:|0:|1:4",
       "escapeReasons": [
         "non-c-identifier-byte",
@@ -2043,7 +2043,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_conditional_result_n4",
+      "baseName": "hxc_l_tmp_conditional_result_n4",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.conditional-result#4"
     },
     {
@@ -2056,7 +2056,7 @@
         "conditional-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_conditional_result_n6",
+      "cName": "hxc_l_tmp_conditional_result_n6",
       "semanticKey": "9:temporary|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod18:conditional-result|0:|0:|1:6",
       "escapeReasons": [
         "non-c-identifier-byte",
@@ -2069,7 +2069,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_conditional_result_n6",
+      "baseName": "hxc_l_tmp_conditional_result_n6",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.conditional-result#6"
     },
     {
@@ -2081,7 +2081,7 @@
         "int"
       ],
       "requestedName": null,
-      "cName": "hxc_int",
+      "cName": "hxc_l_int",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod3:int|0:|0:|1:2",
       "escapeReasons": [
         "c-keyword",
@@ -2094,7 +2094,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_int",
+      "baseName": "hxc_l_int",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.int#2"
     },
     {
@@ -2106,7 +2106,7 @@
         "int1"
       ],
       "requestedName": null,
-      "cName": "hxc_int1",
+      "cName": "hxc_l_int1",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod4:int1|0:|0:|1:3",
       "escapeReasons": [],
       "namespace": {
@@ -2116,7 +2116,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_int1",
+      "baseName": "hxc_l_int1",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.int1#3"
     },
     {
@@ -2128,7 +2128,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2138,7 +2138,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.left#0"
     },
     {
@@ -2151,7 +2151,7 @@
         "load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_load_result_n0",
+      "cName": "hxc_l_tmp_load_result_n0",
       "semanticKey": "9:temporary|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod11:load-result|0:|0:|1:0",
       "escapeReasons": [
         "non-c-identifier-byte",
@@ -2164,7 +2164,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_load_result_n0",
+      "baseName": "hxc_l_tmp_load_result_n0",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.load-result#0"
     },
     {
@@ -2177,7 +2177,7 @@
         "load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_load_result_n4",
+      "cName": "hxc_l_tmp_load_result_n4",
       "semanticKey": "9:temporary|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod11:load-result|0:|0:|1:4",
       "escapeReasons": [
         "non-c-identifier-byte",
@@ -2190,7 +2190,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_load_result_n4",
+      "baseName": "hxc_l_tmp_load_result_n4",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.load-result#4"
     },
     {
@@ -2202,7 +2202,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umod|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umod5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2212,7 +2212,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.umod.right#1"
     },
     {
@@ -2250,7 +2250,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umul|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umul4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2260,7 +2260,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.umul.left#0"
     },
     {
@@ -2272,7 +2272,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:umul|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:umul5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2282,7 +2282,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.umul.right#1"
     },
     {
@@ -2320,7 +2320,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ushl|2:3:u323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ushl4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2330,7 +2330,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ushl.left#0"
     },
     {
@@ -2342,7 +2342,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ushl|2:3:u323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ushl5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2352,7 +2352,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ushl.right#1"
     },
     {
@@ -2390,7 +2390,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ushr|2:3:u323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ushr4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2400,7 +2400,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.ushr.left#0"
     },
     {
@@ -2412,7 +2412,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:ushr|2:3:u323:i32|0:|0:|3:28:PrimitiveDifferentialFixture4:ushr5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2422,7 +2422,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.ushr.right#1"
     },
     {
@@ -2460,7 +2460,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:usub|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:usub4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2470,7 +2470,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "PrimitiveDifferentialFixture.usub.left#0"
     },
     {
@@ -2482,7 +2482,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|111:ordinary:99:6:method|28:ordinary:16:translation-unit|2:28:PrimitiveDifferentialFixture4:usub|2:3:u323:u32|0:|0:|3:28:PrimitiveDifferentialFixture4:usub5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2492,7 +2492,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "PrimitiveDifferentialFixture.usub.right#1"
     },
     {
@@ -2690,7 +2690,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.f64.divide.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.f64.divide.zero-safe4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2700,7 +2700,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.f64.divide.zero-safe.left#0"
     },
     {
@@ -2712,7 +2712,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.f64.divide.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.f64.divide.zero-safe5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2722,7 +2722,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.f64.divide.zero-safe.right#1"
     },
     {
@@ -2734,7 +2734,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.f64.modulo|0:|4:8:compiler16:primitive-helper14:hxc.f64.modulo4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2744,7 +2744,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.f64.modulo.left#0"
     },
     {
@@ -2756,7 +2756,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.f64.modulo|0:|4:8:compiler16:primitive-helper14:hxc.f64.modulo5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2766,7 +2766,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.f64.modulo.right#1"
     },
     {
@@ -2778,7 +2778,7 @@
         "value"
       ],
       "requestedName": null,
-      "cName": "hxc_value",
+      "cName": "hxc_l_value",
       "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.f64.to.i32.saturating|0:|4:8:compiler16:primitive-helper25:hxc.f64.to.i32.saturating5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2788,7 +2788,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_value",
+      "baseName": "hxc_l_value",
       "sourceSymbol": "compiler.primitive-helper.hxc.f64.to.i32.saturating.value#0"
     },
     {
@@ -2800,7 +2800,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2810,7 +2810,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.left#0"
     },
     {
@@ -2822,7 +2822,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2832,7 +2832,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.right#1"
     },
     {
@@ -2844,7 +2844,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-and|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-and4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2854,7 +2854,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-and.left#0"
     },
     {
@@ -2866,7 +2866,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-and|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-and5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2876,7 +2876,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-and.right#1"
     },
     {
@@ -2888,7 +2888,7 @@
         "value"
       ],
       "requestedName": null,
-      "cName": "hxc_value",
+      "cName": "hxc_l_value",
       "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-not|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-not5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2898,7 +2898,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_value",
+      "baseName": "hxc_l_value",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-not.value#0"
     },
     {
@@ -2910,7 +2910,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.i32.bit-or|0:|4:8:compiler16:primitive-helper14:hxc.i32.bit-or4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2920,7 +2920,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-or.left#0"
     },
     {
@@ -2932,7 +2932,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.i32.bit-or|0:|4:8:compiler16:primitive-helper14:hxc.i32.bit-or5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2942,7 +2942,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-or.right#1"
     },
     {
@@ -2954,7 +2954,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-xor|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-xor4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -2964,7 +2964,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-xor.left#0"
     },
     {
@@ -2976,7 +2976,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-xor|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-xor5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -2986,7 +2986,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-xor.right#1"
     },
     {
@@ -2998,7 +2998,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.i32.modulo.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.i32.modulo.zero-safe4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -3008,7 +3008,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.modulo.zero-safe.left#0"
     },
     {
@@ -3020,7 +3020,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.i32.modulo.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.i32.modulo.zero-safe5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -3030,7 +3030,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.modulo.zero-safe.right#1"
     },
     {
@@ -3042,7 +3042,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -3052,7 +3052,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.multiply.wrapping.left#0"
     },
     {
@@ -3064,7 +3064,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -3074,7 +3074,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.multiply.wrapping.right#1"
     },
     {
@@ -3086,7 +3086,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.shift-left.masked|0:|4:8:compiler16:primitive-helper25:hxc.i32.shift-left.masked4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -3096,7 +3096,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-left.masked.left#0"
     },
     {
@@ -3108,7 +3108,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.shift-left.masked|0:|4:8:compiler16:primitive-helper25:hxc.i32.shift-left.masked5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -3118,7 +3118,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-left.masked.right#1"
     },
     {
@@ -3130,7 +3130,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|132:ordinary:119:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:26:hxc.i32.shift-right.masked|0:|4:8:compiler16:primitive-helper26:hxc.i32.shift-right.masked4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -3140,7 +3140,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-right.masked.left#0"
     },
     {
@@ -3152,7 +3152,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|132:ordinary:119:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:26:hxc.i32.shift-right.masked|0:|4:8:compiler16:primitive-helper26:hxc.i32.shift-right.masked5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -3162,7 +3162,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-right.masked.right#1"
     },
     {
@@ -3174,7 +3174,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.subtract.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.subtract.wrapping4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -3184,7 +3184,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.subtract.wrapping.left#0"
     },
     {
@@ -3196,7 +3196,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.subtract.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.subtract.wrapping5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -3206,7 +3206,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.subtract.wrapping.right#1"
     },
     {
@@ -3218,7 +3218,7 @@
         "left"
       ],
       "requestedName": null,
-      "cName": "hxc_left",
+      "cName": "hxc_l_left",
       "semanticKey": "5:local|141:ordinary:128:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:35:hxc.i32.unsigned-shift-right.masked|0:|4:8:compiler16:primitive-helper35:hxc.i32.unsigned-shift-right.masked4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -3228,7 +3228,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_left",
+      "baseName": "hxc_l_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.unsigned-shift-right.masked.left#0"
     },
     {
@@ -3240,7 +3240,7 @@
         "right"
       ],
       "requestedName": null,
-      "cName": "hxc_right",
+      "cName": "hxc_l_right",
       "semanticKey": "5:local|141:ordinary:128:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:35:hxc.i32.unsigned-shift-right.masked|0:|4:8:compiler16:primitive-helper35:hxc.i32.unsigned-shift-right.masked5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -3250,7 +3250,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_right",
+      "baseName": "hxc_l_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.unsigned-shift-right.masked.right#1"
     },
     {
@@ -3262,7 +3262,7 @@
         "value"
       ],
       "requestedName": null,
-      "cName": "hxc_value",
+      "cName": "hxc_l_value",
       "semanticKey": "5:local|125:ordinary:112:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:|4:8:compiler16:primitive-helper19:hxc.u32.to.i32.bits5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -3272,7 +3272,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_value",
+      "baseName": "hxc_l_value",
       "sourceSymbol": "compiler.primitive-helper.hxc.u32.to.i32.bits.value#0"
     },
     {
@@ -3716,5 +3716,5 @@
     }
   ],
   "collisions": [],
-  "algorithm": "hxc-c-symbol-v2"
+  "algorithm": "hxc-c-symbol-v3"
 }

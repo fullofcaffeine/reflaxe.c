@@ -490,12 +490,18 @@ def validate_std_string_identity_ownership(hxcir: str) -> None:
             'runtime(feature="string-scalar",operation="substring")'
         )
         != 1
-        or borrowed_view_return.count("string-substring-retain") != 1
+        or borrowed_view_return.count("declare-managed-carrier") != 1
+        or borrowed_view_return.count(
+            'ownership=retain-borrowed(runtime("string"))'
+        )
+        != 1
+        or borrowed_view_return.count("move-managed-carrier") != 1
+        or "retain-string-return" in borrowed_view_return
         or "std-string" in borrowed_view_return
     ):
         raise StringRuntimeFailure(
-            "Std.string over a borrowed String view changed its existing "
-            "substring ownership plan"
+            "Std.string over a borrowed String view lost its explicit "
+            "retain-and-transfer ownership plan"
         )
 
     consumers = hxcir_function(hxcir, "Main.stringIdentityContractHolds")
@@ -517,6 +523,47 @@ def validate_std_string_identity_ownership(hxcir: str) -> None:
             "a directly consumed fresh Std.string(String) result did not retain "
             "one balanced receiver lifetime"
         )
+
+
+def validate_conditional_view_ownership(hxcir: str) -> None:
+    """Prove a retained String view transfers through an outer conditional."""
+    for display_name in (
+        "Main.selectBorrowedOrView",
+        "Main.selectViewOrBorrowed",
+    ):
+        function = hxcir_function(hxcir, display_name)
+        expected_counts = {
+            "declare-managed-carrier": 2,
+            "ownership=retain-borrowed(runtime(\"string\"))": 2,
+            "ownership=move-fresh": 1,
+            "move-managed-carrier": 2,
+        }
+        for operation, expected in expected_counts.items():
+            actual = function.count(operation)
+            if actual != expected:
+                raise StringRuntimeFailure(
+                    f"{display_name} HxcIR has {actual} {operation!r} "
+                    f"operation(s); expected {expected}"
+                )
+
+
+def validate_conditional_compound_ownership(hxcir: str) -> None:
+    """Prove String compound assignment stages its old value across a join."""
+    function = hxcir_function(hxcir, "Main.appendConditionalScalar")
+    for operation, expected in {
+        "compound-string-left-retain": 1,
+        "compound-string-left-flow-initialize": 1,
+        "compound-string-left-flow-load": 1,
+        "compound-string-concat": 1,
+        "release-compound-string-target": 1,
+        "store-compound-string-result": 1,
+    }.items():
+        actual = function.count(operation)
+        if actual != expected:
+            raise StringRuntimeFailure(
+                "conditional String compound assignment has "
+                f"{actual} {operation!r} operation(s); expected {expected}"
+            )
 
 
 def validate_generated_project(output: Path, hxcir: str) -> None:
@@ -542,6 +589,8 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure("managed String HxcIR leaked the checkout path")
     validate_switch_join_ownership(hxcir)
     validate_std_string_identity_ownership(hxcir)
+    validate_conditional_view_ownership(hxcir)
+    validate_conditional_compound_ownership(hxcir)
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (
@@ -626,6 +675,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "static-value",
         "substring",
         "sys-println-literal",
+        "type-carrier",
     ]
     if stdlib.get("modules") != expected_modules or stdlib.get(
         "capabilities"

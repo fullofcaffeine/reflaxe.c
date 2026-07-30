@@ -21,9 +21,33 @@ as a direct primitive, record, enum, class reference, or string. Non-generic
 primitive functions map `Void`, `Bool`, `Int`, `UInt`, and `Float` through
 `CPrimitiveSemantics`; closed generic calls first apply their normalized type
 arguments and then enter the same typed boundary.
-Parameters become immutable HxcIR values and structural C parameters. The
-compiler never reconstructs a signature from text and never uses `Reflect`,
-`Dynamic`, `Any`, an unchecked cast, or raw C as a missing-type escape.
+Parameters enter HxcIR as immutable incoming values and become structural C
+parameters. Ordinary Haxe may still reassign a parameter inside the function.
+For a directly mutated `Bool`, `Int`, or `Float` parameter, haxe.c creates one
+automatic local at function entry, initializes it from the incoming value, and
+uses that local for every later read and write. A read-only neighbor remains a
+direct parameter value and pays no local-storage cost. For example:
+
+```haxe
+function step(value:Int, unchanged:Int):Int {
+  final before = value;
+  value += 2;
+  return before + value + unchanged;
+}
+```
+
+Here `value` gets one initialized local because its value changes, while
+`unchanged` remains the incoming parameter. This distinction matters because
+HxcIR can validate initialization and mutation explicitly, and generated C
+never needs to guess whether a parameter is writable. A parameter shared with
+a proven nonescaping closure reuses the same addressable local, so the outer
+function and callback observe one changing Haxe value. Direct mutation of
+managed or otherwise unproved parameter representations remains a
+source-positioned `HXC1001` boundary rather than receiving an unsafe copy.
+
+The compiler never reconstructs a signature from text and never uses
+`Reflect`, `Dynamic`, `Any`, an unchecked cast, or raw C as a missing-type
+escape.
 
 Direct calls remain the smallest path, but exact non-capturing function values
 are also admitted. Assigning or passing a static Haxe function preserves its
@@ -342,7 +366,8 @@ The focused function and enum suites render twice, reverse discovery order,
 compare portable and metal, check exact HxcIR/header/C-source-set/symbol
 snapshots, and prove explicit
 argument conversion order, exact non-capturing function pointers, nonescaping
-stack closures, shared captured mutation, captured parameters, repeated
+stack closures, shared captured mutation, directly reassigned primitive
+parameters, read-only parameter fast paths, captured parameters, repeated
 callback calls, context-discarding static/enum adapters, and indirect calls.
 It verifies direct and mutual recursion planning, and
 checks readable module-level fields under Eval, generated C, and a strict native

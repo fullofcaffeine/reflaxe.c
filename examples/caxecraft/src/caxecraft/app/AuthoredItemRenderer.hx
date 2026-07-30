@@ -4,11 +4,6 @@ package caxecraft.app;
 import c.ConstSpan;
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.ContentAsset;
-import caxecraft.content.FirstPlayableLevel.itemCount;
-import caxecraft.content.FirstPlayableLevel.itemStorageCode;
-import caxecraft.content.FirstPlayableLevel.itemXMilli;
-import caxecraft.content.FirstPlayableLevel.itemYMilli;
-import caxecraft.content.FirstPlayableLevel.itemZMilli;
 import raylib.Camera3D;
 import raylib.Texture2D;
 import raylib.Vector3;
@@ -16,22 +11,23 @@ import raylib.Vector3;
 /**
 	Render validated map items without naming campaign content in the game loop.
 
-	The generated level supplies positions and pack-local item codes. The content
-	pack resolves each code to its reviewed atlas and cell. This module only picks
-	the corresponding loaded texture and draws a camera-facing sprite; collection
-	and equipment remain fixed-tick gameplay decisions.
+	The selected runtime generation supplies positions and pack-local item codes.
+	The content pack resolves each code to its reviewed atlas and cell. This
+	module only picks the corresponding loaded texture and draws a camera-facing
+	sprite; collection and equipment remain fixed-tick gameplay decisions.
 **/
-function drawWorldItems(camera:Camera3D, active:ConstSpan<Int>, itemTexture:Texture2D, itemTextureReady:Bool, adventureTexture:Texture2D,
-		adventureTextureReady:Bool):Void {
+function drawWorldItems(camera:Camera3D, active:ConstSpan<Int>, items:Array<LoadedWorldItem>, itemTexture:Texture2D, itemTextureReady:Bool,
+		adventureTexture:Texture2D, adventureTextureReady:Bool):Void {
 	final inactive = 0;
 	var index = 0;
-	while (index < itemCount()) {
+	while (index < items.length) {
 		if (active[index] != inactive) {
-			final code = itemStorageCode(index);
+			final loaded = items[index];
+			final code = loaded.storageCode;
 			if (BaseContentPack.isValidItemStorageCode(code)) {
 				final item = BaseContentPack.itemFromValidatedStorageCode(code);
 				final presentation = BaseContentPack.itemIcon(item);
-				final position = Vector3.fromFloat(itemXMilli(index) / 1000.0, itemYMilli(index) / 1000.0 + 0.42, itemZMilli(index) / 1000.0);
+				final position = Vector3.fromFloat(loaded.xMilli / 1000.0, loaded.yMilli / 1000.0 + 0.42, loaded.zMilli / 1000.0);
 				drawPresentation(camera, presentation.asset, presentation.cellIndex, position, itemTexture, itemTextureReady, adventureTexture,
 					adventureTextureReady, 0.72, 0.72);
 			}

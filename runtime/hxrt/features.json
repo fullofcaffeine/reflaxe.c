@@ -551,6 +551,11 @@
             "kind": "hxc-ir-operation"
           },
           {
+            "description": "Reachable Sys.println with a statically typed runtime String value.",
+            "id": "sys-println-string",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "Reachable default trace with compiler-owned literal text and source prefix.",
             "id": "trace-literal",
             "kind": "hxc-ir-operation"
@@ -577,13 +582,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e",
+          "sourceSha256": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/io.h",
           "sourcePath": "runtime/hxrt/include/hxrt/io.h"
         },
         {
-          "sourceSha256": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c",
+          "sourceSha256": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f",
           "kind": "runtime-source",
           "outputPath": "runtime/src/io.c",
           "sourcePath": "runtime/hxrt/src/io.c"
@@ -591,7 +596,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Minimal hosted length-delimited literal output with explicit write and flush failure status.",
+      "summary": "Minimal hosted length-delimited String output with explicit write and flush failure status.",
       "defines": [],
       "environments": [
         "hosted"
@@ -866,6 +871,11 @@
             "description": "A reachable managed String copy must keep its optional backing owner alive.",
             "id": "retain",
             "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable stored managed String type whose generated C declaration needs the owner-capable carrier.",
+            "id": "type-carrier",
+            "kind": "hxc-ir-operation"
           }
         ],
         "runtimeRationale": "Runtime-created UTF-8 bytes can cross ordinary calls and container boundaries, so their allocator identity and final release need one shared owner contract.",
@@ -941,6 +951,11 @@
           {
             "description": "A reachable immutable Haxe String value backed by compiler-owned literal storage.",
             "id": "direct-string-value",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable stored Haxe String type whose generated C declaration needs the allocation-free carrier.",
+            "id": "type-carrier",
             "kind": "hxc-ir-operation"
           }
         ],
@@ -1257,7 +1272,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "59b264d8b2b72ce412c8491daa7d638744af45e27ec3736271adee2c28ee716d",
+      "sourceSetSha256": "e369b9773cb17ece45fb973936cd260d006852f5f5866d62837125f4819bc2b7",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

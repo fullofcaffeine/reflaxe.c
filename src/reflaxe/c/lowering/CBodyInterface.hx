@@ -29,8 +29,9 @@ class CPreparedBodyInterface {
 	public final haxePath:String;
 	public final ownerModule:String;
 	public final source:HxcSourceSpan;
+	public final ancestorPaths:Array<String>;
 
-	public function new(semanticKey:String, digest:String, haxePath:String, ownerModule:String, source:HxcSourceSpan) {
+	public function new(semanticKey:String, digest:String, haxePath:String, ownerModule:String, source:HxcSourceSpan, ancestorPaths:Array<String>) {
 		this.semanticKey = semanticKey;
 		this.digest = digest;
 		this.declarationId = 'type.interface.$digest';
@@ -38,7 +39,12 @@ class CPreparedBodyInterface {
 		this.haxePath = haxePath;
 		this.ownerModule = ownerModule;
 		this.source = source;
+		this.ancestorPaths = ancestorPaths.copy();
 	}
+
+	/** True when Haxe declared this interface as the target or one of its children. */
+	public function isDescendantOf(target:CPreparedBodyInterface):Bool
+		return haxePath == target.haxePath || ancestorPaths.indexOf(target.haxePath) >= 0;
 
 	/** Keep interface identity semantic; the later C layer chooses the fat-value struct. */
 	public function declaration():HxcIRTypeDeclaration
@@ -106,9 +112,36 @@ class CBodyInterfaceRegistry {
 		final sourcePath = sourcePathsByModule.exists(definition.module) ? sourcePathsByModule.get(definition.module) : ownerSourcePath;
 		if (sourcePath == null)
 			return rejected(fail, position, '$node:missing-source-for-interface:$path');
-		final prepared = new CPreparedBodyInterface(semanticKey, digest, path, definition.module, HaxeSourceSpan.fromPosition(definition.pos, sourcePath));
+		final ancestorPaths = collectAncestorPaths(reference);
+		final prepared = new CPreparedBodyInterface(semanticKey, digest, path, definition.module, HaxeSourceSpan.fromPosition(definition.pos, sourcePath),
+			ancestorPaths);
 		byPath.set(path, prepared);
 		return prepared;
+	}
+
+	/**
+		Collect the declared parent-interface closure in stable order.
+
+		Haxe's typer already rejects inheritance cycles and invalid parents. The
+		target retains this nominal relationship so later interface conversions can
+		distinguish an infallible upcast from a checked downcast without inspecting
+		C table shapes.
+	**/
+	static function collectAncestorPaths(reference:Ref<ClassType>):Array<String> {
+		final result:Map<String, Bool> = [];
+		function visit(current:Ref<ClassType>):Void {
+			for (implemented in current.get().interfaces) {
+				final path = classPath(implemented.t.get());
+				if (result.exists(path))
+					continue;
+				result.set(path, true);
+				visit(implemented.t);
+			}
+		}
+		visit(reference);
+		final paths = [for (path in result.keys()) path];
+		paths.sort(compareUtf8);
+		return paths;
 	}
 
 	static function countValues<T>(values:Map<String, T>):Int {

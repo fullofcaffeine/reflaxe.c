@@ -21,18 +21,18 @@ _Static_assert(FLT_MIN_EXP == -125, "hxc c.Float32 requires the binary32 minimum
 
 _Static_assert(FLT_HAS_SUBNORM == 1, "hxc c.Float32 requires binary32 subnormal support");
 
-static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_l_value)
 {
-  if (hxc_value <= UINT32_C(2147483647))
+  if (hxc_l_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_value;
+    return (int32_t)hxc_l_value;
   }
-  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_l_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_i32_bit_or(int32_t hxc_left, int32_t hxc_right)
+static inline int32_t hxc_i32_bit_or(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left | (uint64_t)(uint32_t)hxc_right));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left | (uint64_t)(uint32_t)hxc_l_right));
 }
 
 void hxc_Main_main(void);

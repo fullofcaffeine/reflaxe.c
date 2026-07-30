@@ -626,10 +626,10 @@ final class GameSession {
 	/**
 		Write one validated compact terrain run while assembling an unpublished level.
 
-		The generated content adapter describes terrain as ascending runs. Keeping the
-		short-lived storage view here lets content remain ordinary Haxe without gaining
-		direct access to the session's C array. Failure returns `-1` and performs no
-		write; success returns the first index after the run.
+		The resolved content plan describes terrain as ascending runs. Keeping the
+		short-lived storage view here lets the loader remain ordinary Haxe without
+		gaining direct access to the session's C array. Failure returns `-1` and
+		performs no write; success returns the first index after the run.
 	**/
 	public function writeTerrainRunDuringLoad(startIndex:Int, storageCode:Int, count:Int):Int {
 		// Air and the complete registered terrain range are valid level data. Use

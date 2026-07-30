@@ -6,6 +6,14 @@ import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
 
+/** Select one focused mutation of the straight-line managed-owner protocol. */
+private enum ManagedCarrierLinearMutation {
+	LinearValid;
+	LinearDuplicateAcquire;
+	LinearDuplicateMove;
+	LinearOwnedExit;
+}
+
 /** Builds deterministic semantic IR fixtures without invoking C emission. */
 class HxcIRGolden {
 	static inline final REPORT_PREFIX = "HXC_IR_REPORT=";
@@ -33,12 +41,22 @@ class HxcIRGolden {
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
 		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
 		validator.requireValid(borrowedSpanReturnProgram(false), PROFILE);
+		validator.requireValid(borrowedSpanReturnProgram(false, true), PROFILE);
+		final unrootedManagedSpanDiagnostics = invalidDiagnostics(unrootedManagedBorrowedSpanReturnProgram());
+		var foundUnrootedSpanContract = false;
+		for (diagnostic in unrootedManagedSpanDiagnostics)
+			if (diagnostic.indexOf("requires caller-borrowed or directly rooted class parameter") != -1)
+				foundUnrootedSpanContract = true;
+		if (!foundUnrootedSpanContract)
+			throw "collector-managed receiver span without its exact root did not fail closed";
 		validator.requireValid(mutableCStringBufferProgram(1, false, false), PROFILE);
 		validator.requireValid(managedRootProgram(false), PROFILE);
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
+		validator.requireValid(managedStringStraightLineCarrierProgram(LinearValid), PROFILE);
 		validator.requireValid(arrayCarrierValidationProgram(false, false), PROFILE);
 		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
+		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
 		verifyReceiverReassignmentCoalescing(validator);
 		final coverageDump = dumper.dump(coverage);
 
@@ -64,6 +82,13 @@ class HxcIRGolden {
 				mismatchedInterfaceTable: invalidDiagnostics(mismatchedInterfaceTableProgram()),
 				mismatchedInterfaceObject: invalidDiagnostics(mismatchedInterfaceObjectProgram()),
 				mismatchedInterfaceReceiver: invalidDiagnostics(mismatchedInterfaceReceiverProgram()),
+				incompleteInterfaceUpcast: invalidDiagnostics(interfaceUpcastProgram([])),
+				mismatchedInterfaceUpcastTable: invalidDiagnostics(interfaceUpcastProgram([
+					{
+						sourceTableId: "itable.coverage.Object",
+						targetTableId: "vtable.coverage.Object"
+					}
+				])),
 				unmanagedRetainedInterface: invalidDiagnostics(unmanagedRetainedInterfaceProgram()),
 				mismatchedClassInheritanceStorage: invalidDiagnostics(managedClassInheritanceProgram(true)),
 				mismatchedVirtualTableBind: invalidDiagnostics(mismatchedVirtualTableBindProgram()),
@@ -131,6 +156,9 @@ class HxcIRGolden {
 				managedCarrierBorrowMovedAsFresh: invalidDiagnostics(managedCarrierBorrowMovedAsFreshProgram()),
 				managedCarrierMissingAcquire: invalidDiagnostics(managedCarrierMissingAcquireProgram()),
 				managedSwitchCarrierMissingAcquire: invalidDiagnostics(managedSwitchCarrierMissingAcquireProgram()),
+				managedLinearCarrierDuplicateAcquire: invalidDiagnostics(managedStringStraightLineCarrierProgram(LinearDuplicateAcquire)),
+				managedLinearCarrierDuplicateMove: invalidDiagnostics(managedStringStraightLineCarrierProgram(LinearDuplicateMove)),
+				managedLinearCarrierOwnedExit: invalidDiagnostics(managedStringStraightLineCarrierProgram(LinearOwnedExit)),
 				managedCarrierLifecycleMismatch: invalidDiagnostics(managedCarrierLifecycleMismatchProgram()),
 				managedStringCarrierLifecycleMismatch: invalidDiagnostics(managedStringCarrierLifecycleMismatchProgram()),
 				arrayCarrierLifecycleMismatch: invalidDiagnostics(arrayCarrierValidationProgram(true, false)),
@@ -599,7 +627,7 @@ class HxcIRGolden {
 	}
 
 	/**
-		Exercise the schema-21 exact-root contract without involving C emission.
+		Exercise the schema-23 exact-root contract without involving C emission.
 
 		The negative variant deliberately roots an Int. A collector cannot learn
 		anything from that address-shaped mistake, so validation must reject it
@@ -890,6 +918,8 @@ class HxcIRGolden {
 								}
 							]),
 							COVERAGE_SOURCE, 28),
+						instruction("c10.record-zero", result("value.zero-record", IRTInstance("instance.record")), IRIOZeroAggregate("instance.record"),
+							COVERAGE_SOURCE, 28),
 						instruction("c10.record-initialize", null,
 							IRIOInitialize(IRPLocal("local.record"), "value.record", IRISUninitialized, IRISInitialized), COVERAGE_SOURCE, 28),
 						instruction("c10.field-address", result("value.field-address", IRTPointer(IRTInt(32, true), false)),
@@ -1069,6 +1099,73 @@ class HxcIRGolden {
 					globals: [],
 					functions: [fn],
 					source: span(file, 53, 58)
+				}
+			]
+		};
+	}
+
+	/**
+		Build one straight-line String ownership handoff and its safety mutations.
+
+		The valid shape retains a borrowed String into a carrier, moves that one
+		owner into a normal local, and releases it. Mutations prove a second acquire,
+		a second move, and leaving while still owned cannot pass validation merely
+		because no branch is present.
+	**/
+	static function managedStringStraightLineCarrierProgram(mutation:ManagedCarrierLinearMutation):HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/ManagedCarrierLinear.hx";
+		final carrierPlace = IRPLocal("local.carrier");
+		final ownerPlace = IRPLocal("local.owner");
+		final instructions:Array<HxcIRInstruction> = [
+			instruction("linear.declare", null, IRIODeclareManagedCarrier(carrierPlace, IRIRuntime("string")), file, 2),
+			instruction("linear.acquire", null, IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(IRIRuntime("string"))), file, 3)
+		];
+		if (mutation == LinearDuplicateAcquire)
+			instructions.push(instruction("linear.acquire-again", null,
+				IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(IRIRuntime("string"))), file, 4));
+		if (mutation != LinearOwnedExit) {
+			instructions.push(instruction("linear.move", result("value.owner", IRTManagedString), IRIOMoveManagedCarrier(carrierPlace), file, 5));
+			if (mutation == LinearDuplicateMove)
+				instructions.push(instruction("linear.move-again", result("value.duplicate", IRTManagedString), IRIOMoveManagedCarrier(carrierPlace), file, 6));
+			instructions.push(instruction("linear.owner-initialize", null, IRIOInitialize(ownerPlace, "value.owner", IRISUninitialized, IRISInitialized),
+				file, 7));
+			instructions.push(instruction("linear.owner-release", null, IRIORelease(ownerPlace, IRIRuntime("string")), file, 8));
+		}
+		final moduleId = switch mutation {
+			case LinearValid: "coverage.ManagedLinearCarrier";
+			case LinearDuplicateAcquire: "invalid.ManagedLinearCarrierDuplicateAcquire";
+			case LinearDuplicateMove: "invalid.ManagedLinearCarrierDuplicateMove";
+			case LinearOwnedExit: "invalid.ManagedLinearCarrierOwnedExit";
+		};
+		final functionPlan:HxcIRFunction = {
+			id: "fn.managed-linear-carrier",
+			displayName: moduleId + ".main",
+			parameters: [parameter("value.borrowed", IRTManagedString, file, 1)],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [
+				local("local.carrier", IRTManagedString, IRLSAutomatic, IRISUninitialized, file, 2),
+				local("local.owner", IRTManagedString, IRLSAutomatic, IRISUninitialized, file, 2)
+			],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [block("entry", instructions, IRTReturn(null, []), file, 9)],
+			cleanupRegions: [],
+			source: span(file, 1, 9)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: moduleId,
+					types: [],
+					typeInstances: [],
+					globals: [],
+					functions: [functionPlan],
+					source: span(file, 1, 9)
 				}
 			]
 		};
@@ -1369,6 +1466,70 @@ class HxcIRGolden {
 			return program;
 		}
 		throw "coverage interface call is missing";
+	}
+
+	/**
+		Build one valid child-interface upcast or replace its table mapping.
+
+		The ordinary Haxe type checker proves that a source interface extends its
+		parent. HxcIR independently owns the lower-level representation proof:
+		every concrete child table must map to the parent table for that same
+		object class. Passing `null` keeps the complete valid mapping; a supplied
+		array makes focused malformed-program diagnostics deterministic.
+	**/
+	static function interfaceUpcastProgram(replacement:Null<Array<HxcIRInterfaceUpcastTable>>):HxcIRProgram {
+		final file = "test/hxc_ir/fixtures/InterfaceUpcast.hx";
+		final program = coverageProgram();
+		final module = program.modules[0];
+		module.types.push({
+			id: "type.parent-interface",
+			displayName: "coverage.ParentInterface",
+			kind: IRTKReference,
+			source: span(file, 1)
+		});
+		module.typeInstances.push({
+			id: "instance.parent-interface",
+			declarationId: "type.parent-interface",
+			arguments: [],
+			representation: IRRDirect,
+			source: span(file, 1)
+		});
+		program.dispatch.layouts.insert(1, {
+			id: "itable.layout.coverage.ParentInterface",
+			rootInstanceId: "instance.parent-interface",
+			slotIds: ["slot.parent-measure"],
+			source: span(file, 2)
+		});
+		program.dispatch.slots.insert(1, {
+			id: "slot.parent-measure",
+			ownerInstanceId: "instance.parent-interface",
+			parameterTypes: [IRTInt(32, true)],
+			returnType: IRTInt(32, true),
+			source: span(file, 2)
+		});
+		program.dispatch.tables.insert(1, {
+			id: "itable.coverage.Object.parent",
+			layoutId: "itable.layout.coverage.ParentInterface",
+			classInstanceId: "instance.object",
+			entries: [{slotId: "slot.parent-measure", implementationFunctionId: "fn.coverage.render"}],
+			source: span(file, 3)
+		});
+		final tables:Array<HxcIRInterfaceUpcastTable> = replacement == null ? [
+			{
+				sourceTableId: "itable.coverage.Object",
+				targetTableId: "itable.coverage.Object.parent"
+			}
+		] : replacement;
+		final instructions = coverageEntryInstructions(program);
+		for (index in 0...instructions.length) {
+			if (instructions[index].id != "c02.interface-bind")
+				continue;
+			instructions.insert(index + 1,
+				instruction("c02.interface-upcast", result("value.parent-interface", IRTInstance("instance.parent-interface")),
+					IRIOUpcastInterface("value.interface-receiver", "instance.interface", "instance.parent-interface", tables), file, 4));
+			return program;
+		}
+		throw "coverage interface construction is missing";
 	}
 
 	/**
@@ -1965,9 +2126,9 @@ class HxcIRGolden {
 		points the borrow at automatic local storage, so the validator—not the C
 		emitter—must identify the false ownership claim.
 	**/
-	static function borrowedSpanReturnProgram(invalidLocalOrigin:Bool):HxcIRProgram {
-		final file = invalidLocalOrigin ? "test/negative/BorrowedSpanLocalReturn.hx" : "test/positive/BorrowedSpanReceiverFieldReturn.hx";
-		final moduleId = invalidLocalOrigin ? "invalid.BorrowedSpanLocalReturn" : "valid.BorrowedSpanReceiverFieldReturn";
+	static function borrowedSpanReturnProgram(invalidLocalOrigin:Bool, managedReceiver:Bool = false):HxcIRProgram {
+		final file = invalidLocalOrigin ? "test/negative/BorrowedSpanLocalReturn.hx" : managedReceiver ? "test/positive/ManagedBorrowedSpanReceiverFieldReturn.hx" : "test/positive/BorrowedSpanReceiverFieldReturn.hx";
+		final moduleId = invalidLocalOrigin ? "invalid.BorrowedSpanLocalReturn" : managedReceiver ? "valid.ManagedBorrowedSpanReceiverFieldReturn" : "valid.BorrowedSpanReceiverFieldReturn";
 		final program = classProgram(file, [], moduleId);
 		final fixedType = IRTFixedArray(IRTInt(8, false), 4, "Length4");
 		final spanType = IRTSpan(IRTInt(8, false), false);
@@ -1986,21 +2147,50 @@ class HxcIRGolden {
 								source: span(file, 1)
 							}
 						],
-						header: layout.header
+						header: managedReceiver ? IRCHRuntime("gc") : layout.header
 					}),
 					source: rootDeclaration.source
 				};
 			case _: throw "receiver span fixture root must remain a class";
 		};
+		if (managedReceiver) {
+			final leafDeclaration = program.modules[0].types[1];
+			program.modules[0].types[1] = switch leafDeclaration.kind {
+				case IRTKClass(layout): {
+						id: leafDeclaration.id,
+						displayName: leafDeclaration.displayName,
+						kind: IRTKClass({baseInstanceId: layout.baseInstanceId, fields: layout.fields, header: IRCHRuntime("gc")}),
+						source: leafDeclaration.source
+					};
+				case _: throw "receiver span fixture leaf must remain a class";
+			};
+			for (index in 0...program.modules[0].typeInstances.length) {
+				final instance = program.modules[0].typeInstances[index];
+				program.modules[0].typeInstances[index] = {
+					id: instance.id,
+					declarationId: instance.declarationId,
+					arguments: instance.arguments,
+					representation: IRRManaged("gc"),
+					source: instance.source
+				};
+			}
+		}
 		final receiverType = IRTPointer(IRTInstance("instance.class.root"), false);
 		final borrowPlace = invalidLocalOrigin ? IRPLocal("local.values") : IRPField(IRPDereference("value.self"), "values");
 		program.modules[0].functions[0] = {
 			id: '$moduleId.view',
 			displayName: '$moduleId.view',
 			parameters: [parameter("value.self", receiverType, file, 2)],
-			borrowedClassParameterIds: ["value.self"],
+			borrowedClassParameterIds: managedReceiver ? [] : ["value.self"],
 			borrowedClassLocalIds: [],
-			managedRoots: [],
+			managedRoots: managedReceiver ? [
+				{
+					id: "root.value-self",
+					valueId: "value.self",
+					projections: [],
+					source: span(file, 2)
+				}
+			] : [],
 			locals: invalidLocalOrigin ? [local("local.values", fixedType, IRLSAutomatic, IRISInitialized, file, 3)] : [],
 			returnType: spanType,
 			borrowedSpanReturn: IRBSRReceiverField("value.self"),
@@ -2020,6 +2210,16 @@ class HxcIRGolden {
 			cleanupRegions: [],
 			source: span(file, 2, 5)
 		};
+		return program;
+	}
+
+	/** Remove the exact receiver root while retaining the collector-managed shape. */
+	static function unrootedManagedBorrowedSpanReturnProgram():HxcIRProgram {
+		final program = borrowedSpanReturnProgram(false, true);
+		final roots = program.modules[0].functions[0].managedRoots;
+		if (roots == null)
+			throw "managed receiver span fixture lost its root array";
+		roots.resize(0);
 		return program;
 	}
 

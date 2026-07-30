@@ -815,15 +815,17 @@ class CProjectEmitter {
 		}
 		for (reason in runtimePlan.rootReasons) {
 			switch reason.featureId {
-				case "string-literal" if (reason.kind == "direct-string-value"):
+				case "string-literal"
+					if (reason.kind == "direct-string-value"
+						|| (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
 				case "string-scalar" if (reason.kind == "runtime-operation" && switch reason.operationId {
 						case "char-at" | "char-code-at" | "index-of" | "last-index-of" | "length" | "substring": true;
 						case _: false;
 					}):
-				case "string" if (reason.kind == "runtime-operation" && switch reason.operationId {
-						case "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
-						case _: false;
-					}):
+				case "string" if ((reason.kind == "runtime-operation" && switch reason.operationId {
+					case "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
+					case _: false;
+				}) || (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):
 				case "array-join" if (reason.kind == "runtime-operation" && reason.operationId == "join"):
 				case "bytes-string" if (reason.kind == "runtime-operation" && reason.operationId == "get-string-utf8"):

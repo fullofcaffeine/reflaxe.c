@@ -1,8 +1,8 @@
 #include "hxc/program.h"
 
-int32_t hxc_caxecraft_app_TerrainAtlas_column(enum hxc_caxecraft_app_TerrainTile hxc_tile)
+int32_t hxc_caxecraft_app_TerrainAtlas_column(enum hxc_caxecraft_app_TerrainTile hxc_l_tile)
 {
-  switch (hxc_tile) {
+  switch (hxc_l_tile) {
     case hxc_caxecraft_app_TerrainTile_RichSoil:
     case hxc_caxecraft_app_TerrainTile_BarkSide:
       {
@@ -28,13 +28,17 @@ int32_t hxc_caxecraft_app_TerrainAtlas_column(enum hxc_caxecraft_app_TerrainTile
       {
         return 1;
       }
+    default:
+      {
+        abort();
+      }
   }
   return 2;
 }
 
-int32_t hxc_caxecraft_app_TerrainAtlas_row(enum hxc_caxecraft_app_TerrainTile hxc_tile)
+int32_t hxc_caxecraft_app_TerrainAtlas_row(enum hxc_caxecraft_app_TerrainTile hxc_l_tile)
 {
-  switch (hxc_tile) {
+  switch (hxc_l_tile) {
     case hxc_caxecraft_app_TerrainTile_FoundationRock:
       {
         break;
@@ -60,13 +64,17 @@ int32_t hxc_caxecraft_app_TerrainAtlas_row(enum hxc_caxecraft_app_TerrainTile hx
       {
         return 1;
       }
+    default:
+      {
+        abort();
+      }
   }
   return 3;
 }
 
-enum hxc_caxecraft_app_TerrainSheet hxc_caxecraft_app_TerrainAtlas_sheet(enum hxc_caxecraft_domain_BlockKind hxc_kind)
+enum hxc_caxecraft_app_TerrainSheet hxc_caxecraft_app_TerrainAtlas_sheet(enum hxc_caxecraft_domain_BlockKind hxc_l_kind)
 {
-  switch (hxc_kind) {
+  switch (hxc_l_kind) {
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Grass:
     case hxc_caxecraft_domain_BlockKind_Dirt:
@@ -83,13 +91,17 @@ enum hxc_caxecraft_app_TerrainSheet hxc_caxecraft_app_TerrainAtlas_sheet(enum hx
       {
         return hxc_caxecraft_app_TerrainSheet_Adventure;
       }
+    default:
+      {
+        abort();
+      }
   }
   return hxc_caxecraft_app_TerrainSheet_Base;
 }
 
-enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face)
+enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_caxecraft_domain_BlockKind hxc_l_kind, enum hxc_caxecraft_app_VoxelFace hxc_l_face)
 {
-  switch (hxc_kind) {
+  switch (hxc_l_kind) {
     case hxc_caxecraft_domain_BlockKind_Air:
       {
         return hxc_caxecraft_app_TerrainTile_RichSoil;
@@ -116,7 +128,7 @@ enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_
       }
     case hxc_caxecraft_domain_BlockKind_Wood:
       {
-        switch (hxc_face) {
+        switch (hxc_l_face) {
           case hxc_caxecraft_app_VoxelFace_Top:
           case hxc_caxecraft_app_VoxelFace_Bottom:
             {
@@ -129,6 +141,10 @@ enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_
             {
               return hxc_caxecraft_app_TerrainTile_BarkSide;
             }
+          default:
+            {
+              abort();
+            }
         }
         return hxc_caxecraft_app_TerrainTile_LogTop;
       }
@@ -138,7 +154,7 @@ enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_
       }
     case hxc_caxecraft_domain_BlockKind_Snow:
       {
-        switch (hxc_face) {
+        switch (hxc_l_face) {
           case hxc_caxecraft_app_VoxelFace_Top:
             {
               break;
@@ -151,12 +167,16 @@ enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_
             {
               return hxc_caxecraft_app_TerrainTile_SnowSide;
             }
+          default:
+            {
+              abort();
+            }
         }
         return hxc_caxecraft_app_TerrainTile_SnowTop;
       }
     case hxc_caxecraft_domain_BlockKind_Ash:
       {
-        switch (hxc_face) {
+        switch (hxc_l_face) {
           case hxc_caxecraft_app_VoxelFace_Top:
             {
               break;
@@ -169,11 +189,19 @@ enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_
             {
               return hxc_caxecraft_app_TerrainTile_AshSide;
             }
+          default:
+            {
+              abort();
+            }
         }
         return hxc_caxecraft_app_TerrainTile_AshTop;
       }
+    default:
+      {
+        abort();
+      }
   }
-  switch (hxc_face) {
+  switch (hxc_l_face) {
     case hxc_caxecraft_app_VoxelFace_Top:
       {
         break;
@@ -188,6 +216,10 @@ enum hxc_caxecraft_app_TerrainTile hxc_caxecraft_app_TerrainAtlas_tile(enum hxc_
     case hxc_caxecraft_app_VoxelFace_West:
       {
         return hxc_caxecraft_app_TerrainTile_GrassSide;
+      }
+    default:
+      {
+        abort();
       }
   }
   return hxc_caxecraft_app_TerrainTile_MeadowGrassTop;

@@ -90,8 +90,21 @@ class RuntimeRequirementAnalyzer {
 		for (module in program.modules) {
 			for (declaration in module.types) {
 				switch declaration.kind {
-					case IRTKClass({header: IRCHRuntime(featureId)}):
-						observations.push(new RuntimeIntentObservation(featureId, "class-object-header", declaration.source));
+					case IRTKAggregate(fields):
+						for (field in fields)
+							collectDeclarationType(field.type, field.source, observations);
+					case IRTKTaggedUnion(cases):
+						for (tagCase in cases)
+							for (payload in tagCase.payload)
+								collectDeclarationType(payload.type, payload.source, observations);
+					case IRTKClass(layout):
+						switch layout.header {
+							case IRCHRuntime(featureId):
+								observations.push(new RuntimeIntentObservation(featureId, "class-object-header", declaration.source));
+							case _:
+						}
+						for (field in layout.fields)
+							collectDeclarationType(field.type, field.source, observations);
 					case _:
 				}
 			}
@@ -163,6 +176,30 @@ class RuntimeRequirementAnalyzer {
 		return new RuntimeRequirementAnalysis(reasons,
 			new RuntimeReachabilityEvidence(program.modules.length, typeInstanceCount, functionCount, blockCount, instructionCount, cleanupActionCount,
 				observations.length));
+	}
+
+	/**
+	 * Record runtime-backed carriers required by one stored declaration type.
+	 *
+	 * A type can be reachable even when no expression constructs one during the
+	 * selected entry-point path. Generated headers still spell its complete C
+	 * layout, so direct and managed String carriers must enter the runtime plan
+	 * from the validated declaration rather than from a fake source operation.
+	 */
+	static function collectDeclarationType(type:HxcIRTypeRef, source:HxcSourceSpan, observations:Array<RuntimeIntentObservation>):Void {
+		switch type {
+			case IRTString:
+				observations.push(new RuntimeIntentObservation("string-literal", "type-carrier", source));
+			case IRTManagedString:
+				observations.push(new RuntimeIntentObservation("string", "type-carrier", source));
+			case IRTPointer(pointee, _) | IRTNullable(pointee, _) | IRTFixedArray(pointee, _, _) | IRTSpan(pointee, _):
+				collectDeclarationType(pointee, source, observations);
+			case IRTFunction(parameters, result):
+				for (parameter in parameters)
+					collectDeclarationType(parameter, source, observations);
+				collectDeclarationType(result, source, observations);
+			case _:
+		}
 	}
 
 	static function collectInstruction(instruction:HxcIRInstruction, observations:Array<RuntimeIntentObservation>):Void {

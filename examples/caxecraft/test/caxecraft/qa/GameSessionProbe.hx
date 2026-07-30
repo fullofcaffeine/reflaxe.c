@@ -4,15 +4,9 @@ import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanError;
 import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanResult;
 import caxecraft.content.ActorIdentityPlanner.actorEntityId;
 import caxecraft.content.ActorIdentityPlanner.planActorIdentities;
-import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.BaseAquaticProfile;
-import caxecraft.content.FirstPlayableSessionLoader.FirstPlayableSessionLoad;
-import caxecraft.content.FirstPlayableSessionLoader.LoadedActorBinding;
-import caxecraft.content.FirstPlayableSessionLoader.loadCandidate;
 import caxecraft.domain.Aquatics.input as aquaticInput;
-import caxecraft.domain.ActorControllerEvent.*;
-import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.Character.start as startCharacter;
 import caxecraft.domain.CharacterDamagePolicy;
@@ -27,11 +21,12 @@ import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.scenario.ScenarioId;
 
 /**
-	Executable specification for unpublished level assembly and session ownership.
+	Executable specification for session ownership and gameplay operations.
 
-	Eval and generated native C construct the same candidate session through the
-	temporary CAXEMAP adapter. The assertions observe only typed session methods;
-	the test never borrows the world's or item table's backing storage.
+	Eval and generated native C construct the same small typed session fixture.
+	Real CAXEMAP-to-generation assembly has its own focused runtime-loader owner;
+	keeping parsing out of this probe preserves its fast, narrow runtime closure.
+	The assertions never borrow the world's or item table's backing storage.
 **/
 var observed:Int = 0;
 
@@ -51,59 +46,25 @@ function selfCheck():Int {
 		return identityFailure;
 
 	final loadedSession = new GameSession();
-	final loaded = loadBuiltInCandidate(loadedSession, 6);
-	if (!loaded.valid)
+	if (loadedSession.writeTerrainRunDuringLoad(0, 0, World.VOLUME) != World.VOLUME)
 		return 1;
-	if (loaded.waterPresentationCell != 5)
+	final editable = World.coord(16, 4, 16);
+	if (!loadedSession.replaceTerrainDuringLoad(editable, Grass)
+		|| !loadedSession.placeInitialWaterVolume(World.coord(1, 1, 1), 1, 1, 1)
+		|| !loadedSession.activateAuthoredItemDuringLoad(0))
 		return 2;
-	final dialogueActorId = actorByRole(loaded.actors, true);
-	final enemyActorId = actorByRole(loaded.actors, false);
-	if (!dialogueActorId.isValid() || !enemyActorId.isValid())
-		return 45;
-	if (loadedSession.characterCount() != 3
+	final loadedPlayerId = EntityId.fromValidatedStorageCode(1);
+	final loadedProfile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
+	if (!loadedSession.bindLocalPlayer(startCharacter(loadedPlayerId, createBody(16.5, 5.0, 16.5), loadedProfile, 6))
+		|| loadedSession.characterCount() != 1
 		|| !loadedSession.hasLocalPlayer()
 		|| loadedSession.readLocalPlayer().id.storageCode() != 1
-		|| loadedSession.actorControllerSnapshots().length != 2)
+		|| loadedSession.actorControllerSnapshots().length != 0)
 		return 44;
-	if (!loadedSession.actorInteractionAvailable(dialogueActorId) || loadedSession.actorInteractionAvailable(enemyActorId))
-		return 46;
-	final firstEnemyDamage = loadedSession.damageCharacter(enemyActorId, 1);
-	if (!firstEnemyDamage.resolved
-		|| firstEnemyDamage.damageApplied != 1
-		|| firstEnemyDamage.defeated
-		|| firstEnemyDamage.character.vitals.health != 2
-		|| loadedSession.readCharacter(enemyActorId).vitals.health != 2)
-		return 47;
-	final defeatedEnemy = loadedSession.damageCharacter(enemyActorId, 2);
-	if (!defeatedEnemy.resolved
-		|| defeatedEnemy.damageApplied != 2
-		|| !defeatedEnemy.defeated
-		|| defeatedEnemy.character.vitals.health != 0)
-		return 48;
-	final actorTick = loadedSession.stepAuthoredActorControllers(0, CharacterDamagePolicy.Invulnerable);
-	switch actorTick.status {
-		case ControllersAdvanced if (actorTick.processed == 2 && actorTick.emittedEvents == 2):
-		case _:
-			return 49;
-	}
-	final actorEvents = loadedSession.actorControllerEventSnapshots();
-	if (actorEvents.length != 2)
-		return 50;
-	switch actorEvents[0] {
-		case DropRequested(id, drop) if (id == enemyActorId && drop.text() == "caxecraft:mossling-berries"):
-		case _:
-			return 51;
-	}
-	switch actorEvents[1] {
-		case InteractionAvailable(id) if (id == dialogueActorId):
-		case _:
-			return 52;
-	}
 	if (!loadedSession.authoredItemIsActive(0) || loadedSession.authoredItemIsActive(1))
 		return 3;
 	if (loadedSession.pendingWaterWork() <= 0 || loadedSession.worldStateHash() == 0)
 		return 4;
-	final editable = World.coord(16, 4, 16);
 	if (queryWorld(loadedSession.worldView(), editable) != Grass)
 		return 15;
 	final beforeFullInventory = loadedSession.worldStateHash();
@@ -334,39 +295,18 @@ function checkActorIdentityPlanning():Int {
 /** Stable cross-target summary of the assembled candidate's owned state. */
 function trace():Int {
 	final session = new GameSession();
-	final loaded = loadBuiltInCandidate(session, 6);
-	if (!loaded.valid)
+	if (session.writeTerrainRunDuringLoad(0, 0, World.VOLUME) != World.VOLUME
+		|| !session.replaceTerrainDuringLoad(World.coord(2, 2, 2), Grass)
+		|| !session.placeInitialWaterVolume(World.coord(1, 1, 1), 1, 1, 1)
+		|| !session.activateAuthoredItemDuringLoad(0))
 		return -1;
-	var hash = CaxecraftTrace.mix(session.worldStateHash(), loaded.waterPresentationCell);
+	final playerId = EntityId.fromValidatedStorageCode(1);
+	final profile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
+	if (!session.bindLocalPlayer(startCharacter(playerId, createBody(2.5, 3.0, 2.5), profile, 6)))
+		return -1;
+	var hash = CaxecraftTrace.mix(session.worldStateHash(), 5);
 	hash = CaxecraftTrace.mix(hash, session.pendingWaterWork());
 	hash = CaxecraftTrace.mix(hash, session.authoredItemIsActive(0) ? 1 : 0);
 	hash = CaxecraftTrace.mix(hash, session.actorControllerSnapshots().length);
 	return CaxecraftTrace.mix(hash, session.characterCount());
-}
-
-/** Select the temporary generated first-playable bridge at the test edge. */
-private function loadBuiltInCandidate(session:GameSession, health:Int):FirstPlayableSessionLoad
-	return loadCandidate(session, health);
-
-/**
-	Return the one actor matching the requested generic role, or an invalid ID.
-
-	This test validates the current first-playable shape without teaching the
-	engine loader a Nia or Mossling name. Multiple matches are rejected because
-	the current presentation has one slot for each role.
-**/
-private function actorByRole(actors:Array<LoadedActorBinding>, dialogue:Bool):EntityId {
-	var result = EntityId.invalid();
-	for (actor in actors) {
-		final matches = switch actor.role {
-			case DialogueNpc(_): dialogue;
-			case EnemyActor: !dialogue;
-		};
-		if (matches) {
-			if (result.isValid())
-				return EntityId.invalid();
-			result = actor.entityId;
-		}
-	}
-	return result;
 }

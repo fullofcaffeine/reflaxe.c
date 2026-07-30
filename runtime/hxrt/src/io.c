@@ -1,10 +1,10 @@
 /*
  * Implementation of compiler-selectable hosted feature `io`.
  *
- * Generated sys-println-literal/trace-literal calls and the native package
- * harness use hxc_io_println. The function borrows its private hxc_string for
- * one call, allocates nothing, and maps write/flush failures to hxc_status. The
- * planner admits it only for hosted programs; no runtime-owned thread state is
+ * Generated literal/runtime-String/trace calls and the native package harness
+ * use hxc_io_println. The function borrows its private hxc_string for one call,
+ * allocates nothing, and maps write/flush failures to hxc_status. The planner
+ * admits it only for hosted programs; no runtime-owned thread state is
  * introduced beyond the host C stdout stream.
  */
 #include "hxrt/io.h"

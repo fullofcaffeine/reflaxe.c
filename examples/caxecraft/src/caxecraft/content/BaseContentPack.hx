@@ -8,6 +8,13 @@ import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.content.ActorContentResolver;
 import caxecraft.content.ActorContentResolver.ActorContentKind;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
+import caxecraft.content.LevelContentResolver;
+import caxecraft.content.LevelContentResolver.FluidContentResolution;
+import caxecraft.content.LevelContentResolver.ItemContentResolution;
+import caxecraft.content.LevelContentResolver.ItemStorageCode;
+import caxecraft.content.LevelContentResolver.LevelFluidSimulation;
+import caxecraft.content.LevelContentResolver.TerrainContentResolution;
+import caxecraft.content.LevelContentResolver.TerrainStorageCode;
 
 enum abstract BaseBlock(Int) {
 	var Air = 0;
@@ -567,7 +574,7 @@ final class BaseContentPack {
 }
 
 /** Scenario/editor lookup over the same generated definitions. */
-final class BaseContentRegistry implements ScenarioContentRegistry implements ActorContentResolver {
+final class BaseContentRegistry implements ScenarioContentRegistry implements LevelContentResolver {
 	public function new() {}
 
 	public function supportsFeature(id:ContentId):Bool
@@ -624,6 +631,30 @@ final class BaseContentRegistry implements ScenarioContentRegistry implements Ac
 		return -1;
 	}
 
+	public function resolveTerrain(id:ContentId):TerrainContentResolution {
+		if (id.text() == "caxecraft:air")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(0));
+		if (id.text() == "caxecraft:ash")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(9));
+		if (id.text() == "caxecraft:bedrock")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(4));
+		if (id.text() == "caxecraft:dirt")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(2));
+		if (id.text() == "caxecraft:grass")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(1));
+		if (id.text() == "caxecraft:leaves")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(7));
+		if (id.text() == "caxecraft:sand")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(5));
+		if (id.text() == "caxecraft:snow")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(8));
+		if (id.text() == "caxecraft:stone")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(3));
+		if (id.text() == "caxecraft:wood")
+			return TerrainContentResolved(TerrainStorageCode.fromValidated(6));
+		return UnknownTerrainContent;
+	}
+
 	public function hasFluid(id:ContentId):Bool {
 		if (id.text() == "caxecraft:water")
 			return true;
@@ -634,6 +665,12 @@ final class BaseContentRegistry implements ScenarioContentRegistry implements Ac
 		if (id.text() == "caxecraft:water")
 			return 5;
 		return -1;
+	}
+
+	public function resolveFluid(id:ContentId):FluidContentResolution {
+		if (id.text() == "caxecraft:water")
+			return FluidContentResolved(LevelFluidSimulation.BoundedWater, 5);
+		return UnknownFluidContent;
 	}
 
 	public function hasItem(id:ContentId):Bool {
@@ -678,6 +715,28 @@ final class BaseContentRegistry implements ScenarioContentRegistry implements Ac
 		if (id.text() == "caxecraft:tideweave-suit")
 			return 8;
 		return -1;
+	}
+
+	public function resolveItem(id:ContentId):ItemContentResolution {
+		if (id.text() == "caxecraft:berries")
+			return ItemContentResolved(ItemStorageCode.fromValidated(0));
+		if (id.text() == "caxecraft:bread")
+			return ItemContentResolved(ItemStorageCode.fromValidated(1));
+		if (id.text() == "caxecraft:copper-sword")
+			return ItemContentResolved(ItemStorageCode.fromValidated(2));
+		if (id.text() == "caxecraft:dirt-block")
+			return ItemContentResolved(ItemStorageCode.fromValidated(3));
+		if (id.text() == "caxecraft:grass-block")
+			return ItemContentResolved(ItemStorageCode.fromValidated(4));
+		if (id.text() == "caxecraft:haxeforge")
+			return ItemContentResolved(ItemStorageCode.fromValidated(5));
+		if (id.text() == "caxecraft:lantern")
+			return ItemContentResolved(ItemStorageCode.fromValidated(6));
+		if (id.text() == "caxecraft:stone-block")
+			return ItemContentResolved(ItemStorageCode.fromValidated(7));
+		if (id.text() == "caxecraft:tideweave-suit")
+			return ItemContentResolved(ItemStorageCode.fromValidated(8));
+		return UnknownItemContent;
 	}
 
 	public function hasEntity(id:ContentId):Bool {

@@ -239,10 +239,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise BodyLoweringFailure("optional structured #line mode drifted")
     if "#include <stdint.h>" not in c_source or "#include <stdbool.h>" not in c_source:
         raise BodyLoweringFailure("primitive body C omitted its exact standard headers")
-    throw_call = "int32_t hxc_tmp_call_result_n0 = hxc_BodyFixture_throwPayload();"
+    throw_call = "int32_t hxc_l_tmp_call_result_n0 = hxc_BodyFixture_throwPayload();"
     throw_abort = "abort();"
     if (
-        "static int32_t hxc_BodyFixture_chooseOrThrow(int32_t hxc_choice);" not in c_source
+        "static int32_t hxc_BodyFixture_chooseOrThrow(int32_t hxc_l_choice);" not in c_source
         or "static int32_t hxc_BodyFixture_throwPayload(void);" not in c_source
         or c_source.find(throw_call) == -1
         or c_source.find(throw_abort) < c_source.find(throw_call)
@@ -252,7 +252,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise BodyLoweringFailure("body lowering omitted the finalized symbol table")
     symbol_entries = symbols.get("symbols")
     if not isinstance(symbol_entries, list):
@@ -738,7 +738,7 @@ def check_throw_cleanup(root: Path) -> None:
         )
     source_path = output / "src/program.c"
     source = source_path.read_text(encoding="utf-8")
-    release = source.find("hxc_array_ref_release(hxc_values)")
+    release = source.find("hxc_array_ref_release(hxc_l_values)")
     fail_stop = source.rfind("abort();", 0, source.find("void hxc_Main_main"))
     if release == -1 or fail_stop < release:
         raise BodyLoweringFailure(

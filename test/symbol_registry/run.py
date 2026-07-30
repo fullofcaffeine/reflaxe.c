@@ -110,7 +110,7 @@ def validate(report: dict[str, Any]) -> None:
     table = report.get("symbolTable")
     if not isinstance(table, dict):
         raise SymbolRegistryFailure("report omitted symbolTable")
-    if table.get("schemaVersion") != 2 or table.get("algorithm") != "hxc-c-symbol-v2":
+    if table.get("schemaVersion") != 2 or table.get("algorithm") != "hxc-c-symbol-v3":
         raise SymbolRegistryFailure("symbol table schema/algorithm drifted")
     symbols = table.get("symbols")
     collisions = table.get("collisions")
@@ -191,9 +191,10 @@ def validate(report: dict[str, Any]) -> None:
         "compiler.closed-record.4aec2e39ec8810b7.x": ("hxc_x", ["x"]),
         "compiler.closed-record.4aec2e39ec8810b7.NULL": ("hxc_NULL", ["NULL"]),
         "compiler.closed-record.4aec2e39ec8810b7.NAN": ("hxc_NAN", ["NAN"]),
-        "demo.Worker.run.value": ("hxc_value", ["value"]),
-        "demo.Worker.run.while": ("hxc_while", ["while"]),
-        "demo.Worker.run.bool": ("hxc_bool", ["bool"]),
+        "demo.Worker.run.value": ("hxc_l_value", ["value"]),
+        "demo.Worker.run.while": ("hxc_l_while", ["while"]),
+        "demo.Worker.run.bool": ("hxc_l_bool", ["bool"]),
+        "demo.Worker.run.status": ("hxc_l_status", ["status"]),
     }
     for source, (expected_name, expected_readable) in readable_expectations.items():
         symbol = by_source.get(source)
@@ -285,11 +286,13 @@ def check_macro_safe_native(by_source: dict[str, dict[str, Any]]) -> None:
     """Compile source-shaped locals/members beside common object macros."""
 
     local_bool = by_source["demo.Worker.run.bool"]["cName"]
+    local_status = by_source["demo.Worker.run.status"]["cName"]
     member_null = by_source["compiler.closed-record.4aec2e39ec8810b7.NULL"]["cName"]
     member_nan = by_source["compiler.closed-record.4aec2e39ec8810b7.NAN"]["cName"]
     source = f"""#include <stdbool.h>
 #include <stddef.h>
 #include <math.h>
+#include "hxrt/status.h"
 
 struct hxc_macro_probe {{
   int {member_null};
@@ -299,8 +302,11 @@ struct hxc_macro_probe {{
 static int hxc_macro_probe_run(void)
 {{
   int {local_bool} = 3;
+  hxc_status {local_status} = HXC_STATUS_OK;
   struct hxc_macro_probe value = {{ .{member_null} = 4, .{member_nan} = 5 }};
-  return {local_bool} + value.{member_null} + value.{member_nan};
+  return {local_status} == HXC_STATUS_OK
+    ? {local_bool} + value.{member_null} + value.{member_nan}
+    : 0;
 }}
 
 int main(void)
@@ -320,8 +326,11 @@ int main(void)
                 "-std=c11",
                 "-Wall",
                 "-Wextra",
+                "-Wshadow",
                 "-Werror",
                 "-pedantic",
+                "-I",
+                str(ROOT / "runtime" / "hxrt" / "include"),
                 str(source_path),
                 "-o",
                 str(executable),

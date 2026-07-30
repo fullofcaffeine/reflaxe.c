@@ -1194,10 +1194,25 @@ def validate() -> list[str]:
     ):
         errors.append("package.json must retain the Caxecraft actor-composition gate")
     if (
-        scripts.get("test:caxecraft-level-adapter")
-        != "python3 examples/caxecraft/level_adapter.py --check"
+        scripts.get("test:caxecraft-package-store")
+        != "python3 examples/caxecraft/run_haxe_c_test.py package-store"
     ):
-        errors.append("package.json must retain the authored Caxecraft level-adapter gate")
+        errors.append("package.json must retain the Caxecraft package-store gate")
+    if (
+        scripts.get("test:caxecraft-resolved-level-plan")
+        != "python3 examples/caxecraft/run_haxe_c_test.py resolved-level-plan"
+    ):
+        errors.append("package.json must retain the Caxecraft resolved-level-plan gate")
+    if (
+        scripts.get("test:caxecraft-content-generation")
+        != "python3 examples/caxecraft/run_haxe_c_test.py content-generation"
+    ):
+        errors.append("package.json must retain the Caxecraft content-generation gate")
+    if (
+        scripts.get("test:caxecraft-runtime-level-loader")
+        != "python3 examples/caxecraft/run_haxe_c_test.py runtime-level-loader"
+    ):
+        errors.append("package.json must retain the Caxecraft runtime-level-loader gate")
     if scripts.get("test:caxecraft-water") != "python3 examples/caxecraft/run_haxe_c_test.py water":
         errors.append("package.json must retain the deterministic Caxecraft water gate")
     if scripts.get("test:caxecraft-aquatics") != "python3 examples/caxecraft/run_haxe_c_test.py aquatics":
@@ -1361,10 +1376,28 @@ def validate() -> list[str]:
         errors.append(
             "package.json test:toolchain must execute test:caxecraft-actor-composition"
         )
-    if "npm run test:caxecraft-level-adapter" not in str(
+    if "npm run test:caxecraft-package-store" not in str(
         scripts.get("test:toolchain", "")
     ):
-        errors.append("package.json test:toolchain must execute test:caxecraft-level-adapter")
+        errors.append("package.json test:toolchain must execute test:caxecraft-package-store")
+    if "npm run test:caxecraft-resolved-level-plan" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:caxecraft-resolved-level-plan"
+        )
+    if "npm run test:caxecraft-content-generation" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:caxecraft-content-generation"
+        )
+    if "npm run test:caxecraft-runtime-level-loader" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:caxecraft-runtime-level-loader"
+        )
     if "npm run test:caxecraft-water" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-water")
     if "npm run test:caxecraft-aquatics" not in str(scripts.get("test:toolchain", "")):
@@ -1588,24 +1621,25 @@ def validate() -> list[str]:
     if "scripts/test/snapshots.py" not in pre_commit:
         errors.append("pre-commit must check registered snapshot ownership and drift")
     if (
-        "npm run test:toolchain:parallel" not in pre_commit
-        or "unknown cross-cutting compiler or test-infrastructure changes"
-        not in pre_commit
-        or "scripts/ci/select_pre_commit_route.py" not in pre_commit
+        "scripts/ci/select_pre_commit_route.py" not in pre_commit
+        or "Unknown cross-cutting infrastructure still runs that smoke" not in pre_commit
+        or "local commit must not launch the complete repository matrix" not in pre_commit
+        or "npm run test:toolchain:parallel" in pre_commit
     ):
         errors.append(
-            "pre-commit must preserve a fail-closed bounded exhaustive route "
-            "for unknown cross-cutting changes"
+            "pre-commit must run fail-closed conservative smoke for unknown "
+            "cross-cutting changes without launching the complete matrix"
         )
     if (
-        "Running affected local compiler evidence" not in pre_commit
-        or 'select_pre_commit_route.py" --owners' not in pre_commit
+        "Running conservative local smoke; focused owners remain task evidence"
+        not in pre_commit
+        or 'select_pre_commit_route.py" --smoke-owners' not in pre_commit
         or 'npm run "$owner_script"' not in pre_commit
         or "complete cold coverage remains required in CI" not in pre_commit
     ):
         errors.append(
-            "pre-commit must run reviewed affected owners for known compiler "
-            "changes while retaining complete cold CI evidence"
+            "pre-commit must run bounded conservative smoke while retaining "
+            "focused task evidence and complete cold CI evidence"
         )
     if "npm run test:beads-plan" not in pre_commit:
         errors.append("pre-commit must validate the reproducible Beads graph")

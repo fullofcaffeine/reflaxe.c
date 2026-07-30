@@ -603,10 +603,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or f"(struct {names['flow_tag']}){{" not in source
         or f"(struct {names['switch_tag']}){{" not in source
         or f"(struct {names['actor_tag']}){{" not in source
-        or "struct hxc_OrderA hxc_tmp_conditional_result_n5;" not in source
-        or "struct hxc_ActorPhase hxc_tmp_conditional_result_n2;" not in source
-        or "hxc_tmp_conditional_result_n5 = hxc_first;" not in source
-        or "hxc_tmp_conditional_result_n5 = hxc_second;" not in source
+        or "struct hxc_OrderA hxc_l_tmp_conditional_result_n5 = { 0 };" not in source
+        or "struct hxc_ActorPhase hxc_l_tmp_conditional_result_n2 = { 0 };" not in source
+        or "hxc_l_tmp_conditional_result_n5 = hxc_l_first;" not in source
+        or "hxc_l_tmp_conditional_result_n5 = hxc_l_second;" not in source
         or ".hxc_tag = hxc_ActorPhase_Moving" not in source
         or ".hxc_tag = hxc_ActorPhase_Waiting" not in source
         or "(struct hxc_optional_OrderA){ .hxc_has_value = false }" not in source
@@ -617,7 +617,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise AggregateLoweringFailure("structural CAST construction/layout assertions drifted")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise AggregateLoweringFailure("aggregate report omitted its finalized symbol table")
 
 
@@ -1211,12 +1211,143 @@ def check_production(*, requested_toolchain: str) -> None:
             )
 
 
+def check_class_reference_records(*, requested_toolchain: str) -> None:
+    """Prove direct records of collector-managed class references and exact roots."""
+    fixture = FIXTURES / "class_reference"
+    oracle = subprocess.run(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise AggregateLoweringFailure(
+            "class-reference record Eval oracle failed\n"
+            f"stdout:\n{oracle.stdout}\nstderr:\n{oracle.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="hxc-class-reference-record-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        result = custom_target(
+            fixture,
+            output,
+            main="Main",
+            hxcir_report=True,
+        )
+        hxcir = reported_hxcir(result, "class-reference record compile")
+        for marker in (
+            'name="ManagedReferenceRecord" kind=aggregate',
+            'representation=managed("gc")',
+            'construct-aggregate instance="instance.closed-record.',
+            'path="field(instance.closed-record.',
+            ',first)"',
+            ',second)"',
+        ):
+            if marker not in hxcir:
+                raise AggregateLoweringFailure(
+                    f"class-reference record HxcIR omitted {marker!r}"
+                )
+        if hxcir.count(
+            'type=pointer(nullable,instance("instance.class.'
+        ) < 2:
+            raise AggregateLoweringFailure(
+                "class-reference record did not retain two typed nullable class fields"
+            )
+
+        header = (output / "include/hxc/program.h").read_text(encoding="utf-8")
+        source = (output / "src/program.c").read_text(encoding="utf-8")
+        for marker in (
+            "struct hxc_ManagedReferenceRecord {",
+            "struct hxc_ManagedReferenceValue *hxc_first;",
+            "struct hxc_ManagedReferenceValue *hxc_second;",
+        ):
+            if marker not in header:
+                raise AggregateLoweringFailure(
+                    f"class-reference record header omitted {marker!r}"
+                )
+        for marker in (
+            "hxc_l_tmp_call_result_n2.hxc_first",
+            "hxc_l_tmp_call_result_n2.hxc_second",
+            "(struct hxc_ManagedReferenceRecord){",
+        ):
+            if marker not in source:
+                raise AggregateLoweringFailure(
+                    f"class-reference record generated C omitted {marker!r}"
+                )
+
+        sources = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.c"))
+        )
+        headers = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.h"))
+        )
+        base = CFixtureProject(
+            "managed-class-reference-record",
+            sources,
+            headers,
+            ("include", "runtime/include"),
+            "",
+            (
+                "class-reference-fields",
+                "generated-executable",
+                "managed-roots",
+            ),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"managed-class-reference-record-{optimization[1:].lower()}",
+                projects=(base,),
+                fixture_root=output,
+                build_root=root / "native" / optimization[1:].lower(),
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(base.coverage))
+
+        sanitized = CFixtureProject(
+            "managed-class-reference-record-sanitized",
+            base.sources,
+            base.headers,
+            base.include_directories,
+            base.expected_stdout,
+            (*base.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="managed-class-reference-record-sanitized",
+            projects=(sanitized,),
+            fixture_root=output,
+            build_root=root / "sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report, required_coverage=frozenset(sanitized.coverage)
+        )
+
+
 def check_negative_cases() -> None:
     cases = {
         "mutation": "TField(value:anonymous-field-mutation-requires-identity-preserving-alias-analysis)",
         "identity_equality": "TBinop(OpEq:left-type):closed-record-not-admitted-in-primitive-operation",
         "dynamic": "TFunction(argument:record):the dynamic source semantic type cannot stand in for a primitive",
         "void_field": "TFunction(return-type).field:value:Void-not-an-object-type",
+        "interface_reference": "interface-reference-record-field-not-admitted",
     }
     with tempfile.TemporaryDirectory(prefix="hxc-aggregate-negative-") as temporary:
         root = Path(temporary)
@@ -1594,6 +1725,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_native(first, requested_toolchain=args.toolchain)
         check_production(requested_toolchain=args.toolchain)
         check_managed_optional(requested_toolchain=args.toolchain)
+        check_class_reference_records(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         AggregateLoweringFailure,
@@ -1610,7 +1742,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "bounded payload-enum records in cold/server split/package/unity builds, explicit "
         "address/copy IR, strict C11 and C++17 layout agreement, runtime-free production "
         "artifacts, managed optional Eval/native/sanitizer parity, and fail-closed "
-        "identity/layout edges passed"
+        "identity/layout edges plus managed class-reference record roots passed"
     )
     return 0
 

@@ -511,21 +511,43 @@ code, or pointers. The bounded first runtime level/UI package is owned by
 `haxe_c-xge.20.4.3`, and content-to-actor composition by
 `haxe_c-xge.20.4`.
 
-The current packaged game has not reached that runtime path yet.
-`FirstPlayableLevelGenerator` parses and validates the checked-in map under
-Eval, then emits `FirstPlayableLevel` as temporary typed facts.
-`FirstPlayableSessionLoader` consumes those facts to build the unpublished
-startup session. This content-specific pair is retained only to finish the
-authored-actor migration; it is not the future loader and must not be copied for
-another map. `haxe_c-xge.20.4.3.6` deletes it after the native executable reads
-the same map bytes.
+The ordinary packaged game now reaches that runtime path for its map. It opens
+one confined staged content root, reads the selected CAXEMAP bytes, runs the
+shared Haxe codec and validator, resolves the private plan, builds a complete
+generation, and selects its `GameSession` before Raylib opens.
+The packaged `map.caxemap` bytes are now the only level authority. The former
+`FirstPlayableLevel` generator and session bridge have been removed, and the
+playable snapshot owner compiles this runtime-loading path too.
 
-The planned durable seam is private: `haxe_c-xge.20.4.3.2` resolves a validated
-`Scenario` plus content registry into a construction plan that has no file
-format or public authoring API. `haxe_c-xge.20.4.3.3` then builds a complete
-inactive content generation and publishes it with one owner swap. The editor,
-game, command-line tools, and agents continue to read and write CAXEMAP rather
-than a serialized engine plan.
+The private construction seam now works independently of the startup bridge.
+`ResolvedLevelPlan.resolve` takes a validated `Scenario`, the selected typed
+content registry, and explicit player options. It resolves nominal terrain,
+fluid, item, actor, player, and flow facts before any session mutation. The plan
+copy-owns its nested Arrays, has no parser, writer, filename, version, or public
+package representation, and keeps renderer-facing presentation facts in a
+separate read model. A deterministic semantic trace matches under Eval and
+generated native C; focused failures cover unknown content, wrong kinds,
+capacity overflow, and invalid player options. Authoring, editor, and package
+modules are prevented from importing this engine-facing plan.
+
+Complete inactive generations and their publication owner now work in the
+focused path too. `LoadedContentGeneration.build` creates a fresh `GameSession`
+and installs terrain, fluids, items, the player, actors, stable bindings, plan
+metadata, and presentation facts without receiving the active session.
+`ActiveContent.publish` rejects an older sequence before changing state, then
+performs one non-failing reference swap. Failures injected before every build
+stage leave the previous generation ID and semantic trace unchanged; repeated
+success/failure cycles match on Eval and generated native C and pass
+sanitizers. The natural managed generation works, so no fixed double-buffer
+fallback is needed.
+
+This does **not** yet mean the packaged game loads a map at runtime. Its current
+first-playable startup still consumes the generated bridge above and has not
+been rewired to ask `ActiveContent` for the session each frame.
+`haxe_c-xge.20.4.3.5` connects package bytes to the shared parser, resolver,
+candidate builder, and publication owner. The editor, game, command-line tools,
+and agents continue to read and write CAXEMAP rather than a serialized engine
+plan.
 
 The first actor-composition stage is now executable. `ActorCompositionPlanner`
 reads the already validated CaxeMap objects in authored order, selects only
@@ -716,6 +738,46 @@ This is a migration guide, not a mechanical package rename. Move one ownership
 slice only when behavior and generated C are being verified. Small independent
 types may keep their files, but each feature needs one obvious public entry so
 the application does not import every implementation detail.
+
+### Platform code is still Haxe code
+
+The game and editor call ordinary typed Haxe APIs, including at the hosted
+operating-system boundary. Target-specific does not mean handwritten C:
+`caxecraft.content.hosted.PosixPackageApi` expresses path traversal, no-follow
+policy, file identity, exact bounded reads, retries, and descriptor cleanup in
+Haxe. `PosixSystem` is a narrow set of typed declarations for the real POSIX
+headers, and haxe.c lowers the implementation to strict C.
+
+This design deliberately exercises haxe.c's metal surface. It lets Caxecraft
+expose missing low-level compiler capabilities as small reusable compiler
+tasks instead of hiding them behind an application-owned C shim. The former
+`examples/caxecraft/native/posix` implementation was removed once haxe.c could
+represent its exact operations.
+
+The public `ContentPackageStore` owns the target-neutral result and error model;
+CaxeMap parsing, validation, defaults, actor construction, and gameplay also
+remain Haxe. Consequently:
+
+- game and editor modules never receive a POSIX path traversal API or file
+  descriptor;
+- Windows, WebAssembly, and other targets may supply their own Haxe adapter without
+  changing content or gameplay semantics; and
+- platform code cannot become a convenient place to duplicate parsers, rules, or
+  first-playable facts.
+
+The focused `npm run test:caxecraft-package-store` command currently proves this
+boundary on Eval and generated native C, including confinement, exact reads,
+bounded changed-file retry, injected read/short-read/close failures, strict C,
+and sanitizers. A small handwritten C harness remains because it has two
+independent evidence jobs: the native compiler checks that Haxe's exact integer
+carriers match the host POSIX ABI, and a non-haxe.c consumer checks the exported
+result envelope. It contains no package-store behavior.
+
+Ordinary play calls this store and publishes the resulting complete generation.
+The bounded evidence is narrower than a general mod system: the application
+selects one known map path, and the base content/UI JSON still comes from its
+compiled typed registry. Runtime pack discovery, Windows/WebAssembly adapters,
+and editor hot reload remain separately owned work.
 
 ## Incremental migration
 

@@ -140,8 +140,6 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/app/TerrainChunkLayout.c": "c",
     "playable/src/modules/caxecraft/app/TerrainRenderer.c": "c",
     "playable/src/modules/caxecraft/app/WaterRenderer.c": "c",
-    "playable/src/modules/caxecraft/content/FirstPlayableLevel.c": "c",
-    "playable/src/modules/caxecraft/content/FirstPlayableSessionLoader.c": "c",
     "playable/src/modules/caxecraft/content/BaseContentPack.c": "c",
     "playable/src/modules/caxecraft/app/CaxecraftApp.c": "c",
     "playable/src/modules/caxecraft/app/MotionInterpolation.c": "c",
@@ -184,6 +182,7 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "object",
     "gc",
     "int-map",
+    "io",
     "string-map",
     "string-split",
 )
@@ -192,9 +191,6 @@ RUNTIME_CONTENT_FILES = (
     "packs/caxecraft/base/content.json",
     "scenarios/first-playable/map.caxemap",
 )
-FIRST_PLAYABLE_MAP = CASE / "scenarios/first-playable/map.caxemap"
-FIRST_PLAYABLE_ADAPTER = CASE / "src/caxecraft/content/FirstPlayableLevel.hx"
-LEVEL_SOURCE_HASH_PATTERN = re.compile(r'^inline final SOURCE_SHA256:String = "([0-9a-f]{64})";$', re.MULTILINE)
 
 
 def remove_owned_stale_stage_files(
@@ -416,14 +412,13 @@ def stage_runtime_assets(destination: Path) -> None:
 
 
 def stage_content_catalogs(destination: Path) -> None:
-    """Package validated text sources without claiming runtime loading yet.
+    """Publish the exact authored content tree consumed beside the executable.
 
-    The current C adapters embed reviewed facts at build time. Keeping the exact
-    UI catalog, content manifest, and CaxeMap beside the executable makes the
-    intended package boundary real: reusable definitions live in the content
-    pack, global UI text is separate, and authored prose stays inside the map.
-    Native loading remains an explicit later capability rather than an
-    example-only shortcut.
+    Native play reads the staged CaxeMap after process startup. The base content
+    manifest and UI catalog are staged through the same bounded ownership rule,
+    but remain compiled inputs until their next runtime-loading slice lands.
+    Generated-content snapshots also use this staging helper so the transition
+    cannot produce two package layouts.
     """
 
     stage_root = destination / "content"
@@ -458,31 +453,6 @@ def development_tool(name: str) -> str:
     local_name = f"{name}.cmd" if os.name == "nt" else name
     local = ROOT / "node_modules/.bin" / local_name
     return str(local) if local.is_file() else name
-
-
-def verify_level_adapter_provenance() -> None:
-    """Fail quickly when native play would use stale generated level facts.
-
-    Haxe owns map parsing, validation, expansion, and adapter generation. This
-    launcher checks only the adapter's recorded source hash, so an ordinary play
-    command cannot silently render old terrain after a map edit. The complete
-    semantic check remains `npm run test:caxecraft-level-adapter`.
-    """
-
-    if FIRST_PLAYABLE_MAP.is_symlink() or not FIRST_PLAYABLE_MAP.is_file():
-        raise PlayFailure(f"first-playable map is missing or a symlink: {FIRST_PLAYABLE_MAP}")
-    if FIRST_PLAYABLE_ADAPTER.is_symlink() or not FIRST_PLAYABLE_ADAPTER.is_file():
-        raise PlayFailure(f"generated first-playable adapter is missing or a symlink: {FIRST_PLAYABLE_ADAPTER}")
-    adapter = FIRST_PLAYABLE_ADAPTER.read_text(encoding="utf-8")
-    match = LEVEL_SOURCE_HASH_PATTERN.search(adapter)
-    if match is None:
-        raise PlayFailure("generated first-playable adapter omitted its exact source hash")
-    actual = hashlib.sha256(FIRST_PLAYABLE_MAP.read_bytes()).hexdigest()
-    if match.group(1) != actual:
-        raise PlayFailure(
-            "generated first-playable adapter is stale; run "
-            "`python3 examples/caxecraft/level_adapter.py` and review the generated Haxe"
-        )
 
 
 def run(arguments: list[str], *, cwd: Path, timeout: int, label: str) -> subprocess.CompletedProcess[str]:
@@ -1335,7 +1305,6 @@ def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
         InputPath("repo/caxecraft/assets", CASE / "assets"),
         InputPath("repo/caxecraft/locales", CASE / "locales"),
         InputPath("repo/caxecraft/packs", CASE / "packs"),
-        InputPath("repo/caxecraft/scenarios", CASE / "scenarios"),
         *source_tooling_inputs(),
         InputPath("tooling/haxeshim.js", resolved_executable(development_tool("haxe"), "Haxe shim")),
         *haxe_install_inputs(),
@@ -1428,9 +1397,12 @@ def play_request_snapshot(
     """Describe the complete source/configuration/tool request before building."""
 
     generator_command = "ninja" if args.generator == "Ninja" else "make"
+    platform_compile_flags = hosted_content_compile_flags(platform_name)
     configuration: dict[str, object] = {
         "platform": platform_name,
         "layout": args.layout,
+        "contentAuthority": "runtime-package",
+        "contentHaxeDefines": list(hosted_content_haxe_defines(platform_name)),
         "raylibConfiguration": args.raylib_configuration,
         "renderer": args.renderer,
         "benchmarkRenderer": args.benchmark_renderer,
@@ -1438,6 +1410,7 @@ def play_request_snapshot(
         "optimization": args.optimization,
         "sanitizers": args.sanitizers,
         "strictFlags": list(STRICT_FLAGS),
+        "platformCompileFlags": list(platform_compile_flags),
         "sanitizerFlags": list(native_sanitizer_flags),
         "authority": args.authority,
         "raylibSource": str(args.source.resolve()) if args.source is not None else None,
@@ -1521,6 +1494,22 @@ def sanitizer_flags(executable: str, platform_name: str) -> tuple[str, ...]:
     if "clang" not in identity and "gcc" not in identity and "free software foundation" not in identity:
         raise PlayFailure(f"--sanitizers does not recognize compiler identity {identity!r}")
     return SANITIZER_FLAGS
+
+
+def hosted_content_compile_flags(platform_name: str) -> tuple[str, ...]:
+    """Expose the POSIX declarations used by the Haxe-authored package reader."""
+
+    if platform_name == "macos":
+        return ("-D_POSIX_C_SOURCE=200809L", "-D_DARWIN_C_SOURCE=1")
+    if platform_name == "linux":
+        return ("-D_POSIX_C_SOURCE=200809L",)
+    return ()
+
+
+def hosted_content_haxe_defines(platform_name: str) -> tuple[str, ...]:
+    """Select the system-header field spellings and exact ABI carriers."""
+
+    return ("caxecraft_posix_darwin",) if platform_name == "macos" else ()
 
 
 def validate_renderer_pilot(raylib_configuration: str, pilot: str | None) -> None:
@@ -1607,7 +1596,6 @@ def compile_haxe(
     server_lease: HaxeServerLease | None = None,
     server_owner: OwnedHaxeServer | None = None,
 ) -> dict[str, object]:
-    verify_level_adapter_provenance()
     if raylib_configuration not in RAYLIB_CONFIGURATIONS:
         raise PlayFailure(f"unknown Raylib configuration {raylib_configuration!r}")
     if runtime_report not in ("full", "summary"):
@@ -1627,6 +1615,8 @@ def compile_haxe(
         "-D",
         f"hxc_runtime_report={runtime_report}",
     ]
+    for define in hosted_content_haxe_defines(platform_name):
+        arguments.extend(["-D", define])
     if layout != "split":
         arguments.extend(["-D", f"hxc_project_layout={layout}"])
     if renderer == "immediate-baseline":
@@ -1800,11 +1790,22 @@ def validate_compiled_haxe(
         )
     ):
         raise PlayFailure("generated Caxecraft runtime plan omitted its owned hxrt artifacts")
-    validate_generated_playable(generated, layout=layout, pilot=pilot, renderer=renderer)
+    validate_generated_playable(
+        generated,
+        layout=layout,
+        pilot=pilot,
+        renderer=renderer,
+    )
     return manifest
 
 
-def validate_generated_playable(generated: Path, *, layout: str, pilot: str | None, renderer: str) -> None:
+def validate_generated_playable(
+    generated: Path,
+    *,
+    layout: str,
+    pilot: str | None,
+    renderer: str,
+) -> None:
     sources = sorted(generated.glob("src/**/*.c"), key=lambda path: path.as_posix().encode("utf-8"))
     if not sources:
         raise PlayFailure("Caxecraft emitted no C sources")
@@ -1886,14 +1887,13 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
                 f"generated Caxecraft application header is missing: {app_header_relative}"
             )
         app_header = app_header_path.read_text(encoding="utf-8")
-        if (
-            "struct hxc_caxecraft_domain_GameSession hxc_session;" not in app_header
-            or "struct hxc_caxecraft_domain_GameSession *hxc_session;" in app_header
-        ):
+        direct_session = "struct hxc_caxecraft_domain_GameSession hxc_session;"
+        pointer_session = "struct hxc_caxecraft_domain_GameSession *hxc_session;"
+        if direct_session in app_header or pointer_session in app_header:
             raise PlayFailure(
-                "generated CaxecraftApp must own GameSession as one direct child struct"
+                "CaxecraftApp must obtain GameSession from its loaded content generation"
             )
-    for required in (
+    required_app_calls = (
         "InitWindow(",
         "IsWindowReady(",
         "WindowShouldClose(",
@@ -1901,7 +1901,6 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "BeginMode3D(",
         "DrawCube(",
         "DrawCubeWires(",
-        "FirstPlayableSessionLoader_loadCandidate(",
         "GameSession_actorControllerEventSnapshots(",
         "GameSession_actorControllerStateSnapshots(",
         "GameSession_actorInteractionAvailable(",
@@ -1920,7 +1919,9 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "GameSession_worldView(",
         "hxc_completedTicks",
         "WaterRenderer_draw(",
-    ):
+    )
+    content_loader_call = "RuntimeLevelLoader_loadRuntimeLevel("
+    for required in (*required_app_calls, content_loader_call):
         if required not in app:
             raise PlayFailure(f"generated Caxecraft app omitted required call {required}")
     if renderer == "chunk-cache":
@@ -1928,19 +1929,26 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
             raise PlayFailure("generated Caxecraft did not retain only the selected chunk-cache renderer")
     elif "TerrainImmediateBaseline_drawImmediate(" not in combined or "TerrainChunkCache_prepare(" in combined:
         raise PlayFailure("generated Caxecraft did not retain only the selected immediate benchmark baseline")
-    loader_call = app.find("FirstPlayableSessionLoader_loadCandidate(")
+    loader_call = app.find(content_loader_call)
     window_call = app.find("InitWindow(")
     if loader_call < 0 or window_call < 0 or loader_call >= window_call:
         raise PlayFailure(
             "generated Caxecraft must validate and assemble its candidate session before opening Raylib"
         )
-    for forbidden in (
+    forbidden_app_calls = [
         "FirstPlayableLevel_loadTerrain(",
         "GameSession_resetEmptyWorld(",
         "GameSession_activateAuthoredItemDuringLoad(",
         "GameSession_writeTerrainRunDuringLoad(",
         "PlayerAgent_bind(",
-    ):
+    ]
+    forbidden_app_calls.extend(
+        [
+            "FirstPlayableSessionLoader_loadCandidate(",
+            "FirstPlayableLevel_",
+        ]
+    )
+    for forbidden in forbidden_app_calls:
         if forbidden in app:
             raise PlayFailure(
                 f"generated Caxecraft app bypassed the typed session loader through {forbidden}"
@@ -2057,19 +2065,47 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         raise PlayFailure(
             "generated Caxecraft authored-item view must be a zero-copy const integer pointer plus checked length output"
         )
-    for required in ("FirstPlayableLevel_loadTerrain(", "FirstPlayableSessionLoader_loadCandidate("):
+    required_level_calls = (
+        "ContentPackageStore_open(",
+        "RuntimeLevelLoader_loadRuntimeLevel(",
+        "LoadedContentGeneration_build(",
+        "constructor_caxecraft_content_ActiveContent(",
+    )
+    for required in required_level_calls:
         if required not in combined:
-            raise PlayFailure(f"generated Caxecraft output omitted level assembly call {required}")
+            raise PlayFailure(
+                f"generated Caxecraft output omitted level assembly call {required}"
+            )
     loader_relative = {
-        "split": "src/modules/caxecraft/content/FirstPlayableSessionLoader.c",
+        "split": "src/modules/caxecraft/content/RuntimeLevelLoader.c",
         "package": "src/packages/caxecraft/content/package.c",
         "unity": "src/program.c",
     }[layout]
     loader_source = generated.joinpath(loader_relative).read_text(encoding="utf-8")
-    if "GameSession_bindLocalPlayer(" not in loader_source:
-        raise PlayFailure(
-            "generated Caxecraft session loader omitted authored local-player binding"
-        )
+    for required in (
+        "RuntimeLevelLoader_loadRuntimeLevel(",
+        "RuntimeLevelLoader_admitRuntimeLevelInput(",
+    ):
+        if required not in loader_source:
+            raise PlayFailure(f"native Caxecraft level loader omitted {required}")
+    posix_relative = {
+        "split": "src/modules/caxecraft/content/hosted/PosixPackageApi.c",
+        "package": "src/packages/caxecraft/content/hosted/package.c",
+        "unity": "src/program.c",
+    }[layout]
+    posix_source = generated.joinpath(posix_relative).read_text(encoding="utf-8")
+    for required in ("openat(", "fstatat(", "read("):
+        if required not in posix_source:
+            raise PlayFailure(
+                "Haxe-authored package reader omitted typed POSIX call "
+                f"{required}"
+            )
+    for forbidden in ("caxecraft_package_posix_", "LoadFileData("):
+        if forbidden in combined:
+            raise PlayFailure(
+                "native content bypassed the Haxe-authored metal package reader "
+                f"through {forbidden}"
+            )
     # Catalogs select text and the application renderer draws it. Both lookup
     # functions must reach C, while every Raylib draw remains outside their
     # generated modules. Catalog completeness is checked against source data by
@@ -2569,6 +2605,7 @@ def compile_native(
         compiler=cc,
         compile_flags=(
             *STRICT_FLAGS,
+            *hosted_content_compile_flags(platform_name),
             f"-O{optimization}",
             *native_sanitizer_flags,
         ),
@@ -2810,7 +2847,11 @@ def main(argv: list[str]) -> int:
         configuration_part = "" if args.raylib_configuration == "desktop" else f"-{args.raylib_configuration}"
         sanitizer_part = "-sanitized" if args.sanitizers else ""
         output_root = prepare_output_root(
-            variants / f"{platform_name}{configuration_part}-{args.layout}{sanitizer_part}-{profile}{renderer_part}{benchmark_part}"
+            variants
+            / (
+                f"{platform_name}{configuration_part}-{args.layout}{sanitizer_part}-"
+                f"{profile}{renderer_part}{benchmark_part}"
+            )
         )
         variant_lock = VariantLock(output_root / "hxc-play-build.lock")
         variant_lock.__enter__()
@@ -2851,10 +2892,11 @@ def main(argv: list[str]) -> int:
                     generation_miss = str(error)
                 validation_ms = (time.monotonic() - validation_started) * 1000.0
                 if decision is not None and decision.hit:
+                    stage_content_catalogs(executable.parent)
                     total_ms = snapshot_ms + validation_ms
                     print(
                         "caxecraft: unchanged build hit; reused generated C, native executable, "
-                        f"and staged content after {total_ms:.1f} ms validation"
+                        f"and restaged current content after {total_ms:.1f} ms validation"
                     )
                     if selected_pilot is None:
                         print("caxecraft: launching; press Q to quit")
@@ -2868,7 +2910,6 @@ def main(argv: list[str]) -> int:
                     miss_reason = generation_miss if decision is None else decision.reason
                     print(f"caxecraft: unchanged build miss: {miss_reason}")
         if args.build_only:
-            verify_level_adapter_provenance()
             generated = current_generation(output_root).generated
             manifest = validate_compiled_haxe(
                 generated,

@@ -11,6 +11,6 @@ typedef char hxc_runtime_abi_major_must_match[HXC_RUNTIME_ABI_MAJOR == 0U ? 1 : 
 
 void hxc_Main_main(void);
 
-hxc_string hxc_Main_selectLabel(bool hxc_primary);
+hxc_string hxc_Main_selectLabel(bool hxc_l_primary);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

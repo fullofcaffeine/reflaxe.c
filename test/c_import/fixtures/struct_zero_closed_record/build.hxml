@@ -1,0 +1,4 @@
+-cp ../positive
+-cp .
+-lib reflaxe.c
+-main Main

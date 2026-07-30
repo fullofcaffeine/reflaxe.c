@@ -56,6 +56,54 @@ final class Main {
 		return Std.string(value.substring(1));
 
 	/**
+		Select either a borrowed whole String or a retained view of its bytes.
+
+		The view arm is already a transferable owner when it reaches the outer
+		conditional. Keeping this ordinary expression in the fixture prevents the
+		compiler from accepting the ownership only through hidden lowering state.
+	**/
+	static function selectBorrowedOrView(value:String, keepWhole:Bool):String
+		return keep(keepWhole ? value : value.substring(1));
+
+	/** Exercise the same ownership join with the retained view in the first arm. */
+	static function selectViewOrBorrowed(value:String, keepView:Bool):String
+		return keep(keepView ? value.substring(1) : value);
+
+	/**
+		Replace the original source after four conditional results escape.
+
+		Every result must retain or transfer its own owner. Native sanitizers make
+		a missing retain or duplicate release observable instead of relying only on
+		the final text comparison.
+	**/
+	static function conditionalViewContractHolds():Bool {
+		var source = build(0xE9, 0x1F600);
+		final whole = selectBorrowedOrView(source, true);
+		final suffix = selectBorrowedOrView(source, false);
+		final reverseSuffix = selectViewOrBorrowed(source, true);
+		final reverseWhole = selectViewOrBorrowed(source, false);
+		source = "replaced";
+		return whole == "Aé😀" && suffix == "é😀" && reverseSuffix == "é😀" && reverseWhole == "Aé😀";
+	}
+
+	/**
+		Append one branch-selected fresh scalar to an existing managed String.
+
+		The old `result` value is evaluated before the conditional right side.
+		HxcIR must preserve both its lifetime and a value visible in the join block
+		where concatenation occurs.
+	**/
+	static function appendConditionalScalar(code:Int, keepLowercase:Bool):String {
+		var result = "prefix:";
+		result += keepLowercase ? String.fromCharCode(code) : String.fromCharCode(code - 32);
+		return result;
+	}
+
+	/** Exercise both runtime branches of conditional String compound assignment. */
+	static function conditionalCompoundContractHolds():Bool
+		return appendConditionalScalar(97, true) == "prefix:a" && appendConditionalScalar(97, false) == "prefix:A";
+
+	/**
 		Exercise the statically typed Boolean slice of Haxe's general conversion.
 
 		`Std.string` accepts `Dynamic` at its public boundary, but Haxe's typed
@@ -294,6 +342,8 @@ final class Main {
 			&& boolStringContractHolds()
 			&& intStringContractHolds()
 			&& stringIdentityContractHolds()
+			&& conditionalViewContractHolds()
+			&& conditionalCompoundContractHolds()
 			&& splitContractHolds()
 			&& switchJoinContractHolds(alias)
 			&& alias.length == 3

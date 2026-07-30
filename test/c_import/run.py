@@ -85,10 +85,15 @@ NEGATIVE_CASES = {
         "Main.hx:4",
         "TCall(c.StructInit.make:requires-direct-object-literal)",
     ),
+    "struct_zero_closed_record": (
+        "HXC1001",
+        "Main.hx:13",
+        "TCall(c.StructInit.zero:result-must-be-imported-struct)",
+    ),
     "variadic": (
         "HXC3000",
         "VariadicApi.hx:4",
-        "Variadic functions are outside the admitted direct slice.",
+        "Use `@:c.variadic` with only the admitted fixed-prefix parameters",
     ),
 }
 TYPING_NEGATIVE_CASES = {
@@ -108,8 +113,10 @@ REQUIRED_COVERAGE = frozenset(
         "float32-conversions",
         "generated-haxe-program",
         "header-owned-structs",
+        "imported-enum-equality",
         "imported-struct-record-field",
         "imported-struct-construction",
+        "imported-struct-zero-initialization",
         "inline-float-parameter-conversion",
         "runtime-free",
         "strict-c11",
@@ -332,13 +339,19 @@ def validate_positive(project: RenderedProject) -> None:
                 f"generated Float32 carrier omitted target guard {spelling!r}"
             )
     for spelling in (
-        "bool *hxc_tmp_native_call_ref",
-        " = &hxc_flipped;",
+        "bool *hxc_l_tmp_native_call_ref",
+        " = &hxc_l_flipped;",
+        "struct pointlib_point *hxc_l_tmp_native_call_ref",
+        " = &hxc_l_inPlace;",
         "pointlib_flip(",
         "pointlib_point_make(",
+        "pointlib_point_is_zero(",
         "pointlib_point_translate(",
+        "pointlib_point_translate_in_place(",
+        "pointlib_variadic_fixed_prefix_verify(",
         "pointlib_point_alias_identity(",
         "pointlib_point_dot(",
+        "pointlib_axis_identity(",
         "pointlib_point_component(",
         "pointlib_point_verify(",
         "pointlib_float_point_make(",
@@ -377,19 +390,23 @@ def validate_positive(project: RenderedProject) -> None:
             raise CImportFailure(f"generated import path leaked forbidden spelling {spelling!r}")
     for spelling in (
         ".x = POINTLIB_COORD_ONE;",
-        " = &hxc_left.x;",
-        " = *hxc_tmp_imported_field_address",
-        "pointlib_axis hxc_axis",
-        "float hxc_floatDot",
-        "struct pointlib_point hxc_pointAlias",
-        "double hxc_widened",
-        "struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_y, bool hxc_useY)",
-        "struct pointlib_point hxc_Main_selectPoint(bool hxc_useLeft, struct pointlib_point hxc_left, struct pointlib_point hxc_right)",
-        "pointlib_coord hxc_tmp = hxc_tmp_native_call_result",
-        "pointlib_coord hxc_tmp_load_result",
-        ".x = hxc_tmp_load_result",
+        " = &hxc_l_left.x;",
+        " = *hxc_l_tmp_imported_field_address",
+        "pointlib_axis hxc_l_axis",
+        "pointlib_axis hxc_Main_selectAxis(bool hxc_l_useY)",
+        "float hxc_l_floatDot",
+        "struct pointlib_point hxc_l_pointAlias",
+        "double hxc_l_widened",
+        "struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_l_y, bool hxc_l_useY)",
+        "struct pointlib_point hxc_Main_selectPoint(bool hxc_l_useLeft, struct pointlib_point hxc_l_left, struct pointlib_point hxc_l_right)",
+        "pointlib_coord hxc_l_tmp = hxc_l_tmp_native_call_result",
+        "pointlib_coord hxc_l_tmp_load_result",
+        ".x = hxc_l_tmp_load_result",
         ".y =",
-        "return (struct hxc_PointResources){ .hxc_point = hxc_point, .hxc_ready = true };",
+        "return (struct hxc_PointResources){ .hxc_point = hxc_l_point, .hxc_ready = true };",
+        " = hxc_l_axis == POINTLIB_AXIS_Y;",
+        " = hxc_l_axis != POINTLIB_AXIS_X;",
+        "(struct pointlib_point){ 0 }",
     ):
         if spelling not in source:
             raise CImportFailure(
@@ -403,8 +420,8 @@ def validate_positive(project: RenderedProject) -> None:
     if (
         select_point_start == -1
         or select_point_end == -1
-        or "struct pointlib_point hxc_tmp_conditional_result" not in select_point
-        or select_point.count("hxc_tmp_conditional_result") < 4
+        or "struct pointlib_point hxc_l_tmp_conditional_result" not in select_point
+        or select_point.count("hxc_l_tmp_conditional_result") < 4
         or "(struct pointlib_point){0}" in select_point
     ):
         raise CImportFailure(
@@ -412,6 +429,19 @@ def validate_positive(project: RenderedProject) -> None:
         )
     if "StructInit" in header + source:
         raise CImportFailure("typed imported-struct construction leaked an intrinsic symbol")
+    select_axis_start = source.find("pointlib_axis hxc_Main_selectAxis(")
+    select_axis_end = source.find("\nstruct pointlib_point hxc_Main_selectPoint(", select_axis_start)
+    select_axis = source[select_axis_start:select_axis_end]
+    if (
+        select_axis_start == -1
+        or select_axis_end == -1
+        or "pointlib_axis hxc_l_tmp_conditional_result" not in select_axis
+        or "pointlib_axis_identity(hxc_l_selected)" not in select_axis
+        or "(pointlib_axis){0}" in select_axis
+    ):
+        raise CImportFailure(
+            "imported enum flow lost its nominal uninitialized conditional carrier"
+        )
 
     # Haxe inserts an implicit Int-to-Float conversion at a declared Float
     # parameter. Inlining removes the call node but must not remove that
@@ -419,11 +449,11 @@ def validate_positive(project: RenderedProject) -> None:
     # (`double`) before the explicit c.Float32 binary32 (`float`) narrowing,
     # just as the retained non-inline helper does.
     for spelling in (
-        "float hxc_fromIntegerLocal = (float)(double)hxc_integerLocal;",
-        "float hxc_fromIntegerArithmetic = (float)(double)hxc_i32_add_wrapping(hxc_integerLocal, 2);",
-        "float hxc_fromFloatLocal = (float)hxc_floatLocal;",
-        "float hxc_fromSideEffect = (float)(double)hxc_tmp_call_result_",
-        "hxc_InlineFloat32Probe_narrowWithoutInlining((double)hxc_i32_add_wrapping(hxc_integerLocal, 5))",
+        "float hxc_l_fromIntegerLocal = (float)(double)hxc_l_integerLocal;",
+        "float hxc_l_fromIntegerArithmetic = (float)(double)hxc_i32_add_wrapping(hxc_l_integerLocal, 2);",
+        "float hxc_l_fromFloatLocal = (float)hxc_l_floatLocal;",
+        "float hxc_l_fromSideEffect = (float)(double)hxc_l_tmp_call_result_",
+        "hxc_InlineFloat32Probe_narrowWithoutInlining((double)hxc_i32_add_wrapping(hxc_l_integerLocal, 5))",
     ):
         if spelling not in source:
             raise CImportFailure(
@@ -499,6 +529,7 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_point_translate",
         "pointlib_point_alias_identity",
         "pointlib_point_dot",
+        "pointlib_axis_identity",
         "pointlib_point_component",
         "pointlib_point_verify",
         "pointlib_float_point",
@@ -663,8 +694,10 @@ def check_native(
                 "float32-conversions",
                 "generated-haxe-program",
                 "header-owned-structs",
+                "imported-enum-equality",
                 "imported-struct-record-field",
                 "imported-struct-construction",
+                "imported-struct-zero-initialization",
                 "inline-float-parameter-conversion",
                 "runtime-free",
             ),

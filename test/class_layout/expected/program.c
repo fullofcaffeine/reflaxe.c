@@ -79,378 +79,378 @@ _Static_assert(sizeof(struct hxc_RootRecord) % _Alignof(struct hxc_RootRecord) =
 
 const struct hxc_type_descriptor hxc_RootRecord_descriptor = { .abi_version = HXC_TYPE_DESCRIPTOR_ABI_VERSION, .flags = 0, .object_size = sizeof(struct hxc_RootRecord), .object_alignment = _Alignof(struct hxc_RootRecord), .trace = NULL, .finalize = NULL };
 
-struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *hxc_value)
+struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *hxc_l_value)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_value, NULL };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  hxc_gc_roots[1] = (const void *)(hxc_value == NULL ? NULL : &hxc_value->hxc_base);
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  hxc_l_gc_roots[1] = (const void *)(hxc_l_value == NULL ? NULL : &hxc_l_value->hxc_base);
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_value == NULL ? NULL : &hxc_value->hxc_base;
+  return hxc_l_value == NULL ? NULL : &hxc_l_value->hxc_base;
 }
 
-struct hxc_MiddleRecord *hxc_ClassLayoutFixture_asMiddle(struct hxc_LeafRecord *hxc_value)
+struct hxc_MiddleRecord *hxc_ClassLayoutFixture_asMiddle(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_value, NULL };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  hxc_gc_roots[1] = (const void *)(hxc_value == NULL ? NULL : &hxc_value->hxc_base);
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  hxc_l_gc_roots[1] = (const void *)(hxc_l_value == NULL ? NULL : &hxc_l_value->hxc_base);
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_value == NULL ? NULL : &hxc_value->hxc_base;
+  return hxc_l_value == NULL ? NULL : &hxc_l_value->hxc_base;
 }
 
-struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_value)
+struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_value, NULL };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  hxc_gc_roots[1] = (const void *)(hxc_value == NULL ? NULL : &hxc_value->hxc_base.hxc_base);
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  hxc_l_gc_roots[1] = (const void *)(hxc_l_value == NULL ? NULL : &hxc_l_value->hxc_base.hxc_base);
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_value == NULL ? NULL : &hxc_value->hxc_base.hxc_base;
+  return hxc_l_value == NULL ? NULL : &hxc_l_value->hxc_base.hxc_base;
 }
 
-int32_t hxc_ClassLayoutFixture_branchProofDoesNotEscape(struct hxc_RootRecord *hxc_value, struct hxc_RootRecord *hxc_other, bool hxc_useFirst)
+int32_t hxc_ClassLayoutFixture_branchProofDoesNotEscape(struct hxc_RootRecord *hxc_l_value, struct hxc_RootRecord *hxc_l_other, bool hxc_l_useFirst)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_value, (const void *)hxc_other };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, (const void *)hxc_l_other };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  int32_t hxc_result = 0;
-  if (hxc_useFirst)
+  int32_t hxc_l_result = 0;
+  if (hxc_l_useFirst)
   {
-    if (hxc_value == NULL)
+    if (hxc_l_value == NULL)
     {
       abort();
     }
-    int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_rootValue;
-    hxc_result = hxc_tmp_class_field_load_result_n0;
+    int32_t hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_rootValue;
+    hxc_l_result = hxc_l_tmp_class_field_load_result_n0;
   }
   else
   {
-    if (hxc_other == NULL)
+    if (hxc_l_other == NULL)
     {
       abort();
     }
-    int32_t hxc_tmp_class_field_load_result_n1 = (*hxc_other).hxc_rootValue;
-    hxc_result = hxc_tmp_class_field_load_result_n1;
+    int32_t hxc_l_tmp_class_field_load_result_n1 = (*hxc_l_other).hxc_rootValue;
+    hxc_l_result = hxc_l_tmp_class_field_load_result_n1;
   }
-  int32_t hxc_tmp_load_result_n2 = hxc_result;
-  if (hxc_value == NULL)
+  int32_t hxc_l_tmp_load_result_n2 = hxc_l_result;
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  int32_t hxc_tmp_class_field_load_result_n3 = (*hxc_value).hxc_rootValue;
-  if (hxc_other == NULL)
+  int32_t hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_value).hxc_rootValue;
+  if (hxc_l_other == NULL)
   {
     abort();
   }
-  int32_t hxc_tmp_class_field_load_result_n4 = (*hxc_other).hxc_rootValue;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  int32_t hxc_l_tmp_class_field_load_result_n4 = (*hxc_l_other).hxc_rootValue;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_tmp_load_result_n2, hxc_tmp_class_field_load_result_n3), hxc_tmp_class_field_load_result_n4);
+  return hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_l_tmp_load_result_n2, hxc_l_tmp_class_field_load_result_n3), hxc_l_tmp_class_field_load_result_n4);
 }
 
-bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_left, struct hxc_RootRecord *hxc_right)
+bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_l_left, struct hxc_RootRecord *hxc_l_right)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_left, (const void *)hxc_right };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_left, (const void *)hxc_l_right };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_left != hxc_right;
+  return hxc_l_left != hxc_l_right;
 }
 
-bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_value)
+bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_l_value)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_value, NULL };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  hxc_gc_roots[1] = (const void *)NULL;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  hxc_l_gc_roots[1] = (const void *)NULL;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_value == NULL;
+  return hxc_l_value == NULL;
 }
 
 void hxc_ClassLayoutFixture_main(void)
 {
-  const void *hxc_gc_roots[19] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 19, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[19] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 19, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  hxc_gc_roots[0] = (const void *)NULL;
-  struct hxc_LeafRecord *hxc_leaf = NULL;
-  hxc_gc_roots[1] = (const void *)hxc_leaf;
-  struct hxc_RootRecord *hxc_tmp_call_result_n1 = hxc_ClassLayoutFixture_asRoot(hxc_leaf);
-  hxc_gc_roots[2] = (const void *)hxc_tmp_call_result_n1;
-  struct hxc_RootRecord *hxc_root = hxc_tmp_call_result_n1;
-  hxc_gc_roots[3] = (const void *)hxc_leaf;
-  struct hxc_MiddleRecord *hxc_tmp_call_result_n3 = hxc_ClassLayoutFixture_asMiddle(hxc_leaf);
-  hxc_gc_roots[4] = (const void *)hxc_tmp_call_result_n3;
-  struct hxc_MiddleRecord *hxc_middle = hxc_tmp_call_result_n3;
-  hxc_gc_roots[5] = (const void *)NULL;
-  struct hxc_EmptyLeaf *hxc_emptyLeaf = NULL;
-  hxc_gc_roots[6] = (const void *)hxc_emptyLeaf;
-  struct hxc_EmptyBase *hxc_tmp_call_result_n5 = hxc_ClassLayoutFixture_asEmptyBase(hxc_emptyLeaf);
-  hxc_gc_roots[7] = (const void *)hxc_tmp_call_result_n5;
-  struct hxc_EmptyBase *hxc_emptyBase = hxc_tmp_call_result_n5;
+  hxc_l_gc_roots[0] = (const void *)NULL;
+  struct hxc_LeafRecord *hxc_l_leaf = NULL;
+  hxc_l_gc_roots[1] = (const void *)hxc_l_leaf;
+  struct hxc_RootRecord *hxc_l_tmp_call_result_n1 = hxc_ClassLayoutFixture_asRoot(hxc_l_leaf);
+  hxc_l_gc_roots[2] = (const void *)hxc_l_tmp_call_result_n1;
+  struct hxc_RootRecord *hxc_l_root = hxc_l_tmp_call_result_n1;
+  hxc_l_gc_roots[3] = (const void *)hxc_l_leaf;
+  struct hxc_MiddleRecord *hxc_l_tmp_call_result_n3 = hxc_ClassLayoutFixture_asMiddle(hxc_l_leaf);
+  hxc_l_gc_roots[4] = (const void *)hxc_l_tmp_call_result_n3;
+  struct hxc_MiddleRecord *hxc_l_middle = hxc_l_tmp_call_result_n3;
+  hxc_l_gc_roots[5] = (const void *)NULL;
+  struct hxc_EmptyLeaf *hxc_l_emptyLeaf = NULL;
+  hxc_l_gc_roots[6] = (const void *)hxc_l_emptyLeaf;
+  struct hxc_EmptyBase *hxc_l_tmp_call_result_n5 = hxc_ClassLayoutFixture_asEmptyBase(hxc_l_emptyLeaf);
+  hxc_l_gc_roots[7] = (const void *)hxc_l_tmp_call_result_n5;
+  struct hxc_EmptyBase *hxc_l_emptyBase = hxc_l_tmp_call_result_n5;
   while (1)
   {
-    struct hxc_RootRecord *hxc_tmp_load_result_n6 = hxc_root;
-    hxc_gc_roots[8] = (const void *)hxc_tmp_load_result_n6;
-    hxc_gc_roots[9] = (const void *)NULL;
-    bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_load_result_n6 == NULL;
-    if (hxc_tmp_load_result_n6 == NULL)
+    struct hxc_RootRecord *hxc_l_tmp_load_result_n6 = hxc_l_root;
+    hxc_l_gc_roots[8] = (const void *)hxc_l_tmp_load_result_n6;
+    hxc_l_gc_roots[9] = (const void *)NULL;
+    bool hxc_l_tmp_short_circuit_result_n5 = hxc_l_tmp_load_result_n6 == NULL;
+    if (hxc_l_tmp_load_result_n6 == NULL)
     {
-      hxc_gc_roots[10] = (const void *)hxc_middle;
-      hxc_gc_roots[11] = (const void *)NULL;
-      hxc_tmp_short_circuit_result_n5 = hxc_middle == NULL;
+      hxc_l_gc_roots[10] = (const void *)hxc_l_middle;
+      hxc_l_gc_roots[11] = (const void *)NULL;
+      hxc_l_tmp_short_circuit_result_n5 = hxc_l_middle == NULL;
     }
-    bool hxc_tmp_short_circuit_load_result_n8 = hxc_tmp_short_circuit_result_n5;
-    bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n8;
-    if (hxc_tmp_short_circuit_load_result_n8)
+    bool hxc_l_tmp_short_circuit_load_result_n8 = hxc_l_tmp_short_circuit_result_n5;
+    bool hxc_l_tmp_short_circuit_result_n6 = hxc_l_tmp_short_circuit_load_result_n8;
+    if (hxc_l_tmp_short_circuit_load_result_n8)
     {
-      hxc_gc_roots[12] = (const void *)hxc_emptyBase;
-      hxc_gc_roots[13] = (const void *)NULL;
-      hxc_tmp_short_circuit_result_n6 = hxc_emptyBase == NULL;
+      hxc_l_gc_roots[12] = (const void *)hxc_l_emptyBase;
+      hxc_l_gc_roots[13] = (const void *)NULL;
+      hxc_l_tmp_short_circuit_result_n6 = hxc_l_emptyBase == NULL;
     }
-    bool hxc_tmp_short_circuit_load_result_n10 = hxc_tmp_short_circuit_result_n6;
-    bool hxc_tmp_short_circuit_result_n7 = hxc_tmp_short_circuit_load_result_n10;
-    if (hxc_tmp_short_circuit_load_result_n10)
+    bool hxc_l_tmp_short_circuit_load_result_n10 = hxc_l_tmp_short_circuit_result_n6;
+    bool hxc_l_tmp_short_circuit_result_n7 = hxc_l_tmp_short_circuit_load_result_n10;
+    if (hxc_l_tmp_short_circuit_load_result_n10)
     {
-      hxc_gc_roots[14] = (const void *)hxc_root;
-      hxc_gc_roots[15] = (const void *)NULL;
-      bool hxc_tmp_call_result_n12 = hxc_ClassLayoutFixture_same(hxc_root, NULL);
-      hxc_tmp_short_circuit_result_n7 = hxc_tmp_call_result_n12;
+      hxc_l_gc_roots[14] = (const void *)hxc_l_root;
+      hxc_l_gc_roots[15] = (const void *)NULL;
+      bool hxc_l_tmp_call_result_n12 = hxc_ClassLayoutFixture_same(hxc_l_root, NULL);
+      hxc_l_tmp_short_circuit_result_n7 = hxc_l_tmp_call_result_n12;
     }
-    bool hxc_tmp_short_circuit_load_result_n13 = hxc_tmp_short_circuit_result_n7;
-    bool hxc_tmp_short_circuit_result_n8 = hxc_tmp_short_circuit_load_result_n13;
-    if (hxc_tmp_short_circuit_load_result_n13)
+    bool hxc_l_tmp_short_circuit_load_result_n13 = hxc_l_tmp_short_circuit_result_n7;
+    bool hxc_l_tmp_short_circuit_result_n8 = hxc_l_tmp_short_circuit_load_result_n13;
+    if (hxc_l_tmp_short_circuit_load_result_n13)
     {
-      hxc_gc_roots[16] = (const void *)hxc_root;
-      hxc_gc_roots[17] = (const void *)NULL;
-      bool hxc_tmp_call_result_n15 = hxc_ClassLayoutFixture_different(hxc_root, NULL);
-      hxc_tmp_short_circuit_result_n8 = !hxc_tmp_call_result_n15;
+      hxc_l_gc_roots[16] = (const void *)hxc_l_root;
+      hxc_l_gc_roots[17] = (const void *)NULL;
+      bool hxc_l_tmp_call_result_n15 = hxc_ClassLayoutFixture_different(hxc_l_root, NULL);
+      hxc_l_tmp_short_circuit_result_n8 = !hxc_l_tmp_call_result_n15;
     }
-    bool hxc_tmp_short_circuit_load_result_n16 = hxc_tmp_short_circuit_result_n8;
-    bool hxc_tmp_short_circuit_result_n9 = hxc_tmp_short_circuit_load_result_n16;
-    if (hxc_tmp_short_circuit_load_result_n16)
+    bool hxc_l_tmp_short_circuit_load_result_n16 = hxc_l_tmp_short_circuit_result_n8;
+    bool hxc_l_tmp_short_circuit_result_n9 = hxc_l_tmp_short_circuit_load_result_n16;
+    if (hxc_l_tmp_short_circuit_load_result_n16)
     {
-      hxc_gc_roots[18] = (const void *)hxc_root;
-      bool hxc_tmp_call_result_n18 = hxc_ClassLayoutFixture_isNull(hxc_root);
-      hxc_tmp_short_circuit_result_n9 = hxc_tmp_call_result_n18;
+      hxc_l_gc_roots[18] = (const void *)hxc_l_root;
+      bool hxc_l_tmp_call_result_n18 = hxc_ClassLayoutFixture_isNull(hxc_l_root);
+      hxc_l_tmp_short_circuit_result_n9 = hxc_l_tmp_call_result_n18;
     }
-    if (!!hxc_tmp_short_circuit_result_n9)
+    if (!!hxc_l_tmp_short_circuit_result_n9)
     {
       break;
     }
   }
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
   return;
 }
 
-int32_t hxc_ClassLayoutFixture_readInherited(struct hxc_LeafRecord *hxc_value)
+int32_t hxc_ClassLayoutFixture_readInherited(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_gc_roots[1] = { (const void *)hxc_value };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_value == NULL)
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  int32_t hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_base.hxc_base.hxc_rootValue;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_tmp_class_field_load_result_n0;
+  return hxc_l_tmp_class_field_load_result_n0;
 }
 
-struct hxc_RootRecord *hxc_ClassLayoutFixture_readPeer(struct hxc_LeafRecord *hxc_value)
+struct hxc_RootRecord *hxc_ClassLayoutFixture_readPeer(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_value, NULL };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_value, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_value == NULL)
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  struct hxc_RootRecord *hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_peer;
-  hxc_gc_roots[1] = (const void *)hxc_tmp_class_field_load_result_n0;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  struct hxc_RootRecord *hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_peer;
+  hxc_l_gc_roots[1] = (const void *)hxc_l_tmp_class_field_load_result_n0;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_tmp_class_field_load_result_n0;
+  return hxc_l_tmp_class_field_load_result_n0;
 }
 
-int32_t hxc_ClassLayoutFixture_readRoot(struct hxc_RootRecord *hxc_value)
+int32_t hxc_ClassLayoutFixture_readRoot(struct hxc_RootRecord *hxc_l_value)
 {
-  const void *hxc_gc_roots[1] = { (const void *)hxc_value };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_value == NULL)
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_rootValue;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  int32_t hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_rootValue;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_tmp_class_field_load_result_n0;
+  return hxc_l_tmp_class_field_load_result_n0;
 }
 
-double hxc_ClassLayoutFixture_readScore(struct hxc_LeafRecord *hxc_value)
+double hxc_ClassLayoutFixture_readScore(struct hxc_LeafRecord *hxc_l_value)
 {
-  const void *hxc_gc_roots[1] = { (const void *)hxc_value };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_value == NULL)
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  double hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_score;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  double hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_score;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_tmp_class_field_load_result_n0;
+  return hxc_l_tmp_class_field_load_result_n0;
 }
 
-bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_left, struct hxc_RootRecord *hxc_right)
+bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_l_left, struct hxc_RootRecord *hxc_l_right)
 {
-  const void *hxc_gc_roots[2] = { (const void *)hxc_left, (const void *)hxc_right };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 2, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[2] = { (const void *)hxc_l_left, (const void *)hxc_l_right };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 2, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_left == hxc_right;
+  return hxc_l_left == hxc_l_right;
 }
 
-double hxc_ClassLayoutFixture_sumAcrossBranch(struct hxc_LeafRecord *hxc_value, bool hxc_addScore)
+double hxc_ClassLayoutFixture_sumAcrossBranch(struct hxc_LeafRecord *hxc_l_value, bool hxc_l_addScore)
 {
-  const void *hxc_gc_roots[1] = { (const void *)hxc_value };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_value == NULL)
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
-  double hxc_total = (double)hxc_tmp_class_field_load_result_n0;
-  if (hxc_addScore)
+  int32_t hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_base.hxc_base.hxc_rootValue;
+  double hxc_l_total = (double)hxc_l_tmp_class_field_load_result_n0;
+  if (hxc_l_addScore)
   {
-    double hxc_tmp_compound_load_result_n1 = hxc_total;
-    double hxc_tmp_class_field_load_result_n2 = (*hxc_value).hxc_score;
-    hxc_total = hxc_tmp_compound_load_result_n1 + hxc_tmp_class_field_load_result_n2;
+    double hxc_l_tmp_compound_load_result_n1 = hxc_l_total;
+    double hxc_l_tmp_class_field_load_result_n2 = (*hxc_l_value).hxc_score;
+    hxc_l_total = hxc_l_tmp_compound_load_result_n1 + hxc_l_tmp_class_field_load_result_n2;
   }
-  double hxc_tmp_load_result_n3 = hxc_total;
-  int32_t hxc_tmp_class_field_load_result_n4 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  double hxc_l_tmp_load_result_n3 = hxc_l_total;
+  int32_t hxc_l_tmp_class_field_load_result_n4 = (*hxc_l_value).hxc_base.hxc_base.hxc_rootValue;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_tmp_load_result_n3 + (double)hxc_tmp_class_field_load_result_n4;
+  return hxc_l_tmp_load_result_n3 + (double)hxc_l_tmp_class_field_load_result_n4;
 }
 
-int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_value, int32_t hxc_next)
+int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_l_value, int32_t hxc_l_next)
 {
-  const void *hxc_gc_roots[1] = { (const void *)hxc_value };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_value };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_value == NULL)
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  (*hxc_value).hxc_base.hxc_base.hxc_rootValue = hxc_next;
-  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  (*hxc_l_value).hxc_base.hxc_base.hxc_rootValue = hxc_l_next;
+  int32_t hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_base.hxc_base.hxc_rootValue;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_tmp_class_field_load_result_n0;
+  return hxc_l_tmp_class_field_load_result_n0;
 }
 
-struct hxc_RootRecord *hxc_ClassLayoutFixture_writePeer(struct hxc_LeafRecord *hxc_value, struct hxc_RootRecord *hxc_peer)
+struct hxc_RootRecord *hxc_ClassLayoutFixture_writePeer(struct hxc_LeafRecord *hxc_l_value, struct hxc_RootRecord *hxc_l_peer)
 {
-  const void *hxc_gc_roots[3] = { (const void *)hxc_value, (const void *)hxc_peer, NULL };
-  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
-  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 3, &hxc_gc_frame) != HXC_STATUS_OK)
+  const void *hxc_l_gc_roots[3] = { (const void *)hxc_l_value, (const void *)hxc_l_peer, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 3, &hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  if (hxc_value == NULL)
+  if (hxc_l_value == NULL)
   {
     abort();
   }
-  (*hxc_value).hxc_peer = hxc_peer;
-  struct hxc_RootRecord *hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_peer;
-  hxc_gc_roots[2] = (const void *)hxc_tmp_class_field_load_result_n0;
-  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  (*hxc_l_value).hxc_peer = hxc_l_peer;
+  struct hxc_RootRecord *hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_value).hxc_peer;
+  hxc_l_gc_roots[2] = (const void *)hxc_l_tmp_class_field_load_result_n0;
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();
   }
-  return hxc_tmp_class_field_load_result_n0;
+  return hxc_l_tmp_class_field_load_result_n0;
 }
 
 int main(void)

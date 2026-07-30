@@ -51,11 +51,11 @@
   "inputs": [
     {
       "path": "body-lines.c",
-      "sha256": "34b710b24134e72248c03a5175f74c564a898fe7b39c5b3aa6303a74cef4e285"
+      "sha256": "fc814702e3ba3041335c93177ba5d66dfab4bbed67910a41fa61918995cc329f"
     },
     {
       "path": "body.c",
-      "sha256": "db25b204655732a8ccd0a02559d96797d13c75e7e576a16cedeb2507c4091af9"
+      "sha256": "8091bfdfcbad58884fc3e0e2114c258b7afe17ee3a56aa4b95a477e40697060d"
     }
   ],
   "summary": {
@@ -77,9 +77,9 @@
     "ownerMappedArtifactCount": 2,
     "ownerMappedArtifactBasisPoints": 10000,
     "branchCount": 8,
-    "temporaryDeclarationCount": 12,
-    "temporaryReferenceCount": 16,
-    "temporaryDeclarationsPerKFunctionCodeLines": 72,
+    "temporaryDeclarationCount": 0,
+    "temporaryReferenceCount": 0,
+    "temporaryDeclarationsPerKFunctionCodeLines": 0,
     "maxIdentifier": {
       "name": "hxc_BodyFixture_chooseOrThrow",
       "bytes": 29,
@@ -119,8 +119,8 @@
   "identifierFindings": [
     {
       "category": "hash-suffix",
-      "identifier": "hxc_value_h276946f7ce4a",
-      "bytes": 23,
+      "identifier": "hxc_l_value_h276946f7ce4a",
+      "bytes": 25,
       "explained": true,
       "sourceSymbols": [
         "BodyFixture.integerValue.value#0"
@@ -136,8 +136,8 @@
     },
     {
       "category": "hash-suffix",
-      "identifier": "hxc_value_h95f4913cd08b",
-      "bytes": 23,
+      "identifier": "hxc_l_value_h95f4913cd08b",
+      "bytes": 25,
       "explained": true,
       "sourceSymbols": [
         "BodyFixture.integerValue.value#1"
@@ -156,7 +156,7 @@
   "files": [
     {
       "path": "body-lines.c",
-      "sha256": "34b710b24134e72248c03a5175f74c564a898fe7b39c5b3aa6303a74cef4e285",
+      "sha256": "fc814702e3ba3041335c93177ba5d66dfab4bbed67910a41fa61918995cc329f",
       "owner": {
         "kind": "source-module",
         "modulePath": "BodyFixture",
@@ -358,8 +358,8 @@
         "line": 7,
         "column": 16
       },
-      "temporaryDeclarationCount": 6,
-      "temporaryReferenceCount": 8,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "body-lines.c:function.BodyFixture.booleanValue",
@@ -431,9 +431,9 @@
           ],
           "branchCount": 4,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 67
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body-lines.c:function.BodyFixture.directInteger",
@@ -505,9 +505,9 @@
           ],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 2,
-          "temporaryDeclarationsPerKCodeLines": 134
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body-lines.c:function.BodyFixture.floatingValue",
@@ -579,9 +579,9 @@
           ],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 100
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body-lines.c:function.BodyFixture.integerValue",
@@ -616,9 +616,9 @@
           ],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 84
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body-lines.c:function.BodyFixture.throwPayload",
@@ -698,7 +698,7 @@
     },
     {
       "path": "body.c",
-      "sha256": "db25b204655732a8ccd0a02559d96797d13c75e7e576a16cedeb2507c4091af9",
+      "sha256": "8091bfdfcbad58884fc3e0e2114c258b7afe17ee3a56aa4b95a477e40697060d",
       "owner": {
         "kind": "source-module",
         "modulePath": "BodyFixture",
@@ -717,8 +717,8 @@
         "line": 7,
         "column": 16
       },
-      "temporaryDeclarationCount": 6,
-      "temporaryReferenceCount": 8,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "body.c:function.BodyFixture.booleanValue",
@@ -786,9 +786,9 @@
           "mappedPaths": [],
           "branchCount": 4,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 87
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body.c:function.BodyFixture.directInteger",
@@ -856,9 +856,9 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 2,
-          "temporaryDeclarationsPerKCodeLines": 200
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body.c:function.BodyFixture.floatingValue",
@@ -926,9 +926,9 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 143
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body.c:function.BodyFixture.integerValue",
@@ -961,9 +961,9 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 125
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "body.c:function.BodyFixture.throwPayload",

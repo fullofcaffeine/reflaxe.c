@@ -11,7 +11,6 @@
     "HXC-RT-003"
   ],
   "sources": [
-    "test/string_output/fixtures/nonliteral/Main.hx",
     "test/string_output/fixtures/nonstring/Main.hx",
     "test/string_output/fixtures/positive/Main.hx",
     "test/string_output/fixtures/sys_print/Main.hx",

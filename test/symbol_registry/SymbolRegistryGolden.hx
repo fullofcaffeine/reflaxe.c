@@ -111,6 +111,7 @@ class SymbolRegistryGolden {
 			new CSymbolRequest(CSKLocal, ["demo", "Worker", "run", "value"], CNSOrdinary("demo.Worker.run(c.Int32)")),
 			new CSymbolRequest(CSKLocal, ["demo", "Worker", "run", "while"], CNSOrdinary("demo.Worker.run(c.Int32)")),
 			new CSymbolRequest(CSKLocal, ["demo", "Worker", "run", "bool"], CNSOrdinary("demo.Worker.run(c.Int32)")),
+			new CSymbolRequest(CSKLocal, ["demo", "Worker", "run", "status"], CNSOrdinary("demo.Worker.run(c.Int32)")),
 			new CSymbolRequest(CSKTemporary, ["demo", "Worker", "run", "call-result"], CNSOrdinary("demo.Worker.run(c.Int32)"), CSVInternal, null, null, null,
 				4),
 			new CSymbolRequest(CSKSpecialization, ["demo", "Box", "map"], global, CSVInternal, null, null, ["c.Int32"]),
@@ -356,7 +357,7 @@ class SymbolRegistryGolden {
 			}
 		}
 		return {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			status: "contract-seed-no-lowering",
 			declarations: declarations,
 			buildFacts: buildFacts,
@@ -402,6 +403,7 @@ class SymbolRegistryGolden {
 			exported: exported,
 			linkage: null,
 			callingConvention: null,
+			variadic: false,
 			visibility: null,
 			section: null
 		};

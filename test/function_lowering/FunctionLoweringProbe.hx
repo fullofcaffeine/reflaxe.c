@@ -104,7 +104,7 @@ class FunctionLoweringProbe {
 			sources.push({path: source.path, content: printer.printTranslationUnit(source.unit)});
 		}
 		final report:FunctionLoweringReport = {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			status: "typed-static-functions-direct-calls-runtime-free",
 			profile: Std.string(profile),
 			hxcir: new HxcIRDumper().dump(lowered.program),

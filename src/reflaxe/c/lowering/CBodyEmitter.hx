@@ -960,6 +960,7 @@ class CBodyEmitter {
 		if (emitBlockInstructions(statements, block, state, fn, false))
 			return true;
 		final emittedCases:Array<CCase> = [];
+		var hasDefault = false;
 		for (arm in arms) {
 			final values:Array<CExpr> = [];
 			var isDefault = false;
@@ -981,6 +982,21 @@ class CBodyEmitter {
 			if (arm.body.completion == CFCFallthrough)
 				body.push(SBreak);
 			emittedCases.push({values: values, isDefault: isDefault, body: body});
+			hasDefault = hasDefault || isDefault;
+		}
+		if (tagged && !hasDefault) {
+			// HxcIR deliberately represents a closed enum match without a
+			// semantic default edge. C still needs an explicit fail-stop for an
+			// invalid foreign/corrupt tag: it preserves that proof for strict
+			// compiler data-flow analysis and prevents an uninitialized join
+			// value from becoming observable.
+			emittedCases.push({
+				values: [],
+				isDefault: true,
+				body: [
+					SExpr(ECall(EIdentifier(requireBoundsAbortName(state.boundsAbortName, "exhaustive-tag-switch", fn.id)), []))
+				]
+			});
 		}
 		final subject = if (tagged) {
 			final instanceId = requireEnumInstanceId(valueType(fn, valueId), "terminator", fn.id);
@@ -1060,9 +1076,15 @@ class CBodyEmitter {
 				case IRIOConstructAggregate(instanceId, fields):
 					emitAggregateConstruction(statements, state.values, state.referencedValues, instruction, instanceId, fields, state.temporaryNames,
 						state.lineDirectives, fn.id, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
+				case IRIOZeroAggregate(instanceId):
+					emitAggregateZeroConstruction(statements, state.values, state.referencedValues, instruction, instanceId, state.temporaryNames,
+						state.lineDirectives, fn.id, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
 				case IRIOConstructInterface(interfaceInstanceId, objectValueId, tableId):
 					emitInterfaceConstruction(statements, state.values, state.referencedValues, instruction, interfaceInstanceId, objectValueId, tableId,
 						state.temporaryNames, state.lineDirectives, fn.id);
+				case IRIOUpcastInterface(valueId, sourceInterfaceInstanceId, targetInterfaceInstanceId, tables):
+					emitInterfaceUpcast(statements, state.values, state.referencedValues, instruction, valueId, sourceInterfaceInstanceId,
+						targetInterfaceInstanceId, tables, state.temporaryNames, state.lineDirectives, fn.id);
 				case IRIOProject(valueId, fieldName):
 					emitAggregateProjection(statements, state.values, state.referencedValues, instruction, valueId, fieldName, fn, state.temporaryNames,
 						state.lineDirectives, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
@@ -1336,8 +1358,11 @@ class CBodyEmitter {
 						for (field in fields) {
 							referenced.set(field.valueId, true);
 						}
+					case IRIOZeroAggregate(_):
 					case IRIOConstructInterface(_, objectValueId, _):
 						referenced.set(objectValueId, true);
+					case IRIOUpcastInterface(valueId, _, _, _):
+						referenced.set(valueId, true);
 					case IRIOProject(valueId, _):
 						referenced.set(valueId, true);
 					case IRIOConstructTag(_, _, payload):
@@ -1693,6 +1718,22 @@ class CBodyEmitter {
 		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, coalesce);
 	}
 
+	/** Emit one validated complete C aggregate zero initializer. */
+	function emitAggregateZeroConstruction(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>,
+			instruction:HxcIRInstruction, instanceId:String, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String,
+			coalesce:Bool):Void {
+		if (aggregateFieldOrder.get(instanceId) == null)
+			fail('zero aggregate construction `${instruction.id}` in `$functionId` has no finalized direct-record layout');
+		final result = requireResult(instruction, functionId);
+		final expression = ECompoundLiteral(cType(result.type), DName(null), IList([
+			{
+				designators: [],
+				value: IExpr(EInt(CIntegerLiteral.decimal("0")))
+			}
+		]));
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, coalesce);
+	}
+
 	function emitInterfaceConstruction(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
 			interfaceInstanceId:String, objectValueId:String, tableId:String, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool,
 			functionId:String):Void {
@@ -1709,6 +1750,63 @@ class CBodyEmitter {
 			{
 				designators: [DField(requireInterfaceTableMember(layout))],
 				value: IExpr(EUnary(AddressOf, EIdentifier(table.cName)))
+			}
+		]));
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, false);
+	}
+
+	/**
+		Rewrap one child-interface value as its declared parent interface.
+
+		Interface values carry a concrete object pointer and an interface-specific
+		table pointer. The object pointer is unchanged. The validated closed-world
+		table map selects the parent table for that same concrete class, expressed
+		as ordinary structural C conditionals instead of an unchecked pointer cast.
+	**/
+	function emitInterfaceUpcast(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			valueId:String, sourceInterfaceInstanceId:String, targetInterfaceInstanceId:String, tables:Array<HxcIRInterfaceUpcastTable>,
+			temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+		if (tables.length == 0)
+			fail('interface upcast `${instruction.id}` in `$functionId` has no reachable table mapping');
+		final sourceLayout = requireInterfaceLayout(sourceInterfaceInstanceId);
+		final targetLayout = requireInterfaceLayout(targetInterfaceInstanceId);
+		final sourceValue = requireValue(values, valueId, functionId);
+		final sourceTableValue = EMember(sourceValue, requireInterfaceTableMember(sourceLayout), false);
+
+		function targetTableAddress(index:Int):CExpr {
+			final pair = tables[index];
+			final sourceTable = requireVirtualTable(pair.sourceTableId);
+			final targetTable = requireVirtualTable(pair.targetTableId);
+			if (sourceTable.layout.id != sourceLayout.id)
+				fail('interface upcast `${instruction.id}` in `$functionId` selected a source table for another interface');
+			if (targetTable.layout.id != targetLayout.id)
+				fail('interface upcast `${instruction.id}` in `$functionId` selected a target table for another interface');
+			if (sourceTable.classInstanceId != targetTable.classInstanceId)
+				fail('interface upcast `${instruction.id}` in `$functionId` changed its concrete object class');
+			return EUnary(AddressOf, EIdentifier(targetTable.cName));
+		}
+
+		var selectedTable = targetTableAddress(tables.length - 1);
+		var index = tables.length - 2;
+		while (index >= 0) {
+			final sourceTable = requireVirtualTable(tables[index].sourceTableId);
+			// Resolve and check the target pair even though only its address is
+			// needed in this branch. This keeps malformed IR from bypassing the
+			// representation checks in the single-pass emitter.
+			final targetAddress = targetTableAddress(index);
+			selectedTable = EConditional(EBinary(Equal, sourceTableValue, EUnary(AddressOf, EIdentifier(sourceTable.cName))), targetAddress, selectedTable);
+			index--;
+		}
+
+		final result = requireResult(instruction, functionId);
+		final expression = ECompoundLiteral(cType(result.type), DName(null), IList([
+			{
+				designators: [DField(requireInterfaceObjectMember(targetLayout))],
+				value: IExpr(EMember(sourceValue, requireInterfaceObjectMember(sourceLayout), false))
+			},
+			{
+				designators: [DField(requireInterfaceTableMember(targetLayout))],
+				value: IExpr(selectedTable)
 			}
 		]));
 		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, false);
@@ -1797,9 +1895,13 @@ class CBodyEmitter {
 		}
 		final local = requireLocal(fn, localId);
 		switch local.type {
-			case IRTInstance(instanceId) if (classTags.exists(instanceId) || aggregateTags.exists(instanceId)):
+			case IRTInstance(instanceId)
+				if (classTags.exists(instanceId)
+					|| aggregateTags.exists(instanceId)
+					|| enumsByInstance.exists(instanceId)
+					&& requireEnumRepresentation(instanceId) == CBECTagged):
 			case _:
-				return fail('default initializer `${instruction.id}` in `${fn.id}` does not target direct record or concrete-class storage');
+				return fail('default initializer `${instruction.id}` in `${fn.id}` does not target direct record, tagged enum, or concrete-class storage');
 		}
 		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));
 		addLineDirective(statements, instruction.source, lineDirectives);
@@ -1876,11 +1978,14 @@ class CBodyEmitter {
 	}
 
 	/**
-	 * Emit storage for a proven direct-value join without creating a fake value.
+	 * Emit inert C storage for a proven direct-value join.
 	 *
 	 * HxcIR validation establishes that structured control flow assigns the
-	 * carrier before it is read. The C declaration therefore intentionally has
-	 * no initializer; each conditional arm emits one ordinary assignment.
+	 * carrier before its semantic value is read. Initializing the physical C
+	 * bytes to zero does not initialize the HxcIR value: it prevents inactive
+	 * tagged-union bytes and padding from remaining indeterminate when strict
+	 * compilers inspect a later whole-value copy. Each admitted branch still
+	 * supplies the actual Haxe value before the join.
 	 */
 	function emitUninitializedDeclaration(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
 			instruction:HxcIRInstruction, localId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
@@ -1895,7 +2000,7 @@ class CBodyEmitter {
 			alignments: [],
 			type: declaration.type,
 			declarator: declaration.declarator,
-			initializer: null,
+			initializer: IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]),
 			attributes: []
 		}));
 		declared.set(localId, true);
@@ -2203,6 +2308,14 @@ class CBodyEmitter {
 						isDefault: true,
 						body: [SGoto(requireLabelName(labelNames, defaultEdge.targetBlockId, functionId))]
 					});
+				} else {
+					emittedCases.push({
+						values: [],
+						isDefault: true,
+						body: [
+							SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, "exhaustive-tag-switch", functionId)), []))
+						]
+					});
 				}
 				statements.push(SSwitch(enumTagExpression(requireValue(values, valueId, functionId), instanceId), emittedCases));
 			case IRTThrow(valueId, failure):
@@ -2481,9 +2594,13 @@ class CBodyEmitter {
 			case "haxe.u32.bit-or": widenedUInt32Binary(BitOr, left, right);
 			case "haxe.u32.bit-xor": widenedUInt32Binary(BitXor, left, right);
 			case "haxe.bool.equal" | "haxe.i32.equal" | "haxe.u32.equal" | "haxe.f64.equal" | "haxe.enum-tag.equal": EBinary(Equal, left, right);
+			case "haxe.c-integer.equal": EBinary(Equal, left, right);
+			case "haxe.c-import-enum.equal": EBinary(Equal, left, right);
 			case "haxe.class-reference.equal" | "haxe.array-reference.equal" | "haxe.string-map-reference.equal": EBinary(Equal, left, right);
 			case "haxe.bool.not-equal" | "haxe.i32.not-equal" | "haxe.u32.not-equal" | "haxe.f64.not-equal" | "haxe.enum-tag.not-equal":
 				EBinary(NotEqual, left, right);
+			case "haxe.c-integer.not-equal": EBinary(NotEqual, left, right);
+			case "haxe.c-import-enum.not-equal": EBinary(NotEqual, left, right);
 			case "haxe.class-reference.not-equal" | "haxe.array-reference.not-equal" | "haxe.string-map-reference.not-equal":
 				EBinary(NotEqual, left, right);
 			case "haxe.string.equal": stringViewEqualExpression(left, right, false, false);
@@ -2495,9 +2612,16 @@ class CBodyEmitter {
 			case "haxe.string.not-equal.right-non-null": EUnary(LogicalNot, stringViewEqualExpression(left, right, false, true));
 			case "haxe.string.not-equal.non-null": EUnary(LogicalNot, stringViewEqualExpression(left, right, true, true));
 			case "haxe.i32.less" | "haxe.u32.less" | "haxe.f64.less": EBinary(Less, left, right);
+			case "haxe.c-integer.less": EBinary(Less, left, right);
 			case "haxe.i32.less-equal" | "haxe.u32.less-equal" | "haxe.f64.less-equal": EBinary(LessEqual, left, right);
+			case "haxe.c-integer.less-equal": EBinary(LessEqual, left, right);
 			case "haxe.i32.greater" | "haxe.u32.greater" | "haxe.f64.greater": EBinary(Greater, left, right);
+			case "haxe.c-integer.greater": EBinary(Greater, left, right);
 			case "haxe.i32.greater-equal" | "haxe.u32.greater-equal" | "haxe.f64.greater-equal": EBinary(GreaterEqual, left, right);
+			case "haxe.c-integer.greater-equal": EBinary(GreaterEqual, left, right);
+			case "haxe.c-integer.bit-and": EBinary(BitAnd, left, right);
+			case "haxe.c-integer.bit-or": EBinary(BitOr, left, right);
+			case "haxe.c-integer.bit-xor": EBinary(BitXor, left, right);
 			case _: fail('binary instruction `$instructionId` in `$functionId` has unsupported direct operation `$operationId`');
 		};
 	}
@@ -2739,7 +2863,7 @@ class CBodyEmitter {
 			}
 			if (block.terminator != null) {
 				switch block.terminator.kind {
-					case IRTThrow(_, {target: IRFTAbort}) | IRTUnreachable:
+					case IRTThrow(_, {target: IRFTAbort}) | IRTUnreachable | IRTTagSwitch(_, _, null):
 						addUnique(headers, "stdlib.h");
 					case _:
 				}
@@ -5036,7 +5160,7 @@ class CBodyEmitter {
 				}
 				ECall(EIdentifier(imported.cName), call.arguments.map(argument -> requireValue(values, argument, functionId)));
 			case dispatch if (isHostedOutputDispatch(dispatch)):
-				emitHostedPrintln(statements, values, instruction, call, lineDirectives, functionId);
+				emitHostedPrintln(statements, values, instruction, call, lineDirectives, fn, localNames, globalNames, spanLengthNames, boundsAbortName);
 				return false;
 			case IRCDRuntime("array", _):
 				emitManagedArrayCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
@@ -6067,24 +6191,35 @@ class CBodyEmitter {
 
 	static function isHostedOutputDispatch(dispatch:HxcIRCallDispatch):Bool {
 		return switch dispatch {
-			case IRCDRuntime("io", operationId): operationId == "sys-println-literal" || operationId == "trace-literal";
+			case IRCDRuntime("io", operationId): operationId == "sys-println-literal" || operationId == "sys-println-string" || operationId == "trace-literal";
 			case _: false;
 		};
 	}
 
-	static function emitHostedPrintln(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, call:HxcIRCall, lineDirectives:Bool,
-			functionId:String):Void {
+	function emitHostedPrintln(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, call:HxcIRCall, lineDirectives:Bool,
+			fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>,
+			boundsAbortName:Null<CIdentifier>):Void {
+		final functionId = fn.id;
 		if (instruction.result != null || call.returnType != IRTVoid || call.arguments.length != 1) {
 			fail('hosted output call `${instruction.id}` in `$functionId` lost its validated Void/string signature');
 		}
 		final failure = call.failure;
-		if (failure == null || failure.kind != IRFNativeStatus || failure.target != IRFTAbort || failure.arguments.length != 0 || failure.cleanup.length != 0) {
+		if (failure == null || failure.kind != IRFNativeStatus || failure.target != IRFTAbort || failure.arguments.length != 0) {
 			fail('hosted output call `${instruction.id}` in `$functionId` lost its native-status abort edge');
 		}
 		final callExpression = ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNPrintln)), [requireValue(values, call.arguments[0], functionId)]);
 		final failed = EBinary(NotEqual, callExpression, EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk)));
 		addLineDirective(statements, instruction.source, lineDirectives);
-		statements.push(SIf(failed, SExpr(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNAbort)), [])), null));
+		if (failure.cleanup.length == 0) {
+			// Preserve the compact, byte-stable literal-output form.
+			statements.push(SIf(failed, SExpr(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNAbort)), [])), null));
+			return;
+		}
+		final failedStatements:Array<CStmt> = [];
+		emitCleanupSteps(failedStatements, failure.cleanup, fn, values, localNames, globalNames, spanLengthNames, boundsAbortName);
+		emitManagedRootFramePop(failedStatements, fn, boundsAbortName);
+		emitFailureTarget(failedStatements, failure, fn, boundsAbortName, 'hosted output call `${instruction.id}`');
+		statements.push(SIf(failed, SBlock(failedStatements), null));
 	}
 
 	static function isNonReturningSelfCall(functionId:String, call:HxcIRCall, nonReturningFunctionIds:Null<Map<String, Bool>>):Bool {

@@ -65,8 +65,9 @@ defines the current blocks, items, actors, behavior profiles, drops, effects,
 and logical visuals. A strict build-time validator rejects malformed or
 unresolved data and generates a typed Haxe adapter; CaxeMap and the editor use
 that same registry. The exact JSON is also packaged with the executable. This
-is not yet arbitrary runtime mod loading—the generated adapter is a temporary
-bridge until native JSON and filesystem support can load the same format.
+is not yet arbitrary runtime pack loading: the map is read at runtime, but this
+JSON registry and the UI catalog remain compiled inputs until the next bounded
+package slice.
 
 The shared domain also contains the first deterministic water simulation:
 authored sources fall, spread with bounded strength, leak through openings,
@@ -111,11 +112,19 @@ owned by `haxe_c-xge.20.4.2.4.5`.
 The playable advances water on the fixed clock, draws translucent surfaces,
 swims, applies Adventure drowning damage, fades the underwater camera, and shows
 fixed-tick breath bubbles. `WaterSnapshot` preserves mutable water for the future
-complete save format. Tideweave pickup/equipment is connected through validated
-content and the deterministic pilot protocol; its display-backed visual
+complete save format. The native playable now reads the staged
+`map.caxemap` after startup, runs the shared Haxe lexer, parser, validator, and
+resolver, builds a complete unpublished generation, and selects that generation
+before opening Raylib. A map edit therefore changes the next launch without
+running Haxe, haxe.c, the C compiler, or the linker. The packaged CaxeMap bytes
+are the only level authority; the old per-level Haxe generator and fallback
+have been removed.
+
+Tideweave pickup/equipment is connected through validated content and the
+deterministic pilot protocol; its display-backed visual
 checkpoint is still pending on a runner with a usable desktop session.
-NPC/enemy controller execution, audio, and native runtime map loading remain
-later work.
+NPC/enemy controller execution, audio, and native runtime content-pack loading
+remain later work.
 
 After editing the built-in pack, run:
 
@@ -232,21 +241,25 @@ the generated project.
 
 After a successful interactive build, the launcher records which exact inputs
 produced the game and hashes every output it may reuse. A second unchanged
-`caxecraft:play` checks that record, the complete Haxe/compiler/runtime/content
+`caxecraft:play` checks that record, the complete Haxe/compiler/runtime/build
 input inventory, the native tool identities and foreign headers/libraries, the
-generated C project, staged files, and executable. Only an exact match skips
+generated C project, staged assets, and executable. Runtime content has a
+separate rule: every launch republishes the current authored files into the
+owned staging directory. A map edit therefore keeps the executable hit while
+still reaching the runtime loader. Pack/UI edits remain build misses until
+their runtime-loading slice lands. Only an exact code/configuration match skips
 Haxe, haxe.c, C compilation, and linking. A local diagnostic sample validated
 3,067 files in 0.31–0.91 seconds and reached launch preparation in 1.09
 seconds. The host was busy, so those figures show that the fast path meets its
 intended order of magnitude; they are not an authoritative percentile
 benchmark.
 
-The record is a local optimization, not build authority. A source edit, new
-module, changed define or layout, compiler/runtime/binding change, content
-change, native-tool or library change, missing output, or altered executable
-prints the first detected miss and runs the normal build. A failed requested
-build exits as a failure; it never presents the previous executable as if it
-contained the edit.
+The record is a local optimization, not build authority. A Haxe source edit,
+new module, changed define or layout, compiler/runtime/binding change, compiled
+pack/UI change, native-tool or library change, missing output, or altered
+executable prints the first detected miss and runs the normal build. A failed
+requested build exits as a failure; it never presents the previous executable
+as if it contained the edit.
 
 Use these explicit escape hatches when measuring or diagnosing the build:
 
@@ -265,6 +278,7 @@ npm run caxecraft:play -- --stop-haxe-server
 
 # Rebuild all native objects through the uncached reference path.
 npm run caxecraft:play -- --build-only --native-cache off
+
 ```
 
 An existing `HAXE_NO_SERVER=1` also bypasses executable reuse because it
@@ -509,16 +523,28 @@ strings by stable message ID, while saves and gameplay state remain independent
 of the chosen language. The future editor will edit the map and its catalog as
 one package.
 
-Today the native String/Bytes/filesystem path is not complete, so the build
-validates the CaxeMap's embedded catalog and generates a renderer-independent
-typed lookup. Eval receives ordinary Haxe `String`; C receives only a
-`c.CString` selected from generated literals with static lifetime. The
-application owns Raylib drawing and never learns the supported locale names.
-The source catalogs are copied
-to `bin/content/` as part of native packaging (the reusable UI JSON plus the
-complete scenario CaxeMap), but the running binary still
-uses the validated embedded mirror. This is a documented transition, not a
-claim that runtime catalog loading or the complete bilingual game is finished.
+The shared native String/Bytes codec and the first confined POSIX package-byte
+store now pass focused Eval/generated-C tests. The POSIX store behavior itself
+is Haxe lowered through haxe.c; typed extern declarations are the only operating
+system boundary. The private level resolver and atomic generation owner also
+pass focused Eval/generated-C/sanitizer tests: a failed fresh candidate cannot
+change the selected session, while a complete newer candidate publishes through
+one reference swap. The ordinary game has not yet connected package bytes to
+that owner or its localization generation, so the
+build still validates the CaxeMap's embedded catalog and generates a
+renderer-independent typed lookup. Eval receives ordinary Haxe `String`; C
+receives only a `c.CString` selected from generated literals with static
+lifetime. The application owns Raylib drawing and never learns the supported
+locale names.
+
+The source catalogs are copied to `bin/content/` as part of native packaging
+(the reusable UI JSON plus the complete scenario CaxeMap), but the running
+binary still uses the validated embedded mirror. This is a documented
+transition, not a claim that runtime catalog loading or the complete bilingual
+game is finished. `npm run test:caxecraft-package-store` proves the byte
+boundary, and `npm run test:caxecraft-content-generation` proves candidate
+ownership/publication; `haxe_c-xge.20.4.3` owns connecting those paths in
+ordinary play.
 
 After editing the UI catalog or embedded CaxeMap messages, regenerate and check
 the temporary built-in lookup catalog with:
@@ -528,20 +554,20 @@ python3 examples/caxecraft/localization_catalog.py
 npm run test:caxecraft-localization
 ```
 
-Terrain, authored fluid records, fluid presentation, and player spawn use a
-second typed adapter generated by a Haxe Eval tool from the same validated
-CaxeMap. Python only starts that Haxe tool and compares bytes; it does not parse
-or reimplement the format. Regenerate and check it after a world edit:
+Terrain, authored fluid records, fluid presentation, actors, items, and player
+spawn are read from the packaged CaxeMap by the ordinary native loader. After a
+world edit, run the shared codec and runtime-loader owners:
 
 ```sh
-python3 examples/caxecraft/level_adapter.py
-npm run test:caxecraft-level-adapter
+npm run test:caxecraft-scenario-model
+npm run test:caxecraft-runtime-level-loader
 ```
 
-The play launcher checks the adapter's exact source hash before invoking Haxe,
-so an edited map cannot silently launch with stale terrain. Actor/item
-placements and CaxeFlow composition are not all consumed by the native game yet;
-`haxe_c-xge.20.4` owns removing that remaining application coupling.
+The play launcher stages the current map before every launch and deliberately
+excludes it from the compiler build key. An edited map therefore cannot be
+silently replaced by stale generated facts. Some CaxeFlow and presentation
+composition still has temporary application coupling; `haxe_c-xge.20.4` owns
+removing it.
 
 The focused check rejects incomplete locales, duplicate IDs or JSON keys,
 unknown fields, invalid UTF-8/control text, stale generated catalogs, and any

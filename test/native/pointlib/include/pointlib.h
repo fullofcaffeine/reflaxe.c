@@ -38,9 +38,13 @@ typedef struct pointlib_float_point {
 #define POINTLIB_FLOAT_NEGATIVE_TWO (-2.0f)
 
 pointlib_point pointlib_point_make(pointlib_coord x, pointlib_coord y);
+bool pointlib_point_is_zero(pointlib_point point);
 pointlib_point pointlib_point_translate(pointlib_point point, pointlib_coord dx, pointlib_coord dy);
+void pointlib_point_translate_in_place(pointlib_point *point, pointlib_coord dx, pointlib_coord dy);
+bool pointlib_variadic_fixed_prefix_verify(pointlib_coord expected, ...);
 pointlib_point_alias pointlib_point_alias_identity(pointlib_point_alias point);
 int64_t pointlib_point_dot(pointlib_point left, pointlib_point right);
+pointlib_axis pointlib_axis_identity(pointlib_axis axis);
 pointlib_coord pointlib_point_component(pointlib_point point, pointlib_axis axis);
 bool pointlib_point_verify(pointlib_point left, pointlib_point right, int64_t dot, pointlib_coord component, pointlib_axis axis, const char *label);
 pointlib_float_point pointlib_float_point_make(float x, float y);

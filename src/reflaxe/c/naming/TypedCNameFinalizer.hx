@@ -28,8 +28,8 @@ class TypedCNameFinalizer {
 	public function new() {}
 
 	public function finalizeNames(snapshot:TypedCContractSnapshot):TypedCNameFinalization {
-		if (snapshot.schemaVersion != 2) {
-			contractFailure('typed C contract schema ${snapshot.schemaVersion} is unsupported by name finalization; expected schema 2');
+		if (snapshot.schemaVersion != 3) {
+			contractFailure('typed C contract schema ${snapshot.schemaVersion} is unsupported by name finalization; expected schema 3');
 		}
 
 		final registry = new CSymbolRegistry();
@@ -164,6 +164,7 @@ class TypedCNameFinalizer {
 			exported: field.exported,
 			linkage: field.linkage,
 			callingConvention: field.callingConvention,
+			variadic: field.variadic,
 			visibility: field.visibility,
 			section: field.section
 		};

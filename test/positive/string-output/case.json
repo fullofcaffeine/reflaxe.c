@@ -13,6 +13,7 @@
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
     "test/string_output/fixtures/positive/Main.hx",
+    "test/string_output/fixtures/nonliteral/Main.hx",
     "test/string_output/run.py"
   ],
   "runner": {

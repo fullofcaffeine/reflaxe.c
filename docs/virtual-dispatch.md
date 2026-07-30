@@ -3,7 +3,7 @@
 E3.T06 admits ordinary instance methods and reachable class-hierarchy virtual
 calls for the bounded concrete-class program already supported by E3.T04 and
 E3.T05. The compiler discovers calls from pinned-Haxe typed expressions,
-records the choice in schema-21 HxcIR, and emits program-local strict C11. The
+records the choice in schema-23 HxcIR, and emits program-local strict C11. The
 slice works in `portable` and `metal`, selects no `hxrt` feature, and exposes no
 public C ABI.
 
@@ -80,6 +80,34 @@ the exact interface, slot, and receiver used by a call. The validator checks
 that the interface instance, table, slot, object implementation, and function
 signature agree before C syntax is selected.
 
+An ordinary child-interface value can also flow to a declared parent
+interface. For example, a `CounterView` that extends `ReadableView` may be
+passed to a function expecting `ReadableView`. The object is already correct,
+but the two interface types use different method-table layouts. Schema-23
+HxcIR therefore records an `IRIOUpcastInterface` operation with a complete
+closed-world mapping:
+
+```text
+Counter implementation:
+  CounterView table -> ReadableView table
+
+AlternateCounter implementation:
+  CounterView table -> ReadableView table
+```
+
+Generated C keeps the object pointer and selects the parent table belonging to
+that same concrete class. With more than one reachable implementation the
+selection is a readable conditional over immutable program-local table
+addresses; it is not an unchecked struct-pointer cast, allocation, or general
+runtime type lookup. Validation independently rejects a missing table, a table
+for the wrong interface, or a mapping that changes the concrete class.
+
+The reverse conversion is different. A `ReadableView` value does not prove
+that its object also implements `CounterView`, and an unrelated interface has
+no nominal relationship at all. Those conversions still need the future
+runtime-checked cast machinery and currently fail at the exact Haxe `cast`
+with `HXC1001`, leaving no output.
+
 A constructor may accept this interface pair by value when its typed body proves
 that the pair remains a short-lived borrow for that call. HxcIR records
 `ownership=borrowed-interface`; storing, returning, or forwarding it without
@@ -136,9 +164,10 @@ compiler decisions; it is not a stable public ABI map.
 ## Remaining boundaries
 
 E3.T07 remains in progress: proven class-to-interface construction, inherited
-interface slots, multiple interface views, interface calls, and call-bounded
-constructor parameters are implemented; runtime-checked casts, dynamic type
-tests, and general retained interface ownership remain fail-closed. Function
+interface slots, multiple interface views, child-interface to parent-interface
+upcasts, interface calls, and call-bounded constructor parameters are
+implemented; runtime-checked downcasts, unrelated-interface casts, dynamic type
+tests, and broader retained interface ownership remain fail-closed. Function
 values and closures remain E3.T08. Generic classes or methods, dynamic instance
 methods, escaping/heap objects, reflection, general exception-bearing virtual
 methods, public class layouts, and stable exported method ABI remain
@@ -165,7 +194,10 @@ slot—while six final/private/metadata/`super` calls remain direct. It proves
 that an unrelated final class receives no table, snapshots HxcIR, the report,
 the generated header/source, and finalized symbols, and compares cold,
 reversed-input, locale, profile, explicit-runtime-none, and warm-server builds.
-Negative fixtures cover argument and return representation variance with exact
+The interface fixture exercises two concrete child-interface implementations,
+so generated C must select both corresponding parent tables while preserving
+the object. Negative fixtures cover argument and return representation
+variance, unsafe interface downcasts, and unrelated-interface casts with exact
 no-output diagnostics. Required native lanes compile and run the generated C
 under identity-verified GCC and Clang at `-O0` and `-O2` and compile the private
 header as C++17. The `.cpp` file is only an independent header consumer; it is

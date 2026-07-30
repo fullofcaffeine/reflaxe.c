@@ -307,7 +307,7 @@ class CBodyValueCoalescingPlanner {
 		return switch kind {
 			case IRIOUnary(_, _, IRIStatic | IRIProgramLocal(_)) | IRIOBinary(_, _, _, IRIStatic | IRIProgramLocal(_)): true;
 			case IRIOConvert(_, _, _, IRIStatic | IRIProgramLocal(_), null): true;
-			case IRIOConstructAggregate(_, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _):
+			case IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _):
 				dispositions.get(resultId) == CBVDInlinePure;
 			case _: false;
 		};
@@ -315,7 +315,7 @@ class CBodyValueCoalescingPlanner {
 
 	static function isPureStructuralProducer(kind:HxcIRInstructionKind):Bool {
 		return switch kind {
-			case IRIOConstructAggregate(_, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _): true;
+			case IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _): true;
 			case _: false;
 		};
 	}
@@ -331,8 +331,8 @@ class CBodyValueCoalescingPlanner {
 	static function isReadOrEffectBarrier(kind:HxcIRInstructionKind):Bool {
 		return switch kind {
 			case IRIOConstant(_) | IRIOUnary(_, _, IRIStatic | IRIProgramLocal(_)) | IRIOBinary(_, _, _, IRIStatic | IRIProgramLocal(_)) |
-				IRIOConvert(_, _, _, IRIStatic | IRIProgramLocal(_), null) | IRIOConstructAggregate(_, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) |
-				IRIOMatchTag(_, _):
+				IRIOConvert(_, _, _, IRIStatic | IRIProgramLocal(_), null) | IRIOConstructAggregate(_, _) | IRIOZeroAggregate(_) | IRIOProject(_, _) |
+				IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _):
 				false;
 			case _: true;
 		};
@@ -404,7 +404,7 @@ class CBodyValueCoalescingPlanner {
 
 	function collectInstructionUses(kind:HxcIRInstructionKind, site:CBodyValueUseSite):Void {
 		switch kind {
-			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_):
+			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOZeroAggregate(_):
 			case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
 				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODeclareUninitialized(place) | IRIODeclareManagedCarrier(place, _) |
 				IRIOMoveManagedCarrier(place) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
@@ -427,6 +427,8 @@ class CBodyValueCoalescingPlanner {
 					addUse(field.valueId, site);
 			case IRIOConstructInterface(_, objectValueId, _):
 				addUse(objectValueId, site);
+			case IRIOUpcastInterface(valueId, _, _, _):
+				addUse(valueId, site);
 			case IRIOProject(valueId, _) | IRIOMatchTag(valueId, _) | IRIOProjectTag(valueId, _, _, _):
 				addUse(valueId, site);
 			case IRIOConstructTag(_, _, payload):

@@ -23,18 +23,18 @@ extern const struct hxc_type_descriptor hxc_LeafRecord_descriptor;
 
 extern const struct hxc_type_descriptor hxc_RootRecord_descriptor;
 
-static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_l_value)
 {
-  if (hxc_value <= UINT32_C(2147483647))
+  if (hxc_l_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_value;
+    return (int32_t)hxc_l_value;
   }
-  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_l_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left + (uint64_t)(uint32_t)hxc_l_right));
 }
 
 struct hxc_RootRecord;
@@ -70,34 +70,34 @@ struct hxc_LeafRecord {
   struct hxc_RootRecord *hxc_peer;
 };
 
-struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *hxc_value);
+struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *hxc_l_value);
 
-struct hxc_MiddleRecord *hxc_ClassLayoutFixture_asMiddle(struct hxc_LeafRecord *hxc_value);
+struct hxc_MiddleRecord *hxc_ClassLayoutFixture_asMiddle(struct hxc_LeafRecord *hxc_l_value);
 
-struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_value);
+struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_l_value);
 
-int32_t hxc_ClassLayoutFixture_branchProofDoesNotEscape(struct hxc_RootRecord *hxc_value, struct hxc_RootRecord *hxc_other, bool hxc_useFirst);
+int32_t hxc_ClassLayoutFixture_branchProofDoesNotEscape(struct hxc_RootRecord *hxc_l_value, struct hxc_RootRecord *hxc_l_other, bool hxc_l_useFirst);
 
-bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_left, struct hxc_RootRecord *hxc_right);
+bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_l_left, struct hxc_RootRecord *hxc_l_right);
 
-bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_value);
+bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_l_value);
 
 void hxc_ClassLayoutFixture_main(void);
 
-int32_t hxc_ClassLayoutFixture_readInherited(struct hxc_LeafRecord *hxc_value);
+int32_t hxc_ClassLayoutFixture_readInherited(struct hxc_LeafRecord *hxc_l_value);
 
-struct hxc_RootRecord *hxc_ClassLayoutFixture_readPeer(struct hxc_LeafRecord *hxc_value);
+struct hxc_RootRecord *hxc_ClassLayoutFixture_readPeer(struct hxc_LeafRecord *hxc_l_value);
 
-int32_t hxc_ClassLayoutFixture_readRoot(struct hxc_RootRecord *hxc_value);
+int32_t hxc_ClassLayoutFixture_readRoot(struct hxc_RootRecord *hxc_l_value);
 
-double hxc_ClassLayoutFixture_readScore(struct hxc_LeafRecord *hxc_value);
+double hxc_ClassLayoutFixture_readScore(struct hxc_LeafRecord *hxc_l_value);
 
-bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_left, struct hxc_RootRecord *hxc_right);
+bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_l_left, struct hxc_RootRecord *hxc_l_right);
 
-double hxc_ClassLayoutFixture_sumAcrossBranch(struct hxc_LeafRecord *hxc_value, bool hxc_addScore);
+double hxc_ClassLayoutFixture_sumAcrossBranch(struct hxc_LeafRecord *hxc_l_value, bool hxc_l_addScore);
 
-int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_value, int32_t hxc_next);
+int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_l_value, int32_t hxc_l_next);
 
-struct hxc_RootRecord *hxc_ClassLayoutFixture_writePeer(struct hxc_LeafRecord *hxc_value, struct hxc_RootRecord *hxc_peer);
+struct hxc_RootRecord *hxc_ClassLayoutFixture_writePeer(struct hxc_LeafRecord *hxc_l_value, struct hxc_RootRecord *hxc_l_peer);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

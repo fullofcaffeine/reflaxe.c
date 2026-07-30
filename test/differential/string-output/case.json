@@ -11,6 +11,7 @@
   ],
   "sources": [
     "test/string_output/fixtures/positive/Main.hx",
+    "test/string_output/fixtures/nonliteral/Main.hx",
     "test/string_output/expected/program.c",
     "test/string_output/run.py"
   ],

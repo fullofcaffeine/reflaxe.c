@@ -5,20 +5,53 @@ editing the engine. The public authoring model is CaxeMap plus CaxeFlow. Haxe
 implements reusable mechanics; authored data decides where and when those
 mechanics are used.
 
-This guide separates what works now from the intended workflow. That boundary
-matters: the current native game packages the first CaxeMap and uses generated,
-validated adapters for localization and for the first playable's terrain,
-initial water, fluid visuals, player spawn, item placements, and actor
-placements. `FirstPlayableLevelGenerator` derives those typed facts from the
-real map; `FirstPlayableSessionLoader` uses them only for the current startup
-candidate. This named pair is a temporary bridge, not a reusable level-loader
-API, and `haxe_c-xge.20.4.3.6` removes it after the native executable reads the
-map itself.
+This guide separates what works now from the intended workflow. The ordinary
+native game now reads the staged first CaxeMap after process startup. The same
+Haxe lexer, parser, validator, resolver, and generation builder used by focused
+Eval/native tests turn those bytes into the complete startup session before
+Raylib opens. There is no generated per-level Haxe fallback: the packaged
+`map.caxemap` bytes are the one level authority used by ordinary play and by the
+playable snapshot owner.
+
+The runtime-ingress pieces run through that same path. The shared CaxeMap
+lexer/parser/validator runs under generated native C, and
+`ContentPackageStore` can read exact bounded bytes through a confined POSIX
+content root. The traversal, no-follow policy, identity checks, exact reads,
+retry, and descriptor cleanup are ordinary Haxe in
+`caxecraft.content.hosted.PosixPackageApi`; haxe.c lowers that metal-facing code
+against narrow typed POSIX extern declarations. The remaining handwritten C
+harness only checks the host ABI independently and consumes the exported Haxe
+result envelope. It owns no file algorithm, CaxeMap grammar, defaults, or
+gameplay.
+`npm run test:caxecraft-package-store` is the focused executable evidence.
+
+The ordinary `caxecraft:play` command is wired to that byte path. Its unchanged
+build check excludes the runtime map, republishes current content before every
+launch, and two diagnostic runs prepared a no-change launch in 378.4 ms and
+646.8 ms on the development host. A map edit therefore does not run Haxe,
+haxe.c, a C compiler, or the linker. This is runtime **map** authority, not
+complete runtime pack authority: `content.json` and `locales/ui.json` remain
+compiled inputs.
+
+The engine-facing resolution step now works in isolation. After the shared
+validator accepts a CAXEMAP document, `ResolvedLevelPlan.resolve` converts its
+readable IDs into fully checked terrain, fluid, item, actor, player, and flow
+construction facts. That plan is deliberately private and temporary: it has no
+file format, cannot be imported by authoring or package code, and is never
+something a creator or agent edits. Eval and generated native C produce the
+same compact semantic trace from it. Ordinary play publishes that result
+through the same executable ownership mechanism: `LoadedContentGeneration`
+builds a fresh complete session and
+`ActiveContent.publish` selects it with one reference swap. Ordinary play now
+uses that generation as its session owner. Injected failures
+before every construction stage leave the active trace unchanged, and repeated
+loads pass Eval, generated native C, and sanitizers.
 
 Inventory setup, dialogue progression, rewards, HUD copy, and rule composition
 still contain temporary Haxe wiring. `haxe_c-xge.20.4` owns removing that
-remaining coupling. Dropping a new map beside the executable does **not** yet
-replace the playable world because native file loading is not implemented.
+remaining coupling. Campaign selection and arbitrary pack discovery are not
+implemented; normal play loads the one application-selected logical map from
+its confined staged root.
 
 ## Where each kind of change belongs
 

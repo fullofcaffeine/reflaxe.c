@@ -590,7 +590,7 @@
           "bool"
         ],
         "requestedName": null,
-        "cName": "hxc_bool",
+        "cName": "hxc_l_bool",
         "semanticKey": "5:local|36:ordinary:24:demo.Worker.run(c.Int32)|4:4:demo6:Worker3:run4:bool|0:|0:|0:",
         "escapeReasons": [],
         "namespace": {
@@ -600,7 +600,7 @@
         "visibility": "internal",
         "kind": "local",
         "specializationArguments": [],
-        "baseName": "hxc_bool",
+        "baseName": "hxc_l_bool",
         "sourceSymbol": "demo.Worker.run.bool"
       },
       {
@@ -613,7 +613,7 @@
           "call-result"
         ],
         "requestedName": null,
-        "cName": "hxc_tmp_call_result_n4",
+        "cName": "hxc_l_tmp_call_result_n4",
         "semanticKey": "9:temporary|36:ordinary:24:demo.Worker.run(c.Int32)|4:4:demo6:Worker3:run11:call-result|0:|0:|1:4",
         "escapeReasons": [
           "non-c-identifier-byte",
@@ -626,7 +626,7 @@
         "visibility": "internal",
         "kind": "temporary",
         "specializationArguments": [],
-        "baseName": "hxc_tmp_call_result_n4",
+        "baseName": "hxc_l_tmp_call_result_n4",
         "sourceSymbol": "demo.Worker.run.call-result#4"
       },
       {
@@ -687,10 +687,32 @@
         "naming": "generated",
         "sourceOrdinal": null,
         "readableName": [
+          "status"
+        ],
+        "requestedName": null,
+        "cName": "hxc_l_status",
+        "semanticKey": "5:local|36:ordinary:24:demo.Worker.run(c.Int32)|4:4:demo6:Worker3:run6:status|0:|0:|0:",
+        "escapeReasons": [],
+        "namespace": {
+          "scope": "demo.Worker.run(c.Int32)",
+          "kind": "ordinary"
+        },
+        "visibility": "internal",
+        "kind": "local",
+        "specializationArguments": [],
+        "baseName": "hxc_l_status",
+        "sourceSymbol": "demo.Worker.run.status"
+      },
+      {
+        "overloadSignature": [],
+        "collisionResolved": false,
+        "naming": "generated",
+        "sourceOrdinal": null,
+        "readableName": [
           "value"
         ],
         "requestedName": null,
-        "cName": "hxc_value",
+        "cName": "hxc_l_value",
         "semanticKey": "5:local|36:ordinary:24:demo.Worker.run(c.Int32)|4:4:demo6:Worker3:run5:value|0:|0:|0:",
         "escapeReasons": [],
         "namespace": {
@@ -700,7 +722,7 @@
         "visibility": "internal",
         "kind": "local",
         "specializationArguments": [],
-        "baseName": "hxc_value",
+        "baseName": "hxc_l_value",
         "sourceSymbol": "demo.Worker.run.value"
       },
       {
@@ -712,7 +734,7 @@
           "while"
         ],
         "requestedName": null,
-        "cName": "hxc_while",
+        "cName": "hxc_l_while",
         "semanticKey": "5:local|36:ordinary:24:demo.Worker.run(c.Int32)|4:4:demo6:Worker3:run5:while|0:|0:|0:",
         "escapeReasons": [
           "c-keyword",
@@ -725,7 +747,7 @@
         "visibility": "internal",
         "kind": "local",
         "specializationArguments": [],
-        "baseName": "hxc_while",
+        "baseName": "hxc_l_while",
         "sourceSymbol": "demo.Worker.run.while"
       },
       {
@@ -954,7 +976,7 @@
         "baseName": "hxc_demo_Worker_run"
       }
     ],
-    "algorithm": "hxc-c-symbol-v2"
+    "algorithm": "hxc-c-symbol-v3"
   },
   "diagnostics": {
     "leadingUnderscore": {
@@ -1212,7 +1234,7 @@
         }
       ],
       "collisions": [],
-      "algorithm": "hxc-c-symbol-v2"
+      "algorithm": "hxc-c-symbol-v3"
     },
     "snapshot": {
       "buildFacts": [
@@ -1255,7 +1277,7 @@
         }
       ],
       "status": "contract-seed-names-finalized-no-lowering",
-      "schemaVersion": 2,
+      "schemaVersion": 3,
       "effects": {
         "unsafe": "none",
         "runtimeFeatures": [],
@@ -1277,6 +1299,7 @@
               "visibility": null,
               "callingConvention": null,
               "kind": "function",
+              "variadic": false,
               "align": null,
               "type": {
                 "arguments": [],
@@ -1294,6 +1317,7 @@
               "visibility": null,
               "callingConvention": null,
               "kind": "function",
+              "variadic": false,
               "align": null,
               "type": {
                 "arguments": [],
@@ -1334,6 +1358,7 @@
               "visibility": null,
               "callingConvention": null,
               "kind": "field",
+              "variadic": false,
               "align": null,
               "type": {
                 "arguments": [],
@@ -1369,6 +1394,7 @@
               "visibility": null,
               "callingConvention": null,
               "kind": "field",
+              "variadic": false,
               "align": null,
               "type": {
                 "arguments": [],

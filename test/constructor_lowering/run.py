@@ -8,6 +8,7 @@ import copy
 import difflib
 import json
 import os
+import re
 import shutil
 import signal
 import socket
@@ -28,6 +29,8 @@ MINIMAL = FIXTURES / "minimal"
 FAILURE_RUNTIME = FIXTURES / "failure_runtime"
 DEFAULT_RUNTIME = FIXTURES / "default_runtime"
 RECORD_PARAMETER = FIXTURES / "record_parameter"
+MANAGED_RECORD_ARGUMENT = FIXTURES / "managed_record_argument"
+MANAGED_RECORD_ARGUMENT_FAILURE = FIXTURES / "managed_record_argument_failure"
 INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
 DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
@@ -41,6 +44,7 @@ DIRECT_ARGUMENT = FIXTURES / "direct_argument"
 OWNED_FALLIBLE = FIXTURES / "owned_fallible"
 FACTORY_RETURN = FIXTURES / "factory_return"
 EARLY_EXIT = FIXTURES / "early_exit"
+FINAL_PRIMITIVE_FIELDS = FIXTURES / "final_primitive_fields"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
@@ -122,6 +126,26 @@ RECORD_NATIVE_COVERAGE = frozenset(
         "constructor-record-parameter",
         "constructor-record-parameter-by-value",
         "constructor-record-parameter-stack-owner",
+    }
+)
+MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-managed-record-argument",
+        "constructor-managed-record-argument-caller-owner",
+        "constructor-managed-record-argument-callee-owner",
+        "constructor-managed-record-argument-stack",
+        "constructor-managed-record-argument-direct-receiver",
+        "constructor-managed-record-argument-owned-child",
+        "constructor-managed-record-argument-super",
+        "constructor-managed-record-argument-collector",
+        "constructor-managed-record-fresh-receiver-projection",
+    }
+)
+MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-managed-record-argument-failure",
+        "constructor-managed-record-argument-failure-caller-cleanup",
+        "constructor-managed-record-argument-failure-partial-object-cleanup",
     }
 )
 INTERFACE_NATIVE_COVERAGE = frozenset(
@@ -239,6 +263,14 @@ EARLY_EXIT_NATIVE_COVERAGE = frozenset(
         "constructor-root-guard-early-exit",
         "constructor-root-guard-stack-storage",
         "constructor-root-guard-cleanup",
+    }
+)
+FINAL_PRIMITIVE_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-final-primitive-bool-field",
+        "constructor-final-primitive-float-field",
+        "constructor-final-primitive-int-field",
+        "constructor-final-primitive-runtime-free",
     }
 )
 RETAINED_INTERFACE_RUNTIME_FEATURES = [
@@ -435,12 +467,12 @@ def validate_record_parameter_project(output: Path) -> None:
             "record-parameter constructor lost its family-specific semantic key"
         )
     if (
-        "struct hxc_SpawnPoint hxc_point" not in sources
-        or "struct hxc_SpawnPoint hxc_point" not in headers
+        "struct hxc_SpawnPoint hxc_l_point" not in sources
+        or "struct hxc_SpawnPoint hxc_l_point" not in headers
         or "struct hxc_ConfiguredSpawn" not in sources
         or " = { 0 };" not in sources
-        or "struct hxc_SpawnPoint *hxc_point" in sources
-        or "struct hxc_SpawnPoint *hxc_point" in headers
+        or "struct hxc_SpawnPoint *hxc_l_point" in sources
+        or "struct hxc_SpawnPoint *hxc_l_point" in headers
     ):
         raise ConstructorLoweringFailure(
             "record parameter was not passed by value to a stack-owned class"
@@ -458,6 +490,150 @@ def validate_record_parameter_project(output: Path) -> None:
             raise ConstructorLoweringFailure(
                 f"record-parameter constructor emitted forbidden shape {forbidden!r}"
             )
+
+
+def validate_managed_record_argument_project(output: Path) -> None:
+    """Prove every constructor spelling borrows one stabilized record owner."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "include").rglob("*.h"))
+    )
+    required_owner_roles = (
+        "constructor_argument_0_owner",
+        "constructed_receiver_argument_0_owner",
+        "managed_constructor_argument_0_owner",
+        "owned_field_constructor_argument_0_owner",
+        "super_constructor_argument_0_owner",
+        "record_field_reading_receiver_owner",
+    )
+    missing_roles = [role for role in required_owner_roles if role not in source]
+    if missing_roles:
+        raise ConstructorLoweringFailure(
+            "managed-record constructor fixture omitted stabilized owner roles: "
+            f"{missing_roles!r}"
+        )
+    receipt_lifecycle_match = re.search(
+        r"(hxc_record_[0-9a-f]+)_destroy"
+        r"\(&hxc_l_tmp_constructor_argument_0_owner",
+        source,
+    )
+    if (
+        receipt_lifecycle_match is None
+        or source.count(receipt_lifecycle_match.group(1) + "_retain") < 5
+        or source.count(receipt_lifecycle_match.group(1) + "_destroy") < 8
+        or "hxc_gc_allocate(" not in source
+        or "ManagedReceiptReader_descriptor" not in source
+        or "struct hxc_Main_Receipt hxc_receipt" not in (source + headers)
+    ):
+        raise ConstructorLoweringFailure(
+            "managed-record constructor lost caller ownership, callee retention, "
+            "collector storage, or by-value record passing"
+        )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    features = plan.get("features", [])
+    direct = plan.get("directDecisions", [])
+    if (
+        not isinstance(features, list)
+        or "array" not in features
+        or "gc" not in features
+        or "closed-anonymous-value-records" not in direct
+        or "bounded-stack-construction" not in direct
+    ):
+        raise ConstructorLoweringFailure(
+            "managed-record constructor lost its Array, GC, record, or stack plan"
+        )
+
+
+def validate_managed_record_argument_report(report: dict[str, object]) -> None:
+    """Prove HxcIR makes each fresh caller owner and cleanup explicit."""
+
+    hxcir = required_text(report.get("hxcir"), "managed-record argument HxcIR")
+    main = function_section(hxcir, "function.Main.main")
+    managed = function_section(hxcir, "function.Main.buildManaged")
+    derived = function_section(hxcir, "constructor._Main.DerivedReceiptReader")
+    parent = function_section(hxcir, "constructor._Main.ReceiptParent")
+    for section, role in (
+        (main, "constructor-argument-0"),
+        (main, "constructed-receiver-argument-0"),
+        (managed, "managed-constructor-argument-0"),
+        (derived, "super-constructor-argument-0"),
+        (parent, "owned-field-constructor-argument-0"),
+        (main, "record-field-reading-receiver"),
+    ):
+        if (
+            f"{role}-owner-initialize" not in section
+            or f"record-temporary." not in section
+            or "idempotence=exactly-once release" not in section
+        ):
+            raise ConstructorLoweringFailure(
+                f"managed-record constructor HxcIR lost the {role} owner lifecycle"
+            )
+    ordered(
+        main,
+        (
+            'dispatch=direct("function.Main.buildReading")',
+            "record-field-reading-receiver-owner-initialize",
+            "record-field-reading-receiver-borrow",
+            'field="reading"',
+        ),
+        "fresh managed-record receiver field projection",
+    )
+    ordered(
+        main,
+        (
+            "construct-record",
+            "constructor-argument-0-owner-initialize",
+            "constructor-argument-0-borrow",
+            'dispatch=direct("constructor._Main.StackReceiptReader")',
+        ),
+        "named managed-record constructor argument",
+    )
+    ordered(
+        managed,
+        (
+            "construct-record",
+            "managed-constructor-argument-0-owner-initialize",
+            "managed-constructor-argument-0-borrow",
+            "managed-class-allocate",
+            'dispatch=direct("constructor._Main.ManagedReceiptReader")',
+        ),
+        "collector-managed record constructor argument",
+    )
+
+
+def validate_managed_record_argument_failure_project(output: Path) -> None:
+    """Prove constructor failure destroys caller and partial-object owners."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    destroy_match = re.search(r"hxc_record_[0-9a-f]+_destroy", source)
+    if destroy_match is None:
+        raise ConstructorLoweringFailure(
+            "managed-record failure fixture omitted its typed record destroyer"
+        )
+    destroy = destroy_match.group(0)
+    call = source.find("if (!hxc_compiler_constructor_Main_FailingReceiptReader(")
+    abort = source.find("abort();", call)
+    if min(call, abort) < 0:
+        raise ConstructorLoweringFailure(
+            "managed-record failure fixture omitted its checked constructor call"
+        )
+    failure = source[call:abort]
+    if (
+        "constructor_argument_0_owner" not in source
+        or "object_storage" not in failure
+        or "constructor_argument_0_owner" not in failure
+        or failure.count(f"{destroy}(") != 2
+    ):
+        raise ConstructorLoweringFailure(
+            "managed-record failure edge did not destroy the partial-object field "
+            "and caller temporary exactly once before abort"
+        )
 
 
 def validate_interface_parameter_project(output: Path) -> None:
@@ -500,12 +676,12 @@ def validate_interface_parameter_project(output: Path) -> None:
         )
     interface_value = "struct hxc_compiler_interface_dispatch_ScoreSource_value"
     if (
-        f"{interface_value} hxc_source" not in sources
-        or f"{interface_value} hxc_source" not in headers
-        or f"{interface_value} *hxc_source" in sources
-        or f"{interface_value} *hxc_source" in headers
-        or "hxc_source.table->hxc_interface_slot_ScoreSource_score("
-        "hxc_source.object, hxc_seed)" not in sources
+        f"{interface_value} hxc_l_source" not in sources
+        or f"{interface_value} hxc_l_source" not in headers
+        or f"{interface_value} *hxc_l_source" in sources
+        or f"{interface_value} *hxc_l_source" in headers
+        or "hxc_l_source.table->hxc_interface_slot_ScoreSource_score("
+        "hxc_l_source.object, hxc_l_seed)" not in sources
     ):
         raise ConstructorLoweringFailure(
             "interface parameter was not a by-value object/table pair with interface dispatch"
@@ -550,10 +726,11 @@ def validate_retained_interface_project(output: Path) -> None:
     interface_value = "struct hxc_compiler_interface_dispatch_ScoreSource_value"
     if (
         plan.get("features") != RETAINED_INTERFACE_RUNTIME_FEATURES
-        or f"{interface_value} hxc_source" not in sources
-        or f"{interface_value} hxc_source" not in headers
-        or f"{interface_value} *hxc_source" in sources
-        or f"{interface_value} *hxc_source" in headers
+        or f"{interface_value} hxc_source;" not in headers
+        or f"{interface_value} hxc_l_source" not in sources
+        or f"{interface_value} hxc_l_source" not in headers
+        or f"{interface_value} *hxc_l_source" in sources
+        or f"{interface_value} *hxc_l_source" in headers
     ):
         raise ConstructorLoweringFailure(
             "retained interface fixture lost its by-value field or collector plan"
@@ -615,8 +792,8 @@ def validate_default_argument_project(output: Path) -> None:
         )
     if (
         "hxc_compiler_constructor_Main_DefaultedRecord("
-        "struct hxc_Main_DefaultedRecord *hxc_self, int32_t hxc_value, "
-        "struct hxc_optional_Main_RestorePoint hxc_restore)" not in headers
+        "struct hxc_Main_DefaultedRecord *hxc_l_self, int32_t hxc_l_value, "
+        "struct hxc_optional_Main_RestorePoint hxc_l_restore)" not in headers
         or sources.count("= hxc_Main_DefaultSource_next();") != 1
         or sources.count(".hxc_has_value = true") != 1
         or sources.count(".hxc_has_value = false") < 4
@@ -674,7 +851,7 @@ def validate_array_parameter_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "Array-parameter fixture lost its two family-specific constructor symbols"
         )
-    parameter_spelling = "struct hxc_array_ref *hxc_values"
+    parameter_spelling = "struct hxc_array_ref *hxc_l_values"
     retained_start = source.find(
         "hxc_compiler_constructor_Main_RetainedArrayReader("
     )
@@ -747,15 +924,15 @@ def validate_direct_receiver_project(output: Path) -> None:
     fresh_body = source[fresh_start:nested_start]
     nested_body = source[nested_start:values_start]
     if (
-        source.count("struct hxc_NumberReader hxc_tmp_object_storage_") != 4
+        source.count("struct hxc_NumberReader hxc_l_tmp_object_storage_") != 4
         or source.count(" = { 0 };") < 4
         or source.count("hxc_compiler_constructor_NumberReader(") < 4
         or source.count("hxc_NumberReader_read(") < 3
         or source.count("hxc_NumberReader_readOffset(") < 2
-        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in parse_body
-        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in conditional_body
-        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in fresh_body
-        or "hxc_array_ref_release(hxc_tmp_object_storage_" not in nested_body
+        or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in parse_body
+        or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in conditional_body
+        or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in fresh_body
+        or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in nested_body
         or "instance_call_receiver_" not in conditional_body
         or "instance_call_receiver_load_result_" not in conditional_body
         or "instance_call_argument_0_" not in conditional_body
@@ -808,7 +985,7 @@ def validate_direct_receiver_failure_project(output: Path) -> None:
     failure_start = source.find(
         "if (!hxc_compiler_constructor_ExplodingReader("
     )
-    failure_end = source.find("\n  if (hxc_tmp_class_object_address_", failure_start)
+    failure_end = source.find("\n  if (hxc_l_tmp_class_object_address_", failure_start)
     if min(failure_start, failure_end) < 0:
         raise ConstructorLoweringFailure(
             "direct-receiver failure fixture omitted its checked constructor call"
@@ -816,7 +993,7 @@ def validate_direct_receiver_failure_project(output: Path) -> None:
     failure_body = source[failure_start:failure_end]
     if (
         failure_body.count("hxc_array_ref_release(") != 2
-        or "hxc_tmp_object_storage_" not in failure_body
+        or "hxc_l_tmp_object_storage_" not in failure_body
         or "constructed_receiver_argument_0_owner" not in failure_body
         or failure_body.rfind("abort();") < failure_body.rfind("hxc_array_ref_release(")
     ):
@@ -844,17 +1021,19 @@ def validate_direct_argument_project(output: Path) -> None:
     main_body = source[main_start:concrete_function]
     concrete_call = main_body.find("hxc_Main_readConcrete(")
     concrete_right_release = main_body.find(
-        "hxc_array_ref_release(hxc_tmp_static_call_argument_2_owner_",
+        "hxc_array_ref_release(hxc_l_tmp_static_call_argument_2_owner_",
         concrete_call,
     )
     concrete_object_release = main_body.find(
-        "hxc_array_ref_release(hxc_tmp_object_storage_", concrete_right_release
+        "hxc_array_ref_release(hxc_l_tmp_object_storage_", concrete_right_release
     )
     concrete_left_release = main_body.find(
-        "hxc_array_ref_release(hxc_tmp_static_call_argument_0_owner_",
+        "hxc_array_ref_release(hxc_l_tmp_static_call_argument_0_owner_",
         concrete_object_release,
     )
-    concrete_result_owner = main_body.find("int32_t hxc_concrete =", concrete_left_release)
+    concrete_result_owner = main_body.find(
+        "int32_t hxc_l_concrete =", concrete_left_release
+    )
     if not (
         0
         <= concrete_call
@@ -867,14 +1046,14 @@ def validate_direct_argument_project(output: Path) -> None:
             "direct class argument lost call-bounded reverse cleanup order"
         )
     if (
-        source.count("struct hxc_OffsetResolver hxc_tmp_object_storage_") != 3
+        source.count("struct hxc_OffsetResolver hxc_l_tmp_object_storage_") != 3
         or source.count("if (!hxc_compiler_constructor_OffsetResolver(") != 3
-        or "struct hxc_OffsetResolver *hxc_resolver" not in headers
-        or "struct hxc_compiler_interface_dispatch_ScoreResolver_value hxc_resolver"
+        or "struct hxc_OffsetResolver *hxc_l_resolver" not in headers
+        or "struct hxc_compiler_interface_dispatch_ScoreResolver_value hxc_l_resolver"
         not in headers
         or "hxc_Main_readInterface(" not in main_body
         or "hxc_ScoreSink_read(" not in main_body
-        or ".object = hxc_tmp_class_object_address_" not in main_body
+        or ".object = hxc_l_tmp_class_object_address_" not in main_body
         or ".table = &hxc_itable_compiler_interface_dispatch_OffsetResolver_itable_layout_ScoreResolver"
         not in main_body
         or "static_call_argument_0_owner_" not in main_body
@@ -886,14 +1065,14 @@ def validate_direct_argument_project(output: Path) -> None:
         )
     first_failure = main_body.find("if (!hxc_compiler_constructor_OffsetResolver(")
     first_failure_end = main_body.find(
-        "struct hxc_array_ref *hxc_tmp_array_create_result_", first_failure
+        "struct hxc_array_ref *hxc_l_tmp_array_create_result_", first_failure
     )
     if (
         first_failure < 0
         or first_failure_end < 0
-        or "hxc_array_ref_release(hxc_tmp_object_storage_"
+        or "hxc_array_ref_release(hxc_l_tmp_object_storage_"
         not in main_body[first_failure:first_failure_end]
-        or "hxc_array_ref_release(hxc_tmp_static_call_argument_0_owner_"
+        or "hxc_array_ref_release(hxc_l_tmp_static_call_argument_0_owner_"
         not in main_body[first_failure:first_failure_end]
         or main_body[first_failure:first_failure_end].count("abort();") < 3
     ):
@@ -961,7 +1140,7 @@ def validate_owned_fallible_project(output: Path) -> None:
         or "if (!hxc_compiler_constructor_Child(" not in source
         or "hxc_gc_allocate(&hxc_program_gc, &hxc_Parent_descriptor" not in source
         or "hxc_gc_allocate(&hxc_program_gc, &hxc_SelfReference_descriptor" not in source
-        or "(*hxc_self).hxc_peer = hxc_self;" not in source
+        or "(*hxc_l_self).hxc_peer = hxc_l_self;" not in source
         or "hxc_Holder_install(" not in source
         or min(pressure_call, self_check_call) < 0
         or self_check_call <= pressure_call
@@ -1048,12 +1227,12 @@ def validate_string_parameter_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "nominal String fixture lost its two exact constructor symbol identities"
         )
-    parameter_spelling = "hxc_string hxc_id"
+    parameter_spelling = "hxc_string hxc_l_id"
     if (
         source.count(parameter_spelling) < 2
         or parameter_spelling not in headers
         or "memcmp(" not in source
-        or "(*hxc_self).hxc_id = hxc_id;" not in source
+        or "(*hxc_l_self).hxc_id = hxc_l_id;" not in source
     ):
         raise ConstructorLoweringFailure(
             "nominal String constructor lost its by-value call, retained field, or comparison"
@@ -1116,12 +1295,12 @@ def validate_enum_parameter_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "fieldless enum fixture lost its two exact constructor symbol identities"
         )
-    parameter_spelling = "enum hxc_Main_ObjectiveState hxc_state"
+    parameter_spelling = "enum hxc_Main_ObjectiveState hxc_l_state"
     if (
         source.count(parameter_spelling) < 2
         or parameter_spelling not in headers
-        or "hxc_state == hxc_Main_ObjectiveState_Active" not in source
-        or "(*hxc_self).hxc_state = hxc_state;" not in source
+        or "hxc_l_state == hxc_Main_ObjectiveState_Active" not in source
+        or "(*hxc_l_self).hxc_state = hxc_l_state;" not in source
     ):
         raise ConstructorLoweringFailure(
             "fieldless enum constructor lost its by-value call, comparison, or final-field store"
@@ -1185,12 +1364,12 @@ def validate_enum_payload_parameter_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "unmanaged payload-enum fixture lost its two exact constructor identities"
         )
-    parameter_spelling = "struct hxc_Main_FlowValue hxc_value"
+    parameter_spelling = "struct hxc_Main_FlowValue hxc_l_value"
     if (
         source.count(parameter_spelling) < 2
         or parameter_spelling not in headers
-        or "switch (hxc_value.hxc_tag)" not in source
-        or "(*hxc_self).hxc_value = hxc_value;" not in source
+        or "switch (hxc_l_value.hxc_tag)" not in source
+        or "(*hxc_l_self).hxc_value = hxc_l_value;" not in source
         or "hxc_Main_FlowValue_Flag" not in source
         or "hxc_Main_FlowValue_Counter" not in source
         or "hxc_Main_FlowValue_State" not in source
@@ -1424,6 +1603,72 @@ def render_direct_receiver_failure_project(
     )
 
 
+def render_managed_record_argument_failure_project(
+    fixture_root: Path,
+) -> CFixtureProject:
+    """Render the fresh-record failure path once with order determinism."""
+
+    normal = fixture_root / "managed-record-argument-failure-split"
+    reverse = fixture_root / "managed-record-argument-failure-split-reverse"
+    for label, result in (
+        (
+            "managed-record argument failure",
+            custom_target(
+                MANAGED_RECORD_ARGUMENT_FAILURE,
+                normal,
+                layout="split",
+                runtime_diagnostics="off",
+            ),
+        ),
+        (
+            "reversed managed-record argument failure",
+            custom_target(
+                MANAGED_RECORD_ARGUMENT_FAILURE,
+                reverse,
+                layout="split",
+                reverse=True,
+                runtime_diagnostics="off",
+            ),
+        ),
+    ):
+        if result.returncode != 0 or result.stdout or result.stderr:
+            raise ConstructorLoweringFailure(
+                f"{label} compile failed\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+    if generated_tree(normal) != generated_tree(reverse):
+        raise ConstructorLoweringFailure(
+            "managed-record argument failure output changed with typed-module order"
+        )
+    validate_managed_record_argument_failure_project(normal)
+    return CFixtureProject(
+        "constructor-managed-record-argument-failure",
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in sorted(normal.rglob("*.c"))
+        ),
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in sorted((normal / "include").rglob("*.h"))
+        ),
+        tuple(
+            path.relative_to(fixture_root).as_posix()
+            for path in (
+                normal / "include",
+                normal / "runtime" / "include",
+            )
+            if path.is_dir()
+        ),
+        "",
+        tuple(
+            sorted(
+                (*MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE, "strict-c11")
+            )
+        ),
+        expected_exit=-signal.SIGABRT,
+    )
+
+
 def required_text(value: object, label: str) -> str:
     if not isinstance(value, str):
         raise ConstructorLoweringFailure(f"{label} must be text")
@@ -1610,13 +1855,13 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     header = required_text(report.get("header"), "header")
     source = required_text(report.get("source"), "source")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise ConstructorLoweringFailure("constructor report omitted finalized symbols")
     for label, text in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in text or "\\" in text or "hxrt" in text.lower():
             raise ConstructorLoweringFailure(f"{label} leaked a host path or runtime")
-    if not hxcir.startswith("hxcir schema=21\n"):
-        raise ConstructorLoweringFailure("constructor lowering did not use schema-21 HxcIR")
+    if not hxcir.startswith("hxcir schema=23\n"):
+        raise ConstructorLoweringFailure("constructor lowering did not use schema-23 HxcIR")
 
     leaf = function_section(hxcir, "constructor.LeafRecord")
     ordered(
@@ -1891,17 +2136,21 @@ def compile_default_fixture(destination: Path) -> None:
 
 
 def check_cpp_header(
-    fixture_root: Path, build_root: Path, *, requested_toolchain: str
+    fixture_root: Path,
+    build_root: Path,
+    *,
+    requested_toolchain: str,
+    include_direct_receiver: bool = True,
 ) -> None:
-    check_cpp_consumers(
-        build_root,
-        requested_toolchain=requested_toolchain,
-        consumers=(
-            (
-                "constructor",
-                (fixture_root / "positive/include",),
-                NATIVE / "constructor_header_cpp.cpp",
-            ),
+    consumers = [
+        (
+            "constructor",
+            (fixture_root / "positive/include",),
+            NATIVE / "constructor_header_cpp.cpp",
+        )
+    ]
+    if include_direct_receiver:
+        consumers.append(
             (
                 "direct-receiver",
                 (
@@ -1909,8 +2158,12 @@ def check_cpp_header(
                     fixture_root / "direct-receiver-split/runtime/include",
                 ),
                 NATIVE / "direct_receiver_header_cpp.cpp",
-            ),
-        ),
+            )
+        )
+    check_cpp_consumers(
+        build_root,
+        requested_toolchain=requested_toolchain,
+        consumers=tuple(consumers),
     )
 
 
@@ -2029,6 +2282,16 @@ def check_native(
                 coverage=RECORD_NATIVE_COVERAGE,
                 validate_project=validate_record_parameter_project,
             )
+            managed_record_argument_projects = render_parameter_projects(
+                fixture_root,
+                fixture=MANAGED_RECORD_ARGUMENT,
+                slug="managed-record-argument",
+                coverage=MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE,
+                validate_project=validate_managed_record_argument_project,
+            )
+            managed_record_argument_failure_project = (
+                render_managed_record_argument_failure_project(fixture_root)
+            )
             interface_projects = render_parameter_projects(
                 fixture_root,
                 fixture=INTERFACE_PARAMETER,
@@ -2111,6 +2374,8 @@ def check_native(
             )
             parameter_projects = (
                 record_projects
+                + managed_record_argument_projects
+                + (managed_record_argument_failure_project,)
                 + interface_projects
                 + retained_interface_projects
                 + default_argument_projects
@@ -2143,6 +2408,8 @@ def check_native(
                 required_coverage = (
                     required_coverage
                     | RECORD_NATIVE_COVERAGE
+                    | MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE
+                    | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
@@ -2193,6 +2460,8 @@ def check_native(
                 sanitizer_report,
                 required_coverage=(
                     RECORD_NATIVE_COVERAGE
+                    | MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE
+                    | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
                     | DEFAULT_ARGUMENT_NATIVE_COVERAGE
@@ -2208,7 +2477,10 @@ def check_native(
                 ),
             )
         check_cpp_header(
-            fixture_root, root / "cxx-build", requested_toolchain=requested_toolchain
+            fixture_root,
+            root / "cxx-build",
+            requested_toolchain=requested_toolchain,
+            include_direct_receiver=render_parameter_fixtures,
         )
 
 
@@ -2263,6 +2535,57 @@ def check_direct_receiver_oracles() -> None:
         )
 
 
+def check_managed_record_argument_oracles() -> None:
+    """Compare successful and throwing managed-record paths with Haxe Eval."""
+
+    success = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(MANAGED_RECORD_ARGUMENT),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if success.returncode != 0 or success.stdout or success.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe managed-record constructor oracle failed\n"
+            f"stdout:\n{success.stdout}\nstderr:\n{success.stderr}"
+        )
+    failure = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(MANAGED_RECORD_ARGUMENT_FAILURE),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if (
+        failure.returncode == 0
+        or failure.stdout
+        or "Uncaught exception 99" not in failure.stderr
+    ):
+        raise ConstructorLoweringFailure(
+            "pinned Haxe managed-record constructor failure oracle did not throw 99\n"
+            f"stdout:\n{failure.stdout}\nstderr:\n{failure.stderr}"
+        )
+
+
 def check_eval_oracle() -> None:
     for label, fixture in (
         ("constructor oracle", ORACLE),
@@ -2298,6 +2621,7 @@ def check_eval_oracle() -> None:
                 f"pinned Haxe {label} failed\n"
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
+    check_managed_record_argument_oracles()
     check_direct_receiver_oracles()
 
 
@@ -2356,7 +2680,7 @@ def validate_early_exit_project(
         report.get("constructors"), "early-exit constructors"
     )
     if (
-        not hxcir.startswith("hxcir schema=21\n")
+        not hxcir.startswith("hxcir schema=23\n")
         or len(constructors) != 1
         or constructors[0].get("id") != "constructor.GuardedValue"
         or section.count('"construction.0.initialized"') < 2
@@ -2750,6 +3074,116 @@ def check_direct_argument_only(*, requested_toolchain: str) -> None:
             validate_report(report, required_coverage=required_coverage)
 
 
+def check_managed_record_argument_only(*, requested_toolchain: str) -> None:
+    """Run the fresh managed-record constructor ownership slice by itself."""
+
+    check_managed_record_argument_oracles()
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-managed-record-argument-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        normal = fixture_root / "managed-record-argument-split"
+        reverse = fixture_root / "managed-record-argument-split-reverse"
+        reports: list[tuple[str, dict[str, object]]] = []
+        for label, output, reverse_input in (
+            ("managed-record argument", normal, False),
+            ("reversed managed-record argument", reverse, True),
+        ):
+            reports.append(
+                emitted_constructor_report(
+                    custom_target(
+                        MANAGED_RECORD_ARGUMENT,
+                        output,
+                        reverse=reverse_input,
+                        report=True,
+                        layout="split",
+                        runtime_diagnostics="off",
+                    ),
+                    label,
+                )
+            )
+        if (
+            reports[0][0] != reports[1][0]
+            or generated_tree(normal) != generated_tree(reverse)
+        ):
+            raise ConstructorLoweringFailure(
+                "managed-record constructor output changed with typed-module order"
+            )
+        validate_managed_record_argument_project(normal)
+        validate_managed_record_argument_report(reports[0][1])
+        success_project = CFixtureProject(
+            "constructor-managed-record-argument",
+            tuple(
+                path.relative_to(fixture_root).as_posix()
+                for path in sorted(normal.rglob("*.c"))
+            ),
+            tuple(
+                path.relative_to(fixture_root).as_posix()
+                for path in sorted((normal / "include").rglob("*.h"))
+            ),
+            tuple(
+                path.relative_to(fixture_root).as_posix()
+                for path in (
+                    normal / "include",
+                    normal / "runtime" / "include",
+                )
+                if path.is_dir()
+            ),
+            "",
+            tuple(sorted((*MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE, "strict-c11"))),
+        )
+        failure_project = render_managed_record_argument_failure_project(
+            fixture_root
+        )
+        projects = tuple(
+            sorted(
+                (success_project, failure_project),
+                key=lambda project: project.identifier.encode("utf-8"),
+            )
+        )
+        required_coverage = (
+            MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE
+            | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
+            | {"strict-c11"}
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-managed-record-argument-{optimization[1:].lower()}",
+                projects=projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in projects
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-managed-record-argument-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required_coverage)
+
+
 def check_owned_fallible_only(*, requested_toolchain: str) -> None:
     """Run the retained parent and fallible inline-child slice by itself."""
 
@@ -2826,6 +3260,161 @@ def check_minimal_example() -> None:
             raise ConstructorLoweringFailure("minimal constructor example lost direct runtime-free lowering")
 
 
+def check_final_primitive_only(*, requested_toolchain: str) -> None:
+    """Run the immutable scalar-field contract without unrelated constructors."""
+
+    oracle = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(FINAL_PRIMITIVE_FIELDS),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe final-primitive constructor oracle failed\n"
+            f"stdout:\n{oracle.stdout}\nstderr:\n{oracle.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-final-primitive-constructor-"
+    ) as temporary:
+        root = Path(temporary)
+        normal = root / "normal"
+        reversed_output = root / "reversed"
+        reports: list[tuple[str, dict[str, object]]] = []
+        for label, output, reverse_input in (
+            ("final-primitive constructor", normal, False),
+            ("reversed final-primitive constructor", reversed_output, True),
+        ):
+            result = custom_target(
+                FINAL_PRIMITIVE_FIELDS,
+                output,
+                reverse=reverse_input,
+                report=True,
+                layout="split",
+                runtime_diagnostics="off",
+            )
+            reports.append(emitted_constructor_report(result, label))
+        if (
+            reports[0][0] != reports[1][0]
+            or generated_tree(normal) != generated_tree(reversed_output)
+        ):
+            raise ConstructorLoweringFailure(
+                "final-primitive constructor output changed with typed-module order"
+            )
+
+        report = reports[0][1]
+        hxcir = required_text(report.get("hxcir"), "final-primitive HxcIR")
+        section = function_section(hxcir, "constructor.PrimitiveReceipt")
+        ordered(
+            section,
+            (
+                'store place=field(dereference("parameter.self"),"byteLength")',
+                'store place=field(dereference("parameter.self"),"ready")',
+                'store place=field(dereference("parameter.self"),"scale")',
+            ),
+            "final-primitive constructor",
+        )
+        sources = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((normal / "src").rglob("*.c"))
+        )
+        headers = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((normal / "include").rglob("*.h"))
+        )
+        plan = json.loads((normal / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+        for spelling in (
+            "int32_t hxc_l_byteLength;",
+            "bool hxc_l_ready;",
+            "double hxc_l_scale;",
+            "(*hxc_l_self).hxc_byteLength = hxc_l_byteLength;",
+            "(*hxc_l_self).hxc_ready = hxc_l_ready;",
+            "(*hxc_l_self).hxc_scale = hxc_l_scale;",
+        ):
+            if spelling not in sources + headers:
+                raise ConstructorLoweringFailure(
+                    f"final-primitive constructor omitted structural C {spelling!r}"
+                )
+        if (
+            plan.get("features") != []
+            or "bounded-stack-construction" not in plan.get("directDecisions", [])
+        ):
+            raise ConstructorLoweringFailure(
+                "final-primitive constructor lost its runtime-free stack plan"
+            )
+        for forbidden in ("hxrt", "malloc(", "calloc(", "realloc(", "goto "):
+            if forbidden in (sources + headers).lower():
+                raise ConstructorLoweringFailure(
+                    f"final-primitive constructor emitted forbidden shape {forbidden!r}"
+                )
+
+        project = CFixtureProject(
+            "constructor-final-primitive",
+            tuple(
+                path.relative_to(root).as_posix()
+                for path in sorted(normal.rglob("*.c"))
+            ),
+            tuple(
+                path.relative_to(root).as_posix()
+                for path in sorted((normal / "include").rglob("*.h"))
+            ),
+            tuple(
+                path.relative_to(root).as_posix()
+                for path in (
+                    normal / "include",
+                    normal / "runtime" / "include",
+                )
+                if path.is_dir()
+            ),
+            "",
+            tuple(sorted((*FINAL_PRIMITIVE_NATIVE_COVERAGE, "strict-c11"))),
+        )
+        required_coverage = FINAL_PRIMITIVE_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            native_report = run_c_fixture_corpus(
+                suite=f"constructor-final-primitive-{optimization[1:].lower()}",
+                projects=(project,),
+                fixture_root=root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized = replace(
+                project,
+                link_arguments=("-fsanitize=address,undefined",),
+            )
+            native_report = run_c_fixture_corpus(
+                suite="constructor-final-primitive-sanitized",
+                projects=(sanitized,),
+                fixture_root=root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+
+
 def check_negative_cases() -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-constructor-negative-") as temporary:
         root = Path(temporary)
@@ -2868,9 +3457,11 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--direct-receiver-only", action="store_true")
     parser.add_argument("--direct-argument-only", action="store_true")
+    parser.add_argument("--managed-record-argument-only", action="store_true")
     parser.add_argument("--owned-fallible-only", action="store_true")
     parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--early-exit-only", action="store_true")
+    parser.add_argument("--final-primitive-only", action="store_true")
     parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
 
@@ -2904,6 +3495,14 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "sanitizer/layout/server/determinism matrix passed"
             )
             return 0
+        if args.managed_record_argument_only:
+            check_managed_record_argument_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: fresh managed-record constructor "
+                "arguments preserved caller/callee ownership, failure cleanup, "
+                "strict C11, sanitizers, and deterministic typed-module order"
+            )
+            return 0
         if args.owned_fallible_only:
             check_owned_fallible_only(requested_toolchain=args.toolchain)
             print(
@@ -2924,6 +3523,14 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "constructor-lowering: OK: root guard Eval/C11/sanitizer/"
                 "determinism matrix passed and branch-local construction "
                 "remained fail-closed"
+            )
+            return 0
+        if args.final_primitive_only:
+            check_final_primitive_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: final primitive fields preserved "
+                "immutable constructor-only initialization under Eval, strict "
+                "C11, sanitizers, and deterministic typed-module order"
             )
             return 0
         if args.negative_only:
@@ -2975,6 +3582,7 @@ def main(arguments: Iterable[str] = ()) -> int:
     print(
         "constructor-lowering: OK: pinned super/field/body order, default storage, "
         "status cleanup, direct caller-owned class and closed-record parameters, "
+        "fresh managed-record arguments across constructor spellings, "
         "call-bounded and collector-retained interface parameters and dispatch, "
         "borrowed and field-retained Array parameters, "
         "nominal literal-backed String parameters and final fields, "

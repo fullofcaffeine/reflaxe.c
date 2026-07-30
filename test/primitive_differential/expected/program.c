@@ -1,113 +1,113 @@
 #include "hxc/program.h"
 
-int32_t hxc_PrimitiveDifferentialFixture_faddInt(double hxc_left, double hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_faddInt(double hxc_l_left, double hxc_l_right)
 {
-  return hxc_f64_to_i32_saturating(hxc_left + hxc_right);
+  return hxc_f64_to_i32_saturating(hxc_l_left + hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_fdivInt(double hxc_left, double hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_fdivInt(double hxc_l_left, double hxc_l_right)
 {
-  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe(hxc_left, hxc_right));
+  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe(hxc_l_left, hxc_l_right));
 }
 
-bool hxc_PrimitiveDifferentialFixture_feq(double hxc_left, double hxc_right)
+bool hxc_PrimitiveDifferentialFixture_feq(double hxc_l_left, double hxc_l_right)
 {
-  return hxc_left == hxc_right;
+  return hxc_l_left == hxc_l_right;
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_fint(double hxc_value)
+int32_t hxc_PrimitiveDifferentialFixture_fint(double hxc_l_value)
 {
-  return hxc_f64_to_i32_saturating(hxc_value);
+  return hxc_f64_to_i32_saturating(hxc_l_value);
 }
 
-bool hxc_PrimitiveDifferentialFixture_flt(double hxc_left, double hxc_right)
+bool hxc_PrimitiveDifferentialFixture_flt(double hxc_l_left, double hxc_l_right)
 {
-  return hxc_left < hxc_right;
+  return hxc_l_left < hxc_l_right;
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_fmodInt(double hxc_left, double hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_fmodInt(double hxc_l_left, double hxc_l_right)
 {
-  return hxc_f64_to_i32_saturating(hxc_f64_modulo(hxc_left, hxc_right));
+  return hxc_f64_to_i32_saturating(hxc_f64_modulo(hxc_l_left, hxc_l_right));
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_fmulInt(double hxc_left, double hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_fmulInt(double hxc_l_left, double hxc_l_right)
 {
-  return hxc_f64_to_i32_saturating(hxc_left * hxc_right);
+  return hxc_f64_to_i32_saturating(hxc_l_left * hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_fsubInt(double hxc_left, double hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_fsubInt(double hxc_l_left, double hxc_l_right)
 {
-  return hxc_f64_to_i32_saturating(hxc_left - hxc_right);
+  return hxc_f64_to_i32_saturating(hxc_l_left - hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_iadd(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_iadd(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_add_wrapping(hxc_left, hxc_right);
+  return hxc_i32_add_wrapping(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_iand(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_iand(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_bit_and(hxc_left, hxc_right);
+  return hxc_i32_bit_and(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_idivInt(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_idivInt(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_left, (double)hxc_right));
+  return hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_left, (double)hxc_l_right));
 }
 
-bool hxc_PrimitiveDifferentialFixture_ieq(int32_t hxc_left, int32_t hxc_right)
+bool hxc_PrimitiveDifferentialFixture_ieq(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_left == hxc_right;
+  return hxc_l_left == hxc_l_right;
 }
 
-bool hxc_PrimitiveDifferentialFixture_ilt(int32_t hxc_left, int32_t hxc_right)
+bool hxc_PrimitiveDifferentialFixture_ilt(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_left < hxc_right;
+  return hxc_l_left < hxc_l_right;
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_imod(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_imod(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_modulo_zero_safe(hxc_left, hxc_right);
+  return hxc_i32_modulo_zero_safe(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_imul(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_imul(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_multiply_wrapping(hxc_left, hxc_right);
+  return hxc_i32_multiply_wrapping(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_inot(int32_t hxc_value)
+int32_t hxc_PrimitiveDifferentialFixture_inot(int32_t hxc_l_value)
 {
-  return hxc_i32_bit_not(hxc_value);
+  return hxc_i32_bit_not(hxc_l_value);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_ior(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_ior(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_bit_or(hxc_left, hxc_right);
+  return hxc_i32_bit_or(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_ishl(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_ishl(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_shift_left_masked(hxc_left, hxc_right);
+  return hxc_i32_shift_left_masked(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_ishr(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_ishr(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_shift_right_masked(hxc_left, hxc_right);
+  return hxc_i32_shift_right_masked(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_isub(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_isub(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_subtract_wrapping(hxc_left, hxc_right);
+  return hxc_i32_subtract_wrapping(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_iushr(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_iushr(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_unsigned_shift_right_masked(hxc_left, hxc_right);
+  return hxc_i32_unsigned_shift_right_masked(hxc_l_left, hxc_l_right);
 }
 
-int32_t hxc_PrimitiveDifferentialFixture_ixor(int32_t hxc_left, int32_t hxc_right)
+int32_t hxc_PrimitiveDifferentialFixture_ixor(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_i32_bit_xor(hxc_left, hxc_right);
+  return hxc_i32_bit_xor(hxc_l_left, hxc_l_right);
 }
 
 void hxc_PrimitiveDifferentialFixture_main(void)
@@ -246,70 +246,70 @@ void hxc_PrimitiveDifferentialFixture_main(void)
   return;
 }
 
-uint32_t hxc_PrimitiveDifferentialFixture_uadd(uint32_t hxc_left, uint32_t hxc_right)
+uint32_t hxc_PrimitiveDifferentialFixture_uadd(uint32_t hxc_l_left, uint32_t hxc_l_right)
 {
-  return (uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right);
+  return (uint32_t)((uint64_t)(uint32_t)hxc_l_left + (uint64_t)(uint32_t)hxc_l_right);
 }
 
-bool hxc_PrimitiveDifferentialFixture_ult(uint32_t hxc_left, uint32_t hxc_right)
+bool hxc_PrimitiveDifferentialFixture_ult(uint32_t hxc_l_left, uint32_t hxc_l_right)
 {
-  bool hxc_aNeg = hxc_u32_to_i32_bits(hxc_right) < 0;
-  bool hxc_bNeg = hxc_u32_to_i32_bits(hxc_left) < 0;
-  bool hxc_tmp_load_result_n0 = hxc_aNeg;
-  if (!(hxc_tmp_load_result_n0 != hxc_bNeg))
+  bool hxc_l_aNeg = hxc_u32_to_i32_bits(hxc_l_right) < 0;
+  bool hxc_l_bNeg = hxc_u32_to_i32_bits(hxc_l_left) < 0;
+  bool hxc_l_tmp_load_result_n0 = hxc_l_aNeg;
+  if (!(hxc_l_tmp_load_result_n0 != hxc_l_bNeg))
   {
-    return hxc_u32_to_i32_bits(hxc_right) > hxc_u32_to_i32_bits(hxc_left);
+    return hxc_u32_to_i32_bits(hxc_l_right) > hxc_u32_to_i32_bits(hxc_l_left);
   }
-  return hxc_aNeg;
+  return hxc_l_aNeg;
 }
 
-uint32_t hxc_PrimitiveDifferentialFixture_umod(uint32_t hxc_left, uint32_t hxc_right)
+uint32_t hxc_PrimitiveDifferentialFixture_umod(uint32_t hxc_l_left, uint32_t hxc_l_right)
 {
-  int32_t hxc_int = hxc_u32_to_i32_bits(hxc_left);
-  int32_t hxc_int1 = hxc_u32_to_i32_bits(hxc_right);
-  int32_t hxc_tmp_load_result_n0 = hxc_int;
-  double hxc_tmp_conditional_result_n4 = 0.0;
-  if (hxc_tmp_load_result_n0 < 0)
+  int32_t hxc_l_int = hxc_u32_to_i32_bits(hxc_l_left);
+  int32_t hxc_l_int1 = hxc_u32_to_i32_bits(hxc_l_right);
+  int32_t hxc_l_tmp_load_result_n0 = hxc_l_int;
+  double hxc_l_tmp_conditional_result_n4 = 0.0;
+  if (hxc_l_tmp_load_result_n0 < 0)
   {
-    hxc_tmp_conditional_result_n4 = 4294967296.0 + (double)hxc_int;
-  }
-  else
-  {
-    hxc_tmp_conditional_result_n4 = (double)hxc_int + 0.0;
-  }
-  double hxc_tmp_binary_left_n5 = hxc_tmp_conditional_result_n4;
-  int32_t hxc_tmp_load_result_n4 = hxc_int1;
-  double hxc_tmp_conditional_result_n6 = 0.0;
-  if (hxc_tmp_load_result_n4 < 0)
-  {
-    hxc_tmp_conditional_result_n6 = 4294967296.0 + (double)hxc_int1;
+    hxc_l_tmp_conditional_result_n4 = 4294967296.0 + (double)hxc_l_int;
   }
   else
   {
-    hxc_tmp_conditional_result_n6 = (double)hxc_int1 + 0.0;
+    hxc_l_tmp_conditional_result_n4 = (double)hxc_l_int + 0.0;
   }
-  double hxc_tmp_conditional_load_result_n7 = hxc_tmp_conditional_result_n6;
-  return (uint32_t)hxc_f64_to_i32_saturating(hxc_f64_modulo(hxc_tmp_binary_left_n5, hxc_tmp_conditional_load_result_n7));
+  double hxc_l_tmp_binary_left_n5 = hxc_l_tmp_conditional_result_n4;
+  int32_t hxc_l_tmp_load_result_n4 = hxc_l_int1;
+  double hxc_l_tmp_conditional_result_n6 = 0.0;
+  if (hxc_l_tmp_load_result_n4 < 0)
+  {
+    hxc_l_tmp_conditional_result_n6 = 4294967296.0 + (double)hxc_l_int1;
+  }
+  else
+  {
+    hxc_l_tmp_conditional_result_n6 = (double)hxc_l_int1 + 0.0;
+  }
+  double hxc_l_tmp_conditional_load_result_n7 = hxc_l_tmp_conditional_result_n6;
+  return (uint32_t)hxc_f64_to_i32_saturating(hxc_f64_modulo(hxc_l_tmp_binary_left_n5, hxc_l_tmp_conditional_load_result_n7));
 }
 
-uint32_t hxc_PrimitiveDifferentialFixture_umul(uint32_t hxc_left, uint32_t hxc_right)
+uint32_t hxc_PrimitiveDifferentialFixture_umul(uint32_t hxc_l_left, uint32_t hxc_l_right)
 {
-  return (uint32_t)((uint64_t)(uint32_t)hxc_left * (uint64_t)(uint32_t)hxc_right);
+  return (uint32_t)((uint64_t)(uint32_t)hxc_l_left * (uint64_t)(uint32_t)hxc_l_right);
 }
 
-uint32_t hxc_PrimitiveDifferentialFixture_ushl(uint32_t hxc_left, int32_t hxc_right)
+uint32_t hxc_PrimitiveDifferentialFixture_ushl(uint32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return (uint32_t)((uint64_t)(uint32_t)hxc_left << ((uint32_t)hxc_right & (uint32_t)31));
+  return (uint32_t)((uint64_t)(uint32_t)hxc_l_left << ((uint32_t)hxc_l_right & (uint32_t)31));
 }
 
-uint32_t hxc_PrimitiveDifferentialFixture_ushr(uint32_t hxc_left, int32_t hxc_right)
+uint32_t hxc_PrimitiveDifferentialFixture_ushr(uint32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return (uint32_t)((uint64_t)(uint32_t)hxc_left >> ((uint32_t)hxc_right & (uint32_t)31));
+  return (uint32_t)((uint64_t)(uint32_t)hxc_l_left >> ((uint32_t)hxc_l_right & (uint32_t)31));
 }
 
-uint32_t hxc_PrimitiveDifferentialFixture_usub(uint32_t hxc_left, uint32_t hxc_right)
+uint32_t hxc_PrimitiveDifferentialFixture_usub(uint32_t hxc_l_left, uint32_t hxc_l_right)
 {
-  return (uint32_t)((uint64_t)(uint32_t)hxc_left - (uint64_t)(uint32_t)hxc_right);
+  return (uint32_t)((uint64_t)(uint32_t)hxc_l_left - (uint64_t)(uint32_t)hxc_l_right);
 }
 
 int main(void)

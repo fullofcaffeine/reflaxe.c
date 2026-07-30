@@ -6,18 +6,18 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_l_value)
 {
-  if (hxc_value <= UINT32_C(2147483647))
+  if (hxc_l_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_value;
+    return (int32_t)hxc_l_value;
   }
-  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_l_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left + (uint64_t)(uint32_t)hxc_l_right));
 }
 
 struct hxc_EvaluationFixture_EvaluationChoiceRecord {
@@ -37,13 +37,13 @@ extern uint32_t hxc_EvaluationFixture_switchCalls;
 
 extern bool hxc_EvaluationFixture_ternaryIntact;
 
-bool hxc_EvaluationFixture_consumePair(bool hxc_first, bool hxc_second);
+bool hxc_EvaluationFixture_consumePair(bool hxc_l_first, bool hxc_l_second);
 
-struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_EvaluationFixture_exhaustiveAbstractRecord(int32_t hxc_value);
+struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_EvaluationFixture_exhaustiveAbstractRecord(int32_t hxc_l_value);
 
-int32_t hxc_EvaluationFixture_exhaustiveAbstractReturn(int32_t hxc_value);
+int32_t hxc_EvaluationFixture_exhaustiveAbstractReturn(int32_t hxc_l_value);
 
-uint32_t hxc_EvaluationFixture_finish(uint32_t hxc_value);
+uint32_t hxc_EvaluationFixture_finish(uint32_t hxc_l_value);
 
 uint32_t hxc_EvaluationFixture_keepTernary(void);
 
@@ -55,12 +55,12 @@ int32_t hxc_EvaluationFixture_readGlobalBeforeCall(void);
 
 uint32_t hxc_EvaluationFixture_run(void);
 
-bool hxc_EvaluationFixture_setCallFlag(bool hxc_value);
+bool hxc_EvaluationFixture_setCallFlag(bool hxc_l_value);
 
 bool hxc_EvaluationFixture_spoilShortCircuit(void);
 
 uint32_t hxc_EvaluationFixture_spoilTernary(void);
 
-int32_t hxc_EvaluationFixture_switchSubject(int32_t hxc_value);
+int32_t hxc_EvaluationFixture_switchSubject(int32_t hxc_l_value);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

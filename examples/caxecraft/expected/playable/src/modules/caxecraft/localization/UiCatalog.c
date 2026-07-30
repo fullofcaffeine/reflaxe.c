@@ -1,8 +1,8 @@
 #include "hxc/program.h"
 
-int32_t hxc_caxecraft_localization_UiCatalog_nextLocale(int32_t hxc_locale)
+int32_t hxc_caxecraft_localization_UiCatalog_nextLocale(int32_t hxc_l_locale)
 {
-  switch (hxc_locale) {
+  switch (hxc_l_locale) {
     case 0:
       {
         break;
@@ -19,31 +19,31 @@ int32_t hxc_caxecraft_localization_UiCatalog_nextLocale(int32_t hxc_locale)
   return 1;
 }
 
-const char *hxc_caxecraft_localization_UiCatalog_text(int32_t hxc_locale, int32_t hxc_message)
+const char *hxc_caxecraft_localization_UiCatalog_text(int32_t hxc_l_locale, int32_t hxc_l_message)
 {
-  switch (hxc_locale) {
+  switch (hxc_l_locale) {
     case 0:
       {
         break;
       }
     case 1:
       {
-        const char *hxc_tmp_call_result_n1 = hxc_caxecraft_localization_UiCatalog_textLocale1(hxc_message);
-        return hxc_tmp_call_result_n1;
+        const char *hxc_l_tmp_call_result_n1 = hxc_caxecraft_localization_UiCatalog_textLocale1(hxc_l_message);
+        return hxc_l_tmp_call_result_n1;
       }
     default:
       {
-        const char *hxc_tmp_call_result_n2 = hxc_caxecraft_localization_UiCatalog_textLocale0(hxc_message);
-        return hxc_tmp_call_result_n2;
+        const char *hxc_l_tmp_call_result_n2 = hxc_caxecraft_localization_UiCatalog_textLocale0(hxc_l_message);
+        return hxc_l_tmp_call_result_n2;
       }
   }
-  const char *hxc_tmp_call_result_n0 = hxc_caxecraft_localization_UiCatalog_textLocale0(hxc_message);
-  return hxc_tmp_call_result_n0;
+  const char *hxc_l_tmp_call_result_n0 = hxc_caxecraft_localization_UiCatalog_textLocale0(hxc_l_message);
+  return hxc_l_tmp_call_result_n0;
 }
 
-const char *hxc_caxecraft_localization_UiCatalog_textLocale0(int32_t hxc_message)
+const char *hxc_caxecraft_localization_UiCatalog_textLocale0(int32_t hxc_l_message)
 {
-  switch (hxc_message) {
+  switch (hxc_l_message) {
     case 0:
       {
         break;
@@ -192,9 +192,9 @@ const char *hxc_caxecraft_localization_UiCatalog_textLocale0(int32_t hxc_message
   return "AQUATIC GEAR EQUIPPED";
 }
 
-const char *hxc_caxecraft_localization_UiCatalog_textLocale1(int32_t hxc_message)
+const char *hxc_caxecraft_localization_UiCatalog_textLocale1(int32_t hxc_l_message)
 {
-  switch (hxc_message) {
+  switch (hxc_l_message) {
     case 0:
       {
         break;

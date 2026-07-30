@@ -12,70 +12,70 @@ _Static_assert(sizeof(struct hxc_PointResources) >= offsetof(struct hxc_PointRes
 
 int32_t hxc_InlineFloat32Probe_sideEffectCount;
 
-float hxc_InlineFloat32Probe_narrowWithoutInlining(double hxc_value)
+float hxc_InlineFloat32Probe_narrowWithoutInlining(double hxc_l_value)
 {
-  return (float)hxc_value;
+  return (float)hxc_l_value;
 }
 
 int32_t hxc_InlineFloat32Probe_nextInteger(void)
 {
-  int32_t hxc_tmp_increment_load_result_n0 = hxc_InlineFloat32Probe_sideEffectCount;
-  hxc_InlineFloat32Probe_sideEffectCount = hxc_i32_add_wrapping(hxc_tmp_increment_load_result_n0, 1);
+  int32_t hxc_l_tmp_increment_load_result_n0 = hxc_InlineFloat32Probe_sideEffectCount;
+  hxc_InlineFloat32Probe_sideEffectCount = hxc_i32_add_wrapping(hxc_l_tmp_increment_load_result_n0, 1);
   return 7;
 }
 
 bool hxc_InlineFloat32Probe_run(void)
 {
-  int32_t hxc_integerLocal = 3;
-  double hxc_floatLocal = 6.5;
-  float hxc_fromIntegerLocal = (float)(double)hxc_integerLocal;
-  float hxc_fromIntegerArithmetic = (float)(double)hxc_i32_add_wrapping(hxc_integerLocal, 2);
-  float hxc_fromFloatLocal = (float)hxc_floatLocal;
-  int32_t hxc_tmp_call_result_n3 = hxc_InlineFloat32Probe_nextInteger();
-  float hxc_fromSideEffect = (float)(double)hxc_tmp_call_result_n3;
-  float hxc_tmp_call_result_n5 = hxc_InlineFloat32Probe_narrowWithoutInlining((double)hxc_i32_add_wrapping(hxc_integerLocal, 5));
-  float hxc_fromNonInline = hxc_tmp_call_result_n5;
-  int32_t hxc_tmp_global_load_result_n6 = hxc_InlineFloat32Probe_sideEffectCount;
-  bool hxc_tmp_short_circuit_result_n7 = hxc_tmp_global_load_result_n6 == 1;
-  if (hxc_tmp_global_load_result_n6 == 1)
+  int32_t hxc_l_integerLocal = 3;
+  double hxc_l_floatLocal = 6.5;
+  float hxc_l_fromIntegerLocal = (float)(double)hxc_l_integerLocal;
+  float hxc_l_fromIntegerArithmetic = (float)(double)hxc_i32_add_wrapping(hxc_l_integerLocal, 2);
+  float hxc_l_fromFloatLocal = (float)hxc_l_floatLocal;
+  int32_t hxc_l_tmp_call_result_n3 = hxc_InlineFloat32Probe_nextInteger();
+  float hxc_l_fromSideEffect = (float)(double)hxc_l_tmp_call_result_n3;
+  float hxc_l_tmp_call_result_n5 = hxc_InlineFloat32Probe_narrowWithoutInlining((double)hxc_i32_add_wrapping(hxc_l_integerLocal, 5));
+  float hxc_l_fromNonInline = hxc_l_tmp_call_result_n5;
+  int32_t hxc_l_tmp_global_load_result_n6 = hxc_InlineFloat32Probe_sideEffectCount;
+  bool hxc_l_tmp_short_circuit_result_n7 = hxc_l_tmp_global_load_result_n6 == 1;
+  if (hxc_l_tmp_global_load_result_n6 == 1)
   {
-    float hxc_tmp_load_result_n7 = hxc_fromIntegerLocal;
-    float hxc_tmp_load_result_n8 = hxc_fromIntegerArithmetic;
-    float hxc_tmp_load_result_n9 = hxc_fromFloatLocal;
-    float hxc_tmp_load_result_n10 = hxc_fromSideEffect;
-    bool hxc_tmp_native_call_result_n12 = pointlib_inline_float32_verify(hxc_tmp_load_result_n7, hxc_tmp_load_result_n8, hxc_tmp_load_result_n9, hxc_tmp_load_result_n10, hxc_fromNonInline);
-    hxc_tmp_short_circuit_result_n7 = hxc_tmp_native_call_result_n12;
+    float hxc_l_tmp_load_result_n7 = hxc_l_fromIntegerLocal;
+    float hxc_l_tmp_load_result_n8 = hxc_l_fromIntegerArithmetic;
+    float hxc_l_tmp_load_result_n9 = hxc_l_fromFloatLocal;
+    float hxc_l_tmp_load_result_n10 = hxc_l_fromSideEffect;
+    bool hxc_l_tmp_native_call_result_n12 = pointlib_inline_float32_verify(hxc_l_tmp_load_result_n7, hxc_l_tmp_load_result_n8, hxc_l_tmp_load_result_n9, hxc_l_tmp_load_result_n10, hxc_l_fromNonInline);
+    hxc_l_tmp_short_circuit_result_n7 = hxc_l_tmp_native_call_result_n12;
   }
-  return hxc_tmp_short_circuit_result_n7;
+  return hxc_l_tmp_short_circuit_result_n7;
 }
 
-struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_y, bool hxc_useY)
+struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_l_y, bool hxc_l_useY)
 {
-  struct pointlib_point hxc_tmp_native_call_result_n0 = pointlib_point_make(POINTLIB_COORD_FIVE, POINTLIB_COORD_SEVEN);
-  pointlib_coord hxc_tmp_native_call_result_n1 = pointlib_point_component(hxc_tmp_native_call_result_n0, POINTLIB_AXIS_X);
-  pointlib_coord hxc_tmp = hxc_tmp_native_call_result_n1;
-  pointlib_coord hxc_selected = hxc_y;
-  if (!hxc_useY)
+  struct pointlib_point hxc_l_tmp_native_call_result_n0 = pointlib_point_make(POINTLIB_COORD_FIVE, POINTLIB_COORD_SEVEN);
+  pointlib_coord hxc_l_tmp_native_call_result_n1 = pointlib_point_component(hxc_l_tmp_native_call_result_n0, POINTLIB_AXIS_X);
+  pointlib_coord hxc_l_tmp = hxc_l_tmp_native_call_result_n1;
+  pointlib_coord hxc_l_selected = hxc_l_y;
+  if (!hxc_l_useY)
   {
-    hxc_selected = POINTLIB_COORD_ONE;
+    hxc_l_selected = POINTLIB_COORD_ONE;
   }
-  pointlib_coord hxc_tmp_load_result_n2 = hxc_tmp;
-  return (struct pointlib_point){ .x = hxc_tmp_load_result_n2, .y = hxc_selected };
+  pointlib_coord hxc_l_tmp_load_result_n2 = hxc_l_tmp;
+  return (struct pointlib_point){ .x = hxc_l_tmp_load_result_n2, .y = hxc_l_selected };
 }
 
-const char *hxc_Main_localizedLabel(int32_t hxc_locale, int32_t hxc_message)
+const char *hxc_Main_localizedLabel(int32_t hxc_l_locale, int32_t hxc_l_message)
 {
-  if (!(hxc_locale == 0))
+  if (!(hxc_l_locale == 0))
   {
     return "other-locale";
   }
-  const char *hxc_tmp_call_result_n0 = hxc_Main_localizedMessage(hxc_message);
-  return hxc_tmp_call_result_n0;
+  const char *hxc_l_tmp_call_result_n0 = hxc_Main_localizedMessage(hxc_l_message);
+  return hxc_l_tmp_call_result_n0;
 }
 
-const char *hxc_Main_localizedMessage(int32_t hxc_message)
+const char *hxc_Main_localizedMessage(int32_t hxc_l_message)
 {
-  if (!(hxc_message == 0))
+  if (!(hxc_l_message == 0))
   {
     return "other-message";
   }
@@ -85,94 +85,128 @@ const char *hxc_Main_localizedMessage(int32_t hxc_message)
 void hxc_Main_main(void)
 {
   pointlib_build_fact_probe();
-  bool hxc_flipped = false;
-  bool *hxc_tmp_native_call_ref_n0 = &hxc_flipped;
-  pointlib_flip(hxc_tmp_native_call_ref_n0);
-  struct pointlib_point hxc_tmp_native_call_result_n1 = pointlib_point_make(POINTLIB_COORD_ONE, POINTLIB_COORD_NEGATIVE_THREE);
-  struct pointlib_point hxc_left = hxc_tmp_native_call_result_n1;
-  struct pointlib_point hxc_tmp_call_result_n2 = hxc_Main_localPoint(POINTLIB_COORD_SEVEN, true);
-  struct hxc_PointResources hxc_tmp_call_result_n3 = hxc_Main_pointResources(hxc_tmp_call_result_n2);
-  struct hxc_PointResources hxc_resources = hxc_tmp_call_result_n3;
-  struct pointlib_point hxc_tmp_load_result_n4 = hxc_left;
-  struct pointlib_point hxc_tmp_call_result_n6 = hxc_Main_selectPoint(false, hxc_tmp_load_result_n4, hxc_resources.hxc_point);
-  struct pointlib_point hxc_right = hxc_tmp_call_result_n6;
-  hxc_left.x = POINTLIB_COORD_ONE;
-  pointlib_coord *hxc_tmp_imported_field_address_n7 = &hxc_left.x;
-  pointlib_coord hxc_tmp_imported_field_load_result_n8 = *hxc_tmp_imported_field_address_n7;
-  pointlib_coord hxc_delta = hxc_tmp_imported_field_load_result_n8;
-  struct pointlib_point hxc_tmp_load_result_n9 = hxc_left;
-  struct pointlib_point hxc_tmp_native_call_result_n11 = pointlib_point_translate(hxc_tmp_load_result_n9, hxc_delta, POINTLIB_COORD_FIVE);
-  hxc_left = hxc_tmp_native_call_result_n11;
-  struct pointlib_point hxc_tmp_native_call_result_n13 = pointlib_point_alias_identity(hxc_left);
-  struct pointlib_point hxc_pointAlias = hxc_tmp_native_call_result_n13;
-  (void)hxc_pointAlias;
-  struct pointlib_point hxc_tmp_load_result_n14 = hxc_left;
-  int64_t hxc_tmp_native_call_result_n16 = pointlib_point_dot(hxc_tmp_load_result_n14, hxc_right);
-  int64_t hxc_dot = hxc_tmp_native_call_result_n16;
-  pointlib_axis hxc_axis = POINTLIB_AXIS_Y;
-  struct pointlib_point hxc_tmp_load_result_n17 = hxc_left;
-  pointlib_coord hxc_tmp_native_call_result_n19 = pointlib_point_component(hxc_tmp_load_result_n17, hxc_axis);
-  pointlib_coord hxc_component = hxc_tmp_native_call_result_n19;
-  struct pointlib_float_point hxc_tmp_native_call_result_n20 = pointlib_float_point_make(POINTLIB_FLOAT_ONE_POINT_FIVE, POINTLIB_FLOAT_NEGATIVE_TWO);
-  struct pointlib_float_point hxc_floatPoint = hxc_tmp_native_call_result_n20;
-  hxc_floatPoint.x = (float)0.5;
-  struct pointlib_float_point hxc_tmp_native_call_result_n22 = pointlib_float_point_scale(hxc_floatPoint, (float)2.0);
-  hxc_floatPoint = hxc_tmp_native_call_result_n22;
-  struct pointlib_float_point hxc_tmp_load_result_n23 = hxc_floatPoint;
-  float hxc_tmp_native_call_result_n25 = pointlib_float_point_dot(hxc_tmp_load_result_n23, hxc_floatPoint);
-  float hxc_floatDot = hxc_tmp_native_call_result_n25;
-  double hxc_widened = (double)hxc_floatDot;
-  float hxc_tie = (float)1.000000059604644775390625;
-  float hxc_subnormal = (float)1.401298464324817e-45;
-  float hxc_positiveInfinity = (float)hxc_f64_divide_zero_safe(1.0, 0.0);
-  float hxc_nan = (float)hxc_f64_divide_zero_safe(0.0, 0.0);
-  float hxc_negativeZero = (float)-0.0;
-  float hxc_finiteOverflow = (float)1.0e300;
-  int32_t hxc_locale = 0;
+  bool hxc_l_flipped = false;
+  bool *hxc_l_tmp_native_call_ref_n0 = &hxc_l_flipped;
+  pointlib_flip(hxc_l_tmp_native_call_ref_n0);
+  struct pointlib_point hxc_l_tmp_native_call_result_n1 = pointlib_point_make(POINTLIB_COORD_ONE, POINTLIB_COORD_NEGATIVE_THREE);
+  struct pointlib_point hxc_l_left = hxc_l_tmp_native_call_result_n1;
+  struct pointlib_point hxc_l_tmp_native_call_result_n2 = pointlib_point_make(POINTLIB_COORD_ONE, POINTLIB_COORD_NEGATIVE_THREE);
+  struct pointlib_point hxc_l_inPlace = hxc_l_tmp_native_call_result_n2;
+  struct pointlib_point *hxc_l_tmp_native_call_ref_n3 = &hxc_l_inPlace;
+  pointlib_point_translate_in_place(hxc_l_tmp_native_call_ref_n3, POINTLIB_COORD_ONE, POINTLIB_COORD_FIVE);
+  struct pointlib_point hxc_l_tmp_call_result_n4 = hxc_Main_localPoint(POINTLIB_COORD_SEVEN, true);
+  struct hxc_PointResources hxc_l_tmp_call_result_n5 = hxc_Main_pointResources(hxc_l_tmp_call_result_n4);
+  struct hxc_PointResources hxc_l_resources = hxc_l_tmp_call_result_n5;
+  struct pointlib_point hxc_l_tmp_load_result_n6 = hxc_l_left;
+  struct pointlib_point hxc_l_tmp_call_result_n8 = hxc_Main_selectPoint(false, hxc_l_tmp_load_result_n6, hxc_l_resources.hxc_point);
+  struct pointlib_point hxc_l_right = hxc_l_tmp_call_result_n8;
+  struct pointlib_point hxc_l_zeroed = (struct pointlib_point){ 0 };
+  hxc_l_left.x = POINTLIB_COORD_ONE;
+  pointlib_coord *hxc_l_tmp_imported_field_address_n10 = &hxc_l_left.x;
+  pointlib_coord hxc_l_tmp_imported_field_load_result_n11 = *hxc_l_tmp_imported_field_address_n10;
+  pointlib_coord hxc_l_delta = hxc_l_tmp_imported_field_load_result_n11;
+  struct pointlib_point hxc_l_tmp_load_result_n12 = hxc_l_left;
+  struct pointlib_point hxc_l_tmp_native_call_result_n14 = pointlib_point_translate(hxc_l_tmp_load_result_n12, hxc_l_delta, POINTLIB_COORD_FIVE);
+  hxc_l_left = hxc_l_tmp_native_call_result_n14;
+  struct pointlib_point hxc_l_tmp_native_call_result_n16 = pointlib_point_alias_identity(hxc_l_left);
+  struct pointlib_point hxc_l_pointAlias = hxc_l_tmp_native_call_result_n16;
+  (void)hxc_l_pointAlias;
+  struct pointlib_point hxc_l_tmp_load_result_n17 = hxc_l_left;
+  int64_t hxc_l_tmp_native_call_result_n19 = pointlib_point_dot(hxc_l_tmp_load_result_n17, hxc_l_right);
+  int64_t hxc_l_dot = hxc_l_tmp_native_call_result_n19;
+  pointlib_axis hxc_l_tmp_call_result_n20 = hxc_Main_selectAxis(true);
+  pointlib_axis hxc_l_axis = hxc_l_tmp_call_result_n20;
+  bool hxc_l_axisIsY = hxc_l_axis == POINTLIB_AXIS_Y;
+  bool hxc_l_axisIsNotX = hxc_l_axis != POINTLIB_AXIS_X;
+  struct pointlib_point hxc_l_tmp_load_result_n23 = hxc_l_left;
+  pointlib_coord hxc_l_tmp_native_call_result_n25 = pointlib_point_component(hxc_l_tmp_load_result_n23, hxc_l_axis);
+  pointlib_coord hxc_l_component = hxc_l_tmp_native_call_result_n25;
+  struct pointlib_float_point hxc_l_tmp_native_call_result_n26 = pointlib_float_point_make(POINTLIB_FLOAT_ONE_POINT_FIVE, POINTLIB_FLOAT_NEGATIVE_TWO);
+  struct pointlib_float_point hxc_l_floatPoint = hxc_l_tmp_native_call_result_n26;
+  hxc_l_floatPoint.x = (float)0.5;
+  struct pointlib_float_point hxc_l_tmp_native_call_result_n28 = pointlib_float_point_scale(hxc_l_floatPoint, (float)2.0);
+  hxc_l_floatPoint = hxc_l_tmp_native_call_result_n28;
+  struct pointlib_float_point hxc_l_tmp_load_result_n29 = hxc_l_floatPoint;
+  float hxc_l_tmp_native_call_result_n31 = pointlib_float_point_dot(hxc_l_tmp_load_result_n29, hxc_l_floatPoint);
+  float hxc_l_floatDot = hxc_l_tmp_native_call_result_n31;
+  double hxc_l_widened = (double)hxc_l_floatDot;
+  float hxc_l_tie = (float)1.000000059604644775390625;
+  float hxc_l_subnormal = (float)1.401298464324817e-45;
+  float hxc_l_positiveInfinity = (float)hxc_f64_divide_zero_safe(1.0, 0.0);
+  float hxc_l_nan = (float)hxc_f64_divide_zero_safe(0.0, 0.0);
+  float hxc_l_negativeZero = (float)-0.0;
+  float hxc_l_finiteOverflow = (float)1.0e300;
+  int32_t hxc_l_locale = 0;
   while (1)
   {
-    bool hxc_tmp_load_result_n27 = hxc_flipped;
-    bool hxc_tmp_short_circuit_result_n19 = !hxc_tmp_load_result_n27;
-    if (!!hxc_tmp_load_result_n27)
+    bool hxc_l_tmp_load_result_n33 = hxc_l_flipped;
+    bool hxc_l_tmp_short_circuit_result_n23 = !hxc_l_tmp_load_result_n33;
+    if (!!hxc_l_tmp_load_result_n33)
     {
-      hxc_tmp_short_circuit_result_n19 = !hxc_resources.hxc_ready;
+      hxc_l_tmp_short_circuit_result_n23 = !hxc_l_resources.hxc_ready;
     }
-    bool hxc_tmp_short_circuit_load_result_n29 = hxc_tmp_short_circuit_result_n19;
-    bool hxc_tmp_short_circuit_result_n20 = hxc_tmp_short_circuit_load_result_n29;
-    if (!hxc_tmp_short_circuit_load_result_n29)
+    bool hxc_l_tmp_short_circuit_load_result_n35 = hxc_l_tmp_short_circuit_result_n23;
+    bool hxc_l_tmp_short_circuit_result_n24 = hxc_l_tmp_short_circuit_load_result_n35;
+    if (!hxc_l_tmp_short_circuit_load_result_n35)
     {
-      struct pointlib_point hxc_tmp_load_result_n30 = hxc_left;
-      struct pointlib_point hxc_tmp_load_result_n31 = hxc_right;
-      int64_t hxc_tmp_load_result_n32 = hxc_dot;
-      pointlib_coord hxc_tmp_load_result_n33 = hxc_component;
-      pointlib_axis hxc_tmp_load_result_n34 = hxc_axis;
-      const char *hxc_tmp_call_result_n36 = hxc_Main_localizedLabel(hxc_locale, 0);
-      bool hxc_tmp_call_result_n37 = hxc_Main_verifyPoint(hxc_tmp_load_result_n30, hxc_tmp_load_result_n31, hxc_tmp_load_result_n32, hxc_tmp_load_result_n33, hxc_tmp_load_result_n34, hxc_tmp_call_result_n36);
-      hxc_tmp_short_circuit_result_n20 = !hxc_tmp_call_result_n37;
+      bool hxc_l_tmp_native_call_result_n36 = pointlib_variadic_fixed_prefix_verify(POINTLIB_COORD_ONE);
+      hxc_l_tmp_short_circuit_result_n24 = !hxc_l_tmp_native_call_result_n36;
     }
-    bool hxc_tmp_short_circuit_load_result_n38 = hxc_tmp_short_circuit_result_n20;
-    bool hxc_tmp_short_circuit_result_n21 = hxc_tmp_short_circuit_load_result_n38;
-    if (!hxc_tmp_short_circuit_load_result_n38)
+    bool hxc_l_tmp_short_circuit_load_result_n37 = hxc_l_tmp_short_circuit_result_n24;
+    bool hxc_l_tmp_short_circuit_result_n25 = hxc_l_tmp_short_circuit_load_result_n37;
+    if (!hxc_l_tmp_short_circuit_load_result_n37)
     {
-      struct pointlib_float_point hxc_tmp_load_result_n39 = hxc_floatPoint;
-      float hxc_tmp_load_result_n40 = hxc_floatDot;
-      double hxc_tmp_load_result_n41 = hxc_widened;
-      float hxc_tmp_load_result_n42 = hxc_tie;
-      float hxc_tmp_load_result_n43 = hxc_subnormal;
-      float hxc_tmp_load_result_n44 = hxc_positiveInfinity;
-      float hxc_tmp_load_result_n45 = hxc_nan;
-      float hxc_tmp_load_result_n46 = hxc_negativeZero;
-      bool hxc_tmp_native_call_result_n48 = pointlib_float32_verify(hxc_tmp_load_result_n39, hxc_tmp_load_result_n40, hxc_tmp_load_result_n41, hxc_tmp_load_result_n42, hxc_tmp_load_result_n43, hxc_tmp_load_result_n44, hxc_tmp_load_result_n45, hxc_tmp_load_result_n46, hxc_finiteOverflow);
-      hxc_tmp_short_circuit_result_n21 = !hxc_tmp_native_call_result_n48;
+      hxc_l_tmp_short_circuit_result_n25 = !hxc_l_axisIsY;
     }
-    bool hxc_tmp_short_circuit_load_result_n49 = hxc_tmp_short_circuit_result_n21;
-    bool hxc_tmp_short_circuit_result_n22 = hxc_tmp_short_circuit_load_result_n49;
-    if (!hxc_tmp_short_circuit_load_result_n49)
+    bool hxc_l_tmp_short_circuit_load_result_n39 = hxc_l_tmp_short_circuit_result_n25;
+    bool hxc_l_tmp_short_circuit_result_n26 = hxc_l_tmp_short_circuit_load_result_n39;
+    if (!hxc_l_tmp_short_circuit_load_result_n39)
     {
-      bool hxc_tmp_call_result_n50 = hxc_InlineFloat32Probe_run();
-      hxc_tmp_short_circuit_result_n22 = !hxc_tmp_call_result_n50;
+      hxc_l_tmp_short_circuit_result_n26 = !hxc_l_axisIsNotX;
     }
-    if (!hxc_tmp_short_circuit_result_n22)
+    bool hxc_l_tmp_short_circuit_load_result_n41 = hxc_l_tmp_short_circuit_result_n26;
+    bool hxc_l_tmp_short_circuit_result_n27 = hxc_l_tmp_short_circuit_load_result_n41;
+    if (!hxc_l_tmp_short_circuit_load_result_n41)
+    {
+      bool hxc_l_tmp_native_call_result_n43 = pointlib_point_is_zero(hxc_l_zeroed);
+      hxc_l_tmp_short_circuit_result_n27 = !hxc_l_tmp_native_call_result_n43;
+    }
+    bool hxc_l_tmp_short_circuit_load_result_n44 = hxc_l_tmp_short_circuit_result_n27;
+    bool hxc_l_tmp_short_circuit_result_n28 = hxc_l_tmp_short_circuit_load_result_n44;
+    if (!hxc_l_tmp_short_circuit_load_result_n44)
+    {
+      struct pointlib_point hxc_l_tmp_load_result_n45 = hxc_l_inPlace;
+      struct pointlib_point hxc_l_tmp_load_result_n46 = hxc_l_right;
+      int64_t hxc_l_tmp_load_result_n47 = hxc_l_dot;
+      pointlib_coord hxc_l_tmp_load_result_n48 = hxc_l_component;
+      pointlib_axis hxc_l_tmp_load_result_n49 = hxc_l_axis;
+      const char *hxc_l_tmp_call_result_n51 = hxc_Main_localizedLabel(hxc_l_locale, 0);
+      bool hxc_l_tmp_call_result_n52 = hxc_Main_verifyPoint(hxc_l_tmp_load_result_n45, hxc_l_tmp_load_result_n46, hxc_l_tmp_load_result_n47, hxc_l_tmp_load_result_n48, hxc_l_tmp_load_result_n49, hxc_l_tmp_call_result_n51);
+      hxc_l_tmp_short_circuit_result_n28 = !hxc_l_tmp_call_result_n52;
+    }
+    bool hxc_l_tmp_short_circuit_load_result_n53 = hxc_l_tmp_short_circuit_result_n28;
+    bool hxc_l_tmp_short_circuit_result_n29 = hxc_l_tmp_short_circuit_load_result_n53;
+    if (!hxc_l_tmp_short_circuit_load_result_n53)
+    {
+      struct pointlib_float_point hxc_l_tmp_load_result_n54 = hxc_l_floatPoint;
+      float hxc_l_tmp_load_result_n55 = hxc_l_floatDot;
+      double hxc_l_tmp_load_result_n56 = hxc_l_widened;
+      float hxc_l_tmp_load_result_n57 = hxc_l_tie;
+      float hxc_l_tmp_load_result_n58 = hxc_l_subnormal;
+      float hxc_l_tmp_load_result_n59 = hxc_l_positiveInfinity;
+      float hxc_l_tmp_load_result_n60 = hxc_l_nan;
+      float hxc_l_tmp_load_result_n61 = hxc_l_negativeZero;
+      bool hxc_l_tmp_native_call_result_n63 = pointlib_float32_verify(hxc_l_tmp_load_result_n54, hxc_l_tmp_load_result_n55, hxc_l_tmp_load_result_n56, hxc_l_tmp_load_result_n57, hxc_l_tmp_load_result_n58, hxc_l_tmp_load_result_n59, hxc_l_tmp_load_result_n60, hxc_l_tmp_load_result_n61, hxc_l_finiteOverflow);
+      hxc_l_tmp_short_circuit_result_n29 = !hxc_l_tmp_native_call_result_n63;
+    }
+    bool hxc_l_tmp_short_circuit_load_result_n64 = hxc_l_tmp_short_circuit_result_n29;
+    bool hxc_l_tmp_short_circuit_result_n30 = hxc_l_tmp_short_circuit_load_result_n64;
+    if (!hxc_l_tmp_short_circuit_load_result_n64)
+    {
+      bool hxc_l_tmp_call_result_n65 = hxc_InlineFloat32Probe_run();
+      hxc_l_tmp_short_circuit_result_n30 = !hxc_l_tmp_call_result_n65;
+    }
+    if (!hxc_l_tmp_short_circuit_result_n30)
     {
       break;
     }
@@ -180,30 +214,46 @@ void hxc_Main_main(void)
   return;
 }
 
-struct hxc_PointResources hxc_Main_pointResources(struct pointlib_point hxc_point)
+struct hxc_PointResources hxc_Main_pointResources(struct pointlib_point hxc_l_point)
 {
-  return (struct hxc_PointResources){ .hxc_point = hxc_point, .hxc_ready = true };
+  return (struct hxc_PointResources){ .hxc_point = hxc_l_point, .hxc_ready = true };
 }
 
-struct pointlib_point hxc_Main_selectPoint(bool hxc_useLeft, struct pointlib_point hxc_left, struct pointlib_point hxc_right)
+pointlib_axis hxc_Main_selectAxis(bool hxc_l_useY)
 {
-  struct pointlib_point hxc_tmp_conditional_result_n4;
-  if (hxc_useLeft)
+  pointlib_axis hxc_l_tmp_conditional_result_n2 = { 0 };
+  if (hxc_l_useY)
   {
-    hxc_tmp_conditional_result_n4 = hxc_left;
+    hxc_l_tmp_conditional_result_n2 = POINTLIB_AXIS_Y;
   }
   else
   {
-    hxc_tmp_conditional_result_n4 = hxc_right;
+    hxc_l_tmp_conditional_result_n2 = POINTLIB_AXIS_X;
   }
-  struct pointlib_point hxc_selected = hxc_tmp_conditional_result_n4;
-  return hxc_selected;
+  pointlib_axis hxc_l_selected = hxc_l_tmp_conditional_result_n2;
+  pointlib_axis hxc_l_tmp_native_call_result_n2 = pointlib_axis_identity(hxc_l_selected);
+  return hxc_l_tmp_native_call_result_n2;
 }
 
-bool hxc_Main_verifyPoint(struct pointlib_point hxc_left, struct pointlib_point hxc_right, int64_t hxc_dot, pointlib_coord hxc_component, pointlib_axis hxc_axis, const char *hxc_label)
+struct pointlib_point hxc_Main_selectPoint(bool hxc_l_useLeft, struct pointlib_point hxc_l_left, struct pointlib_point hxc_l_right)
 {
-  bool hxc_tmp_native_call_result_n0 = pointlib_point_verify(hxc_left, hxc_right, hxc_dot, hxc_component, hxc_axis, hxc_label);
-  return hxc_tmp_native_call_result_n0;
+  struct pointlib_point hxc_l_tmp_conditional_result_n4 = { 0 };
+  if (hxc_l_useLeft)
+  {
+    hxc_l_tmp_conditional_result_n4 = hxc_l_left;
+  }
+  else
+  {
+    hxc_l_tmp_conditional_result_n4 = hxc_l_right;
+  }
+  struct pointlib_point hxc_l_selected = hxc_l_tmp_conditional_result_n4;
+  return hxc_l_selected;
+}
+
+bool hxc_Main_verifyPoint(struct pointlib_point hxc_l_left, struct pointlib_point hxc_l_right, int64_t hxc_l_dot, pointlib_coord hxc_l_component, pointlib_axis hxc_l_axis, const char *hxc_l_label)
+{
+  bool hxc_l_tmp_native_call_result_n0 = pointlib_point_verify(hxc_l_left, hxc_l_right, hxc_l_dot, hxc_l_component, hxc_l_axis, hxc_l_label);
+  return hxc_l_tmp_native_call_result_n0;
 }
 
 void hxc_init_compiler_static_initialization_InlineFloat32Probe_static_field_sideEffectCount(void)

@@ -119,7 +119,7 @@ a synchronous C text function. `c.CStringBufferRef.to(bytes)` lowers to
 `hxc_bytes_ref_borrow_mutable_cstring`, which accepts only a live, non-empty
 Bytes value whose allocation already contains a NUL byte. It publishes a
 `char *` only after those checks pass. The pointer has no owner of its own:
-schema-21 HxcIR requires the checked borrow as its producer and exactly one
+schema-23 HxcIR requires the checked borrow as its producer and exactly one
 direct native-call argument as its consumer, in the same basic block. Storage,
 return, forwarding, indirect calls, and a second consumer are validation
 errors before C emission.

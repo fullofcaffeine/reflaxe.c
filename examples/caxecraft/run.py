@@ -688,7 +688,7 @@ def validate_hxcir(hxcir: str, projection: dict[str, object]) -> None:
         projection, "caxecraft.domain.CharacterPhysics.step"
     )
     for marker in (
-        "hxcir schema=21",
+        "hxcir schema=23",
         'function "function.caxecraft.domain.World.generate"',
         'function "function.caxecraft.domain.VoxelRaycast.trace"',
         f'function "{player_step_id}"',
@@ -725,7 +725,7 @@ def validate_generated_text(
             f"generated Caxecraft C retained compiler control-flow marker {marker!r}"
         )
     for marker in (
-        "uint8_t hxc_storage[16384]",
+        "uint8_t hxc_l_storage[16384]",
         projected_method_name(
             method_symbols,
             "caxecraft.domain.VoxelRaycast.trace(span:const<u8>, f64, f64, f64, f64, f64, f64, f64)",
@@ -1115,7 +1115,7 @@ def validate_symbol_readability(symbols: dict[str, object]) -> None:
     collisions = symbols.get("collisions")
     if (
         symbols.get("schemaVersion") != 2
-        or symbols.get("algorithm") != "hxc-c-symbol-v2"
+        or symbols.get("algorithm") != "hxc-c-symbol-v3"
         or not isinstance(entries, list)
         or not isinstance(collisions, list)
     ):

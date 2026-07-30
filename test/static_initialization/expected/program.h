@@ -3,23 +3,23 @@
 
 #include <stdint.h>
 
-static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_l_value)
 {
-  if (hxc_value <= UINT32_C(2147483647))
+  if (hxc_l_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_value;
+    return (int32_t)hxc_l_value;
   }
-  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_l_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left + (uint64_t)(uint32_t)hxc_l_right));
 }
 
-static inline int32_t hxc_i32_multiply_wrapping(int32_t hxc_left, int32_t hxc_right)
+static inline int32_t hxc_i32_multiply_wrapping(int32_t hxc_l_left, int32_t hxc_l_right)
 {
-  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left * (uint64_t)(uint32_t)hxc_right));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left * (uint64_t)(uint32_t)hxc_l_right));
 }
 
 extern int32_t hxc_AStaticInitDependent_first;
@@ -36,7 +36,7 @@ extern int32_t hxc_MStaticInitTrace_trace;
 
 extern int32_t hxc_ZStaticInitPrerequisite_value;
 
-int32_t hxc_MStaticInitTrace_mark(int32_t hxc_digit);
+int32_t hxc_MStaticInitTrace_mark(int32_t hxc_l_digit);
 
 int32_t hxc_MStaticInitTrace_seed(void);
 

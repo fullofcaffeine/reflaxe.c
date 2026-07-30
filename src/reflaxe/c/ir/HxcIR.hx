@@ -46,6 +46,18 @@ typedef HxcIRVirtualTable = {
 	final source:HxcSourceSpan;
 }
 
+/**
+	One closed-world table mapping for an infallible interface-parent upcast.
+
+	Both tables belong to the same concrete class. The source table identifies
+	which implementation an interface value currently carries; the target table
+	preserves that implementation while changing only the static interface view.
+**/
+typedef HxcIRInterfaceUpcastTable = {
+	final sourceTableId:String;
+	final targetTableId:String;
+}
+
 typedef HxcIRModule = {
 	final id:String;
 	final types:Array<HxcIRTypeDeclaration>;
@@ -398,12 +410,14 @@ typedef HxcIRResult = {
 }
 
 /**
-	How one managed carrier acquires the owner selected by a control-flow arm.
+	How one managed carrier acquires an owner before transferring it.
 
 	A fresh result already owns its active payload and can move that owner. A
 	borrowed value must retain one independent copy before its original owner may
-	leave scope. The distinction stays in semantic IR so C emission never guesses
-	ownership from syntax.
+	leave scope. Branch joins use this distinction to select one owner, while a
+	straight-line handoff uses it to make a retained borrow visibly transferable.
+	The distinction stays in semantic IR so C emission never guesses ownership
+	from syntax.
 **/
 enum HxcIRManagedCarrierAcquisition {
 	IRMCAMoveFresh;
@@ -435,12 +449,31 @@ enum HxcIRInstructionKind {
 	IRIOConstructAggregate(instanceId:String, fields:Array<HxcIRNamedValue>);
 
 	/**
+		Construct one direct aggregate with C's complete zero-initialization rule.
+
+		The typed surface currently admits only header-owned structs. Keeping the
+		operation explicit lets validation prove that no managed owner is
+		fabricated and lets C emission use structural `(struct T){0}` syntax.
+	**/
+	IRIOZeroAggregate(instanceId:String);
+
+	/**
 		Pair a concrete Haxe object reference with the interface table selected for
 		its runtime class. Keeping this as semantic IR lets validation reject a
 		wrong object/table/interface combination before C chooses a two-pointer
 		struct spelling.
 	**/
 	IRIOConstructInterface(interfaceInstanceId:String, objectValueId:String, tableId:String);
+
+	/**
+		Change a child-interface value into one declared parent interface.
+
+		The object pointer is preserved. `tables` is the complete closed-world
+		mapping from every reachable source table to the corresponding target table
+		for the same concrete class, so C emission never guesses or uses an
+		unchecked struct-pointer cast.
+	**/
+	IRIOUpcastInterface(valueId:String, sourceInterfaceInstanceId:String, targetInterfaceInstanceId:String, tables:Array<HxcIRInterfaceUpcastTable>);
 
 	IRIOProject(valueId:String, fieldName:String);
 	IRIOConstructTag(instanceId:String, tagName:String, payload:Array<String>);
@@ -465,12 +498,13 @@ enum HxcIRInstructionKind {
 	IRIODeclareUninitialized(place:HxcIRPlace);
 
 	/**
-		Declare the one owner that all normal paths into a managed-value join fill.
+		Declare storage for one explicitly acquired managed owner.
 
 		The destroy plan identifies the matching String/Array runtime lifecycle or
-		the exact managed tagged-enum family. A matching acquire operation
-		initializes the carrier on each selected path, and one move operation
-		transfers that owner out at the join.
+		the exact managed tagged-enum family. In a control-flow join, every path
+		that reaches the move acquires the carrier once. A straight-line retain may
+		acquire and move immediately. Both forms transfer exactly one owner and
+		reject duplicate acquisition, duplicate movement, or an owned exit.
 	**/
 	IRIODeclareManagedCarrier(place:HxcIRPlace, destroyImplementation:HxcIRImplementation);
 
@@ -653,7 +687,7 @@ typedef HxcIRFunction = {
 		How this function may lend a read-only span across its return boundary.
 
 		The optional field preserves compatibility with older hand-built HxcIR
-		fixtures. Compiler-produced schema-21 functions always supply either the
+		fixtures. Compiler-produced schema-23 functions always supply either the
 		closed receiver-field contract or `null`.
 	**/
 	final ?borrowedSpanReturn:HxcIRBorrowedSpanReturn;

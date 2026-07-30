@@ -286,6 +286,34 @@ performance, packaging, and developer experience together.
   state. Fail review if the bridge starts shaping source data, public APIs,
   tooling requirements, or durable architecture. Prefer a focused check that
   fails if the removal issue is closed while the temporary path still exists.
+- Default every repository-owned production behavior to Haxe authored and
+  compiled through haxe.c. This rule includes metal and platform boundaries:
+  when code intentionally depends on a C ABI, pointer, layout, operating-system
+  call, or other low-level contract, express that boundary with typed `c.*`
+  values and Haxe externs wherever haxe.c can represent it safely. The fact
+  that an API is declared in a C header does not by itself justify a
+  repository-owned handwritten C implementation.
+
+  Handwritten C must be **justified twice**, with the two arguments recorded
+  beside its owning Beads issue or accepted architecture record:
+
+  1. **Technical necessity:** name the exact behavior that typed Haxe plus the
+     metal surface cannot currently express or verify, provide the smallest
+     focused reproducer, and explain why adding the reusable haxe.c capability
+     is unsafe, impossible, or outside the accepted task boundary.
+  2. **Durable ownership value:** independently explain why keeping this logic
+     in C is better for users and maintainers than lifting the compiler
+     capability. Name the ABI, toolchain, performance, lifecycle, or external
+     ownership fact that requires C; keep the boundary minimal and typed; and
+     provide its tests, responsible owner, review/removal condition, and
+     generated/runtime consequence.
+
+  A temporary C probe or bridge may satisfy the first argument only long enough
+  to expose the missing compiler contract. It does not satisfy the second
+  argument merely because it works. Do not close the natural Haxe capability,
+  build new product behavior on the bridge, or call the bridge the final
+  architecture until both justifications have been reviewed and executable
+  evidence covers the Haxe-to-C boundary.
 - Apply the same loop to improvements, not only failures. Measure readability,
   output shape, compile time, runtime cost, allocations, code size, diagnostics,
   and workflow friction where relevant. Turn a broadly useful improvement into

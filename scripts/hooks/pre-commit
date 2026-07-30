@@ -73,13 +73,14 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
 fi
 
-# Known compiler semantic layers use a reviewed set of affected owners for
-# quick local proof. Unknown cross-cutting infrastructure still fails closed to
-# the complete matrix. Pull requests, nightly runs, releases, and the explicit
-# toolchain command always retain the cold exhaustive proof.
+# Known compiler semantic layers add reviewed affected owners to a conservative
+# local smoke set. Unknown cross-cutting infrastructure still runs that smoke
+# set instead of silently selecting no evidence. Pull requests, nightly runs,
+# releases, and the explicit toolchain command own the cold exhaustive proof;
+# a local commit must not launch the complete repository matrix automatically.
 PRE_COMMIT_ROUTE="$(printf '%s\n' "$STAGED_FILES" | python3 "$ROOT_DIR/scripts/ci/select_pre_commit_route.py")"
 if [ "$PRE_COMMIT_ROUTE" = "affected" ]; then
-  echo "[pre-commit] Running affected local compiler evidence; complete cold coverage remains required in CI..."
+  echo "[pre-commit] Running conservative local smoke; focused owners remain task evidence and complete cold coverage remains required in CI..."
   npm run test:governance
   while IFS=$'\t' read -r owner_script owner_reason; do
     if [ -z "$owner_script" ]; then
@@ -89,20 +90,9 @@ if [ "$PRE_COMMIT_ROUTE" = "affected" ]; then
     npm run "$owner_script"
   done < <(
     printf '%s\n' "$STAGED_FILES" |
-      python3 "$ROOT_DIR/scripts/ci/select_pre_commit_route.py" --owners
+      python3 "$ROOT_DIR/scripts/ci/select_pre_commit_route.py" --smoke-owners
   )
-  echo "[pre-commit] Affected evidence passed. Run 'npm run test:toolchain:parallel -- --with-native' for the complete cold local matrix."
-  echo "[pre-commit] OK"
-  exit 0
-fi
-
-if [ "$PRE_COMMIT_ROUTE" = "parallel-exhaustive" ]; then
-  echo "[pre-commit] Running one bounded parallel exhaustive gate for unknown cross-cutting compiler or test-infrastructure changes..."
-  npm run test:governance
-  # Resume is deliberately local to this hook. It can reuse only exact,
-  # unexpired passing shards from the same staged/worktree/tool environment;
-  # hosted CI and ordinary shard commands always run cold.
-  npm run test:toolchain:parallel -- --resume --with-native
+  echo "[pre-commit] Local smoke passed. Hosted CI owns the complete cold matrix; focused and explicit full local commands remain documented in docs/test-performance.md."
   echo "[pre-commit] OK"
   exit 0
 fi

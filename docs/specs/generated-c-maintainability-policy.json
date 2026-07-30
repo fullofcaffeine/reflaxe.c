@@ -84,8 +84,8 @@
       "fileOverrides": [
         {
           "path": "src/packages/caxecraft/domain/package.c",
-          "maxFileLines": 1454,
-          "reason": "Package layout intentionally groups the reviewed production domain modules into one package source. The added WorldRead module keeps const world queries structurally separate from mutable storage operations; per-function limits remain unchanged."
+          "maxFileLines": 1474,
+          "reason": "Package layout intentionally groups the reviewed production domain modules into one package source. Five exhaustive World enum switches each carry a four-line defensive default that aborts if foreign C supplies an invalid enum value; valid Haxe behavior and the per-function control-flow limits remain unchanged."
         },
         {
           "path": "src/packages/caxecraft/qa/package.c",
@@ -139,8 +139,8 @@
       "fileOverrides": [
         {
           "path": "src/modules/caxecraft/domain/World.c",
-          "maxFileLines": 407,
-          "reason": "The finite world module keeps every stable solid-material storage code and edit rule together. Adding the reviewed sand, forest, snow, and ash identities grows exhaustive switches without weakening per-function or control-flow budgets."
+          "maxFileLines": 427,
+          "reason": "The finite world module keeps every stable solid-material storage code and edit rule together. Five exhaustive enum switches each carry a four-line defensive default that aborts if foreign C supplies an invalid enum value; valid Haxe behavior and the per-function control-flow limits remain unchanged."
         },
         {
           "path": "src/modules/caxecraft/qa/DomainProbe.c",
@@ -194,8 +194,8 @@
       "fileOverrides": [
         {
           "path": "src/program.c",
-          "maxFileLines": 2238,
-          "reason": "Unity layout intentionally amalgamates the same reviewed split program into one translation unit. The added WorldRead module keeps const world queries structurally separate from mutable storage operations; per-function limits remain unchanged."
+          "maxFileLines": 2258,
+          "reason": "Unity layout intentionally amalgamates the same reviewed split program into one translation unit. Five exhaustive World enum switches each carry a four-line defensive default that aborts if foreign C supplies an invalid enum value; valid Haxe behavior and the per-function control-flow limits remain unchanged."
         }
       ],
       "functionOverrides": [

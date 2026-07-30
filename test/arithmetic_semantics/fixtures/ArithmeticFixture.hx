@@ -1,3 +1,12 @@
+/**
+ * Keeps the arithmetic oracle in ordinary Haxe and free of target-specific code.
+ *
+ * The same source feeds Eval and haxe.c so wrapping integers, floating-point
+ * edge cases, conversions, local updates, and parameter updates can be compared
+ * at their observable function boundaries.
+ */
+
+/** Exercises the admitted primitive arithmetic operations as small typed functions. */
 class ArithmeticFixture {
 	static function iadd(left:Int, right:Int):Int
 		return left + right;
@@ -112,6 +121,18 @@ class ArithmeticFixture {
 		return current;
 	}
 
+	/**
+	 * Proves that compound arithmetic may update a function parameter itself.
+	 *
+	 * The parameter starts as an immutable incoming HxcIR value. haxe.c gives
+	 * this function one initialized automatic local so `+=` can preserve Haxe's
+	 * wrapping `Int` semantics without assigning the C parameter directly.
+	 */
+	static function updateParameter(value:Int):Int {
+		value += 3;
+		return value;
+	}
+
 	static function main():Void {
 		#if arithmetic_semantics_oracle
 		var minimum = -2147483647 - 1;
@@ -137,7 +158,8 @@ class ArithmeticFixture {
 			umod(unsignedMaximum, unsignedHalf),
 			ushl(1, -1),
 			ushr(unsignedHalf, -1),
-			update(3)
+			update(3),
+			updateParameter(3)
 		].join(","));
 		#else
 		iadd(1, 2);
@@ -174,6 +196,7 @@ class ArithmeticFixture {
 		u32ToU8(c.IntConvert.modulo(-1));
 		u8ToI16(c.IntConvert.modulo(255));
 		update(3);
+		updateParameter(3);
 		#end
 	}
 }

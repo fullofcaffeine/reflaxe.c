@@ -173,7 +173,7 @@ class DeclarationPlanGolden {
 
 	static function contract(declarations:Array<TypedCDeclaration>, buildFacts:Array<TypedCBuildFact>):TypedCContractSnapshot {
 		return {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			status: "contract-seed-no-lowering",
 			declarations: declarations,
 			buildFacts: buildFacts,

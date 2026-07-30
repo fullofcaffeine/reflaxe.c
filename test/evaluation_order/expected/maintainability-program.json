@@ -45,7 +45,7 @@
   "inputs": [
     {
       "path": "program.c",
-      "sha256": "42efef4ba12ee563e1c81d3b640385fd4bcf8c7e1e690e6dc21d5eb4edd1b979"
+      "sha256": "a944378ca309fe7321b2658157e2e406396d409cada02cec4a379e53163de5d6"
     }
   ],
   "summary": {
@@ -65,9 +65,9 @@
     "ownerMappedArtifactCount": 1,
     "ownerMappedArtifactBasisPoints": 10000,
     "branchCount": 49,
-    "temporaryDeclarationCount": 60,
-    "temporaryReferenceCount": 91,
-    "temporaryDeclarationsPerKFunctionCodeLines": 159,
+    "temporaryDeclarationCount": 0,
+    "temporaryReferenceCount": 0,
+    "temporaryDeclarationsPerKFunctionCodeLines": 0,
     "maxIdentifier": {
       "name": "hxc_EvaluationFixture_exhaustiveAbstractRecord",
       "bytes": 46,
@@ -107,8 +107,8 @@
   "identifierFindings": [
     {
       "category": "hash-suffix",
-      "identifier": "hxc_symbol_h0c443bac736a",
-      "bytes": 24,
+      "identifier": "hxc_l_symbol_h0c443bac736a",
+      "bytes": 26,
       "explained": true,
       "sourceSymbols": [
         "EvaluationFixture.run.`#23"
@@ -127,8 +127,8 @@
     },
     {
       "category": "hash-suffix",
-      "identifier": "hxc_symbol_h73c8af38b72c",
-      "bytes": 24,
+      "identifier": "hxc_l_symbol_h73c8af38b72c",
+      "bytes": 26,
       "explained": true,
       "sourceSymbols": [
         "EvaluationFixture.run.`#26"
@@ -147,8 +147,8 @@
     },
     {
       "category": "hash-suffix",
-      "identifier": "hxc_symbol_habfcdbf4fca5",
-      "bytes": 24,
+      "identifier": "hxc_l_symbol_habfcdbf4fca5",
+      "bytes": 26,
       "explained": true,
       "sourceSymbols": [
         "EvaluationFixture.run.`#22"
@@ -170,7 +170,7 @@
   "files": [
     {
       "path": "program.c",
-      "sha256": "42efef4ba12ee563e1c81d3b640385fd4bcf8c7e1e690e6dc21d5eb4edd1b979",
+      "sha256": "a944378ca309fe7321b2658157e2e406396d409cada02cec4a379e53163de5d6",
       "owner": {
         "kind": "amalgamation",
         "modulePath": null,
@@ -189,8 +189,8 @@
         "line": 35,
         "column": 53
       },
-      "temporaryDeclarationCount": 60,
-      "temporaryReferenceCount": 91,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "function.EvaluationFixture.consumePair",
@@ -223,9 +223,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 2,
-          "temporaryDeclarationsPerKCodeLines": 112
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "function.EvaluationFixture.exhaustiveAbstractRecord",
@@ -258,9 +258,9 @@
           "mappedPaths": [],
           "branchCount": 5,
           "maxNestingDepth": 3,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 38
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "function.EvaluationFixture.exhaustiveAbstractReturn",
@@ -293,9 +293,9 @@
           "mappedPaths": [],
           "branchCount": 5,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 39
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "function.EvaluationFixture.finish",
@@ -468,9 +468,9 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 125
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "function.EvaluationFixture.run",
@@ -503,9 +503,9 @@
           "mappedPaths": [],
           "branchCount": 38,
           "maxNestingDepth": 4,
-          "temporaryDeclarationCount": 55,
-          "temporaryReferenceCount": 79,
-          "temporaryDeclarationsPerKCodeLines": 208
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "function.EvaluationFixture.setCallFlag",
@@ -643,9 +643,9 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 167
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "compiler.entry.main",

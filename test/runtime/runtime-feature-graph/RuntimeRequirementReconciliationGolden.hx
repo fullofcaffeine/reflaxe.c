@@ -68,6 +68,7 @@ class RuntimeRequirementReconciliationGolden {
 			}
 		}
 		verifySameSpanReasons(analyzer);
+		verifyDeclarationCarriers(analyzer);
 		next();
 	}
 
@@ -117,6 +118,53 @@ class RuntimeRequirementReconciliationGolden {
 		}
 		if (!rejected)
 			throw "one runtime observation incorrectly admitted two distinct source reasons";
+	}
+
+	/**
+		Prove that stored String types select their C carriers without fake work.
+
+		A reachable type declaration is emitted even when no function constructs
+		one of its values. Its complete C layout therefore needs the direct or
+		managed String runtime header. This test keeps that type-only requirement
+		separate from literal and concatenation operations.
+	**/
+	static function verifyDeclarationCarriers(analyzer:RuntimeRequirementAnalyzer):Void {
+		final directSource = new HxcSourceSpan("test/runtime/runtime-feature-graph/DeclarationCarriers.hx", 4, 3, 4, 16);
+		final managedSource = new HxcSourceSpan("test/runtime/runtime-feature-graph/DeclarationCarriers.hx", 5, 3, 5, 17);
+		final program = programWith([], new HxcSourceSpan("test/runtime/runtime-feature-graph/DeclarationCarriers.hx", 1, 1, 7, 1));
+		program.modules[0].types.push({
+			id: "type.fixture.declaration-carriers",
+			displayName: "fixture.DeclarationCarriers",
+			kind: IRTKAggregate([
+				{
+					name: "direct",
+					type: IRTString,
+					mutable: false,
+					source: directSource
+				},
+				{
+					name: "managed",
+					type: IRTManagedString,
+					mutable: false,
+					source: managedSource
+				}
+			]),
+			source: directSource
+		});
+		final analysis = analyzer.analyze(program, [
+			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string-literal"), "type-carrier", "runtime-representation",
+				"closed Haxe record field `direct`", directSource),
+			new RuntimeRequirementCandidate(RuntimeFeatureId.parse("string"), "type-carrier", "runtime-representation", "closed Haxe record field `managed`",
+				managedSource)
+		]);
+		if (analysis.reasons.length != 2
+			|| analysis.reachability.runtimeIntentCount != 2
+			|| analysis.reasons[0].featureId.text() != "string"
+			|| analysis.reasons[1].featureId.text() != "string-literal"
+			|| analysis.reasons[0].operationId != "type-carrier"
+			|| analysis.reasons[1].operationId != "type-carrier") {
+			throw "stored String declarations lost their direct or managed runtime carrier";
+		}
 	}
 
 	/** Build the smallest HxcIR program needed by reconciliation-only tests. */

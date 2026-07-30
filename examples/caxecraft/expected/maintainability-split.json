@@ -41,8 +41,8 @@
     "fileOverrides": [
       {
         "path": "src/modules/caxecraft/domain/World.c",
-        "maxFileLines": 407,
-        "reason": "The finite world module keeps every stable solid-material storage code and edit rule together. Adding the reviewed sand, forest, snow, and ash identities grows exhaustive switches without weakening per-function or control-flow budgets."
+        "maxFileLines": 427,
+        "reason": "The finite world module keeps every stable solid-material storage code and edit rule together. Five exhaustive enum switches each carry a four-line defensive default that aborts if foreign C supplies an invalid enum value; valid Haxe behavior and the per-function control-flow limits remain unchanged."
       },
       {
         "path": "src/modules/caxecraft/qa/DomainProbe.c",
@@ -60,12 +60,12 @@
         "reason": "The QA-only self-check is a deliberate aggregate oracle. Two added lines hold the reviewed read-only world view beside mutable fixture storage; production domain functions remain under the ordinary budget."
       }
     ],
-    "sha256": "eb7c4a2182fde9f9840955e7509f623d7e30e0a8831432b5c3aff92bb8b5208c"
+    "sha256": "696bf80995bb546f6bc124fd22d5f0abe6dd3dba516ebbc63515b82bf4215e2d"
   },
   "inputs": [
     {
       "path": "include/hxc/detail/program_types.h",
-      "sha256": "36f96488a6642852416b397df662014e889551965e0bb3fee22ee3dcc4e2fd7b"
+      "sha256": "9b5cb9c0baa175ebb4b36094562854a2a56432d9c6f00228c706bb218ca08289"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/AxisMove.h",
@@ -81,7 +81,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/CaxecraftTrace.h",
-      "sha256": "c12e4e378297f552490a6e3bd59c0cd1b1dcbddbbde2b48a4989206eca281519"
+      "sha256": "15fa81ac3fb1d878c081f2d24ec43c26e4798008d3ade3d4d95426af535cf4b6"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/CharacterBody.h",
@@ -89,7 +89,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
-      "sha256": "de2d790e221cc0d42ad35dc572b0137fa9860fb372f176b4c32153fc806abc38"
+      "sha256": "a45e53b996f0abaf9f4cd90a54d153344b0f09d8acf511c9a26878160094608b"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/RaycastHit.h",
@@ -101,23 +101,23 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
-      "sha256": "8e6551766b51499516346d09959578ba3c64cac80001decdd0029a3d30f5099a"
+      "sha256": "5bdd2fd7e40dc9065758d1207a9b10277a518ad8a56d83cc7b0d6452bd9e1c6e"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/World.h",
-      "sha256": "39d2f6bf9aefbe417b3bad57e2f3449593fb3d884508c849cf30333dfebac74a"
+      "sha256": "7ff243f4cff175aa574e1d9c21ddbae4d0aee24e6a9ae87576bfa11084fbf03b"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/WorldRead.h",
-      "sha256": "5069c2e27ab2c31026410ea603a211d7a761c7e98ea80885c33ed724fe6e5b29"
+      "sha256": "a33762c707337121a726e4037c1c16fcf2067f7d8580579d7af6cf24fdc8f214"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/WorldStorage.h",
-      "sha256": "f05593f6cd4da79da515a5d96c28d534b87b865715eed25ed6c5b5ac74a501a6"
+      "sha256": "a83e4f508c6f993f520a7b87a3c9281ba7a832cf4ede74c4411c9d23198d6018"
     },
     {
       "path": "include/hxc/modules/caxecraft/qa/DomainProbe.h",
-      "sha256": "1f000814c1c418616750f093d05563ca9b06b8df13d5379b0ecd76684e49f08c"
+      "sha256": "fb3a1e708582fbd317d2986e745ac87cc4e29df5d869bad63b7cd24241ca4955"
     },
     {
       "path": "include/hxc/program.h",
@@ -133,37 +133,37 @@
     },
     {
       "path": "src/modules/caxecraft/domain/CaxecraftTrace.c",
-      "sha256": "904c61f0eac6772013b1299be95f5f147143ae4d90bdc5469ba0787de249dc29"
+      "sha256": "9b2fe97a709cd167082d95e1f429d5cfe75e263fb8edb54dbaf1c02d76a8c11b"
     },
     {
       "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
-      "sha256": "fc636b9fdf291a29fba307de792a924e4d9b04ba1a7e2a58f757e8a20d32853a"
+      "sha256": "e7b9dbef30ac013a30003c8521acab42aae94859c8c602e5266e879f45cdcbf1"
     },
     {
       "path": "src/modules/caxecraft/domain/VoxelRaycast.c",
-      "sha256": "6dc284a4d27290fbb27cadfbed7dc0b1c2c9aec0de19cd5d2006129a83f265e8"
+      "sha256": "84fd3f75ed49ead47bb6ad7e6914a1fb7129ffd71b6173aeed54b207f7a0e1b8"
     },
     {
       "path": "src/modules/caxecraft/domain/World.c",
-      "sha256": "c12704a1a57f4c42eee509df7a9cbbf5cbd05a3d40a74451e8ec71615d98e5db"
+      "sha256": "e7b5093e055edf4cbb15c89e5b8edc0d2bdf9f2a1f55872f67cdaa218a03156b"
     },
     {
       "path": "src/modules/caxecraft/domain/WorldRead.c",
-      "sha256": "21766de57dc343cfc356076ba8da53808d623475d2cbcebe3449c40fbdffd867"
+      "sha256": "f84607f0dd8f522c73e1057b27ff4f4f0b9f5f4cc07400edd2dc15c77442d00d"
     },
     {
       "path": "src/modules/caxecraft/domain/WorldStorage.c",
-      "sha256": "affb31b22326d7410314dcd7e04af2ac051f693816634e582a19ce03011981fd"
+      "sha256": "a9f9a280c86c594dabac6ee3a411b2f7807f387813b86283923f0de6becda7dd"
     },
     {
       "path": "src/modules/caxecraft/qa/DomainProbe.c",
-      "sha256": "d2f4ad6ffb5daa3d3e19b47200f0f724d00a39f667086fa77daaf7d5f1422bd7"
+      "sha256": "4d1d9940a67af4949e4b4f66930f1bcb56db3e0e8f9f638c7e026b652c1c4a93"
     }
   ],
   "summary": {
     "artifactCount": 24,
-    "physicalLineCount": 2589,
-    "codeLineCount": 2373,
+    "physicalLineCount": 2609,
+    "codeLineCount": 2393,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -176,10 +176,10 @@
     "lineMappedFunctionBasisPoints": 0,
     "ownerMappedArtifactCount": 24,
     "ownerMappedArtifactBasisPoints": 10000,
-    "branchCount": 270,
-    "temporaryDeclarationCount": 531,
-    "temporaryReferenceCount": 770,
-    "temporaryDeclarationsPerKFunctionCodeLines": 252,
+    "branchCount": 275,
+    "temporaryDeclarationCount": 0,
+    "temporaryReferenceCount": 0,
+    "temporaryDeclarationsPerKFunctionCodeLines": 0,
     "maxIdentifier": {
       "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
       "bytes": 53,
@@ -221,7 +221,7 @@
   "files": [
     {
       "path": "include/hxc/detail/program_types.h",
-      "sha256": "36f96488a6642852416b397df662014e889551965e0bb3fee22ee3dcc4e2fd7b",
+      "sha256": "9b5cb9c0baa175ebb4b36094562854a2a56432d9c6f00228c706bb218ca08289",
       "owner": {
         "kind": "compiler-support",
         "modulePath": null,
@@ -575,7 +575,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/CaxecraftTrace.h",
-      "sha256": "c12e4e378297f552490a6e3bd59c0cd1b1dcbddbbde2b48a4989206eca281519",
+      "sha256": "15fa81ac3fb1d878c081f2d24ec43c26e4798008d3ade3d4d95426af535cf4b6",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.CaxecraftTrace",
@@ -625,7 +625,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
-      "sha256": "de2d790e221cc0d42ad35dc572b0137fa9860fb372f176b4c32153fc806abc38",
+      "sha256": "a45e53b996f0abaf9f4cd90a54d153344b0f09d8acf511c9a26878160094608b",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.CharacterPhysics",
@@ -700,7 +700,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
-      "sha256": "8e6551766b51499516346d09959578ba3c64cac80001decdd0029a3d30f5099a",
+      "sha256": "5bdd2fd7e40dc9065758d1207a9b10277a518ad8a56d83cc7b0d6452bd9e1c6e",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.VoxelRaycast",
@@ -725,7 +725,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/World.h",
-      "sha256": "39d2f6bf9aefbe417b3bad57e2f3449593fb3d884508c849cf30333dfebac74a",
+      "sha256": "7ff243f4cff175aa574e1d9c21ddbae4d0aee24e6a9ae87576bfa11084fbf03b",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.World",
@@ -750,7 +750,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/WorldRead.h",
-      "sha256": "5069c2e27ab2c31026410ea603a211d7a761c7e98ea80885c33ed724fe6e5b29",
+      "sha256": "a33762c707337121a726e4037c1c16fcf2067f7d8580579d7af6cf24fdc8f214",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.WorldRead",
@@ -775,7 +775,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/WorldStorage.h",
-      "sha256": "f05593f6cd4da79da515a5d96c28d534b87b865715eed25ed6c5b5ac74a501a6",
+      "sha256": "a83e4f508c6f993f520a7b87a3c9281ba7a832cf4ede74c4411c9d23198d6018",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.WorldStorage",
@@ -800,7 +800,7 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/qa/DomainProbe.h",
-      "sha256": "1f000814c1c418616750f093d05563ca9b06b8df13d5379b0ecd76684e49f08c",
+      "sha256": "fb3a1e708582fbd317d2986e745ac87cc4e29df5d869bad63b7cd24241ca4955",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.qa.DomainProbe",
@@ -924,7 +924,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/CaxecraftTrace.c",
-      "sha256": "904c61f0eac6772013b1299be95f5f147143ae4d90bdc5469ba0787de249dc29",
+      "sha256": "9b2fe97a709cd167082d95e1f429d5cfe75e263fb8edb54dbaf1c02d76a8c11b",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.CaxecraftTrace",
@@ -943,8 +943,8 @@
         "line": 3,
         "column": 9
       },
-      "temporaryDeclarationCount": 90,
-      "temporaryReferenceCount": 108,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.collisionTrace",
@@ -977,9 +977,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 17,
-          "temporaryReferenceCount": 18,
-          "temporaryDeclarationsPerKCodeLines": 460
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.editTrace",
@@ -1012,9 +1012,9 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 7,
-          "temporaryReferenceCount": 12,
-          "temporaryDeclarationsPerKCodeLines": 369
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.makeFloor",
@@ -1047,9 +1047,9 @@
           "mappedPaths": [],
           "branchCount": 4,
           "maxNestingDepth": 3,
-          "temporaryDeclarationCount": 3,
-          "temporaryReferenceCount": 3,
-          "temporaryDeclarationsPerKCodeLines": 104
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.mix",
@@ -1117,9 +1117,9 @@
           "mappedPaths": [],
           "branchCount": 4,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 32,
-          "temporaryReferenceCount": 41,
-          "temporaryDeclarationsPerKCodeLines": 368
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.rayTrace",
@@ -1152,9 +1152,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 16,
-          "temporaryReferenceCount": 18,
-          "temporaryDeclarationsPerKCodeLines": 422
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.runTrace",
@@ -1187,9 +1187,9 @@
           "mappedPaths": [],
           "branchCount": 2,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 13,
-          "temporaryReferenceCount": 13,
-          "temporaryDeclarationsPerKCodeLines": 420
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.terrainTrace",
@@ -1222,15 +1222,15 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 3,
-          "temporaryDeclarationsPerKCodeLines": 223
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         }
       ]
     },
     {
       "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
-      "sha256": "fc636b9fdf291a29fba307de792a924e4d9b04ba1a7e2a58f757e8a20d32853a",
+      "sha256": "e7b9dbef30ac013a30003c8521acab42aae94859c8c602e5266e879f45cdcbf1",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.CharacterPhysics",
@@ -1249,8 +1249,8 @@
         "line": 249,
         "column": 43
       },
-      "temporaryDeclarationCount": 67,
-      "temporaryReferenceCount": 83,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.abs",
@@ -1458,9 +1458,9 @@
           "mappedPaths": [],
           "branchCount": 9,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 16,
-          "temporaryReferenceCount": 22,
-          "temporaryDeclarationsPerKCodeLines": 184
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.overlaps",
@@ -1493,9 +1493,9 @@
           "mappedPaths": [],
           "branchCount": 8,
           "maxNestingDepth": 4,
-          "temporaryDeclarationCount": 17,
-          "temporaryReferenceCount": 19,
-          "temporaryDeclarationsPerKCodeLines": 258
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.recoverSpawn",
@@ -1528,9 +1528,9 @@
           "mappedPaths": [],
           "branchCount": 3,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 3,
-          "temporaryReferenceCount": 5,
-          "temporaryDeclarationsPerKCodeLines": 120
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.resolveVelocity",
@@ -1563,9 +1563,9 @@
           "mappedPaths": [],
           "branchCount": 5,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 20,
-          "temporaryReferenceCount": 22,
-          "temporaryDeclarationsPerKCodeLines": 371
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.step",
@@ -1598,15 +1598,15 @@
           "mappedPaths": [],
           "branchCount": 3,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 11,
-          "temporaryReferenceCount": 15,
-          "temporaryDeclarationsPerKCodeLines": 290
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         }
       ]
     },
     {
       "path": "src/modules/caxecraft/domain/VoxelRaycast.c",
-      "sha256": "6dc284a4d27290fbb27cadfbed7dc0b1c2c9aec0de19cd5d2006129a83f265e8",
+      "sha256": "84fd3f75ed49ead47bb6ad7e6914a1fb7129ffd71b6173aeed54b207f7a0e1b8",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.VoxelRaycast",
@@ -1625,8 +1625,8 @@
         "line": 12,
         "column": 9
       },
-      "temporaryDeclarationCount": 110,
-      "temporaryReferenceCount": 157,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "caxecraft.domain.VoxelRaycast.abs",
@@ -1799,35 +1799,35 @@
           "mappedPaths": [],
           "branchCount": 34,
           "maxNestingDepth": 4,
-          "temporaryDeclarationCount": 110,
-          "temporaryReferenceCount": 157,
-          "temporaryDeclarationsPerKCodeLines": 307
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         }
       ]
     },
     {
       "path": "src/modules/caxecraft/domain/World.c",
-      "sha256": "c12704a1a57f4c42eee509df7a9cbbf5cbd05a3d40a74451e8ec71615d98e5db",
+      "sha256": "e7b5093e055edf4cbb15c89e5b8edc0d2bdf9f2a1f55872f67cdaa218a03156b",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.World",
         "source": null
       },
-      "physicalLineCount": 407,
-      "codeLineCount": 393,
+      "physicalLineCount": 427,
+      "codeLineCount": 413,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 717,
+      "identifierCount": 727,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_WorldStorage_writeCode",
         "bytes": 43,
         "line": 55,
         "column": 5
       },
-      "temporaryDeclarationCount": 48,
-      "temporaryReferenceCount": 57,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "caxecraft.domain.World.contains",
@@ -1860,9 +1860,9 @@
           "mappedPaths": [],
           "branchCount": 5,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 9,
-          "temporaryReferenceCount": 18,
-          "temporaryDeclarationsPerKCodeLines": 273
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.coord",
@@ -1930,9 +1930,9 @@
           "mappedPaths": [],
           "branchCount": 11,
           "maxNestingDepth": 6,
-          "temporaryDeclarationCount": 18,
-          "temporaryReferenceCount": 18,
-          "temporaryDeclarationsPerKCodeLines": 210
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.indexOf",
@@ -1965,9 +1965,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 112
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.isPlaceable",
@@ -1992,13 +1992,13 @@
             "endColumn": 3
           },
           "startLine": 139,
-          "endLine": 160,
-          "physicalLineCount": 22,
-          "codeLineCount": 22,
-          "bodyCodeLineCount": 19,
+          "endLine": 164,
+          "physicalLineCount": 26,
+          "codeLineCount": 26,
+          "bodyCodeLineCount": 23,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 11,
+          "branchCount": 12,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -2026,14 +2026,14 @@
             "endLine": 66,
             "endColumn": 3
           },
-          "startLine": 162,
-          "endLine": 183,
-          "physicalLineCount": 22,
-          "codeLineCount": 22,
-          "bodyCodeLineCount": 19,
+          "startLine": 166,
+          "endLine": 191,
+          "physicalLineCount": 26,
+          "codeLineCount": 26,
+          "bodyCodeLineCount": 23,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 11,
+          "branchCount": 12,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -2061,14 +2061,14 @@
             "endLine": 44,
             "endColumn": 3
           },
-          "startLine": 185,
-          "endLine": 230,
-          "physicalLineCount": 46,
-          "codeLineCount": 46,
-          "bodyCodeLineCount": 43,
+          "startLine": 193,
+          "endLine": 242,
+          "physicalLineCount": 50,
+          "codeLineCount": 50,
+          "bodyCodeLineCount": 47,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 11,
+          "branchCount": 12,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -2096,8 +2096,8 @@
             "endLine": 59,
             "endColumn": 3
           },
-          "startLine": 232,
-          "endLine": 277,
+          "startLine": 244,
+          "endLine": 289,
           "physicalLineCount": 46,
           "codeLineCount": 46,
           "bodyCodeLineCount": 43,
@@ -2131,18 +2131,18 @@
             "endLine": 128,
             "endColumn": 3
           },
-          "startLine": 279,
-          "endLine": 311,
-          "physicalLineCount": 33,
-          "codeLineCount": 33,
-          "bodyCodeLineCount": 30,
+          "startLine": 291,
+          "endLine": 327,
+          "physicalLineCount": 37,
+          "codeLineCount": 37,
+          "bodyCodeLineCount": 34,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 12,
+          "branchCount": 13,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 4,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 122
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.query",
@@ -2166,8 +2166,8 @@
             "endLine": 93,
             "endColumn": 3
           },
-          "startLine": 313,
-          "endLine": 328,
+          "startLine": 329,
+          "endLine": 344,
           "physicalLineCount": 16,
           "codeLineCount": 16,
           "bodyCodeLineCount": 13,
@@ -2175,9 +2175,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 4,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 250
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.remove",
@@ -2201,18 +2201,18 @@
             "endLine": 118,
             "endColumn": 3
           },
-          "startLine": 330,
-          "endLine": 358,
-          "physicalLineCount": 29,
-          "codeLineCount": 29,
-          "bodyCodeLineCount": 26,
+          "startLine": 346,
+          "endLine": 378,
+          "physicalLineCount": 33,
+          "codeLineCount": 33,
+          "bodyCodeLineCount": 30,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 11,
+          "branchCount": 12,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 3,
-          "temporaryReferenceCount": 3,
-          "temporaryDeclarationsPerKCodeLines": 104
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.replace",
@@ -2236,8 +2236,8 @@
             "endLine": 102,
             "endColumn": 3
           },
-          "startLine": 360,
-          "endLine": 376,
+          "startLine": 380,
+          "endLine": 396,
           "physicalLineCount": 17,
           "codeLineCount": 17,
           "bodyCodeLineCount": 14,
@@ -2245,9 +2245,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 4,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 236
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.stateHash",
@@ -2271,8 +2271,8 @@
             "endLine": 202,
             "endColumn": 3
           },
-          "startLine": 378,
-          "endLine": 398,
+          "startLine": 398,
+          "endLine": 418,
           "physicalLineCount": 21,
           "codeLineCount": 21,
           "bodyCodeLineCount": 18,
@@ -2280,9 +2280,9 @@
           "mappedPaths": [],
           "branchCount": 2,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 3,
-          "temporaryReferenceCount": 3,
-          "temporaryDeclarationsPerKCodeLines": 143
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.World.terrainNoise",
@@ -2306,8 +2306,8 @@
             "endLine": 208,
             "endColumn": 3
           },
-          "startLine": 400,
-          "endLine": 407,
+          "startLine": 420,
+          "endLine": 427,
           "physicalLineCount": 8,
           "codeLineCount": 8,
           "bodyCodeLineCount": 5,
@@ -2315,15 +2315,15 @@
           "mappedPaths": [],
           "branchCount": 0,
           "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 2,
-          "temporaryDeclarationsPerKCodeLines": 250
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         }
       ]
     },
     {
       "path": "src/modules/caxecraft/domain/WorldRead.c",
-      "sha256": "21766de57dc343cfc356076ba8da53808d623475d2cbcebe3449c40fbdffd867",
+      "sha256": "f84607f0dd8f522c73e1057b27ff4f4f0b9f5f4cc07400edd2dc15c77442d00d",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.WorldRead",
@@ -2340,10 +2340,10 @@
         "name": "hxc_caxecraft_domain_WorldRead_storageCodeAt",
         "bytes": 44,
         "line": 13,
-        "column": 38
+        "column": 40
       },
-      "temporaryDeclarationCount": 6,
-      "temporaryReferenceCount": 6,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "caxecraft.domain._WorldRead.WorldRead_Fields_.query",
@@ -2376,9 +2376,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 4,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 250
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain._WorldRead.WorldRead_Fields_.storageCodeAt",
@@ -2411,15 +2411,15 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 2,
-          "temporaryDeclarationsPerKCodeLines": 182
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         }
       ]
     },
     {
       "path": "src/modules/caxecraft/domain/WorldStorage.c",
-      "sha256": "affb31b22326d7410314dcd7e04af2ac051f693816634e582a19ce03011981fd",
+      "sha256": "a9f9a280c86c594dabac6ee3a411b2f7807f387813b86283923f0de6becda7dd",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.WorldStorage",
@@ -2438,8 +2438,8 @@
         "line": 15,
         "column": 6
       },
-      "temporaryDeclarationCount": 3,
-      "temporaryReferenceCount": 3,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "caxecraft.domain.WorldStorage.readCode",
@@ -2472,9 +2472,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 2,
-          "temporaryReferenceCount": 2,
-          "temporaryDeclarationsPerKCodeLines": 182
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.domain.WorldStorage.writeCode",
@@ -2507,15 +2507,15 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 1,
-          "temporaryDeclarationsPerKCodeLines": 91
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         }
       ]
     },
     {
       "path": "src/modules/caxecraft/qa/DomainProbe.c",
-      "sha256": "d2f4ad6ffb5daa3d3e19b47200f0f724d00a39f667086fa77daaf7d5f1422bd7",
+      "sha256": "4d1d9940a67af4949e4b4f66930f1bcb56db3e0e8f9f638c7e026b652c1c4a93",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.qa.DomainProbe",
@@ -2532,10 +2532,10 @@
         "name": "hxc_caxecraft_domain_CharacterPhysics_recoverSpawn",
         "bytes": 50,
         "line": 596,
-        "column": 72
+        "column": 74
       },
-      "temporaryDeclarationCount": 207,
-      "temporaryReferenceCount": 356,
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
       "functions": [
         {
           "functionId": "caxecraft.qa.DomainProbe.clear",
@@ -2568,9 +2568,9 @@
           "mappedPaths": [],
           "branchCount": 2,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 4,
-          "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 191
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.qa.DomainProbe.main",
@@ -2638,9 +2638,9 @@
           "mappedPaths": [],
           "branchCount": 1,
           "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 1,
-          "temporaryReferenceCount": 3,
-          "temporaryDeclarationsPerKCodeLines": 72
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         },
         {
           "functionId": "caxecraft.qa.DomainProbe.selfCheck",
@@ -2673,9 +2673,9 @@
           "mappedPaths": [],
           "branchCount": 83,
           "maxNestingDepth": 2,
-          "temporaryDeclarationCount": 202,
-          "temporaryReferenceCount": 349,
-          "temporaryDeclarationsPerKCodeLines": 345
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
         }
       ]
     }

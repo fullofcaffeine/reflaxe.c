@@ -2,7 +2,7 @@
 
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
 complete object lifetime is proven. The compiler lowers the real pinned-Haxe
-`TypedExpr` through schema-21 HxcIR and structural C AST nodes. A class whose
+`TypedExpr` through schema-23 HxcIR and structural C AST nodes. A class whose
 object stays inside one function can remain allocation-free. A class reference
 that crosses a function return or is retained by another object instead selects
 the dependency-closed object and garbage-collector runtime features needed for
@@ -164,6 +164,13 @@ immediately after the method returns. A managed method result follows the
 ordinary function-return contract: the callee returns one owner, so the caller
 transfers that owner before ending the receiver and argument lifetimes rather
 than retaining it again.
+
+The same rule applies when a field is read directly from a fresh managed
+record, for example `buildReading().reading`. C cannot safely project through a
+temporary after its owner disappears, so haxe.c evaluates `buildReading()` once,
+moves the result into a compiler-owned local, reads `reading`, and destroys the
+record once after the projection. Haxe authors do not need to add an artificial
+source local merely to expose that C lifetime.
 
 A method receiver and each earlier argument are also saved when a later
 argument creates an `if` or `switch` join. HxcIR values belong to one basic
@@ -428,6 +435,30 @@ field. It also applies repeated allocation/release pressure to `Array<Int>`.
 A tracing-collector stress loop would test the wrong lifetime mechanism for
 that reference-counted specialization.
 
+The same rule now applies when the argument is a fresh closed record that owns
+managed fields:
+
+```haxe
+new Candidate({
+  label: sourceLabel,
+  values: [41]
+});
+```
+
+The record expression initially has no source local to own it. haxe.c creates
+one caller-owned automatic local, passes a borrowed by-value copy to the
+constructor, and releases the local after the call. If the constructor stores
+the record, its field acquires an independent owner first. If the constructor
+throws after that store, the failure edge destroys the partial object's field
+and the caller temporary exactly once each before propagating or aborting.
+
+This is one general constructor rule, not a special case for a class or call
+spelling. Named stack objects, immediate receivers such as
+`new Reader(record).read()`, inline owned children, `super(record)`, and
+collector-managed objects all use the same typed record retain/destroy plan.
+The record remains a Haxe value passed by value; only its nested managed fields
+need ownership work.
+
 The owning boundary remains narrow. The first typed initialization of the
 constructed object's own final Array field is admitted. Replacing a managed
 Array field later or storing the parameter through another object still fails
@@ -618,6 +649,14 @@ cleanup, immediate reverse cleanup after the call, split/package/unity output,
 warm-server determinism, strict GCC/Clang C11 at `-O0` and `-O2`, and
 sanitizers without running unrelated constructor fixtures.
 
+Use `test:constructor-managed-record-argument` for fresh closed records whose
+fields own managed values. It checks named, immediate-receiver, inline-child,
+`super`, collector-managed constructor paths, and field projection from a
+fresh managed receiver; explicit HxcIR caller
+ownership; callee retention; a real throwing constructor; reversed typed-module
+order; strict C11 at `-O0` and `-O2`; and sanitizers without recompiling
+unrelated constructor families.
+
 Use `test:constructor-early-exit` for the smaller root-guard lifetime rule. Its
 positive fixture returns before construction on one path, constructs and uses a
 nonescaping object on the surviving path, and proves that only the later return
@@ -631,7 +670,11 @@ structured C, Eval parity, reversed-input determinism, strict C11 at both
 optimization levels, and sanitizer execution. The focused `record_parameter`
 fixture proves a direct closed record
 argument in split, package, and unity output, reversed discovery, warm compiler
-server reuse, and strict native execution. `interface_parameter` proves the
+server reuse, and strict native execution. `managed_record_argument` extends
+that value shape to String/Array-owning records passed freshly through named,
+immediate-receiver, inline-child, `super`, and collector-managed construction.
+Its failure neighbor proves the partial object and caller temporary release
+their independent record owners before the uncaught abort. `interface_parameter` proves the
 same output and native matrix for a by-value interface pair whose constructor
 performs real interface dispatch; `interface_parameter_escape` proves that the
 pair cannot be retained after the call. `instance_parameter` proves that a

@@ -20,11 +20,13 @@ ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
 POSITIVE = FIXTURES / "positive"
+RUNTIME_STRING = FIXTURES / "nonliteral"
 EXPECTED = CASE / "expected"
 RUNTIME_CATALOG = ROOT / "runtime/hxrt/features.json"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 TOOLCHAINS = ("gcc", "clang")
 EXPECTED_STDOUT = b"ASCII\n" + "é🙂\n".encode() + b"embedded\x00NUL\nMain.hx:9: traced\n"
+EXPECTED_RUNTIME_STRING_STDOUT = b"runtime-1\nborrowed\nonce\n"
 EXPECTED_FEATURES = ["runtime-base", "status", "string-literal", "io"]
 EXPECTED_RUNTIME_ARTIFACTS = [
     "runtime/include/hxrt/base.h",
@@ -157,7 +159,7 @@ def extract_hxcir(result: subprocess.CompletedProcess[str], label: str) -> str:
 
 def validate_hxcir(hxcir: str) -> None:
     required = (
-        "hxcir schema=21",
+        "hxcir schema=23",
         'string-utf8(bytes=5,value="ASCII")',
         'string-utf8(bytes=6,value="é🙂")',
         'string-utf8(bytes=12,value="embedded\\u0000NUL")',
@@ -358,6 +360,60 @@ def render_project(
     return RenderedProject(output, hxcir, runtime_plan, stdlib_report, manifest)
 
 
+def render_runtime_string_project(output: Path) -> RenderedProject:
+    result = compile_target(RUNTIME_STRING, output, diagnostics="off", report=True)
+    if result.returncode != 0 or result.stderr:
+        raise StringOutputFailure(
+            "runtime-String output compile failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    hxcir = extract_hxcir(result, "runtime-String output compile")
+    required_hxcir = (
+        'runtime(feature="io",operation="sys-println-string")',
+        'cleanup=["cleanup.construction"."string-temporary.local.0.release"]',
+        'release place=local("local.0") implementation=runtime("string")',
+    )
+    for marker in required_hxcir:
+        if marker not in hxcir:
+            raise StringOutputFailure(f"runtime-String output HxcIR omitted {marker!r}")
+    if hxcir.count('runtime(feature="io",operation="sys-println-string")') != 2:
+        raise StringOutputFailure("runtime-String output must contain one borrowed and one fresh String call")
+
+    runtime_plan = load_json(output / "hxc.runtime-plan.json", "runtime-String runtime plan")
+    expected_features = [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "io",
+        "string-scalar",
+        "string",
+    ]
+    if text_list(runtime_plan.get("features"), "runtime-String runtime features") != expected_features:
+        raise StringOutputFailure("runtime-String output selected an unexpected runtime closure")
+    stdlib_report = load_json(output / "hxc.stdlib-report.json", "runtime-String stdlib report")
+    capabilities = text_list(stdlib_report.get("capabilities"), "runtime-String stdlib capabilities")
+    if "sys-println-string" not in capabilities:
+        raise StringOutputFailure("runtime-String output lost its stdlib capability record")
+    manifest = load_json(output / "hxc.manifest.json", "runtime-String project manifest")
+    source = (output / "src/program.c").read_text(encoding="utf-8")
+    failure_release = (
+        "if (hxc_io_println(hxc_l_tmp_sys_println_string_argument_owner_n0) != HXC_STATUS_OK)\n"
+        "  {\n"
+        "    if (hxc_string_release(&hxc_l_tmp_sys_println_string_argument_owner_n0) != HXC_STATUS_OK)"
+    )
+    if (
+        failure_release not in source
+        or source.count("hxc_string_release(&hxc_l_tmp_sys_println_string_argument_owner_n0)") != 2
+        or source.find("hxc_io_println(hxc_l_tmp_sys_println_string_argument_owner_n0)")
+        > source.find("hxc_Main_printValue((hxc_string)")
+    ):
+        raise StringOutputFailure(
+            "fresh runtime-String output lost failure cleanup, normal cleanup, or source evaluation order"
+        )
+    return RenderedProject(output, hxcir, runtime_plan, stdlib_report, manifest)
+
+
 def normal_artifacts(output: Path) -> dict[str, bytes]:
     return {
         path.relative_to(output).as_posix(): path.read_bytes()
@@ -437,8 +493,7 @@ def plausible_output_exists(output: Path) -> bool:
 
 def validate_fail_closed(root: Path) -> None:
     cases = (
-        ("nonliteral", "TCall(Sys.println(String literal):requires-String-literal)"),
-        ("nonstring", "requires-String-literal"),
+        ("nonstring", "requires-statically-typed-String"),
         ("sys_print", "unavailable-static-target:function.Sys.print"),
         ("trace_custom", "custom-position-info-not-admitted"),
     )
@@ -513,6 +568,24 @@ def run_eval_oracle() -> None:
     if result.returncode != 0 or result.stdout != EXPECTED_STDOUT or result.stderr:
         raise StringOutputFailure(
             f"pinned Haxe literal-output oracle drifted: exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
+        )
+    runtime_string = subprocess.run(
+        [development_tool("haxe"), "-cp", ".", "-main", "Main", "--interp"],
+        cwd=RUNTIME_STRING,
+        env=base_environment(),
+        check=False,
+        capture_output=True,
+        timeout=30,
+    )
+    if (
+        runtime_string.returncode != 0
+        or runtime_string.stdout != EXPECTED_RUNTIME_STRING_STDOUT
+        or runtime_string.stderr
+    ):
+        raise StringOutputFailure(
+            "pinned Haxe runtime-String output oracle drifted: "
+            f"exit={runtime_string.returncode} stdout={runtime_string.stdout!r} "
+            f"stderr={runtime_string.stderr!r}"
         )
 
 
@@ -694,6 +767,53 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
             raise StringOutputFailure(f"{toolchain.family} generated program ignored a hosted output failure")
 
 
+def run_runtime_string_native(
+    toolchains: list[NativeToolchain],
+    rendered: RenderedProject,
+    build: Path,
+) -> None:
+    for toolchain in toolchains:
+        failure_executable: Path | None = None
+        for optimization in ("O0", "O2"):
+            executable = compile_native(toolchain, rendered, optimization, build)
+            if failure_executable is None:
+                failure_executable = executable
+            result = subprocess.run(
+                [str(executable)],
+                cwd=build,
+                check=False,
+                capture_output=True,
+                timeout=30,
+            )
+            if (
+                result.returncode != 0
+                or result.stdout != EXPECTED_RUNTIME_STRING_STDOUT
+                or result.stderr
+            ):
+                raise StringOutputFailure(
+                    f"{toolchain.family} {optimization} runtime-String output drifted: "
+                    f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
+                )
+
+        def close_standard_output() -> None:
+            os.close(1)
+
+        if failure_executable is None:
+            raise StringOutputFailure(f"{toolchain.family} produced no runtime-String failure probe")
+        failed = subprocess.run(
+            [str(failure_executable)],
+            cwd=build,
+            check=False,
+            stderr=subprocess.PIPE,
+            preexec_fn=close_standard_output,
+            timeout=30,
+        )
+        if failed.returncode == 0:
+            raise StringOutputFailure(
+                f"{toolchain.family} runtime-String program ignored a hosted output failure"
+            )
+
+
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
@@ -728,13 +848,16 @@ def main(argv: Iterable[str] = ()) -> int:
             build = root / "native"
             build.mkdir()
             run_native(toolchains, [portable, metal], build)
+            runtime_string = render_runtime_string_project(root / "runtime-string")
+            run_runtime_string_native(toolchains, runtime_string, build)
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired, StringOutputFailure) as error:
         print(f"string-output: ERROR: {error}", file=sys.stderr)
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
     print(
         "string-output: OK: "
-        f"{families} exact UTF-8/NUL output, trace formatting, selective runtime closure, diagnostics, and fail-stop I/O passed"
+        f"{families} literal and runtime String output, exact UTF-8/NUL bytes, cleanup, trace formatting, "
+        "selective runtime closure, diagnostics, and fail-stop I/O passed"
     )
     return 0
 

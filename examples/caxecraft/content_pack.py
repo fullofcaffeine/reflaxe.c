@@ -702,6 +702,13 @@ def render_haxe(pack: ContentPack) -> str:
         "import caxecraft.content.ActorContentResolver;",
         "import caxecraft.content.ActorContentResolver.ActorContentKind;",
         "import caxecraft.content.ActorContentResolver.ActorContentResolution;",
+        "import caxecraft.content.LevelContentResolver;",
+        "import caxecraft.content.LevelContentResolver.FluidContentResolution;",
+        "import caxecraft.content.LevelContentResolver.ItemContentResolution;",
+        "import caxecraft.content.LevelContentResolver.ItemStorageCode;",
+        "import caxecraft.content.LevelContentResolver.LevelFluidSimulation;",
+        "import caxecraft.content.LevelContentResolver.TerrainContentResolution;",
+        "import caxecraft.content.LevelContentResolver.TerrainStorageCode;",
         "",
     ]
     for name, values, is_content in (
@@ -975,7 +982,7 @@ def render_haxe(pack: ContentPack) -> str:
             "}",
             "",
             "/** Scenario/editor lookup over the same generated definitions. */",
-            "final class BaseContentRegistry implements ScenarioContentRegistry implements ActorContentResolver {",
+            "final class BaseContentRegistry implements ScenarioContentRegistry implements LevelContentResolver {",
             "\tpublic function new() {}",
             "",
             f"\tpublic function supportsFeature(id:ContentId):Bool\n\t\treturn id.text() == {haxe_string(pack.features[0])};",
@@ -1001,6 +1008,15 @@ def render_haxe(pack: ContentPack) -> str:
             ]
         )
     lines.extend(["\t\treturn -1;", "\t}", ""])
+    lines.extend(["\tpublic function resolveTerrain(id:ContentId):TerrainContentResolution {"])
+    for block in pack.blocks:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(block.content_id)})",
+                f"\t\t\treturn TerrainContentResolved(TerrainStorageCode.fromValidated({block.storage_code}));",
+            ]
+        )
+    lines.extend(["\t\treturn UnknownTerrainContent;", "\t}", ""])
     registry_membership("hasFluid", fluid_ids)
     lines.extend(["\tpublic function fluidPresentationCell(id:ContentId):Int {"])
     for fluid in pack.fluids:
@@ -1011,11 +1027,29 @@ def render_haxe(pack: ContentPack) -> str:
             ]
         )
     lines.extend(["\t\treturn -1;", "\t}", ""])
+    lines.extend(["\tpublic function resolveFluid(id:ContentId):FluidContentResolution {"])
+    for fluid in pack.fluids:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(fluid.content_id)})",
+                f"\t\t\treturn FluidContentResolved(LevelFluidSimulation.BoundedWater, {fluid.presentation.cell_index});",
+            ]
+        )
+    lines.extend(["\t\treturn UnknownFluidContent;", "\t}", ""])
     registry_membership("hasItem", item_ids)
     lines.extend(["\tpublic function itemStorageCode(id:ContentId):Int {"])
     for index, item in enumerate(pack.items):
         lines.extend([f"\t\tif (id.text() == {haxe_string(item.content_id)})", f"\t\t\treturn {index};"])
     lines.extend(["\t\treturn -1;", "\t}", ""])
+    lines.extend(["\tpublic function resolveItem(id:ContentId):ItemContentResolution {"])
+    for index, item in enumerate(pack.items):
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(item.content_id)})",
+                f"\t\t\treturn ItemContentResolved(ItemStorageCode.fromValidated({index}));",
+            ]
+        )
+    lines.extend(["\t\treturn UnknownItemContent;", "\t}", ""])
     registry_membership("hasEntity", enemy_ids)
     registry_membership("hasNpc", npc_ids)
     lines.extend(["\tpublic function resolveNpc(id:ContentId):ActorContentResolution {"])

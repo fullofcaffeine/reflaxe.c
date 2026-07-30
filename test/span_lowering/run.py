@@ -563,7 +563,7 @@ def function_names(
 
 def validate(report: dict[str, object], *, profile: str, build: str) -> None:
     if (
-        report.get("schemaVersion") != 2
+        report.get("schemaVersion") != 3
         or report.get("status")
         != "typed-zero-fixed-arrays-and-span-parameters-runtime-free"
         or report.get("profile") != profile
@@ -651,7 +651,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
     if length_name_count != 18:
         raise SpanLoweringFailure("span length identifier inventory is incomplete")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise SpanLoweringFailure("span report omitted its finalized symbol table")
     function_names(symbols)
     aborts = [

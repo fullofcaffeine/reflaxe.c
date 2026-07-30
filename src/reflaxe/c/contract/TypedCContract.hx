@@ -18,6 +18,10 @@ typedef TypedCContractField = {
 	final exported:Bool;
 	final linkage:Null<String>;
 	final callingConvention:Null<String>;
+
+	/** True when the header prototype has `...`; only its fixed prefix is callable. */
+	final variadic:Bool;
+
 	final visibility:Null<String>;
 	final section:Null<String>;
 }

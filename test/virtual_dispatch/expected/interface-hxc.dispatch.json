@@ -17,6 +17,15 @@
       ]
     },
     {
+      "cMember": "hxc_interface_slot_ReadableView_read",
+      "id": "interface-slot.ReadableView.read",
+      "ownerInstanceId": "instance.interface.af1267a3848fffdcced950c680bb0feb780a1916fade8461036dc64c3b24443f",
+      "returnRepresentation": "i32",
+      "parameterRepresentations": [
+        "i32"
+      ]
+    },
+    {
       "cMember": "hxc_interface_slot_ResetView_resetValue",
       "id": "interface-slot.ResetView.resetValue",
       "ownerInstanceId": "instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34",
@@ -27,6 +36,37 @@
   "status": "analyzed-reachable-instance-dispatch",
   "schemaVersion": 2,
   "tables": [
+    {
+      "entries": [
+        {
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_interface_slot_CounterView_doubled_method_AlternateCounter_doubled",
+          "implementationFunctionId": "method.AlternateCounter.doubled",
+          "slotId": "interface-slot.CounterView.doubled"
+        },
+        {
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_interface_slot_CounterView_read_method_AlternateCounter_read",
+          "implementationFunctionId": "method.AlternateCounter.read",
+          "slotId": "interface-slot.CounterView.read"
+        }
+      ],
+      "layoutId": "itable.layout.CounterView",
+      "classInstanceId": "instance.class.f170ae38c39850785f44a8b3f46c577aaf62775f462c81e7ceb746fff748fa70",
+      "cName": "hxc_itable_compiler_interface_dispatch_AlternateCounter_itable_layout_CounterView",
+      "id": "itable.AlternateCounter.CounterView"
+    },
+    {
+      "entries": [
+        {
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_interface_slot_ReadableView_read_method_AlternateCounter_read",
+          "implementationFunctionId": "method.AlternateCounter.read",
+          "slotId": "interface-slot.ReadableView.read"
+        }
+      ],
+      "layoutId": "itable.layout.ReadableView",
+      "classInstanceId": "instance.class.f170ae38c39850785f44a8b3f46c577aaf62775f462c81e7ceb746fff748fa70",
+      "cName": "hxc_itable_compiler_interface_dispatch_AlternateCounter_itable_layout_ReadableView",
+      "id": "itable.AlternateCounter.ReadableView"
+    },
     {
       "entries": [
         {
@@ -44,6 +84,19 @@
       "classInstanceId": "instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8",
       "cName": "hxc_itable_compiler_interface_dispatch_Counter_itable_layout_CounterView",
       "id": "itable.Counter.CounterView"
+    },
+    {
+      "entries": [
+        {
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_interface_slot_ReadableView_read_method_Counter_read",
+          "implementationFunctionId": "method.Counter.read",
+          "slotId": "interface-slot.ReadableView.read"
+        }
+      ],
+      "layoutId": "itable.layout.ReadableView",
+      "classInstanceId": "instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8",
+      "cName": "hxc_itable_compiler_interface_dispatch_Counter_itable_layout_ReadableView",
+      "id": "itable.Counter.ReadableView"
     },
     {
       "entries": [
@@ -68,67 +121,67 @@
       "callerFunctionId": "function.Main.inspect",
       "id": "dispatch.call.0",
       "reason": "ordinary-interface-method",
-      "receiverStaticClass": "CounterView",
-      "slotId": "interface-slot.CounterView.read",
+      "receiverStaticClass": "ReadableView",
+      "slotId": "interface-slot.ReadableView.read",
       "targetFunctionId": null,
       "dispatch": "interface",
       "source": {
-        "startLine": 11,
+        "startLine": 13,
         "file": "Main.hx",
         "startColumn": 10,
-        "endLine": 11,
-        "endColumn": 25
-      }
-    },
-    {
-      "methodFunctionId": "method.CounterView.doubled",
-      "callerFunctionId": "function.Main.inspect",
-      "id": "dispatch.call.1",
-      "reason": "ordinary-interface-method",
-      "receiverStaticClass": "CounterView",
-      "slotId": "interface-slot.CounterView.doubled",
-      "targetFunctionId": null,
-      "dispatch": "interface",
-      "source": {
-        "startLine": 11,
-        "file": "Main.hx",
-        "startColumn": 28,
-        "endLine": 11,
-        "endColumn": 45
+        "endLine": 13,
+        "endColumn": 26
       }
     },
     {
       "methodFunctionId": "method.ReadableView.read",
       "callerFunctionId": "function.Main.main",
-      "id": "dispatch.call.2",
+      "id": "dispatch.call.1",
       "reason": "ordinary-interface-method",
       "receiverStaticClass": "CounterView",
       "slotId": "interface-slot.CounterView.read",
       "targetFunctionId": null,
       "dispatch": "interface",
       "source": {
-        "startLine": 19,
+        "startLine": 23,
         "file": "Main.hx",
         "startColumn": 10,
-        "endLine": 19,
+        "endLine": 23,
         "endColumn": 25
       }
     },
     {
       "methodFunctionId": "method.CounterView.doubled",
       "callerFunctionId": "function.Main.main",
-      "id": "dispatch.call.3",
+      "id": "dispatch.call.2",
       "reason": "ordinary-interface-method",
       "receiverStaticClass": "CounterView",
       "slotId": "interface-slot.CounterView.doubled",
       "targetFunctionId": null,
       "dispatch": "interface",
       "source": {
-        "startLine": 19,
+        "startLine": 23,
         "file": "Main.hx",
         "startColumn": 35,
-        "endLine": 19,
+        "endLine": 23,
         "endColumn": 52
+      }
+    },
+    {
+      "methodFunctionId": "method.ReadableView.read",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.3",
+      "reason": "ordinary-interface-method",
+      "receiverStaticClass": "CounterView",
+      "slotId": "interface-slot.CounterView.read",
+      "targetFunctionId": null,
+      "dispatch": "interface",
+      "source": {
+        "startLine": 23,
+        "file": "Main.hx",
+        "startColumn": 62,
+        "endLine": 23,
+        "endColumn": 77
       }
     },
     {
@@ -141,11 +194,11 @@
       "targetFunctionId": null,
       "dispatch": "interface",
       "source": {
-        "startLine": 19,
+        "startLine": 23,
         "file": "Main.hx",
-        "startColumn": 62,
-        "endLine": 19,
-        "endColumn": 80
+        "startColumn": 87,
+        "endLine": 23,
+        "endColumn": 105
       }
     }
   ],
@@ -160,6 +213,14 @@
       "rootInstanceId": "instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc"
     },
     {
+      "cTag": "hxc_compiler_interface_dispatch_ReadableView_table_layout",
+      "id": "itable.layout.ReadableView",
+      "slotIds": [
+        "interface-slot.ReadableView.read"
+      ],
+      "rootInstanceId": "instance.interface.af1267a3848fffdcced950c680bb0feb780a1916fade8461036dc64c3b24443f"
+    },
+    {
       "cTag": "hxc_compiler_interface_dispatch_ResetView_table_layout",
       "id": "itable.layout.ResetView",
       "slotIds": [
@@ -170,12 +231,12 @@
   ],
   "summary": {
     "indirectCalls": 5,
-    "slots": 3,
+    "slots": 4,
     "instanceCalls": 5,
-    "tables": 2,
+    "tables": 5,
     "directCalls": 0,
-    "adapters": 3,
-    "layouts": 2
+    "adapters": 7,
+    "layouts": 3
   },
   "algorithm": "hxc-closed-world-instance-dispatch-v2"
 }

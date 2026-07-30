@@ -1,3 +1,18 @@
+/**
+	Provides a small ordinary-Haxe program for function-lowering tests.
+
+	The module keeps all results observable without target-specific source so Haxe
+	Eval and generated C can execute the same program.
+**/
+
+/**
+	Exercises ordinary Haxe function calls through the semantic C pipeline.
+
+	The class groups the fixture entry point with its private call shapes. Haxe
+	Eval is the behavior oracle, while generated strict C proves that immutable
+	incoming parameters, mutable parameter storage, recursion, and stack closures
+	share one source-language contract.
+**/
 class FunctionFixture {
 	static function passthrough(value:Int):Int {
 		return value;
@@ -82,6 +97,53 @@ class FunctionFixture {
 		return apply(operation(value), passthrough);
 	}
 
+	/**
+		Exercise direct `Int` and `Bool` parameter reassignment.
+
+		`seed` is read before its first write, so its mutable HxcIR local must be
+		initialized at function entry rather than created lazily at the assignment.
+		The assignment expression also proves that storing a new value still
+		returns that same value to the enclosing expression.
+	**/
+	static function mutateParameters(seed:Int, remaining:Int, flag:Bool):Int {
+		final original = seed;
+		seed = remaining;
+		final assigned = (seed = original);
+		while (remaining > 0) {
+			seed = remaining;
+			remaining = 0;
+		}
+		flag = !flag;
+		if (flag)
+			seed = original;
+		if (assigned != original)
+			return 0;
+		return seed;
+	}
+
+	/**
+		Exercise compound reassignment without adding signed-integer helpers here.
+
+		The arithmetic suite owns UB-safe signed integer helper coverage. Float
+		addition is direct C arithmetic, so this function keeps the present fixture
+		focused on parameter storage and its independent-header contract.
+	**/
+	static function mutateFloat(value:Float):Float {
+		value += 1.5;
+		return value;
+	}
+
+	/**
+		Keep neighboring read-only parameters on the immutable value path.
+
+		This function has no local carrier. Its generated C and HxcIR therefore
+		guard against turning every parameter into mutable storage just because the
+		compiler now supports reassignment elsewhere.
+	**/
+	static function readOnlyParameters(left:Int, right:Int, enabled:Bool):Int {
+		return enabled ? left : right;
+	}
+
 	static function recursive(left:Int, right:Int):Void {
 		recursive(right, left);
 	}
@@ -109,6 +171,12 @@ class FunctionFixture {
 		final captured = captureRoundTrip(5);
 		// The first result (5) becomes the second call's argument; its result is 15.
 		while (captured != 15) {}
+		final mutated = mutateParameters(3, 2, false);
+		while (mutated != 3) {}
+		final mutatedFloat = mutateFloat(3.0);
+		while (mutatedFloat != 4.5) {}
+		final readOnly = readOnlyParameters(9, 4, true);
+		while (readOnly != 9) {}
 		return;
 	}
 }

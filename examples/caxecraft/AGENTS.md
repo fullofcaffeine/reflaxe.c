@@ -153,18 +153,13 @@ not a general runtime loader, dependency system, or mod marketplace.
   embeds arbitrary Haxe, C, shell commands, or host paths.
 - The application composition root may select a built-in campaign or content
   package, but it must not reconstruct that package with hardcoded coordinates,
-  IDs, dialogue stages, rewards, or encounters. Generated adapters may embed a
-  validated package temporarily while native loading is incomplete; the
-  package remains the sole editable source of truth and the adapter must be
-  deterministic and replaceable by the ordinary loader. Do not add another
-  hand-written loader, generator, runtime type, or engine branch named for a
-  campaign, world, level, quest, or character. The existing
-  `FirstPlayableLevel`/`FirstPlayableSessionLoader` pair is a bounded temporary
-  bridge with removal owner `haxe_c-xge.20.4.3.6`, not a pattern to copy.
-  Native loading must read the authored bytes through the shared
-  parser/validator and resolve a private construction plan under
-  `haxe_c-xge.20.4.3.2`; it must not preserve generated Haxe as a second content
-  authority.
+  IDs, dialogue stages, rewards, or encounters. Ordinary play reads the map
+  through the shared native Haxe loader. The packaged CaxeMap bytes are the one
+  level authority; the former generated per-level Haxe adapter has been removed.
+  Do not add another hand-written loader, generator, runtime type, or engine
+  branch named for a campaign, world, level, quest, or character. Native loading
+  must read the authored bytes through the shared parser/validator and resolve
+  the private construction plan implemented under `haxe_c-xge.20.4.3.2`.
 - Tests exercise the same loader, runtime systems, and semantic input path used
   by the game. Focused fixtures may define tiny test content, but production
   engine code must not recognize fixture, character, map, or path names.

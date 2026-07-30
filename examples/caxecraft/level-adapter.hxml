@@ -1,4 +1,0 @@
--cp src
--cp toolsrc
---main caxecraft.tool.FirstPlayableLevelGenerator
---interp

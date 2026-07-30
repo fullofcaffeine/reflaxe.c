@@ -69,7 +69,7 @@ class ToolchainShardTests(unittest.TestCase):
                     self.route_selector.AFFECTED,
                 )
 
-    def test_unknown_cross_cutting_paths_fail_closed_to_parallel_route(self) -> None:
+    def test_unknown_cross_cutting_paths_use_conservative_affected_route(self) -> None:
         for path in (
             "scripts/ci/run_toolchain_shard.py",
             ".github/workflows/governance.yml",
@@ -79,7 +79,7 @@ class ToolchainShardTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(
                     self.route_selector.select_route((path,)),
-                    self.route_selector.PARALLEL_EXHAUSTIVE,
+                    self.route_selector.AFFECTED,
                 )
 
     def test_narrow_paths_keep_focused_route(self) -> None:
@@ -104,7 +104,7 @@ class ToolchainShardTests(unittest.TestCase):
             self.route_selector.AFFECTED,
         )
 
-    def test_unknown_cross_cutting_path_dominates_an_affected_change(self) -> None:
+    def test_unknown_cross_cutting_path_preserves_known_affected_owners(self) -> None:
         self.assertEqual(
             self.route_selector.select_route(
                 (
@@ -112,7 +112,7 @@ class ToolchainShardTests(unittest.TestCase):
                     "scripts/ci/run_toolchain_shard.py",
                 )
             ),
-            self.route_selector.PARALLEL_EXHAUSTIVE,
+            self.route_selector.AFFECTED,
         )
 
     def test_affected_owners_are_deterministic_and_deduplicated(self) -> None:
@@ -138,6 +138,28 @@ class ToolchainShardTests(unittest.TestCase):
             ),
         )
         self.assertTrue(all(owner.reason for owner in owners))
+
+    def test_automatic_smoke_owners_remain_fixed_and_bounded(self) -> None:
+        for paths in (
+            ("src/reflaxe/c/lowering/CBodyEmitter.hx",),
+            ("src/reflaxe/c/new_layer/FuturePass.hx",),
+            (
+                "package.json",
+                "src/reflaxe/c/lowering/CBodyEmitter.hx",
+                "examples/caxecraft/play.py",
+            ),
+        ):
+            with self.subTest(paths=paths):
+                owners = self.route_selector.select_smoke_owners(paths)
+                self.assertEqual(
+                    tuple(owner.script for owner in owners),
+                    (
+                        "test:all-sources",
+                        "test:hxc-ir",
+                        "test:hello",
+                        "snapshots:catalog",
+                    ),
+                )
 
     def test_caxecraft_only_change_selects_product_owner(self) -> None:
         owners = self.route_selector.select_affected_owners(
@@ -256,18 +278,24 @@ class ToolchainShardTests(unittest.TestCase):
             ),
         )
 
-    def test_unknown_cross_cutting_change_has_no_affected_owner_fallback(self) -> None:
-        with self.assertRaisesRegex(
-            ValueError, "affected owners require the affected pre-commit route"
-        ):
-            self.route_selector.select_affected_owners(
-                ("src/reflaxe/c/new_layer/FuturePass.hx",)
-            )
+    def test_unknown_cross_cutting_change_runs_conservative_base_smoke(self) -> None:
+        owners = self.route_selector.select_affected_owners(
+            ("src/reflaxe/c/new_layer/FuturePass.hx",)
+        )
+        self.assertEqual(
+            tuple(owner.script for owner in owners),
+            (
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+            ),
+        )
 
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 64)
+        self.assertEqual(len(canonical), 67)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER
@@ -1133,21 +1161,21 @@ class ToolchainShardTests(unittest.TestCase):
             ["contracts", "lowering-objects", "caxecraft"],
         )
 
-    def test_hook_keeps_affected_local_and_exhaustive_fallback_routes(self) -> None:
+    def test_hook_keeps_local_smoke_and_hosted_exhaustive_routes_separate(
+        self,
+    ) -> None:
         hook = (ROOT / "scripts/hooks/pre-commit").read_text(encoding="utf-8")
         workflow = (ROOT / ".github/workflows/governance.yml").read_text(
             encoding="utf-8"
         )
         affected = (
-            "[pre-commit] Running affected local compiler evidence; "
-            "complete cold coverage remains required in CI..."
+            "[pre-commit] Running conservative local smoke; focused owners remain "
+            "task evidence and complete cold coverage remains required in CI..."
         )
-        resume = "npm run test:toolchain:parallel -- --resume --with-native"
         self.assertIn(affected, hook)
         self.assertIn('"$PRE_COMMIT_ROUTE" = "affected"', hook)
-        self.assertIn('select_pre_commit_route.py" --owners', hook)
+        self.assertIn('select_pre_commit_route.py" --smoke-owners', hook)
         self.assertIn('npm run "$owner_script"', hook)
-        self.assertIn(resume, hook)
         self.assertIn("scripts/ci/select_pre_commit_route.py", hook)
         for uncached_check in (
             "Exporting Beads issues",
@@ -1158,11 +1186,13 @@ class ToolchainShardTests(unittest.TestCase):
         ):
             with self.subTest(uncached_check=uncached_check):
                 self.assertLess(hook.index(uncached_check), hook.index(affected))
-        self.assertLess(hook.index(affected), hook.index(resume))
         self.assertIn("npm run test:governance", hook)
+        self.assertNotIn("npm run test:toolchain:parallel", hook)
+        self.assertNotIn("parallel-exhaustive", hook)
         self.assertNotIn("\n  npm run test:native\n", hook)
         self.assertNotIn("--resume", workflow)
         self.assertIn("npm run test:toolchain:shard", workflow)
+        self.assertIn("python3 scripts/ci/runtime_smoke.py", workflow)
 
     def test_native_lane_shares_the_global_worker_limit(self) -> None:
         scripts = self.runner.load_scripts()

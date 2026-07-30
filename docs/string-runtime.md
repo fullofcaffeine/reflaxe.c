@@ -91,9 +91,13 @@ This is deliberately smaller than general String support. `String.charAt` and
 escapes its immediate expression, generated code retains the same optional
 owner; it does not copy the slice. `String.fromCharCode` and concatenation
 produce fresh owners, while aliases and aggregate/container copies retain them.
-The last cleanup releases the allocation. `Sys.println(value)` remains
-unsupported when the argument is not a literal at the call site: broadening
-that output API is a separate standard-library decision.
+The last cleanup releases the allocation. Hosted `Sys.println(value)` now
+accepts any expression whose static Haxe type is `String`, including a
+runtime-created managed String. It evaluates the expression once, keeps a fresh
+result alive through the write, and releases it on both success and output
+failure. The declared `Dynamic` surface remains deliberately narrower than
+Haxe's full standard library: non-String values still fail closed instead of
+silently choosing a formatting policy.
 
 `hxc_owned_string` pairs one immutable value with `hxc_allocation`. The complete
 allocator callback/context identity therefore follows owned bytes and disposal
@@ -235,14 +239,17 @@ The compiler admits literal-backed String values as the direct
 `string-literal/static-value` capability. A program using only those values
 selects `runtime-base + string-literal`; this packages the private carrier
 definition but no allocator or full String operations. E2.T07 additionally
-admits compiler-known literals passed directly to hosted `Sys.println` or
-default `trace`. Those output programs select
-`runtime-base + status + string-literal + io`; they package no allocator or
-`string.c` operation symbols. Generated C
+admits hosted output. A direct literal passed to `Sys.println` or default
+`trace` keeps the minimal
+`runtime-base + status + string-literal + io` closure; it packages no allocator
+or `string.c` operation symbols. `Sys.println` also accepts a statically typed
+runtime String and reuses whatever String features created that value, plus
+`io`. Default `trace` remains literal-only. Generated C
 stores exact validated UTF-8 bytes and byte length, including embedded NUL, and
 the output helper writes by length, adds a newline, flushes, and returns
 `HXC_STATUS_IO_ERROR` on write or flush failure. The generated caller follows
-the admitted fail-stop policy by aborting on any non-OK status.
+the admitted fail-stop policy by releasing active temporary owners and then
+aborting on any non-OK status.
 
 The typed compiler tree retains the concrete source type even though Haxe
 declares `Std.string` with a `Dynamic` parameter. haxe.c currently uses that

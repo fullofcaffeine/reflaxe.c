@@ -61,11 +61,17 @@ class HaxeCTestCase:
     output_line_count: int
     success_line: str
     expected_runtime_features: tuple[str, ...] = ()
+    required_runtime_roots: tuple[tuple[str, str, str], ...] = ()
     split_source_checks: tuple[GeneratedSourceCheck, ...] = ()
     runs_generated_main: bool = False
     embedded_source_path: str | None = None
     embedded_haxe_path: str | None = None
     embedded_source_functions: tuple[str, ...] = ()
+    native_sources: tuple[str, ...] = ()
+    native_include_directories: tuple[str, ...] = ()
+    native_defines: tuple[str, ...] = ()
+    haxe_defines: tuple[str, ...] = ()
+    native_runs_from_case_root: bool = False
 
 
 CASES = {
@@ -153,7 +159,7 @@ CASES = {
             "AppScreen_loseFocus",
             "AppScreen_togglePause",
             "AppScreen_recapture",
-            "switch (hxc_screen)",
+            "switch (hxc_l_screen)",
         ),
         forbidden_source_markers=("goto ",),
         output_line_count=1,
@@ -165,11 +171,27 @@ CASES = {
         c_hxml="aquatics-c.hxml",
         native_harness="test/native/aquatics_harness.c",
         generated_source="src/modules/caxecraft/domain/GameSession.c",
-        required_source_markers=("GameSession_tick", "GameSession *hxc_self"),
+        required_source_markers=("GameSession_tick", "GameSession *hxc_l_self"),
         forbidden_source_markers=("goto ",),
         output_line_count=2,
         success_line="0",
-        expected_runtime_features=("runtime-base", "status", "alloc", "array"),
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+        ),
+        required_runtime_roots=(
+            ("string-literal", "type-carrier", "runtime-representation"),
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="include/hxc/detail/program_types.h",
+                required_markers=("#include <hxrt/string_literal.h>",),
+                forbidden_markers=(),
+            ),
+        ),
     ),
     "presentation": HaxeCTestCase(
         case_id="presentation",
@@ -185,6 +207,230 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=1,
         success_line="0",
+    ),
+    "package-store": HaxeCTestCase(
+        case_id="package-store",
+        eval_hxml="package-store.hxml",
+        c_hxml="package-store-c.hxml",
+        native_harness="test/native/content_package_store_harness.c",
+        generated_source="src/modules/caxecraft/content/hosted/PosixPackageApi.c",
+        required_source_markers=(
+            "PosixPackageApi_openRoot",
+            "PosixPackageApi_inspect",
+            "PosixPackageApi_readExact",
+            "openat(",
+            "fstat(",
+            "read(",
+        ),
+        forbidden_source_markers=(
+            "caxecraft_package_posix_",
+            "sys.io.File",
+            "LoadFileData",
+            "goto ",
+        ),
+        output_line_count=4,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "object",
+            "gc",
+            "string-scalar",
+            "string",
+            "string-split",
+        ),
+        runs_generated_main=True,
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentPackageStore.c",
+                required_markers=(
+                    "ContentPackageStore_open",
+                    "ContentPackageStore_read",
+                ),
+                forbidden_markers=("caxecraft_package_posix_", "goto "),
+            ),
+        ),
+        haxe_defines=("caxecraft_package_store_testing",),
+        native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
+        native_runs_from_case_root=True,
+    ),
+    "resolved-level-plan": HaxeCTestCase(
+        case_id="resolved-level-plan",
+        eval_hxml="resolved-level-plan.hxml",
+        c_hxml="resolved-level-plan-c.hxml",
+        native_harness="test/native/resolved_level_plan_harness.c",
+        generated_source="src/modules/caxecraft/content/ResolvedLevelPlan.c",
+        required_source_markers=(
+            "ResolvedLevelPlan_resolve",
+            "ResolvedLevelPlan_semanticTrace",
+            "ResolvedLevelPlanResult_LevelPlanResolved",
+            "ResolvedLevelPlanResult_LevelPlanRejected",
+        ),
+        forbidden_source_markers=("ScenarioLexer", "ScenarioParser", "goto "),
+        output_line_count=15,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "object",
+            "gc",
+            "int-map",
+            "string-scalar",
+            "string",
+            "string-map",
+            "string-split",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/BaseContentPack.c",
+                required_markers=(
+                    "BaseContentRegistry_resolveTerrain",
+                    "BaseContentRegistry_resolveFluid",
+                    "BaseContentRegistry_resolveItem",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ActorCompositionPlanner.c",
+                required_markers=("ActorCompositionPlanner_planActorComposition",),
+                forbidden_markers=("goto ",),
+            ),
+        ),
+        runs_generated_main=True,
+    ),
+    "content-generation": HaxeCTestCase(
+        case_id="content-generation",
+        eval_hxml="content-generation.hxml",
+        c_hxml="content-generation-c.hxml",
+        native_harness="test/native/content_generation_harness.c",
+        generated_source="src/modules/caxecraft/content/LoadedContentGeneration.c",
+        required_source_markers=(
+            "LoadedContentGeneration_build",
+            "LoadedContentGeneration_buildInternal",
+            "ContentGenerationBuildResult_ContentGenerationReady",
+            "ContentGenerationBuildResult_ContentGenerationRejected",
+        ),
+        forbidden_source_markers=("FirstPlayableLevel", "goto "),
+        output_line_count=4,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "object",
+            "gc",
+            "int-map",
+            "string-scalar",
+            "string",
+            "string-map",
+            "string-split",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ActiveContent.c",
+                required_markers=(
+                    "ActiveContent_publish",
+                    "ContentPublicationResult_ContentPublished",
+                    "ContentPublicationResult_ContentPublicationRejected",
+                ),
+                forbidden_markers=("FirstPlayable", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/domain/GameSession.c",
+                required_markers=(
+                    "GameSession_writeTerrainRunDuringLoad",
+                    "GameSession_bindLocalPlayer",
+                    "GameSession_replaceAuthoredActors",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+        ),
+        runs_generated_main=False,
+    ),
+    "runtime-level-loader": HaxeCTestCase(
+        case_id="runtime-level-loader",
+        eval_hxml="runtime-level-loader.hxml",
+        c_hxml="runtime-level-loader-c.hxml",
+        native_harness="test/native/runtime_level_loader_harness.c",
+        generated_source="src/modules/caxecraft/content/RuntimeLevelLoader.c",
+        required_source_markers=(
+            "RuntimeLevelLoader_loadRuntimeLevel",
+            "RuntimeLevelLoader_loadRuntimeLevelInternal",
+            "RuntimeLevelLoadResult_RuntimeLevelReady",
+            "RuntimeLevelLoadResult_RuntimeLevelRejected",
+        ),
+        forbidden_source_markers=(
+            "FirstPlayableLevel",
+            "FirstPlayableSessionLoader",
+            "LoadFileData",
+            "goto ",
+        ),
+        output_line_count=8,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "object",
+            "gc",
+            "int-map",
+            "string-scalar",
+            "string",
+            "string-map",
+            "string-split",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ContentPackageStore.c",
+                required_markers=(
+                    "ContentPackageStore_open",
+                    "ContentPackageStore_read",
+                ),
+                forbidden_markers=("LoadFileData", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/hosted/PosixPackageApi.c",
+                required_markers=(
+                    "PosixPackageApi_openRoot",
+                    "PosixPackageApi_readExact",
+                    "openat(",
+                    "read(",
+                ),
+                forbidden_markers=("caxecraft_package_posix_", "goto "),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/scenario/ScenarioLexer.c",
+                required_markers=("ScenarioLexer_read",),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ResolvedLevelPlan.c",
+                required_markers=("ResolvedLevelPlan_resolve",),
+                forbidden_markers=("goto ",),
+            ),
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ActiveContent.c",
+                required_markers=("ActiveContent_publish",),
+                forbidden_markers=("FirstPlayable", "goto "),
+            ),
+        ),
+        runs_generated_main=True,
+        native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
+        native_runs_from_case_root=True,
     ),
     "scenario-native-codec": HaxeCTestCase(
         case_id="scenario-native-codec",
@@ -401,6 +647,18 @@ def checked_relative_parts(spelling: str, label: str) -> tuple[str, ...]:
     return parsed.parts
 
 
+def checked_case_directory(spelling: str, label: str) -> Path:
+    """Resolve one reviewed case-relative directory without traversal."""
+
+    parsed = PurePosixPath(spelling)
+    if parsed.is_absolute() or ".." in parsed.parts or "\\" in spelling:
+        raise HaxeCTestFailure(f"{label} is not a safe case-relative path")
+    resolved = CASE_ROOT.joinpath(*parsed.parts)
+    if not resolved.is_dir():
+        raise HaxeCTestFailure(f"{label} does not exist: {spelling}")
+    return resolved
+
+
 def validate_oracle(test_case: HaxeCTestCase, output: str) -> None:
     """Validate only the shared test protocol; Haxe owns mechanic assertions."""
 
@@ -470,6 +728,44 @@ def validate_embedded_source(test_case: HaxeCTestCase) -> None:
         )
 
 
+def validate_resolved_level_privacy(test_case: HaxeCTestCase) -> None:
+    """Keep the engine plan out of authoring, editor, and package-ingress code."""
+
+    if test_case.case_id != "resolved-level-plan":
+        return
+    restricted_roots = (
+        CASE_ROOT / "src/caxecraft/scenario",
+        CASE_ROOT / "src/caxecraft/editor",
+        CASE_ROOT / "toolsrc",
+    )
+    restricted_files = tuple(
+        sorted(
+            path
+            for root in restricted_roots
+            for path in root.rglob("*.hx")
+            if path.is_file()
+        )
+    ) + tuple(
+        sorted(
+            path
+            for path in (CASE_ROOT / "src/caxecraft/content").glob(
+                "ContentPackage*.hx"
+            )
+            if path.is_file()
+        )
+    )
+    violations = [
+        path.relative_to(CASE_ROOT).as_posix()
+        for path in restricted_files
+        if "ResolvedLevelPlan" in path.read_text(encoding="utf-8")
+    ]
+    if violations:
+        raise HaxeCTestFailure(
+            "private resolved level plan leaked into authoring/editor/package code: "
+            + ", ".join(violations)
+        )
+
+
 def sanitizer_supported(compiler: str, root: Path) -> bool:
     """Ask whether the selected compiler can link Address/Undefined sanitizers."""
 
@@ -515,11 +811,14 @@ def compile_native(
     layout: str,
     sanitized: bool,
     runs_generated_main: bool,
+    support_sources: tuple[Path, ...],
+    support_include_roots: tuple[Path, ...],
+    native_defines: tuple[str, ...],
 ) -> None:
     """Compile one generated test plus its independent native ABI consumer."""
 
     flags = [*STRICT_FLAGS, *(SANITIZER_FLAGS if sanitized else ())]
-    include_roots = [generated / "include"]
+    include_roots = [generated / "include", *support_include_roots]
     runtime_include = generated / "runtime/include"
     if runtime_include.is_dir():
         include_roots.append(runtime_include)
@@ -528,6 +827,7 @@ def compile_native(
         for include_root in include_roots
         for argument in ("-I", str(include_root))
     ]
+    define_flags = [f"-D{define}" for define in native_defines]
     if layout == "unity":
         objects: list[Path] = []
         for index, source in enumerate(sources):
@@ -544,6 +844,7 @@ def compile_native(
                     [
                         compiler,
                         *flags,
+                        *define_flags,
                         *include_flags,
                         "-fsyntax-only",
                         str(source),
@@ -556,6 +857,7 @@ def compile_native(
                 [
                     compiler,
                     *flags,
+                    *define_flags,
                     *include_flags,
                     *(
                         ("-Dmain=hxc_generated_main", "-Wno-missing-prototypes")
@@ -572,11 +874,30 @@ def compile_native(
                 label=f"{'sanitized ' if sanitized else ''}unity generated object",
             )
             objects.append(generated_object)
+        for index, source in enumerate(support_sources):
+            support_object = executable.parent / f"support-{index}.o"
+            run(
+                [
+                    compiler,
+                    *flags,
+                    *define_flags,
+                    *include_flags,
+                    "-c",
+                    str(source),
+                    "-o",
+                    str(support_object),
+                ],
+                cwd=ROOT,
+                timeout=60,
+                label=f"{'sanitized ' if sanitized else ''}unity support object",
+            )
+            objects.append(support_object)
         harness_object = executable.parent / "native-harness.o"
         run(
             [
                 compiler,
                 *flags,
+                *define_flags,
                 *include_flags,
                 "-c",
                 str(harness),
@@ -629,8 +950,10 @@ def compile_native(
         [
             compiler,
             *flags,
+            *define_flags,
             *include_flags,
             *(str(path) for path in sources),
+            *(str(path) for path in support_sources),
             str(harness),
             *((str(generated_main_object),) if generated_main_object else ()),
             "-o",
@@ -648,9 +971,18 @@ def execute(
     """Run one Haxe test on Eval, one C layout, strict C, and sanitizers."""
 
     validate_embedded_source(test_case)
+    validate_resolved_level_privacy(test_case)
     eval_hxml = checked_case_path(test_case.eval_hxml, "Eval HXML")
     c_hxml = checked_case_path(test_case.c_hxml, "C HXML")
     harness = checked_case_path(test_case.native_harness, "native harness")
+    support_sources = tuple(
+        checked_case_path(path, "native support source")
+        for path in test_case.native_sources
+    )
+    support_include_roots = tuple(
+        checked_case_directory(path, "native support include directory")
+        for path in test_case.native_include_directories
+    )
     oracle = run(
         [development_tool("haxe"), "--cwd", str(CASE_ROOT), eval_hxml.name],
         cwd=ROOT,
@@ -669,6 +1001,14 @@ def execute(
                 "--cwd",
                 str(CASE_ROOT),
                 c_hxml.name,
+                *(
+                    argument
+                    for define in (
+                        *test_case.haxe_defines,
+                        *(("caxecraft_posix_darwin",) if sys.platform == "darwin" else ()),
+                    )
+                    for argument in ("-D", define)
+                ),
                 "-D",
                 f"hxc_project_layout={layout}",
                 "--custom-target",
@@ -691,6 +1031,23 @@ def execute(
                 f"{test_case.case_id} selected an unexpected hxrt feature closure: "
                 f"expected={expected_runtime_features!r}, "
                 f"actual={runtime_plan.get('features')!r}"
+            )
+        actual_runtime_roots = {
+            (
+                root.get("featureId"),
+                root.get("operationId"),
+                root.get("kind"),
+            )
+            for root in runtime_plan.get("rootReasons", [])
+            if isinstance(root, dict)
+        }
+        missing_runtime_roots = set(test_case.required_runtime_roots).difference(
+            actual_runtime_roots
+        )
+        if missing_runtime_roots:
+            raise HaxeCTestFailure(
+                f"{test_case.case_id} omitted required runtime root reasons: "
+                f"{sorted(missing_runtime_roots)!r}"
             )
 
         if layout == "split":
@@ -758,10 +1115,13 @@ def execute(
             layout=layout,
             sanitized=False,
             runs_generated_main=test_case.runs_generated_main,
+            support_sources=support_sources,
+            support_include_roots=support_include_roots,
+            native_defines=test_case.native_defines,
         )
         native_output = run(
             [str(executable)],
-            cwd=ROOT,
+            cwd=CASE_ROOT if test_case.native_runs_from_case_root else ROOT,
             timeout=20,
             label=f"{test_case.case_id} native test",
         ).stdout
@@ -783,10 +1143,13 @@ def execute(
                 layout=layout,
                 sanitized=True,
                 runs_generated_main=test_case.runs_generated_main,
+                support_sources=support_sources,
+                support_include_roots=support_include_roots,
+                native_defines=test_case.native_defines,
             )
             sanitized_output = run(
                 [str(sanitized)],
-                cwd=ROOT,
+                cwd=CASE_ROOT if test_case.native_runs_from_case_root else ROOT,
                 timeout=20,
                 label=f"{test_case.case_id} sanitized native test",
                 environment={
@@ -799,6 +1162,20 @@ def execute(
                     f"{test_case.case_id} sanitizer run changed the test result"
                 )
         return sanitizer_ran
+
+
+def create_transient_fixture(test_case: HaxeCTestCase) -> Path | None:
+    """Create host-shaped evidence that must not become a tracked cache input."""
+
+    if test_case.case_id != "package-store":
+        return None
+    link = CASE_ROOT / "test/fixtures/package-store/root/escape.bin"
+    if link.exists() or link.is_symlink():
+        raise HaxeCTestFailure(
+            "package-store symlink fixture already exists before the isolated run"
+        )
+    link.symlink_to("../outside.bin")
+    return link
 
 
 def parse_args() -> argparse.Namespace:
@@ -820,7 +1197,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     test_case = CASES[args.case]
+    transient_fixture: Path | None = None
     try:
+        transient_fixture = create_transient_fixture(test_case)
         sanitizer_ran = execute(test_case, args.cc, args.layout)
     except (HaxeCTestFailure, OSError, UnicodeError, json.JSONDecodeError) as error:
         print(
@@ -828,6 +1207,9 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    finally:
+        if transient_fixture is not None:
+            transient_fixture.unlink(missing_ok=True)
     sanitizer_status = "ran" if sanitizer_ran else "unavailable"
     runtime_status = (
         "+".join(test_case.expected_runtime_features)

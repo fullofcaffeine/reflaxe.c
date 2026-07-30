@@ -131,7 +131,7 @@ private typedef AssignedDraft = {
  */
 class CSymbolRegistry {
 	public static inline final SCHEMA_VERSION = 2;
-	public static inline final ALGORITHM = "hxc-c-symbol-v2";
+	public static inline final ALGORITHM = "hxc-c-symbol-v3";
 	public static inline final MAX_GENERATED_LENGTH = 120;
 
 	/**
@@ -712,6 +712,16 @@ class CSymbolRegistry {
 			collectEscapeReasons(part, reasons);
 		}
 		final prefix = switch request.visibility {
+			/*
+				C permits a block declaration to shadow a file-scope typedef or
+				object, but the strict GCC lane deliberately rejects that shape with
+				`-Wshadow`. Give function-scope ordinary names their own compiler
+				subnamespace so a Haxe local such as `status` cannot become the same
+				token as hxrt's file-scope `hxc_status` typedef. This rule works by
+				construction for future runtime names instead of maintaining a list of
+				today's headers.
+			**/
+			case CSVInternal if (isFunctionOrdinaryNamespace(request.namespace)): "hxc_l_";
 			case CSVInternal: "hxc_";
 			case CSVPublic: "hxc_api_";
 			case CSVExternal: "hxc_external_";
@@ -730,6 +740,21 @@ class CSymbolRegistry {
 		}
 		reasons.sort(compareUtf8);
 		return {request: request, baseName: baseName, escapeReasons: reasons};
+	}
+
+	/**
+		Return whether a generated name lives in one function's ordinary C scope.
+
+		Labels and aggregate members use separate C namespaces, so they keep their
+		existing readable prefix. Only ordinary block names can shadow file-scope
+		typedefs and objects under the project's strict warning contract.
+	**/
+	static function isFunctionOrdinaryNamespace(namespace:CSymbolNamespace):Bool {
+		return switch namespace {
+			case CNSOrdinary(scopeKey): scopeKey != "translation-unit";
+			case _:
+				false;
+		};
 	}
 
 	static function generatedName(state:GeneratedState):String

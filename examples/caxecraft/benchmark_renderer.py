@@ -27,7 +27,6 @@ PLAY = CASE / "play.py"
 C_BASELINE = CASE / "benchmarks/renderer_immediate.c"
 CAXEMAP = CASE / "scenarios/first-playable/map.caxemap"
 CONTENT_PACK = CASE / "packs/caxecraft/base/content.json"
-LEVEL_ADAPTER = CASE / "src/caxecraft/content/FirstPlayableLevel.hx"
 PLATFORM_NAMES = {"Linux": "linux", "Darwin": "macos"}
 SCRIPT_ID = "move-jump-edit"
 RAYLIB_CONFIGURATION = "memory-software"
@@ -249,14 +248,6 @@ def benchmark_scene() -> tuple[bytes, str]:
     if len(cells) != 32 * 16 * 32:
         raise BenchmarkFailure(f"benchmark terrain has {len(cells)} cells, expected 16384")
     source_hash = hashlib.sha256(source.encode("utf-8")).hexdigest()
-    try:
-        adapter = LEVEL_ADAPTER.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as error:
-        raise BenchmarkFailure(f"cannot read generated level adapter: {error}") from error
-    if f'inline final SOURCE_SHA256:String = "{source_hash}";' not in adapter:
-        raise BenchmarkFailure(
-            "handwritten C benchmark data and the Haxe level adapter do not name the same CAXEMAP bytes"
-        )
     return bytes(cells), source_hash
 
 

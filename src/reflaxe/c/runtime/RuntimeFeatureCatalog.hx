@@ -321,6 +321,8 @@ class RuntimeFeatureCatalog {
 					[
 						new RuntimeFeatureSelectionRoot("direct-string-value", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable immutable Haxe String value backed by compiler-owned literal storage."),
+						new RuntimeFeatureSelectionRoot("type-carrier", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable stored Haxe String type whose generated C declaration needs the allocation-free carrier."),
 						dependencyRoot("Selected transitively when a runtime operation consumes the compiler's direct literal representation.")
 					],
 					"The literal bytes and length are emitted directly in generated C; Haxe null uses a null data pointer, while every real String including the empty String has a non-null address.",
@@ -405,7 +407,9 @@ class RuntimeFeatureCatalog {
 						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable managed String copy must keep its optional backing owner alive."),
 						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,
-							"A reachable managed String owner must be released when its Haxe lifetime ends.")
+							"A reachable managed String owner must be released when its Haxe lifetime ends."),
+						new RuntimeFeatureSelectionRoot("type-carrier", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable stored managed String type whose generated C declaration needs the owner-capable carrier.")
 					],
 					"Known literals, constant concatenation, and statically decidable string facts should remain direct compiler-owned C data.",
 					"Closed call sites should receive specialized local operations when their representation, lifetime, and operation set are statically bounded.",
@@ -444,12 +448,14 @@ class RuntimeFeatureCatalog {
 						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
-			new RuntimeFeatureDefinition(io, "Minimal hosted length-delimited literal output with explicit write and flush failure status.",
+			new RuntimeFeatureDefinition(io, "Minimal hosted length-delimited String output with explicit write and flush failure status.",
 				CompilerSelectable, true, [CEnvironment.Hosted], [status, stringLiteral], [header("io.h"), source("io.c")], ["hxc_io_println"], [], [],
 				documentation("Writes one valid length-delimited Haxe String value plus a newline to hosted stdout and reports write or flush failure explicitly.",
 					[
 					new RuntimeFeatureSelectionRoot("sys-println-literal", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"Reachable Sys.println with a compiler-owned String literal."),
+					new RuntimeFeatureSelectionRoot("sys-println-string", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"Reachable Sys.println with a statically typed runtime String value."),
 					new RuntimeFeatureSelectionRoot("trace-literal", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 						"Reachable default trace with compiler-owned literal text and source prefix.")
 				],
@@ -507,7 +513,7 @@ class RuntimeFeatureCatalog {
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
-			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
+			case "io.h": "4b92f03451dc4d04ea74c857ca3ce54d52fbe80d31f155b93781ee2fab946589";
 			case "int_map.h": "dd54b016db1d391dc7778b13e6cff856c886543ca87119b37141c5ad150f8080";
 			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
@@ -531,7 +537,7 @@ class RuntimeFeatureCatalog {
 			case "bytes.c": "902f1a40eb6ff1d94cc58d48a8096c9c0cb60eef4e6e9b0d0469448f929bfcb8";
 			case "bytes_string.c": "0ee9604f1b4ae78baeeaf7cac8b2a35b5634f115c958a7575230c790e8aa6ca6";
 			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
-			case "io.c": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c";
+			case "io.c": "898b3f351b60a91f25fd1ffdfe8d832e95a5a6a738ffe226ac33581f1fcb5b0f";
 			case "int_map.c": "68a649d20d244f6fa73709da7d6a1d412a4ecb6e350048f0ed09fec6b044933e";
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";

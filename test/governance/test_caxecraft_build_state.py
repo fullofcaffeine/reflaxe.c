@@ -150,6 +150,28 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         self.assertFalse(executable.hit)
         self.assertEqual(executable.reason, "build output changed: native/executable")
 
+    def test_runtime_content_is_republished_instead_of_invalidating_the_build(self) -> None:
+        staged = self.executable.parent / "content/world.caxemap"
+        staged.write_text("new authored world\n", encoding="utf-8")
+        decision = self.decision()
+        self.assertTrue(decision.hit)
+
+    def test_generated_level_bridge_cannot_reenter_the_play_build(self) -> None:
+        removed_paths = (
+            CASE / "src/caxecraft/content/FirstPlayableLevel.hx",
+            CASE / "src/caxecraft/content/FirstPlayableSessionLoader.hx",
+            CASE / "toolsrc/caxecraft/tool/FirstPlayableLevelGenerator.hx",
+            CASE / "level-adapter.hxml",
+            CASE / "level_adapter.py",
+        )
+        self.assertFalse(any(path.exists() for path in removed_paths))
+        self.assertNotIn("content_authority", vars(parse_args([])))
+
+        scripts = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))[
+            "scripts"
+        ]
+        self.assertNotIn("test:caxecraft-level-adapter", scripts)
+
     def test_external_native_change_is_a_miss(self) -> None:
         self.raylib.write_bytes(b"changed-raylib")
         decision = self.decision()
@@ -196,7 +218,6 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "repo/caxecraft/assets",
             "repo/caxecraft/locales",
             "repo/caxecraft/packs",
-            "repo/caxecraft/scenarios",
             "repo/caxecraft/tooling/play.py",
             "repo/caxecraft/tooling/dev_build_state.py",
             "repo/caxecraft/tooling/dev_generation.py",
@@ -212,6 +233,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "haxe/std",
         }
         self.assertTrue(required_roots.issubset(logical_names))
+        self.assertNotIn("repo/caxecraft/scenarios", logical_names)
         self.assertFalse(
             any("__pycache__" in name or name.endswith(".pyc") for name in logical_names)
         )

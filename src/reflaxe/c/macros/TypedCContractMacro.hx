@@ -60,6 +60,7 @@ class TypedCContractMacro {
 		"c.align",
 		"c.linkage",
 		"c.callingConvention",
+		"c.variadic",
 		"c.visibility",
 		"c.section",
 		"c.export",
@@ -185,7 +186,7 @@ class TypedCContractMacro {
 		validateByValueGraph(drafts, layouts);
 		deduplicateAndSortBuildFacts(buildFacts);
 		return {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			status: "contract-seed-no-lowering",
 			declarations: declarations,
 			buildFacts: buildFacts,
@@ -350,6 +351,7 @@ class TypedCContractMacro {
 				"c.align",
 				"c.linkage",
 				"c.callingConvention",
+				"c.variadic",
 				"c.visibility",
 				"c.section",
 				"c.export",
@@ -368,6 +370,7 @@ class TypedCContractMacro {
 				exported: false,
 				linkage: null,
 				callingConvention: null,
+				variadic: false,
 				visibility: null,
 				section: null
 			});
@@ -429,6 +432,10 @@ class TypedCContractMacro {
 		final linkage = readOptionalEnum(field.meta, "c.linkage", "c.Linkage", ["External", "Internal", "Static", "Inline"], '${shell.path}.${field.name}');
 		final callingConvention = readOptionalEnum(field.meta, "c.callingConvention", "c.CallingConvention",
 			["C", "Cdecl", "Stdcall", "Fastcall", "Vectorcall"], '${shell.path}.${field.name}');
+		final variadic = marker(field.meta, "c.variadic", '${shell.path}.${field.name}');
+		if (variadic && !identityExternalFunction)
+			error("c.variadic is valid only on a static function imported from an authoritative C header",
+				single(field.meta, "c.variadic", '${shell.path}.${field.name}').pos);
 		final visibility = readOptionalEnum(field.meta, "c.visibility", "c.Visibility", ["Default", "Hidden"], '${shell.path}.${field.name}');
 		final section = readOptionalSection(field.meta, '${shell.path}.${field.name}');
 
@@ -453,6 +460,7 @@ class TypedCContractMacro {
 			exported: exported,
 			linkage: linkage,
 			callingConvention: callingConvention,
+			variadic: variadic,
 			visibility: visibility,
 			section: section
 		});

@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 21
+the structural C AST. Its schema is internal to the compiler: schema version 23
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise.
 
@@ -17,7 +17,8 @@ branch/jump graphs for lazy and expression-valued control flow. E2.T05 consumes
 typed unary/binary operation IDs with direct or request-local implementation
 intent. E2.T06 consumes branch, jump, and switch terminators for the admitted
 primitive statement/value control-flow slice. E2.T07 adds validated immutable
-UTF-8 constants and explicit literal-only hosted output intent. E2.T08 adds
+UTF-8 constants and explicit hosted output intent for literals and statically
+typed String values. E2.T08 adds
 fixed-array/span type identity, ordered literal and zero initialization, and
 explicit checked/proven bounds policies.
 E3.T01 consumes aggregate type declarations/instances, named construction,
@@ -119,8 +120,11 @@ walks every `if` branch or `switch` arm plus nested joins to prove that every
 reachable read follows an assignment on that path. The producer accepts both a
 direct value expression and the equivalent typed form Haxe sometimes creates:
 an empty temporary local, exhaustive arm assignments, then one read. C lowering
-can therefore emit the familiar handwritten shape `T selected; if (condition)
-selected = left; else selected = right;` without fabricating a zero value.
+emits the familiar handwritten control flow, but starts the physical C storage
+as `T selected = { 0 };`. That zero is not a Haxe value and does not satisfy the
+HxcIR assignment proof. It only makes padding and inactive tagged-union bytes
+deterministic when a strict C compiler inspects a later whole-value copy; every
+reachable Haxe path must still assign `left` or `right` before the join.
 Managed conditional joins remain a separate ownership problem because selecting
 a branch may require retain, transfer, and cleanup.
 Schema version 19 solves that separate problem with a general managed-carrier
@@ -142,6 +146,17 @@ retain can allocate and fail, while this carrier protocol is deliberately
 infallible. Collector-backed `Array<Class>` values are also excluded: their
 outer storage follows precise garbage-collector roots rather than the
 retain/release lifecycle this protocol validates.
+
+Collector-bearing direct values use a different join rule. A tagged enum whose
+active payload may contain a collector-managed class reference receives a
+zero-initialized direct carrier before the conditional. Each selected arm then
+assigns the complete enum value, and the carrier's existing tag-aware root paths
+publish only the active payload pointers. The zero value matters before the
+first assignment: an allocation in either arm may trigger collection, so an
+uninitialized tag could make the root walker inspect inactive union storage.
+This carrier does not retain or move the class object; the collector keeps the
+selected object live through the exact root until the surrounding value leaves
+scope.
 
 The join moves the one owner out. If that owner belongs to an ordinary Haxe
 local, lowering immediately transfers it into a cleanup-owned local before
@@ -165,9 +180,11 @@ catch, `finally`, payload-transport, or general exception-frame semantics; those
 remain a later exception capability rather than printer behavior.
 Schema version 20 adds a receiver-tied, read-only span return. An exact final
 instance method may use `IRIOBorrowSpan` to lend one immediate fixed-array field
-owned by its `self` parameter. Matching function and direct-call contracts keep
-that ownership fact explicit across the return boundary. Validation proves the
-origin and restricts the caller to an immediate compiler-known span
+owned by its `self` parameter. The receiver may be a caller-borrowed stack
+class or a collector-managed class with an exact direct root for `self`.
+Matching function and direct-call contracts keep that ownership fact explicit
+across the return boundary. Validation proves the origin and restricts the
+caller to an immediate compiler-known span
 consumption; mutable returns, local-owner returns, retained results, indirect
 calls, and public/native boundaries remain illegal. C emission returns
 `const T *` and writes the exact element count through a compiler-private
@@ -582,7 +599,11 @@ slot and receiver separately from the explicit source arguments.
   resolved profile/build checked-abort policy;
 - tag-switch cases are unique and compatible with the subject instance. An
   exhaustive switch names every constructor exactly once and has no default
-  edge; every case edge still validates block arguments and cleanup;
+  **semantic HxcIR edge**; every case edge still validates block arguments and
+  cleanup. C projection adds a defensive `default: abort()` for an invalid
+  foreign or corrupt tag. That path is representation safety, not another Haxe
+  match arm, and it also makes definite assignment visible to strict C
+  compilers;
 - direct by-value instance dependencies are acyclic. Recursive enum edges must
   be represented indirectly so every emitted C object has finite size;
 - return terminators carry no value for `Void`, carry exactly one value for a
@@ -604,8 +625,9 @@ slot and receiver separately from the explicit source arguments.
 - local entry states and every explicit lifetime transition are legal. An
   initialization ends in `initialized`; retain/release operations name a
   type-compatible owned place; a destroy cleanup ends in `destroyed`;
-- default initialization targets a structurally resolvable class-instance
-  place whose storage type matches the instruction exactly;
+- default initialization targets a structurally resolvable direct record,
+  tagged-enum, or class-instance place whose storage type matches the
+  instruction exactly;
 - a deferred global names an existing zero-argument `Void` initializer, and
   that function contains exactly one `uninitialized -> initialized`
   `initialize-global` instruction for the named global;
@@ -621,9 +643,11 @@ slot and receiver separately from the explicit source arguments.
   function names the exact failure kind represented by its native status. A
   direct constructor call may carry a failure successor only when the called
   constructor has the matching status convention;
-- the admitted `io` runtime call is exactly `sys-println-literal` or
-  `trace-literal`, accepts one `IRTString`, returns `Void`, and retains the
-  cleanup-free native-status abort edge used by the hosted fail-stop policy.
+- the admitted `io` runtime call is `sys-println-literal`, `trace-literal`, or
+  `sys-println-string`. Literal output accepts one `IRTString` and keeps its
+  cleanup-free native-status abort edge. Runtime String output accepts
+  `IRTString` or `IRTManagedString`; its native-status abort edge carries the
+  active cleanup needed to release a fresh owner before fail-stop.
 - a direct imported call is represented as native dispatch with exact argument
   order and value types. Header-owned scalar, typedef, enum/constant, and
   by-value struct identities remain structural; they select no runtime intent.

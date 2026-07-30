@@ -13,7 +13,9 @@ Primitive, fixed-array/span, aggregate, bounded enum, concrete-class, and
 bounded nonescaping constructor programs remain runtime-free. E2.T07
 additionally admits compiler-known String literals passed to hosted
 `Sys.println` or default `trace`; that edge selects only the literal carrier and
-minimal output closure. The allocator, managed String, and resizable-Array
+minimal output closure. A statically typed runtime String passed to
+`Sys.println` adds the same `io` edge while retaining the exact String features
+that produced it. The allocator, managed String, and resizable-Array
 storage began as native-only evidence and now have separately bounded
 ordinary-Haxe slices. The first ordinary-Haxe Array lowering selects `array`
 and its transitive `alloc` dependency. A literal-backed `Bytes.ofString`

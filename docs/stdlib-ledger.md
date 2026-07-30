@@ -48,12 +48,13 @@ adapter, memory-model, collector-root, and race evidence.
 At this snapshot the ledger contains 183 source modules and 2,311 public API
 records. Exactly the typed `Std.int(Float):Int` row is `conformant`, based on the
 existing ADR 0008 differential, strict-C, optimization, and UBSan suite.
-Thirty rows are `partial`: literal-only `Sys.println` and default
-`haxe.Log.trace`, ten bounded `haxe.io.Bytes` entries, eight bounded `String`
-entries, four bounded `StringBuf` entries, bounded `Array.copy`, `Array.shift`,
-`Array.sort`, literal `Array.resize(0)`, and `Array<String>.join` entries, and one
-`Std.string` entry covering only typed `Bool`, `Int`, and String identity. The
-other 2,280 rows are `planned`. A partial row means only its named operation
+Thirty-three rows are `partial`: statically typed `String` values passed to
+`Sys.println`, literal-only default `haxe.Log.trace`, twelve bounded
+`haxe.io.Bytes` entries, eight bounded `String` entries, four bounded
+`StringBuf` entries, bounded `Array.copy`, `Array.shift`, `Array.sort`,
+`Array.splice`, literal `Array.resize(0)`, and `Array<String>.join` entries, and
+one `Std.string` entry covering only typed `Bool`, `Int`, and String identity.
+The other 2,277 rows are `planned`. A partial row means only its named operation
 shapes have executable evidence; it does not claim the entire type or
 neighboring overloads. This deliberately preserves the current narrow compiler
 claim.
@@ -99,9 +100,10 @@ means no `hxrt` include, source, define, library, or symbol.
 The global ownership ledger is distinct from a generated program's
 `hxc.stdlib-report.json`. The ledger says who must implement and test the pinned
 surface. The per-program report says which reachable stdlib operations were
-analyzed for one build; current selected forms cover literal `Sys.println`,
-default `haxe.Log.trace`, and the bounded Bytes operations named above. Neither
-artifact can substitute for generated-C behavior evidence.
+analyzed for one build; current selected forms cover statically typed `String`
+values passed to `Sys.println`, literal default `haxe.Log.trace`, and the
+bounded Bytes operations named above. Neither artifact can substitute for
+generated-C behavior evidence.
 
 ## Review and update workflow
 

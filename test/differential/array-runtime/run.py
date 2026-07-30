@@ -456,10 +456,27 @@ def validate_generated_hxcir(hxcir: str) -> None:
         cleanup_step = (
             f'"cleanup.construction"."array-temporary.{owner_local}.release"'
         )
-        if entry.count(action) != 1 or cleanup_line.count(cleanup_step) != 1:
+        eager_release = re.findall(
+            rf'instruction "[^"]+\.release-branch-local-owner" result=- release '
+            rf'place=local\("{re.escape(owner_local)}"\) '
+            r'implementation=runtime\("array"\)',
+            entry,
+        )
+        deferred_release_count = cleanup_line.count(cleanup_step)
+        if (
+            entry.count(action) != 1
+            or deferred_release_count + len(eager_release) != 1
+        ):
             raise ArrayRuntimeFailure(
                 f"fresh direct Array call lost exactly-once {role} cleanup"
             )
+        if eager_release:
+            call_offset = entry.index(call_lines[0])
+            release_offset = entry.index(eager_release[0])
+            if release_offset <= call_offset:
+                raise ArrayRuntimeFailure(
+                    f"fresh direct Array call released its {role} owner before use"
+                )
     if (
         history_pop.count('runtime(feature="array",operation="pop")') != 1
         or 'returns=nullable(tagged,instance("instance.closed-record.' not in history_pop

@@ -792,6 +792,33 @@ class CPreparedBodyDispatch {
 	public function tableForInterface(classInstanceId:String, interfaceInstanceId:String):Null<CPreparedVirtualTable>
 		return tablesByInstanceAndLayout.get(tableLookupKey(classInstanceId, interfaceInstanceId));
 
+	/**
+		Pair every reachable child-interface table with the same class's parent table.
+
+		An interface value stores only `{ object, table }`; it does not erase the
+		concrete class into a universal runtime descriptor. A parent upcast
+		therefore maps each reachable child table to the corresponding parent table
+		for that same concrete class. The returned list is complete and stable, or
+		empty when the dispatch graph cannot prove the conversion.
+	**/
+	public function interfaceUpcastTables(sourceInterfaceId:String, targetInterfaceId:String):Array<HxcIRInterfaceUpcastTable> {
+		final pairs:Array<HxcIRInterfaceUpcastTable> = [];
+		for (source in tables) {
+			final sourceRoot = source.layout.rootInterface;
+			if (sourceRoot == null || sourceRoot.instanceId != sourceInterfaceId)
+				continue;
+			final target = tableForInterface(source.classValue.instanceId, targetInterfaceId);
+			if (target == null)
+				return [];
+			pairs.push({
+				sourceTableId: source.input.id,
+				targetTableId: target.input.id
+			});
+		}
+		pairs.sort((left, right) -> CBodyDispatchCatalog.compareUtf8(left.sourceTableId, right.sourceTableId));
+		return pairs;
+	}
+
 	static function tableLookupKey(classInstanceId:String, interfaceInstanceId:Null<String>):String
 		return interfaceInstanceId == null ? 'class:$classInstanceId' : 'interface:$classInstanceId:$interfaceInstanceId';
 

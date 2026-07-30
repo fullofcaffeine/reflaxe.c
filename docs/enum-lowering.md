@@ -1,7 +1,7 @@
 # Haxe enum lowering
 
 E3.T02 adds a bounded production path for Haxe algebraic enums. Concrete enum
-values lower from pinned-Haxe `TypedExpr` through schema-21 HxcIR and the HxcIR
+values lower from pinned-Haxe `TypedExpr` through schema-23 HxcIR and the HxcIR
 validator before structural strict C11 is selected. The emitted definitions are
 private compiler implementation details in both `portable` and `metal`; this
 work does not establish a public C ABI or support broader generic classes and
@@ -118,9 +118,11 @@ that temporary, and read it once afterward. Haxe.c recognizes only the proven
 closed version of that graph: every normal arm must assign the exact same
 temporary. It then applies the same move-fresh or retain-borrowed ownership
 operation used by the direct conditional above. An unmanaged enum uses the
-schema-18 direct carrier instead, so generated C declares the enum local and
-lets the exhaustive arms assign it; haxe.c does not fabricate a zero
-constructor merely to satisfy C declaration syntax.
+schema-18 direct carrier instead. Generated C zeroes the carrier's physical
+bytes, then lets the exhaustive arms assign its real value. The zero state is
+not a fabricated Haxe constructor: HxcIR still treats the carrier as
+uninitialized until one arm assigns it. This distinction keeps inactive union
+bytes deterministic when GNU GCC checks a later whole-record copy.
 
 Recursive managed enums remain a fail-closed boundary for this graph. Retaining
 a borrowed recursive value deep-copies its owned child and can fail while
@@ -144,6 +146,14 @@ to every embedded collector pointer. Generated function root frames publish
 that pointer only while the matching enum tag and optional-presence guards are
 true, so inactive union storage is never read.
 
+The same rule makes a conditional result safe. Before either arm runs, haxe.c
+declares the joined enum as `{ 0 }`, which selects no active managed payload.
+Either arm can allocate and trigger collection without exposing uninitialized
+tag or union bytes. After the chosen enum is assigned, the root frame follows
+its real tag and visits only the selected class pointer. Unlike the
+reference-counted conditional above, this join performs no retain or release:
+the local is a precise collector root, not a second owner.
+
 An `Array<EnumWithClass>` remains a shared Array, but its object descriptor
 walks each live element, switches on the tag, and visits the active class
 pointer. The same finite traversal composes through closed records and tagged
@@ -164,7 +174,10 @@ constructors and typed block edges. `HxcIRValidator` requires each constructor
 exactly once for an exhaustive switch and rejects an exhaustive switch with a
 default edge. C emission uses a structural `switch` over the finalized
 discriminant member, with one case per HxcIR edge; no arm can fall through into
-another.
+another. The C `switch` also gets `default: abort()`. That extra C branch is not
+a semantic HxcIR default: valid Haxe values cannot select it. It makes a corrupt
+or foreign tag fail immediately and shows strict C compilers that a result local
+cannot reach its later read unassigned.
 
 `TEnumParameter` lowers to `IRIOProjectTag`. The instruction records the
 expected constructor, payload index, exact result type, and resolved
@@ -261,8 +274,9 @@ buffer. Fresh and borrowed arms run in both orders and in local, argument,
 return, nested, and value-switch positions; an observable trace checks that the
 condition and only the selected arm run in source order. The lane checks the
 exact HxcIR acquire/move ownership operations, proves an unmanaged switch
-carrier has no fabricated default, checks the exact runtime slice and
-active-tag retain/destroy helpers,
+carrier has no fabricated **semantic** default, checks its inert C storage and
+fail-stop tag default, checks the exact runtime slice and active-tag
+retain/destroy helpers,
 cold/repeated/reversed/server determinism, unity/split/package layouts, strict
 native execution, sanitizers, and the source-positioned rejection of a
 StringMap payload. It is the fast diagnostic for this rule; the complete enum

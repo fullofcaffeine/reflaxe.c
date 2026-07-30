@@ -185,8 +185,13 @@ class HxcIRDumper {
 			case IRIOCall(call): renderCall(call);
 			case IRIOConstructAggregate(instanceId, fields):
 				'construct-aggregate instance=${quote(instanceId)} fields=[${fields.map(field -> quote(field.name) + "=" + quote(field.valueId)).join(",")}]';
+			case IRIOZeroAggregate(instanceId):
+				'zero-aggregate instance=${quote(instanceId)}';
 			case IRIOConstructInterface(interfaceInstanceId, objectValueId, tableId):
 				'construct-interface interface=${quote(interfaceInstanceId)} object=${quote(objectValueId)} table=${quote(tableId)}';
+			case IRIOUpcastInterface(valueId, sourceInterfaceInstanceId, targetInterfaceInstanceId, tables):
+				final mappings = tables.map(table -> '${quote(table.sourceTableId)}->${quote(table.targetTableId)}');
+				'upcast-interface value=${quote(valueId)} source=${quote(sourceInterfaceInstanceId)} target=${quote(targetInterfaceInstanceId)} tables=[${mappings.join(",")}]';
 			case IRIOProject(valueId, fieldName): 'project value=${quote(valueId)} field=${quote(fieldName)}';
 			case IRIOConstructTag(instanceId, tagName, payload):
 				'construct-tag instance=${quote(instanceId)} tag=${quote(tagName)} payload=${strings(payload)}';

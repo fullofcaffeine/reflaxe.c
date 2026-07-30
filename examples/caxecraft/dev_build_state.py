@@ -25,7 +25,7 @@ from typing import Mapping, Sequence
 
 
 STATE_KIND = "caxecraft-play-build-state"
-STATE_SCHEMA_VERSION = 1
+STATE_SCHEMA_VERSION = 2
 
 
 class BuildStateFailure(RuntimeError):
@@ -178,17 +178,18 @@ def external_file_snapshot(files: Sequence[ExternalFile]) -> list[dict[str, obje
 
 
 def output_snapshot(generated: Path, executable: Path) -> dict[str, object]:
-    """Hash the generated project, staged content/assets, and executable.
+    """Hash the generated project, staged assets, and executable.
 
-    Object files are deliberately absent. The linked executable is the
-    launchable product, while a later incremental-native-build layer will own
-    reusable object integrity and dependency files.
+    Runtime content is deliberately absent: `play.py` republishes the current
+    authored files before every launch, so a map edit must not invalidate this
+    executable-build record. Object files are also absent. The linked
+    executable is the launchable product, while the native cache separately
+    owns reusable object integrity and dependency files.
     """
 
     roots = (
         InputPath("generated", generated),
         InputPath("staged/assets", executable.parent / "assets"),
-        InputPath("staged/content", executable.parent / "content"),
         InputPath("native/executable", executable),
     )
     files = inventory_inputs(roots)

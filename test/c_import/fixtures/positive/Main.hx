@@ -61,19 +61,35 @@ class Main {
 		return selected;
 	}
 
+	/**
+	 * Select and return one header-owned enum through ordinary Haxe control flow.
+	 *
+	 * The value stays nominally `Axis` so equality checks below cannot silently
+	 * become comparisons on an unrelated integer representation.
+	 */
+	static function selectAxis(useY:Bool):Axis {
+		var selected = useY ? Axis.Y : Axis.X;
+		return PointLib.axisIdentity(selected);
+	}
+
 	static function main():Void {
 		PointLib.pointlib_build_fact_probe();
 		var flipped = false;
 		PointLib.pointlib_flip(c.Ref.to(flipped));
 		var left = PointLib.make(PointLib.one, PointLib.negativeThree);
+		var inPlace = PointLib.make(PointLib.one, PointLib.negativeThree);
+		PointLib.translateInPlace(c.Ref.to(inPlace), PointLib.one, PointLib.five);
 		var resources = pointResources(localPoint(PointLib.seven, true));
 		var right = selectPoint(false, left, resources.point);
+		final zeroed:Point = c.StructInit.zero();
 		left.x = PointLib.one;
 		var delta = left.x;
 		left = PointLib.translate(left, delta, PointLib.five);
 		var pointAlias = PointLib.aliasIdentity(left);
 		var dot = PointLib.dot(left, right);
-		var axis = Axis.Y;
+		var axis = selectAxis(true);
+		var axisIsY = axis == Axis.Y;
+		var axisIsNotX = axis != Axis.X;
 		var component = PointLib.component(left, axis);
 		var floatPoint = PointLib.makeFloatPoint(PointLib.floatOnePointFive, PointLib.floatNegativeTwo);
 		floatPoint.x = c.Float32.fromFloat(0.5);
@@ -89,7 +105,11 @@ class Main {
 		var locale = 0;
 		while (!flipped
 			|| !resources.ready
-			|| !verifyPoint(left, right, dot, component, axis, localizedLabel(locale, 0))
+			|| !PointLib.verifyVariadicFixedPrefix(PointLib.one)
+			|| !axisIsY
+			|| !axisIsNotX
+			|| !PointLib.isZero(zeroed)
+			|| !verifyPoint(inPlace, right, dot, component, axis, localizedLabel(locale, 0))
 			|| !PointLib.verifyFloat32(floatPoint, floatDot, widened, tie, subnormal, positiveInfinity, nan, negativeZero, finiteOverflow)
 			|| !InlineFloat32Probe.run()) {}
 	}

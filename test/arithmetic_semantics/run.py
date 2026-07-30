@@ -25,7 +25,7 @@ EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ARITHMETIC_SEMANTICS="
 EXPECTED_ORACLE = (
     "-2147483648,2147483647,-2,-2147483648,2147483648,0,-2147483648,-1,1,"
-    "85,95,90,-1,-1,3,0,2147483647,-2147483648,1,18\n"
+    "85,95,90,-1,-1,3,0,2147483647,-2147483648,1,18,6\n"
 )
 STRICT_FLAGS = (
     "-std=c11",
@@ -262,6 +262,24 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             )
     if "runtime(" in hxcir:
         raise ArithmeticSemanticsFailure("primitive HxcIR selected a runtime implementation")
+    parameter_update = re.search(
+        r'function "function\.ArithmeticFixture\.updateParameter"([\s\S]+?)'
+        r'end function "function\.ArithmeticFixture\.updateParameter"',
+        hxcir,
+    )
+    if (
+        parameter_update is None
+        or not re.search(
+            r'mutable-parameter-initialize" result=- initialize '
+            r'place=local\("([^"]+)"\) value="parameter\.0"',
+            parameter_update.group(1),
+        )
+        or "compound-store" not in parameter_update.group(1)
+        or 'operation="haxe.i32.add"' not in parameter_update.group(1)
+    ):
+        raise ArithmeticSemanticsFailure(
+            "compound Int parameter update lost its initialized HxcIR carrier"
+        )
     if re.search(
         r'convert[^\n]+kind=numeric-saturating[^\n]+implementation=program-local\("hxc\.f64\.to\.i32\.saturating"\)',
         hxcir,
@@ -309,7 +327,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise ArithmeticSemanticsFailure(f"helper header lost {marker!r}")
 
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v3":
         raise ArithmeticSemanticsFailure("finalized symbol table is missing")
     helper_symbols = [item for item in symbol_entries(symbols) if item.get("kind") == "specialization"]
     if len(helper_symbols) != len(EXPECTED_HELPERS):
@@ -318,12 +336,26 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     uadd = function_body(source, function_c_name(symbols, "uadd"))
     ushl = function_body(source, function_c_name(symbols, "ushl"))
     ushr = function_body(source, function_c_name(symbols, "ushr"))
+    parameter_update_c = function_body(
+        source, function_c_name(symbols, "updateParameter")
+    )
     if " + " not in uadd or "(uint64_t)" not in uadd or "(uint32_t)" not in uadd or "primitive" in uadd:
         raise ArithmeticSemanticsFailure("UInt addition stopped lowering to direct unsigned C")
     if " << " not in ushl or "(uint64_t)" not in ushl or "(uint32_t)31" not in ushl or "primitive" in ushl:
         raise ArithmeticSemanticsFailure("UInt left shift lost its direct masked fast path")
     if " >> " not in ushr or "(uint64_t)" not in ushr or "(uint32_t)31" not in ushr or "primitive" in ushr:
         raise ArithmeticSemanticsFailure("UInt right shift lost its direct masked fast path")
+    if (
+        re.search(
+            r"\bint32_t (hxc_l_[A-Za-z0-9_]+) = hxc_l_value;",
+            parameter_update_c,
+        )
+        is None
+        or re.search(r"^\s+hxc_l_value\s*=", parameter_update_c, re.MULTILINE)
+    ):
+        raise ArithmeticSemanticsFailure(
+            "compound Int parameter update did not use one generated C carrier"
+        )
     required_conversion_c = (
         ("literalToU8", "(uint8_t)"),
         ("i32ToU8", "(uint8_t)"),
@@ -473,7 +505,7 @@ def harness_source(symbols: dict[str, object]) -> str:
             "iushr", "iand", "ior", "ixor", "inot", "iless", "fadd", "fsub",
             "fmul", "fneg", "fdiv", "fmod", "fint", "fequal", "uadd", "umod", "ushl",
             "ushr", "literalToU8", "i32ToU8", "u8ToI32", "i64ToU16",
-            "u32ToU64", "u32ToU8", "u8ToI16", "update",
+            "u32ToU64", "u32ToU8", "u8ToI16", "update", "updateParameter",
         )
     }
     i8_to_i32 = optional_function_c_name(symbols, "i8ToI32")
@@ -542,7 +574,8 @@ int main(void)
   if ({names["u8ToI16"]}(UINT8_MAX) != (int16_t)255) return 51;
   if ({names["u32ToU8"]}(UINT32_MAX) != UINT8_MAX) return 52;
   if ({names["u32ToU8"]}(UINT32_C(256)) != (uint8_t)0) return 53;
-{i8_to_i32_check}  return 0;
+{i8_to_i32_check}  if ({names["updateParameter"]}(INT32_C(3)) != INT32_C(6)) return 55;
+  return 0;
 }}
 '''
 

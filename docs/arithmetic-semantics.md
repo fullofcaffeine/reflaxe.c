@@ -103,6 +103,13 @@ is stored in a typed flow local before that control flow begins. Compound
 assignment evaluates and stabilizes the destination, loads it once, evaluates
 the right side, performs the typed operation, and stores once.
 
+This includes directly mutated primitive parameters. The generated C keeps an
+incoming function parameter immutable and initializes one local carrier from
+it; later reads and compound writes use that carrier. Read-only parameters do
+not pay this cost. The focused arithmetic fixture proves this with an `Int`
+parameter updated by `+=`, while the function-lowering fixture covers direct
+`Int`/`Bool` reassignment and `Float` compound reassignment.
+
 Prefix and postfix increment/decrement are explicit load, one, operation,
 store sequences. `Int` updates use the same wrapping helpers as ordinary
 arithmetic; `UInt` updates use defined unsigned arithmetic. The emitted C never
@@ -121,10 +128,12 @@ npm run snapshots:check
 The arithmetic suite renders repeated, reversed-input, portable, and metal
 projects; checks HxcIR, direct-conversion, helper, header, source, symbol, and
 build-fact snapshots; compares the defined common subset with the pinned Eval
-oracle; and builds production `auto`, `minimal`, and `none` configurations. It
-also checks exact HXC1001 ranges and no-artifact behavior for invalid or
-helper-requiring conversions. Required CI lanes compile and execute both GCC
-and Clang output at `-O0` and `-O2`, then run eligible output under
+oracle; proves that an `Int +=` parameter update uses an initialized local
+carrier instead of assigning to the incoming C parameter; and builds production
+`auto`, `minimal`, and `none` configurations. It also checks exact HXC1001
+ranges and no-artifact behavior for invalid or helper-requiring conversions.
+Required CI lanes compile and execute both GCC and Clang output at `-O0` and
+`-O2`, then run eligible output under
 undefined-behavior and
 floating-divide-by-zero sanitizers.
 

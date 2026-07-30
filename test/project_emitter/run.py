@@ -1076,7 +1076,7 @@ def check_concise_symbol_report() -> None:
             "algorithm": "hxc-c-symbol-summary-v1",
             "detail": "summary",
             "sourceSchemaVersion": 2,
-            "sourceAlgorithm": "hxc-c-symbol-v2",
+            "sourceAlgorithm": "hxc-c-symbol-v3",
             "symbolCount": 2,
             "collisionGroupCount": 0,
             "collisionSymbolCount": 0,
@@ -1495,6 +1495,15 @@ def parse_arguments() -> argparse.Namespace:
         default="auto",
         help="Select the C compiler used by executable build-adapter proofs.",
     )
+    parser.add_argument(
+        "--snapshot-only",
+        action="store_true",
+        help=(
+            "Render one canonical project and validate its exact snapshot and manifest. "
+            "The default command retains the exhaustive ownership, server, adapter, "
+            "and negative matrix."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1507,6 +1516,18 @@ def main() -> int:
         print("project-emitter: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if arguments.snapshot_only:
+            with tempfile.TemporaryDirectory(
+                prefix="reflaxe-c-project-snapshot-validation-"
+            ) as temporary:
+                output = Path(temporary) / "project"
+                run_emitter("full", output, label="project emitter snapshot validation")
+                check_manifest(output)
+                check_expected(output)
+            print(
+                "project-emitter: OK: canonical project snapshot and manifest passed"
+            )
+            return 0
         check_difference_reporting()
         check_cross_root_order_locale_and_line_endings()
         check_unchanged_write_skip()
