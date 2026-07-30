@@ -1282,6 +1282,11 @@ def validate() -> list[str]:
     if scripts.get("snapshots:update") != "python3 scripts/test/snapshots.py --update":
         errors.append("package.json must retain the explicit snapshots:update entry point")
     if (
+        scripts.get("test:plan")
+        != "python3 scripts/ci/select_pre_commit_route.py --plan"
+    ):
+        errors.append("package.json must retain the explain-only agent test-plan command")
+    if (
         scripts.get("test:toolchain-shards")
         != "python3 scripts/ci/run_toolchain_shard.py --check"
     ):
@@ -1498,6 +1503,8 @@ def validate() -> list[str]:
 
     performance_policy = read_text(TEST_PERFORMANCE, errors)
     for contract in (
+        "## AI-agent test loop",
+        "## Current evidence and qualification gaps",
         "## Current lane topology",
         "## Snapshot de-duplication contract",
         "## Parallelization safety rule",
@@ -1530,6 +1537,8 @@ def validate() -> list[str]:
     pre_commit = read_text(PRE_COMMIT, errors)
     if "scripts/security/run-gitleaks.sh\" --staged" not in pre_commit:
         errors.append("pre-commit must scan staged content for secrets")
+    if 'git diff --cached --name-only --diff-filter=ACMRD' not in pre_commit:
+        errors.append("pre-commit test routing must include staged deletions")
     if "scripts/lint/hx_format_guard.sh\" --tool-only" not in pre_commit:
         errors.append("pre-commit must require the exact Haxe formatter")
     if "scripts/ci/runtime_smoke.py" not in pre_commit:

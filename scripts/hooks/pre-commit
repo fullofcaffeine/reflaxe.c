@@ -48,7 +48,7 @@ bash "$ROOT_DIR/scripts/lint/whitespace_guard.sh" --staged
 echo "[pre-commit] Running staged secret scan..."
 bash "$ROOT_DIR/scripts/security/run-gitleaks.sh" --staged
 
-STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMR || true)"
+STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMRD || true)"
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '(^|/)(AGENTS|CLAUDE)\.md$|^scripts/ci/check_agent_instruction_links\.py$|^test/governance/test_agent_instruction_links\.py$'; then
   echo "[pre-commit] Validating canonical agent-instruction links..."

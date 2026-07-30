@@ -4,6 +4,91 @@ Developer waiting time is an engineering constraint. This document turns the
 repository directive in [`AGENTS.md`](../AGENTS.md) into an executable lane
 design without weakening the evidence contract in [`testing.md`](testing.md).
 
+## AI-agent test loop
+
+The practical outcome is simple: an agent should get a useful failure quickly,
+then increase evidence once at a review boundary. It should not run the full
+repository matrix after every edit.
+
+Use the changed-path planner before choosing commands:
+
+```sh
+# Plan from the files staged for the next commit. This runs no tests.
+git diff --cached --name-only | npm run --silent test:plan
+
+# Machine-readable form for an agent or editor integration.
+git diff --cached --name-only |
+  npm run --silent test:plan -- --json
+```
+
+The planner is explanatory, not a cache and not a test result. It reuses the
+conservative route and central-owner rules used by the pre-commit hook, derives
+direct test-directory owners from their package scripts, and reports four
+rings:
+
+| Ring | When an agent uses it | Evidence |
+| --- | --- | --- |
+| R0 — focused owner | Repeatedly while changing one behavior | The owning issue's smallest package script, plus a regression that fails for the observed defect. When the planner cannot infer an owner, the agent must choose the nearest existing package script; an empty mapping is not permission to skip tests. |
+| R1 — local commit smoke | Once after the focused owner passes and before committing or handing off a central change | Governance plus `test:all-sources`, `test:hxc-ir`, `test:hello`, and `snapshots:catalog`. The installed pre-commit hook runs this bounded set for the affected route. |
+| R2 — hosted pull-request gate | After the commit is ready for independent verification | The required `Governance` workflow: all four complete toolchain shards plus independent native, build-adapter, platform, provenance, and security jobs. |
+| R3 — cold/scheduled authority | On relevant path changes, weekly, release preparation, or explicit investigation | Independent cold snapshot rendering and comparison through `snapshots:check`. |
+
+For an AI-agent loop, “focused owner passes” is the normal signal to continue
+implementation. “R1 passes” is the normal signal to create the task commit.
+R2/R3 are independent hosted evidence: an agent reports them as pending unless
+it has an actual completed workflow result. It must not report an unrun remote
+lane as green, and it must not block its next local edit merely to replay the
+same full matrix on the developer machine.
+
+The complete local commands remain available for diagnosis:
+`npm run test:toolchain:shard -- <name>` runs one hosted-equivalent shard,
+`npm run test:toolchain:parallel` runs all four with bounded workers, and
+`npm run test:toolchain` is the canonical serial reference. These are explicit
+tools, not automatic per-commit work.
+
+This ring model separates two different questions:
+
+- **portable Haxe semantics:** did ordinary Haxe source compile through haxe.c,
+  build as C, and execute with the expected behavior?
+- **native/metal correctness:** did the low-level target-facing path (the
+  generated C and its direct native boundaries), runtime slices, strict C11
+  compilers, optimizations, and sanitizers satisfy their independent contracts?
+
+One axis cannot borrow a pass from the other. Eval is a reference result, not a
+haxe.c runtime pass; a warning-clean C snapshot is not proof that the program
+executed; and a native C adapter test does not prove broad ordinary-Haxe
+compatibility.
+
+## Current evidence and qualification gaps
+
+The exact production baseline is Haxe `5.0.0-preview.1` at official source
+revision `2c1e544e0a2c7524ef4c8e103f1b0580362ea538`. The older Haxe 4.3.7
+taxonomy in the cross-repository review is useful precedent only; it is not
+this target's qualification baseline.
+
+The statuses below describe the current checkout, not the intended 1.0
+destination:
+
+| Area | Evidence status | Current result |
+| --- | --- | --- |
+| Compiler and target baseline | **Observed** | `.haxerc`, `toolchain-lock.json`, bootstrap tests, and ADR 0007 pin the exact Haxe preview, Reflaxe revision, target identity, and release artifact hashes. |
+| Official Haxe source inventory | **Observed locally; not repository-owned** | The exact commit object available in the neighboring Haxe checkout contains 69 `unitstd` specifications, 1,167 general issue files, and 8 `hxcpp_issues` files. A neighboring checkout is convenient review evidence, not a reproducible project input. |
+| Active official test inventory | **Unknown / unimplemented** | No haxe.c-owned adapter records which Haxe 5 tests and assertions remain active under the C target's defines. File counts do not count as passes. |
+| Official-suite adapter self-test | **Unknown / unimplemented** | There is no deliberate failing official-harness case proving that compile, C-build, assertion, crash, timeout, and empty-test failures all propagate. |
+| Official Haxe smoke | **Unknown / unimplemented** | No published top-level + `unitstd` + issue subset currently travels through custom-target compilation, strict C build, and target-runtime execution as one official-source lane. |
+| Repository-owned portable semantics | **Observed, bounded** | Focused generated-Haxe differential suites and `test:hello` compile and execute the currently admitted language/runtime slices. They do not imply the complete applicable official suite. |
+| Native/metal evidence | **Observed, bounded** | GCC/Clang strict C11, O0/O2, sanitizer, C/C++ consumer, runtime-policy, and platform lanes exist for their named fixtures and profiles. |
+| Package-installed consumer path | **Observed for a staged development package; release path incomplete** | Bootstrap tests copy the reviewed package surface into a temporary consumer and compile from another working directory. A published release artifact and release-install qualification remain future evidence. |
+| Local feedback-loop budgets | **Inferred from limited samples** | Focused and bounded-smoke responsibilities are implemented, but the stated percentile budgets are not yet backed by enough comparable samples to become hard gates. |
+| Compatibility claim | **Observed as intentionally bounded** | The repository remains M0/developer-preview evidence. It does not claim “Haxe compatible,” the complete official `tests/unit` contract, full standard-library parity, or production readiness. |
+
+Beads issue `haxe_c-6k7` owns the official Haxe test integration and parity
+dashboard. Its first honest increment is baseline/source provenance, complete
+active inventory, harness self-test, and a tiny real official-source
+compile → strict-C-build → runtime smoke. Until those artifacts exist, the
+planner reports `readiness-only-not-a-pass`; expected failures remain
+nonpassing and visible rather than being converted into exclusions.
+
 ## Baseline and trigger
 
 Governance run

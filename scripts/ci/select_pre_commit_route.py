@@ -16,18 +16,27 @@ a test or changes the canonical CI partition.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
-from dataclasses import dataclass
 from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 
 FOCUSED = "focused"
 AFFECTED = "affected"
+PLAN_SCHEMA_VERSION = 1
+HOSTED_REQUIRED_CHECK = "Governance"
+OFFICIAL_HAXE_READINESS_OWNER = "haxe_c-6k7"
+ROOT = Path(__file__).resolve().parents[2]
+PACKAGE_JSON = ROOT / "package.json"
 
 KNOWN_AFFECTED_PATH = re.compile(
     r"^(?:"
-    r"docs/specs/fixture-taxonomy(?:\.schema)?\.json"
+    r"docs/test-performance\.md"
+    r"|docs/specs/fixture-taxonomy(?:\.schema)?\.json"
     r"|scripts/ci/"
     r"|scripts/hooks/"
     r"|scripts/test/"
@@ -73,6 +82,13 @@ AFFECTED_BASE_OWNERS = (
 )
 
 AFFECTED_OWNER_RULES = (
+    (
+        re.compile(r"^(?:src/reflaxe/c/ir/|test/hxc_ir/|docs/hxc-ir\.md)"),
+        AffectedOwner(
+            "test:hxc-ir",
+            "the validated semantic IR or its focused evidence changed",
+        ),
+    ),
     (
         re.compile(
             r"^(?:src/reflaxe/c/lowering/(?:CBodyLowering|CBodyFunctionReplayCache)\.hx"
@@ -165,6 +181,18 @@ AFFECTED_OWNER_RULES = (
             "the generated raw binding or typed Raygui surface changed",
         ),
     ),
+    (
+        re.compile(
+            r"^(?:docs/test-performance\.md"
+            r"|package(?:-lock)?\.json"
+            r"|scripts/ci/(?:check_ci_policy|select_pre_commit_route)\.py"
+            r"|test/governance/test_toolchain_shard\.py)"
+        ),
+        AffectedOwner(
+            "test:governance",
+            "test selection, local-loop policy, or its fail-closed guard changed",
+        ),
+    ),
 )
 
 
@@ -209,6 +237,157 @@ def select_smoke_owners(paths: Iterable[str]) -> tuple[AffectedOwner, ...]:
     return AFFECTED_BASE_OWNERS
 
 
+def select_task_owners(paths: Iterable[str]) -> tuple[AffectedOwner, ...]:
+    """Return focused owners for both narrow and conservative routes."""
+    normalized = tuple(path.strip() for path in paths if path.strip())
+    owners: list[AffectedOwner] = []
+    selected_scripts: set[str] = set()
+    paths_with_explicit_owners: set[str] = set()
+    for pattern, owner in AFFECTED_OWNER_RULES:
+        matched_paths = tuple(path for path in normalized if pattern.match(path))
+        if not matched_paths:
+            continue
+        paths_with_explicit_owners.update(matched_paths)
+        if owner.script not in selected_scripts:
+            owners.append(owner)
+            selected_scripts.add(owner.script)
+
+    # A test fixture should name its own package-script owner even when it uses
+    # the narrow route. Deriving these prefixes from package.json avoids a
+    # second hand-maintained test-directory catalog. More specific exceptional
+    # paths, such as incremental typed-AST fixtures, are handled above.
+    package_scripts = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))["scripts"]
+    runner_owners: dict[str, tuple[str, bool]] = {}
+    for script, command in package_scripts.items():
+        if not script.startswith("test:"):
+            continue
+        match = re.match(r"^python3 (test/\S+)", command)
+        if match is None:
+            continue
+        runner = match.group(1)
+        prefix = runner.rsplit("/", 1)[0] + "/"
+        unqualified = command == f"python3 {runner}"
+        candidate = (script, unqualified)
+        current = runner_owners.get(prefix)
+        if current is None:
+            runner_owners[prefix] = candidate
+            continue
+        if (unqualified and not current[1]) or (
+            unqualified == current[1] and script < current[0]
+        ):
+            runner_owners[prefix] = candidate
+
+    for path in normalized:
+        # An explicitly routed fixture can stay with its narrow special mode,
+        # but edits to the shared runner itself must also run the unqualified
+        # package command. For example, typed_ast/run.py owns both the normal
+        # suite and its incremental-backend mode.
+        if path in paths_with_explicit_owners and not path.endswith("/run.py"):
+            continue
+        matching_prefixes = tuple(
+            prefix for prefix in runner_owners if path.startswith(prefix)
+        )
+        if not matching_prefixes:
+            continue
+        prefix = max(matching_prefixes, key=len)
+        script = runner_owners[prefix][0]
+        if script not in selected_scripts:
+            owners.append(
+                AffectedOwner(
+                    script,
+                    "the changed focused-test directory is owned by this package script",
+                )
+            )
+            selected_scripts.add(script)
+    return tuple(owners)
+
+
+def build_test_plan(paths: Iterable[str]) -> dict[str, Any]:
+    """Describe local and hosted evidence without executing any test."""
+    normalized = tuple(path.strip() for path in paths if path.strip())
+    route = select_route(normalized)
+    task_owners = select_task_owners(normalized)
+    local_smoke = (
+        (
+            AffectedOwner(
+                "test:governance",
+                "test policy, selection, provenance, and repository wiring agree",
+            ),
+            *AFFECTED_BASE_OWNERS,
+        )
+        if route == AFFECTED
+        else ()
+    )
+    return {
+        "schemaVersion": PLAN_SCHEMA_VERSION,
+        "route": route,
+        "changedPaths": list(normalized),
+        "taskOwners": [
+            {"script": owner.script, "reason": owner.reason}
+            for owner in task_owners
+        ],
+        "taskOwnerSelection": (
+            "mapped"
+            if task_owners
+            else "required-from-owning-issue-or-nearest-package-script"
+        ),
+        "localCommitSmoke": [
+            {"script": owner.script, "reason": owner.reason}
+            for owner in local_smoke
+        ],
+        "hostedRequired": {
+            "check": HOSTED_REQUIRED_CHECK,
+            "scope": (
+                "four complete toolchain shards plus independent native, build, "
+                "platform, provenance, and security jobs"
+            ),
+        },
+        "coldSnapshotAudit": {
+            "schedule": "path-triggered, weekly, or explicit dispatch",
+            "script": "snapshots:check",
+        },
+        "officialHaxeQualification": {
+            "status": "readiness-only-not-a-pass",
+            "owner": OFFICIAL_HAXE_READINESS_OWNER,
+        },
+    }
+
+
+def print_human_plan(plan: dict[str, Any]) -> None:
+    """Print the smallest useful agent-facing explanation of a test plan."""
+    print(f"route: {plan['route']}")
+    print("R0 focused task evidence:")
+    task_owners = plan["taskOwners"]
+    if task_owners:
+        for owner in task_owners:
+            print(f"  npm run {owner['script']}  # {owner['reason']}")
+    else:
+        print(
+            "  choose the owning issue's narrow package script; "
+            "no changed-path owner is inferred"
+        )
+    print("R1 local commit smoke:")
+    local_smoke = plan["localCommitSmoke"]
+    if local_smoke:
+        for owner in local_smoke:
+            print(f"  npm run {owner['script']}  # {owner['reason']}")
+    else:
+        print("  use the existing path-specific pre-commit checks")
+    print("R2 hosted required evidence:")
+    hosted = plan["hostedRequired"]
+    print(f"  {hosted['check']}: {hosted['scope']}")
+    cold = plan["coldSnapshotAudit"]
+    print(
+        "R3 cold snapshot authority: "
+        f"npm run {cold['script']} ({cold['schedule']})"
+    )
+    official = plan["officialHaxeQualification"]
+    print(
+        "official Haxe suite: "
+        f"{official['status']} (owner {official['owner']})"
+    )
+
+
 def main(arguments: Iterable[str] | None = None) -> int:
     selected_arguments = tuple(sys.argv[1:] if arguments is None else arguments)
     paths = tuple(sys.stdin)
@@ -220,9 +399,23 @@ def main(arguments: Iterable[str] | None = None) -> int:
         for owner in select_smoke_owners(paths):
             print(f"{owner.script}\t{owner.reason}")
         return 0
+    if selected_arguments == ("--plan",):
+        print_human_plan(build_test_plan(paths))
+        return 0
+    if selected_arguments in (("--plan", "--json"), ("--json", "--plan")):
+        print(
+            json.dumps(
+                build_test_plan(paths),
+                ensure_ascii=True,
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
     if selected_arguments:
         raise SystemExit(
-            "usage: select_pre_commit_route.py [--owners|--smoke-owners]"
+            "usage: select_pre_commit_route.py "
+            "[--owners|--smoke-owners|--plan [--json]]"
         )
     print(select_route(paths))
     return 0

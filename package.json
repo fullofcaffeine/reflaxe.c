@@ -104,6 +104,7 @@
     "test:raylib-provisioning": "python3 test/raylib_provisioning/run.py",
     "test:raygui-binding": "python3 test/raygui_binding/test_binding.py",
     "test:native": "python3 scripts/ci/runtime_smoke.py",
+    "test:plan": "python3 scripts/ci/select_pre_commit_route.py --plan",
     "test:toolchain-shards": "python3 scripts/ci/run_toolchain_shard.py --check",
     "test:toolchain:shard": "python3 scripts/ci/run_toolchain_shard.py --run",
     "test:toolchain:parallel": "python3 scripts/ci/run_toolchain_shard.py --run-all",

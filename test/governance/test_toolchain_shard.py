@@ -75,6 +75,7 @@ class ToolchainShardTests(unittest.TestCase):
             "scripts/ci/new_check.py",
             "scripts/test/new_helper.py",
             "test/governance/test_new_policy.py",
+            "docs/test-performance.md",
             ".github/workflows/governance.yml",
             "package.json",
             "src/reflaxe/c/new_layer/FuturePass.hx",
@@ -279,6 +280,97 @@ class ToolchainShardTests(unittest.TestCase):
                 "test:hello",
                 "snapshots:catalog",
             ),
+        )
+
+    def test_agent_plan_separates_task_smoke_and_hosted_evidence(self) -> None:
+        plan = self.route_selector.build_test_plan(
+            (
+                "scripts/ci/select_pre_commit_route.py",
+                "docs/test-performance.md",
+            )
+        )
+        self.assertEqual(plan["schemaVersion"], 1)
+        self.assertEqual(plan["route"], self.route_selector.AFFECTED)
+        self.assertEqual(
+            [owner["script"] for owner in plan["taskOwners"]],
+            ["test:governance"],
+        )
+        self.assertEqual(
+            [owner["script"] for owner in plan["localCommitSmoke"]],
+            [
+                "test:governance",
+                "test:all-sources",
+                "test:hxc-ir",
+                "test:hello",
+                "snapshots:catalog",
+            ],
+        )
+        self.assertEqual(plan["hostedRequired"]["check"], "Governance")
+        self.assertEqual(
+            plan["coldSnapshotAudit"],
+            {
+                "schedule": "path-triggered, weekly, or explicit dispatch",
+                "script": "snapshots:check",
+            },
+        )
+        self.assertEqual(
+            plan["officialHaxeQualification"],
+            {
+                "status": "readiness-only-not-a-pass",
+                "owner": "haxe_c-6k7",
+            },
+        )
+
+    def test_agent_plan_reports_normal_focused_owner(self) -> None:
+        plan = self.route_selector.build_test_plan(("test/body_lowering/run.py",))
+        self.assertEqual(plan["route"], self.route_selector.FOCUSED)
+        self.assertEqual(
+            [owner["script"] for owner in plan["taskOwners"]],
+            ["test:body-lowering"],
+        )
+        hxc_ir_plan = self.route_selector.build_test_plan(
+            ("src/reflaxe/c/ir/HxcIR.hx",)
+        )
+        self.assertIn(
+            "test:hxc-ir",
+            [owner["script"] for owner in hxc_ir_plan["taskOwners"]],
+        )
+        shared_runner_plan = self.route_selector.build_test_plan(
+            ("test/typed_ast/run.py",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in shared_runner_plan["taskOwners"]],
+            ["test:incremental-backend", "test:typed-ast"],
+        )
+
+    def test_agent_plan_keeps_unmapped_focused_owner_explicit(self) -> None:
+        plan = self.route_selector.build_test_plan(("docs/string-runtime.md",))
+        self.assertEqual(plan["route"], self.route_selector.FOCUSED)
+        self.assertEqual(plan["taskOwners"], [])
+        self.assertEqual(
+            plan["taskOwnerSelection"],
+            "required-from-owning-issue-or-nearest-package-script",
+        )
+        self.assertEqual(plan["localCommitSmoke"], [])
+
+    def test_agent_plan_json_is_stable_and_machine_readable(self) -> None:
+        stdout = io.StringIO()
+        with mock.patch.object(sys, "stdin", io.StringIO("package.json\n")):
+            with mock.patch.object(sys, "stdout", stdout):
+                self.assertEqual(
+                    self.route_selector.main(("--plan", "--json")),
+                    0,
+                )
+        plan = json.loads(stdout.getvalue())
+        self.assertEqual(plan["changedPaths"], ["package.json"])
+        self.assertEqual(
+            [owner["script"] for owner in plan["taskOwners"]],
+            ["test:governance"],
+        )
+        lock_plan = self.route_selector.build_test_plan(("package-lock.json",))
+        self.assertEqual(
+            [owner["script"] for owner in lock_plan["taskOwners"]],
+            ["test:governance"],
         )
 
     def test_unknown_cross_cutting_change_runs_conservative_base_smoke(self) -> None:
@@ -1177,6 +1269,10 @@ class ToolchainShardTests(unittest.TestCase):
         )
         self.assertIn(affected, hook)
         self.assertIn('"$PRE_COMMIT_ROUTE" = "affected"', hook)
+        self.assertIn(
+            "git diff --cached --name-only --diff-filter=ACMRD",
+            hook,
+        )
         self.assertIn('select_pre_commit_route.py" --smoke-owners', hook)
         self.assertIn('npm run "$owner_script"', hook)
         self.assertIn("scripts/ci/select_pre_commit_route.py", hook)
