@@ -670,7 +670,7 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 	}
 
 	public function hasEntity(id:ContentId):Bool
-		return id.text() == "caxecraft:browser";
+		return id.text() == "caxecraft:browser" || id.text() == "caxecraft:mossling";
 
 	public function hasNpc(id:ContentId):Bool
 		return id.text() == "caxecraft:ivvy" || id.text() == "caxecraft:nia";

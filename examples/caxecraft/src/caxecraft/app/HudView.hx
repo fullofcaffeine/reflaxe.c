@@ -1,11 +1,12 @@
 package caxecraft.app;
 
+import caxecraft.domain.ActorControllerPhase;
+import caxecraft.domain.Character;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.VitalsState;
-import caxecraft.gameplay.GuideState;
+import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
-import caxecraft.gameplay.MosslingState;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.localization.UiCatalog.LocaleCursor;
 
@@ -21,9 +22,9 @@ import caxecraft.localization.UiCatalog.LocaleCursor;
 
 	The nested records group facts by purpose and give every call-site value a
 	name. The compiler lowers these immutable records to direct C structs with no
-	heap allocation. Some first-playable guide and Mossling observations remain
-	here as an explicit migration seam until authored prompts are loaded from content;
-	the view does not claim that content migration is already complete.
+	heap allocation. First-playable prompt state remains an explicit content
+	migration seam, but actor position, health, and controller phase now come from
+	the authoritative generic session rather than copied Guide/Mossling state.
 **/
 typedef HudView = {
 	/** Performance and deterministic-clock facts shown by the debug panel. */
@@ -53,11 +54,17 @@ typedef HudView = {
 	/** Immutable bounded inventory snapshot. */
 	final inventory:InventoryState;
 
-	/** Current first-playable guide snapshot; temporary authored-content seam. */
-	final guide:GuideState;
+	/** Current first-playable dialogue progress; temporary authored-content seam. */
+	final guidePhase:GuidePhase;
 
-	/** Current first-playable enemy snapshot; temporary authored-content seam. */
-	final mossling:MosslingState;
+	/** Whether the generic stationary controller currently offers interaction. */
+	final guideInteractionAvailable:Bool;
+
+	/** Committed first-playable enemy character from the generic entity store. */
+	final enemy:Character;
+
+	/** Read-only generic controller phase used for enemy prompt presentation. */
+	final enemyPhase:ActorControllerPhase;
 }
 
 /** Small debug-panel snapshot for one rendered frame. */

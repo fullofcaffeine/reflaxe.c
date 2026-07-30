@@ -4,10 +4,15 @@ import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanError;
 import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanResult;
 import caxecraft.content.ActorIdentityPlanner.actorEntityId;
 import caxecraft.content.ActorIdentityPlanner.planActorIdentities;
+import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.BaseAquaticProfile;
+import caxecraft.content.FirstPlayableSessionLoader.FirstPlayableSessionLoad;
+import caxecraft.content.FirstPlayableSessionLoader.LoadedActorBinding;
 import caxecraft.content.FirstPlayableSessionLoader.loadCandidate;
 import caxecraft.domain.Aquatics.input as aquaticInput;
+import caxecraft.domain.ActorControllerEvent.*;
+import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.Character.start as startCharacter;
 import caxecraft.domain.CharacterDamagePolicy;
@@ -45,41 +50,86 @@ function selfCheck():Int {
 	if (identityFailure != 0)
 		return identityFailure;
 
-	final session = new GameSession();
-	final loaded = loadCandidate(session);
+	final loadedSession = new GameSession();
+	final loaded = loadBuiltInCandidate(loadedSession, 6);
 	if (!loaded.valid)
 		return 1;
 	if (loaded.waterPresentationCell != 5)
 		return 2;
-	if (!session.authoredItemIsActive(0) || session.authoredItemIsActive(1))
+	final dialogueActorId = actorByRole(loaded.actors, true);
+	final enemyActorId = actorByRole(loaded.actors, false);
+	if (!dialogueActorId.isValid() || !enemyActorId.isValid())
+		return 45;
+	if (loadedSession.characterCount() != 3
+		|| !loadedSession.hasLocalPlayer()
+		|| loadedSession.readLocalPlayer().id.storageCode() != 1
+		|| loadedSession.actorControllerSnapshots().length != 2)
+		return 44;
+	if (!loadedSession.actorInteractionAvailable(dialogueActorId) || loadedSession.actorInteractionAvailable(enemyActorId))
+		return 46;
+	final firstEnemyDamage = loadedSession.damageCharacter(enemyActorId, 1);
+	if (!firstEnemyDamage.resolved
+		|| firstEnemyDamage.damageApplied != 1
+		|| firstEnemyDamage.defeated
+		|| firstEnemyDamage.character.vitals.health != 2
+		|| loadedSession.readCharacter(enemyActorId).vitals.health != 2)
+		return 47;
+	final defeatedEnemy = loadedSession.damageCharacter(enemyActorId, 2);
+	if (!defeatedEnemy.resolved
+		|| defeatedEnemy.damageApplied != 2
+		|| !defeatedEnemy.defeated
+		|| defeatedEnemy.character.vitals.health != 0)
+		return 48;
+	final actorTick = loadedSession.stepAuthoredActorControllers(0, CharacterDamagePolicy.Invulnerable);
+	switch actorTick.status {
+		case ControllersAdvanced if (actorTick.processed == 2 && actorTick.emittedEvents == 2):
+		case _:
+			return 49;
+	}
+	final actorEvents = loadedSession.actorControllerEventSnapshots();
+	if (actorEvents.length != 2)
+		return 50;
+	switch actorEvents[0] {
+		case DropRequested(id, drop) if (id == enemyActorId && drop.text() == "caxecraft:mossling-berries"):
+		case _:
+			return 51;
+	}
+	switch actorEvents[1] {
+		case InteractionAvailable(id) if (id == dialogueActorId):
+		case _:
+			return 52;
+	}
+	if (!loadedSession.authoredItemIsActive(0) || loadedSession.authoredItemIsActive(1))
 		return 3;
-	if (session.pendingWaterWork() <= 0 || session.worldStateHash() == 0)
+	if (loadedSession.pendingWaterWork() <= 0 || loadedSession.worldStateHash() == 0)
 		return 4;
 	final editable = World.coord(16, 4, 16);
-	if (queryWorld(session.worldView(), editable) != Grass)
+	if (queryWorld(loadedSession.worldView(), editable) != Grass)
 		return 15;
-	final beforeFullInventory = session.worldStateHash();
+	final beforeFullInventory = loadedSession.worldStateHash();
 	final fullInventory = Inventory.make(0, Inventory.MAX_STACK, 0, 0, 0, 0, 0, 0, 0);
-	final rejectedMining = session.mineTerrain(editable, fullInventory);
+	final rejectedMining = loadedSession.mineTerrain(editable, fullInventory);
 	if (rejectedMining.outcome != MiningOutcome.InventoryFull
-		|| session.worldStateHash() != beforeFullInventory
-		|| queryWorld(session.worldView(), editable) != Grass)
+		|| loadedSession.worldStateHash() != beforeFullInventory
+		|| queryWorld(loadedSession.worldView(), editable) != Grass)
 		return 16;
-	final mined = session.mineTerrain(editable, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0));
-	if (mined.outcome != MiningOutcome.Collected || mined.inventory.grass != 1 || queryWorld(session.worldView(), editable) != Air)
+	final mined = loadedSession.mineTerrain(editable, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0));
+	if (mined.outcome != MiningOutcome.Collected || mined.inventory.grass != 1 || queryWorld(loadedSession.worldView(), editable) != Air)
 		return 17;
-	if (!session.placeTerrain(editable, Grass) || queryWorld(session.worldView(), editable) != Grass)
+	if (!loadedSession.placeTerrain(editable, Grass) || queryWorld(loadedSession.worldView(), editable) != Grass)
 		return 18;
-	if (session.removeTerrain(World.coord(16, 0, 16)))
+	if (loadedSession.removeTerrain(World.coord(16, 0, 16)))
 		return 19;
 
-	final beforeRejectedRun = session.worldStateHash();
-	if (session.writeTerrainRunDuringLoad(World.VOLUME, 1, 1) != -1
-		|| session.writeTerrainRunDuringLoad(0, 10, 1) != -1
-		|| session.worldStateHash() != beforeRejectedRun)
+	final beforeRejectedRun = loadedSession.worldStateHash();
+	if (loadedSession.writeTerrainRunDuringLoad(World.VOLUME, 1, 1) != -1
+		|| loadedSession.writeTerrainRunDuringLoad(0, 10, 1) != -1
+		|| loadedSession.worldStateHash() != beforeRejectedRun)
 		return 5;
-	if (session.activateAuthoredItemDuringLoad(-1))
+	if (loadedSession.activateAuthoredItemDuringLoad(-1))
 		return 6;
+
+	final session = new GameSession();
 	final unboundView = session.view();
 	if (unboundView.valid || unboundView.localPlayer.id.isValid() || unboundView.completedTicks != 0)
 		return 7;
@@ -88,7 +138,7 @@ function selfCheck():Int {
 	if (rejectedRecovery.resolved
 		|| rejectedRecovery.character.id.isValid()
 		|| rejectedRecovery.inventory.berries != recoveryInventory.berries
-		|| !session.authoredItemIsActive(0))
+		|| session.authoredItemIsActive(0))
 		return 20;
 	final rejectedAttack = session.receiveLocalPlayerAttack();
 	if (rejectedAttack.resolved || rejectedAttack.character.id.isValid())
@@ -137,6 +187,8 @@ function selfCheck():Int {
 	characterSnapshots.push(npcStart);
 	if (session.characterCount() != 2 || session.removeCharacter(localId) || !session.removeCharacter(npcId) || session.characterCount() != 1)
 		return 33;
+	if (!session.activateAuthoredItemDuringLoad(0))
+		return 45;
 	final aquaticEquipment = session.collectAuthoredAquaticEquipment(0, BaseContentPack.aquaticProfile(BaseAquaticProfile.TideweaveAquatics));
 	if (!aquaticEquipment.resolved
 		|| !aquaticEquipment.collected
@@ -282,10 +334,39 @@ function checkActorIdentityPlanning():Int {
 /** Stable cross-target summary of the assembled candidate's owned state. */
 function trace():Int {
 	final session = new GameSession();
-	final loaded = loadCandidate(session);
+	final loaded = loadBuiltInCandidate(session, 6);
 	if (!loaded.valid)
 		return -1;
 	var hash = CaxecraftTrace.mix(session.worldStateHash(), loaded.waterPresentationCell);
 	hash = CaxecraftTrace.mix(hash, session.pendingWaterWork());
-	return CaxecraftTrace.mix(hash, session.authoredItemIsActive(0) ? 1 : 0);
+	hash = CaxecraftTrace.mix(hash, session.authoredItemIsActive(0) ? 1 : 0);
+	hash = CaxecraftTrace.mix(hash, session.actorControllerSnapshots().length);
+	return CaxecraftTrace.mix(hash, session.characterCount());
+}
+
+/** Select the temporary generated first-playable bridge at the test edge. */
+private function loadBuiltInCandidate(session:GameSession, health:Int):FirstPlayableSessionLoad
+	return loadCandidate(session, health);
+
+/**
+	Return the one actor matching the requested generic role, or an invalid ID.
+
+	This test validates the current first-playable shape without teaching the
+	engine loader a Nia or Mossling name. Multiple matches are rejected because
+	the current presentation has one slot for each role.
+**/
+private function actorByRole(actors:Array<LoadedActorBinding>, dialogue:Bool):EntityId {
+	var result = EntityId.invalid();
+	for (actor in actors) {
+		final matches = switch actor.role {
+			case DialogueNpc(_): dialogue;
+			case EnemyActor: !dialogue;
+		};
+		if (matches) {
+			if (result.isValid())
+				return EntityId.invalid();
+			result = actor.entityId;
+		}
+	}
+	return result;
 }

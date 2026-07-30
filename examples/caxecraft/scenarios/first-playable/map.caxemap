@@ -233,6 +233,10 @@ chunk world.base 0 0 0 32 16 32
 end chunk
 fluid water.pool caxecraft:water volume 2 4 2 4 1 4
 fluid water.spring caxecraft:water source 3 4 3
+object enemy.mossling
+  tag enemy
+  placement entity caxecraft:mossling 15500 5000 13800 0
+end object
 object guide.nia
   tag friend
   placement npc caxecraft:nia dialogue.nia.welcome 17500 5000 13500 270

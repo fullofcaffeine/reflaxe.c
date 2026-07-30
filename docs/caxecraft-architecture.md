@@ -41,9 +41,10 @@ breath. Before the first character slice, the missing layer was above them:
 - focused records such as `CharacterBody`, `AquaticState`,
   `VitalsState`, and `InventoryState` are carried as unrelated variables;
   and
-- Nia, the Mossling, drops, combat, and HUD rules still meet directly in
-  the application loop, although validated content is intended to select those
-  actors and interactions.
+- before the authored-controller migration, Nia and the Mossling also kept
+  separate application-owned movement state. The current application still
+  consumes first-playable dialogue, combat, drop, and HUD observations, but
+  actor construction and movement now enter through the generic session.
 
 Small types are not the problem. Without a higher-level value, Adventure,
 Ivvy, saves, audio, cutscenes, the editor, and a later second player would
@@ -129,7 +130,7 @@ through walls or across a discontinuous transition.
 validated campaign, level, and content
                  |
                  v
-        LevelLoader -> GameSession
+ validated construction -> candidate GameSession -> publish
                           |
 input adapter -> intent -> fixed simulation tick -> typed events
                           |                         |
@@ -500,14 +501,31 @@ come from runtime content packs.
 ```text
 Caxe campaign/world/level + content packs
         -> parse and validate
-        -> resolve stable IDs and profiles
-        -> construct complete GameSession
+        -> resolve one private construction plan
+        -> construct one complete candidate generation
         -> publish only on success
 ```
 
 Content selects registered mechanics; it cannot embed arbitrary Haxe, C, shell
-code, or pointers. Runtime loading is owned by `haxe_c-xge.39`, and
-content-to-actor composition by `haxe_c-xge.20.4`.
+code, or pointers. The bounded first runtime level/UI package is owned by
+`haxe_c-xge.20.4.3`, and content-to-actor composition by
+`haxe_c-xge.20.4`.
+
+The current packaged game has not reached that runtime path yet.
+`FirstPlayableLevelGenerator` parses and validates the checked-in map under
+Eval, then emits `FirstPlayableLevel` as temporary typed facts.
+`FirstPlayableSessionLoader` consumes those facts to build the unpublished
+startup session. This content-specific pair is retained only to finish the
+authored-actor migration; it is not the future loader and must not be copied for
+another map. `haxe_c-xge.20.4.3.6` deletes it after the native executable reads
+the same map bytes.
+
+The planned durable seam is private: `haxe_c-xge.20.4.3.2` resolves a validated
+`Scenario` plus content registry into a construction plan that has no file
+format or public authoring API. `haxe_c-xge.20.4.3.3` then builds a complete
+inactive content generation and publishes it with one owner swap. The editor,
+game, command-line tools, and agents continue to read and write CAXEMAP rather
+than a serialized engine plan.
 
 The first actor-composition stage is now executable. `ActorCompositionPlanner`
 reads the already validated CaxeMap objects in authored order, selects only
@@ -558,12 +576,14 @@ intelligence budget.
 The focused Eval/native-C specification proves empty passes, stable event and
 save order, stationary behavior, deterministic wander/chase/return,
 wind-up/impact/recovery, cancellation after leaving attack range, one-shot
-defeat drops, missing actors, model mismatch, and rejected shared commands. The
-current playable still advances its earlier Nia and Mossling fields.
-`haxe_c-xge.20.4.2.4.5.2` owns adding the missing authored Mossling placement
-and switching that application/presentation path to these published generic
-states; this distinction prevents the focused engine proof from being
-advertised as a completed playable migration.
+defeat drops, missing actors, model mismatch, and rejected shared commands.
+The playable now loads both Nia and the Mossling from the checked-in CaxeMap,
+publishes their generic characters and controller states through
+`GameSession`, and advances those states once per fixed tick. `CaxecraftApp`
+observes typed interaction, attack, and drop events; it no longer creates or
+steps `GuideNpc` or `Mossling` controller state. The first-playable gift
+sequence and HUD wording remain explicit content-migration seams until
+CaxeFlow and runtime content loading own them.
 
 One engine capability must connect all authoring surfaces without becoming
 five implementations:

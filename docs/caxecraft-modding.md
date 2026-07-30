@@ -7,12 +7,18 @@ mechanics are used.
 
 This guide separates what works now from the intended workflow. That boundary
 matters: the current native game packages the first CaxeMap and uses generated,
-validated adapters for its localization, terrain, initial water, fluid visual,
-and player spawn. Inventory setup, Nia/Mossling construction, item placements,
-and rule composition still contain temporary Haxe wiring. `haxe_c-xge.20.4`
-owns removing that remaining coupling. Dropping a new map beside the executable
-does **not** yet replace the playable world because native file loading is not
-implemented.
+validated adapters for localization and for the first playable's terrain,
+initial water, fluid visuals, player spawn, item placements, and actor
+placements. `FirstPlayableLevelGenerator` derives those typed facts from the
+real map; `FirstPlayableSessionLoader` uses them only for the current startup
+candidate. This named pair is a temporary bridge, not a reusable level-loader
+API, and `haxe_c-xge.20.4.3.6` removes it after the native executable reads the
+map itself.
+
+Inventory setup, dialogue progression, rewards, HUD copy, and rule composition
+still contain temporary Haxe wiring. `haxe_c-xge.20.4` owns removing that
+remaining coupling. Dropping a new map beside the executable does **not** yet
+replace the playable world because native file loading is not implemented.
 
 ## Where each kind of change belongs
 

@@ -1,0 +1,49 @@
+#ifndef HXC_CAXECRAFT_DOMAIN_ACTOR_CONTROLLER_TICK_H_INCLUDED
+#define HXC_CAXECRAFT_DOMAIN_ACTOR_CONTROLLER_TICK_H_INCLUDED
+
+#include "hxc/detail/program_types.h"
+
+enum hxc_caxecraft_domain_ActorControllerTickStatus_tag {
+  hxc_caxecraft_domain_ActorControllerTickStatus_ControllersAdvanced = 0,
+  hxc_caxecraft_domain_ActorControllerTickStatus_ControllerModelRejected = 1,
+  hxc_caxecraft_domain_ActorControllerTickStatus_ControlledCharacterMissing = 2,
+  hxc_caxecraft_domain_ActorControllerTickStatus_CharacterCommandRejected = 3,
+  hxc_caxecraft_domain_ActorControllerTickStatus_LocalAttackCommandRejected = 4
+};
+
+struct hxc_caxecraft_domain_ActorControllerTickStatus_ControllerModelRejected_payload {
+  int32_t hxc_characterId;
+  enum hxc_caxecraft_domain_ActorControllerPlanError hxc_error;
+};
+
+struct hxc_caxecraft_domain_ActorControllerTickStatus_ControlledCharacterMissing_payload {
+  int32_t hxc_characterId;
+};
+
+struct hxc_caxecraft_domain_ActorControllerTickStatus_CharacterCommandRejected_payload {
+  int32_t hxc_characterId;
+};
+
+struct hxc_caxecraft_domain_ActorControllerTickStatus_LocalAttackCommandRejected_payload {
+  int32_t hxc_characterId;
+};
+
+union hxc_caxecraft_domain_ActorControllerTickStatus_payload {
+  struct hxc_caxecraft_domain_ActorControllerTickStatus_ControllerModelRejected_payload hxc_ControllerModelRejected;
+  struct hxc_caxecraft_domain_ActorControllerTickStatus_ControlledCharacterMissing_payload hxc_ControlledCharacterMissing;
+  struct hxc_caxecraft_domain_ActorControllerTickStatus_CharacterCommandRejected_payload hxc_CharacterCommandRejected;
+  struct hxc_caxecraft_domain_ActorControllerTickStatus_LocalAttackCommandRejected_payload hxc_LocalAttackCommandRejected;
+};
+
+struct hxc_caxecraft_domain_ActorControllerTickStatus {
+  enum hxc_caxecraft_domain_ActorControllerTickStatus_tag hxc_tag;
+  union hxc_caxecraft_domain_ActorControllerTickStatus_payload hxc_payload;
+};
+
+struct hxc_caxecraft_domain_ActorControllerTickResult {
+  int32_t hxc_emittedEvents;
+  int32_t hxc_processed;
+  struct hxc_caxecraft_domain_ActorControllerTickStatus hxc_status;
+};
+
+#endif /* HXC_CAXECRAFT_DOMAIN_ACTOR_CONTROLLER_TICK_H_INCLUDED */

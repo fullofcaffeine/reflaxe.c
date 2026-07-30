@@ -309,7 +309,7 @@ def check_renderer_benchmark_contract() -> None:
     if sum(renderer_benchmark.CHUNK_CACHE_PAYLOAD.values()) != 196_816:
         raise PilotFailure("renderer benchmark cache payload accounting drifted")
     cells, scene_hash = renderer_benchmark.benchmark_scene()
-    if len(cells) != 16_384 or scene_hash != "f1e992a434edb24bed0ff2d114fc3e6fd88ec7bfc495c6b2a22e99b14732dbc5":
+    if len(cells) != 16_384 or scene_hash != "e7bd9c1c8c64d84940880e8b42fd8aa2f9df9c4229ba160fdb35785e0f368644":
         raise PilotFailure("handwritten C benchmark scene stopped matching the generated Haxe adapter")
     c_source = renderer_benchmark.C_BASELINE.read_text(encoding="utf-8")
     for required in ("draw_sheet", "GetTime", "UnloadTexture(adventure)", "CloseWindow()"):

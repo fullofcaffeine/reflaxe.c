@@ -115,9 +115,10 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/include/hxc/modules/caxecraft/app/TerrainRenderer.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/InventoryState.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/ItemKind.h": "header",
-    "playable/include/hxc/modules/caxecraft/gameplay/GuideState.h": "header",
-    "playable/include/hxc/modules/caxecraft/gameplay/MosslingState.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/BerryDropState.h": "header",
+    "playable/include/hxc/modules/caxecraft/domain/ActorControllerEvent.h": "header",
+    "playable/include/hxc/modules/caxecraft/domain/ActorControllerState.h": "header",
+    "playable/include/hxc/modules/caxecraft/domain/ActorControllerTick.h": "header",
     "playable/include/hxc/modules/caxecraft/domain/AquaticState.h": "header",
     "playable/include/hxc/modules/caxecraft/domain/CharacterBody.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/MiningResult.h": "header",
@@ -145,9 +146,10 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/app/CaxecraftApp.c": "c",
     "playable/src/modules/caxecraft/app/MotionInterpolation.c": "c",
     "playable/src/modules/caxecraft/app/Main.c": "c",
+    "playable/src/modules/caxecraft/content/ActorCompositionPlanner.c": "c",
+    "playable/src/modules/caxecraft/content/ActorPublication.c": "c",
+    "playable/src/modules/caxecraft/domain/ActorControllerScheduler.c": "c",
     "playable/src/modules/caxecraft/gameplay/Inventory.c": "c",
-    "playable/src/modules/caxecraft/gameplay/GuideNpc.c": "c",
-    "playable/src/modules/caxecraft/gameplay/Mossling.c": "c",
     "playable/src/modules/caxecraft/gameplay/BerryDrop.c": "c",
     "playable/src/modules/caxecraft/domain/Vitals.c": "c",
     "playable/src/modules/caxecraft/gameplay/Recovery.c": "c",
@@ -1900,14 +1902,18 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "DrawCube(",
         "DrawCubeWires(",
         "FirstPlayableSessionLoader_loadCandidate(",
-        "GameSession_bindLocalPlayer(",
+        "GameSession_actorControllerEventSnapshots(",
+        "GameSession_actorControllerStateSnapshots(",
+        "GameSession_actorInteractionAvailable(",
+        "GameSession_readCharacter(",
         "GameSession_authoredItemsView(",
         "GameSession_collectAuthoredAquaticEquipment(",
+        "GameSession_damageCharacter(",
         "GameSession_mineTerrain(",
         "GameSession_placeTerrain(",
-        "GameSession_receiveLocalPlayerAttack(",
         "GameSession_removeTerrain(",
         "GameSession_reviveLocalPlayerAt(",
+        "GameSession_stepAuthoredActorControllers(",
         "GameSession_tick(",
         "GameSession_useSelectedRecovery(",
         "GameSession_view(",
@@ -1956,6 +1962,11 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "WorldStorage_writeCode(",
         "GameSession_replaceLocalPlayer(",
         "GameSession_deactivateAuthoredItem(",
+        "GuideNpc_start(",
+        "GuideNpc_interact(",
+        "Mossling_start(",
+        "Mossling_step(",
+        "Mossling_strike(",
     ):
         if forbidden in app:
             raise PlayFailure(
@@ -2049,6 +2060,16 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
     for required in ("FirstPlayableLevel_loadTerrain(", "FirstPlayableSessionLoader_loadCandidate("):
         if required not in combined:
             raise PlayFailure(f"generated Caxecraft output omitted level assembly call {required}")
+    loader_relative = {
+        "split": "src/modules/caxecraft/content/FirstPlayableSessionLoader.c",
+        "package": "src/packages/caxecraft/content/package.c",
+        "unity": "src/program.c",
+    }[layout]
+    loader_source = generated.joinpath(loader_relative).read_text(encoding="utf-8")
+    if "GameSession_bindLocalPlayer(" not in loader_source:
+        raise PlayFailure(
+            "generated Caxecraft session loader omitted authored local-player binding"
+        )
     # Catalogs select text and the application renderer draws it. Both lookup
     # functions must reach C, while every Raylib draw remains outside their
     # generated modules. Catalog completeness is checked against source data by

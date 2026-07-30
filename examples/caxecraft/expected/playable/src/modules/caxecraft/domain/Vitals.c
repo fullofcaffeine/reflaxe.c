@@ -21,6 +21,21 @@ struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_domain_Vitals_applyAttack(
   return hxc_state;
 }
 
+struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_domain_Vitals_applyDamage(struct hxc_caxecraft_domain_VitalsState hxc_state, int32_t hxc_amount)
+{
+  bool hxc_tmp_short_circuit_result_n2 = hxc_amount <= 0;
+  if (!(hxc_amount <= 0))
+  {
+    hxc_tmp_short_circuit_result_n2 = hxc_state.hxc_health <= 0;
+  }
+  if (!hxc_tmp_short_circuit_result_n2)
+  {
+    struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n4 = hxc_caxecraft_domain_Vitals_make(hxc_i32_subtract_wrapping(hxc_state.hxc_health, hxc_amount), hxc_state.hxc_safeTicks);
+    return hxc_tmp_call_result_n4;
+  }
+  return hxc_state;
+}
+
 struct hxc_caxecraft_domain_VitalsState hxc_caxecraft_domain_Vitals_make(int32_t hxc_health, int32_t hxc_safeTicks)
 {
   int32_t hxc_boundedHealth = hxc_health;

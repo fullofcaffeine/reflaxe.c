@@ -939,6 +939,20 @@ def render_haxe(pack: ContentPack) -> str:
     lines.extend(switch_function("dropId", "BaseDrop", "ContentId", pack.drops, lambda value: f"new ContentId({haxe_string(value.content_id)})"))
     lines.extend(switch_function("dropQuantity", "BaseDrop", "Int", pack.drops, lambda value: str(value.quantity)))
     lines.extend(switch_function("dropPickupRadiusMilli", "BaseDrop", "Int", pack.drops, lambda value: str(value.pickup_radius_milli)))
+    lines.extend(
+        [
+            "\t/** Resolve a typed controller drop request without a content-name branch in gameplay. */",
+            "\tpublic static function dropQuantityById(id:ContentId):Int {",
+        ]
+    )
+    for drop in pack.drops:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(drop.content_id)})",
+                f"\t\t\treturn {drop.quantity};",
+            ]
+        )
+    lines.extend(["\t\treturn 0;", "\t}", ""])
     lines.extend(switch_function("effectId", "BaseEffect", "ContentId", pack.effects, lambda value: f"new ContentId({haxe_string(value.content_id)})"))
     lines.extend(switch_function("effectProfile", "BaseEffect", "EffectProfile", pack.effects, lambda value: profile_symbol(value.profile)))
     lines.extend(

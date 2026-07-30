@@ -530,6 +530,13 @@ final class BaseContentPack {
 			case MosslingBerries: 1500;
 		}
 
+	/** Resolve a typed controller drop request without a content-name branch in gameplay. */
+	public static function dropQuantityById(id:ContentId):Int {
+		if (id.text() == "caxecraft:mossling-berries")
+			return 2;
+		return 0;
+	}
+
 	public static function effectId(value:BaseEffect):ContentId
 		return switch (value) {
 			case BerryPickup: new ContentId("caxecraft:berry-pickup");

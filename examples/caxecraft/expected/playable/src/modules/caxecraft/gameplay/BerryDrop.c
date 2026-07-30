@@ -19,9 +19,24 @@ struct hxc_caxecraft_gameplay_BerryDropState hxc_caxecraft_gameplay_BerryDrop_co
   return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_state.hxc_y, .hxc_z = hxc_state.hxc_z };
 }
 
-struct hxc_caxecraft_gameplay_BerryDropState hxc_caxecraft_gameplay_BerryDrop_fromDefeatedMossling(struct hxc_caxecraft_gameplay_MosslingState hxc_state)
+struct hxc_caxecraft_gameplay_BerryDropState hxc_caxecraft_gameplay_BerryDrop_fromDefeatedCharacter(struct hxc_caxecraft_domain_Character hxc_character, int32_t hxc_amount)
 {
-  return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = true, .hxc_amount = 2, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_state.hxc_y + 0.24, .hxc_z = hxc_state.hxc_z };
+  bool hxc_tmp_short_circuit_result_n2 = hxc_character.hxc_id <= 0;
+  if (!(hxc_character.hxc_id <= 0))
+  {
+    hxc_tmp_short_circuit_result_n2 = hxc_character.hxc_vitals.hxc_health > 0;
+  }
+  bool hxc_tmp_short_circuit_load_result_n3 = hxc_tmp_short_circuit_result_n2;
+  bool hxc_tmp_short_circuit_result_n3 = hxc_tmp_short_circuit_load_result_n3;
+  if (!hxc_tmp_short_circuit_load_result_n3)
+  {
+    hxc_tmp_short_circuit_result_n3 = hxc_amount <= 0;
+  }
+  if (!hxc_tmp_short_circuit_result_n3)
+  {
+    return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = true, .hxc_amount = hxc_amount, .hxc_x = hxc_character.hxc_body.hxc_x, .hxc_y = hxc_character.hxc_body.hxc_y + 0.24, .hxc_z = hxc_character.hxc_body.hxc_z };
+  }
+  return (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = 0.0, .hxc_y = 0.0, .hxc_z = 0.0 };
 }
 
 bool hxc_caxecraft_gameplay_BerryDrop_isInRange(struct hxc_caxecraft_gameplay_BerryDropState hxc_state, double hxc_playerX, double hxc_playerY, double hxc_playerZ)

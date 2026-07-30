@@ -45,7 +45,11 @@ def render() -> str:
             "Haxe level generator failed\n"
             f"exit: {result.returncode}\nstdout:\n{result.stdout}stderr:\n{result.stderr}"
         )
-    if not result.stdout.endswith("\n") or "function loadTerrain" not in result.stdout:
+    if (
+        not result.stdout.endswith("\n")
+        or "function loadTerrain" not in result.stdout
+        or "function actorObjects():Array<ScenarioObject>" not in result.stdout
+    ):
         raise LevelAdapterFailure("Haxe level generator emitted an invalid result envelope")
     return result.stdout
 

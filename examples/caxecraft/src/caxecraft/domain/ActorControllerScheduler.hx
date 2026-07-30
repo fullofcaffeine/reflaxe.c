@@ -43,14 +43,36 @@ function planActorController(state:ActorControllerState, character:Character, lo
 	if (!isValidCharacter(character) || !isValidCharacter(localPlayer) || state.characterId != character.id)
 		return ControllerPlanRejected(CharacterIdentityMismatch);
 	return switch state.profile {
-		case StationaryDialogue(interactionRadiusMilli):
+		case StationaryDialogue(_):
 			if (state.phase != Stationary || state.phaseTicks != 0 || state.dropPublished) ControllerPlanRejected(ProfileStateMismatch); else {
-				final inRange = insideRadius(character.body.x, character.body.z, localPlayer.body.x, localPlayer.body.z, interactionRadiusMilli);
+				final inRange = interactionAvailable(state, character, localPlayer);
 				ControllerPlanned(state, stillIntent(), inRange ? InteractionAvailable(character.id) : NoControllerEvent);
 			}
 		case WanderChaseMelee(profile):
 			if (state.phase == Stationary) ControllerPlanRejected(ProfileStateMismatch); else planWanderChaseMelee(state, character, localPlayer, tickNumber,
 				profile);
+	};
+}
+
+/**
+	Observe whether one stationary controller currently offers interaction.
+
+	This is the read-only counterpart to the event emitted during a fixed tick.
+	Input sampled before the first tick can use the same profile, phase, identity,
+	and distance rule without advancing the actor or recreating controller state
+	in an application. Other controller profiles return false.
+**/
+function interactionAvailable(state:ActorControllerState, character:Character, localPlayer:Character):Bool {
+	if (!isValidCharacter(character) || !isValidCharacter(localPlayer) || state.characterId != character.id)
+		return false;
+	return switch state.profile {
+		case StationaryDialogue(interactionRadiusMilli):
+			state.phase == Stationary
+			&& state.phaseTicks == 0
+			&& !state.dropPublished
+			&& insideRadius(character.body.x, character.body.z, localPlayer.body.x, localPlayer.body.z, interactionRadiusMilli);
+		case WanderChaseMelee(_):
+			false;
 	};
 }
 

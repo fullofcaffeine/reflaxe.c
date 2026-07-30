@@ -86,6 +86,20 @@ function applyAttack(state:VitalsState, attacked:Bool):VitalsState {
 	return make(state.health - 1, ATTACK_SAFE_TICKS);
 }
 
+/**
+	Apply an already rate-limited positive damage amount.
+
+	This operation does not start or inspect attack-safe time. It is for mechanics
+	such as a weapon whose own cooldown has already decided whether this impact may
+	happen. Hazards and hostile contact should keep using `applyAttack`, which owns
+	the shared temporary-protection rule.
+**/
+function applyDamage(state:VitalsState, amount:Int):VitalsState {
+	if (amount <= 0 || isDefeated(state))
+		return state;
+	return make(state.health - amount, state.safeTicks);
+}
+
 /** True when this character can no longer act without being revived. */
 inline function isDefeated(state:VitalsState):Bool
 	return state.health <= 0;

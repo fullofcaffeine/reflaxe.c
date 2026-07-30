@@ -265,10 +265,11 @@ Current limits are deliberate and executable:
   `WaterSimulation.cellState` and `WaterCellCodec.stateAt` preserve their exact
   fluid meaning;
 - CAXEMAP source/volume placement and renderer-independent editor commands are
-  implemented. A validated generated level adapter now loads the shipped pond,
-  and a separate translucent quad batch draws exposed tops and sides without
-  advancing simulation. Direct native CAXEMAP file loading and chunk-mesh
-  scaling remain later work.
+  implemented. The temporary generated first-playable adapter now loads the
+  shipped pond from the validated CaxeMap facts at build time. A separate
+  translucent quad batch draws exposed tops and sides without advancing
+  simulation. Direct native CAXEMAP file loading and chunk-mesh scaling remain
+  later work.
 
 `WaterSnapshot` is the save-game handoff, not a second simulator. It captures
 only exact source/flow bytes plus pending queue marks in ascending world-index
@@ -454,11 +455,19 @@ typed observations for interaction, a completed attack, and a one-shot drop
 request; dialogue, rewards, inventory changes, and presentation remain separate
 consumers rather than hidden controller side effects.
 
-This is not yet the playable migration. `CaxecraftApp` still owns its earlier
-Nia and Mossling fields until `haxe_c-xge.20.4.2.4.5.2` adds the missing authored
-enemy placement and replaces those application branches. Inventory, equipment,
-weapons, and effects likewise have not all completed the shared-entity
-migration.
+The playable now uses that generic actor path: its checked-in CaxeMap places
+both Nia and the Mossling; the temporary generated adapter preserves those
+validated placements; `ActorCompositionPlanner` and `ActorPublication` resolve
+and publish them through the selected content registry; and `GameSession`
+advances their controllers in authored order. `CaxecraftApp` consumes typed
+controller events and read-only character observations rather than owning
+separate `GuideNpc` or `Mossling` movement state.
+
+The surrounding level bridge remains first-playable-specific and build-time.
+`haxe_c-xge.20.4.3.6` removes it after native package loading is proven.
+Inventory setup, dialogue progression, weapons, effects, and HUD copy still
+have first-playable-specific seams; their owning CaxeFlow/content migrations
+remain separate work rather than hidden inside the controller scheduler.
 
 ### Array representation and allocation
 
@@ -576,11 +585,11 @@ does not authorize a mechanical repository-wide rewrite.
 
 | Classification | Current types | Reason |
 | --- | --- | --- |
-| Migrated | `Recovery`, `Mining`, `BerryDrop`, `CharacterPhysics`, `Aquatics`, `Character`, `Vitals`, `EditorCommandReducer`, `EditorPolicy`, `EditorScenarioFactory`, `EditorScenarioSnapshot`, and `EditorWorldGrid` | Stateless gameplay, domain, and editor operations with stable module-shaped call sites; the character slice also has a real non-player consumer. The editor modules keep their result types beside the functions while `EditorSession` remains the supported stateful boundary. |
-| Migrate by ownership slice | `CaxecraftAtlas`, `CaxecraftPalette`, `CaxecraftTextures`, `HudDigits`, `RaylibGameInput`, `TerrainAtlas`, `TitleMenu`, `CaxecraftTrace`, `VoxelRaycast`, `World`, `WorldStorage`, `GuideNpc`, `Inventory`, `Mossling`, `SwordCombat`, `PilotScript`, `CaxeFlowClock`, `CaxeFlowValueReader`, `ScenarioLexer`, `ScenarioLimits`, `ScenarioTokenGrammar`, and `ScenarioWriter` | They currently expose only stateless functions/constants over explicit state. Migrate when that subsystem is next changed, after checking target-boundary and generated-C evidence. |
+| Migrated | `Recovery`, `Mining`, `BerryDrop`, `SwordCombat`, `CharacterPhysics`, `Aquatics`, `Character`, `Vitals`, `EditorCommandReducer`, `EditorPolicy`, `EditorScenarioFactory`, `EditorScenarioSnapshot`, and `EditorWorldGrid` | Stateless gameplay, domain, and editor operations with stable module-shaped call sites; the character and sword slices also have real non-player consumers. The editor modules keep their result types beside the functions while `EditorSession` remains the supported stateful boundary. |
+| Migrate by ownership slice | `CaxecraftAtlas`, `CaxecraftPalette`, `CaxecraftTextures`, `HudDigits`, `RaylibGameInput`, `TerrainAtlas`, `TitleMenu`, `CaxecraftTrace`, `VoxelRaycast`, `World`, `WorldStorage`, `GuideNpc`, `Inventory`, `Mossling`, `PilotScript`, `CaxeFlowClock`, `CaxeFlowValueReader`, `ScenarioLexer`, `ScenarioLimits`, `ScenarioTokenGrammar`, and `ScenarioWriter` | They currently expose only stateless functions/constants over explicit state. Migrate when that subsystem is next changed, after checking target-boundary and generated-C evidence. |
 | Retain as stateful owners | `TerrainChunkCache`, `TerrainRenderer` | Their mutable derived face data has a real lifetime across frames. Classes make that ownership explicit without moving world authority out of `GameSession`. |
 | Retain as a named boundary | `Main`, `GameInputFrames`, `ScenarioMessages`/`ScenarioMessageLookup`, `ScenarioParser`, and `ScenarioValidator` | The current name is an intentional application, factory, lookup, or public parsing/validation boundary. Revisit only with an API-focused reason, not to remove a class count. |
-| Generated bridge | `FirstPlayableCatalog`, `UiCatalog` | Validated JSON/CaxeMap sources generate renderer-independent typed lookups. The C carrier selects only static literals; future runtime catalog loading under `haxe_c-xge.21` and `haxe_c-xge.39` must replace this required build-time provider without changing renderer ownership. |
+| Generated bridge | `FirstPlayableCatalog`, `UiCatalog` | Validated JSON/CaxeMap sources generate renderer-independent typed lookups. The C carrier selects only static literals; the bounded runtime package under `haxe_c-xge.20.4.3.7` and later localization work under `haxe_c-xge.21` must replace this required build-time provider without changing renderer ownership. |
 | Generated | no other Caxecraft runtime modules | Generated raylib bindings live outside this game-source audit and follow their generator contract. |
 | Blocked by a compiler gap | none known in the migrated slice | If a later module conversion exposes a real gap, reduce it to a compiler fixture and track it rather than restoring a wrapper silently. |
 

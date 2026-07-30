@@ -1,13 +1,26 @@
 package caxecraft.gameplay;
 
+import caxecraft.domain.Character;
+import caxecraft.domain.Vitals.isDefeated;
+
 /** Deterministic spawn and pickup rules for the first visible enemy drop. */
 inline final PICKUP_DISTANCE_SQUARED:Float = 2.25;
 
 inline function none():BerryDropState
 	return make(0.0, 0.0, 0.0, 0, false);
 
-function fromDefeatedMossling(state:MosslingState):BerryDropState
-	return make(state.x, state.y + 0.24, state.z, 2, true);
+/**
+	Create one visible berry pickup from a committed defeated character.
+
+	The actor controller event and selected content pack decide the item and
+	quantity. This presentation helper only places that admitted quantity at the
+	character body; it contains no Mossling identity or controller state.
+**/
+function fromDefeatedCharacter(character:Character, amount:Int):BerryDropState {
+	if (!character.id.isValid() || !isDefeated(character.vitals) || amount <= 0)
+		return none();
+	return make(character.body.x, character.body.y + 0.24, character.body.z, amount, true);
+}
 
 function isInRange(state:BerryDropState, playerX:Float, playerY:Float, playerZ:Float):Bool {
 	if (!state.active)

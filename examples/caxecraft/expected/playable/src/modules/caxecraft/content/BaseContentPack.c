@@ -316,6 +316,15 @@ hxc_string hxc_caxecraft_content_BaseContentPack_blockId(int32_t hxc_value)
   return hxc_tmp_returned_string_owner_n1;
 }
 
+int32_t hxc_caxecraft_content_BaseContentPack_dropQuantityById(hxc_string hxc_id)
+{
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:mossling-berries", 26, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:mossling-berries", 26, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    return 0;
+  }
+  return 2;
+}
+
 int32_t hxc_caxecraft_content_BaseContentPack_itemAquaticProfile(int32_t hxc_value)
 {
   switch (hxc_value) {
@@ -991,6 +1000,76 @@ int32_t hxc_caxecraft_content_BaseContentRegistry_maximumItemQuantity(struct hxc
     abort();
   }
   return 1;
+}
+
+struct hxc_caxecraft_content_ActorContentResolution hxc_caxecraft_content_BaseContentRegistry_resolveEnemy(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_string hxc_tmp_record_field_drop_owner_n2 = { 0 };
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:mossling", 18, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:mossling", 18, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_call_result_n1 = hxc_caxecraft_content_BaseContentPack_aquaticProfile(0);
+    hxc_tmp_record_field_drop_owner_n2 = (hxc_string){ (const uint8_t *)"caxecraft:mossling-berries", 26, true, NULL };
+    if (hxc_string_retain(hxc_tmp_record_field_drop_owner_n2) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return (struct hxc_caxecraft_content_ActorContentResolution){ .hxc_tag = hxc_caxecraft_content_ActorContentResolution_ActorContentResolved, .hxc_payload.hxc_ActorContentResolved.hxc_profile = (struct hxc_caxecraft_content_ActorMechanicsProfile){ .hxc_aquaticProfile = hxc_tmp_call_result_n1, .hxc_controller = (struct hxc_caxecraft_domain_ActorControllerProfile){ .hxc_tag = hxc_caxecraft_domain_ActorControllerProfile_WanderChaseMelee, .hxc_payload.hxc_WanderChaseMelee.hxc_profile = (struct hxc_caxecraft_domain_WanderChaseMeleeProfile){ .hxc_attackRadiusMilli = 1400, .hxc_drop = hxc_tmp_record_field_drop_owner_n2, .hxc_noticeRadiusMilli = 6000, .hxc_recoveryTicks = 12, .hxc_stepMilli = 80, .hxc_strikeRadiusMilli = 3000, .hxc_windupTicks = 8 } }, .hxc_maximumHealth = 3 } };
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:nia", 13, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:nia", 13, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return (struct hxc_caxecraft_content_ActorContentResolution){ .hxc_tag = hxc_caxecraft_content_ActorContentResolution_UnknownActorContent };
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return (struct hxc_caxecraft_content_ActorContentResolution){ .hxc_tag = hxc_caxecraft_content_ActorContentResolution_WrongActorContentKind, .hxc_payload.hxc_WrongActorContentKind.hxc_actual = hxc_caxecraft_content_ActorContentKind_NpcContent };
+}
+
+struct hxc_caxecraft_content_ActorContentResolution hxc_caxecraft_content_BaseContentRegistry_resolveNpc(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)
+{
+  const void *hxc_gc_roots[1] = { (const void *)hxc_self };
+  struct hxc_gc_root_frame hxc_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_gc_roots, 1, &hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:nia", 13, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:nia", 13, true, NULL }.data, hxc_id.byte_length) == 0)))
+  {
+    struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_call_result_n1 = hxc_caxecraft_content_BaseContentPack_aquaticProfile(0);
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return (struct hxc_caxecraft_content_ActorContentResolution){ .hxc_tag = hxc_caxecraft_content_ActorContentResolution_ActorContentResolved, .hxc_payload.hxc_ActorContentResolved.hxc_profile = (struct hxc_caxecraft_content_ActorMechanicsProfile){ .hxc_aquaticProfile = hxc_tmp_call_result_n1, .hxc_controller = (struct hxc_caxecraft_domain_ActorControllerProfile){ .hxc_tag = hxc_caxecraft_domain_ActorControllerProfile_StationaryDialogue, .hxc_payload.hxc_StationaryDialogue.hxc_interactionRadiusMilli = 3500 }, .hxc_maximumHealth = 6 } };
+  }
+  if (!(hxc_id.data != NULL && (hxc_id.byte_length == (hxc_string){ (const uint8_t *)"caxecraft:mossling", 18, true, NULL }.byte_length && (hxc_id.byte_length == 0 || memcmp(hxc_id.data, (hxc_string){ (const uint8_t *)"caxecraft:mossling", 18, true, NULL }.data, hxc_id.byte_length) == 0))))
+  {
+    if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return (struct hxc_caxecraft_content_ActorContentResolution){ .hxc_tag = hxc_caxecraft_content_ActorContentResolution_UnknownActorContent };
+  }
+  if (hxc_gc_root_frame_pop(&hxc_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return (struct hxc_caxecraft_content_ActorContentResolution){ .hxc_tag = hxc_caxecraft_content_ActorContentResolution_WrongActorContentKind, .hxc_payload.hxc_WrongActorContentKind.hxc_actual = hxc_caxecraft_content_ActorContentKind_EnemyContent };
 }
 
 bool hxc_caxecraft_content_BaseContentRegistry_supportsFeature(struct hxc_caxecraft_content_BaseContentRegistry *hxc_self, hxc_string hxc_id)

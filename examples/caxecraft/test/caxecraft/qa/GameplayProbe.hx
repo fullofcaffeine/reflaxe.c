@@ -1,5 +1,9 @@
 package caxecraft.qa;
 
+import caxecraft.content.BaseContentPack;
+import caxecraft.domain.Character.start as startCharacter;
+import caxecraft.domain.CharacterPhysics.body as createCharacterBody;
+import caxecraft.domain.EntityId;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.domain.WorldView;
@@ -20,7 +24,7 @@ import caxecraft.domain.Vitals.step as stepVitals;
 import caxecraft.gameplay.GuideNpc;
 import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.BerryDrop.collectAmount as collectBerryDropAmount;
-import caxecraft.gameplay.BerryDrop.fromDefeatedMossling as berryDropFromDefeatedMossling;
+import caxecraft.gameplay.BerryDrop.fromDefeatedCharacter as berryDropFromDefeatedCharacter;
 import caxecraft.gameplay.BerryDrop.isInRange as berryDropIsInRange;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.ItemKind;
@@ -33,7 +37,10 @@ import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
 import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
 import caxecraft.gameplay.Recovery.decide as decideRecovery;
 import caxecraft.gameplay.RecoveryDecision;
-import caxecraft.gameplay.SwordCombat;
+import caxecraft.gameplay.SwordCombat.after as afterSwordCombat;
+import caxecraft.gameplay.SwordCombat.decide as decideSwordCombat;
+import caxecraft.gameplay.SwordCombat.start as startSwordCombat;
+import caxecraft.gameplay.SwordCombat.step as stepSwordCombat;
 import caxecraft.gameplay.SwordCombatDecision;
 
 /** Renderer-independent proof for the first friendly and hostile actors. */
@@ -142,24 +149,27 @@ final class GameplayProbe {
 			"leaving the marked range cancels the pending hit");
 
 		var target = Mossling.start(view, 12.5, 12.5);
+		var combatTarget = startCharacter(EntityId.fromValidatedStorageCode(2), createCharacterBody(target.x, target.y, target.z),
+			BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()), target.health);
 		inventory = Inventory.select(inventory, 4);
 		require(Inventory.selectedIs(inventory, ItemKind.CopperSword), "combat asks for a semantic sword rather than a slot number");
 		require(Mossling.canStrike(target, 10.5, 12.5, 1.0, 0.0), "near aimed sword reaches Mossling");
 		require(!Mossling.canStrike(target, 10.5, 12.5, -1.0, 0.0), "sword does not strike behind player");
-		var swordCombat = SwordCombat.start();
-		var swordDecision = SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, 1.0, 0.0);
+		var swordCombat = startSwordCombat();
+		var swordDecision = decideSwordCombat(swordCombat, inventory, startVitals(), combatTarget, 10.5, 12.5, 1.0, 0.0);
 		require(swordDecision == SwordCombatDecision.Hit, "ready aimed sword action is admitted on the fixed clock");
-		swordCombat = SwordCombat.after(swordDecision, swordCombat);
-		swordCombat = SwordCombat.step(swordCombat);
-		require(SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.CoolingDown,
+		swordCombat = afterSwordCombat(swordDecision, swordCombat);
+		swordCombat = stepSwordCombat(swordCombat);
+		require(decideSwordCombat(swordCombat, inventory, startVitals(), combatTarget, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.CoolingDown,
 			"rapid display-frame presses cannot bypass the sword cooldown");
 		while (swordCombat.cooldownTicks > 0)
-			swordCombat = SwordCombat.step(swordCombat);
-		require(SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.Hit,
+			swordCombat = stepSwordCombat(swordCombat);
+		require(decideSwordCombat(swordCombat, inventory, startVitals(), combatTarget, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.Hit,
 			"sword becomes ready after exactly the declared fixed ticks");
-		require(SwordCombat.decide(swordCombat, Inventory.select(inventory, 0), startVitals(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.NotSword,
+		require(decideSwordCombat(swordCombat, Inventory.select(inventory, 0), startVitals(), combatTarget, 10.5, 12.5, 1.0,
+			0.0) == SwordCombatDecision.NotSword,
 			"non-sword primary actions remain outside combat");
-		require(SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, -1.0, 0.0) == SwordCombatDecision.TargetMissed,
+		require(decideSwordCombat(swordCombat, inventory, startVitals(), combatTarget, 10.5, 12.5, -1.0, 0.0) == SwordCombatDecision.TargetMissed,
 			"fixed-step combat preserves the aiming boundary");
 		target = Mossling.strike(target);
 		target = Mossling.strike(target);
@@ -168,7 +178,9 @@ final class GameplayProbe {
 		require(target.health == 0 && !Mossling.isAlive(target), "third strike defeats Mossling");
 		require(Mossling.step(view, target, 10.5, 12.5, 0) == target, "defeated Mossling state is stable");
 
-		var drop = berryDropFromDefeatedMossling(target);
+		combatTarget = startCharacter(EntityId.fromValidatedStorageCode(2), createCharacterBody(target.x, target.y, target.z),
+			BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()), target.health);
+		var drop = berryDropFromDefeatedCharacter(combatTarget, 2);
 		require(drop.active && drop.amount == 2, "defeat creates one visible berry drop");
 		require(berryDropIsInRange(drop, drop.x, drop.y, drop.z), "near player can collect drop");
 		final berriesBeforeDrop = inventory.berries;
@@ -176,7 +188,7 @@ final class GameplayProbe {
 		drop = collectBerryDropAmount(drop, drop.amount);
 		require(!drop.active && inventory.berries == berriesBeforeDrop + 2, "drop collection is one-time and explicit");
 
-		var partialDrop = berryDropFromDefeatedMossling(target);
+		var partialDrop = berryDropFromDefeatedCharacter(combatTarget, 2);
 		var nearlyFull = Inventory.make(5, 0, 0, 0, 0, 0, Inventory.MAX_STACK - 1, 0, 0);
 		final acceptedDrop = Inventory.acceptedAmount(nearlyFull, ItemKind.Berries, partialDrop.amount);
 		nearlyFull = Inventory.collectItem(nearlyFull, ItemKind.Berries, acceptedDrop);

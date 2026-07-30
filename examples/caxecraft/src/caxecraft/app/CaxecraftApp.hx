@@ -3,6 +3,7 @@ package caxecraft.app;
 #if c
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.ItemUseProfile;
+import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.FirstPlayableLevel.itemCount;
 import caxecraft.content.FirstPlayableLevel.itemStorageCode;
 import caxecraft.content.FirstPlayableLevel.itemXMilli;
@@ -11,6 +12,7 @@ import caxecraft.content.FirstPlayableLevel.itemZMilli;
 import caxecraft.content.FirstPlayableLevel.spawnXMilli;
 import caxecraft.content.FirstPlayableLevel.spawnYMilli;
 import caxecraft.content.FirstPlayableLevel.spawnZMilli;
+import caxecraft.content.FirstPlayableSessionLoader.LoadedActorBinding;
 import caxecraft.content.FirstPlayableSessionLoader.loadCandidate as loadFirstPlayableSession;
 import caxecraft.app.AppScreen;
 import caxecraft.app.AppScreen.capturesPointer as screenCapturesPointer;
@@ -30,8 +32,12 @@ import caxecraft.app.MotionInterpolation.advance as advanceMotion;
 import caxecraft.app.MotionInterpolation.reset as resetMotion;
 import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
-import caxecraft.domain.Character.start as startCharacter;
 import caxecraft.domain.CharacterDamagePolicy;
+import caxecraft.domain.Character;
+import caxecraft.domain.ActorControllerEvent;
+import caxecraft.domain.ActorControllerPhase;
+import caxecraft.domain.ActorControllerState;
+import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
 import caxecraft.domain.Aquatics.canMine as playerCanMine;
@@ -51,18 +57,17 @@ import caxecraft.app.CaxecraftAtlas.HotbarFrame;
 import caxecraft.app.CaxecraftAtlas.HudGlyph;
 import caxecraft.app.CaxecraftAtlas.WorldSprite;
 import caxecraft.gameplay.BerryDrop.collectAmount as collectBerryDropAmount;
-import caxecraft.gameplay.BerryDrop.fromDefeatedMossling as berryDropFromDefeatedMossling;
+import caxecraft.gameplay.BerryDrop.fromDefeatedCharacter as berryDropFromDefeatedCharacter;
 import caxecraft.gameplay.BerryDrop.isInRange as berryDropIsInRange;
 import caxecraft.gameplay.BerryDrop.none as emptyBerryDrop;
 import caxecraft.gameplay.BerryDropState;
-import caxecraft.gameplay.GuideNpc;
 import caxecraft.gameplay.GuidePhase;
-import caxecraft.gameplay.GuideState;
 import caxecraft.gameplay.ItemKind;
-import caxecraft.gameplay.Mossling;
-import caxecraft.gameplay.MosslingMode;
-import caxecraft.gameplay.MosslingState;
 import caxecraft.gameplay.MiningOutcome;
+import caxecraft.gameplay.SwordCombat.after as afterSwordCombat;
+import caxecraft.gameplay.SwordCombat.decide as decideSwordCombat;
+import caxecraft.gameplay.SwordCombat.start as startSwordCombat;
+import caxecraft.gameplay.SwordCombat.step as stepSwordCombat;
 import caxecraft.domain.VitalsState;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.Vitals.isDefeated as characterIsDefeated;
@@ -97,6 +102,27 @@ import raylib.MouseButton;
 import raylib.Raylib;
 import raylib.Texture2D;
 import raylib.Vector3;
+
+/** One read-only controller phase lookup used to validate presentation input. */
+private typedef ActorPhaseObservation = {
+	final valid:Bool;
+	final phase:ActorControllerPhase;
+}
+
+/**
+	The two actor capabilities still required by the current hand-built HUD.
+
+	The generic loader returns every authored binding without choosing campaign
+	roles. This temporary presentation selection asks for one dialogue actor and
+	one hostile actor because the current HUD and combat slice still have two
+	fixed slots. CaxeFlow/content migration under `haxe_c-xge.20.4` removes this
+	shape; adding another level must not add another named selection type.
+**/
+private typedef PlayableActorSelection = {
+	final valid:Bool;
+	final dialogueActorId:EntityId;
+	final enemyActorId:EntityId;
+}
 
 /**
  * Runs Caxecraft's current Raylib application and game loop.
@@ -155,15 +181,6 @@ final class CaxecraftApp {
 	 * before publishing a partial live application.
 	 */
 	public function run():Void {
-		// Construct and validate a candidate before treating it as the live session.
-		// The temporary generated level bridge receives the session itself, not its
-		// buffers, so content cannot keep or mutate a raw storage view.
-		final loadedLevel = loadFirstPlayableSession(session);
-		if (!loadedLevel.valid)
-			return;
-		final waterPresentationCell = loadedLevel.waterPresentationCell;
-
-		final initialAquaticProfile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
 		#if caxecraft_pilot_secondary_locale
 		final pilotName:PilotScriptName = PilotScriptName.LaunchSmoke;
 		#elseif caxecraft_pilot_launch_smoke
@@ -195,9 +212,19 @@ final class CaxecraftApp {
 		// build contains neither this branch nor a way to alter starting health.
 		initialHealth = PilotScript.initialHealth(pilotName);
 		#end
-		if (!session.bindLocalPlayer(startCharacter(EntityId.fromValidatedStorageCode(1), spawnPlayer(session.worldView()), initialAquaticProfile,
-			initialHealth)))
+
+		// This temporary bridge reads only generated facts derived from the checked-in
+		// map. The runtime package path removes it under haxe_c-xge.20.4.3.6; actor
+		// planning, publication, and controller execution already use general systems.
+		final loadedLevel = loadFirstPlayableSession(session, initialHealth);
+		if (!loadedLevel.valid)
 			return;
+		final actors = selectPlayableActors(loadedLevel.actors);
+		if (!actors.valid)
+			return;
+		final waterPresentationCell = loadedLevel.waterPresentationCell;
+		final dialogueActorId = actors.dialogueActorId;
+		final enemyActorId = actors.enemyActorId;
 
 		var windowFlags = ConfigFlags.VsyncHint | ConfigFlags.WindowResizable;
 		#if !raylib_platform_macos
@@ -255,9 +282,16 @@ final class CaxecraftApp {
 		// exercise the same typed inventory transitions as a real player.
 		inventory = PilotScript.initialInventory(pilotName);
 		#end
-		var guide:GuideState = GuideNpc.start(session.worldView(), 17.5, 13.5);
-		var mossling:MosslingState = Mossling.start(session.worldView(), 15.5, 13.8);
-		var swordCombat:SwordCombatState = SwordCombat.start();
+		var guidePhase = GuidePhase.Waiting;
+		var guideInteractionAvailable = session.actorInteractionAvailable(dialogueActorId);
+		var dialogueActor = session.readCharacter(dialogueActorId);
+		var enemyActor = session.readCharacter(enemyActorId);
+		var initialActorPhases = session.actorControllerStateSnapshots();
+		var dialoguePhase = observeActorPhase(initialActorPhases, dialogueActorId, ActorControllerPhase.Stationary);
+		var enemyPhase = observeActorPhase(initialActorPhases, enemyActorId, ActorControllerPhase.Resting);
+		if (!dialogueActor.id.isValid() || !enemyActor.id.isValid() || !dialoguePhase.valid || !enemyPhase.valid)
+			return;
+		var swordCombat:SwordCombatState = startSwordCombat();
 		var berryDrop:BerryDropState = emptyBerryDrop();
 		var lookX = 0.0;
 		var lookY = -0.18;
@@ -423,19 +457,19 @@ final class CaxecraftApp {
 						accumulator = 0.0;
 						resetMotionThisFrame = true;
 					}
-				} else if (GuideNpc.isInRange(guide, character.body.x, character.body.z)) {
-					final sharesBerries = GuideNpc.sharesBerriesOnNextInteraction(guide);
+				} else if (session.actorInteractionAvailable(dialogueActorId)) {
+					final sharesBerries = guidePhase == GuidePhase.Welcomed;
 					if (sharesBerries) {
 						final acceptedGift = Inventory.acceptedAmount(inventory, ItemKind.Berries, 2);
 						if (acceptedGift == 2) {
 							inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
-							guide = GuideNpc.interact(guide);
+							guidePhase = advanceGuidePhase(guidePhase);
 						} else {
 							inventoryFullReason = InventoryFullReason.BerryStack;
 							inventoryFullFrames = 90;
 						}
 					} else {
-						guide = GuideNpc.interact(guide);
+						guidePhase = advanceGuidePhase(guidePhase);
 					}
 				}
 			}
@@ -657,30 +691,50 @@ final class CaxecraftApp {
 				}
 				if (selectedMode == GameMode.Adventure) {
 					if (!characterIsDefeated(character.vitals)) {
-						final mosslingAttacked = Mossling.attacksThisTick(mossling, character.body.x, character.body.z);
-						if (mosslingAttacked) {
-							final damage = session.receiveLocalPlayerAttack();
-							character = damage.character;
-							if (!damage.resolved)
+						final actorTick = session.stepAuthoredActorControllers(gameTick.tickIndex, damagePolicy);
+						switch actorTick.status {
+							case ControllersAdvanced:
+								guideInteractionAvailable = false;
+								for (event in session.actorControllerEventSnapshots())
+									switch event {
+										case NoControllerEvent:
+										case InteractionAvailable(source):
+											if (source == dialogueActorId) guideInteractionAvailable = true;
+										case LocalPlayerAttack(source):
+											if (source == enemyActorId) enemyAttackFrames = 120;
+										case DropRequested(source, drop):
+											final quantity = BaseContentPack.dropQuantityById(drop);
+											final defeatedActor = session.readCharacter(source);
+											if (quantity <= 0 || !defeatedActor.id.isValid()) quit = true; else if (!berryDrop.active) {
+												berryDrop = berryDropFromDefeatedCharacter(defeatedActor, quantity);
+												enemyDefeatedFrames = 120;
+											}
+									}
+							case ControllerModelRejected(_, _) | ControlledCharacterMissing(_) | CharacterCommandRejected(_) | LocalAttackCommandRejected(_):
 								quit = true;
-							else
-								enemyAttackFrames = 120;
 						}
-						mossling = Mossling.step(session.worldView(), mossling, character.body.x, character.body.z, gameTick.tickIndex);
 					}
-					swordCombat = SwordCombat.step(swordCombat);
+					final actorPhases = session.actorControllerStateSnapshots();
+					dialoguePhase = observeActorPhase(actorPhases, dialogueActorId, ActorControllerPhase.Stationary);
+					enemyPhase = observeActorPhase(actorPhases, enemyActorId, ActorControllerPhase.Defeated);
+					dialogueActor = session.readCharacter(dialogueActorId);
+					enemyActor = session.readCharacter(enemyActorId);
+					if (!dialoguePhase.valid || !enemyPhase.valid || !dialogueActor.id.isValid() || !enemyActor.id.isValid())
+						quit = true;
+					swordCombat = stepSwordCombat(swordCombat);
 					if (swordQueued) {
-						final swordDecision = SwordCombat.decide(swordCombat, inventory, character.vitals, mossling, character.body.x, character.body.z,
+						final swordDecision = decideSwordCombat(swordCombat, inventory, character.vitals, enemyActor, character.body.x, character.body.z,
 							lookX, lookZ);
 						if (swordDecision == SwordCombatDecision.Hit) {
-							mossling = Mossling.strike(mossling);
-							strikeHitFrames = 16;
-							if (!Mossling.isAlive(mossling)) {
-								berryDrop = berryDropFromDefeatedMossling(mossling);
-								enemyDefeatedFrames = 120;
+							final damage = session.damageCharacter(enemyActorId, 1);
+							if (!damage.resolved)
+								quit = true;
+							else if (damage.damageApplied > 0) {
+								enemyActor = damage.character;
+								strikeHitFrames = 16;
 							}
 						}
-						swordCombat = SwordCombat.after(swordDecision, swordCombat);
+						swordCombat = afterSwordCombat(swordDecision, swordCombat);
 						swordQueued = false;
 					}
 				}
@@ -809,6 +863,14 @@ final class CaxecraftApp {
 				quit = true;
 			else
 				character = committedView.localPlayer;
+			guideInteractionAvailable = session.actorInteractionAvailable(dialogueActorId);
+			final presentationActorPhases = session.actorControllerStateSnapshots();
+			dialoguePhase = observeActorPhase(presentationActorPhases, dialogueActorId, ActorControllerPhase.Stationary);
+			enemyPhase = observeActorPhase(presentationActorPhases, enemyActorId, ActorControllerPhase.Defeated);
+			dialogueActor = session.readCharacter(dialogueActorId);
+			enemyActor = session.readCharacter(enemyActorId);
+			if (!dialoguePhase.valid || !enemyPhase.valid || !dialogueActor.id.isValid() || !enemyActor.id.isValid())
+				quit = true;
 			final completedTicks = committedView.completedTicks;
 			if (resetMotionThisFrame)
 				motionHistory = resetMotion(character.body);
@@ -884,7 +946,7 @@ final class CaxecraftApp {
 				totalRebuiltTerrainChunks = renderCounters.totalRebuiltChunks;
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
-				drawActors(camera, entityTexture, entityTextureReady, guide, mossling, berryDrop);
+				drawActors(camera, entityTexture, entityTextureReady, dialogueActor, enemyActor, enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(camera, session.authoredItemsView(), itemTexture, itemTextureReady, adventureItemTexture,
 					adventureItemTextureReady);
 				if (hit.hit)
@@ -929,8 +991,10 @@ final class CaxecraftApp {
 					mode: selectedMode,
 					locale: locale,
 					inventory: inventory,
-					guide: guide,
-					mossling: mossling
+					guidePhase: guidePhase,
+					guideInteractionAvailable: guideInteractionAvailable,
+					enemy: enemyActor,
+					enemyPhase: enemyPhase.phase
 				};
 				drawHud(hudView, hudResources);
 			}
@@ -939,15 +1003,15 @@ final class CaxecraftApp {
 			#if caxecraft_render_benchmark
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
-					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
-					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
+					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
+					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid,
 					measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds);
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
-					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, GuideNpc.phase(guide),
-					Mossling.isAlive(mossling), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
+					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
+					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0);
 			#end
 			var capturePilotFrame = pilotComplete;
@@ -1045,31 +1109,103 @@ final class CaxecraftApp {
 		return recoverPlayerSpawn(cells, createPlayer(spawnX, spawnY, spawnZ));
 	}
 
-	/** Original atlas sprites with code-drawn fallbacks; actor rules remain in gameplay/. */
-	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, guide:GuideState, mossling:MosslingState,
-			berryDrop:BerryDropState):Void {
+	/**
+		Select the two temporary presentation slots from generic actor capabilities.
+
+		The level loader deliberately returns every actor. Until authored UI and
+		combat bindings replace the current fixed first-playable presentation, this
+		application boundary requires exactly one dialogue NPC and one enemy. It
+		never checks a character name, content ID, map path, or generated module.
+	**/
+	static function selectPlayableActors(bindings:Array<LoadedActorBinding>):PlayableActorSelection {
+		var dialogueActorId = EntityId.invalid();
+		var enemyActorId = EntityId.invalid();
+		for (binding in bindings)
+			switch binding.role {
+				case DialogueNpc(_):
+					if (dialogueActorId.isValid())
+						return invalidPlayableActorSelection();
+					dialogueActorId = binding.entityId;
+				case EnemyActor:
+					if (enemyActorId.isValid())
+						return invalidPlayableActorSelection();
+					enemyActorId = binding.entityId;
+			}
+		return dialogueActorId.isValid() && enemyActorId.isValid() ? {
+			valid: true,
+			dialogueActorId: dialogueActorId,
+			enemyActorId: enemyActorId
+		} : invalidPlayableActorSelection();
+	}
+
+	/** Build the one invalid selection without nullable actor identities. */
+	static inline function invalidPlayableActorSelection():PlayableActorSelection
+		return {
+			valid: false,
+			dialogueActorId: EntityId.invalid(),
+			enemyActorId: EntityId.invalid()
+		};
+
+	/**
+		Advance the temporary first-playable dialogue progress value.
+
+		This is story state, not actor movement state: the generic stationary
+		controller owns Nia's position and interaction range. CaxeFlow will later
+		own this three-step gift sequence when the playable consumes runtime rules.
+	**/
+	static function advanceGuidePhase(phase:GuidePhase):GuidePhase
+		return switch phase {
+			case Waiting: Welcomed;
+			case Welcomed: SharedBerries;
+			case SharedBerries: SharedBerries;
+		};
+
+	/**
+		Find one controller phase in a copy-owned session observation.
+
+		`valid` stays separate from the fallback phase so a missing actor cannot be
+		drawn as a plausible state. The caller treats that mismatch as an ownership
+		failure and exits the frame cleanly.
+	**/
+	static function observeActorPhase(states:Array<ActorControllerState>, id:EntityId, fallback:ActorControllerPhase):ActorPhaseObservation {
+		for (state in states)
+			if (state.characterId == id)
+				return {valid: true, phase: state.phase};
+		return {valid: false, phase: fallback};
+	}
+
+	/**
+		Draw committed actor observations without advancing or reconstructing them.
+
+		`GameSession` owns both characters and the enemy controller phase. This
+		presentation helper borrows those immutable values for one frame; it cannot
+		change movement, health, or controller timing.
+	**/
+	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, guide:Character, enemy:Character,
+			enemyPhase:ActorControllerPhase, berryDrop:BerryDropState):Void {
 		if (entityTextureReady)
-			CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.NiaFront, Vector3.fromFloat(guide.x, guide.y + 0.76, guide.z), 0.95, 1.52);
+			CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.NiaFront, Vector3.fromFloat(guide.body.x, guide.body.y + 0.76, guide.body.z),
+				0.95, 1.52);
 		else {
-			Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 0.54, guide.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
+			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 0.54, guide.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
 				c.Float32.fromFloat(0.42), CaxecraftPalette.niaCoat());
-			Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 1.18, guide.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
+			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 1.18, guide.body.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
 				c.Float32.fromFloat(0.44), CaxecraftPalette.niaSkin());
-			Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 1.41, guide.z), c.Float32.fromFloat(0.48), c.Float32.fromFloat(0.16),
+			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 1.41, guide.body.z), c.Float32.fromFloat(0.48), c.Float32.fromFloat(0.16),
 				c.Float32.fromFloat(0.48), CaxecraftPalette.niaHair());
 		}
-		if (Mossling.isAlive(mossling)) {
+		if (!characterIsDefeated(enemy.vitals)) {
 			if (entityTextureReady)
-				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.MosslingFront, Vector3.fromFloat(mossling.x, mossling.y + 0.48, mossling.z),
-					1.05, 0.96);
+				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.MosslingFront,
+					Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05, 0.96);
 			else {
-				Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 0.30, mossling.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),
+				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.30, enemy.body.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),
 					c.Float32.fromFloat(0.70), CaxecraftPalette.mosslingBody());
-				Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 0.66, mossling.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
+				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.66, enemy.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
 					c.Float32.fromFloat(0.50), CaxecraftPalette.mosslingCrown());
 			}
-			if (Mossling.mode(mossling) == MosslingMode.Windup)
-				Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 1.02, mossling.z), c.Float32.fromFloat(0.20), c.Float32.fromFloat(0.20),
+			if (enemyPhase == ActorControllerPhase.Windup)
+				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 1.02, enemy.body.z), c.Float32.fromFloat(0.20), c.Float32.fromFloat(0.20),
 					c.Float32.fromFloat(0.20), CaxecraftPalette.damage());
 		}
 		if (berryDrop.active) {
@@ -1090,13 +1226,13 @@ final class CaxecraftApp {
 		final captured = view.pointerCaptured;
 		final placementBlocked = view.feedback.placementBlocked;
 		final hit = view.hit;
-		final playerX = view.character.x;
-		final playerZ = view.character.z;
 		final mode = view.mode;
 		final locale = view.locale;
 		final inventory = view.inventory;
-		final guide = view.guide;
-		final mossling = view.mossling;
+		final guidePhase = view.guidePhase;
+		final guideInteractionAvailable = view.guideInteractionAvailable;
+		final enemy = view.enemy;
+		final enemyPhase = view.enemyPhase;
 		final vitals = view.character.vitals;
 		final strikeHit = view.feedback.strikeHit;
 		final enemyDefeated = view.feedback.enemyDefeated;
@@ -1149,19 +1285,19 @@ final class CaxecraftApp {
 		drawUiText(locale, UiMessage.Controls, 20, height - 22, 14, text);
 		if (mode == GameMode.Adventure)
 			drawScenarioText(locale, ScenarioMessage.AdventureProgress, 32, 110, 14, CaxecraftPalette.selection());
-		if (GuideNpc.isInRange(guide, playerX, playerZ)) {
+		if (guideInteractionAvailable) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
-			if (GuideNpc.phase(guide) == GuidePhase.Waiting)
+			if (guidePhase == GuidePhase.Waiting)
 				drawScenarioText(locale, ScenarioMessage.NiaTalk, centerX - 110, centerY + 74, 18, text);
-			else if (GuideNpc.phase(guide) == GuidePhase.Welcomed)
+			else if (guidePhase == GuidePhase.Welcomed)
 				drawScenarioText(locale, ScenarioMessage.NiaWelcome, centerX - 225, centerY + 74, 16, text);
 			else
 				drawScenarioText(locale, ScenarioMessage.NiaGift, centerX - 205, centerY + 74, 16, text);
 		}
-		if (Mossling.isAlive(mossling)) {
-			if (Mossling.mode(mossling) == MosslingMode.Windup)
+		if (!characterIsDefeated(enemy.vitals)) {
+			if (enemyPhase == ActorControllerPhase.Windup)
 				drawScenarioText(locale, ScenarioMessage.MosslingWindup, width - 300, 28, 16, CaxecraftPalette.damage());
-			else if (Mossling.mode(mossling) == MosslingMode.Chasing)
+			else if (enemyPhase == ActorControllerPhase.Chasing)
 				drawScenarioText(locale, ScenarioMessage.MosslingAlert, width - 180, 28, 16, CaxecraftPalette.selection());
 		}
 		if (strikeHit)

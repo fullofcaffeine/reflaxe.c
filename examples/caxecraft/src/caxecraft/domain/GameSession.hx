@@ -2,12 +2,14 @@ package caxecraft.domain;
 
 import caxecraft.domain.Aquatics.observe as observeAquatics;
 import caxecraft.domain.ActorControllerDecision.ActorControllerDecision;
+import caxecraft.domain.ActorControllerScheduler.interactionAvailable as controllerInteractionAvailable;
 import caxecraft.domain.ActorControllerScheduler.planActorController;
 import caxecraft.domain.ActorControllerScheduler.startActorController;
 import caxecraft.domain.ActorControllerTick.ActorControllerTickResult;
 import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
 import caxecraft.domain.Character.adoptProfile as adoptCharacterProfile;
 import caxecraft.domain.Character.applyAttack as applyCharacterAttack;
+import caxecraft.domain.Character.applyDamage as applyCharacterDamage;
 import caxecraft.domain.Character.isValid as isValidCharacter;
 import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
 import caxecraft.domain.Character.step as advanceCharacterState;
@@ -23,6 +25,7 @@ import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
 import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
 import caxecraft.gameplay.Recovery.decide as decideRecovery;
 import caxecraft.gameplay.RecoveryDecision;
+import caxecraft.domain.Vitals.isDefeated as characterVitalsDefeated;
 #if c
 import c.CArray;
 import c.ConstSpan;
@@ -70,6 +73,20 @@ typedef GameTickResult = {
 **/
 typedef LocalCharacterCommandResult = {
 	final character:Character;
+	final resolved:Bool;
+}
+
+/**
+	Result of applying an already rate-limited damage amount to any character.
+
+	`damageApplied` reports the committed health difference. `defeated` is true
+	only for the impact that changed a living character into a defeated one, so
+	content can request a drop once without examining mutable storage.
+**/
+typedef CharacterDamageResult = {
+	final character:Character;
+	final damageApplied:Int;
+	final defeated:Bool;
 	final resolved:Bool;
 }
 
@@ -227,8 +244,16 @@ final class GameSession {
 	public inline function readLocalPlayer():Character
 		return entities.read(localPlayer.characterId);
 
-	/** Read any committed character snapshot by stable identity. */
-	public inline function readCharacter(id:EntityId):Character
+	/**
+		Read any committed character snapshot by stable identity.
+
+		This remains a normal method rather than `inline` so split generated C
+		keeps the `EntityStore` read inside `GameSession.c`. Callers receive the
+		same immutable value either way, but preserving this function boundary
+		makes the session's storage ownership visible to a C reader and prevents
+		presentation code from growing a copied storage access.
+	**/
+	public function readCharacter(id:EntityId):Character
 		return entities.read(id);
 
 	/** Number of committed characters in deterministic insertion order. */
@@ -260,6 +285,23 @@ final class GameSession {
 	/** Return copy-owned typed events from the most recent controller pass. */
 	public function actorControllerEventSnapshots():Array<ActorControllerEvent>
 		return actorControllerEvents.copy();
+
+	/**
+		Observe one actor's current stationary-interaction offer without advancing it.
+
+		The lookup uses the session-owned controller and character snapshots plus the
+		current local player. This lets input sampled before a fixed tick use the same
+		typed range rule as the scheduler; presentation does not recreate a guide
+		controller or gain access to mutable actor storage.
+	**/
+	public function actorInteractionAvailable(id:EntityId):Bool {
+		final actor = readCharacter(id);
+		final player = readLocalPlayer();
+		for (controller in actorControllers)
+			if (controller.characterId == id)
+				return controllerInteractionAvailable(controller, actor, player);
+		return false;
+	}
 
 	/**
 		Atomically replace authored non-player characters and their controllers.
@@ -407,6 +449,40 @@ final class GameSession {
 		final replacement = applyCharacterAttack(original, true);
 		final resolved = entities.replace(id, replacement);
 		return {character: resolved ? replacement : original, resolved: resolved};
+	}
+
+	/**
+		Apply positive damage after a weapon or mechanic has admitted the impact.
+
+		The caller owns rate limiting—for example the Copper Sword cooldown—while
+		`GameSession` owns stable-ID lookup and commit. This keeps weapons reusable
+		for players and non-player actors without exposing `EntityStore` or forcing
+		the application to maintain a second health value.
+	**/
+	public function damageCharacter(id:EntityId, amount:Int):CharacterDamageResult {
+		final original = readCharacter(id);
+		if (!isValidCharacter(original) || amount <= 0)
+			return {
+				character: original,
+				damageApplied: 0,
+				defeated: false,
+				resolved: false
+			};
+		final replacement = applyCharacterDamage(original, amount);
+		final resolved = entities.replace(id, replacement);
+		if (!resolved)
+			return {
+				character: original,
+				damageApplied: 0,
+				defeated: false,
+				resolved: false
+			};
+		return {
+			character: replacement,
+			damageApplied: original.vitals.health - replacement.vitals.health,
+			defeated: !characterVitalsDefeated(original.vitals) && characterVitalsDefeated(replacement.vitals),
+			resolved: true
+		};
 	}
 
 	/**

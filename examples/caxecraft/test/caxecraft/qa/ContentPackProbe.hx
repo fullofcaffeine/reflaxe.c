@@ -83,7 +83,7 @@ final class ContentPackProbe {
 		};
 		require(scenario.assetPack.text() == "packs/caxecraft/base", "map pack reference");
 		require(scenario.world.fluids.length == 2, "validated authored water");
-		require(scenario.objects.length == 3, "validated placed objects and Tideweave");
+		require(scenario.objects.length == 4, "validated player, Nia, Mossling, and Tideweave placements");
 		final editor = switch EditorSession.open(parsed.candidate, registry) {
 			case EditorOpened(value): value;
 			case EditorOpenRejected(_): fail("editor opens with base-pack definitions");

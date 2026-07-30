@@ -19,4 +19,6 @@ struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_EntityStore_read(stru
 
 bool hxc_caxecraft_domain_EntityStore_replace(struct hxc_caxecraft_domain_EntityStore *hxc_self, int32_t hxc_id, struct hxc_caxecraft_domain_Character hxc_character);
 
+bool hxc_caxecraft_domain_EntityStore_replaceOthers(struct hxc_caxecraft_domain_EntityStore *hxc_self, int32_t hxc_retained, struct hxc_array_ref *hxc_replacements);
+
 #endif /* HXC_CAXECRAFT_DOMAIN_ENTITY_STORE_H_INCLUDED */

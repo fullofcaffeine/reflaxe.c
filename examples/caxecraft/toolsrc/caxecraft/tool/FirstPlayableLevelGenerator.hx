@@ -1,5 +1,7 @@
 package caxecraft.tool;
 
+import caxecraft.content.ActorCompositionPlanner.ActorCompositionResult;
+import caxecraft.content.ActorCompositionPlanner.planActorComposition;
 import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.domain.World;
 import caxecraft.scenario.Scenario;
@@ -43,13 +45,29 @@ private typedef GeneratedItem = {
 	final yawDegrees:Int;
 }
 
-/**
-	Generate the native first-playable adapter from the real validated CAXEMAP.
+/** One character-like authored placement preserved for native planning. */
+private typedef GeneratedActor = {
+	final authoredId:String;
+	final contentId:String;
+	final dialogueId:String;
+	final kind:Int;
+	final xMilli:Int;
+	final yMilli:Int;
+	final zMilli:Int;
+	final yawDegrees:Int;
+}
 
-	This Eval-only build tool is the semantic owner of the generated data. It
-	uses the same lexer, parser, validator, and content registry as the editor,
-	then prints ordinary typed Haxe. The Python wrapper only compares or writes
-	those bytes; it does not parse terrain, fluids, or object placement.
+/**
+	Generate the temporary native first-playable adapter from the real CAXEMAP.
+
+	This Eval-only tool runs the same lexer, parser, validator, content registry,
+	and actor planner used by the editor and game. It then prints ordinary typed
+	Haxe containing only validated level facts. The Python wrapper compares or
+	writes those bytes; it owns no terrain, actor, or gameplay rule.
+
+	This adapter keeps the game playable while the runtime package reader is
+	built. `haxe_c-xge.20.4.3.6` removes it once the native executable reads the
+	map itself, so new content must not depend on this generated module.
 **/
 function main():Void {
 	final source = File.getBytes("scenarios/first-playable/map.caxemap");
@@ -62,8 +80,9 @@ function main():Void {
 	final runs = terrainRuns(scenario, registry);
 	final fluids = generatedFluids(scenario, registry);
 	final items = generatedItems(scenario, registry);
+	final actors = generatedActors(scenario, registry);
 	final spawn = playerSpawn(scenario);
-	Sys.print(render(Sha256.make(source).toHex(), runs, fluids, items, spawn.xMilli, spawn.yMilli, spawn.zMilli, spawn.yawDegrees));
+	Sys.print(render(Sha256.make(source).toHex(), runs, fluids, items, actors, spawn.xMilli, spawn.yMilli, spawn.zMilli, spawn.yawDegrees));
 }
 
 /** Parse and validate one complete candidate before reading any generated fact. */
@@ -199,6 +218,50 @@ private function generatedItems(scenario:Scenario, registry:BaseContentRegistry)
 	return result;
 }
 
+/**
+	Preserve validated NPC and enemy placements in their authored order.
+
+	The generic actor planner first proves identities, content kinds, mechanics,
+	and capacity for the complete candidate. The adapter then carries only the
+	map-authored IDs and transforms; the native candidate loader resolves current
+	pack mechanics again before it publishes any actor.
+**/
+private function generatedActors(scenario:Scenario, registry:BaseContentRegistry):Array<GeneratedActor> {
+	switch planActorComposition(scenario.objects, registry) {
+		case ActorCompositionPlanned(_):
+		case ActorCompositionRejected(_):
+			fail("first-playable actors did not produce one complete runtime plan");
+	}
+	final result:Array<GeneratedActor> = [];
+	for (object in scenario.objects)
+		switch object.placement {
+			case Npc(npcType, dialogue, transform):
+				result.push({
+					authoredId: object.id.text(),
+					contentId: npcType.text(),
+					dialogueId: dialogue.text(),
+					kind: 0,
+					xMilli: transform.xMilli,
+					yMilli: transform.yMilli,
+					zMilli: transform.zMilli,
+					yawDegrees: transform.yawDegrees
+				});
+			case Entity(entityType, transform):
+				result.push({
+					authoredId: object.id.text(),
+					contentId: entityType.text(),
+					dialogueId: "",
+					kind: 1,
+					xMilli: transform.xMilli,
+					yMilli: transform.yMilli,
+					zMilli: transform.zMilli,
+					yawDegrees: transform.yawDegrees
+				});
+			case PlayerSpawn(_) | Checkpoint(_) | Item(_, _, _) | Prefab(_, _) | TriggerZone(_) | StatefulObject(_, _, _):
+		}
+	return result;
+}
+
 /** Extract the validator-proven single player spawn as integer milliblocks. */
 private function playerSpawn(scenario:Scenario):caxecraft.scenario.ScenarioGeometry.ScenarioTransform {
 	for (object in scenario.objects)
@@ -211,25 +274,28 @@ private function playerSpawn(scenario:Scenario):caxecraft.scenario.ScenarioGeome
 }
 
 /** Render formatter-stable ordinary Haxe with no copied parser/runtime policy. */
-private function render(sourceHash:String, runs:Array<GeneratedRun>, fluids:Array<GeneratedFluid>, items:Array<GeneratedItem>, spawnX:Int, spawnY:Int,
-		spawnZ:Int, spawnYaw:Int):String {
+private function render(sourceHash:String, runs:Array<GeneratedRun>, fluids:Array<GeneratedFluid>, items:Array<GeneratedItem>, actors:Array<GeneratedActor>,
+		spawnX:Int, spawnY:Int, spawnZ:Int, spawnYaw:Int):String {
 	final lines = [
 		"package caxecraft.content;",
 		"",
 		"import caxecraft.domain.GameSession;",
 		"import caxecraft.domain.World;",
+		"import caxecraft.scenario.ContentId;",
+		"import caxecraft.scenario.ScenarioId;",
+		"import caxecraft.scenario.ScenarioObject;",
+		"import caxecraft.scenario.ScenarioObject.ObjectPlacement;",
 		"",
 		"/**",
 		" * Native level facts generated from the validated first-playable CAXEMAP.",
 		" *",
 		" * The checked-in map is the editable source of truth. Regenerate this typed",
 		" * adapter with `python3 examples/caxecraft/level_adapter.py`; do not hand-edit",
-		" * terrain runs, fluid/item placement, or spawn values here.",
+		" * terrain runs or fluid, item, actor, and spawn values here.",
 		" *",
-		" * This temporary adapter proves that validated authored data can drive the",
-		" * native game while file and text parsing support is still incomplete. Bead",
-		" * `haxe_c-xge.39` owns replacing it with runtime CAXEMAP loading; new gameplay",
-		" * content must not make this generated module a permanent application API.",
+		" * This temporary adapter keeps the native game playable while it cannot read",
+		" * the package directly. `haxe_c-xge.20.4.3.6` removes this module once the",
+		" * executable loads the same map bytes; new content must not depend on it.",
 		" */",
 		'inline final SOURCE_SHA256:String = "$sourceHash";',
 		"",
@@ -275,6 +341,25 @@ private function render(sourceHash:String, runs:Array<GeneratedRun>, fluids:Arra
 	appendItemFunction(lines, "ZMilli", "z coordinate in milliblocks", items, value -> value.zMilli);
 	appendItemFunction(lines, "YawDegrees", "yaw in whole degrees", items, value -> value.yawDegrees);
 	appendLines(lines, [
+		"/** Rebuild the validated character-like CAXEMAP placements in source order. */",
+		"function actorObjects():Array<ScenarioObject>",
+		"\treturn ["
+	]);
+	for (actor in actors) {
+		final placement = if (actor.kind == 0)
+			'ObjectPlacement.Npc(new ContentId(${quoted(actor.contentId)}), new ScenarioId(${quoted(actor.dialogueId)}), ${renderTransform(actor)})'; else
+			'ObjectPlacement.Entity(new ContentId(${quoted(actor.contentId)}), ${renderTransform(actor)})';
+		appendLines(lines, [
+			"\t\t{",
+			'\t\t\tid: new ScenarioId(${quoted(actor.authoredId)}),',
+			"\t\t\ttags: [],",
+			'\t\t\tplacement: $placement',
+			"\t\t},"
+		]);
+	}
+	appendLines(lines, [
+		"\t];",
+		"",
 		"/** Authored player spawn x coordinate in integer milliblocks. */",
 		"inline function spawnXMilli():Int",
 		'\treturn $spawnX;',
@@ -301,6 +386,15 @@ private function render(sourceHash:String, runs:Array<GeneratedRun>, fluids:Arra
 	]);
 	return lines.join("\n");
 }
+
+/** Render one validated actor transform as a closed Haxe record. */
+private function renderTransform(actor:GeneratedActor):String
+	return '{\n' + '\t\t\t\txMilli: ${actor.xMilli},\n' + '\t\t\t\tyMilli: ${actor.yMilli},\n' + '\t\t\t\tzMilli: ${actor.zMilli},\n'
+		+ '\t\t\t\tyawDegrees: ${actor.yawDegrees}\n' + "\t\t\t}";
+
+/** Quote validated source text with Haxe/JSON-compatible string escaping. */
+private inline function quoted(value:String):String
+	return haxe.Json.stringify(value);
 
 /** Add one primitive indexed item projection without reflective field access. */
 private function appendItemFunction(lines:Array<String>, suffix:String, label:String, items:Array<GeneratedItem>, read:GeneratedItem->Int):Void {

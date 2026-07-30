@@ -15,9 +15,16 @@ struct hxc_caxecraft_domain_Character {
   struct hxc_caxecraft_domain_VitalsState hxc_vitals;
 };
 
+struct hxc_optional_caxecraft_domain_Character {
+  bool hxc_has_value;
+  struct hxc_caxecraft_domain_Character hxc_value;
+};
+
 struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_adoptProfile(struct hxc_caxecraft_domain_Character hxc_original, struct hxc_caxecraft_domain_AquaticProfile hxc_replacement);
 
 struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_applyAttack(struct hxc_caxecraft_domain_Character hxc_original, bool hxc_attacked);
+
+struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_applyDamage(struct hxc_caxecraft_domain_Character hxc_original, int32_t hxc_amount);
 
 struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_empty(void);
 

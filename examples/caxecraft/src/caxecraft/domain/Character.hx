@@ -6,6 +6,7 @@ import caxecraft.domain.Aquatics.start as startAquatics;
 import caxecraft.domain.Aquatics.step as stepAquatics;
 import caxecraft.domain.CharacterPhysics.body as createBody;
 import caxecraft.domain.Vitals.applyAttack as applyVitalsAttack;
+import caxecraft.domain.Vitals.applyDamage as applyVitalsDamage;
 import caxecraft.domain.Vitals.isDefeated as vitalsAreDefeated;
 import caxecraft.domain.Vitals.revive as reviveVitals;
 import caxecraft.domain.Vitals.startAt as startVitalsAt;
@@ -104,6 +105,10 @@ function step(cells:WorldView, original:Character, intent:CharacterIntent, damag
 function applyAttack(original:Character, attacked:Bool):Character {
 	return withVitals(original, applyVitalsAttack(original.vitals, attacked));
 }
+
+/** Apply one already rate-limited damage amount without changing components. */
+function applyDamage(original:Character, amount:Int):Character
+	return withVitals(original, applyVitalsDamage(original.vitals, amount));
 
 /** Replace the aquatic capability without granting back spent breath. */
 function adoptProfile(original:Character, replacement:AquaticProfile):Character {

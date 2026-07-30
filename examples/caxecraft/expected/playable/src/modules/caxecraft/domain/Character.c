@@ -13,6 +13,13 @@ struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_applyAttack
   return hxc_tmp_call_result_n2;
 }
 
+struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_applyDamage(struct hxc_caxecraft_domain_Character hxc_original, int32_t hxc_amount)
+{
+  struct hxc_caxecraft_domain_VitalsState hxc_tmp_call_result_n1 = hxc_caxecraft_domain_Vitals_applyDamage(hxc_original.hxc_vitals, hxc_amount);
+  struct hxc_caxecraft_domain_Character hxc_tmp_call_result_n2 = hxc_caxecraft_domain_Character_withVitals(hxc_original, hxc_tmp_call_result_n1);
+  return hxc_tmp_call_result_n2;
+}
+
 struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_empty(void)
 {
   struct hxc_caxecraft_domain_AquaticProfile hxc_tmp_call_result_n0 = hxc_caxecraft_domain_Aquatics_profile(1, 1, 0.0, 0.0, 0.0, 0.0, 0.0, 1, false, false);

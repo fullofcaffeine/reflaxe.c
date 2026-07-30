@@ -2,20 +2,23 @@ package caxecraft.content;
 
 import caxecraft.domain.GameSession;
 import caxecraft.domain.World;
+import caxecraft.scenario.ContentId;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 
 /**
  * Native level facts generated from the validated first-playable CAXEMAP.
  *
  * The checked-in map is the editable source of truth. Regenerate this typed
  * adapter with `python3 examples/caxecraft/level_adapter.py`; do not hand-edit
- * terrain runs, fluid/item placement, or spawn values here.
+ * terrain runs or fluid, item, actor, and spawn values here.
  *
- * This temporary adapter proves that validated authored data can drive the
- * native game while file and text parsing support is still incomplete. Bead
- * `haxe_c-xge.39` owns replacing it with runtime CAXEMAP loading; new gameplay
- * content must not make this generated module a permanent application API.
+ * This temporary adapter keeps the native game playable while it cannot read
+ * the package directly. `haxe_c-xge.20.4.3.6` removes this module once the
+ * executable loads the same map bytes; new content must not depend on it.
  */
-inline final SOURCE_SHA256:String = "f1e992a434edb24bed0ff2d114fc3e6fd88ec7bfc495c6b2a22e99b14732dbc5";
+inline final SOURCE_SHA256:String = "e7bd9c1c8c64d84940880e8b42fd8aa2f9df9c4229ba160fdb35785e0f368644";
 
 inline final FLUID_INITIAL_VOLUME:Int = 0;
 inline final FLUID_SOURCE:Int = 1;
@@ -323,6 +326,31 @@ function itemYawDegrees(index:Int):Int {
 		return 0;
 	return -1;
 }
+
+/** Rebuild the validated character-like CAXEMAP placements in source order. */
+function actorObjects():Array<ScenarioObject>
+	return [
+		{
+			id: new ScenarioId("enemy.mossling"),
+			tags: [],
+			placement: ObjectPlacement.Entity(new ContentId("caxecraft:mossling"), {
+				xMilli: 15500,
+				yMilli: 5000,
+				zMilli: 13800,
+				yawDegrees: 0
+			})
+		},
+		{
+			id: new ScenarioId("guide.nia"),
+			tags: [],
+			placement: ObjectPlacement.Npc(new ContentId("caxecraft:nia"), new ScenarioId("dialogue.nia.welcome"), {
+				xMilli: 17500,
+				yMilli: 5000,
+				zMilli: 13500,
+				yawDegrees: 270
+			})
+		},
+	];
 
 /** Authored player spawn x coordinate in integer milliblocks. */
 inline function spawnXMilli():Int

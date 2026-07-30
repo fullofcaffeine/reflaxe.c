@@ -1,5 +1,66 @@
 #include "hxc/program.h"
 
+struct hxc_array_ref *hxc_caxecraft_content_FirstPlayableLevel_actorObjects(void)
+{
+  hxc_string hxc_tmp_record_field_id_owner_n0 = (hxc_string){ (const uint8_t *)"enemy.mossling", 14, true, NULL };
+  if (hxc_string_retain(hxc_tmp_record_field_id_owner_n0) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_string hxc_tmp_record_field_id_owned_load_result_n0 = hxc_tmp_record_field_id_owner_n0;
+  struct hxc_array_ref *hxc_tmp_array_create_result_n1 = NULL;
+  if (hxc_array_ref_create(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(hxc_string), _Alignof(hxc_string), NULL, hxc_array_1db07f4c_element_copy, hxc_array_1db07f4c_element_assign, hxc_array_1db07f4c_element_destroy }, &hxc_tmp_array_create_result_n1) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_string hxc_tmp_enum_payload_0_owner_n1 = (hxc_string){ (const uint8_t *)"caxecraft:mossling", 18, true, NULL };
+  if (hxc_string_retain(hxc_tmp_enum_payload_0_owner_n1) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_scenario_ScenarioObject hxc_tmp_array_literal_element_0_owner_n2 = (struct hxc_caxecraft_scenario_ScenarioObject){ .hxc_id = hxc_tmp_record_field_id_owned_load_result_n0, .hxc_placement = (struct hxc_caxecraft_scenario_ObjectPlacement){ .hxc_tag = hxc_caxecraft_scenario_ObjectPlacement_Entity, .hxc_payload.hxc_Entity.hxc_entityType = hxc_tmp_enum_payload_0_owner_n1, .hxc_payload.hxc_Entity.hxc_transform = (struct hxc_caxecraft_scenario_ScenarioTransform){ .hxc_xMilli = 15500, .hxc_yMilli = 5000, .hxc_yawDegrees = 0, .hxc_zMilli = 13800 } }, .hxc_tags = hxc_tmp_array_create_result_n1 };
+  struct hxc_caxecraft_scenario_ScenarioObject hxc_tmp_array_literal_element_0_borrow_result_n6 = hxc_tmp_array_literal_element_0_owner_n2;
+  hxc_string hxc_tmp_record_field_id_owner_n3 = (hxc_string){ (const uint8_t *)"guide.nia", 9, true, NULL };
+  if (hxc_string_retain(hxc_tmp_record_field_id_owner_n3) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_string hxc_tmp_record_field_id_owned_load_result_n7 = hxc_tmp_record_field_id_owner_n3;
+  struct hxc_array_ref *hxc_tmp_array_create_result_n8 = NULL;
+  if (hxc_array_ref_create(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(hxc_string), _Alignof(hxc_string), NULL, hxc_array_1db07f4c_element_copy, hxc_array_1db07f4c_element_assign, hxc_array_1db07f4c_element_destroy }, &hxc_tmp_array_create_result_n8) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_string hxc_tmp_enum_payload_0_owner_n4 = (hxc_string){ (const uint8_t *)"caxecraft:nia", 13, true, NULL };
+  if (hxc_string_retain(hxc_tmp_enum_payload_0_owner_n4) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_string hxc_tmp_enum_payload_0_owned_load_result_n9 = hxc_tmp_enum_payload_0_owner_n4;
+  hxc_string hxc_tmp_enum_payload_1_owner_n5 = (hxc_string){ (const uint8_t *)"dialogue.nia.welcome", 20, true, NULL };
+  if (hxc_string_retain(hxc_tmp_enum_payload_1_owner_n5) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_scenario_ScenarioObject hxc_tmp_array_literal_element_1_owner_n6 = (struct hxc_caxecraft_scenario_ScenarioObject){ .hxc_id = hxc_tmp_record_field_id_owned_load_result_n7, .hxc_placement = (struct hxc_caxecraft_scenario_ObjectPlacement){ .hxc_tag = hxc_caxecraft_scenario_ObjectPlacement_Npc, .hxc_payload.hxc_Npc.hxc_npcType = hxc_tmp_enum_payload_0_owned_load_result_n9, .hxc_payload.hxc_Npc.hxc_dialogue = hxc_tmp_enum_payload_1_owner_n5, .hxc_payload.hxc_Npc.hxc_transform = (struct hxc_caxecraft_scenario_ScenarioTransform){ .hxc_xMilli = 17500, .hxc_yMilli = 5000, .hxc_yawDegrees = 270, .hxc_zMilli = 13500 } }, .hxc_tags = hxc_tmp_array_create_result_n8 };
+  struct hxc_array_ref *hxc_tmp_array_create_result_n15 = NULL;
+  if (hxc_array_ref_create(hxc_default_allocator(), (hxc_array_element_ops){ sizeof(struct hxc_caxecraft_scenario_ScenarioObject), _Alignof(struct hxc_caxecraft_scenario_ScenarioObject), NULL, hxc_array_223dc263_element_copy, hxc_array_223dc263_element_assign, hxc_array_223dc263_element_destroy }, &hxc_tmp_array_create_result_n15) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_array_push_copy(&hxc_tmp_array_create_result_n15->value, &hxc_tmp_array_literal_element_0_borrow_result_n6) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_array_push_copy(&hxc_tmp_array_create_result_n15->value, &hxc_tmp_array_literal_element_1_owner_n6) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_record_86003d77_destroy(&hxc_tmp_array_literal_element_1_owner_n6);
+  hxc_record_86003d77_destroy(&hxc_tmp_array_literal_element_0_owner_n2);
+  return hxc_tmp_array_create_result_n15;
+}
+
 int32_t hxc_caxecraft_content_FirstPlayableLevel_fluidDepth(int32_t hxc_index)
 {
   if (hxc_index == 0)
