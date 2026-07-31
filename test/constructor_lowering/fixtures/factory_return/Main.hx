@@ -32,6 +32,26 @@ final class ValueContainer {
 	/** Return the same child while allowing this container to end. */
 	public function expose():ValidatedValue
 		return child;
+
+	/** Build one optional child from a method whose `this` receiver is borrowed. */
+	public function create(value:Int):Null<ValidatedValue> {
+		if (value <= 0)
+			return null;
+		return new ValidatedValue(value);
+	}
+
+	/**
+	 * Store the returned owner in a local before checking and reading it.
+	 *
+	 * This is the parser-shaped path: `this` is borrowed only for each call, while
+	 * the collector-rooted result must remain alive through the later statements.
+	 */
+	public function createAndRead(value:Int):Int {
+		final result = create(value);
+		if (result == null)
+			return -1;
+		return result.read();
+	}
 }
 
 /** Exercises the general validated-factory shape exposed by Raygui text state. */
@@ -66,8 +86,12 @@ final class Main {
 		final retained = create(42);
 		final forwarded = forward(new ValidatedValue(7));
 		final exposed = new ValueContainer().expose();
+		final container = new ValueContainer();
+		final rejectedByMethod = container.createAndRead(0);
+		final retainedByMethod = container.createAndRead(73);
 		for (index in 0...40000)
 			new ValidatedValue(index + 1);
-		while (missing != null || retained == null || retained.read() != 42 || forwarded.read() != 7 || exposed.read() != 9) {}
+		while (missing != null || retained == null || retained.read() != 42 || forwarded.read() != 7 || exposed.read() != 9 || rejectedByMethod != -1
+			|| retainedByMethod != 73) {}
 	}
 }

@@ -1182,6 +1182,7 @@ def validate_factory_return_project(output: Path) -> None:
         or "hxc_Main_create(" not in source
         or "hxc_Main_forward(" not in source
         or "hxc_ValueContainer_expose(" not in source
+        or "hxc_ValueContainer_createAndRead(" not in source
         or not isinstance(features, list)
         or "gc" not in features
         or "object" not in features

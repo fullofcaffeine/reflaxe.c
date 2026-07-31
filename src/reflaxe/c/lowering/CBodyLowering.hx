@@ -12451,8 +12451,19 @@ private class FunctionBuilder {
 			context.symbols.register(lengthRequest);
 			spanLengthRequests.set(result.id, lengthRequest);
 		}
+		/*
+		 * A stack-backed class result still borrows storage through a borrowed
+		 * receiver and may not escape that receiver's scope. A collector-managed
+		 * class result is different: the call result gets its own exact root, so
+		 * returning `new Node(...)`, `this`, or one traced child is safe even when
+		 * the method borrowed `this` for the duration of the call.
+		 *
+		 * Interface results remain borrowed here because their concrete storage
+		 * policy is not carried by this call result yet.
+		 */
+		final returnedClass = returnMapping.classValue();
 		if (borrowedReferenceValueIds.exists(receiver.id)
-			&& (returnMapping.classValue() != null || returnMapping.interfaceValue() != null))
+			&& ((returnedClass != null && !returnedClass.managedByCollector) || returnMapping.interfaceValue() != null))
 			borrowedReferenceValueIds.set(result.id, true);
 		if (returnMapping.bytesValue() != null)
 			freshManagedBytesValueIds.set(result.id, true);
