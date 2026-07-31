@@ -1465,6 +1465,7 @@ class CBodyLowering {
 					isStringFromCharCode(callee)
 					|| isArrayJoinCall(callee)
 					|| isBytesStringCall(callee)
+					|| isStringBufferToStringCall(callee)
 					|| (arguments.length == 1 && isStdStringCall(callee) && switch CPrimitiveTypeMapper.map(arguments[0].t, profile) {
 						case CTPrimitive(mapping): mapping.sourceType == CPHaxeInt && mapping.nullability == CPNonNullable;
 						case _: false;
@@ -1490,6 +1491,26 @@ class CBodyLowering {
 					.name == "join";
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
 				isArrayJoinCall(inner);
+			case _:
+				false;
+		};
+	}
+
+	/**
+	 * Recognize the pinned core `StringBuf.toString` instance method.
+	 *
+	 * The result can outlive the mutable buffer and cross records, enums,
+	 * optionals, or ordinary calls. Marking that result as managed before type
+	 * preparation keeps every later carrier on the same owned String ABI.
+	 */
+	static function isStringBufferToStringCall(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FInstance(reference, _, field)): final owner = reference.get(); owner.pack.length == 0 && owner.name == "StringBuf" && field.get()
+					.name == "toString";
+			case TField(_, FClosure(reference, field)) if (reference != null): final owner = reference.c.get(); owner.pack.length == 0 && owner.name == "StringBuf" && field.get()
+					.name == "toString";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				isStringBufferToStringCall(inner);
 			case _:
 				false;
 		};

@@ -24,6 +24,77 @@ private typedef ParsedChoice = {
 	final next:Int;
 }
 
+/** A parser-style reason whose String payload is created at runtime. */
+private enum TextProblem {
+	NoTextProblem;
+	DuplicateText(name:String);
+}
+
+/** A diagnostic record that owns the managed payload inside `TextProblem`. */
+private typedef TextDiagnostic = {
+	final line:Int;
+	final problem:TextProblem;
+}
+
+/**
+ * Public parser result whose rejection arm owns the diagnostic record.
+ *
+ * Preparing this outer enum discovers `TextProblem` while an enum is already
+ * being prepared. The nested String lifetime must settle before a nullable
+ * diagnostic field asks whether the complete record is managed.
+ */
+private enum TextReadResult {
+	TextReady;
+	TextRejected(diagnostic:TextDiagnostic);
+}
+
+/**
+ * Owns one parser-style nullable managed record across ordinary method calls.
+ *
+ * This is the natural class-field shape exposed by Caxecraft's bounded JSON
+ * cursor. The class starts absent, may publish one complete diagnostic record,
+ * may replace it, and may clear it without leaking the nested managed enum.
+ */
+private final class DiagnosticCursor {
+	var failure:Null<ParsedChoice> = null;
+
+	public function new() {}
+
+	public function replace(value:Null<ParsedChoice>):Void
+		failure = value;
+
+	public function nextOr(fallback:Int):Int
+		return failure == null ? fallback : failure.next;
+
+	public function clear():Void
+		failure = null;
+}
+
+/**
+ * Stores the exact String-payload diagnostic shape used by bounded parsers.
+ *
+ * `StringBuf.toString()` creates owned text. The enum, record, optional, and
+ * class field must all preserve that ownership when the value is replaced or
+ * cleared.
+ */
+private final class TextDiagnosticCursor {
+	var failure:Null<TextDiagnostic> = null;
+
+	public function new() {}
+
+	public function replace(value:Null<TextDiagnostic>):Void
+		failure = value;
+
+	public function lineOr(fallback:Int):Int
+		return failure == null ? fallback : failure.line;
+
+	public function clear():Void
+		failure = null;
+
+	public function result():TextReadResult
+		return failure == null ? TextReady : TextRejected(failure);
+}
+
 class Main {
 	static function maybe(value:ManagedRecord):Null<ManagedRecord>
 		return value;
@@ -62,6 +133,14 @@ class Main {
 		return {value: value, next: next};
 	}
 
+	/** Build one owned String through the pinned core `StringBuf` API. */
+	static function builtText(code:Int):String {
+		final output = new StringBuf();
+		output.add("field-");
+		output.addChar(code);
+		return output.toString();
+	}
+
 	static function main():Void {
 		final value:ManagedRecord = {bytes: Bytes.alloc(1)};
 		final absent:Null<ManagedRecord> = null;
@@ -88,5 +167,28 @@ class Main {
 
 		final parsed = parsedChoice(Done, 7);
 		while (parsed == null || parsed.next != 7) {}
+
+		final cursor = new DiagnosticCursor();
+		while (cursor.nextOr(-1) != -1) {}
+		cursor.replace(parsedChoice(Many([Done]), 8));
+		while (cursor.nextOr(-1) != 8) {}
+		cursor.replace(parsedChoice(Negated(Done), 9));
+		while (cursor.nextOr(-1) != 9) {}
+		cursor.clear();
+		while (cursor.nextOr(-1) != -1) {}
+
+		final textCursor = new TextDiagnosticCursor();
+		while (textCursor.lineOr(-1) != -1) {}
+		textCursor.replace({line: 10, problem: DuplicateText(builtText(65))});
+		while (textCursor.lineOr(-1) != 10) {}
+		switch textCursor.result() {
+			case TextRejected(diagnostic) if (diagnostic.line == 10):
+			case _:
+				while (true) {}
+		}
+		textCursor.replace({line: 11, problem: NoTextProblem});
+		while (textCursor.lineOr(-1) != 11) {}
+		textCursor.clear();
+		while (textCursor.lineOr(-1) != -1) {}
 	}
 }

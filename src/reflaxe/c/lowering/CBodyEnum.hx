@@ -494,6 +494,21 @@ class CBodyEnumRegistry {
 			}
 			prepared.cases.push(tagCase);
 		}
+		/*
+		 * A complete inner enum can immediately tell an enclosing record that it
+		 * owns a direct managed payload. Waiting for the outermost enum to finish
+		 * made this fact depend on discovery order: `Outer(Record<Inner<String>>)`
+		 * briefly described the record as unmanaged, so `Null<Record<...>>` was
+		 * rejected before the final recursion pass could correct it.
+		 *
+		 * Recursive reachability still settles below after the outermost enum is
+		 * complete. This eager step covers only already-prepared direct payloads.
+		 */
+		prepared.managedPayload = requiresManagedPayloadLifecycle(prepared, []);
+		if (prepared.managedPayload) {
+			prepared.managedLifetime = true;
+			registerManagedLifecycle(prepared);
+		}
 		preparationDepth--;
 		if (preparationDepth == 0) {
 			recomputeRecursion();

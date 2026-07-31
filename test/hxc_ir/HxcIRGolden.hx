@@ -39,6 +39,7 @@ class HxcIRGolden {
 		validator.requireValid(coverage, PROFILE);
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
+		validator.requireValid(borrowedClassOwnedFieldReleaseProgram(), PROFILE);
 		validator.requireValid(borrowedInterfaceAliasProgram(), PROFILE);
 		validator.requireValid(borrowedSpanReturnProgram(false), PROFILE);
 		validator.requireValid(borrowedSpanReturnProgram(false, true), PROFILE);
@@ -2023,6 +2024,45 @@ class HxcIRGolden {
 		fn.borrowedClassParameterIds.push("value.borrowed");
 		fn.borrowedClassLocalIds.push("local.alias");
 		fn.locals.push(local("local.alias", classReference, IRLSAutomatic, IRISUninitialized, file, 2));
+		return program;
+	}
+
+	/**
+	 * A borrowed method receiver still locates storage owned by that object.
+	 *
+	 * Releasing the managed field is required for replacement and destruction;
+	 * the function does not release or retain the borrowed object pointer.
+	 */
+	static function borrowedClassOwnedFieldReleaseProgram():HxcIRProgram {
+		final file = "test/positive/BorrowedClassOwnedFieldRelease.hx";
+		final classReference = IRTPointer(IRTInstance("instance.class.root"), false);
+		final program = classProgram(file, [
+			instruction("field.release", null, IRIORelease(IRPField(IRPDereference("value.borrowed"), "value"), IRIRuntime("string")), file, 3)
+		], "valid.BorrowedClassOwnedFieldRelease");
+		final root = program.modules[0].types[0];
+		program.modules[0].types[0] = switch root.kind {
+			case IRTKClass(layout): {
+					id: root.id,
+					displayName: root.displayName,
+					kind: IRTKClass({
+						baseInstanceId: layout.baseInstanceId,
+						fields: [
+							{
+								name: "value",
+								type: IRTManagedString,
+								mutable: true,
+								source: span(file, 1)
+							}
+						],
+						header: layout.header
+					}),
+					source: root.source
+				};
+			case _: throw "borrowed field-release fixture root must remain a class";
+		};
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.borrowed", classReference, file, 2));
+		fn.borrowedClassParameterIds.push("value.borrowed");
 		return program;
 	}
 

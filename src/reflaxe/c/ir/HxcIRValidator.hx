@@ -1887,10 +1887,10 @@ private class HxcIRValidationState {
 				if (call.failure != null)
 					rejectValues(call.failure.arguments, "failure-edge argument");
 			case IRIODeallocate(place, _) | IRIORetain(place, _) | IRIORelease(place, _) | IRIOTrace(place, _):
-				if (placeUsesBorrowedReference(place, borrowed))
+				if (placeUsesBorrowedReference(place, borrowed) && !placeOwnsFieldBelowBorrowedReference(place, borrowed))
 					add(path, "borrowed reference storage cannot be deallocated, retained, or traced as owned storage", instruction.source);
 			case IRIOLifetime(place, _, _, _):
-				if (placeUsesBorrowedReference(place, borrowed))
+				if (placeUsesBorrowedReference(place, borrowed) && !placeOwnsFieldBelowBorrowedReference(place, borrowed))
 					add(path, "borrowed reference storage cannot acquire a local ownership lifetime", instruction.source);
 			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOUnary(_, _, _) |
 				IRIOBinary(_, _, _) | IRIOConvert(_, _, _, _, _) | IRIOProject(_, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
@@ -2024,6 +2024,25 @@ private class HxcIRValidationState {
 		return switch place {
 			case IRPDereference(pointerValueId): borrowed.exists(pointerValueId);
 			case IRPField(base, _) | IRPIndex(base, _): placeUsesBorrowedReference(base, borrowed);
+			case IRPLocal(_) | IRPGlobal(_): false;
+		};
+	}
+
+	/**
+	 * Distinguish a borrowed object address from storage owned by that object.
+	 *
+	 * An instance method borrows its `this` pointer: it may not retain, release,
+	 * or deallocate the object itself. The object's fields still have the
+	 * lifetimes declared by the class, however. Replacing a managed field must
+	 * therefore retain the new field value and release the old field value
+	 * through that borrowed address. At least one structural field step is
+	 * required; merely dereferencing the borrowed pointer remains rejected.
+	 */
+	function placeOwnsFieldBelowBorrowedReference(place:HxcIRPlace, borrowed:Map<String, Bool>, crossedField:Bool = false):Bool {
+		return switch place {
+			case IRPDereference(pointerValueId): crossedField && borrowed.exists(pointerValueId);
+			case IRPField(base, _): placeOwnsFieldBelowBorrowedReference(base, borrowed, true);
+			case IRPIndex(base, _): placeOwnsFieldBelowBorrowedReference(base, borrowed, crossedField);
 			case IRPLocal(_) | IRPGlobal(_): false;
 		};
 	}

@@ -1440,6 +1440,8 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
             "array",
             "string-literal",
             "bytes",
+            "string-scalar",
+            "string",
         ]
 
         def validate_output(output: Path, label: str) -> None:
@@ -1458,6 +1460,7 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
                 b"hxc_record_",
                 b"hxc_enum_",
                 b"hxc_bytes_ref_retain",
+                b"hxc_string_retain",
             ):
                 if marker not in generated_c:
                     raise AggregateLoweringFailure(
