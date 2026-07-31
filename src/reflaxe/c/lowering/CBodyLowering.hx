@@ -6179,6 +6179,7 @@ private class FunctionBuilder {
 			argument = stabilizeFreshManagedString(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
 			argument = stabilizeFreshManagedArray(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
 			argument = stabilizeFreshManagedBytes(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
+			argument = stabilizeFreshManagedEnum(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
 			argument = stabilizeFreshManagedAggregate(argument, argumentExpression.pos, 'constructed-receiver-argument-$index');
 			if (!signature.arguments[index].borrowedReference)
 				rejectOwnedClassBorrow(argument, argumentExpression.pos, 'TNew(owned-class-borrow-escape:constructor-argument:$index)');
@@ -6245,6 +6246,7 @@ private class FunctionBuilder {
 			argument = stabilizeFreshManagedString(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			argument = stabilizeFreshManagedArray(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			argument = stabilizeFreshManagedBytes(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
+			argument = stabilizeFreshManagedEnum(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			argument = stabilizeFreshManagedAggregate(argument, sourceArgument.pos, 'managed-constructor-argument-$index');
 			if (!signature.arguments[index].borrowedReference)
 				rejectOwnedClassBorrow(argument, sourceArgument.pos, 'TNew(owned-class-borrow-escape:managed-constructor-argument:$index)');

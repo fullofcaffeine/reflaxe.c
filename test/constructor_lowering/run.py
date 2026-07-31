@@ -31,6 +31,7 @@ DEFAULT_RUNTIME = FIXTURES / "default_runtime"
 RECORD_PARAMETER = FIXTURES / "record_parameter"
 MANAGED_RECORD_ARGUMENT = FIXTURES / "managed_record_argument"
 MANAGED_RECORD_ARGUMENT_FAILURE = FIXTURES / "managed_record_argument_failure"
+MANAGED_ENUM_ARGUMENT = FIXTURES / "managed_enum_argument"
 INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
 DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
@@ -146,6 +147,17 @@ MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE = frozenset(
         "constructor-managed-record-argument-failure",
         "constructor-managed-record-argument-failure-caller-cleanup",
         "constructor-managed-record-argument-failure-partial-object-cleanup",
+    }
+)
+MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-managed-enum-argument",
+        "constructor-managed-enum-fieldless-variant",
+        "constructor-managed-enum-string-payload",
+        "constructor-managed-enum-array-payload",
+        "constructor-managed-enum-temporary-owner",
+        "constructor-managed-enum-retained-field",
+        "constructor-managed-enum-collector-class",
     }
 )
 INTERFACE_NATIVE_COVERAGE = frozenset(
@@ -1190,6 +1202,64 @@ def validate_factory_return_project(output: Path) -> None:
         raise ConstructorLoweringFailure(
             "validated factory lost its guarded collector-owned return"
         )
+
+
+def validate_managed_enum_argument_project(output: Path) -> None:
+    """Prove fresh managed enum arguments keep caller and retained field owners."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    support = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*support*.c"))
+    )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    features = plan.get("features")
+    lifecycle = re.search(r"(hxc_enum_[0-9a-f]+)_destroy", source + support)
+    if (
+        "hxc_Main_buildEmpty(" not in source
+        or "hxc_Main_buildText(" not in source
+        or "hxc_Main_buildValues(" not in source
+        or "hxc_gc_allocate(" not in source
+        or "managed_constructor_argument_0_owner" not in source
+        or lifecycle is None
+        or lifecycle.group(1) + "_retain" not in source + support
+        or not isinstance(features, list)
+        or "array" not in features
+        or "gc" not in features
+        or "object" not in features
+    ):
+        raise ConstructorLoweringFailure(
+            "managed enum constructor argument lost its caller temporary, "
+            "retained field, typed lifecycle, or collector-managed class"
+        )
+
+
+def validate_managed_enum_argument_report(report: dict[str, object]) -> None:
+    """Prove HxcIR makes the fresh enum's caller owner and cleanup explicit."""
+
+    hxcir = required_text(report.get("hxcir"), "managed-enum argument HxcIR")
+    for function in ("buildEmpty", "buildText", "buildValues"):
+        section = function_section(hxcir, f"function.Main.{function}")
+        ordered(
+            section,
+            (
+                "construct-enum",
+                "managed-constructor-argument-0-owner-initialize",
+                "managed-constructor-argument-0-borrow",
+                "managed-class-allocate",
+                'dispatch=direct("constructor._Main.ManagedEnumOwner")',
+            ),
+            f"fresh managed enum constructor argument in {function}",
+        )
+        if (
+            "enum-temporary." not in section
+            or "idempotence=exactly-once release" not in section
+        ):
+            raise ConstructorLoweringFailure(
+                f"managed enum constructor HxcIR lost caller cleanup in {function}"
+            )
 
 
 def validate_string_parameter_project(output: Path) -> None:
@@ -2290,6 +2360,13 @@ def check_native(
                 coverage=MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE,
                 validate_project=validate_managed_record_argument_project,
             )
+            managed_enum_argument_projects = render_parameter_projects(
+                fixture_root,
+                fixture=MANAGED_ENUM_ARGUMENT,
+                slug="managed-enum-argument",
+                coverage=MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE,
+                validate_project=validate_managed_enum_argument_project,
+            )
             managed_record_argument_failure_project = (
                 render_managed_record_argument_failure_project(fixture_root)
             )
@@ -2376,6 +2453,7 @@ def check_native(
             parameter_projects = (
                 record_projects
                 + managed_record_argument_projects
+                + managed_enum_argument_projects
                 + (managed_record_argument_failure_project,)
                 + interface_projects
                 + retained_interface_projects
@@ -2410,6 +2488,7 @@ def check_native(
                     required_coverage
                     | RECORD_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE
+                    | MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
@@ -2462,6 +2541,7 @@ def check_native(
                 required_coverage=(
                     RECORD_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE
+                    | MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
@@ -2600,6 +2680,7 @@ def check_eval_oracle() -> None:
         ("direct-call-argument oracle", DIRECT_ARGUMENT),
         ("fallible-inline-child oracle", OWNED_FALLIBLE),
         ("validated-factory oracle", FACTORY_RETURN),
+        ("managed-enum-argument oracle", MANAGED_ENUM_ARGUMENT),
     ):
         result = subprocess.run(
             [
@@ -2912,6 +2993,112 @@ def check_factory_return_only(*, requested_toolchain: str) -> None:
                         fixture_root / "factory-return-split/runtime/include",
                     ),
                     NATIVE / "factory_return_header_cpp.cpp",
+                ),
+            ),
+        )
+
+
+def check_managed_enum_argument_only(*, requested_toolchain: str) -> None:
+    """Run the fresh managed-enum constructor ownership slice by itself."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(MANAGED_ENUM_ARGUMENT),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe managed-enum constructor oracle failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-managed-enum-argument-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        _, report = emitted_constructor_report(
+            custom_target(
+                MANAGED_ENUM_ARGUMENT,
+                fixture_root / "managed-enum-argument-report",
+                report=True,
+                layout="split",
+                runtime_diagnostics="off",
+            ),
+            "managed-enum argument",
+        )
+        validate_managed_enum_argument_report(report)
+
+        projects = render_parameter_projects(
+            fixture_root,
+            fixture=MANAGED_ENUM_ARGUMENT,
+            slug="managed-enum-argument",
+            coverage=MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE,
+            validate_project=validate_managed_enum_argument_project,
+        )
+        ordered_projects = tuple(
+            sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
+        )
+        required_coverage = MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            native_report = run_c_fixture_corpus(
+                suite=f"constructor-managed-enum-argument-{optimization[1:].lower()}",
+                projects=ordered_projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in ordered_projects
+            )
+            native_report = run_c_fixture_corpus(
+                suite="constructor-managed-enum-argument-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+
+        check_cpp_consumers(
+            root / "cxx-build",
+            requested_toolchain=requested_toolchain,
+            consumers=(
+                (
+                    "managed-enum-argument",
+                    (
+                        fixture_root / "managed-enum-argument-split/include",
+                        fixture_root / "managed-enum-argument-split/runtime/include",
+                    ),
+                    NATIVE / "managed_enum_argument_header_cpp.cpp",
                 ),
             ),
         )
@@ -3459,6 +3646,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--direct-receiver-only", action="store_true")
     parser.add_argument("--direct-argument-only", action="store_true")
     parser.add_argument("--managed-record-argument-only", action="store_true")
+    parser.add_argument("--managed-enum-argument-only", action="store_true")
     parser.add_argument("--owned-fallible-only", action="store_true")
     parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--early-exit-only", action="store_true")
@@ -3502,6 +3690,14 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "constructor-lowering: OK: fresh managed-record constructor "
                 "arguments preserved caller/callee ownership, failure cleanup, "
                 "strict C11, sanitizers, and deterministic typed-module order"
+            )
+            return 0
+        if args.managed_enum_argument_only:
+            check_managed_enum_argument_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: fresh managed-enum constructor "
+                "arguments preserved caller/callee ownership, strict C11/C++17, "
+                "sanitizers, layouts, server reuse, and determinism"
             )
             return 0
         if args.owned_fallible_only:
@@ -3584,6 +3780,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "constructor-lowering: OK: pinned super/field/body order, default storage, "
         "status cleanup, direct caller-owned class and closed-record parameters, "
         "fresh managed-record arguments across constructor spellings, "
+        "fresh managed-enum arguments into collector-managed classes, "
         "call-bounded and collector-retained interface parameters and dispatch, "
         "borrowed and field-retained Array parameters, "
         "nominal literal-backed String parameters and final fields, "
