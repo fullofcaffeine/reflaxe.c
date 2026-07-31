@@ -32,6 +32,7 @@ RECORD_PARAMETER = FIXTURES / "record_parameter"
 MANAGED_RECORD_ARGUMENT = FIXTURES / "managed_record_argument"
 MANAGED_RECORD_ARGUMENT_FAILURE = FIXTURES / "managed_record_argument_failure"
 MANAGED_ENUM_ARGUMENT = FIXTURES / "managed_enum_argument"
+NULLABLE_RECURSIVE_FACTORY = FIXTURES / "nullable_recursive_factory"
 INTERFACE_PARAMETER = FIXTURES / "interface_parameter"
 RETAINED_INTERFACE_PARAMETER = FIXTURES / "interface_parameter_retained"
 DEFAULT_ARGUMENTS = FIXTURES / "default_arguments"
@@ -158,6 +159,17 @@ MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE = frozenset(
         "constructor-managed-enum-temporary-owner",
         "constructor-managed-enum-retained-field",
         "constructor-managed-enum-collector-class",
+    }
+)
+NULLABLE_RECURSIVE_FACTORY_NATIVE_COVERAGE = frozenset(
+    {
+        "constructor-nullable-recursive-factory",
+        "constructor-nullable-recursive-null-branch",
+        "constructor-nullable-recursive-present-branch",
+        "constructor-nullable-recursive-call-result-root",
+        "constructor-nullable-recursive-local-root",
+        "constructor-nullable-recursive-returned-enum",
+        "constructor-nullable-recursive-allocation-pressure",
     }
 )
 INTERFACE_NATIVE_COVERAGE = frozenset(
@@ -1260,6 +1272,59 @@ def validate_managed_enum_argument_report(report: dict[str, object]) -> None:
             raise ConstructorLoweringFailure(
                 f"managed enum constructor HxcIR lost caller cleanup in {function}"
             )
+
+
+def validate_nullable_recursive_factory_project(output: Path) -> None:
+    """Prove a recursive class result owns independent call and local roots."""
+
+    source = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((output / "src").rglob("*.c"))
+    )
+    support = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((output / "src").rglob("*support*.c"))
+    )
+    plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    features = plan.get("features")
+    if (
+        "hxc_Main_TreeParser_parseValue(" not in source
+        or "hxc_Main_TreeParser_parse(" not in source
+        or "hxc_Main_TreeNode_descriptor" not in source + support
+        or "hxc_Main_TreeNode_trace" not in source + support
+        or "tmp_instance_call_result" not in source
+        or "hxc_l_root" not in source
+        or not isinstance(features, list)
+        or "array" not in features
+        or "gc" not in features
+        or "object" not in features
+        or "exact-traced-haxe-object-graph" not in plan.get("directDecisions", [])
+    ):
+        raise ConstructorLoweringFailure(
+            "nullable recursive factory lost its collector representation, "
+            "call/local roots, or traced recursive graph"
+        )
+
+
+def validate_nullable_recursive_factory_report(report: dict[str, object]) -> None:
+    """Prove HxcIR transfers the managed method result into a rooted local."""
+
+    hxcir = required_text(report.get("hxcir"), "nullable recursive factory HxcIR")
+    section = function_section(hxcir, "method._Main.TreeParser.parse")
+    ordered(
+        section,
+        (
+            "instance-call-null-check",
+            'dispatch=direct("method._Main.TreeParser.parseValue")',
+            'initialize place=local("local.',
+            "class-reference-equality",
+            "construct-enum",
+        ),
+        "nullable recursive class call-result transfer",
+    )
+    if 'managed-root "root.0" value="value.0" path=""' not in section:
+        raise ConstructorLoweringFailure(
+            "nullable recursive factory HxcIR lost its exact class-result root"
+        )
 
 
 def validate_string_parameter_project(output: Path) -> None:
@@ -2367,6 +2432,13 @@ def check_native(
                 coverage=MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE,
                 validate_project=validate_managed_enum_argument_project,
             )
+            nullable_recursive_factory_projects = render_parameter_projects(
+                fixture_root,
+                fixture=NULLABLE_RECURSIVE_FACTORY,
+                slug="nullable-recursive-factory",
+                coverage=NULLABLE_RECURSIVE_FACTORY_NATIVE_COVERAGE,
+                validate_project=validate_nullable_recursive_factory_project,
+            )
             managed_record_argument_failure_project = (
                 render_managed_record_argument_failure_project(fixture_root)
             )
@@ -2454,6 +2526,7 @@ def check_native(
                 record_projects
                 + managed_record_argument_projects
                 + managed_enum_argument_projects
+                + nullable_recursive_factory_projects
                 + (managed_record_argument_failure_project,)
                 + interface_projects
                 + retained_interface_projects
@@ -2489,6 +2562,7 @@ def check_native(
                     | RECORD_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE
                     | MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE
+                    | NULLABLE_RECURSIVE_FACTORY_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
@@ -2542,6 +2616,7 @@ def check_native(
                     RECORD_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_NATIVE_COVERAGE
                     | MANAGED_ENUM_ARGUMENT_NATIVE_COVERAGE
+                    | NULLABLE_RECURSIVE_FACTORY_NATIVE_COVERAGE
                     | MANAGED_RECORD_ARGUMENT_FAILURE_NATIVE_COVERAGE
                     | INTERFACE_NATIVE_COVERAGE
                     | RETAINED_INTERFACE_NATIVE_COVERAGE
@@ -2681,6 +2756,7 @@ def check_eval_oracle() -> None:
         ("fallible-inline-child oracle", OWNED_FALLIBLE),
         ("validated-factory oracle", FACTORY_RETURN),
         ("managed-enum-argument oracle", MANAGED_ENUM_ARGUMENT),
+        ("nullable-recursive-factory oracle", NULLABLE_RECURSIVE_FACTORY),
     ):
         result = subprocess.run(
             [
@@ -3099,6 +3175,115 @@ def check_managed_enum_argument_only(*, requested_toolchain: str) -> None:
                         fixture_root / "managed-enum-argument-split/runtime/include",
                     ),
                     NATIVE / "managed_enum_argument_header_cpp.cpp",
+                ),
+            ),
+        )
+
+
+def check_nullable_recursive_factory_only(*, requested_toolchain: str) -> None:
+    """Run the nullable recursive class-result ownership slice by itself."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(NULLABLE_RECURSIVE_FACTORY),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise ConstructorLoweringFailure(
+            "pinned Haxe nullable-recursive factory oracle failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-nullable-recursive-factory-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        _, report = emitted_constructor_report(
+            custom_target(
+                NULLABLE_RECURSIVE_FACTORY,
+                fixture_root / "nullable-recursive-factory-report",
+                report=True,
+                layout="split",
+                runtime_diagnostics="off",
+            ),
+            "nullable-recursive factory",
+        )
+        validate_nullable_recursive_factory_report(report)
+
+        projects = render_parameter_projects(
+            fixture_root,
+            fixture=NULLABLE_RECURSIVE_FACTORY,
+            slug="nullable-recursive-factory",
+            coverage=NULLABLE_RECURSIVE_FACTORY_NATIVE_COVERAGE,
+            validate_project=validate_nullable_recursive_factory_project,
+        )
+        ordered_projects = tuple(
+            sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
+        )
+        required_coverage = NULLABLE_RECURSIVE_FACTORY_NATIVE_COVERAGE | {
+            "strict-c11"
+        }
+        for optimization in ("-O0", "-O2"):
+            native_report = run_c_fixture_corpus(
+                suite=f"constructor-nullable-recursive-factory-{optimization[1:].lower()}",
+                projects=ordered_projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(
+                    project,
+                    link_arguments=("-fsanitize=address,undefined",),
+                )
+                for project in ordered_projects
+            )
+            native_report = run_c_fixture_corpus(
+                suite="constructor-nullable-recursive-factory-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(native_report, required_coverage=required_coverage)
+
+        check_cpp_consumers(
+            root / "cxx-build",
+            requested_toolchain=requested_toolchain,
+            consumers=(
+                (
+                    "nullable-recursive-factory",
+                    (
+                        fixture_root / "nullable-recursive-factory-split/include",
+                        fixture_root
+                        / "nullable-recursive-factory-split/runtime/include",
+                    ),
+                    NATIVE / "nullable_recursive_factory_header_cpp.cpp",
                 ),
             ),
         )
@@ -3647,6 +3832,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--direct-argument-only", action="store_true")
     parser.add_argument("--managed-record-argument-only", action="store_true")
     parser.add_argument("--managed-enum-argument-only", action="store_true")
+    parser.add_argument("--nullable-recursive-factory-only", action="store_true")
     parser.add_argument("--owned-fallible-only", action="store_true")
     parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--early-exit-only", action="store_true")
@@ -3697,6 +3883,16 @@ def main(arguments: Iterable[str] = ()) -> int:
             print(
                 "constructor-lowering: OK: fresh managed-enum constructor "
                 "arguments preserved caller/callee ownership, strict C11/C++17, "
+                "sanitizers, layouts, server reuse, and determinism"
+            )
+            return 0
+        if args.nullable_recursive_factory_only:
+            check_nullable_recursive_factory_only(
+                requested_toolchain=args.toolchain
+            )
+            print(
+                "constructor-lowering: OK: nullable recursive class results "
+                "preserved independent call/local roots, strict C11/C++17, "
                 "sanitizers, layouts, server reuse, and determinism"
             )
             return 0
@@ -3781,6 +3977,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         "status cleanup, direct caller-owned class and closed-record parameters, "
         "fresh managed-record arguments across constructor spellings, "
         "fresh managed-enum arguments into collector-managed classes, "
+        "nullable recursive class results with independent collector roots, "
         "call-bounded and collector-retained interface parameters and dispatch, "
         "borrowed and field-retained Array parameters, "
         "nominal literal-backed String parameters and final fields, "

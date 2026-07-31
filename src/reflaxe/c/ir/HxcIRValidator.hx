@@ -1968,7 +1968,7 @@ private class HxcIRValidationState {
 				borrowed.exists(objectValueId);
 			case IRIOUpcastInterface(valueId, _, _, _):
 				borrowed.exists(valueId);
-			case IRIOCall(call): isBorrowedReferenceCarrier(result.type) && switch call.dispatch {
+			case IRIOCall(call): isBorrowedReferenceCarrier(result.type) && !isCollectorManagedClassReference(result.type) && switch call.dispatch {
 					case IRCDDirect(functionId): StringTools.startsWith(functionId,
 							"method.") && call.arguments.length > 0 && borrowed.exists(call.arguments[0]);
 					case IRCDVirtual(_, receiverValueId):
@@ -2051,6 +2051,22 @@ private class HxcIRValidationState {
 		return switch type {
 			case IRTPointer(IRTInstance(instanceId), _): isClassInstance(instanceId);
 			case _: false;
+		};
+	}
+
+	/**
+	 * Recognize a class pointer whose result can acquire its own exact GC root.
+	 *
+	 * A method may borrow `this` while still returning `this`, a newly allocated
+	 * object, or one traced child. For a collector-managed class, the call result
+	 * root keeps that object alive independently after the receiver borrow ends.
+	 * Direct stack-backed classes have no such owner and remain borrowed.
+	 */
+	function isCollectorManagedClassReference(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTPointer(IRTInstance(instanceId), _): final instance = typeInstances.get(instanceId); instance != null && isClassInstance(instanceId) && isGcManaged(instance.representation);
+			case _:
+				false;
 		};
 	}
 
