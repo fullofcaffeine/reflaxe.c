@@ -207,12 +207,32 @@ AFFECTED_OWNER_RULES = (
     ),
     (
         re.compile(
+            r"^examples/caxecraft/(?:"
+            r"runtime-schemas(?:-c)?\.hxml"
+            r"|src/caxecraft/(?:content/(?:ContentJson|RuntimeAssetInventory|RuntimeContentPack|RuntimeSchema)|text/Utf8Decoder|localization/RuntimeUiCatalog)\.hx"
+            r"|test/caxecraft/qa/RuntimeSchemasProbe\.hx"
+            r"|test/native/runtime_schemas_harness\.c"
+            r"|packs/caxecraft/base/content\.json"
+            r"|locales/ui\.json"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-runtime-schemas",
+            "runtime content or UI schema semantics and their JSON dependencies changed",
+        ),
+    ),
+    (
+        re.compile(
             r"^(?:examples/caxecraft/(?!"
             r"(?:profile_(?:compiler|incremental_edit)\.py"
             r"|content-json(?:-c)?\.hxml"
             r"|src/caxecraft/content/ContentJson\.hx"
             r"|test/caxecraft/qa/ContentJsonProbe\.hx"
             r"|test/native/content_json_harness\.c"
+            r"|runtime-schemas(?:-c)?\.hxml"
+            r"|src/caxecraft/(?:content/(?:RuntimeAssetInventory|RuntimeContentPack|RuntimeSchema)|localization/RuntimeUiCatalog)\.hx"
+            r"|test/caxecraft/qa/RuntimeSchemasProbe\.hx"
+            r"|test/native/runtime_schemas_harness\.c"
             r")$"
             r")|docs/caxecraft-)"
         ),

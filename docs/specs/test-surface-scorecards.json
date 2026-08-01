@@ -51,6 +51,7 @@
       "verticalOwners": [
         "test:hello",
         "test:caxecraft-content-json",
+        "test:caxecraft-runtime-schemas",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -79,6 +80,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
           "proves": "One bounded ordinary-Haxe JSON codec crosses the admitted enum, class, Array, Bytes, and String slices through strict generated C.",
           "doesNotProve": "General Haxe lowering, a general JSON library, runtime pack loading, public ABI stability, or platform qualification."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
+          "proves": "The checked-in content and UI bytes cross the package store, bounded JSON codec, exact target-owned schemas, immutable registry/catalog, strict generated C, and a real runtime observer.",
+          "doesNotProve": "General Haxe lowering, arbitrary pack compatibility, publication into the running game, public ABI stability, or platform qualification."
         }
       ],
       "selectorOwnership": {
@@ -204,6 +210,7 @@
       "verticalOwners": [
         "test:hello",
         "test:caxecraft-content-json",
+        "test:caxecraft-runtime-schemas",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -233,6 +240,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
           "proves": "The bounded JSON tree and rejection paths complete real generated native cleanup under AddressSanitizer and UndefinedBehaviorSanitizer.",
           "doesNotProve": "A complete runtime, leak detection where unavailable, arbitrary pack loading, compiler conformance, or another platform."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
+          "proves": "Real package bytes become immutable content/UI models and complete positive and malformed-candidate cleanup under AddressSanitizer and UndefinedBehaviorSanitizer.",
+          "doesNotProve": "Publication into a live renderer, complete runtime ownership, arbitrary pack safety, semantic conformance outside this admitted slice, or another platform."
         }
       ],
       "selectorOwnership": {

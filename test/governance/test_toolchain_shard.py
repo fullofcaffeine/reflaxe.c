@@ -183,7 +183,6 @@ class ToolchainShardTests(unittest.TestCase):
     def test_content_json_change_selects_focused_and_flagship_owners(self) -> None:
         focused_paths = (
             "examples/caxecraft/content-json-c.hxml",
-            "examples/caxecraft/src/caxecraft/content/ContentJson.hx",
             "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
             "examples/caxecraft/test/native/content_json_harness.c",
         )
@@ -200,12 +199,53 @@ class ToolchainShardTests(unittest.TestCase):
                 )
                 self.assertFalse(plan["fullBackstop"]["required"])
 
+        content_plan = self.route_selector.build_test_plan(
+            ("examples/caxecraft/src/caxecraft/content/ContentJson.hx",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in content_plan["taskOwners"]],
+            ["test:caxecraft-content-json", "test:caxecraft-runtime-schemas"],
+        )
+
         shared_plan = self.route_selector.build_test_plan(
             ("examples/caxecraft/src/caxecraft/text/Utf8Decoder.hx",)
         )
         self.assertEqual(
             [owner["script"] for owner in shared_plan["taskOwners"]],
-            ["test:caxecraft-content-json", "test:caxecraft-domain"],
+            [
+                "test:caxecraft-content-json",
+                "test:caxecraft-runtime-schemas",
+                "test:caxecraft-domain",
+            ],
+        )
+
+    def test_runtime_schema_change_selects_vertical_schema_owner(self) -> None:
+        focused_paths = (
+            "examples/caxecraft/runtime-schemas-c.hxml",
+            "examples/caxecraft/src/caxecraft/content/RuntimeContentPack.hx",
+            "examples/caxecraft/src/caxecraft/localization/RuntimeUiCatalog.hx",
+            "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
+            "examples/caxecraft/test/native/runtime_schemas_harness.c",
+        )
+        for path in focused_paths:
+            with self.subTest(path=path):
+                plan = self.route_selector.build_test_plan((path,))
+                self.assertEqual(
+                    [owner["script"] for owner in plan["taskOwners"]],
+                    ["test:caxecraft-runtime-schemas"],
+                )
+                self.assertEqual(
+                    plan["taskOwners"][0]["productSurfaces"],
+                    ["compiler-admitted-slices", "runtime-memory-lifetime"],
+                )
+                self.assertFalse(plan["fullBackstop"]["required"])
+
+        data_plan = self.route_selector.build_test_plan(
+            ("examples/caxecraft/packs/caxecraft/base/content.json",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in data_plan["taskOwners"]],
+            ["test:caxecraft-runtime-schemas", "test:caxecraft-domain"],
         )
 
     def test_replay_change_selects_incremental_invalidation_owner(self) -> None:
@@ -551,7 +591,7 @@ class ToolchainShardTests(unittest.TestCase):
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 68)
+        self.assertEqual(len(canonical), 69)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER

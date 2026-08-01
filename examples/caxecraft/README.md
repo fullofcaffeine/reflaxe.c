@@ -569,6 +569,28 @@ Run it with:
 npm run test:caxecraft-content-json
 ```
 
+The next bounded layer now admits the shipped `content.json` and `ui.json` into
+immutable runtime models. The content registry implements the existing level,
+scenario, and actor lookup contracts; the UI catalog maps the existing typed
+locale and message constructors to owned Haxe strings. Malformed candidates
+fail before either model escapes, with the first error tied to its JSON source
+location. Run the vertical tracer with:
+
+```sh
+npm run test:caxecraft-runtime-schemas
+```
+
+This is a capability showcase, not the publication step. The tracer reads the
+real package files through the confined package store, compares selected facts
+with manually authored expectations reviewed from those source files and the
+independent Python validators, then repeats the behavior through strict native
+C and sanitizers. The visual inventory is a reviewed manifest subset; the
+parent task still has to bind it to the packaged manifest hash, publish one
+complete candidate, replace the generated adapters, and borrow runtime UI text
+at the rendering boundary. Until then, this evidence does not claim arbitrary
+pack support, a public C application binary interface (ABI), or platform
+qualification.
+
 After editing the UI catalog or embedded CaxeMap messages, regenerate and check
 the temporary built-in lookup catalog with:
 
