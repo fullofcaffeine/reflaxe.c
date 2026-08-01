@@ -11,6 +11,41 @@
     "HXC-QA-002",
     "HXC-QA-005"
   ],
+  "productSurfaces": [
+    "compiler-admitted-slices",
+    "c-abi-native-ffi",
+    "runtime-memory-lifetime",
+    "diagnostics-source-mapping-downstream"
+  ],
+  "behaviorScenario": {
+    "preconditions": "The pinned Haxe custom target, checked-in Caxecraft domain sources and assets, and an identity-matching strict C compiler are available.",
+    "action": "Run the full declared domain case through Eval, haxe.c split/package/unity generation, strict native builds, seeded properties, native consumers, and applicable sanitizers.",
+    "observableResult": "The generated program matches the pinned Eval domain trace, all 32 seeded properties, layout expectations, and declared native/sanitizer observers.",
+    "edgeBehavior": "A semantic mismatch, stale artifact, native warning, sanitizer finding, timeout, or absent required CI toolchain fails its owning lane; planned playable features remain outside this case.",
+    "protectedClaim": "The declared flagship domain slice works through the real compiler and native boundary without implying complete game, platform, runtime, or language support."
+  },
+  "oracleProvenance": {
+    "kind": "pinned-differential-reference",
+    "source": "examples/caxecraft/expected/oracle.txt",
+    "independence": "Pinned Haxe Eval executes the shared domain rules without haxe.c, while independent C and C++ harnesses check target layout and calling boundaries.",
+    "reviewRule": "Oracle and generated golden refreshes require semantic review, deterministic rerendering, and retained native differential evidence."
+  },
+  "example": {
+    "tier": "flagship-application",
+    "owner": "test:caxecraft-domain:full",
+    "executionKind": "mixed",
+    "compilerToolchains": [
+      "Haxe 5.0.0-preview.1 CustomTarget(c)",
+      "identity-matching GCC and Clang at O0/O2 in their declared lanes"
+    ],
+    "platformAssumptions": [
+      "the declared case is a headless domain proof; graphical playable checks have separate environment requirements",
+      "one host or compiler pass does not qualify a supported platform tuple"
+    ],
+    "runtimeExpectation": "The full domain command executes generated C, validates exact runtime plans, and runs the applicable ASan/UBSan observers.",
+    "sanitizerRelevance": "Memory and undefined-behavior claims are limited to the explicit full sanitizer lanes; snapshot or Eval success cannot replace them.",
+    "advertisedClaim": "Tier A flagship application whose case manifest currently proves the bounded full domain slice, not every planned playable or release path."
+  },
   "sources": [
     "examples/caxecraft/README.md",
     "examples/caxecraft/assets/README.md",

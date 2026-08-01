@@ -27,7 +27,7 @@ from typing import Any
 
 FOCUSED = "focused"
 AFFECTED = "affected"
-PLAN_SCHEMA_VERSION = 2
+PLAN_SCHEMA_VERSION = 3
 HOSTED_REQUIRED_CHECK = "Governance"
 OFFICIAL_HAXE_READINESS_OWNER = "haxe_c-6k7"
 LOCALLY_REUSABLE_SCRIPTS = frozenset(
@@ -35,11 +35,12 @@ LOCALLY_REUSABLE_SCRIPTS = frozenset(
 )
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_JSON = ROOT / "package.json"
+SURFACE_SCORECARDS_JSON = ROOT / "docs/specs/test-surface-scorecards.json"
 
 KNOWN_AFFECTED_PATH = re.compile(
     r"^(?:"
-    r"docs/test-performance\.md"
-    r"|docs/specs/fixture-taxonomy(?:\.schema)?\.json"
+    r"docs/(?:test-performance|testing|testing-strategy-audit-2026-07-31)\.md"
+    r"|docs/specs/(?:fixture-(?:case|taxonomy)|test-surface-scorecards)(?:\.schema)?\.json"
     r"|scripts/ci/"
     r"|scripts/hooks/"
     r"|scripts/test/"
@@ -63,6 +64,7 @@ UNKNOWN_CROSS_CUTTING_PATH = re.compile(
     r"|package(?:-lock)?\.json"
     r"|docs/specs/(?:caxecraft-timing|toolchain-timing)\.json"
     r"|src/reflaxe/c/"
+    r"|std/c/"
     r")"
 )
 
@@ -85,6 +87,17 @@ AFFECTED_BASE_OWNERS = (
 )
 
 AFFECTED_OWNER_RULES = (
+    (
+        re.compile(
+            r"^(?:docs/(?:testing|testing-strategy-audit-2026-07-31)\.md"
+            r"|docs/specs/(?:fixture-(?:case|taxonomy)|test-surface-scorecards)(?:\.schema)?\.json"
+            r"|scripts/ci/check_fixture_policy\.py)"
+        ),
+        AffectedOwner(
+            "test:fixture-policy",
+            "behavior scenarios, product-surface scorecards, examples, or their policy guard changed",
+        ),
+    ),
     (
         re.compile(r"^(?:src/reflaxe/c/ir/|test/hxc_ir/|docs/hxc-ir\.md)"),
         AffectedOwner(
@@ -325,11 +338,77 @@ def select_task_owners(paths: Iterable[str]) -> tuple[AffectedOwner, ...]:
     return tuple(owners)
 
 
+def load_surface_ownership() -> tuple[
+    dict[str, tuple[str, ...]], dict[str, tuple[str, ...]], frozenset[str]
+]:
+    """Load semantic-owner and R3 mappings from the checked scorecard authority."""
+    scorecards = json.loads(SURFACE_SCORECARDS_JSON.read_text(encoding="utf-8"))
+    package_scripts = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))["scripts"]
+    owner_surfaces: dict[str, list[str]] = {}
+    extended_by_surface: dict[str, tuple[str, ...]] = {}
+    for surface in scorecards["surfaces"]:
+        surface_id = surface["id"]
+        for field in (
+            "focusedOwners",
+            "verticalOwners",
+            "systemOwners",
+            "affectedExtendedOwners",
+        ):
+            for script in surface[field]:
+                if script not in package_scripts:
+                    continue
+                owner_surfaces.setdefault(script, []).append(surface_id)
+        extended_by_surface[surface_id] = tuple(surface["affectedExtendedOwners"])
+    return (
+        {
+            script: tuple(dict.fromkeys(surfaces))
+            for script, surfaces in owner_surfaces.items()
+        },
+        extended_by_surface,
+        frozenset(scorecards["policyOnlyOwners"]),
+    )
+
+
+def product_surfaces_for_script(script: str) -> tuple[str, ...]:
+    """Return only scorecard-declared claims for one semantic test owner."""
+    owner_surfaces, _, _ = load_surface_ownership()
+    return owner_surfaces.get(script, ())
+
+
 def build_test_plan(paths: Iterable[str]) -> dict[str, Any]:
     """Describe local and hosted evidence without executing any test."""
     normalized = tuple(path.strip() for path in paths if path.strip())
     route = select_route(normalized)
     task_owners = select_task_owners(normalized)
+    owner_surfaces, extended_by_surface, policy_only_scripts = load_surface_ownership()
+    selected_surfaces = tuple(
+        sorted(
+            {
+                surface
+                for owner in task_owners
+                for surface in owner_surfaces.get(owner.script, ())
+            }
+        )
+    )
+    selected_extended: dict[str, set[str]] = {}
+    for surface in selected_surfaces:
+        for script in extended_by_surface[surface]:
+            selected_extended.setdefault(script, set()).add(surface)
+    unmapped_scripts = sorted(
+        {
+            owner.script
+            for owner in task_owners
+            if owner.script not in policy_only_scripts
+            and not owner_surfaces.get(owner.script)
+        }
+    )
+    full_backstop_reasons: list[str] = []
+    if normalized and not task_owners:
+        full_backstop_reasons.append("no semantic task owner was inferred")
+    if unmapped_scripts:
+        full_backstop_reasons.append(
+            "task owners lack scorecard mapping: " + ", ".join(unmapped_scripts)
+        )
     local_smoke = (
         (
             AffectedOwner(
@@ -349,6 +428,7 @@ def build_test_plan(paths: Iterable[str]) -> dict[str, Any]:
             {
                 "script": owner.script,
                 "reason": owner.reason,
+                "productSurfaces": list(owner_surfaces.get(owner.script, ())),
                 "localCommand": (
                     f"npm run --silent test:local-gate -- {owner.script}"
                     if owner.script in LOCALLY_REUSABLE_SCRIPTS
@@ -366,6 +446,7 @@ def build_test_plan(paths: Iterable[str]) -> dict[str, Any]:
             {
                 "script": owner.script,
                 "reason": owner.reason,
+                "productSurfaces": list(owner_surfaces.get(owner.script, ())),
                 "localCommand": (
                     f"npm run --silent test:local-gate -- --hook {owner.script}"
                     if owner.script in LOCALLY_REUSABLE_SCRIPTS
@@ -380,6 +461,39 @@ def build_test_plan(paths: Iterable[str]) -> dict[str, Any]:
                 "four complete toolchain shards plus independent native, build, "
                 "platform, provenance, and security jobs"
             ),
+        },
+        "affectedExtended": {
+            "status": (
+                "observation-only-selected"
+                if selected_surfaces
+                else "no-claim-bearing-surface"
+            ),
+            "productSurfaces": list(selected_surfaces),
+            "owners": [
+                {
+                    "script": script,
+                    "command": f"npm run {script}",
+                    "productSurfaces": sorted(surfaces),
+                }
+                for script, surfaces in selected_extended.items()
+            ],
+            "scope": (
+                "secondary compilers, sanitizers, platform profiles, and downstream "
+                "owners selected directly from the affected scorecards; selection "
+                "remains observation-only while R2 stays exhaustive"
+            ),
+        },
+        "fullBackstop": {
+            "localCommand": "npm run test:toolchain:parallel -- --with-native",
+            "hostedCheck": HOSTED_REQUIRED_CHECK,
+            "scope": "complete cold active suite plus native backstop and selector-miss audit",
+            "required": bool(full_backstop_reasons),
+            "reasons": full_backstop_reasons,
+        },
+        "releaseQualification": {
+            "status": "unimplemented-not-a-pass",
+            "command": None,
+            "owners": ["E10.T07", "E10.T08", "E10.T11", "E10.T12"],
         },
         "coldSnapshotAudit": {
             "schedule": "path-triggered, weekly, or explicit dispatch",
@@ -415,10 +529,27 @@ def print_human_plan(plan: dict[str, Any]) -> None:
     print("R2 hosted required evidence:")
     hosted = plan["hostedRequired"]
     print(f"  {hosted['check']}: {hosted['scope']}")
+    affected = plan["affectedExtended"]
+    affected_surfaces = ", ".join(affected["productSurfaces"]) or "no claim-bearing surface inferred"
+    print(f"R3 affected extended: {affected_surfaces}")
+    print(f"  {affected['scope']}")
+    for owner in affected["owners"]:
+        surfaces = ", ".join(owner["productSurfaces"])
+        print(f"  {owner['command']}  # {surfaces}")
+    full = plan["fullBackstop"]
+    requirement = "required" if full["required"] else "available"
+    print(f"R4 full/main/nightly backstop ({requirement}): {full['localCommand']}")
+    for reason in full["reasons"]:
+        print(f"  reason: {reason}")
     cold = plan["coldSnapshotAudit"]
     print(
-        "R3 cold snapshot authority: "
+        "  cold snapshot authority: "
         f"npm run {cold['script']} ({cold['schedule']})"
+    )
+    release = plan["releaseQualification"]
+    print(
+        "R5 release qualification: "
+        f"{release['status']} (owners {', '.join(release['owners'])})"
     )
     official = plan["officialHaxeQualification"]
     print(

@@ -10,6 +10,51 @@
     "HXC-QA-002",
     "HXC-QA-005"
   ],
+  "productSurfaces": [
+    "compiler-admitted-slices",
+    "runtime-memory-lifetime",
+    "toolchain-platform-portability",
+    "diagnostics-source-mapping-downstream"
+  ],
+  "behaviorScenario": {
+    "preconditions": "The pinned Haxe custom target, haxe.c sources, and an identity-matching strict C compiler are available.",
+    "action": "Compile ordinary Main.hx through Eval and haxe.c, build the generated strict C11 project, and run it.",
+    "observableResult": "Eval and the native executable both write the exact UTF-8 bytes Hello from hxc followed by one newline.",
+    "edgeBehavior": "A missing required compiler, mismatched output, warning, build failure, or process failure makes the case fail rather than silently skip the required CI lane.",
+    "protectedClaim": "The admitted compiler-known literal output slice crosses authored Haxe, haxe.c, strict C11, and a real runtime observer."
+  },
+  "oracleProvenance": {
+    "kind": "pinned-differential-reference",
+    "source": "examples/hello/oracle.hxml",
+    "independence": "Pinned Haxe Eval executes the authored Haxe source without using haxe.c or its generated C.",
+    "reviewRule": "Expected stdout is manually readable; generated artifacts may change only after semantic diff review and a passing Eval/native comparison."
+  },
+  "tracerBullet": {
+    "claim": "Compiler-known literal Sys.println reaches a strict native executable with no unrelated runtime slice.",
+    "path": [
+      "examples/hello/Main.hx",
+      "Haxe CustomTarget(c) and haxe.c lowering",
+      "generated strict C11 project and selected runtime features",
+      "identity-matching C compiler",
+      "native stdout compared byte-for-byte with Haxe Eval"
+    ]
+  },
+  "example": {
+    "tier": "capability-showcase",
+    "owner": "test:hello",
+    "executionKind": "portable",
+    "compilerToolchains": [
+      "Haxe 5.0.0-preview.1 CustomTarget(c)",
+      "identity-matching GCC and Clang where available; CI requires both families"
+    ],
+    "platformAssumptions": [
+      "hosted environment with process execution and standard output",
+      "this case does not by itself claim a supported operating system or architecture"
+    ],
+    "runtimeExpectation": "The executable selects only runtime-base, status, string-literal, and io and exits successfully after exact output.",
+    "sanitizerRelevance": "The literal-output path is runtime-executed; sanitizer matrix ownership remains with broader native lanes and is not inferred from this case alone.",
+    "advertisedClaim": "Tier B capability showcase for the bounded literal Sys.println Haxe-to-C path."
+  },
   "sources": [
     "examples/hello/Main.hx",
     "examples/hello/build.hxml",

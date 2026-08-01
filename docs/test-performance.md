@@ -23,15 +23,28 @@ git diff --cached --name-only |
 
 The planner is explanatory, not a cache and not a test result. It reuses the
 conservative route and central-owner rules used by the pre-commit hook, derives
-direct test-directory owners from their package scripts, and reports four
-rings:
+direct test-directory owners from their package scripts, attaches each owner to
+the product surfaces it may advance, and reports six rings:
 
 | Ring | When an agent uses it | Evidence |
 | --- | --- | --- |
 | R0 — focused owner | Repeatedly while changing one behavior | The owning issue's smallest package script, plus a regression that fails for the observed defect. When the planner cannot infer an owner, the agent must choose the nearest existing package script; an empty mapping is not permission to skip tests. |
 | R1 — local commit smoke | Once after the focused owner passes and before committing or handing off a central change | Governance plus `test:all-sources`, `test:hxc-ir`, `test:hello`, and `snapshots:catalog`. The installed pre-commit hook runs this bounded set for the affected route. |
 | R2 — hosted pull-request gate | After the commit is ready for independent verification | The required `Governance` workflow: all four complete toolchain shards plus independent native, build-adapter, platform, provenance, and security jobs. |
-| R3 — cold/scheduled authority | On relevant path changes, weekly, release preparation, or explicit investigation | Independent cold snapshot rendering and comparison through `snapshots:check`. |
+| R3 — affected extended | For a high-risk or product-surface change after its primary owner passes | Secondary compilers, sanitizers, platform profiles, and downstream owners from the affected scorecards. Selection is explanatory today; no evidence has been removed from R2 while selector recall is established. |
+| R4 — full/main/nightly backstop | On main/nightly, explicit investigation, or any unknown/ambiguous semantic owner | The complete active toolchain partition plus native smoke through `npm run test:toolchain:parallel -- --with-native`, hosted `Governance`, selector-miss review, and independent cold `snapshots:check` on its path/schedule. |
+| R5 — release qualification | For a release candidate after support and release owners land | Clean package/install, every claimed ADR 0007 tuple, security, reproducibility, compatibility, and archived provenance. This command is intentionally marked unimplemented; E10.T07, E10.T08, E10.T11, and E10.T12 prevent a false release pass. |
+
+R3 selects by semantic owner and product surface, not by changed path alone.
+Paths are only the transparent input used to find those owners. Every plan
+prints the inferred surfaces; policy-only owners print an empty surface set and
+therefore advance no product claim. The planner loads both the surface map and
+the concrete R3 package commands directly from the checked scorecards; script
+names are not a claim heuristic. Unknown or ambiguous ownership marks R4
+`required` and prints the reason. The complete R2 matrix remains required while
+affected selection is in observation, so this update moves no evidence out of
+the pull-request critical path. The full R4 run remains the backstop that can
+expose a selector miss.
 
 An agent should not wait twice for the same expensive test against the same
 checkout. For example, when it runs `test:hxc-ir` while finishing a change, the
@@ -108,10 +121,10 @@ the hosted `test:build-adapters` job.
 
 For an AI-agent loop, “focused owner passes” is the normal signal to continue
 implementation. “R1 passes” is the normal signal to create the task commit.
-R2/R3 are independent hosted evidence: an agent reports them as pending unless
-it has an actual completed workflow result. It must not report an unrun remote
-lane as green, and it must not block its next local edit merely to replay the
-same full matrix on the developer machine.
+R2 through R5 are independent hosted or qualification evidence: an agent
+reports them as pending unless it has an actual completed workflow result. It
+must not report an unrun remote lane as green, and it must not block its next
+local edit merely to replay the same full matrix on the developer machine.
 
 The complete local commands remain available for diagnosis:
 `npm run test:toolchain:shard -- <name>` runs one hosted-equivalent shard,

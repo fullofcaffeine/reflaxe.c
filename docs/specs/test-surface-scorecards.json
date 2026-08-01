@@ -1,0 +1,382 @@
+{
+  "$schema": "test-surface-scorecards.schema.json",
+  "schemaVersion": 1,
+  "manifestId": "hxc-test-surfaces-v1",
+  "capabilityAuthority": "docs/specs/bootstrap-inventory.json",
+  "policyOnlyOwners": [
+    "snapshots:catalog",
+    "test:agent-instructions",
+    "test:beads-plan",
+    "test:capabilities",
+    "test:fixture-policy",
+    "test:governance",
+    "test:governance-policy",
+    "test:research-bundle",
+    "test:security-tooling",
+    "test:toolchain-shards",
+    "test:typed-boundaries"
+  ],
+  "surfaces": [
+    {
+      "id": "compiler-admitted-slices",
+      "name": "Explicitly admitted Haxe-to-C compiler slices",
+      "archetype": "compiler",
+      "status": "admitted-slice",
+      "ownerBeads": [
+        "E2.T10",
+        "E3.T10"
+      ],
+      "protectedClaims": [
+        "Only capability-manifest slices with real typed-Haxe lowering, strict C build, and runtime evidence are admitted.",
+        "Official Haxe qualification applies only to explicitly mapped admitted scope."
+      ],
+      "capabilityIds": [
+        "general-haxe-lowering",
+        "primitive-executable-lowering",
+        "literal-string-output",
+        "closed-anonymous-record-lowering",
+        "tagged-enum-lowering",
+        "class-layout",
+        "constructor-lowering",
+        "virtual-dispatch",
+        "generic-specialization"
+      ],
+      "focusedOwners": [
+        "test:body-lowering",
+        "test:function-lowering",
+        "test:aggregate-lowering",
+        "test:enum-lowering",
+        "test:string-runtime"
+      ],
+      "verticalOwners": [
+        "test:hello",
+        "test:caxecraft-domain"
+      ],
+      "systemOwners": [
+        "test:caxecraft-playable"
+      ],
+      "affectedExtendedOwners": [
+        "test:primitive-differential",
+        "test:caxecraft-domain:full"
+      ],
+      "oracles": [
+        "Pinned Haxe Eval differential traces for shared Haxe semantics",
+        "Manually reviewed HxcIR and generated-C expectations paired with strict native execution"
+      ],
+      "evidence": [
+        {
+          "path": "examples/hello/case.json",
+          "proves": "One ordinary Haxe literal-output tracer crosses haxe.c, strict C11, and a native runtime observer.",
+          "doesNotProve": "General Haxe lowering, general String support, platform support, or a stable public ABI."
+        },
+        {
+          "path": "test/differential/string-runtime/case.json",
+          "proves": "The declared bounded String suite has a focused differential/native owner.",
+          "doesNotProve": "The currently failing fresh managed enum-value ownership path or full standard-library String behavior."
+        }
+      ],
+      "selectorOwnership": {
+        "semanticOwners": [
+          "compiler frontend, HxcIR, lowering, representation, and generated-project planning"
+        ],
+        "affectedRing": "R3",
+        "unknownFallback": "R4"
+      },
+      "fullBackstopCommand": "npm run test:toolchain:parallel -- --with-native",
+      "releaseCommand": null,
+      "lastObserved": {
+        "state": "known-red",
+        "evidence": "haxe_c-djl.25: test:string-runtime rejects unowned-fresh-managed-enum-value with HXC1001 while the neighboring content-json path passes."
+      },
+      "residualRisks": [
+        "General Haxe-to-C remains unsupported in the capability manifest.",
+        "The official Haxe suite adapter remains readiness-only under haxe_c-6k7."
+      ]
+    },
+    {
+      "id": "c-abi-native-ffi",
+      "name": "C ABI, native/metal, and foreign-function behavior",
+      "archetype": "native-metal",
+      "status": "partial",
+      "ownerBeads": [
+        "E6.T01",
+        "E7.T01",
+        "E7.T03"
+      ],
+      "protectedClaims": [
+        "Typed direct-C imports and native fixture ABIs are proven only for their declared headers and consumers.",
+        "Independent native C or C++ evidence does not create a generated public ABI claim."
+      ],
+      "capabilityIds": [
+        "direct-c-import",
+        "native-interop-fixtures",
+        "bindgen",
+        "c-export",
+        "public-c-abi"
+      ],
+      "focusedOwners": [
+        "test:c-import",
+        "test:typed-c",
+        "test:raygui-binding"
+      ],
+      "verticalOwners": [
+        "test:raylib-provisioning",
+        "test:build-adapters"
+      ],
+      "systemOwners": [
+        "test:caxecraft-playable"
+      ],
+      "affectedExtendedOwners": [
+        "test:native",
+        "test:raylib-provisioning",
+        "test:caxecraft-domain:full"
+      ],
+      "oracles": [
+        "Independent C header/layout contracts and strict target compiler diagnostics",
+        "Hand-authored C and C++ consumers rather than generated expectations from haxe.c"
+      ],
+      "evidence": [
+        {
+          "path": "test/abi/c-import/case.json",
+          "proves": "The bounded direct-import fixture crosses an independently authored C ABI boundary.",
+          "doesNotProve": "Bindgen, arbitrary C or C++ consumption, generated exports, or ABI stability."
+        },
+        {
+          "path": "docs/specs/bootstrap-inventory.json",
+          "proves": "Public ABI, bindgen, and C export remain explicit unsupported gates.",
+          "doesNotProve": "Any future ABI layout or compatibility promise."
+        }
+      ],
+      "selectorOwnership": {
+        "semanticOwners": [
+          "typed c.* contracts, imports, generated headers, native consumers, and build adapters"
+        ],
+        "affectedRing": "R3",
+        "unknownFallback": "R4"
+      },
+      "fullBackstopCommand": "npm run test:toolchain:parallel -- --with-native",
+      "releaseCommand": null,
+      "lastObserved": {
+        "state": "bounded-green",
+        "evidence": "The declared C-import fixture and native smoke are active; the capability manifest still marks public-c-abi unsupported."
+      },
+      "residualRisks": [
+        "No generated public header, ABI manifest, or compatibility policy exists.",
+        "Native fixture success cannot advance compiler conformance or platform support."
+      ]
+    },
+    {
+      "id": "runtime-memory-lifetime",
+      "name": "Runtime, memory, ownership, and lifetime behavior",
+      "archetype": "runtime",
+      "status": "partial",
+      "ownerBeads": [
+        "E4.T01",
+        "E4.T03",
+        "E4.T06",
+        "E4.T12"
+      ],
+      "protectedClaims": [
+        "Runtime and memory claims require generated native execution and the applicable sanitizer or failure-path observer.",
+        "A generated-C snapshot or semantic pass cannot substitute for ownership and lifetime execution."
+      ],
+      "capabilityIds": [
+        "runtime-feature-planning",
+        "runtime-collector-contract",
+        "runtime-string-contract",
+        "runtime-array-contract",
+        "runtime-bytes-contract",
+        "runtime-hxrt-seed"
+      ],
+      "focusedOwners": [
+        "test:runtime-features",
+        "test:gc-runtime",
+        "test:string-runtime",
+        "test:array-runtime",
+        "test:bytes-runtime"
+      ],
+      "verticalOwners": [
+        "test:hello",
+        "test:caxecraft-domain"
+      ],
+      "systemOwners": [
+        "test:caxecraft-playable"
+      ],
+      "affectedExtendedOwners": [
+        "test:gc-runtime",
+        "test:caxecraft-domain:full"
+      ],
+      "oracles": [
+        "Pinned Haxe Eval behavior for shared semantics",
+        "ASan and UBSan for invalid memory and undefined C behavior",
+        "Independent allocator and C consumer invariants"
+      ],
+      "evidence": [
+        {
+          "path": "test/runtime/gc/case.json",
+          "proves": "The declared collector seed has a native and sanitizer owner.",
+          "doesNotProve": "Complete object-graph, thread-root, finalization, or platform collector support."
+        },
+        {
+          "path": "test/differential/string-runtime/case.json",
+          "proves": "String runtime behavior is compared with an independent Haxe oracle and native observers.",
+          "doesNotProve": "The active managed enum-value lifetime regression is fixed."
+        }
+      ],
+      "selectorOwnership": {
+        "semanticOwners": [
+          "runtime feature planning, allocator/collector slices, managed values, cleanup, and sanitizer lanes"
+        ],
+        "affectedRing": "R3",
+        "unknownFallback": "R4"
+      },
+      "fullBackstopCommand": "npm run test:toolchain:parallel -- --with-native",
+      "releaseCommand": null,
+      "lastObserved": {
+        "state": "known-red",
+        "evidence": "haxe_c-djl.25: the scenario-native-codec tracer reaches an ASan heap-use-after-free during GC disposal."
+      },
+      "residualRisks": [
+        "The hxrt implementation remains a bounded collection of admitted slices, not a complete runtime.",
+        "Sanitizer success on one host cannot qualify other platforms or prove Haxe semantic conformance."
+      ]
+    },
+    {
+      "id": "toolchain-platform-portability",
+      "name": "Compiler, toolchain, architecture, and platform portability",
+      "archetype": "portability",
+      "status": "partial",
+      "ownerBeads": [
+        "E10.T01",
+        "E10.T07"
+      ],
+      "protectedClaims": [
+        "A platform claim is a tested environment, operating system or C runtime, architecture, compiler, artifact, profile, and runtime tuple.",
+        "Cross-compilation or one compiler family is not runtime or portability qualification."
+      ],
+      "capabilityIds": [
+        "toolchain-metadata",
+        "native-smoke",
+        "platform-support-matrix",
+        "c23-internal-dialect"
+      ],
+      "focusedOwners": [
+        "test:bootstrap",
+        "test:build-adapters",
+        "test:native"
+      ],
+      "verticalOwners": [
+        "test:hello",
+        "test:raylib-provisioning"
+      ],
+      "systemOwners": [
+        "Governance platform jobs"
+      ],
+      "affectedExtendedOwners": [
+        "test:native",
+        "test:build-adapters"
+      ],
+      "oracles": [
+        "ADR 0007 support tuples",
+        "Identity-checked strict C compiler diagnostics and native process results"
+      ],
+      "evidence": [
+        {
+          "path": "docs/adr/0007-strict-c11-target-and-platform-baseline.md",
+          "proves": "The target has an accepted strict-C11 floor and explicit qualification tuples.",
+          "doesNotProve": "That the unsupported support matrix or release lanes have passed."
+        },
+        {
+          "path": ".github/workflows/governance.yml",
+          "proves": "Current hosted jobs exercise selected compilers, native builds, and platform probes.",
+          "doesNotProve": "Every Tier 1 architecture, OS/runtime tuple, or release artifact."
+        }
+      ],
+      "selectorOwnership": {
+        "semanticOwners": [
+          "toolchain pins, platform facts, strict native builds, compiler families, sanitizers, and build consumers"
+        ],
+        "affectedRing": "R3",
+        "unknownFallback": "R4"
+      },
+      "fullBackstopCommand": "npm run test:toolchain:parallel -- --with-native",
+      "releaseCommand": null,
+      "lastObserved": {
+        "state": "not-qualified",
+        "evidence": "Current native smoke and hosted component jobs are evidence inputs; platform-support-matrix remains unsupported."
+      },
+      "residualRisks": [
+        "The ADR 0007 Tier 1 tuple matrix is incomplete.",
+        "No R5 release command can honestly qualify supported platforms yet."
+      ]
+    },
+    {
+      "id": "diagnostics-source-mapping-downstream",
+      "name": "Diagnostics, source mapping, and downstream programs where claimed",
+      "archetype": "diagnostics-downstream",
+      "status": "partial",
+      "ownerBeads": [
+        "E8.T06",
+        "E9.T01",
+        "E9.T02"
+      ],
+      "protectedClaims": [
+        "Stable diagnostic IDs and source positions are tested separately from generated-program behavior.",
+        "An example supports only the compile, runtime, sanitizer, package, or interactive level its declared runner executes."
+      ],
+      "capabilityIds": [
+        "diagnostics",
+        "example-portfolio",
+        "hxc-cli",
+        "hxc-doctor"
+      ],
+      "focusedOwners": [
+        "test:diagnostics"
+      ],
+      "verticalOwners": [
+        "test:hello",
+        "test:caxecraft-domain"
+      ],
+      "systemOwners": [
+        "test:caxecraft-playable"
+      ],
+      "affectedExtendedOwners": [
+        "test:diagnostics",
+        "test:caxecraft-domain:full"
+      ],
+      "oracles": [
+        "Typed diagnostic registry plus malformed-input cases",
+        "Pinned Haxe Eval traces and declared real example observers"
+      ],
+      "evidence": [
+        {
+          "path": "test/diagnostics/run.py",
+          "proves": "Registered diagnostic IDs, structured renders, source-path policy, and malformed registry inputs are checked.",
+          "doesNotProve": "A complete hxc CLI, doctor command, debugger source map, or downstream ecosystem compatibility."
+        },
+        {
+          "path": "examples/caxecraft/case.json",
+          "proves": "The flagship case declares its exact full domain command, artifacts, oracle, and execution assumptions.",
+          "doesNotProve": "Every planned playable, packaging, platform, or release claim in the broader product narrative."
+        }
+      ],
+      "selectorOwnership": {
+        "semanticOwners": [
+          "diagnostic registry/rendering, source positions, example manifests, and downstream observers"
+        ],
+        "affectedRing": "R3",
+        "unknownFallback": "R4"
+      },
+      "fullBackstopCommand": "npm run test:toolchain:parallel -- --with-native",
+      "releaseCommand": null,
+      "lastObserved": {
+        "state": "bounded-green",
+        "evidence": "The diagnostic registry and declared example-domain proofs are active; hxc CLI and doctor remain unsupported."
+      },
+      "residualRisks": [
+        "No general source-map or downstream package compatibility claim exists.",
+        "The flagship has intentionally planned paths that its current case manifest does not advertise as passing."
+      ]
+    }
+  ]
+}

@@ -1,9 +1,13 @@
-# Fixture and snapshot policy
+# Behavior, fixture, and product-surface test policy
 
 This document is the human-readable contract for HXC-COMP-014, HXC-QA-001,
 and HXC-QA-007. The machine-readable join point is
 [`fixture-taxonomy.json`](specs/fixture-taxonomy.json); individual cases
-use [`fixture-case.schema.json`](specs/fixture-case.schema.json).
+use [`fixture-case.schema.json`](specs/fixture-case.schema.json). Claim-bearing
+evidence is indexed separately by
+[`test-surface-scorecards.json`](specs/test-surface-scorecards.json). The
+capability manifest remains the authority for whether a product capability is
+implemented, experimental, scaffold-only, or unsupported.
 
 The taxonomy describes evidence. It does not promote a seed into a supported
 compiler capability. Direct HxcIR/C AST fixtures and independent native C/C++
@@ -140,6 +144,83 @@ declares:
 - the exact expected exit code;
 - at least one semantic assertion: stdout, stderr, diagnostic IDs, artifacts,
   runtime plan, oracle output, or metrics.
+
+For meaningful new or changed behavior, record the scenario before broad
+automation. A Bead acceptance section, case manifest, or durable implementation
+note must name the preconditions and input, action or compilation path,
+observable result, error or edge behavior, owning product surface, and exact
+claim protected. Given/When/Then wording is welcome when it helps a reader, but
+this repository has no need for a separate Gherkin or Cucumber stack.
+
+The implementation loop then starts at the lowest layer that can still expose
+the defect:
+
+1. identify the smallest faithful semantic owner;
+2. run the new or identified regression and record that it is red for the
+   intended reason;
+3. implement the behavior, make that owner green, and refactor;
+4. run the next broader contract that crosses a different real boundary.
+
+Record the pre-fix command and concise failure in the Bead or pull request. A
+separate red commit is optional. A setup failure, unrelated timeout, or failure
+from a different unsupported feature is not red-state evidence for the claimed
+behavior.
+
+Every new or materially revised expectation also names its independent source:
+a specification, manually authored minimum, pinned differential reference,
+invariant or metamorphic property, reviewed golden with provenance, or real
+consumer observation. Never use the implementation under test to generate both
+actual and expected values, copy its algorithm into the assertion, or refresh a
+snapshot without reviewing the semantic change. The optional
+`behaviorScenario`, `oracleProvenance`, and `tracerBullet` case fields make this
+record executable when a case is the durable owner; every declared example is
+required to provide the applicable scenario and provenance fields.
+
+Start a new capability with one narrow tracer bullet through authored Haxe,
+haxe.c, generated C, the primary strict compiler, and a real runtime or system
+observer. Expand focused positive and negative permutations only after that
+path works. A high-level failure found later receives a focused deterministic
+regression when a stable lower owner exists, while the representative real
+boundary remains. This “double lock” is not duplicate testing: one test
+diagnoses the semantic rule and the other proves that the cross-language
+contract is still connected.
+
+## Product-surface scorecards
+
+Five scorecards keep independent claims from borrowing each other's green
+results:
+
+| Product surface | Current scorecard status | Boundary that must remain independent |
+| --- | --- | --- |
+| Explicitly admitted Haxe-to-C slices | Admitted slices only | Typed Haxe, lowering, strict C build, and runtime evidence do not imply general Haxe conformance. |
+| C ABI, native/metal, and foreign functions | Partial | Native consumers do not imply generated public ABI, bindgen, or platform support. |
+| Runtime, memory, ownership, and lifetime | Partial | Generated text or semantic parity does not replace native execution and applicable sanitizer/failure-path evidence. |
+| Toolchain, architecture, and platform portability | Partial | One host, compiler family, sanitizer, or cross-compile does not qualify an ADR 0007 support tuple. |
+| Diagnostics, source mapping, and downstream programs | Partial | Stable diagnostics or one example do not imply a CLI, general source maps, packages, or every planned flagship path. |
+
+The machine guard requires exactly these five IDs, validates every referenced
+capability, stable Beads owner, evidence path, focused/vertical/R3 package
+script, strict field set, and canonical full-backstop command. The planner loads
+its product-surface and R3 owner mappings from this same file; it does not infer
+claims from script names. Each evidence record says both what it proves and what
+it does not prove. A surface may cite the capability manifest, but may not
+override its status.
+
+Portfolio ranges are review prompts inside an admitted slice, never quotas.
+Keep a broad focused semantic and diagnostic base, substantial real
+Haxe-to-C-to-native integration, and selected sanitizer, platform, and
+downstream system lanes. Unsupported language areas remain capability gaps,
+not missing unit-test volume. Formatting, typing, schema, freshness, workflow,
+security, and other static policy checks sit outside any behavior-layer ratio.
+Review unique failure yield, escaped defects, diagnosis time, claim coverage,
+selector misses, and high-level failures converted to focused regressions—not
+assertion count or CI minutes alone.
+
+Compiler representation, runtime, ABI, package publication, security,
+migration, and public-claim changes require a review pass distinct from
+implementation. Record whether the reviewer challenged assertion sensitivity,
+oracle independence, negative cases, mocked boundaries, selector omissions,
+scorecard leakage, and overbroad claims, plus the disposition of every finding.
 
 Runners execute from the declared working directory, default to no network,
 use bounded timeouts, preserve stdout/stderr/exit status separately, and never
@@ -658,11 +739,21 @@ Haxe in those jobs.
 
 ## Examples are product proofs, not implicit tests
 
-The examples policy is active with one immediate child: `examples/hello`. Its
-schema-valid `case.json` has `role: "example"`, an argument-array runner, an
-exact expected exit, generated artifacts, runtime-plan evidence, and a named
-Haxe oracle. Every additional immediate `examples/<name>/` directory must meet
-the same declaration rule before any harness may run it.
+The examples policy currently declares two immediate children. `examples/hello`
+is a **capability showcase**: it proves the bounded literal-output tracer
+through a real native executable. `examples/caxecraft` is the **flagship
+application**, but its current case advertises only the full headless domain
+slice that its runner executes; planned interactive, packaging, and release
+paths remain separate claims. A future **compile-only snippet** may prove only
+that it compiles or type-checks and cannot support runtime, memory, framework,
+portability, or package-install claims.
+
+Every example manifest declares its tier, portable/native-metal/mixed execution
+kind, compiler and toolchain requirements, platform assumptions, runtime
+expectation, sanitizer relevance, advertised claim, product surfaces, scenario,
+and independent oracle provenance. Every additional immediate
+`examples/<name>/` directory must meet that declaration rule before any harness
+may run it.
 
 A test harness may run an example only through that declared case. It must not
 glob `examples/**`, infer success from compilation alone, or treat README prose

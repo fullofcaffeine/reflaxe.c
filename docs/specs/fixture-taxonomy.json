@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "caseSchema": "docs/specs/fixture-case.schema.json",
+  "surfaceScorecards": "docs/specs/test-surface-scorecards.json",
   "runnerContract": {
     "caseManifest": "case.json",
     "defaultWorkingDirectory": "case-directory",

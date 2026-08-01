@@ -7,6 +7,7 @@
   "required": [
     "schemaVersion",
     "caseSchema",
+    "surfaceScorecards",
     "runnerContract",
     "types",
     "suites",
@@ -19,6 +20,9 @@
     },
     "caseSchema": {
       "$ref": "#/$defs/path"
+    },
+    "surfaceScorecards": {
+      "const": "docs/specs/test-surface-scorecards.json"
     },
     "runnerContract": {
       "type": "object",

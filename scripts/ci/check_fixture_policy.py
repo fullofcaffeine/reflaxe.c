@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path, PurePosixPath
 from types import ModuleType
@@ -15,6 +16,10 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "docs/specs/fixture-taxonomy.json"
 CATALOG_SCHEMA = ROOT / "docs/specs/fixture-taxonomy.schema.json"
 CASE_SCHEMA = ROOT / "docs/specs/fixture-case.schema.json"
+SURFACE_SCORECARDS = ROOT / "docs/specs/test-surface-scorecards.json"
+SURFACE_SCORECARDS_SCHEMA = ROOT / "docs/specs/test-surface-scorecards.schema.json"
+CAPABILITY_MANIFEST = ROOT / "docs/specs/bootstrap-inventory.json"
+BEADS_PLAN = ROOT / "docs/specs/beads-plan.json"
 PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 WORKFLOW = ROOT / ".github/workflows/governance.yml"
@@ -29,6 +34,107 @@ EXPECTED_TYPES = {
     "abi",
     "performance",
 }
+EXPECTED_PRODUCT_SURFACES = {
+    "compiler-admitted-slices",
+    "c-abi-native-ffi",
+    "runtime-memory-lifetime",
+    "toolchain-platform-portability",
+    "diagnostics-source-mapping-downstream",
+}
+EXAMPLE_TIERS = {
+    "flagship-application",
+    "capability-showcase",
+    "compile-only-snippet",
+}
+REQUIRED_SCORECARD_FIELDS = {
+    "id",
+    "name",
+    "archetype",
+    "status",
+    "ownerBeads",
+    "protectedClaims",
+    "capabilityIds",
+    "focusedOwners",
+    "verticalOwners",
+    "systemOwners",
+    "affectedExtendedOwners",
+    "oracles",
+    "evidence",
+    "selectorOwnership",
+    "fullBackstopCommand",
+    "releaseCommand",
+    "lastObserved",
+    "residualRisks",
+}
+SCORECARD_ROOT_FIELDS = {
+    "$schema",
+    "schemaVersion",
+    "manifestId",
+    "capabilityAuthority",
+    "policyOnlyOwners",
+    "surfaces",
+}
+SCORECARD_ARCHETYPES = {
+    "compiler-admitted-slices": "compiler",
+    "c-abi-native-ffi": "native-metal",
+    "runtime-memory-lifetime": "runtime",
+    "toolchain-platform-portability": "portability",
+    "diagnostics-source-mapping-downstream": "diagnostics-downstream",
+}
+SCORECARD_EVIDENCE_FIELDS = {"path", "proves", "doesNotProve"}
+SCORECARD_SELECTOR_FIELDS = {"semanticOwners", "affectedRing", "unknownFallback"}
+SCORECARD_OBSERVED_FIELDS = {"state", "evidence"}
+CASE_FIELDS = {
+    "schemaVersion",
+    "id",
+    "role",
+    "type",
+    "status",
+    "requirements",
+    "productSurfaces",
+    "behaviorScenario",
+    "oracleProvenance",
+    "tracerBullet",
+    "example",
+    "sources",
+    "runner",
+    "expected",
+}
+SCENARIO_FIELDS = {
+    "preconditions",
+    "action",
+    "observableResult",
+    "edgeBehavior",
+    "protectedClaim",
+}
+PROVENANCE_FIELDS = {"kind", "source", "independence", "reviewRule"}
+TRACER_FIELDS = {"claim", "path"}
+EXAMPLE_FIELDS = {
+    "tier",
+    "owner",
+    "executionKind",
+    "compilerToolchains",
+    "platformAssumptions",
+    "runtimeExpectation",
+    "sanitizerRelevance",
+    "advertisedClaim",
+}
+RUNNER_FIELDS = {"command", "workingDirectory", "timeoutSeconds", "network"}
+EXPECTED_FIELDS = {
+    "exitCode",
+    "stdout",
+    "stderr",
+    "diagnostics",
+    "artifacts",
+    "runtimePlan",
+    "oracle",
+    "metrics",
+}
+STREAM_ASSERTION_FIELDS = {"mode", "value", "path"}
+ARTIFACT_FIELDS = {"path", "format", "comparison"}
+ARTIFACT_FORMATS = {"text", "json", "c", "header", "hxcir", "binary", "metrics"}
+ARTIFACT_COMPARISONS = {"exact", "semantic-json", "symbols", "layout", "budget"}
+FULL_BACKSTOP_COMMAND = "npm run test:toolchain:parallel -- --with-native"
 SEMANTIC_ASSERTIONS = {
     "stdout",
     "stderr",
@@ -81,6 +187,65 @@ def safe_path(value: Any, label: str, errors: list[str]) -> Path | None:
     return candidate
 
 
+def is_json_integer(value: Any) -> bool:
+    """JSON integers exclude Python booleans even though bool subclasses int."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def validate_stream_assertion(value: Any, label: str, errors: list[str]) -> None:
+    if not isinstance(value, dict):
+        errors.append(f"{label} must be an object")
+        return
+    extra_fields = sorted(set(value) - STREAM_ASSERTION_FIELDS)
+    if extra_fields:
+        errors.append(f"{label} has undeclared fields: {extra_fields!r}")
+    mode = value.get("mode")
+    if mode not in {"empty", "exact", "contains", "regex", "json"}:
+        errors.append(f"{label}.mode is invalid")
+        return
+    has_value = "value" in value
+    has_path = "path" in value
+    if mode == "empty":
+        if has_value or has_path:
+            errors.append(f"{label} empty mode cannot declare value or path")
+        return
+    if has_value == has_path:
+        errors.append(f"{label} must declare exactly one of value or path")
+    if has_value and not isinstance(value.get("value"), str):
+        errors.append(f"{label}.value must be a string")
+    if has_path:
+        assertion_path = safe_path(value.get("path"), f"{label}.path", errors)
+        if assertion_path is not None and not assertion_path.is_file():
+            errors.append(f"{label}.path is missing: {assertion_path.relative_to(ROOT)}")
+
+
+def scorecard_owner_surfaces() -> tuple[dict[str, set[str]], set[str]]:
+    """Return the checked product owners and explicit policy-only exclusions."""
+    scorecards = json.loads(SURFACE_SCORECARDS.read_text(encoding="utf-8"))
+    ownership: dict[str, set[str]] = {}
+    for surface in scorecards.get("surfaces", []):
+        if not isinstance(surface, dict) or not isinstance(surface.get("id"), str):
+            continue
+        for field in (
+            "focusedOwners",
+            "verticalOwners",
+            "systemOwners",
+            "affectedExtendedOwners",
+        ):
+            owners = surface.get(field, [])
+            if not isinstance(owners, list):
+                continue
+            for owner in owners:
+                if isinstance(owner, str):
+                    ownership.setdefault(owner, set()).add(surface["id"])
+    policy_only = {
+        owner
+        for owner in scorecards.get("policyOnlyOwners", [])
+        if isinstance(owner, str)
+    }
+    return ownership, policy_only
+
+
 def load_snapshot_module(errors: list[str]) -> ModuleType | None:
     path = ROOT / "scripts/test/snapshots.py"
     spec = importlib.util.spec_from_file_location("hxc_snapshot_policy", path)
@@ -105,18 +270,52 @@ def validate_case(
     errors: list[str],
 ) -> None:
     label = path.relative_to(ROOT).as_posix()
+    required_case_fields = {
+        "schemaVersion",
+        "id",
+        "role",
+        "type",
+        "status",
+        "sources",
+        "runner",
+        "expected",
+    }
+    missing_case_fields = sorted(required_case_fields - set(case))
+    if missing_case_fields:
+        errors.append(f"{label} omitted required case fields: {missing_case_fields!r}")
+    extra_case_fields = sorted(set(case) - CASE_FIELDS)
+    if extra_case_fields:
+        errors.append(f"{label} has undeclared case fields: {extra_case_fields!r}")
     if case.get("schemaVersion") != 1:
         errors.append(f"{label} must use schemaVersion 1")
+    if not isinstance(case.get("id"), str) or re.fullmatch(
+        r"[a-z0-9][a-z0-9-]*", case.get("id", "")
+    ) is None:
+        errors.append(f"{label} must declare a canonical case ID")
+    if case.get("role") not in {"fixture", "example"}:
+        errors.append(f"{label} has an invalid role")
     if expected_role is not None and case.get("role") != expected_role:
         errors.append(f"{label} must declare role {expected_role!r}")
     if case.get("type") not in EXPECTED_TYPES:
         errors.append(f"{label} has an unknown fixture type")
     if case.get("status") not in {"active", "planned", "disabled"}:
         errors.append(f"{label} has an invalid status")
+    requirements = case.get("requirements")
+    if requirements is not None:
+        if not isinstance(requirements, list) or not all(
+            isinstance(requirement, str)
+            and re.fullmatch(r"HXC-[A-Z]+-[0-9]{3}", requirement)
+            for requirement in requirements
+        ):
+            errors.append(f"{label} requirements must use canonical requirement IDs")
+        elif len(requirements) != len(set(requirements)):
+            errors.append(f"{label} requirements must be unique")
     sources = case.get("sources")
     if not isinstance(sources, list) or not sources:
         errors.append(f"{label} must declare at least one source")
     else:
+        if len(sources) != len(set(sources)):
+            errors.append(f"{label} sources must be unique")
         for index, source in enumerate(sources):
             source_path = safe_path(source, f"{label}.sources[{index}]", errors)
             if (
@@ -132,13 +331,20 @@ def validate_case(
     if not isinstance(runner, dict):
         errors.append(f"{label} must declare a runner object")
     else:
+        extra_runner_fields = sorted(set(runner) - RUNNER_FIELDS)
+        missing_runner_fields = sorted(RUNNER_FIELDS - set(runner))
+        if extra_runner_fields:
+            errors.append(f"{label} runner has undeclared fields: {extra_runner_fields!r}")
+        if missing_runner_fields:
+            errors.append(f"{label} runner omitted fields: {missing_runner_fields!r}")
         command = runner.get("command")
         if not isinstance(command, list) or not command or not all(
             isinstance(part, str) and part for part in command
         ):
             errors.append(f"{label} runner.command must be a non-empty argument array")
-        if not isinstance(runner.get("timeoutSeconds"), int):
-            errors.append(f"{label} runner.timeoutSeconds must be an integer")
+        timeout = runner.get("timeoutSeconds")
+        if not is_json_integer(timeout) or not 1 <= timeout <= 3600:
+            errors.append(f"{label} runner.timeoutSeconds must be an integer from 1 to 3600")
         if not isinstance(runner.get("network"), bool):
             errors.append(f"{label} runner.network must be boolean")
         working_directory = safe_path(
@@ -156,10 +362,444 @@ def validate_case(
                 f"{working_directory.relative_to(ROOT)}"
             )
     expected = case.get("expected")
-    if not isinstance(expected, dict) or not isinstance(expected.get("exitCode"), int):
-        errors.append(f"{label} expected must declare an integer exitCode")
-    elif not SEMANTIC_ASSERTIONS.intersection(expected):
-        errors.append(f"{label} must declare at least one semantic expected assertion")
+    if not isinstance(expected, dict):
+        errors.append(f"{label} expected must be an object")
+    else:
+        if not is_json_integer(expected.get("exitCode")):
+            errors.append(f"{label} expected must declare an integer exitCode")
+        extra_expected_fields = sorted(set(expected) - EXPECTED_FIELDS)
+        if extra_expected_fields:
+            errors.append(
+                f"{label} expected has undeclared fields: {extra_expected_fields!r}"
+            )
+        if not SEMANTIC_ASSERTIONS.intersection(expected):
+            errors.append(f"{label} must declare at least one semantic expected assertion")
+        for stream in ("stdout", "stderr"):
+            if stream in expected:
+                validate_stream_assertion(
+                    expected[stream], f"{label}.expected.{stream}", errors
+                )
+        diagnostics = expected.get("diagnostics")
+        if diagnostics is not None:
+            if (
+                not isinstance(diagnostics, list)
+                or not diagnostics
+                or not all(
+                    isinstance(diagnostic, str)
+                    and re.fullmatch(r"HXC[0-9]{4}", diagnostic)
+                    for diagnostic in diagnostics
+                )
+                or len(diagnostics) != len(set(diagnostics))
+            ):
+                errors.append(
+                    f"{label}.expected.diagnostics must be unique canonical IDs"
+                )
+        artifacts = expected.get("artifacts")
+        if artifacts is not None:
+            if not isinstance(artifacts, list) or not artifacts:
+                errors.append(f"{label}.expected.artifacts must be a non-empty array")
+            else:
+                for index, artifact in enumerate(artifacts):
+                    artifact_label = f"{label}.expected.artifacts[{index}]"
+                    if not isinstance(artifact, dict):
+                        errors.append(f"{artifact_label} must be an object")
+                        continue
+                    if set(artifact) != ARTIFACT_FIELDS:
+                        errors.append(
+                            f"{artifact_label} fields must match the schema exactly"
+                        )
+                    artifact_path = safe_path(
+                        artifact.get("path"), f"{artifact_label}.path", errors
+                    )
+                    if artifact_path is not None and not artifact_path.exists():
+                        errors.append(
+                            f"{artifact_label}.path is missing: "
+                            f"{artifact_path.relative_to(ROOT)}"
+                        )
+                    if artifact.get("format") not in ARTIFACT_FORMATS:
+                        errors.append(f"{artifact_label}.format is invalid")
+                    if artifact.get("comparison") not in ARTIFACT_COMPARISONS:
+                        errors.append(f"{artifact_label}.comparison is invalid")
+        runtime_plan = expected.get("runtimePlan")
+        if isinstance(runtime_plan, dict):
+            if set(runtime_plan) != {"policy", "features"}:
+                errors.append(
+                    f"{label}.expected.runtimePlan fields must match the schema exactly"
+                )
+            if runtime_plan.get("policy") not in {"auto", "minimal", "none"}:
+                errors.append(f"{label}.expected.runtimePlan.policy is invalid")
+            features = runtime_plan.get("features")
+            if (
+                not isinstance(features, list)
+                or not all(isinstance(feature, str) and feature for feature in features)
+                or len(features) != len(set(features))
+            ):
+                errors.append(
+                    f"{label}.expected.runtimePlan.features must be unique strings"
+                )
+        for assertion in ("runtimePlan", "oracle", "metrics"):
+            if assertion in expected:
+                if assertion == "runtimePlan" and isinstance(expected[assertion], dict):
+                    continue
+                assertion_path = safe_path(
+                    expected[assertion], f"{label}.expected.{assertion}", errors
+                )
+                if assertion_path is not None and not assertion_path.is_file():
+                    errors.append(
+                        f"{label}.expected.{assertion} is missing: "
+                        f"{assertion_path.relative_to(ROOT)}"
+                    )
+
+    if case.get("role") != "example":
+        return
+
+    product_surfaces = case.get("productSurfaces")
+    if not isinstance(product_surfaces, list) or not product_surfaces:
+        errors.append(f"{label} example must declare productSurfaces")
+    else:
+        if len(product_surfaces) != len(set(product_surfaces)):
+            errors.append(f"{label} example productSurfaces must be unique")
+        unknown_surfaces = sorted(set(product_surfaces) - EXPECTED_PRODUCT_SURFACES)
+        if unknown_surfaces:
+            errors.append(
+                f"{label} example declares unknown product surfaces: {unknown_surfaces!r}"
+            )
+
+    scenario = case.get("behaviorScenario")
+    if not isinstance(scenario, dict) or not all(
+        isinstance(scenario.get(field), str) and scenario[field]
+        for field in SCENARIO_FIELDS
+    ):
+        errors.append(
+            f"{label} example must declare a complete observable behaviorScenario"
+        )
+    elif set(scenario) != SCENARIO_FIELDS:
+        errors.append(f"{label} behaviorScenario fields must match the schema exactly")
+
+    provenance = case.get("oracleProvenance")
+    if not isinstance(provenance, dict):
+        errors.append(f"{label} example must declare oracleProvenance")
+    else:
+        if set(provenance) != PROVENANCE_FIELDS:
+            errors.append(f"{label} oracleProvenance fields must match the schema exactly")
+        if provenance.get("kind") not in {
+            "specification",
+            "manual-expectation",
+            "pinned-differential-reference",
+            "invariant",
+            "reviewed-golden",
+            "real-consumer",
+        }:
+            errors.append(f"{label} example has an invalid oracle provenance kind")
+        oracle_source = safe_path(
+            provenance.get("source"), f"{label}.oracleProvenance.source", errors
+        )
+        if oracle_source is not None and not oracle_source.is_file():
+            errors.append(
+                f"{label} oracle provenance source is missing: "
+                f"{oracle_source.relative_to(ROOT)}"
+            )
+        for field in ("independence", "reviewRule"):
+            if not isinstance(provenance.get(field), str) or not provenance[field]:
+                errors.append(f"{label} oracleProvenance.{field} must be non-empty")
+
+    example = case.get("example")
+    if not isinstance(example, dict):
+        errors.append(f"{label} must declare example tier and execution assumptions")
+    else:
+        if set(example) != EXAMPLE_FIELDS:
+            errors.append(f"{label} example fields must match the schema exactly")
+        if example.get("tier") not in EXAMPLE_TIERS:
+            errors.append(f"{label} has an invalid example tier")
+        if example.get("executionKind") not in {"portable", "native-metal", "mixed"}:
+            errors.append(f"{label} has an invalid example executionKind")
+        for field in ("compilerToolchains", "platformAssumptions"):
+            values = example.get(field)
+            if not isinstance(values, list) or not values or not all(
+                isinstance(value, str) and value for value in values
+            ):
+                errors.append(f"{label} example.{field} must be a non-empty string array")
+        for field in ("runtimeExpectation", "sanitizerRelevance", "advertisedClaim"):
+            if not isinstance(example.get(field), str) or not example[field]:
+                errors.append(f"{label} example.{field} must be non-empty")
+        owner = example.get("owner")
+        owner_surfaces, policy_only = scorecard_owner_surfaces()
+        package_scripts = json.loads(PACKAGE.read_text(encoding="utf-8"))["scripts"]
+        if not isinstance(owner, str) or owner not in package_scripts:
+            errors.append(f"{label} example.owner must name a package script")
+        elif owner in policy_only:
+            errors.append(f"{label} example.owner cannot be policy-only")
+        elif set(product_surfaces or []) != owner_surfaces.get(owner, set()):
+            errors.append(
+                f"{label} productSurfaces must exactly match scorecard ownership for {owner}"
+            )
+
+    tracer = case.get("tracerBullet")
+    if tracer is not None:
+        if not isinstance(tracer, dict) or set(tracer) != TRACER_FIELDS:
+            errors.append(f"{label} tracerBullet fields must match the schema exactly")
+        else:
+            tracer_path = tracer.get("path")
+            if (
+                not isinstance(tracer.get("claim"), str)
+                or not tracer["claim"]
+                or not isinstance(tracer_path, list)
+                or len(tracer_path) < 4
+                or not all(isinstance(step, str) and step for step in tracer_path)
+            ):
+                errors.append(f"{label} tracerBullet must declare a claim and at least four steps")
+
+
+def validate_surface_scorecards(
+    scorecards: dict[str, Any],
+    capability_manifest: dict[str, Any],
+    package_scripts: dict[str, Any],
+    stable_owner_ids: set[str],
+    errors: list[str],
+) -> None:
+    """Keep claim-bearing evidence attached to one explicit product surface."""
+    if scorecards.get("schemaVersion") != 1:
+        errors.append("test surface scorecards must use schemaVersion 1")
+    if scorecards.get("$schema") != SURFACE_SCORECARDS_SCHEMA.name:
+        errors.append("test surface scorecards must point to their canonical schema")
+    if scorecards.get("capabilityAuthority") != CAPABILITY_MANIFEST.relative_to(ROOT).as_posix():
+        errors.append("test surface scorecards must reference the capability manifest authority")
+    if scorecards.get("manifestId") != "hxc-test-surfaces-v1":
+        errors.append("test surface scorecards must use the canonical manifest ID")
+    missing_root_fields = sorted(SCORECARD_ROOT_FIELDS - set(scorecards))
+    if missing_root_fields:
+        errors.append(
+            f"test surface scorecards omitted root fields: {missing_root_fields!r}"
+        )
+    extra_root_fields = sorted(set(scorecards) - SCORECARD_ROOT_FIELDS)
+    if extra_root_fields:
+        errors.append(
+            f"test surface scorecards have undeclared root fields: {extra_root_fields!r}"
+        )
+    policy_only = scorecards.get("policyOnlyOwners")
+    if (
+        not isinstance(policy_only, list)
+        or not policy_only
+        or not all(isinstance(owner, str) and owner in package_scripts for owner in policy_only)
+        or len(policy_only) != len(set(policy_only))
+    ):
+        errors.append(
+            "test surface scorecards policyOnlyOwners must be unique package scripts"
+        )
+        policy_only_set: set[str] = set()
+    else:
+        policy_only_set = set(policy_only)
+
+    capabilities = capability_manifest.get("capabilities")
+    capability_ids = (
+        {
+            entry.get("id")
+            for entry in capabilities
+            if isinstance(entry, dict)
+        }
+        if isinstance(capabilities, list)
+        else set()
+    )
+    surfaces = scorecards.get("surfaces")
+    if not isinstance(surfaces, list):
+        errors.append("test surface scorecards surfaces must be an array")
+        return
+
+    seen: set[str] = set()
+    for index, surface in enumerate(surfaces):
+        label = f"test surface scorecards surfaces[{index}]"
+        if not isinstance(surface, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        missing_fields = sorted(REQUIRED_SCORECARD_FIELDS - set(surface))
+        if missing_fields:
+            errors.append(f"{label} omitted required fields: {missing_fields!r}")
+        extra_fields = sorted(set(surface) - REQUIRED_SCORECARD_FIELDS)
+        if extra_fields:
+            errors.append(f"{label} has undeclared fields: {extra_fields!r}")
+        identifier = surface.get("id")
+        if not isinstance(identifier, str):
+            errors.append(f"{label} must declare an ID")
+            continue
+        if identifier in seen:
+            errors.append(f"duplicate test product surface {identifier}")
+        seen.add(identifier)
+
+        expected_archetype = SCORECARD_ARCHETYPES.get(identifier)
+        if surface.get("archetype") != expected_archetype:
+            errors.append(
+                f"test product surface {identifier} must use archetype {expected_archetype!r}"
+            )
+
+        for text_field in ("name", "fullBackstopCommand"):
+            if not isinstance(surface.get(text_field), str) or not surface[text_field]:
+                errors.append(f"test product surface {identifier} {text_field} must be non-empty")
+        if surface.get("status") not in {"admitted-slice", "partial", "unsupported"}:
+            errors.append(f"test product surface {identifier} has an invalid status")
+        for list_field in (
+            "ownerBeads",
+            "protectedClaims",
+            "capabilityIds",
+            "systemOwners",
+            "oracles",
+            "residualRisks",
+        ):
+            values = surface.get(list_field)
+            if not isinstance(values, list) or not values or not all(
+                isinstance(value, str) and value for value in values
+            ):
+                errors.append(
+                    f"test product surface {identifier} {list_field} must be a non-empty string array"
+                )
+            elif len(values) != len(set(values)):
+                errors.append(
+                    f"test product surface {identifier} {list_field} must contain unique values"
+                )
+
+        unknown_owner_ids = sorted(set(surface.get("ownerBeads", [])) - stable_owner_ids)
+        if unknown_owner_ids:
+            errors.append(
+                f"test product surface {identifier} references unknown stable Beads owners: "
+                f"{unknown_owner_ids!r}"
+            )
+
+        unknown_capabilities = sorted(
+            set(surface.get("capabilityIds", [])) - capability_ids
+        )
+        if unknown_capabilities:
+            errors.append(
+                f"test product surface {identifier} references unknown capabilities: "
+                f"{unknown_capabilities!r}"
+            )
+        for owner_field in (
+            "focusedOwners",
+            "verticalOwners",
+            "affectedExtendedOwners",
+        ):
+            owners = surface.get(owner_field)
+            if not isinstance(owners, list) or not owners:
+                errors.append(f"test product surface {identifier} omitted {owner_field}")
+                continue
+            unknown_scripts = sorted(
+                owner for owner in owners if owner not in package_scripts
+            )
+            if unknown_scripts:
+                errors.append(
+                    f"test product surface {identifier} {owner_field} are not package scripts: "
+                    f"{unknown_scripts!r}"
+                )
+            if len(owners) != len(set(owners)):
+                errors.append(
+                    f"test product surface {identifier} {owner_field} must be unique"
+                )
+            forbidden_policy_owners = sorted(set(owners) & policy_only_set)
+            if forbidden_policy_owners:
+                errors.append(
+                    f"test product surface {identifier} {owner_field} contains policy-only owners: "
+                    f"{forbidden_policy_owners!r}"
+                )
+        forbidden_system_policy_owners = sorted(
+            set(surface.get("systemOwners", [])) & policy_only_set
+        )
+        if forbidden_system_policy_owners:
+            errors.append(
+                f"test product surface {identifier} systemOwners contains policy-only owners: "
+                f"{forbidden_system_policy_owners!r}"
+            )
+        evidence = surface.get("evidence")
+        if not isinstance(evidence, list) or not evidence:
+            errors.append(f"test product surface {identifier} omitted evidence")
+        else:
+            for evidence_index, entry in enumerate(evidence):
+                if not isinstance(entry, dict):
+                    errors.append(
+                        f"test product surface {identifier} evidence[{evidence_index}] "
+                        "must be an object"
+                    )
+                    continue
+                if set(entry) != SCORECARD_EVIDENCE_FIELDS:
+                    errors.append(
+                        f"test product surface {identifier} evidence[{evidence_index}] "
+                        "fields must match the schema exactly"
+                    )
+                evidence_path = safe_path(
+                    entry.get("path"),
+                    f"test product surface {identifier} evidence[{evidence_index}].path",
+                    errors,
+                )
+                if evidence_path is not None and not evidence_path.is_file():
+                    errors.append(
+                        f"test product surface {identifier} evidence is missing: "
+                        f"{evidence_path.relative_to(ROOT)}"
+                    )
+                for field in ("proves", "doesNotProve"):
+                    if not isinstance(entry.get(field), str) or not entry[field]:
+                        errors.append(
+                            f"test product surface {identifier} evidence[{evidence_index}].{field} "
+                            "must be non-empty"
+                        )
+        selector = surface.get("selectorOwnership")
+        if not isinstance(selector, dict):
+            errors.append(f"test product surface {identifier} omitted selectorOwnership")
+        else:
+            if set(selector) != SCORECARD_SELECTOR_FIELDS:
+                errors.append(
+                    f"test product surface {identifier} selector fields must match the schema exactly"
+                )
+            semantic_owners = selector.get("semanticOwners")
+            if (
+                not isinstance(semantic_owners, list)
+                or not semantic_owners
+                or not all(isinstance(owner, str) and owner for owner in semantic_owners)
+                or len(semantic_owners) != len(set(semantic_owners))
+            ):
+                errors.append(
+                    f"test product surface {identifier} semantic owners must be unique non-empty strings"
+                )
+            if selector.get("affectedRing") != "R3" or selector.get("unknownFallback") != "R4":
+                errors.append(
+                    f"test product surface {identifier} must use R3 affected selection and R4 fallback"
+                )
+        observed = surface.get("lastObserved")
+        if not isinstance(observed, dict):
+            errors.append(f"test product surface {identifier} omitted lastObserved")
+        else:
+            if set(observed) != SCORECARD_OBSERVED_FIELDS:
+                errors.append(
+                    f"test product surface {identifier} lastObserved fields must match the schema exactly"
+                )
+            if observed.get("state") not in {
+                "bounded-green",
+                "known-red",
+                "not-qualified",
+            }:
+                errors.append(f"test product surface {identifier} has an invalid observed state")
+            if not isinstance(observed.get("evidence"), str) or not observed["evidence"]:
+                errors.append(
+                    f"test product surface {identifier} lastObserved.evidence must be non-empty"
+                )
+        if surface.get("fullBackstopCommand") != FULL_BACKSTOP_COMMAND:
+            errors.append(
+                f"test product surface {identifier} must use the canonical full backstop command"
+            )
+        release_command = surface.get("releaseCommand")
+        if release_command is not None:
+            if not isinstance(release_command, str):
+                errors.append(
+                    f"test product surface {identifier} releaseCommand must be a string or null"
+                )
+            else:
+                match = re.fullmatch(r"npm run ([a-z0-9:-]+)(?: -- .+)?", release_command)
+                if match is None or match.group(1) not in package_scripts:
+                    errors.append(
+                        f"test product surface {identifier} releaseCommand must name a package script"
+                    )
+
+    if seen != EXPECTED_PRODUCT_SURFACES:
+        errors.append(
+            "test product surfaces must be exactly "
+            f"{sorted(EXPECTED_PRODUCT_SURFACES)!r}; got {sorted(seen)!r}"
+        )
 
 
 def expected_output_files() -> set[Path]:
@@ -190,6 +830,10 @@ def validate() -> list[str]:
     catalog = load_json(CATALOG, errors)
     catalog_schema = load_json(CATALOG_SCHEMA, errors)
     case_schema = load_json(CASE_SCHEMA, errors)
+    surface_scorecards = load_json(SURFACE_SCORECARDS, errors)
+    surface_scorecards_schema = load_json(SURFACE_SCORECARDS_SCHEMA, errors)
+    capability_manifest = load_json(CAPABILITY_MANIFEST, errors)
+    beads_plan = load_json(BEADS_PLAN, errors)
     package = load_json(PACKAGE, errors)
 
     if catalog.get("schemaVersion") != 1:
@@ -198,9 +842,16 @@ def validate() -> list[str]:
         errors.append("fixture taxonomy schema must use JSON Schema 2020-12")
     if case_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         errors.append("fixture case schema must use JSON Schema 2020-12")
+    if surface_scorecards_schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+        errors.append("test surface scorecard schema must use JSON Schema 2020-12")
     case_schema_path = safe_path(catalog.get("caseSchema"), "caseSchema", errors)
     if case_schema_path is not None and case_schema_path != CASE_SCHEMA:
         errors.append("fixture taxonomy must point to the canonical fixture-case schema")
+    scorecards_path = safe_path(
+        catalog.get("surfaceScorecards"), "surfaceScorecards", errors
+    )
+    if scorecards_path is not None and scorecards_path != SURFACE_SCORECARDS:
+        errors.append("fixture taxonomy must point to the canonical test surface scorecards")
 
     runner_contract = catalog.get("runnerContract")
     if not isinstance(runner_contract, dict):
@@ -451,6 +1102,19 @@ def validate() -> list[str]:
     if not isinstance(scripts, dict):
         errors.append("package.json scripts must be an object")
         scripts = {}
+    validate_surface_scorecards(
+        surface_scorecards,
+        capability_manifest,
+        scripts,
+        {
+            entry.get("key")
+            for section in (beads_plan.get("epics"), beads_plan.get("tasks"))
+            if isinstance(section, list)
+            for entry in section
+            if isinstance(entry, dict) and isinstance(entry.get("key"), str)
+        },
+        errors,
+    )
     expected_scripts = {
         "test:fixture-policy": "python3 scripts/ci/check_fixture_policy.py",
         "snapshots:check": "python3 scripts/test/snapshots.py --check",
@@ -500,8 +1164,8 @@ def main() -> int:
             print(f"fixture-policy: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "fixture-policy: OK: 8 lanes, canonical case manifests, mapped runners/expected outputs, "
-        "explicit snapshot updates, and example assertions"
+        "fixture-policy: OK: 8 lanes, 5 product-surface scorecards, canonical case manifests, "
+        "mapped runners/expected outputs, explicit snapshot updates, and tiered example assertions"
     )
     return 0
 

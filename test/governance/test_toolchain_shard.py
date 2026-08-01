@@ -291,7 +291,7 @@ class ToolchainShardTests(unittest.TestCase):
                 "test/governance/test_local_gate_evidence.py",
             )
         )
-        self.assertEqual(plan["schemaVersion"], 2)
+        self.assertEqual(plan["schemaVersion"], 3)
         self.assertEqual(plan["route"], self.route_selector.AFFECTED)
         self.assertEqual(
             [owner["script"] for owner in plan["taskOwners"]],
@@ -312,6 +312,31 @@ class ToolchainShardTests(unittest.TestCase):
             ],
         )
         self.assertEqual(plan["hostedRequired"]["check"], "Governance")
+        self.assertEqual(
+            plan["affectedExtended"],
+            {
+                "status": "no-claim-bearing-surface",
+                "productSurfaces": [],
+                "owners": [],
+                "scope": (
+                    "secondary compilers, sanitizers, platform profiles, and downstream "
+                    "owners selected directly from the affected scorecards; selection "
+                    "remains observation-only while R2 stays exhaustive"
+                ),
+            },
+        )
+        self.assertEqual(
+            plan["fullBackstop"],
+            {
+                "localCommand": "npm run test:toolchain:parallel -- --with-native",
+                "hostedCheck": "Governance",
+                "scope": "complete cold active suite plus native backstop and selector-miss audit",
+                "required": False,
+                "reasons": [],
+            },
+        )
+        self.assertEqual(plan["releaseQualification"]["status"], "unimplemented-not-a-pass")
+        self.assertIsNone(plan["releaseQualification"]["command"])
         self.assertEqual(
             plan["coldSnapshotAudit"],
             {
@@ -337,6 +362,10 @@ class ToolchainShardTests(unittest.TestCase):
         self.assertEqual(
             plan["taskOwners"][0]["localCommand"],
             "npm run test:body-lowering",
+        )
+        self.assertEqual(
+            plan["taskOwners"][0]["productSurfaces"],
+            ["compiler-admitted-slices"],
         )
         hxc_ir_plan = self.route_selector.build_test_plan(
             ("src/reflaxe/c/ir/HxcIR.hx",)
@@ -364,6 +393,26 @@ class ToolchainShardTests(unittest.TestCase):
         self.assertEqual(
             hello_plan["taskOwners"][0]["localCommand"],
             "npm run test:hello",
+        )
+        self.assertEqual(
+            hello_plan["affectedExtended"]["productSurfaces"],
+            [
+                "compiler-admitted-slices",
+                "diagnostics-source-mapping-downstream",
+                "runtime-memory-lifetime",
+                "toolchain-platform-portability",
+            ],
+        )
+        self.assertEqual(
+            [owner["script"] for owner in hello_plan["affectedExtended"]["owners"]],
+            [
+                "test:primitive-differential",
+                "test:caxecraft-domain:full",
+                "test:diagnostics",
+                "test:gc-runtime",
+                "test:native",
+                "test:build-adapters",
+            ],
         )
         project_plan = self.route_selector.build_test_plan(
             ("test/project_emitter/run.py",)
@@ -398,6 +447,44 @@ class ToolchainShardTests(unittest.TestCase):
             "required-from-owning-issue-or-nearest-package-script",
         )
         self.assertEqual(plan["localCommitSmoke"], [])
+        self.assertTrue(plan["fullBackstop"]["required"])
+        self.assertIn("no semantic task owner", plan["fullBackstop"]["reasons"][0])
+
+    def test_scorecards_are_the_only_product_surface_mapping_authority(self) -> None:
+        string_plan = self.route_selector.build_test_plan(
+            ("test/differential/string-runtime/run.py",)
+        )
+        self.assertEqual(
+            string_plan["taskOwners"][0]["productSurfaces"],
+            ["compiler-admitted-slices", "runtime-memory-lifetime"],
+        )
+        policy_plan = self.route_selector.build_test_plan(
+            ("scripts/ci/check_fixture_policy.py",)
+        )
+        fixture_owner = next(
+            owner
+            for owner in policy_plan["taskOwners"]
+            if owner["script"] == "test:fixture-policy"
+        )
+        self.assertEqual(fixture_owner["productSurfaces"], [])
+        extended_owner_plan = self.route_selector.build_test_plan(
+            ("test/primitive_differential/run.py",)
+        )
+        self.assertEqual(
+            extended_owner_plan["taskOwners"][0]["productSurfaces"],
+            ["compiler-admitted-slices"],
+        )
+        self.assertFalse(extended_owner_plan["fullBackstop"]["required"])
+
+    def test_unknown_target_surface_requires_the_full_r4_backstop(self) -> None:
+        plan = self.route_selector.build_test_plan(("std/c/NewSurface.hx",))
+        self.assertEqual(plan["route"], self.route_selector.AFFECTED)
+        self.assertEqual(plan["taskOwners"], [])
+        self.assertTrue(plan["fullBackstop"]["required"])
+        self.assertEqual(
+            plan["fullBackstop"]["reasons"],
+            ["no semantic task owner was inferred"],
+        )
 
     def test_agent_plan_json_is_stable_and_machine_readable(self) -> None:
         stdout = io.StringIO()
