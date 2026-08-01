@@ -261,6 +261,51 @@ CASES = {
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
     ),
+    "content-json": HaxeCTestCase(
+        case_id="content-json",
+        eval_hxml="content-json.hxml",
+        c_hxml="content-json-c.hxml",
+        native_harness="test/native/content_json_harness.c",
+        generated_source="src/modules/caxecraft/content/ContentJson.c",
+        required_source_markers=(
+            "ContentJson_read",
+            "ContentJson_parseValue",
+            "ContentJsonReadResult_ContentJsonReady",
+            "ContentJsonReadResult_ContentJsonRejected",
+        ),
+        forbidden_source_markers=(
+            "haxe.Json",
+            "Dynamic",
+            "throw",
+            "goto ",
+        ),
+        output_line_count=4,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "object",
+            "gc",
+            "string-scalar",
+            "string",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/text/Utf8Decoder.c",
+                required_markers=(
+                    "Utf8Decoder_decode",
+                    "Utf8DecodeResult_Utf8Decoded",
+                    "Utf8DecodeResult_Utf8Rejected",
+                ),
+                forbidden_markers=("goto ",),
+            ),
+        ),
+        runs_generated_main=True,
+    ),
     "resolved-level-plan": HaxeCTestCase(
         case_id="resolved-level-plan",
         eval_hxml="resolved-level-plan.hxml",
@@ -285,10 +330,8 @@ CASES = {
             "bytes",
             "object",
             "gc",
-            "int-map",
             "string-scalar",
             "string",
-            "string-map",
             "string-split",
         ),
         split_source_checks=(
@@ -443,7 +486,6 @@ CASES = {
         generated_source="src/modules/caxecraft/scenario/ScenarioLexer.c",
         required_source_markers=(
             "ScenarioLexer_read",
-            "ScenarioLexer_decodeUtf8",
             "ScenarioLexer_tokenize",
         ),
         forbidden_source_markers=("goto ",),
@@ -465,6 +507,15 @@ CASES = {
             "string-split",
         ),
         split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/text/Utf8Decoder.c",
+                required_markers=(
+                    "Utf8Decoder_decode",
+                    "Utf8DecodeResult_Utf8Decoded",
+                    "Utf8DecodeResult_Utf8Rejected",
+                ),
+                forbidden_markers=("goto ",),
+            ),
             GeneratedSourceCheck(
                 path="src/modules/caxecraft/scenario/ScenarioParser.c",
                 required_markers=("ScenarioParser_parse",),

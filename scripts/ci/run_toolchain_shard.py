@@ -91,6 +91,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
     "caxecraft": (
         "test:caxecraft-localization",
         "test:caxecraft-content-pack",
+        "test:caxecraft-content-json",
         "test:caxecraft-actor-composition",
         "test:caxecraft-package-store",
         "test:caxecraft-resolved-level-plan",

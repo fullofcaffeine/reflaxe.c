@@ -180,6 +180,34 @@ class ToolchainShardTests(unittest.TestCase):
             ),
         )
 
+    def test_content_json_change_selects_focused_and_flagship_owners(self) -> None:
+        focused_paths = (
+            "examples/caxecraft/content-json-c.hxml",
+            "examples/caxecraft/src/caxecraft/content/ContentJson.hx",
+            "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
+            "examples/caxecraft/test/native/content_json_harness.c",
+        )
+        for path in focused_paths:
+            with self.subTest(path=path):
+                plan = self.route_selector.build_test_plan((path,))
+                self.assertEqual(
+                    [owner["script"] for owner in plan["taskOwners"]],
+                    ["test:caxecraft-content-json"],
+                )
+                self.assertEqual(
+                    plan["taskOwners"][0]["productSurfaces"],
+                    ["compiler-admitted-slices", "runtime-memory-lifetime"],
+                )
+                self.assertFalse(plan["fullBackstop"]["required"])
+
+        shared_plan = self.route_selector.build_test_plan(
+            ("examples/caxecraft/src/caxecraft/text/Utf8Decoder.hx",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in shared_plan["taskOwners"]],
+            ["test:caxecraft-content-json", "test:caxecraft-domain"],
+        )
+
     def test_replay_change_selects_incremental_invalidation_owner(self) -> None:
         owners = self.route_selector.select_affected_owners(
             ("src/reflaxe/c/lowering/CBodyFunctionReplayCache.hx",)
@@ -523,7 +551,7 @@ class ToolchainShardTests(unittest.TestCase):
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 67)
+        self.assertEqual(len(canonical), 68)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER

@@ -6,6 +6,8 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioLexTokenKind;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioLimitKind;
+import caxecraft.text.Utf8Decoder;
+import caxecraft.text.Utf8Decoder.Utf8DecodeResult;
 import haxe.io.Bytes;
 
 /** Bounded UTF-8 decoder and tokenizer for the line-oriented CAXEMAP grammar. */
@@ -13,52 +15,11 @@ final class ScenarioLexer {
 	public static function read(input:Bytes):ScenarioReadResult<Array<ScenarioLexRecord>> {
 		if (input.length > ScenarioLimits.MAX_FILE_BYTES)
 			return fail(1, 1, 0, LimitExceeded(FileBytes, ScenarioLimits.MAX_FILE_BYTES));
-		final decoded = decodeUtf8(input);
+		final decoded = Utf8Decoder.decode(input, ScenarioLimits.MAX_FILE_BYTES);
 		return switch decoded {
-			case ReadError(diagnostics): ReadError(diagnostics);
-			case ReadOk(text): tokenize(text);
+			case Utf8Rejected(offset): fail(1, 1, 0, MalformedUtf8(offset));
+			case Utf8Decoded(text): tokenize(text);
 		}
-	}
-
-	static function decodeUtf8(input:Bytes):ScenarioReadResult<String> {
-		if (input.length >= 3 && input.get(0) == 0xef && input.get(1) == 0xbb && input.get(2) == 0xbf)
-			return fail(1, 1, 0, MalformedUtf8(0));
-		final output = new StringBuf();
-		var offset = 0;
-		while (offset < input.length) {
-			final first = input.get(offset);
-			var scalar = 0;
-			var width = 0;
-			if (first <= 0x7f) {
-				scalar = first;
-				width = 1;
-			} else if (first >= 0xc2 && first <= 0xdf) {
-				scalar = first & 0x1f;
-				width = 2;
-			} else if (first >= 0xe0 && first <= 0xef) {
-				scalar = first & 0x0f;
-				width = 3;
-			} else if (first >= 0xf0 && first <= 0xf4) {
-				scalar = first & 0x07;
-				width = 4;
-			} else {
-				return fail(1, 1, 0, MalformedUtf8(offset));
-			}
-			if (offset + width > input.length)
-				return fail(1, 1, 0, MalformedUtf8(offset));
-			for (index in 1...width) {
-				final continuation = input.get(offset + index);
-				if ((continuation & 0xc0) != 0x80)
-					return fail(1, 1, 0, MalformedUtf8(offset + index));
-				scalar = (scalar << 6) | (continuation & 0x3f);
-			}
-			final overlong = (width == 2 && scalar < 0x80) || (width == 3 && scalar < 0x800) || (width == 4 && scalar < 0x10000);
-			if (overlong || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff) || scalar == 0)
-				return fail(1, 1, 0, MalformedUtf8(offset));
-			output.addChar(scalar);
-			offset += width;
-		}
-		return ReadOk(output.toString());
 	}
 
 	static function tokenize(text:String):ScenarioReadResult<Array<ScenarioLexRecord>> {

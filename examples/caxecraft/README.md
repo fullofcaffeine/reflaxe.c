@@ -552,6 +552,23 @@ finished. `npm run test:caxecraft-package-store` proves the byte boundary, and
 ownership/publication; `haxe_c-xge.20.4.3` owns completing the bounded runtime
 pack.
 
+Before a pack-specific schema accepts fields, `ContentJson` turns bounded
+scalar-valid UTF-8 into a closed JSON tree with source locations. It preserves
+number spellings, rejects duplicate names and malformed syntax, and enforces
+reviewed byte, depth, node, and collection limits. This is a capability showcase
+inside the flagship application, not a general JSON library or a claim that the
+game loads arbitrary packs. It is portable ordinary Haxe inside the admitted
+haxe.c slice rather than native/metal application logic. Its focused owner uses
+the pinned Haxe toolchain, compares Eval with real generated C compiled as
+strict C11 by the available host compiler (normally Clang), and runs Address
+Sanitizer and UndefinedBehaviorSanitizer when that compiler supports them. That
+one-host result proves runtime behavior and cleanup, not platform qualification.
+Run it with:
+
+```sh
+npm run test:caxecraft-content-json
+```
+
 After editing the UI catalog or embedded CaxeMap messages, regenerate and check
 the temporary built-in lookup catalog with:
 

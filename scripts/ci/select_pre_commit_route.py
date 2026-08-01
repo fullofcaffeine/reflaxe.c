@@ -193,7 +193,28 @@ AFFECTED_OWNER_RULES = (
     ),
     (
         re.compile(
-            r"^examples/caxecraft/(?!profile_(?:compiler|incremental_edit)\.py$)|^docs/caxecraft-"
+            r"^examples/caxecraft/(?:"
+            r"content-json(?:-c)?\.hxml"
+            r"|src/caxecraft/(?:content/ContentJson|text/Utf8Decoder)\.hx"
+            r"|test/caxecraft/qa/ContentJsonProbe\.hx"
+            r"|test/native/content_json_harness\.c"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-content-json",
+            "bounded content JSON semantics or its shared byte decoder changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^(?:examples/caxecraft/(?!"
+            r"(?:profile_(?:compiler|incremental_edit)\.py"
+            r"|content-json(?:-c)?\.hxml"
+            r"|src/caxecraft/content/ContentJson\.hx"
+            r"|test/caxecraft/qa/ContentJsonProbe\.hx"
+            r"|test/native/content_json_harness\.c"
+            r")$"
+            r")|docs/caxecraft-)"
         ),
         AffectedOwner("test:caxecraft-domain", "the flagship compiler/product path changed"),
     ),

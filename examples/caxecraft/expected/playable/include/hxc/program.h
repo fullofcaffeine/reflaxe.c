@@ -137,6 +137,7 @@
 #include "hxc/modules/caxecraft/scenario/ScenarioWorldReader.h"
 #include "hxc/modules/caxecraft/scenario/ScenarioWorldValidator.h"
 #include "hxc/modules/caxecraft/scenario/ScenarioWriter.h"
+#include "hxc/modules/caxecraft/text/Utf8Decoder.h"
 #include "hxc/modules/raygui/GuiListViewState.h"
 #include "hxc/modules/raygui/GuiTextBoxState.h"
 #include "hxc/modules/raygui/GuiToggleState.h"

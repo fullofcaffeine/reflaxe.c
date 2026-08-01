@@ -50,6 +50,7 @@
       ],
       "verticalOwners": [
         "test:hello",
+        "test:caxecraft-content-json",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -73,6 +74,11 @@
           "path": "test/differential/string-runtime/case.json",
           "proves": "The bounded String suite proves fresh decoded enum carriers and retained String payload aliases with Eval, strict native execution, and sanitizer observers; the enum suite separately proves the synchronous String constructor-callback adapter.",
           "doesNotProve": "Other managed or recursive enum-constructor callback payloads, full standard-library String behavior, or general Haxe lowering."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
+          "proves": "One bounded ordinary-Haxe JSON codec crosses the admitted enum, class, Array, Bytes, and String slices through strict generated C.",
+          "doesNotProve": "General Haxe lowering, a general JSON library, runtime pack loading, public ABI stability, or platform qualification."
         }
       ],
       "selectorOwnership": {
@@ -197,6 +203,7 @@
       ],
       "verticalOwners": [
         "test:hello",
+        "test:caxecraft-content-json",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -221,6 +228,11 @@
           "path": "test/differential/string-runtime/case.json",
           "proves": "String runtime behavior, including fresh enum-payload projection and retained aggregate aliases, is compared with an independent Haxe oracle and native sanitizer observers.",
           "doesNotProve": "Other managed callback payload types, a complete runtime, leak detection on hosts without LeakSanitizer, or platform qualification."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
+          "proves": "The bounded JSON tree and rejection paths complete real generated native cleanup under AddressSanitizer and UndefinedBehaviorSanitizer.",
+          "doesNotProve": "A complete runtime, leak detection where unavailable, arbitrary pack loading, compiler conformance, or another platform."
         }
       ],
       "selectorOwnership": {
