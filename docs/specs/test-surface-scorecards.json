@@ -71,8 +71,8 @@
         },
         {
           "path": "test/differential/string-runtime/case.json",
-          "proves": "The declared bounded String suite has a focused differential/native owner.",
-          "doesNotProve": "The currently failing fresh managed enum-value ownership path or full standard-library String behavior."
+          "proves": "The bounded String suite proves fresh decoded enum carriers and retained String payload aliases with Eval, strict native execution, and sanitizer observers; the enum suite separately proves the synchronous String constructor-callback adapter.",
+          "doesNotProve": "Other managed or recursive enum-constructor callback payloads, full standard-library String behavior, or general Haxe lowering."
         }
       ],
       "selectorOwnership": {
@@ -85,8 +85,8 @@
       "fullBackstopCommand": "npm run test:toolchain:parallel -- --with-native",
       "releaseCommand": null,
       "lastObserved": {
-        "state": "known-red",
-        "evidence": "haxe_c-djl.25: test:string-runtime rejects unowned-fresh-managed-enum-value with HXC1001 while the neighboring content-json path passes."
+        "state": "bounded-green",
+        "evidence": "haxe_c-djl.25: test:string-runtime and test:enum-lowering pass the focused decoded-enum and synchronous managed-String callback ownership slices; Caxecraft remains the separate vertical proof."
       },
       "residualRisks": [
         "General Haxe-to-C remains unsupported in the capability manifest.",
@@ -219,8 +219,8 @@
         },
         {
           "path": "test/differential/string-runtime/case.json",
-          "proves": "String runtime behavior is compared with an independent Haxe oracle and native observers.",
-          "doesNotProve": "The active managed enum-value lifetime regression is fixed."
+          "proves": "String runtime behavior, including fresh enum-payload projection and retained aggregate aliases, is compared with an independent Haxe oracle and native sanitizer observers.",
+          "doesNotProve": "Other managed callback payload types, a complete runtime, leak detection on hosts without LeakSanitizer, or platform qualification."
         }
       ],
       "selectorOwnership": {
@@ -233,8 +233,8 @@
       "fullBackstopCommand": "npm run test:toolchain:parallel -- --with-native",
       "releaseCommand": null,
       "lastObserved": {
-        "state": "known-red",
-        "evidence": "haxe_c-djl.25: the scenario-native-codec tracer reaches an ASan heap-use-after-free during GC disposal."
+        "state": "bounded-green",
+        "evidence": "haxe_c-djl.25: the staged focused String and enum owners pass strict native execution and ASan/UBSan for decoded enum projection and synchronous managed-String callback cleanup on the local Clang host."
       },
       "residualRisks": [
         "The hxrt implementation remains a bounded collection of admitted slices, not a complete runtime.",

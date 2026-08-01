@@ -2112,7 +2112,7 @@ private class EnumConstructorAdapterRegistry {
 			final payload = tagCase.payload[index];
 			if (FunctionBuilder.typeKey(parameter.irType) != FunctionBuilder.typeKey(payload.valueType.irType))
 				return reject(owner, expression.pos, 'enum-constructor-function:${field.name}:parameter-$index-type-mismatch');
-			if (payload.indirect || hasManagedLifetime(payload.valueType))
+			if (payload.indirect || (hasManagedLifetime(payload.valueType) && !isManagedString(payload.valueType)))
 				return reject(owner, expression.pos, 'enum-constructor-function:${field.name}:parameter-$index-managed-or-recursive-adapter-not-yet-admitted');
 		}
 		final closure = expected == null ? null : expected.stackClosureValue();
@@ -2238,6 +2238,57 @@ private class EnumConstructorAdapterRegistry {
 			throw new CBodyEmissionError('enum-constructor adapter `${prepared.irId}` lost its enum result representation');
 		final result:HxcIRResult = {id: "value.0", type: prepared.returnMapping.irType};
 		final payloadParameters = prepared.parameters.filter(parameter -> parameter.ir.id != "parameter.context");
+		final locals:Array<HxcIRLocal> = [];
+		final localRequests:Map<String, CSymbolRequest> = [];
+		final instructions:Array<HxcIRInstruction> = [];
+		final runtimeRequirements:Array<CBodyRuntimeRequirement> = [];
+		for (index in 0...payloadParameters.length) {
+			final parameter = payloadParameters[index];
+			if (!isManagedString(parameter.mapping))
+				continue;
+			final payload = tagCase.payload[index];
+			final localId = 'local.payload-owner.$index';
+			locals.push({
+				id: localId,
+				type: parameter.mapping.irType,
+				storage: IRLSAutomatic,
+				initialState: IRISUninitialized,
+				source: source
+			});
+			final localRequest = new CSymbolRequest(CSKTemporary, [
+				"compiler",
+				"enum-constructor-adapter",
+				enumValue.digest,
+				tagCase.name,
+				payload.name,
+				"owner"
+			],
+				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], index, [payload.name, "owner"]);
+			context.symbols.register(localRequest);
+			localRequests.set(localId, localRequest);
+			instructions.push({
+				id: 'instruction.payload-owner.$index.initialize',
+				result: null,
+				kind: IRIOInitialize(IRPLocal(localId), parameter.ir.id, IRISUninitialized, IRISInitialized),
+				source: source
+			});
+			instructions.push({
+				id: 'instruction.payload-owner.$index.retain',
+				result: null,
+				kind: IRIORetain(IRPLocal(localId), IRIRuntime("string")),
+				source: source
+			});
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "managed String transferred through an enum constructor callback",
+				source, prepared.sourceExpression.pos));
+		}
+		// Each retained owner is deliberately not cleaned up in this adapter: the
+		// returned enum carries the same String bits and receives that logical owner.
+		instructions.push({
+			id: "instruction.0.construct-enum-adapter",
+			result: result,
+			kind: IRIOConstructTag(enumValue.instanceId, tagCase.name, payloadParameters.map(parameter -> parameter.ir.id)),
+			source: source
+		});
 		final ir:HxcIRFunction = {
 			id: prepared.irId,
 			displayName: '${prepared.declarationPath}.${prepared.displayName}',
@@ -2247,7 +2298,7 @@ private class EnumConstructorAdapterRegistry {
 			borrowedClassLocalIds: [],
 			borrowedInterfaceLocalIds: [],
 			managedRoots: [],
-			locals: [],
+			locals: locals,
 			returnType: prepared.returnMapping.irType,
 			failureConvention: IRFCInfallible,
 			entryBlockId: "entry",
@@ -2255,14 +2306,7 @@ private class EnumConstructorAdapterRegistry {
 				{
 					id: "entry",
 					parameters: [],
-					instructions: [
-						{
-							id: "instruction.0.construct-enum-adapter",
-							result: result,
-							kind: IRIOConstructTag(enumValue.instanceId, tagCase.name, payloadParameters.map(parameter -> parameter.ir.id)),
-							source: source
-						}
-					],
+					instructions: instructions,
 					terminator: {kind: IRTReturn(result.id, []), source: source},
 					source: source
 				}
@@ -2273,12 +2317,12 @@ private class EnumConstructorAdapterRegistry {
 		return {
 			prepared: prepared,
 			ir: ir,
-			localRequests: [],
+			localRequests: localRequests,
 			spanLengthRequests: [],
 			temporaryRequests: [],
 			tailArgumentRequests: [],
 			labelRequests: [],
-			runtimeRequirements: []
+			runtimeRequirements: runtimeRequirements
 		};
 	}
 
@@ -2287,10 +2331,17 @@ private class EnumConstructorAdapterRegistry {
 
 	static function hasManagedLifetime(value:CBodyValueType):Bool
 		return switch value.kind {
-			case CBVKArray(_) | CBVKBytes(_): true;
+			case CBVKManagedString(_) | CBVKArray(_) | CBVKBytes(_): true;
 			case CBVKEnum(nested): nested.managedLifetime;
 			case CBVKAggregate(aggregate): aggregate.managedLifetime;
 			case CBVKOptional(optional): optional.managedLifetime;
+			case _: false;
+		};
+
+	/** Managed String is the first adapter payload with an exact typed retain plan. */
+	static function isManagedString(value:CBodyValueType):Bool
+		return switch value.kind {
+			case CBVKManagedString(_): true;
 			case _: false;
 		};
 
@@ -7375,8 +7426,9 @@ private class FunctionBuilder {
 	}
 
 	function lowerEnumParameter(expression:TypedExpr, receiver:TypedExpr, enumField:EnumField, payloadIndex:Int):LoweredValue {
-		final receiverValue = lowerRequiredEnumValue(receiver, 'TEnumParameter(${enumField.name}:receiver-type)',
-			'TEnumParameter(${enumField.name}:receiver-not-enum)', 'enum-parameter-${enumField.name}');
+		final receiverValue = stabilizeFreshManagedEnum(lowerRequiredEnumValue(receiver, 'TEnumParameter(${enumField.name}:receiver-type)',
+			'TEnumParameter(${enumField.name}:receiver-not-enum)', 'enum-parameter-${enumField.name}'),
+			receiver.pos, 'enum-parameter-${enumField.name}-receiver');
 		final receiverMapping = receiverValue.mapping;
 		final value = receiverMapping.enumValue();
 		if (value == null)

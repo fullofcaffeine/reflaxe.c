@@ -229,6 +229,55 @@ final class Main {
 	}
 
 	/**
+		Keep one runtime substring through two independently owned aggregates.
+
+		Caxecraft first exposed this shape when its parser stored one feature ID
+		in both the playable scenario and a copied source-location table. The
+		collector later destroys the outer context field by field, so each Array
+		and enum payload must own its String alias independently.
+	**/
+	static function copiedAggregateAliasesHold():Bool {
+		var retained = false;
+		switch decodeManagedText() {
+			case ManagedDecoded(source):
+				retained = retainDecodedAliases(source);
+		}
+		return retained;
+	}
+
+	/**
+		Build one managed String behind an enum result, as a decoder boundary does.
+
+		The caller must keep the payload alive after this function's local
+		`StringBuf` and returned enum carrier have both been cleaned up.
+	**/
+	static function decodeManagedText():ManagedDecodeResult {
+		final output = new StringBuf();
+		output.add("prefix:caxecraft:core:suffix");
+		return ManagedDecoded(output.toString());
+	}
+
+	/**
+		Retain aliases derived from a decoded enum payload across a helper call.
+
+		This is the smallest ordinary-Haxe shape of the Caxecraft failure: the
+		decoded payload is borrowed by the pattern binding, while the candidate and
+		the diagnostic-location copy each acquire independent owners.
+	**/
+	static function retainDecodedAliases(source:String):Bool {
+		final feature = source.substring(7, 21);
+		final candidate:ManagedCandidate = {requiredFeatures: [feature]};
+		final cursor = new ManagedLocationCursor();
+		cursor.add(FeatureSubject(feature));
+		final parsed:ManagedParsed = {
+			candidate: candidate,
+			sourceLocations: cursor.sourceLocations()
+		};
+		final context = new ManagedParseContext(parsed);
+		return context.firstFeature() == "caxecraft:core" && context.firstLocationFeature() == "caxecraft:core";
+	}
+
+	/**
 		Exercise managed String ownership at four kinds of value-switch join.
 
 		Each switch deliberately mixes a static literal, a borrowed parameter, a
@@ -345,6 +394,7 @@ final class Main {
 			&& conditionalViewContractHolds()
 			&& conditionalCompoundContractHolds()
 			&& splitContractHolds()
+			&& copiedAggregateAliasesHold()
 			&& switchJoinContractHolds(alias)
 			&& alias.length == 3
 			&& direct == "é😀"
@@ -422,4 +472,85 @@ enum abstract SwitchKey(String) {
 	final Borrowed = "borrowed";
 	final Fresh = "fresh";
 	final Explode = "explode";
+}
+
+/**
+	A source-location subject owns the parsed String it keeps for diagnostics.
+
+	The enum is separate from the playable candidate because both values can
+	outlive the parser cursor and are destroyed independently.
+**/
+enum ManagedSourceSubject {
+	FeatureSubject(feature:String);
+}
+
+/** A decoder returns its runtime-created text through a managed enum payload. */
+enum ManagedDecodeResult {
+	ManagedDecoded(text:String);
+}
+
+/** One source-location record keeps the subject shape visible to record copying. */
+typedef ManagedSourceLocation = {
+	final subject:ManagedSourceSubject;
+}
+
+/** The playable candidate owns the feature IDs required by one document. */
+typedef ManagedCandidate = {
+	final requiredFeatures:Array<String>;
+}
+
+/** Parsed output owns both its candidate and a copied diagnostic-location table. */
+typedef ManagedParsed = {
+	final candidate:ManagedCandidate;
+	final sourceLocations:Array<ManagedSourceLocation>;
+}
+
+/**
+	Collects source locations while parsing and returns an independently owned copy.
+
+	The copied Array must retain the nested enum's String payload rather than
+	borrowing it from this cursor's original Array.
+**/
+final class ManagedLocationCursor {
+	final locations:Array<ManagedSourceLocation> = [];
+
+	/** Create one empty parser-owned location table. */
+	public function new() {}
+
+	/** Add one independently owned location to the parser cursor. */
+	public function add(subject:ManagedSourceSubject):Void
+		locations.push({subject: subject});
+
+	/** Return a copy that remains valid after the cursor is collected. */
+	public function sourceLocations():Array<ManagedSourceLocation>
+		return locations.copy();
+}
+
+/**
+	Owns parsed output and its frequently used candidate view together.
+
+	This mirrors a validator that keeps the complete parsed document for source
+	diagnostics while also retaining the nested candidate for semantic checks.
+**/
+final class ManagedParseContext {
+	final parsed:ManagedParsed;
+	final candidate:ManagedCandidate;
+
+	/**
+		Retain both values because this context destroys both fields independently.
+	**/
+	public function new(parsed:ManagedParsed) {
+		this.parsed = parsed;
+		this.candidate = parsed.candidate;
+	}
+
+	/** Read the playable feature through the nested candidate view. */
+	public function firstFeature():String
+		return candidate.requiredFeatures[0];
+
+	/** Read the same feature through the copied diagnostic-location aggregate. */
+	public function firstLocationFeature():String
+		return switch parsed.sourceLocations[0].subject {
+			case FeatureSubject(feature): feature;
+		};
 }

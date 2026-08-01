@@ -566,6 +566,55 @@ def validate_conditional_compound_ownership(hxcir: str) -> None:
             )
 
 
+def validate_projected_enum_payload_ownership(hxcir: str) -> None:
+    """Prove a fresh enum stays alive until its borrowed String is retained."""
+    function = hxcir_function(hxcir, "Main.copiedAggregateAliasesHold")
+    enum_owner = re.search(
+        r'enum-parameter-ManagedDecoded-receiver-owner-initialize".*'
+        r'place=local\("([^"]+)"\)',
+        function,
+    )
+    string_owner = re.search(
+        r'retain-string-alias".*place=local\("([^"]+)"\)',
+        function,
+    )
+    operations = [
+        function.find('call dispatch=direct("function.Main.decodeManagedText")'),
+        function.find("enum-parameter-ManagedDecoded-receiver-owner-initialize"),
+        function.find("enum-payload-project"),
+        function.find("retain-string-alias"),
+        function.find(
+            'call dispatch=direct("function.Main.retainDecodedAliases")'
+        ),
+    ]
+    if (
+        enum_owner is None
+        or string_owner is None
+        or any(position < 0 for position in operations)
+        or operations != sorted(operations)
+    ):
+        raise StringRuntimeFailure(
+            "the decoded enum payload is not retained before its carrier can be "
+            "destroyed"
+        )
+    expected_cleanup = (
+        'cleanup=["cleanup.construction".'
+        f'"string-{string_owner.group(1)}.release",'
+        '"cleanup.construction".'
+        f'"enum-temporary.{enum_owner.group(1)}.release"]'
+    )
+    if (
+        function.count("enum-parameter-ManagedDecoded-receiver-owner-initialize")
+        != 1
+        or function.count("retain-string-alias") != 1
+        or function.count(expected_cleanup) != 1
+    ):
+        raise StringRuntimeFailure(
+            "the decoded payload and fresh enum carrier do not have one ordered "
+            "cleanup each"
+        )
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     """Check semantic intent, exact runtime closure, and recognizable C calls."""
     for operation in (
@@ -591,6 +640,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     validate_std_string_identity_ownership(hxcir)
     validate_conditional_view_ownership(hxcir)
     validate_conditional_compound_ownership(hxcir)
+    validate_projected_enum_payload_ownership(hxcir)
 
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (
@@ -663,6 +713,8 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "char-code-at",
         "cleanup-release",
         "concat",
+        "copy",
+        "create-literal",
         "from-int",
         "from-scalar",
         "get-checked",
@@ -670,6 +722,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "last-index-of",
         "length",
         "managed-type-representation",
+        "push",
         "retain",
         "split",
         "static-value",

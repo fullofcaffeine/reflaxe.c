@@ -144,9 +144,13 @@ instead of hiding semantic work in the printer. An ordinary bare function value
 gets a bare adapter. A proven synchronous callback slot gets the context-aware
 form instead; its otherwise-unused context parameter is discarded explicitly.
 The compiler does not emit both forms unless the program actually uses both.
-The first slice remains bounded to non-recursive payload shapes admitted by the
-current enum ownership plan; unsupported recursive or ownership-sensitive
-constructors still fail closed.
+The first ownership-sensitive exception is a direct managed `String` payload.
+The adapter receives that value as a borrow, retains one typed owner before it
+constructs the tag, and transfers that owner to the returned enum. The enum's
+ordinary active-tag destroy helper releases it. This is intentionally narrower
+than general managed-payload support: indirect payloads and every other managed
+or recursive constructor shape still stop with source-positioned `HXC1001`
+until they have their own typed, failure-safe ownership plan.
 
 The graph collector walks real `TypedExpr` nodes with the typed compiler API, is
 cycle-safe, and normalizes the reachable set before lowering. An unavailable

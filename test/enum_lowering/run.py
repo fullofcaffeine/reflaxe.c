@@ -1246,6 +1246,10 @@ def check_negative_cases() -> None:
             "HXC1001",
             "UnsupportedValue.values:reference-policy-not-admitted:haxe-string-map-reference:",
         ),
+        "unsupported_managed_callback": (
+            "HXC1001",
+            "enum-constructor-function:Collected:parameter-0-managed-or-recursive-adapter-not-yet-admitted",
+        ),
     }
     with tempfile.TemporaryDirectory(prefix="hxc-enum-negative-") as temporary:
         root = Path(temporary)
@@ -1367,6 +1371,128 @@ def check_string_payload(*, requested_toolchain: str) -> None:
                         "tagged-union",
                     }
                 ),
+            )
+
+
+def check_managed_string_callback(*, requested_toolchain: str) -> None:
+    """Prove a synchronous enum-constructor callback retains its String payload."""
+    fixture = FIXTURES / "managed_string_callback"
+    eval_result = subprocess.run(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    require_compile_success(eval_result, "managed-String callback Eval oracle")
+    with tempfile.TemporaryDirectory(prefix="hxc-enum-string-callback-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        compile_result = custom_target(
+            fixture,
+            output,
+            main="Main",
+            report=True,
+        )
+        hxcir = extract_static_hxcir(
+            compile_result, "managed-String callback compile"
+        )
+        sources = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.c"))
+        )
+        headers = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.h"))
+        )
+        project = CFixtureProject(
+            "enum-managed-string-callback-sanitized",
+            sources,
+            headers,
+            ("include", "runtime/include"),
+            "",
+            (
+                "enum-constructor-callback",
+                "managed-string-payload",
+                "generated-executable",
+                "asan-ubsan",
+            ),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        report = run_c_fixture_corpus(
+            suite="enum-managed-string-callback-sanitized",
+            projects=(project,),
+            fixture_root=output,
+            build_root=root / "native-sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(report, required_coverage=frozenset(project.coverage))
+
+        generated_c = b"\n".join(
+            path.read_bytes() for path in sorted(output.rglob("*.c"))
+        ).decode("utf-8")
+        adapter_match = re.search(
+            r"\b([A-Za-z_][A-Za-z0-9_]*Entered_synchronous_callback_adapter"
+            r"[A-Za-z0-9_]*)\(",
+            generated_c,
+        )
+        adapter = (
+            c_function_section(generated_c, adapter_match.group(1))
+            if adapter_match is not None
+            else ""
+        )
+        retain = adapter.find("hxc_string_retain(")
+        construction = adapter.find(".hxc_tag = hxc_TextEvent_Entered")
+        destroy_names = re.findall(
+            r"\bvoid\s+(hxc_enum_[0-9a-f]+_destroy)\(void \*", generated_c
+        )
+        destroy_sections = {
+            name: c_function_section(generated_c, name) for name in destroy_names
+        }
+        text_event_destroy = [
+            (name, section)
+            for name, section in destroy_sections.items()
+            if "case hxc_TextEvent_Entered" in section
+        ]
+        destroy_name, destroy = (
+            text_event_destroy[0] if len(text_event_destroy) == 1 else ("", "")
+        )
+        caller = c_function_section(
+            generated_c, "hxc_Main_callbackResultSurvivesSourceRelease"
+        )
+        observation = caller.find("hxc_Main_isExpected(")
+        caller_destroy = caller.find(destroy_name + "(&") if destroy_name else -1
+        if (
+            'name="TextEvent.Entered constructor adapter for synchronous callback"'
+            not in hxcir
+            or 'retain place=local("local.payload-owner.0")' not in hxcir
+            or 'implementation=runtime("string")' not in hxcir
+            or adapter_match is None
+            or retain == -1
+            or construction == -1
+            or retain > construction
+            or adapter.count("hxc_string_retain(") != 1
+            or len(text_event_destroy) != 1
+            or destroy.count("hxc_string_release(") != 1
+            or caller.count(destroy_name + "(&") != 1
+            or observation == -1
+            or caller_destroy == -1
+            or observation > caller_destroy
+        ):
+            raise EnumLoweringFailure(
+                "managed-String enum callback lost its balanced retain, active-tag "
+                "release, or caller cleanup proof"
             )
 
 
@@ -2012,6 +2138,8 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--native-only", action="store_true")
     parser.add_argument("--bytes-payload-only", action="store_true")
     parser.add_argument("--managed-class-payload-only", action="store_true")
+    parser.add_argument("--managed-string-callback-only", action="store_true")
+    parser.add_argument("--negative-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -2043,6 +2171,20 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "and sanitizer evidence passed"
             )
             return 0
+        if args.managed_string_callback_only:
+            check_managed_string_callback(requested_toolchain=args.toolchain)
+            print(
+                "enum-lowering: OK: synchronous enum-constructor callbacks retain "
+                "managed String payloads before returning owned tagged values"
+            )
+            return 0
+        if args.negative_only:
+            check_negative_cases()
+            print(
+                "enum-lowering: OK: unsupported enum semantics remain exact, "
+                "source-positioned, and fail closed"
+            )
+            return 0
 
         first_payload, first = render("first enum render")
         second_payload, second = render("second enum render")
@@ -2060,6 +2202,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_native(first, requested_toolchain=args.toolchain)
         check_production(requested_toolchain=args.toolchain)
         check_string_payload(requested_toolchain=args.toolchain)
+        check_managed_string_callback(requested_toolchain=args.toolchain)
         check_managed_class_payload(requested_toolchain=args.toolchain)
         check_bytes_payload(requested_toolchain=args.toolchain)
         check_negative_cases()
