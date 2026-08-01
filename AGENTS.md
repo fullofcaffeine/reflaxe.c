@@ -368,8 +368,11 @@ performance, packaging, and developer experience together.
   plausible options, migration cost, and regression gates; check the governing
   PRD/ADR; and ask the maintainer for an explicit decision. When the decision is
   unusually broad, irreversible, or uncertain, prepare that evidence as a
-  focused deep-research brief for the designated Oracle model rather than
-  improvising a new architecture.
+  focused deep-research brief for GPT-5.6 Pro rather than improvising a new
+  architecture. Use the globally installed `$oracle-review` skill for the rare
+  manual handoff, sanitized Repomix package, pending-request check, and archive
+  lifecycle under `/tmp/oracle`. Public source and install instructions:
+  https://github.com/fullofcaffeine/caf-skills/tree/main/skills/oracle-review
 - Keep claims evidence-bounded. Caxecraft is the primary integrated proof, not
   permission to infer general language support from one game. Conversely, a
   focused compiler fixture passing is not enough to claim the flagship is
