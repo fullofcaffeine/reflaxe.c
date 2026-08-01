@@ -225,7 +225,7 @@ AFFECTED_OWNER_RULES = (
         re.compile(
             r"^examples/caxecraft/(?:"
             r"runtime-content-generation(?:-c)?\.hxml"
-            r"|src/caxecraft/content/(?:RuntimeContentDigest|RuntimeContentGeneration)\.hx"
+            r"|src/caxecraft/content/(?:ActiveRuntimeContent|RuntimeContentDigest|RuntimeContentGeneration|RuntimeLevelLoader)\.hx"
             r"|test/caxecraft/qa/RuntimeContentGenerationProbe\.hx"
             r"|test/native/runtime_content_generation_harness\.c"
             r"|packs/caxecraft/base/runtime-content\.json"
@@ -237,6 +237,19 @@ AFFECTED_OWNER_RULES = (
         AffectedOwner(
             "test:caxecraft-runtime-content-generation",
             "atomic package receipt, digest, decoding, or generation semantics changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?:"
+            r"runtime-content-publication\.hxml"
+            r"|src/caxecraft/content/ActiveRuntimeContent\.hx"
+            r"|test/caxecraft/qa/RuntimeContentPublicationProbe\.hx"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-runtime-content-publication",
+            "complete runtime generation publication semantics changed",
         ),
     ),
     (
@@ -256,6 +269,9 @@ AFFECTED_OWNER_RULES = (
             r"|test/caxecraft/qa/RuntimeContentGenerationProbe\.hx"
             r"|test/native/runtime_content_generation_harness\.c"
             r"|packs/caxecraft/base/runtime-content\.json"
+            r"|runtime-content-publication\.hxml"
+            r"|src/caxecraft/content/ActiveRuntimeContent\.hx"
+            r"|test/caxecraft/qa/RuntimeContentPublicationProbe\.hx"
             r")$"
             r")|docs/caxecraft-)"
         ),

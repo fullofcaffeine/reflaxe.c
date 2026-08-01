@@ -2099,7 +2099,7 @@ def validate_generated_playable(
         "hxc_completedTicks",
         "WaterRenderer_draw(",
     )
-    content_loader_call = "RuntimeLevelLoader_loadRuntimeLevel("
+    content_loader_call = "RuntimeContentGeneration_loadRuntimeContent("
     for required in (*required_app_calls, content_loader_call):
         if required not in app:
             raise PlayFailure(f"generated Caxecraft app omitted required call {required}")
@@ -2115,6 +2115,8 @@ def validate_generated_playable(
             "generated Caxecraft must validate and assemble its candidate session before opening Raylib"
         )
     forbidden_app_calls = [
+        "BaseContentRegistry",
+        "constructor_caxecraft_content_ActiveContent(",
         "FirstPlayableLevel_loadTerrain(",
         "GameSession_resetEmptyWorld(",
         "GameSession_activateAuthoredItemDuringLoad(",
@@ -2246,9 +2248,10 @@ def validate_generated_playable(
         )
     required_level_calls = (
         "ContentPackageStore_open(",
+        "RuntimeContentGeneration_loadRuntimeContent(",
         "RuntimeLevelLoader_loadRuntimeLevel(",
         "LoadedContentGeneration_build(",
-        "constructor_caxecraft_content_ActiveContent(",
+        "constructor_caxecraft_content_ActiveRuntimeContent(",
     )
     for required in required_level_calls:
         if required not in combined:

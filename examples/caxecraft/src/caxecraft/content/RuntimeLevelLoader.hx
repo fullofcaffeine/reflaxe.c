@@ -237,6 +237,24 @@ function loadRuntimeLevelWithFault(source:RuntimeLevelSource, generationId:Conte
 		resolutionRegistry:LevelContentResolver, playerOptions:LevelPlayerOptions, fault:ContentGenerationBuildFault):RuntimeLevelLoadResult {
 	return loadRuntimeLevelInternal(source, generationId, validationRegistry, resolutionRegistry, playerOptions, fault);
 }
+
+/**
+ * Rebuild a fresh level/session from one real decoded candidate for publication tests.
+ *
+ * Native complete-package tests use this after one real filesystem load. It
+ * avoids rereading and rehashing identical bytes while still constructing a
+ * distinct `GameSession`, generation identity, level owner, and copied receipt.
+ * The helper is absent from ordinary product builds and cannot combine an
+ * unrelated plan, presentation model, registry, or source receipt.
+ */
+function rebuildRuntimeLevelForPublicationTesting(candidate:RuntimeLevelCandidate, generationId:ContentGenerationId):RuntimeLevelLoadResult {
+	return switch LoadedContentGeneration.build(generationId, candidate.generation().plan(), candidate.generation().presentation()) {
+		case ContentGenerationReady(generation):
+			RuntimeLevelReady(new RuntimeLevelCandidate(generation, candidate.receipt(), candidate.authoredTrace()));
+		case ContentGenerationRejected(error):
+			RuntimeLevelRejected(RuntimeLevelGenerationRejected(error));
+	};
+}
 #end
 
 /**

@@ -582,17 +582,13 @@ location. Run the vertical tracer with:
 npm run test:caxecraft-runtime-schemas
 ```
 
-This is a capability showcase, not the publication step. The tracer reads the
+This is a capability showcase, not the complete publication step. The tracer reads the
 real package files through the confined package store, compares selected facts
 with manually authored expectations reviewed from those source files and the
 independent Python validators, then repeats the behavior through strict native
 C and sanitizers. The visual inventory is a reviewed manifest subset; the
 atomic-generation layer now binds it to the packaged manifest hash and keeps a
-complete candidate private until pack, UI, and map verification succeeds. The
-active application still has to publish that candidate, replace the generated
-adapters, and borrow runtime UI text at the rendering boundary. Until then,
-this evidence does not claim arbitrary pack support, a public C application
-binary interface (ABI), or platform qualification.
+complete candidate private until pack, UI, and map verification succeeds.
 
 The complete package tracer runs with:
 
@@ -602,14 +598,37 @@ npm run test:caxecraft-runtime-content-generation
 
 It reads the checked-in receipt first, verifies exact byte counts and SHA-256
 digests, decodes the real pack and UI files, resolves the real CaxeMap through
-that decoded registry, and constructs generation 1 only after every stage is
-green. Focused in-memory mutations prove malformed, unlisted, stale,
-mismatched, and missing sources cannot create a candidate. Expected hashes come
-from Python `hashlib`, while standard SHA-256 known vectors independently own
-the portable digest result. A private Haxe digest worker temporarily stands in
-for `haxe.crypto.Sha256.make` because `haxe_c-0h4.4` still owns the standard
-library's definitely-assigned local shape; closing that Bead and passing the
-same vectors and vertical tracer is the bridge's removal condition.
+that decoded registry, builds two complete candidates, publishes generation 2,
+and rejects older and duplicate candidates. Eval loads both generations from
+the package. Native C loads the real package once, then rebuilds a distinct
+generation-2 level/session from the verified immutable plan, registry, catalog,
+and receipt; this keeps the lifetime proof while avoiding duplicate hashing and
+JSON decoding inside one test process. Focused in-memory mutations prove
+malformed, unlisted, stale, mismatched, and missing sources cannot create a
+candidate. Expected hashes come from Python `hashlib`, while standard SHA-256
+known vectors independently own the portable digest result. A private Haxe
+digest worker temporarily stands in for `haxe.crypto.Sha256.make` because
+`haxe_c-0h4.4` still owns the standard library's definitely-assigned local
+shape; closing that Bead and passing the same vectors and vertical tracer is
+the bridge's removal condition.
+
+The two-second diagnostic owner for complete publication runs with:
+
+```sh
+npm run test:caxecraft-runtime-content-publication
+```
+
+It proves malformed loading leaves the active generation unchanged, one newer
+generation swaps pack, UI, map/session, and receipt identity together, and
+older or duplicate candidates reject. The native generation command above
+retains the same publication boundary under strict C and sanitizers, avoiding a
+second expensive compilation of the complete package graph. The playable app
+now verifies that complete package and derives its initial session from one
+`ActiveRuntimeContent` snapshot before opening Raylib. It still has to replace
+`BaseContentPack` and generated `UiCatalog` consumers and borrow runtime UI text
+at the renderer boundary. Until then, this evidence does not claim live
+renderer publication, arbitrary package support, a public C application binary
+interface (ABI), or platform qualification.
 
 After editing the UI catalog or embedded CaxeMap messages, regenerate and check
 the temporary built-in lookup catalog with:

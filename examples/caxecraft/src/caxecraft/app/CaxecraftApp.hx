@@ -4,14 +4,12 @@ package caxecraft.app;
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.ItemUseProfile;
 import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
-import caxecraft.content.ActiveContent;
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
+import caxecraft.content.ActiveRuntimeContent;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
-import caxecraft.content.RuntimeLevelLoader.RuntimeLevelLoadResult;
-import caxecraft.content.RuntimeLevelLoader.RuntimeLevelSource;
-import caxecraft.content.RuntimeLevelLoader.loadRuntimeLevel;
+import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
+import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
 import caxecraft.app.AppScreen;
 import caxecraft.app.AppScreen.capturesPointer as screenCapturesPointer;
 import caxecraft.app.AppScreen.closeEditor;
@@ -222,20 +220,21 @@ final class CaxecraftApp {
 				Sys.println("caxecraft: runtime content root rejected");
 				return;
 		};
-		final baseRegistry = new BaseContentRegistry();
-		final loadedCandidate = switch loadRuntimeLevel(NativePackageFile(contentStore, "scenarios/first-playable/map.caxemap"),
-			ContentGenerationId.fromSequence(1), baseRegistry, baseRegistry, {
-				entityId: EntityId.fromValidatedStorageCode(1),
-				initialHealth: initialHealth,
-				aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile())
-			}) {
-				case RuntimeLevelReady(candidate): candidate;
-				case RuntimeLevelRejected(_):
-					Sys.println("caxecraft: runtime level rejected");
-					return;
-			};
-		final activeContent = new ActiveContent(loadedCandidate.generation());
-		final session = activeContent.session();
+		final completeCandidate = switch loadRuntimeContent(contentStore, ContentGenerationId.fromSequence(1), {
+			entityId: EntityId.fromValidatedStorageCode(1),
+			initialHealth: initialHealth
+		}) {
+			case RuntimeContentReady(candidate): candidate;
+			case RuntimeContentRejected(_):
+				Sys.println("caxecraft: runtime content rejected");
+				return;
+		};
+		final activeContent = new ActiveRuntimeContent(completeCandidate);
+		// Borrow one complete snapshot so the registry, catalog, level, and receipt
+		// cannot come from different publications during this application run.
+		final runtimeContent = activeContent.generation();
+		final loadedCandidate = runtimeContent.level();
+		final session = loadedCandidate.generation().session();
 		final actorBindings:Array<PlayableActorBinding> = [];
 		for (binding in loadedCandidate.generation().actorBindings())
 			actorBindings.push({entityId: binding.entityId, role: binding.role});
@@ -259,7 +258,7 @@ final class CaxecraftApp {
 		Sys.println("caxecraft: content-source=runtime-package");
 		Sys.println("caxecraft: content-path=" + receipt.logicalPath);
 		Sys.println("caxecraft: content-input-hash=" + Std.string(receipt.inputHash));
-		Sys.println("caxecraft: content-generation=" + Std.string(activeContent.generationId().value()));
+		Sys.println("caxecraft: content-generation=" + Std.string(runtimeContent.generationId().value()));
 		final actors = selectPlayableActors(actorBindings);
 		if (!actors.valid)
 			return;

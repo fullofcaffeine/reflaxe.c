@@ -541,13 +541,29 @@ success/failure cycles match on Eval and generated native C and pass
 sanitizers. The natural managed generation works, so no fixed double-buffer
 fallback is needed.
 
-This does **not** yet mean the packaged game loads a map at runtime. Its current
-first-playable startup still consumes the generated bridge above and has not
-been rewired to ask `ActiveContent` for the session each frame.
-`haxe_c-xge.20.4.3.5` connects package bytes to the shared parser, resolver,
-candidate builder, and publication owner. The editor, game, command-line tools,
-and agents continue to read and write CAXEMAP rather than a serialized engine
-plan.
+The lower owner now has one complete-package neighbor without losing its
+independent test boundary. `ActiveRuntimeContent` retains one
+`RuntimeContentGeneration`, so a product operation borrows a single coherent
+snapshot and derives its registry, UI catalog, level/session, and receipt from
+that object. Eval proves malformed loading, successful replacement, and stale
+or duplicate rejection against independently reviewed pack, UI, world, and
+receipt observations. The existing generated-native generation tracer now
+loads one real complete candidate, rebuilds a distinct level/session from those
+verified immutable package facts, publishes that newer candidate, rejects
+older and duplicate candidates, and keeps retained graphs valid under
+sanitizers. Eval still loads both candidates through the real package path.
+This reuses one expensive package compilation instead of adding a second one.
+
+The packaged game now constructs this complete owner before opening Raylib.
+Startup verifies the staged receipt, pack, UI catalog, and map, then derives the
+initial session from one `ActiveRuntimeContent` snapshot; its runtime-load path
+no longer constructs `BaseContentRegistry` or publishes only the map. Gameplay
+item lookups and renderer text still use generated `BaseContentPack` and
+`UiCatalog` adapters, so this is not yet a claim that every product operation
+observes live package publication. `haxe_c-xge.20.4.3.8` owns removal of those
+remaining generated authorities after the renderer has a safe call-bounded
+runtime-string boundary. The editor, game, command-line tools, and agents
+continue to read and write CAXEMAP rather than a serialized engine plan.
 
 The first actor-composition stage is now executable. `ActorCompositionPlanner`
 reads the already validated CaxeMap objects in authored order, selects only

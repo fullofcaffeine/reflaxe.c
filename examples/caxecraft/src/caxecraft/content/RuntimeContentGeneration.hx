@@ -12,6 +12,9 @@ import caxecraft.content.RuntimeLevelLoader.RuntimeLevelCandidate;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelLoadError;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelLoadResult;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelSource;
+#if caxecraft_runtime_level_testing
+import caxecraft.content.RuntimeLevelLoader.rebuildRuntimeLevelForPublicationTesting;
+#end
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
 import caxecraft.content.RuntimeContentDigest.runtimeSha256;
@@ -289,6 +292,25 @@ final class RuntimeContentGeneration {
 function loadRuntimeContent(store:ContentPackageStore, generationId:ContentGenerationId, player:RuntimeContentPlayerOptions):RuntimeContentLoadResult {
 	return loadRuntimeContentFromSource(new StoredRuntimeContentSource(store), generationId, player);
 }
+
+#if caxecraft_runtime_level_testing
+/**
+ * Rebuild one coherent candidate from an already verified real package owner.
+ *
+ * The new level receives a fresh session and generation identity. Registry,
+ * catalog, and receipt facts remain the same immutable decoded package facts,
+ * which is exactly the publication invariant under test. Ordinary builds do
+ * not expose this helper.
+ */
+function rebuildRuntimeContentForPublicationTesting(candidate:RuntimeContentGeneration, generationId:ContentGenerationId):RuntimeContentLoadResult {
+	return switch rebuildRuntimeLevelForPublicationTesting(candidate.level(), generationId) {
+		case RuntimeLevelReady(level):
+			RuntimeContentReady(new RuntimeContentGeneration(candidate.registry(), candidate.catalog(), level, candidate.receipt()));
+		case RuntimeLevelRejected(error):
+			RuntimeContentRejected(RuntimeContentLevelRejected(error));
+	};
+}
+#end
 
 #if caxecraft_runtime_content_testing
 /** Exercise the production verifier with exact in-memory sources owned by a focused test. */

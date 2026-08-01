@@ -1,9 +1,14 @@
 package caxecraft.qa;
 
+import caxecraft.content.ActiveRuntimeContent;
+import caxecraft.content.ActiveRuntimeContent.RuntimeContentPublicationResult;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
+#if c
+import caxecraft.content.RuntimeContentGeneration.rebuildRuntimeContentForPublicationTesting;
+#end
 #if !c
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContentForTesting;
 #end
@@ -15,18 +20,21 @@ import caxecraft.localization.UiCatalog.UiMessage;
 import haxe.io.Bytes;
 
 /**
- * Proves one real pack, UI catalog, and map become one unpublished generation.
+ * Proves one real pack, UI catalog, and map publish as one generation.
  *
  * The process starts in the Caxecraft source package. The loader must read the
  * checked-in runtime receipt and its three named files, verify independently
  * authored SHA-256 expectations, decode the pack and UI schemas, resolve the
- * map through that decoded registry, and expose one complete owner. Eval and
- * generated native C execute the same Haxe path.
+ * map through that decoded registry, build two complete candidates, publish the
+ * newer one, and reject older or duplicate candidates. Eval reads both
+ * candidates from the package. Generated native C reads it once, then rebuilds
+ * only a fresh level/session from those verified immutable package facts; both
+ * execute the same Haxe publication and observation path.
  */
 /** First broken invariant, or zero after the complete tracer passes. */
 var observed:Int = 0;
 
-/** Monotonic identity retained by the complete runtime owner. */
+/** Monotonic identity retained after one successful complete-owner swap. */
 var traceGenerationId:Int = 0;
 
 /** Existing independent semantic proof from the decoded pack registry. */
@@ -66,10 +74,7 @@ function selfCheck():Int {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 2;
 	};
-	final candidate = switch loadRuntimeContent(store, ContentGenerationId.fromSequence(1), {
-		entityId: EntityId.fromValidatedStorageCode(1),
-		initialHealth: MAX_HEALTH
-	}) {
+	final candidate = switch load(store, 1) {
 		case RuntimeContentReady(value): value;
 		case RuntimeContentRejected(_): return 8;
 	};
@@ -79,26 +84,64 @@ function selfCheck():Int {
 	if (rejected != 0)
 		return rejected;
 	#end
-	final receipt = candidate.receipt();
+	final active = new ActiveRuntimeContent(candidate);
+	final secondResult = #if c rebuildRuntimeContentForPublicationTesting(candidate, ContentGenerationId.fromSequence(2)) #else load(store, 2) #end;
+	final second = switch secondResult {
+		case RuntimeContentReady(value): value;
+		case RuntimeContentRejected(_): return 12;
+	};
+	switch active.publish(second) {
+		case RuntimeContentPublished(retired, selected) if (retired.value() == 1 && selected.value() == 2):
+		case _:
+			return 13;
+	}
+	if (active.generation() != second || active.generation() == candidate)
+		return 18;
+	switch active.publish(candidate) {
+		case RuntimeContentPublicationRejected(OutOfOrderRuntimeContent(1, 2)):
+		case _:
+			return 14;
+	}
+	switch active.publish(second) {
+		case RuntimeContentPublicationRejected(OutOfOrderRuntimeContent(2, 2)):
+		case _:
+			return 15;
+	}
+	if (active.publicationCount() != 1)
+		return 16;
+	if (candidate.generationId().value() != 1
+		|| candidate.registry().semanticProof() != 132089
+		|| candidate.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
+		|| candidate.level().generation().semanticTrace().worldState != -1715484850)
+		return 17;
+	final selected = active.generation();
+	final receipt = selected.receipt();
 	if (receipt.generationSha256 != "5a212043c98b1fdffbe4ca8f9ce787af2dc9aaf3192296f12fa792c60186c468"
 		|| receipt.assetManifestSha256 != "70d322eb2908ddb908121f8952f6de27d95203d51a46ffa56adecf7efb1abd25"
 		|| receipt.content.sha256 != "f11055d3f62667b3918e2ea16ca72f90c445edd0000f3fc634b63f4458cfdc2c"
 		|| receipt.ui.sha256 != "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
 		|| receipt.map.sha256 != "e7bd9c1c8c64d84940880e8b42fd8aa2f9df9c4229ba160fdb35785e0f368644")
 		return 9;
-	traceGenerationId = candidate.generationId().value();
+	traceGenerationId = selected.generationId().value();
 	#if !c
-	if (traceGenerationId != activeGenerationBeforeFailures)
+	if (activeGenerationBeforeFailures != 1)
 		return 11;
 	#end
-	tracePack = candidate.registry().semanticProof();
-	traceUi = candidate.catalog().messageCount() * 100
-		+ candidate.catalog().localeCount() * 10
-		+ candidate.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
-	traceWorldState = candidate.level().generation().semanticTrace().worldState;
+	tracePack = selected.registry().semanticProof();
+	traceUi = selected.catalog().messageCount() * 100
+		+ selected.catalog().localeCount() * 10
+		+ selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
+	traceWorldState = selected.level().generation().semanticTrace().worldState;
 	traceSourceBytes = receipt.content.byteLength + receipt.ui.byteLength + receipt.map.byteLength;
-	return traceGenerationId == 1 && tracePack == 132089 && traceUi == 3528 && traceWorldState == -1715484850 && traceSourceBytes == 18389 ? 0 : 10;
+	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 3528 && traceWorldState == -1715484850 && traceSourceBytes == 18389 ? 0 : 10;
 }
+
+/** Load one real complete candidate through the shared package path. */
+function load(store:ContentPackageStore, sequence:Int):RuntimeContentLoadResult
+	return loadRuntimeContent(store, ContentGenerationId.fromSequence(sequence), {
+		entityId: EntityId.fromValidatedStorageCode(1),
+		initialHealth: MAX_HEALTH
+	});
 
 #if !c
 /** Prove malformed, unlisted, stale, mismatched, and missing inputs publish nothing. */

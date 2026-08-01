@@ -371,6 +371,7 @@ CASES = {
         generated_source="src/modules/caxecraft/content/RuntimeContentGeneration.c",
         required_source_markers=(
             "RuntimeContentGeneration_loadRuntimeContent",
+            "RuntimeContentGeneration_rebuildRuntimeContentForPublicationTesting",
             "RuntimeContentLoadResult_RuntimeContentReady",
             "RuntimeContentLoadResult_RuntimeContentRejected",
         ),
@@ -394,6 +395,15 @@ CASES = {
         ),
         split_source_checks=(
             GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/ActiveRuntimeContent.c",
+                required_markers=(
+                    "ActiveRuntimeContent_publish",
+                    "RuntimeContentPublicationResult_RuntimeContentPublished",
+                    "RuntimeContentPublicationResult_RuntimeContentPublicationRejected",
+                ),
+                forbidden_markers=("BaseContentRegistry", "UiCatalog_text", "Dynamic", "Reflect", "goto "),
+            ),
+            GeneratedSourceCheck(
                 path="src/modules/caxecraft/content/RuntimeContentPack.c",
                 required_markers=("RuntimeContentPack_decode", "RuntimeContentRegistry_semanticProof"),
                 forbidden_markers=("haxe.Json", "Dynamic", "Reflect", "goto "),
@@ -405,7 +415,10 @@ CASES = {
             ),
             GeneratedSourceCheck(
                 path="src/modules/caxecraft/content/RuntimeLevelLoader.c",
-                required_markers=("RuntimeLevelLoader_loadRuntimeLevel",),
+                required_markers=(
+                    "RuntimeLevelLoader_loadRuntimeLevel",
+                    "RuntimeLevelLoader_rebuildRuntimeLevelForPublicationTesting",
+                ),
                 forbidden_markers=("BaseContentRegistry", "FirstPlayable", "goto "),
             ),
             GeneratedSourceCheck(

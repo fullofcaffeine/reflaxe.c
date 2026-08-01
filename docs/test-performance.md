@@ -593,6 +593,30 @@ performs repeated successful owner swaps, rejects stale publication, compares
 Eval/native semantic traces, and runs the native result under sanitizers. It
 does not launch Raylib or repeat the full playable compile.
 
+Complete runtime-package publication keeps diagnosis and vertical evidence
+separate without compiling the large graph twice. The focused
+`test:caxecraft-runtime-content-publication` Eval owner first observed 2.27
+seconds; the final cold-process and immediate repeated measurements were 1.08
+and 0.80 seconds for malformed-load invariance, exact candidate replacement,
+retired-alias retention, and old/duplicate rejection. The existing
+`test:caxecraft-runtime-content-generation` command is
+the sole Haxe-to-C/native/sanitizer tracer. Eval loads two real package
+candidates. Native loads the real package once, rebuilds a distinct
+generation-2 level/session from the verified immutable facts, and publishes it;
+repeated filesystem reads, hashes, and JSON decoding are not publication
+evidence. A proposed second native case timed out
+at 60 and 90 seconds while unrelated work held roughly 700–900 percent host
+CPU, so the duplicate case and its proposed timeout exception were removed.
+This is an evidence-efficiency improvement, not a claim that the underlying
+compiler phase became faster. The final isolated full-detail generation took
+80.29 seconds while the host remained saturated, so the unchanged 60-second
+official frontend bound could not be reported green locally. Reusing that one
+reviewed artifact, strict native and AddressSanitizer/UndefinedBehaviorSanitizer
+observers emitted the exact six-value Eval envelope in 7.26 and 2.98 seconds,
+both below the unchanged 20-second runtime bound. A formatted Linux playable
+snapshot render took 84.62 seconds and validated all 54 registered artifacts;
+that is product-call-graph evidence, not a new latency baseline.
+
 The successful Caxecraft command embeds its own phase report, also described by
 [`caxecraft-timing.schema.json`](specs/caxecraft-timing.schema.json). It keeps
 asset checks, the Eval reference run, the first three backend renders, cold

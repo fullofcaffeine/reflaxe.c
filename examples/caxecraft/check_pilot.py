@@ -389,7 +389,9 @@ def check_outer_application_boundary() -> None:
             raise PilotFailure(f"Main regained application ownership {forbidden!r}")
     for required in (
         "final class CaxecraftApp",
-        "final session:GameSession = new GameSession();",
+        "final activeContent = new ActiveRuntimeContent(completeCandidate);",
+        "final runtimeContent = activeContent.generation();",
+        "final session = loadedCandidate.generation().session();",
         "public function run():Void",
         "Raylib.InitWindow(",
         "while (!quit && !Raylib.WindowShouldClose())",
@@ -397,8 +399,15 @@ def check_outer_application_boundary() -> None:
     ):
         if required not in app:
             raise PilotFailure(f"CaxecraftApp lost native lifetime marker {required!r}")
-    if "final session = new GameSession();" in app:
-        raise PilotFailure("CaxecraftApp stopped owning its session as a final child")
+    for forbidden in (
+        "new BaseContentRegistry()",
+        "loadRuntimeLevel(",
+        "final session = new GameSession();",
+    ):
+        if forbidden in app:
+            raise PilotFailure(
+                f"CaxecraftApp bypassed its complete runtime-content owner through {forbidden!r}"
+            )
     for forbidden in (
         "session.replaceLocalPlayer(",
         "session.deactivateAuthoredItem(",

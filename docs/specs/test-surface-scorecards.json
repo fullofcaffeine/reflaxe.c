@@ -91,6 +91,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
           "proves": "One admitted ordinary-Haxe slice verifies exact package receipts, hashes real source bytes, decodes pack and UI schemas, resolves a real map, and constructs one unpublished generation through strict generated C.",
           "doesNotProve": "General Haxe lowering, arbitrary package compatibility, live renderer publication, public ABI stability, or platform qualification."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentPublicationProbe.hx",
+          "proves": "The fast Eval owner proves failed-load invariance, successful replacement, retained retired views, and exact stale/duplicate rejection; the paired runtime-content-generation tracer carries that owner through haxe.c, strict generated C, and a native observer without compiling the package graph twice.",
+          "doesNotProve": "General Haxe lowering, renderer String interop, arbitrary hot reload, public ABI stability, or platform qualification."
         }
       ],
       "selectorOwnership": {
@@ -167,7 +172,7 @@
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
-          "proves": "The atomic runtime-content tracer crosses the typed confined POSIX package adapter and primary strict native compiler before observing real bytes and one complete generation.",
+          "proves": "The atomic runtime-content tracer crosses the typed confined POSIX package adapter and primary strict native compiler before observing real bytes, one complete generation, and successful complete-owner publication.",
           "doesNotProve": "A public C ABI, arbitrary foreign functions, Windows package IO, another platform tuple, or compiler conformance."
         }
       ],
@@ -217,7 +222,8 @@
         "test:gc-runtime",
         "test:string-runtime",
         "test:array-runtime",
-        "test:bytes-runtime"
+        "test:bytes-runtime",
+        "test:caxecraft-runtime-content-publication"
       ],
       "verticalOwners": [
         "test:hello",
@@ -263,6 +269,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
           "proves": "Real receipt, pack, UI, and map bytes remain private until one coherent generation is built under native AddressSanitizer and UndefinedBehaviorSanitizer observers; Eval owns exact malformed, stale, mismatched, unlisted, and missing coordinator outcomes, while native schema and level owners retain malformed cleanup evidence.",
           "doesNotProve": "Native execution of every coordinator rejection permutation, live generation replacement, a complete runtime, leak detection where unavailable, arbitrary package safety, or another platform."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentPublicationProbe.hx",
+          "proves": "The complete owner retains one coherent registry, catalog, level/session, and receipt snapshot; Eval proves successful replacement plus failed-load, stale, duplicate, and retired-alias invariance, while the paired strict native tracer publishes a separately rebuilt session from one real verified package and retains both graphs under sanitizers.",
+          "doesNotProve": "Concurrent publication, native execution of every rejection permutation, renderer integration, a complete runtime, leak detection where unavailable, or another platform."
         }
       ],
       "selectorOwnership": {
@@ -406,6 +417,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
           "proves": "The flagship's staged base pack, UI catalog, and first-playable map execute as one independently verified downstream generation tracer with exact rejection outcomes.",
           "doesNotProve": "Diagnostic source mapping, live renderer publication, arbitrary mods, package release readiness, portability, or full playability."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentPublicationProbe.hx",
+          "proves": "The flagship's complete runtime package reaches one focused product publication owner and preserves exact pack, UI, world, and receipt identity across success and rejection paths.",
+          "doesNotProve": "Live renderer consumption, diagnostic source mapping, arbitrary mods, package release readiness, portability, or full playability."
         }
       ],
       "selectorOwnership": {

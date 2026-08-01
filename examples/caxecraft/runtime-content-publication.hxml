@@ -1,0 +1,7 @@
+-cp src
+-cp test
+--main caxecraft.qa.RuntimeContentPublicationProbe
+-D caxecraft_generation_testing
+-D caxecraft_runtime_level_testing
+-D caxecraft_runtime_content_testing
+--interp
