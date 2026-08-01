@@ -45,7 +45,11 @@ DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PROFILE_PREFIX = "HXC_PROFILE\t"
 PROFILE_SCHEMA_VERSION = 11
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
-PROFILE_WORKLOADS = ("runtime-free", "playable")
+PROFILE_WORKLOADS = (
+    "runtime-free",
+    "runtime-content-generation",
+    "playable",
+)
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
 PHASES = (
     "typed input capture",
@@ -2251,6 +2255,20 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             times=True,
             phase_timing=True,
         )
+    elif workload == "runtime-content-generation":
+        arguments = [
+            "runtime-content-generation-c.hxml",
+            "-D",
+            "caxecraft_posix_hosted",
+            *(("-D", "caxecraft_posix_darwin") if sys.platform == "darwin" else ()),
+            "-D",
+            "hxc_project_layout=split",
+            "-D",
+            "reflaxe_c_phase_timing",
+            "--times",
+            "--custom-target",
+            f"c={output}",
+        ]
     elif workload == "playable":
         platform_name = {
             "darwin": "macos",
@@ -2419,9 +2437,15 @@ def profile(
                 "boundary": "haxe-source-to-generated-c",
                 "nativeCompileIncluded": False,
                 "layout": "split",
-                "runtimePolicy": "none"
-                if workload == "runtime-free"
-                else "auto",
+                "runtimePolicy": (
+                    "none" if workload == "runtime-free" else "auto"
+                ),
+                "symbolReportDetail": (
+                    "full" if workload == "runtime-free" else "summary"
+                ),
+                "runtimeReportDetail": (
+                    "summary" if workload == "playable" else "full"
+                ),
                 "normalArtifactCount": len(baseline),
                 "normalArtifactSha256": artifact_digest(baseline),
             },

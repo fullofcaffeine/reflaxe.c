@@ -53,9 +53,7 @@ class ProjectEmitterGolden {
 	public static function run(mode:String, outputDirectory:String):Void {
 		final files = switch mode {
 			case "full": new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
-			case "summary":
-				new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal,
-					CProjectSymbolReportDetail.Summary));
+			case "summary": symbolSummaryProjection();
 			case "reverse": new CProjectEmitter().emit(plan(true, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
 			case "trimmed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
 			case "renamed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVRenamed));
@@ -137,6 +135,36 @@ class ProjectEmitterGolden {
 		compiler.setOutputDir(outputDirectory);
 		compiler.generateFiles();
 		Sys.println("project-emitter-macro: OK");
+	}
+
+	/**
+		Prove concise naming evidence changes no generated program or other report.
+
+		Both plans finalize the same complete symbol table. The concise projection may
+		change only `hxc.symbols.json` and the manifest that records its new digest;
+		every C artifact and independently owned sidecar must remain byte-identical.
+	**/
+	static function symbolSummaryProjection():Array<GeneratedFile> {
+		final full = new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
+		final summary = new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal,
+			CProjectSymbolReportDetail.Summary));
+		if (full.length != summary.length)
+			throw "concise symbol reporting changed the generated artifact count";
+		var changedReports = 0;
+		for (index in 0...full.length) {
+			final fullFile = full[index];
+			final summaryFile = summary[index];
+			if (fullFile.relativePath != summaryFile.relativePath || fullFile.kind != summaryFile.kind)
+				throw "concise symbol reporting changed artifact ownership or order";
+			if (fullFile.contents != summaryFile.contents) {
+				if (fullFile.relativePath != "hxc.symbols.json" && fullFile.relativePath != "hxc.manifest.json")
+					throw 'concise symbol reporting changed unrelated artifact `${fullFile.relativePath}`';
+				changedReports++;
+			}
+		}
+		if (changedReports != 2)
+			throw "concise symbol reporting did not change exactly its report and manifest digest";
+		return summary;
 	}
 
 	static function plan(reverse:Bool, trimmed:Bool, compilationStatus:CProjectCompilationStatus, variant:ProjectFixtureVariant,

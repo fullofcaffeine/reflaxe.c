@@ -604,18 +604,49 @@ the sole Haxe-to-C/native/sanitizer tracer. Eval loads two real package
 candidates. Native loads the real package once, rebuilds a distinct
 generation-2 level/session from the verified immutable facts, and publishes it;
 repeated filesystem reads, hashes, and JSON decoding are not publication
-evidence. A proposed second native case timed out
-at 60 and 90 seconds while unrelated work held roughly 700–900 percent host
-CPU, so the duplicate case and its proposed timeout exception were removed.
-This is an evidence-efficiency improvement, not a claim that the underlying
-compiler phase became faster. The final isolated full-detail generation took
-80.29 seconds while the host remained saturated, so the unchanged 60-second
-official frontend bound could not be reported green locally. Reusing that one
-reviewed artifact, strict native and AddressSanitizer/UndefinedBehaviorSanitizer
-observers emitted the exact six-value Eval envelope in 7.26 and 2.98 seconds,
-both below the unchanged 20-second runtime bound. A formatted Linux playable
-snapshot render took 84.62 seconds and validated all 54 registered artifacts;
-that is product-call-graph evidence, not a new latency baseline.
+evidence. A proposed second native case timed out at 60 and 90 seconds while
+unrelated work held roughly 700–900 percent host CPU, so the duplicate case and
+its proposed timeout exception were removed. This is an evidence-efficiency
+improvement, not a semantic compiler shortcut.
+
+Issue `haxe_c-xge.20.4.3.7.5` then profiled this exact HXML instead of inferring
+its cost from the smaller runtime-free or larger playable workloads. The first
+two samples below are contention diagnostics, not representative p50 or p95
+claims; the first concise-report sample began under higher one-minute load. The
+final sample is the required cold representative-host confirmation. The
+complete compiler plan still contained 7,520 runtime requirements, 506 HxcIR
+functions, and 25,914 validated names in every run.
+
+| Cold runtime-content generation | Full symbol audit, contended | Concise report, contended | Concise report, representative |
+| --- | ---: | ---: | ---: |
+| Host load, start → end | 13.990 → 10.726 | 16.821 → 22.083 | 5.729 → 5.879 |
+| Haxe-to-generated-C wall | 59.036s | 48.067s | 41.512s |
+| Profiled target-request CPU | 47.457s | 34.917s | 30.029s |
+| Symbol-report serialization CPU | 18.122s | 0.207s | 0.191s |
+| Typed-body lowering CPU | 4.640s | 6.012s | 4.936s |
+| Generated project bytes | 49,495,895 | 13,186,260 | 13,186,260 |
+
+The retained change uses `hxc_symbol_report=summary` only in this publication
+tracer. The compiler still finalizes and validates the full symbol table; the
+concise report keeps exact symbol and collision counts plus every collision
+record. The focused project-emitter owner independently renders both forms and
+requires every generated C artifact and every unrelated sidecar to remain
+byte-identical; only `hxc.symbols.json` and the manifest containing its digest
+may differ. Full per-symbol evidence remains in the required symbol-registry and
+project-emitter gates. The runtime report stays full because this tracer checks
+individual feature-root reasons.
+
+The exact `npm run test:caxecraft-runtime-content-generation` command then
+passed without changing its 60-second frontend or 20-second native/sanitizer
+bounds and retained the exact Eval/native envelope
+`0,2,132089,3528,-1715484850,18389`. The earlier reusable strict native and
+AddressSanitizer/UndefinedBehaviorSanitizer observers completed in 7.26 and
+2.98 seconds. The representative cold frontend completed in 41.512 seconds,
+leaving 18.488 seconds, or 30.8 percent, of the unchanged frontend budget. This
+single diagnostic confirmation establishes margin for the task; it is not a
+latency distribution. A formatted Linux playable snapshot render took 84.62
+seconds and validated all 54 registered artifacts; that is product-call-graph
+evidence, not a new latency baseline.
 
 The successful Caxecraft command embeds its own phase report, also described by
 [`caxecraft-timing.schema.json`](specs/caxecraft-timing.schema.json). It keeps

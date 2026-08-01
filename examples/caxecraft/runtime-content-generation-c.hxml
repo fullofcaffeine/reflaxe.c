@@ -5,3 +5,6 @@
 -D caxecraft_generation_testing
 -D caxecraft_runtime_level_testing
 -D hxc_runtime=auto
+# This tracer audits content publication, runtime roots, and native behavior.
+# Naming/project gates retain every symbol; this lane keeps counts and collisions.
+-D hxc_symbol_report=summary

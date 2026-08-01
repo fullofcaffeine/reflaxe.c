@@ -596,6 +596,18 @@ The complete package tracer runs with:
 npm run test:caxecraft-runtime-content-generation
 ```
 
+That tracer keeps the complete runtime-reason report because it checks exact
+feature roots. It requests the concise symbol report because naming is not its
+claim: haxe.c still finalizes every name and the report retains exact counts and
+all collision groups, while the required symbol-registry and project-emitter
+tests keep the full per-symbol audit. To diagnose its cold Haxe-to-C cost with
+the same HXML and structured compiler phases, run:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport cold --workload runtime-content-generation
+```
+
 It reads the checked-in receipt first, verifies exact byte counts and SHA-256
 digests, decodes the real pack and UI files, resolves the real CaxeMap through
 that decoded registry, builds two complete candidates, publishes generation 2,
