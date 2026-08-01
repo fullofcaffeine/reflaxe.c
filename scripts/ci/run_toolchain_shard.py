@@ -98,6 +98,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:caxecraft-resolved-level-plan",
         "test:caxecraft-content-generation",
         "test:caxecraft-runtime-level-loader",
+        "test:caxecraft-runtime-content-generation",
         "test:caxecraft-water",
         "test:caxecraft-aquatics",
         "test:caxecraft-session",

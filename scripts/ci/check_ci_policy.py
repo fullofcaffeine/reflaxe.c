@@ -1232,6 +1232,11 @@ def validate() -> list[str]:
         != "python3 examples/caxecraft/run_haxe_c_test.py runtime-level-loader"
     ):
         errors.append("package.json must retain the Caxecraft runtime-level-loader gate")
+    if (
+        scripts.get("test:caxecraft-runtime-content-generation")
+        != "python3 examples/caxecraft/run_haxe_c_test.py runtime-content-generation"
+    ):
+        errors.append("package.json must retain the Caxecraft runtime-content-generation gate")
     if scripts.get("test:caxecraft-water") != "python3 examples/caxecraft/run_haxe_c_test.py water":
         errors.append("package.json must retain the deterministic Caxecraft water gate")
     if scripts.get("test:caxecraft-aquatics") != "python3 examples/caxecraft/run_haxe_c_test.py aquatics":
@@ -1434,6 +1439,12 @@ def validate() -> list[str]:
     ):
         errors.append(
             "package.json test:toolchain must execute test:caxecraft-runtime-level-loader"
+        )
+    if "npm run test:caxecraft-runtime-content-generation" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:caxecraft-runtime-content-generation"
         )
     if "npm run test:caxecraft-water" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-water")

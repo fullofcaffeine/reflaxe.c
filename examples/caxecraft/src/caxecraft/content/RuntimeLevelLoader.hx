@@ -1,8 +1,8 @@
 package caxecraft.content;
 
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.content.ContentPackageModel.ContentPackageError;
 import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
+import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildError;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildResult;
@@ -16,6 +16,7 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioParser;
+import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioValidator;
 import haxe.io.Bytes;
 #if caxecraft_runtime_level_testing
@@ -50,6 +51,9 @@ enum RuntimeLevelSource {
 
 	/** Read exact owned bytes below an already-open package-root capability. */
 	NativePackageFile(store:ContentPackageStore, logicalPath:String);
+
+	/** Reuse one exact package read after an outer coordinator verified it. */
+	AdmittedPackageBytes(content:LoadedPackageBytes);
 }
 
 /** Which byte source produced one successful candidate. */
@@ -210,14 +214,15 @@ private enum RuntimeLevelInputResult {
 /**
  * Read, validate, resolve, and construct one complete unpublished level.
  *
- * The currently compiled `BaseContentRegistry` supplies both validation and
- * engine-resolution facts in this first vertical. Runtime pack loading will
- * replace that concrete registry under `haxe_c-xge.20.4.3.7` without changing
- * the byte, plan, generation, or publication pipeline.
+ * A `ScenarioContentRegistry` validates authored names, while a
+ * `LevelContentResolver` selects construction facts. The atomic package owner
+ * passes one runtime registry through both narrow views so no generated
+ * registry can remain hidden in either stage.
  */
-function loadRuntimeLevel(source:RuntimeLevelSource, generationId:ContentGenerationId, registry:BaseContentRegistry,
-		playerOptions:LevelPlayerOptions):RuntimeLevelLoadResult {
-	return loadRuntimeLevelInternal(source, generationId, registry, playerOptions #if caxecraft_runtime_level_testing, NoGenerationFault #end);
+function loadRuntimeLevel(source:RuntimeLevelSource, generationId:ContentGenerationId, validationRegistry:ScenarioContentRegistry,
+		resolutionRegistry:LevelContentResolver, playerOptions:LevelPlayerOptions):RuntimeLevelLoadResult {
+	return loadRuntimeLevelInternal(source, generationId, validationRegistry, resolutionRegistry, playerOptions
+		#if caxecraft_runtime_level_testing, NoGenerationFault #end);
 }
 
 #if caxecraft_runtime_level_testing
@@ -228,17 +233,18 @@ function loadRuntimeLevel(source:RuntimeLevelSource, generationId:ContentGenerat
  * read and successful parse still cannot expose a partial generation when a
  * later construction stage rejects.
  */
-function loadRuntimeLevelWithFault(source:RuntimeLevelSource, generationId:ContentGenerationId, registry:BaseContentRegistry,
-		playerOptions:LevelPlayerOptions, fault:ContentGenerationBuildFault):RuntimeLevelLoadResult {
-	return loadRuntimeLevelInternal(source, generationId, registry, playerOptions, fault);
+function loadRuntimeLevelWithFault(source:RuntimeLevelSource, generationId:ContentGenerationId, validationRegistry:ScenarioContentRegistry,
+		resolutionRegistry:LevelContentResolver, playerOptions:LevelPlayerOptions, fault:ContentGenerationBuildFault):RuntimeLevelLoadResult {
+	return loadRuntimeLevelInternal(source, generationId, validationRegistry, resolutionRegistry, playerOptions, fault);
 }
 #end
 
 /**
  * Share every semantic stage after source admission between both authorities.
  */
-private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationId:ContentGenerationId, registry:BaseContentRegistry,
-		playerOptions:LevelPlayerOptions #if caxecraft_runtime_level_testing, fault:ContentGenerationBuildFault #end):RuntimeLevelLoadResult {
+private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationId:ContentGenerationId, validationRegistry:ScenarioContentRegistry,
+		resolutionRegistry:LevelContentResolver, playerOptions:LevelPlayerOptions
+		#if caxecraft_runtime_level_testing, fault:ContentGenerationBuildFault #end):RuntimeLevelLoadResult {
 	final input = switch admitRuntimeLevelInput(source) {
 		case RuntimeLevelInputReady(value): value;
 		case RuntimeLevelInputRejected(error): return RuntimeLevelRejected(RuntimeLevelSourceRejected(error));
@@ -247,7 +253,7 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 		case ReadOk(records):
 			switch ScenarioParser.parse(records) {
 				case ReadOk(parsed):
-					switch ScenarioValidator.validate(parsed, registry) {
+					switch ScenarioValidator.validate(parsed, validationRegistry) {
 						case ReadOk(validated): validated;
 						case ReadError(diagnostics): return RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics));
 					}
@@ -257,7 +263,7 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 		case ReadError(diagnostics):
 			return RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics));
 	};
-	final resolved = switch ResolvedLevelPlan.resolve(scenario, registry, playerOptions) {
+	final resolved = switch ResolvedLevelPlan.resolve(scenario, resolutionRegistry, playerOptions) {
 		case LevelPlanResolved(plan, presentation): {plan: plan, presentation: presentation};
 		case LevelPlanRejected(error): return RuntimeLevelRejected(RuntimeLevelPlanRejected(error));
 	};
@@ -314,6 +320,14 @@ private function admitRuntimeLevelInput(source:RuntimeLevelSource):RuntimeLevelI
 						readAttempts: content.provenance.readAttempts
 					});
 			}
+		case AdmittedPackageBytes(content):
+			RuntimeLevelInputReady({
+				authority: NativePackage,
+				rootLabel: content.provenance.rootLabel,
+				logicalPath: content.provenance.logicalPath.text(),
+				bytes: content.bytes,
+				readAttempts: content.provenance.readAttempts
+			});
 	};
 }
 

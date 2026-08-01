@@ -1,0 +1,29 @@
+{
+  "assetManifest": {
+    "packId": "caxecraft-showcase-v1-draft",
+    "schemaVersion": 1,
+    "sha256": "70d322eb2908ddb908121f8952f6de27d95203d51a46ffa56adecf7efb1abd25"
+  },
+  "files": [
+    {
+      "byteLength": 6890,
+      "kind": "content-pack",
+      "path": "packs/caxecraft/base/content.json",
+      "sha256": "f11055d3f62667b3918e2ea16ca72f90c445edd0000f3fc634b63f4458cfdc2c"
+    },
+    {
+      "byteLength": 6401,
+      "kind": "ui-catalog",
+      "path": "locales/ui.json",
+      "sha256": "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
+    },
+    {
+      "byteLength": 5098,
+      "kind": "level-map",
+      "path": "scenarios/first-playable/map.caxemap",
+      "sha256": "e7bd9c1c8c64d84940880e8b42fd8aa2f9df9c4229ba160fdb35785e0f368644"
+    }
+  ],
+  "generationSha256": "5a212043c98b1fdffbe4ca8f9ce787af2dc9aaf3192296f12fa792c60186c468",
+  "schemaVersion": 1
+}

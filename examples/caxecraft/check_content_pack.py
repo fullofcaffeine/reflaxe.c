@@ -35,7 +35,7 @@ from content_pack import (  # noqa: E402
     render_haxe,
     validate_document,
 )
-from play import stage_content_catalogs  # noqa: E402
+from play import runtime_content_report, stage_content_catalogs  # noqa: E402
 
 EXPECTED_EVAL = (
     "caxecraft-content-pack: typed JSON adapter and first-playable resolution passed\n"
@@ -99,6 +99,14 @@ def check_source_and_adapter() -> None:
     if not OUTPUT.is_file() or OUTPUT.read_text(encoding="utf-8") != rendered:
         raise ContentPackCheckFailure(
             "generated adapter is stale; run python3 examples/caxecraft/content_pack.py"
+        )
+    report_path = CASE / "packs/caxecraft/base/runtime-content.json"
+    expected_report = json.dumps(
+        runtime_content_report(), ensure_ascii=False, indent=2, sort_keys=True
+    ) + "\n"
+    if not report_path.is_file() or report_path.read_text(encoding="utf-8") != expected_report:
+        raise ContentPackCheckFailure(
+            "runtime content receipt is stale; refresh its reviewed hashes"
         )
     with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-content-stage-") as temporary:
         destination = Path(temporary)

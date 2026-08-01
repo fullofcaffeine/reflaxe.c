@@ -223,6 +223,24 @@ AFFECTED_OWNER_RULES = (
     ),
     (
         re.compile(
+            r"^examples/caxecraft/(?:"
+            r"runtime-content-generation(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:RuntimeContentDigest|RuntimeContentGeneration)\.hx"
+            r"|test/caxecraft/qa/RuntimeContentGenerationProbe\.hx"
+            r"|test/native/runtime_content_generation_harness\.c"
+            r"|packs/caxecraft/base/runtime-content\.json"
+            r"|packs/caxecraft/base/content\.json"
+            r"|locales/ui\.json"
+            r"|scenarios/first-playable/map\.caxemap"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-runtime-content-generation",
+            "atomic package receipt, digest, decoding, or generation semantics changed",
+        ),
+    ),
+    (
+        re.compile(
             r"^(?:examples/caxecraft/(?!"
             r"(?:profile_(?:compiler|incremental_edit)\.py"
             r"|content-json(?:-c)?\.hxml"
@@ -233,6 +251,11 @@ AFFECTED_OWNER_RULES = (
             r"|src/caxecraft/(?:content/(?:RuntimeAssetInventory|RuntimeContentPack|RuntimeSchema)|localization/RuntimeUiCatalog)\.hx"
             r"|test/caxecraft/qa/RuntimeSchemasProbe\.hx"
             r"|test/native/runtime_schemas_harness\.c"
+            r"|runtime-content-generation(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:RuntimeContentDigest|RuntimeContentGeneration)\.hx"
+            r"|test/caxecraft/qa/RuntimeContentGenerationProbe\.hx"
+            r"|test/native/runtime_content_generation_harness\.c"
+            r"|packs/caxecraft/base/runtime-content\.json"
             r")$"
             r")|docs/caxecraft-)"
         ),

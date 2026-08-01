@@ -52,6 +52,7 @@
         "test:hello",
         "test:caxecraft-content-json",
         "test:caxecraft-runtime-schemas",
+        "test:caxecraft-runtime-content-generation",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -85,6 +86,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
           "proves": "The checked-in content and UI bytes cross the package store, bounded JSON codec, exact target-owned schemas, immutable registry/catalog, strict generated C, and a real runtime observer.",
           "doesNotProve": "General Haxe lowering, arbitrary pack compatibility, publication into the running game, public ABI stability, or platform qualification."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
+          "proves": "One admitted ordinary-Haxe slice verifies exact package receipts, hashes real source bytes, decodes pack and UI schemas, resolves a real map, and constructs one unpublished generation through strict generated C.",
+          "doesNotProve": "General Haxe lowering, arbitrary package compatibility, live renderer publication, public ABI stability, or platform qualification."
         }
       ],
       "selectorOwnership": {
@@ -133,7 +139,8 @@
       ],
       "verticalOwners": [
         "test:raylib-provisioning",
-        "test:build-adapters"
+        "test:build-adapters",
+        "test:caxecraft-runtime-content-generation"
       ],
       "systemOwners": [
         "test:caxecraft-playable"
@@ -157,6 +164,11 @@
           "path": "docs/specs/bootstrap-inventory.json",
           "proves": "Public ABI, bindgen, and C export remain explicit unsupported gates.",
           "doesNotProve": "Any future ABI layout or compatibility promise."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
+          "proves": "The atomic runtime-content tracer crosses the typed confined POSIX package adapter and primary strict native compiler before observing real bytes and one complete generation.",
+          "doesNotProve": "A public C ABI, arbitrary foreign functions, Windows package IO, another platform tuple, or compiler conformance."
         }
       ],
       "selectorOwnership": {
@@ -211,6 +223,7 @@
         "test:hello",
         "test:caxecraft-content-json",
         "test:caxecraft-runtime-schemas",
+        "test:caxecraft-runtime-content-generation",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -245,6 +258,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
           "proves": "Real package bytes become immutable content/UI models and complete positive and malformed-candidate cleanup under AddressSanitizer and UndefinedBehaviorSanitizer.",
           "doesNotProve": "Publication into a live renderer, complete runtime ownership, arbitrary pack safety, semantic conformance outside this admitted slice, or another platform."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
+          "proves": "Real receipt, pack, UI, and map bytes remain private until one coherent generation is built under native AddressSanitizer and UndefinedBehaviorSanitizer observers; Eval owns exact malformed, stale, mismatched, unlisted, and missing coordinator outcomes, while native schema and level owners retain malformed cleanup evidence.",
+          "doesNotProve": "Native execution of every coordinator rejection permutation, live generation replacement, a complete runtime, leak detection where unavailable, arbitrary package safety, or another platform."
         }
       ],
       "selectorOwnership": {
@@ -359,6 +377,7 @@
       ],
       "verticalOwners": [
         "test:hello",
+        "test:caxecraft-runtime-content-generation",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -382,6 +401,11 @@
           "path": "examples/caxecraft/case.json",
           "proves": "The flagship case declares its exact full domain command, artifacts, oracle, and execution assumptions.",
           "doesNotProve": "Every planned playable, packaging, platform, or release claim in the broader product narrative."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
+          "proves": "The flagship's staged base pack, UI catalog, and first-playable map execute as one independently verified downstream generation tracer with exact rejection outcomes.",
+          "doesNotProve": "Diagnostic source mapping, live renderer publication, arbitrary mods, package release readiness, portability, or full playability."
         }
       ],
       "selectorOwnership": {

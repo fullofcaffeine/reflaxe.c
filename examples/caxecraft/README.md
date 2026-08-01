@@ -66,8 +66,10 @@ and logical visuals. A strict build-time validator rejects malformed or
 unresolved data and generates a typed Haxe adapter; CaxeMap and the editor use
 that same registry. The exact JSON is also packaged with the executable. This
 is not yet arbitrary runtime pack loading: the map is read at runtime, but this
-JSON registry and the UI catalog remain compiled inputs until the next bounded
-package slice.
+JSON registry and the UI catalog remain the active playable's compiled inputs.
+The separate atomic-generation tracer now proves that their packaged bytes can
+be verified and decoded together with the map; switching the live application
+to that owner remains the next bounded package slice.
 
 The shared domain also contains the first deterministic water simulation:
 authored sources fall, spread with bounded strength, leak through openings,
@@ -585,11 +587,29 @@ real package files through the confined package store, compares selected facts
 with manually authored expectations reviewed from those source files and the
 independent Python validators, then repeats the behavior through strict native
 C and sanitizers. The visual inventory is a reviewed manifest subset; the
-parent task still has to bind it to the packaged manifest hash, publish one
-complete candidate, replace the generated adapters, and borrow runtime UI text
-at the rendering boundary. Until then, this evidence does not claim arbitrary
-pack support, a public C application binary interface (ABI), or platform
-qualification.
+atomic-generation layer now binds it to the packaged manifest hash and keeps a
+complete candidate private until pack, UI, and map verification succeeds. The
+active application still has to publish that candidate, replace the generated
+adapters, and borrow runtime UI text at the rendering boundary. Until then,
+this evidence does not claim arbitrary pack support, a public C application
+binary interface (ABI), or platform qualification.
+
+The complete package tracer runs with:
+
+```sh
+npm run test:caxecraft-runtime-content-generation
+```
+
+It reads the checked-in receipt first, verifies exact byte counts and SHA-256
+digests, decodes the real pack and UI files, resolves the real CaxeMap through
+that decoded registry, and constructs generation 1 only after every stage is
+green. Focused in-memory mutations prove malformed, unlisted, stale,
+mismatched, and missing sources cannot create a candidate. Expected hashes come
+from Python `hashlib`, while standard SHA-256 known vectors independently own
+the portable digest result. A private Haxe digest worker temporarily stands in
+for `haxe.crypto.Sha256.make` because `haxe_c-0h4.4` still owns the standard
+library's definitely-assigned local shape; closing that Bead and passing the
+same vectors and vertical tracer is the bridge's removal condition.
 
 After editing the UI catalog or embedded CaxeMap messages, regenerate and check
 the temporary built-in lookup catalog with:

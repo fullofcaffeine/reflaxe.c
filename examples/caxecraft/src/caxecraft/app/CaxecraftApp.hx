@@ -222,8 +222,9 @@ final class CaxecraftApp {
 				Sys.println("caxecraft: runtime content root rejected");
 				return;
 		};
+		final baseRegistry = new BaseContentRegistry();
 		final loadedCandidate = switch loadRuntimeLevel(NativePackageFile(contentStore, "scenarios/first-playable/map.caxemap"),
-			ContentGenerationId.fromSequence(1), new BaseContentRegistry(), {
+			ContentGenerationId.fromSequence(1), baseRegistry, baseRegistry, {
 				entityId: EntityId.fromValidatedStorageCode(1),
 				initialHealth: initialHealth,
 				aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile())

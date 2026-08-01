@@ -22,9 +22,11 @@ The editor reads, validates, and writes this same model. Packaging copies the
 complete CaxeMap beside the native executable, and a map edit is picked up on
 the next launch without running Haxe or a C compiler. After editing
 `map.caxemap`, run `npm run test:caxecraft-scenario-model` and
-`npm run test:caxecraft-runtime-level-loader`. Embedded localization still uses
-the separately owned generated lookup catalog until runtime catalog loading
-lands.
+`npm run test:caxecraft-runtime-level-loader`. The atomic package tracer also
+loads the reusable UI catalog and this map into one unpublished generation;
+run `npm run test:caxecraft-runtime-content-generation` after changing either
+source. The active renderer still uses the separately owned generated lookup
+catalog until the publication and renderer-boundary migration lands.
 
 `fluid ... source` records place permanent simulation sources. `fluid ...
 volume` records fill a finite box once when the level starts, so that water may

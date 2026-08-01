@@ -10,6 +10,9 @@ package caxecraft.content;
  * reviewed manifest hash before replacing generated packaging glue.
  */
 final class RuntimeAssetInventory {
+	/** Reviewed SHA-256 of the complete asset-manifest source bytes. */
+	public static inline final REVIEWED_MANIFEST_SHA256 = "70d322eb2908ddb908121f8952f6de27d95203d51a46ffa56adecf7efb1abd25";
+
 	final manifestIdValue:String;
 	final assets:Array<RuntimeAssetFacts>;
 

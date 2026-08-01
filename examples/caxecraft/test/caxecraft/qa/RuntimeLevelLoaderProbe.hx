@@ -86,7 +86,7 @@ function selfCheck():Int {
 	};
 	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final embedded = switch loadRuntimeLevel(InMemoryBytes(firstPlayableBytes(), "embedded-first-playable", logicalPath), ContentGenerationId.fromSequence(1),
-		registry, options) {
+		registry, registry, options) {
 		case RuntimeLevelReady(candidate): candidate;
 		case RuntimeLevelRejected(_): return 1;
 	};
@@ -109,7 +109,7 @@ function selfCheck():Int {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 5;
 	};
-	final nativeCandidate = switch loadRuntimeLevel(NativePackageFile(store, logicalPath), ContentGenerationId.fromSequence(2), registry, options) {
+	final nativeCandidate = switch loadRuntimeLevel(NativePackageFile(store, logicalPath), ContentGenerationId.fromSequence(2), registry, registry, options) {
 		case RuntimeLevelReady(candidate): candidate;
 		case RuntimeLevelRejected(_): return 6;
 	};
@@ -127,7 +127,8 @@ function selfCheck():Int {
 		return 8;
 
 	final beforeFailures = active.semanticTrace();
-	switch loadRuntimeLevel(NativePackageFile(store, "scenarios/first-playable/missing.caxemap"), ContentGenerationId.fromSequence(2), registry, options) {
+	switch loadRuntimeLevel(NativePackageFile(store, "scenarios/first-playable/missing.caxemap"), ContentGenerationId.fromSequence(2), registry, registry,
+		options) {
 		case RuntimeLevelRejected(RuntimeLevelSourceRejected(EntryMissing)):
 		case _:
 			return 9;
@@ -136,7 +137,7 @@ function selfCheck():Int {
 		return 10;
 
 	switch loadRuntimeLevel(InMemoryBytes(Bytes.ofString("CAXEMAP 1\nend-map\n"), "malformed-fixture", logicalPath), ContentGenerationId.fromSequence(2),
-		registry, options) {
+		registry, registry, options) {
 		case RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics)) if (diagnostics.length > 0):
 		case _:
 			return 11;
@@ -144,7 +145,8 @@ function selfCheck():Int {
 	if (!sameGenerationTrace(beforeFailures, active.semanticTrace()))
 		return 12;
 
-	switch loadRuntimeLevelWithFault(NativePackageFile(store, logicalPath), ContentGenerationId.fromSequence(2), registry, options, FailBeforeActors) {
+	switch loadRuntimeLevelWithFault(NativePackageFile(store, logicalPath), ContentGenerationId.fromSequence(2), registry, registry, options,
+		FailBeforeActors) {
 		case RuntimeLevelRejected(RuntimeLevelGenerationRejected(InjectedFailure(ActorConstruction))):
 		case _:
 			return 13;
