@@ -77,6 +77,7 @@
     "test:aggregate-lowering": "python3 test/aggregate_lowering/run.py",
     "test:class-layout": "python3 test/class_layout/run.py",
     "test:constructor-lowering": "python3 test/constructor_lowering/run.py",
+    "test:constructor-retained-interface": "python3 test/constructor_lowering/run.py --retained-interface-only",
     "test:constructor-direct-receiver": "python3 test/constructor_lowering/run.py --direct-receiver-only",
     "test:constructor-direct-argument": "python3 test/constructor_lowering/run.py --direct-argument-only",
     "test:constructor-managed-record-argument": "python3 test/constructor_lowering/run.py --managed-record-argument-only",

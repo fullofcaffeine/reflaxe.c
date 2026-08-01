@@ -70,8 +70,26 @@ final class Main {
 	static function fromCode(code:Int):String
 		return String.fromCharCode(code);
 
+	/** Build and mutate the explicit empty constructor used by standard-library helpers. */
+	static function constructedIntegerArraySum():Int {
+		final values = new Array<Int>();
+		values.push(40);
+		values[0] |= 1;
+		values.push(1);
+		return values[0] + values[1];
+	}
+
+	/** Prove the same constructor keeps a managed String element's lifecycle. */
+	static function constructedStringArrayLength():Int {
+		final values = new Array<String>();
+		values.push(fromCode(0x1F642));
+		return values[0].length;
+	}
+
 	static function main():Void {
 		final values:Array<Int> = [10, 20];
+		final constructedIntegerSum = constructedIntegerArraySum();
+		final constructedStringLength = constructedStringArrayLength();
 		final freshStaticLength = borrowedLength([2, 3, 5]);
 		final freshInstanceLength = new FreshArrayReader().length([7, 11]);
 		final clearedIntegers = [31, 32, 33];
@@ -213,6 +231,8 @@ final class Main {
 		final delayedPlanSuccess = delayedPlanLength(true, borrowedPlanValues);
 		final delayedPlanFailure = delayedPlanLength(false, borrowedPlanValues);
 		while (values.length != 3
+			|| constructedIntegerSum != 42
+			|| constructedStringLength != 1
 			|| freshStaticLength != 3
 			|| freshInstanceLength != 2
 			|| clearedIntegersAlias.length != 0

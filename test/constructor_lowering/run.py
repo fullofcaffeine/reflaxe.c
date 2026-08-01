@@ -780,6 +780,31 @@ def validate_retained_interface_project(output: Path) -> None:
         )
 
 
+def validate_retained_interface_report(report: dict[str, object]) -> None:
+    """Keep borrow labels aligned with each helper's observable lifetime."""
+
+    hxcir = required_text(report.get("hxcir"), "retained-interface HxcIR")
+    inspect = function_section(hxcir, "function.Main.inspect")
+    retain = function_section(hxcir, "function.Main.retain")
+    forward = function_section(hxcir, "function.Main.forwardRetained")
+    if "ownership=borrowed-interface" not in inspect:
+        raise ConstructorLoweringFailure(
+            "read-only interface helper lost its call-bounded borrow"
+        )
+    for label, section in (("retaining", retain), ("forwarding", forward)):
+        if (
+            "ownership=owned-or-value" not in section
+            or "ownership=borrowed-interface" in section
+        ):
+            raise ConstructorLoweringFailure(
+                f"{label} interface helper did not preserve the owning contract"
+            )
+    if 'dispatch=direct("function.Main.retain")' not in forward:
+        raise ConstructorLoweringFailure(
+            "retained-interface HxcIR lost the direct forwarding edge"
+        )
+
+
 def validate_default_argument_project(output: Path) -> None:
     """Prove constructor calls settle defaults before fixed-arity C emission."""
 
@@ -1599,17 +1624,23 @@ def render_parameter_projects(
     slug: str,
     coverage: frozenset[str],
     validate_project: Callable[[Path], None],
+    validate_inspection: Callable[[dict[str, object]], None] | None = None,
 ) -> tuple[CFixtureProject, ...]:
     projects: list[CFixtureProject] = []
     split_tree: dict[str, bytes] | None = None
     for layout in ("split", "package", "unity"):
         normal = fixture_root / f"{slug}-{layout}"
         reverse = fixture_root / f"{slug}-{layout}-reverse"
+        reports: list[tuple[str, dict[str, object]]] = []
         for label, result in (
             (
                 f"{layout} {slug} constructor",
                 custom_target(
-                    fixture, normal, layout=layout, runtime_diagnostics="off"
+                    fixture,
+                    normal,
+                    layout=layout,
+                    report=validate_inspection is not None and layout == "split",
+                    runtime_diagnostics="off",
                 ),
             ),
             (
@@ -1619,15 +1650,24 @@ def render_parameter_projects(
                     reverse,
                     layout=layout,
                     reverse=True,
+                    report=validate_inspection is not None and layout == "split",
                     runtime_diagnostics="off",
                 ),
             ),
         ):
-            if result.returncode != 0 or result.stdout or result.stderr:
+            if validate_inspection is not None and layout == "split":
+                reports.append(emitted_constructor_report(result, label))
+            elif result.returncode != 0 or result.stdout or result.stderr:
                 raise ConstructorLoweringFailure(
                     f"{label} compile failed\n"
                     f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
                 )
+        if reports:
+            if reports[0][0] != reports[1][0]:
+                raise ConstructorLoweringFailure(
+                    f"{layout} {slug} constructor report changed with typed-module order"
+                )
+            validate_inspection(reports[0][1])
         if generated_tree(normal) != generated_tree(reverse):
             raise ConstructorLoweringFailure(
                 f"{layout} {slug} constructor changed with typed-module order"
@@ -2455,6 +2495,7 @@ def check_native(
                 slug="retained-interface-parameter",
                 coverage=RETAINED_INTERFACE_NATIVE_COVERAGE,
                 validate_project=validate_retained_interface_project,
+                validate_inspection=validate_retained_interface_report,
             )
             default_argument_projects = render_parameter_projects(
                 fixture_root,
@@ -3613,6 +3654,81 @@ def check_owned_fallible_only(*, requested_toolchain: str) -> None:
             validate_report(report, required_coverage=required_coverage)
 
 
+def check_retained_interface_only(*, requested_toolchain: str) -> None:
+    """Run the retained-interface forwarding contract at its faithful layer."""
+
+    eval_result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "-cp",
+            str(RETAINED_INTERFACE_PARAMETER),
+            "-main",
+            "Main",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if eval_result.returncode != 0 or eval_result.stdout or eval_result.stderr:
+        raise ConstructorLoweringFailure(
+            "retained-interface Eval oracle failed\n"
+            f"stdout:\n{eval_result.stdout}\nstderr:\n{eval_result.stderr}"
+        )
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-retained-interface-focused-"
+    ) as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        projects = render_parameter_projects(
+            fixture_root,
+            fixture=RETAINED_INTERFACE_PARAMETER,
+            slug="retained-interface-parameter",
+            coverage=RETAINED_INTERFACE_NATIVE_COVERAGE,
+            validate_project=validate_retained_interface_project,
+            validate_inspection=validate_retained_interface_report,
+        )
+        ordered_projects = tuple(
+            sorted(projects, key=lambda project: project.identifier.encode("utf-8"))
+        )
+        required_coverage = RETAINED_INTERFACE_NATIVE_COVERAGE | {"strict-c11"}
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"constructor-retained-interface-{optimization[1:].lower()}",
+                projects=ordered_projects,
+                fixture_root=fixture_root,
+                build_root=root / f"c-build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=required_coverage)
+        available_families = {
+            toolchain.family
+            for toolchain in resolve_toolchains(
+                requested_toolchain, repository_root=ROOT
+            )
+        }
+        if "clang" in available_families:
+            sanitized_projects = tuple(
+                replace(project, link_arguments=("-fsanitize=address,undefined",))
+                for project in ordered_projects
+            )
+            report = run_c_fixture_corpus(
+                suite="constructor-retained-interface-sanitized",
+                projects=sanitized_projects,
+                fixture_root=fixture_root,
+                build_root=root / "c-build-sanitized",
+                repository_root=ROOT,
+                requested_toolchain="clang",
+                strict_flags=(*C11_STRICT_FLAGS, *SANITIZER_FLAGS),
+            )
+            validate_report(report, required_coverage=required_coverage)
+
+
 def check_minimal_example() -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-constructor-minimal-") as temporary:
         output = Path(temporary) / "generated"
@@ -3833,6 +3949,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--managed-record-argument-only", action="store_true")
     parser.add_argument("--managed-enum-argument-only", action="store_true")
     parser.add_argument("--nullable-recursive-factory-only", action="store_true")
+    parser.add_argument("--retained-interface-only", action="store_true")
     parser.add_argument("--owned-fallible-only", action="store_true")
     parser.add_argument("--factory-return-only", action="store_true")
     parser.add_argument("--early-exit-only", action="store_true")
@@ -3894,6 +4011,14 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "constructor-lowering: OK: nullable recursive class results "
                 "preserved independent call/local roots, strict C11/C++17, "
                 "sanitizers, layouts, server reuse, and determinism"
+            )
+            return 0
+        if args.retained_interface_only:
+            check_retained_interface_only(requested_toolchain=args.toolchain)
+            print(
+                "constructor-lowering: OK: retained-interface static forwarding "
+                "preserved Eval/HxcIR/C ownership, native execution, sanitizers, "
+                "layouts, server reuse, and determinism"
             )
             return 0
         if args.owned_fallible_only:

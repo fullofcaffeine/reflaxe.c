@@ -379,10 +379,45 @@ def validate_generated_hxcir(hxcir: str) -> None:
         hxcir, "function.Main.countFirstScheduledCommands"
     )
     entry = hxcir_function(hxcir, "function.Main.main")
+    constructed_integers = hxcir_function(
+        hxcir, "function.Main.constructedIntegerArraySum"
+    )
+    constructed_strings = hxcir_function(
+        hxcir, "function.Main.constructedStringArrayLength"
+    )
     history_pop = hxcir_function(hxcir, "method.History.takeNewest")
     choose_array = hxcir_function(hxcir, "function.Main.chooseArray")
     selected_pair_sum = hxcir_function(hxcir, "function.Main.selectedPairSum")
     delayed_plan = hxcir_function(hxcir, "function.Main.delayedPlanLength")
+    for label, section in (
+        ("Int", constructed_integers),
+        ("String", constructed_strings),
+    ):
+        if (
+            'runtime(feature="array",operation="create-literal") arguments=[]'
+            not in section
+            or 'release place=local("local.0") implementation=runtime("array")'
+            not in section
+        ):
+            raise ArrayRuntimeFailure(
+                f"new Array<{label}> lost typed empty construction or owner cleanup"
+            )
+    for marker in (
+        'runtime(feature="array",operation="get-checked")',
+        'binary operation="haxe.i32.bit-or"',
+        'runtime(feature="array",operation="set")',
+    ):
+        if marker not in constructed_integers:
+            raise ArrayRuntimeFailure(
+                f"Array<Int> indexed compound assignment omitted {marker}"
+            )
+    if (
+        'implementation=runtime("string")' not in constructed_strings
+        or 'runtime(feature="array",operation="push")' not in constructed_strings
+    ):
+        raise ArrayRuntimeFailure(
+            "new Array<String> lost managed-element ownership during mutation"
+        )
     if (
         "declare-managed-carrier" not in choose_array
         or "ownership=move-fresh" not in choose_array

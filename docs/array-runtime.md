@@ -434,6 +434,25 @@ emits neither feature for the direct class fixture or for an ordinary
 `Array<Int>`/record/enum program. `hxc_runtime=none` rejects the traced graph
 before any plausible C project is written.
 
+## Explicit empty construction and primitive indexed updates
+
+Ordinary Haxe offers two equivalent ways to create an empty typed Array:
+`([] : Array<Int>)` and `new Array<Int>()`. haxe.c lowers the zero-argument core
+`Array<T>` constructor through the same typed `array/create-literal` operation
+as the empty literal. The resolved element specialization, allocation-failure
+edge, fresh owner, and exactly-once cleanup are therefore identical. This is a
+core Array rule, not general generic-class construction; other generic
+constructors retain their existing fail-closed boundary.
+
+A primitive indexed compound update such as `words[index] |= mask` becomes an
+ordered checked read, the typed primitive operation, and a typed Array write.
+The receiver and index are each evaluated once before the old element is read;
+the right side runs afterward; and the final write reuses those saved values.
+HxcIR records `array/get-checked`, `haxe.i32.bit-or`, and `array/set` separately,
+so bounds failure and arithmetic semantics remain visible before C is selected.
+This direct compound path accepts primitive elements only. Managed values keep
+their separately proven read/copy/update ownership paths.
+
 ## Executable evidence
 
 [`test/differential/array-runtime`](../test/differential/array-runtime) runs the
@@ -456,8 +475,12 @@ The fixture proves:
 - unchanged logical contents after allocation failure; and
 - absence of string, object, GC, reflection, and dynamic symbol families.
 
-The ordinary-Haxe generated fixture additionally proves both sides of an Array
-join: a fresh literal moves its owner, while a borrowed Array is retained. A
+The ordinary-Haxe generated fixture additionally constructs empty `Array<Int>`
+and `Array<String>` values with `new Array<T>()`, mutates both, and applies `|=`
+to an indexed integer. It proves the typed creation/cleanup pair, the managed
+String element lifecycle, and the checked read/primitive-operation/write
+sequence in HxcIR. The same fixture proves both sides of an Array join: a fresh
+literal moves its owner, while a borrowed Array is retained. A
 pair of sequential value switches proves that the first joined local is
 released when the second switch returns early. The same source runs under Eval
 and generated native C, while the HxcIR shape check confirms the ownership

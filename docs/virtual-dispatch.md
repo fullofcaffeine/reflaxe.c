@@ -108,10 +108,21 @@ no nominal relationship at all. Those conversions still need the future
 runtime-checked cast machinery and currently fail at the exact Haxe `cast`
 with `HXC1001`, leaving no output.
 
-A constructor may accept this interface pair by value when its typed body proves
-that the pair remains a short-lived borrow for that call. HxcIR records
-`ownership=borrowed-interface`; storing, returning, or forwarding it without
-another checked borrow contract is rejected. See
+A constructor or static helper may accept this interface pair by value when its
+complete direct-call path proves that the pair remains a short-lived borrow.
+For example, a helper that only calls `source.score(2)` records
+`ownership=borrowed-interface`. A helper that passes `source` to another static
+function may keep that label only when the receiving parameter is also
+call-bounded.
+
+The compiler settles these labels from callees back to callers before it lowers
+either body. If the receiving helper stores the interface in an object, its
+parameter owns the value for that operation, and every direct forwarding helper
+becomes `owned-or-value` as well. This backward propagation matters because the
+outer caller must then keep collector-managed storage alive; treating the outer
+parameter as a borrow could leave the retained interface pointing at expired
+storage. Unknown and generic call targets remain conservative rather than
+inventing a borrow contract. See
 [bounded constructor lowering](constructor-lowering.md#c-function-and-elision-model)
 for the lifetime reason and generated-C example.
 

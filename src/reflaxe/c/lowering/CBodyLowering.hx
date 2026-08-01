@@ -415,6 +415,7 @@ class CBodyLowering {
 			preparedById.set(fn.irId, fn);
 		}
 		final globalRegistry = new BodyGlobalRegistry(context, inputGlobals == null ? [] : inputGlobals, deferredInitializersByGlobal);
+		BorrowContractRefiner.refine(prepared, preparedById);
 		final functionLiterals = new FunctionLiteralRegistry(context, aggregateRegistry);
 		for (fn in prepared.copy())
 			functionLiterals.discover(fn, preparedById);
@@ -3268,7 +3269,7 @@ private class FunctionPreparer {
 	}
 
 	/** True when this expression's value is the parameter itself, not a field/call result. */
-	static function isDirectParameterValue(expression:TypedExpr, compilerId:Int):Bool {
+	public static function isDirectParameterValue(expression:TypedExpr, compilerId:Int):Bool {
 		return switch expression.expr {
 			case TLocal(variable): variable.id == compilerId;
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isDirectParameterValue(inner, compilerId);
@@ -3323,6 +3324,120 @@ private class FunctionPreparer {
 				throw new CBodyEmissionError('function signature contains non-admitted HxcIR type `${Std.string(type)}`');
 		};
 	}
+}
+
+/**
+	Propagates direct static-call ownership requirements back to their callers.
+
+	The first syntax pass can prove that a parameter is not returned, stored,
+	thrown, captured, or handed to a constructor in its own body. A direct helper
+	may still require an owning argument because *its* body retains the reference.
+	This fixed point revokes the caller's borrow in that case. Revocation can move
+	through several helpers, and it never turns an owning parameter into a borrow.
+**/
+private class BorrowContractRefiner {
+	/** Settle all named static-function parameters before representation planning. */
+	public static function refine(functions:Array<PreparedBodyFunction>, byId:Map<String, PreparedBodyFunction>):Void {
+		var changed = true;
+		var remaining = 1;
+		for (fn in functions)
+			remaining += fn.parameters.length;
+		while (changed) {
+			if (remaining-- <= 0)
+				throw new CBodyEmissionError("borrow-contract refinement did not converge");
+			changed = false;
+			final replacements:Map<String, PreparedBodyFunction> = [];
+			for (fn in functions) {
+				if (fn.role != PBRFunction)
+					continue;
+				var parameterChanged = false;
+				final parameters:Array<PreparedParameter> = [];
+				for (parameter in fn.parameters) {
+					final borrowed = parameter.borrowedReference
+						&& forwardsOnlyToBorrowingStaticTargets(fn.bodyExpression, parameter.compilerId, byId);
+					if (borrowed != parameter.borrowedReference)
+						parameterChanged = true;
+					parameters.push({
+						compilerId: parameter.compilerId,
+						ir: parameter.ir,
+						mapping: parameter.mapping,
+						borrowedReference: borrowed,
+						defaultValue: parameter.defaultValue
+					});
+				}
+				if (parameterChanged) {
+					changed = true;
+					replacements.set(fn.irId, copyWithParameters(fn, parameters));
+				}
+			}
+			if (changed)
+				for (index in 0...functions.length) {
+					final replacement = replacements.get(functions[index].irId);
+					if (replacement != null) {
+						functions[index] = replacement;
+						byId.set(replacement.irId, replacement);
+					}
+				}
+		}
+	}
+
+	/** Keep one borrow only when each direct forwarding target also borrows it. */
+	static function forwardsOnlyToBorrowingStaticTargets(body:TypedExpr, compilerId:Int, byId:Map<String, PreparedBodyFunction>):Bool {
+		var safe = true;
+		function visit(expression:TypedExpr):Void {
+			if (!safe)
+				return;
+			switch expression.expr {
+				case TCall(callee, arguments):
+					for (index in 0...arguments.length)
+						if (FunctionPreparer.isDirectParameterValue(arguments[index], compilerId)) {
+							final target = directStaticTarget(callee, byId);
+							if (target == null || index >= target.parameters.length || !target.parameters[index].borrowedReference) {
+								safe = false;
+								return;
+							}
+						}
+				case _:
+			}
+			if (safe)
+				TypedExprTools.iter(expression, visit);
+		}
+		visit(body);
+		return safe;
+	}
+
+	/** Resolve only non-generic named static functions; other calls stay owning. */
+	static function directStaticTarget(callee:TypedExpr, byId:Map<String, PreparedBodyFunction>):Null<PreparedBodyFunction> {
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)):
+				final owner = classReference.get();
+				final field = fieldReference.get();
+				if (field.params.length != 0) null; else byId.get(CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name));
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directStaticTarget(inner, byId);
+			case _: null;
+		};
+	}
+
+	/** Rebuild one immutable prepared record with its settled parameter contracts. */
+	static function copyWithParameters(fn:PreparedBodyFunction, parameters:Array<PreparedParameter>):PreparedBodyFunction
+		return {
+			modulePath: fn.modulePath,
+			declarationPath: fn.declarationPath,
+			sourcePath: fn.sourcePath,
+			displayName: fn.displayName,
+			fieldName: fn.fieldName,
+			specialization: fn.specialization,
+			sourceExpression: fn.sourceExpression,
+			bodyExpression: fn.bodyExpression,
+			role: fn.role,
+			irId: fn.irId,
+			parameters: parameters,
+			returnMapping: fn.returnMapping,
+			borrowedSpanReturn: fn.borrowedSpanReturn,
+			functionRequest: fn.functionRequest,
+			parameterRequests: fn.parameterRequests,
+			closureEnvironment: fn.closureEnvironment
+		};
 }
 
 private class ConstructorPreparer {
@@ -5673,6 +5788,7 @@ private class FunctionBuilder {
 		if (initializer != null) {
 			final construction = newExpression(initializer);
 			if (construction != null
+				&& !CBodyArrayRecognition.isCoreArray(construction.classReference)
 				&& !CBodyIntMapRecognition.isIntMap(construction.classReference)
 				&& !CBodyStringMapRecognition.isStringMap(construction.classReference)) {
 				// Constructor preparation already owns the admitted nominal class. Use
@@ -7313,6 +7429,13 @@ private class FunctionBuilder {
 				lowerIntMapConstruction(expression, arguments, expectedMapping);
 			case TNew(classReference, _, arguments) if (CBodyStringMapRecognition.isStringMap(classReference)):
 				lowerStringMapConstruction(expression, arguments, expectedMapping);
+			case TNew(classReference, _, arguments) if (CBodyArrayRecognition.isCoreArray(classReference)):
+				if (arguments.length != 0)
+					unsupported(expression, 'TNew(Array:argument-count=${arguments.length})');
+				// `new Array<T>()` and `([] : Array<T>)` create the same empty,
+				// mutable container. Reusing the literal path preserves the resolved
+				// element specialization, allocation failure, and fresh-owner cleanup.
+				lowerManagedArrayLiteral(expression, [], expectedMapping);
 			case TNew(_, _, _):
 				final construction = newExpression(expression);
 				if (construction == null)
@@ -9385,7 +9508,79 @@ private class FunctionBuilder {
 		return {id: result.id, type: result.type, mapping: resultMapping};
 	}
 
+	/** Lower `array[index] op= value` as one checked read and one typed write. */
+	function lowerManagedArrayCompoundAssignment(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):Null<LoweredValue> {
+		final indexed = switch unwrapExpression(left).expr {
+			case TArray(collection, index): {collection: collection, index: index};
+			case _: return null;
+		};
+		if (!CBodyArrayRecognition.isCoreArrayType(indexed.collection.t))
+			return null;
+		final receiverMapping = bodyValueType(indexed.collection.t, indexed.collection.pos, "TArray(compound:receiver-type)");
+		final array = receiverMapping.arrayValue();
+		if (array == null)
+			return null;
+		if (array.element.primitiveMapping() == null)
+			return unsupported(expression, "TArray(compound:requires-primitive-element)");
+
+		// Haxe evaluates the receiver and index before reading the old element,
+		// then evaluates the right side before writing. Keep each earlier value in
+		// HxcIR when a later expression introduces control flow so none is repeated.
+		final receiver = stabilizeFreshManagedArray(coerce(lowerValue(indexed.collection, receiverMapping), receiverMapping, indexed.collection.pos,
+			"TArray(compound:receiver)"),
+			indexed.collection.pos, "array-compound-receiver");
+		final stagedReceiver = stageFlowValue(receiver, indexed.collection, expressionCreatesFlow(indexed.index), "array-compound-receiver");
+		final indexMapping = CBodyValueType.primitive(primitiveMapping(indexed.index.t, indexed.index.pos, "TArray(compound:index-type)"));
+		if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(indexed.index, "TArray(compound:index-must-be-Int)");
+		final index = coerce(lowerValue(indexed.index, indexMapping), indexMapping, indexed.index.pos, "TArray(compound:index)");
+		final restoredReceiver = restoreStagedLoweredValue(stagedReceiver, "array-compound-receiver-load");
+		final source = sourceSpan(expression.pos);
+		final oldResult:HxcIRResult = {id: nextValueId(), type: array.element.irType};
+		appendInstruction(oldResult, IRIOCall({
+			dispatch: IRCDRuntime("array", "get-checked"),
+			arguments: [restoredReceiver.id, index.id],
+			returnType: array.element.irType,
+			failure: managedArrayFailure()
+		}), source, "array-compound-get");
+		registerValueTemporary(oldResult.id, "array-compound-old-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "get-checked", "ordinary Haxe Array indexed compound assignment", source,
+			expression.pos));
+
+		final oldValue:LoweredValue = {id: oldResult.id, type: oldResult.type, mapping: array.element};
+		final rightCreatesFlow = expressionCreatesFlow(right);
+		final receiverForSet = stageFlowValue(restoredReceiver, indexed.collection, rightCreatesFlow, "array-compound-set-receiver");
+		final indexForSet = stageFlowValue(index, indexed.index, rightCreatesFlow, "array-compound-set-index");
+		final oldValueLocal = rightCreatesFlow ? createFlowLocal(array.element, oldValue.id, source, "array-compound-old") : null;
+		final rightValue = lowerValue(right);
+		final stableOld = oldValueLocal == null ? oldValue : loadPlace({
+			place: IRPLocal(oldValueLocal),
+			mapping: array.element,
+			mutable: false
+		}, left.pos, "array-compound-old-load");
+		final next = lowerBinaryValues(expression, operation, stableOld, rightValue, "array-compound", array.element);
+		final stored = coerce(next, array.element, expression.pos, "TArray(compound:result)");
+		final stableReceiver = restoreStagedLoweredValue(receiverForSet, "array-compound-set-receiver-load");
+		final stableIndex = restoreStagedLoweredValue(indexForSet, "array-compound-set-index-load");
+		final resultMapping = bodyValueType(expression.t, expression.pos, "TArray(compound:result-type)");
+		if (typeKey(resultMapping.irType) != typeKey(array.element.irType))
+			return unsupported(expression, "TArray(compound:assignment-result-mismatch)");
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("array", "set"),
+			arguments: [stableReceiver.id, stableIndex.id, stored.id],
+			returnType: result.type,
+			failure: managedArrayFailure()
+		}), source, "array-compound-set");
+		registerValueTemporary(result.id, "array-compound-set-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "set", "ordinary Haxe Array indexed compound assignment", source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
 	function lowerCompoundAssignment(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
+		final managedArrayAssignment = lowerManagedArrayCompoundAssignment(expression, operation, left, right);
+		if (managedArrayAssignment != null)
+			return managedArrayAssignment;
 		final target = lowerPlace(left);
 		if (!target.mutable) {
 			unsupported(left, "TBinop(OpAssignOp:immutable-place)");

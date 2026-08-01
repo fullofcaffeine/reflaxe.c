@@ -153,9 +153,21 @@ final class RetainedScore {
 
 /** Exercises delayed interface dispatch after deterministic collection pressure. */
 final class Main {
+	/** Observe one interface without keeping it after this helper returns. */
+	static function inspect(source:ScoreSource):Int
+		return source.score(2);
+
+	/** Transfer one interface into the object that keeps it after this call. */
+	static function retain(source:ScoreSource):RetainedScore
+		return new RetainedScore(source);
+
+	/** Propagate the target's owning requirement through one static helper. */
+	static function forwardRetained(source:ScoreSource):RetainedScore
+		return retain(source);
+
 	/** Builds the retained graph without exposing its concrete implementation. */
 	static function build():RetainedScore
-		return new RetainedScore(new FixedScore(40));
+		return forwardRetained(new FixedScore(40));
 
 	/** Forces several collector cycles so a missing trace edge fails reliably. */
 	static function forceCollectionPressure():Void {
@@ -165,12 +177,13 @@ final class Main {
 
 	/** Keeps the process alive only when delayed interface dispatch returns 42. */
 	static function main():Void {
+		final observed = inspect(new FixedScore(40));
 		final value = build();
 		value.advance();
 		value.advance();
 		value.installDirect(40);
 		forceCollectionPressure();
-		while (value.advances != 2 || value.read(2) != 42 || value.readDirect(2) != 42 || value.readDraft() != 42) {}
+		while (observed != 42 || value.advances != 2 || value.read(2) != 42 || value.readDirect(2) != 42 || value.readDraft() != 42) {}
 		value.keepDraft();
 		value.replaceDraft(39);
 		forceCollectionPressure();
