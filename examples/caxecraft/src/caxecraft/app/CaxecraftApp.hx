@@ -1,8 +1,7 @@
 package caxecraft.app;
 
 #if c
-import caxecraft.content.BaseContentPack;
-import caxecraft.content.BaseContentPack.ItemUseProfile;
+import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.ActiveRuntimeContent;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
@@ -75,9 +74,9 @@ import caxecraft.gameplay.SwordCombatState;
 import caxecraft.gameplay.WorldItemPickup.isInRange as authoredItemIsInRange;
 import caxecraft.localization.FirstPlayableCatalog;
 import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
-import caxecraft.localization.UiCatalog;
-import caxecraft.localization.UiCatalog.LocaleCursor;
-import caxecraft.localization.UiCatalog.UiMessage;
+import caxecraft.localization.RuntimeUiCatalog;
+import caxecraft.localization.UiTypes.LocaleCursor;
+import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.input.NavigationInput.NavigationRepeater;
 import caxecraft.input.NavigationInput.NavigationSample;
@@ -154,9 +153,6 @@ final class CaxecraftApp {
 	/** Persistent terrain faces rebuilt only after successful world edits. */
 	final terrainRenderer:TerrainRenderer = new TerrainRenderer();
 
-	/** Native visual editor shell over the shared renderer-independent session. */
-	final editorScreen:CaxecraftEditorScreen;
-
 	/** Held-direction clock shared by real controller input and native pilots. */
 	final editorNavigation:NavigationRepeater;
 
@@ -167,7 +163,6 @@ final class CaxecraftApp {
 	 * bytes have produced a complete candidate session.
 	 */
 	public function new() {
-		editorScreen = new CaxecraftEditorScreen();
 		editorNavigation = new NavigationRepeater();
 	}
 
@@ -233,6 +228,9 @@ final class CaxecraftApp {
 		// Borrow one complete snapshot so the registry, catalog, level, and receipt
 		// cannot come from different publications during this application run.
 		final runtimeContent = activeContent.generation();
+		final contentRegistry = runtimeContent.registry();
+		final uiCatalog = runtimeContent.catalog();
+		final editorScreen = new CaxecraftEditorScreen(contentRegistry, uiCatalog);
 		final loadedCandidate = runtimeContent.level();
 		final session = loadedCandidate.generation().session();
 		final actorBindings:Array<PlayableActorBinding> = [];
@@ -356,11 +354,11 @@ final class CaxecraftApp {
 		// exercises finite Adventure inventory and actor behavior from frame one.
 		selectedMode = GameMode.Adventure;
 		#end
-		var locale:LocaleCursor = UiCatalog.defaultLocale();
+		var locale:LocaleCursor = uiCatalog.defaultLocale();
 		#if caxecraft_pilot_secondary_locale
 		// The graphical locale pilot selects the next validated catalog without
 		// teaching the application which human language that catalog contains.
-		locale = UiCatalog.nextLocale(locale);
+		locale = uiCatalog.nextLocale(locale);
 		#end
 		#if caxecraft_pilot
 		final showInitialTitle = pilotName == PilotScriptName.LaunchSmoke
@@ -517,7 +515,7 @@ final class CaxecraftApp {
 				#if !caxecraft_pilot
 				final modeBeforeInput = selectedMode;
 				if (Raylib.IsKeyPressed(KeyboardKey.L))
-					locale = UiCatalog.nextLocale(locale);
+					locale = uiCatalog.nextLocale(locale);
 				if (Raylib.IsKeyPressed(KeyboardKey.Up) || Raylib.IsKeyPressed(KeyboardKey.Down))
 					selectedMode = selectedMode == GameMode.Creative ? GameMode.Adventure : GameMode.Creative;
 
@@ -712,10 +710,9 @@ final class CaxecraftApp {
 							&& authoredItemIsInRange(character.body.x, character.body.y, character.body.z, loadedItem.xMilli, loadedItem.yMilli,
 								loadedItem.zMilli)) {
 							final itemCode = loadedItem.storageCode;
-							final item = BaseContentPack.itemFromValidatedStorageCode(itemCode);
-							if (BaseContentPack.itemUseProfile(item) == ItemUseProfile.EquipAquatic
-								&& BaseContentPack.itemProvidesAquaticProfile(item)) {
-								final replacement = BaseContentPack.aquaticProfile(BaseContentPack.itemAquaticProfile(item));
+							if (contentRegistry.itemUseProfile(itemCode) == RuntimeItemUseProfile.EquipAquatic
+								&& contentRegistry.itemProvidesAquaticProfile(itemCode)) {
+								final replacement = contentRegistry.itemAquaticProfile(itemCode);
 								final equipment = session.collectAuthoredAquaticEquipment(pickupIndex, replacement);
 								character = equipment.character;
 								if (!equipment.resolved)
@@ -743,7 +740,7 @@ final class CaxecraftApp {
 										case LocalPlayerAttack(source):
 											if (source == enemyActorId) enemyAttackFrames = 120;
 										case DropRequested(source, drop):
-											final quantity = BaseContentPack.dropQuantityById(drop);
+											final quantity = contentRegistry.dropQuantityById(drop);
 											final defeatedActor = session.readCharacter(source);
 											if (quantity <= 0 || !defeatedActor.id.isValid()) quit = true; else if (!berryDrop.active) {
 												berryDrop = berryDropFromDefeatedCharacter(defeatedActor, quantity);
@@ -951,7 +948,7 @@ final class CaxecraftApp {
 			// must observe committed state and must not advance simulation itself.
 			Raylib.BeginDrawing();
 			if (onTitle) {
-				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale);
+				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale, uiCatalog);
 			} else if (onEditor) {
 				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
 					screen = closeEditor(screen);
@@ -987,8 +984,8 @@ final class CaxecraftApp {
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
 				drawActors(camera, entityTexture, entityTextureReady, dialogueActor, enemyActor, enemyPhase.phase, berryDrop);
-				AuthoredItemRenderer.drawWorldItems(camera, session.authoredItemsView(), loadedItems, itemTexture, itemTextureReady, adventureItemTexture,
-					adventureItemTextureReady);
+				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), loadedItems, itemTexture, itemTextureReady,
+					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
 						c.Float32.fromFloat(1.04), c.Float32.fromFloat(1.04), CaxecraftPalette.selection());
@@ -1036,7 +1033,7 @@ final class CaxecraftApp {
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase
 				};
-				drawHud(hudView, hudResources);
+				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
 			}
 			#if caxecraft_pilot
 			final pilotComplete = PilotScript.complete(pilotName, frameCount);
@@ -1257,7 +1254,8 @@ final class CaxecraftApp {
 	}
 
 	/** Draw one immutable post-simulation HUD snapshot using borrowed textures. */
-	static function drawHud(view:HudView, resources:HudResources):Void {
+	static function drawHud(view:HudView, resources:HudResources, contentRegistry:caxecraft.content.RuntimeContentPack.RuntimeContentRegistry,
+			uiCatalog:RuntimeUiCatalog):Void {
 		final visible = view.metrics.visibleBlocks;
 		final drawCalls = view.metrics.drawCalls;
 		final frames = view.metrics.renderedFrames;
@@ -1304,25 +1302,25 @@ final class CaxecraftApp {
 		Raylib.DrawLine(centerX, centerY + 3, centerX, centerY + 8, text);
 		Raylib.DrawRectangle(18, 18, 460, 108, CaxecraftPalette.hudPanel());
 		Raylib.DrawRectangleLines(18, 18, 460, 108, CaxecraftPalette.selection());
-		drawUiText(locale, UiMessage.Brand, 32, 28, 20, text);
-		drawUiText(locale, UiMessage.DebugCells, 32, 58, 14, text);
+		drawUiText(uiCatalog, locale, UiMessage.Brand, 32, 28, 20, text);
+		drawUiText(uiCatalog, locale, UiMessage.DebugCells, 32, 58, 14, text);
 		HudDigits.drawNumber(World.VOLUME, 82, 59, 5, CaxecraftPalette.selection());
-		drawUiText(locale, UiMessage.DebugVisible, 160, 58, 14, text);
+		drawUiText(uiCatalog, locale, UiMessage.DebugVisible, 160, 58, 14, text);
 		HudDigits.drawNumber(visible, 230, 59, 5, CaxecraftPalette.selection());
-		drawUiText(locale, UiMessage.DebugDraws, 326, 58, 14, text);
+		drawUiText(uiCatalog, locale, UiMessage.DebugDraws, 326, 58, 14, text);
 		HudDigits.drawNumber(drawCalls, 382, 59, 5, CaxecraftPalette.selection());
-		drawUiText(locale, UiMessage.DebugFrame, 32, 86, 12, text);
+		drawUiText(uiCatalog, locale, UiMessage.DebugFrame, 32, 86, 12, text);
 		HudDigits.drawNumber(frames, 82, 85, 6, text);
-		drawUiText(locale, UiMessage.DebugTick, 174, 86, 12, text);
+		drawUiText(uiCatalog, locale, UiMessage.DebugTick, 174, 86, 12, text);
 		HudDigits.drawNumber(updates, 216, 85, 6, text);
 		drawHotbar(inventory, hudTexture, hudTextureReady, itemTexture, itemTextureReady, width, height);
 		drawHealth(vitals, hudTexture, hudTextureReady, width);
 		if (aquaticEquipmentCode >= 0)
-			AuthoredItemRenderer.drawEquippedIcon(aquaticEquipmentCode, itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady,
-				width - 226, 18, 42);
+			AuthoredItemRenderer.drawEquippedIcon(contentRegistry, aquaticEquipmentCode, itemTexture, itemTextureReady, adventureItemTexture,
+				adventureItemTextureReady, width - 226, 18, 42);
 		if (headSubmerged)
 			drawBreath(breathTicks, maximumBreathTicks, width, height);
-		drawUiText(locale, UiMessage.Controls, 20, height - 22, 14, text);
+		drawUiText(uiCatalog, locale, UiMessage.Controls, 20, height - 22, 14, text);
 		if (mode == GameMode.Adventure)
 			drawScenarioText(locale, ScenarioMessage.AdventureProgress, 32, 110, 14, CaxecraftPalette.selection());
 		if (guideInteractionAvailable) {
@@ -1358,12 +1356,12 @@ final class CaxecraftApp {
 			if (recoveryFeedback == RecoveryDecision.UseBerries)
 				drawScenarioText(locale, ScenarioMessage.BerryRecovery, centerX - 88, centerY + 24, 18, CaxecraftPalette.recovery());
 			else if (recoveryFeedback == RecoveryDecision.HealthAlreadyFull)
-				drawUiText(locale, UiMessage.HealthFull, centerX - 96, centerY + 24, 18, CaxecraftPalette.selection());
+				drawUiText(uiCatalog, locale, UiMessage.HealthFull, centerX - 96, centerY + 24, 18, CaxecraftPalette.selection());
 			else if (recoveryFeedback == RecoveryDecision.RecoveryStackEmpty)
 				drawScenarioText(locale, ScenarioMessage.NoBerries, centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
 		}
 		if (aquaticEquipmentVisible)
-			drawUiText(locale, UiMessage.AquaticGearEquipped, centerX - 128, centerY + 24, 18, CaxecraftPalette.selection());
+			drawUiText(uiCatalog, locale, UiMessage.AquaticGearEquipped, centerX - 128, centerY + 24, 18, CaxecraftPalette.selection());
 		if (vitals.safeTicks > 15)
 			Raylib.DrawRectangleLines(4, 4, width - 8, height - 8, CaxecraftPalette.damage());
 		if (characterIsDefeated(vitals)) {
@@ -1375,20 +1373,20 @@ final class CaxecraftApp {
 		if (paused) {
 			Raylib.DrawRectangle(centerX - 170, centerY - 48, 340, 96, CaxecraftPalette.hudPanel());
 			Raylib.DrawRectangleLines(centerX - 170, centerY - 48, 340, 96, CaxecraftPalette.selection());
-			drawUiText(locale, UiMessage.PauseTitle, centerX - 48, centerY - 30, 24, text);
-			drawUiText(locale, UiMessage.PauseHelp, centerX - 160, centerY + 8, 16, text);
+			drawUiText(uiCatalog, locale, UiMessage.PauseTitle, centerX - 48, centerY - 30, 24, text);
+			drawUiText(uiCatalog, locale, UiMessage.PauseHelp, centerX - 160, centerY + 8, 16, text);
 		} else if (placementBlocked) {
-			drawUiText(locale, UiMessage.PlaceBlocked, centerX - 170, centerY + 26, 14, CaxecraftPalette.selection());
+			drawUiText(uiCatalog, locale, UiMessage.PlaceBlocked, centerX - 170, centerY + 26, 14, CaxecraftPalette.selection());
 		} else if (!captured) {
-			drawUiText(locale, UiMessage.CapturePrompt, centerX - 90, centerY + 26, 14, text);
+			drawUiText(uiCatalog, locale, UiMessage.CapturePrompt, centerX - 90, centerY + 26, 14, text);
 		} else if (!hit.hit) {
-			drawUiText(locale, UiMessage.NoBlockInReach, centerX - 105, centerY + 26, 14, text);
+			drawUiText(uiCatalog, locale, UiMessage.NoBlockInReach, centerX - 105, centerY + 26, 14, text);
 		}
 	}
 
 	/** Keep native drawing in the UI layer; the catalog only chooses text. */
-	static inline function drawUiText(locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
-		Raylib.DrawText(UiCatalog.text(locale, message), x, y, fontSize, color);
+	static inline function drawUiText(catalog:RuntimeUiCatalog, locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
+		Raylib.DrawTextString(catalog.text(locale, message), x, y, fontSize, color);
 
 	/** Draw one campaign-owned message after its catalog resolves the locale. */
 	static inline function drawScenarioText(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void

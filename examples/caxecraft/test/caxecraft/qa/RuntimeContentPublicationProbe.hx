@@ -9,8 +9,8 @@ import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContentForTesting;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
-import caxecraft.localization.UiCatalog.LocaleCursor;
-import caxecraft.localization.UiCatalog.UiMessage;
+import caxecraft.localization.UiTypes.LocaleCursor;
+import caxecraft.localization.UiTypes.UiMessage;
 import haxe.io.Bytes;
 
 /**

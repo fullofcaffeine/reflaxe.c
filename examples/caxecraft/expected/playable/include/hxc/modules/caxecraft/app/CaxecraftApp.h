@@ -8,7 +8,6 @@
 
 struct hxc_caxecraft_app_CaxecraftApp {
   struct hxc_caxecraft_app_TerrainRenderer hxc_terrainRenderer;
-  struct hxc_caxecraft_app_CaxecraftEditorScreen *hxc_editorScreen;
   struct hxc_caxecraft_input_NavigationRepeater hxc_editorNavigation;
 };
 
@@ -40,7 +39,7 @@ void hxc_caxecraft_app_CaxecraftApp_drawHealth(struct hxc_caxecraft_domain_Vital
 
 void hxc_caxecraft_app_CaxecraftApp_drawHotbar(struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory, struct Texture hxc_l_hudTexture, bool hxc_l_hudTextureReady, struct Texture hxc_l_itemTexture, bool hxc_l_itemTextureReady, int32_t hxc_l_width, int32_t hxc_l_height);
 
-void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc_l_view, struct hxc_caxecraft_app_HudResources hxc_l_resources);
+void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc_l_view, struct hxc_caxecraft_app_HudResources hxc_l_resources, struct hxc_caxecraft_content_RuntimeContentRegistry *hxc_l_contentRegistry, struct hxc_caxecraft_localization_RuntimeUiCatalog *hxc_l_uiCatalog);
 
 struct hxc_caxecraft_app_CaxecraftApp_ActorPhaseObservation hxc_caxecraft_app_CaxecraftApp_observeActorPhase(struct hxc_array_ref *hxc_l_states, int32_t hxc_l_id, enum hxc_caxecraft_domain_ActorControllerPhase hxc_l_fallback);
 

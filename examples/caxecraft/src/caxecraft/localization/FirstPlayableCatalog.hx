@@ -1,6 +1,6 @@
 package caxecraft.localization;
 
-import caxecraft.localization.UiCatalog.LocaleCursor;
+import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.LocalizationText;
 
 enum abstract ScenarioMessage(Int) {

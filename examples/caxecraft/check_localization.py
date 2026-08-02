@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check catalog completeness, generated lookups, and locale-blind app code."""
+"""Check runtime UI data, the campaign fallback, and locale-blind app code."""
 
 from __future__ import annotations
 
@@ -237,7 +237,7 @@ def main() -> int:
     except (OSError, UnicodeError, PlayFailure, catalog.CatalogFailure, LocalizationCheckFailure) as error:
         print(f"caxecraft-localization: ERROR: {error}", file=sys.stderr)
         return 1
-    print("caxecraft-localization: OK: complete typed lookups, static C text, locale-blind app")
+    print("caxecraft-localization: OK: runtime UI data, campaign fallback, and locale-blind app")
     return 0
 
 

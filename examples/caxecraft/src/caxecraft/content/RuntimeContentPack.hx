@@ -128,6 +128,24 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public inline function blockCount():Int
 		return blocks.length;
 
+	/** Return the schema-validated air ID used to initialize blank terrain. */
+	public inline function airBlockId():ContentId
+		return new ContentId(airBlock);
+
+	/**
+	 * Return the first admitted non-air block for a new editor brush.
+	 *
+	 * The current schema does not yet name a preferred editor brush. Choosing
+	 * the first canonical non-air definition keeps that bounded policy outside
+	 * generated source while allowing a future schema field to replace it.
+	 */
+	public function defaultEditorBlockId():ContentId {
+		for (block in blocks)
+			if (block.id != airBlock)
+				return new ContentId(block.id);
+		return new ContentId(airBlock);
+	}
+
 	/** Number of admitted item definitions and valid item storage codes. */
 	public inline function itemCount():Int
 		return items.length;

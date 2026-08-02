@@ -140,7 +140,7 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/app/TerrainChunkLayout.c": "c",
     "playable/src/modules/caxecraft/app/TerrainRenderer.c": "c",
     "playable/src/modules/caxecraft/app/WaterRenderer.c": "c",
-    "playable/src/modules/caxecraft/content/BaseContentPack.c": "c",
+    "playable/src/modules/caxecraft/content/RuntimeContentPack.c": "c",
     "playable/src/modules/caxecraft/app/CaxecraftApp.c": "c",
     "playable/src/modules/caxecraft/app/MotionInterpolation.c": "c",
     "playable/src/modules/caxecraft/app/Main.c": "c",
@@ -153,7 +153,7 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/gameplay/Recovery.c": "c",
     "playable/src/modules/caxecraft/gameplay/Mining.c": "c",
     "playable/src/modules/caxecraft/localization/FirstPlayableCatalog.c": "c",
-    "playable/src/modules/caxecraft/localization/UiCatalog.c": "c",
+    "playable/src/modules/caxecraft/localization/RuntimeUiCatalog.c": "c",
     "playable/src/modules/caxecraft/domain/Aquatics.c": "c",
     "playable/src/modules/caxecraft/domain/Character.c": "c",
     "playable/src/modules/caxecraft/domain/EntityStore.c": "c",
@@ -519,8 +519,7 @@ def stage_content_catalogs(
 
     Native play reads the staged CaxeMap after process startup. The base content
     manifest and UI catalog use the same bounded ownership rule. Their current
-    bytes are runtime inputs; generated compatibility Haxe remains a separate
-    build input until its removal Bead completes.
+    bytes are runtime inputs and are deliberately absent from the compile key.
     """
 
     stage_root = destination / "content"
@@ -1403,15 +1402,13 @@ def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
 
     Authored map, pack, and UI files are runtime inputs. The launcher copies
     their current bytes beside an already verified executable, and the Haxe
-    package loader validates them after startup. Their generated compatibility
-    adapters remain ordinary Haxe files below ``src`` until
-    ``haxe_c-xge.20.4.3.8`` removes that second authority; changing an adapter
-    still causes a build miss, while changing runtime data does not.
+    package loader validates them after startup. They therefore stay outside
+    this compile request: changing runtime data must not cause a build miss.
 
     The logical names form the vocabulary used by cache-miss diagnostics. This
     function is separate from hashing so focused tests can prove that compiler,
-    binding, runtime, generated compatibility code, Haxe-install, and launcher
-    inputs all participate without performing a full game build.
+    binding, runtime, Haxe-install, and launcher inputs all participate without
+    performing a full game build.
     """
 
     inputs = [

@@ -1,6 +1,6 @@
 #include "hxc/program.h"
 
-bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord)
+bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_domain_BlockCoord hxc_l_coord)
 {
   bool hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x >= 0;
   if (hxc_l_coord.hxc_x >= 0)
@@ -34,12 +34,12 @@ bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_scenario_VoxelPoin
   return hxc_l_tmp_short_circuit_result_n5;
 }
 
-struct hxc_caxecraft_scenario_VoxelPoint hxc_caxecraft_domain_World_coord(int32_t hxc_l_x, int32_t hxc_l_y, int32_t hxc_l_z)
+struct hxc_caxecraft_domain_BlockCoord hxc_caxecraft_domain_World_coord(int32_t hxc_l_x, int32_t hxc_l_y, int32_t hxc_l_z)
 {
-  return (struct hxc_caxecraft_scenario_VoxelPoint){ .hxc_x = hxc_l_x, .hxc_y = hxc_l_y, .hxc_z = hxc_l_z };
+  return (struct hxc_caxecraft_domain_BlockCoord){ .hxc_x = hxc_l_x, .hxc_y = hxc_l_y, .hxc_z = hxc_l_z };
 }
 
-int32_t hxc_caxecraft_domain_World_indexOf(struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord)
+int32_t hxc_caxecraft_domain_World_indexOf(struct hxc_caxecraft_domain_BlockCoord hxc_l_coord)
 {
   bool hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_contains(hxc_l_coord);
   if (!!hxc_l_tmp_call_result_n0)
@@ -201,7 +201,7 @@ enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_kindFromCode(int3
   return hxc_caxecraft_domain_BlockKind_Grass;
 }
 
-enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_query(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord)
+enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_query(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_domain_BlockCoord hxc_l_coord)
 {
   uint8_t *hxc_l_borrow = hxc_l_cells;
   size_t hxc_l_tmp_length_n2 = hxc_l_length;
@@ -218,7 +218,7 @@ enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_query(uint8_t *hx
   return hxc_caxecraft_domain_BlockKind_Air;
 }
 
-bool hxc_caxecraft_domain_World_remove(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord)
+bool hxc_caxecraft_domain_World_remove(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_domain_BlockCoord hxc_l_coord)
 {
   uint8_t *hxc_l_borrow = hxc_l_cells;
   size_t hxc_l_tmp_length_n2 = hxc_l_length;
@@ -252,7 +252,7 @@ bool hxc_caxecraft_domain_World_remove(uint8_t *hxc_l_cells, size_t hxc_l_length
   return hxc_l_tmp_call_result_n3;
 }
 
-bool hxc_caxecraft_domain_World_replace(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord, enum hxc_caxecraft_domain_BlockKind hxc_l_kind)
+bool hxc_caxecraft_domain_World_replace(uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_domain_BlockCoord hxc_l_coord, enum hxc_caxecraft_domain_BlockKind hxc_l_kind)
 {
   uint8_t *hxc_l_borrow = hxc_l_cells;
   size_t hxc_l_tmp_length_n3 = hxc_l_length;

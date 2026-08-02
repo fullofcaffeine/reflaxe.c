@@ -5,6 +5,17 @@ package raygui;
 // target-neutral concepts; there is no run-time target branch in generated C.
 
 #if c
+/** Direct raygui aliases whose labels borrow one validated Haxe String. */
+@:c.include("raygui.h", c.IncludeKind.System)
+private extern class RayguiRuntimeText {
+	@:c.name("GuiWindowBox") public static function windowBox(bounds:raylib.raw.Rectangle, text:c.CStringRef):c.Int32;
+	@:c.name("GuiPanel") public static function panel(bounds:raylib.raw.Rectangle, text:c.CStringRef):c.Int32;
+	@:c.name("GuiLabel") public static function label(bounds:raylib.raw.Rectangle, text:c.CStringRef):c.Int32;
+	@:c.name("GuiButton") public static function button(bounds:raylib.raw.Rectangle, text:c.CStringRef):c.Int32;
+	@:c.name("GuiStatusBar") public static function statusBar(bounds:raylib.raw.Rectangle, text:c.CStringRef):c.Int32;
+	@:c.name("GuiToggle") public static function toggle(bounds:raylib.raw.Rectangle, text:c.CStringRef, active:c.Ref<Bool>):c.Int32;
+}
+
 /**
  * Allocation-free Haxe facade for the reviewed, by-value raygui core.
  *
@@ -65,6 +76,10 @@ class Raygui {
 	public static inline function WindowBox(bounds:raylib.Rectangle, title:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiWindowBox(bounds, title)));
 
+	/** Draw one window title borrowed from a runtime-owned Haxe String. */
+	public static inline function WindowBoxString(bounds:raylib.Rectangle, title:String):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(RayguiRuntimeText.windowBox(bounds, c.CStringRef.to(title))));
+
 	public static inline function GroupBox(bounds:raylib.Rectangle, text:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiGroupBox(bounds, text)));
 
@@ -74,11 +89,23 @@ class Raygui {
 	public static inline function Panel(bounds:raylib.Rectangle, text:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiPanel(bounds, text)));
 
+	/** Draw one panel label borrowed from a runtime-owned Haxe String. */
+	public static inline function PanelString(bounds:raylib.Rectangle, text:String):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(RayguiRuntimeText.panel(bounds, c.CStringRef.to(text))));
+
 	public static inline function Label(bounds:raylib.Rectangle, text:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiLabel(bounds, text)));
 
+	/** Draw one label borrowed from a runtime-owned Haxe String. */
+	public static inline function LabelString(bounds:raylib.Rectangle, text:String):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(RayguiRuntimeText.label(bounds, c.CStringRef.to(text))));
+
 	public static inline function Button(bounds:raylib.Rectangle, text:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiButton(bounds, text)));
+
+	/** Draw one button label borrowed from a runtime-owned Haxe String. */
+	public static inline function ButtonString(bounds:raylib.Rectangle, text:String):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(RayguiRuntimeText.button(bounds, c.CStringRef.to(text))));
 
 	public static inline function LabelButton(bounds:raylib.Rectangle, text:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiLabelButton(bounds, text)));
@@ -89,6 +116,10 @@ class Raygui {
 	public static inline function StatusBar(bounds:raylib.Rectangle, text:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiStatusBar(bounds, text)));
 
+	/** Draw one status label borrowed from a runtime-owned Haxe String. */
+	public static inline function StatusBarString(bounds:raylib.Rectangle, text:String):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(RayguiRuntimeText.statusBar(bounds, c.CStringRef.to(text))));
+
 	/**
 	 * Draw a toggle and update its caller-owned state.
 	 *
@@ -98,5 +129,9 @@ class Raygui {
 	 */
 	public static inline function Toggle(bounds:raylib.Rectangle, text:c.CString, state:GuiToggleState):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiToggle(bounds, text, c.Ref.to(state.active))));
+
+	/** Draw one runtime-owned toggle label while borrowing the caller's state. */
+	public static inline function ToggleString(bounds:raylib.Rectangle, text:String, state:GuiToggleState):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(RayguiRuntimeText.toggle(bounds, c.CStringRef.to(text), c.Ref.to(state.active))));
 }
 #end

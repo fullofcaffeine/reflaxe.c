@@ -804,9 +804,8 @@ The staged map, pack, and UI catalog are intentionally not compiler/build
 inputs: the executable parses them after startup, so changing any one must
 preserve the code hit. Restaging still copies the exact repository bytes
 through the existing fail-closed owned-directory check and writes an exact
-SHA-256 receipt. Generated compatibility adapters below Caxecraft's Haxe source
-tree remain build inputs until `haxe_c-xge.20.4.3.8` removes that second
-authority.
+SHA-256 receipt. Caxecraft's production Haxe source no longer contains generated
+pack or UI mirrors, so those runtime bytes are the only product authority.
 
 Only an exact code/configuration match launches the existing executable. A missing, malformed,
 partial, or corrupt record is a visible miss. The ordinary build then runs and

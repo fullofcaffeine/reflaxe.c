@@ -1,6 +1,14 @@
 package raygui;
 
 #if c
+/** Direct list-view alias for one runtime-owned item string. */
+@:c.include("raygui.h", c.IncludeKind.System)
+private extern class GuiListViewRuntimeText {
+	/** Draw without retaining the text or either mutable integer pointer. */
+	@:c.name("GuiListView")
+	public static function draw(bounds:raylib.raw.Rectangle, items:c.CStringRef, scrollIndex:c.Ref<c.Int32>, active:c.Ref<c.Int32>):c.Int32;
+}
+
 /**
  * Persistent selection and scrolling for one immediate-mode list.
  *
@@ -65,5 +73,9 @@ final class GuiListViewState {
 	 */
 	public inline function draw(bounds:raylib.Rectangle, items:c.CString):GuiResult
 		return GuiResult.fromRaw(c.IntConvert.exact(raygui.raw.Raygui.GuiListView(bounds, items, c.Ref.to(scrollIndex), c.Ref.to(active))));
+
+	/** Draw runtime-owned list text while retaining this value's native state. */
+	public inline function drawString(bounds:raylib.Rectangle, items:String):GuiResult
+		return GuiResult.fromRaw(c.IntConvert.exact(GuiListViewRuntimeText.draw(bounds, c.CStringRef.to(items), c.Ref.to(scrollIndex), c.Ref.to(active))));
 }
 #end

@@ -554,25 +554,23 @@ older and duplicate candidates, and keeps retained graphs valid under
 sanitizers. Eval still loads both candidates through the real package path.
 This reuses one expensive package compilation instead of adding a second one.
 
-The packaged game now constructs this complete owner before opening Raylib.
-Startup verifies the staged receipt, pack, UI catalog, and map, then derives the
-initial session from one `ActiveRuntimeContent` snapshot; its runtime-load path
-no longer constructs `BaseContentRegistry` or publishes only the map. Gameplay
-item lookups and renderer text still use generated `BaseContentPack` and
-`UiCatalog` adapters, so this is not yet a claim that every product operation
-observes live package publication. `haxe_c-xge.20.4.3.8` owns removal of those
-remaining generated authorities after the renderer has a safe call-bounded
-runtime-string boundary. The editor, game, command-line tools, and agents
-continue to read and write CAXEMAP rather than a serialized engine plan.
+The packaged game constructs this complete owner before opening Raylib. Startup
+verifies the staged receipt, pack, UI catalog, and map, then derives the initial
+session from one `ActiveRuntimeContent` snapshot. Gameplay item lookups and
+renderer text use that same runtime generation; production source contains no
+generated pack or UI mirror. Native drawing borrows validated UI strings only
+for the duration of each foreign call. This proves startup publication, not
+live hot-reload during one running process or arbitrary third-party package
+compatibility. The editor, game, command-line tools, and agents continue to
+read and write CAXEMAP rather than a serialized engine plan.
 
 The first actor-composition stage is now executable. `ActorCompositionPlanner`
 reads the already validated CaxeMap objects in authored order, selects only
 character-like `Npc` and `Entity` placements, asks `ActorIdentityPlanner` for
 stable runtime IDs, and resolves each content ID through
-`ActorContentResolver`. The generated base-pack registry implements that
-resolver from the reviewed content JSON. It supplies health, aquatic behavior,
-and one typed controller recipe without teaching the planner names such as Nia
-or Mossling.
+`ActorContentResolver`. The runtime pack registry implements that resolver from
+validated packaged JSON. It supplies health, aquatic behavior, and one typed
+controller recipe without teaching the planner names such as Nia or Mossling.
 
 The result is an immutable `CharacterSpawnPlan` for every admitted placement.
 A spawn plan is construction information, not a live actor: planning does not

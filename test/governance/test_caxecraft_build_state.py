@@ -272,6 +272,27 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         ]
         self.assertNotIn("test:caxecraft-level-adapter", scripts)
 
+    def test_playable_product_reads_pack_mechanics_and_ui_text_from_runtime_data(self) -> None:
+        """Keep generated content facts out of every production Haxe module."""
+        product_sources = sorted((CASE / "src").rglob("*.hx"))
+        forbidden = (
+            "import caxecraft.content.BaseContentPack",
+            "BaseContentPack.",
+            "UiCatalog.text(",
+        )
+        violations = []
+        for source in product_sources:
+            text = source.read_text(encoding="utf-8")
+            for marker in forbidden:
+                if marker in text:
+                    violations.append(f"{source.relative_to(ROOT)}: {marker}")
+        self.assertEqual(
+            violations,
+            [],
+            "playable product source still has a generated content authority:\n"
+            + "\n".join(violations),
+        )
+
     def test_external_native_change_is_a_miss(self) -> None:
         self.raylib.write_bytes(b"changed-raylib")
         decision = self.decision()

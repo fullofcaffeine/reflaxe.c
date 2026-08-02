@@ -361,8 +361,8 @@ double hxc_caxecraft_domain_Aquatics_waterSurface(const uint8_t *hxc_l_cells, si
   (void)hxc_l_tmp_length_n4;
   int32_t hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_Aquatics_floorToInt(hxc_l_x);
   int32_t hxc_l_tmp_call_result_n1 = hxc_caxecraft_domain_Aquatics_floorToInt(hxc_l_z);
-  struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n2 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_call_result_n0, hxc_l_y, hxc_l_tmp_call_result_n1);
-  struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord = hxc_l_tmp_call_result_n2;
+  struct hxc_caxecraft_domain_BlockCoord hxc_l_tmp_call_result_n2 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_call_result_n0, hxc_l_y, hxc_l_tmp_call_result_n1);
+  struct hxc_caxecraft_domain_BlockCoord hxc_l_coord = hxc_l_tmp_call_result_n2;
   struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n4 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_coord);
   struct hxc_caxecraft_domain_WaterCellState hxc_l_g = hxc_l_tmp_call_result_n4;
   switch (hxc_l_g.hxc_tag) {

@@ -8,7 +8,7 @@ import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.gameplay.RecoveryDecision;
-import caxecraft.localization.UiCatalog.LocaleCursor;
+import caxecraft.localization.UiTypes.LocaleCursor;
 
 /**
 	Read-only facts needed to draw one Caxecraft heads-up display (HUD) frame.

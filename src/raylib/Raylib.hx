@@ -6,6 +6,14 @@ package raylib;
 // See docs/raylib-semantic-core.md for the cross-target adapter design.
 
 #if c
+/** Direct raylib aliases whose text borrow is checked at the Haxe/C boundary. */
+@:c.include("raylib.h", c.IncludeKind.System)
+private extern class RaylibRuntimeText {
+	/** Draw one runtime-owned String without retaining its UTF-8 pointer. */
+	@:c.name("DrawText")
+	public static function drawText(text:c.CStringRef, x:c.Int32, y:c.Int32, fontSize:c.Int32, color:Color):Void;
+}
+
 /**
  * Zero-cost semantic facade for the reviewed raylib core slice.
  *
@@ -216,6 +224,16 @@ class Raylib {
 
 	public static inline function DrawText(text:c.CString, x:Int, y:Int, fontSize:Int, color:Color):Void
 		raylib.raw.Raylib.DrawText(text, c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(fontSize), color);
+
+	/**
+	 * Draw runtime-owned Haxe text through one checked, non-retaining C call.
+	 *
+	 * Use `DrawText` for static literals. This variant keeps `text` alive until
+	 * raylib returns and fails before C runs when the String contains an embedded
+	 * NUL or does not expose a trailing NUL at the end of its current view.
+	 */
+	public static inline function DrawTextString(text:String, x:Int, y:Int, fontSize:Int, color:Color):Void
+		RaylibRuntimeText.drawText(c.CStringRef.to(text), c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(fontSize), color);
 
 	public static inline function DrawFPS(x:Int, y:Int):Void
 		raylib.raw.Raylib.DrawFPS(c.IntConvert.exact(x), c.IntConvert.exact(y));

@@ -1,9 +1,7 @@
 package caxecraft.app;
 
 #if c
-import caxecraft.content.BaseContentPack;
-import caxecraft.content.BaseContentPack.BaseBlock;
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
+import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.editor.EditorScenarioFactory.createBlank as createBlankEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
@@ -28,9 +26,9 @@ import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.input.NavigationInput.NavigationCommand;
-import caxecraft.localization.UiCatalog;
-import caxecraft.localization.UiCatalog.LocaleCursor;
-import caxecraft.localization.UiCatalog.UiMessage;
+import caxecraft.localization.RuntimeUiCatalog;
+import caxecraft.localization.UiTypes.LocaleCursor;
+import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
@@ -81,6 +79,8 @@ private enum EditorNotice {
  * planned separately.
  */
 final class CaxecraftEditorScreen {
+	final contentRegistry:RuntimeContentRegistry;
+	final uiCatalog:RuntimeUiCatalog;
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
 	var projection:Null<EditorWorldProjection>;
@@ -100,7 +100,10 @@ final class CaxecraftEditorScreen {
 	 */
 	final worldName:Null<GuiTextBoxState>;
 
-	public function new() {
+	/** Start an editor whose mechanics and labels come from one runtime generation. */
+	public function new(contentRegistry:RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog) {
+		this.contentRegistry = contentRegistry;
+		this.uiCatalog = uiCatalog;
 		session = openNewWorld();
 		notice = Ready;
 		projection = null;
@@ -130,7 +133,7 @@ final class CaxecraftEditorScreen {
 			return ReturnToTitle;
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
-		if (Raygui.WindowBox(outer, UiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
+		if (Raygui.WindowBoxString(outer, uiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
 			focusedControl = EditorFocusTarget.Back;
 			return ReturnToTitle;
 		}
@@ -139,46 +142,46 @@ final class CaxecraftEditorScreen {
 		final buttonWidth = 116.0;
 		final buttonGap = 10.0;
 		var buttonLeft = 32.0;
-		if (focusedButton(EditorFocusTarget.NewWorld, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorNewWorld))) {
+		if (focusedButton(EditorFocusTarget.NewWorld, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorNewWorld))) {
 			session = openNewWorld();
 			notice = Ready;
 			refreshProjection(true);
 		}
 		buttonLeft += buttonWidth + buttonGap;
-		if (focusedButton(EditorFocusTarget.Undo, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorUndo)))
+		if (focusedButton(EditorFocusTarget.Undo, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorUndo)))
 			undo();
 		buttonLeft += buttonWidth + buttonGap;
-		if (focusedButton(EditorFocusTarget.Redo, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorRedo)))
+		if (focusedButton(EditorFocusTarget.Redo, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorRedo)))
 			redo();
 		buttonLeft += buttonWidth + buttonGap;
-		if (focusedButton(EditorFocusTarget.Validate, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, UiMessage.EditorValidate)))
+		if (focusedButton(EditorFocusTarget.Validate, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorValidate)))
 			validate();
 		buttonLeft += buttonWidth + buttonGap;
 		final testing = session != null && session.testPlay() != null;
 		final testLabel = testing ? UiMessage.EditorStopTest : UiMessage.EditorTest;
-		if (focusedButton(EditorFocusTarget.TestPlay, buttonLeft, toolbarTop, buttonWidth, UiCatalog.text(locale, testLabel)))
+		if (focusedButton(EditorFocusTarget.TestPlay, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, testLabel)))
 			toggleTestPlay();
 
 		final viewportTop = 104.0;
 		final sidebarWidth = 230;
-		Raygui.Panel(Rectangle.fromFloat(32.0, viewportTop, width - sidebarWidth - 80.0, height - viewportTop - 70.0),
-			UiCatalog.text(locale, UiMessage.EditorCanvasHelp));
-		Raygui.Panel(Rectangle.fromFloat(width - sidebarWidth - 32.0, viewportTop, sidebarWidth, height - viewportTop - 70.0),
-			UiCatalog.text(locale, UiMessage.EditorReady));
+		Raygui.PanelString(Rectangle.fromFloat(32.0, viewportTop, width - sidebarWidth - 80.0, height - viewportTop - 70.0),
+			uiCatalog.text(locale, UiMessage.EditorCanvasHelp));
+		Raygui.PanelString(Rectangle.fromFloat(width - sidebarWidth - 32.0, viewportTop, sidebarWidth, height - viewportTop - 70.0),
+			uiCatalog.text(locale, UiMessage.EditorReady));
 		final toolLeft = width - sidebarWidth - 16;
 		final toolWidth = sidebarWidth - 32;
-		final toolListResult = toolList.draw(Rectangle.fromFloat(toolLeft, viewportTop + 44.0, toolWidth, 116.0),
-			UiCatalog.text(locale, UiMessage.EditorToolList));
+		final toolListResult = toolList.drawString(Rectangle.fromFloat(toolLeft, viewportTop + 44.0, toolWidth, 116.0),
+			uiCatalog.text(locale, UiMessage.EditorToolList));
 		if (toolListResult.has(GuiResult.Pressed))
 			focusedControl = EditorFocusTarget.ToolList;
 		drawFocusRing(EditorFocusTarget.ToolList, toolLeft, Std.int(viewportTop + 44.0), toolWidth, 116);
-		final toggleResult = Raygui.Toggle(Rectangle.fromFloat(toolLeft, viewportTop + 172.0, toolWidth, 32.0),
-			UiCatalog.text(locale, UiMessage.EditorAdvanced), advancedTools);
+		final toggleResult = Raygui.ToggleString(Rectangle.fromFloat(toolLeft, viewportTop + 172.0, toolWidth, 32.0),
+			uiCatalog.text(locale, UiMessage.EditorAdvanced), advancedTools);
 		if (toggleResult.has(GuiResult.Pressed))
 			focusedControl = EditorFocusTarget.AdvancedTools;
 		drawFocusRing(EditorFocusTarget.AdvancedTools, toolLeft, Std.int(viewportTop + 172.0), toolWidth, 32);
-		Raygui.Label(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 216.0, sidebarWidth - 32.0, 24.0),
-			UiCatalog.text(locale, UiMessage.EditorName));
+		Raygui.LabelString(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 216.0, sidebarWidth - 32.0, 24.0),
+			uiCatalog.text(locale, UiMessage.EditorName));
 		final name = worldName;
 		if (name != null) {
 			final result = name.draw(Rectangle.fromFloat(toolLeft, viewportTop + 242.0, toolWidth, 32.0));
@@ -197,14 +200,14 @@ final class CaxecraftEditorScreen {
 			case Invalid: UiMessage.EditorInvalid;
 			case Testing: UiMessage.EditorTesting;
 		};
-		Raygui.StatusBar(Rectangle.fromFloat(32.0, height - 54.0, width - 190.0, 28.0), UiCatalog.text(locale, status));
-		if (focusedButton(EditorFocusTarget.Back, width - 142.0, height - 54.0, 110.0, UiCatalog.text(locale, UiMessage.EditorBack)))
+		Raygui.StatusBarString(Rectangle.fromFloat(32.0, height - 54.0, width - 190.0, 28.0), uiCatalog.text(locale, status));
+		if (focusedButton(EditorFocusTarget.Back, width - 142.0, height - 54.0, 110.0, uiCatalog.text(locale, UiMessage.EditorBack)))
 			return ReturnToTitle;
 		return StayInEditor;
 	}
 
-	static inline function button(x:Float, y:Float, width:Float, text:c.CString):Bool
-		return Raygui.Button(Rectangle.fromFloat(x, y, width, 32.0), text).has(GuiResult.Pressed);
+	static inline function button(x:Float, y:Float, width:Float, text:String):Bool
+		return Raygui.ButtonString(Rectangle.fromFloat(x, y, width, 32.0), text).has(GuiResult.Pressed);
 
 	/**
 	 * Draw one button, remember pointer focus, and paint keyboard focus.
@@ -213,7 +216,7 @@ final class CaxecraftEditorScreen {
 	 * screen owns semantic focus, so mouse and keyboard routes converge before
 	 * the existing editor action runs.
 	 */
-	function focusedButton(target:EditorFocusTarget, x:Float, y:Float, width:Float, text:c.CString):Bool {
+	function focusedButton(target:EditorFocusTarget, x:Float, y:Float, width:Float, text:String):Bool {
 		final pressed = button(x, y, width, text);
 		if (pressed)
 			focusedControl = target;
@@ -644,14 +647,14 @@ final class CaxecraftEditorScreen {
 	#end
 
 	/** Create the built-in blank draft without teaching the generic editor a pack ID. */
-	static function openNewWorld():Null<EditorSession> {
-		final draft = createBlankEditorScenario(new ScenarioId("editor.new-world"), new LogicalPath("packs/caxecraft/base"),
-			ScenarioText.Literal("Untitled world"), ScenarioMode.Creative, BaseContentPack.blockId(BaseBlock.Air), new ScenarioId("player.spawn"), {
+	function openNewWorld():Null<EditorSession> {
+		final draft = createBlankEditorScenario(new ScenarioId("editor.new-world"), new LogicalPath(contentRegistry.logicalPath()),
+			ScenarioText.Literal("Untitled world"), ScenarioMode.Creative, contentRegistry.airBlockId(), new ScenarioId("player.spawn"), {
 				width: 12,
 				height: 1,
 				depth: 12
-			}, [{code: 1, blockType: BaseContentPack.blockId(BaseBlock.Grass)}]);
-		return switch EditorSession.open(draft, new BaseContentRegistry()) {
+			}, [{code: 1, blockType: contentRegistry.defaultEditorBlockId()}]);
+		return switch EditorSession.open(draft, contentRegistry) {
 			case EditorOpened(value): value;
 			case EditorOpenRejected(_): null;
 		};

@@ -5,8 +5,8 @@ import caxecraft.content.ContentJson.ContentJsonField;
 import caxecraft.content.ContentJson.ContentJsonValue;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
-import caxecraft.localization.UiCatalog.LocaleCursor;
-import caxecraft.localization.UiCatalog.UiMessage;
+import caxecraft.localization.UiTypes.LocaleCursor;
+import caxecraft.localization.UiTypes.UiMessage;
 import haxe.io.Bytes;
 
 /**
@@ -253,6 +253,18 @@ final class RuntimeUiCatalog {
 	/** Number of typed messages available at every locale. */
 	public inline function messageCount():Int
 		return messages.length;
+
+	/** Return the locale selected by the validated document's default entry. */
+	public inline function defaultLocale():LocaleCursor
+		return LocaleCursor.Locale0;
+
+	/** Cycle through the validated locale set without exposing its storage. */
+	public function nextLocale(locale:LocaleCursor):LocaleCursor
+		return switch locale {
+			case Locale0: locales.length > 1 ? LocaleCursor.Locale1 : LocaleCursor.Locale0;
+			case Locale1: LocaleCursor.Locale0;
+			case _: LocaleCursor.Locale0;
+		};
 
 	/** Return owned text for one typed locale/message pair, or empty on invalid raw codes. */
 	public function text(locale:LocaleCursor, message:UiMessage):String {

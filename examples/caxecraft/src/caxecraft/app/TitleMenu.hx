@@ -3,9 +3,9 @@ package caxecraft.app;
 #if c
 import caxecraft.localization.FirstPlayableCatalog;
 import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
-import caxecraft.localization.UiCatalog;
-import caxecraft.localization.UiCatalog.LocaleCursor;
-import caxecraft.localization.UiCatalog.UiMessage;
+import caxecraft.localization.RuntimeUiCatalog;
+import caxecraft.localization.UiTypes.LocaleCursor;
+import caxecraft.localization.UiTypes.UiMessage;
 import raylib.Color;
 import raylib.Raylib;
 import raylib.Texture2D;
@@ -32,7 +32,8 @@ final class TitleMenu {
 		return -1;
 	}
 
-	public static inline function draw(title:Texture2D, titleReady:Bool, wordmark:Texture2D, wordmarkReady:Bool, selected:GameMode, locale:LocaleCursor):Void {
+	public static inline function draw(title:Texture2D, titleReady:Bool, wordmark:Texture2D, wordmarkReady:Bool, selected:GameMode, locale:LocaleCursor,
+			catalog:RuntimeUiCatalog):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (titleReady)
@@ -46,18 +47,18 @@ final class TitleMenu {
 		if (wordmarkReady)
 			CaxecraftTextures.drawContained(wordmark, Std.int(width / 2), 28, 560, 132, Color.rgba(255, 255, 255));
 		else
-			drawUiText(locale, UiMessage.TitleFallback, Std.int(width / 2) - 92, 52, 34, Color.rgba(242, 249, 245));
+			drawUiText(catalog, locale, UiMessage.TitleFallback, Std.int(width / 2) - 92, 52, 34, Color.rgba(242, 249, 245));
 
 		final firstTop = buttonTop(height);
-		drawButton(firstTop, selected == GameMode.Creative, UiMessage.MenuCreative, locale, width);
-		drawButton(firstTop + BUTTON_HEIGHT + BUTTON_GAP, selected == GameMode.Adventure, UiMessage.MenuAdventure, locale, width);
-		drawButton(firstTop + (BUTTON_HEIGHT + BUTTON_GAP) * 2, false, UiMessage.MenuEditor, locale, width);
-		drawUiText(locale, UiMessage.MenuInstructions, Std.int(width / 2) - 285, height - 58, 16, Color.rgba(229, 241, 235));
+		drawButton(firstTop, selected == GameMode.Creative, UiMessage.MenuCreative, locale, width, catalog);
+		drawButton(firstTop + BUTTON_HEIGHT + BUTTON_GAP, selected == GameMode.Adventure, UiMessage.MenuAdventure, locale, width, catalog);
+		drawButton(firstTop + (BUTTON_HEIGHT + BUTTON_GAP) * 2, false, UiMessage.MenuEditor, locale, width, catalog);
+		drawUiText(catalog, locale, UiMessage.MenuInstructions, Std.int(width / 2) - 285, height - 58, 16, Color.rgba(229, 241, 235));
 		if (selected == GameMode.Adventure)
 			drawScenarioText(locale, ScenarioMessage.AdventureTagline, Std.int(width / 2) - 230, firstTop - 36, 17, Color.rgba(255, 205, 91));
 	}
 
-	static inline function drawButton(top:Int, active:Bool, message:UiMessage, locale:LocaleCursor, width:Int):Void {
+	static inline function drawButton(top:Int, active:Bool, message:UiMessage, locale:LocaleCursor, width:Int, catalog:RuntimeUiCatalog):Void {
 		final left = Std.int(width / 2) - Std.int(BUTTON_WIDTH / 2);
 		if (active) {
 			Raylib.DrawRectangle(left, top, BUTTON_WIDTH, BUTTON_HEIGHT, Color.rgba(16, 88, 102, 232));
@@ -66,12 +67,12 @@ final class TitleMenu {
 			Raylib.DrawRectangle(left, top, BUTTON_WIDTH, BUTTON_HEIGHT, Color.rgba(6, 26, 36, 218));
 			Raylib.DrawRectangleLines(left, top, BUTTON_WIDTH, BUTTON_HEIGHT, Color.rgba(92, 194, 188));
 		}
-		drawUiText(locale, message, left + 28, top + 16, 21, Color.rgba(242, 249, 245));
+		drawUiText(catalog, locale, message, left + 28, top + 16, 21, Color.rgba(242, 249, 245));
 	}
 
 	/** Keep native drawing separate from reusable locale and message lookup. */
-	static inline function drawUiText(locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
-		Raylib.DrawText(UiCatalog.text(locale, message), x, y, fontSize, color);
+	static inline function drawUiText(catalog:RuntimeUiCatalog, locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
+		Raylib.DrawTextString(catalog.text(locale, message), x, y, fontSize, color);
 
 	/** Render campaign copy selected by the campaign-owned catalog. */
 	static inline function drawScenarioText(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void

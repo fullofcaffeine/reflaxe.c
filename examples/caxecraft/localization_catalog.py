@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Validate Caxecraft text sources and generate typed lookup catalogs.
+"""Validate Caxecraft text sources and generate the campaign fallback catalog.
 
-Reusable interface copy comes from one JSON catalog. Authored Adventure copy
-comes from the same CaxeMap that owns its world and story references. Generated
-Haxe keeps locale selection and C string-lifetime details out of gameplay code.
+Reusable interface text is validated here for quick author feedback, then the
+game reads the JSON itself at runtime. The first Adventure campaign still keeps
+its text inside the CaxeMap, so this bounded generator emits its temporary typed
+Haxe lookup until campaign data follows the same runtime-loading path.
 """
 
 from __future__ import annotations
@@ -18,7 +19,6 @@ from pathlib import Path
 CASE = Path(__file__).resolve().parent
 UI_SOURCE = CASE / "locales/ui.json"
 SCENARIO_SOURCE = CASE / "scenarios/first-playable/map.caxemap"
-UI_OUTPUT = CASE / "src/caxecraft/localization/UiCatalog.hx"
 SCENARIO_OUTPUT = CASE / "src/caxecraft/localization/FirstPlayableCatalog.hx"
 CATALOG_KEYS = {"schemaVersion", "catalogId", "defaultLocale", "locales", "messages"}
 MESSAGE_KEYS = {"id", "symbol", "text"}
@@ -296,57 +296,31 @@ def enum_abstract(name: str, symbols: tuple[str, ...]) -> list[str]:
     return lines
 
 
-def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
-    class_name = "FirstPlayableCatalog" if scenario else "UiCatalog"
-    message_type = "ScenarioMessage" if scenario else "UiMessage"
-    source_name = "scenarios/first-playable/map.caxemap" if scenario else "locales/ui.json"
+def render_scenario_catalog(catalog: Catalog) -> str:
+    """Render only the still-deferred embedded campaign text lookup."""
+
     lines = [
         "package caxecraft.localization;",
         "",
+        "import caxecraft.localization.UiTypes.LocaleCursor;",
+        "import caxecraft.localization.LocalizationText;",
+        "",
     ]
-    if scenario:
-        lines.append("import caxecraft.localization.UiCatalog.LocaleCursor;")
-    lines.extend(["import caxecraft.localization.LocalizationText;", ""])
-    if not scenario:
-        lines.extend(enum_abstract("LocaleCursor", tuple(f"Locale{index}" for index in range(len(catalog.locales)))))
-        lines.append("")
-    lines.extend(enum_abstract(message_type, tuple(message.symbol for message in catalog.messages)))
+    lines.extend(enum_abstract("ScenarioMessage", tuple(message.symbol for message in catalog.messages)))
     lines.extend(
         [
             "",
             "/**",
-            f" * Typed text catalog generated from `{source_name}`.",
+            " * Typed text catalog generated from `scenarios/first-playable/map.caxemap`.",
             " *",
-            f" * The {'embedded CaxeMap catalog' if scenario else 'JSON catalog'} is the editable source of truth. Callers choose a",
+            " * The embedded CaxeMap catalog is the editable source of truth. Callers choose a",
             " * typed message ID and receive text; rendering, layout, and input remain",
             " * outside localization. The C carrier borrows only generated literals",
             " * with static lifetime and therefore allocates nothing.",
             " */",
-            f"final class {class_name} {{",
+            "final class FirstPlayableCatalog {",
         ]
     )
-    if not scenario:
-        lines.extend(
-            [
-                "\tpublic static inline function defaultLocale():LocaleCursor",
-                "\t\treturn LocaleCursor.Locale0;",
-                "",
-                "\t/** Reject an unknown raw locale code before constructing a typed cursor. */",
-                "\tpublic static inline function isValidLocaleStorageCode(code:Int):Bool",
-                f"\t\treturn code >= 0 && code < {len(catalog.locales)};",
-                "",
-                "\tpublic static function nextLocale(locale:LocaleCursor):LocaleCursor",
-                "\t\treturn switch (locale) {",
-            ]
-        )
-        for index in range(len(catalog.locales)):
-            next_index = (index + 1) % len(catalog.locales)
-            lines.append(f"\t\t\tcase Locale{index}: Locale{next_index};")
-        # Enum abstracts have a primitive representation, so a foreign or
-        # corrupted value is theoretically possible. Recover to the reviewed
-        # default instead of letting an invalid value escape this catalog.
-        lines.append("\t\t\tcase _: Locale0;")
-        lines.extend(["\t\t}", ""])
     lines.extend(
         [
             "\t/** Reject an unknown raw message code before constructing a typed ID. */",
@@ -357,7 +331,7 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
     )
     lines.extend(
         [
-            f"\tpublic static function text(locale:LocaleCursor, message:{message_type}):LocalizationText {{",
+            "\tpublic static function text(locale:LocaleCursor, message:ScenarioMessage):LocalizationText {",
             "\t\treturn switch (locale) {",
         ]
     )
@@ -369,7 +343,7 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
         lines.extend(
             [
                 f"\t/** Select one validated `{locale}` literal without allocation. */",
-                f"\tstatic function textLocale{locale_index}(message:{message_type}):LocalizationText {{",
+                f"\tstatic function textLocale{locale_index}(message:ScenarioMessage):LocalizationText {{",
                 "\t\treturn switch (message) {",
             ]
         )
@@ -388,8 +362,7 @@ def rendered_catalogs() -> dict[Path, str]:
     if tuple(locale.lower() for locale in ui.locales) != scenario.locales or ui.default_locale.lower() != scenario.default_locale:
         raise CatalogFailure("the built-in UI and first-playable catalogs must use the same locale order and default")
     return {
-        UI_OUTPUT: render_catalog(ui, scenario=False),
-        SCENARIO_OUTPUT: render_catalog(scenario, scenario=True),
+        SCENARIO_OUTPUT: render_scenario_catalog(scenario),
     }
 
 

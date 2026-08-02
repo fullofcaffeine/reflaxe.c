@@ -125,14 +125,13 @@ have been removed.
 Tideweave pickup/equipment is connected through validated content and the
 deterministic pilot protocol; its display-backed visual
 checkpoint is still pending on a runner with a usable desktop session.
-NPC/enemy controller execution, audio, and native runtime content-pack loading
-remain later work.
+NPC/enemy controller execution, audio, and save persistence remain later work.
 
 After editing the built-in pack, run:
 
 ```sh
-python3 examples/caxecraft/content_pack.py
-npm run test:caxecraft-content-pack
+npm run test:caxecraft-runtime-schemas
+npm run test:caxecraft-runtime-content-generation
 npm run test:caxecraft-actor-composition
 npm run test:caxecraft-water
 npm run test:caxecraft-aquatics
@@ -537,19 +536,19 @@ level resolver and atomic generation owner also
 pass focused Eval/generated-C/sanitizer tests: a failed fresh candidate cannot
 change the selected session, while a complete newer candidate publishes through
 one reference swap. Ordinary Linux/macOS play now connects the staged
-`map.caxemap` bytes to that owner before Raylib opens. The build still validates
-the CaxeMap's embedded catalog and generates a renderer-independent typed
-lookup because the reusable UI catalog is not runtime-loaded yet. Eval receives
-ordinary Haxe `String`; C receives only a `c.CString` selected from generated
-literals with static lifetime. The application owns Raylib drawing and never
-learns the supported locale names.
+`map.caxemap` bytes to that owner before Raylib opens. The build generates a
+renderer-independent typed lookup only for the CaxeMap's embedded campaign
+dialogue. The reusable UI catalog is loaded and validated from packaged JSON at
+runtime. Eval receives ordinary Haxe `String`; the native renderer borrows each
+selected string through a call-bounded typed `c.CStringRef`. The application
+owns Raylib drawing and never learns the supported locale names.
 
-The source catalogs are copied to `bin/content/` as part of native packaging
-(the reusable UI JSON plus the complete scenario CaxeMap). The running
-Linux/macOS binary reads the map from that directory, while the reusable UI
-JSON still uses its validated embedded mirror. This is a documented transition,
-not a claim that runtime UI-catalog loading or the complete bilingual game is
-finished. `npm run test:caxecraft-package-store` proves the byte boundary, and
+The source catalogs and pack are copied to `bin/content/` as part of native
+packaging. The running Linux/macOS binary reads and validates those exact bytes;
+the remaining generated localization fallback contains only the campaign
+dialogue embedded in the current CaxeMap. This is not a claim that arbitrary
+campaign packages or the complete bilingual game are finished.
+`npm run test:caxecraft-package-store` proves the byte boundary, and
 `npm run test:caxecraft-content-generation` proves candidate
 ownership/publication; `haxe_c-xge.20.4.3` owns completing the bounded runtime
 pack.
@@ -635,15 +634,15 @@ generation swaps pack, UI, map/session, and receipt identity together, and
 older or duplicate candidates reject. The native generation command above
 retains the same publication boundary under strict C and sanitizers, avoiding a
 second expensive compilation of the complete package graph. The playable app
-now verifies that complete package and derives its initial session from one
-`ActiveRuntimeContent` snapshot before opening Raylib. It still has to replace
-`BaseContentPack` and generated `UiCatalog` consumers and borrow runtime UI text
-at the renderer boundary. Until then, this evidence does not claim live
-renderer publication, arbitrary package support, a public C application binary
-interface (ABI), or platform qualification.
+verifies that complete package and derives its initial session from one
+`ActiveRuntimeContent` snapshot before opening Raylib. Gameplay mechanics and
+renderer UI text now read that snapshot; generated pack and UI mirrors are
+absent from production source. This evidence still does not claim arbitrary
+package support, live hot-reload during one running process, a public C
+application binary interface (ABI), or platform qualification.
 
-After editing the UI catalog or embedded CaxeMap messages, regenerate and check
-the temporary built-in lookup catalog with:
+After editing the UI catalog or embedded CaxeMap messages, check runtime UI
+loading and regenerate only the temporary campaign-dialogue fallback with:
 
 ```sh
 python3 examples/caxecraft/localization_catalog.py

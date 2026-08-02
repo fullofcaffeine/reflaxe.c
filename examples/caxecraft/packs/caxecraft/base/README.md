@@ -9,26 +9,27 @@ class for every piece of game content.
 Run the focused check after editing the pack:
 
 ```sh
-npm run test:caxecraft-content-pack
+npm run test:caxecraft-runtime-schemas
+npm run test:caxecraft-runtime-content-generation
 ```
 
-The check rejects unknown fields, duplicate IDs, wrong-kind or missing
-references, unsupported mechanic profiles, invalid atlas cells, and a stale
-generated adapter. It then resolves the real first-playable map with Eval and
-compiles the generated adapter through haxe.c and strict C11 without `hxrt`.
+The checks read the real packaged bytes, reject unknown fields, duplicate IDs,
+wrong-kind or missing references, unsupported mechanic profiles, and invalid
+atlas cells. They then resolve the first-playable map with Eval and with real
+generated C compiled under the host's strict C toolchain and sanitizers where
+available.
 
-## Why a generated Haxe adapter exists
+## Runtime authority
 
-The engine does not yet have the general filesystem and JSON runtime needed to
-load this file in native C. `content_pack.py` therefore validates the JSON at
-build time and generates `BaseContentPack.hx`, which is ordinary typed Haxe.
-The game and compiler tests consume that Haxe; there is no copied hand-written
-C table. The JSON is also packaged beside the game so the eventual runtime
-loader can adopt the same format without moving the authored data.
+The launcher copies this file beside the executable. The Haxe package loader
+reads, parses, validates, and publishes it after startup, so editing the pack
+does not run Haxe, haxe.c, the C compiler, or the linker. The executable rejects
+bad content before publishing a new runtime generation. There is no generated
+Haxe product mirror to refresh.
 
-Do not edit `BaseContentPack.hx` directly. Change `content.json`, run
-`python3 examples/caxecraft/content_pack.py`, and review both the data and the
-generated typed surface.
+Older focused compiler tests retain a manually reviewed compatibility fixture
+under `test/`. It is not packaged or compiled into the game and is tracked for
+replacement by a runtime-registry fixture.
 
 ## Water and aquatic profiles
 
@@ -42,9 +43,7 @@ drag, movement control, mining, and cold protection. The ordinary profile is
 the default. The Tideweave suit is an item that selects the stronger profile;
 its location belongs to a CaxeMap, not this reusable definition.
 
-These declarations now validate and generate typed Haxe. The native playable
-does not yet consume the complete authored level, render water, or persist its
-mutable fluid state to a file. The engine now exposes a validated in-memory
-water snapshot for the future full save codec. The remaining product
-integrations are owned by `haxe_c-xge.20.5.3`; the schema does not claim they
-already work.
+These declarations now validate into typed runtime models. The native playable
+consumes the authored level and renders and simulates water, while persistence
+of mutable fluid state remains future save-codec work. The schema does not
+claim broader mod, campaign, or platform qualification.

@@ -176,7 +176,8 @@ npm run test:caxecraft-caxeflow
 npm run test:caxecraft-editor
 
 # Validate built-in definitions, editor resolution, packaging, Eval, and C.
-npm run test:caxecraft-content-pack
+npm run test:caxecraft-runtime-schemas
+npm run test:caxecraft-runtime-content-generation
 
 # Check canonical bytes across locale and repeated builds.
 npm run test:caxecraft-scenario-determinism
