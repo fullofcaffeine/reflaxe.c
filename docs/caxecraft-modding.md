@@ -25,6 +25,28 @@ result envelope. It owns no file algorithm, CaxeMap grammar, defaults, or
 gameplay.
 `npm run test:caxecraft-package-store` is the focused executable evidence.
 
+The first semantic package manifest now lives at
+[`examples/caxecraft/caxecraft.package.json`](../examples/caxecraft/caxecraft.package.json).
+It lists the exact top-level semantic entries the first adventure owns, their
+byte lengths and SHA-256 receipts, and the roles the package contributes:
+campaign, levels, content, localization, and assets. Those entries keep their
+existing CaxeMap, campaign, content-pack, UI-catalog, and asset schemas; this
+manifest only composes them. In particular, `assets/manifest.json` remains the
+single inventory and receipt authority for the selected PNG files, so the
+package manifest does not duplicate that list.
+
+`mod` is another package role, not another container or scripting language. A
+mod package can compose the same admitted entry kinds and declare bounded
+dependencies on stable package IDs. The current runtime validates that model
+and one explicit directory-backed first-adventure package; it does not discover,
+install, order, or activate arbitrary mods yet. ZIP is the planned sharing
+transport: it must expose the same manifest paths and bytes to the same verifier
+instead of becoming a second package format. Run the tracer with:
+
+```sh
+npm run test:caxecraft-package-manifest
+```
+
 This is intentionally separate from the future general `sys.io.File`
 implementation owned by `haxe_c-fwg`. `File.getBytes(path)` is the natural API
 for a trusted ordinary file, but it does not promise that an editor- or
@@ -89,9 +111,9 @@ The built-in schema-2 content manifest is
 A strict build-time validator turns it into the typed
 `ScenarioContentRegistry` used by CaxeMap and editor validation. The separate
 `assets/manifest.json` proves the reviewed visual bytes that those logical
-definitions reference. Arbitrary runtime pack discovery/loading is not
-implemented yet, so copying a new JSON file beside the game does not install a
-mod.
+definitions reference. Arbitrary runtime package discovery and activation are
+not implemented yet, so copying a new JSON or ZIP file beside the game does not
+install a mod.
 
 ## CaxeFlow versus the native pilot
 

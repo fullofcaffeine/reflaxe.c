@@ -56,8 +56,32 @@ enum RuntimeSchemaErrorKind {
 	/** One typed array repeated an ID. */
 	SchemaDuplicateId(path:String, id:String);
 
+	/** One closed package list repeated the same scalar value. */
+	SchemaDuplicateValue(path:String, value:String);
+
 	/** Two campaign levels claimed the same package-relative map path. */
 	SchemaDuplicateLogicalPath(path:String);
+
+	/** Two portable package paths differ only by ASCII letter case. */
+	SchemaCaseCollidingLogicalPath(path:String, previous:String);
+
+	/** One package entry requires a semantic role the package did not declare. */
+	SchemaRoleEntryMismatch(path:String, role:String);
+
+	/** One declared package role has no payload entry to fulfill it. */
+	SchemaMissingRoleEntry(role:String);
+
+	/** One package dependency identity appeared more than once. */
+	SchemaDuplicateDependency(id:String);
+
+	/** A package attempted to depend on its own stable identity. */
+	SchemaSelfDependency(id:String);
+
+	/** One inclusive dependency interval placed its minimum after its maximum. */
+	SchemaIncompatibleVersionBounds(id:String, minimum:Int, maximum:Int);
+
+	/** Declared package receipts exceeded the bounded total verification budget. */
+	SchemaPackageByteBudgetExceeded(maximum:Int);
 
 	/** One typed array was not ascending by exact UTF-8 bytes. */
 	SchemaNonCanonicalOrder(path:String);

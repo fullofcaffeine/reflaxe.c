@@ -34,7 +34,7 @@ import sys.io.File;
 	storage for one call, and closes before returning. A changing file gets one
 	complete retry and can never publish a mixed byte vector.
 **/
-final class ContentPackageStore {
+final class ContentPackageStore implements ContentPackageSource {
 	/** Product-wide upper bound inherited from the CAXEMAP byte contract. */
 	public static inline final MAXIMUM_PACKAGE_BYTES:Int = 16 * 1024 * 1024;
 

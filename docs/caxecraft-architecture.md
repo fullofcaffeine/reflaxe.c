@@ -829,6 +829,16 @@ independent evidence jobs: the native compiler checks that Haxe's exact integer
 carriers match the host POSIX ABI, and a non-haxe.c consumer checks the exported
 result envelope. It contains no package-store behavior.
 
+The next semantic layer is `ContentPackageManifest`. It says which existing
+files one package owns, which closed roles they fulfill, and which compatible
+package versions it requires. `ContentPackageStore` supplies bytes; the
+manifest verifier checks every declared length and SHA-256 before returning a
+loaded package. No directory fact enters the manifest model, so a future ZIP
+adapter must expose the same logical paths to this verifier. The focused
+`npm run test:caxecraft-package-manifest` tracer proves the checked-in first
+adventure through Eval and generated native C. It does not prove ZIP parsing,
+arbitrary dependency resolution, package activation, or platform portability.
+
 Ordinary play calls this store and publishes the resulting complete generation.
 The bounded evidence is narrower than a general mod system: the application
 selects one known map path, and the base content/UI JSON still comes from its

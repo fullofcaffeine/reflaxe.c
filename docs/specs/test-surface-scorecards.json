@@ -51,6 +51,7 @@
       "verticalOwners": [
         "test:hello",
         "test:caxecraft-content-json",
+        "test:caxecraft-package-manifest",
         "test:caxecraft-runtime-schemas",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime",
@@ -83,6 +84,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
           "proves": "One bounded ordinary-Haxe JSON codec crosses the admitted enum, class, Array, Bytes, and String slices through strict generated C.",
           "doesNotProve": "General Haxe lowering, a general JSON library, runtime pack loading, public ABI stability, or platform qualification."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageManifestProbe.hx",
+          "proves": "One typed package-role and receipt model crosses bounded JSON, the confined directory source, haxe.c, strict native C, and every declared first-adventure payload.",
+          "doesNotProve": "General Haxe lowering, ZIP transport, arbitrary mod activation, dependency resolution, public ABI stability, or platform qualification."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
@@ -147,6 +153,7 @@
       "verticalOwners": [
         "test:raylib-provisioning",
         "test:build-adapters",
+        "test:caxecraft-package-manifest",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime"
       ],
@@ -178,6 +185,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
           "proves": "The atomic runtime-content tracer crosses the typed confined POSIX package adapter and primary strict native compiler before observing real bytes, one complete generation, and successful complete-owner publication.",
           "doesNotProve": "A public C ABI, arbitrary foreign functions, Windows package IO, another platform tuple, or compiler conformance."
+        },
+        {
+          "path": "examples/caxecraft/test/native/content_package_manifest_harness.c",
+          "proves": "An independent C consumer observes the Haxe-authored directory package tracer while the typed POSIX boundary supplies the real bytes.",
+          "doesNotProve": "A generated public API, arbitrary C interop, ZIP support, Windows package IO, ABI stability, or platform qualification."
         }
       ],
       "selectorOwnership": {
@@ -232,6 +244,7 @@
       "verticalOwners": [
         "test:hello",
         "test:caxecraft-content-json",
+        "test:caxecraft-package-manifest",
         "test:caxecraft-runtime-schemas",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime",
@@ -265,6 +278,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
           "proves": "The bounded JSON tree and rejection paths complete real generated native cleanup under AddressSanitizer and UndefinedBehaviorSanitizer.",
           "doesNotProve": "A complete runtime, leak detection where unavailable, arbitrary pack loading, compiler conformance, or another platform."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageManifestProbe.hx",
+          "proves": "All positive and rejected package candidates complete under generated native execution and the runner's eligible sanitizer observers.",
+          "doesNotProve": "A complete runtime, leak detection where unavailable, arbitrary mods, ZIP parsing, concurrent package activation, or another platform."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
@@ -394,6 +412,7 @@
       ],
       "verticalOwners": [
         "test:hello",
+        "test:caxecraft-package-manifest",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime",
         "test:caxecraft-domain"
@@ -420,6 +439,11 @@
           "path": "examples/caxecraft/case.json",
           "proves": "The flagship case declares its exact full domain command, artifacts, oracle, and execution assumptions.",
           "doesNotProve": "Every planned playable, packaging, platform, or release claim in the broader product narrative."
+        },
+        {
+          "path": "examples/caxecraft/caxecraft.package.json",
+          "proves": "The flagship has one executable, independently receipted package example that composes campaign, levels, content, localization, and assets through a directory source.",
+          "doesNotProve": "Package discovery, dependency installation, mod activation, ZIP transport, source mapping, portability, or release readiness."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
