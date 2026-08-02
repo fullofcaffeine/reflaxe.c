@@ -368,8 +368,15 @@ performance, packaging, and developer experience together.
   plausible options, migration cost, and regression gates; check the governing
   PRD/ADR; and ask the maintainer for an explicit decision. When the decision is
   unusually broad, irreversible, or uncertain, prepare that evidence as a
-  focused deep-research brief for the designated Oracle model rather than
-  improvising a new architecture.
+  focused deep-research brief for GPT-5.6 Pro rather than improvising a new
+  architecture. Oracle may clarify and plan before implementation or review a
+  critical result, but size or generic extra confidence alone is insufficient.
+  Invoke the globally installed `$oracle-review` skill and let its caf-oracle
+  facade own the ledger, agent provenance, checked evidence, browser dispatch,
+  recovery, response capture, disposition, and archive. Do not maintain a
+  parallel `/tmp/oracle` queue or manually upload and paste when the tool is
+  available. If `$show-me-your-work` is active, link its concise decision trail
+  to the caf-oracle request rather than duplicating artifacts.
 - Keep claims evidence-bounded. Caxecraft is the primary integrated proof, not
   permission to infer general language support from one game. Conversely, a
   focused compiler fixture passing is not enough to claim the flagship is
