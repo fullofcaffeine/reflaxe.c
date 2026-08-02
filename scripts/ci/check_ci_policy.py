@@ -1227,6 +1227,11 @@ def validate() -> list[str]:
     ):
         errors.append("package.json must retain the Caxecraft runtime-content-generation gate")
     if (
+        scripts.get("test:caxecraft-campaign-runtime")
+        != "python3 examples/caxecraft/run_haxe_c_test.py campaign-runtime"
+    ):
+        errors.append("package.json must retain the Caxecraft campaign-runtime gate")
+    if (
         scripts.get("test:caxecraft-runtime-content-publication")
         != "haxe --cwd examples/caxecraft runtime-content-publication.hxml"
     ):
@@ -1435,6 +1440,12 @@ def validate() -> list[str]:
     ):
         errors.append(
             "package.json test:toolchain must execute test:caxecraft-runtime-content-generation"
+        )
+    if "npm run test:caxecraft-campaign-runtime" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:caxecraft-campaign-runtime"
         )
     if "npm run test:caxecraft-runtime-content-publication" not in str(
         scripts.get("test:toolchain", "")

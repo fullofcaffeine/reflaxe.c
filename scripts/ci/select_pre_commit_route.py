@@ -242,6 +242,23 @@ AFFECTED_OWNER_RULES = (
     (
         re.compile(
             r"^examples/caxecraft/(?:"
+            r"campaign-runtime(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:CampaignManifest|CampaignRuntime|RuntimeSchema|RuntimeLevelLoader|ActiveContent)\.hx"
+            r"|test/caxecraft/qa/CampaignRuntimeProbe\.hx"
+            r"|test/native/campaign_runtime_harness\.c"
+            r"|campaigns/first-adventure/campaign\.json"
+            r"|scenarios/first-adventure/western-falls\.caxemap"
+            r"|scenarios/first-playable/map\.caxemap"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-campaign-runtime",
+            "campaign schema, level selection, or atomic transition behavior changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?:"
             r"runtime-content-publication\.hxml"
             r"|src/caxecraft/content/ActiveRuntimeContent\.hx"
             r"|test/caxecraft/qa/RuntimeContentPublicationProbe\.hx"
@@ -269,6 +286,12 @@ AFFECTED_OWNER_RULES = (
             r"|test/caxecraft/qa/RuntimeContentGenerationProbe\.hx"
             r"|test/native/runtime_content_generation_harness\.c"
             r"|packs/caxecraft/base/runtime-content\.json"
+            r"|campaign-runtime(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:CampaignManifest|CampaignRuntime)\.hx"
+            r"|test/caxecraft/qa/CampaignRuntimeProbe\.hx"
+            r"|test/native/campaign_runtime_harness\.c"
+            r"|campaigns/first-adventure/campaign\.json"
+            r"|scenarios/first-adventure/western-falls\.caxemap"
             r"|runtime-content-publication\.hxml"
             r"|src/caxecraft/content/ActiveRuntimeContent\.hx"
             r"|test/caxecraft/qa/RuntimeContentPublicationProbe\.hx"

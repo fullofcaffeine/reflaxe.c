@@ -53,6 +53,7 @@
         "test:caxecraft-content-json",
         "test:caxecraft-runtime-schemas",
         "test:caxecraft-runtime-content-generation",
+        "test:caxecraft-campaign-runtime",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -145,7 +146,8 @@
       "verticalOwners": [
         "test:raylib-provisioning",
         "test:build-adapters",
-        "test:caxecraft-runtime-content-generation"
+        "test:caxecraft-runtime-content-generation",
+        "test:caxecraft-campaign-runtime"
       ],
       "systemOwners": [
         "test:caxecraft-playable"
@@ -230,6 +232,7 @@
         "test:caxecraft-content-json",
         "test:caxecraft-runtime-schemas",
         "test:caxecraft-runtime-content-generation",
+        "test:caxecraft-campaign-runtime",
         "test:caxecraft-domain"
       ],
       "systemOwners": [
@@ -389,6 +392,7 @@
       "verticalOwners": [
         "test:hello",
         "test:caxecraft-runtime-content-generation",
+        "test:caxecraft-campaign-runtime",
         "test:caxecraft-domain"
       ],
       "systemOwners": [

@@ -609,6 +609,18 @@ unrelated work held roughly 700–900 percent host CPU, so the duplicate case an
 its proposed timeout exception were removed. This is an evidence-efficiency
 improvement, not a semantic compiler shortcut.
 
+The first campaign capability adds one distinct vertical owner rather than
+expanding that startup tracer. `test:caxecraft-campaign-runtime` reads a closed
+campaign manifest and a second real CAXEMAP, challenges schema/path/receipt
+failures, then publishes the second generation through `ActiveContent`. The
+focused Eval command first completed in about 0.27 seconds. Two complete
+Eval/native/sanitizer samples took about 63 and 59 seconds on a host carrying
+unrelated work. There is no before/after speedup claim because no campaign lane
+existed before this change; the initial native red run stopped after 20.7
+seconds at the missing indexed-Array update lowering. Existing runtime-content
+and full Caxecraft owners remain unchanged, while affected selection maps
+campaign-specific paths to this one additional semantic owner.
+
 Issue `haxe_c-xge.20.4.3.7.5` then profiled this exact HXML instead of inferring
 its cost from the smaller runtime-free or larger playable workloads. The first
 two samples below are contention diagnostics, not representative p50 or p95

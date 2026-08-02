@@ -294,7 +294,7 @@ class ToolchainShardTests(unittest.TestCase):
                     plan["taskOwners"][0]["productSurfaces"],
                     ["runtime-memory-lifetime"],
                 )
-                self.assertFalse(plan["fullBackstop"]["required"])
+        self.assertFalse(plan["fullBackstop"]["required"])
 
         owner_plan = self.route_selector.build_test_plan(
             ("examples/caxecraft/src/caxecraft/content/ActiveRuntimeContent.hx",)
@@ -315,10 +315,39 @@ class ToolchainShardTests(unittest.TestCase):
             [owner["script"] for owner in shared_level_plan["taskOwners"]],
             [
                 "test:caxecraft-runtime-content-generation",
+                "test:caxecraft-campaign-runtime",
                 "test:caxecraft-domain",
             ],
         )
         self.assertFalse(shared_level_plan["fullBackstop"]["required"])
+
+    def test_campaign_change_selects_its_real_vertical_owner(self) -> None:
+        focused_paths = (
+            "examples/caxecraft/campaign-runtime-c.hxml",
+            "examples/caxecraft/src/caxecraft/content/CampaignManifest.hx",
+            "examples/caxecraft/src/caxecraft/content/CampaignRuntime.hx",
+            "examples/caxecraft/test/caxecraft/qa/CampaignRuntimeProbe.hx",
+            "examples/caxecraft/test/native/campaign_runtime_harness.c",
+            "examples/caxecraft/campaigns/first-adventure/campaign.json",
+            "examples/caxecraft/scenarios/first-adventure/western-falls.caxemap",
+        )
+        for path in focused_paths:
+            with self.subTest(path=path):
+                plan = self.route_selector.build_test_plan((path,))
+                self.assertEqual(
+                    [owner["script"] for owner in plan["taskOwners"]],
+                    ["test:caxecraft-campaign-runtime"],
+                )
+                self.assertEqual(
+                    plan["taskOwners"][0]["productSurfaces"],
+                    [
+                        "compiler-admitted-slices",
+                        "c-abi-native-ffi",
+                        "runtime-memory-lifetime",
+                        "diagnostics-source-mapping-downstream",
+                    ],
+                )
+                self.assertFalse(plan["fullBackstop"]["required"])
 
     def test_replay_change_selects_incremental_invalidation_owner(self) -> None:
         owners = self.route_selector.select_affected_owners(
@@ -663,7 +692,7 @@ class ToolchainShardTests(unittest.TestCase):
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 70)
+        self.assertEqual(len(canonical), 71)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER

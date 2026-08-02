@@ -187,8 +187,10 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "string-split",
 )
 RUNTIME_CONTENT_FILES = (
+    "campaigns/first-adventure/campaign.json",
     "locales/ui.json",
     "packs/caxecraft/base/content.json",
+    "scenarios/first-adventure/western-falls.caxemap",
     "scenarios/first-playable/map.caxemap",
 )
 RUNTIME_CONTENT_REPORT = "packs/caxecraft/base/runtime-content.json"

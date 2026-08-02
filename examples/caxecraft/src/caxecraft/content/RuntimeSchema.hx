@@ -56,6 +56,9 @@ enum RuntimeSchemaErrorKind {
 	/** One typed array repeated an ID. */
 	SchemaDuplicateId(path:String, id:String);
 
+	/** Two campaign levels claimed the same package-relative map path. */
+	SchemaDuplicateLogicalPath(path:String);
+
 	/** One typed array was not ascending by exact UTF-8 bytes. */
 	SchemaNonCanonicalOrder(path:String);
 
@@ -67,6 +70,9 @@ enum RuntimeSchemaErrorKind {
 
 	/** Individually valid values violated one schema-level relationship. */
 	SchemaInvalidInvariant(path:String);
+
+	/** Required campaign transitions formed a cycle with no terminal level. */
+	SchemaRequiredTransitionCycle(levelId:String);
 
 	/** A stable ID did not exist in any admitted content kind. */
 	SchemaUnresolvedReference(path:String, id:String, expectedKind:String);

@@ -1,0 +1,258 @@
+CAXEMAP 1
+feature required caxecraft:core
+map adventure.western-falls
+asset-pack packs/caxecraft/base
+default-locale en
+locale en
+  message adventure_progress "ADVENTURE: WESTERN FALLS"
+  message adventure_tagline "FOLLOW THE RIVER BEYOND EVERGROVE."
+  message berry_pickup_one "+1 BERRY"
+  message berry_pickup_two "+2 BERRIES"
+  message berry_recovery "BERRIES: +1 HEART"
+  message berry_stack_full "BERRIES FULL: USE ONE FIRST"
+  message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
+  message copper_strike "COPPER STRIKE"
+  message haxirio_fallen "HAXIRIO HAS FALLEN"
+  message mossling_alert "MOSSLING ALERT"
+  message mossling_dropped_berries "MOSSLING DROPPED BERRIES"
+  message mossling_windup "MOSSLING WINDUP: DODGE"
+  message nia_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
+  message nia_talk "E  TALK TO NIA"
+  message nia_welcome "NIA: THE WESTERN TRAIL STARTS HERE"
+  message no_berries "NO BERRIES LEFT"
+  message return_to_meadow "E  RETURN TO EVERGROVE"
+  message scenario_title "Caxecraft: Western Falls"
+  message telegraphed_hit "TELEGRAPHED HIT: DODGE THE NEXT"
+end locale
+locale es-mx
+  message adventure_progress "AVENTURA: CATARATAS DEL OESTE"
+  message adventure_tagline "SIGUE EL RIO MAS ALLA DE LA ARBOLEDA."
+  message berry_pickup_one "+1 BAYA"
+  message berry_pickup_two "+2 BAYAS"
+  message berry_recovery "BAYAS: +1 CORAZON"
+  message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
+  message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
+  message copper_strike "GOLPE DE COBRE"
+  message haxirio_fallen "HAXIRIO HA CAIDO"
+  message mossling_alert "MUSGUITO ALERTA"
+  message mossling_dropped_berries "EL MUSGUITO SOLTO BAYAS"
+  message mossling_windup "MUSGUITO CARGANDO: ESQUIVA"
+  message nia_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
+  message nia_talk "E  HABLAR CON NIA"
+  message nia_welcome "NIA: EL SENDERO DEL OESTE COMIENZA AQUI"
+  message no_berries "NO QUEDAN BAYAS"
+  message return_to_meadow "E  VOLVER A LA ARBOLEDA"
+  message scenario_title "Caxecraft: Cataratas del Oeste"
+  message telegraphed_hit "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
+end locale
+title message scenario_title
+mode adventure
+world 32 16 32
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+palette 2 caxecraft:dirt
+palette 3 caxecraft:grass
+palette 4 caxecraft:sand
+palette 5 caxecraft:wood
+palette 6 caxecraft:leaves
+palette 7 caxecraft:snow
+palette 8 caxecraft:ash
+chunk world.base 0 0 0 32 16 32
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 1
+  run 4 6
+  run 3 25
+  run 0 352
+  run 1 32
+  run 2 96
+  run 4 2
+  run 0 4
+  run 4 2
+  run 3 24
+  run 0 352
+  run 1 32
+  run 2 96
+  run 4 2
+  run 0 4
+  run 4 2
+  run 3 24
+  run 0 352
+  run 1 32
+  run 2 96
+  run 4 2
+  run 0 4
+  run 4 2
+  run 3 24
+  run 0 352
+  run 1 32
+  run 2 96
+  run 4 2
+  run 0 4
+  run 4 2
+  run 3 24
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 1
+  run 4 6
+  run 3 25
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 89
+  run 6 3
+  run 0 260
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 26
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 30
+  run 6 3
+  run 0 30
+  run 6 1
+  run 0 229
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 89
+  run 6 3
+  run 0 260
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+  run 1 32
+  run 2 96
+  run 7 10
+  run 3 12
+  run 8 10
+  run 0 352
+end chunk
+fluid water.pool caxecraft:water volume 2 4 2 4 1 4
+fluid water.spring caxecraft:water source 3 4 3
+object enemy.mossling
+  tag enemy
+  placement entity caxecraft:mossling 13500 5000 13800 0
+end object
+object guide.nia
+  tag friend
+  placement npc caxecraft:nia dialogue.nia.welcome 14500 5000 13500 90
+end object
+object item.tideweave
+  tag quest
+  placement item caxecraft:tideweave-suit 1 6500 5000 4500 0
+end object
+object player.start
+  tag player
+  placement player-spawn 12500 5000 16500 180
+end object
+dialogue dialogue.nia.welcome
+  line speaker guide.nia message nia_welcome
+end dialogue
+objective objective.western-falls active title message adventure_progress
+  body message adventure_tagline
+end objective
+end-map

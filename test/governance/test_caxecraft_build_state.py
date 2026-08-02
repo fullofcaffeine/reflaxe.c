@@ -179,8 +179,10 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         source_root = self.root / "content-source"
         for relative in (
             "assets/manifest.json",
+            "campaigns/first-adventure/campaign.json",
             "locales/ui.json",
             "packs/caxecraft/base/content.json",
+            "scenarios/first-adventure/western-falls.caxemap",
             "scenarios/first-playable/map.caxemap",
         ):
             source = CASE / relative
@@ -210,6 +212,13 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         self.assertEqual(
             (self.executable.parent / "content/locales/ui.json").read_bytes(),
             ui.read_bytes(),
+        )
+        self.assertEqual(
+            (
+                self.executable.parent
+                / "content/scenarios/first-adventure/western-falls.caxemap"
+            ).read_bytes(),
+            (source_root / "scenarios/first-adventure/western-falls.caxemap").read_bytes(),
         )
         self.assertEqual(
             json.loads(

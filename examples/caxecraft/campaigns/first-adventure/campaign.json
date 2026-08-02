@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "caxecraft:first-adventure",
+  "campaignVersion": 1,
+  "entryLevel": "evergrove",
+  "levels": [
+    {
+      "id": "evergrove",
+      "path": "scenarios/first-playable/map.caxemap",
+      "byteLength": 5098,
+      "sha256": "e7bd9c1c8c64d84940880e8b42fd8aa2f9df9c4229ba160fdb35785e0f368644"
+    },
+    {
+      "id": "western-falls",
+      "path": "scenarios/first-adventure/western-falls.caxemap",
+      "byteLength": 5065,
+      "sha256": "ac54f3c91e79157839785cc647f58f9cd30f62ccfc300b836fd277a8e475da3f"
+    }
+  ],
+  "transitions": [
+    {
+      "exit": "evergrove-west",
+      "sourceLevel": "evergrove",
+      "destinationLevel": "western-falls",
+      "destinationEntrance": "default",
+      "required": true
+    },
+    {
+      "exit": "western-falls-east",
+      "sourceLevel": "western-falls",
+      "destinationLevel": "evergrove",
+      "destinationEntrance": "default",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+-cp src
+-cp test
+-lib reflaxe.c
+--main caxecraft.qa.CampaignRuntimeProbe
+-D caxecraft_generation_testing
+-D caxecraft_runtime_level_testing
+-D hxc_runtime=auto
+-D hxc_symbol_report=summary
