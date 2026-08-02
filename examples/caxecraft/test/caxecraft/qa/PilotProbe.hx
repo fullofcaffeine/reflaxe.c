@@ -22,7 +22,7 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryGift, 4);
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryMining, 7);
 		sampledFrames += checkBounded(PilotScriptName.ResizeLayout, 6);
-		sampledFrames += checkBounded(PilotScriptName.AquaticGear, 96);
+		sampledFrames += checkBounded(PilotScriptName.AquaticGear, 150);
 		sampledFrames += checkBounded(PilotScriptName.SmoothMotion, 12);
 		sampledFrames += checkBounded(PilotScriptName.EditorShell, 4);
 		sampledFrames += checkBounded(PilotScriptName.CampaignTravel, 5);
@@ -181,9 +181,18 @@ final class PilotProbe {
 		require(PilotScript.stableName(name) == "aquatic-gear", "aquatic gear script lost its stable name");
 		require(PilotScript.sample(name, 0).moveForward == 1.0 && PilotScript.sample(name, 0).moveRight == -1.0,
 			"aquatic gear script lost its authored-item approach");
-		require(PilotScript.sample(name, 92).moveForward == 0.0 && PilotScript.sample(name, 92).moveRight == 0.0,
+		require(PilotScript.sample(name, 88).lookYaw > 0.0
+			&& PilotScript.sample(name, 93).lookYaw > 0.0
+			&& PilotScript.sample(name, 88).lookPitch < 0.0,
+			"aquatic gear script lost its real-camera turn toward the bank");
+		require(PilotScript.sample(name, 94).primaryPressed, "aquatic gear script lost its submerged bank-mining action");
+		require(PilotScript.sample(name, 95).riseHeld
+			&& PilotScript.sample(name, 95).moveForward == 1.0, "aquatic gear script lost its moving bank exit");
+		require(PilotScript.sample(name, 130).riseHeld
+			&& PilotScript.sample(name, 130).moveForward == 0.0, "aquatic gear script lost its held-rise finish");
+		require(PilotScript.sample(name, 146).moveForward == 0.0 && !PilotScript.sample(name, 146).riseHeld,
 			"aquatic gear script did not stop for its evidence frame");
-		final screenshot = PilotScript.checkpoint(name, 92);
+		final screenshot = PilotScript.checkpoint(name, 146);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "aquatic-gear.frame",
 			"aquatic gear screenshot checkpoint changed");
 		return 1;
@@ -239,20 +248,25 @@ final class PilotProbe {
 		require(PilotScript.sample(name, 3).travelPressed, "Adventure journey no longer follows the campaign's typed way forward after launch");
 		final selected = PilotScript.checkpoint(name, 0);
 		final campaign = PilotScript.checkpoint(name, 1);
+		final entry = PilotScript.checkpoint(name, 2);
 		final destination = PilotScript.checkpoint(name, 5);
 		require(selected != null && selected.kind == CaptureScreenshot && selected.label == "adventure-journey.selected",
 			"Adventure journey lost its selected-menu evidence");
 		require(campaign != null && campaign.kind == CaptureScreenshot && campaign.label == "adventure-journey.campaign",
 			"Adventure journey lost its campaign-selection evidence");
+		require(entry != null && entry.kind == CaptureScreenshot && entry.label == "adventure-journey.entry",
+			"Adventure journey lost its playable Evergrove entry evidence");
 		require(destination != null && destination.kind == CaptureScreenshot && destination.label == "adventure-journey.destination",
 			"Adventure journey lost its destination evidence");
-		return 3;
+		return 4;
 	}
 
 	static function checkSharedInterface():Void {
 		final realLike:GameInputSource = new FixedInputSource();
 		require(realLike.sample(12).moveRight == -1.0, "real-input-shaped adapter did not satisfy the shared interface");
 		require(!PilotScript.sample(PilotScriptName.LaunchSmoke, 0).quitPressed, "pilot did not produce shared input values");
+		require(GameInputFrames.make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, false, false, false, -1, 0, false, false, false, true).riseHeld,
+			"shared input cannot represent held swim-rise separately from a one-shot land jump");
 	}
 
 	static inline function require(condition:Bool, message:String):Void {

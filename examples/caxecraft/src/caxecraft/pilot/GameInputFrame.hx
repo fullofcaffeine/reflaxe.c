@@ -9,9 +9,10 @@ package caxecraft.pilot;
  *
  * Movement uses camera-relative axes in the inclusive range -1...1. Look
  * values are already-bounded changes for this frame, not raw mouse pixels.
- * The Boolean actions, including the target-neutral `interactPressed` and
- * `travelPressed` intents, and the two title-menu intents,
- * are one-frame presses rather than held device buttons.
+ * Most Boolean actions, including the target-neutral `interactPressed` and
+ * `travelPressed` intents, are one-frame presses. Swimming is the exception:
+ * `riseHeld` and `descendHeld` remain true while their device buttons are held
+ * because water movement applies acceleration over several simulation ticks.
  * A hotbar selection of `-1` means “keep the current slot”; the cycle value is
  * a signed number of slots, normally -1, 0, or 1.
  */
@@ -21,6 +22,9 @@ typedef GameInputFrame = {
 	final lookYaw:Float;
 	final lookPitch:Float;
 	final jumpPressed:Bool;
+
+	/** Held upward-swim intent; dry movement still uses `jumpPressed`. */
+	final riseHeld:Bool;
 
 	/** Held downward-swim intent; ignored by ordinary land movement. */
 	final descendHeld:Bool;
@@ -53,14 +57,15 @@ typedef GameInputFrame = {
 final class GameInputFrames {
 	public static inline function make(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool, primaryPressed:Bool,
 			secondaryPressed:Bool, interactPressed:Bool, travelPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool,
-			hotbarSelection:Int = -1, hotbarCycle:Int = 0, descendHeld:Bool = false, menuNextPressed:Bool = false,
-			menuConfirmPressed:Bool = false):GameInputFrame
+			hotbarSelection:Int = -1, hotbarCycle:Int = 0, descendHeld:Bool = false, menuNextPressed:Bool = false, menuConfirmPressed:Bool = false,
+			riseHeld:Bool = false):GameInputFrame
 		return {
 			moveForward: moveForward,
 			moveRight: moveRight,
 			lookYaw: lookYaw,
 			lookPitch: lookPitch,
 			jumpPressed: jumpPressed,
+			riseHeld: riseHeld,
 			descendHeld: descendHeld,
 			primaryPressed: primaryPressed,
 			secondaryPressed: secondaryPressed,
@@ -106,6 +111,7 @@ final class GameInputFrames {
 			&& left.lookYaw == right.lookYaw
 			&& left.lookPitch == right.lookPitch
 			&& left.jumpPressed == right.jumpPressed
+			&& left.riseHeld == right.riseHeld
 			&& left.descendHeld == right.descendHeld
 			&& left.primaryPressed == right.primaryPressed
 			&& left.secondaryPressed == right.secondaryPressed

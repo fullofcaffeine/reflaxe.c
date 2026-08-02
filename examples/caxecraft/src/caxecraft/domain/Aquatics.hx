@@ -6,6 +6,7 @@ import caxecraft.domain.CharacterPhysics.input as landInput;
 import caxecraft.domain.CharacterPhysics.resolveVelocity;
 import caxecraft.domain.CharacterPhysics.step as stepOnLand;
 import caxecraft.domain.WaterCellCodec.stateInView as waterStateAt;
+import caxecraft.domain.CharacterPhysics.tryStepUp;
 
 /**
 	Fixed-tick swimming, floating, breath, and waterline state.
@@ -172,6 +173,12 @@ function step(cells:WorldView, original:CharacterBody, aquatic:AquaticState, com
 		var velocityY = (original.velocityY + verticalAcceleration * FIXED_SECONDS) * drag;
 		velocityY = clamp(velocityY, -MAX_VERTICAL_SPEED, MAX_VERTICAL_SPEED);
 		moved = resolveVelocity(cells, original, velocityX, velocityY, velocityZ);
+		final horizontalBlocked = (command.moveX != 0.0 && moved.velocityX == 0.0) || (command.moveZ != 0.0 && moved.velocityZ == 0.0);
+		if (command.jump && horizontalBlocked) {
+			final stepped = tryStepUp(cells, original, velocityX, velocityZ);
+			if (stepped.x != original.x || stepped.y != original.y || stepped.z != original.z)
+				moved = stepped;
+		}
 	}
 
 	final after = observe(cells, moved);

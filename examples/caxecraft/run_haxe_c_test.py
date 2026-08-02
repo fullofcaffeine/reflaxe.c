@@ -177,7 +177,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "inventory.hxml",
-                "caxecraft-inventory: 8 typed slots; selection, wrap, consume, "
+                "caxecraft-inventory: 9 typed slots; selection, wrap, consume, "
                 "lossless collect, empty, and full bounds passed\n",
             ),
         ),
@@ -249,7 +249,7 @@ EVAL_CASES = {
             EvalProbe("scenario-model.hxml", "scenario-model: 264908270\n"),
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 5098 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 14223 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -276,7 +276,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 5098 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 14223 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -1012,6 +1012,11 @@ CASES = {
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
+        # The authored village now has more than one thousand compact terrain
+        # runs. This complete parser/publication fault matrix is intentionally
+        # broader than the focused landmark check; keep its diagnostic timeout
+        # bounded without treating an unoptimized native test as a load budget.
+        native_timeout_seconds=40,
     ),
     "scenario-native-codec": HaxeCTestCase(
         case_id="scenario-native-codec",
@@ -1269,12 +1274,12 @@ def validate_package_zip_archive(archive: Path) -> None:
     if not archive.is_file():
         raise HaxeCTestFailure("package ZIP Eval proof did not write its archive")
     raw = archive.read_bytes()
-    if len(raw) != 9_488_899:
+    if len(raw) != 9_486_280:
         raise HaxeCTestFailure(
-            f"canonical package ZIP has {len(raw)} bytes instead of 9488899"
+            f"canonical package ZIP has {len(raw)} bytes instead of 9486280"
         )
     digest = hashlib.sha256(raw).hexdigest()
-    expected_digest = "e0d29cb2837ee8a3530579ef4dc9f2bfa1990ec70bbddeda9494beaf80378b4a"
+    expected_digest = "ff897a6e740b8ac704649277dfaeff3016888151e3ba329e16cd81b3d7377f6b"
     if digest != expected_digest:
         raise HaxeCTestFailure(
             "canonical package ZIP changed without semantic golden review: "
@@ -1283,10 +1288,10 @@ def validate_package_zip_archive(archive: Path) -> None:
     fingerprint = 2_166_136_261
     for byte in raw:
         fingerprint = ((fingerprint ^ byte) * 16_777_619) & 0xFFFFFFFF
-    if fingerprint != 393_434_124:
+    if fingerprint != 3_029_997_671:
         raise HaxeCTestFailure(
             "canonical package ZIP byte-order fingerprint changed: "
-            f"expected=393434124 actual={fingerprint}"
+            f"expected=3029997671 actual={fingerprint}"
         )
 
     manifest_path = CASE_ROOT / "caxecraft.package.json"

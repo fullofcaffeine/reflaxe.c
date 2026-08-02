@@ -100,11 +100,14 @@
     "items": {
       "mode": "openai-built-in-imagegen",
       "artifactIds": [
-        "exec-74e34a5c-6fe6-4f8d-a2aa-38acfc84f0e0"
+        "exec-74e34a5c-6fe6-4f8d-a2aa-38acfc84f0e0",
+        "exec-d0489376-d008-46b0-a43e-2351efc9fdf2"
       ],
-      "promptSummary": "Original transparent 4x4 voxel-game inventory atlas for basic blocks, tools, copper sword, materials, food, map, lantern, herbs, and quest token; readable at small size; no text, logos, or watermark.",
-      "referenceInputs": [],
-      "processing": "Selected built-in output, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+      "promptSummary": "Original transparent 4x4 voxel-game inventory atlas for basic blocks, tools, copper sword, materials, food, map, lantern, and quest token; the later precise edit replaced the unused herb cell with a warm river-sand block; readable at small size; no text, logos, or watermark.",
+      "referenceInputs": [
+        "The checked-in items atlas was the sole edit target and visual-style reference."
+      ],
+      "processing": "Selected the sand cell from the precise-object-edit output, extracted its soft alpha locally, and replaced exactly row 4 column 3. A pixel comparison confirmed all fifteen other cells remained byte-for-byte visually unchanged."
     },
     "ivvy": {
       "mode": "openai-built-in-imagegen",
@@ -363,7 +366,7 @@
       "width": 1024,
       "height": 1024,
       "alpha": true,
-      "sha256": "0c5ee8db1ce5e8b19ff21d8e50a2abf088b23574c044ac88afa79bf50a067ed0",
+      "sha256": "e63a7b9a2235175ef164742a2bf569f997e585b9dd2fe25d8f65952001d5eea1",
       "generationRecord": "items",
       "rights": "caxecraft-original",
       "grid": {
@@ -386,7 +389,7 @@
           "bread",
           "map",
           "lantern",
-          "healing-herbs",
+          "sand-block",
           "quest-token"
         ]
       }

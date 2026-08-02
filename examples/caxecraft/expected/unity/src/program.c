@@ -939,12 +939,12 @@ bool hxc_caxecraft_domain_World_isPlaceable(enum hxc_caxecraft_domain_BlockKind 
     case hxc_caxecraft_domain_BlockKind_Grass:
     case hxc_caxecraft_domain_BlockKind_Dirt:
     case hxc_caxecraft_domain_BlockKind_Stone:
+    case hxc_caxecraft_domain_BlockKind_Sand:
       {
         break;
       }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
-    case hxc_caxecraft_domain_BlockKind_Sand:
     case hxc_caxecraft_domain_BlockKind_Wood:
     case hxc_caxecraft_domain_BlockKind_Leaves:
     case hxc_caxecraft_domain_BlockKind_Snow:
@@ -1152,12 +1152,12 @@ bool hxc_caxecraft_domain_World_remove(uint8_t *hxc_l_cells, size_t hxc_l_length
     case hxc_caxecraft_domain_BlockKind_Grass:
     case hxc_caxecraft_domain_BlockKind_Dirt:
     case hxc_caxecraft_domain_BlockKind_Stone:
+    case hxc_caxecraft_domain_BlockKind_Sand:
       {
         break;
       }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
-    case hxc_caxecraft_domain_BlockKind_Sand:
     case hxc_caxecraft_domain_BlockKind_Wood:
     case hxc_caxecraft_domain_BlockKind_Leaves:
     case hxc_caxecraft_domain_BlockKind_Snow:

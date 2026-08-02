@@ -106,7 +106,7 @@ function selfCheck():Int {
 		|| manifest.transitionCount() != 2
 		|| manifest.entryLevelId().text() != "evergrove"
 		|| entry.logicalPath != "scenarios/first-playable/map.caxemap"
-		|| entry.byteLength != 5098
+		|| entry.byteLength != 14223
 		|| forward.exit.text() != "evergrove-west"
 		|| forward.sourceLevel.text() != "evergrove"
 		|| forward.destinationLevel.text() != "western-falls"

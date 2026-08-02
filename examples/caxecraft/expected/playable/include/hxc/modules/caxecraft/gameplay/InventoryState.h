@@ -10,6 +10,7 @@ struct hxc_caxecraft_gameplay_InventoryState {
   int32_t hxc_grass;
   int32_t hxc_haxeforge;
   int32_t hxc_lantern;
+  int32_t hxc_sand;
   int32_t hxc_selected;
   int32_t hxc_stone;
   int32_t hxc_sword;

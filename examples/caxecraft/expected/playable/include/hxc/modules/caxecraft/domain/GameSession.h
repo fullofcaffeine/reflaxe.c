@@ -46,13 +46,6 @@ struct hxc_caxecraft_domain_CharacterCommandStepResult {
   bool hxc_resolved;
 };
 
-struct hxc_caxecraft_domain_LocalRecoveryResult {
-  struct hxc_caxecraft_domain_Character hxc_character;
-  int32_t hxc_decision;
-  struct hxc_caxecraft_gameplay_InventoryState hxc_inventory;
-  bool hxc_resolved;
-};
-
 struct hxc_caxecraft_domain_GameTickResult {
   struct hxc_caxecraft_domain_Character hxc_character;
   bool hxc_committed;
@@ -60,6 +53,13 @@ struct hxc_caxecraft_domain_GameTickResult {
   struct hxc_caxecraft_domain_Immersion hxc_immersion;
   int32_t hxc_tickIndex;
   struct hxc_caxecraft_domain_WaterTickResult hxc_water;
+};
+
+struct hxc_caxecraft_domain_LocalRecoveryResult {
+  struct hxc_caxecraft_domain_Character hxc_character;
+  int32_t hxc_decision;
+  struct hxc_caxecraft_gameplay_InventoryState hxc_inventory;
+  bool hxc_resolved;
 };
 
 struct hxc_caxecraft_domain_CharacterDamageResult {

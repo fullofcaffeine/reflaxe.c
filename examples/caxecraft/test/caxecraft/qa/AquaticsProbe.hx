@@ -163,21 +163,33 @@ function selfCheck():Int {
 	if (breach.immersion.headWet || breach.body.y <= submergedPlayer.y || breachTicks >= 40)
 		return 18;
 
+	// A held rise against a one-block shore must use the same collision box to
+	// leave the pool; pure buoyancy intentionally remains too weak to hop walls.
+	World.replace(cells, World.coord(6, 1, 8), caxecraft.domain.BlockKind.Stone);
+	var shore = stepAquatics(view, createPlayer(7.3, 1.2, 8.5), startAquatics(enhanced), aquaticInput(-1.0, 0.0, true, false), enhanced);
+	var shoreTicks = 1;
+	while (shore.aquatic.medium != AquaticMedium.Dry && shoreTicks < 24) {
+		shore = stepAquatics(view, shore.body, shore.aquatic, aquaticInput(-1.0, 0.0, true, false), enhanced);
+		shoreTicks++;
+	}
+	if (shore.aquatic.medium != AquaticMedium.Dry || shore.body.x >= 7.3 || shore.body.y < 2.0 || shoreTicks >= 24)
+		return 22;
+
 	var spent = stepAquatics(view, submergedPlayer, initial, aquaticInput(0.0, 0.0, false, false), basic).aquatic;
 	spent = stepAquatics(view, submergedPlayer, spent, aquaticInput(0.0, 0.0, false, false), basic).aquatic;
 	final upgraded = adoptProfile(spent, basic, enhanced);
 	if (upgraded.breathTicks != enhanced.maximumBreathTicks - 2
 		|| upgraded.medium != spent.medium
 		|| upgraded.headSubmerged != spent.headSubmerged)
-		return 19;
+		return 23;
 	final downgraded = adoptProfile(upgraded, enhanced, basic);
 	if (downgraded.breathTicks != basic.maximumBreathTicks - 2 || downgraded.drowningTicks > basic.drowningIntervalTicks)
-		return 20;
+		return 24;
 	if (!itemIsInRange(4.5, 4.1, 4.5, 4500, 5000, 4500) || itemIsInRange(8.0, 4.1, 8.0, 4500, 5000, 4500))
-		return 21;
+		return 25;
 	final sharedCharacterResult = sharedCharacterCheck(view, basic);
 	if (sharedCharacterResult != 0)
-		return 21 + sharedCharacterResult;
+		return 25 + sharedCharacterResult;
 	return 0;
 }
 

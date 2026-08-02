@@ -20,6 +20,31 @@ private inline final JUMP_SPEED:Float = 6.5;
 private inline final MAX_SUBSTEP:Float = 0.20;
 private inline final EPSILON:Float = 0.0001;
 
+/**
+	Try one ordinary block-height step while another movement owner supplies speed.
+
+	Water movement uses this only after horizontal collision blocks a held-rise
+	request. The candidate must have clear body space both directly above and
+	after the requested horizontal advance, so it cannot pass through a wall or
+	ceiling. Returning the original body means no safe one-block exit existed.
+**/
+function tryStepUp(cells:WorldView, original:CharacterBody, velocityX:Float, velocityZ:Float):CharacterBody {
+	final raisedY = floorToInt(original.y) + 1.0 + EPSILON;
+	if (raisedY - original.y > 1.0 + EPSILON || overlaps(cells, original.x, raisedY, original.z))
+		return original;
+	final raised:CharacterBody = {
+		x: original.x,
+		y: raisedY,
+		z: original.z,
+		velocityX: original.velocityX,
+		velocityY: 0.0,
+		velocityZ: original.velocityZ,
+		grounded: false
+	};
+	final advanced = resolveVelocity(cells, raised, velocityX, 0.0, velocityZ);
+	return advanced.x != original.x || advanced.z != original.z ? advanced : original;
+}
+
 /** Create one stationary character body at a feet-center position. */
 function body(x:Float, y:Float, z:Float):CharacterBody {
 	return {

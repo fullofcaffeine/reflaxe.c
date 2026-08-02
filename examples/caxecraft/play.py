@@ -344,7 +344,7 @@ PILOT_FRAME_LIMITS = {
     "full-inventory-gift": 4,
     "full-inventory-mining": 7,
     "resize-layout": 6,
-    "aquatic-gear": 96,
+    "aquatic-gear": 150,
     "smooth-motion": 12,
     "editor-shell": 4,
     "campaign-travel": 5,
@@ -1070,9 +1070,9 @@ def build_pilot_report(
         raise PlayFailure("pilot telemetry edit counters cannot be negative")
     if signed[25] < 0 or signed[26] < 0:
         raise PlayFailure("pilot telemetry render counters cannot be negative")
-    if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 8 or not 0 <= signed[29] <= 2:
+    if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 9 or not 0 <= signed[29] <= 2:
         raise PlayFailure("pilot telemetry gameplay carriers are outside their closed ranges")
-    if not 0 <= signed[31] <= 127:
+    if not 0 <= signed[31] <= 1023:
         raise PlayFailure("pilot telemetry presentation flags contain unknown bits")
     if signed[32] < 0 or signed[33] < 0 or signed[34] < 0 or signed[35] not in (0, 1):
         raise PlayFailure("pilot telemetry terrain-cache counters are outside their closed ranges")
@@ -1088,8 +1088,13 @@ def build_pilot_report(
         raise PlayFailure("non-gameplay pilot unexpectedly submitted world terrain")
     if (title_visible or editor_visible) and (signed[32] != 0 or signed[33] != 0 or signed[34] != 0):
         raise PlayFailure("non-gameplay pilot unexpectedly prepared terrain chunks")
-    if not title_visible and not editor_visible and signed[26] != 3:
-        raise PlayFailure("gameplay pilot did not submit the base, adventure, and water batches exactly once")
+    # Every gameplay frame must draw both terrain layers. Water is a transparent
+    # third batch only when the camera can see it; a wooded route may correctly
+    # cull an off-camera stream. The aquatic pilot records actual submerged and
+    # dry-after-submerged simulation states, so its final camera may face the
+    # mined bank without laundering that behavior through rendering.
+    if not title_visible and not editor_visible and signed[26] < 2:
+        raise PlayFailure("gameplay pilot did not submit both opaque terrain batches")
     if not title_visible and not editor_visible and (signed[32] <= 0 or signed[35] != 1):
         raise PlayFailure("gameplay pilot did not submit valid terrain faces")
     if renderer == "chunk-cache":
@@ -1116,6 +1121,9 @@ def build_pilot_report(
     aquatic_gear_equipped = bool(signed[31] & 8)
     interpolation_observed = bool(signed[31] & 16)
     review_screenshot_observed = bool(signed[31] & 64)
+    submersion_observed = bool(signed[31] & 128)
+    water_exit_observed = bool(signed[31] & 256)
+    sand_mined_observed = bool(signed[31] & 512)
     if not review_screenshot_observed:
         raise PlayFailure(
             f"pilot {pilot!r} reached its final state frame, but the native "
@@ -1132,8 +1140,14 @@ def build_pilot_report(
             )
     elif editor_visible:
         raise PlayFailure(f"pilot {pilot!r} unexpectedly finished on the editor screen")
-    if pilot == "aquatic-gear" and not aquatic_gear_equipped:
-        raise PlayFailure("aquatic-gear pilot completed without collecting and equipping the authored item")
+    if pilot == "aquatic-gear" and not (
+        aquatic_gear_equipped and submersion_observed and water_exit_observed and sand_mined_observed
+    ):
+        raise PlayFailure(
+            "aquatic-gear pilot did not complete the real gear/submerge/mine/exit path "
+            f"(gear={aquatic_gear_equipped}, submerged={submersion_observed}, "
+            f"sandMined={sand_mined_observed}, exited={water_exit_observed})"
+        )
     if pilot == "smooth-motion" and (
         not interpolation_observed
         or completed_ticks <= 0
@@ -1216,6 +1230,9 @@ def build_pilot_report(
             "guidePhase": signed[29],
             "mosslingAlive": signed[30] == 1,
             "aquaticGearEquipped": aquatic_gear_equipped,
+            "submersionObserved": submersion_observed,
+            "waterExitObserved": water_exit_observed,
+            "sandMinedObserved": sand_mined_observed,
         },
         "content": {
             "generation": signed[40],
@@ -3383,6 +3400,7 @@ def main(argv: list[str]) -> int:
                 (
                     executable.parent / "caxecraft-pilot-adventure-selected.png",
                     executable.parent / "caxecraft-pilot-campaign-selected.png",
+                    executable.parent / "caxecraft-pilot-evergrove-entry.png",
                 )
                 if selected_pilot == "adventure-journey"
                 else ()
@@ -3432,6 +3450,13 @@ def main(argv: list[str]) -> int:
                 for supporting_screenshot in supporting_screenshots:
                     if supporting_screenshot.name == "caxecraft-pilot-campaign-selected.png":
                         validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
+                    elif supporting_screenshot.name == "caxecraft-pilot-evergrove-entry.png":
+                        validate_presented_screenshot(
+                            supporting_screenshot,
+                            platform_name=platform_name,
+                            expected_entities=True,
+                            expected_open_sky=False,
+                        )
                     else:
                         validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
                     supporting_hashes[supporting_screenshot.name].append(hashlib.sha256(supporting_screenshot.read_bytes()).hexdigest())

@@ -67,8 +67,8 @@ final class World {
 
 	public static function isPlaceable(kind:BlockKind):Bool {
 		return switch (kind) {
-			case Grass | Dirt | Stone: true;
-			case Air | Bedrock | Sand | Wood | Leaves | Snow | Ash: false;
+			case Grass | Dirt | Stone | Sand: true;
+			case Air | Bedrock | Wood | Leaves | Snow | Ash: false;
 		};
 	}
 
@@ -104,7 +104,7 @@ final class World {
 	/**
 	 * Remove only materials whose current content definitions declare drops.
 	 *
-	 * The first inventory slice has grass, dirt, and stone items. Authored sand,
+	 * The bounded inventory has grass, dirt, stone, and sand items. Authored
 	 * forest, snow, and ash remain scenery until the content pack gives them
 	 * matching items; silently deleting them would lose data in Adventure and
 	 * would make Creative promise an item model it does not have yet.
@@ -112,8 +112,8 @@ final class World {
 	public static function remove(cells:WorldCells, coord:BlockCoord):Bool {
 		final current = query(cells, coord);
 		return switch (current) {
-			case Air | Bedrock | Sand | Wood | Leaves | Snow | Ash: false;
-			case Grass | Dirt | Stone: replace(cells, coord, Air);
+			case Air | Bedrock | Wood | Leaves | Snow | Ash: false;
+			case Grass | Dirt | Stone | Sand: replace(cells, coord, Air);
 		};
 	}
 

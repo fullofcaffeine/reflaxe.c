@@ -2,16 +2,17 @@ package caxecraft.gameplay;
 
 import caxecraft.domain.BlockKind;
 
-/** Deterministic operations for Caxecraft's bounded eight-slot inventory. */
+/** Deterministic operations for Caxecraft's bounded nine-slot inventory. */
 final class Inventory {
-	public static inline final SLOT_COUNT:Int = 8;
+	public static inline final SLOT_COUNT:Int = 9;
 	public static inline final MAX_STACK:Int = 64;
 
 	/** A useful finite starting set for the first Adventure gameplay slice. */
 	public static function starter():InventoryState
-		return make(0, 16, 24, 12, 1, 1, 6, 3, 1);
+		return make(0, 16, 24, 12, 1, 1, 6, 3, 1, 0);
 
-	public static function make(selected:Int, grass:Int, dirt:Int, stone:Int, haxeforge:Int, sword:Int, berries:Int, bread:Int, lantern:Int):InventoryState {
+	public static function make(selected:Int, grass:Int, dirt:Int, stone:Int, haxeforge:Int, sword:Int, berries:Int, bread:Int, lantern:Int,
+			sand:Int = 0):InventoryState {
 		return {
 			selected: selected,
 			grass: boundedCount(grass),
@@ -21,7 +22,8 @@ final class Inventory {
 			sword: boundedCount(sword),
 			berries: boundedCount(berries),
 			bread: boundedCount(bread),
-			lantern: boundedCount(lantern)
+			lantern: boundedCount(lantern),
+			sand: boundedCount(sand)
 		};
 	}
 
@@ -29,7 +31,7 @@ final class Inventory {
 	public static function select(state:InventoryState, slot:Int):InventoryState {
 		if (slot < 0 || slot >= SLOT_COUNT || slot == state.selected)
 			return state;
-		return make(slot, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
+		return make(slot, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern, state.sand);
 	}
 
 	/** Move one or more slots and wrap at either end. */
@@ -53,7 +55,8 @@ final class Inventory {
 			case 4: CopperSword;
 			case 5: Berries;
 			case 6: Bread;
-			case _: Lantern;
+			case 7: Lantern;
+			case _: SandBlock;
 		};
 	}
 
@@ -68,6 +71,7 @@ final class Inventory {
 			case Berries: state.selected == 5;
 			case Bread: state.selected == 6;
 			case Lantern: state.selected == 7;
+			case SandBlock: state.selected == 8;
 		};
 	}
 
@@ -81,6 +85,7 @@ final class Inventory {
 			case 5: state.berries;
 			case 6: state.bread;
 			case 7: state.lantern;
+			case 8: state.sand;
 			case _: 0;
 		};
 	}
@@ -96,6 +101,7 @@ final class Inventory {
 			case Berries: state.berries;
 			case Bread: state.bread;
 			case Lantern: state.lantern;
+			case SandBlock: state.sand;
 		};
 	}
 
@@ -119,6 +125,7 @@ final class Inventory {
 			case 0: Grass;
 			case 1: Dirt;
 			case 2: Stone;
+			case 8: Sand;
 			case _: Air;
 		};
 	}
@@ -128,19 +135,24 @@ final class Inventory {
 		if (countAt(state, state.selected) <= 0)
 			return state;
 		return switch (state.selected) {
-			case 0: make(state.selected, state.grass - 1, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
-			case 1: make(state.selected, state.grass, state.dirt - 1, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
-			case 2: make(state.selected, state.grass, state.dirt, state.stone - 1, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
-			case 3: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge
-					- 1, state.sword, state.berries, state.bread, state.lantern);
-			case 4: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword
-					- 1, state.berries, state.bread, state.lantern);
-			case 5: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries
-					- 1, state.bread, state.lantern);
-			case 6: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread
-					- 1, state.lantern);
-			case 7: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern
-					- 1);
+			case 0: make(state.selected, state.grass - 1, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand);
+			case 1: make(state.selected, state.grass, state.dirt - 1, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand);
+			case 2: make(state.selected, state.grass, state.dirt, state.stone - 1, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand);
+			case 3: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge - 1, state.sword, state.berries, state.bread, state.lantern,
+					state.sand);
+			case 4: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword - 1, state.berries, state.bread, state.lantern,
+					state.sand);
+			case 5: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries - 1, state.bread, state.lantern,
+					state.sand);
+			case 6: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread - 1, state.lantern,
+					state.sand);
+			case 7: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern - 1,
+					state.sand);
+			case 8: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand - 1);
 			case _: state;
 		};
 	}
@@ -149,12 +161,18 @@ final class Inventory {
 	public static function collectBlock(state:InventoryState, kind:BlockKind):InventoryState {
 		return switch (kind) {
 			case Grass:
-				make(state.selected, state.grass + 1, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
+				make(state.selected, state.grass + 1, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand);
 			case Dirt:
-				make(state.selected, state.grass, state.dirt + 1, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
+				make(state.selected, state.grass, state.dirt + 1, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand);
 			case Stone:
-				make(state.selected, state.grass, state.dirt, state.stone + 1, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
-			case Air | Bedrock | Sand | Wood | Leaves | Snow | Ash: state;
+				make(state.selected, state.grass, state.dirt, state.stone + 1, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand);
+			case Sand:
+				make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern,
+					state.sand + 1);
+			case Air | Bedrock | Wood | Leaves | Snow | Ash: state;
 		};
 	}
 
@@ -165,22 +183,24 @@ final class Inventory {
 			return state;
 		return switch (kind) {
 			case GrassBlock: make(state.selected, state.grass + accepted, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
-					state.lantern);
+					state.lantern, state.sand);
 			case DirtBlock: make(state.selected, state.grass, state.dirt + accepted, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
-					state.lantern);
+					state.lantern, state.sand);
 			case StoneBlock: make(state.selected, state.grass, state.dirt, state.stone + accepted, state.haxeforge, state.sword, state.berries, state.bread,
-					state.lantern);
+					state.lantern, state.sand);
 			case Haxeforge: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge + accepted, state.sword, state.berries, state.bread,
-					state.lantern);
+					state.lantern, state.sand);
 			case CopperSword: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword
 					+ accepted, state.berries, state.bread,
-					state.lantern);
+					state.lantern, state.sand);
 			case Berries: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries + accepted, state.bread,
-					state.lantern);
+					state.lantern, state.sand);
 			case Bread: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread + accepted,
-					state.lantern);
+					state.lantern, state.sand);
 			case Lantern: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
-					state.lantern + accepted);
+					state.lantern + accepted, state.sand);
+			case SandBlock: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
+					state.lantern, state.sand + accepted);
 		};
 	}
 

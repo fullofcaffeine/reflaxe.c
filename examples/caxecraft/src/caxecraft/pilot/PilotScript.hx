@@ -47,6 +47,9 @@ enum abstract PilotAction(Int) to Int {
 	var Travel = 18;
 	var MenuNext = 19;
 	var MenuConfirm = 20;
+	var LookLeft = 21;
+	var ForwardRise = 22;
+	var Rise = 23;
 }
 
 /**
@@ -56,7 +59,7 @@ enum abstract PilotAction(Int) to Int {
  * adds neither a heap object nor interface dispatch to the game loop.
  */
 final class PilotScript {
-	public static inline final ABSOLUTE_FRAME_LIMIT:Int = 120;
+	public static inline final ABSOLUTE_FRAME_LIMIT:Int = 150;
 
 	/** Stable numeric identity carried by native telemetry without a C string. */
 	public static function scriptCode(name:PilotScriptName):Int
@@ -90,7 +93,8 @@ final class PilotScript {
 		hash = mix(hash, inventory.sword);
 		hash = mix(hash, inventory.berries);
 		hash = mix(hash, inventory.bread);
-		return mix(hash, inventory.lantern);
+		hash = mix(hash, inventory.lantern);
+		return mix(hash, inventory.sand);
 	}
 
 	public static function frameLimit(name:PilotScriptName):Int {
@@ -107,7 +111,7 @@ final class PilotScript {
 		if (name == ResizeLayout)
 			return 6;
 		if (name == AquaticGear)
-			return 96;
+			return 150;
 		if (name == SmoothMotion)
 			return 12;
 		if (name == EditorShell)
@@ -162,8 +166,17 @@ final class PilotScript {
 			return recoveryAction(frameNumber);
 		if (name == FullInventoryGift)
 			return fullInventoryGiftAction(frameNumber);
-		if (name == AquaticGear)
-			return frameNumber < 92 ? ForwardLeft : Idle;
+		if (name == AquaticGear) {
+			if (frameNumber < 88)
+				return ForwardLeft;
+			if (frameNumber < 94)
+				return LookLeft;
+			if (frameNumber == 94)
+				return Mine;
+			if (frameNumber < 130)
+				return ForwardRise;
+			return frameNumber < 146 ? Rise : Idle;
+		}
 		if (name == SmoothMotion)
 			return frameNumber == 8 ? ForwardJump : Forward;
 		if (name == EditorShell)
@@ -184,23 +197,27 @@ final class PilotScript {
 		final action = actionAt(name, frameNumber);
 		return GameInputFrames.make(moveForward(action), moveRight(action), lookYaw(action), lookPitch(action), jumpPressed(action), primaryPressed(action),
 			secondaryPressed(action), interactPressed(action), travelPressed(action), pausePressed(action), capturePressed(action), quitPressed(action),
-			hotbarSelection(action), hotbarCycle(action), false, menuNextPressed(action), menuConfirmPressed(action));
+			hotbarSelection(action), hotbarCycle(action), false, menuNextPressed(action), menuConfirmPressed(action), riseHeld(action));
 	}
 
 	public static inline function moveForward(action:PilotAction):Float
-		return action == Forward || action == ForwardTurn || action == ForwardJump || action == ForwardLeft ? 1.0 : 0.0;
+		return action == Forward || action == ForwardTurn || action == ForwardJump || action == ForwardLeft || action == ForwardRise ? 1.0 : 0.0;
 
 	public static inline function moveRight(action:PilotAction):Float
 		return action == RightLook ? 1.0 : action == ForwardLeft ? -1.0 : 0.0;
 
 	public static inline function lookYaw(action:PilotAction):Float
-		return action == ForwardTurn ? -0.05 : 0.0;
+		return action == LookLeft ? 0.25 : action == ForwardTurn ? -0.05 : 0.0;
 
 	public static inline function lookPitch(action:PilotAction):Float
-		return action == RightLook ? 0.04 : action == LookDown ? -0.25 : 0.0;
+		return action == RightLook ? 0.04 : action == LookDown ? -0.25 : action == LookLeft ? -0.08 : 0.0;
 
 	public static inline function jumpPressed(action:PilotAction):Bool
 		return action == ForwardJump;
+
+	/** Hold the same upward-swim intent supplied by interactive Space input. */
+	public static inline function riseHeld(action:PilotAction):Bool
+		return action == ForwardRise || action == Rise;
 
 	public static inline function primaryPressed(action:PilotAction):Bool
 		return action == Mine || action == Strike;
@@ -261,7 +278,7 @@ final class PilotScript {
 			case ResizeLayout:
 				frameNumber == 3 ? new PilotCheckpoint("resize-layout.frame", CaptureScreenshot) : null;
 			case AquaticGear:
-				frameNumber == 92 ? new PilotCheckpoint("aquatic-gear.frame", CaptureScreenshot) : null;
+				frameNumber == 146 ? new PilotCheckpoint("aquatic-gear.frame", CaptureScreenshot) : null;
 			case SmoothMotion:
 				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
 			case EditorShell:
@@ -271,6 +288,7 @@ final class PilotScript {
 			case AdventureJourney:
 				if (frameNumber == 0) new PilotCheckpoint("adventure-journey.selected",
 					CaptureScreenshot); else if (frameNumber == 1) new PilotCheckpoint("adventure-journey.campaign",
+					CaptureScreenshot); else if (frameNumber == 2) new PilotCheckpoint("adventure-journey.entry",
 					CaptureScreenshot); else if (frameNumber == 5) new PilotCheckpoint("adventure-journey.destination", CaptureScreenshot); else null;
 			case _: null;
 		};
@@ -327,7 +345,7 @@ final class PilotScript {
 				starter.bread, starter.lantern);
 		if (name == FullInventoryMining)
 			return Inventory.make(starter.selected, Inventory.MAX_STACK, Inventory.MAX_STACK, Inventory.MAX_STACK, starter.haxeforge, starter.sword,
-				starter.berries, starter.bread, starter.lantern);
+				starter.berries, starter.bread, starter.lantern, Inventory.MAX_STACK);
 		return starter;
 	}
 

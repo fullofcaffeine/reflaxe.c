@@ -34,7 +34,7 @@ import play as playable  # noqa: E402
 import benchmark_renderer as renderer_benchmark  # noqa: E402
 
 EXPECTED_TRACE = (
-    "caxecraft-pilot: 13 named scripts, 210 deterministic frames, 17 checkpoints; "
+    "caxecraft-pilot: 13 named scripts, 264 deterministic frames, 18 checkpoints; "
     "bounded quit and shared input interface\n"
 )
 FORBIDDEN_PILOT_TEXT = (
@@ -310,7 +310,7 @@ def check_renderer_benchmark_contract() -> None:
     if sum(renderer_benchmark.CHUNK_CACHE_PAYLOAD.values()) != 196_816:
         raise PilotFailure("renderer benchmark cache payload accounting drifted")
     cells, scene_hash = renderer_benchmark.benchmark_scene()
-    if len(cells) != 16_384 or scene_hash != "e7bd9c1c8c64d84940880e8b42fd8aa2f9df9c4229ba160fdb35785e0f368644":
+    if len(cells) != 16_384 or scene_hash != "871959eefd18d410e5faeb1955c1136337ba955ecb52c335c39dfec899d8a52e":
         raise PilotFailure("handwritten C benchmark scene stopped matching the generated Haxe adapter")
     c_source = renderer_benchmark.C_BASELINE.read_text(encoding="utf-8")
     for required in ("draw_sheet", "GetTime", "UnloadTexture(adventure)", "CloseWindow()"):

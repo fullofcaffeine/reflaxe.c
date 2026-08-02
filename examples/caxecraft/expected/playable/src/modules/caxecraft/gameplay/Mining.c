@@ -23,9 +23,13 @@ struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_attempt
         struct hxc_caxecraft_gameplay_MiningResult hxc_l_tmp_call_result_n10 = hxc_caxecraft_gameplay_Mining_collect(hxc_l_cells, hxc_l_length, hxc_l_coordinate, hxc_l_inventory, hxc_l_kind, hxc_caxecraft_gameplay_ItemKind_StoneBlock);
         return hxc_l_tmp_call_result_n10;
       }
+    case hxc_caxecraft_domain_BlockKind_Sand:
+      {
+        struct hxc_caxecraft_gameplay_MiningResult hxc_l_tmp_call_result_n13 = hxc_caxecraft_gameplay_Mining_collect(hxc_l_cells, hxc_l_length, hxc_l_coordinate, hxc_l_inventory, hxc_l_kind, hxc_caxecraft_gameplay_ItemKind_SandBlock);
+        return hxc_l_tmp_call_result_n13;
+      }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
-    case hxc_caxecraft_domain_BlockKind_Sand:
     case hxc_caxecraft_domain_BlockKind_Wood:
     case hxc_caxecraft_domain_BlockKind_Leaves:
     case hxc_caxecraft_domain_BlockKind_Snow:

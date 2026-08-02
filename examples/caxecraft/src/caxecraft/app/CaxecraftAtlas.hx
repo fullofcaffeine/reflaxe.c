@@ -90,6 +90,9 @@ final class CaxecraftAtlas {
 			case Lantern:
 				column = 1;
 				row = 3;
+			case SandBlock:
+				column = 2;
+				row = 3;
 		}
 		CaxecraftTextures.drawAtlasCell(texture, column, row, 4, 4, x, y, size, size, CaxecraftPalette.textureTint());
 	}

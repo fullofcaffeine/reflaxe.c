@@ -3,6 +3,7 @@ package caxecraft.qa;
 import caxecraft.content.ActiveContent;
 import caxecraft.content.ActiveContent.ContentPublicationResult;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
+import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildError;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildFault;
@@ -16,11 +17,12 @@ import caxecraft.content.RuntimeLevelLoader.RuntimeLevelSource;
 import caxecraft.content.RuntimeLevelLoader.loadRuntimeLevel;
 import caxecraft.content.RuntimeLevelLoader.loadRuntimeLevelWithFault;
 import caxecraft.domain.ActorControllerProfile;
+import caxecraft.domain.BlockKind;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.World;
-import caxecraft.qa.ScenarioNativeCodecProbe.firstPlayableBytes;
+import caxecraft.domain.WorldRead.query as queryWorld;
 import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import haxe.io.Bytes;
@@ -28,12 +30,16 @@ import haxe.io.Bytes;
 /**
  * Proves that staged CAXEMAP bytes can become the native playable generation.
  *
- * The probe first loads the checked-in bytes from an embedded QA fixture, then
- * reads the real file through `ContentPackageStore`. Both requests must produce
- * the same story, construction, actor-mechanics, and session evidence before
- * the package candidate is published. Malformed input, missing input, and a
- * late injected construction failure must leave the active generation
- * unchanged.
+ * The probe reads the checked-in map once through `ContentPackageStore`, then
+ * sends those exact bytes through both the in-memory and native-file loading
+ * authorities. Both requests must produce the same story, construction,
+ * actor-mechanics, landmark, and session evidence before publication. This
+ * keeps the product map runtime-authored: changing map data does not require a
+ * matching Haxe byte-array fixture or a product rebuild. The smaller codec
+ * probe separately retains a manually reviewed parser fixture.
+ *
+ * Malformed input, missing input, and a late injected construction failure
+ * must leave the active generation unchanged.
  */
 /** Complete Haxe-authored assertion result observed by the native harness. */
 var observed:Int = 0;
@@ -85,33 +91,38 @@ function selfCheck():Int {
 		aquaticProfile: standardAquaticProfile()
 	};
 	final logicalPath = "scenarios/first-playable/map.caxemap";
-	final embedded = switch loadRuntimeLevel(InMemoryBytes(firstPlayableBytes(), "embedded-first-playable", logicalPath), ContentGenerationId.fromSequence(1),
+	final store = switch ContentPackageStore.open(".", "caxecraft-source", ContentPackageStore.MAXIMUM_PACKAGE_BYTES) {
+		case PackageStoreOpened(value): value;
+		case PackageStoreRejected(_): return 1;
+	};
+	final checkedIn = switch store.read(logicalPath) {
+		case PackageBytesRead(value): value;
+		case PackageBytesRejected(_): return 2;
+	};
+	final embedded = switch loadRuntimeLevel(InMemoryBytes(checkedIn.bytes, "checked-in-first-playable", logicalPath), ContentGenerationId.fromSequence(1),
 		registry, registry, options) {
 		case RuntimeLevelReady(candidate): candidate;
-		case RuntimeLevelRejected(_): return 1;
+		case RuntimeLevelRejected(_): return 3;
 	};
 	final embeddedReceipt = embedded.receipt();
 	if (embeddedReceipt.authority != InMemorySource
 		|| embeddedReceipt.logicalPath != logicalPath
-		|| embeddedReceipt.rootLabel != "embedded-first-playable"
-		|| embeddedReceipt.byteLength != 5098
+		|| embeddedReceipt.rootLabel != "checked-in-first-playable"
+		|| embeddedReceipt.byteLength <= 0
+		|| embeddedReceipt.byteLength != checkedIn.bytes.length
 		|| embeddedReceipt.readAttempts != 1)
-		return 2;
+		return 4;
 	final embeddedFacts = embedded.authoredTrace();
 	if (!expectedAuthoredFacts(embeddedFacts))
-		return 3;
+		return 5;
 	if (!expectedResolvedLevel(embedded))
-		return 4;
+		return 6;
 
 	final active = new ActiveContent(embedded.generation());
 	final embeddedTrace = active.semanticTrace();
-	final store = switch ContentPackageStore.open(".", "caxecraft-source", ContentPackageStore.MAXIMUM_PACKAGE_BYTES) {
-		case PackageStoreOpened(value): value;
-		case PackageStoreRejected(_): return 5;
-	};
 	final nativeCandidate = switch loadRuntimeLevel(NativePackageFile(store, logicalPath), ContentGenerationId.fromSequence(2), registry, registry, options) {
 		case RuntimeLevelReady(candidate): candidate;
-		case RuntimeLevelRejected(_): return 6;
+		case RuntimeLevelRejected(_): return 7;
 	};
 	final nativeReceipt = nativeCandidate.receipt();
 	if (nativeReceipt.authority != NativePackage
@@ -120,48 +131,48 @@ function selfCheck():Int {
 		|| nativeReceipt.inputHash != embeddedReceipt.inputHash
 		|| nativeReceipt.byteLength != embeddedReceipt.byteLength
 		|| nativeReceipt.readAttempts != 1)
-		return 7;
+		return 8;
 	if (!sameAuthoredTrace(embeddedFacts, nativeCandidate.authoredTrace())
 		|| !sameGenerationSemantics(embeddedTrace, nativeCandidate.generation().semanticTrace())
 		|| !expectedResolvedLevel(nativeCandidate))
-		return 8;
+		return 9;
 
 	final beforeFailures = active.semanticTrace();
 	switch loadRuntimeLevel(NativePackageFile(store, "scenarios/first-playable/missing.caxemap"), ContentGenerationId.fromSequence(2), registry, registry,
 		options) {
 		case RuntimeLevelRejected(RuntimeLevelSourceRejected(EntryMissing)):
 		case _:
-			return 9;
+			return 10;
 	}
 	if (!sameGenerationTrace(beforeFailures, active.semanticTrace()))
-		return 10;
+		return 11;
 
 	switch loadRuntimeLevel(InMemoryBytes(Bytes.ofString("CAXEMAP 1\nend-map\n"), "malformed-fixture", logicalPath), ContentGenerationId.fromSequence(2),
 		registry, registry, options) {
 		case RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics)) if (diagnostics.length > 0):
 		case _:
-			return 11;
+			return 12;
 	}
 	if (!sameGenerationTrace(beforeFailures, active.semanticTrace()))
-		return 12;
+		return 13;
 
 	switch loadRuntimeLevelWithFault(NativePackageFile(store, logicalPath), ContentGenerationId.fromSequence(2), registry, registry, options,
 		FailBeforeActors) {
 		case RuntimeLevelRejected(RuntimeLevelGenerationRejected(InjectedFailure(ActorConstruction))):
 		case _:
-			return 13;
+			return 14;
 	}
 	if (!sameGenerationTrace(beforeFailures, active.semanticTrace()))
-		return 14;
+		return 15;
 
 	switch active.publish(nativeCandidate.generation()) {
 		case ContentPublished(retired, selected) if (retired.value() == 1 && selected.value() == 2):
 		case _:
-			return 15;
+			return 16;
 	}
 	final finalTrace = active.semanticTrace();
 	if (active.generationId().value() != 2 || active.publicationCount() != 1 || !sameGenerationSemantics(embeddedTrace, finalTrace))
-		return 16;
+		return 17;
 
 	traceInputHash = nativeReceipt.inputHash;
 	traceByteLength = nativeReceipt.byteLength;
@@ -170,7 +181,7 @@ function selfCheck():Int {
 	traceAuthored = digestAuthored(nativeCandidate.authoredTrace());
 	traceActorMechanics = digestActorMechanics(nativeCandidate);
 	traceAuthority = authorityCode(nativeReceipt.authority);
-	return traceByteLength == 5098 && traceAuthority == 2 ? 0 : 17;
+	return traceByteLength == checkedIn.bytes.length && traceAuthority == 2 ? 0 : 18;
 }
 
 /**
@@ -187,11 +198,12 @@ function expectedResolvedLevel(candidate:caxecraft.content.RuntimeLevelLoader.Ru
 	final actors = plan.actors();
 	final player = plan.player();
 	if (terrain.length == 0
-		|| terrain[0].storage.value() != 4
-		|| terrain[0].count != 32
-		|| fluids.length != 2
-		|| fluids[0].authoredId.text() != "water.pool"
-		|| fluids[1].authoredId.text() != "water.spring"
+		|| fluids.length != 5
+		|| fluids[0].authoredId.text() != "water.evergrove-stream-north"
+		|| fluids[1].authoredId.text() != "water.evergrove-stream-south"
+		|| fluids[2].authoredId.text() != "water.evergrove-stream-under-bridge"
+		|| fluids[3].authoredId.text() != "water.village-well"
+		|| fluids[4].authoredId.text() != "water.evergrove-stream-source"
 		|| items.length != 1
 		|| items[0].authoredId.text() != "item.tideweave"
 		|| items[0].contentId.text() != "caxecraft:tideweave-suit"
@@ -226,7 +238,31 @@ function expectedResolvedLevel(candidate:caxecraft.content.RuntimeLevelLoader.Ru
 		case _:
 			false;
 	};
-	return mossling && nia;
+	return mossling && nia && expectedEvergroveLandmarks(candidate);
+}
+
+/**
+ * Check a small independent coordinate oracle for the village's readable shape.
+ *
+ * These expectations were selected by hand from the content brief, not derived
+ * from the map's run encoder. Together they protect the arrival road, north
+ * gate, house, bridge, stream, well, and forest edge without freezing every
+ * decorative voxel into a snapshot.
+ */
+function expectedEvergroveLandmarks(candidate:caxecraft.content.RuntimeLevelLoader.RuntimeLevelCandidate):Bool {
+	final session = candidate.generation().session();
+	return queryWorld(session.worldView(), World.coord(15, 4, 12)) == Sand
+		&& queryWorld(session.worldView(), World.coord(13, 7, 6)) == Wood
+		&& queryWorld(session.worldView(), World.coord(22, 6, 23)) == Wood
+		&& queryWorld(session.worldView(), World.coord(22, 5, 24)) == Air
+		&& queryWorld(session.worldView(), World.coord(22, 4, 23)) == Stone
+		&& queryWorld(session.worldView(), World.coord(5, 4, 21)) == Wood
+		&& queryWorld(session.worldView(), World.coord(5, 4, 20)) == Air
+		&& queryWorld(session.worldView(), World.coord(5, 3, 20)) == Air
+		&& queryWorld(session.worldView(), World.coord(5, 2, 20)) == Sand
+		&& queryWorld(session.worldView(), World.coord(5, 3, 21)) == Air
+		&& queryWorld(session.worldView(), World.coord(12, 5, 22)) == Air
+		&& queryWorld(session.worldView(), World.coord(9, 7, 7)) == Wood;
 }
 
 /** Verify the first map's current dialogue, objective, and empty flow surface. */

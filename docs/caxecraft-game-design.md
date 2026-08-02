@@ -36,6 +36,14 @@ zones, and the broader Adventure campaign remain unimplemented. Do not describe
 concept art, semantic editor tests, or the remaining design-only atlases as
 evidence that those broader capabilities run.
 
+Evergrove itself is now a compact authored village rather than the former flat
+meadow: the runtime-loaded CAXEMAP includes the arrival road and gate, a house,
+garden, well, bridge, wooded edges, and a continuous deep stream. The real
+native Adventure path can equip Tideweave, enter a genuinely submerged state,
+mine one sand-bank block, and climb back onto dry ground with held rise. This
+proves that bounded interaction only; it does not yet implement the planned
+flooded ruins, complete village story, Ivvy route, or finished campaign.
+
 The durable work owners are:
 
 - `haxe_c-xge.7`: first playable C/raylib vertical slice;

@@ -49,6 +49,7 @@ import caxecraft.domain.ActorControllerEvent;
 import caxecraft.domain.ActorControllerPhase;
 import caxecraft.domain.ActorControllerState;
 import caxecraft.domain.ActorControllerTick.ActorControllerTickStatus;
+import caxecraft.domain.AquaticMedium;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
 import caxecraft.domain.Aquatics.canMine as playerCanMine;
@@ -397,6 +398,9 @@ final class CaxecraftApp {
 		var placedBlocks = 0;
 		var rejectedEdits = 0;
 		var interpolationObserved = false;
+		var submersionObserved = false;
+		var waterExitObserved = false;
+		var sandMinedObserved = false;
 		// The review capture happens before the final state frame. Keep Raylib's
 		// immediate filesystem observation so final telemetry can attribute a
 		// missing image to the native producer instead of leaving the host to guess.
@@ -451,6 +455,7 @@ final class CaxecraftApp {
 			final lookYaw = PilotScript.lookYaw(pilotAction);
 			final lookPitch = PilotScript.lookPitch(pilotAction);
 			final jumpPressed = PilotScript.jumpPressed(pilotAction);
+			final riseHeld = PilotScript.riseHeld(pilotAction);
 			final primaryPressed = PilotScript.primaryPressed(pilotAction);
 			final secondaryPressed = PilotScript.secondaryPressed(pilotAction);
 			final interactPressed = PilotScript.interactPressed(pilotAction);
@@ -475,6 +480,7 @@ final class CaxecraftApp {
 			final lookYaw = frameInput.lookYaw;
 			final lookPitch = frameInput.lookPitch;
 			final jumpPressed = frameInput.jumpPressed;
+			final riseHeld = frameInput.riseHeld;
 			final primaryPressed = frameInput.primaryPressed;
 			final secondaryPressed = frameInput.secondaryPressed;
 			final interactPressed = frameInput.interactPressed;
@@ -817,12 +823,21 @@ final class CaxecraftApp {
 					moveZ *= 0.7071067811865476;
 				}
 				final damagePolicy = selectedMode == GameMode.Adventure ? CharacterDamagePolicy.Survival : CharacterDamagePolicy.Invulnerable;
+				final rising = jumpQueued || (character.aquatic.medium != AquaticMedium.Dry && riseHeld);
 				final gameTick = session.tick({
-					intent: aquaticInput(moveX, moveZ, jumpQueued, descendHeld),
+					intent: aquaticInput(moveX, moveZ, rising, descendHeld),
 					damagePolicy: damagePolicy,
 					waterUpdateBudget: 64
 				});
 				character = gameTick.character;
+				#if caxecraft_pilot
+				if (pilotName == PilotScriptName.AquaticGear) {
+					if (character.aquatic.medium == AquaticMedium.Submerged)
+						submersionObserved = true;
+					if (submersionObserved && character.aquatic.medium == AquaticMedium.Dry)
+						waterExitObserved = true;
+				}
+				#end
 				if (gameTick.committed)
 					motionHistory = advanceMotion(motionHistory, character.body);
 				cameraWaterBlend = gameTick.immersion.cameraBlend;
@@ -922,14 +937,18 @@ final class CaxecraftApp {
 							&& hit.hit
 							&& playerCanMine(character.aquatic, character.aquaticProfile)) {
 							final minedCoordinate = World.coord(hit.cellX, hit.cellY, hit.cellZ);
+							final sandBefore = inventory.sand;
 							final mining = session.mineTerrain(minedCoordinate, inventory);
 							inventory = mining.inventory;
 							if (mining.outcome == MiningOutcome.Collected) {
 								terrainRenderer.invalidate(minedCoordinate);
 							}
 							#if caxecraft_pilot
-							if (mining.outcome == MiningOutcome.Collected)
+							if (mining.outcome == MiningOutcome.Collected) {
 								removedBlocks++;
+								if (inventory.sand == sandBefore + 1)
+									sandMinedObserved = true;
+							}
 							#end
 							if (mining.outcome == MiningOutcome.InventoryFull) {
 								#if caxecraft_pilot
@@ -1175,16 +1194,16 @@ final class CaxecraftApp {
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
-					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid,
-					measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds,
-					activeLevel.generationId().value(), activeLevel.publicationCount());
+					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, visibleTerrainFaces, rebuiltTerrainChunks,
+					totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds,
+					measuredPreparationMicroseconds, activeLevel.generationId().value(), activeLevel.publicationCount());
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
-					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0,
-					activeLevel.generationId().value(), activeLevel.publicationCount());
+					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, visibleTerrainFaces, rebuiltTerrainChunks,
+					totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(), activeLevel.publicationCount());
 			#end
 			var capturePilotFrame = pilotComplete;
 			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
@@ -1195,11 +1214,12 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.FullInventoryGift && frameCount == 2)
 				|| (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
-				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 92)
+				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
 				|| (pilotName == PilotScriptName.EditorShell && frameCount == 2)
 				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
-				|| (pilotName == PilotScriptName.AdventureJourney && (frameCount == 0 || frameCount == 1 || frameCount == 5)))
+				|| (pilotName == PilotScriptName.AdventureJourney
+					&& (frameCount == 0 || frameCount == 1 || frameCount == 2 || frameCount == 5)))
 				capturePilotFrame = true;
 			// Submit this frame before reading it. `EndDrawing()` would otherwise
 			// swap the buffers first, causing Raylib's screenshot function to read
@@ -1227,7 +1247,7 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-full-mining.png");
 			if (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-resize.png");
-			if (pilotName == PilotScriptName.AquaticGear && frameCount == 92)
+			if (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-aquatic-gear.png");
 			if (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-smooth-motion.png");
@@ -1239,6 +1259,8 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-adventure-selected.png");
 			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 1)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-selected.png");
+			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 2)
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-evergrove-entry.png");
 			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 5)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-adventure-journey.png");
 			if (pilotComplete)

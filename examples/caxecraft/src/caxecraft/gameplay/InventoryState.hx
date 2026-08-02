@@ -17,4 +17,5 @@ typedef InventoryState = {
 	final berries:Int;
 	final bread:Int;
 	final lantern:Int;
+	final sand:Int;
 }

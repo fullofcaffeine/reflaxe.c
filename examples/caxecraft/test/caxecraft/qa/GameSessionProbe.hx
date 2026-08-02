@@ -44,6 +44,9 @@ function selfCheck():Int {
 	final identityFailure = checkActorIdentityPlanning();
 	if (identityFailure != 0)
 		return identityFailure;
+	final sandFailure = checkSandMining();
+	if (sandFailure != 0)
+		return sandFailure;
 
 	final loadedSession = new GameSession();
 	if (loadedSession.writeTerrainRunDuringLoad(0, 0, World.VOLUME) != World.VOLUME)
@@ -221,6 +224,38 @@ function selfCheck():Int {
 	if (!committedView.valid || committedView.localPlayer.id != localId || committedView.completedTicks != 3)
 		return 14;
 	return 0;
+}
+
+/**
+	Prove sand mining is lossless and not a scenery-only deletion shortcut.
+
+	A full sand stack must leave the world untouched. Once space exists, one
+	transaction removes one bank cell, schedules nearby water, and returns one
+	typed block that can be selected, placed, and consumed again.
+**/
+function checkSandMining():Int {
+	final session = new GameSession();
+	final bank = World.coord(6, 3, 6);
+	if (session.writeTerrainRunDuringLoad(0, 0, World.VOLUME) != World.VOLUME || !session.replaceTerrainDuringLoad(bank, Sand))
+		return 45;
+	final before = session.worldStateHash();
+	final full = Inventory.make(8, 0, 0, 0, 0, 0, 0, 0, 0, Inventory.MAX_STACK);
+	final rejected = session.mineTerrain(bank, full);
+	if (rejected.outcome != MiningOutcome.InventoryFull
+		|| rejected.inventory.sand != Inventory.MAX_STACK
+		|| session.worldStateHash() != before
+		|| session.pendingWaterWork() != 0)
+		return 46;
+	final mined = session.mineTerrain(bank, Inventory.make(8, 0, 0, 0, 0, 0, 0, 0, 0));
+	if (mined.outcome != MiningOutcome.Collected
+		|| mined.inventory.sand != 1
+		|| queryWorld(session.worldView(), bank) != Air
+		|| session.pendingWaterWork() <= 0)
+		return 47;
+	if (!session.placeTerrain(bank, Sand) || queryWorld(session.worldView(), bank) != Sand)
+		return 48;
+	final consumed = Inventory.consumeSelected(mined.inventory);
+	return consumed.sand == 0 ? 0 : 49;
 }
 
 /**

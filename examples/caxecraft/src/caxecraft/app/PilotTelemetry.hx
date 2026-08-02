@@ -43,9 +43,9 @@ import raylib.Raylib;
 function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldView, selection:RaycastHit,
 		removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int, guidePhase:GuidePhase,
 		mosslingAlive:Bool, onTitle:Bool, onEditor:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool, interpolationObserved:Bool,
-		reviewScreenshotObserved:Bool, visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool,
-		measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int,
-		contentGeneration:Int, contentPublications:Int):Void {
+		reviewScreenshotObserved:Bool, submersionObserved:Bool, waterExitObserved:Bool, sandMinedObserved:Bool, visibleTerrainFaces:Int,
+		rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool, measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int,
+		measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int, contentGeneration:Int, contentPublications:Int):Void {
 	var flags = 0;
 	if (onTitle)
 		flags |= 1;
@@ -61,6 +61,12 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 		flags |= 32;
 	if (reviewScreenshotObserved)
 		flags |= 64;
+	if (submersionObserved)
+		flags |= 128;
+	if (waterExitObserved)
+		flags |= 256;
+	if (sandMinedObserved)
+		flags |= 512;
 
 	var word = 0;
 	word = drawWord(word, 0x43585054); // "CXPT": Caxecraft pilot telemetry.

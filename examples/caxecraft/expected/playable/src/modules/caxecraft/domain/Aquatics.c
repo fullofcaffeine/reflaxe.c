@@ -334,22 +334,67 @@ struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(const
     double hxc_l_tmp_load_result_n46 = hxc_l_velocityY;
     struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n48 = hxc_caxecraft_domain_CharacterPhysics_resolveVelocity(hxc_l_cells, hxc_l_length, hxc_l_original, hxc_l_tmp_load_result_n45, hxc_l_tmp_load_result_n46, hxc_l_velocityZ);
     hxc_l_moved = hxc_l_tmp_call_result_n48;
+    bool hxc_l_tmp_short_circuit_result_n18 = hxc_l_command.hxc_moveX != 0.0;
+    if (hxc_l_command.hxc_moveX != 0.0)
+    {
+      hxc_l_tmp_short_circuit_result_n18 = hxc_l_moved.hxc_velocityX == 0.0;
+    }
+    bool hxc_l_tmp_short_circuit_load_result_n51 = hxc_l_tmp_short_circuit_result_n18;
+    bool hxc_l_tmp_short_circuit_result_n19 = hxc_l_tmp_short_circuit_load_result_n51;
+    if (!hxc_l_tmp_short_circuit_load_result_n51)
+    {
+      bool hxc_l_tmp_short_circuit_result_n20 = hxc_l_command.hxc_moveZ != 0.0;
+      if (hxc_l_command.hxc_moveZ != 0.0)
+      {
+        hxc_l_tmp_short_circuit_result_n20 = hxc_l_moved.hxc_velocityZ == 0.0;
+      }
+      hxc_l_tmp_short_circuit_result_n19 = hxc_l_tmp_short_circuit_result_n20;
+    }
+    bool hxc_l_horizontalBlocked = hxc_l_tmp_short_circuit_result_n19;
+    bool hxc_l_tmp_record_field_project_n56 = hxc_l_command.hxc_jump;
+    bool hxc_l_tmp_short_circuit_result_n21 = hxc_l_tmp_record_field_project_n56;
+    if (hxc_l_tmp_record_field_project_n56)
+    {
+      hxc_l_tmp_short_circuit_result_n21 = hxc_l_horizontalBlocked;
+    }
+    if (hxc_l_tmp_short_circuit_result_n21)
+    {
+      double hxc_l_tmp_load_result_n59 = hxc_l_velocityX;
+      struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n61 = hxc_caxecraft_domain_CharacterPhysics_tryStepUp(hxc_l_cells, hxc_l_length, hxc_l_original, hxc_l_tmp_load_result_n59, hxc_l_velocityZ);
+      struct hxc_caxecraft_domain_CharacterBody hxc_l_stepped = hxc_l_tmp_call_result_n61;
+      double hxc_l_tmp_record_field_load_result_n62 = hxc_l_stepped.hxc_x;
+      bool hxc_l_tmp_short_circuit_result_n23 = hxc_l_tmp_record_field_load_result_n62 != hxc_l_original.hxc_x;
+      if (!(hxc_l_tmp_record_field_load_result_n62 != hxc_l_original.hxc_x))
+      {
+        hxc_l_tmp_short_circuit_result_n23 = hxc_l_stepped.hxc_y != hxc_l_original.hxc_y;
+      }
+      bool hxc_l_tmp_short_circuit_load_result_n66 = hxc_l_tmp_short_circuit_result_n23;
+      bool hxc_l_tmp_short_circuit_result_n24 = hxc_l_tmp_short_circuit_load_result_n66;
+      if (!hxc_l_tmp_short_circuit_load_result_n66)
+      {
+        hxc_l_tmp_short_circuit_result_n24 = hxc_l_stepped.hxc_z != hxc_l_original.hxc_z;
+      }
+      if (hxc_l_tmp_short_circuit_result_n24)
+      {
+        hxc_l_moved = hxc_l_stepped;
+      }
+    }
   }
-  struct hxc_caxecraft_domain_Immersion hxc_l_tmp_call_result_n50 = hxc_caxecraft_domain_Aquatics_observe(hxc_l_cells, hxc_l_length, hxc_l_moved);
-  struct hxc_caxecraft_domain_Immersion hxc_l_after = hxc_l_tmp_call_result_n50;
-  int32_t hxc_l_tmp_load_result_n51 = hxc_l_beforeMedium;
-  int32_t hxc_l_tmp_call_result_n53 = hxc_caxecraft_domain_Aquatics_classifyMedium(hxc_l_tmp_load_result_n51, hxc_l_after);
-  int32_t hxc_l_medium = hxc_l_tmp_call_result_n53;
-  struct hxc_caxecraft_domain_Aquatics_BreathStep hxc_l_tmp_call_result_n55 = hxc_caxecraft_domain_Aquatics_advanceBreath(hxc_l_aquatic, hxc_l_after, hxc_l_capability);
-  struct hxc_caxecraft_domain_Aquatics_BreathStep hxc_l_breath = hxc_l_tmp_call_result_n55;
-  struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_load_result_n56 = hxc_l_moved;
-  struct hxc_caxecraft_domain_Immersion hxc_l_tmp_load_result_n57 = hxc_l_after;
-  int32_t hxc_l_tmp_load_result_n58 = hxc_l_medium;
-  double hxc_l_tmp_record_field_load_result_n59 = hxc_l_after.hxc_submersion;
-  bool hxc_l_tmp_record_field_load_result_n60 = hxc_l_after.hxc_headWet;
-  int32_t hxc_l_tmp_record_field_load_result_n61 = hxc_l_breath.hxc_remaining;
-  int32_t hxc_l_tmp_record_field_load_result_n62 = hxc_l_breath.hxc_drowningTicks;
-  return (struct hxc_caxecraft_domain_AquaticStep){ .hxc_aquatic = (struct hxc_caxecraft_domain_AquaticState){ .hxc_breathTicks = hxc_l_tmp_record_field_load_result_n61, .hxc_drowningTicks = hxc_l_tmp_record_field_load_result_n62, .hxc_headSubmerged = hxc_l_tmp_record_field_load_result_n60, .hxc_medium = hxc_l_tmp_load_result_n58, .hxc_submersion = hxc_l_tmp_record_field_load_result_n59 }, .hxc_body = hxc_l_tmp_load_result_n56, .hxc_drowningDamage = hxc_l_breath.hxc_damage, .hxc_immersion = hxc_l_tmp_load_result_n57 };
+  struct hxc_caxecraft_domain_Immersion hxc_l_tmp_call_result_n72 = hxc_caxecraft_domain_Aquatics_observe(hxc_l_cells, hxc_l_length, hxc_l_moved);
+  struct hxc_caxecraft_domain_Immersion hxc_l_after = hxc_l_tmp_call_result_n72;
+  int32_t hxc_l_tmp_load_result_n73 = hxc_l_beforeMedium;
+  int32_t hxc_l_tmp_call_result_n75 = hxc_caxecraft_domain_Aquatics_classifyMedium(hxc_l_tmp_load_result_n73, hxc_l_after);
+  int32_t hxc_l_medium = hxc_l_tmp_call_result_n75;
+  struct hxc_caxecraft_domain_Aquatics_BreathStep hxc_l_tmp_call_result_n77 = hxc_caxecraft_domain_Aquatics_advanceBreath(hxc_l_aquatic, hxc_l_after, hxc_l_capability);
+  struct hxc_caxecraft_domain_Aquatics_BreathStep hxc_l_breath = hxc_l_tmp_call_result_n77;
+  struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_load_result_n78 = hxc_l_moved;
+  struct hxc_caxecraft_domain_Immersion hxc_l_tmp_load_result_n79 = hxc_l_after;
+  int32_t hxc_l_tmp_load_result_n80 = hxc_l_medium;
+  double hxc_l_tmp_record_field_load_result_n81 = hxc_l_after.hxc_submersion;
+  bool hxc_l_tmp_record_field_load_result_n82 = hxc_l_after.hxc_headWet;
+  int32_t hxc_l_tmp_record_field_load_result_n83 = hxc_l_breath.hxc_remaining;
+  int32_t hxc_l_tmp_record_field_load_result_n84 = hxc_l_breath.hxc_drowningTicks;
+  return (struct hxc_caxecraft_domain_AquaticStep){ .hxc_aquatic = (struct hxc_caxecraft_domain_AquaticState){ .hxc_breathTicks = hxc_l_tmp_record_field_load_result_n83, .hxc_drowningTicks = hxc_l_tmp_record_field_load_result_n84, .hxc_headSubmerged = hxc_l_tmp_record_field_load_result_n82, .hxc_medium = hxc_l_tmp_load_result_n80, .hxc_submersion = hxc_l_tmp_record_field_load_result_n81 }, .hxc_body = hxc_l_tmp_load_result_n78, .hxc_drowningDamage = hxc_l_breath.hxc_damage, .hxc_immersion = hxc_l_tmp_load_result_n79 };
 }
 
 double hxc_caxecraft_domain_Aquatics_waterSurface(const uint8_t *hxc_l_cells, size_t hxc_l_length, double hxc_l_x, int32_t hxc_l_y, double hxc_l_z)

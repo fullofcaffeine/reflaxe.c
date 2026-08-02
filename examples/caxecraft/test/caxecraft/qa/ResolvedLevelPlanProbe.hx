@@ -22,6 +22,7 @@ import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 
 /**
  * Proves the private level-construction boundary on Eval and generated C.
@@ -163,21 +164,32 @@ function selfCheck():Int {
 	final freshScenario = readFirstPlayableScenario();
 	if (freshScenario == null)
 		return 5;
+	final interleaved = switch resolveFirstPlayable(withInterleavedFluidIds(freshScenario), registry) {
+		case LevelPlanResolved(plan, presentation): {construction: plan.fluids(), presentation: presentation.fluidRequests()};
+		case LevelPlanRejected(_): return 6;
+	};
+	if (interleaved.construction.length != 2
+		|| interleaved.presentation.length != 2
+		|| interleaved.construction[0].authoredId.text() != "water.z-volume"
+		|| interleaved.presentation[0].authoredId.text() != "water.z-volume"
+		|| interleaved.construction[1].authoredId.text() != "water.a-source"
+		|| interleaved.presentation[1].authoredId.text() != "water.a-source")
+		return 7;
 	switch resolveFirstPlayable(freshScenario, new RejectingLevelRegistry(MissingTerrain)) {
 		case LevelPlanRejected(UnknownTerrain(_, id)) if (id.text() == "caxecraft:grass"):
 		case _:
-			return 6;
+			return 8;
 	}
 	switch resolveFirstPlayable(freshScenario, new RejectingLevelRegistry(WrongActorKind)) {
 		case LevelPlanRejected(ActorResolutionRejected(PlacedActorKindMismatch(authored, content, EnemyContent, NpcContent)))
 			if (authored.text() == "enemy.mossling" && content.text() == "caxecraft:mossling"):
 		case _:
-			return 7;
+			return 9;
 	}
 	switch resolveFirstPlayable(withTooManyItems(freshScenario), registry) {
 		case LevelPlanRejected(ItemCapacityExceeded(257, maximum)) if (maximum == 256):
 		case _:
-			return 8;
+			return 10;
 	}
 	final invalidOptions:LevelPlayerOptions = {
 		entityId: EntityId.fromValidatedStorageCode(1),
@@ -187,7 +199,7 @@ function selfCheck():Int {
 	switch ResolvedLevelPlan.resolve(freshScenario, registry, invalidOptions) {
 		case LevelPlanRejected(InvalidPlayerOptions):
 		case _:
-			return 9;
+			return 11;
 	}
 
 	traceScenario = before.scenarioDigest;
@@ -204,7 +216,7 @@ function selfCheck():Int {
 	traceFlow = before.flowDigest;
 	tracePlayer = before.playerDigest;
 	tracePresentation = before.presentationDigest;
-	return before.worldCells == World.VOLUME && before.fluids == 2 && before.items == 1 && before.actors == 2 ? 0 : 10;
+	return before.worldCells == World.VOLUME && before.fluids == 2 && before.items == 1 && before.actors == 2 ? 0 : 12;
 }
 
 /** Compare every scalar in the target-neutral semantic trace. */
@@ -224,6 +236,46 @@ function sameTrace(left:caxecraft.content.ResolvedLevelPlan.ResolvedLevelSemanti
 		&& left.flowDigest == right.flowDigest
 		&& left.playerDigest == right.playerDigest
 		&& left.presentationDigest == right.presentationDigest;
+
+/**
+ * Rename the fixture fluids so lexical ID order conflicts with placement order.
+ *
+ * Volumes must be constructed before sources because a source may intentionally
+ * overlap its initial pool. Presentation must follow that same order even when
+ * a source's ID sorts first, otherwise a valid plan is rejected at publication.
+ */
+function withInterleavedFluidIds(source:Scenario):Scenario {
+	final fluids:Array<ScenarioFluid> = [];
+	for (fluid in source.world.fluids)
+		fluids.push({
+			id: new ScenarioId(switch fluid.placement {
+				case InitialVolume(_): "water.z-volume";
+				case Source(_): "water.a-source";
+			}),
+			fluidType: fluid.fluidType,
+			placement: fluid.placement
+		});
+	return {
+		formatVersion: source.formatVersion,
+		requiredFeatures: source.requiredFeatures.copy(),
+		optionalFeatures: source.optionalFeatures.copy(),
+		id: source.id,
+		assetPack: source.assetPack,
+		messages: source.messages,
+		title: source.title,
+		mode: source.mode,
+		world: {
+			size: source.world.size,
+			palette: source.world.palette.copy(),
+			chunks: source.world.chunks.copy(),
+			fluids: fluids
+		},
+		objects: source.objects.copy(),
+		story: source.story,
+		flow: source.flow,
+		extensions: source.extensions.copy()
+	};
+}
 
 /**
  * Build an otherwise valid engine candidate that exceeds only item capacity.

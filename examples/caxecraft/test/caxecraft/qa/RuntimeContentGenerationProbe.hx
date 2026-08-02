@@ -112,15 +112,15 @@ function selfCheck():Int {
 	if (candidate.generationId().value() != 1
 		|| candidate.registry().semanticProof() != 132089
 		|| candidate.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
-		|| candidate.level().generation().semanticTrace().worldState != -1715484850)
+		|| candidate.level().generation().semanticTrace().worldState != 454073574)
 		return 17;
 	final selected = active.generation();
 	final receipt = selected.receipt();
-	if (receipt.generationSha256 != "5a212043c98b1fdffbe4ca8f9ce787af2dc9aaf3192296f12fa792c60186c468"
-		|| receipt.assetManifestSha256 != "70d322eb2908ddb908121f8952f6de27d95203d51a46ffa56adecf7efb1abd25"
+	if (receipt.generationSha256 != "213fed53f94ff4607db1b6a50566bb318900023e17b27f0f978b76ddb2090b33"
+		|| receipt.assetManifestSha256 != "dbd7fae77851790c589296f96782750ab000067a7e9936820406966f4cc6cba5"
 		|| receipt.content.sha256 != "f11055d3f62667b3918e2ea16ca72f90c445edd0000f3fc634b63f4458cfdc2c"
 		|| receipt.ui.sha256 != "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
-		|| receipt.map.sha256 != "e7bd9c1c8c64d84940880e8b42fd8aa2f9df9c4229ba160fdb35785e0f368644")
+		|| receipt.map.sha256 != "871959eefd18d410e5faeb1955c1136337ba955ecb52c335c39dfec899d8a52e")
 		return 9;
 	traceGenerationId = selected.generationId().value();
 	#if !c
@@ -133,7 +133,7 @@ function selfCheck():Int {
 		+ selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	traceWorldState = selected.level().generation().semanticTrace().worldState;
 	traceSourceBytes = receipt.content.byteLength + receipt.ui.byteLength + receipt.map.byteLength;
-	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 3528 && traceWorldState == -1715484850 && traceSourceBytes == 18389 ? 0 : 10;
+	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 3528 && traceWorldState == 454073574 && traceSourceBytes == 27514 ? 0 : 10;
 }
 
 /** Load one real complete candidate through the shared package path. */

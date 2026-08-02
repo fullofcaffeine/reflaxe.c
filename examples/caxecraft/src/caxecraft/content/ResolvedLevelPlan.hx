@@ -272,6 +272,12 @@ private typedef FluidPlans = {
 	final presentation:Array<ResolvedFluidPresentation>;
 }
 
+/** One fluid read-model request paired with its construction-order group. */
+private typedef PendingFluidPresentation = {
+	final placementRank:Int;
+	final value:ResolvedFluidPresentation;
+}
+
 private typedef ItemPlans = {
 	final construction:Array<ResolvedItem>;
 	final presentation:Array<ResolvedItemPresentation>;
@@ -545,7 +551,7 @@ final class ResolvedLevelPlan {
 
 	static function resolveFluids(scenario:Scenario, registry:LevelContentResolver):FluidPlanResult {
 		final construction:Array<ResolvedFluid> = [];
-		final presentation:Array<ResolvedFluidPresentation> = [];
+		final pendingPresentation:Array<PendingFluidPresentation> = [];
 		for (fluid in scenario.world.fluids) {
 			final resolved = switch registry.resolveFluid(fluid.fluidType) {
 				case FluidContentResolved(simulation, cell):
@@ -555,23 +561,37 @@ final class ResolvedLevelPlan {
 				case UnknownFluidContent:
 					return FluidsRejected(UnknownFluid(fluid.id, fluid.fluidType));
 			};
+			final placement:ResolvedFluidPlacement = switch fluid.placement {
+				case InitialVolume(bounds): InitialVolume(copyBounds(bounds));
+				case Source(point): Source(copyPoint(point));
+			};
+			final placementRank = switch placement {
+				case InitialVolume(_): 0;
+				case Source(_): 1;
+			};
 			construction.push({
 				authoredId: fluid.id,
 				contentId: fluid.fluidType,
 				simulation: resolved.simulation,
-				placement: switch fluid.placement {
-					case InitialVolume(bounds): InitialVolume(copyBounds(bounds));
-					case Source(point): Source(copyPoint(point));
-				}
+				placement: placement
 			});
-			presentation.push({
-				authoredId: fluid.id,
-				contentId: fluid.fluidType,
-				cellIndex: resolved.cell
+			pendingPresentation.push({
+				placementRank: placementRank,
+				value: {
+					authoredId: fluid.id,
+					contentId: fluid.fluidType,
+					cellIndex: resolved.cell
+				}
 			});
 		}
 		construction.sort(compareFluids);
-		presentation.sort((left, right) -> compareText(left.authoredId.text(), right.authoredId.text()));
+		pendingPresentation.sort((left,
+				right) ->
+				left.placementRank == right.placementRank ? compareText(left.value.authoredId.text(), right.value.authoredId.text()) : left.placementRank
+				- right.placementRank);
+		final presentation:Array<ResolvedFluidPresentation> = [];
+		for (entry in pendingPresentation)
+			presentation.push(entry.value);
 		return FluidsPlanned({construction: construction, presentation: presentation});
 	}
 

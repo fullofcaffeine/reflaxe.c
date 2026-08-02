@@ -19,7 +19,8 @@ function attempt(cells:WorldCells, coordinate:BlockCoord, inventory:InventorySta
 		case Grass: collect(cells, coordinate, inventory, kind, ItemKind.GrassBlock);
 		case Dirt: collect(cells, coordinate, inventory, kind, ItemKind.DirtBlock);
 		case Stone: collect(cells, coordinate, inventory, kind, ItemKind.StoneBlock);
-		case Air | Bedrock | Sand | Wood | Leaves | Snow | Ash: result(inventory, BlockUnavailable);
+		case Sand: collect(cells, coordinate, inventory, kind, ItemKind.SandBlock);
+		case Air | Bedrock | Wood | Leaves | Snow | Ash: result(inventory, BlockUnavailable);
 	};
 }
 

@@ -11,7 +11,7 @@ package caxecraft.content;
  */
 final class RuntimeAssetInventory {
 	/** Reviewed SHA-256 of the complete asset-manifest source bytes. */
-	public static inline final REVIEWED_MANIFEST_SHA256 = "70d322eb2908ddb908121f8952f6de27d95203d51a46ffa56adecf7efb1abd25";
+	public static inline final REVIEWED_MANIFEST_SHA256 = "dbd7fae77851790c589296f96782750ab000067a7e9936820406966f4cc6cba5";
 
 	final manifestIdValue:String;
 	final assets:Array<RuntimeAssetFacts>;
@@ -82,7 +82,7 @@ final class RuntimeAssetInventory {
 				"bread",
 				"map",
 				"lantern",
-				"healing-herbs",
+				"sand-block",
 				"quest-token"
 			]),
 			new RuntimeAssetFacts("terrain", [

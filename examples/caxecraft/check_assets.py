@@ -63,6 +63,9 @@ CUTSCENE_EDITOR_REFERENCE = (
     "Existing repository HUD and Adventure-item atlases used only as visual-style "
     "references; neither was an edit target."
 )
+ITEMS_EDIT_REFERENCE = (
+    "The checked-in items atlas was the sole edit target and visual-style reference."
+)
 EXPECTED_GRID_CELLS = {
     "adventure-characters": (
         "haxirio-front", "haxirio-three-quarter", "haxirio-side", "haxirio-back",
@@ -104,7 +107,7 @@ EXPECTED_GRID_CELLS = {
         "grass-block", "soil-block", "slate-stone", "oak-log",
         "wood-pick", "stone-axe", "stone-shovel", "copper-sword",
         "amber-shard", "copper-nugget", "berries", "bread",
-        "map", "lantern", "healing-herbs", "quest-token",
+        "map", "lantern", "sand-block", "quest-token",
     ),
     "ivvy": (
         "sit-front", "sit-three-quarter", "stand-side", "stand-back",
@@ -321,6 +324,8 @@ def validate_generation_records(records: dict[str, Any]) -> None:
             expected_references = [IVVY_PRIVATE_REFERENCE]
         elif record_id == "cutscene-editor":
             expected_references = [CUTSCENE_EDITOR_REFERENCE]
+        elif record_id == "items":
+            expected_references = [ITEMS_EDIT_REFERENCE]
         else:
             expected_references = []
         if references != expected_references:

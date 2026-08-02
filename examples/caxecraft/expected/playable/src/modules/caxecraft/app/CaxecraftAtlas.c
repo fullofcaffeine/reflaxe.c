@@ -113,6 +113,12 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawItem(struct Texture hxc_l_texture, enu
         hxc_l_row = 3;
         break;
       }
+    case hxc_caxecraft_gameplay_ItemKind_SandBlock:
+      {
+        hxc_l_column = 2;
+        hxc_l_row = 3;
+        break;
+      }
     default:
       {
         abort();

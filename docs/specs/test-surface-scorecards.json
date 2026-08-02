@@ -55,6 +55,9 @@
         "test:caxecraft-content-generation",
         "test:caxecraft-runtime-level-loader",
         "test:caxecraft-session",
+        "test:caxecraft-aquatics",
+        "test:caxecraft-inventory",
+        "test:caxecraft-pilot",
         "test:caxecraft-content-json",
         "test:caxecraft-package-manifest",
         "test:caxecraft-package-zip-source",
@@ -279,6 +282,9 @@
         "test:caxecraft-content-generation",
         "test:caxecraft-runtime-level-loader",
         "test:caxecraft-session",
+        "test:caxecraft-aquatics",
+        "test:caxecraft-inventory",
+        "test:caxecraft-pilot",
         "test:caxecraft-content-json",
         "test:caxecraft-package-manifest",
         "test:caxecraft-package-zip-source",
@@ -471,6 +477,9 @@
         "test:caxecraft-content-generation",
         "test:caxecraft-runtime-level-loader",
         "test:caxecraft-session",
+        "test:caxecraft-aquatics",
+        "test:caxecraft-inventory",
+        "test:caxecraft-pilot",
         "test:caxecraft-gameplay",
         "test:caxecraft-package-manifest",
         "test:caxecraft-package-zip-source",
@@ -530,7 +539,7 @@
         },
         {
           "path": "examples/caxecraft/play.py",
-          "proves": "The direct campaign-travel owner diagnoses one typed runtime transition. The separate adventure-journey owner begins on the real title screen, visibly selects Adventure, presents the runtime manifest-backed first-adventure card and its two-level route, launches it through shared menu behavior, reaches generation 2 with one publication, and retains the title choice, campaign card, and Western Falls as real 1280x720 Raylib frames.",
+          "proves": "The direct campaign-travel owner diagnoses one typed runtime transition. The separate adventure-journey owner begins on the real title screen, visibly selects Adventure, presents the runtime manifest-backed first-adventure card and its two-level route, launches it through shared menu behavior, reaches generation 2 with one publication, and retains the title choice, campaign card, and Western Falls as real 1280x720 Raylib frames. The aquatic-gear owner separately records real equipment, submersion, sand mining, and dry-after-submerged exit observations from the generated native game.",
           "doesNotProve": "Branching or return travel, saves, editor campaign authoring, arbitrary mods, sanitizer success, portability, or release readiness."
         }
       ],

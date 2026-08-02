@@ -67,7 +67,8 @@ final class RaylibGameInput {
 			interactPressed, travelPressed, Raylib.IsKeyPressed(KeyboardKey.Escape), paused && leftPressed, Raylib.IsKeyPressed(KeyboardKey.Q),
 			hotbarSelection, hotbarCycle,
 			Raylib.IsKeyDown(KeyboardKey.LeftShift), Raylib.IsKeyPressed(KeyboardKey.Up) || Raylib.IsKeyPressed(KeyboardKey.Down),
-			Raylib.IsKeyPressed(KeyboardKey.Enter));
+			Raylib.IsKeyPressed(KeyboardKey.Enter),
+			Raylib.IsKeyDown(KeyboardKey.Space));
 	}
 }
 #end
