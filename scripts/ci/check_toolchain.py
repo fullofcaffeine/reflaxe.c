@@ -277,9 +277,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "haxe --cwd examples/caxecraft runtime-content-publication.hxml"
     )
     expected_caxecraft_scenario_model_script = (
-        "python3 examples/caxecraft/check_scenario_model.py"
+        "python3 examples/caxecraft/run_haxe_c_test.py scenario-model"
     )
-    expected_caxecraft_inventory_script = "python3 examples/caxecraft/check_inventory.py"
+    expected_caxecraft_inventory_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py inventory"
+    )
     expected_caxecraft_water_script = (
         "python3 examples/caxecraft/run_haxe_c_test.py water"
     )
@@ -298,14 +300,18 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_caxecraft_terrain_chunks_script = (
         "python3 examples/caxecraft/run_haxe_c_test.py terrain-chunks"
     )
-    expected_caxecraft_gameplay_script = "python3 examples/caxecraft/check_gameplay.py"
+    expected_caxecraft_gameplay_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py gameplay"
+    )
     expected_caxecraft_pilot_script = "python3 examples/caxecraft/check_pilot.py"
     expected_caxecraft_caxeflow_script = (
-        "python3 examples/caxecraft/check_caxeflow.py"
+        "python3 examples/caxecraft/run_haxe_c_test.py caxeflow"
     )
-    expected_caxecraft_editor_script = "python3 examples/caxecraft/check_editor.py"
+    expected_caxecraft_editor_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py editor"
+    )
     expected_caxecraft_scenario_determinism_script = (
-        "python3 examples/caxecraft/check_scenario_determinism.py"
+        "python3 examples/caxecraft/run_haxe_c_test.py scenario-determinism"
     )
     expected_caxecraft_domain_script = "python3 examples/caxecraft/run.py"
     expected_caxecraft_domain_full_script = "python3 examples/caxecraft/run.py --full"

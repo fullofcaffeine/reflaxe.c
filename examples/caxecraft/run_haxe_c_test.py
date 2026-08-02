@@ -6,12 +6,23 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dev_haxe_server import (  # noqa: E402
+    HaxeInstallation,
+    HaxeServerFailure,
+    pinned_haxe_environment,
+    pinned_haxe_installation,
+    resolve_haxe_arguments,
+    verify_pinned_haxe,
+)
 
 
 CASE_ROOT = Path(__file__).resolve().parent
@@ -72,6 +83,208 @@ class HaxeCTestCase:
     native_defines: tuple[str, ...] = ()
     haxe_defines: tuple[str, ...] = ()
     native_runs_from_case_root: bool = False
+
+
+@dataclass(frozen=True)
+class EvalProbe:
+    """One Haxe-owned assertion program and its small result envelope."""
+
+    hxml: str
+    expected_stdout: str
+
+
+@dataclass(frozen=True)
+class SourceAudit:
+    """One source group and host-only dependency spellings it must exclude."""
+
+    pattern: str
+    forbidden_patterns: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class NegativeCompile:
+    """One source-level type error whose useful Haxe diagnostic is required."""
+
+    hxml: str
+    required_fragments: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class EvalTestCase:
+    """Host process checks around behavior assertions implemented in Haxe.
+
+    The Haxe program decides whether the product behavior is correct. This
+    record only states how to launch it, which tiny output envelope identifies
+    success, and which target dependencies are forbidden at reusable source
+    boundaries.
+    """
+
+    case_id: str
+    probes: tuple[EvalProbe, ...]
+    source_audits: tuple[SourceAudit, ...] = ()
+    shim_direct: bool = False
+    alternate_locale: bool = False
+    cold_c_runs: int = 1
+    warm_c_runs: int = 0
+    negative_compile: NegativeCompile | None = None
+    success_message: str = ""
+
+
+TARGET_NEUTRAL_PATTERNS = (
+    r"#if\b",
+    r"\bDynamic\b",
+    r"\bAny\b",
+    r"\bReflect\b",
+    r"\buntyped\b",
+    r"\b__c__\b",
+    r"\bc\.",
+    r"\braylib\.",
+)
+SCENARIO_TARGET_NEUTRAL_PATTERNS = (
+    r"#if\b",
+    r"\bDynamic\b",
+    r"\bAny\b",
+    r"\bReflect\b",
+    r"\buntyped\b",
+    r"\b__c__\b",
+    r"^import\s+c\.",
+    r"^import\s+raylib\.",
+)
+
+
+EVAL_CASES = {
+    "caxeflow": EvalTestCase(
+        case_id="caxeflow",
+        probes=(
+            EvalProbe(
+                "caxeflow.hxml",
+                "caxeflow: 10 events, 12 predicates, 18 actions; "
+                "stable order/repeat/defer/sequence/budgets; trace=2142133802\n",
+            ),
+        ),
+        alternate_locale=True,
+        success_message=(
+            "caxeflow: OK: closed fixed-tick execution, reverse registration, "
+            "C/{locale} locale determinism, and exact runtime budgets"
+        ),
+    ),
+    "inventory": EvalTestCase(
+        case_id="inventory",
+        probes=(
+            EvalProbe(
+                "inventory.hxml",
+                "caxecraft-inventory: 8 typed slots; selection, wrap, consume, "
+                "lossless collect, empty, and full bounds passed\n",
+            ),
+        ),
+        source_audits=(
+            SourceAudit("src/caxecraft/gameplay/*.hx", TARGET_NEUTRAL_PATTERNS),
+        ),
+        alternate_locale=True,
+        success_message=(
+            "caxecraft-inventory: OK: bounded typed hotbar and C/{locale} determinism"
+        ),
+    ),
+    "gameplay": EvalTestCase(
+        case_id="gameplay",
+        probes=(
+            EvalProbe(
+                "gameplay.hxml",
+                "caxecraft-gameplay: lossless mining/items, paced Mossling encounter, "
+                "berry recovery, and bounded player health passed\n",
+            ),
+            EvalProbe(
+                "terrain-atlas.hxml",
+                "caxecraft-terrain-atlas: two typed sheets, material faces, and "
+                "inset UV bounds passed\n",
+            ),
+        ),
+        source_audits=(
+            SourceAudit("src/caxecraft/gameplay/*.hx", TARGET_NEUTRAL_PATTERNS),
+            SourceAudit("src/caxecraft/app/TerrainAtlas.hx", TARGET_NEUTRAL_PATTERNS),
+        ),
+        alternate_locale=True,
+        success_message=(
+            "caxecraft-gameplay: OK: target-neutral actor, combat, drop, recovery, "
+            "and health state under POSIX C and {locale} locales"
+        ),
+    ),
+    "editor": EvalTestCase(
+        case_id="editor",
+        probes=(
+            EvalProbe(
+                "editor.hxml",
+                "caxemap-editor: 23 command round trips, 50 protocol checks, "
+                "19 focus checks, 18 navigation checks, 12 2D checks, 16 3D "
+                "checks, 1890 canonical bytes; bounded history/test-play/recovery; "
+                "trace=150575006\n",
+            ),
+        ),
+        source_audits=(
+            SourceAudit("src/caxecraft/editor/*.hx", TARGET_NEUTRAL_PATTERNS),
+            SourceAudit("src/caxecraft/input/NavigationInput.hx", TARGET_NEUTRAL_PATTERNS),
+            SourceAudit(
+                "src/caxecraft/app/RaylibNavigationInput.hx",
+                (
+                    r"raylib\.raw\.",
+                    r"IsGamepadButton(?:Down|Pressed)\([^,]+,\s*[0-9]",
+                    r"GetGamepadAxisMovement\([^,]+,\s*[0-9]",
+                ),
+            ),
+            SourceAudit("src/caxecraft/app/CaxecraftEditorScreen.hx", (r"Gamepad", r"Controller")),
+        ),
+        alternate_locale=True,
+        success_message=(
+            "caxemap-editor: OK: revisioned commands, atomic batches, copy-owned "
+            "observations, undo/redo, validation, and test play agree under C/{locale}"
+        ),
+    ),
+    "scenario-model": EvalTestCase(
+        case_id="scenario-model",
+        probes=(
+            EvalProbe("scenario-model.hxml", "scenario-model: 264908270\n"),
+            EvalProbe(
+                "scenario-codec.hxml",
+                "scenario-codec: 1192 + 4027 + 5098 bytes, staged round-trip and "
+                "exact malformed-input audit\n",
+            ),
+        ),
+        source_audits=(
+            SourceAudit(
+                "src/caxecraft/scenario/*.hx",
+                SCENARIO_TARGET_NEUTRAL_PATTERNS,
+            ),
+        ),
+        negative_compile=NegativeCompile(
+            "scenario-identity-negative.hxml",
+            (
+                "ScenarioIdentityMixup.hx:11",
+                "caxecraft.scenario.ContentId should be caxecraft.scenario.ScenarioId",
+            ),
+        ),
+        shim_direct=True,
+        success_message=(
+            "caxemap-model: OK: closed target-neutral model, canonical fixture, and nominal IDs"
+        ),
+    ),
+    "scenario-determinism": EvalTestCase(
+        case_id="scenario-determinism",
+        probes=(
+            EvalProbe(
+                "scenario-codec.hxml",
+                "scenario-codec: 1192 + 4027 + 5098 bytes, staged round-trip and "
+                "exact malformed-input audit\n",
+            ),
+        ),
+        alternate_locale=True,
+        cold_c_runs=2,
+        warm_c_runs=2,
+        success_message=(
+            "caxemap-determinism: OK: 3 cold Eval requests (C and {locale}) "
+            "plus 2 requests through one pinned Haxe server"
+        ),
+    ),
+}
 
 
 CASES = {
@@ -949,6 +1162,256 @@ def validate_resolved_level_privacy(test_case: HaxeCTestCase) -> None:
         )
 
 
+def validate_source_audits(test_case: EvalTestCase) -> None:
+    """Keep reusable Haxe semantics free of target-specific dependencies."""
+
+    for audit in test_case.source_audits:
+        sources = sorted(
+            (path for path in CASE_ROOT.glob(audit.pattern) if path.is_file()),
+            key=lambda path: path.as_posix().encode("utf-8"),
+        )
+        if not sources:
+            raise HaxeCTestFailure(
+                f"{test_case.case_id} source audit matched no files: {audit.pattern}"
+            )
+        compiled_patterns = tuple(
+            re.compile(pattern, re.MULTILINE) for pattern in audit.forbidden_patterns
+        )
+        for source in sources:
+            text = source.read_text(encoding="utf-8")
+            for pattern in compiled_patterns:
+                if pattern.search(text):
+                    raise HaxeCTestFailure(
+                        f"{source.relative_to(ROOT)} crosses the target-neutral "
+                        f"boundary: {pattern.pattern}"
+                    )
+
+
+def run_eval_probe(
+    test_case: EvalTestCase,
+    probe: EvalProbe,
+    installation: HaxeInstallation,
+    arguments: tuple[str, ...],
+    *,
+    locale: str,
+    connection: str | None = None,
+) -> str:
+    """Launch one Haxe assertion program and check only its result envelope."""
+
+    command = [str(installation.compiler)]
+    if connection is not None:
+        command.extend(("--connect", connection))
+    command.extend(arguments)
+    try:
+        result = subprocess.run(
+            command,
+            cwd=CASE_ROOT,
+            env=pinned_haxe_environment(locale, installation),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=90,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} {probe.hxml} could not run: {error}"
+        ) from error
+    if (
+        result.returncode != 0
+        or result.stdout != probe.expected_stdout
+        or result.stderr
+    ):
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} {probe.hxml} changed under {locale}:\n"
+            f"exit: {result.returncode}\n"
+            f"expected stdout: {probe.expected_stdout!r}\n"
+            f"actual stdout: {result.stdout!r}\n"
+            f"actual stderr: {result.stderr!r}"
+        )
+    return result.stdout
+
+
+def run_shim_eval_probe(test_case: EvalTestCase, probe: EvalProbe) -> str:
+    """Run a cold Eval case through the checkout's ordinary Haxe shim."""
+
+    try:
+        result = subprocess.run(
+            [development_tool("haxe"), "--cwd", str(CASE_ROOT), probe.hxml],
+            cwd=ROOT,
+            env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=90,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} {probe.hxml} could not run: {error}"
+        ) from error
+    if (
+        result.returncode != 0
+        or result.stdout != probe.expected_stdout
+        or result.stderr
+    ):
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} {probe.hxml} changed through the Haxe shim:\n"
+            f"exit: {result.returncode}\n"
+            f"expected stdout: {probe.expected_stdout!r}\n"
+            f"actual stdout: {result.stdout!r}\n"
+            f"actual stderr: {result.stderr!r}"
+        )
+    return result.stdout
+
+
+def validate_negative_compile(
+    test_case: EvalTestCase, installation: HaxeInstallation | None
+) -> None:
+    """Require one reviewed source-type failure and its useful diagnostic."""
+
+    negative = test_case.negative_compile
+    if negative is None:
+        return
+    if installation is None:
+        command = [
+            development_tool("haxe"),
+            "--cwd",
+            str(CASE_ROOT),
+            negative.hxml,
+        ]
+        environment = {**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"}
+    else:
+        arguments = resolve_haxe_arguments((negative.hxml,), locale="C")
+        command = [str(installation.compiler), *arguments]
+        environment = pinned_haxe_environment("C", installation)
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT if installation is None else CASE_ROOT,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} negative compile could not run: {error}"
+        ) from error
+    combined = result.stdout + result.stderr
+    if result.returncode == 0:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} negative compile unexpectedly succeeded"
+        )
+    missing = [
+        fragment for fragment in negative.required_fragments if fragment not in combined
+    ]
+    if missing:
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} negative compile lost diagnostic fragments: "
+            + ", ".join(missing)
+            + "\n"
+            + combined
+        )
+
+
+def execute_eval_case(test_case: EvalTestCase) -> str:
+    """Run Haxe-owned assertions through the requested host process profiles."""
+
+    validate_source_audits(test_case)
+    if test_case.shim_direct:
+        if test_case.alternate_locale or test_case.warm_c_runs:
+            raise HaxeCTestFailure(
+                f"{test_case.case_id} cannot combine direct HaxeShim and locale/server profiles"
+            )
+        validate_negative_compile(test_case, None)
+        for probe in test_case.probes:
+            traces = [
+                run_shim_eval_probe(test_case, probe)
+                for _ in range(test_case.cold_c_runs)
+            ]
+            if any(trace != traces[0] for trace in traces[1:]):
+                raise HaxeCTestFailure(
+                    f"{test_case.case_id} repeated traces differ for {probe.hxml}"
+                )
+        return "C"
+    # Locale and warm-server cases borrow two helpers from the aggregate domain
+    # runner. Keep that import lazy so native and direct-shim cases do not load
+    # unrelated asset, snapshot, and playable-game machinery.
+    from run import alternate_locale, haxe_compilation_server
+
+    installation = pinned_haxe_installation()
+    verify_pinned_haxe(installation)
+    validate_negative_compile(test_case, installation)
+    locale = alternate_locale() if test_case.alternate_locale else "C"
+    if test_case.alternate_locale and locale == "C":
+        raise HaxeCTestFailure(
+            f"{test_case.case_id} requires an installed alternate process locale"
+        )
+
+    reference_outputs: dict[str, str] = {}
+    c_arguments_by_hxml: dict[str, tuple[str, ...]] = {}
+    for probe in test_case.probes:
+        c_arguments = resolve_haxe_arguments((probe.hxml,), locale="C")
+        c_arguments_by_hxml[probe.hxml] = c_arguments
+        traces = [
+            run_eval_probe(
+                test_case,
+                probe,
+                installation,
+                c_arguments,
+                locale="C",
+            )
+            for _ in range(test_case.cold_c_runs)
+        ]
+        if test_case.alternate_locale:
+            locale_arguments = resolve_haxe_arguments((probe.hxml,), locale=locale)
+            traces.append(
+                run_eval_probe(
+                    test_case,
+                    probe,
+                    installation,
+                    locale_arguments,
+                    locale=locale,
+                )
+            )
+        if traces:
+            reference_outputs[probe.hxml] = traces[0]
+            if any(trace != traces[0] for trace in traces[1:]):
+                raise HaxeCTestFailure(
+                    f"{test_case.case_id} cold/locale traces differ for {probe.hxml}"
+                )
+
+    if test_case.warm_c_runs:
+        with haxe_compilation_server() as connection:
+            if connection.installation != installation:
+                raise HaxeCTestFailure(
+                    f"{test_case.case_id} warm server uses a different Haxe installation"
+                )
+            for probe in test_case.probes:
+                warm_arguments = c_arguments_by_hxml[probe.hxml]
+                warm = [
+                    run_eval_probe(
+                        test_case,
+                        probe,
+                        installation,
+                        warm_arguments,
+                        locale="C",
+                        connection=connection.endpoint,
+                    )
+                    for _ in range(test_case.warm_c_runs)
+                ]
+                if any(
+                    trace != reference_outputs[probe.hxml] for trace in warm
+                ):
+                    raise HaxeCTestFailure(
+                        f"{test_case.case_id} warm/cold traces differ for {probe.hxml}"
+                    )
+    return locale
+
+
 def sanitizer_supported(compiler: str, root: Path) -> bool:
     """Ask whether the selected compiler can link Address/Undefined sanitizers."""
 
@@ -1363,7 +1826,7 @@ def create_transient_fixture(test_case: HaxeCTestCase) -> Path | None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case", choices=tuple(sorted(CASES)))
+    parser.add_argument("case", choices=tuple(sorted((*CASES, *EVAL_CASES))))
     parser.add_argument(
         "--cc",
         help="explicit C compiler command or path; the default keeps the focused local lane fast",
@@ -1379,6 +1842,26 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if args.case in EVAL_CASES:
+        test_case = EVAL_CASES[args.case]
+        try:
+            locale = execute_eval_case(test_case)
+        except (
+            HaxeCTestFailure,
+            HaxeServerFailure,
+            RuntimeError,
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+        ) as error:
+            print(
+                f"caxecraft-haxe-test: ERROR [{test_case.case_id}]: {error}",
+                file=sys.stderr,
+            )
+            return 1
+        print(test_case.success_message.format(locale=locale))
+        return 0
+
     test_case = CASES[args.case]
     transient_fixture: Path | None = None
     try:

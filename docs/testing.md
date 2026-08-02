@@ -247,6 +247,10 @@ a small closed result protocol and process-level facts; it does not recompute
 the expected product state. Caxecraft uses the shared
 `examples/caxecraft/run_haxe_c_test.py` runner for focused Haxe-authored cases
 instead of adding one Python semantics runner per mechanic.
+The inventory, gameplay, editor, CaxeFlow, CaxeMap model, and CaxeMap
+determinism commands all route through that runner. Their npm names remain
+separate because each is still a useful focused behavior owner; separate
+Python files are not needed to preserve that selection.
 Its default selects one available compiler to keep the local loop short. When a
 host exposes a second compiler under a versioned name, pass it explicitly—for
 example, `python3 examples/caxecraft/run_haxe_c_test.py aquatics --cc gcc-16`.

@@ -2174,6 +2174,47 @@ Timeouts are containment:
 - a shard approaching its ceiling requires an owning issue and decomposition
   or optimization, not another silent timeout increase.
 
+### Consolidating Caxecraft host entry points
+
+Caxecraft behavior tests used to have one Python launcher per mechanic even
+when each launcher performed the same work: start pinned Haxe, repeat under a
+second locale, compare a small success line, and scan reusable Haxe for target
+dependencies. The behavior assertions were already Haxe-owned. Six launchers
+for inventory, gameplay, the editor, CaxeFlow, the CaxeMap model, and CaxeMap
+determinism now use cases in the existing `run_haxe_c_test.py` runner. Their npm
+command names and Haxe programs remain unchanged.
+
+The change removes six command files. In the reviewed commit tree, Caxecraft
+falls from 22 to 16 tracked Python files and from 16 to 10 distinct Python
+files behind its npm command surface. Total tracked Caxecraft Python source
+falls from 17,606 to 17,347 lines even after adding the shared case
+descriptions.
+
+The same six focused npm commands took 11.30 seconds before the change. An
+initial after sample took 14.29 seconds while host load was 15.82 on 12 logical
+CPUs and several unrelated Haxe targets were compiling. Review also found that
+the first shared implementation needlessly repeated compiler-pin and HXML
+argument resolution for scenario-determinism samples. That duplication was
+removed: the final command topology keeps the previous cold, locale, negative,
+and warm-server request counts. The model/codec command also retains its
+ordinary checkout Haxe-shim path; it measured 1.44 seconds under heavy load
+against the 1.42-second baseline. The contended pre-fix sample proves only that
+the commands completed. The corrected topology took 14.76 seconds while load
+remained about 14 on 12 logical CPUs, so that sample is also diagnostic only.
+
+The host did not reach the predeclared representative threshold in two bounded
+waiting periods, even after unrelated compiler/test process trees were paused.
+Rather than weaken that threshold, the final review executed each deleted
+launcher directly from `HEAD` and its replacement back to back against the same
+checkout and contention. All six pairs passed. Their old paths totaled 14.90
+seconds wall time and 11.38 seconds combined user/system CPU time; the shared
+paths totaled 13.71 and 10.95 seconds respectively. This paired evidence shows
+that consolidation did not materially slow the focused commands. It is not an
+absolute speedup claim, because the one-minute host load ranged from 19.35 to
+23.20 on 12 logical CPUs. The specialized asset, content-pack, localization,
+graphical Pilot, native C, and sanitizer owners remain separate because they
+observe boundaries that Eval cannot.
+
 ## Optimization sequence
 
 1. **Partition without weakening.** Keep the serial reference lane, run four
