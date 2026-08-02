@@ -59,10 +59,17 @@ final class FreshArrayReader {
 final class Main {
 	static var joinSeparatorEvaluations:Int = 0;
 	static var sortComparatorCalls:Int = 0;
+	static var updateIndexEvaluations:Int = 0;
 
 	/** Return one separator while proving `Array.join` evaluates it once. */
 	static function observedSeparator(value:String):String {
 		joinSeparatorEvaluations += 1;
+		return value;
+	}
+
+	/** Return one index while proving an indexed update evaluates it once. */
+	static function observedUpdateIndex(value:Int):Int {
+		updateIndexEvaluations += 1;
 		return value;
 	}
 
@@ -76,7 +83,12 @@ final class Main {
 		values.push(40);
 		values[0] |= 1;
 		values.push(1);
-		return values[0] + values[1];
+		updateIndexEvaluations = 0;
+		final postfixIncrement = values[observedUpdateIndex(0)]++;
+		final prefixIncrement = ++values[observedUpdateIndex(1)];
+		final postfixDecrement = values[observedUpdateIndex(0)]--;
+		final prefixDecrement = --values[observedUpdateIndex(1)];
+		return postfixIncrement + prefixIncrement + postfixDecrement + prefixDecrement + values[0] + values[1];
 	}
 
 	/** Prove the same constructor keeps a managed String element's lifecycle. */
@@ -231,7 +243,8 @@ final class Main {
 		final delayedPlanSuccess = delayedPlanLength(true, borrowedPlanValues);
 		final delayedPlanFailure = delayedPlanLength(false, borrowedPlanValues);
 		while (values.length != 3
-			|| constructedIntegerSum != 42
+			|| constructedIntegerSum != 128
+			|| updateIndexEvaluations != 4
 			|| constructedStringLength != 1
 			|| freshStaticLength != 3
 			|| freshInstanceLength != 2

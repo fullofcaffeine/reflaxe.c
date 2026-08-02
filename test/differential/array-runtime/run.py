@@ -411,6 +411,16 @@ def validate_generated_hxcir(hxcir: str) -> None:
             raise ArrayRuntimeFailure(
                 f"Array<Int> indexed compound assignment omitted {marker}"
             )
+    for marker, expected in (
+        ("array-update-get", 4),
+        ("array-update-increment", 2),
+        ("array-update-decrement", 2),
+        ("array-update-set", 4),
+    ):
+        if constructed_integers.count(marker) != expected:
+            raise ArrayRuntimeFailure(
+                f"prefix/postfix Array<Int> updates expected {expected} {marker} instructions"
+            )
     if (
         'implementation=runtime("string")' not in constructed_strings
         or 'runtime(feature="array",operation="push")' not in constructed_strings

@@ -10398,6 +10398,9 @@ private class FunctionBuilder {
 	}
 
 	function lowerUpdate(expression:TypedExpr, targetExpression:TypedExpr, postFix:Bool, increment:Bool):LoweredValue {
+		final managedArrayUpdate = lowerManagedArrayUpdate(expression, targetExpression, postFix, increment);
+		if (managedArrayUpdate != null)
+			return managedArrayUpdate;
 		final target = lowerPlace(targetExpression);
 		if (!target.mutable) {
 			unsupported(targetExpression, 'TUnop(${increment ? "OpIncrement" : "OpDecrement"}:immutable-place)');
@@ -10414,6 +10417,68 @@ private class FunctionBuilder {
 		final oneValue:LoweredValue = {id: oneResult.id, type: oneResult.type, mapping: target.mapping};
 		final nextValue = lowerBinaryValues(expression, increment ? OpAdd : OpSub, oldValue, oneValue, role, target.mapping);
 		appendInstruction(null, IRIOStore(target.place, nextValue.id), sourceSpan(expression.pos), role + "-store");
+		return postFix ? oldValue : nextValue;
+	}
+
+	/**
+	 * Lower `array[index]++` and its prefix/decrement neighbors through hxrt.
+	 *
+	 * An ordinary resizable Haxe `Array` is a managed reference, not an inline C
+	 * place. The fixed-array path therefore cannot store through `IRPIndex`.
+	 * Evaluate the receiver and index once, perform the same checked read and
+	 * checked write used by indexed compound assignment, and return either the
+	 * old or new scalar according to Haxe's postfix/prefix contract.
+	 */
+	function lowerManagedArrayUpdate(expression:TypedExpr, targetExpression:TypedExpr, postFix:Bool, increment:Bool):Null<LoweredValue> {
+		final indexed = switch unwrapExpression(targetExpression).expr {
+			case TArray(collection, index): {collection: collection, index: index};
+			case _: return null;
+		};
+		if (!CBodyArrayRecognition.isCoreArrayType(indexed.collection.t))
+			return null;
+		final receiverMapping = bodyValueType(indexed.collection.t, indexed.collection.pos, "TArray(update:receiver-type)");
+		final array = receiverMapping.arrayValue();
+		if (array == null)
+			return null;
+		if (typeKey(array.element.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(expression, 'TUnop(${increment ? "OpIncrement" : "OpDecrement"}:Array-element-must-be-Int)');
+
+		final receiver = stabilizeFreshManagedArray(coerce(lowerValue(indexed.collection, receiverMapping), receiverMapping, indexed.collection.pos,
+			"TArray(update:receiver)"),
+			indexed.collection.pos, "array-update-receiver");
+		final stagedReceiver = stageFlowValue(receiver, indexed.collection, expressionCreatesFlow(indexed.index), "array-update-receiver");
+		final indexMapping = CBodyValueType.primitive(primitiveMapping(indexed.index.t, indexed.index.pos, "TArray(update:index-type)"));
+		if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
+			return unsupported(indexed.index, "TArray(update:index-must-be-Int)");
+		final index = coerce(lowerValue(indexed.index, indexMapping), indexMapping, indexed.index.pos, "TArray(update:index)");
+		final stableReceiver = restoreStagedLoweredValue(stagedReceiver, "array-update-receiver-load");
+		final source = sourceSpan(expression.pos);
+		final oldResult:HxcIRResult = {id: nextValueId(), type: array.element.irType};
+		appendInstruction(oldResult, IRIOCall({
+			dispatch: IRCDRuntime("array", "get-checked"),
+			arguments: [stableReceiver.id, index.id],
+			returnType: oldResult.type,
+			failure: managedArrayFailure()
+		}), source, "array-update-get");
+		registerValueTemporary(oldResult.id, "array-update-old-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "get-checked", "ordinary Haxe Array indexed update", source, expression.pos));
+
+		final oldValue:LoweredValue = {id: oldResult.id, type: oldResult.type, mapping: array.element};
+		final role = increment ? "increment" : "decrement";
+		final oneResult:HxcIRResult = {id: nextValueId(), type: array.element.irType};
+		appendInstruction(oneResult, IRIOConstant(IRCInt("1")), source, "array-update-one");
+		final oneValue:LoweredValue = {id: oneResult.id, type: oneResult.type, mapping: array.element};
+		final nextValue = lowerBinaryValues(expression, increment ? OpAdd : OpSub, oldValue, oneValue, "array-update-" + role, array.element);
+		final stored = coerce(nextValue, array.element, expression.pos, "TArray(update:result)");
+		final setResult:HxcIRResult = {id: nextValueId(), type: array.element.irType};
+		appendInstruction(setResult, IRIOCall({
+			dispatch: IRCDRuntime("array", "set"),
+			arguments: [stableReceiver.id, index.id, stored.id],
+			returnType: setResult.type,
+			failure: managedArrayFailure()
+		}), source, "array-update-set");
+		registerValueTemporary(setResult.id, "array-update-set-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("array", "set", "ordinary Haxe Array indexed update", source, expression.pos));
 		return postFix ? oldValue : nextValue;
 	}
 
