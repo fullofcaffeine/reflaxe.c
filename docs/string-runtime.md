@@ -193,9 +193,12 @@ is disposed or when a mutable builder view is changed.
 
 Owned conversion also rejects embedded NUL, then allocates exact terminated
 storage and retains the selected allocator identity until explicit disposal.
-Neither path truncates at embedded NUL. The typed `c.Borrowed<c.CString>` and
-`c.Owned<c.CString>` compiler surface will carry these distinctions when its
-lowering owner is implemented.
+Neither path truncates at embedded NUL. The implemented `c.CStringRef.to(text)`
+surface exposes only the borrowed form to one direct, non-retaining imported C
+call. Its distinct HxcIR carrier keeps the source owner alive and forbids
+storage, returns, forwarding, control-flow edges, indirect calls, or a second
+consumer. General borrowed values and owned CString conversion remain future
+typed surfaces.
 
 ## Feature and evidence boundary
 

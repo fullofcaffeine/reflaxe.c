@@ -489,7 +489,7 @@ def validate_dispatch(report: dict[str, object]) -> None:
 def validate_hxcir(project: RenderedProject) -> None:
     hxcir = project.hxcir
     required = (
-        "hxcir schema=23\n",
+        "hxcir schema=24\n",
         'layout "vtable.layout.BaseWorker"',
         'slot "slot.BaseWorker.value"',
         'table "vtable.LeafWorker"',

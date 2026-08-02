@@ -823,7 +823,7 @@ class CProjectEmitter {
 						case _: false;
 					}):
 				case "string" if ((reason.kind == "runtime-operation" && switch reason.operationId {
-					case "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
+					case "borrow-cstring" | "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
 					case _: false;
 				}) || (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):

@@ -548,6 +548,8 @@ class CBodyEnumRegistry {
 				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
 			case CBVKCString:
 				rejected(fail, position, '$node:borrowed-c-string-payload-escape');
+			case CBVKCStringRef:
+				rejected(fail, position, '$node:call-scoped-immutable-c-string-escape');
 			case CBVKCStringBufferRef:
 				rejected(fail, position, '$node:call-scoped-mutable-c-string-buffer-escape');
 			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKOptional(_) |

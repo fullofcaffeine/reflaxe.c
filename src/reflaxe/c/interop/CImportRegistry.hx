@@ -391,7 +391,8 @@ class CImportRegistry {
 				final path = typePath(value.module, value.pack, value.name);
 				isImportedType(path) ? CBodyValueType.imported(prepareType(path, parameters, position, sourcePath)) : null;
 			case TAbstract(reference, parameters): final value = reference.get(); final path = typePath(value.module, value.pack,
-					value.name); path == "c.CString" && parameters.length == 0 ? CBodyValueType.cString() : null;
+					value.name); path == "c.CString" && parameters.length == 0 ? CBodyValueType.cString() : path == "c.CStringRef"
+					&& parameters.length == 0 ? CBodyValueType.cStringRef() : null;
 			case _: null;
 		};
 	}
@@ -690,7 +691,8 @@ class CImportRegistry {
 				final path = typePath(value.module, value.pack, value.name);
 				if (path == "c.FunctionPtr")
 					abiFailure(position, sourcePath, label, "Callbacks require the later typed function-pointer and context-lifetime contract.");
-				if (pointerLike(path) && !(parameter && (path == "c.CString" || path == "c.Ref" || path == "c.CStringBufferRef")))
+				if (pointerLike(path)
+					&& !(parameter && (path == "c.CString" || path == "c.CStringRef" || path == "c.Ref" || path == "c.CStringBufferRef")))
 					abiFailure(position, sourcePath, label, "Pointer and retained-borrow lifetimes are outside this direct by-value slice.");
 			case TInst(reference, _):
 				final value = reference.get();
@@ -822,7 +824,7 @@ class CImportRegistry {
 	static function pointerLike(path:String):Bool {
 		return switch path {
 			case "c.Ptr" | "c.ConstPtr" | "c.NullablePtr" | "c.Ref" | "c.ConstRef" | "c.RestrictPtr" | "c.VolatilePtr" | "c.FunctionPtr" | "c.Span" |
-				"c.ConstSpan" | "c.CString" | "c.CStringBufferRef" | "c.StringView" | "c.Owned" | "c.Borrowed" | "c.Allocator" | "c.Arena": true;
+				"c.ConstSpan" | "c.CString" | "c.CStringRef" | "c.CStringBufferRef" | "c.StringView" | "c.Owned" | "c.Borrowed" | "c.Allocator" | "c.Arena": true;
 			case _: false;
 		};
 	}

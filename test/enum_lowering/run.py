@@ -489,7 +489,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         record.get("representation") == "tagged-union" for record in records
     )
     if (
-        not hxcir.startswith("hxcir schema=23\n")
+        not hxcir.startswith("hxcir schema=24\n")
         or hxcir.count(" representation=tagged ") != tagged_instance_count
     ):
         raise EnumLoweringFailure("schema-23 tagged-union HxcIR inventory drifted")

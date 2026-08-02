@@ -38,6 +38,9 @@ the imported header still owns its layout, and the containing generated record
 remains a private Haxe implementation detail. A direct imported call may also
 receive `c.Ref.to(localOrField)` for one mutable scalar out-parameter whose C
 callee uses the address only until that call returns. A runtime-backed call may
+use `c.CStringRef.to(text)` to lend one immutable Haxe String to exactly one
+non-retaining imported C call. It validates NUL termination and embedded NUL
+through the existing String runtime without copying. A mutable text API may
 similarly use `c.CStringBufferRef.to(bytes)` to lend one managed byte allocation
 as mutable text to exactly one direct imported call; unlike `c.Ref`, that
 carrier selects the narrow Bytes runtime and never exposes a general pointer.
@@ -179,7 +182,8 @@ import has these properties:
   locals may propagate that proven carrier to a direct native call. The
   compiler validates every literal's UTF-8 byte length, rejects embedded NUL,
   emits immutable translation-unit storage, and performs no allocation.
-  Dynamic `String` conversion and retained foreign pointers remain rejected; and
+  Runtime-created `String` values use the separate explicit `c.CStringRef`
+  contract below. Retained foreign pointers remain rejected; and
 - reached include, logical library, pkg-config, and framework facts are
   deduplicated with declaration provenance in the neutral build plan. Merely
   declaring an unused extern selects no fact and no runtime feature.
@@ -214,6 +218,30 @@ imported structs are not admitted. A binding generator must also record the
 callee's call-only lifetime explicitly: Clang can prove that a header says
 `bool *`, but C type spelling alone cannot prove that the library does not keep
 the pointer.
+
+### Call-scoped immutable text
+
+Runtime data such as a localized UI label is an ordinary Haxe `String`, but a
+non-retaining C drawing function receives `const char *`. The boundary remains
+explicit at the call:
+
+```haxe
+extern class NativeLabel {
+	public static function draw(text:c.CStringRef):Void;
+}
+
+final label = runtimeCatalog.text(locale, message);
+NativeLabel.draw(c.CStringRef.to(label));
+```
+
+`CStringRef.to(label)` creates no Haxe object and does not widen `String` to a
+general pointer. haxe.c keeps the String owner alive, asks hxrt to validate a
+stable trailing NUL and reject embedded NUL, passes only the checked `const
+char *` to one direct imported call, then resumes normal String cleanup. HxcIR
+rejects storing, returning, forwarding, branching with, or consuming that
+pointer twice. Static text should continue to use `c.CString`; C functions that
+retain text need a separately owned conversion and are not admitted by this
+call-scoped carrier.
 
 ### Call-scoped mutable text buffers
 
@@ -376,7 +404,7 @@ escape hatch.
 | Exact C binary32 value | `c.Float32`, with explicit `fromFloat`/`toFloat` | Haxe `Float` remains binary64; a lossy foreign narrowing must be visible and target-qualified. |
 | Integer value conversion | `c.IntConvert.exact(value)`, `c.IntConvert.modulo(value)` | Conversion intent stays distinct from an unchecked type assertion; the inferred target is admitted only when the compiler proves the named direct semantics. |
 | Pointers and qualifiers | `c.Ptr<T>`, `ConstPtr<T>`, `NullablePtr<T>`, `Ref<T>`, `ConstRef<T>`, `RestrictPtr<T>`, `VolatilePtr<T>` | Nullability, borrow shape, mutability, and aliasing obligations stay visible in types. |
-| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `CStringBufferRef`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. The admitted fixed-array slice preserves `N` for direct nonempty literals and bounded compiler-known `CArray.zero` storage, then lowers local span views without runtime objects. `CStringBufferRef.to(bytes)` is the separate runtime-backed one-call mutable-text borrow described above; broader forms remain reserved. |
+| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `CStringRef`, `CStringBufferRef`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. The admitted fixed-array slice preserves `N` for direct nonempty literals and bounded compiler-known `CArray.zero` storage, then lowers local span views without runtime objects. `CStringRef.to(text)` is a checked one-call immutable String borrow; `CStringBufferRef.to(bytes)` is the separate runtime-backed mutable-text borrow. Broader forms remain reserved. |
 | Ownership and allocation | `c.Owned<T>`, `Borrowed<T>`, `Allocator`, `Arena`, `Result<T, E>` | Ownership and failure cannot disappear behind a convenient call. |
 | Struct, union, enum, or opaque intent | ordinary declaration plus `@:c.layout(c.Layout.*)` | Layout is a declaration fact that Haxe syntax alone cannot state. |
 | Header group and stable native name | `@:c.header("path.h", c.Header.Public\|Private)` and `@:c.name("symbol")` | The compiler can derive guards, forward declarations, dependencies, and ordering. |

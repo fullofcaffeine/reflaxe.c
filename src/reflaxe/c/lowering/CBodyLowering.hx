@@ -3313,6 +3313,7 @@ private class FunctionPreparer {
 			case IRTString: "string-utf8-static-view";
 			case IRTManagedString: "string-utf8-managed-view";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTCallScopedCString: "cstring-call-borrow";
 			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${valueTypeKey(element)}>';
 			case IRTVoid: "void";
@@ -7396,9 +7397,10 @@ private class FunctionBuilder {
 						// construction as an implicit assignment; genuinely dynamic casts
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
-					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
-						CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _) |
-						CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _):
+					case CBVKStaticString(_) | CBVKManagedString(_) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKImport(_) | CBVKAggregate(_) |
+						CBVKEnum(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) |
+						CBVKFunction(_, _) | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext |
+						CBVKStackClosure(_, _, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -10838,6 +10840,8 @@ private class FunctionBuilder {
 			return unsupported(expression, "TCall(c.Ref.to:requires-direct-import-argument)");
 		if (isAbstractMethod(call.callee, "c.CStringBufferRef", "to"))
 			return unsupported(expression, "TCall(c.CStringBufferRef.to:requires-direct-import-argument)");
+		if (isAbstractMethod(call.callee, "c.CStringRef", "to"))
+			return unsupported(expression, "TCall(c.CStringRef.to:requires-direct-import-argument)");
 		final bytesStaticMethod = coreBytesStaticMethod(call.callee);
 		if (bytesStaticMethod != null)
 			return lowerManagedBytesStaticCall(expression, bytesStaticMethod, call.arguments);
@@ -11222,6 +11226,7 @@ private class FunctionBuilder {
 			final value = switch expected.kind {
 				case CBVKNativeRef(pointee): lowerNativeRefArgument(argument, expected, pointee, target, index);
 				case CBVKCStringBufferRef: lowerCStringBufferRefArgument(argument, expected, target, index);
+				case CBVKCStringRef: lowerCStringRefArgument(argument, expected, target, index);
 				case _: expected.isCString() ? lowerBorrowedCString(argument, target,
 						index) : coerce(lowerValue(argument, expected), expected, argument.pos, 'native-call:${target.id}:argument:$index');
 			};
@@ -11248,6 +11253,36 @@ private class FunctionBuilder {
 		if (materializeResult)
 			registerValueTemporary(result.id, "native-call-result");
 		return {id: result.id, type: result.type, mapping: target.returnType};
+	}
+
+	/** Borrow one immutable Haxe String only for this direct imported-C call. */
+	function lowerCStringRefArgument(expression:TypedExpr, expected:CBodyValueType, target:CPreparedImportFunction, argumentIndex:Int):LoweredValue {
+		final ownerExpression = switch unwrapExpression(expression).expr {
+			case TCall(callee, [value]) if (isAbstractMethod(callee, "c.CStringRef", "to")): value;
+			case TCall(callee, _) if (isAbstractMethod(callee, "c.CStringRef", "to")):
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires c.CStringRef.to with exactly one String owner.');
+			case _:
+				return invalidAbi(expression,
+					'Imported C function `${target.haxePath}` argument $argumentIndex requires an explicit c.CStringRef.to(text) call.');
+		};
+		final ownerMapping = bodyValueType(ownerExpression.t, ownerExpression.pos, "TCall(c.CStringRef.to:owner-type)");
+		if (ownerMapping.staticStringIdentity() == null)
+			return invalidAbi(ownerExpression, 'Imported C function `${target.haxePath}` argument $argumentIndex requires a Haxe String owner.');
+		var owner = coerce(lowerValue(ownerExpression, ownerMapping), ownerMapping, ownerExpression.pos, "TCall(c.CStringRef.to:owner)");
+		owner = stabilizeFreshManagedString(owner, ownerExpression.pos, "cstring-ref-owner");
+		final source = sourceSpan(expression.pos);
+		final result:HxcIRResult = {id: nextValueId(), type: expected.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string", "borrow-cstring"),
+			arguments: [owner.id],
+			returnType: expected.irType,
+			failure: managedStringBorrowFailure()
+		}), source, "string-borrow-cstring");
+		registerValueTemporary(result.id, "string-borrow-cstring-result");
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string", "borrow-cstring", "call-scoped immutable C text borrowed from one Haxe String owner",
+			source, expression.pos));
+		return {id: result.id, type: result.type, mapping: expected};
 	}
 
 	/**
@@ -12530,6 +12565,15 @@ private class FunctionBuilder {
 	}
 
 	static function managedBytesFailure():HxcIRFailureEdge
+		return {
+			kind: IRFNativeStatus,
+			target: IRFTAbort,
+			arguments: [],
+			cleanup: []
+		};
+
+	/** Abort before C observes text when String-to-C validation fails. */
+	static function managedStringBorrowFailure():HxcIRFailureEdge
 		return {
 			kind: IRFNativeStatus,
 			target: IRFTAbort,
@@ -13959,8 +14003,8 @@ private class FunctionBuilder {
 			case CBVKOptional(_) | CBVKFunction(_, _) | CBVKStackClosure(_, _, _):
 				profileCallableOptionalTypeClassifications++;
 				profileCallableOptionalTypeCpuSeconds += cpuSeconds;
-			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKClosureCapturePointer(_) | CBVKNativeRef(_) |
-				CBVKCStringBufferRef | CBVKClosureContext:
+			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKCStringRef | CBVKClosureCapturePointer(_) |
+				CBVKNativeRef(_) | CBVKCStringBufferRef | CBVKClosureContext:
 				profileOtherTypeClassifications++;
 				profileOtherTypeCpuSeconds += cpuSeconds;
 		}
@@ -14133,6 +14177,7 @@ private class FunctionBuilder {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTCallScopedCString: "cstring-call-borrow";
 			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';

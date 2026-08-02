@@ -2036,7 +2036,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     for label, text in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in text or "\\" in text or "hxrt" in text.lower():
             raise ConstructorLoweringFailure(f"{label} leaked a host path or runtime")
-    if not hxcir.startswith("hxcir schema=23\n"):
+    if not hxcir.startswith("hxcir schema=24\n"):
         raise ConstructorLoweringFailure("constructor lowering did not use schema-23 HxcIR")
 
     leaf = function_section(hxcir, "constructor.LeafRecord")
@@ -2879,7 +2879,7 @@ def validate_early_exit_project(
         report.get("constructors"), "early-exit constructors"
     )
     if (
-        not hxcir.startswith("hxcir schema=23\n")
+        not hxcir.startswith("hxcir schema=24\n")
         or len(constructors) != 1
         or constructors[0].get("id") != "constructor.GuardedValue"
         or section.count('"construction.0.initialized"') < 2

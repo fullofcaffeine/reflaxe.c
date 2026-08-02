@@ -404,6 +404,8 @@ class RuntimeFeatureCatalog {
 							"A reachable Std.string(Int) whose decimal spelling depends on a run-time value."),
 						new RuntimeFeatureSelectionRoot("concat", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable ordinary Haxe String concatenation whose result bytes are not compile-time constants."),
+						new RuntimeFeatureSelectionRoot("borrow-cstring", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable direct C import borrows one validated Haxe String as immutable NUL-terminated text only until that call returns."),
 						new RuntimeFeatureSelectionRoot("retain", RuntimeFeatureSelectionRootKind.HxcIrOperation,
 							"A reachable managed String copy must keep its optional backing owner alive."),
 						new RuntimeFeatureSelectionRoot("cleanup-release", RuntimeFeatureSelectionRootKind.HxcIrOperation,

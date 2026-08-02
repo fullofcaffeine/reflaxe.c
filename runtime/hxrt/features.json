@@ -848,6 +848,11 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
+            "description": "A reachable direct C import borrows one validated Haxe String as immutable NUL-terminated text only until that call returns.",
+            "id": "borrow-cstring",
+            "kind": "hxc-ir-operation"
+          },
+          {
             "description": "A reachable managed String owner must be released when its Haxe lifetime ends.",
             "id": "cleanup-release",
             "kind": "hxc-ir-operation"

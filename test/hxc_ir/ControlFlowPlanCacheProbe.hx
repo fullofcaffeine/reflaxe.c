@@ -27,13 +27,13 @@ class ControlFlowPlanCacheProbe {
 		}
 
 		CBodyControlFlowPlanCache.beginRequest(true);
-		final first = CBodyControlFlowPlanCache.resolve("function.demo", "hxcir schema=23\nfunction demo\n", () -> build("first"));
+		final first = CBodyControlFlowPlanCache.resolve("function.demo", "hxcir schema=24\nfunction demo\n", () -> build("first"));
 		require(!first.reused && builds == 1, "first request must build one plan");
 		final firstStats = CBodyControlFlowPlanCache.completeRequest();
 		require(firstStats.hits == 0 && firstStats.misses == 1 && firstStats.retainedFunctions == 1, "first request accounting drifted");
 
 		CBodyControlFlowPlanCache.beginRequest(true);
-		final identical = CBodyControlFlowPlanCache.resolve("function.demo", "hxcir schema=23\nfunction demo\n", () -> build("unexpected"));
+		final identical = CBodyControlFlowPlanCache.resolve("function.demo", "hxcir schema=24\nfunction demo\n", () -> build("unexpected"));
 		require(identical.reused && builds == 1, "byte-identical function did not reuse its plan");
 		CBodyControlFlowPlanCache.completeRequest();
 
@@ -43,22 +43,22 @@ class ControlFlowPlanCacheProbe {
 		CBodyControlFlowPlanCache.completeRequest();
 
 		CBodyControlFlowPlanCache.beginRequest(true);
-		final changedFunction = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=23\nfunction demo\n", () -> build("function"));
+		final changedFunction = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=24\nfunction demo\n", () -> build("function"));
 		require(!changedFunction.reused && builds == 3, "changed function identity reused stale evidence");
 		CBodyControlFlowPlanCache.completeRequest();
 
 		CBodyControlFlowPlanCache.beginRequest(true);
-		final abortedText = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=23\nfunction changed\n", () -> build("text"));
+		final abortedText = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=24\nfunction changed\n", () -> build("text"));
 		require(!abortedText.reused && builds == 4, "changed function text reused stale evidence");
 		CBodyControlFlowPlanCache.abortRequest();
 
 		CBodyControlFlowPlanCache.beginRequest(true);
-		final afterAbort = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=23\nfunction demo\n", () -> build("unexpected"));
+		final afterAbort = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=24\nfunction demo\n", () -> build("unexpected"));
 		require(afterAbort.reused && builds == 4, "aborted request replaced the prior successful generation");
 		CBodyControlFlowPlanCache.completeRequest();
 
 		CBodyControlFlowPlanCache.beginRequest(false);
-		final disabled = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=23\nfunction demo\n", () -> build("disabled"));
+		final disabled = CBodyControlFlowPlanCache.resolve("function.other", "hxcir schema=24\nfunction demo\n", () -> build("disabled"));
 		require(!disabled.reused && builds == 5, "disabled cache skipped authoritative planning");
 		final disabledStats = CBodyControlFlowPlanCache.completeRequest();
 		require(!disabledStats.enabled && disabledStats.hits == 0 && disabledStats.misses == 0 && disabledStats.retainedFunctions == 1,

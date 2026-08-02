@@ -18,10 +18,21 @@
     "runtime/hxrt/include/hxrt/string_scalar.h",
     "runtime/hxrt/src/string.c",
     "runtime/hxrt/src/string_scalar.c",
+    "std/c/CStringRef.hx",
     "test/differential/string-runtime/StringRuntimeOracle.hx",
     "test/differential/string-runtime/generated/Main.hx",
     "test/differential/string-runtime/generated/oracle.hxml",
     "test/differential/string-runtime/negative/Main.hx",
+    "test/differential/string-runtime/negative/cstring_ref_escape/Main.hx",
+    "test/differential/string-runtime/negative/cstring_ref_wrong_owner/Main.hx",
+    "test/differential/string-runtime/native/include/text_observer.h",
+    "test/differential/string-runtime/native/text_observer.c",
+    "test/differential/string-runtime/native_text/Main.hx",
+    "test/differential/string-runtime/native_text/TextObserver.hx",
+    "test/differential/string-runtime/native_text_nul/Main.hx",
+    "test/differential/string-runtime/native_text_nul/TextObserver.hx",
+    "test/differential/string-runtime/native_text_unterminated/Main.hx",
+    "test/differential/string-runtime/native_text_unterminated/TextObserver.hx",
     "test/differential/string-runtime/oracle.hxml",
     "test/differential/string-runtime/run.py",
     "test/differential/string-runtime/string_runtime.c"
@@ -39,7 +50,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "string-runtime: OK: .*checked/lossy UTF-8, scalar indexing/search, owned aliases/fields/containers/returns, split/package/unity determinism, C11/C\\+\\+17, sanitizers, and selective symbols passed$"
+      "value": "string-runtime: OK: .*checked/lossy UTF-8, scalar indexing/search, owned aliases/fields/containers/returns, call-scoped immutable C text, split/package/unity determinism, C11/C\\+\\+17, sanitizers, and selective symbols passed$"
     },
     "oracle": "test/differential/string-runtime/oracle.hxml",
     "artifacts": [

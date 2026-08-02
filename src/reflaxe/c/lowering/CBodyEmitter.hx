@@ -2758,6 +2758,8 @@ class CBodyEmitter {
 				{type: new CType(TStruct(new CIdentifier("hxc_bytes_ref"))), declarator: DPointer(inner, [])};
 			case IRTCString:
 				{type: new CType(TChar(null), [QConst]), declarator: DPointer(inner, [])};
+			case IRTCallScopedCString:
+				{type: new CType(TChar(null), [QConst]), declarator: DPointer(inner, [])};
 			case IRTMutableCStringBuffer:
 				{type: new CType(TChar(null)), declarator: DPointer(inner, [])};
 			case IRTSpan(element, mutable):
@@ -4885,7 +4887,7 @@ class CBodyEmitter {
 				addUnique(headers, "stdint.h");
 			case IRTString:
 				addUnique(headers, "hxrt/string_literal.h");
-			case IRTManagedString:
+			case IRTManagedString | IRTCallScopedCString:
 				addUnique(headers, "hxrt/string.h");
 			case IRTCString:
 			case IRTInstance(instanceId):
@@ -6080,6 +6082,29 @@ class CBodyEmitter {
 			case _: return fail('managed String emitter received a non-String call in `${fn.id}`');
 		};
 		final result = requireResult(instruction, fn.id);
+		if (operation == "borrow-cstring") {
+			if (result.type != IRTCallScopedCString || call.returnType != IRTCallScopedCString || call.arguments.length != 1)
+				return fail('String C borrow `${instruction.id}` in `${fn.id}` lost its call-scoped type');
+			final temporary = temporaryNames.get(result.id);
+			if (temporary == null)
+				return fail('String C borrow `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+			statements.push(SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNBorrowedCStringType))),
+				declarator: DName(temporary),
+				initializer: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNBorrowedCStringInitializer))),
+				attributes: []
+			}));
+			final owner = requireValue(values, call.arguments[0], fn.id);
+			addLineDirective(statements, instruction.source, lineDirectives);
+			emitStatusAbort(statements,
+				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNStringBorrowCString)),
+					[EUnary(AddressOf, owner), EUnary(AddressOf, EIdentifier(temporary))]),
+				boundsAbortName, instruction.id, fn.id);
+			values.set(result.id, EMember(EIdentifier(temporary), CBodyRuntimeNames.identifier(CBRNBorrowedCStringData), false));
+			return;
+		}
 		if (result.type != IRTManagedString || call.returnType != IRTManagedString)
 			return fail('managed String call `${instruction.id}` in `${fn.id}` lost its owned result type');
 		final temporary = temporaryNames.get(result.id);
@@ -6796,6 +6821,7 @@ class CBodyEmitter {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTCallScopedCString: "cstring-call-borrow";
 			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
@@ -6818,6 +6844,7 @@ class CBodyEmitter {
 			case IRTString: "string-utf8";
 			case IRTManagedString: "managed-string-utf8";
 			case IRTCString: "cstring";
+			case IRTCallScopedCString: "cstring-call-borrow";
 			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';

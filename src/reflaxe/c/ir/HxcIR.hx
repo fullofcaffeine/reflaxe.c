@@ -104,6 +104,15 @@ enum HxcIRTypeRef {
 	IRTCString;
 
 	/**
+		An immutable `const char *` borrowed from one live Haxe String owner.
+
+		The checked `string/borrow-cstring` operation is its only producer. The
+		value may be consumed exactly once by a direct native call in the same
+		basic block and cannot enter storage or control flow.
+	**/
+	IRTCallScopedCString;
+
+	/**
 		A mutable `char *` borrowed from one live managed Bytes owner.
 
 		This is not a general pointer. Its only legal producer is the checked

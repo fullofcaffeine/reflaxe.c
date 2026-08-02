@@ -1,4 +1,4 @@
-hxcir schema=23
+hxcir schema=24
 module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-329:3
   type "type.closed-record.49c666a9270caa959fe5cff9cf3642aacb73c1fccc9018a65a4776683c9ec4eb" name="StrictCarrierHolder" kind=aggregate @"test/enum_lowering/fixtures/positive/EnumFixture.hx":47:1-49:2
     field "value" type=instance("instance.enum.b0fb5c4b474c92ec4ac47d4ae0747115a61b124cdfd43901cb75c9098476ea52") mutable=false @"test/enum_lowering/fixtures/positive/EnumFixture.hx":48:2-48:28

@@ -24,6 +24,11 @@ ORACLE_HXML = CASE / "oracle.hxml"
 FIXTURE = CASE / "string_runtime.c"
 GENERATED = CASE / "generated"
 NEGATIVE = CASE / "negative"
+NATIVE_TEXT = CASE / "native_text"
+NATIVE_TEXT_NUL = CASE / "native_text_nul"
+NATIVE_TEXT_UNTERMINATED = CASE / "native_text_unterminated"
+TEXT_OBSERVER_SOURCE = CASE / "native/text_observer.c"
+TEXT_OBSERVER_INCLUDE = CASE / "native/include"
 INCLUDE = ROOT / "runtime/hxrt/include"
 SOURCES = (
     ROOT / "runtime/hxrt/src/abi.c",
@@ -859,6 +864,36 @@ def render_projects(root: Path) -> dict[str, Path]:
     return projects
 
 
+def render_native_text_projects(root: Path) -> tuple[Path, Path, Path]:
+    """Compile the successful and two fail-before-C text-borrow proofs."""
+    success = root / "native-text"
+    nul = root / "native-text-nul"
+    unterminated = root / "native-text-unterminated"
+    rendered = compile_haxe(NATIVE_TEXT, success, report=True)
+    rejected = compile_haxe(NATIVE_TEXT_NUL, nul)
+    unavailable = compile_haxe(NATIVE_TEXT_UNTERMINATED, unterminated)
+    for label, result in (
+        ("native text", rendered),
+        ("embedded-NUL text", rejected),
+        ("unterminated text view", unavailable),
+    ):
+        if result.returncode != 0 or result.stderr:
+            raise StringRuntimeFailure(
+                f"{label} compile failed\nstdout={result.stdout!r}\nstderr={result.stderr!r}"
+            )
+    hxcir = extract_hxcir(rendered)
+    if 'runtime(feature="string",operation="borrow-cstring")' not in hxcir:
+        raise StringRuntimeFailure("native text HxcIR omitted its checked String borrow")
+    if ":cstring-call-borrow" not in hxcir or 'native("native.function.TextObserver.matches")' not in hxcir:
+        raise StringRuntimeFailure("native text HxcIR lost its distinct carrier or consumer")
+    sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted((success / "src").rglob("*.c"))
+    )
+    if "hxc_string_borrow_cstring(" not in sources or ".data" not in sources:
+        raise StringRuntimeFailure("native text generated C bypassed the checked hxrt borrow")
+    return success, nul, unterminated
+
+
 def plausible_output_exists(output: Path) -> bool:
     return output.exists() and any(output.rglob("*"))
 
@@ -880,6 +915,18 @@ def validate_generated_failures(root: Path) -> None:
         raise StringRuntimeFailure(
             "unsupported Std.string source left plausible generated output"
         )
+
+    expected_cstring_failures = {
+        "cstring_ref_escape": ("HXC1001", "TCall(c.CStringRef.to:requires-direct-import-argument)"),
+        "cstring_ref_wrong_owner": ("Int should be String", "For function argument 'text'"),
+    }
+    for name, (diagnostic, marker) in expected_cstring_failures.items():
+        output = root / f"negative-{name}"
+        result = compile_haxe(NEGATIVE / name, output)
+        if result.returncode == 0 or diagnostic not in result.stderr or marker not in result.stderr:
+            raise StringRuntimeFailure(f"negative CStringRef case {name} drifted: {result.stderr!r}")
+        if plausible_output_exists(output):
+            raise StringRuntimeFailure(f"negative CStringRef case {name} left plausible output")
 
     none_output = root / "runtime-none"
     none = compile_haxe(
@@ -933,6 +980,10 @@ def compile_generated_and_run(
     project: Path,
     executable: Path,
     flags: tuple[str, ...],
+    extra_sources: tuple[Path, ...] = (),
+    extra_include_roots: tuple[Path, ...] = (),
+    expect_runtime_rejection: bool = False,
+    expected_stdout: str = EXPECTED_GENERATED_STDOUT,
 ) -> None:
     sources, include_roots = project_build_inputs(project)
     command = [
@@ -941,6 +992,8 @@ def compile_generated_and_run(
         *flags,
         *(f"-I{root}" for root in include_roots),
         *(str(source) for source in sources),
+        *(f"-I{root}" for root in extra_include_roots),
+        *(str(source) for source in extra_sources),
         "-o",
         str(executable),
     ]
@@ -971,11 +1024,11 @@ def compile_generated_and_run(
         text=True,
         timeout=30,
     )
-    if (
-        executed.returncode != 0
-        or executed.stdout != EXPECTED_GENERATED_STDOUT
-        or executed.stderr
-    ):
+    if expect_runtime_rejection:
+        if executed.returncode == 0:
+            raise StringRuntimeFailure("invalid native text reached its C consumer")
+        return
+    if executed.returncode != 0 or executed.stdout != expected_stdout or executed.stderr:
         raise StringRuntimeFailure(
             f"{toolchain.family} generated managed String execution drifted: "
             f"exit={executed.returncode} stdout={executed.stdout!r} "
@@ -1083,7 +1136,7 @@ def compile_cpp_headers(toolchain: Toolchain, project: Path, build: Path) -> Non
 
 
 def run_generated_native(
-    toolchains: list[Toolchain], projects: dict[str, Path], root: Path
+    toolchains: list[Toolchain], projects: dict[str, Path], native_text: tuple[Path, Path, Path], root: Path
 ) -> None:
     for toolchain in toolchains:
         build = root / f"generated-{toolchain.family}"
@@ -1096,6 +1149,22 @@ def run_generated_native(
                 )
                 inspect_generated_symbols(executable, toolchain.family)
         compile_cpp_headers(toolchain, projects["split"], build)
+        native_text_success, native_text_nul, native_text_unterminated = native_text
+        for project, label, expect_runtime_rejection in (
+            (native_text_success, "native-text", False),
+            (native_text_nul, "native-text-nul", True),
+            (native_text_unterminated, "native-text-unterminated", True),
+        ):
+            compile_generated_and_run(
+                toolchain,
+                project,
+                build / label,
+                ("-O0",),
+                extra_sources=(TEXT_OBSERVER_SOURCE,),
+                extra_include_roots=(TEXT_OBSERVER_INCLUDE,),
+                expect_runtime_rejection=expect_runtime_rejection,
+                expected_stdout="",
+            )
         if toolchain.family == "clang":
             executable = build / "split-sanitized"
             compile_generated_and_run(
@@ -1128,8 +1197,9 @@ def main(argv: Iterable[str] = ()) -> int:
             ) as temporary:
                 root = Path(temporary)
                 projects = render_projects(root)
+                native_text = render_native_text_projects(root)
                 validate_generated_failures(root)
-                run_generated_native(toolchains, projects, root)
+                run_generated_native(toolchains, projects, native_text, root)
     except (
         OSError,
         UnicodeError,
@@ -1147,7 +1217,8 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "string-runtime: OK: "
         f"{families}; {oracle}; checked/lossy UTF-8, scalar indexing/search, "
-        "owned aliases/fields/containers/returns, split/package/unity "
+        "owned aliases/fields/containers/returns, call-scoped immutable C text, "
+        "split/package/unity "
         "determinism, C11/C++17, sanitizers, and selective symbols passed"
     )
     return 0

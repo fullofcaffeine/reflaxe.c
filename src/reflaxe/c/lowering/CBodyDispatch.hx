@@ -1221,6 +1221,7 @@ class CBodyDispatchPreparer {
 			case IRTString: "string";
 			case IRTManagedString: "managed-string";
 			case IRTCString: "cstring-borrowed-literal";
+			case IRTCallScopedCString: "cstring-call-borrow";
 			case IRTMutableCStringBuffer: "mutable-cstring-buffer-call-borrow";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';

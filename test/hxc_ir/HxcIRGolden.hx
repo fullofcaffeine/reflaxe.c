@@ -51,6 +51,7 @@ class HxcIRGolden {
 		if (!foundUnrootedSpanContract)
 			throw "collector-managed receiver span without its exact root did not fail closed";
 		validator.requireValid(mutableCStringBufferProgram(1, false, false), PROFILE);
+		validator.requireValid(callScopedCStringProgram(), PROFILE);
 		validator.requireValid(managedRootProgram(false), PROFILE);
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
@@ -119,6 +120,8 @@ class HxcIRGolden {
 				mutableCStringBufferIndirectUse: invalidDiagnostics(mutableCStringBufferProgram(0, false, true)),
 				mutableCStringBufferReturn: invalidDiagnostics(mutableCStringBufferProgram(0, true, false)),
 				mutableCStringBufferStorage: invalidDiagnostics(mutableCStringBufferProgram(1, false, false, true)),
+				callScopedCStringMissingBorrow: invalidDiagnostics(callScopedCStringProgram(false)),
+				callScopedCStringParameter: invalidDiagnostics(callScopedCStringProgram(false, true)),
 				invalidManagedRoot: invalidDiagnostics(managedRootProgram(true)),
 				invalidManagedRootProjection: invalidDiagnostics(invalidManagedRootProjectionProgram()),
 				deferredInitializerMissingWrite: invalidDiagnostics(deferredInitializerMissingWriteProgram()),
@@ -3298,6 +3301,29 @@ class HxcIRGolden {
 		program.modules[0].types.push(bytesType);
 		program.modules[0].typeInstances.push(bytesInstance);
 		program.modules[0].functions[0].parameters.push(parameter("value.bytes", IRTInstance(bytesInstance.id), file, 1));
+		return program;
+	}
+
+	/** Build one checked immutable String borrow with one same-block native use. */
+	static function callScopedCStringProgram(checkedBorrow:Bool = true, parameterCarrier:Bool = false):HxcIRProgram {
+		final invalid = !checkedBorrow || parameterCarrier;
+		final file = invalid ? "test/negative/CallScopedCString.hx" : "test/hxc_ir/fixtures/CallScopedCString.hx";
+		final failure:HxcIRFailureEdge = {
+			kind: IRFNativeStatus,
+			target: IRFTAbort,
+			arguments: [],
+			cleanup: []
+		};
+		final instructions:Array<HxcIRInstruction> = [];
+		if (!parameterCarrier) {
+			instructions.push(checkedBorrow ? instruction("borrow.cstring", result("value.cstring", IRTCallScopedCString),
+				IRIOCall(call(IRCDRuntime("string", "borrow-cstring"), ["value.text"], IRTCallScopedCString, failure)), file,
+				2) : instruction("invent.cstring", result("value.cstring", IRTCallScopedCString), IRIOConstant(IRCString("text", 4)), file, 2));
+		}
+		instructions.push(instruction("consume.cstring", null, IRIOCall(call(IRCDNative("native.text"), ["value.cstring"], IRTVoid)), file, 3));
+		final program = minimalProgram("fixture.CallScopedCString", instructions, terminator(IRTReturn(null, []), file, 4), [], [], file);
+		program.modules[0].functions[0].parameters.push(parameter(parameterCarrier ? "value.cstring" : "value.text",
+			parameterCarrier ? IRTCallScopedCString : IRTManagedString, file, 1));
 		return program;
 	}
 
