@@ -84,6 +84,13 @@ final class TerrainRenderer {
 		#end
 	}
 
+	/** Discard every derived face partition after the game selects a new world. */
+	public inline function invalidateAll():Void {
+		#if !caxecraft_renderer_baseline
+		cache.invalidateAll();
+		#end
+	}
+
 	/** Rebuild dirty chunks and submit at most one batch per ready opaque atlas. */
 	public function draw(cells:WorldView, baseTexture:Texture2D, baseReady:Bool, adventureTexture:Texture2D, adventureReady:Bool, playerX:Float,
 			playerZ:Float):TerrainRenderCounters {

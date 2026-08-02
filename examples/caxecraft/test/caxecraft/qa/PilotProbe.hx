@@ -25,6 +25,7 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.AquaticGear, 96);
 		sampledFrames += checkBounded(PilotScriptName.SmoothMotion, 12);
 		sampledFrames += checkBounded(PilotScriptName.EditorShell, 4);
+		sampledFrames += checkBounded(PilotScriptName.CampaignTravel, 5);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
@@ -36,9 +37,10 @@ final class PilotProbe {
 		checkpoints += checkAquaticGear();
 		checkpoints += checkSmoothMotion();
 		checkpoints += checkEditorShell();
+		checkpoints += checkCampaignTravel();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 11 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 12 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -211,6 +213,18 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 2);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "editor-shell.frame",
 			"editor-shell screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkCampaignTravel():Int {
+		final name = PilotScriptName.CampaignTravel;
+		require(PilotScript.stableName(name) == "campaign-travel", "campaign travel script lost its stable name");
+		require(PilotScript.sample(name, 0).travelPressed && !PilotScript.sample(name, 0).interactPressed,
+			"campaign travel stopped being distinct from local interaction");
+		require(!PilotScript.sample(name, 1).travelPressed, "campaign travel repeated its one-shot request");
+		final screenshot = PilotScript.checkpoint(name, 3);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "campaign-travel.frame",
+			"campaign travel screenshot checkpoint changed");
 		return 1;
 	}
 

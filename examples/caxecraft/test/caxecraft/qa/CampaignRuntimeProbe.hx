@@ -1,7 +1,8 @@
 package caxecraft.qa;
 
-import caxecraft.content.ActiveContent;
-import caxecraft.content.ActiveContent.ContentPublicationResult;
+import caxecraft.app.ActivePlayableLevel;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelPublicationResult;
 import caxecraft.content.CampaignManifest.CampaignManifestReadResult;
 import caxecraft.content.CampaignManifest.decodeCampaignManifest;
 import caxecraft.content.CampaignRuntime.CampaignLevelLoadResult;
@@ -110,7 +111,8 @@ function selfCheck():Int {
 		|| forward.sourceLevel.text() != "evergrove"
 		|| forward.destinationLevel.text() != "western-falls"
 		|| forward.destinationEntrance.text() != "default"
-		|| !forward.required)
+		|| !forward.required
+		|| manifest.unambiguousTransitionFrom(entry.id) != forward)
 		return 6;
 	if (initial.receipt().map.logicalPath != entry.logicalPath || initial.level().generation().generationId().value() != 1)
 		return 7;
@@ -120,7 +122,18 @@ function selfCheck():Int {
 		aquaticProfile: initial.registry().defaultAquaticProfile()
 	};
 
-	final active = new ActiveContent(initial.level().generation());
+	final active = switch ActivePlayableLevel.create(initial.level()) {
+		case PlayableLevelCreated(value): value;
+		case PlayableLevelCreationRejected(_): return 114;
+	};
+	final initialView = active.level();
+	if (initialView.logicalPath() != "scenarios/first-playable/map.caxemap"
+		|| initialView.spawnTransform().xMilli != 16500
+		|| initialView.loadedItemCount() != 1
+		|| initialView.loadedItemAt(0).xMilli != 4500
+		|| !initialView.dialogueActorId().isValid()
+		|| !initialView.enemyActorId().isValid())
+		return 115;
 	final staleLengthText = replaceOnce(manifestText, '"byteLength": 5065', '"byteLength": 5064');
 	final staleLengthManifest = switch decodeCampaignManifest(Bytes.ofString(staleLengthText)) {
 		case CampaignManifestReady(value): value;
@@ -178,13 +191,29 @@ function selfCheck():Int {
 		|| authored.flowSequences != 0
 		|| authored.flowRules != 0)
 		return 16;
-	switch active.publish(second.generation()) {
-		case ContentPublished(retired, selected) if (retired.value() == 1 && selected.value() == 2):
+	switch active.publish(second) {
+		case PlayableLevelPublished(retired, selected) if (retired.value() == 1 && selected.value() == 2):
 		case _:
 			return 17;
 	}
-	if (active.generationId().value() != 2 || active.publicationCount() != 1 || active.session() != second.generation().session())
+	final westernFalls = active.level();
+	if (active.generationId().value() != 2
+		|| active.publicationCount() != 1
+		|| active.session() != second.generation().session()
+		|| westernFalls.logicalPath() != destination.logicalPath
+		|| westernFalls.spawnTransform().xMilli != 12500
+		|| westernFalls.loadedItemCount() != 1
+		|| westernFalls.loadedItemAt(0).xMilli != 6500
+		|| !westernFalls.dialogueActorId().isValid()
+		|| !westernFalls.enemyActorId().isValid())
 		return 18;
+	switch active.publish(initial.level()) {
+		case PlayableLevelPublicationRejected(_):
+		case _:
+			return 116;
+	}
+	if (active.generationId().value() != 2 || active.publicationCount() != 1 || active.level().logicalPath() != destination.logicalPath)
+		return 117;
 
 	final semantic = active.semanticTrace();
 	traceManifest = manifest.id.text().length * 10000 + manifest.version * 1000 + manifest.levelCount() * 100 + manifest.transitionCount() * 10

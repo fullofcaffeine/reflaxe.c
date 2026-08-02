@@ -35,12 +35,17 @@ returns `UnsupportedCapability` until it has an equivalent Haxe-authored
 adapter. It never emits POSIX calls and pretends they are portable Windows C.
 
 The ordinary `caxecraft:play` command is wired to that byte path. Its unchanged
-build check excludes the runtime map, republishes current content before every
-launch, and two diagnostic runs prepared a no-change launch in 378.4 ms and
-646.8 ms on the development host. A map edit therefore does not run Haxe,
-haxe.c, a C compiler, or the linker. This is runtime **map** authority, not
-complete runtime pack authority: `content.json` and `locales/ui.json` remain
-compiled inputs.
+build check excludes the staged campaign, maps, base content pack, and UI
+catalog from the compile identity, then copies their current bytes beside the
+already verified executable before every launch. A content edit therefore does
+not run Haxe, haxe.c, a C compiler, or the linker. The base runtime receipt
+checks the pack, UI, and entry map together; the campaign manifest independently
+checks the exact length and SHA-256 of each selected map. A warm graphical
+campaign run reused all 116 native objects and the existing link after 684.4 ms
+of fail-closed reuse validation; its two complete graphical runs finished in
+18.53 seconds overall. This is runtime authority for the
+five admitted staged files, not arbitrary mod discovery or hot reload while one
+process is already running.
 
 The engine-facing resolution step now works in isolation. After the shared
 validator accepts a CAXEMAP document, `ResolvedLevelPlan.resolve` converts its
@@ -58,9 +63,12 @@ loads pass Eval, generated native C, and sanitizers.
 
 Inventory setup, dialogue progression, rewards, HUD copy, and rule composition
 still contain temporary Haxe wiring. `haxe_c-xge.20.4` owns removing that
-remaining coupling. Campaign selection and arbitrary pack discovery are not
-implemented; normal play loads the one application-selected logical map from
-its confined staged root.
+remaining coupling. The admitted first campaign now loads its manifest from the
+confined staged root, starts in Evergrove, and lets the player press `N` to take
+the sole unambiguous authored exit to Western Falls. The destination is prepared
+privately and replaces the active level only after all checks pass. Branching,
+return travel, save persistence, arbitrary campaign discovery, and arbitrary
+pack discovery remain separate work.
 
 ## Where each kind of change belongs
 
@@ -70,7 +78,7 @@ its confined staged root.
 | dialogue, objectives, and translated story text | the level's CaxeMap | prose travels with the content that uses it |
 | triggers, gifts, state changes, encounters, and progression | CaxeFlow rules inside CaxeMap | these are authored cause-and-effect rules |
 | item, actor, behavior, render, audio, and effect definitions | validated content pack | levels reference stable definitions rather than copying their implementation |
-| level order and transitions | campaign data | campaigns connect levels; this format is planned, not shipped |
+| level order and transitions | campaign data | the first closed JSON manifest connects two independently valid maps; broader authoring and packaging remain planned |
 | movement, inventory transfer, combat, dialogue playback, and rule execution | ordinary typed Haxe | these are reusable game mechanics |
 | menus and product-wide interface text | `locales/ui.json` | global interface text is not level story content |
 | asset bytes and provenance | `assets/manifest.json` | this lock proves which reviewed files are packaged |
@@ -217,8 +225,8 @@ The intended loop is:
 6. save canonical CaxeMap/campaign data; and
 7. run CaxeTest/native pilots for repeatable regression checks.
 
-The visual Raygui editor, arbitrary runtime content-pack loader, campaign format,
-direct native CaxeMap loading, save overlays, and child-friendly visual cards
-are planned Beads work. The renderer-independent editor model and CaxeMap 1
-format are implemented foundations, not a claim that the complete creator UI
-already ships.
+The visual Raygui editor, arbitrary runtime content-pack discovery, campaign
+authoring UI, save overlays, branching/return travel, and child-friendly visual
+cards are planned Beads work. Direct native CaxeMap loading and one closed
+two-level campaign format are implemented foundations, not a claim that the
+complete creator UI or general mod ecosystem already ships.

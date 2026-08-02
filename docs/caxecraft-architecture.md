@@ -564,6 +564,20 @@ live hot-reload during one running process or arbitrary third-party package
 compatibility. The editor, game, command-line tools, and agents continue to
 read and write CAXEMAP rather than a serialized engine plan.
 
+The first live campaign transition adds one application-facing owner without
+widening the package or map owners. `ActivePlayableLevel` derives the temporary
+fixed-HUD actor slots, item placements, spawn, water presentation cell, and
+source path from one `RuntimeLevelCandidate` before publication. At a frame
+boundary it delegates the generation change to `ActiveContent`, then exposes the
+matching immutable view; the single-threaded loop invokes no callback between
+those assignments. A rejected source, stale receipt, invalid runtime candidate,
+or old generation therefore leaves every old view active. On success the loop
+reacquires the session, resets interpolation and level-local feedback, and
+invalidates all derived terrain chunks before drawing Western Falls. The base
+pack and UI catalog remain the original coherent runtime-content generation.
+This proves one linear forward transition, not branching, return travel,
+persistence, arbitrary campaigns, or live hot reload inside a running process.
+
 The first actor-composition stage is now executable. `ActorCompositionPlanner`
 reads the already validated CaxeMap objects in authored order, selects only
 character-like `Npc` and `Entity` placements, asks `ActorIdentityPlanner` for

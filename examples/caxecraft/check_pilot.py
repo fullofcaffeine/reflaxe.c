@@ -34,7 +34,7 @@ import play as playable  # noqa: E402
 import benchmark_renderer as renderer_benchmark  # noqa: E402
 
 EXPECTED_TRACE = (
-    "caxecraft-pilot: 11 named scripts, 198 deterministic frames, 13 checkpoints; "
+    "caxecraft-pilot: 12 named scripts, 203 deterministic frames, 14 checkpoints; "
     "bounded quit and shared input interface\n"
 )
 FORBIDDEN_PILOT_TEXT = (
@@ -143,6 +143,7 @@ def check_native_telemetry_decoder() -> None:
         report_words[30] = 1
         report_words[31] = 1  # Title visible, capture observation deliberately absent.
         report_words[35] = 1
+        report_words[40] = 1
         write_telemetry_fixture(path, report_words)
         try:
             playable.build_pilot_report(
@@ -355,8 +356,8 @@ def check_hud_presentation_boundary() -> None:
     resources = HUD_RESOURCES.read_text(encoding="utf-8")
     for required in (
         "final hudView:HudView = {",
-        "drawHud(hudView, hudResources);",
-        "static function drawHud(view:HudView, resources:HudResources):Void",
+        "drawHud(hudView, hudResources, contentRegistry, uiCatalog);",
+        "static function drawHud(view:HudView, resources:HudResources,",
     ):
         if required not in app:
             raise PilotFailure(f"CaxecraftApp lost the immutable HUD boundary marker {required!r}")
@@ -389,9 +390,10 @@ def check_outer_application_boundary() -> None:
             raise PilotFailure(f"Main regained application ownership {forbidden!r}")
     for required in (
         "final class CaxecraftApp",
-        "final activeContent = new ActiveRuntimeContent(completeCandidate);",
-        "final runtimeContent = activeContent.generation();",
-        "final session = loadedCandidate.generation().session();",
+        "final activeRuntimeContent = new ActiveRuntimeContent(completeCandidate);",
+        "final runtimeContent = activeRuntimeContent.generation();",
+        "final activeLevel = switch ActivePlayableLevel.create(loadedCandidate)",
+        "var session = activeLevel.session();",
         "public function run():Void",
         "Raylib.InitWindow(",
         "while (!quit && !Raylib.WindowShouldClose())",
@@ -423,6 +425,36 @@ def check_outer_application_boundary() -> None:
             raise PilotFailure(
                 f"CaxecraftApp regained direct simulation mutation through {forbidden!r}"
             )
+
+
+def check_runtime_campaign_staging_boundary() -> None:
+    """Keep campaign/map bytes staged at launch and outside the compile identity."""
+    required = {
+        "campaigns/first-adventure/campaign.json",
+        "scenarios/first-adventure/western-falls.caxemap",
+        "scenarios/first-playable/map.caxemap",
+    }
+    staged = set(playable.RUNTIME_CONTENT_FILES)
+    if not required <= staged:
+        raise PilotFailure(
+            "runtime campaign staging lost " + ", ".join(sorted(required - staged))
+        )
+
+    request_inputs = playable.play_build_inputs(
+        type(
+            "BuildInputOptions",
+            (),
+            {"source": None, "raygui_source": None, "prebuilt_raylib_report": None},
+        )()
+    )
+    for relative in required:
+        runtime_path = (CASE / relative).resolve()
+        for build_input in request_inputs:
+            build_path = build_input.path.resolve()
+            if runtime_path == build_path or (build_path.is_dir() and runtime_path.is_relative_to(build_path)):
+                raise PilotFailure(
+                    f"runtime content {relative} entered compile identity through {build_input.logical_name}"
+                )
 
 
 def check_motion_interpolation_boundary() -> None:
@@ -482,6 +514,7 @@ def main() -> int:
         check_target_neutral_boundary()
         check_hud_presentation_boundary()
         check_outer_application_boundary()
+        check_runtime_campaign_staging_boundary()
         check_motion_interpolation_boundary()
         check_native_telemetry_decoder()
         check_memory_software_capture_normalization()

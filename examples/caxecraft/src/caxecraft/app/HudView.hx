@@ -65,6 +65,9 @@ typedef HudView = {
 
 	/** Read-only generic controller phase used for enemy prompt presentation. */
 	final enemyPhase:ActorControllerPhase;
+
+	/** Runtime-selected campaign level ID, or the standalone map path. */
+	final levelLabel:String;
 }
 
 /** Small debug-panel snapshot for one rendered frame. */

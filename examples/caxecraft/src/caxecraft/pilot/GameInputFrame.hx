@@ -9,7 +9,8 @@ package caxecraft.pilot;
  *
  * Movement uses camera-relative axes in the inclusive range -1...1. Look
  * values are already-bounded changes for this frame, not raw mouse pixels.
- * The Boolean actions, including the target-neutral `interactPressed` intent,
+ * The Boolean actions, including the target-neutral `interactPressed` and
+ * `travelPressed` intents,
  * are one-frame presses rather than held device buttons.
  * A hotbar selection of `-1` means “keep the current slot”; the cycle value is
  * a signed number of slots, normally -1, 0, or 1.
@@ -31,6 +32,10 @@ typedef GameInputFrame = {
 	final secondaryPressed:Bool;
 
 	final interactPressed:Bool;
+
+	/** Continue through the sole unambiguous campaign exit, when one exists. */
+	final travelPressed:Bool;
+
 	final pausePressed:Bool;
 	final capturePressed:Bool;
 	final quitPressed:Bool;
@@ -41,8 +46,8 @@ typedef GameInputFrame = {
 /** Allocation-free constructors and comparisons for `GameInputFrame`. */
 final class GameInputFrames {
 	public static inline function make(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool, primaryPressed:Bool,
-			secondaryPressed:Bool, interactPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool, hotbarSelection:Int = -1,
-			hotbarCycle:Int = 0, descendHeld:Bool = false):GameInputFrame
+			secondaryPressed:Bool, interactPressed:Bool, travelPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool,
+			hotbarSelection:Int = -1, hotbarCycle:Int = 0, descendHeld:Bool = false):GameInputFrame
 		return {
 			moveForward: moveForward,
 			moveRight: moveRight,
@@ -53,6 +58,7 @@ final class GameInputFrames {
 			primaryPressed: primaryPressed,
 			secondaryPressed: secondaryPressed,
 			interactPressed: interactPressed,
+			travelPressed: travelPressed,
 			pausePressed: pausePressed,
 			capturePressed: capturePressed,
 			quitPressed: quitPressed,
@@ -61,28 +67,28 @@ final class GameInputFrames {
 		};
 
 	public static inline function idle():GameInputFrame
-		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, false, false);
+		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, false, false, false);
 
 	public static inline function quit():GameInputFrame
-		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, false, true);
+		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, false, false, true);
 
 	public static inline function move(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool):GameInputFrame
-		return make(moveForward, moveRight, lookYaw, lookPitch, jumpPressed, false, false, false, false, false, false);
+		return make(moveForward, moveRight, lookYaw, lookPitch, jumpPressed, false, false, false, false, false, false, false);
 
 	public static inline function mine():GameInputFrame
-		return make(0.0, 0.0, 0.0, 0.0, false, true, false, false, false, false, false);
+		return make(0.0, 0.0, 0.0, 0.0, false, true, false, false, false, false, false, false);
 
 	public static inline function secondary():GameInputFrame
-		return make(0.0, 0.0, 0.0, 0.0, false, false, true, false, false, false, false);
+		return make(0.0, 0.0, 0.0, 0.0, false, false, true, false, false, false, false, false);
 
 	public static inline function interact():GameInputFrame
-		return make(0.0, 0.0, 0.0, 0.0, false, false, false, true, false, false, false);
+		return make(0.0, 0.0, 0.0, 0.0, false, false, false, true, false, false, false, false);
 
 	public static inline function pause():GameInputFrame
-		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, true, false, false);
+		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, true, false, false);
 
 	public static inline function capture():GameInputFrame
-		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, true, false);
+		return make(0.0, 0.0, 0.0, 0.0, false, false, false, false, false, false, true, false);
 
 	/** Exact equality is intentional: pilot scripts contain fixed literal input. */
 	public static function same(left:GameInputFrame, right:GameInputFrame):Bool {
@@ -95,6 +101,7 @@ final class GameInputFrames {
 			&& left.primaryPressed == right.primaryPressed
 			&& left.secondaryPressed == right.secondaryPressed
 			&& left.interactPressed == right.interactPressed
+			&& left.travelPressed == right.travelPressed
 			&& left.pausePressed == right.pausePressed
 			&& left.capturePressed == right.capturePressed
 			&& left.quitPressed == right.quitPressed

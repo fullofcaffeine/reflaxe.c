@@ -27,7 +27,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft
 
 int32_t hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, int32_t hxc_l_chunk);
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, struct hxc_caxecraft_domain_BlockCoord hxc_l_coord);
+int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord);
 
 void hxc_caxecraft_app_TerrainChunkCache_invalidateAll(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self);
 

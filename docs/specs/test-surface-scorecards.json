@@ -57,7 +57,8 @@
         "test:caxecraft-domain"
       ],
       "systemOwners": [
-        "test:caxecraft-playable"
+        "test:caxecraft-playable",
+        "test:caxecraft-campaign-graphical"
       ],
       "affectedExtendedOwners": [
         "test:primitive-differential",
@@ -150,7 +151,8 @@
         "test:caxecraft-campaign-runtime"
       ],
       "systemOwners": [
-        "test:caxecraft-playable"
+        "test:caxecraft-playable",
+        "test:caxecraft-campaign-graphical"
       ],
       "affectedExtendedOwners": [
         "test:native",
@@ -236,7 +238,8 @@
         "test:caxecraft-domain"
       ],
       "systemOwners": [
-        "test:caxecraft-playable"
+        "test:caxecraft-playable",
+        "test:caxecraft-campaign-graphical"
       ],
       "affectedExtendedOwners": [
         "test:gc-runtime",
@@ -396,7 +399,8 @@
         "test:caxecraft-domain"
       ],
       "systemOwners": [
-        "test:caxecraft-playable"
+        "test:caxecraft-playable",
+        "test:caxecraft-campaign-graphical"
       ],
       "affectedExtendedOwners": [
         "test:diagnostics",
@@ -426,6 +430,11 @@
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentPublicationProbe.hx",
           "proves": "The flagship's complete runtime package reaches one focused product publication owner and preserves exact pack, UI, world, and receipt identity across success and rejection paths.",
           "doesNotProve": "Live renderer consumption, diagnostic source mapping, arbitrary mods, package release readiness, portability, or full playability."
+        },
+        {
+          "path": "examples/caxecraft/play.py",
+          "proves": "The campaign-travel system owner reuses one compiled executable, stages current campaign/map bytes, triggers one typed runtime transition, validates generation-2 telemetry, and retains a real 1280x720 Raylib frame for review.",
+          "doesNotProve": "Branching or return travel, saves, editor campaign authoring, arbitrary mods, sanitizer success, portability, or release readiness."
         }
       ],
       "selectorOwnership": {

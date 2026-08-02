@@ -621,6 +621,21 @@ seconds at the missing indexed-Array update lowering. Existing runtime-content
 and full Caxecraft owners remain unchanged, while affected selection maps
 campaign-specific paths to this one additional semantic owner.
 
+The graphical campaign claim has its own system owner:
+`test:caxecraft-campaign-graphical`. It compiles the real Raylib application,
+loads the staged manifest and Western Falls at runtime, triggers the one
+unambiguous typed edge, and validates generation 2 plus one publication through
+framebuffer telemetry. It also retains a 1280x720 review frame that visibly
+labels `western-falls`. The explicit cold/no-native-cache sample built all 116
+native objects, linked, and ran both graphical repetitions in 79.44 seconds.
+The immediate warm sample reused generated C, all 116 objects, and the link
+after 684.4 ms of reuse validation and finished in 18.53 seconds overall. The
+command runs the same five-frame pilot twice and requires identical semantic
+reports and screenshot bytes. This is
+distinct system evidence, so it does not replace the headless schema/failure
+owner, sanitizers, or any platform lane, and no speedup claim is inferred from
+the new lane.
+
 Issue `haxe_c-xge.20.4.3.7.5` then profiled this exact HXML instead of inferring
 its cost from the smaller runtime-free or larger playable workloads. The first
 two samples below are contention diagnostics, not representative p50 or p95

@@ -44,7 +44,8 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 		removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int, guidePhase:GuidePhase,
 		mosslingAlive:Bool, onTitle:Bool, onEditor:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool, interpolationObserved:Bool,
 		reviewScreenshotObserved:Bool, visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool,
-		measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int):Void {
+		measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int,
+		contentGeneration:Int, contentPublications:Int):Void {
 	var flags = 0;
 	if (onTitle)
 		flags |= 1;
@@ -63,8 +64,8 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 
 	var word = 0;
 	word = drawWord(word, 0x43585054); // "CXPT": Caxecraft pilot telemetry.
-	word = drawWord(word, 7); // Protocol version.
-	word = drawWord(word, 40); // Number of words in this closed version.
+	word = drawWord(word, 8); // Protocol version.
+	word = drawWord(word, 42); // Number of words in this closed version.
 	word = drawWord(word, PilotScript.scriptCode(name));
 	word = drawWord(word, PilotScript.inputHash(name));
 	word = drawWord(word, completedFrames);
@@ -101,7 +102,9 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 	word = drawWord(word, measuredTerrainMicroseconds);
 	word = drawWord(word, measuredTerrainFrames);
 	word = drawWord(word, measuredUpdateMicroseconds);
-	drawWord(word, measuredPreparationMicroseconds);
+	word = drawWord(word, measuredPreparationMicroseconds);
+	word = drawWord(word, contentGeneration);
+	drawWord(word, contentPublications);
 }
 
 /** Convert the nominal game state to the pilot protocol's stable integer code. */

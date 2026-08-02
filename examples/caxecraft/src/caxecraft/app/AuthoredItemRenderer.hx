@@ -2,6 +2,7 @@ package caxecraft.app;
 
 #if c
 import c.ConstSpan;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import raylib.Camera3D;
 import raylib.Texture2D;
@@ -15,13 +16,13 @@ import raylib.Vector3;
 	module only picks the corresponding loaded texture and draws a camera-facing
 	sprite; collection and equipment remain fixed-tick gameplay decisions.
 **/
-function drawWorldItems(registry:RuntimeContentRegistry, camera:Camera3D, active:ConstSpan<Int>, items:Array<LoadedWorldItem>, itemTexture:Texture2D,
+function drawWorldItems(registry:RuntimeContentRegistry, camera:Camera3D, active:ConstSpan<Int>, level:PlayableLevelView, itemTexture:Texture2D,
 		itemTextureReady:Bool, adventureTexture:Texture2D, adventureTextureReady:Bool):Void {
 	final inactive = 0;
 	var index = 0;
-	while (index < items.length) {
+	while (index < level.loadedItemCount()) {
 		if (active[index] != inactive) {
-			final loaded = items[index];
+			final loaded = level.loadedItemAt(index);
 			final code = loaded.storageCode;
 			final presentation = registry.itemPresentation(code);
 			if (presentation != null) {

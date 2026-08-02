@@ -306,8 +306,8 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 7
-PILOT_TELEMETRY_WORDS = 40
+PILOT_TELEMETRY_VERSION = 8
+PILOT_TELEMETRY_WORDS = 42
 PILOT_TELEMETRY_COLORS = tuple(
     (
         8 + nibble * 16,
@@ -330,6 +330,7 @@ PILOT_SCRIPT_CODES = {
     "aquatic-gear": 8,
     "smooth-motion": 9,
     "editor-shell": 10,
+    "campaign-travel": 11,
 }
 PILOT_FRAME_LIMITS = {
     "launch-smoke": 4,
@@ -344,6 +345,7 @@ PILOT_FRAME_LIMITS = {
     "aquatic-gear": 96,
     "smooth-motion": 12,
     "editor-shell": 4,
+    "campaign-travel": 5,
 }
 
 
@@ -1029,6 +1031,13 @@ def build_pilot_report(
             raise PlayFailure("renderer benchmark did not measure every post-warmup terrain frame")
     elif any(signed[index] != 0 for index in range(36, 40)):
         raise PlayFailure("ordinary pilot unexpectedly retained renderer timing instrumentation")
+    expected_generation = 2 if pilot == "campaign-travel" else 1
+    expected_publications = 1 if pilot == "campaign-travel" else 0
+    if signed[40] != expected_generation or signed[41] != expected_publications:
+        raise PlayFailure(
+            f"pilot {pilot!r} observed content generation/publications "
+            f"{signed[40]}/{signed[41]}; expected {expected_generation}/{expected_publications}"
+        )
     aquatic_gear_equipped = bool(signed[31] & 8)
     interpolation_observed = bool(signed[31] & 16)
     review_screenshot_observed = bool(signed[31] & 64)
@@ -1132,6 +1141,10 @@ def build_pilot_report(
             "guidePhase": signed[29],
             "mosslingAlive": signed[30] == 1,
             "aquaticGearEquipped": aquatic_gear_equipped,
+        },
+        "content": {
+            "generation": signed[40],
+            "publications": signed[41],
         },
         "termination": {"reason": "script-complete", "exitCode": 0},
         "native": {
@@ -1774,6 +1787,7 @@ def compile_haxe(
             "aquatic-gear": "caxecraft_pilot_aquatic_gear",
             "smooth-motion": "caxecraft_pilot_smooth_motion",
             "editor-shell": "caxecraft_pilot_editor_shell",
+            "campaign-travel": "caxecraft_pilot_campaign_travel",
         }
         pilot_define = pilot_defines.get(pilot)
         if pilot_define is None:
@@ -2873,6 +2887,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             "aquatic-gear",
             "smooth-motion",
             "editor-shell",
+            "campaign-travel",
         ),
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
@@ -3281,6 +3296,7 @@ def main(argv: list[str]) -> int:
                 "aquatic-gear": "caxecraft-pilot-aquatic-gear.png",
                 "smooth-motion": "caxecraft-pilot-smooth-motion.png",
                 "editor-shell": "caxecraft-pilot-editor.png",
+                "campaign-travel": "caxecraft-pilot-campaign-travel.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
             state_screenshot = executable.parent / "caxecraft-pilot-state.png"

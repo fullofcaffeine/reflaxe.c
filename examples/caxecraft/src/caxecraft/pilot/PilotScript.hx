@@ -20,6 +20,7 @@ enum abstract PilotScriptName(Int) to Int {
 	var AquaticGear = 8;
 	var SmoothMotion = 9;
 	var EditorShell = 10;
+	var CampaignTravel = 11;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -42,6 +43,7 @@ enum abstract PilotAction(Int) to Int {
 	var EatBerries = 15;
 	var ForwardLeft = 16;
 	var LookDown = 17;
+	var Travel = 18;
 }
 
 /**
@@ -107,6 +109,8 @@ final class PilotScript {
 			return 12;
 		if (name == EditorShell)
 			return 4;
+		if (name == CampaignTravel)
+			return 5;
 		return 4;
 	}
 
@@ -131,6 +135,8 @@ final class PilotScript {
 			return "smooth-motion";
 		if (name == EditorShell)
 			return "editor-shell";
+		if (name == CampaignTravel)
+			return "campaign-travel";
 		return "resize-layout";
 	}
 
@@ -155,14 +161,16 @@ final class PilotScript {
 			return frameNumber == 8 ? ForwardJump : Forward;
 		if (name == EditorShell)
 			return Idle;
+		if (name == CampaignTravel)
+			return frameNumber == 0 ? Travel : Idle;
 		return fullInventoryMiningAction(frameNumber);
 	}
 
 	public static function sample(name:PilotScriptName, frameNumber:Int):GameInputFrame {
 		final action = actionAt(name, frameNumber);
 		return GameInputFrames.make(moveForward(action), moveRight(action), lookYaw(action), lookPitch(action), jumpPressed(action), primaryPressed(action),
-			secondaryPressed(action), interactPressed(action), pausePressed(action), capturePressed(action), quitPressed(action), hotbarSelection(action),
-			hotbarCycle(action));
+			secondaryPressed(action), interactPressed(action), travelPressed(action), pausePressed(action), capturePressed(action), quitPressed(action),
+			hotbarSelection(action), hotbarCycle(action));
 	}
 
 	public static inline function moveForward(action:PilotAction):Float
@@ -188,6 +196,10 @@ final class PilotScript {
 
 	public static inline function interactPressed(action:PilotAction):Bool
 		return action == Interact;
+
+	/** Request the campaign's sole authored way forward. */
+	public static inline function travelPressed(action:PilotAction):Bool
+		return action == Travel;
 
 	public static inline function pausePressed(action:PilotAction):Bool
 		return action == Pause;
@@ -232,6 +244,8 @@ final class PilotScript {
 				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
 			case EditorShell:
 				frameNumber == 2 ? new PilotCheckpoint("editor-shell.frame", CaptureScreenshot) : null;
+			case CampaignTravel:
+				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot) : null;
 			case _: null;
 		};
 	}

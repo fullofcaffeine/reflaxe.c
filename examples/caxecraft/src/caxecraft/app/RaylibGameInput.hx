@@ -37,6 +37,9 @@ final class RaylibGameInput {
 		final primaryPressed = captured && leftPressed;
 		final secondaryPressed = captured && Raylib.IsMouseButtonPressed(MouseButton.Right);
 		final interactPressed = captured && Raylib.IsKeyPressed(KeyboardKey.E);
+		// N means “continue” only for a campaign level with one unambiguous exit.
+		// The campaign manifest, not this device adapter, chooses the destination.
+		final travelPressed = captured && Raylib.IsKeyPressed(KeyboardKey.N);
 		var hotbarSelection = -1;
 		if (Raylib.IsKeyPressed(KeyboardKey.One))
 			hotbarSelection = 0;
@@ -61,8 +64,8 @@ final class RaylibGameInput {
 		if (wheel < 0.0)
 			hotbarCycle = 1;
 		return GameInputFrames.make(forward, right, lookYaw, lookPitch, Raylib.IsKeyPressed(KeyboardKey.Space), primaryPressed, secondaryPressed,
-			interactPressed, Raylib.IsKeyPressed(KeyboardKey.Escape), paused && leftPressed, Raylib.IsKeyPressed(KeyboardKey.Q), hotbarSelection, hotbarCycle,
-			Raylib.IsKeyDown(KeyboardKey.LeftShift));
+			interactPressed, travelPressed, Raylib.IsKeyPressed(KeyboardKey.Escape), paused && leftPressed, Raylib.IsKeyPressed(KeyboardKey.Q),
+			hotbarSelection, hotbarCycle, Raylib.IsKeyDown(KeyboardKey.LeftShift));
 	}
 }
 #end

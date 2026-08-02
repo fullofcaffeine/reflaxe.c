@@ -3,7 +3,6 @@
 
 #include "hxc/detail/program_types.h"
 #include "hxc/modules/caxecraft/app/TerrainRenderer.h"
-#include "hxc/modules/caxecraft/content/ActorCompositionPlanner.h"
 #include "hxc/modules/caxecraft/input/NavigationInput.h"
 
 struct hxc_caxecraft_app_CaxecraftApp {
@@ -11,25 +10,16 @@ struct hxc_caxecraft_app_CaxecraftApp {
   struct hxc_caxecraft_input_NavigationRepeater hxc_editorNavigation;
 };
 
-struct hxc_caxecraft_app_CaxecraftApp_PlayableActorBinding {
-  int32_t hxc_entityId;
-  struct hxc_caxecraft_content_CharacterSpawnRole hxc_role;
-};
-
 struct hxc_caxecraft_app_CaxecraftApp_ActorPhaseObservation {
   enum hxc_caxecraft_domain_ActorControllerPhase hxc_phase;
-  bool hxc_valid;
-};
-
-struct hxc_caxecraft_app_CaxecraftApp_PlayableActorSelection {
-  int32_t hxc_dialogueActorId;
-  int32_t hxc_enemyActorId;
   bool hxc_valid;
 };
 
 void hxc_compiler_constructor_caxecraft_app_CaxecraftApp(struct hxc_caxecraft_app_CaxecraftApp *hxc_l_self);
 
 enum hxc_caxecraft_gameplay_GuidePhase hxc_caxecraft_app_CaxecraftApp_advanceGuidePhase(enum hxc_caxecraft_gameplay_GuidePhase hxc_l_phase);
+
+hxc_string hxc_caxecraft_app_CaxecraftApp_campaignLevelLoadFailure(struct hxc_caxecraft_content_CampaignLevelLoadError hxc_l_error);
 
 void hxc_caxecraft_app_CaxecraftApp_drawActors(struct Camera3D hxc_l_camera, struct Texture hxc_l_entityTexture, bool hxc_l_entityTextureReady, struct hxc_caxecraft_domain_Character hxc_l_guide, struct hxc_caxecraft_domain_Character hxc_l_enemy, enum hxc_caxecraft_domain_ActorControllerPhase hxc_l_enemyPhase, struct hxc_caxecraft_gameplay_BerryDropState hxc_l_berryDrop);
 
@@ -42,8 +32,6 @@ void hxc_caxecraft_app_CaxecraftApp_drawHotbar(struct hxc_caxecraft_gameplay_Inv
 void hxc_caxecraft_app_CaxecraftApp_drawHud(struct hxc_caxecraft_app_HudView hxc_l_view, struct hxc_caxecraft_app_HudResources hxc_l_resources, struct hxc_caxecraft_content_RuntimeContentRegistry *hxc_l_contentRegistry, struct hxc_caxecraft_localization_RuntimeUiCatalog *hxc_l_uiCatalog);
 
 struct hxc_caxecraft_app_CaxecraftApp_ActorPhaseObservation hxc_caxecraft_app_CaxecraftApp_observeActorPhase(struct hxc_array_ref *hxc_l_states, int32_t hxc_l_id, enum hxc_caxecraft_domain_ActorControllerPhase hxc_l_fallback);
-
-struct hxc_caxecraft_app_CaxecraftApp_PlayableActorSelection hxc_caxecraft_app_CaxecraftApp_selectPlayableActors(struct hxc_array_ref *hxc_l_bindings);
 
 struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_app_CaxecraftApp_spawnPlayer(const uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_scenario_ScenarioTransform hxc_l_transform);
 

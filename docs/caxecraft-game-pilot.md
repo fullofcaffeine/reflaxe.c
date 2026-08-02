@@ -109,12 +109,16 @@ npm run caxecraft:play -- --pilot smooth-motion
 # Enter through the real title-to-editor transition, draw the native raygui
 # shell twice, validate its working regions and typed screen state, then quit.
 npm run caxecraft:play -- --pilot editor-shell
+
+# Ask the runtime campaign for its sole authored way forward, load Western
+# Falls without recompiling, publish generation 2, render it, and quit.
+npm run caxecraft:play -- --pilot campaign-travel
 ```
 
-The eleven closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+The twelve closed script names are `LaunchSmoke`, `MoveJumpEdit`,
 `PauseRecapture`, `CombatDrop`, `RecoveryUse`, `FullInventoryGift`, and
 `FullInventoryMining`, plus `ResizeLayout`, `AquaticGear`, `SmoothMotion`, and
-`EditorShell`.
+`EditorShell`, and `CampaignTravel`.
 Each has a small fixed frame limit below the absolute 120-frame policy. Its
 final and every later action is `Quit`, which protects against a script
 accidentally becoming an unattended interactive session. The Python runner
@@ -207,25 +211,36 @@ raygui implementation, Raylib framebuffer, and native window. The screenshot
 check looks for four independently placed regions—the toolbar, canvas,
 sidebar/tool list, and status bar—without demanding byte-identical font
 rasterization. Faster localization and editor-domain tests own exact labels
-and command behavior. Protocol version 7 retains a distinct editor-screen bit
+and command behavior. Protocol version 8 retains a distinct editor-screen bit
 so a title or gameplay frame cannot accidentally satisfy this proof.
+
+The campaign-travel pilot sends one target-neutral “continue” action. The
+manifest supplies the sole outgoing typed edge; the script contains no level
+path or destination name. The app prepares Western Falls through the ordinary
+runtime loader, publishes it through `ActiveContent`, then renders a frame whose
+HUD reads `western-falls`. Telemetry must report generation 2, one publication,
+and the independently authored destination spawn at x=12.5, y=5, z=16.5. The
+headless campaign tracer remains responsible for malformed manifests, stale
+receipts, missing destinations, and unchanged-state failures.
 
 ## How semantic state leaves the native game
 
 A screenshot can prove that the game drew a scene, but it cannot reliably tell
 us an exact player coordinate, world hash, or rejected edit count. Pilot builds
 therefore draw a tiny machine-readable strip along the bottom edge of a second
-frame capture. Each colored mark represents one hexadecimal digit. Forty
+frame capture. Each colored mark represents one hexadecimal digit. Forty-two
 fixed-width words carry a magic number, protocol version, script identity and
 input hash, completed frames and fixed ticks, player motion, world selection
 and edit counts, render counters, inventory/actor state, presentation flags,
-and four benchmark-only timing counters. Version 7 records exposed terrain
+and four benchmark-only timing counters. Version 8 records exposed terrain
 faces, dirty-chunk rebuilds, cumulative rebuilds, whether the fixed cache
 capacity remained valid, whether the editor rather than title or gameplay is
 visible, and whether Raylib could observe the review screenshot immediately
 after writing it. Ordinary pilots require every timing counter to be zero,
 proving that their executable does not accidentally retain benchmark
-instrumentation.
+instrumentation. The final two words identify the active content generation and
+the number of successful publications, so a rendered startup level cannot pass
+the campaign transition proof.
 
 This strip is test instrumentation, not game content or a public save format.
 It is used because it exercises the same real Raylib framebuffer without adding

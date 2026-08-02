@@ -29,8 +29,10 @@ target-neutral editor command/history/test-play layer now exists, but the
 in-game Raylib interface does not. The menu can choose Creative or Adventure;
 the authored mode content does not run yet beyond that first encounter. Broader
 combat and enemies, broader item recovery, NPC dialogue, persistence, complete
-localization, Ivvy behavior, terrain and Adventure-cast art, audio, and the authored
-campaign remain unimplemented. Do not describe
+localization, Ivvy behavior, terrain and Adventure-cast art, and audio remain
+unimplemented. One admitted two-level campaign can now travel from Evergrove to
+Western Falls at runtime; branching, return travel, persistence, authored exit
+zones, and the broader Adventure campaign remain unimplemented. Do not describe
 concept art, semantic editor tests, or the remaining design-only atlases as
 evidence that those broader capabilities run.
 

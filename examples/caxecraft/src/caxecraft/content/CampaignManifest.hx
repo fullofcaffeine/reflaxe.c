@@ -203,6 +203,25 @@ final class CampaignManifest {
 		return null;
 	}
 
+	/**
+	 * Return the sole authored way forward from one level, or no automatic choice.
+	 *
+	 * The first playable campaign is linear, so its application shell can request
+	 * “continue” without knowing a content-specific exit name. Zero matches means
+	 * the level is terminal; two or more means a later branching UI must make the
+	 * choice explicitly. Manifest order never silently chooses between branches.
+	 */
+	public function unambiguousTransitionFrom(source:CampaignLevelId):Null<CampaignTransition> {
+		var found:Null<CampaignTransition> = null;
+		for (candidate in admittedTransitions)
+			if (candidate.sourceLevel.text() == source.text()) {
+				if (found != null)
+					return null;
+				found = candidate;
+			}
+		return found;
+	}
+
 	/** Read one already-bounds-checked level for deterministic tests and UI lists. */
 	public inline function levelAt(index:Int):CampaignLevel
 		return admittedLevels[index];

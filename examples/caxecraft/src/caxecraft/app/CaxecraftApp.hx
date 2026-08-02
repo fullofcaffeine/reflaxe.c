@@ -2,11 +2,21 @@ package caxecraft.app;
 
 #if c
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
-import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.ActiveRuntimeContent;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelPublicationResult;
+import caxecraft.content.CampaignManifest.CampaignLevel;
+import caxecraft.content.CampaignManifest.CampaignManifest;
+import caxecraft.content.CampaignRuntime.CampaignLevelLoadError;
+import caxecraft.content.CampaignRuntime.CampaignLevelLoadResult;
+import caxecraft.content.CampaignRuntime.CampaignPackageLoadError;
+import caxecraft.content.CampaignRuntime.CampaignPackageLoadResult;
+import caxecraft.content.CampaignRuntime.loadCampaignLevel;
+import caxecraft.content.CampaignRuntime.loadCampaignManifest;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
+import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
 import caxecraft.app.AppScreen;
@@ -106,27 +116,6 @@ private typedef ActorPhaseObservation = {
 }
 
 /**
-	The two actor capabilities still required by the current hand-built HUD.
-
-	The generic loader returns every authored binding without choosing campaign
-	roles. This temporary presentation selection asks for one dialogue actor and
-	one hostile actor because the current HUD and combat slice still have two
-	fixed slots. CaxeFlow/content migration under `haxe_c-xge.20.4` removes this
-	shape; adding another level must not add another named selection type.
-**/
-private typedef PlayableActorSelection = {
-	final valid:Bool;
-	final dialogueActorId:EntityId;
-	final enemyActorId:EntityId;
-}
-
-/** Minimal actor capability view retained by the current fixed HUD slots. */
-private typedef PlayableActorBinding = {
-	final entityId:EntityId;
-	final role:CharacterSpawnRole;
-}
-
-/**
  * Runs Caxecraft's current Raylib application and game loop.
  *
  * One outer loop follows the display: it polls window/input state and presents
@@ -199,6 +188,8 @@ final class CaxecraftApp {
 		final pilotName:PilotScriptName = PilotScriptName.SmoothMotion;
 		#elseif caxecraft_pilot_editor_shell
 		final pilotName:PilotScriptName = PilotScriptName.EditorShell;
+		#elseif caxecraft_pilot_campaign_travel
+		final pilotName:PilotScriptName = PilotScriptName.CampaignTravel;
 		#end
 		var initialHealth = MAX_HEALTH;
 		#if caxecraft_pilot
@@ -224,45 +215,47 @@ final class CaxecraftApp {
 				Sys.println("caxecraft: runtime content rejected");
 				return;
 		};
-		final activeContent = new ActiveRuntimeContent(completeCandidate);
+		final activeRuntimeContent = new ActiveRuntimeContent(completeCandidate);
 		// Borrow one complete snapshot so the registry, catalog, level, and receipt
 		// cannot come from different publications during this application run.
-		final runtimeContent = activeContent.generation();
+		final runtimeContent = activeRuntimeContent.generation();
 		final contentRegistry = runtimeContent.registry();
 		final uiCatalog = runtimeContent.catalog();
 		final editorScreen = new CaxecraftEditorScreen(contentRegistry, uiCatalog);
 		final loadedCandidate = runtimeContent.level();
-		final session = loadedCandidate.generation().session();
-		final actorBindings:Array<PlayableActorBinding> = [];
-		for (binding in loadedCandidate.generation().actorBindings())
-			actorBindings.push({entityId: binding.entityId, role: binding.role});
-		final loadedItems:Array<LoadedWorldItem> = [];
-		for (binding in loadedCandidate.generation().itemBindings())
-			loadedItems.push({
-				storageCode: binding.storage.value(),
-				xMilli: binding.transform.xMilli,
-				yMilli: binding.transform.yMilli,
-				zMilli: binding.transform.zMilli
-			});
-		final spawnTransform = loadedCandidate.generation().plan().player().transform;
-		final fluidPresentation = loadedCandidate.generation().presentation().fluidRequests();
-		if (fluidPresentation.length == 0)
-			return;
-		final waterPresentationCell = fluidPresentation[0].cellIndex;
-		for (request in fluidPresentation)
-			if (request.cellIndex != waterPresentationCell)
+		final activeLevel = switch ActivePlayableLevel.create(loadedCandidate) {
+			case PlayableLevelCreated(value): value;
+			case PlayableLevelCreationRejected(_):
+				Sys.println("caxecraft: initial level lacks required playable bindings");
 				return;
+		};
+		var campaign:Null<CampaignManifest> = null;
+		var campaignLevel:Null<CampaignLevel> = null;
+		switch loadCampaignManifest(contentStore, "campaigns/first-adventure/campaign.json") {
+			case CampaignPackageReady(manifest):
+				final entry = manifest.entryLevel();
+				if (entry.logicalPath != loadedCandidate.receipt().logicalPath) {
+					Sys.println("caxecraft: campaign entry does not match the active map");
+					return;
+				}
+				campaign = manifest;
+				campaignLevel = entry;
+			case CampaignPackageRejected(CampaignManifestSourceRejected(EntryMissing)):
+				// A standalone Creative map needs no campaign wrapper. It keeps the
+				// exact same runtime generation and simply has no travel action.
+				Sys.println("caxecraft: campaign-source=standalone-map");
+			case CampaignPackageRejected(_):
+				Sys.println("caxecraft: campaign manifest rejected: campaigns/first-adventure/campaign.json");
+				return;
+		}
+		var levelLabel = campaignLevel == null ? loadedCandidate.receipt().logicalPath : campaignLevel.id.text();
+		final initialLevel = activeLevel.level();
+		final initialSession = activeLevel.session();
 		final receipt = loadedCandidate.receipt();
 		Sys.println("caxecraft: content-source=runtime-package");
 		Sys.println("caxecraft: content-path=" + receipt.logicalPath);
 		Sys.println("caxecraft: content-input-hash=" + Std.string(receipt.inputHash));
 		Sys.println("caxecraft: content-generation=" + Std.string(runtimeContent.generationId().value()));
-		final actors = selectPlayableActors(actorBindings);
-		if (!actors.valid)
-			return;
-		final dialogueActorId = actors.dialogueActorId;
-		final enemyActorId = actors.enemyActorId;
-
 		var windowFlags = ConfigFlags.VsyncHint | ConfigFlags.WindowResizable;
 		#if !raylib_platform_macos
 		windowFlags |= ConfigFlags.WindowHighDpi;
@@ -320,12 +313,12 @@ final class CaxecraftApp {
 		inventory = PilotScript.initialInventory(pilotName);
 		#end
 		var guidePhase = GuidePhase.Waiting;
-		var guideInteractionAvailable = session.actorInteractionAvailable(dialogueActorId);
-		var dialogueActor = session.readCharacter(dialogueActorId);
-		var enemyActor = session.readCharacter(enemyActorId);
-		var initialActorPhases = session.actorControllerStateSnapshots();
-		var dialoguePhase = observeActorPhase(initialActorPhases, dialogueActorId, ActorControllerPhase.Stationary);
-		var enemyPhase = observeActorPhase(initialActorPhases, enemyActorId, ActorControllerPhase.Resting);
+		var guideInteractionAvailable = initialSession.actorInteractionAvailable(initialLevel.dialogueActorId());
+		var dialogueActor = initialSession.readCharacter(initialLevel.dialogueActorId());
+		var enemyActor = initialSession.readCharacter(initialLevel.enemyActorId());
+		var initialActorPhases = initialSession.actorControllerStateSnapshots();
+		var dialoguePhase = observeActorPhase(initialActorPhases, initialLevel.dialogueActorId(), ActorControllerPhase.Stationary);
+		var enemyPhase = observeActorPhase(initialActorPhases, initialLevel.enemyActorId(), ActorControllerPhase.Resting);
 		if (!dialogueActor.id.isValid() || !enemyActor.id.isValid() || !dialoguePhase.valid || !enemyPhase.valid)
 			return;
 		var swordCombat:SwordCombatState = startSwordCombat();
@@ -337,7 +330,7 @@ final class CaxecraftApp {
 		// authoritative fixed simulation steps. The remainder selects a visual
 		// position between the last two committed bodies; it never changes gameplay.
 		var accumulator = 0.0;
-		final initialPresentation = session.view();
+		final initialPresentation = initialSession.view();
 		if (!initialPresentation.valid)
 			return;
 		var motionHistory = startMotion(initialPresentation.localPlayer.body);
@@ -349,7 +342,8 @@ final class CaxecraftApp {
 			|| caxecraft_pilot_recovery_use
 			|| caxecraft_pilot_full_inventory_gift
 			|| caxecraft_pilot_full_inventory_mining
-			|| caxecraft_pilot_aquatic_gear)
+			|| caxecraft_pilot_aquatic_gear
+			|| caxecraft_pilot_campaign_travel)
 		// A deterministic provider choice, not gameplay branching: this pilot
 		// exercises finite Adventure inventory and actor behavior from frame one.
 		selectedMode = GameMode.Adventure;
@@ -414,7 +408,9 @@ final class CaxecraftApp {
 			// Work on one immutable view for this frame. Every owned player change
 			// below enters through a semantic GameSession operation; presentation
 			// never receives the mutable session or its entity store.
-			final initialView = session.view();
+			var levelView = activeLevel.level();
+			var session = activeLevel.session();
+			var initialView = session.view();
 			if (!initialView.valid)
 				quit = true;
 			var character = initialView.localPlayer;
@@ -449,6 +445,7 @@ final class CaxecraftApp {
 			final primaryPressed = PilotScript.primaryPressed(pilotAction);
 			final secondaryPressed = PilotScript.secondaryPressed(pilotAction);
 			final interactPressed = PilotScript.interactPressed(pilotAction);
+			final travelPressed = PilotScript.travelPressed(pilotAction);
 			final pausePressed = PilotScript.pausePressed(pilotAction);
 			final capturePressed = PilotScript.capturePressed(pilotAction);
 			final quitPressed = PilotScript.quitPressed(pilotAction);
@@ -470,6 +467,7 @@ final class CaxecraftApp {
 			final primaryPressed = frameInput.primaryPressed;
 			final secondaryPressed = frameInput.secondaryPressed;
 			final interactPressed = frameInput.interactPressed;
+			final travelPressed = frameInput.travelPressed;
 			final pausePressed = frameInput.pausePressed;
 			final capturePressed = frameInput.capturePressed;
 			final quitPressed = frameInput.quitPressed;
@@ -477,6 +475,77 @@ final class CaxecraftApp {
 			final hotbarCycle = frameInput.hotbarCycle;
 			final descendHeld = frameInput.descendHeld;
 			#end
+			if (!quit && screenIsPlaying(screen) && travelPressed) {
+				final selectedCampaign = campaign;
+				final sourceLevel = campaignLevel;
+				if (selectedCampaign != null && sourceLevel != null) {
+					final transition = selectedCampaign.unambiguousTransitionFrom(sourceLevel.id);
+					if (transition == null) {
+						Sys.println("caxecraft: campaign travel requires exactly one outgoing transition from " + sourceLevel.id.text());
+					} else {
+						final destination = selectedCampaign.level(transition.destinationLevel);
+						if (destination == null) {
+							Sys.println("caxecraft: campaign destination disappeared after manifest validation");
+						} else {
+							final playerOptions:LevelPlayerOptions = {
+								entityId: character.id,
+								initialHealth: character.vitals.health,
+								aquaticProfile: character.aquaticProfile
+							};
+							final nextGeneration = ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1);
+							switch loadCampaignLevel(contentStore, destination, nextGeneration, contentRegistry, contentRegistry, playerOptions) {
+								case CampaignLevelRejected(error):
+									Sys.println("caxecraft: campaign travel rejected: " + campaignLevelLoadFailure(error));
+								case CampaignLevelReady(candidate):
+									switch activeLevel.publish(candidate) {
+										case PlayableLevelPublicationRejected(_):
+											Sys.println("caxecraft: campaign destination could not replace the active level");
+										case PlayableLevelPublished(_, selected):
+											campaignLevel = destination;
+											levelLabel = destination.id.text();
+											levelView = activeLevel.level();
+											session = activeLevel.session();
+											initialView = session.view();
+											if (!initialView.valid) {
+												quit = true;
+											} else {
+												character = initialView.localPlayer;
+												guidePhase = GuidePhase.Waiting;
+												guideInteractionAvailable = session.actorInteractionAvailable(levelView.dialogueActorId());
+												dialogueActor = session.readCharacter(levelView.dialogueActorId());
+												enemyActor = session.readCharacter(levelView.enemyActorId());
+												final phases = session.actorControllerStateSnapshots();
+												dialoguePhase = observeActorPhase(phases, levelView.dialogueActorId(), ActorControllerPhase.Stationary);
+												enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
+												swordCombat = startSwordCombat();
+												berryDrop = emptyBerryDrop();
+												cameraWaterBlend = 0.0;
+												accumulator = 0.0;
+												motionHistory = resetMotion(character.body);
+												jumpQueued = false;
+												swordQueued = false;
+												placementBlockedFrames = 0;
+												strikeHitFrames = 0;
+												enemyDefeatedFrames = 0;
+												enemyAttackFrames = 0;
+												pickupFrames = 0;
+												inventoryFullFrames = 0;
+												inventoryFullReason = InventoryFullReason.None;
+												recoveryFeedbackFrames = 0;
+												aquaticEquipmentFrames = 0;
+												terrainRenderer.invalidateAll();
+												resetMotionThisFrame = true;
+												Sys.println("caxecraft: campaign-level=" + levelLabel + " generation=" + Std.string(selected.value()));
+											}
+									}
+							}
+						}
+					}
+				}
+			}
+			final dialogueActorId = levelView.dialogueActorId();
+			final enemyActorId = levelView.enemyActorId();
+			final spawnTransform = levelView.spawnTransform();
 			if (quitPressed)
 				quit = true;
 			if (hotbarSelection >= 0)
@@ -704,8 +773,8 @@ final class CaxecraftApp {
 					quit = true;
 				if (!characterIsDefeated(character.vitals)) {
 					var pickupIndex = 0;
-					while (pickupIndex < loadedItems.length) {
-						final loadedItem = loadedItems[pickupIndex];
+					while (pickupIndex < levelView.loadedItemCount()) {
+						final loadedItem = levelView.loadedItemAt(pickupIndex);
 						if (session.authoredItemIsActive(pickupIndex)
 							&& authoredItemIsInRange(character.body.x, character.body.y, character.body.z, loadedItem.xMilli, loadedItem.yMilli,
 								loadedItem.zMilli)) {
@@ -972,7 +1041,7 @@ final class CaxecraftApp {
 					measuredTerrainFrames++;
 				}
 				#end
-				final waterCounters = WaterRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, waterPresentationCell);
+				final waterCounters = WaterRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, levelView.waterPresentationCell());
 				final totalVisible = renderCounters.visible + waterCounters.visible;
 				final totalDrawCalls = renderCounters.drawCalls + waterCounters.drawCalls;
 				#if caxecraft_pilot
@@ -984,7 +1053,7 @@ final class CaxecraftApp {
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
 				drawActors(camera, entityTexture, entityTextureReady, dialogueActor, enemyActor, enemyPhase.phase, berryDrop);
-				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), loadedItems, itemTexture, itemTextureReady,
+				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
@@ -1031,7 +1100,8 @@ final class CaxecraftApp {
 					guidePhase: guidePhase,
 					guideInteractionAvailable: guideInteractionAvailable,
 					enemy: enemyActor,
-					enemyPhase: enemyPhase.phase
+					enemyPhase: enemyPhase.phase,
+					levelLabel: levelLabel
 				};
 				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
 			}
@@ -1043,13 +1113,15 @@ final class CaxecraftApp {
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid,
-					measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds);
+					measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds,
+					activeLevel.generationId().value(), activeLevel.publicationCount());
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
-					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0);
+					reviewScreenshotObserved, visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0,
+					activeLevel.generationId().value(), activeLevel.publicationCount());
 			#end
 			var capturePilotFrame = pilotComplete;
 			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
@@ -1062,7 +1134,8 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 92)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				|| (pilotName == PilotScriptName.EditorShell && frameCount == 2))
+				|| (pilotName == PilotScriptName.EditorShell && frameCount == 2)
+				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
 				capturePilotFrame = true;
 			// Submit this frame before reading it. `EndDrawing()` would otherwise
 			// swap the buffers first, causing Raylib's screenshot function to read
@@ -1096,6 +1169,8 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-smooth-motion.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 2)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor.png");
+			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
 			if (pilotComplete)
 				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end
@@ -1123,6 +1198,23 @@ final class CaxecraftApp {
 		Raylib.CloseWindow();
 	}
 
+	/** Turn one closed campaign-load failure into a path-and-stage console hint. */
+	static function campaignLevelLoadFailure(error:CampaignLevelLoadError):String {
+		return switch error {
+			case CampaignLevelSourceRejected(path, _): "source read failed for " + path;
+			case CampaignLevelLengthMismatch(path, expected, actual):
+				"length changed for "
+				+ path
+				+ " (expected "
+				+ Std.string(expected)
+				+ ", found "
+				+ Std.string(actual)
+				+ ")";
+			case CampaignLevelHashMismatch(path, _): "SHA-256 receipt changed for " + path;
+			case CampaignLevelRuntimeRejected(path, _): "runtime validation failed for " + path;
+		};
+	}
+
 	#if caxecraft_pilot
 	/**
 	 * Capture one flushed review frame and immediately observe its published file.
@@ -1145,43 +1237,6 @@ final class CaxecraftApp {
 		final spawnZ = transform.zMilli / 1000.0;
 		return recoverPlayerSpawn(cells, createPlayer(spawnX, spawnY, spawnZ));
 	}
-
-	/**
-		Select the two temporary presentation slots from generic actor capabilities.
-
-		The level loader deliberately returns every actor. Until authored UI and
-		combat bindings replace the current fixed first-playable presentation, this
-		application boundary requires exactly one dialogue NPC and one enemy. It
-		never checks a character name, content ID, map path, or generated module.
-	**/
-	static function selectPlayableActors(bindings:Array<PlayableActorBinding>):PlayableActorSelection {
-		var dialogueActorId = EntityId.invalid();
-		var enemyActorId = EntityId.invalid();
-		for (binding in bindings)
-			switch binding.role {
-				case DialogueNpc(_):
-					if (dialogueActorId.isValid())
-						return invalidPlayableActorSelection();
-					dialogueActorId = binding.entityId;
-				case EnemyActor:
-					if (enemyActorId.isValid())
-						return invalidPlayableActorSelection();
-					enemyActorId = binding.entityId;
-			}
-		return dialogueActorId.isValid() && enemyActorId.isValid() ? {
-			valid: true,
-			dialogueActorId: dialogueActorId,
-			enemyActorId: enemyActorId
-		} : invalidPlayableActorSelection();
-	}
-
-	/** Build the one invalid selection without nullable actor identities. */
-	static inline function invalidPlayableActorSelection():PlayableActorSelection
-		return {
-			valid: false,
-			dialogueActorId: EntityId.invalid(),
-			enemyActorId: EntityId.invalid()
-		};
 
 	/**
 		Advance the temporary first-playable dialogue progress value.
@@ -1303,6 +1358,9 @@ final class CaxecraftApp {
 		Raylib.DrawRectangle(18, 18, 460, 108, CaxecraftPalette.hudPanel());
 		Raylib.DrawRectangleLines(18, 18, 460, 108, CaxecraftPalette.selection());
 		drawUiText(uiCatalog, locale, UiMessage.Brand, 32, 28, 20, text);
+		// This runtime identity makes a campaign handoff visible without baking a
+		// level name into the executable or the static localization catalog.
+		Raylib.DrawTextString(view.levelLabel, 250, 30, 16, CaxecraftPalette.selection());
 		drawUiText(uiCatalog, locale, UiMessage.DebugCells, 32, 58, 14, text);
 		HudDigits.drawNumber(World.VOLUME, 82, 59, 5, CaxecraftPalette.selection());
 		drawUiText(uiCatalog, locale, UiMessage.DebugVisible, 160, 58, 14, text);

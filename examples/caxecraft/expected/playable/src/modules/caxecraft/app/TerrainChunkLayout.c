@@ -1,6 +1,6 @@
 #include "hxc/program.h"
 
-int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkFor(struct hxc_caxecraft_domain_BlockCoord hxc_l_coord)
+int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkFor(struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord)
 {
   bool hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_contains(hxc_l_coord);
   if (!!hxc_l_tmp_call_result_n0)

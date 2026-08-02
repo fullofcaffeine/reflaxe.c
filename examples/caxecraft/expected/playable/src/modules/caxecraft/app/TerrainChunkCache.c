@@ -17,7 +17,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_appendIfExposed(struct hxc_caxecraft
   size_t hxc_l_tmp_length_n12 = hxc_l_length;
   (void)hxc_l_borrow;
   (void)hxc_l_tmp_length_n12;
-  struct hxc_caxecraft_domain_BlockCoord hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_coord(hxc_l_neighborX, hxc_l_neighborY, hxc_l_neighborZ);
+  struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_coord(hxc_l_neighborX, hxc_l_neighborY, hxc_l_neighborZ);
   enum hxc_caxecraft_domain_BlockKind hxc_l_tmp_call_result_n1 = hxc_caxecraft_domain_WorldRead_query(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n0);
   bool hxc_l_tmp_call_result_n2 = hxc_caxecraft_domain_World_isSolid(hxc_l_tmp_call_result_n1);
   if (hxc_l_tmp_call_result_n2)
@@ -85,7 +85,7 @@ int32_t hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(struct hxc_caxecraft_
   return 0;
 }
 
-int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, struct hxc_caxecraft_domain_BlockCoord hxc_l_coord)
+int32_t hxc_caxecraft_app_TerrainChunkCache_invalidate(struct hxc_caxecraft_app_TerrainChunkCache *hxc_l_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord)
 {
   int32_t hxc_l_tmp_call_result_n0 = hxc_caxecraft_app_TerrainChunkLayout_chunkFor(hxc_l_coord);
   int32_t hxc_l_owner = hxc_l_tmp_call_result_n0;
@@ -397,7 +397,7 @@ bool hxc_caxecraft_app_TerrainChunkCache_rebuild(struct hxc_caxecraft_app_Terrai
         }
         int32_t hxc_l_tmp_load_result_n9 = hxc_l_x;
         int32_t hxc_l_tmp_load_result_n10 = hxc_l_y;
-        struct hxc_caxecraft_domain_BlockCoord hxc_l_tmp_call_result_n12 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n9, hxc_l_tmp_load_result_n10, hxc_l_z);
+        struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n12 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n9, hxc_l_tmp_load_result_n10, hxc_l_z);
         enum hxc_caxecraft_domain_BlockKind hxc_l_tmp_call_result_n13 = hxc_caxecraft_domain_WorldRead_query(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n12);
         enum hxc_caxecraft_domain_BlockKind hxc_l_kind = hxc_l_tmp_call_result_n13;
         bool hxc_l_tmp_call_result_n15 = hxc_caxecraft_domain_World_isSolid(hxc_l_kind);

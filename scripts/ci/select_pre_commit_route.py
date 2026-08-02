@@ -243,6 +243,7 @@ AFFECTED_OWNER_RULES = (
         re.compile(
             r"^examples/caxecraft/(?:"
             r"campaign-runtime(?:-c)?\.hxml"
+            r"|src/caxecraft/app/ActivePlayableLevel\.hx"
             r"|src/caxecraft/content/(?:CampaignManifest|CampaignRuntime|RuntimeSchema|RuntimeLevelLoader|ActiveContent)\.hx"
             r"|test/caxecraft/qa/CampaignRuntimeProbe\.hx"
             r"|test/native/campaign_runtime_harness\.c"
