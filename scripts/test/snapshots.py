@@ -21,6 +21,8 @@ from typing import Any, Callable, Iterable
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "docs/specs/fixture-taxonomy.json"
 PACKAGE = ROOT / "package.json"
+LARGE_DIFF_CHARACTER_THRESHOLD = 1_000_000
+LARGE_DIFF_TIMEOUT_SECONDS = 30
 
 
 class SnapshotFailure(RuntimeError):
@@ -1381,14 +1383,77 @@ def render_diff(change: Change) -> str:
     relative = change.path.relative_to(ROOT).as_posix()
     before_name = f"expected/{relative}" if change.before is not None else "/dev/null"
     after_name = f"actual/{relative}" if change.after is not None else "/dev/null"
+    before_lines = canonical_lines(change.before, change.format)
+    after_lines = canonical_lines(change.after, change.format)
+    if sum(map(len, before_lines)) + sum(map(len, after_lines)) >= LARGE_DIFF_CHARACTER_THRESHOLD:
+        return render_large_diff(relative, before_lines, after_lines)
     return "".join(
         difflib.unified_diff(
-            canonical_lines(change.before, change.format),
-            canonical_lines(change.after, change.format),
+            before_lines,
+            after_lines,
             fromfile=before_name,
             tofile=after_name,
         )
     )
+
+
+def render_large_diff(relative: str, before_lines: list[str], after_lines: list[str]) -> str:
+    """
+    Show a large snapshot change without making review time grow quadratically.
+
+    Python's general-purpose line matcher can repeatedly rescan a large JSON
+    file when many lines look alike. Git's histogram algorithm groups those
+    repeated lines efficiently and still produces an ordinary expected/actual
+    patch for review. A missing, timed-out, or failed Git command rejects the
+    snapshot update instead of hiding the change.
+    """
+    with tempfile.TemporaryDirectory(prefix="hxc-snapshot-diff-") as temporary:
+        root = Path(temporary)
+        before = root / "expected" / relative
+        after = root / "actual" / relative
+        before.parent.mkdir(parents=True)
+        after.parent.mkdir(parents=True)
+        before.write_text("".join(before_lines), encoding="utf-8")
+        after.write_text("".join(after_lines), encoding="utf-8")
+        command = [
+            "git",
+            "diff",
+            "--no-index",
+            "--no-color",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--diff-algorithm=histogram",
+            "--src-prefix=",
+            "--dst-prefix=",
+            "--",
+            before.relative_to(root).as_posix(),
+            after.relative_to(root).as_posix(),
+        ]
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_PAGER": "cat",
+                "LC_ALL": "C",
+            }
+        )
+        try:
+            result = subprocess.run(
+                command,
+                cwd=root,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=LARGE_DIFF_TIMEOUT_SECONDS,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise SnapshotFailure(f"large snapshot diff failed: {error}") from error
+        if result.returncode != 1 or result.stderr:
+            detail = result.stderr.strip() or f"unexpected exit {result.returncode}"
+            raise SnapshotFailure(f"large snapshot diff failed: {detail}")
+        return result.stdout
 
 
 def collect_changes(

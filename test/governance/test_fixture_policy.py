@@ -283,6 +283,45 @@ class FixturePolicyTests(unittest.TestCase):
         self.assertIn("snapshot-diff: sample: expected/result.json", stdout)
         self.assertIn("semantic drift detected", stderr)
 
+    def test_large_repeated_json_uses_bounded_histogram_diff(self) -> None:
+        repeated = [{"kind": "reason", "value": "same"} for _ in range(15_000)]
+        changed = list(repeated)
+        changed[len(changed) // 2] = {"kind": "reason", "value": "changed"}
+        change = self.runner.Change(
+            "sample",
+            ROOT / "large-runtime-plan.json",
+            "json",
+            {"reasons": repeated},
+            {"reasons": changed},
+        )
+
+        difference = self.runner.render_diff(change)
+
+        self.assertIn("--- expected/large-runtime-plan.json", difference)
+        self.assertIn("+++ actual/large-runtime-plan.json", difference)
+        self.assertIn('-      "value": "same"', difference)
+        self.assertIn('+      "value": "changed"', difference)
+
+    def test_large_diff_failure_rejects_the_snapshot(self) -> None:
+        change = self.runner.Change(
+            "sample",
+            ROOT / "large.json",
+            "json",
+            {"value": "before"},
+            {"value": "after"},
+        )
+        failed = self.runner.subprocess.CompletedProcess(
+            args=["git", "diff"], returncode=2, stdout="", stderr="diff failed"
+        )
+        with (
+            mock.patch.object(self.runner, "LARGE_DIFF_CHARACTER_THRESHOLD", 1),
+            mock.patch.object(self.runner.subprocess, "run", return_value=failed),
+            self.assertRaisesRegex(
+                self.runner.SnapshotFailure, "large snapshot diff failed: diff failed"
+            ),
+        ):
+            self.runner.render_diff(change)
+
     def test_snapshot_paths_cannot_escape_the_repository(self) -> None:
         with self.assertRaisesRegex(
             self.runner.SnapshotFailure, "snapshot path must be normalized"
