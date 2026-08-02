@@ -16,10 +16,12 @@ import reflaxe.c.contract.TypedCContract.TypedCDeclaration;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstField;
+import reflaxe.c.frontend.TypedAstNormalizer;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
+import reflaxe.c.lowering.CBodyAggregate.CBodyValueKind;
 import reflaxe.c.lowering.CBodyLoweringError;
 import reflaxe.c.lowering.HaxeSourceSpan;
 import reflaxe.c.naming.CSymbolRegistry;
@@ -318,6 +320,7 @@ class CImportRegistry {
 	final includeFactsByOwner:Map<String, Array<TypedCBuildFact>> = [];
 	final preparedTypes:Map<String, CPreparedImportType> = [];
 	final preparedFunctions:Map<String, CPreparedImportFunction> = [];
+	final preparedFunctionsByCName:Map<String, CPreparedImportFunction> = [];
 	final preparedConstants:Map<String, CPreparedImportConstant> = [];
 	final reachedOwners:Map<String, Bool> = [];
 
@@ -346,8 +349,21 @@ class CImportRegistry {
 			throw new CBodyLoweringError(HxcIRDiagnostic.invalidAbiBoundary(Std.string(context.profile), "C import contract",
 				'Unsupported typed C contract schema ${snapshot.schemaVersion}; expected schema 3.', fallbackSource(program)),
 				fallbackPosition(program));
-		for (declaration in program.declarations)
+		for (declaration in program.declarations) {
 			declarationsByPath.set(declaration.path, declaration);
+			final base = TypedAstNormalizer.baseType(declaration.raw);
+			final importPath = typePath(base.module, base.pack, base.name);
+			final prior = declarationsByPath.get(importPath);
+			if (prior != null && prior.path != declaration.path)
+				abiFailure(rawPosition(declaration), declaration.sourcePath, 'C import declaration `$importPath`',
+					'Two retained Haxe declarations resolve to the same canonical C-import identity: `${prior.path}` and `${declaration.path}`.');
+			// Haxe gives private secondary types an internal `_Module` package path.
+			// Typed references and C contracts instead use their authored module path.
+			// Keep both names attached to the same typed declaration so an inlined
+			// private extern call retains real ClassField types rather than rebuilding
+			// its ABI from serialized contract strings.
+			declarationsByPath.set(importPath, declaration);
+		}
 		for (contract in snapshot.declarations)
 			contractsByPath.set(contract.modulePath, contract);
 		for (fact in snapshot.buildFacts) {
@@ -603,14 +619,55 @@ class CImportRegistry {
 			abiFailure(field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`',
 				"Borrowed CString returns need an explicit lifetime owner.");
 		final cName = externalName(contractField.cName, field.name, field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`');
-		final request = new CSymbolRequest(CSKMethod, ownerPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVExternal, cName);
-		context.symbols.register(request);
+		final abiKey = functionAbiKey(parameters, returnType, variadic);
+		final prior = preparedFunctionsByCName.get(cName);
+		final request = if (prior == null) {
+			final fresh = new CSymbolRequest(CSKMethod, ownerPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVExternal, cName);
+			context.symbols.register(fresh);
+			fresh;
+		} else {
+			final priorKey = functionAbiKey(prior.parameters, prior.returnType, prior.variadic);
+			if (priorKey != abiKey)
+				abiFailure(field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`',
+					'Native symbol `$cName` is already imported by `${prior.haxePath}` with an incompatible C ABI signature.');
+			prior.request;
+		};
 		final prepared = new CPreparedImportFunction(id, declaration.ownerModulePath, '$ownerPath.${field.name}', parameters, returnType, variadic,
 			HaxeSourceSpan.fromPosition(field.pos, declaration.sourcePath), request);
 		preparedFunctions.set(id, prepared);
+		if (prior == null)
+			preparedFunctionsByCName.set(cName, prepared);
 		reach(ownerPath);
 		return prepared;
 	}
+
+	/**
+		Describe only the C declaration shape of an imported function.
+
+		Source-level lifetime carriers deliberately remain distinct in HxcIR, but
+		`c.CString` and `c.CStringRef` both enter C as `const char *`. This key is
+		used only to prove that two declarations may name the same header-owned C
+		function; it never makes their Haxe values interchangeable.
+	**/
+	static function functionAbiKey(parameters:Array<CBodyValueType>, returnType:CBodyValueType, variadic:Bool):String
+		return '(${parameters.map(importAbiTypeKey).join(",")})->${importAbiTypeKey(returnType)};variadic=$variadic';
+
+	/** Map one admitted Haxe carrier to its exact declaration shape at the C ABI. */
+	static function importAbiTypeKey(type:CBodyValueType):String
+		return switch type.kind {
+			case CBVKPrimitive(mapping): 'primitive:${mapping.cSpelling}';
+			case CBVKCString | CBVKCStringRef: "pointer:const-char";
+			case CBVKCStringBufferRef: "pointer:char";
+			case CBVKNativeRef(pointee): 'pointer:${importAbiTypeKey(pointee)}';
+			case CBVKImport(value):
+				final spelling = value.request.explicitName ?? value.haxePath;
+				switch value.kind {
+					case CITStruct: 'struct:$spelling';
+					case CITEnum: 'enum:$spelling';
+					case CITTypedef: 'typedef:$spelling';
+				};
+			case _: 'semantic:${type.cSpelling}';
+		};
 
 	function prepareConstant(ownerPath:String, field:ClassField, contractField:TypedCContractField, position:Position, callerSourcePath:String,
 			expected:Null<CBodyValueType>):CPreparedImportConstant {

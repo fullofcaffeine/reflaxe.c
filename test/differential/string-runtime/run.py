@@ -25,6 +25,7 @@ FIXTURE = CASE / "string_runtime.c"
 GENERATED = CASE / "generated"
 NEGATIVE = CASE / "negative"
 NATIVE_TEXT = CASE / "native_text"
+NATIVE_TEXT_PRIVATE_INLINE = CASE / "native_text_private_inline"
 NATIVE_TEXT_NUL = CASE / "native_text_nul"
 NATIVE_TEXT_UNTERMINATED = CASE / "native_text_unterminated"
 TEXT_OBSERVER_SOURCE = CASE / "native/text_observer.c"
@@ -864,16 +865,26 @@ def render_projects(root: Path) -> dict[str, Path]:
     return projects
 
 
-def render_native_text_projects(root: Path) -> tuple[Path, Path, Path]:
-    """Compile the successful and two fail-before-C text-borrow proofs."""
+def render_native_text_projects(root: Path) -> tuple[Path, Path, Path, Path, Path]:
+    """Compile public/private successes and two fail-before-C text borrows."""
     success = root / "native-text"
+    private_split = root / "native-text-private-split"
+    private_unity = root / "native-text-private-unity"
     nul = root / "native-text-nul"
     unterminated = root / "native-text-unterminated"
     rendered = compile_haxe(NATIVE_TEXT, success, report=True)
+    private_rendered = compile_haxe(
+        NATIVE_TEXT_PRIVATE_INLINE, private_split, report=True
+    )
+    private_unity_rendered = compile_haxe(
+        NATIVE_TEXT_PRIVATE_INLINE, private_unity, layout="unity"
+    )
     rejected = compile_haxe(NATIVE_TEXT_NUL, nul)
     unavailable = compile_haxe(NATIVE_TEXT_UNTERMINATED, unterminated)
     for label, result in (
         ("native text", rendered),
+        ("private inline native text", private_rendered),
+        ("private inline unity native text", private_unity_rendered),
         ("embedded-NUL text", rejected),
         ("unterminated text view", unavailable),
     ):
@@ -891,7 +902,45 @@ def render_native_text_projects(root: Path) -> tuple[Path, Path, Path]:
     )
     if "hxc_string_borrow_cstring(" not in sources or ".data" not in sources:
         raise StringRuntimeFailure("native text generated C bypassed the checked hxrt borrow")
-    return success, nul, unterminated
+    private_hxcir = extract_hxcir(private_rendered)
+    if (
+        'runtime(feature="string",operation="borrow-cstring")'
+        not in private_hxcir
+        or 'native("native.function.RuntimeTextFacade.PrivateTextObserver.matches")'
+        not in private_hxcir
+    ):
+        raise StringRuntimeFailure(
+            "private inline native text lost its declaration or checked borrow"
+        )
+    private_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((private_split / "src").rglob("*.c"))
+    )
+    if private_sources.count("fixture_text_matches(") != 2:
+        raise StringRuntimeFailure(
+            "compatible literal/runtime imports did not share one native function"
+        )
+    private_headers = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted((private_split / "include").rglob("*.h"))
+    )
+    if "PrivateTextObserver" in private_headers or "StaticTextObserver" in private_headers:
+        raise StringRuntimeFailure(
+            "private inline fixture leaked a Haxe helper into generated C headers"
+        )
+    symbol_table = json.loads(
+        (private_split / "hxc.symbols.json").read_text(encoding="utf-8")
+    )
+    shared = [
+        symbol
+        for symbol in symbol_table.get("symbols", [])
+        if symbol.get("cName") == "fixture_text_matches"
+    ]
+    if len(shared) != 1:
+        raise StringRuntimeFailure(
+            "compatible aliases did not coalesce to one external symbol request"
+        )
+    return success, private_split, private_unity, nul, unterminated
 
 
 def plausible_output_exists(output: Path) -> bool:
@@ -919,6 +968,7 @@ def validate_generated_failures(root: Path) -> None:
     expected_cstring_failures = {
         "cstring_ref_escape": ("HXC1001", "TCall(c.CStringRef.to:requires-direct-import-argument)"),
         "cstring_ref_wrong_owner": ("Int should be String", "For function argument 'text'"),
+        "c_import_alias_mismatch": ("HXC3000", "incompatible C ABI signature"),
     }
     for name, (diagnostic, marker) in expected_cstring_failures.items():
         output = root / f"negative-{name}"
@@ -1136,7 +1186,10 @@ def compile_cpp_headers(toolchain: Toolchain, project: Path, build: Path) -> Non
 
 
 def run_generated_native(
-    toolchains: list[Toolchain], projects: dict[str, Path], native_text: tuple[Path, Path, Path], root: Path
+    toolchains: list[Toolchain],
+    projects: dict[str, Path],
+    native_text: tuple[Path, Path, Path, Path, Path],
+    root: Path,
 ) -> None:
     for toolchain in toolchains:
         build = root / f"generated-{toolchain.family}"
@@ -1149,9 +1202,17 @@ def run_generated_native(
                 )
                 inspect_generated_symbols(executable, toolchain.family)
         compile_cpp_headers(toolchain, projects["split"], build)
-        native_text_success, native_text_nul, native_text_unterminated = native_text
+        (
+            native_text_success,
+            native_text_private_split,
+            native_text_private_unity,
+            native_text_nul,
+            native_text_unterminated,
+        ) = native_text
         for project, label, expect_runtime_rejection in (
             (native_text_success, "native-text", False),
+            (native_text_private_split, "native-text-private-split", False),
+            (native_text_private_unity, "native-text-private-unity", False),
             (native_text_nul, "native-text-nul", True),
             (native_text_unterminated, "native-text-unterminated", True),
         ):

@@ -426,7 +426,7 @@ class TypedCContractMacro {
 		}
 		if (cName != null) {
 			final symbolNamespace = !isStatic && isVariable ? 'member:${shell.path}' : "ordinary:translation-unit";
-			registerSymbol(cName, '${shell.path}.${field.name}', symbolNamespace, cNameEntry.pos, explicitSymbols);
+			registerSymbol(cName, '${shell.path}.${field.name}', symbolNamespace, cNameEntry.pos, explicitSymbols, identityExternalFunction);
 		}
 
 		final linkage = readOptionalEnum(field.meta, "c.linkage", "c.Linkage", ["External", "Internal", "Static", "Inline"], '${shell.path}.${field.name}');
@@ -953,13 +953,17 @@ class TypedCContractMacro {
 		};
 	}
 
-	static function registerSymbol(name:String, owner:String, namespace:String, pos:Position, symbols:Map<String, SymbolOrigin>):Void {
+	static function registerSymbol(name:String, owner:String, namespace:String, pos:Position, symbols:Map<String, SymbolOrigin>,
+			externalFunction:Bool = false):Void {
 		final key = namespace + "\x00" + name;
 		final existing = symbols.get(key);
-		if (existing != null) {
+		if (existing != null && !(existing.externalFunction && externalFunction)) {
 			error('duplicate explicit C symbol `$name` in `$namespace` on `$owner`; first declared by `${existing.owner}`', pos);
-		} else {
-			symbols.set(key, {owner: owner});
+		} else if (existing == null) {
+			// Two extern declarations may intentionally describe the same function
+			// through different Haxe lifetime views. Typed lowering compares their
+			// complete C ABI before it lets them share this spelling.
+			symbols.set(key, {owner: owner, externalFunction: externalFunction});
 		}
 	}
 
@@ -1090,5 +1094,6 @@ private typedef LiteralValue = {
 
 private typedef SymbolOrigin = {
 	final owner:String;
+	final externalFunction:Bool;
 }
 #end
