@@ -791,21 +791,22 @@ beside that build variant. On the next request it performs these checks in
 order:
 
 1. hash every reviewed Haxe, nested HXML, compiler, Reflaxe, runtime, binding,
-   build-script, asset, compiled localization/content-pack, pinned Haxe, and
-   standard-library input;
+   build-script, executable asset, pinned Haxe, and standard-library input;
 2. compare the requested configuration, selected native tools, flags, and
    environment with the request that produced the executable;
 3. re-hash the exact Raylib/Raygui headers and libraries used by that native
    build; and
-4. re-hash the complete generated project, staged assets, and linked
+4. re-hash the complete generated project, staged executable assets, and linked
    executable; and
 5. republish the current runtime content files before launch.
 
-The staged map is intentionally not a compiler/build input: the executable
-parses it after startup, so changing it must preserve the code hit. Restaging
-still copies the exact repository bytes through the existing fail-closed owned
-directory check. The pack and UI catalog remain compiler inputs until their
-runtime-loading slice lands.
+The staged map, pack, and UI catalog are intentionally not compiler/build
+inputs: the executable parses them after startup, so changing any one must
+preserve the code hit. Restaging still copies the exact repository bytes
+through the existing fail-closed owned-directory check and writes an exact
+SHA-256 receipt. Generated compatibility adapters below Caxecraft's Haxe source
+tree remain build inputs until `haxe_c-xge.20.4.3.8` removes that second
+authority.
 
 Only an exact code/configuration match launches the existing executable. A missing, malformed,
 partial, or corrupt record is a visible miss. The ordinary build then runs and

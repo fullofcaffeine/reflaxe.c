@@ -734,6 +734,15 @@ future `hxc dev`/`hxc watch` command may extract this proven lifecycle from the
 Caxecraft runner; it must preserve the same cold/server byte parity and fresh
 request-local compiler state.
 
+Map, pack, and UI source files are now runtime inputs rather than code-build
+inputs. After one verified build, editing any of those files keeps the exact
+executable, stages the new bytes, and lets the compiled Haxe loader validate
+them before publishing one complete content generation. The build-state guard
+checks that these authored files stay outside the executable key and that the
+launcher stages their exact current bytes. Generated compatibility Haxe remains
+a build input until `haxe_c-xge.20.4.3.8` removes that temporary second
+authority.
+
 For a focused compiler-latency investigation, run:
 
 ```sh

@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -29,6 +32,9 @@ from play import (  # noqa: E402
     hosted_content_haxe_defines,
     parse_args,
     play_build_inputs,
+    runtime_content_report,
+    stage_content_catalogs,
+    tool_identity,
     validate_content_platform_output,
 )
 
@@ -145,6 +151,12 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         self.assertFalse(tool.hit)
         self.assertEqual(tool.reason, "native or launcher tool identity changed")
 
+    def test_no_build_tool_identity_reads_bytes_without_starting_the_tool(self) -> None:
+        with patch("play.tool_version", side_effect=AssertionError("tool process started")):
+            identity = tool_identity("python-test", sys.executable, report_version=False)
+        self.assertEqual(identity["path"], str(Path(sys.executable).resolve()))
+        self.assertNotIn("version", identity)
+
     def test_generated_or_executable_corruption_never_launches(self) -> None:
         (self.output_root / "generated/main.c").write_text("corrupt\n", encoding="utf-8")
         generated = self.decision()
@@ -162,6 +174,51 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         staged.write_text("new authored world\n", encoding="utf-8")
         decision = self.decision()
         self.assertTrue(decision.hit)
+
+    def test_alternate_runtime_content_is_hashed_and_staged_from_its_real_bytes(self) -> None:
+        source_root = self.root / "content-source"
+        for relative in (
+            "assets/manifest.json",
+            "locales/ui.json",
+            "packs/caxecraft/base/content.json",
+            "scenarios/first-playable/map.caxemap",
+        ):
+            source = CASE / relative
+            target = source_root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        ui = source_root / "locales/ui.json"
+        ui.write_bytes(ui.read_bytes() + b"\n")
+
+        report = runtime_content_report(source_root)
+        files = {
+            str(record["path"]): record
+            for record in report["files"]
+        }
+        expected_ui_hash = hashlib.sha256(ui.read_bytes()).hexdigest()
+        self.assertEqual(files["locales/ui.json"]["sha256"], expected_ui_hash)
+
+        (self.output_root / ".hxc-caxecraft-play-root.json").write_text(
+            json.dumps({"kind": "caxecraft-play-output", "schemaVersion": 1}) + "\n",
+            encoding="utf-8",
+        )
+        published = stage_content_catalogs(
+            self.executable.parent,
+            source_root=source_root,
+        )
+        self.assertEqual(published, report)
+        self.assertEqual(
+            (self.executable.parent / "content/locales/ui.json").read_bytes(),
+            ui.read_bytes(),
+        )
+        self.assertEqual(
+            json.loads(
+                (self.executable.parent / "content/packs/caxecraft/base/runtime-content.json").read_text(
+                    encoding="utf-8"
+                )
+            ),
+            report,
+        )
 
     def test_windows_generation_selects_typed_unsupported_package_capability(
         self,
@@ -259,8 +316,6 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "repo/caxecraft/play.hxml",
             "repo/caxecraft/src",
             "repo/caxecraft/assets",
-            "repo/caxecraft/locales",
-            "repo/caxecraft/packs",
             "repo/caxecraft/tooling/play.py",
             "repo/caxecraft/tooling/dev_build_state.py",
             "repo/caxecraft/tooling/dev_generation.py",
@@ -276,6 +331,8 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "haxe/std",
         }
         self.assertTrue(required_roots.issubset(logical_names))
+        self.assertNotIn("repo/caxecraft/locales", logical_names)
+        self.assertNotIn("repo/caxecraft/packs", logical_names)
         self.assertNotIn("repo/caxecraft/scenarios", logical_names)
         self.assertFalse(
             any("__pycache__" in name or name.endswith(".pyc") for name in logical_names)

@@ -458,7 +458,7 @@ def stage_runtime_assets(destination: Path) -> None:
     )
 
 
-def runtime_content_report() -> dict[str, object]:
+def runtime_content_report(source_root: Path = CASE) -> dict[str, object]:
     """Describe the exact runtime inputs without making them compiler inputs.
 
     The report is regenerated from current source bytes whenever play stages a
@@ -466,7 +466,7 @@ def runtime_content_report() -> dict[str, object]:
     never trusts that copy to describe edited content.
     """
 
-    manifest = load_object(CASE / "assets/manifest.json", "Caxecraft asset manifest")
+    manifest = load_object(source_root / "assets/manifest.json", "Caxecraft asset manifest")
     if manifest.get("schemaVersion") != 1 or not isinstance(manifest.get("packId"), str):
         raise PlayFailure("Caxecraft asset manifest identity is invalid")
     file_kinds = {
@@ -481,7 +481,7 @@ def runtime_content_report() -> dict[str, object]:
     )
     files: list[dict[str, object]] = []
     for raw_path in ordered_paths:
-        source = CASE.joinpath(*PurePosixPath(raw_path).parts)
+        source = source_root.joinpath(*PurePosixPath(raw_path).parts)
         files.append(
             {
                 "kind": file_kinds[raw_path],
@@ -490,7 +490,7 @@ def runtime_content_report() -> dict[str, object]:
                 "sha256": sha256_file(source),
             }
         )
-    asset_hash = sha256_file(CASE / "assets/manifest.json")
+    asset_hash = sha256_file(source_root / "assets/manifest.json")
     generation_input = (
         f"asset-manifest\0{manifest['packId']}\0{asset_hash}\n"
         + "".join(
@@ -510,14 +510,17 @@ def runtime_content_report() -> dict[str, object]:
     }
 
 
-def stage_content_catalogs(destination: Path) -> None:
+def stage_content_catalogs(
+    destination: Path,
+    *,
+    source_root: Path = CASE,
+) -> dict[str, object]:
     """Publish the exact authored content tree consumed beside the executable.
 
     Native play reads the staged CaxeMap after process startup. The base content
-    manifest and UI catalog are staged through the same bounded ownership rule,
-    but remain compiled inputs until their next runtime-loading slice lands.
-    Generated-content snapshots also use this staging helper so the transition
-    cannot produce two package layouts.
+    manifest and UI catalog use the same bounded ownership rule. Their current
+    bytes are runtime inputs; generated compatibility Haxe remains a separate
+    build input until its removal Bead completes.
     """
 
     stage_root = destination / "content"
@@ -541,7 +544,7 @@ def stage_content_catalogs(destination: Path) -> None:
             )
     for raw_path in RUNTIME_CONTENT_FILES:
         relative = validated_relative(raw_path, f"runtime content {raw_path}")
-        source = CASE.joinpath(*relative.parts)
+        source = source_root.joinpath(*relative.parts)
         if source.is_symlink() or not source.is_file():
             raise PlayFailure(f"Caxecraft runtime content is missing or a symlink: {raw_path}")
         target = prepare_stage_destination(
@@ -555,11 +558,13 @@ def stage_content_catalogs(destination: Path) -> None:
         PurePosixPath(RUNTIME_CONTENT_REPORT),
         "Caxecraft runtime content report",
     )
+    published_report = runtime_content_report(source_root)
     report_target.write_text(
-        json.dumps(runtime_content_report(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        json.dumps(published_report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
         newline="\n",
     )
+    return published_report
 
 
 def development_tool(name: str) -> str:
@@ -1396,10 +1401,17 @@ def source_tooling_inputs() -> list[InputPath]:
 def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
     """Name every source family whose bytes can change the playable build.
 
+    Authored map, pack, and UI files are runtime inputs. The launcher copies
+    their current bytes beside an already verified executable, and the Haxe
+    package loader validates them after startup. Their generated compatibility
+    adapters remain ordinary Haxe files below ``src`` until
+    ``haxe_c-xge.20.4.3.8`` removes that second authority; changing an adapter
+    still causes a build miss, while changing runtime data does not.
+
     The logical names form the vocabulary used by cache-miss diagnostics. This
     function is separate from hashing so focused tests can prove that compiler,
-    binding, runtime, content, Haxe-install, and launcher inputs all participate
-    without performing a full game build.
+    binding, runtime, generated compatibility code, Haxe-install, and launcher
+    inputs all participate without performing a full game build.
     """
 
     inputs = [
@@ -1416,8 +1428,6 @@ def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
         InputPath("repo/caxecraft/play.hxml", CASE / "play.hxml"),
         InputPath("repo/caxecraft/src", CASE / "src"),
         InputPath("repo/caxecraft/assets", CASE / "assets"),
-        InputPath("repo/caxecraft/locales", CASE / "locales"),
-        InputPath("repo/caxecraft/packs", CASE / "packs"),
         *source_tooling_inputs(),
         InputPath("tooling/haxeshim.js", resolved_executable(development_tool("haxe"), "Haxe shim")),
         *haxe_install_inputs(),
@@ -1545,10 +1555,13 @@ def play_request_snapshot(
         "hxml": "examples/caxecraft/play.hxml",
     }
     tools = [
-        tool_identity("node", "node", report_version=True),
-        tool_identity("c-compiler", args.cc, report_version=True),
-        tool_identity("cxx-compiler", args.cxx, report_version=True),
-        tool_identity("cmake", args.cmake, report_version=True),
+        # Exact executable bytes are sufficient for reuse identity. Asking a
+        # compiler for its version would itself violate the no-build path's
+        # process contract before the cache decision was known.
+        tool_identity("node", "node", report_version=False),
+        tool_identity("c-compiler", args.cc, report_version=False),
+        tool_identity("cxx-compiler", args.cxx, report_version=False),
+        tool_identity("cmake", args.cmake, report_version=False),
         tool_identity("archiver", args.ar, report_version=False),
         tool_identity("generator", generator_command, report_version=False),
     ]
