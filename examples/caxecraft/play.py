@@ -19,6 +19,7 @@ import tempfile
 import time
 import zlib
 from pathlib import Path, PurePosixPath
+from typing import Callable
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -331,6 +332,7 @@ PILOT_SCRIPT_CODES = {
     "smooth-motion": 9,
     "editor-shell": 10,
     "campaign-travel": 11,
+    "adventure-journey": 12,
 }
 PILOT_FRAME_LIMITS = {
     "launch-smoke": 4,
@@ -346,6 +348,7 @@ PILOT_FRAME_LIMITS = {
     "smooth-motion": 12,
     "editor-shell": 4,
     "campaign-travel": 5,
+    "adventure-journey": 7,
 }
 
 
@@ -898,6 +901,78 @@ def validate_smoke_screenshot(
     return width, height
 
 
+def validate_campaign_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove Adventure exposed the staged campaign before gameplay began.
+
+    The focused Haxe probes own the exact manifest strings and transitions.
+    This native observer instead checks the visible roles that only the real
+    renderer can prove: staged title art behind a dark campaign card, distinct
+    campaign and route text, both route nodes, and separate launch/back actions.
+    Broad color ranges keep the check portable across admitted pixel scales and
+    graphics drivers without turning the screenshot into an opaque golden.
+    """
+    width, height, pixels = decode_rgba_png(path, "campaign selection")
+    expected_dimensions = {(1280, 720)}
+    if platform_name == "macos":
+        expected_dimensions.add((2560, 1440))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft campaign screenshot must match its logical 1280x720 window "
+            f"at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // 1280
+    stride = width * 4
+
+    def count_region(
+        bounds: tuple[int, int, int, int],
+        predicate: Callable[[int, int, int], bool],
+    ) -> int:
+        left, top, right, bottom = bounds
+        matches = 0
+        for row in range(top * scale, bottom * scale):
+            row_start = row * stride
+            for column in range(left * scale, right * scale):
+                offset = row_start + column * 4
+                red, green, blue = pixels[offset : offset + 3]
+                if predicate(red, green, blue):
+                    matches += 1
+        return matches
+
+    panel = (300, 240, 980, 630)
+    wordmark = (300, 0, 980, 180)
+    route = (300, 410, 700, 535)
+    actions = (300, 550, 980, 630)
+    dark_panel = count_region(panel, lambda red, green, blue: red < 45 and green < 55 and blue < 65)
+    staged_white = count_region(wordmark, lambda red, green, blue: red > 210 and green > 210 and blue > 200)
+    panel_cyan = count_region(panel, lambda red, green, blue: green > 140 and blue > 140 and green > red * 1.4)
+    panel_orange = count_region(panel, lambda red, green, blue: red > 200 and 120 < green < 220 and blue < 120)
+    panel_text = count_region(panel, lambda red, green, blue: red > 210 and green > 210 and blue > 200)
+    route_cyan = count_region(route, lambda red, green, blue: green > 140 and blue > 140 and green > red * 1.4)
+    route_orange = count_region(route, lambda red, green, blue: red > 200 and 120 < green < 220 and blue < 120)
+    action_cyan = count_region(actions, lambda red, green, blue: green > 140 and blue > 140 and green > red * 1.4)
+    action_orange = count_region(actions, lambda red, green, blue: red > 200 and 120 < green < 220 and blue < 120)
+
+    pixel_area = scale * scale
+    if (
+        dark_panel < 180_000 * pixel_area
+        or staged_white < 1_000 * pixel_area
+        or panel_cyan < 1_500 * pixel_area
+        or panel_orange < 1_500 * pixel_area
+        or panel_text < 2_000 * pixel_area
+        or route_cyan < 100 * pixel_area
+        or route_orange < 80 * pixel_area
+        or action_cyan < 350 * pixel_area
+        or action_orange < 250 * pixel_area
+    ):
+        raise PlayFailure(
+            "Caxecraft campaign framebuffer is missing its staged campaign card, route, or actions "
+            f"(darkPanel={dark_panel}, stagedWhite={staged_white}, panelCyan={panel_cyan}, "
+            f"panelOrange={panel_orange}, panelText={panel_text}, routeCyan={route_cyan}, "
+            f"routeOrange={route_orange}, actionCyan={action_cyan}, actionOrange={action_orange})"
+        )
+    return width, height
+
+
 def signed_word(value: int) -> int:
     """Interpret one decoded 32-bit word as Haxe/C's signed `Int`."""
     return value - 0x1_0000_0000 if value >= 0x8000_0000 else value
@@ -1031,8 +1106,8 @@ def build_pilot_report(
             raise PlayFailure("renderer benchmark did not measure every post-warmup terrain frame")
     elif any(signed[index] != 0 for index in range(36, 40)):
         raise PlayFailure("ordinary pilot unexpectedly retained renderer timing instrumentation")
-    expected_generation = 2 if pilot == "campaign-travel" else 1
-    expected_publications = 1 if pilot == "campaign-travel" else 0
+    expected_generation = 2 if pilot in ("campaign-travel", "adventure-journey") else 1
+    expected_publications = 1 if pilot in ("campaign-travel", "adventure-journey") else 0
     if signed[40] != expected_generation or signed[41] != expected_publications:
         raise PlayFailure(
             f"pilot {pilot!r} observed content generation/publications "
@@ -1788,6 +1863,7 @@ def compile_haxe(
             "smooth-motion": "caxecraft_pilot_smooth_motion",
             "editor-shell": "caxecraft_pilot_editor_shell",
             "campaign-travel": "caxecraft_pilot_campaign_travel",
+            "adventure-journey": "caxecraft_pilot_adventure_journey",
         }
         pilot_define = pilot_defines.get(pilot)
         if pilot_define is None:
@@ -2409,10 +2485,12 @@ def validate_generated_playable(
     draw_texture_count = combined.count("DrawTexturePro(")
     # Title, wordmark, hotbar frame, item, and health-glyph helpers own the
     # original five sites. The equipped-item badge adds one reviewed branch for
-    # each admitted item atlas. Runtime loops still reuse those fixed helpers.
-    if draw_texture_count != 7:
+    # each admitted item atlas. Campaign selection deliberately redraws the
+    # staged panorama and wordmark through the same two typed helpers. Runtime
+    # loops still reuse those fixed sites; campaign rows add no texture owner.
+    if draw_texture_count != 9:
         raise PlayFailure(
-            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 7"
+            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 9"
         )
     billboard_count = combined.count("DrawBillboardRec(")
     # Actors use one entity-atlas borrow. Authored world items add one branch
@@ -2888,6 +2966,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             "smooth-motion",
             "editor-shell",
             "campaign-travel",
+            "adventure-journey",
         ),
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
@@ -3297,17 +3376,27 @@ def main(argv: list[str]) -> int:
                 "smooth-motion": "caxecraft-pilot-smooth-motion.png",
                 "editor-shell": "caxecraft-pilot-editor.png",
                 "campaign-travel": "caxecraft-pilot-campaign-travel.png",
+                "adventure-journey": "caxecraft-pilot-adventure-journey.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
+            supporting_screenshots = (
+                (
+                    executable.parent / "caxecraft-pilot-adventure-selected.png",
+                    executable.parent / "caxecraft-pilot-campaign-selected.png",
+                )
+                if selected_pilot == "adventure-journey"
+                else ()
+            )
             state_screenshot = executable.parent / "caxecraft-pilot-state.png"
             reports: list[dict[str, object]] = []
             screenshot_hashes: list[str] = []
+            supporting_hashes: dict[str, list[str]] = {path.name: [] for path in supporting_screenshots}
             compiler_version = tool_version(args.cc)
             width = 0
             height = 0
             repetitions = 7 if args.benchmark_renderer else 2
             for repeat in range(repetitions):
-                for stale in (screenshot, state_screenshot):
+                for stale in (screenshot, state_screenshot, *supporting_screenshots):
                     if stale.exists():
                         stale.unlink()
                 run(
@@ -3338,6 +3427,14 @@ def main(argv: list[str]) -> int:
                 )
                 if args.raylib_configuration == "memory-software":
                     normalize_memory_software_capture(screenshot)
+                    for supporting_screenshot in supporting_screenshots:
+                        normalize_memory_software_capture(supporting_screenshot)
+                for supporting_screenshot in supporting_screenshots:
+                    if supporting_screenshot.name == "caxecraft-pilot-campaign-selected.png":
+                        validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
+                    else:
+                        validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
+                    supporting_hashes[supporting_screenshot.name].append(hashlib.sha256(supporting_screenshot.read_bytes()).hexdigest())
                 if selected_pilot in ("launch-smoke", "secondary-locale"):
                     width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
                 elif selected_pilot == "resize-layout":
@@ -3376,6 +3473,9 @@ def main(argv: list[str]) -> int:
                     raise PlayFailure(f"repeated native pilot semantic evidence drifted:\n{difference}")
             if len(set(screenshot_hashes)) != 1:
                 raise PlayFailure("repeated native pilot review screenshots differed byte-for-byte")
+            for name, hashes in supporting_hashes.items():
+                if len(set(hashes)) != 1:
+                    raise PlayFailure(f"repeated native pilot supporting screenshot {name!r} differed byte-for-byte")
 
             final_report = reports[0]
             if args.benchmark_renderer:

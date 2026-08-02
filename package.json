@@ -45,6 +45,7 @@
     "test:caxecraft-runtime-content-generation": "python3 examples/caxecraft/run_haxe_c_test.py runtime-content-generation",
     "test:caxecraft-campaign-runtime": "python3 examples/caxecraft/run_haxe_c_test.py campaign-runtime",
     "test:caxecraft-campaign-graphical": "python3 examples/caxecraft/play.py --pilot campaign-travel --raylib-configuration memory-software",
+    "test:caxecraft-adventure-journey": "python3 examples/caxecraft/play.py --pilot adventure-journey --raylib-configuration memory-software",
     "test:caxecraft-runtime-content-publication": "haxe --cwd examples/caxecraft runtime-content-publication.hxml",
     "test:caxecraft-actor-composition": "python3 examples/caxecraft/run_haxe_c_test.py actor-composition",
     "test:caxecraft-package-store": "python3 examples/caxecraft/run_haxe_c_test.py package-store",

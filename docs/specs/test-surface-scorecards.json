@@ -66,7 +66,8 @@
       ],
       "systemOwners": [
         "test:caxecraft-playable",
-        "test:caxecraft-campaign-graphical"
+        "test:caxecraft-campaign-graphical",
+        "test:caxecraft-adventure-journey"
       ],
       "affectedExtendedOwners": [
         "test:primitive-differential",
@@ -183,7 +184,8 @@
       ],
       "systemOwners": [
         "test:caxecraft-playable",
-        "test:caxecraft-campaign-graphical"
+        "test:caxecraft-campaign-graphical",
+        "test:caxecraft-adventure-journey"
       ],
       "affectedExtendedOwners": [
         "test:native",
@@ -288,7 +290,8 @@
       ],
       "systemOwners": [
         "test:caxecraft-playable",
-        "test:caxecraft-campaign-graphical"
+        "test:caxecraft-campaign-graphical",
+        "test:caxecraft-adventure-journey"
       ],
       "affectedExtendedOwners": [
         "test:gc-runtime",
@@ -478,7 +481,8 @@
       ],
       "systemOwners": [
         "test:caxecraft-playable",
-        "test:caxecraft-campaign-graphical"
+        "test:caxecraft-campaign-graphical",
+        "test:caxecraft-adventure-journey"
       ],
       "affectedExtendedOwners": [
         "test:diagnostics",
@@ -526,7 +530,7 @@
         },
         {
           "path": "examples/caxecraft/play.py",
-          "proves": "The campaign-travel system owner reuses one compiled executable, stages current campaign/map bytes, triggers one typed runtime transition, validates generation-2 telemetry, and retains a real 1280x720 Raylib frame for review.",
+          "proves": "The direct campaign-travel owner diagnoses one typed runtime transition. The separate adventure-journey owner begins on the real title screen, visibly selects Adventure, presents the runtime manifest-backed first-adventure card and its two-level route, launches it through shared menu behavior, reaches generation 2 with one publication, and retains the title choice, campaign card, and Western Falls as real 1280x720 Raylib frames.",
           "doesNotProve": "Branching or return travel, saves, editor campaign authoring, arbitrary mods, sanitizer success, portability, or release readiness."
         }
       ],

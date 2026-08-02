@@ -10,7 +10,7 @@ package caxecraft.pilot;
  * Movement uses camera-relative axes in the inclusive range -1...1. Look
  * values are already-bounded changes for this frame, not raw mouse pixels.
  * The Boolean actions, including the target-neutral `interactPressed` and
- * `travelPressed` intents,
+ * `travelPressed` intents, and the two title-menu intents,
  * are one-frame presses rather than held device buttons.
  * A hotbar selection of `-1` means “keep the current slot”; the cycle value is
  * a signed number of slots, normally -1, 0, or 1.
@@ -36,6 +36,12 @@ typedef GameInputFrame = {
 	/** Continue through the sole unambiguous campaign exit, when one exists. */
 	final travelPressed:Bool;
 
+	/** Move between the title screen's Creative and Adventure choices. */
+	final menuNextPressed:Bool;
+
+	/** Launch the title screen's currently selected game mode. */
+	final menuConfirmPressed:Bool;
+
 	final pausePressed:Bool;
 	final capturePressed:Bool;
 	final quitPressed:Bool;
@@ -47,7 +53,8 @@ typedef GameInputFrame = {
 final class GameInputFrames {
 	public static inline function make(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool, primaryPressed:Bool,
 			secondaryPressed:Bool, interactPressed:Bool, travelPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool,
-			hotbarSelection:Int = -1, hotbarCycle:Int = 0, descendHeld:Bool = false):GameInputFrame
+			hotbarSelection:Int = -1, hotbarCycle:Int = 0, descendHeld:Bool = false, menuNextPressed:Bool = false,
+			menuConfirmPressed:Bool = false):GameInputFrame
 		return {
 			moveForward: moveForward,
 			moveRight: moveRight,
@@ -59,6 +66,8 @@ final class GameInputFrames {
 			secondaryPressed: secondaryPressed,
 			interactPressed: interactPressed,
 			travelPressed: travelPressed,
+			menuNextPressed: menuNextPressed,
+			menuConfirmPressed: menuConfirmPressed,
 			pausePressed: pausePressed,
 			capturePressed: capturePressed,
 			quitPressed: quitPressed,
@@ -102,6 +111,8 @@ final class GameInputFrames {
 			&& left.secondaryPressed == right.secondaryPressed
 			&& left.interactPressed == right.interactPressed
 			&& left.travelPressed == right.travelPressed
+			&& left.menuNextPressed == right.menuNextPressed
+			&& left.menuConfirmPressed == right.menuConfirmPressed
 			&& left.pausePressed == right.pausePressed
 			&& left.capturePressed == right.capturePressed
 			&& left.quitPressed == right.quitPressed

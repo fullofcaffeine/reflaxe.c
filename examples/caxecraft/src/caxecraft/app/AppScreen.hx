@@ -5,16 +5,17 @@ package caxecraft.app;
  *
  * This closed enum replaces loosely related Boolean values for title, pause,
  * editor, and pointer capture. Each variant describes one complete valid state:
- * the title, pause, and editor screens stop simulation and release the pointer,
- * while playing advances simulation and captures it. Keeping those rules here makes
- * impossible combinations unrepresentable and keeps Raylib device calls at the
- * application edge.
+ * the title, campaign-selection, pause, and editor screens stop simulation and
+ * release the pointer, while playing advances simulation and captures it.
+ * Keeping those rules here makes impossible combinations unrepresentable and
+ * keeps Raylib device calls at the application edge.
  *
  * The editor variant became real with the first RayguiHx shell. Loading,
  * settings, and exit variants still belong here only when their screens exist.
  */
 enum AppScreen {
 	Title;
+	CampaignSelect;
 	Playing;
 	Paused;
 	Editor;
@@ -31,9 +32,18 @@ function initialScreen(showTitle:Bool):AppScreen {
 function showsTitle(screen:AppScreen):Bool {
 	return switch screen {
 		case Title: true;
+		case CampaignSelect: false;
 		case Playing: false;
 		case Paused: false;
 		case Editor: false;
+	};
+}
+
+/** Report whether Adventure is presenting its runtime-loaded campaign. */
+function showsCampaignSelection(screen:AppScreen):Bool {
+	return switch screen {
+		case CampaignSelect: true;
+		case Title | Playing | Paused | Editor: false;
 	};
 }
 
@@ -41,6 +51,7 @@ function showsTitle(screen:AppScreen):Bool {
 function showsEditor(screen:AppScreen):Bool {
 	return switch screen {
 		case Title: false;
+		case CampaignSelect: false;
 		case Playing: false;
 		case Paused: false;
 		case Editor: true;
@@ -51,6 +62,7 @@ function showsEditor(screen:AppScreen):Bool {
 function isPlaying(screen:AppScreen):Bool {
 	return switch screen {
 		case Title: false;
+		case CampaignSelect: false;
 		case Playing: true;
 		case Paused: false;
 		case Editor: false;
@@ -61,6 +73,7 @@ function isPlaying(screen:AppScreen):Bool {
 function capturesPointer(screen:AppScreen):Bool {
 	return switch screen {
 		case Title: false;
+		case CampaignSelect: false;
 		case Playing: true;
 		case Paused: false;
 		case Editor: false;
@@ -71,6 +84,7 @@ function capturesPointer(screen:AppScreen):Bool {
 function pausesSimulation(screen:AppScreen):Bool {
 	return switch screen {
 		case Title: true;
+		case CampaignSelect: true;
 		case Playing: false;
 		case Paused: true;
 		case Editor: true;
@@ -81,6 +95,40 @@ function pausesSimulation(screen:AppScreen):Bool {
 function startPlaying(screen:AppScreen):AppScreen {
 	return switch screen {
 		case Title: Playing;
+		case CampaignSelect: CampaignSelect;
+		case Playing: Playing;
+		case Paused: Paused;
+		case Editor: Editor;
+	};
+}
+
+/** Open the campaign picker only from the title's Adventure choice. */
+function openCampaignSelection(screen:AppScreen):AppScreen {
+	return switch screen {
+		case Title: CampaignSelect;
+		case CampaignSelect: CampaignSelect;
+		case Playing: Playing;
+		case Paused: Paused;
+		case Editor: Editor;
+	};
+}
+
+/** Launch the selected runtime campaign; other screens ignore the request. */
+function startSelectedCampaign(screen:AppScreen):AppScreen {
+	return switch screen {
+		case CampaignSelect: Playing;
+		case Title: Title;
+		case Playing: Playing;
+		case Paused: Paused;
+		case Editor: Editor;
+	};
+}
+
+/** Cancel campaign selection without starting or mutating gameplay. */
+function closeCampaignSelection(screen:AppScreen):AppScreen {
+	return switch screen {
+		case CampaignSelect: Title;
+		case Title: Title;
 		case Playing: Playing;
 		case Paused: Paused;
 		case Editor: Editor;
@@ -91,6 +139,7 @@ function startPlaying(screen:AppScreen):AppScreen {
 function loseFocus(screen:AppScreen):AppScreen {
 	return switch screen {
 		case Title: Title;
+		case CampaignSelect: CampaignSelect;
 		case Playing: Paused;
 		case Paused: Paused;
 		case Editor: Editor;
@@ -101,6 +150,7 @@ function loseFocus(screen:AppScreen):AppScreen {
 function togglePause(screen:AppScreen):AppScreen {
 	return switch screen {
 		case Title: Title;
+		case CampaignSelect: CampaignSelect;
 		case Playing: Paused;
 		case Paused: Playing;
 		case Editor: Editor;
@@ -111,6 +161,7 @@ function togglePause(screen:AppScreen):AppScreen {
 function recapture(screen:AppScreen):AppScreen {
 	return switch screen {
 		case Title: Title;
+		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Playing;
 		case Editor: Editor;
@@ -121,6 +172,7 @@ function recapture(screen:AppScreen):AppScreen {
 function openEditor(screen:AppScreen):AppScreen {
 	return switch screen {
 		case Title: Editor;
+		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Paused;
 		case Editor: Editor;
@@ -131,6 +183,7 @@ function openEditor(screen:AppScreen):AppScreen {
 function closeEditor(screen:AppScreen):AppScreen {
 	return switch screen {
 		case Title: Title;
+		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Paused;
 		case Editor: Title;

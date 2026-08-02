@@ -21,6 +21,7 @@ import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
 import caxecraft.app.AppScreen;
 import caxecraft.app.AppScreen.capturesPointer as screenCapturesPointer;
+import caxecraft.app.AppScreen.closeCampaignSelection;
 import caxecraft.app.AppScreen.closeEditor;
 import caxecraft.app.AppScreen.initialScreen;
 import caxecraft.app.AppScreen.isPlaying as screenIsPlaying;
@@ -29,9 +30,14 @@ import caxecraft.app.AppScreen.openEditor;
 import caxecraft.app.AppScreen.pausesSimulation as screenPausesSimulation;
 import caxecraft.app.AppScreen.recapture as recapturePointer;
 import caxecraft.app.AppScreen.showsEditor as screenShowsEditor;
+import caxecraft.app.AppScreen.showsCampaignSelection as screenShowsCampaignSelection;
 import caxecraft.app.AppScreen.showsTitle as screenShowsTitle;
-import caxecraft.app.AppScreen.startPlaying;
+import caxecraft.app.AppScreen.startSelectedCampaign;
 import caxecraft.app.AppScreen.togglePause;
+import caxecraft.app.TitleMenuFlow.TitleMenuCommand;
+import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
+import caxecraft.app.TitleMenuFlow.applyTitleMenuCommand;
+import caxecraft.app.TitleMenuFlow.titleMenuState;
 import caxecraft.app.CaxecraftEditorScreen.EditorScreenAction;
 import caxecraft.app.MotionInterpolation.advance as advanceMotion;
 import caxecraft.app.MotionInterpolation.reset as resetMotion;
@@ -190,6 +196,8 @@ final class CaxecraftApp {
 		final pilotName:PilotScriptName = PilotScriptName.EditorShell;
 		#elseif caxecraft_pilot_campaign_travel
 		final pilotName:PilotScriptName = PilotScriptName.CampaignTravel;
+		#elseif caxecraft_pilot_adventure_journey
+		final pilotName:PilotScriptName = PilotScriptName.AdventureJourney;
 		#end
 		var initialHealth = MAX_HEALTH;
 		#if caxecraft_pilot
@@ -357,7 +365,8 @@ final class CaxecraftApp {
 		#if caxecraft_pilot
 		final showInitialTitle = pilotName == PilotScriptName.LaunchSmoke
 			|| pilotName == PilotScriptName.ResizeLayout
-			|| pilotName == PilotScriptName.EditorShell;
+			|| pilotName == PilotScriptName.EditorShell
+			|| pilotName == PilotScriptName.AdventureJourney;
 		#else
 		final showInitialTitle = true;
 		#end
@@ -451,6 +460,8 @@ final class CaxecraftApp {
 			final quitPressed = PilotScript.quitPressed(pilotAction);
 			final hotbarSelection = PilotScript.hotbarSelection(pilotAction);
 			final hotbarCycle = PilotScript.hotbarCycle(pilotAction);
+			final menuNextPressed = PilotScript.menuNextPressed(pilotAction);
+			final menuConfirmPressed = PilotScript.menuConfirmPressed(pilotAction);
 			// Existing deterministic scripts do not request downward swimming yet.
 			// A dedicated water pilot will own that authored action when added.
 			final descendHeld = false;
@@ -473,9 +484,11 @@ final class CaxecraftApp {
 			final quitPressed = frameInput.quitPressed;
 			final hotbarSelection = frameInput.hotbarSelection;
 			final hotbarCycle = frameInput.hotbarCycle;
+			final menuNextPressed = frameInput.menuNextPressed;
+			final menuConfirmPressed = frameInput.menuConfirmPressed;
 			final descendHeld = frameInput.descendHeld;
 			#end
-			if (!quit && screenIsPlaying(screen) && travelPressed) {
+			if (!quit && allowsCampaignTravel(screen, selectedMode) && travelPressed) {
 				final selectedCampaign = campaign;
 				final sourceLevel = campaignLevel;
 				if (selectedCampaign != null && sourceLevel != null) {
@@ -580,38 +593,72 @@ final class CaxecraftApp {
 				}
 			}
 
-			if (screenShowsTitle(screen) && focused) {
+			if (screenShowsCampaignSelection(screen) && focused) {
 				#if !caxecraft_pilot
-				final modeBeforeInput = selectedMode;
 				if (Raylib.IsKeyPressed(KeyboardKey.L))
 					locale = uiCatalog.nextLocale(locale);
-				if (Raylib.IsKeyPressed(KeyboardKey.Up) || Raylib.IsKeyPressed(KeyboardKey.Down))
-					selectedMode = selectedMode == GameMode.Creative ? GameMode.Adventure : GameMode.Creative;
-
-				final menuMouse = Raylib.GetMousePosition();
-				final hovered = TitleMenu.selectionAt(menuMouse.x.toFloat(), menuMouse.y.toFloat(), Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
-				if (hovered == 0)
-					selectedMode = GameMode.Creative;
-				if (hovered == 1)
-					selectedMode = GameMode.Adventure;
-				if (selectedMode != modeBeforeInput) {
+				final campaignMouse = Raylib.GetMousePosition();
+				final campaignChoice = CampaignMenu.selectionAt(campaignMouse.x.toFloat(), campaignMouse.y.toFloat(), Raylib.GetScreenWidth(),
+					Raylib.GetScreenHeight());
+				final clickedCampaignChoice = campaignChoice >= 0 && Raylib.IsMouseButtonPressed(MouseButton.Left);
+				#else
+				final campaignChoice = -1;
+				final clickedCampaignChoice = false;
+				#end
+				if (pausePressed || (clickedCampaignChoice && campaignChoice == 1)) {
+					screen = closeCampaignSelection(screen);
 					accumulator = 0.0;
 					resetMotionThisFrame = true;
-				}
-				final clickedChoice = hovered >= 0 && Raylib.IsMouseButtonPressed(MouseButton.Left);
-				if (clickedChoice && hovered == 2) {
-					screen = openEditor(screen);
-					accumulator = 0.0;
-					resetMotionThisFrame = true;
-					Raylib.EnableCursor();
-				} else if (clickedChoice || Raylib.IsKeyPressed(KeyboardKey.Enter)) {
-					screen = startPlaying(screen);
+				} else if (campaign != null && (menuConfirmPressed || (clickedCampaignChoice && campaignChoice == 0))) {
+					screen = startSelectedCampaign(screen);
 					recapturedThisFrame = true;
 					accumulator = 0.0;
 					resetMotionThisFrame = true;
 					Raylib.DisableCursor();
 				}
+			}
+
+			if (screenShowsTitle(screen) && focused) {
+				final screenBeforeMenu = screen;
+				final modeBeforeMenu = selectedMode;
+				var menuState = titleMenuState(screen, selectedMode);
+				#if !caxecraft_pilot
+				if (Raylib.IsKeyPressed(KeyboardKey.L))
+					locale = uiCatalog.nextLocale(locale);
+				if (menuNextPressed)
+					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.CycleMode);
+
+				final menuMouse = Raylib.GetMousePosition();
+				final hovered = TitleMenu.selectionAt(menuMouse.x.toFloat(), menuMouse.y.toFloat(), Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
+				if (hovered == 0)
+					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.SelectCreative);
+				if (hovered == 1)
+					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.SelectAdventure);
+				final clickedChoice = hovered >= 0 && Raylib.IsMouseButtonPressed(MouseButton.Left);
+				if (clickedChoice)
+					menuState = applyTitleMenuCommand(menuState, hovered == 2 ? TitleMenuCommand.OpenEditor : TitleMenuCommand.ConfirmMode);
+				else if (menuConfirmPressed)
+					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.ConfirmMode);
+				#else
+				if (menuNextPressed)
+					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.CycleMode);
+				if (menuConfirmPressed)
+					menuState = applyTitleMenuCommand(menuState, TitleMenuCommand.ConfirmMode);
 				#end
+				screen = menuState.screen;
+				selectedMode = menuState.mode;
+				if (screenShowsCampaignSelection(screen) && campaign == null)
+					screen = screenBeforeMenu;
+				if (screen != screenBeforeMenu || selectedMode != modeBeforeMenu) {
+					accumulator = 0.0;
+					resetMotionThisFrame = true;
+				}
+				if (screenBeforeMenu == AppScreen.Title && screenIsPlaying(screen)) {
+					recapturedThisFrame = true;
+					Raylib.DisableCursor();
+				} else if (screenShowsEditor(screen)) {
+					Raylib.EnableCursor();
+				}
 			}
 
 			if (!focused && screenIsPlaying(screen)) {
@@ -621,7 +668,11 @@ final class CaxecraftApp {
 				resetMotionThisFrame = true;
 				Raylib.EnableCursor();
 			}
-			if (!screenShowsTitle(screen) && !screenShowsEditor(screen) && focused && pausePressed) {
+			if (!screenShowsTitle(screen)
+				&& !screenShowsCampaignSelection(screen)
+				&& !screenShowsEditor(screen)
+				&& focused
+				&& pausePressed) {
 				screen = togglePause(screen);
 				accumulator = 0.0;
 				resetMotionThisFrame = true;
@@ -632,7 +683,12 @@ final class CaxecraftApp {
 				else
 					Raylib.EnableCursor();
 			}
-			if (!screenShowsTitle(screen) && !screenShowsEditor(screen) && focused && screenPausesSimulation(screen) && capturePressed) {
+			if (!screenShowsTitle(screen)
+				&& !screenShowsCampaignSelection(screen)
+				&& !screenShowsEditor(screen)
+				&& focused
+				&& screenPausesSimulation(screen)
+				&& capturePressed) {
 				screen = recapturePointer(screen);
 				recapturedThisFrame = true;
 				accumulator = 0.0;
@@ -643,6 +699,7 @@ final class CaxecraftApp {
 			// These are read-only projections of one closed state, not independent
 			// flags. No screen transition occurs after this point in the frame.
 			final onTitle = screenShowsTitle(screen);
+			final onCampaignSelect = screenShowsCampaignSelection(screen);
 			final onEditor = screenShowsEditor(screen);
 			final paused = screenPausesSimulation(screen);
 			final captured = screenCapturesPointer(screen);
@@ -1018,6 +1075,12 @@ final class CaxecraftApp {
 			Raylib.BeginDrawing();
 			if (onTitle) {
 				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale, uiCatalog);
+			} else if (onCampaignSelect) {
+				final selectedCampaign = campaign;
+				if (selectedCampaign == null)
+					screen = closeCampaignSelection(screen);
+				else
+					CampaignMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedCampaign, locale, uiCatalog);
 			} else if (onEditor) {
 				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
 					screen = closeEditor(screen);
@@ -1135,7 +1198,8 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 92)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
 				|| (pilotName == PilotScriptName.EditorShell && frameCount == 2)
-				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
+				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
+				|| (pilotName == PilotScriptName.AdventureJourney && (frameCount == 0 || frameCount == 1 || frameCount == 5)))
 				capturePilotFrame = true;
 			// Submit this frame before reading it. `EndDrawing()` would otherwise
 			// swap the buffers first, causing Raylib's screenshot function to read
@@ -1171,6 +1235,12 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor.png");
 			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
+			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 0)
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-adventure-selected.png");
+			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 1)
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-selected.png");
+			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 5)
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-adventure-journey.png");
 			if (pilotComplete)
 				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end

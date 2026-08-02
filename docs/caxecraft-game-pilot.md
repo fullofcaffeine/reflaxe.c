@@ -113,12 +113,17 @@ npm run caxecraft:play -- --pilot editor-shell
 # Ask the runtime campaign for its sole authored way forward, load Western
 # Falls without recompiling, publish generation 2, render it, and quit.
 npm run caxecraft:play -- --pilot campaign-travel
+
+# Begin on the real title screen, highlight Adventure, show and launch the
+# staged campaign through ordinary menu transitions, continue to Western Falls,
+# render it, and quit.
+npm run caxecraft:play -- --pilot adventure-journey
 ```
 
-The twelve closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+The thirteen closed script names are `LaunchSmoke`, `MoveJumpEdit`,
 `PauseRecapture`, `CombatDrop`, `RecoveryUse`, `FullInventoryGift`, and
 `FullInventoryMining`, plus `ResizeLayout`, `AquaticGear`, `SmoothMotion`, and
-`EditorShell`, and `CampaignTravel`.
+`EditorShell`, `CampaignTravel`, and `AdventureJourney`.
 Each has a small fixed frame limit below the absolute 120-frame policy. Its
 final and every later action is `Quit`, which protects against a script
 accidentally becoming an unattended interactive session. The Python runner
@@ -222,6 +227,26 @@ HUD reads `western-falls`. Telemetry must report generation 2, one publication,
 and the independently authored destination spawn at x=12.5, y=5, z=16.5. The
 headless campaign tracer remains responsible for malformed manifests, stale
 receipts, missing destinations, and unchanged-state failures.
+
+The adventure-journey pilot protects the path a player actually sees. It
+starts with Creative highlighted on the real title screen, sends the same
+device-independent next/confirm choices used by keyboard input, and retains a
+frame showing Adventure highlighted. Confirming Adventure opens a separate
+campaign screen instead of launching the old prototype immediately. That
+screen reads the exact campaign identity and route from the staged runtime
+manifest: `caxecraft:first-adventure`, with `evergrove` leading to
+`western-falls`. A second confirm launches its entry level. The pilot then
+sends the same typed “continue” action as the narrower campaign-travel pilot
+and retains a third frame at Western Falls. The native observer checks all
+three visible stages, while focused Haxe probes own the exact screen
+transitions and manifest values. Generation 2 and one publication can only be
+reached while the app is both playing and in Adventure mode, so a Creative
+launch, a hidden campaign screen, or a script that bypasses the title cannot
+satisfy this owner.
+
+This is evidence for the current two-level forward journey. The player still
+presses `N` to use the manifest's sole exit; authored exit volumes, branching,
+return travel, saves, and a fuller Western Falls level remain future work.
 
 ## How semantic state leaves the native game
 

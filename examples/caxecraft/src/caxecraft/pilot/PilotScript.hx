@@ -21,6 +21,7 @@ enum abstract PilotScriptName(Int) to Int {
 	var SmoothMotion = 9;
 	var EditorShell = 10;
 	var CampaignTravel = 11;
+	var AdventureJourney = 12;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -44,6 +45,8 @@ enum abstract PilotAction(Int) to Int {
 	var ForwardLeft = 16;
 	var LookDown = 17;
 	var Travel = 18;
+	var MenuNext = 19;
+	var MenuConfirm = 20;
 }
 
 /**
@@ -111,6 +114,8 @@ final class PilotScript {
 			return 4;
 		if (name == CampaignTravel)
 			return 5;
+		if (name == AdventureJourney)
+			return 7;
 		return 4;
 	}
 
@@ -137,6 +142,8 @@ final class PilotScript {
 			return "editor-shell";
 		if (name == CampaignTravel)
 			return "campaign-travel";
+		if (name == AdventureJourney)
+			return "adventure-journey";
 		return "resize-layout";
 	}
 
@@ -163,6 +170,13 @@ final class PilotScript {
 			return Idle;
 		if (name == CampaignTravel)
 			return frameNumber == 0 ? Travel : Idle;
+		if (name == AdventureJourney) {
+			if (frameNumber == 0)
+				return MenuNext;
+			if (frameNumber == 1 || frameNumber == 2)
+				return MenuConfirm;
+			return frameNumber == 3 ? Travel : Idle;
+		}
 		return fullInventoryMiningAction(frameNumber);
 	}
 
@@ -170,7 +184,7 @@ final class PilotScript {
 		final action = actionAt(name, frameNumber);
 		return GameInputFrames.make(moveForward(action), moveRight(action), lookYaw(action), lookPitch(action), jumpPressed(action), primaryPressed(action),
 			secondaryPressed(action), interactPressed(action), travelPressed(action), pausePressed(action), capturePressed(action), quitPressed(action),
-			hotbarSelection(action), hotbarCycle(action));
+			hotbarSelection(action), hotbarCycle(action), false, menuNextPressed(action), menuConfirmPressed(action));
 	}
 
 	public static inline function moveForward(action:PilotAction):Float
@@ -200,6 +214,14 @@ final class PilotScript {
 	/** Request the campaign's sole authored way forward. */
 	public static inline function travelPressed(action:PilotAction):Bool
 		return action == Travel;
+
+	/** Move to the neighboring game mode on the real title-menu path. */
+	public static inline function menuNextPressed(action:PilotAction):Bool
+		return action == MenuNext;
+
+	/** Confirm the title menu's currently selected game mode. */
+	public static inline function menuConfirmPressed(action:PilotAction):Bool
+		return action == MenuConfirm;
 
 	public static inline function pausePressed(action:PilotAction):Bool
 		return action == Pause;
@@ -246,6 +268,10 @@ final class PilotScript {
 				frameNumber == 2 ? new PilotCheckpoint("editor-shell.frame", CaptureScreenshot) : null;
 			case CampaignTravel:
 				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot) : null;
+			case AdventureJourney:
+				if (frameNumber == 0) new PilotCheckpoint("adventure-journey.selected",
+					CaptureScreenshot); else if (frameNumber == 1) new PilotCheckpoint("adventure-journey.campaign",
+					CaptureScreenshot); else if (frameNumber == 5) new PilotCheckpoint("adventure-journey.destination", CaptureScreenshot); else null;
 			case _: null;
 		};
 	}

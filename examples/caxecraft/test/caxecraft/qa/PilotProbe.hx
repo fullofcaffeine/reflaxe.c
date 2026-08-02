@@ -26,6 +26,7 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.SmoothMotion, 12);
 		sampledFrames += checkBounded(PilotScriptName.EditorShell, 4);
 		sampledFrames += checkBounded(PilotScriptName.CampaignTravel, 5);
+		sampledFrames += checkBounded(PilotScriptName.AdventureJourney, 7);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
@@ -38,9 +39,10 @@ final class PilotProbe {
 		checkpoints += checkSmoothMotion();
 		checkpoints += checkEditorShell();
 		checkpoints += checkCampaignTravel();
+		checkpoints += checkAdventureJourney();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 12 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 13 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -226,6 +228,25 @@ final class PilotProbe {
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "campaign-travel.frame",
 			"campaign travel screenshot checkpoint changed");
 		return 1;
+	}
+
+	static function checkAdventureJourney():Int {
+		final name = PilotScriptName.AdventureJourney;
+		require(PilotScript.stableName(name) == "adventure-journey", "Adventure journey script lost its stable name");
+		require(PilotScript.menuNextPressed(PilotScript.actionAt(name, 0)), "Adventure journey no longer selects Adventure from the default Creative choice");
+		require(PilotScript.menuConfirmPressed(PilotScript.actionAt(name, 1)), "Adventure journey no longer confirms the selected title choice");
+		require(PilotScript.menuConfirmPressed(PilotScript.actionAt(name, 2)), "Adventure journey no longer launches the selected campaign");
+		require(PilotScript.sample(name, 3).travelPressed, "Adventure journey no longer follows the campaign's typed way forward after launch");
+		final selected = PilotScript.checkpoint(name, 0);
+		final campaign = PilotScript.checkpoint(name, 1);
+		final destination = PilotScript.checkpoint(name, 5);
+		require(selected != null && selected.kind == CaptureScreenshot && selected.label == "adventure-journey.selected",
+			"Adventure journey lost its selected-menu evidence");
+		require(campaign != null && campaign.kind == CaptureScreenshot && campaign.label == "adventure-journey.campaign",
+			"Adventure journey lost its campaign-selection evidence");
+		require(destination != null && destination.kind == CaptureScreenshot && destination.label == "adventure-journey.destination",
+			"Adventure journey lost its destination evidence");
+		return 3;
 	}
 
 	static function checkSharedInterface():Void {
