@@ -9,9 +9,9 @@ import caxecraft.scenario.ContentId;
 
 	CaxeMap says which NPC or enemy is placed; a content pack says how that kind
 	of actor behaves. This interface joins those two sources without teaching the
-	generic level loader any built-in name such as Nia or Mossling. The generated
-	base-pack registry implements it today, and a future runtime pack loader can
-	implement the same contract without changing actor planning.
+	generic level loader any built-in name such as Nia or Mossling. The active
+	`RuntimeContentRegistry` implements it from validated package bytes, so actor
+	planning stays unchanged when a different admitted package supplies the facts.
 **/
 interface ActorContentResolver {
 	/** Resolve an ID written in an `Npc` placement as an NPC mechanics profile. */

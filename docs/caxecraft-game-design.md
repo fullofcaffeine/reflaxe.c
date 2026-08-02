@@ -469,18 +469,19 @@ A scenario contains:
 The required `asset-pack` record resolves to the checked-in schema-2 manifest
 at `packs/caxecraft/base/content.json`. That data defines the current blocks,
 items, actors, selected engine behavior profiles, drops, effects, and logical
-presentation references. A strict build-time validator checks every field and
-reference, then generates the ordinary typed Haxe `BaseContentRegistry` used by
-CaxeMap and renderer-independent editor validation. The exact JSON is packaged
-beside the executable.
+presentation references. At launch, the package store reads the exact staged
+JSON bytes and `RuntimeContentPack` validates every field and reference before
+publishing one immutable `RuntimeContentRegistry`. CaxeMap validation, level
+construction, actor planning, editor lookups, and the playable session then
+read that same registry. Editing a map, pack, or UI data file does not rebuild
+the executable; launch preparation revalidates and restages the changed bytes.
 
-This is a validated built-in content pack, not yet a general runtime loader.
-The native game cannot discover arbitrary directories or parse their JSON at
-runtime. `assets/manifest.json` remains the separate owner of reviewed image
-identity, dimensions, hashes, provenance, and packaged bytes; content data
-refers to those logical visuals instead of copying their hashes. The generated
-Haxe adapter is replaceable packaging glue until the ordinary native loader
-exists, never a second editable source of truth.
+This is a bounded runtime package path, not yet arbitrary installed-mod
+discovery or dependency activation. `assets/manifest.json` remains the separate
+owner of reviewed image identity, dimensions, hashes, provenance, and packaged
+bytes; content data refers to those logical visuals instead of copying their
+hashes. Directory and ZIP readers prove the transport boundary, while a public
+import/install command and broader package selection remain future work.
 
 The distributable unit is a **scenario package**. CAXEMAP 1 keeps stable
 language-neutral message IDs and each complete locale catalog in the same

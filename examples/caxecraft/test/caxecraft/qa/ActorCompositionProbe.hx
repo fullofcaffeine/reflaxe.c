@@ -13,8 +13,6 @@ import caxecraft.content.ActorContentResolver.ActorContentKind;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
 import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanError;
 import caxecraft.content.ActorIdentityPlanner.actorEntityId;
-import caxecraft.content.BaseContentPack;
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.domain.Aquatics.profile as aquaticProfile;
 import caxecraft.domain.ActorControllerProfile;
 import caxecraft.domain.Character.start as startCharacter;
@@ -26,6 +24,7 @@ import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
+import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 
 /**
 	Executable specification for content-driven actor planning and publication.
@@ -47,7 +46,7 @@ function main():Void {
 
 /** Return zero, or the stable number of the first broken planning invariant. */
 function selfCheck():Int {
-	final registry = new BaseContentRegistry();
+	final registry = new FocusedContentRegistry();
 	switch planActorComposition([], registry) {
 		case ActorCompositionPlanned(plans) if (plans.length == 0):
 		case _:

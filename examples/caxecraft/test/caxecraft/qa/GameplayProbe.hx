@@ -1,6 +1,5 @@
 package caxecraft.qa;
 
-import caxecraft.content.BaseContentPack;
 import caxecraft.domain.Character.start as startCharacter;
 import caxecraft.domain.CharacterPhysics.body as createCharacterBody;
 import caxecraft.domain.EntityId;
@@ -42,6 +41,7 @@ import caxecraft.gameplay.SwordCombat.decide as decideSwordCombat;
 import caxecraft.gameplay.SwordCombat.start as startSwordCombat;
 import caxecraft.gameplay.SwordCombat.step as stepSwordCombat;
 import caxecraft.gameplay.SwordCombatDecision;
+import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 
 /** Renderer-independent proof for the first friendly and hostile actors. */
 final class GameplayProbe {
@@ -149,8 +149,8 @@ final class GameplayProbe {
 			"leaving the marked range cancels the pending hit");
 
 		var target = Mossling.start(view, 12.5, 12.5);
-		var combatTarget = startCharacter(EntityId.fromValidatedStorageCode(2), createCharacterBody(target.x, target.y, target.z),
-			BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()), target.health);
+		var combatTarget = startCharacter(EntityId.fromValidatedStorageCode(2), createCharacterBody(target.x, target.y, target.z), standardAquaticProfile(),
+			target.health);
 		inventory = Inventory.select(inventory, 4);
 		require(Inventory.selectedIs(inventory, ItemKind.CopperSword), "combat asks for a semantic sword rather than a slot number");
 		require(Mossling.canStrike(target, 10.5, 12.5, 1.0, 0.0), "near aimed sword reaches Mossling");
@@ -178,8 +178,8 @@ final class GameplayProbe {
 		require(target.health == 0 && !Mossling.isAlive(target), "third strike defeats Mossling");
 		require(Mossling.step(view, target, 10.5, 12.5, 0) == target, "defeated Mossling state is stable");
 
-		combatTarget = startCharacter(EntityId.fromValidatedStorageCode(2), createCharacterBody(target.x, target.y, target.z),
-			BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile()), target.health);
+		combatTarget = startCharacter(EntityId.fromValidatedStorageCode(2), createCharacterBody(target.x, target.y, target.z), standardAquaticProfile(),
+			target.health);
 		var drop = berryDropFromDefeatedCharacter(combatTarget, 2);
 		require(drop.active && drop.amount == 2, "defeat creates one visible berry drop");
 		require(berryDropIsInRange(drop, drop.x, drop.y, drop.z), "near player can collect drop");

@@ -2,8 +2,6 @@ package caxecraft.qa;
 
 import caxecraft.content.ActorContentResolver.ActorContentKind;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
-import caxecraft.content.BaseContentPack;
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.content.LevelContentResolver;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
@@ -17,6 +15,8 @@ import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.World;
 import caxecraft.qa.ResolvedLevelFixture.readFirstPlayableScenario;
 import caxecraft.qa.ResolvedLevelFixture.resolveFirstPlayable;
+import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
+import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioId;
@@ -112,7 +112,7 @@ function main():Void {
  * exception text or generated symbol spelling.
  */
 function selfCheck():Int {
-	final registry = new BaseContentRegistry();
+	final registry = new FocusedContentRegistry();
 	final scenario = readFirstPlayableScenario();
 	if (scenario == null)
 		return 1;
@@ -182,7 +182,7 @@ function selfCheck():Int {
 	final invalidOptions:LevelPlayerOptions = {
 		entityId: EntityId.fromValidatedStorageCode(1),
 		initialHealth: MAX_HEALTH + 1,
-		aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile())
+		aquaticProfile: standardAquaticProfile()
 	};
 	switch ResolvedLevelPlan.resolve(freshScenario, registry, invalidOptions) {
 		case LevelPlanRejected(InvalidPlayerOptions):
@@ -283,11 +283,11 @@ private enum RegistryRejection {
  */
 private final class RejectingLevelRegistry implements LevelContentResolver {
 	final rejection:RegistryRejection;
-	final base:BaseContentRegistry;
+	final base:FocusedContentRegistry;
 
 	public function new(rejection:RegistryRejection) {
 		this.rejection = rejection;
-		base = new BaseContentRegistry();
+		base = new FocusedContentRegistry();
 	}
 
 	public function resolveTerrain(id:ContentId):TerrainContentResolution {

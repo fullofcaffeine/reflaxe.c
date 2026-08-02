@@ -191,8 +191,12 @@ using it and its scope needs a separate path-sensitive lifetime.
 Natural Haxe also permits a fresh object to be an argument:
 
 ```haxe
-final plans = planActorComposition(objects, new BaseContentRegistry());
+final plans = planActorComposition(objects, new FocusedContentRegistry());
 ```
+
+`FocusedContentRegistry` is a small test-only implementation of the same typed
+resolver interface used by runtime package data; it is not game content or a
+production fallback.
 
 Before this capability, haxe.c rejected the `new` expression unless the author
 first assigned it to a named local. That rewrite was safe but artificial: the

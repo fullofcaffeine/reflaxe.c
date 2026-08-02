@@ -1,12 +1,12 @@
 package caxecraft.qa;
 
-import caxecraft.content.BaseContentPack;
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.content.LevelContentResolver;
 import caxecraft.content.ResolvedLevelPlan;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanResult;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
+import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
+import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioLexer;
@@ -31,7 +31,7 @@ function readFirstPlayableScenario():Null<Scenario> {
 				case ReadError(_):
 					null;
 				case ReadOk(parsed):
-					switch ScenarioValidator.validate(parsed, new BaseContentRegistry()) {
+					switch ScenarioValidator.validate(parsed, new FocusedContentRegistry()) {
 						case ReadError(_): null;
 						case ReadOk(value): value;
 					}
@@ -44,5 +44,5 @@ function resolveFirstPlayable(scenario:Scenario, registry:LevelContentResolver):
 	return ResolvedLevelPlan.resolve(scenario, registry, {
 		entityId: EntityId.fromValidatedStorageCode(1),
 		initialHealth: MAX_HEALTH,
-		aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile())
+		aquaticProfile: standardAquaticProfile()
 	});

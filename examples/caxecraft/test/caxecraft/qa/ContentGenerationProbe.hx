@@ -4,7 +4,6 @@ import caxecraft.content.ActiveContent;
 import caxecraft.content.ActiveContent.ContentPublicationError;
 import caxecraft.content.ActiveContent.ContentPublicationResult;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.content.LevelContentResolver;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
@@ -21,6 +20,7 @@ import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.World;
 import caxecraft.qa.ResolvedLevelFixture.readFirstPlayableScenario;
 import caxecraft.qa.ResolvedLevelFixture.resolveFirstPlayable;
+import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.scenario.ContentId;
 
 /**
@@ -62,7 +62,7 @@ function selfCheck():Int {
 	final scenario = readFirstPlayableScenario();
 	if (scenario == null)
 		return 1;
-	final registry = new BaseContentRegistry();
+	final registry = new FocusedContentRegistry();
 	final pair = switch resolveFirstPlayable(scenario, registry) {
 		case LevelPlanResolved(plan, presentation): {plan: plan, presentation: presentation};
 		case LevelPlanRejected(_): return 2;
@@ -246,7 +246,7 @@ function digestTrace(trace:LoadedContentGenerationTrace):Int {
  * and simulation choice still looks plausible.
  */
 final class AlternatePresentationRegistry implements LevelContentResolver {
-	final base:BaseContentRegistry = new BaseContentRegistry();
+	final base:FocusedContentRegistry = new FocusedContentRegistry();
 
 	/** Construct one stateless test resolver over the reviewed base registry. */
 	public function new() {}

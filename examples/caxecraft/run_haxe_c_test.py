@@ -331,10 +331,10 @@ CASES = {
                 forbidden_markers=("goto ",),
             ),
             GeneratedSourceCheck(
-                path="src/modules/caxecraft/content/BaseContentPack.c",
+                path="src/modules/caxecraft/qa/FocusedContentFixture.c",
                 required_markers=(
-                    "BaseContentRegistry_resolveNpc",
-                    "BaseContentRegistry_resolveEnemy",
+                    "FocusedContentRegistry_resolveNpc",
+                    "FocusedContentRegistry_resolveEnemy",
                     "ActorContentResolution_ActorContentResolved",
                 ),
                 forbidden_markers=("goto ",),
@@ -870,11 +870,11 @@ CASES = {
         ),
         split_source_checks=(
             GeneratedSourceCheck(
-                path="src/modules/caxecraft/content/BaseContentPack.c",
+                path="src/modules/caxecraft/qa/FocusedContentFixture.c",
                 required_markers=(
-                    "BaseContentRegistry_resolveTerrain",
-                    "BaseContentRegistry_resolveFluid",
-                    "BaseContentRegistry_resolveItem",
+                    "FocusedContentRegistry_resolveTerrain",
+                    "FocusedContentRegistry_resolveFluid",
+                    "FocusedContentRegistry_resolveItem",
                 ),
                 forbidden_markers=("goto ",),
             ),

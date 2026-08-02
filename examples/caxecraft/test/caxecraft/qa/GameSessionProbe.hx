@@ -4,8 +4,6 @@ import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanError;
 import caxecraft.content.ActorIdentityPlanner.ActorIdentityPlanResult;
 import caxecraft.content.ActorIdentityPlanner.actorEntityId;
 import caxecraft.content.ActorIdentityPlanner.planActorIdentities;
-import caxecraft.content.BaseContentPack;
-import caxecraft.content.BaseContentPack.BaseAquaticProfile;
 import caxecraft.domain.Aquatics.input as aquaticInput;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.Character.start as startCharacter;
@@ -19,6 +17,8 @@ import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
+import caxecraft.qa.FocusedContentFixture.tideweaveAquaticProfile;
 
 /**
 	Executable specification for session ownership and gameplay operations.
@@ -54,7 +54,7 @@ function selfCheck():Int {
 		|| !loadedSession.activateAuthoredItemDuringLoad(0))
 		return 2;
 	final loadedPlayerId = EntityId.fromValidatedStorageCode(1);
-	final loadedProfile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
+	final loadedProfile = standardAquaticProfile();
 	if (!loadedSession.bindLocalPlayer(startCharacter(loadedPlayerId, createBody(16.5, 5.0, 16.5), loadedProfile, 6))
 		|| loadedSession.characterCount() != 1
 		|| !loadedSession.hasLocalPlayer()
@@ -119,7 +119,7 @@ function selfCheck():Int {
 		|| session.pendingWaterWork() != pendingBeforeRejectedTick)
 		return 8;
 	final localId = EntityId.fromValidatedStorageCode(11);
-	final localProfile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
+	final localProfile = standardAquaticProfile();
 	if (!session.bindLocalPlayer(startCharacter(localId, createBody(8.5, 2.0, 8.5), localProfile, 4))
 		|| !session.hasLocalPlayer()
 		|| session.readLocalPlayer().id != localId)
@@ -150,7 +150,7 @@ function selfCheck():Int {
 		return 33;
 	if (!session.activateAuthoredItemDuringLoad(0))
 		return 45;
-	final aquaticEquipment = session.collectAuthoredAquaticEquipment(0, BaseContentPack.aquaticProfile(BaseAquaticProfile.TideweaveAquatics));
+	final aquaticEquipment = session.collectAuthoredAquaticEquipment(0, tideweaveAquaticProfile());
 	if (!aquaticEquipment.resolved
 		|| !aquaticEquipment.collected
 		|| aquaticEquipment.character.id != localId
@@ -301,7 +301,7 @@ function trace():Int {
 		|| !session.activateAuthoredItemDuringLoad(0))
 		return -1;
 	final playerId = EntityId.fromValidatedStorageCode(1);
-	final profile = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
+	final profile = standardAquaticProfile();
 	if (!session.bindLocalPlayer(startCharacter(playerId, createBody(2.5, 3.0, 2.5), profile, 6)))
 		return -1;
 	var hash = CaxecraftTrace.mix(session.worldStateHash(), 5);

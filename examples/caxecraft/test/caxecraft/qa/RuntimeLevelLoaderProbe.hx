@@ -2,8 +2,6 @@ package caxecraft.qa;
 
 import caxecraft.content.ActiveContent;
 import caxecraft.content.ActiveContent.ContentPublicationResult;
-import caxecraft.content.BaseContentPack;
-import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildError;
@@ -23,6 +21,8 @@ import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.World;
 import caxecraft.qa.ScenarioNativeCodecProbe.firstPlayableBytes;
+import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
+import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import haxe.io.Bytes;
 
 /**
@@ -78,11 +78,11 @@ function main():Void {
 
 /** Return zero, or the stable number of the first broken loading invariant. */
 function selfCheck():Int {
-	final registry = new BaseContentRegistry();
+	final registry = new FocusedContentRegistry();
 	final options:LevelPlayerOptions = {
 		entityId: EntityId.fromValidatedStorageCode(1),
 		initialHealth: MAX_HEALTH,
-		aquaticProfile: BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile())
+		aquaticProfile: standardAquaticProfile()
 	};
 	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final embedded = switch loadRuntimeLevel(InMemoryBytes(firstPlayableBytes(), "embedded-first-playable", logicalPath), ContentGenerationId.fromSequence(1),

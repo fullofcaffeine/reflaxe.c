@@ -408,6 +408,24 @@ class ToolchainShardTests(unittest.TestCase):
                 )
                 self.assertFalse(plan["fullBackstop"]["required"])
 
+    def test_shared_focused_content_fixture_selects_every_semantic_consumer(self) -> None:
+        plan = self.route_selector.build_test_plan(
+            ("examples/caxecraft/test/caxecraft/qa/FocusedContentFixture.hx",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in plan["taskOwners"]],
+            [
+                "test:caxecraft-actor-composition",
+                "test:caxecraft-resolved-level-plan",
+                "test:caxecraft-content-generation",
+                "test:caxecraft-runtime-level-loader",
+                "test:caxecraft-session",
+                "test:caxecraft-gameplay",
+                "test:caxecraft-domain",
+            ],
+        )
+        self.assertFalse(plan["fullBackstop"]["required"])
+
     def test_replay_change_selects_incremental_invalidation_owner(self) -> None:
         owners = self.route_selector.select_affected_owners(
             ("src/reflaxe/c/lowering/CBodyFunctionReplayCache.hx",)

@@ -86,6 +86,10 @@ AFFECTED_BASE_OWNERS = (
     AffectedOwner("snapshots:catalog", "checked expected outputs retain one registered owner"),
 )
 
+FOCUSED_CONTENT_FIXTURE_PATH = re.compile(
+    r"^examples/caxecraft/test/caxecraft/qa/FocusedContentFixture\.hx$"
+)
+
 AFFECTED_OWNER_RULES = (
     (
         re.compile(
@@ -314,6 +318,48 @@ AFFECTED_OWNER_RULES = (
         AffectedOwner(
             "test:caxecraft-runtime-content-publication",
             "complete runtime generation publication semantics changed",
+        ),
+    ),
+    (
+        FOCUSED_CONTENT_FIXTURE_PATH,
+        AffectedOwner(
+            "test:caxecraft-actor-composition",
+            "the shared focused actor mechanics oracle changed",
+        ),
+    ),
+    (
+        FOCUSED_CONTENT_FIXTURE_PATH,
+        AffectedOwner(
+            "test:caxecraft-resolved-level-plan",
+            "the shared focused level-resolution oracle changed",
+        ),
+    ),
+    (
+        FOCUSED_CONTENT_FIXTURE_PATH,
+        AffectedOwner(
+            "test:caxecraft-content-generation",
+            "the shared focused content-generation oracle changed",
+        ),
+    ),
+    (
+        FOCUSED_CONTENT_FIXTURE_PATH,
+        AffectedOwner(
+            "test:caxecraft-runtime-level-loader",
+            "the shared focused runtime-level oracle changed",
+        ),
+    ),
+    (
+        FOCUSED_CONTENT_FIXTURE_PATH,
+        AffectedOwner(
+            "test:caxecraft-session",
+            "the shared focused session profile oracle changed",
+        ),
+    ),
+    (
+        FOCUSED_CONTENT_FIXTURE_PATH,
+        AffectedOwner(
+            "test:caxecraft-gameplay",
+            "the shared focused gameplay profile oracle changed",
         ),
     ),
     (

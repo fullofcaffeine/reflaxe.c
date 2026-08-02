@@ -302,6 +302,26 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             + "\n".join(violations),
         )
 
+    def test_removed_content_pack_fixture_cannot_return(self) -> None:
+        """Keep the deleted test-only mirror from becoming a second authority again."""
+        old_fixture = CASE / "test/caxecraft/content/BaseContentPack.hx"
+        self.assertFalse(old_fixture.exists())
+
+        haxe_sources = sorted((CASE / "src").rglob("*.hx")) + sorted(
+            (CASE / "test").rglob("*.hx")
+        )
+        stale_references = [
+            str(source.relative_to(ROOT))
+            for source in haxe_sources
+            if "BaseContentPack" in source.read_text(encoding="utf-8")
+        ]
+        self.assertEqual(
+            stale_references,
+            [],
+            "Caxecraft Haxe still references the removed content-pack fixture:\n"
+            + "\n".join(stale_references),
+        )
+
     def test_external_native_change_is_a_miss(self) -> None:
         self.raylib.write_bytes(b"changed-raylib")
         decision = self.decision()

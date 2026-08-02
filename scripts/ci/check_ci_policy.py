@@ -611,7 +611,7 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/check_assets.py",
     "examples/caxecraft/packs/caxecraft/base/content.json",
     "examples/caxecraft/packs/caxecraft/base/README.md",
-    "examples/caxecraft/test/caxecraft/content/BaseContentPack.hx",
+    "examples/caxecraft/test/caxecraft/qa/FocusedContentFixture.hx",
     "examples/caxecraft/oracle.hxml",
     "examples/caxecraft/case.json",
     "examples/caxecraft/run.py",
