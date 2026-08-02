@@ -81,6 +81,11 @@
           "doesNotProve": "Other managed or recursive enum-constructor callback payloads, full standard-library String behavior, or general Haxe lowering."
         },
         {
+          "path": "test/differential/bytes-runtime/case.json",
+          "proves": "The bounded Bytes suite proves borrowed and fresh Bytes values can cross compiler-generated switch joins, including an early-return arm, through Eval, validated HxcIR, strict native execution, and sanitizer observers.",
+          "doesNotProve": "Other compiler-generated carrier shapes, full standard-library Bytes behavior, a public ABI, platform qualification, or general Haxe lowering."
+        },
+        {
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
           "proves": "One bounded ordinary-Haxe JSON codec crosses the admitted enum, class, Array, Bytes, and String slices through strict generated C.",
           "doesNotProve": "General Haxe lowering, a general JSON library, runtime pack loading, public ABI stability, or platform qualification."
@@ -117,7 +122,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "haxe_c-djl.25: test:string-runtime and test:enum-lowering pass the focused decoded-enum and synchronous managed-String callback ownership slices; Caxecraft remains the separate vertical proof."
+        "evidence": "haxe_c-djl.26: test:bytes-runtime passes borrowed/fresh Bytes switch joins and early return through Eval, strict native C, ownership checks, and sanitizers; the unchanged Caxecraft ZIP package tracer is the separate product-boundary proof."
       },
       "residualRisks": [
         "General Haxe-to-C remains unsupported in the capability manifest.",
@@ -275,6 +280,11 @@
           "doesNotProve": "Other managed callback payload types, a complete runtime, leak detection on hosts without LeakSanitizer, or platform qualification."
         },
         {
+          "path": "test/differential/bytes-runtime/case.json",
+          "proves": "Borrowed and fresh Bytes owners cross compiler-generated switch joins with exactly one selected owner, early-return cleanup, repeated borrowing, and return transfer under strict native execution and the eligible sanitizers.",
+          "doesNotProve": "A complete runtime, unrelated managed carrier types, leak detection where unavailable, a stable ABI, or platform qualification."
+        },
+        {
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
           "proves": "The bounded JSON tree and rejection paths complete real generated native cleanup under AddressSanitizer and UndefinedBehaviorSanitizer.",
           "doesNotProve": "A complete runtime, leak detection where unavailable, arbitrary pack loading, compiler conformance, or another platform."
@@ -311,7 +321,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "haxe_c-djl.25: the staged focused String and enum owners pass strict native execution and ASan/UBSan for decoded enum projection and synchronous managed-String callback cleanup on the local Clang host."
+        "evidence": "haxe_c-djl.26: the focused Bytes owner passes strict native execution, ownership markers, allocation rollback, and ASan/UBSan for borrowed/fresh switch joins on the local Clang host."
       },
       "residualRisks": [
         "The hxrt implementation remains a bounded collection of admitted slices, not a complete runtime.",

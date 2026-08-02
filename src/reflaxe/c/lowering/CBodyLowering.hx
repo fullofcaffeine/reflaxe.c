@@ -149,9 +149,9 @@ private typedef CBodyStringSwitchDispatchCase = {
  *
  * Haxe may replace a block-valued `if` or `switch` with an empty local,
  * assignments in every normal arm, and one later read. The binding keeps the
- * local's exact String, reference-counted Array, closed-record, or tagged-enum
- * lifecycle beside that compiler ID so assignments can acquire one owner and
- * the read can move it out once.
+ * local's exact String, reference-counted Array or Bytes, closed-record, or
+ * tagged-enum lifecycle beside that compiler ID so assignments can acquire one
+ * owner and the read can move it out once.
  */
 private typedef CBodyManagedFlowCarrier = {
 	final localId:String;
@@ -5833,6 +5833,10 @@ private class FunctionBuilder {
 		// instead, so it remains outside this retain/release carrier protocol.
 		final managedFlowCarrierArray = compilerFlowCarrier ? localMapping.arrayValue() : null;
 		final managedArrayFlowCarrier = managedFlowCarrierArray != null && !managedFlowCarrierArray.managedByCollector;
+		// Bytes is also a small reference-counted runtime handle. It uses the same
+		// move-fresh/retain-borrowed join protocol as a non-collector Array; treating
+		// it as a direct value would require an unsafe fabricated default owner.
+		final managedBytesFlowCarrier = compilerFlowCarrier && localMapping.bytesValue() != null;
 		// A managed closed record has the same join requirement as a managed
 		// String or enum: copying its C struct does not create owners for the
 		// managed fields inside it. The generated record lifecycle helper
@@ -5847,6 +5851,7 @@ private class FunctionBuilder {
 		final managedFlowCarrier = compilerFlowCarrier
 			&& (localMapping.irType == IRTManagedString
 				|| managedArrayFlowCarrier
+				|| managedBytesFlowCarrier
 				|| managedAggregateFlowCarrier
 				|| managedFlowCarrierEnum != null);
 		final directFlowCarrier = compilerFlowCarrier && conditionalDirectValue(localMapping) && !tracedAggregateFlowCarrier;
@@ -5960,7 +5965,7 @@ private class FunctionBuilder {
 			intMapCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("int-map", "cleanup-release", "ordinary Haxe IntMap local lifetime", source, position));
 		}
-		if (localMapping.bytesValue() != null && !borrowedEnumManagedPayload) {
+		if (localMapping.bytesValue() != null && !borrowedEnumManagedPayload && !managedFlowCarrier) {
 			final transferredFreshOwner = value != null && freshManagedBytesValueIds.remove(value.id);
 			if (!transferredFreshOwner) {
 				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("bytes")), source, "retain-bytes-alias");
@@ -9186,6 +9191,11 @@ private class FunctionBuilder {
 			arrayCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release",
 				"ordinary Haxe Array selected by control flow and read through a local owner", source, position));
+		} else if (binding.mapping.bytesValue() != null) {
+			freshManagedBytesValueIds.remove(moved.id);
+			bytesCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "cleanup-release",
+				"ordinary Haxe Bytes selected by control flow and read through a local owner", source, position));
 		} else if (binding.mapping.aggregateValue() != null) {
 			freshManagedAggregateValueIds.remove(moved.id);
 			aggregateCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
@@ -9193,7 +9203,7 @@ private class FunctionBuilder {
 			freshManagedEnumValueIds.remove(moved.id);
 			enumCleanupActionIdsByCompilerId.set(compilerId, cleanupId);
 		} else {
-			throw new CBodyEmissionError("materialized managed flow carrier lost its String, Array, record, or enum lifetime plan");
+			throw new CBodyEmissionError("materialized managed flow carrier lost its String, Array, Bytes, record, or enum lifetime plan");
 		}
 		materializedManagedFlowCarrierLocalIds.set(compilerId, localId);
 		return localId;
@@ -10630,7 +10640,7 @@ private class FunctionBuilder {
 	 *
 	 * Fresh constructors and owned call results move directly. Parameters,
 	 * locals, and other borrowed values are copied and retained through the
-	 * matching String/Array runtime, closed-record helper, or enum active-tag
+	 * matching String/Array/Bytes runtime, closed-record helper, or enum active-tag
 	 * helper before branch-local cleanup runs.
 	 */
 	function appendManagedCarrierAcquire(localId:String, value:LoweredValue, mapping:CBodyValueType, managedEnum:Null<CPreparedBodyEnumInstance>,
@@ -10640,6 +10650,8 @@ private class FunctionBuilder {
 			freshManagedStringValueIds.remove(value.id);
 		} else if (mapping.arrayValue() != null) {
 			freshManagedArrayValueIds.remove(value.id);
+		} else if (mapping.bytesValue() != null) {
+			freshManagedBytesValueIds.remove(value.id);
 		} else if (mapping.aggregateValue() != null) {
 			freshManagedAggregateValueIds.remove(value.id);
 		} else if (managedEnum != null) {
@@ -10657,6 +10669,8 @@ private class FunctionBuilder {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string", "retain", "borrowed managed String selected by control flow", source, position));
 		} else if (mapping.arrayValue() != null && !fresh) {
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "retain", "borrowed ordinary Haxe Array selected by control flow", source, position));
+		} else if (mapping.bytesValue() != null && !fresh) {
+			runtimeRequirements.push(new CBodyRuntimeRequirement("bytes", "retain", "borrowed ordinary Haxe Bytes selected by control flow", source, position));
 		}
 	}
 
@@ -10667,6 +10681,8 @@ private class FunctionBuilder {
 		final array = mapping.arrayValue();
 		if (array != null && !array.managedByCollector)
 			return IRIRuntime("array");
+		if (mapping.bytesValue() != null)
+			return IRIRuntime("bytes");
 		final aggregate = mapping.aggregateValue();
 		if (aggregate != null && aggregate.managedLifetime) {
 			final implementationId = retain ? aggregate.retainImplementationId() : aggregate.destroyImplementationId();
@@ -10675,7 +10691,7 @@ private class FunctionBuilder {
 			return IRIProgramLocal(implementationId);
 		}
 		if (managedEnum == null)
-			throw new CBodyEmissionError("managed carrier lost its supported String, Array, record, or enum lifetime plan");
+			throw new CBodyEmissionError("managed carrier lost its supported String, Array, Bytes, record, or enum lifetime plan");
 		final implementationId = retain ? managedEnum.retainImplementationId() : managedEnum.destroyImplementationId();
 		if (implementationId == null)
 			throw new CBodyEmissionError('managed enum `${managedEnum.instanceId}` lost its ${retain ? "retain" : "destroy"} plan');
@@ -10702,12 +10718,14 @@ private class FunctionBuilder {
 			freshManagedStringValueRoles.set(result.id, role);
 		} else if (binding.mapping.arrayValue() != null) {
 			freshManagedArrayValueIds.set(result.id, true);
+		} else if (binding.mapping.bytesValue() != null) {
+			freshManagedBytesValueIds.set(result.id, true);
 		} else if (binding.mapping.aggregateValue() != null) {
 			freshManagedAggregateValueIds.set(result.id, true);
 		} else if (binding.managedEnum != null) {
 			freshManagedEnumValueIds.set(result.id, true);
 		} else {
-			throw new CBodyEmissionError('managed flow carrier `$role` lost its String, Array, record, or enum ownership plan');
+			throw new CBodyEmissionError('managed flow carrier `$role` lost its String, Array, Bytes, record, or enum ownership plan');
 		}
 		return {id: result.id, type: result.type, mapping: binding.mapping};
 	}

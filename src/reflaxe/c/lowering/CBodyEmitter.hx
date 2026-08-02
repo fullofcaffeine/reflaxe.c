@@ -2013,7 +2013,7 @@ class CBodyEmitter {
 	 * Assign one selected managed value and acquire exactly one owner for the join.
 	 *
 	 * Moving a fresh value needs only the structural C assignment. Copying a
-	 * borrowed value immediately calls the matching String/Array runtime retain
+	 * borrowed value immediately calls the matching String/Array/Bytes runtime retain
 	 * operation or a record/enum type-specific retain helper, so later branch
 	 * cleanup cannot invalidate the joined payload.
 	 */
@@ -2032,6 +2032,9 @@ class CBodyEmitter {
 					fn.id);
 			case IRMCARetainBorrowed(IRIRuntime("array")):
 				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayRetain)), [target]), boundsAbortName, instruction.id,
+					fn.id);
+			case IRMCARetainBorrowed(IRIRuntime("bytes")):
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [target]), boundsAbortName, instruction.id,
 					fn.id);
 			case IRMCARetainBorrowed(IRIProgramLocal(implementationId)):
 				final lifecycle = programLocalLifecycle(implementationId, instruction.id, fn.id);

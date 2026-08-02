@@ -215,6 +215,7 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "managedSwitchCarrierMissingAcquire",
         "managedCarrierLifecycleMismatch",
         "managedStringCarrierLifecycleMismatch",
+        "managedBytesCarrierLifecycleMismatch",
         "arrayCarrierLifecycleMismatch",
         "collectorArrayCarrier",
     ):

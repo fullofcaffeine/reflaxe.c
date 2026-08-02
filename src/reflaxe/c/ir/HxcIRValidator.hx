@@ -1610,7 +1610,7 @@ private class HxcIRValidationState {
 	/**
 	 * Match a join carrier with the lifecycle implementation for its exact type.
 	 *
-	 * Managed Strings and ordinary Haxe Arrays use their matching runtime
+	 * Managed Strings, ordinary Haxe Arrays, and Bytes use their matching runtime
 	 * retain/release operations. Closed records and tagged enums instead use
 	 * generated, type-specific lifecycle helpers because their managed fields or
 	 * active payload decide what must be retained or destroyed. Keeping this
@@ -1636,6 +1636,13 @@ private class HxcIRValidationState {
 			add(path, 'collector-backed Array cannot use the retain/release managed-carrier lifecycle', source);
 			return false;
 		}
+		if (isManagedBytes(type)) {
+			if (!isBytesRuntimeImplementation(selected)) {
+				add(path, 'managed Bytes carrier $operation requires the bytes runtime lifecycle', source);
+				return false;
+			}
+			return true;
+		}
 		final aggregateId = switch selected {
 			case IRIProgramLocal(helperId): aggregateLifecycleInstanceId(helperId, operation);
 			case _: null;
@@ -1655,6 +1662,8 @@ private class HxcIRValidationState {
 			add(path, "collector-backed Array cannot use the retain/release managed-carrier lifecycle", source);
 			return false;
 		}
+		if (isManagedBytes(type))
+			return true;
 		final instanceId = switch type {
 			case IRTInstance(value): value;
 			case _: null;

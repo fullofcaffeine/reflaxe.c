@@ -84,8 +84,8 @@ NEGATIVE_CASES = {
         "target=function.Main.observe)"
     ),
     "borrowed_forward": (
-        "TCall(owned-class-borrow-escape:instance-call-argument:0,"
-        "target=method.BorrowedForwardSink.consume)"
+        "TNew(stack-reference-escape:static-call-argument:0,"
+        "target=function.Main.forward)"
     ),
     "conditional": "TNew(stack-construction-requires-function-lifetime-sequence)",
     "cycle": "TNew(constructor-cycle:CycleA -> CycleB -> CycleA)",

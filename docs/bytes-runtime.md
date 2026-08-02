@@ -99,6 +99,18 @@ the caller releases the owners in reverse order on normal completion, early
 return, or an admitted failure edge. Passing an existing local or parameter
 does not add another retain because that value already has an owner.
 
+A value-producing `if` or switch can also choose which Bytes value continues.
+Pinned Haxe may express that source as an initially empty compiler temporary,
+one assignment in each normal arm, and one read after the branches rejoin.
+HxcIR does not invent a null or zero Bytes owner for that temporary. It declares
+one empty managed carrier instead: a fresh result moves its owner into the
+carrier, a borrowed result is retained once, and an arm that returns early never
+touches the carrier. The join moves the selected owner into a normal
+cleanup-owned local. Repeated reads and calls then borrow that local, while a
+return can transfer its owner to the caller. The validator rejects a missing or
+duplicate acquisition, a read before acquisition, and a lifecycle helper for
+the wrong managed type before C is emitted.
+
 When such an owner is created only inside an `if`, switch, or loop region,
 HxcIR still gives it function-level identity. Generated C therefore declares
 the cleanup-owned carrier at function scope with an inert zero value, then

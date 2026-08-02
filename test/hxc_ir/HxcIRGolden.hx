@@ -56,6 +56,7 @@ class HxcIRGolden {
 		validator.requireValid(managedClassInheritanceProgram(false), PROFILE);
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
 		validator.requireValid(managedStringStraightLineCarrierProgram(LinearValid), PROFILE);
+		validator.requireValid(managedBytesCarrierValidationProgram(false), PROFILE);
 		validator.requireValid(arrayCarrierValidationProgram(false, false), PROFILE);
 		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
 		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
@@ -165,6 +166,7 @@ class HxcIRGolden {
 				managedLinearCarrierOwnedExit: invalidDiagnostics(managedStringStraightLineCarrierProgram(LinearOwnedExit)),
 				managedCarrierLifecycleMismatch: invalidDiagnostics(managedCarrierLifecycleMismatchProgram()),
 				managedStringCarrierLifecycleMismatch: invalidDiagnostics(managedStringCarrierLifecycleMismatchProgram()),
+				managedBytesCarrierLifecycleMismatch: invalidDiagnostics(managedBytesCarrierValidationProgram(true)),
 				arrayCarrierLifecycleMismatch: invalidDiagnostics(arrayCarrierValidationProgram(true, false)),
 				collectorArrayCarrier: invalidDiagnostics(arrayCarrierValidationProgram(false, true)),
 				managedAggregateCarrierLifecycleMismatch: invalidDiagnostics(managedAggregateCarrierValidationProgram(true)),
@@ -2974,6 +2976,78 @@ class HxcIRGolden {
 					typeInstances: [],
 					globals: [],
 					functions: [functionPlan],
+					source: span(file, 1, 5)
+				}
+			]
+		};
+	}
+
+	/**
+	 * Build one Bytes carrier and optionally pair it with the wrong runtime.
+	 *
+	 * Bytes is a reference-counted handle, so both retaining a borrowed arm and
+	 * releasing an unconsumed carrier must use the Bytes runtime. The malformed
+	 * variant keeps the control flow valid and changes only that lifecycle.
+	 */
+	static function managedBytesCarrierValidationProgram(wrongLifecycle:Bool):HxcIRProgram {
+		final file = wrongLifecycle ? "test/negative/ManagedBytesCarrierLifecycleMismatch.hx" : COVERAGE_SOURCE;
+		final bytesType:HxcIRTypeDeclaration = {
+			id: "type.carrier-bytes",
+			displayName: "haxe.io.Bytes",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final bytesInstance:HxcIRTypeInstance = {
+			id: "instance.carrier-bytes",
+			declarationId: bytesType.id,
+			arguments: [],
+			representation: IRRManaged("bytes"),
+			source: span(file, 1)
+		};
+		final bytesRef = IRTInstance(bytesInstance.id);
+		final lifecycle = IRIRuntime(wrongLifecycle ? "string" : "bytes");
+		final carrierPlace = IRPLocal("local.bytes-result");
+		final fn:HxcIRFunction = {
+			id: "fn.coverage.bytes-carrier",
+			displayName: "coverage.IR.bytesCarrier",
+			parameters: [
+				parameter("value.condition", IRTBool, file, 1),
+				parameter("value.borrowed", bytesRef, file, 1)
+			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [local("local.bytes-result", bytesRef, IRLSAutomatic, IRISUninitialized, file, 2)],
+			returnType: bytesRef,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				block("entry", [
+					instruction("bytes.declare", null, IRIODeclareManagedCarrier(carrierPlace, lifecycle), file, 2)
+				], IRTBranch("value.condition", edge("true"), edge("false")), file, 2),
+				block("true", [
+					instruction("bytes.acquire-true", null, IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(lifecycle)), file, 3)
+				], IRTJump(edge("join")), file, 3),
+				block("false", [
+					instruction("bytes.acquire-false", null, IRIOAcquireManagedCarrier(carrierPlace, "value.borrowed", IRMCARetainBorrowed(lifecycle)), file, 4)
+				], IRTJump(edge("join")), file, 4),
+				block("join", [
+					instruction("bytes.move", result("value.bytes-result", bytesRef), IRIOMoveManagedCarrier(carrierPlace), file, 5)
+				], IRTReturn("value.bytes-result", []), file, 5)
+			],
+			cleanupRegions: [],
+			source: span(file, 1, 5)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: wrongLifecycle ? "invalid.ManagedBytesCarrierLifecycleMismatch" : "coverage.ManagedBytesCarrier",
+					types: [bytesType],
+					typeInstances: [bytesInstance],
+					globals: [],
+					functions: [fn],
 					source: span(file, 1, 5)
 				}
 			]
