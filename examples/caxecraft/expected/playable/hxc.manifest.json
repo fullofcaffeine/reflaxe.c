@@ -476,7 +476,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "b2e99d08eada7c6abdb53d4295bc02ad84324492008b0020ca6f2fb59d1988f0",
+      "sha256": "b87e28c5d14fcd9074ba2abde8b3d690f819b3b852fe74b30d86ea64c12f27d4",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -486,12 +486,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "51da7b43e5d1c9cf0d6cc41d259db3987872eee4282ff73d8716b9704f34c024",
+      "sha256": "89e79ba3365a9ca917979dd826ae5e643b8ece3e85248a3aaa166ca21a7ac203",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "9adaad1f1d984c67e69793f47598a9c9479a010b7d32329d9cf29648365662d2",
+      "sha256": "b3f0f4ecd7cc4c3f04cb28a9c8a0e136db15d3ac7a34def0e7e5038ec464a8e7",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -501,7 +501,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "6caa0ff616bb06684c9ddad5362f6f1453985f9a4545b45ebd87997effee0cbb",
+      "sha256": "5538c852e4a62dcddc104e143cd14de5b27962c376c584c9bd0b1e836686d1fb",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -716,7 +716,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "b092acbfccef7498400da1ace331ab7e20d015e0c9ab2b18d96f8489b100d7ba",
+      "sha256": "04d3579130e02c4f744f48f58b8132bfd8fc6c4d96e4364a168c6c1624eded72",
       "path": "include/hxc/modules/caxecraft/content/RuntimeSchema.h",
       "kind": "private-header"
     },
@@ -1471,7 +1471,7 @@
       "kind": "source"
     },
     {
-      "sha256": "751a1bbc97017a447e8ccd3cf43293415b139c9fadd18ff00e84506fb29712dd",
+      "sha256": "a87915e1f489b8e6cda466f6a56fbed97b701b6611c5f1763c5d74a22c939648",
       "path": "src/hxc/support.c",
       "kind": "source"
     },

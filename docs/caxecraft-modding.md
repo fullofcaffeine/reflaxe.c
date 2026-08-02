@@ -38,13 +38,29 @@ package manifest does not duplicate that list.
 `mod` is another package role, not another container or scripting language. A
 mod package can compose the same admitted entry kinds and declare bounded
 dependencies on stable package IDs. The current runtime validates that model
-and one explicit directory-backed first-adventure package; it does not discover,
-install, order, or activate arbitrary mods yet. ZIP is the planned sharing
-transport: it must expose the same manifest paths and bytes to the same verifier
-instead of becoming a second package format. Run the tracer with:
+and one explicit first-adventure package from either its authoring directory or
+a reviewed ZIP fixture; it does not discover, install, order, or activate
+arbitrary mods yet. ZIP is only the sharing envelope. The ZIP source exposes
+the same package-relative paths and exact bytes to the same manifest verifier,
+so a level, campaign, content pack, localization bundle, asset inventory, or mod
+does not become a different semantic format when someone hands it off.
+
+The first ZIP reader deliberately accepts a small, safe profile: one ordinary
+disk, stored files (no compression), UTF-8 names when needed, no directory or
+special entries, no comments or extra records, and bounded archive, entry, and
+payload sizes. It checks local and central records against each other and checks
+every payload's CRC-32 before making the package readable. Unsupported Deflate,
+ZIP64, encryption, data descriptors, and multi-disk archives are rejected
+instead of being guessed at. The independent fixture contains the package
+manifest and its seven directly receipted semantic entries. Its nested asset
+inventory names PNG files, but this tracer does not yet claim a complete
+standalone export containing those transitive asset bytes.
+
+Run both transport owners with:
 
 ```sh
 npm run test:caxecraft-package-manifest
+npm run test:caxecraft-package-zip-source
 ```
 
 This is intentionally separate from the future general `sys.io.File`
@@ -113,7 +129,9 @@ A strict build-time validator turns it into the typed
 `assets/manifest.json` proves the reviewed visual bytes that those logical
 definitions reference. Arbitrary runtime package discovery and activation are
 not implemented yet, so copying a new JSON or ZIP file beside the game does not
-install a mod.
+install a mod. Creating a deterministic shareable ZIP, including every
+transitive asset, is also still separate work; the current implemented slice
+reads the bounded profile.
 
 ## CaxeFlow versus the native pilot
 

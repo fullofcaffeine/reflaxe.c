@@ -369,7 +369,7 @@ private final class ContentPackageManifestDecoder {
 					reader.reject(pathNode, SchemaDuplicateLogicalPath(pathText));
 					return null;
 				}
-				if (asciiCaseEqual(previous.logicalPath.text(), pathText)) {
+				if (previous.logicalPath.asciiCaseEquals(logicalPath)) {
 					reader.reject(pathNode, SchemaCaseCollidingLogicalPath(pathText, previous.logicalPath.text()));
 					return null;
 				}
@@ -529,25 +529,6 @@ private final class ContentPackageManifestDecoder {
 			return null;
 		}
 		return value;
-	}
-
-	/** Compare ASCII path letters without allocating or using host locale rules. */
-	static function asciiCaseEqual(left:String, right:String):Bool {
-		if (left.length != right.length)
-			return false;
-		for (index in 0...left.length) {
-			final maybeLeft = left.charCodeAt(index);
-			final maybeRight = right.charCodeAt(index);
-			if (maybeLeft == null || maybeRight == null)
-				return false;
-			final leftCode:Int = maybeLeft;
-			final rightCode:Int = maybeRight;
-			final foldedLeft = leftCode >= 65 && leftCode <= 90 ? leftCode + 32 : leftCode;
-			final foldedRight = rightCode >= 65 && rightCode <= 90 ? rightCode + 32 : rightCode;
-			if (foldedLeft != foldedRight)
-				return false;
-		}
-		return true;
 	}
 
 	static function rejected(reader:RuntimeSchemaReader):ContentPackageManifestReadResult {

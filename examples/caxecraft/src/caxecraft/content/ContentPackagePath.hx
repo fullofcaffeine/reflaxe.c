@@ -72,6 +72,31 @@ final class ContentPackagePath {
 		return components[index];
 
 	/**
+		Compare portable path identity without allocating or consulting host locale.
+
+		ZIP archives and manifests both reject names that differ only by ASCII case,
+		because those names collide on common filesystems even when the current host
+		would keep them separate.
+	**/
+	public function asciiCaseEquals(other:ContentPackagePath):Bool {
+		if (value.length != other.value.length)
+			return false;
+		for (index in 0...value.length) {
+			final maybeLeft = value.charCodeAt(index);
+			final maybeRight = other.value.charCodeAt(index);
+			if (maybeLeft == null || maybeRight == null)
+				return false;
+			final left:Int = maybeLeft;
+			final right:Int = maybeRight;
+			final foldedLeft = left >= 65 && left <= 90 ? left + 32 : left;
+			final foldedRight = right >= 65 && right <= 90 ? right + 32 : right;
+			if (foldedLeft != foldedRight)
+				return false;
+		}
+		return true;
+	}
+
+	/**
 		Validate one untrusted logical path without touching the filesystem.
 
 		Both POSIX and Windows escape spellings are rejected on every host. That

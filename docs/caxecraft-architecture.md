@@ -833,11 +833,30 @@ The next semantic layer is `ContentPackageManifest`. It says which existing
 files one package owns, which closed roles they fulfill, and which compatible
 package versions it requires. `ContentPackageStore` supplies bytes; the
 manifest verifier checks every declared length and SHA-256 before returning a
-loaded package. No directory fact enters the manifest model, so a future ZIP
-adapter must expose the same logical paths to this verifier. The focused
-`npm run test:caxecraft-package-manifest` tracer proves the checked-in first
-adventure through Eval and generated native C. It does not prove ZIP parsing,
-arbitrary dependency resolution, package activation, or platform portability.
+loaded package. No directory or archive fact enters that model.
+
+`ContentPackageZipSource` is the second concrete transport for the same interface.
+It owns a copy of one complete archive, validates a deliberately narrow stored
+ZIP profile once, and returns independent byte owners for validated logical
+paths. Before the source becomes visible, it checks the ordinary end record,
+single-disk counts, exact central/local layout, matching names and metadata,
+stored sizes, CRC-32, UTF-8 spelling, portable paths, duplicate and ASCII-case
+collisions, regular-file metadata, and archive/entry/payload budgets. Optional
+ZIP structures and compression fail closed. This keeps archive parsing below
+the semantic package boundary: manifests, levels, campaigns, packs, and mods do
+not branch on whether their bytes came from a directory or a ZIP.
+
+The focused `npm run test:caxecraft-package-manifest` tracer proves the
+checked-in directory package. `npm run test:caxecraft-package-zip-source`
+loads an independently produced Info-ZIP stored archive through the same
+manifest verifier, compares every direct semantic receipt and payload byte with
+the directory source, and challenges 36 separately located malformed archive
+conditions on Eval and generated native C with sanitizers. The fixture includes
+the seven direct semantic entries named by the package manifest; its asset
+manifest's transitive PNG files are not yet bundled. These proofs therefore do
+not claim deterministic ZIP export, complete clean-machine handoff, Deflate,
+general `haxe.zip`, discovery, dependency resolution, activation, platform
+portability, or release readiness.
 
 Ordinary play calls this store and publishes the resulting complete generation.
 The bounded evidence is narrower than a general mod system: the application
