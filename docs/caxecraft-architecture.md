@@ -846,17 +846,26 @@ ZIP structures and compression fail closed. This keeps archive parsing below
 the semantic package boundary: manifests, levels, campaigns, packs, and mods do
 not branch on whether their bytes came from a directory or a ZIP.
 
-The focused `npm run test:caxecraft-package-manifest` tracer proves the
-checked-in directory package. `npm run test:caxecraft-package-zip-source`
-loads an independently produced Info-ZIP stored archive through the same
-manifest verifier, compares every direct semantic receipt and payload byte with
-the directory source, and challenges 36 separately located malformed archive
-conditions on Eval and generated native C with sanitizers. The fixture includes
-the seven direct semantic entries named by the package manifest; its asset
-manifest's transitive PNG files are not yet bundled. These proofs therefore do
-not claim deterministic ZIP export, complete clean-machine handoff, Deflate,
-general `haxe.zip`, discovery, dependency resolution, activation, platform
-portability, or release readiness.
+The focused `npm run test:caxecraft-package-manifest` tracer proves the current
+checked-in directory package. `npm run test:caxecraft-package-zip-source` keeps
+an independently produced, deliberately small Info-ZIP archive frozen as its
+reader oracle and challenges 36 separately located malformed archive
+conditions on Eval and generated native C with sanitizers. Its package shape is
+not updated when the live package grows; this keeps exporter behavior from
+changing the reader's expected input.
+
+`npm run test:caxecraft-package-zip-export` owns current-package parity. The
+Haxe exporter verifies all fifteen declared payloads, cross-checks the asset
+inventory's eight selected PNGs against the package transport receipts, and
+writes one canonical stored ZIP containing the package manifest plus those
+payloads. The Haxe reader reopens it, Python's standard ZIP reader checks every
+name, receipt, CRC, and normalized metadata field, and Info-ZIP checks the same
+archive when available. Finally, the already-built native verifier and copied
+archive run alone in an isolated directory with an empty toolchain path. This
+proves a reproducible complete handoff for the admitted first-adventure package.
+It does not prove Deflate, general `haxe.zip`, creator-facing export/install
+commands, discovery, dependency resolution, activation, platform portability,
+or release readiness.
 
 Ordinary play calls this store and publishes the resulting complete generation.
 The bounded evidence is narrower than a general mod system: the application

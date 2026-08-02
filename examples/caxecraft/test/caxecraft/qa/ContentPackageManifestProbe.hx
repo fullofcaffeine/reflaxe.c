@@ -59,9 +59,9 @@ function selfCheck():Int {
 	if (manifest.id.text() != "caxecraft:first-adventure"
 		|| manifest.version != 1
 		|| manifest.roleCount() != 5
-		|| manifest.entryCount() != 7
+		|| manifest.entryCount() != 15
 		|| manifest.dependencyCount() != 0
-		|| loaded.receiptCount() != 7)
+		|| loaded.receiptCount() != 15)
 		return 3;
 	if (!sameRole(manifest.roleAt(0), Assets)
 		|| !sameRole(manifest.roleAt(1), Campaign)
@@ -81,7 +81,7 @@ function selfCheck():Int {
 		bytes += receipt.byteLength;
 		kinds |= kindBit(entry.kind);
 	}
-	if (bytes != 42943 || kinds != 126)
+	if (bytes != 9483471 || kinds != 127)
 		return 6;
 	if (!verifyDecoderRejections())
 		return 7;
@@ -92,7 +92,7 @@ function selfCheck():Int {
 	traceIdentity = manifest.version * 100000 + manifest.roleCount() * 1000 + manifest.entryCount() * 10 + manifest.dependencyCount();
 	traceBytes = bytes;
 	traceKinds = kinds;
-	return traceIdentity == 105070 ? 0 : 10;
+	return traceIdentity == 105150 ? 0 : 10;
 }
 
 /** Challenge malformed, identity, role, path, ordering, and dependency input. */

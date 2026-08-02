@@ -154,11 +154,11 @@ final class ContentJson {
 	/**
 	 * Largest JSON source admitted by this bounded content schema.
 	 *
-	 * Sixteen KiB leaves more than twice the largest shipped file while keeping
-	 * an exact-limit parse inside the native feedback budget. Raise it
-	 * only with representative generated-C timing and memory evidence.
+	 * Twenty-four KiB admits the reviewed 17.2 KiB asset inventory while keeping
+	 * untrusted syntax and allocation work bounded. The focused asset/export
+	 * tracer supplies representative generated-C timing and sanitizer evidence.
 	 */
-	public static inline final MAXIMUM_BYTES:Int = 16 * 1024;
+	public static inline final MAXIMUM_BYTES:Int = 24 * 1024;
 
 	/** Deep enough for the current schemas while bounding recursive work. */
 	public static inline final MAXIMUM_DEPTH:Int = 24;

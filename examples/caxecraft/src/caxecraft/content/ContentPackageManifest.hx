@@ -12,11 +12,13 @@ import haxe.io.Bytes;
 /**
  * Defines what a Caxecraft package contributes independently of how it travels.
  *
- * The manifest names existing campaign, level, content, localization, and asset
- * manifest files; it does not duplicate their schemas or the asset manifest's
- * binary inventory. A directory source and a future
- * ZIP source must expose the same logical paths and bytes, then this module
- * performs the same role, dependency, length, and SHA-256 checks for either.
+ * The manifest names existing campaign, level, content, localization, asset
+ * inventory, and selected binary files without duplicating their schemas. The
+ * asset inventory remains the authority for visual selection and provenance;
+ * this manifest repeats selected paths and digests only so every file that must
+ * travel has one transport receipt. A directory or ZIP source exposes the same
+ * logical paths and bytes, then this module performs the same role, dependency,
+ * length, and SHA-256 checks for either.
  */
 /** Stable identity shared by package manifests and dependency declarations. */
 abstract ContentPackageId(String) {

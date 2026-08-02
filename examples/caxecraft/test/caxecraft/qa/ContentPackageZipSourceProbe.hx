@@ -4,7 +4,6 @@ import caxecraft.content.ContentPackageManifest.ContentPackageLoadResult;
 import caxecraft.content.ContentPackageManifest.LoadedContentPackage;
 import caxecraft.content.ContentPackageManifest.loadContentPackage;
 import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
-import caxecraft.content.ContentPackageSource;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.ContentPackageZipSource;
 import caxecraft.content.ContentPackageZipSource.ContentPackageZipError;
@@ -12,16 +11,18 @@ import caxecraft.content.ContentPackageZipSource.ContentPackageZipOpenResult;
 import haxe.io.Bytes;
 
 /**
- * Proves that one copied ZIP exposes the same logical package as a directory.
+ * Proves that one frozen standard-tool ZIP remains readable and fail-closed.
  *
- * The archive fixture comes from an independent standard ZIP tool. This probe
- * owns transport parity and adversarial archive structure; the existing
- * package-manifest probe continues to own semantic roles and entry receipts.
+ * The deliberately small archive fixture comes from an independent standard
+ * ZIP tool. Keeping it frozen prevents an exporter bug from changing the
+ * reader's oracle. This probe owns stored-ZIP compatibility and adversarial
+ * archive structure. The current package's full directory-to-ZIP parity is
+ * owned separately by `ContentPackageZipExportProbe`.
  */
 /** First broken ZIP-source invariant, or zero after every scenario passes. */
 var observed:Int = 0;
 
-/** Compact package identity shared with the directory-backed proof. */
+/** Compact identity of the reviewed package frozen inside the ZIP fixture. */
 var traceIdentity:Int = 0;
 
 /** Exact verified semantic payload bytes reached through the ZIP source. */
@@ -41,13 +42,13 @@ function main():Void {
 	#end
 }
 
-/** Return zero only when directory parity and every ZIP rejection agree. */
+/** Return zero only when the frozen package and every ZIP rejection agree. */
 function selfCheck():Int {
-	final directory = switch ContentPackageStore.open(".", "first-adventure-directory", ContentPackageStore.MAXIMUM_PACKAGE_BYTES) {
+	final fixtureStore = switch ContentPackageStore.open(".", "package-zip-fixtures", ContentPackageStore.MAXIMUM_PACKAGE_BYTES) {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 1;
 	};
-	final archiveRead = switch directory.read("test/fixtures/package-zip/first-adventure-store.zip") {
+	final archiveRead = switch fixtureStore.read("test/fixtures/package-zip/first-adventure-store.zip") {
 		case PackageBytesRead(value): value;
 		case PackageBytesRejected(_): return 2;
 	};
@@ -61,13 +62,12 @@ function selfCheck():Int {
 
 	// The source owns a copy: changing the caller buffer cannot change later reads.
 	archiveRead.bytes.set(52, archiveRead.bytes.get(52) ^ 0xff);
-	final directoryPackage = ready(loadContentPackage(directory, "caxecraft.package.json"));
 	final zipPackage = ready(loadContentPackage(zip, "caxecraft.package.json"));
-	if (directoryPackage == null || zipPackage == null || !samePackage(directory, directoryPackage, zip, zipPackage))
+	if (zipPackage == null || zipPackage.manifest.id.text() != "caxecraft:first-adventure")
 		return 5;
 	if (!readRejections(zip))
 		return 6;
-	if (!archiveRejections(pristine, directory))
+	if (!archiveRejections(pristine, fixtureStore))
 		return 7;
 
 	traceIdentity = zipPackage.manifest.version * 100000 + zipPackage.manifest.roleCount() * 1000 + zipPackage.manifest.entryCount() * 10
@@ -83,36 +83,6 @@ function ready(result:ContentPackageLoadResult):Null<LoadedContentPackage>
 		case ContentPackageReady(value): value;
 		case ContentPackageRejected(_): null;
 	};
-
-/** Compare semantic receipts and every direct payload byte across transports. */
-function samePackage(leftSource:ContentPackageSource, left:LoadedContentPackage, rightSource:ContentPackageSource, right:LoadedContentPackage):Bool {
-	if (left.manifest.id.text() != right.manifest.id.text()
-		|| left.manifest.version != right.manifest.version
-		|| left.manifest.roleCount() != right.manifest.roleCount()
-		|| left.manifest.entryCount() != right.manifest.entryCount()
-		|| left.manifest.dependencyCount() != right.manifest.dependencyCount()
-		|| left.receiptCount() != right.receiptCount())
-		return false;
-	for (index in 0...left.receiptCount()) {
-		final leftReceipt = left.receiptAt(index);
-		final rightReceipt = right.receiptAt(index);
-		if (leftReceipt.logicalPath.text() != rightReceipt.logicalPath.text()
-			|| leftReceipt.byteLength != rightReceipt.byteLength
-			|| leftReceipt.sha256 != rightReceipt.sha256)
-			return false;
-		switch [
-			leftSource.read(leftReceipt.logicalPath.text()),
-			rightSource.read(rightReceipt.logicalPath.text())
-		] {
-			case [PackageBytesRead(leftContent), PackageBytesRead(rightContent)]:
-				if (!sameBytes(leftContent.bytes, rightContent.bytes))
-					return false;
-			case _:
-				return false;
-		}
-	}
-	return true;
-}
 
 /** Prove invalid and absent lookups remain ordinary source errors. */
 function readRejections(source:ContentPackageZipSource):Bool {
@@ -345,14 +315,4 @@ function writeU32(bytes:Bytes, offset:Int, value:Int):Void {
 	bytes.set(offset + 1, value >>> 8 & 0xff);
 	bytes.set(offset + 2, value >>> 16 & 0xff);
 	bytes.set(offset + 3, value >>> 24 & 0xff);
-}
-
-/** Compare exact payload bytes without depending on a target helper. */
-function sameBytes(left:Bytes, right:Bytes):Bool {
-	if (left.length != right.length)
-		return false;
-	for (index in 0...left.length)
-		if (left.get(index) != right.get(index))
-			return false;
-	return true;
 }

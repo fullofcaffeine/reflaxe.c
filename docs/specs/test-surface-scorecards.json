@@ -53,6 +53,7 @@
         "test:caxecraft-content-json",
         "test:caxecraft-package-manifest",
         "test:caxecraft-package-zip-source",
+        "test:caxecraft-package-zip-export",
         "test:caxecraft-runtime-schemas",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime",
@@ -98,8 +99,13 @@
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageZipSourceProbe.hx",
-          "proves": "One independently produced stored ZIP crosses the Haxe-authored bounded parser, the transport-neutral package verifier, haxe.c, strict native C, and a real observer with exact directory parity and 36 fail-closed archive mutations.",
-          "doesNotProve": "General Haxe lowering, general haxe.zip support, Deflate, deterministic export, complete transitive asset handoff, arbitrary mod activation, public ABI stability, or platform qualification."
+          "proves": "One frozen independently produced stored ZIP crosses the Haxe-authored bounded parser, the transport-neutral package verifier, haxe.c, strict native C, and a real observer with 36 fail-closed archive mutations.",
+          "doesNotProve": "Current-package directory parity, general Haxe lowering, general haxe.zip support, Deflate, deterministic export, complete asset handoff, arbitrary mod activation, public ABI stability, or platform qualification."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageZipExportProbe.hx",
+          "proves": "One admitted Haxe slice verifies a complete campaign/level/pack/localization/asset package, writes a deterministic stored ZIP, reopens it through the bounded reader, and preserves the exact package identity through strict native C.",
+          "doesNotProve": "General Haxe lowering, general haxe.zip support, Deflate, arbitrary package compatibility, mod installation or activation, public ABI stability, or platform qualification."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
@@ -128,7 +134,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "haxe_c-i1h3: test:bytes-runtime passes nullable-local identity, checked unwrap, replacement, and borrowed/fresh Bytes switch and conditional joins through Eval, validated HxcIR, strict native C, ownership checks, and sanitizers."
+        "evidence": "haxe_c-xge.20.4.4.3: test:caxecraft-package-zip-export passes complete deterministic package export and isolated handoff through the admitted Bytes/String/Array/class/enum slice on Eval and strict native C with sanitizers."
       },
       "residualRisks": [
         "General Haxe-to-C remains unsupported in the capability manifest.",
@@ -165,6 +171,7 @@
         "test:raylib-provisioning",
         "test:build-adapters",
         "test:caxecraft-package-manifest",
+        "test:caxecraft-package-zip-export",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime"
       ],
@@ -201,6 +208,11 @@
           "path": "examples/caxecraft/test/native/content_package_manifest_harness.c",
           "proves": "An independent C consumer observes the Haxe-authored directory package tracer while the typed POSIX boundary supplies the real bytes.",
           "doesNotProve": "A generated public API, arbitrary C interop, ZIP support, Windows package IO, ABI stability, or platform qualification."
+        },
+        {
+          "path": "examples/caxecraft/test/native/content_package_zip_export_harness.c",
+          "proves": "An independent C consumer observes the Haxe-authored complete ZIP exporter and reader after the typed POSIX boundary supplies every real package payload; an isolated rerun uses the already-built consumer beside only the archive.",
+          "doesNotProve": "A generated public API, arbitrary C interop, Windows package IO, ABI stability, another compiler family, or platform qualification."
         }
       ],
       "selectorOwnership": {
@@ -214,7 +226,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "The declared C-import fixture and native smoke are active; the capability manifest still marks public-c-abi unsupported."
+        "evidence": "haxe_c-xge.20.4.4.3: a strict native C consumer observes complete package ZIP export and isolated reload through the typed POSIX file boundary; the capability manifest still marks public-c-abi unsupported."
       },
       "residualRisks": [
         "No generated public header, ABI manifest, or compatibility policy exists.",
@@ -257,6 +269,7 @@
         "test:caxecraft-content-json",
         "test:caxecraft-package-manifest",
         "test:caxecraft-package-zip-source",
+        "test:caxecraft-package-zip-export",
         "test:caxecraft-runtime-schemas",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime",
@@ -303,8 +316,13 @@
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageZipSourceProbe.hx",
-          "proves": "The copied archive, indexed entry owners, independent read results, directory-parity payloads, and 36 rejected archive candidates complete under generated native execution and the eligible AddressSanitizer and UndefinedBehaviorSanitizer observers.",
+          "proves": "The frozen copied archive, indexed entry owners, independent read results, and 36 rejected archive candidates complete under generated native execution and the eligible AddressSanitizer and UndefinedBehaviorSanitizer observers.",
           "doesNotProve": "A complete runtime, streaming or compressed archives, leak detection where unavailable, concurrent package activation, arbitrary mod safety, or another platform."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageZipExportProbe.hx",
+          "proves": "All complete-package payload owners, two independent archive results, bounded ZIP-reader owners, negative preflight candidates, and isolated native reload complete under strict execution and the eligible AddressSanitizer and UndefinedBehaviorSanitizer observers.",
+          "doesNotProve": "A complete runtime, streaming or compressed archives, concurrent package activation, arbitrary mod safety, leak detection where unavailable, or another platform."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeSchemasProbe.hx",
@@ -333,7 +351,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "haxe_c-i1h3: the focused Bytes owner passes strict native execution, ownership markers, allocation rollback, and ASan/UBSan for nullable replacement plus borrowed/fresh switch and conditional joins on the local Clang host."
+        "evidence": "haxe_c-xge.20.4.4.3: the complete 9.5 MB package ZIP export, two-result ownership, reader round trip, negative preflight paths, and isolated reload pass strict native execution and ASan/UBSan on the local Clang host."
       },
       "residualRisks": [
         "The hxrt implementation remains a bounded collection of admitted slices, not a complete runtime.",
@@ -436,6 +454,7 @@
         "test:hello",
         "test:caxecraft-package-manifest",
         "test:caxecraft-package-zip-source",
+        "test:caxecraft-package-zip-export",
         "test:caxecraft-runtime-content-generation",
         "test:caxecraft-campaign-runtime",
         "test:caxecraft-domain"
@@ -465,13 +484,18 @@
         },
         {
           "path": "examples/caxecraft/caxecraft.package.json",
-          "proves": "The flagship has one executable, independently receipted package example that composes campaign, levels, content, localization, and assets through a directory source.",
-          "doesNotProve": "Package discovery, dependency installation, mod activation, ZIP transport, source mapping, portability, or release readiness."
+          "proves": "The flagship has one executable, independently receipted package example that composes campaign, levels, content, localization, and every selected asset through directory and canonical stored-ZIP sources.",
+          "doesNotProve": "Package discovery, dependency installation, mod activation, a creator-facing export command, source mapping, portability, or release readiness."
         },
         {
           "path": "examples/caxecraft/test/fixtures/package-zip/first-adventure-store.zip",
-          "proves": "The flagship can read one independently generated stored ZIP as the same direct semantic package entries and bytes as its authoring directory.",
-          "doesNotProve": "Deterministic export, inclusion of transitive PNG assets, discovery, dependency installation, mod activation, source mapping, portability, or release readiness."
+          "proves": "The flagship can still read one frozen independently generated stored ZIP and reject 36 independently located malformed archive conditions.",
+          "doesNotProve": "Current-package parity, deterministic export, complete selected-asset handoff, discovery, dependency installation, mod activation, source mapping, portability, or release readiness."
+        },
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageZipExportProbe.hx",
+          "proves": "The flagship exports all current first-adventure package files to reproducible ZIP bytes, passes standard-reader inspection, and reloads the copied archive through an already-built native downstream consumer in isolation.",
+          "doesNotProve": "A public export/install command, arbitrary package discovery or activation, source mapping, portability, full campaign playability, or release readiness."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/RuntimeContentGenerationProbe.hx",
@@ -500,7 +524,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "The diagnostic registry and declared example-domain proofs are active; hxc CLI and doctor remain unsupported."
+        "evidence": "haxe_c-xge.20.4.4.3: the declared flagship package example has a complete canonical ZIP and isolated native handoff proof; hxc CLI, package installation, and doctor remain unsupported."
       },
       "residualRisks": [
         "No general source-map or downstream package compatibility claim exists.",

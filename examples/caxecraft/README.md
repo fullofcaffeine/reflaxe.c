@@ -553,6 +553,33 @@ campaign packages or the complete bilingual game are finished.
 ownership/publication; `haxe_c-xge.20.4.3` owns completing the bounded runtime
 pack.
 
+## Sharing a complete content package
+
+A content package is the semantic unit: it may contain levels, a campaign,
+content packs, localization, selected assets, or the `mod` role. ZIP is only a
+convenient transport for handing those same files to someone else. Loading from
+a ZIP does not change the CaxeMap, campaign, pack, localization, or asset
+formats, and editing staged content does not recompile the game.
+
+The first Haxe exporter now creates one canonical stored ZIP for the admitted
+first-adventure package. It includes `caxecraft.package.json`, seven
+semantic/inventory payloads, and all eight PNGs selected by
+`assets/manifest.json`. Export checks exact lengths and SHA-256 receipts and
+cross-checks the package's asset entries against that independent asset
+selection before writing an archive. Standard ZIP tooling and an isolated
+already-built native verifier independently check the resulting handoff:
+
+```sh
+npm run test:caxecraft-package-manifest
+npm run test:caxecraft-package-zip-source
+npm run test:caxecraft-package-zip-export
+```
+
+This is an executable packaging foundation, not yet a public export command,
+mod installer, dependency resolver, or live-reload system. The current ZIP
+profile stores files without compression and deliberately rejects optional
+profiles such as Deflate, ZIP64, encryption, and multi-disk archives.
+
 Before a pack-specific schema accepts fields, `ContentJson` turns bounded
 scalar-valid UTF-8 into a closed JSON tree with source locations. It preserves
 number spellings, rejects duplicate names and malformed syntax, and enforces

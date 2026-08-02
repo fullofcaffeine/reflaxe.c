@@ -204,7 +204,12 @@ class ToolchainShardTests(unittest.TestCase):
         )
         self.assertEqual(
             [owner["script"] for owner in content_plan["taskOwners"]],
-            ["test:caxecraft-content-json", "test:caxecraft-runtime-schemas"],
+            [
+                "test:caxecraft-package-manifest",
+                "test:caxecraft-package-zip-export",
+                "test:caxecraft-content-json",
+                "test:caxecraft-runtime-schemas",
+            ],
         )
 
         shared_plan = self.route_selector.build_test_plan(
@@ -216,6 +221,60 @@ class ToolchainShardTests(unittest.TestCase):
                 "test:caxecraft-content-json",
                 "test:caxecraft-runtime-schemas",
                 "test:caxecraft-domain",
+            ],
+        )
+
+    def test_package_transport_change_selects_exact_vertical_owners(self) -> None:
+        export_paths = (
+            "examples/caxecraft/package-zip-export-c.hxml",
+            "examples/caxecraft/src/caxecraft/content/ContentPackageAssetClosure.hx",
+            "examples/caxecraft/src/caxecraft/content/ContentPackageZipExport.hx",
+            "examples/caxecraft/test/caxecraft/qa/ContentPackageZipExportProbe.hx",
+            "examples/caxecraft/test/native/content_package_zip_export_harness.c",
+        )
+        for path in export_paths:
+            with self.subTest(path=path):
+                plan = self.route_selector.build_test_plan((path,))
+                self.assertEqual(
+                    [owner["script"] for owner in plan["taskOwners"]],
+                    ["test:caxecraft-package-zip-export"],
+                )
+                self.assertEqual(
+                    plan["taskOwners"][0]["productSurfaces"],
+                    [
+                        "compiler-admitted-slices",
+                        "c-abi-native-ffi",
+                        "runtime-memory-lifetime",
+                        "diagnostics-source-mapping-downstream",
+                    ],
+                )
+                self.assertFalse(plan["fullBackstop"]["required"])
+
+        source_plan = self.route_selector.build_test_plan(
+            ("examples/caxecraft/test/caxecraft/qa/ContentPackageZipSourceProbe.hx",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in source_plan["taskOwners"]],
+            ["test:caxecraft-package-zip-source"],
+        )
+
+        package_plan = self.route_selector.build_test_plan(
+            ("examples/caxecraft/caxecraft.package.json",)
+        )
+        self.assertEqual(
+            [owner["script"] for owner in package_plan["taskOwners"]],
+            [
+                "test:caxecraft-package-manifest",
+                "test:caxecraft-package-zip-export",
+            ],
+        )
+        self.assertEqual(
+            package_plan["affectedExtended"]["productSurfaces"],
+            [
+                "c-abi-native-ffi",
+                "compiler-admitted-slices",
+                "diagnostics-source-mapping-downstream",
+                "runtime-memory-lifetime",
             ],
         )
 
@@ -692,7 +751,7 @@ class ToolchainShardTests(unittest.TestCase):
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 73)
+        self.assertEqual(len(canonical), 74)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER

@@ -28,11 +28,11 @@ int main(void)
 	             hxc_caxecraft_qa_ContentPackageManifestProbe_traceKinds);
 	return generated_status == 0 && check == INT32_C(0)
 	       && hxc_caxecraft_qa_ContentPackageManifestProbe_traceIdentity
-	              == INT32_C(105070)
+	              == INT32_C(105150)
 	       && hxc_caxecraft_qa_ContentPackageManifestProbe_traceBytes
-	              == INT32_C(42943)
+	              == INT32_C(9483471)
 	       && hxc_caxecraft_qa_ContentPackageManifestProbe_traceKinds
-	              == INT32_C(126)
+	              == INT32_C(127)
 	           ? 0
 	           : 1;
 }

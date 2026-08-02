@@ -194,6 +194,52 @@ AFFECTED_OWNER_RULES = (
     (
         re.compile(
             r"^examples/caxecraft/(?:"
+            r"package-manifest(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:ContentJson|ContentPackageManifest|ContentPackageModel|ContentPackagePath)\.hx"
+            r"|test/caxecraft/qa/ContentPackageManifestProbe\.hx"
+            r"|test/native/content_package_manifest_harness\.c"
+            r"|caxecraft\.package\.json"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-package-manifest",
+            "semantic package roles, receipts, or bounded decoding changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?:"
+            r"package-zip-source(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:ContentPackageManifest|ContentPackageModel|ContentPackagePath|ContentPackageZipSource)\.hx"
+            r"|test/caxecraft/qa/ContentPackageZipSourceProbe\.hx"
+            r"|test/native/content_package_zip_source_harness\.c"
+            r"|test/fixtures/package-zip/[^/]+\.zip"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-package-zip-source",
+            "bounded stored-ZIP parsing or its frozen compatibility fixtures changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?:"
+            r"package-zip-export(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:ContentJson|ContentPackageAssetClosure|ContentPackageManifest|ContentPackageModel|ContentPackagePath|ContentPackageZipExport|ContentPackageZipSource)\.hx"
+            r"|test/caxecraft/qa/ContentPackageZipExportProbe\.hx"
+            r"|test/native/content_package_zip_export_harness\.c"
+            r"|caxecraft\.package\.json"
+            r"|assets/(?:manifest\.json|.+\.png)"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-package-zip-export",
+            "complete package closure, deterministic ZIP bytes, or isolated handoff changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?:"
             r"content-json(?:-c)?\.hxml"
             r"|src/caxecraft/(?:content/ContentJson|text/Utf8Decoder)\.hx"
             r"|test/caxecraft/qa/ContentJsonProbe\.hx"
@@ -278,6 +324,13 @@ AFFECTED_OWNER_RULES = (
             r"|src/caxecraft/content/ContentJson\.hx"
             r"|test/caxecraft/qa/ContentJsonProbe\.hx"
             r"|test/native/content_json_harness\.c"
+            r"|package-(?:manifest|zip-source|zip-export)(?:-c)?\.hxml"
+            r"|src/caxecraft/content/(?:ContentPackageAssetClosure|ContentPackageManifest|ContentPackageModel|ContentPackagePath|ContentPackageZipExport|ContentPackageZipSource)\.hx"
+            r"|test/caxecraft/qa/ContentPackage(?:Manifest|ZipSource|ZipExport)Probe\.hx"
+            r"|test/native/content_package_(?:manifest|zip_source|zip_export)_harness\.c"
+            r"|test/fixtures/package-zip/[^/]+\.zip"
+            r"|caxecraft\.package\.json"
+            r"|assets/(?:manifest\.json|.+\.png)"
             r"|runtime-schemas(?:-c)?\.hxml"
             r"|src/caxecraft/(?:content/(?:RuntimeAssetInventory|RuntimeContentPack|RuntimeSchema)|localization/RuntimeUiCatalog)\.hx"
             r"|test/caxecraft/qa/RuntimeSchemasProbe\.hx"

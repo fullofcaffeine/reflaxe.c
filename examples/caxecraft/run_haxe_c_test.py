@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -83,6 +85,8 @@ class HaxeCTestCase:
     native_defines: tuple[str, ...] = ()
     haxe_defines: tuple[str, ...] = ()
     native_runs_from_case_root: bool = False
+    eval_timeout_seconds: int = 30
+    native_timeout_seconds: int = 20
 
 
 @dataclass(frozen=True)
@@ -514,6 +518,8 @@ CASES = {
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
+        eval_timeout_seconds=120,
+        native_timeout_seconds=120,
     ),
     "package-zip-source": HaxeCTestCase(
         case_id="package-zip-source",
@@ -557,6 +563,50 @@ CASES = {
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
+    ),
+    "package-zip-export": HaxeCTestCase(
+        case_id="package-zip-export",
+        eval_hxml="package-zip-export.hxml",
+        c_hxml="package-zip-export-c.hxml",
+        native_harness="test/native/content_package_zip_export_harness.c",
+        generated_source="src/modules/caxecraft/content/ContentPackageZipExport.c",
+        required_source_markers=(
+            "exportContentPackageZip",
+            "ContentPackageZipExport_writeLocal",
+            "ContentPackageZipExport_writeCentral",
+            "ContentPackageZipExport_zipCrc32",
+            "ContentPackageAssetClosure_verifyContentPackageAssetClosure",
+        ),
+        forbidden_source_markers=("haxe.zip", "Dynamic", "Reflect", "goto "),
+        output_line_count=5,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "string-scalar",
+            "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "string-split",
+        ),
+        split_source_checks=(
+            GeneratedSourceCheck(
+                path="src/modules/caxecraft/content/hosted/PosixPackageApi.c",
+                required_markers=("PosixPackageApi_openRoot", "PosixPackageApi_readExact", "openat(", "read("),
+                forbidden_markers=("caxecraft_package_posix_", "goto "),
+            ),
+        ),
+        runs_generated_main=True,
+        haxe_defines=("caxecraft_posix_hosted",),
+        native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
+        native_runs_from_case_root=True,
+        eval_timeout_seconds=120,
+        native_timeout_seconds=120,
     ),
     "content-json": HaxeCTestCase(
         case_id="content-json",
@@ -602,6 +652,7 @@ CASES = {
             ),
         ),
         runs_generated_main=True,
+        native_timeout_seconds=40,
     ),
     "runtime-schemas": HaxeCTestCase(
         case_id="runtime-schemas",
@@ -1212,6 +1263,140 @@ def validate_oracle(test_case: HaxeCTestCase, output: str) -> None:
         )
 
 
+def validate_package_zip_archive(archive: Path) -> None:
+    """Inspect the transported bytes with independent standard ZIP tooling."""
+
+    if not archive.is_file():
+        raise HaxeCTestFailure("package ZIP Eval proof did not write its archive")
+    raw = archive.read_bytes()
+    if len(raw) != 9_488_899:
+        raise HaxeCTestFailure(
+            f"canonical package ZIP has {len(raw)} bytes instead of 9488899"
+        )
+    digest = hashlib.sha256(raw).hexdigest()
+    expected_digest = "e0d29cb2837ee8a3530579ef4dc9f2bfa1990ec70bbddeda9494beaf80378b4a"
+    if digest != expected_digest:
+        raise HaxeCTestFailure(
+            "canonical package ZIP changed without semantic golden review: "
+            f"expected={expected_digest} actual={digest}"
+        )
+    fingerprint = 2_166_136_261
+    for byte in raw:
+        fingerprint = ((fingerprint ^ byte) * 16_777_619) & 0xFFFFFFFF
+    if fingerprint != 393_434_124:
+        raise HaxeCTestFailure(
+            "canonical package ZIP byte-order fingerprint changed: "
+            f"expected=393434124 actual={fingerprint}"
+        )
+
+    manifest_path = CASE_ROOT / "caxecraft.package.json"
+    manifest_bytes = manifest_path.read_bytes()
+    manifest = json.loads(manifest_bytes)
+    entries = manifest.get("entries") if isinstance(manifest, dict) else None
+    if not isinstance(entries, list):
+        raise HaxeCTestFailure("package manifest omitted its reviewed entry list")
+    expected: dict[str, tuple[int, str] | bytes] = {
+        "caxecraft.package.json": manifest_bytes
+    }
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise HaxeCTestFailure("package manifest entry is not an object")
+        path = entry.get("path")
+        byte_length = entry.get("byteLength")
+        sha256 = entry.get("sha256")
+        if (
+            not isinstance(path, str)
+            or not isinstance(byte_length, int)
+            or isinstance(byte_length, bool)
+            or not isinstance(sha256, str)
+        ):
+            raise HaxeCTestFailure("package manifest entry lost path/length/digest facts")
+        if path in expected:
+            raise HaxeCTestFailure(f"package manifest repeated {path!r}")
+        expected[path] = (byte_length, sha256)
+
+    with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-zip-handoff-") as temporary:
+        handoff = Path(temporary) / "first-adventure.zip"
+        shutil.copy2(archive, handoff)
+        try:
+            with zipfile.ZipFile(handoff, "r") as package_zip:
+                infos = package_zip.infolist()
+                names = [info.filename for info in infos]
+                if names != sorted(expected):
+                    raise HaxeCTestFailure(
+                        f"canonical package ZIP names/order differ: {names!r}"
+                    )
+                if package_zip.comment != b"" or package_zip.testzip() is not None:
+                    raise HaxeCTestFailure(
+                        "canonical package ZIP has a comment or failing CRC payload"
+                    )
+                for info in infos:
+                    if (
+                        info.compress_type != zipfile.ZIP_STORED
+                        or info.date_time != (1980, 1, 1, 0, 0, 0)
+                        or info.create_system != 3
+                        or info.create_version != 30
+                        or info.extract_version != 10
+                        or info.flag_bits != 0
+                        or info.external_attr != 0x81A40000
+                        or info.internal_attr != 0
+                        or info.extra != b""
+                        or info.comment != b""
+                    ):
+                        raise HaxeCTestFailure(
+                            f"canonical ZIP metadata drifted for {info.filename!r}"
+                        )
+                    data = package_zip.read(info)
+                    expected_entry = expected[info.filename]
+                    if isinstance(expected_entry, bytes):
+                        if data != expected_entry:
+                            raise HaxeCTestFailure(
+                                "archive package manifest differs from authored bytes"
+                            )
+                    else:
+                        byte_length, sha256 = expected_entry
+                        if len(data) != byte_length or hashlib.sha256(data).hexdigest() != sha256:
+                            raise HaxeCTestFailure(
+                                f"archive payload receipt differs for {info.filename!r}"
+                            )
+        except zipfile.BadZipFile as error:
+            raise HaxeCTestFailure(f"standard ZIP reader rejected handoff: {error}") from error
+
+        unzip = shutil.which("unzip")
+        if unzip is not None:
+            run(
+                [unzip, "-t", handoff.name],
+                cwd=handoff.parent,
+                timeout=30,
+                label="independent Info-ZIP handoff check",
+            )
+
+
+def validate_package_zip_executable_handoff(
+    executable: Path, archive: Path, oracle: str, temporary_root: Path, timeout: int
+) -> None:
+    """Run the already-built reader beside only the shared ZIP and no toolchain."""
+
+    handoff = temporary_root / "isolated-package-handoff"
+    handoff.mkdir()
+    proof = handoff / "verify-package"
+    shutil.copy2(executable, proof)
+    shutil.copy2(archive, handoff / "handoff.zip")
+    empty_path = handoff / "empty-path"
+    empty_path.mkdir()
+    output = run(
+        [str(proof)],
+        cwd=handoff,
+        timeout=timeout,
+        label="isolated package ZIP executable handoff",
+        environment={"PATH": str(empty_path)},
+    ).stdout
+    if output != oracle:
+        raise HaxeCTestFailure(
+            "isolated package ZIP handoff changed the verified result envelope"
+        )
+
+
 def validate_embedded_source(test_case: HaxeCTestCase) -> None:
     """Require fixture-only String chunks to equal their authored byte source."""
 
@@ -1771,17 +1956,29 @@ def execute(
         checked_case_directory(path, "native support include directory")
         for path in test_case.native_include_directories
     )
-    oracle = run(
-        [development_tool("haxe"), "--cwd", str(CASE_ROOT), eval_hxml.name],
-        cwd=ROOT,
-        timeout=30,
-        label=f"{test_case.case_id} Eval test",
-    ).stdout
-    validate_oracle(test_case, oracle)
-
     compiler = native_compiler(requested_compiler)
     with tempfile.TemporaryDirectory(prefix=f"hxc-caxecraft-{test_case.case_id}-") as temporary:
         temporary_root = Path(temporary)
+        eval_archive = (
+            temporary_root / "canonical-first-adventure.zip"
+            if test_case.case_id == "package-zip-export"
+            else None
+        )
+        oracle = run(
+            [development_tool("haxe"), "--cwd", str(CASE_ROOT), eval_hxml.name],
+            cwd=ROOT,
+            timeout=test_case.eval_timeout_seconds,
+            label=f"{test_case.case_id} Eval test",
+            environment=(
+                {"CAXECRAFT_ZIP_EXPORT_PATH": str(eval_archive)}
+                if eval_archive is not None
+                else None
+            ),
+        ).stdout
+        validate_oracle(test_case, oracle)
+        if eval_archive is not None:
+            validate_package_zip_archive(eval_archive)
+
         generated = temporary_root / "generated"
         run(
             [
@@ -1910,13 +2107,21 @@ def execute(
         native_output = run(
             [str(executable)],
             cwd=CASE_ROOT if test_case.native_runs_from_case_root else ROOT,
-            timeout=20,
+            timeout=test_case.native_timeout_seconds,
             label=f"{test_case.case_id} native test",
         ).stdout
         if native_output != oracle:
             raise HaxeCTestFailure(
                 f"{test_case.case_id} Eval/native results differ\n"
                 f"Eval={oracle!r}\nnative={native_output!r}"
+            )
+        if eval_archive is not None:
+            validate_package_zip_executable_handoff(
+                executable,
+                eval_archive,
+                oracle,
+                temporary_root,
+                test_case.native_timeout_seconds,
             )
 
         sanitizer_ran = sanitizer_supported(compiler, temporary_root)
@@ -1938,7 +2143,7 @@ def execute(
             sanitized_output = run(
                 [str(sanitized)],
                 cwd=CASE_ROOT if test_case.native_runs_from_case_root else ROOT,
-                timeout=20,
+                timeout=test_case.native_timeout_seconds,
                 label=f"{test_case.case_id} sanitized native test",
                 environment={
                     "ASAN_OPTIONS": "halt_on_error=1:abort_on_error=1",
@@ -2028,6 +2233,11 @@ def main() -> int:
         f"caxecraft-haxe-c-test: OK [{test_case.case_id}/{args.layout}]: "
         f"Haxe assertions passed on Eval/native C; runtime={runtime_status}; "
         f"sanitizers={sanitizer_status}"
+        + (
+            "; canonical-zip-handoff=standard-reader+Info-ZIP-if-available+isolated-native"
+            if test_case.case_id == "package-zip-export"
+            else ""
+        )
     )
     return 0
 

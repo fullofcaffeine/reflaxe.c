@@ -11,10 +11,58 @@
   ],
   "entries": [
     {
+      "kind": "asset",
+      "path": "assets/atlases/adventure-items.png",
+      "byteLength": 813741,
+      "sha256": "4317ec8e7a23a3ef358124c01bb2982fb2846da46f83ab146e6a9aa522664938"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/atlases/adventure-terrain.png",
+      "byteLength": 1321950,
+      "sha256": "9b4293014566b76c95f56e683b9380b51e19287087633f801be33477a237e3f0"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/atlases/entities.png",
+      "byteLength": 788010,
+      "sha256": "6f41e7b20f31b368f50ca934725c7edeb2fb355ef303817cfa744e801afe0f1a"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/atlases/hud.png",
+      "byteLength": 771031,
+      "sha256": "d64823fa0ce8168634f5b389f85bfb5002a68482ea4fe697e890c291333ee388"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/atlases/items.png",
+      "byteLength": 1014185,
+      "sha256": "0c5ee8db1ce5e8b19ff21d8e50a2abf088b23574c044ac88afa79bf50a067ed0"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/atlases/terrain.png",
+      "byteLength": 1247110,
+      "sha256": "7bba5133568d69850f8764fe43b70a93228ab5aded8d276649685902691ec217"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/branding/caxecraft-wordmark.png",
+      "byteLength": 1249962,
+      "sha256": "9afa069ce5547b46ed0d4881f247d7ece04d3380fb828cce10d5b72399e01b68"
+    },
+    {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
       "byteLength": 17636,
       "sha256": "70d322eb2908ddb908121f8952f6de27d95203d51a46ffa56adecf7efb1abd25"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/showcase/title-panorama.png",
+      "byteLength": 2234539,
+      "sha256": "15fe8f38afb11392eeeeae9d503f368c47ce5a7c9d19b8dce4a28dc9f1ea5ce3"
     },
     {
       "kind": "campaign",
