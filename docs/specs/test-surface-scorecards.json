@@ -83,8 +83,8 @@
         },
         {
           "path": "test/differential/bytes-runtime/case.json",
-          "proves": "The bounded Bytes suite proves borrowed and fresh Bytes values can cross compiler-generated switch joins, including an early-return arm, through Eval, validated HxcIR, strict native execution, and sanitizer observers.",
-          "doesNotProve": "Other compiler-generated carrier shapes, full standard-library Bytes behavior, a public ABI, platform qualification, or general Haxe lowering."
+          "proves": "The bounded Bytes suite proves borrowed and fresh Bytes values cross compiler-generated switch and conditional joins, while an explicit nullable local preserves absent, present-empty, and present-non-empty states through checked unwrap, replacement, and cleanup, using Eval, validated HxcIR, strict native execution, and sanitizer observers.",
+          "doesNotProve": "Nullable Bytes parameters, returns, fields, or other erased-null storage shapes; full standard-library Bytes behavior; a public ABI; platform qualification; or general Haxe lowering."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
@@ -128,7 +128,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "haxe_c-djl.26: test:bytes-runtime passes borrowed/fresh Bytes switch joins and early return through Eval, strict native C, ownership checks, and sanitizers; the unchanged Caxecraft ZIP package tracer is the separate product-boundary proof."
+        "evidence": "haxe_c-i1h3: test:bytes-runtime passes nullable-local identity, checked unwrap, replacement, and borrowed/fresh Bytes switch and conditional joins through Eval, validated HxcIR, strict native C, ownership checks, and sanitizers."
       },
       "residualRisks": [
         "General Haxe-to-C remains unsupported in the capability manifest.",
@@ -288,8 +288,8 @@
         },
         {
           "path": "test/differential/bytes-runtime/case.json",
-          "proves": "Borrowed and fresh Bytes owners cross compiler-generated switch joins with exactly one selected owner, early-return cleanup, repeated borrowing, and return transfer under strict native execution and the eligible sanitizers.",
-          "doesNotProve": "A complete runtime, unrelated managed carrier types, leak detection where unavailable, a stable ABI, or platform qualification."
+          "proves": "Borrowed and fresh Bytes owners cross compiler-generated switch and conditional joins with exactly one selected owner; explicit nullable locals distinguish absence from an empty allocation and retain valid aliases across checked unwrap, replacement, early-return cleanup, and return transfer under strict native execution and the eligible sanitizers.",
+          "doesNotProve": "Nullable Bytes parameters, returns, fields, or other erased-null storage shapes; a complete runtime; unrelated managed carrier types; leak detection where unavailable; a stable ABI; or platform qualification."
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/ContentJsonProbe.hx",
@@ -333,7 +333,7 @@
       "releaseCommand": null,
       "lastObserved": {
         "state": "bounded-green",
-        "evidence": "haxe_c-djl.26: the focused Bytes owner passes strict native execution, ownership markers, allocation rollback, and ASan/UBSan for borrowed/fresh switch joins on the local Clang host."
+        "evidence": "haxe_c-i1h3: the focused Bytes owner passes strict native execution, ownership markers, allocation rollback, and ASan/UBSan for nullable replacement plus borrowed/fresh switch and conditional joins on the local Clang host."
       },
       "residualRisks": [
         "The hxrt implementation remains a bounded collection of admitted slices, not a complete runtime.",

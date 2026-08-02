@@ -4214,7 +4214,7 @@ private class FunctionBuilder {
 			// Preserve both the discovery order and the useful source location,
 			// rather than first discovering the family at a narrow `[]` literal.
 			switch expression.expr {
-				case TVar(variable, _):
+				case TVar(variable, initializer):
 					final variableType = applyCurrentSpecialization(variable.t);
 					// A local can be the first storage boundary that makes a
 					// non-signature enum or closed-record layout reachable. Discover
@@ -4224,7 +4224,7 @@ private class FunctionBuilder {
 					// C struct may consume a literal contextually without ever
 					// materializing that anonymous Haxe record.
 					if (isLocalEnumType(variableType) || isLocalAggregateType(variableType) || mayDiscoverSharedBodyType(variableType))
-						bodyValueType(variable.t, expression.pos, 'shared-body-plan:TVar(${variable.name})');
+						localStorageValueType(variable, initializer, expression.pos, 'shared-body-plan:TVar(${variable.name})');
 				case _:
 			}
 			if (mayDiscoverSharedBodyType(applyCurrentSpecialization(expression.t)))
@@ -5815,7 +5815,7 @@ private class FunctionBuilder {
 			lowerCollectionVariable(variable, initializer, position, ordinal, localId, collectionType);
 			return;
 		}
-		final localMapping = bodyValueType(variable.t, position, 'TVar(${variable.name}:type)');
+		final localMapping = localStorageValueType(variable, initializer, position, 'TVar(${variable.name}:type)');
 		if (localMapping.irType == IRTVoid) {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
@@ -6075,6 +6075,21 @@ private class FunctionBuilder {
 		}
 		if (stackReferenceAlias)
 			stackConstructedCompilerIds.set(variable.id, true);
+	}
+
+	/**
+		Recover explicit absence for a local after Haxe erases `Null<Bytes>`.
+
+		The typed variable arrives as ordinary `Bytes`, but a written null initializer
+		still proves that this storage needs three distinct states: absent, present
+		empty, and present non-empty. Only that exact local boundary is widened; all
+		other Bytes values retain their existing pointer carrier and ownership plan.
+	**/
+	function localStorageValueType(variable:TVar, initializer:Null<TypedExpr>, position:Position, node:String):CBodyValueType {
+		final direct = bodyValueType(variable.t, position, node);
+		if (direct.bytesValue() == null || initializer == null || !isNullConstantExpression(initializer))
+			return direct;
+		return aggregateRegistry.optionalValueType(direct, position, input.modulePath, input.sourcePath, rejectAggregateType, '$node.nullable-bytes-local');
 	}
 
 	function lowerConstructedVariable(variable:TVar, expression:TypedExpr, construction:BodyNewExpression, position:Position, ordinal:Int,
@@ -9866,7 +9881,7 @@ private class FunctionBuilder {
 		ordinary casts continue through the normal checked conversion path.
 	**/
 	function nullEqualityValueMapping(expression:TypedExpr, node:String):CBodyValueType {
-		final direct = bodyValueType(expression.t, expression.pos, node);
+		final direct = nullEqualityDirectValueMapping(expression, node);
 		if (direct.optionalValue() != null)
 			return direct;
 		return switch expression.expr {
@@ -9886,7 +9901,7 @@ private class FunctionBuilder {
 		inner expression whose own mapping still carries the presence bit.
 	**/
 	function nullEqualityCarrierExpression(expression:TypedExpr, node:String):TypedExpr {
-		final direct = bodyValueType(expression.t, expression.pos, node);
+		final direct = nullEqualityDirectValueMapping(expression, node);
 		if (direct.optionalValue() != null)
 			return expression;
 		return switch expression.expr {
@@ -9894,6 +9909,17 @@ private class FunctionBuilder {
 				nullEqualityCarrierExpression(inner, '$node.inner');
 			case _:
 				expression;
+		};
+	}
+
+	/** Use the representation already selected for a local when testing null. */
+	function nullEqualityDirectValueMapping(expression:TypedExpr, node:String):CBodyValueType {
+		return switch expression.expr {
+			case TLocal(variable):
+				final local = localTypesByCompilerId.get(variable.id);
+				local == null ? bodyValueType(expression.t, expression.pos, node) : local;
+			case _:
+				bodyValueType(expression.t, expression.pos, node);
 		};
 	}
 
@@ -10544,13 +10570,15 @@ private class FunctionBuilder {
 		final managedStringResult = resultMapping.irType == IRTManagedString;
 		final arrayResult = resultMapping.arrayValue();
 		final managedArrayResult = arrayResult != null && !arrayResult.managedByCollector;
-		final managedCarrierResult = managedStringResult || managedArrayResult || managedEnumResult != null;
+		final managedBytesResult = resultMapping.bytesValue() != null;
+		final managedCarrierResult = managedStringResult || managedArrayResult || managedBytesResult || managedEnumResult != null;
 		final branchInitializesResult = conditionalDirectValue(resultMapping);
 		final tracedDirectResult = branchInitializesResult && resultMapping.containsCollectorManagedReference();
 		if (resultMapping.primitiveMapping() == null
 			&& !resultMapping.isCString()
 			&& resultMapping.irType != IRTManagedString
 			&& !managedArrayResult
+			&& !managedBytesResult
 			&& optionalResult == null
 			&& managedEnumResult == null
 			&& !branchInitializesResult)
@@ -10626,6 +10654,8 @@ private class FunctionBuilder {
 			freshManagedEnumValueIds.set(loaded.id, true);
 		if (managedArrayResult)
 			freshManagedArrayValueIds.set(loaded.id, true);
+		if (managedBytesResult)
+			freshManagedBytesValueIds.set(loaded.id, true);
 		if (managedStringResult)
 			freshManagedStringValueIds.set(loaded.id, true);
 		if (managedStringResult)

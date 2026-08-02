@@ -216,6 +216,7 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "managedCarrierLifecycleMismatch",
         "managedStringCarrierLifecycleMismatch",
         "managedBytesCarrierLifecycleMismatch",
+        "nullableBytesCleanupLifecycleMismatch",
         "arrayCarrierLifecycleMismatch",
         "collectorArrayCarrier",
     ):

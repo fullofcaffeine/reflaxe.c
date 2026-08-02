@@ -64,10 +64,14 @@ class CPreparedBodyOptional {
 		return IRTNullable(payload.irType, IRNTagged);
 
 	public function retainImplementationId():Null<String>
-		return managedLifetime ? 'optional-lifecycle:$planId:retain' : null;
+		return managedLifetime ? '${lifecycleImplementationPrefix()}:retain' : null;
 
 	public function destroyImplementationId():Null<String>
-		return managedLifetime ? 'optional-lifecycle:$planId:destroy' : null;
+		return managedLifetime ? '${lifecycleImplementationPrefix()}:destroy' : null;
+
+	/** Keep the managed Bytes family independently visible to HxcIR validation. */
+	private function lifecycleImplementationPrefix():String
+		return payload.bytesValue() == null ? 'optional-lifecycle:$planId' : 'optional-lifecycle:bytes:$planId';
 }
 
 /** Final strict-C names for one direct optional value. */
@@ -115,15 +119,17 @@ class CBodyOptionalRegistry {
 
 		The payload check is recursive. Unmanaged values need no lifecycle work. A
 		managed closed record or enum is admitted only after it has one complete
-		typed retain/destroy plan; the presence flag then guards every use of that
-		plan.
+		typed retain/destroy plan. Managed Bytes uses its exact runtime retain/release
+		pair. In either case, the presence flag guards every ownership operation.
 	**/
 	public function require(payload:CBodyValueType, ownerModule:String, sourcePath:String, position:Position, fail:(Position, String) -> Void,
 			node:String):CPreparedBodyOptional {
 		final payloadAggregate = payload.aggregateValue();
 		final payloadEnum = payload.enumValue();
+		final payloadBytes = payload.bytesValue();
 		final managedLifetime = (payloadAggregate != null && payloadAggregate.managedLifetime)
-			|| (payloadEnum != null && payloadEnum.managedLifetime);
+			|| (payloadEnum != null && payloadEnum.managedLifetime)
+			|| payloadBytes != null;
 		if (!isDirectUnmanaged(payload) && !managedLifetime) {
 			fail(position, '$node:payload-requires-direct-unmanaged-value:${payload.cSpelling}');
 			throw new CBodyEmissionError("direct optional rejection callback returned unexpectedly");
@@ -144,7 +150,7 @@ class CBodyOptionalRegistry {
 		// function happened to mention `Null<T>` first. Owning it beside T keeps
 		// split/package headers deterministic and prevents accidental module cycles.
 		final representationOwner = if (payloadAggregate != null) payloadAggregate.ownerModule else if (payloadEnum != null) payloadEnum.ownerModule else
-			staticStringOwner(payload, ownerModule);
+			if (payloadBytes != null) payloadBytes.ownerModule else staticStringOwner(payload, ownerModule);
 		final prepared = new CPreparedBodyOptional(semanticKey, digest, payload, representationOwner, HaxeSourceSpan.fromPosition(position, sourcePath),
 			position, typeRequest, presenceRequest, payloadRequest, managedLifetime);
 		if (managedLifetime)

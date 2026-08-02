@@ -342,6 +342,86 @@ def validate_bytes_flow_carrier(hxcir: str, function_id: str) -> None:
         )
 
 
+def validate_optional_bytes_lifecycle(hxcir: str) -> None:
+    """Prove absence, payload ownership, replacement, and cleanup stay distinct."""
+    function = hxcir_function(hxcir, "function.Main.inspectOptionalBytes")
+    required = (
+        'type=nullable(tagged,instance("instance.haxe-io-bytes"))',
+        "null-direct-optional",
+        "direct-optional-null-equality",
+        "direct-optional-inject",
+        "direct-optional-null-check",
+        "direct-optional-unwrap",
+        'retain place=local(',
+        'implementation=runtime("bytes")',
+        "release-optional-assignment-target",
+        "store-optional-assignment-replacement",
+        'operation="alloc"',
+    )
+    for marker in required:
+        if marker not in function:
+            raise BytesRuntimeFailure(
+                f"nullable Bytes HxcIR omitted {marker!r}"
+            )
+    optional_actions = [
+        line
+        for line in function.splitlines()
+        if ' action "optional-local.' in line
+        and 'implementation=program-local("optional-lifecycle:bytes:optional.' in line
+    ]
+    if len(optional_actions) != 1 or ':destroy")' not in optional_actions[0]:
+        raise BytesRuntimeFailure(
+            "nullable Bytes local lost its one typed optional cleanup owner"
+        )
+    if function.count("release-optional-assignment-target") != 3:
+        raise BytesRuntimeFailure(
+            "nullable Bytes replacement did not release each prior optional owner"
+        )
+    if function.count("store-optional-assignment-replacement") != 3:
+        raise BytesRuntimeFailure(
+            "nullable Bytes replacement did not store each acquired state"
+        )
+    if function.count("null-direct-optional") != 2 or function.count(
+        "direct-optional-inject"
+    ) != 3:
+        raise BytesRuntimeFailure(
+            "nullable Bytes HxcIR collapsed present-empty storage into null"
+        )
+
+
+def validate_optional_bytes_fallback(hxcir: str) -> None:
+    """Prove a checked optional unwrap and fresh fallback join one owner."""
+    function = hxcir_function(hxcir, "function.Main.optionalBytesOrEmpty")
+    carrier_lines = [
+        line
+        for line in function.splitlines()
+        if "conditional-managed-result-declare" in line
+        and 'destroy=runtime("bytes")' in line
+    ]
+    if len(carrier_lines) != 1 or 'place=local("' not in carrier_lines[0]:
+        raise BytesRuntimeFailure(
+            "nullable Bytes fallback lost its one managed join carrier"
+        )
+    carrier = carrier_lines[0].split('place=local("', 1)[1].split('"', 1)[0]
+    required_once = (
+        "direct-optional-null-equality",
+        "direct-optional-null-check",
+        "direct-optional-unwrap",
+        'ownership=retain-borrowed(runtime("bytes"))',
+        "ownership=move-fresh",
+        f'move-managed-carrier place=local("{carrier}")',
+    )
+    for marker in required_once:
+        if function.count(marker) != 1:
+            raise BytesRuntimeFailure(
+                f"nullable Bytes fallback expected exactly one {marker!r}"
+            )
+    if "conditional-default" in function or "flow-carrier-default" in function:
+        raise BytesRuntimeFailure(
+            "nullable Bytes fallback fabricated a default managed owner"
+        )
+
+
 def validate_generated_project(output: Path, hxcir: str) -> None:
     for marker in (
         'representation=managed("bytes")',
@@ -413,6 +493,8 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     )
     validate_bytes_flow_carrier(hxcir, "function.Main.inspectChoice")
     validate_bytes_flow_carrier(hxcir, "function.Main.returnChoice")
+    validate_optional_bytes_lifecycle(hxcir)
+    validate_optional_bytes_fallback(hxcir)
 
     main = hxcir_function(hxcir, "function.Main.main")
     owner_actions = [
@@ -513,6 +595,16 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     ):
         if marker not in sources:
             raise BytesRuntimeFailure(f"generated C omitted {marker}")
+    for marker in (
+        ".hxc_has_value = false",
+        ".hxc_has_value = true",
+        "hxc_bytes_ref_retain((*(struct hxc_optional_value *)",
+        "hxc_bytes_ref_release((*(struct hxc_optional_value *)",
+    ):
+        if marker not in sources:
+            raise BytesRuntimeFailure(
+                f"structural nullable Bytes C omitted {marker}"
+            )
     if "goto " in sources:
         raise BytesRuntimeFailure("the structured Bytes fixture unexpectedly emitted goto")
 

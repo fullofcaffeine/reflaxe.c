@@ -57,6 +57,7 @@ class HxcIRGolden {
 		validator.requireValid(managedCarrierLoopProgram(), PROFILE);
 		validator.requireValid(managedStringStraightLineCarrierProgram(LinearValid), PROFILE);
 		validator.requireValid(managedBytesCarrierValidationProgram(false), PROFILE);
+		validator.requireValid(nullableBytesCleanupValidationProgram(false), PROFILE);
 		validator.requireValid(arrayCarrierValidationProgram(false, false), PROFILE);
 		validator.requireValid(managedAggregateCarrierValidationProgram(false), PROFILE);
 		validator.requireValid(interfaceUpcastProgram(null), PROFILE);
@@ -167,6 +168,7 @@ class HxcIRGolden {
 				managedCarrierLifecycleMismatch: invalidDiagnostics(managedCarrierLifecycleMismatchProgram()),
 				managedStringCarrierLifecycleMismatch: invalidDiagnostics(managedStringCarrierLifecycleMismatchProgram()),
 				managedBytesCarrierLifecycleMismatch: invalidDiagnostics(managedBytesCarrierValidationProgram(true)),
+				nullableBytesCleanupLifecycleMismatch: invalidDiagnostics(nullableBytesCleanupValidationProgram(true)),
 				arrayCarrierLifecycleMismatch: invalidDiagnostics(arrayCarrierValidationProgram(true, false)),
 				collectorArrayCarrier: invalidDiagnostics(arrayCarrierValidationProgram(false, true)),
 				managedAggregateCarrierLifecycleMismatch: invalidDiagnostics(managedAggregateCarrierValidationProgram(true)),
@@ -3049,6 +3051,75 @@ class HxcIRGolden {
 					globals: [],
 					functions: [fn],
 					source: span(file, 1, 5)
+				}
+			]
+		};
+	}
+
+	/**
+	 * Build one initialized tagged Bytes optional with exact or invalid cleanup.
+	 *
+	 * The valid form proves the semantic IR admits explicit absence around a
+	 * managed Bytes payload. The malformed form changes only the named payload
+	 * family, so the validator must reject applying another owner's cleanup plan.
+	 */
+	static function nullableBytesCleanupValidationProgram(wrongLifecycle:Bool):HxcIRProgram {
+		final file = wrongLifecycle ? "test/negative/NullableBytesCleanupLifecycleMismatch.hx" : COVERAGE_SOURCE;
+		final bytesType:HxcIRTypeDeclaration = {
+			id: "type.optional-bytes",
+			displayName: "haxe.io.Bytes",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final bytesInstance:HxcIRTypeInstance = {
+			id: "instance.optional-bytes",
+			declarationId: bytesType.id,
+			arguments: [],
+			representation: IRRManaged("bytes"),
+			source: span(file, 1)
+		};
+		final optionalType = IRTNullable(IRTInstance(bytesInstance.id), IRNTagged);
+		final cleanupStep:HxcIRCleanupStep = {regionId: "cleanup.optional-bytes", actionId: "release-optional-bytes"};
+		final fn:HxcIRFunction = {
+			id: wrongLifecycle ? "fn.invalid.nullable-bytes-cleanup" : "fn.coverage.nullable-bytes-cleanup",
+			displayName: wrongLifecycle ? "invalid.NullableBytesCleanupLifecycleMismatch.main" : "coverage.IR.nullableBytesCleanup",
+			parameters: [],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [
+				local("local.optional-bytes", optionalType, IRLSAutomatic, IRISInitialized, file, 2)
+			],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [block("entry", [], IRTReturn(null, [cleanupStep]), file, 3)],
+			cleanupRegions: [
+				{
+					id: "cleanup.optional-bytes",
+					parentId: null,
+					actions: [
+						cleanupAction("release-optional-bytes",
+							IRCARelease(IRPLocal("local.optional-bytes"),
+								wrongLifecycle ? IRIProgramLocal("optional-lifecycle:string:optional.bytes:destroy") : IRIProgramLocal("optional-lifecycle:bytes:optional.bytes:destroy")),
+							file, 2)
+					],
+					source: span(file, 2, 3)
+				}
+			],
+			source: span(file, 1, 3)
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: wrongLifecycle ? "invalid.NullableBytesCleanupLifecycleMismatch" : "coverage.NullableBytesCleanup",
+					types: [bytesType],
+					typeInstances: [bytesInstance],
+					globals: [],
+					functions: [fn],
+					source: span(file, 1, 3)
 				}
 			]
 		};

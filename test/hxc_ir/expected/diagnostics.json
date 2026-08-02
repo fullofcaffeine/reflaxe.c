@@ -76,6 +76,9 @@
     "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:3:1-3:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:true.instruction:0:bytes.acquire-true] Invalid HxcIR: managed Bytes carrier retain requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
     "HXC9000 error [profile=portable] test/negative/ManagedBytesCarrierLifecycleMismatch.hx:4:1-4:2 [module:invalid.ManagedBytesCarrierLifecycleMismatch.function:fn.coverage.bytes-carrier.block:false.instruction:0:bytes.acquire-false] Invalid HxcIR: managed Bytes carrier retain requires the bytes runtime lifecycle Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "nullableBytesCleanupLifecycleMismatch": [
+    "HXC9000 error [profile=portable] test/negative/NullableBytesCleanupLifecycleMismatch.hx:2:1-2:2 [module:invalid.NullableBytesCleanupLifecycleMismatch.function:fn.invalid.nullable-bytes-cleanup.cleanup:cleanup.optional-bytes.action:0:release-optional-bytes] Invalid HxcIR: managed Bytes optional destroy requires the bytes lifecycle plan Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "zeroFixedArrayNonAutomatic": [
     "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayNonAutomatic.hx:2:1-2:2 [module:invalid.ZeroFixedArrayNonAutomatic.function:invalid.ZeroFixedArrayNonAutomatic.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage must be an automatic local Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

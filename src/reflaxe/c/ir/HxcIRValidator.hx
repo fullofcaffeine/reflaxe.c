@@ -1482,6 +1482,17 @@ private class HxcIRValidationState {
 											case _:
 												add(actionPath, "managed record destroy plan and cleanup place type differ", action.source);
 										}
+								} else if (StringTools.startsWith(helperId, "optional-lifecycle:")) {
+									final placeType = knownPlaceType(place, noValues, locals);
+									if (optionalLifecyclePlanId(helperId, "destroy") == null) {
+										add(actionPath, "managed optional release cleanup has a malformed typed destroy plan", action.source);
+									} else if (!isTaggedOptionalType(placeType)) {
+										add(actionPath, "managed optional destroy plan requires a tagged optional place", action.source);
+									} else {
+										final mismatch = optionalLifecyclePayloadMismatch(helperId, "destroy", placeType);
+										if (mismatch != null)
+											add(actionPath, mismatch, action.source);
+									}
 								}
 							case _:
 						}
@@ -1689,6 +1700,47 @@ private class HxcIRValidationState {
 			return null;
 		final result = helperId.substring(prefix.length, helperId.length - suffix.length);
 		return result == "" ? null : result;
+	}
+
+	/** Extract the representation plan named by one tagged-optional helper. */
+	static function optionalLifecyclePlanId(helperId:String, operation:String):Null<String> {
+		final prefix = "optional-lifecycle:";
+		final suffix = ':$operation';
+		if (!StringTools.startsWith(helperId, prefix) || !StringTools.endsWith(helperId, suffix))
+			return null;
+		final body = helperId.substring(prefix.length, helperId.length - suffix.length);
+		final plan = if (StringTools.startsWith(body, "optional.")) body else {
+			final separator = body.indexOf(":");
+			separator < 1 ? null : body.substring(separator + 1);
+		};
+		return plan != null && StringTools.startsWith(plan, "optional.") && plan.length > "optional.".length ? plan : null;
+	}
+
+	/** Return an explicit managed payload family, or null for legacy direct plans. */
+	static function optionalLifecycleFamily(helperId:String, operation:String):Null<String> {
+		final prefix = "optional-lifecycle:";
+		final suffix = ':$operation';
+		if (!StringTools.startsWith(helperId, prefix) || !StringTools.endsWith(helperId, suffix))
+			return null;
+		final body = helperId.substring(prefix.length, helperId.length - suffix.length);
+		if (StringTools.startsWith(body, "optional."))
+			return null;
+		final separator = body.indexOf(":");
+		return separator < 1 ? null : body.substring(0, separator);
+	}
+
+	/** Reject a tagged optional paired with another payload family's helper. */
+	function optionalLifecyclePayloadMismatch(helperId:String, operation:String, type:Null<HxcIRTypeRef>):Null<String> {
+		final family = optionalLifecycleFamily(helperId, operation);
+		final bytesPayload = switch type {
+			case IRTNullable(inner, IRNTagged): isManagedBytes(inner);
+			case _: false;
+		};
+		if (bytesPayload && family != "bytes")
+			return 'managed Bytes optional $operation requires the bytes lifecycle plan';
+		if (!bytesPayload && family != null)
+			return 'managed optional $operation lifecycle family and payload differ';
+		return null;
 	}
 
 	function validateBlock(fn:HxcIRFunction, block:HxcIRBlock, path:String, locals:Map<String, HxcIRLocal>, borrowedReferenceLocals:Map<String, Bool>,
@@ -2572,6 +2624,17 @@ private class HxcIRValidationState {
 							case _:
 								add(path, "managed record retain plan and place type differ", instruction.source);
 						}
+					case IRIProgramLocal(helperId) if (StringTools.startsWith(helperId, "optional-lifecycle:")):
+						final placeType = knownPlaceType(place, available, locals);
+						if (optionalLifecyclePlanId(helperId, "retain") == null) {
+							add(path, "managed optional retain has a malformed typed plan", instruction.source);
+						} else if (!isTaggedOptionalType(placeType)) {
+							add(path, "managed optional retain plan requires a tagged optional place", instruction.source);
+						} else {
+							final mismatch = optionalLifecyclePayloadMismatch(helperId, "retain", placeType);
+							if (mismatch != null)
+								add(path, mismatch, instruction.source);
+						}
 					case _:
 				}
 			case IRIORelease(place, implementation):
@@ -2602,6 +2665,17 @@ private class HxcIRValidationState {
 							instruction.source); else switch knownPlaceType(place, available, locals) {
 							case IRTInstance(instanceId) if (instanceId == expectedInstanceId):
 							case _: add(path, "managed record destroy plan and release place type differ", instruction.source);
+						}
+					case IRIProgramLocal(helperId) if (StringTools.startsWith(helperId, "optional-lifecycle:")):
+						final placeType = knownPlaceType(place, available, locals);
+						if (optionalLifecyclePlanId(helperId, "destroy") == null) {
+							add(path, "managed optional release has a malformed typed plan", instruction.source);
+						} else if (!isTaggedOptionalType(placeType)) {
+							add(path, "managed optional destroy plan requires a tagged optional place", instruction.source);
+						} else {
+							final mismatch = optionalLifecyclePayloadMismatch(helperId, "destroy", placeType);
+							if (mismatch != null)
+								add(path, mismatch, instruction.source);
 						}
 					case _:
 				}
@@ -4535,13 +4609,19 @@ private class HxcIRValidationState {
 		return switch declaration.kind {
 			case IRTKAggregate(_): instance.representation == IRRDirect;
 			case IRTKTaggedUnion(_): instance.representation == IRRDirect || instance.representation == IRRTagged;
+			case IRTKReference:
+				switch instance.representation {
+					case IRRManaged(featureId): featureId == "bytes";
+					case _:
+						false;
+				}
 			case _:
 				false;
 		};
 	}
 
-	/** True for every payload admitted by the direct tagged optional layout. */
-	function isTaggedOptionalType(type:HxcIRTypeRef):Bool
+	/** True for every scalar, direct value, or managed Bytes optional payload. */
+	function isTaggedOptionalType(type:Null<HxcIRTypeRef>):Bool
 		return switch type {
 			case IRTNullable(IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_), IRNTagged): true;
 			case IRTNullable(IRTInstance(instanceId), IRNTagged): isTaggedOptionalPayloadInstance(instanceId);
@@ -5171,7 +5251,7 @@ private class HxcIRValidationState {
 							case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_):
 							case IRTInstance(instanceId) if (isTaggedOptionalPayloadInstance(instanceId)):
 							case _:
-								add(path, "tagged nullability requires a direct scalar, closed-record, or closed-enum payload", source);
+								add(path, "tagged nullability requires a direct scalar, closed-record, closed-enum, or managed Bytes payload", source);
 						}
 					case IRNPointer:
 						switch inner {

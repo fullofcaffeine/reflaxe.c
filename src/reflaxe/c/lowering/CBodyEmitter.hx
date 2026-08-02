@@ -3541,6 +3541,8 @@ class CBodyEmitter {
 
 	/** Retain the one closed managed payload family selected by this optional. */
 	function managedOptionalRetainCall(value:CLoweredBodyOptional, payload:CExpr):CExpr {
+		if (value.prepared.payload.bytesValue() != null)
+			return ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [payload]);
 		final preparedAggregate = value.prepared.payload.aggregateValue();
 		if (preparedAggregate != null && preparedAggregate.managedLifetime) {
 			final aggregate = aggregatesByInstance.get(preparedAggregate.instanceId);
@@ -3555,11 +3557,13 @@ class CBodyEmitter {
 				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized enum `${preparedEnum.instanceId}`');
 			return ECall(EIdentifier(requireEnumLifecycleName(enumValue.retainName, enumValue, "retain")), [EUnary(AddressOf, payload)]);
 		}
-		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed record or enum payload');
+		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed Bytes, record, or enum payload');
 	}
 
 	/** Destroy the present payload through the same family chosen for retain. */
 	function managedOptionalDestroyCall(value:CLoweredBodyOptional, payload:CExpr):CExpr {
+		if (value.prepared.payload.bytesValue() != null)
+			return ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRelease)), [payload]);
 		final preparedAggregate = value.prepared.payload.aggregateValue();
 		if (preparedAggregate != null && preparedAggregate.managedLifetime) {
 			final aggregate = aggregatesByInstance.get(preparedAggregate.instanceId);
@@ -3574,7 +3578,7 @@ class CBodyEmitter {
 				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized enum `${preparedEnum.instanceId}`');
 			return ECall(EIdentifier(requireEnumLifecycleName(enumValue.destroyName, enumValue, "destroy")), [EUnary(AddressOf, payload)]);
 		}
-		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed record or enum payload');
+		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed Bytes, record, or enum payload');
 	}
 
 	function enumLifecyclePrototype(name:CIdentifier, parameter:CIdentifier, destroy:Bool):CDecl {

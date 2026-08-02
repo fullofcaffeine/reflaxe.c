@@ -130,6 +130,40 @@ final class Main {
 		return selected;
 	}
 
+	/**
+		Exercise an explicitly nullable Bytes local without using empty bytes as null.
+
+		The local first owns absence, then either borrows an existing buffer or takes
+		a fresh one. Replacing that value with a real empty buffer and finally with
+		null proves the tagged carrier preserves all three states while a previously
+		unwrapped alias keeps its own valid lifetime.
+	**/
+	static function inspectOptionalBytes(useFresh:Bool, borrowed:Bytes):Int {
+		var optional:Null<Bytes> = null;
+		if (optional != null)
+			return -1;
+		optional = useFresh ? Bytes.ofString("NF") : borrowed;
+		if (optional == null)
+			return -2;
+		final retained = optional;
+		optional = Bytes.alloc(0);
+		if (optional == null || optional.length != 0)
+			return -3;
+		optional = null;
+		if (optional != null)
+			return -4;
+		return retained.get(0) + retained.length;
+	}
+
+	/** Select a real empty owner only when an explicitly nullable buffer is absent. */
+	static function optionalBytesOrEmpty(present:Bool, borrowed:Bytes):Int {
+		var optional:Null<Bytes> = null;
+		if (present)
+			optional = borrowed;
+		final selected = optional == null ? Bytes.alloc(0) : optional;
+		return selected.length;
+	}
+
 	static function main():Void {
 		final bytes = makeBuffer();
 		final alias = bytes;
@@ -174,6 +208,10 @@ final class Main {
 		final returnedFreshOrder = bytesChoiceEvaluations;
 		final returnedMissingChoice = returnChoice(Missing);
 		final returnedMissingOrder = bytesChoiceEvaluations;
+		final optionalBorrowed = inspectOptionalBytes(false, borrowedChoice);
+		final optionalFresh = inspectOptionalBytes(true, borrowedChoice);
+		final optionalFallback = optionalBytesOrEmpty(false, borrowedChoice);
+		final optionalPresent = optionalBytesOrEmpty(true, borrowedChoice);
 		final decodedBytes = Bytes.ofString("prefix:hé🙂");
 		final decodedAscii = decodedBytes.getString(0, 6);
 		final decodedSlice = decodedBytes.getString(7, decodedBytes.length - 7);
@@ -227,6 +265,10 @@ final class Main {
 			|| returnedFreshOrder != 1
 			|| returnedMissingChoice.length != 0
 			|| returnedMissingOrder != 0
+			|| optionalBorrowed != 0x42 + 2
+			|| optionalFresh != 0x4e + 2
+			|| optionalFallback != 0
+			|| optionalPresent != 2
 			|| decodedAscii != "prefix"
 			|| decodedSlice != "hé🙂"
 			|| decodedNullEncoding != "prefix:hé🙂"

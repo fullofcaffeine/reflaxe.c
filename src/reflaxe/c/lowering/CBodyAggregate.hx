@@ -848,6 +848,18 @@ class CBodyAggregateRegistry {
 	}
 
 	/**
+		Wrap one already classified value in the shared tagged optional plan.
+
+		Haxe erases `Null<T>` around some reference-shaped standard-library values
+		before target lowering. A storage boundary that still proves absence can use
+		this method to recover the explicit target representation without replaying
+		type classification or inventing a sentinel payload.
+	**/
+	public function optionalValueType(payload:CBodyValueType, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):CBodyValueType
+		return CBodyValueType.optional(optionalRegistry.require(payload, ownerModule, sourcePath, position, fail, node));
+
+	/**
 		Return a shared value plan for an exact primitive abstract.
 
 		This is intentionally narrower than `valueType`: it does not follow
