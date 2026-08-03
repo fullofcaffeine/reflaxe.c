@@ -612,7 +612,11 @@ improvement, not a semantic compiler shortcut.
 The first campaign capability adds one distinct vertical owner rather than
 expanding that startup tracer. `test:caxecraft-campaign-runtime` reads a closed
 campaign manifest and a second real CAXEMAP, challenges schema/path/receipt
-failures, then publishes the second generation through `ActiveContent`. The
+failures, then publishes the second generation through `ActiveContent`. Its
+schema mutations come from a manually authored minimal document, while real
+package checks derive paths, byte lengths, and hashes from the current manifest.
+It deliberately does not pin shipped coordinates, actor/item counts,
+dialogue/objective counts, or the absence of future CaxeFlow content. The
 focused Eval command first completed in about 0.27 seconds. Two complete
 Eval/native/sanitizer samples took about 63 and 59 seconds on a host carrying
 unrelated work. There is no before/after speedup claim because no campaign lane
@@ -626,10 +630,11 @@ The graphical campaign claim has its own system owner:
 loads the staged manifest and Western Falls at runtime, triggers the one
 unambiguous typed edge, and validates generation 2 plus one publication through
 framebuffer telemetry. It also retains a 1280x720 review frame that visibly
-labels `western-falls`. The broader title-to-Adventure journey now also
-requires the destination frame to contain a tall, vertically continuous water
-landmark; a generation counter beside the former flat placeholder is no longer
-enough. The focused Haxe campaign probe instead owns valid runtime loading,
+labels `western-falls`. The broader title-to-Adventure journey now pairs a
+third water-render batch with water-texture colors that persist through many
+consecutive rows anywhere in the gameplay viewport; a generation counter beside the former flat placeholder is
+no longer enough, while moving the falls horizontally remains a content-only
+edit. The focused Haxe campaign probe instead owns valid runtime loading,
 receipts, and cross-target semantic agreement so designers can reshape the
 level without rewriting Haxe expectations. The explicit cold/no-native-cache sample built all 116
 native objects, linked, and ran both graphical repetitions in 79.44 seconds.
@@ -845,6 +850,29 @@ publishes replacement state only after Haxe-to-C generation, native compilation
 and linking, content staging, and a second input snapshot all succeed. If an
 input changes during the build, publication fails; an old executable is never
 reported as the result of the new request.
+
+The creator-facing `--content-feedback` mode is stricter than the ordinary
+launcher. It performs the same complete build-state verification, stages the
+current map/campaign/pack/UI bytes, and then either validates those bytes
+through the shortest launch pilot, opens the existing desktop game, or runs one
+selected Piloscript journey once. A miss stops with “rebuild deliberately”;
+this path cannot enter Haxe, haxe.c, a C compiler, an archiver, or a linker.
+Formal system evidence keeps the ordinary two-run deterministic pilot command.
+The one-run content command is for rapid creation, not a replacement release
+gate.
+
+On the 2026-08-03 macOS development host, one cold launch-smoke qualification
+with 118 native object misses took 92.15 seconds. After the final launcher
+refactor, requalification with all 118 objects and the link already cached took
+79.28 seconds; this is setup evidence, not a speedup comparison because the
+inputs and cache state differ. Two reuse-only current-byte validation samples
+took 8.58 and 8.39 seconds before that refactor, and the final shared-validator
+sample took 8.59 seconds. The stronger one-run Adventure feedback sample,
+including its title, campaign-selection, entry, and destination frame checks,
+took 17.01 seconds; its immediately preceding ordinary requalification took
+69.80 seconds with generated-C planning, cached native objects/link, and two
+determinism runs. Every reuse-only sample reported the verified executable hit
+and current-content restage, and none entered a compiler or linker path.
 
 The default interactive fast path is deliberately separate from correctness
 evidence. `--no-build-cache` rebuilds while retaining the developer's normal

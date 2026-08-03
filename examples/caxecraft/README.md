@@ -137,16 +137,22 @@ deterministic pilot protocol; its display-backed visual
 checkpoint is still pending on a runner with a usable desktop session.
 NPC/enemy controller execution, audio, and save persistence remain later work.
 
-After editing the built-in pack, run:
+After one verified engine build, a map, campaign, pack, or UI edit should stay
+in the content realm. Validate the exact current files with the production
+loader, then run only the Piloscript journey that protects the changed player
+flow:
 
 ```sh
-npm run test:caxecraft-runtime-schemas
-npm run test:caxecraft-runtime-content-generation
-npm run test:caxecraft-actor-composition
-npm run test:caxecraft-water
-npm run test:caxecraft-aquatics
-npm run test:caxecraft-terrain-chunks
+npm run caxecraft:content:validate -- --raylib-configuration memory-software
+npm run caxecraft:content -- --pilot adventure-journey --raylib-configuration memory-software
 ```
+
+Both commands reuse the already-qualified executable and refuse to fall back
+to compilation. `npm run caxecraft:content` without a pilot relaunches the
+existing desktop game for free play and visual review. Reusable parser,
+movement, water, publication, compiler, and native-boundary changes still use
+their focused Haxe/generated-C owners; ordinary content edits do not run that
+portfolio as a quota.
 
 ## Why the source contains `#if c`
 
@@ -679,8 +685,9 @@ absent from production source. This evidence still does not claim arbitrary
 package support, live hot-reload during one running process, a public C
 application binary interface (ABI), or platform qualification.
 
-After editing the UI catalog or embedded CaxeMap messages, check runtime UI
-loading and regenerate only the temporary campaign-dialogue fallback with:
+The legacy campaign-dialogue fallback remains a temporary foundation seam. If
+work intentionally changes that compatibility path, regenerate and check it
+with:
 
 ```sh
 python3 examples/caxecraft/localization_catalog.py
@@ -688,8 +695,10 @@ npm run test:caxecraft-localization
 ```
 
 Terrain, authored fluid records, fluid presentation, actors, items, and player
-spawn are read from the packaged CaxeMap by the ordinary native loader. After a
-world edit, run the shared codec and runtime-loader owners:
+spawn are read from the packaged CaxeMap by the ordinary native loader. The
+shared codec and runtime-loader commands below are foundation checks for a
+schema, parser, resolver, or publication change—not a requirement after every
+world edit:
 
 ```sh
 npm run test:caxecraft-scenario-model

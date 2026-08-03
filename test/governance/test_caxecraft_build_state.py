@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import shutil
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from unittest.mock import patch
 from pathlib import Path
 
@@ -30,6 +32,7 @@ from play import (  # noqa: E402
     PlayFailure,
     haxe_module_path_inventory,
     hosted_content_haxe_defines,
+    main as play_main,
     parse_args,
     play_build_inputs,
     runtime_content_report,
@@ -156,6 +159,27 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             identity = tool_identity("python-test", sys.executable, report_version=False)
         self.assertEqual(identity["path"], str(Path(sys.executable).resolve()))
         self.assertNotIn("version", identity)
+
+    def test_content_feedback_miss_never_enters_a_build_path(self) -> None:
+        """A creator command must fail instead of compiling behind their back."""
+        empty_output = self.root / "content-feedback"
+        with (
+            patch("play.compile_haxe", side_effect=AssertionError("Haxe compilation started")),
+            patch("play.compile_native", side_effect=AssertionError("native compilation started")),
+            redirect_stderr(io.StringIO()),
+        ):
+            result = play_main(
+                [
+                    "--content-feedback",
+                    "--validate-only",
+                    "--raylib-configuration",
+                    "memory-software",
+                    "--output-root",
+                    str(empty_output),
+                ]
+            )
+        self.assertEqual(result, 1)
+        self.assertFalse((empty_output / "variants").exists())
 
     def test_generated_or_executable_corruption_never_launches(self) -> None:
         (self.output_root / "generated/main.c").write_text("corrupt\n", encoding="utf-8")

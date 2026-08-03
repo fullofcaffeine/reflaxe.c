@@ -87,18 +87,37 @@ Linux and macOS currently provide the required POSIX calls; Windows explicitly
 returns `UnsupportedCapability` until it has an equivalent Haxe-authored
 adapter. It never emits POSIX calls and pretends they are portable Windows C.
 
-The ordinary `caxecraft:play` command is wired to that byte path. Its unchanged
-build check excludes the staged campaign, maps, base content pack, and UI
-catalog from the compile identity, then copies their current bytes beside the
-already verified executable before every launch. A content edit therefore does
-not run Haxe, haxe.c, a C compiler, or the linker. The base runtime receipt
-checks the pack, UI, and entry map together; the campaign manifest independently
-checks the exact length and SHA-256 of each selected map. A warm graphical
-campaign run reused all 116 native objects and the existing link after 684.4 ms
-of fail-closed reuse validation; its two complete graphical runs finished in
-18.53 seconds overall. This is runtime authority for the
-five admitted staged files, not arbitrary mod discovery or hot reload while one
-process is already running.
+The play launcher is wired to that byte path. Its build identity deliberately
+excludes the staged campaign, maps, base content pack, and UI catalog because
+the game reads those files after startup. The explicit creator command makes
+that promise fail closed: it verifies an already-built executable, copies the
+current files beside it, and either launches the game or runs one selected
+Piloscript journey. If Haxe source, compiler input, native libraries, or the
+executable changed, it stops and asks for one deliberate normal build. It never
+silently recompiles.
+
+After building the desired executable once, the ordinary editing loop is:
+
+```sh
+# Fast structural check of the exact files the game will read.
+npm run caxecraft:content:validate -- --raylib-configuration memory-software
+
+# One player-visible title -> Adventure -> destination journey.
+npm run caxecraft:content -- --pilot adventure-journey --raylib-configuration memory-software
+
+# Or relaunch the existing desktop game for free play and human review.
+npm run caxecraft:content
+```
+
+The first command reaches the production package reader, campaign decoder,
+CaxeMap parser, validators, resolver, and generation builder, then completes
+the shortest three-frame in-memory launch pilot. The second adds one
+representative player journey. Neither command runs Haxe, haxe.c, a C compiler,
+an archiver, or a linker. A stale or missing executable is an honest failure,
+not permission to build. Use the corresponding ordinary `caxecraft:play` pilot
+once after engine or compiler changes to qualify a replacement.
+This is runtime authority for the five admitted staged files, not arbitrary mod
+discovery or hot reload while one process is already running.
 
 The engine-facing resolution step now works in isolation. After the shared
 validator accepts a CAXEMAP document, `ResolvedLevelPlan.resolve` converts its
@@ -136,7 +155,28 @@ pack discovery remain separate work.
 | menus and product-wide interface text | `locales/ui.json` | global interface text is not level story content |
 | asset selection and provenance | `assets/manifest.json` | this lock selects reviewed visual IDs and records where their bytes came from |
 | complete package transport | `caxecraft.package.json` | this manifest receipts every semantic file and selected PNG that must travel together |
-| automated player input and assertions | CaxeTest/native pilot | tests exercise content; they are not content |
+| automated player input and assertions | Piloscript/native pilot | tests exercise content; they are not content |
+
+## Which checks belong to content and which belong to the foundation
+
+Content should remain easy to reshape. Engine tests protect reusable rules and
+trust boundaries; they should not freeze the decoration of one level. The
+current ownership scorecard is:
+
+| Change or claim | Lowest faithful check | Stable expectation |
+|---|---|---|
+| parser, schema, resolver, publication, movement, water, ABI, or compiler behavior | focused Haxe/Eval plus generated strict C where the boundary is claimed | manually authored invariant, specification, or independent receipt |
+| every edited map, campaign, pack, or UI catalog | `caxecraft:content:validate` over the exact staged bytes | production parser/resolver accepts the complete current package |
+| a story or gameplay outcome visible to a player | one representative Piloscript journey | semantic outcome and broad visual promise, not decorative coordinates |
+| composition, pacing, prose quality, visual appeal, and play feel | creator review in the existing game | human judgment |
+| package sharing or security | package/ZIP focused owners when transport or trust rules change | independent manifest receipts, frozen foreign ZIP, and safe-path rules |
+
+When a Piloscript journey exposes a reusable engine defect, add a focused Haxe
+regression at the smallest stable owner and retain the representative journey.
+When it exposes only a misplaced prop or broken story step, fix the content and
+keep the check at the content level. Save compatibility, untrusted mods, package
+security, localization completeness, deterministic simulation, and stable
+public IDs are not “just content”; their independent contracts remain strict.
 
 The built-in schema-2 content manifest is
 [`packs/caxecraft/base/content.json`](../examples/caxecraft/packs/caxecraft/base/content.json).
@@ -229,7 +269,10 @@ localized messages, placements, dialogue, and an objective. The codec, validator
 canonical writer, CaxeFlow executor, and renderer-independent editor model run
 under the pinned Haxe oracle.
 
-From the repository root:
+For an ordinary content edit, use the fast commands above: validate the current
+runtime bytes, run only the Piloscript journey that protects the changed player
+flow, then review the result in the existing game. The broader commands below
+belong to foundation development, not every map edit:
 
 ```sh
 # Parse, validate, execute, and round-trip the scenario/CaxeFlow model.
@@ -246,13 +289,13 @@ npm run test:caxecraft-runtime-content-generation
 # Check canonical bytes across locale and repeated builds.
 npm run test:caxecraft-scenario-determinism
 
-# Exercise the currently integrated generated-C game.
+# Requalify the generated-C game after an engine, compiler, or native change.
 npm run caxecraft:play -- --pilot launch-smoke
 ```
 
-The first three commands validate authoring semantics. The native pilot proves
-the current generated-C application, but it does not yet prove that arbitrary
-CaxeMap geometry or rules were loaded into that application. The
+These commands validate reusable authoring semantics and the generated-C
+application. They are intentionally available when the foundation changes;
+they are not a quota for creators. The
 [CAXEMAP 1 reference](caxemap-1.md) documents the exact grammar, bounds,
 canonical order, validation, and current compiler limitations.
 

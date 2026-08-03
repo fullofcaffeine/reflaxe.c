@@ -22,22 +22,24 @@ import caxecraft.domain.Vitals.MAX_HEALTH;
 import haxe.io.Bytes;
 
 /**
- * Proves the first real two-level campaign from package bytes to publication.
+ * Proves one real campaign transition from package bytes to publication.
  *
  * Scenario table and independent oracles:
  *
- * - Given the checked-in manifest and maps, read the package, select
- *   `evergrove`, then load `western-falls`; reviewed file lengths/SHA-256 and
- *   literal IDs/paths are the oracle.
- * - Given unknown fields, duplicate IDs/paths, an unresolved entry/source/
- *   destination, an unsafe path, or a required cycle, decode; the closed schema
+ * - Given the checked-in manifest and maps, read the package, select its entry,
+ *   then follow its sole required transition; the manifest receipt and real
+ *   package bytes are the oracle. Decorative coordinates and authored counts
+ *   deliberately remain free to change.
+ * - Given a manually authored minimal campaign document, mutate unknown fields,
+ *   duplicate IDs/paths, references, paths, and cycles; the closed schema
  *   contract and one-based source coordinate are the oracle.
  * - Given a valid manifest naming an absent destination, load while generation
  *   one is active; package-store `EntryMissing` and unchanged publication
  *   counters are the oracle.
  * - Given the valid destination, build generation two through the existing
- *   CAXEMAP pipeline and publish it; reviewed authored counts/digests and the
- *   generated-C ABI observer are the oracle.
+ *   CAXEMAP pipeline and publish it; publication invariants and the generated-C
+ *   ABI observer are the oracle. Dynamic digests prove Eval/native agreement,
+ *   not independent truth about one campaign's decoration.
  *
  * The probe intentionally makes no graphical transition, save, editor, ZIP,
  * or arbitrary-campaign claim. Those remain broader owners after this tracer.
@@ -45,7 +47,7 @@ import haxe.io.Bytes;
 /** First broken invariant, or zero after every focused and vertical scenario. */
 var observed:Int = 0;
 
-/** Compact literal identity/version/count proof from the manifest. */
+/** Dynamic manifest envelope used only for Eval/native agreement. */
 var traceManifest:Int = 0;
 
 /** Generation selected by the real `ActiveContent` publication owner. */
@@ -95,24 +97,15 @@ function selfCheck():Int {
 		case PackageBytesRead(value): value.bytes.toString();
 		case PackageBytesRejected(_): return 4;
 	};
-	if (!verifySchemaRejections(manifestText))
+	if (!verifySchemaRejections(schemaFixture()))
 		return 5;
 
 	final entry = manifest.entryLevel();
-	final forward = manifest.transitionAt(0);
-	if (manifest.id.text() != "caxecraft:first-adventure"
-		|| manifest.version != 1
-		|| manifest.levelCount() != 2
-		|| manifest.transitionCount() != 2
-		|| manifest.entryLevelId().text() != "evergrove"
-		|| entry.logicalPath != "scenarios/first-playable/map.caxemap"
-		|| entry.byteLength != 14223
-		|| forward.exit.text() != "evergrove-west"
-		|| forward.sourceLevel.text() != "evergrove"
-		|| forward.destinationLevel.text() != "western-falls"
-		|| forward.destinationEntrance.text() != "default"
-		|| !forward.required
-		|| manifest.unambiguousTransitionFrom(entry.id) != forward)
+	final forward = manifest.unambiguousTransitionFrom(entry.id);
+	if (manifest.id.text() != "caxecraft:first-adventure" || forward == null || !forward.required)
+		return 6;
+	final destination = manifest.level(forward.destinationLevel);
+	if (destination == null)
 		return 6;
 	if (initial.receipt().map.logicalPath != entry.logicalPath || initial.level().generation().generationId().value() != 1)
 		return 7;
@@ -127,49 +120,55 @@ function selfCheck():Int {
 		case PlayableLevelCreationRejected(_): return 114;
 	};
 	final initialView = active.level();
-	if (initialView.logicalPath() != "scenarios/first-playable/map.caxemap"
-		|| initialView.spawnTransform().xMilli != 16500
-		|| initialView.loadedItemCount() != 1
-		|| initialView.loadedItemAt(0).xMilli != 4500
-		|| !initialView.dialogueActorId().isValid()
-		|| !initialView.enemyActorId().isValid())
+	if (initialView.logicalPath() != entry.logicalPath)
 		return 115;
-	final staleLengthText = replaceOnce(manifestText, '"byteLength": 10255', '"byteLength": 10254');
+	final staleLength = destination.byteLength == 1 ? 2 : destination.byteLength - 1;
+	final destinationIdentity = '"id": "${destination.id.text()}"';
+	final staleLengthText = replaceObjectField(manifestText, destinationIdentity, '"byteLength": ${destination.byteLength}', '"byteLength": $staleLength');
 	final staleLengthManifest = switch decodeCampaignManifest(Bytes.ofString(staleLengthText)) {
 		case CampaignManifestReady(value): value;
 		case CampaignManifestRejected(_): return 8;
 	};
-	switch loadCampaignLevel(store, staleLengthManifest.levelAt(1), ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
-		case CampaignLevelRejected(CampaignLevelLengthMismatch("scenarios/first-adventure/western-falls.caxemap", 10254, 10255)):
+	final staleLengthDestination = staleLengthManifest.level(forward.destinationLevel);
+	if (staleLengthDestination == null)
+		return 8;
+	switch loadCampaignLevel(store, staleLengthDestination, ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
+		case CampaignLevelRejected(CampaignLevelLengthMismatch(path, expected, actual))
+			if (path == destination.logicalPath && expected == staleLength && actual == destination.byteLength):
 		case _:
 			return 9;
 	}
-	final staleHashText = replaceOnce(manifestText, "189073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8",
-		"289073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8");
+	final staleHash = (destination.sha256.charAt(0) == "0" ? "1" : "0") + destination.sha256.substring(1);
+	final staleHashText = replaceObjectField(manifestText, destinationIdentity, '"sha256": "${destination.sha256}"', '"sha256": "$staleHash"');
 	final staleHashManifest = switch decodeCampaignManifest(Bytes.ofString(staleHashText)) {
 		case CampaignManifestReady(value): value;
 		case CampaignManifestRejected(_): return 10;
 	};
-	switch loadCampaignLevel(store, staleHashManifest.levelAt(1), ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
-		case CampaignLevelRejected(CampaignLevelHashMismatch("scenarios/first-adventure/western-falls.caxemap",
-			"289073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8")):
+	final staleHashDestination = staleHashManifest.level(forward.destinationLevel);
+	if (staleHashDestination == null)
+		return 10;
+	switch loadCampaignLevel(store, staleHashDestination, ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
+		case CampaignLevelRejected(CampaignLevelHashMismatch(path, expected)) if (path == destination.logicalPath && expected == staleHash):
 		case _:
 			return 11;
 	}
-	final missingText = replaceOnce(manifestText, "scenarios/first-adventure/western-falls.caxemap", "scenarios/first-adventure/missing.caxemap");
+	final missingPath = "scenarios/caxecraft-probe/missing.caxemap";
+	final missingText = replaceObjectField(manifestText, destinationIdentity, '"path": "${destination.logicalPath}"', '"path": "$missingPath"');
 	final missingManifest = switch decodeCampaignManifest(Bytes.ofString(missingText)) {
 		case CampaignManifestReady(value): value;
 		case CampaignManifestRejected(_): return 12;
 	};
-	switch loadCampaignLevel(store, missingManifest.levelAt(1), ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
-		case CampaignLevelRejected(CampaignLevelSourceRejected("scenarios/first-adventure/missing.caxemap", EntryMissing)):
+	final missingDestination = missingManifest.level(forward.destinationLevel);
+	if (missingDestination == null)
+		return 12;
+	switch loadCampaignLevel(store, missingDestination, ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
+		case CampaignLevelRejected(CampaignLevelSourceRejected(path, EntryMissing)) if (path == missingPath):
 		case _:
 			return 13;
 	}
 	if (active.generationId().value() != 1 || active.publicationCount() != 0)
 		return 14;
 
-	final destination = manifest.levelAt(1);
 	final second = switch loadCampaignLevel(store, destination, ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
 		case CampaignLevelReady(value): value;
 		case CampaignLevelRejected(CampaignLevelRuntimeRejected(_, RuntimeLevelScenarioRejected(_))): return 111;
@@ -179,31 +178,18 @@ function selfCheck():Int {
 	};
 	final receipt = second.receipt();
 	final authored = second.authoredTrace();
-	if (destination.id.text() != "western-falls"
-		|| destination.logicalPath != "scenarios/first-adventure/western-falls.caxemap"
-		|| destination.byteLength != 10255
-		|| destination.sha256 != "189073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8"
-		|| receipt.logicalPath != destination.logicalPath
-		|| receipt.byteLength != destination.byteLength
-		|| authored.dialogues != 1
-		|| authored.objectives != 1
-		|| authored.flowVariables != 0
-		|| authored.flowSequences != 0
-		|| authored.flowRules != 0)
+	if (receipt.logicalPath != destination.logicalPath || receipt.byteLength != destination.byteLength)
 		return 16;
 	switch active.publish(second) {
 		case PlayableLevelPublished(retired, selected) if (retired.value() == 1 && selected.value() == 2):
 		case _:
 			return 17;
 	}
-	final westernFalls = active.level();
+	final destinationView = active.level();
 	if (active.generationId().value() != 2
 		|| active.publicationCount() != 1
 		|| active.session() != second.generation().session()
-		|| westernFalls.logicalPath() != destination.logicalPath
-		|| westernFalls.loadedItemCount() != 1
-		|| !westernFalls.dialogueActorId().isValid()
-		|| !westernFalls.enemyActorId().isValid())
+		|| destinationView.logicalPath() != destination.logicalPath)
 		return 18;
 	switch active.publish(initial.level()) {
 		case PlayableLevelPublicationRejected(_):
@@ -222,33 +208,41 @@ function selfCheck():Int {
 	traceAuthored = authored.dialogueDigest;
 	traceAuthored = traceAuthored * 31 + authored.objectiveDigest;
 	traceAuthored = traceAuthored * 31 + authored.flowDigest;
-	return traceManifest == 251221 && traceGeneration == 2 ? 0 : 19;
+	return traceGeneration == 2 ? 0 : 19;
 }
+
+/** Provide a tiny independent schema oracle unrelated to shipped campaign art. */
+function schemaFixture():String
+	return '{"schemaVersion":1,"campaignId":"caxecraft:schema-probe","campaignVersion":1,"entryLevel":"a",'
+		+ '"levels":[{"id":"a","path":"scenarios/a.caxemap","byteLength":1,"sha256":"0000000000000000000000000000000000000000000000000000000000000000"},'
+		+ '{"id":"b","path":"scenarios/b.caxemap","byteLength":1,"sha256":"1111111111111111111111111111111111111111111111111111111111111111"}],'
+		+ '"transitions":[{"exit":"a-b","sourceLevel":"a","destinationLevel":"b","destinationEntrance":"default","required":true},'
+		+ '{"exit":"b-a","sourceLevel":"b","destinationLevel":"a","destinationEntrance":"default","required":false}]}';
 
 /** Challenge every campaign-only schema relationship with a reviewed mutation. */
 function verifySchemaRejections(source:String):Bool {
-	final unknown = replaceOnce(source, '"campaignVersion": 1,', '"campaignVersion": 1,\n  "unexpected": true,');
+	final unknown = replaceOnce(source, '"campaignVersion":1,', '"campaignVersion":1,"unexpected":true,');
 	if (!rejects(unknown, 1))
 		return false;
-	final duplicateId = replaceOnce(source, '"id": "western-falls"', '"id": "evergrove"');
+	final duplicateId = replaceOnce(source, '"id":"b"', '"id":"a"');
 	if (!rejects(duplicateId, 2))
 		return false;
-	final duplicatePath = replaceOnce(source, '"path": "scenarios/first-adventure/western-falls.caxemap"', '"path": "scenarios/first-playable/map.caxemap"');
+	final duplicatePath = replaceOnce(source, '"path":"scenarios/b.caxemap"', '"path":"scenarios/a.caxemap"');
 	if (!rejects(duplicatePath, 3))
 		return false;
-	final missingEntry = replaceOnce(source, '"entryLevel": "evergrove"', '"entryLevel": "missing"');
+	final missingEntry = replaceOnce(source, '"entryLevel":"a"', '"entryLevel":"missing"');
 	if (!rejects(missingEntry, 4))
 		return false;
-	final missingSource = replaceOnce(source, '"sourceLevel": "evergrove"', '"sourceLevel": "missing"');
+	final missingSource = replaceOnce(source, '"sourceLevel":"a"', '"sourceLevel":"missing"');
 	if (!rejects(missingSource, 5))
 		return false;
-	final missingDestination = replaceOnce(source, '"destinationLevel": "western-falls"', '"destinationLevel": "missing"');
+	final missingDestination = replaceOnce(source, '"destinationLevel":"b"', '"destinationLevel":"missing"');
 	if (!rejects(missingDestination, 6))
 		return false;
-	final unsafePath = replaceOnce(source, '"path": "scenarios/first-adventure/western-falls.caxemap"', '"path": "../western-falls.caxemap"');
+	final unsafePath = replaceOnce(source, '"path":"scenarios/b.caxemap"', '"path":"../b.caxemap"');
 	if (!rejects(unsafePath, 7))
 		return false;
-	final requiredCycle = replaceOnce(source, '"required": false', '"required": true');
+	final requiredCycle = replaceOnce(source, '"required":false', '"required":true');
 	return rejects(requiredCycle, 8);
 }
 
@@ -262,8 +256,8 @@ function rejects(source:String, expected:Int):Bool {
 			} else {
 				switch [expected, diagnostic.kind] {
 					case [1, SchemaUnknownField("campaign", "unexpected")]: true;
-					case [2, SchemaDuplicateId("levels", "evergrove")]: true;
-					case [3, SchemaDuplicateLogicalPath("scenarios/first-playable/map.caxemap")]: true;
+					case [2, SchemaDuplicateId("levels", "a")]: true;
+					case [3, SchemaDuplicateLogicalPath("scenarios/a.caxemap")]: true;
 					case [4, SchemaUnresolvedReference("entryLevel", "missing", "campaign level")]: true;
 					case [
 						5,
@@ -279,6 +273,19 @@ function rejects(source:String, expected:Int):Bool {
 				}
 			}
 	};
+}
+
+/** Replace one field inside the uniquely identified JSON object under test. */
+function replaceObjectField(source:String, identity:String, field:String, replacement:String):String {
+	final identityAt = source.indexOf(identity);
+	if (identityAt < 0 || source.indexOf(identity, identityAt + identity.length) >= 0)
+		return "";
+	final objectEnd = source.indexOf("}", identityAt + identity.length);
+	final fieldAt = source.indexOf(field, identityAt + identity.length);
+	final repeatedFieldAt = source.indexOf(field, fieldAt + field.length);
+	if (objectEnd < 0 || fieldAt < 0 || fieldAt >= objectEnd || (repeatedFieldAt >= 0 && repeatedFieldAt < objectEnd))
+		return "";
+	return source.substring(0, fieldAt) + replacement + source.substring(fieldAt + field.length);
 }
 
 /** Replace exactly one reviewed fixture fragment; empty means fixture drift. */

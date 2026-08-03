@@ -224,9 +224,10 @@ manifest supplies the sole outgoing typed edge; the script contains no level
 path or destination name. The app prepares Western Falls through the ordinary
 runtime loader, publishes it through `ActiveContent`, then renders a frame whose
 HUD reads `western-falls`. Telemetry must report generation 2, one publication,
-and the independently authored destination spawn at x=16.5, y=8, z=27.5. The
+and a completed transition into the independently authored destination. The
 headless campaign tracer remains responsible for malformed manifests, stale
-receipts, missing destinations, and unchanged-state failures.
+receipts, missing destinations, and unchanged-state failures. Neither owner
+freezes the destination's spawn coordinates or decoration.
 
 The adventure-journey pilot protects the path a player actually sees. It
 starts with Creative highlighted on the real title screen, sends the same
@@ -238,11 +239,13 @@ manifest: `caxecraft:first-adventure`, with `evergrove` leading to
 `western-falls`. A second confirm launches its entry level. The pilot then
 sends the same typed “continue” action as the narrower campaign-travel pilot
 and retains a third frame at Western Falls. The native observer checks all
-three visible stages. The destination check specifically requires a tall,
-vertically continuous water landmark, so the former flat meadow and tiny pool
-cannot pass merely by reporting generation 2. Focused Haxe probes separately
-own the exact screen transitions, manifest receipts, and valid runtime loading;
-they do not freeze decorative terrain or actor coordinates. Generation 2 and
+three visible stages. The destination check pairs a real water-render
+submission with water-texture colors that persist through many consecutive
+rows anywhere in the gameplay view, so the former flat meadow and tiny pool cannot pass merely by
+reporting generation 2, while a designer can move the waterfall horizontally.
+Focused Haxe probes separately own the exact screen transitions, manifest
+receipts, and valid runtime loading; they do not freeze decorative terrain or
+actor coordinates. Generation 2 and
 one publication can only be reached while the app is both playing and in Adventure mode, so a Creative
 launch, a hidden campaign screen, or a script that bypasses the title cannot
 satisfy this owner.

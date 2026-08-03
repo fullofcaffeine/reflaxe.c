@@ -350,6 +350,22 @@ PILOT_FRAME_LIMITS = {
     "campaign-travel": 5,
     "adventure-journey": 7,
 }
+PILOT_SCREENSHOT_NAMES = {
+    "launch-smoke": "caxecraft-smoke.png",
+    "secondary-locale": "caxecraft-secondary-locale.png",
+    "move-jump-edit": "caxecraft-pilot-move.png",
+    "pause-recapture": "caxecraft-pilot-pause.png",
+    "combat-drop": "caxecraft-pilot-combat.png",
+    "recovery-use": "caxecraft-pilot-recovery.png",
+    "full-inventory-gift": "caxecraft-pilot-full-inventory.png",
+    "full-inventory-mining": "caxecraft-pilot-full-mining.png",
+    "resize-layout": "caxecraft-pilot-resize.png",
+    "aquatic-gear": "caxecraft-pilot-aquatic-gear.png",
+    "smooth-motion": "caxecraft-pilot-smooth-motion.png",
+    "editor-shell": "caxecraft-pilot-editor.png",
+    "campaign-travel": "caxecraft-pilot-campaign-travel.png",
+    "adventure-journey": "caxecraft-pilot-adventure-journey.png",
+}
 
 
 class PlayFailure(RuntimeError):
@@ -579,7 +595,13 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
-def run(arguments: list[str], *, cwd: Path, timeout: int, label: str) -> subprocess.CompletedProcess[str]:
+def run(
+    arguments: list[str],
+    *,
+    cwd: Path,
+    timeout: int,
+    label: str,
+) -> subprocess.CompletedProcess[str]:
     """Run one checked tool without changing the developer's Haxe-server policy.
 
     In particular, the interactive play path must not force
@@ -1095,6 +1117,10 @@ def build_pilot_report(
     # mined bank without laundering that behavior through rendering.
     if not title_visible and not editor_visible and signed[26] < 2:
         raise PlayFailure("gameplay pilot did not submit both opaque terrain batches")
+    if pilot == "adventure-journey" and signed[26] != 3:
+        raise PlayFailure(
+            "adventure-journey did not submit its visible water batch at the destination"
+        )
     if not title_visible and not editor_visible and (signed[32] <= 0 or signed[35] != 1):
         raise PlayFailure("gameplay pilot did not submit valid terrain faces")
     if renderer == "chunk-cache":
@@ -1299,11 +1325,11 @@ def validate_western_falls_screenshot(
 
     Focused Haxe evidence owns valid runtime loading and package receipts. This
     real-render observer has one narrower job: reject a journey that reaches
-    generation two while still showing the old meadow and tiny pool. It looks
-    for a substantial vertically continuous family of water-texture colors in
-    the left half of the gameplay view, with broad thresholds for admitted
-    framebuffer scales and renderer interpolation. Decorative coordinates stay
-    free to move as the level evolves.
+    generation two while still showing the old meadow and tiny pool. Paired
+    with the pilot's water-batch telemetry, it looks for water-texture colors
+    that persist through many consecutive rows anywhere in the gameplay view.
+    A tiny pool therefore fails, while moving the falls horizontally remains a
+    content-only change. Decorative coordinates stay free to evolve.
     """
 
     width, height, pixels = decode_rgba_png(path, "Western Falls")
@@ -1317,24 +1343,30 @@ def validate_western_falls_screenshot(
         )
     scale = width // 1280
     stride = width * 4
+    first_row = 150 * scale
+    last_row = 620 * scale
     matching_pixels = 0
-    matching_rows = 0
-    for row in range(150 * scale, 620 * scale):
+    current_row_run = 0
+    largest_row_run = 0
+    for row in range(first_row, last_row):
         row_matches = 0
         row_start = row * stride
-        for column in range(0, 640 * scale):
+        for column in range(width):
             offset = row_start + column * 4
             red, green, blue = pixels[offset : offset + 3]
             if red < 115 and green > 125 and blue > 135 and green > red + 25 and blue > red + 35:
                 row_matches += 1
         matching_pixels += row_matches
         if row_matches >= 20 * scale:
-            matching_rows += 1
-    if matching_pixels < 5_000 * scale * scale or matching_rows < 100 * scale:
+            current_row_run += 1
+            largest_row_run = max(largest_row_run, current_row_run)
+        else:
+            current_row_run = 0
+    if matching_pixels < 5_000 * scale * scale or largest_row_run < 40 * scale:
         raise PlayFailure(
             "Caxecraft Adventure journey reached Western Falls without presenting "
             "its tall water landmark "
-            f"(waterPixels={matching_pixels}, waterRows={matching_rows})"
+            f"(waterPixels={matching_pixels}, consecutiveWaterRows={largest_row_run})"
         )
 
 
@@ -3009,12 +3041,235 @@ def compile_native(
     )
 
 
+def run_pilot_sample(
+    *,
+    executable: Path,
+    pilot: str,
+    platform_name: str,
+    raylib_configuration: str,
+    renderer: str,
+    benchmark_renderer: bool,
+    sanitizers: bool,
+    cc: str,
+    compiler_version: str,
+    label: str,
+) -> tuple[dict[str, object], int, int, str, dict[str, str]]:
+    """Run and inspect one Haxe-authored pilot without duplicating its oracle.
+
+    Formal system evidence calls this owner repeatedly and compares the returned
+    hashes. Content feedback calls it once after fail-closed executable reuse.
+    Pilot names, checkpoints, and behavior remain Haxe-owned; haxe_c-xge.20.6
+    owns deriving the remaining host filename metadata from that one authority.
+    """
+
+    screenshot_name = PILOT_SCREENSHOT_NAMES.get(pilot)
+    if screenshot_name is None:
+        raise PlayFailure(f"unknown Caxecraft pilot script {pilot!r}")
+    screenshot = executable.parent / screenshot_name
+    supporting_screenshots = (
+        (
+            executable.parent / "caxecraft-pilot-adventure-selected.png",
+            executable.parent / "caxecraft-pilot-campaign-selected.png",
+            executable.parent / "caxecraft-pilot-evergrove-entry.png",
+        )
+        if pilot == "adventure-journey"
+        else ()
+    )
+    state_screenshot = executable.parent / "caxecraft-pilot-state.png"
+    for stale in (screenshot, state_screenshot, *supporting_screenshots):
+        if stale.exists():
+            stale.unlink()
+    run([str(executable)], cwd=executable.parent, timeout=15, label=label)
+    if not state_screenshot.is_file():
+        raise PlayFailure(f"{label} did not reach its Haxe-owned semantic checkpoint")
+    if raylib_configuration == "memory-software":
+        normalize_memory_software_capture(state_screenshot)
+    report = build_pilot_report(
+        state_path=state_screenshot,
+        review_screenshot=screenshot,
+        pilot=pilot,
+        platform_name=platform_name,
+        raylib_configuration=raylib_configuration,
+        renderer=renderer,
+        benchmark_renderer=benchmark_renderer,
+        sanitizers=sanitizers,
+        cc=cc,
+        compiler_version=compiler_version,
+    )
+    if raylib_configuration == "memory-software":
+        normalize_memory_software_capture(screenshot)
+        for supporting_screenshot in supporting_screenshots:
+            normalize_memory_software_capture(supporting_screenshot)
+    supporting_hashes: dict[str, str] = {}
+    for supporting_screenshot in supporting_screenshots:
+        if supporting_screenshot.name == "caxecraft-pilot-campaign-selected.png":
+            validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-evergrove-entry.png":
+            validate_presented_screenshot(
+                supporting_screenshot,
+                platform_name=platform_name,
+                expected_entities=True,
+                expected_open_sky=False,
+            )
+        else:
+            validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
+        supporting_hashes[supporting_screenshot.name] = hashlib.sha256(
+            supporting_screenshot.read_bytes()
+        ).hexdigest()
+    if pilot in ("launch-smoke", "secondary-locale"):
+        width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
+    elif pilot == "resize-layout":
+        width, height = validate_smoke_screenshot(
+            screenshot,
+            platform_name=platform_name,
+            expected_logical_size=(960, 540),
+        )
+    elif pilot == "editor-shell":
+        width, height = validate_editor_screenshot(screenshot, platform_name=platform_name)
+    else:
+        width, height = validate_presented_screenshot(
+            screenshot,
+            platform_name=platform_name,
+            expected_drop=pilot == "combat-drop",
+            expected_attack=pilot == "combat-drop",
+            expected_recovery=pilot == "recovery-use",
+            expected_inventory_full=pilot
+            in ("full-inventory-gift", "full-inventory-mining"),
+            expected_entities=pilot == "full-inventory-gift",
+            expected_open_sky=pilot != "move-jump-edit",
+        )
+        if pilot == "adventure-journey":
+            validate_western_falls_screenshot(screenshot, platform_name=platform_name)
+    screenshot_hash = hashlib.sha256(screenshot.read_bytes()).hexdigest()
+    state_screenshot.unlink()
+    return report, width, height, screenshot_hash, supporting_hashes
+
+
+def run_content_feedback(
+    args: argparse.Namespace,
+    *,
+    platform_name: str,
+    selected_pilot: str | None,
+) -> int:
+    """Validate or observe current content without entering a build path.
+
+    The existing build-state receipt proves that generated C, the executable,
+    native libraries, compiler inputs, and launcher inputs still match. A miss
+    is an instruction to rebuild deliberately with the ordinary command; this
+    creator path never falls through to Haxe, haxe.c, a native compiler, an
+    archiver, or the linker.
+    """
+
+    output_base = prepare_output_root(args.output_root.resolve())
+    variants = output_base / "variants"
+    if variants.is_symlink() or not variants.is_dir():
+        raise PlayFailure(
+            "content feedback requires an existing real Caxecraft variants directory; no build was attempted"
+        )
+    renderer_part = "" if args.renderer == "chunk-cache" else "-immediate-baseline"
+    configuration_part = "" if args.raylib_configuration == "desktop" else f"-{args.raylib_configuration}"
+    profile = "interactive" if selected_pilot is None else f"pilot-{selected_pilot}"
+    output_root = variants / (
+        f"{platform_name}{configuration_part}-{args.layout}-{profile}{renderer_part}"
+    )
+    if output_root.is_symlink() or not output_root.is_dir():
+        raise PlayFailure(
+            f"content feedback needs the existing {profile!r} variant; "
+            "run its ordinary command once after engine changes"
+        )
+
+    executable = output_root / "bin" / (
+        "caxecraft.exe" if platform_name == "windows" else "caxecraft"
+    )
+    with VariantLock(output_root / "hxc-play-build.lock"):
+        try:
+            generated = current_generation(output_root).generated
+        except GenerationFailure as error:
+            raise PlayFailure(
+                f"content feedback cannot reuse the selected pilot generation; no build was attempted: {error}"
+            ) from error
+        requested = play_request_snapshot(
+            args,
+            platform_name=platform_name,
+            selected_pilot=selected_pilot,
+            native_sanitizer_flags=(),
+        )
+        decision = validate_reuse(
+            state_path=output_root / PLAY_BUILD_STATE,
+            current_request=requested,
+            generated=generated,
+            executable=executable,
+        )
+        if not decision.hit:
+            raise PlayFailure(
+                "content feedback refused compiler or linker fallback; rebuild deliberately first: "
+                + decision.reason
+            )
+        stage_content_catalogs(executable.parent)
+        print(
+            "caxecraft: content-feedback reused the verified executable and restaged current runtime bytes"
+        )
+
+        if selected_pilot is None:
+            print("caxecraft: launching current content; press Q to quit (no build was attempted)")
+            try:
+                return subprocess.run(
+                    [str(executable)],
+                    cwd=executable.parent,
+                    check=False,
+                ).returncode
+            except OSError as error:
+                raise PlayFailure(f"Caxecraft content-feedback launch failed: {error}") from error
+
+        report, width, height, _, _ = run_pilot_sample(
+            executable=executable,
+            pilot=selected_pilot,
+            platform_name=platform_name,
+            raylib_configuration=args.raylib_configuration,
+            renderer=args.renderer,
+            benchmark_renderer=False,
+            sanitizers=False,
+            cc=args.cc,
+            compiler_version="not invoked; verified executable reuse",
+            label=f"Caxecraft {selected_pilot} content-feedback journey",
+        )
+        report["feedbackMode"] = (
+            "reuse-only-current-bytes" if args.validate_only else "reuse-only-single-run"
+        )
+        report_path = executable.parent / "caxecraft-content-feedback-report.json"
+        report_path.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        outcome = (
+            "current runtime bytes passed the shortest Haxe-owned launch pilot"
+            if args.validate_only
+            else f"{selected_pilot} content feedback passed"
+        )
+        print(f"caxecraft: {outcome} ({width}x{height}, no build; report {report_path})")
+        return 0
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-snapshots", action="store_true", help="compile once and compare the registered playable snapshots")
     parser.add_argument("--compile-only", action="store_true", help="emit and validate C without provisioning or linking Raylib")
     parser.add_argument("--build-only", action="store_true", help="link the native executable without opening a window")
     parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
+    parser.add_argument(
+        "--content-feedback",
+        action="store_true",
+        help=(
+            "reuse an already verified executable, restage current content, and fail "
+            "instead of invoking Haxe, haxe.c, a C compiler, or the linker"
+        ),
+    )
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="with --content-feedback, validate current runtime bytes with the shortest launch pilot",
+    )
     parser.add_argument(
         "--pilot",
         choices=(
@@ -3140,7 +3395,38 @@ def main(argv: list[str]) -> int:
             os.environ["HAXE_NO_SERVER"] = "1"
         if args.native_jobs < 1 or args.native_jobs > 32:
             raise PlayFailure("--native-jobs must be between 1 and 32")
-        selected_pilot = "launch-smoke" if args.smoke else args.pilot
+        if args.validate_only and not args.content_feedback:
+            raise PlayFailure("--validate-only is available only with --content-feedback")
+        if args.content_feedback and args.validate_only and args.pilot is not None:
+            raise PlayFailure("--validate-only selects the shortest launch pilot and cannot be combined with --pilot")
+        if args.content_feedback and (
+            args.smoke
+            or args.check_snapshots
+            or args.compile_only
+            or args.build_only
+            or args.sanitizers
+            or args.benchmark_renderer
+            or args.cold
+            or args.no_build_cache
+            or args.rebuild_raylib
+            or args.rebuild_raygui
+            or args.stop_haxe_server
+            or args.allow_network
+            or args.source is not None
+            or args.raygui_source is not None
+            or args.prebuilt_raylib_cache is not None
+            or args.prebuilt_raylib_build is not None
+            or args.prebuilt_raylib_report is not None
+        ):
+            raise PlayFailure(
+                "--content-feedback cannot be combined with build, provisioning, cache-bypass, "
+                "snapshot, sanitizer, benchmark, or server-lifecycle options"
+            )
+        selected_pilot = (
+            "launch-smoke"
+            if args.smoke or (args.content_feedback and args.validate_only)
+            else args.pilot
+        )
         if args.smoke and args.pilot is not None:
             raise PlayFailure("--smoke is the launch-smoke pilot alias and cannot be combined with --pilot")
         if (args.smoke or args.pilot is not None) and (args.check_snapshots or args.compile_only or args.build_only):
@@ -3163,6 +3449,16 @@ def main(argv: list[str]) -> int:
         if args.authority == "pinned-source" and args.source is not None:
             raise PlayFailure("--source is accepted only with --authority offline-source")
         validate_renderer_pilot(args.raylib_configuration, selected_pilot)
+        if args.content_feedback:
+            if args.raylib_configuration == "memory-software" and selected_pilot is None:
+                raise PlayFailure(
+                    "memory-software has no interactive window; select --pilot or --validate-only"
+                )
+            return run_content_feedback(
+                args,
+                platform_name=platform_name,
+                selected_pilot=selected_pilot,
+            )
         native_sanitizer_flags = sanitizer_flags(args.cc, platform_name) if args.sanitizers else ()
         if (
             args.raylib_configuration == "memory-software"
@@ -3427,114 +3723,30 @@ def main(argv: list[str]) -> int:
         if args.build_only and selected_pilot is None:
             return 0
         if selected_pilot is not None:
-            screenshot_names = {
-                "launch-smoke": "caxecraft-smoke.png",
-                "secondary-locale": "caxecraft-secondary-locale.png",
-                "move-jump-edit": "caxecraft-pilot-move.png",
-                "pause-recapture": "caxecraft-pilot-pause.png",
-                "combat-drop": "caxecraft-pilot-combat.png",
-                "recovery-use": "caxecraft-pilot-recovery.png",
-                "full-inventory-gift": "caxecraft-pilot-full-inventory.png",
-                "full-inventory-mining": "caxecraft-pilot-full-mining.png",
-                "resize-layout": "caxecraft-pilot-resize.png",
-                "aquatic-gear": "caxecraft-pilot-aquatic-gear.png",
-                "smooth-motion": "caxecraft-pilot-smooth-motion.png",
-                "editor-shell": "caxecraft-pilot-editor.png",
-                "campaign-travel": "caxecraft-pilot-campaign-travel.png",
-                "adventure-journey": "caxecraft-pilot-adventure-journey.png",
-            }
-            screenshot = executable.parent / screenshot_names[selected_pilot]
-            supporting_screenshots = (
-                (
-                    executable.parent / "caxecraft-pilot-adventure-selected.png",
-                    executable.parent / "caxecraft-pilot-campaign-selected.png",
-                    executable.parent / "caxecraft-pilot-evergrove-entry.png",
-                )
-                if selected_pilot == "adventure-journey"
-                else ()
-            )
-            state_screenshot = executable.parent / "caxecraft-pilot-state.png"
             reports: list[dict[str, object]] = []
             screenshot_hashes: list[str] = []
-            supporting_hashes: dict[str, list[str]] = {path.name: [] for path in supporting_screenshots}
+            supporting_hashes: dict[str, list[str]] = {}
             compiler_version = tool_version(args.cc)
             width = 0
             height = 0
             repetitions = 7 if args.benchmark_renderer else 2
             for repeat in range(repetitions):
-                for stale in (screenshot, state_screenshot, *supporting_screenshots):
-                    if stale.exists():
-                        stale.unlink()
-                run(
-                    [str(executable)],
-                    cwd=executable.parent,
-                    timeout=15,
+                report, width, height, screenshot_hash, sample_supporting_hashes = run_pilot_sample(
+                    executable=executable,
+                    pilot=selected_pilot,
+                    platform_name=platform_name,
+                    raylib_configuration=args.raylib_configuration,
+                    renderer=args.renderer,
+                    benchmark_renderer=args.benchmark_renderer,
+                    sanitizers=args.sanitizers,
+                    cc=args.cc,
+                    compiler_version=compiler_version,
                     label=f"Caxecraft {selected_pilot} graphical pilot run {repeat + 1}",
                 )
-                if args.raylib_configuration == "memory-software":
-                    # Raylib 6.0's software readback has a documented, focused
-                    # conversion above. Normalize the state capture first so
-                    # native capture failure can be diagnosed before the host
-                    # attempts to open the possibly absent review image.
-                    normalize_memory_software_capture(state_screenshot)
-                reports.append(
-                    build_pilot_report(
-                        state_path=state_screenshot,
-                        review_screenshot=screenshot,
-                        pilot=selected_pilot,
-                        platform_name=platform_name,
-                        raylib_configuration=args.raylib_configuration,
-                        renderer=args.renderer,
-                        benchmark_renderer=args.benchmark_renderer,
-                        sanitizers=args.sanitizers,
-                        cc=args.cc,
-                        compiler_version=compiler_version,
-                    )
-                )
-                if args.raylib_configuration == "memory-software":
-                    normalize_memory_software_capture(screenshot)
-                    for supporting_screenshot in supporting_screenshots:
-                        normalize_memory_software_capture(supporting_screenshot)
-                for supporting_screenshot in supporting_screenshots:
-                    if supporting_screenshot.name == "caxecraft-pilot-campaign-selected.png":
-                        validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
-                    elif supporting_screenshot.name == "caxecraft-pilot-evergrove-entry.png":
-                        validate_presented_screenshot(
-                            supporting_screenshot,
-                            platform_name=platform_name,
-                            expected_entities=True,
-                            expected_open_sky=False,
-                        )
-                    else:
-                        validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
-                    supporting_hashes[supporting_screenshot.name].append(hashlib.sha256(supporting_screenshot.read_bytes()).hexdigest())
-                if selected_pilot in ("launch-smoke", "secondary-locale"):
-                    width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
-                elif selected_pilot == "resize-layout":
-                    width, height = validate_smoke_screenshot(
-                        screenshot,
-                        platform_name=platform_name,
-                        expected_logical_size=(960, 540),
-                    )
-                elif selected_pilot == "editor-shell":
-                    width, height = validate_editor_screenshot(screenshot, platform_name=platform_name)
-                else:
-                    width, height = validate_presented_screenshot(
-                        screenshot,
-                        platform_name=platform_name,
-                        expected_drop=selected_pilot == "combat-drop",
-                        expected_attack=selected_pilot == "combat-drop",
-                        expected_recovery=selected_pilot == "recovery-use",
-                        expected_inventory_full=selected_pilot in ("full-inventory-gift", "full-inventory-mining"),
-                        expected_entities=selected_pilot == "full-inventory-gift",
-                        expected_open_sky=selected_pilot != "move-jump-edit",
-                    )
-                    if selected_pilot == "adventure-journey":
-                        validate_western_falls_screenshot(
-                            screenshot,
-                            platform_name=platform_name,
-                        )
-                screenshot_hashes.append(hashlib.sha256(screenshot.read_bytes()).hexdigest())
+                reports.append(report)
+                screenshot_hashes.append(screenshot_hash)
+                for name, digest in sample_supporting_hashes.items():
+                    supporting_hashes.setdefault(name, []).append(digest)
 
             semantic_reports: list[dict[str, object]] = []
             for report in reports:
@@ -3589,7 +3801,6 @@ def main(argv: list[str]) -> int:
                 encoding="utf-8",
                 newline="\n",
             )
-            state_screenshot.unlink()
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "
                 f"({width}x{height} presented framebuffer, {repetitions} identical semantic runs, "

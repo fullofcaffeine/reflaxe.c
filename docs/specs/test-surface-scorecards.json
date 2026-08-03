@@ -539,13 +539,13 @@
         },
         {
           "path": "examples/caxecraft/test/caxecraft/qa/CampaignRuntimeProbe.hx",
-          "proves": "The admitted two-level campaign publishes Western Falls from independently receipted runtime bytes, retains its required actor/item/objective roles, and preserves Eval/generated-C semantic agreement without freezing decorative map coordinates.",
-          "doesNotProve": "Fallskeeper behavior, journal/code progression, opening the vault, flooded ruins, branching, return travel, saves, arbitrary campaigns, portability, or release readiness."
+          "proves": "The admitted first-adventure manifest follows its sole required entry transition through independently receipted runtime bytes, rejects stale or missing destination bytes, publishes generation 2 atomically, and preserves Eval/generated-C agreement with sanitizers. Closed campaign-schema failures use a separate manually authored minimal fixture rather than shipped level decoration.",
+          "doesNotProve": "Exact actor, item, objective, dialogue, coordinate, terrain, or flow counts; Fallskeeper behavior; journal/code progression; opening the vault; flooded ruins; branching; return travel; saves; arbitrary campaigns; portability; or release readiness."
         },
         {
           "path": "examples/caxecraft/play.py",
-          "proves": "The direct campaign-travel owner diagnoses one typed runtime transition. The separate adventure-journey owner begins on the real title screen, visibly selects Adventure, presents the runtime manifest-backed first-adventure card and its two-level route, launches it through shared menu behavior, reaches generation 2 with one publication, and retains the title choice, campaign card, and Western Falls as real 1280x720 Raylib frames. Its destination observer requires a tall continuous water landmark, so the old meadow and tiny pool cannot satisfy the claim. The aquatic-gear owner separately records real equipment, submersion, sand mining, and dry-after-submerged exit observations from the generated native game.",
-          "doesNotProve": "Branching or return travel, saves, editor campaign authoring, arbitrary mods, sanitizer success, portability, or release readiness."
+          "proves": "The reuse-only content-feedback path stages and validates exact current runtime bytes through an already-qualified native executable without compiler or linker fallback. The direct campaign-travel owner diagnoses one typed transition; the separate adventure-journey owner starts on the real title screen, selects Adventure through shared menu behavior, reaches generation 2 with one publication, and retains real Raylib frames. Destination evidence pairs a visible water draw batch with water-texture colors that persist through many consecutive rows anywhere in the gameplay view. The aquatic-gear owner separately records real equipment, submersion, sand mining, and dry-after-submerged exit observations.",
+          "doesNotProve": "The active destination objective or semantic message identity, physical traversal through an authored exit volume, exact decorative coordinates, subjective composition or play feel, branching or return travel, saves, editor campaign authoring, arbitrary mods, sanitizer success, portability, or release readiness."
         }
       ],
       "selectorOwnership": {

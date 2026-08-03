@@ -75,6 +75,8 @@
     "profile:caxecraft-incremental-edit": "python3 examples/caxecraft/profile_incremental_edit.py",
     "test:caxecraft-playable": "python3 examples/caxecraft/play.py --check-snapshots",
     "caxecraft:play": "python3 examples/caxecraft/play.py",
+    "caxecraft:content": "python3 examples/caxecraft/play.py --content-feedback",
+    "caxecraft:content:validate": "python3 examples/caxecraft/play.py --content-feedback --validate-only",
     "benchmark:caxecraft-renderer": "python3 examples/caxecraft/benchmark_renderer.py",
     "test:stdlib-ledger": "python3 test/stdlib_ledger/run.py",
     "test:hxc-ir": "python3 test/hxc_ir/run.py",
