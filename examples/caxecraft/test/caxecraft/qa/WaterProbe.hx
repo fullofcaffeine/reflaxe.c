@@ -1,5 +1,8 @@
 package caxecraft.qa;
 
+import caxecraft.app.WaterSurfaceGeometry.cornerHeight as waterCornerHeight;
+import caxecraft.app.WaterSurfaceGeometry.sideIsExposed as waterSideIsExposed;
+import caxecraft.app.WaterSurfaceGeometry.surfaceTop as waterSurfaceTop;
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.WaterCellState;
@@ -177,6 +180,24 @@ final class WaterProbe {
 		final grouped = deterministicHash(23, true);
 		if (slow == 0 || slow != grouped)
 			return 41;
+
+		// Presentation joins neighboring discrete levels without changing any
+		// simulation byte. Reordering the same four cells represents asking for
+		// the shared corner from an adjacent top and must produce one height.
+		final joined = waterCornerHeight(4, Source, Flowing(WaterLevel.One, false), Empty, Blocked);
+		final adjacent = waterCornerHeight(4, Blocked, Source, Empty, Flowing(WaterLevel.One, false));
+		if (joined != 4.9375 || adjacent != joined)
+			return 50;
+		if (waterCornerHeight(4, Empty, Blocked, InvalidStorage(99), Empty) != 4.0)
+			return 51;
+		if (waterSurfaceTop(Flowing(WaterLevel.Thin, false), 4) != 4.125 || waterSurfaceTop(Flowing(WaterLevel.Thin, true), 4) != 5.0)
+			return 52;
+		if (!waterSideIsExposed(Empty)
+			|| waterSideIsExposed(Source)
+			|| waterSideIsExposed(Flowing(WaterLevel.One, false))
+			|| waterSideIsExposed(Blocked)
+			|| waterSideIsExposed(InvalidStorage(99)))
+			return 53;
 		return 0;
 	}
 

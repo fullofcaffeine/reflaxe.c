@@ -141,6 +141,7 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/app/TerrainChunkLayout.c": "c",
     "playable/src/modules/caxecraft/app/TerrainRenderer.c": "c",
     "playable/src/modules/caxecraft/app/WaterRenderer.c": "c",
+    "playable/src/modules/caxecraft/app/WaterSurfaceGeometry.c": "c",
     "playable/src/modules/caxecraft/content/RuntimeContentPack.c": "c",
     "playable/src/modules/caxecraft/app/CaxecraftApp.c": "c",
     "playable/src/modules/caxecraft/app/MotionInterpolation.c": "c",

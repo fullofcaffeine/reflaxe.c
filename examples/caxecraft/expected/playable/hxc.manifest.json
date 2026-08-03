@@ -45,6 +45,7 @@
       "src/modules/caxecraft/app/TitleMenu.c",
       "src/modules/caxecraft/app/TitleMenuFlow.c",
       "src/modules/caxecraft/app/WaterRenderer.c",
+      "src/modules/caxecraft/app/WaterSurfaceGeometry.c",
       "src/modules/caxecraft/content/ActiveContent.c",
       "src/modules/caxecraft/content/ActiveRuntimeContent.c",
       "src/modules/caxecraft/content/ActorCompositionPlanner.c",
@@ -114,6 +115,7 @@
       "src/modules/caxecraft/scenario/ScenarioDocumentValidator.c",
       "src/modules/caxecraft/scenario/ScenarioLexer.c",
       "src/modules/caxecraft/scenario/ScenarioMessageValidator.c",
+      "src/modules/caxecraft/scenario/ScenarioMessages.c",
       "src/modules/caxecraft/scenario/ScenarioObject.c",
       "src/modules/caxecraft/scenario/ScenarioParser.c",
       "src/modules/caxecraft/scenario/ScenarioRecordCursor.c",
@@ -158,6 +160,7 @@
       "include/hxc/modules/caxecraft/app/TitleMenu.h",
       "include/hxc/modules/caxecraft/app/TitleMenuFlow.h",
       "include/hxc/modules/caxecraft/app/WaterRenderer.h",
+      "include/hxc/modules/caxecraft/app/WaterSurfaceGeometry.h",
       "include/hxc/modules/caxecraft/content/ActiveContent.h",
       "include/hxc/modules/caxecraft/content/ActiveRuntimeContent.h",
       "include/hxc/modules/caxecraft/content/ActorCompositionPlanner.h",
@@ -470,7 +473,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "5eace4b8d1b20d4e7184d576c5f87ada4e6bb644a791678fd026e13e926876f4",
+      "sha256": "867fca014a04a8d448f39fce877df2b76293e29044e58f5557e8b8d41ca4df35",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -480,7 +483,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "dc37f43ebfa17dea98b591d28fa9a8d6db1d6cec27fa2685531b2ada868052c1",
+      "sha256": "ca2c6e42d3889e7b56652d17b07614938f7aa99d950f3bcd75a7d4412712f7da",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -490,12 +493,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "8c181a257332791aa10b2e460920d592cd68b2e05ca40ddbd3596ca73c069bf0",
+      "sha256": "afc47ba3a889107cb79501f940426b645fb74e80441d46f276f52174236b3902",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "2630f4552a68c3df8dba0404db9e47782d9080abad2b18b29f121d664ae1e782",
+      "sha256": "414283959cb9d0522ae630ff915b9e3eea99849a1f56133aeb6d91d79aa87bef",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -505,12 +508,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "5c936d5a8b4190af48cd30d19cf45fd23b9426ce27dc9e2b0c82f40f1f9d6ab5",
+      "sha256": "d98d8ac33536a94bb97c0ffc7b178a745634346a50f8a75038a723824a491a7e",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "a02b31b7f365027003910d0821288b229eb69f135dcdeb9bd92a4dda86a5a785",
+      "sha256": "85143128fd1ed0f5ef4dd63198dba3bd339c6c62cef4794ae85578d479ba9db2",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -520,7 +523,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "d6cebbf9913873fda8dfa9df4b0c7d9cbe10d4fc45c91ca2e5b7e323214aba6b",
+      "sha256": "57b3e2fec6c96a9c1c3c532eb78c93476ddd574967ab40a6fbbef0b18171051c",
       "path": "include/hxc/modules/caxecraft/app/ActivePlayableLevel.h",
       "kind": "private-header"
     },
@@ -535,7 +538,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "1a99e6eff032bfa73d3bf21cf76ab42baaa2e230616e30d8c683d7ee25998ae0",
+      "sha256": "c8935397d3101024f2b024b95879055a666939abb05790864749bbfd7eef403e",
       "path": "include/hxc/modules/caxecraft/app/CampaignMenu.h",
       "kind": "private-header"
     },
@@ -565,7 +568,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "52d7fde7199f88be9b4857d8fc94c8265919840a42a9df5a259ada947f76f735",
+      "sha256": "48b780576cdf3b5e5845b94e36c2387f0d2d64092d65910db957f180fb4571eb",
       "path": "include/hxc/modules/caxecraft/app/HudView.h",
       "kind": "private-header"
     },
@@ -620,8 +623,13 @@
       "kind": "private-header"
     },
     {
-      "sha256": "fe752c00b6eadd6e48c0ba1efcedb954859a347730cf5228f1a1837d76722b23",
+      "sha256": "42ce2239953f6b7b529ebefe262efa4b4a785cf6c92f56cf3bebf943ad62a22c",
       "path": "include/hxc/modules/caxecraft/app/WaterRenderer.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "f94681670a5e497144f468ed7086943a1a1c7946af5108fee385c5a5f75730d8",
+      "path": "include/hxc/modules/caxecraft/app/WaterSurfaceGeometry.h",
       "kind": "private-header"
     },
     {
@@ -725,7 +733,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "fa39d26456da2306c699d70cf722686aac14244a932626a096d5a082b62b328c",
+      "sha256": "20b2fc42aa1ca542a126979a918bea14fd44bbef8d914f1d0b0742f16640a6ad",
       "path": "include/hxc/modules/caxecraft/content/RuntimeLevelLoader.h",
       "kind": "private-header"
     },
@@ -1180,7 +1188,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "d7b39f4bde58edbd5a24f81cb33d76e687ea4c0cd84277b18546e45db8a2b008",
+      "sha256": "986a4b08077b94c8bc0151575f9194f9968a1d1222287a5e806c8eef61aa70c7",
       "path": "include/hxc/modules/caxecraft/scenario/ScenarioMessages.h",
       "kind": "private-header"
     },
@@ -1320,12 +1328,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "d9795a33a0ffed8f4b058edf1709e34c9acae983129c4110e3c3f757c5b81109",
+      "sha256": "a9b29e0fc3b7e165a1a2ad10924e21ad30ef87f1b25b93eae78b3ff38f49f0d8",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "50e5a213018926f0cb122088dcb9399f6713895e7cd3f5ebb36b5f0c833e73f9",
+      "sha256": "de00eccab8028b61b7b5d48dccd1db37632c84bb264d47782d10cebb87d2f365",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1485,7 +1493,7 @@
       "kind": "source"
     },
     {
-      "sha256": "8e074490077ea9d818e5fd4efecb54126fa51232bef6a095235ff67a0ca28bf2",
+      "sha256": "2c8f6858b6c582b154d9511179a2f4a0647b583f6dfd755003692301a381e102",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1495,7 +1503,7 @@
       "kind": "source"
     },
     {
-      "sha256": "b907cf1e7cb91194c298b161a9ac02d72ff48d3bd0f83714aa3ed3bfeeee5fb9",
+      "sha256": "2b117d074f34e89c7b51b10ecf4e7c283221bc7161b1b67f8e0f7a786b50d157",
       "path": "src/modules/caxecraft/app/ActivePlayableLevel.c",
       "kind": "source"
     },
@@ -1510,12 +1518,12 @@
       "kind": "source"
     },
     {
-      "sha256": "36d994911cf7b33571fee2a1809e8199738c94fb15902c9faf7a799b65ad1a22",
+      "sha256": "fcce45fe4d590f98002d2c2aa2440a209b06c3454ad95def0f854de624cfa275",
       "path": "src/modules/caxecraft/app/CampaignMenu.c",
       "kind": "source"
     },
     {
-      "sha256": "a727900c616c460a45058825ae0cb8578ac2b683e41f3036306e8a2154e9e8e3",
+      "sha256": "e3536eee801d76db59ade249fc84a08402e4153c0783172b05cb0cb2fd94e7ab",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -1580,8 +1588,13 @@
       "kind": "source"
     },
     {
-      "sha256": "406aaaa997a13c608149dbc4981b28740ce9d86bb7c9b916d1aaeef7b3b196e1",
+      "sha256": "c913561c435e926d175aa6ca5d80322494ff90ae67acfee28155a7d782eaa438",
       "path": "src/modules/caxecraft/app/WaterRenderer.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "6a8c0397597e83792d5141a3625f3427eb1bc219ee2133ead9a44dd4575f1ca9",
+      "path": "src/modules/caxecraft/app/WaterSurfaceGeometry.c",
       "kind": "source"
     },
     {
@@ -1675,7 +1688,7 @@
       "kind": "source"
     },
     {
-      "sha256": "989d1d04e072087d518c508e0db85e46dbbbcb3b3ea67cd240ec1a76307fbe0a",
+      "sha256": "708554a69b6ad378c20db340dcece8de8ac5103ae2b4973c2cfe57d1f1fae273",
       "path": "src/modules/caxecraft/content/RuntimeLevelLoader.c",
       "kind": "source"
     },
@@ -1927,6 +1940,11 @@
     {
       "sha256": "60218e24bcfbb3366404ba261ab52b19c12d8bde15609b034d149b53308d6cd4",
       "path": "src/modules/caxecraft/scenario/ScenarioMessageValidator.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "93054cbc08c68aff189f9b098d9b81e09bb0d1a5d04a39b4ac7f6309595729f4",
+      "path": "src/modules/caxecraft/scenario/ScenarioMessages.c",
       "kind": "source"
     },
     {

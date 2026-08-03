@@ -59,116 +59,132 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
         struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n19 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n16, hxc_l_tmp_load_result_n17, hxc_l_z);
         struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n20 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n19);
         struct hxc_caxecraft_domain_WaterCellState hxc_l_state = hxc_l_tmp_call_result_n20;
-        bool hxc_l_tmp_call_result_n22 = hxc_caxecraft_app_WaterRenderer_isWater(hxc_l_state);
+        bool hxc_l_tmp_call_result_n22 = hxc_caxecraft_app_WaterSurfaceGeometry_isWater(hxc_l_state);
         if (hxc_l_tmp_call_result_n22)
         {
-          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_load_result_n23 = hxc_l_state;
-          double hxc_l_tmp_call_result_n25 = hxc_caxecraft_app_WaterRenderer_surfaceTop(hxc_l_tmp_load_result_n23, hxc_l_y);
-          double hxc_l_top = hxc_l_tmp_call_result_n25;
-          bool hxc_l_cellVisible = false;
-          int32_t hxc_l_tmp_load_result_n26 = hxc_l_x;
-          int32_t hxc_l_tmp_load_result_n27 = hxc_l_y;
-          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n29 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n26, hxc_i32_add_wrapping(hxc_l_tmp_load_result_n27, 1), hxc_l_z);
-          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n30 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n29);
-          bool hxc_l_tmp_call_result_n31 = hxc_caxecraft_app_WaterRenderer_isOpenAir(hxc_l_tmp_call_result_n30);
-          if (hxc_l_tmp_call_result_n31)
+          int32_t hxc_l_tmp_load_result_n23 = hxc_l_x;
+          int32_t hxc_l_tmp_load_result_n24 = hxc_l_y;
+          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n26 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n23, hxc_i32_add_wrapping(hxc_l_tmp_load_result_n24, 1), hxc_l_z);
+          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n27 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n26);
+          bool hxc_l_tmp_call_result_n28 = hxc_caxecraft_app_WaterSurfaceGeometry_isOpenTop(hxc_l_tmp_call_result_n27);
+          bool hxc_l_topOpen = hxc_l_tmp_call_result_n28;
+          int32_t hxc_l_tmp_load_result_n29 = hxc_l_x;
+          int32_t hxc_l_tmp_load_result_n30 = hxc_l_y;
+          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n32 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n29, hxc_l_tmp_load_result_n30, hxc_i32_subtract_wrapping(hxc_l_z, 1));
+          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n33 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n32);
+          bool hxc_l_tmp_call_result_n34 = hxc_caxecraft_app_WaterSurfaceGeometry_sideIsExposed(hxc_l_tmp_call_result_n33);
+          bool hxc_l_northOpen = hxc_l_tmp_call_result_n34;
+          int32_t hxc_l_tmp_load_result_n35 = hxc_l_x;
+          int32_t hxc_l_tmp_load_result_n36 = hxc_l_y;
+          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n38 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n35, hxc_l_tmp_load_result_n36, hxc_i32_add_wrapping(hxc_l_z, 1));
+          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n39 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n38);
+          bool hxc_l_tmp_call_result_n40 = hxc_caxecraft_app_WaterSurfaceGeometry_sideIsExposed(hxc_l_tmp_call_result_n39);
+          bool hxc_l_southOpen = hxc_l_tmp_call_result_n40;
+          int32_t hxc_l_tmp_load_result_n41 = hxc_l_x;
+          int32_t hxc_l_tmp_load_result_n42 = hxc_l_y;
+          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n44 = hxc_caxecraft_domain_World_coord(hxc_i32_add_wrapping(hxc_l_tmp_load_result_n41, 1), hxc_l_tmp_load_result_n42, hxc_l_z);
+          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n45 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n44);
+          bool hxc_l_tmp_call_result_n46 = hxc_caxecraft_app_WaterSurfaceGeometry_sideIsExposed(hxc_l_tmp_call_result_n45);
+          bool hxc_l_eastOpen = hxc_l_tmp_call_result_n46;
+          int32_t hxc_l_tmp_load_result_n47 = hxc_l_x;
+          int32_t hxc_l_tmp_load_result_n48 = hxc_l_y;
+          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n50 = hxc_caxecraft_domain_World_coord(hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n47, 1), hxc_l_tmp_load_result_n48, hxc_l_z);
+          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n51 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n50);
+          bool hxc_l_tmp_call_result_n52 = hxc_caxecraft_app_WaterSurfaceGeometry_sideIsExposed(hxc_l_tmp_call_result_n51);
+          bool hxc_l_westOpen = hxc_l_tmp_call_result_n52;
+          bool hxc_l_tmp_load_result_n53 = hxc_l_topOpen;
+          bool hxc_l_tmp_short_circuit_result_n25 = hxc_l_tmp_load_result_n53;
+          if (!hxc_l_tmp_load_result_n53)
           {
-            int32_t hxc_l_tmp_load_result_n32 = hxc_l_x;
-            double hxc_l_tmp_load_result_n33 = hxc_l_top;
-            int32_t hxc_l_tmp_load_result_n34 = hxc_l_z;
-            double hxc_l_tmp_load_result_n35 = hxc_l_u0;
-            double hxc_l_tmp_load_result_n36 = hxc_l_u1;
-            double hxc_l_tmp_load_result_n37 = hxc_l_v0;
-            hxc_caxecraft_app_WaterRenderer_emitTop((double)hxc_l_tmp_load_result_n32, hxc_l_tmp_load_result_n33, (double)hxc_l_tmp_load_result_n34, hxc_l_tmp_load_result_n35, hxc_l_tmp_load_result_n36, hxc_l_tmp_load_result_n37, hxc_l_v1);
-            hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
-            hxc_l_cellVisible = true;
+            hxc_l_tmp_short_circuit_result_n25 = hxc_l_northOpen;
           }
-          int32_t hxc_l_tmp_load_result_n40 = hxc_l_x;
-          int32_t hxc_l_tmp_load_result_n41 = hxc_l_y;
-          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n43 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n40, hxc_l_tmp_load_result_n41, hxc_i32_subtract_wrapping(hxc_l_z, 1));
-          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n44 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n43);
-          int32_t hxc_l_tmp_load_result_n45 = hxc_l_y;
-          double hxc_l_tmp_call_result_n47 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_l_tmp_call_result_n44, hxc_l_tmp_load_result_n45, hxc_l_top);
-          double hxc_l_northBottom = hxc_l_tmp_call_result_n47;
-          double hxc_l_tmp_load_result_n48 = hxc_l_northBottom;
-          if (hxc_l_tmp_load_result_n48 < hxc_l_top)
+          bool hxc_l_tmp_short_circuit_load_result_n55 = hxc_l_tmp_short_circuit_result_n25;
+          bool hxc_l_tmp_short_circuit_result_n26 = hxc_l_tmp_short_circuit_load_result_n55;
+          if (!hxc_l_tmp_short_circuit_load_result_n55)
           {
-            int32_t hxc_l_tmp_load_result_n50 = hxc_l_x;
-            double hxc_l_tmp_load_result_n51 = hxc_l_northBottom;
-            double hxc_l_tmp_load_result_n52 = hxc_l_top;
-            int32_t hxc_l_tmp_load_result_n53 = hxc_l_z;
-            double hxc_l_tmp_load_result_n54 = hxc_l_u0;
-            double hxc_l_tmp_load_result_n55 = hxc_l_u1;
-            double hxc_l_tmp_load_result_n56 = hxc_l_v0;
-            hxc_caxecraft_app_WaterRenderer_emitNorth((double)hxc_l_tmp_load_result_n50, hxc_l_tmp_load_result_n51, hxc_l_tmp_load_result_n52, (double)hxc_l_tmp_load_result_n53, hxc_l_tmp_load_result_n54, hxc_l_tmp_load_result_n55, hxc_l_tmp_load_result_n56, hxc_l_v1);
-            hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
-            hxc_l_cellVisible = true;
+            hxc_l_tmp_short_circuit_result_n26 = hxc_l_southOpen;
           }
-          int32_t hxc_l_tmp_load_result_n59 = hxc_l_x;
-          int32_t hxc_l_tmp_load_result_n60 = hxc_l_y;
-          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n62 = hxc_caxecraft_domain_World_coord(hxc_l_tmp_load_result_n59, hxc_l_tmp_load_result_n60, hxc_i32_add_wrapping(hxc_l_z, 1));
-          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n63 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n62);
-          int32_t hxc_l_tmp_load_result_n64 = hxc_l_y;
-          double hxc_l_tmp_call_result_n66 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_l_tmp_call_result_n63, hxc_l_tmp_load_result_n64, hxc_l_top);
-          double hxc_l_southBottom = hxc_l_tmp_call_result_n66;
-          double hxc_l_tmp_load_result_n67 = hxc_l_southBottom;
-          if (hxc_l_tmp_load_result_n67 < hxc_l_top)
+          bool hxc_l_tmp_short_circuit_load_result_n57 = hxc_l_tmp_short_circuit_result_n26;
+          bool hxc_l_tmp_short_circuit_result_n27 = hxc_l_tmp_short_circuit_load_result_n57;
+          if (!hxc_l_tmp_short_circuit_load_result_n57)
           {
-            int32_t hxc_l_tmp_load_result_n69 = hxc_l_x;
-            double hxc_l_tmp_load_result_n70 = hxc_l_southBottom;
-            double hxc_l_tmp_load_result_n71 = hxc_l_top;
-            int32_t hxc_l_tmp_load_result_n72 = hxc_l_z;
-            double hxc_l_tmp_load_result_n73 = hxc_l_u0;
-            double hxc_l_tmp_load_result_n74 = hxc_l_u1;
-            double hxc_l_tmp_load_result_n75 = hxc_l_v0;
-            hxc_caxecraft_app_WaterRenderer_emitSouth((double)hxc_l_tmp_load_result_n69, hxc_l_tmp_load_result_n70, hxc_l_tmp_load_result_n71, (double)hxc_l_tmp_load_result_n72, hxc_l_tmp_load_result_n73, hxc_l_tmp_load_result_n74, hxc_l_tmp_load_result_n75, hxc_l_v1);
-            hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
-            hxc_l_cellVisible = true;
+            hxc_l_tmp_short_circuit_result_n27 = hxc_l_eastOpen;
           }
-          int32_t hxc_l_tmp_load_result_n78 = hxc_l_x;
-          int32_t hxc_l_tmp_load_result_n79 = hxc_l_y;
-          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n81 = hxc_caxecraft_domain_World_coord(hxc_i32_add_wrapping(hxc_l_tmp_load_result_n78, 1), hxc_l_tmp_load_result_n79, hxc_l_z);
-          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n82 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n81);
-          int32_t hxc_l_tmp_load_result_n83 = hxc_l_y;
-          double hxc_l_tmp_call_result_n85 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_l_tmp_call_result_n82, hxc_l_tmp_load_result_n83, hxc_l_top);
-          double hxc_l_eastBottom = hxc_l_tmp_call_result_n85;
-          double hxc_l_tmp_load_result_n86 = hxc_l_eastBottom;
-          if (hxc_l_tmp_load_result_n86 < hxc_l_top)
+          bool hxc_l_tmp_short_circuit_load_result_n59 = hxc_l_tmp_short_circuit_result_n27;
+          bool hxc_l_tmp_short_circuit_result_n28 = hxc_l_tmp_short_circuit_load_result_n59;
+          if (!hxc_l_tmp_short_circuit_load_result_n59)
           {
-            int32_t hxc_l_tmp_load_result_n88 = hxc_l_x;
-            double hxc_l_tmp_load_result_n89 = hxc_l_eastBottom;
-            double hxc_l_tmp_load_result_n90 = hxc_l_top;
-            int32_t hxc_l_tmp_load_result_n91 = hxc_l_z;
-            double hxc_l_tmp_load_result_n92 = hxc_l_u0;
-            double hxc_l_tmp_load_result_n93 = hxc_l_u1;
-            double hxc_l_tmp_load_result_n94 = hxc_l_v0;
-            hxc_caxecraft_app_WaterRenderer_emitEast((double)hxc_l_tmp_load_result_n88, hxc_l_tmp_load_result_n89, hxc_l_tmp_load_result_n90, (double)hxc_l_tmp_load_result_n91, hxc_l_tmp_load_result_n92, hxc_l_tmp_load_result_n93, hxc_l_tmp_load_result_n94, hxc_l_v1);
-            hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
-            hxc_l_cellVisible = true;
+            hxc_l_tmp_short_circuit_result_n28 = hxc_l_westOpen;
           }
-          int32_t hxc_l_tmp_load_result_n97 = hxc_l_x;
-          int32_t hxc_l_tmp_load_result_n98 = hxc_l_y;
-          struct hxc_caxecraft_scenario_VoxelPoint hxc_l_tmp_call_result_n100 = hxc_caxecraft_domain_World_coord(hxc_i32_subtract_wrapping(hxc_l_tmp_load_result_n97, 1), hxc_l_tmp_load_result_n98, hxc_l_z);
-          struct hxc_caxecraft_domain_WaterCellState hxc_l_tmp_call_result_n101 = hxc_caxecraft_domain_WaterCellCodec_stateInView(hxc_l_cells, hxc_l_length, hxc_l_tmp_call_result_n100);
-          int32_t hxc_l_tmp_load_result_n102 = hxc_l_y;
-          double hxc_l_tmp_call_result_n104 = hxc_caxecraft_app_WaterRenderer_exposedSideBottom(hxc_l_tmp_call_result_n101, hxc_l_tmp_load_result_n102, hxc_l_top);
-          double hxc_l_westBottom = hxc_l_tmp_call_result_n104;
-          double hxc_l_tmp_load_result_n105 = hxc_l_westBottom;
-          if (hxc_l_tmp_load_result_n105 < hxc_l_top)
+          if (hxc_l_tmp_short_circuit_result_n28)
           {
-            int32_t hxc_l_tmp_load_result_n107 = hxc_l_x;
-            double hxc_l_tmp_load_result_n108 = hxc_l_westBottom;
-            double hxc_l_tmp_load_result_n109 = hxc_l_top;
-            int32_t hxc_l_tmp_load_result_n110 = hxc_l_z;
-            double hxc_l_tmp_load_result_n111 = hxc_l_u0;
-            double hxc_l_tmp_load_result_n112 = hxc_l_u1;
-            double hxc_l_tmp_load_result_n113 = hxc_l_v0;
-            hxc_caxecraft_app_WaterRenderer_emitWest((double)hxc_l_tmp_load_result_n107, hxc_l_tmp_load_result_n108, hxc_l_tmp_load_result_n109, (double)hxc_l_tmp_load_result_n110, hxc_l_tmp_load_result_n111, hxc_l_tmp_load_result_n112, hxc_l_tmp_load_result_n113, hxc_l_v1);
-            hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
-            hxc_l_cellVisible = true;
-          }
-          if (hxc_l_cellVisible)
-          {
+            int32_t hxc_l_tmp_load_result_n62 = hxc_l_x;
+            int32_t hxc_l_tmp_load_result_n63 = hxc_l_y;
+            struct hxc_caxecraft_app_WaterSurfaceCorners hxc_l_tmp_call_result_n65 = hxc_caxecraft_app_WaterSurfaceGeometry_surfaceCorners(hxc_l_cells, hxc_l_length, hxc_l_tmp_load_result_n62, hxc_l_tmp_load_result_n63, hxc_l_z);
+            struct hxc_caxecraft_app_WaterSurfaceCorners hxc_l_corners = hxc_l_tmp_call_result_n65;
+            if (hxc_l_topOpen)
+            {
+              int32_t hxc_l_tmp_load_result_n67 = hxc_l_x;
+              int32_t hxc_l_tmp_load_result_n68 = hxc_l_z;
+              struct hxc_caxecraft_app_WaterSurfaceCorners hxc_l_tmp_load_result_n69 = hxc_l_corners;
+              double hxc_l_tmp_load_result_n70 = hxc_l_u0;
+              double hxc_l_tmp_load_result_n71 = hxc_l_u1;
+              double hxc_l_tmp_load_result_n72 = hxc_l_v0;
+              hxc_caxecraft_app_WaterRenderer_emitTop((double)hxc_l_tmp_load_result_n67, (double)hxc_l_tmp_load_result_n68, hxc_l_tmp_load_result_n69, hxc_l_tmp_load_result_n70, hxc_l_tmp_load_result_n71, hxc_l_tmp_load_result_n72, hxc_l_v1);
+              hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
+            }
+            if (hxc_l_northOpen)
+            {
+              int32_t hxc_l_tmp_load_result_n76 = hxc_l_x;
+              int32_t hxc_l_tmp_load_result_n77 = hxc_l_y;
+              double hxc_l_tmp_record_field_load_result_n78 = hxc_l_corners.hxc_northWest;
+              double hxc_l_tmp_record_field_load_result_n79 = hxc_l_corners.hxc_northEast;
+              int32_t hxc_l_tmp_load_result_n80 = hxc_l_z;
+              double hxc_l_tmp_load_result_n81 = hxc_l_u0;
+              double hxc_l_tmp_load_result_n82 = hxc_l_u1;
+              double hxc_l_tmp_load_result_n83 = hxc_l_v0;
+              hxc_caxecraft_app_WaterRenderer_emitNorth((double)hxc_l_tmp_load_result_n76, (double)hxc_l_tmp_load_result_n77, hxc_l_tmp_record_field_load_result_n78, hxc_l_tmp_record_field_load_result_n79, (double)hxc_l_tmp_load_result_n80, hxc_l_tmp_load_result_n81, hxc_l_tmp_load_result_n82, hxc_l_tmp_load_result_n83, hxc_l_v1);
+              hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
+            }
+            if (hxc_l_southOpen)
+            {
+              int32_t hxc_l_tmp_load_result_n87 = hxc_l_x;
+              int32_t hxc_l_tmp_load_result_n88 = hxc_l_y;
+              double hxc_l_tmp_record_field_load_result_n89 = hxc_l_corners.hxc_southWest;
+              double hxc_l_tmp_record_field_load_result_n90 = hxc_l_corners.hxc_southEast;
+              int32_t hxc_l_tmp_load_result_n91 = hxc_l_z;
+              double hxc_l_tmp_load_result_n92 = hxc_l_u0;
+              double hxc_l_tmp_load_result_n93 = hxc_l_u1;
+              double hxc_l_tmp_load_result_n94 = hxc_l_v0;
+              hxc_caxecraft_app_WaterRenderer_emitSouth((double)hxc_l_tmp_load_result_n87, (double)hxc_l_tmp_load_result_n88, hxc_l_tmp_record_field_load_result_n89, hxc_l_tmp_record_field_load_result_n90, (double)hxc_l_tmp_load_result_n91, hxc_l_tmp_load_result_n92, hxc_l_tmp_load_result_n93, hxc_l_tmp_load_result_n94, hxc_l_v1);
+              hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
+            }
+            if (hxc_l_eastOpen)
+            {
+              int32_t hxc_l_tmp_load_result_n98 = hxc_l_x;
+              int32_t hxc_l_tmp_load_result_n99 = hxc_l_y;
+              double hxc_l_tmp_record_field_load_result_n100 = hxc_l_corners.hxc_northEast;
+              double hxc_l_tmp_record_field_load_result_n101 = hxc_l_corners.hxc_southEast;
+              int32_t hxc_l_tmp_load_result_n102 = hxc_l_z;
+              double hxc_l_tmp_load_result_n103 = hxc_l_u0;
+              double hxc_l_tmp_load_result_n104 = hxc_l_u1;
+              double hxc_l_tmp_load_result_n105 = hxc_l_v0;
+              hxc_caxecraft_app_WaterRenderer_emitEast((double)hxc_l_tmp_load_result_n98, (double)hxc_l_tmp_load_result_n99, hxc_l_tmp_record_field_load_result_n100, hxc_l_tmp_record_field_load_result_n101, (double)hxc_l_tmp_load_result_n102, hxc_l_tmp_load_result_n103, hxc_l_tmp_load_result_n104, hxc_l_tmp_load_result_n105, hxc_l_v1);
+              hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
+            }
+            if (hxc_l_westOpen)
+            {
+              int32_t hxc_l_tmp_load_result_n109 = hxc_l_x;
+              int32_t hxc_l_tmp_load_result_n110 = hxc_l_y;
+              double hxc_l_tmp_record_field_load_result_n111 = hxc_l_corners.hxc_northWest;
+              double hxc_l_tmp_record_field_load_result_n112 = hxc_l_corners.hxc_southWest;
+              int32_t hxc_l_tmp_load_result_n113 = hxc_l_z;
+              double hxc_l_tmp_load_result_n114 = hxc_l_u0;
+              double hxc_l_tmp_load_result_n115 = hxc_l_u1;
+              double hxc_l_tmp_load_result_n116 = hxc_l_v0;
+              hxc_caxecraft_app_WaterRenderer_emitWest((double)hxc_l_tmp_load_result_n109, (double)hxc_l_tmp_load_result_n110, hxc_l_tmp_record_field_load_result_n111, hxc_l_tmp_record_field_load_result_n112, (double)hxc_l_tmp_load_result_n113, hxc_l_tmp_load_result_n114, hxc_l_tmp_load_result_n115, hxc_l_tmp_load_result_n116, hxc_l_v1);
+              hxc_l_faces = hxc_i32_add_wrapping(hxc_l_faces, 1);
+            }
             hxc_l_visible = hxc_i32_add_wrapping(hxc_l_visible, 1);
           }
         }
@@ -185,11 +201,11 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
   {
     hxc_l_drawCalls = 1;
   }
-  int32_t hxc_l_tmp_load_result_n122 = hxc_l_visible;
-  return (struct hxc_caxecraft_app_WaterRenderCounters){ .hxc_drawCalls = hxc_l_drawCalls, .hxc_visible = hxc_l_tmp_load_result_n122 };
+  int32_t hxc_l_tmp_load_result_n124 = hxc_l_visible;
+  return (struct hxc_caxecraft_app_WaterRenderCounters){ .hxc_drawCalls = hxc_l_drawCalls, .hxc_visible = hxc_l_tmp_load_result_n124 };
 }
 
-void hxc_caxecraft_app_WaterRenderer_emitEast(double hxc_l_x, double hxc_l_bottom, double hxc_l_top, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+void hxc_caxecraft_app_WaterRenderer_emitEast(double hxc_l_x, double hxc_l_bottom, double hxc_l_topNorth, double hxc_l_topSouth, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
 {
   struct Color hxc_l_raw = (struct Color){ .r = 150, .g = 226, .b = 242, .a = 178 };
   uint8_t *hxc_l_tmp_imported_field_address_n1 = &hxc_l_raw.r;
@@ -203,13 +219,13 @@ void hxc_caxecraft_app_WaterRenderer_emitEast(double hxc_l_x, double hxc_l_botto
   rlColor4ub(hxc_l_tmp_imported_field_load_result_n2, hxc_l_tmp_imported_field_load_result_n4, hxc_l_tmp_imported_field_load_result_n6, hxc_l_tmp_imported_field_load_result_n8);
   rlNormal3f((float)1.0, (float)0.0, (float)0.0);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v1, hxc_l_x + 1.0, hxc_l_bottom, hxc_l_z);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x + 1.0, hxc_l_top, hxc_l_z);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_top, hxc_l_z + 1.0);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x + 1.0, hxc_l_topNorth, hxc_l_z);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_topSouth, hxc_l_z + 1.0);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v1, hxc_l_x + 1.0, hxc_l_bottom, hxc_l_z + 1.0);
   return;
 }
 
-void hxc_caxecraft_app_WaterRenderer_emitNorth(double hxc_l_x, double hxc_l_bottom, double hxc_l_top, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+void hxc_caxecraft_app_WaterRenderer_emitNorth(double hxc_l_x, double hxc_l_bottom, double hxc_l_topWest, double hxc_l_topEast, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
 {
   struct Color hxc_l_raw = (struct Color){ .r = 150, .g = 226, .b = 242, .a = 178 };
   uint8_t *hxc_l_tmp_imported_field_address_n1 = &hxc_l_raw.r;
@@ -223,13 +239,13 @@ void hxc_caxecraft_app_WaterRenderer_emitNorth(double hxc_l_x, double hxc_l_bott
   rlColor4ub(hxc_l_tmp_imported_field_load_result_n2, hxc_l_tmp_imported_field_load_result_n4, hxc_l_tmp_imported_field_load_result_n6, hxc_l_tmp_imported_field_load_result_n8);
   rlNormal3f((float)0.0, (float)0.0, (float)-1.0);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v1, hxc_l_x, hxc_l_bottom, hxc_l_z);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_top, hxc_l_z);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_top, hxc_l_z);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_topWest, hxc_l_z);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_topEast, hxc_l_z);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v1, hxc_l_x + 1.0, hxc_l_bottom, hxc_l_z);
   return;
 }
 
-void hxc_caxecraft_app_WaterRenderer_emitSouth(double hxc_l_x, double hxc_l_bottom, double hxc_l_top, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+void hxc_caxecraft_app_WaterRenderer_emitSouth(double hxc_l_x, double hxc_l_bottom, double hxc_l_topWest, double hxc_l_topEast, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
 {
   struct Color hxc_l_raw = (struct Color){ .r = 150, .g = 226, .b = 242, .a = 178 };
   uint8_t *hxc_l_tmp_imported_field_address_n1 = &hxc_l_raw.r;
@@ -244,12 +260,12 @@ void hxc_caxecraft_app_WaterRenderer_emitSouth(double hxc_l_x, double hxc_l_bott
   rlNormal3f((float)0.0, (float)0.0, (float)1.0);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v1, hxc_l_x, hxc_l_bottom, hxc_l_z + 1.0);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v1, hxc_l_x + 1.0, hxc_l_bottom, hxc_l_z + 1.0);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_top, hxc_l_z + 1.0);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_top, hxc_l_z + 1.0);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_topEast, hxc_l_z + 1.0);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_topWest, hxc_l_z + 1.0);
   return;
 }
 
-void hxc_caxecraft_app_WaterRenderer_emitTop(double hxc_l_x, double hxc_l_y, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+void hxc_caxecraft_app_WaterRenderer_emitTop(double hxc_l_x, double hxc_l_z, struct hxc_caxecraft_app_WaterSurfaceCorners hxc_l_corners, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
 {
   struct Color hxc_l_raw = (struct Color){ .r = 150, .g = 226, .b = 242, .a = 178 };
   uint8_t *hxc_l_tmp_imported_field_address_n1 = &hxc_l_raw.r;
@@ -262,14 +278,14 @@ void hxc_caxecraft_app_WaterRenderer_emitTop(double hxc_l_x, double hxc_l_y, dou
   uint8_t hxc_l_tmp_imported_field_load_result_n8 = *hxc_l_tmp_imported_field_address_n7;
   rlColor4ub(hxc_l_tmp_imported_field_load_result_n2, hxc_l_tmp_imported_field_load_result_n4, hxc_l_tmp_imported_field_load_result_n6, hxc_l_tmp_imported_field_load_result_n8);
   rlNormal3f((float)0.0, (float)1.0, (float)0.0);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_y, hxc_l_z);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v1, hxc_l_x, hxc_l_y, hxc_l_z + 1.0);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v1, hxc_l_x + 1.0, hxc_l_y, hxc_l_z + 1.0);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_y, hxc_l_z);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_corners.hxc_northWest, hxc_l_z);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v1, hxc_l_x, hxc_l_corners.hxc_southWest, hxc_l_z + 1.0);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v1, hxc_l_x + 1.0, hxc_l_corners.hxc_southEast, hxc_l_z + 1.0);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x + 1.0, hxc_l_corners.hxc_northEast, hxc_l_z);
   return;
 }
 
-void hxc_caxecraft_app_WaterRenderer_emitWest(double hxc_l_x, double hxc_l_bottom, double hxc_l_top, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+void hxc_caxecraft_app_WaterRenderer_emitWest(double hxc_l_x, double hxc_l_bottom, double hxc_l_topNorth, double hxc_l_topSouth, double hxc_l_z, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
 {
   struct Color hxc_l_raw = (struct Color){ .r = 150, .g = 226, .b = 242, .a = 178 };
   uint8_t *hxc_l_tmp_imported_field_address_n1 = &hxc_l_raw.r;
@@ -284,143 +300,9 @@ void hxc_caxecraft_app_WaterRenderer_emitWest(double hxc_l_x, double hxc_l_botto
   rlNormal3f((float)-1.0, (float)0.0, (float)0.0);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v1, hxc_l_x, hxc_l_bottom, hxc_l_z);
   hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v1, hxc_l_x, hxc_l_bottom, hxc_l_z + 1.0);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x, hxc_l_top, hxc_l_z + 1.0);
-  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_top, hxc_l_z);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u1, hxc_l_v0, hxc_l_x, hxc_l_topSouth, hxc_l_z + 1.0);
+  hxc_caxecraft_app_WaterRenderer_vertex(hxc_l_u0, hxc_l_v0, hxc_l_x, hxc_l_topNorth, hxc_l_z);
   return;
-}
-
-double hxc_caxecraft_app_WaterRenderer_exposedSideBottom(struct hxc_caxecraft_domain_WaterCellState hxc_l_neighbor, int32_t hxc_l_y, double hxc_l_top)
-{
-  switch (hxc_l_neighbor.hxc_tag) {
-    case hxc_caxecraft_domain_WaterCellState_Empty:
-      {
-        break;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Blocked:
-      {
-        return hxc_l_top;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Source:
-      {
-        return (double)hxc_l_y + 1.0;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Flowing:
-      {
-        double hxc_l_tmp_call_result_n0 = hxc_caxecraft_app_WaterRenderer_surfaceTop(hxc_l_neighbor, hxc_l_y);
-        return hxc_l_tmp_call_result_n0;
-      }
-    case hxc_caxecraft_domain_WaterCellState_InvalidStorage:
-      {
-        return hxc_l_top;
-      }
-    default:
-      {
-        abort();
-      }
-  }
-  return (double)hxc_l_y;
-}
-
-bool hxc_caxecraft_app_WaterRenderer_isOpenAir(struct hxc_caxecraft_domain_WaterCellState hxc_l_state)
-{
-  switch (hxc_l_state.hxc_tag) {
-    case hxc_caxecraft_domain_WaterCellState_Empty:
-      {
-        break;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Blocked:
-    case hxc_caxecraft_domain_WaterCellState_Source:
-      {
-        return false;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Flowing:
-      {
-        return false;
-      }
-    case hxc_caxecraft_domain_WaterCellState_InvalidStorage:
-      {
-        return false;
-      }
-    default:
-      {
-        abort();
-      }
-  }
-  return true;
-}
-
-bool hxc_caxecraft_app_WaterRenderer_isWater(struct hxc_caxecraft_domain_WaterCellState hxc_l_state)
-{
-  switch (hxc_l_state.hxc_tag) {
-    case hxc_caxecraft_domain_WaterCellState_Empty:
-    case hxc_caxecraft_domain_WaterCellState_Blocked:
-      {
-        break;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Source:
-      {
-        return true;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Flowing:
-      {
-        return true;
-      }
-    case hxc_caxecraft_domain_WaterCellState_InvalidStorage:
-      {
-        return false;
-      }
-    default:
-      {
-        abort();
-      }
-  }
-  return false;
-}
-
-double hxc_caxecraft_app_WaterRenderer_surfaceTop(struct hxc_caxecraft_domain_WaterCellState hxc_l_state, int32_t hxc_l_y)
-{
-  int32_t hxc_l_distance = { 0 };
-  switch (hxc_l_state.hxc_tag) {
-    case hxc_caxecraft_domain_WaterCellState_Empty:
-    case hxc_caxecraft_domain_WaterCellState_Blocked:
-      {
-        return (double)hxc_l_y;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Source:
-      {
-        return (double)hxc_l_y + 1.0;
-      }
-    case hxc_caxecraft_domain_WaterCellState_Flowing:
-      {
-        break;
-      }
-    case hxc_caxecraft_domain_WaterCellState_InvalidStorage:
-      {
-        return (double)hxc_l_y;
-      }
-    default:
-      {
-        abort();
-      }
-  }
-  if (hxc_l_state.hxc_tag != hxc_caxecraft_domain_WaterCellState_Flowing)
-  {
-    abort();
-  }
-  int32_t hxc_l_tmp_enum_payload_project_n0 = hxc_l_state.hxc_payload.hxc_Flowing.hxc_level;
-  int32_t hxc_l_level = hxc_l_tmp_enum_payload_project_n0;
-  if (hxc_l_state.hxc_tag != hxc_caxecraft_domain_WaterCellState_Flowing)
-  {
-    abort();
-  }
-  bool hxc_l_tmp_enum_payload_project_n1 = hxc_l_state.hxc_payload.hxc_Flowing.hxc_falling;
-  bool hxc_l_falling = hxc_l_tmp_enum_payload_project_n1;
-  if (!hxc_l_falling)
-  {
-    hxc_l_distance = hxc_l_level;
-    return (double)hxc_l_y + hxc_f64_divide_zero_safe(8.0 - (double)hxc_l_distance, 8.0);
-  }
-  return (double)hxc_l_y + 1.0;
 }
 
 void hxc_caxecraft_app_WaterRenderer_vertex(double hxc_l_u, double hxc_l_v, double hxc_l_x, double hxc_l_y, double hxc_l_z)

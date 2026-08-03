@@ -23,6 +23,7 @@
 #include "hxc/modules/caxecraft/app/TitleMenu.h"
 #include "hxc/modules/caxecraft/app/TitleMenuFlow.h"
 #include "hxc/modules/caxecraft/app/WaterRenderer.h"
+#include "hxc/modules/caxecraft/app/WaterSurfaceGeometry.h"
 #include "hxc/modules/caxecraft/content/ActiveContent.h"
 #include "hxc/modules/caxecraft/content/ActiveRuntimeContent.h"
 #include "hxc/modules/caxecraft/content/ActorCompositionPlanner.h"

@@ -2,9 +2,13 @@ package caxecraft.app;
 
 #if c
 import caxecraft.domain.WaterCellCodec.stateInView as waterStateAt;
-import caxecraft.domain.WaterCellState;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldView;
+import caxecraft.app.WaterSurfaceGeometry.isOpenTop;
+import caxecraft.app.WaterSurfaceGeometry.isWater;
+import caxecraft.app.WaterSurfaceGeometry.sideIsExposed;
+import caxecraft.app.WaterSurfaceGeometry.surfaceCorners;
+import caxecraft.app.WaterSurfaceGeometry.WaterSurfaceCorners;
 import raylib.Color;
 import raylib.Rlgl;
 import raylib.Texture2D;
@@ -20,9 +24,11 @@ typedef WaterRenderCounters = {
 
 	Solid terrain is submitted first by `TerrainRenderer`; this second coherent
 	quad batch draws only exposed water faces with vertex alpha. Neighboring water
-	faces are omitted, and the top follows the exact eight-level simulation
-	surface. This is intentionally a small first transparent pass rather than a
-	per-block Raylib draw call or a renderer-owned fluid update.
+	faces are omitted, and cells that meet at one corner share an averaged visual
+	height instead of exposing a translucent wall at each one-eighth simulation
+	step. The exact discrete state remains in `GameSession`; this is intentionally
+	a small transparent pass rather than a per-block Raylib draw call or a
+	renderer-owned fluid update.
 **/
 function draw(cells:WorldView, texture:Texture2D, textureReady:Bool, presentationCell:Int):WaterRenderCounters {
 	if (!textureReady || presentationCell < 0)
@@ -45,39 +51,37 @@ function draw(cells:WorldView, texture:Texture2D, textureReady:Bool, presentatio
 			while (x < World.WIDTH) {
 				final state = waterStateAt(cells, World.coord(x, y, z));
 				if (isWater(state)) {
-					final top = surfaceTop(state, y);
-					var cellVisible = false;
-					if (isOpenAir(waterStateAt(cells, World.coord(x, y + 1, z)))) {
-						emitTop(x, top, z, u0, u1, v0, v1);
-						faces++;
-						cellVisible = true;
-					}
-					final northBottom = exposedSideBottom(waterStateAt(cells, World.coord(x, y, z - 1)), y, top);
-					if (northBottom < top) {
-						emitNorth(x, northBottom, top, z, u0, u1, v0, v1);
-						faces++;
-						cellVisible = true;
-					}
-					final southBottom = exposedSideBottom(waterStateAt(cells, World.coord(x, y, z + 1)), y, top);
-					if (southBottom < top) {
-						emitSouth(x, southBottom, top, z, u0, u1, v0, v1);
-						faces++;
-						cellVisible = true;
-					}
-					final eastBottom = exposedSideBottom(waterStateAt(cells, World.coord(x + 1, y, z)), y, top);
-					if (eastBottom < top) {
-						emitEast(x, eastBottom, top, z, u0, u1, v0, v1);
-						faces++;
-						cellVisible = true;
-					}
-					final westBottom = exposedSideBottom(waterStateAt(cells, World.coord(x - 1, y, z)), y, top);
-					if (westBottom < top) {
-						emitWest(x, westBottom, top, z, u0, u1, v0, v1);
-						faces++;
-						cellVisible = true;
-					}
-					if (cellVisible)
+					final topOpen = isOpenTop(waterStateAt(cells, World.coord(x, y + 1, z)));
+					final northOpen = sideIsExposed(waterStateAt(cells, World.coord(x, y, z - 1)));
+					final southOpen = sideIsExposed(waterStateAt(cells, World.coord(x, y, z + 1)));
+					final eastOpen = sideIsExposed(waterStateAt(cells, World.coord(x + 1, y, z)));
+					final westOpen = sideIsExposed(waterStateAt(cells, World.coord(x - 1, y, z)));
+					if (topOpen || northOpen || southOpen || eastOpen || westOpen) {
+						// Corner sampling is the more detailed part of this pass. Hidden
+						// interior water needs neither geometry nor those extra reads.
+						final corners = surfaceCorners(cells, x, y, z);
+						if (topOpen) {
+							emitTop(x, z, corners, u0, u1, v0, v1);
+							faces++;
+						}
+						if (northOpen) {
+							emitNorth(x, y, corners.northWest, corners.northEast, z, u0, u1, v0, v1);
+							faces++;
+						}
+						if (southOpen) {
+							emitSouth(x, y, corners.southWest, corners.southEast, z, u0, u1, v0, v1);
+							faces++;
+						}
+						if (eastOpen) {
+							emitEast(x, y, corners.northEast, corners.southEast, z, u0, u1, v0, v1);
+							faces++;
+						}
+						if (westOpen) {
+							emitWest(x, y, corners.northWest, corners.southWest, z, u0, u1, v0, v1);
+							faces++;
+						}
 						visible++;
+					}
 				}
 				x++;
 			}
@@ -92,98 +96,53 @@ function draw(cells:WorldView, texture:Texture2D, textureReady:Bool, presentatio
 	return {visible: visible, drawCalls: drawCalls};
 }
 
-/** Draw a top only when the cell above is actual open air. */
-private function isOpenAir(state:WaterCellState):Bool {
-	return switch state {
-		case Empty: true;
-		case Source | Flowing(_, _) | Blocked | InvalidStorage(_): false;
-	};
-}
-
-/**
-	Find the visible bottom of one water side.
-
-	Air exposes the complete side, lower neighboring water exposes only the step
-	between surfaces, and opaque or malformed neighbors expose nothing. Returning
-	`top` for the last case lets the caller use one clear `bottom < top` rule.
-**/
-private function exposedSideBottom(neighbor:WaterCellState, y:Int, top:Float):Float {
-	return switch neighbor {
-		case Empty: y;
-		case Source: y + 1.0;
-		case Flowing(_, _): surfaceTop(neighbor, y);
-		case Blocked | InvalidStorage(_): top;
-	};
-}
-
-/** Preserve the exact source/flow distinction while asking only about presence. */
-private function isWater(state:WaterCellState):Bool {
-	return switch state {
-		case Source | Flowing(_, _): true;
-		case Empty | Blocked | InvalidStorage(_): false;
-	};
-}
-
-/** Convert the compact level into a continuous voxel-space top surface. */
-private function surfaceTop(state:WaterCellState, y:Int):Float {
-	return switch state {
-		case Source: y + 1.0;
-		case Flowing(level, falling):
-			if (falling) y + 1.0; else {
-				final distance:Int = level;
-				y + (8.0 - distance) / 8.0;
-			}
-		case Empty | Blocked | InvalidStorage(_): y;
-	};
-}
-
 /** Select one calm translucent tint for the built-in fresh-water profile. */
 private inline function tint():Color
 	return Color.rgba(150, 226, 242, 178);
 
-private function emitTop(x:Float, y:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitTop(x:Float, z:Float, corners:WaterSurfaceCorners, u0:Float, u1:Float, v0:Float, v1:Float):Void {
 	Rlgl.Color(tint());
 	Rlgl.Normal(0.0, 1.0, 0.0);
-	vertex(u0, v0, x, y, z);
-	vertex(u0, v1, x, y, z + 1.0);
-	vertex(u1, v1, x + 1.0, y, z + 1.0);
-	vertex(u1, v0, x + 1.0, y, z);
+	vertex(u0, v0, x, corners.northWest, z);
+	vertex(u0, v1, x, corners.southWest, z + 1.0);
+	vertex(u1, v1, x + 1.0, corners.southEast, z + 1.0);
+	vertex(u1, v0, x + 1.0, corners.northEast, z);
 }
 
-private function emitNorth(x:Float, bottom:Float, top:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitNorth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
 	Rlgl.Color(tint());
 	Rlgl.Normal(0.0, 0.0, -1.0);
 	vertex(u0, v1, x, bottom, z);
-	vertex(u0, v0, x, top, z);
-	vertex(u1, v0, x + 1.0, top, z);
+	vertex(u0, v0, x, topWest, z);
+	vertex(u1, v0, x + 1.0, topEast, z);
 	vertex(u1, v1, x + 1.0, bottom, z);
 }
 
-private function emitSouth(x:Float, bottom:Float, top:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitSouth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
 	Rlgl.Color(tint());
 	Rlgl.Normal(0.0, 0.0, 1.0);
 	vertex(u0, v1, x, bottom, z + 1.0);
 	vertex(u1, v1, x + 1.0, bottom, z + 1.0);
-	vertex(u1, v0, x + 1.0, top, z + 1.0);
-	vertex(u0, v0, x, top, z + 1.0);
+	vertex(u1, v0, x + 1.0, topEast, z + 1.0);
+	vertex(u0, v0, x, topWest, z + 1.0);
 }
 
-private function emitEast(x:Float, bottom:Float, top:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitEast(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
 	Rlgl.Color(tint());
 	Rlgl.Normal(1.0, 0.0, 0.0);
 	vertex(u0, v1, x + 1.0, bottom, z);
-	vertex(u0, v0, x + 1.0, top, z);
-	vertex(u1, v0, x + 1.0, top, z + 1.0);
+	vertex(u0, v0, x + 1.0, topNorth, z);
+	vertex(u1, v0, x + 1.0, topSouth, z + 1.0);
 	vertex(u1, v1, x + 1.0, bottom, z + 1.0);
 }
 
-private function emitWest(x:Float, bottom:Float, top:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitWest(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
 	Rlgl.Color(tint());
 	Rlgl.Normal(-1.0, 0.0, 0.0);
 	vertex(u0, v1, x, bottom, z);
 	vertex(u1, v1, x, bottom, z + 1.0);
-	vertex(u1, v0, x, top, z + 1.0);
-	vertex(u0, v0, x, top, z);
+	vertex(u1, v0, x, topSouth, z + 1.0);
+	vertex(u0, v0, x, topNorth, z);
 }
 
 /** Submit one atlas vertex through the reviewed binary32 Rlgl facade. */
