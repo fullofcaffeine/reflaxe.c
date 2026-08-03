@@ -11,6 +11,14 @@ import raylib.Color;
 import raylib.Raylib;
 import raylib.Texture2D;
 
+/** The one campaign-screen control under a pointer for this frame. */
+enum CampaignMenuHit {
+	NoCampaignMenuHit;
+	LevelHit(index:Int);
+	LaunchHit;
+	BackHit;
+}
+
 /**
  * Presents the campaign that the active runtime package actually supplied.
  *
@@ -26,23 +34,34 @@ final class CampaignMenu {
 	static inline final BUTTON_WIDTH:Int = 250;
 	static inline final BUTTON_HEIGHT:Int = 48;
 
-	/** Return Launch, Back, or no campaign-menu hit for one pointer position. */
-	public static function selectionAt(mouseX:Float, mouseY:Float, width:Int, height:Int):Int {
+	/**
+	 * Return the level row or action button under one pointer position.
+	 *
+	 * The caller supplies the validated manifest's level count, so hit testing and
+	 * drawing agree without keeping a second list inside the presentation layer.
+	 */
+	public static function selectionAt(mouseX:Float, mouseY:Float, width:Int, height:Int, levelCount:Int):CampaignMenuHit {
 		final panelLeft = Std.int(width / 2) - Std.int(PANEL_WIDTH / 2);
 		final panelTop = Std.int(height / 2) - 120;
 		final buttonTop = panelTop + PANEL_HEIGHT - 68;
-		if (mouseY < buttonTop || mouseY >= buttonTop + BUTTON_HEIGHT)
-			return -1;
-		if (mouseX >= panelLeft + 42 && mouseX < panelLeft + 42 + BUTTON_WIDTH)
-			return 0;
-		if (mouseX >= panelLeft + PANEL_WIDTH - 42 - BUTTON_WIDTH && mouseX < panelLeft + PANEL_WIDTH - 42)
-			return 1;
-		return -1;
+		if (mouseY >= buttonTop && mouseY < buttonTop + BUTTON_HEIGHT) {
+			if (mouseX >= panelLeft + 42 && mouseX < panelLeft + 42 + BUTTON_WIDTH)
+				return LaunchHit;
+			if (mouseX >= panelLeft + PANEL_WIDTH - 42 - BUTTON_WIDTH && mouseX < panelLeft + PANEL_WIDTH - 42)
+				return BackHit;
+		}
+		final levelTop = panelTop + 190;
+		if (mouseX >= panelLeft + 32 && mouseX < panelLeft + PANEL_WIDTH - 32 && mouseY >= levelTop && mouseY < buttonTop) {
+			final index = Std.int((mouseY - levelTop) / 34);
+			if (index >= 0 && index < levelCount)
+				return LevelHit(index);
+		}
+		return NoCampaignMenuHit;
 	}
 
-	/** Draw one validated campaign card and its explicit launch/back actions. */
+	/** Draw one validated campaign card, its selected level, and launch/back actions. */
 	public static function draw(title:Texture2D, titleReady:Bool, wordmark:Texture2D, wordmarkReady:Bool, campaign:CampaignManifest, locale:LocaleCursor,
-			catalog:RuntimeUiCatalog):Void {
+			catalog:RuntimeUiCatalog, selectedLevelIndex:Int):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (titleReady)
@@ -68,7 +87,9 @@ final class CampaignMenu {
 		for (index in 0...campaign.levelCount()) {
 			final level = campaign.levelAt(index);
 			final rowTop = levelTop + index * 34;
-			final active = index == 0;
+			final active = index == selectedLevelIndex;
+			if (active)
+				Raylib.DrawRectangle(panelLeft + 32, rowTop - 5, PANEL_WIDTH - 64, 28, Color.rgba(16, 88, 102, 178));
 			Raylib.DrawCircle(panelLeft + 47, rowTop + 9, c.Float32.fromFloat(active ? 7.0 : 5.0),
 				active ? Color.rgba(255, 190, 55) : Color.rgba(92, 194, 188));
 			Raylib.DrawTextString(level.id.text(), panelLeft + 66, rowTop, 18, Color.rgba(229, 241, 235));

@@ -38,6 +38,7 @@ import caxecraft.app.TitleMenuFlow.TitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
 import caxecraft.app.TitleMenuFlow.applyTitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.titleMenuState;
+import caxecraft.app.CampaignMenu.CampaignMenuHit;
 import caxecraft.app.CaxecraftEditorScreen.EditorScreenAction;
 import caxecraft.app.MotionInterpolation.advance as advanceMotion;
 import caxecraft.app.MotionInterpolation.reset as resetMotion;
@@ -259,6 +260,11 @@ final class CaxecraftApp {
 				return;
 		}
 		var levelLabel = campaignLevel == null ? loadedCandidate.receipt().logicalPath : campaignLevel.id.text();
+		var selectedCampaignLevelIndex = 0;
+		if (campaign != null && campaignLevel != null)
+			for (index in 0...campaign.levelCount())
+				if (campaign.levelAt(index).id.text() == campaignLevel.id.text())
+					selectedCampaignLevelIndex = index;
 		final initialLevel = activeLevel.level();
 		final initialSession = activeLevel.session();
 		final receipt = loadedCandidate.receipt();
@@ -495,6 +501,8 @@ final class CaxecraftApp {
 			final menuConfirmPressed = frameInput.menuConfirmPressed;
 			final descendHeld = frameInput.descendHeld;
 			#end
+			var requestedCampaignLevel:Null<CampaignLevel> = null;
+			var requestedFromCampaignMenu = false;
 			if (!quit && allowsCampaignTravel(screen, selectedMode) && travelPressed) {
 				final selectedCampaign = campaign;
 				final sourceLevel = campaignLevel;
@@ -504,124 +512,47 @@ final class CaxecraftApp {
 						Sys.println("caxecraft: campaign travel requires exactly one outgoing transition from " + sourceLevel.id.text());
 					} else {
 						final destination = selectedCampaign.level(transition.destinationLevel);
-						if (destination == null) {
+						if (destination == null)
 							Sys.println("caxecraft: campaign destination disappeared after manifest validation");
-						} else {
-							final playerOptions:LevelPlayerOptions = {
-								entityId: character.id,
-								initialHealth: character.vitals.health,
-								aquaticProfile: character.aquaticProfile
-							};
-							final nextGeneration = ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1);
-							switch loadCampaignLevel(contentStore, destination, nextGeneration, contentRegistry, contentRegistry, playerOptions) {
-								case CampaignLevelRejected(error):
-									Sys.println("caxecraft: campaign travel rejected: " + campaignLevelLoadFailure(error));
-								case CampaignLevelReady(candidate):
-									switch activeLevel.publish(candidate) {
-										case PlayableLevelPublicationRejected(_):
-											Sys.println("caxecraft: campaign destination could not replace the active level");
-										case PlayableLevelPublished(_, selected):
-											campaignLevel = destination;
-											levelLabel = destination.id.text();
-											levelView = activeLevel.level();
-											session = activeLevel.session();
-											initialView = session.view();
-											if (!initialView.valid) {
-												quit = true;
-											} else {
-												character = initialView.localPlayer;
-												guidePhase = GuidePhase.Waiting;
-												guideInteractionAvailable = session.actorInteractionAvailable(levelView.dialogueActorId());
-												dialogueActor = session.readCharacter(levelView.dialogueActorId());
-												enemyActor = session.readCharacter(levelView.enemyActorId());
-												final phases = session.actorControllerStateSnapshots();
-												dialoguePhase = observeActorPhase(phases, levelView.dialogueActorId(), ActorControllerPhase.Stationary);
-												enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
-												swordCombat = startSwordCombat();
-												berryDrop = emptyBerryDrop();
-												cameraWaterBlend = 0.0;
-												accumulator = 0.0;
-												motionHistory = resetMotion(character.body);
-												jumpQueued = false;
-												swordQueued = false;
-												placementBlockedFrames = 0;
-												strikeHitFrames = 0;
-												enemyDefeatedFrames = 0;
-												enemyAttackFrames = 0;
-												pickupFrames = 0;
-												inventoryFullFrames = 0;
-												inventoryFullReason = InventoryFullReason.None;
-												recoveryFeedbackFrames = 0;
-												aquaticEquipmentFrames = 0;
-												terrainRenderer.invalidateAll();
-												resetMotionThisFrame = true;
-												Sys.println("caxecraft: campaign-level=" + levelLabel + " generation=" + Std.string(selected.value()));
-											}
-									}
-							}
-						}
-					}
-				}
-			}
-			final dialogueActorId = levelView.dialogueActorId();
-			final enemyActorId = levelView.enemyActorId();
-			final spawnTransform = levelView.spawnTransform();
-			if (quitPressed)
-				quit = true;
-			if (hotbarSelection >= 0)
-				inventory = Inventory.select(inventory, hotbarSelection);
-			if (hotbarCycle != 0)
-				inventory = Inventory.cycle(inventory, hotbarCycle);
-			if (screenIsPlaying(screen) && interactPressed) {
-				if (characterIsDefeated(character.vitals)) {
-					final revival = session.reviveLocalPlayerAt(spawnPlayer(session.worldView(), spawnTransform));
-					character = revival.character;
-					if (!revival.resolved)
-						quit = true;
-					else {
-						cameraWaterBlend = 0.0;
-						accumulator = 0.0;
-						resetMotionThisFrame = true;
-					}
-				} else if (session.actorInteractionAvailable(dialogueActorId)) {
-					final sharesBerries = guidePhase == GuidePhase.Welcomed;
-					if (sharesBerries) {
-						final acceptedGift = Inventory.acceptedAmount(inventory, ItemKind.Berries, 2);
-						if (acceptedGift == 2) {
-							inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
-							guidePhase = advanceGuidePhase(guidePhase);
-						} else {
-							inventoryFullReason = InventoryFullReason.BerryStack;
-							inventoryFullFrames = 90;
-						}
-					} else {
-						guidePhase = advanceGuidePhase(guidePhase);
+						else
+							requestedCampaignLevel = destination;
 					}
 				}
 			}
 
 			if (screenShowsCampaignSelection(screen) && focused) {
+				var campaignLaunchRequested = menuConfirmPressed;
+				var campaignBackRequested = pausePressed;
+				#if caxecraft_devmode
+				if (menuNextPressed && campaign != null && campaign.levelCount() > 0)
+					selectedCampaignLevelIndex = (selectedCampaignLevelIndex + 1) % campaign.levelCount();
+				#end
 				#if !caxecraft_pilot
 				if (Raylib.IsKeyPressed(KeyboardKey.L))
 					locale = uiCatalog.nextLocale(locale);
 				final campaignMouse = Raylib.GetMousePosition();
 				final campaignChoice = CampaignMenu.selectionAt(campaignMouse.x.toFloat(), campaignMouse.y.toFloat(), Raylib.GetScreenWidth(),
-					Raylib.GetScreenHeight());
-				final clickedCampaignChoice = campaignChoice >= 0 && Raylib.IsMouseButtonPressed(MouseButton.Left);
-				#else
-				final campaignChoice = -1;
-				final clickedCampaignChoice = false;
+					Raylib.GetScreenHeight(), campaign == null ? 0 : campaign.levelCount());
+				if (Raylib.IsMouseButtonPressed(MouseButton.Left))
+					switch campaignChoice {
+						case NoCampaignMenuHit:
+						case LevelHit(index):
+							#if caxecraft_devmode
+							selectedCampaignLevelIndex = index;
+							#end
+						case LaunchHit:
+							campaignLaunchRequested = true;
+						case BackHit:
+							campaignBackRequested = true;
+					}
 				#end
-				if (pausePressed || (clickedCampaignChoice && campaignChoice == 1)) {
+				if (campaignBackRequested) {
 					screen = closeCampaignSelection(screen);
 					accumulator = 0.0;
 					resetMotionThisFrame = true;
-				} else if (campaign != null && (menuConfirmPressed || (clickedCampaignChoice && campaignChoice == 0))) {
-					screen = startSelectedCampaign(screen);
-					recapturedThisFrame = true;
-					accumulator = 0.0;
-					resetMotionThisFrame = true;
-					Raylib.DisableCursor();
+				} else if (campaign != null && campaignLaunchRequested) {
+					requestedCampaignLevel = campaign.levelAt(selectedCampaignLevelIndex);
+					requestedFromCampaignMenu = true;
 				}
 			}
 
@@ -665,6 +596,113 @@ final class CaxecraftApp {
 					Raylib.DisableCursor();
 				} else if (screenShowsEditor(screen)) {
 					Raylib.EnableCursor();
+				}
+			}
+
+			// Both the in-world Continue action and the developer level picker enter
+			// through the same checked loader. The new map replaces live state only
+			// after its package receipt, schema, content references, and playable
+			// bindings all succeed.
+			final destination = requestedCampaignLevel;
+			if (destination != null) {
+				final playerOptions:LevelPlayerOptions = {
+					entityId: character.id,
+					initialHealth: character.vitals.health,
+					aquaticProfile: character.aquaticProfile
+				};
+				final nextGeneration = ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1);
+				switch loadCampaignLevel(contentStore, destination, nextGeneration, contentRegistry, contentRegistry, playerOptions) {
+					case CampaignLevelRejected(error):
+						Sys.println("caxecraft: campaign level rejected: " + campaignLevelLoadFailure(error));
+					case CampaignLevelReady(candidate):
+						switch activeLevel.publish(candidate) {
+							case PlayableLevelPublicationRejected(_):
+								Sys.println("caxecraft: campaign level could not replace the active level");
+							case PlayableLevelPublished(_, selected):
+								campaignLevel = destination;
+								levelLabel = destination.id.text();
+								final selectedCampaign = campaign;
+								if (selectedCampaign != null)
+									for (index in 0...selectedCampaign.levelCount())
+										if (selectedCampaign.levelAt(index).id.text() == destination.id.text())
+											selectedCampaignLevelIndex = index;
+								levelView = activeLevel.level();
+								session = activeLevel.session();
+								initialView = session.view();
+								if (!initialView.valid) {
+									quit = true;
+								} else {
+									character = initialView.localPlayer;
+									guidePhase = GuidePhase.Waiting;
+									guideInteractionAvailable = session.actorInteractionAvailable(levelView.dialogueActorId());
+									dialogueActor = session.readCharacter(levelView.dialogueActorId());
+									enemyActor = session.readCharacter(levelView.enemyActorId());
+									final phases = session.actorControllerStateSnapshots();
+									dialoguePhase = observeActorPhase(phases, levelView.dialogueActorId(), ActorControllerPhase.Stationary);
+									enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
+									swordCombat = startSwordCombat();
+									berryDrop = emptyBerryDrop();
+									cameraWaterBlend = 0.0;
+									accumulator = 0.0;
+									motionHistory = resetMotion(character.body);
+									jumpQueued = false;
+									swordQueued = false;
+									placementBlockedFrames = 0;
+									strikeHitFrames = 0;
+									enemyDefeatedFrames = 0;
+									enemyAttackFrames = 0;
+									pickupFrames = 0;
+									inventoryFullFrames = 0;
+									inventoryFullReason = InventoryFullReason.None;
+									recoveryFeedbackFrames = 0;
+									aquaticEquipmentFrames = 0;
+									terrainRenderer.invalidateAll();
+									resetMotionThisFrame = true;
+									if (requestedFromCampaignMenu) {
+										screen = startSelectedCampaign(screen);
+										recapturedThisFrame = true;
+										Raylib.DisableCursor();
+									}
+									Sys.println("caxecraft: campaign-level=" + levelLabel + " generation=" + Std.string(selected.value()));
+								}
+						}
+				}
+			}
+
+			final dialogueActorId = levelView.dialogueActorId();
+			final enemyActorId = levelView.enemyActorId();
+			final spawnTransform = levelView.spawnTransform();
+			if (quitPressed)
+				quit = true;
+			if (hotbarSelection >= 0)
+				inventory = Inventory.select(inventory, hotbarSelection);
+			if (hotbarCycle != 0)
+				inventory = Inventory.cycle(inventory, hotbarCycle);
+			if (screenIsPlaying(screen) && interactPressed) {
+				if (characterIsDefeated(character.vitals)) {
+					final revival = session.reviveLocalPlayerAt(spawnPlayer(session.worldView(), spawnTransform));
+					character = revival.character;
+					if (!revival.resolved)
+						quit = true;
+					else {
+						cameraWaterBlend = 0.0;
+						accumulator = 0.0;
+						resetMotionThisFrame = true;
+					}
+				} else if (session.actorInteractionAvailable(dialogueActorId)) {
+					final sharesBerries = guidePhase == GuidePhase.Welcomed;
+					if (sharesBerries) {
+						final acceptedGift = Inventory.acceptedAmount(inventory, ItemKind.Berries, 2);
+						if (acceptedGift == 2) {
+							inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
+							guidePhase = advanceGuidePhase(guidePhase);
+						} else {
+							inventoryFullReason = InventoryFullReason.BerryStack;
+							inventoryFullFrames = 90;
+						}
+					} else {
+						guidePhase = advanceGuidePhase(guidePhase);
+					}
 				}
 			}
 
@@ -1100,7 +1138,8 @@ final class CaxecraftApp {
 				if (selectedCampaign == null)
 					screen = closeCampaignSelection(screen);
 				else
-					CampaignMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedCampaign, locale, uiCatalog);
+					CampaignMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedCampaign, locale, uiCatalog,
+						selectedCampaignLevelIndex);
 			} else if (onEditor) {
 				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
 					screen = closeEditor(screen);
@@ -1262,7 +1301,7 @@ final class CaxecraftApp {
 			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 1)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-selected.png");
 			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 2)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-evergrove-entry.png");
+				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-level-selected.png");
 			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 5)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-adventure-journey.png");
 			if (pilotComplete)

@@ -3070,7 +3070,7 @@ def run_pilot_sample(
         (
             executable.parent / "caxecraft-pilot-adventure-selected.png",
             executable.parent / "caxecraft-pilot-campaign-selected.png",
-            executable.parent / "caxecraft-pilot-evergrove-entry.png",
+            executable.parent / "caxecraft-pilot-level-selected.png",
         )
         if pilot == "adventure-journey"
         else ()
@@ -3104,13 +3104,8 @@ def run_pilot_sample(
     for supporting_screenshot in supporting_screenshots:
         if supporting_screenshot.name == "caxecraft-pilot-campaign-selected.png":
             validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
-        elif supporting_screenshot.name == "caxecraft-pilot-evergrove-entry.png":
-            validate_presented_screenshot(
-                supporting_screenshot,
-                platform_name=platform_name,
-                expected_entities=True,
-                expected_open_sky=False,
-            )
+        elif supporting_screenshot.name == "caxecraft-pilot-level-selected.png":
+            validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
         else:
             validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
         supporting_hashes[supporting_screenshot.name] = hashlib.sha256(

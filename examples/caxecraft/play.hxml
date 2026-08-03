@@ -7,6 +7,10 @@
 # Interactive builds keep every collision decision but omit 20k+ collision-free
 # local records. Required audit/snapshot lanes retain the compiler's full default.
 -D hxc_symbol_report=summary
+# Caxecraft is currently a developer preview. This keeps the runtime campaign
+# level picker available while content authors build and inspect individual maps.
+# A future release HXML can omit this define without changing campaign data.
+-D caxecraft_devmode
 # The in-memory runtime plan remains complete and fully validated. Normal play
 # writes exact counts for its thousands of repeated source reasons; a dedicated
 # audit build overrides this with -D hxc_runtime_report=full.

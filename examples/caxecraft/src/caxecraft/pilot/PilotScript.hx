@@ -186,9 +186,9 @@ final class PilotScript {
 		if (name == AdventureJourney) {
 			if (frameNumber == 0)
 				return MenuNext;
-			if (frameNumber == 1 || frameNumber == 2)
+			if (frameNumber == 1 || frameNumber == 3)
 				return MenuConfirm;
-			return frameNumber == 3 ? Travel : Idle;
+			return frameNumber == 2 ? MenuNext : Idle;
 		}
 		return fullInventoryMiningAction(frameNumber);
 	}
@@ -288,7 +288,7 @@ final class PilotScript {
 			case AdventureJourney:
 				if (frameNumber == 0) new PilotCheckpoint("adventure-journey.selected",
 					CaptureScreenshot); else if (frameNumber == 1) new PilotCheckpoint("adventure-journey.campaign",
-					CaptureScreenshot); else if (frameNumber == 2) new PilotCheckpoint("adventure-journey.entry",
+					CaptureScreenshot); else if (frameNumber == 2) new PilotCheckpoint("adventure-journey.level",
 					CaptureScreenshot); else if (frameNumber == 5) new PilotCheckpoint("adventure-journey.destination", CaptureScreenshot); else null;
 			case _: null;
 		};
