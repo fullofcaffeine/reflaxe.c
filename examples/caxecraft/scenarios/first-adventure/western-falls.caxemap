@@ -789,7 +789,6 @@ chunk world.base 0 0 0 32 16 32
 end chunk
 fluid water.falls-pool caxecraft:water volume 5 3 19 10 2 5
 fluid water.flooded-grotto caxecraft:water volume 11 3 24 3 2 4
-fluid water.waterfall-column caxecraft:water volume 8 5 17 2 6 2
 fluid water.waterfall-source caxecraft:water source 8 10 17
 object enemy.mossling
   tag enemy
