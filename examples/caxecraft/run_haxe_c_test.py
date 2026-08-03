@@ -1274,12 +1274,12 @@ def validate_package_zip_archive(archive: Path) -> None:
     if not archive.is_file():
         raise HaxeCTestFailure("package ZIP Eval proof did not write its archive")
     raw = archive.read_bytes()
-    if len(raw) != 9_486_557:
+    if len(raw) != 9_491_749:
         raise HaxeCTestFailure(
-            f"canonical package ZIP has {len(raw)} bytes instead of 9486557"
+            f"canonical package ZIP has {len(raw)} bytes instead of 9491749"
         )
     digest = hashlib.sha256(raw).hexdigest()
-    expected_digest = "44830c1e5e5474b05b40ab38fe9f044645b6cd54e7fea28aa63f252696fe8186"
+    expected_digest = "e74757c2a486ea17dd8059f36b2400c4a637281f923922731cf788c65255d22c"
     if digest != expected_digest:
         raise HaxeCTestFailure(
             "canonical package ZIP changed without semantic golden review: "
@@ -1288,10 +1288,10 @@ def validate_package_zip_archive(archive: Path) -> None:
     fingerprint = 2_166_136_261
     for byte in raw:
         fingerprint = ((fingerprint ^ byte) * 16_777_619) & 0xFFFFFFFF
-    if fingerprint != 2_276_992_540:
+    if fingerprint != 3_135_140_983:
         raise HaxeCTestFailure(
             "canonical package ZIP byte-order fingerprint changed: "
-            f"expected=2276992540 actual={fingerprint}"
+            f"expected=3135140983 actual={fingerprint}"
         )
 
     manifest_path = CASE_ROOT / "caxecraft.package.json"

@@ -31,10 +31,16 @@ the authored mode content does not run yet beyond that first encounter. Broader
 combat and enemies, broader item recovery, NPC dialogue, persistence, complete
 localization, Ivvy behavior, terrain and Adventure-cast art, and audio remain
 unimplemented. One admitted two-level campaign can now travel from Evergrove to
-Western Falls at runtime; branching, return travel, persistence, authored exit
-zones, and the broader Adventure campaign remain unimplemented. Do not describe
-concept art, semantic editor tests, or the remaining design-only atlases as
-evidence that those broader capabilities run.
+Western Falls at runtime. Western Falls is now a compact authored region rather
+than the former flat placeholder: its arrival overlook faces a tall waterfall
+and pool, a stepped route reaches the valley, and a bridge, four-material clue
+shrine, concealed Tideweave alcove, snow shelf, and ash silhouettes establish
+the planned route's first visible landmarks. The Fallskeeper, journal entry,
+four-glyph code interaction, sealed-vault progression, and flooded ruins are
+still designs rather than playable mechanics. Branching, return travel,
+persistence, authored exit zones, and the broader Adventure campaign also
+remain unimplemented. Do not describe concept art, semantic editor tests, or
+the remaining design-only atlases as evidence that those capabilities run.
 
 Evergrove itself is now a compact authored village rather than the former flat
 meadow: the runtime-loaded CAXEMAP includes the arrival road and gate, a house,

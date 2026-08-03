@@ -1290,6 +1290,54 @@ def validate_presented_screenshot(
     )
 
 
+def validate_western_falls_screenshot(
+    path: Path,
+    *,
+    platform_name: str,
+) -> None:
+    """Require the destination frame to present a tall waterfall landmark.
+
+    Focused Haxe evidence owns valid runtime loading and package receipts. This
+    real-render observer has one narrower job: reject a journey that reaches
+    generation two while still showing the old meadow and tiny pool. It looks
+    for a substantial vertically continuous family of water-texture colors in
+    the left half of the gameplay view, with broad thresholds for admitted
+    framebuffer scales and renderer interpolation. Decorative coordinates stay
+    free to move as the level evolves.
+    """
+
+    width, height, pixels = decode_rgba_png(path, "Western Falls")
+    expected_dimensions = {(1280, 720)}
+    if platform_name == "macos":
+        expected_dimensions.add((2560, 1440))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft Western Falls screenshot must match its logical 1280x720 "
+            f"window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // 1280
+    stride = width * 4
+    matching_pixels = 0
+    matching_rows = 0
+    for row in range(150 * scale, 620 * scale):
+        row_matches = 0
+        row_start = row * stride
+        for column in range(0, 640 * scale):
+            offset = row_start + column * 4
+            red, green, blue = pixels[offset : offset + 3]
+            if red < 115 and green > 125 and blue > 135 and green > red + 25 and blue > red + 35:
+                row_matches += 1
+        matching_pixels += row_matches
+        if row_matches >= 20 * scale:
+            matching_rows += 1
+    if matching_pixels < 5_000 * scale * scale or matching_rows < 100 * scale:
+        raise PlayFailure(
+            "Caxecraft Adventure journey reached Western Falls without presenting "
+            "its tall water landmark "
+            f"(waterPixels={matching_pixels}, waterRows={matching_rows})"
+        )
+
+
 def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
     """Prove the native editor drew its controls and first real 3D world.
 
@@ -3481,6 +3529,11 @@ def main(argv: list[str]) -> int:
                         expected_entities=selected_pilot == "full-inventory-gift",
                         expected_open_sky=selected_pilot != "move-jump-edit",
                     )
+                    if selected_pilot == "adventure-journey":
+                        validate_western_falls_screenshot(
+                            screenshot,
+                            platform_name=platform_name,
+                        )
                 screenshot_hashes.append(hashlib.sha256(screenshot.read_bytes()).hexdigest())
 
             semantic_reports: list[dict[str, object]] = []

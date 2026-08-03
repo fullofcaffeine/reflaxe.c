@@ -5,7 +5,7 @@ asset-pack packs/caxecraft/base
 default-locale en
 locale en
   message adventure_progress "ADVENTURE: WESTERN FALLS"
-  message adventure_tagline "FOLLOW THE RIVER BEYOND EVERGROVE."
+  message adventure_tagline "CROSS THE FALLS. READ THE FOUR MARKS."
   message berry_pickup_one "+1 BERRY"
   message berry_pickup_two "+2 BERRIES"
   message berry_recovery "BERRIES: +1 HEART"
@@ -18,7 +18,7 @@ locale en
   message mossling_windup "MOSSLING WINDUP: DODGE"
   message nia_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
   message nia_talk "E  TALK TO NIA"
-  message nia_welcome "NIA: THE WESTERN TRAIL STARTS HERE"
+  message nia_welcome "NIA: THE FALLS MARK A SEALED WAY WEST"
   message no_berries "NO BERRIES LEFT"
   message return_to_meadow "E  RETURN TO EVERGROVE"
   message scenario_title "Caxecraft: Western Falls"
@@ -26,7 +26,7 @@ locale en
 end locale
 locale es-mx
   message adventure_progress "AVENTURA: CATARATAS DEL OESTE"
-  message adventure_tagline "SIGUE EL RIO MAS ALLA DE LA ARBOLEDA."
+  message adventure_tagline "CRUZA LAS CATARATAS. LEE LAS CUATRO MARCAS."
   message berry_pickup_one "+1 BAYA"
   message berry_pickup_two "+2 BAYAS"
   message berry_recovery "BAYAS: +1 CORAZON"
@@ -39,7 +39,7 @@ locale es-mx
   message mossling_windup "MUSGUITO CARGANDO: ESQUIVA"
   message nia_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
   message nia_talk "E  HABLAR CON NIA"
-  message nia_welcome "NIA: EL SENDERO DEL OESTE COMIENZA AQUI"
+  message nia_welcome "NIA: LAS CATARATAS MARCAN UN CAMINO SELLADO"
   message no_berries "NO QUEDAN BAYAS"
   message return_to_meadow "E  VOLVER A LA ARBOLEDA"
   message scenario_title "Caxecraft: Cataratas del Oeste"
@@ -57,197 +57,681 @@ palette 5 caxecraft:wood
 palette 6 caxecraft:leaves
 palette 7 caxecraft:snow
 palette 8 caxecraft:ash
+palette 9 caxecraft:stone
 chunk world.base 0 0 0 32 16 32
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 143
+  run 2 5
+  run 9 27
+  run 2 32
+  run 3 5
+  run 2 27
+  run 0 5
+  run 7 27
+  run 0 209
   run 1 32
-  run 2 96
-  run 3 1
-  run 4 6
-  run 3 25
-  run 0 352
+  run 9 143
+  run 2 5
+  run 9 27
+  run 2 32
+  run 3 5
+  run 2 27
+  run 0 5
+  run 7 27
+  run 0 209
   run 1 32
-  run 2 96
-  run 4 2
-  run 0 4
-  run 4 2
-  run 3 24
-  run 0 352
+  run 9 143
+  run 2 5
+  run 9 27
+  run 2 32
+  run 3 5
+  run 2 27
+  run 0 5
+  run 7 27
+  run 0 209
   run 1 32
-  run 2 96
-  run 4 2
-  run 0 4
-  run 4 2
-  run 3 24
-  run 0 352
+  run 9 143
+  run 2 5
+  run 9 27
+  run 2 32
+  run 3 5
+  run 2 27
+  run 0 5
+  run 7 27
+  run 0 209
   run 1 32
-  run 2 96
-  run 4 2
-  run 0 4
-  run 4 2
-  run 3 24
-  run 0 352
+  run 9 143
+  run 2 5
+  run 9 27
+  run 2 32
+  run 3 5
+  run 2 27
+  run 0 5
+  run 7 27
+  run 0 209
   run 1 32
-  run 2 96
-  run 4 2
-  run 0 4
-  run 4 2
-  run 3 24
-  run 0 352
+  run 9 111
+  run 2 5
+  run 9 27
+  run 2 5
+  run 9 27
+  run 3 5
+  run 2 27
+  run 0 5
+  run 2 27
+  run 0 5
+  run 7 27
+  run 0 209
   run 1 32
-  run 2 96
-  run 3 1
-  run 4 6
-  run 3 25
-  run 0 352
+  run 9 111
+  run 2 5
+  run 9 27
+  run 2 5
+  run 9 27
+  run 3 5
+  run 2 12
+  run 9 15
+  run 0 5
+  run 2 27
+  run 0 5
+  run 7 12
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 177
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 111
+  run 2 5
+  run 9 27
+  run 2 5
+  run 9 27
+  run 3 5
+  run 2 12
+  run 9 15
+  run 0 5
+  run 2 27
+  run 0 5
+  run 7 12
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 177
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 111
+  run 2 9
+  run 9 23
+  run 2 17
+  run 9 15
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 17
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 177
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 89
+  run 9 111
+  run 2 9
+  run 9 23
+  run 2 17
+  run 9 15
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 17
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 177
+  run 1 32
+  run 9 111
+  run 2 9
+  run 9 23
+  run 2 17
+  run 9 15
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 17
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 177
+  run 1 32
+  run 9 79
+  run 2 9
+  run 9 23
+  run 2 9
+  run 9 23
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 10
+  run 8 1
+  run 0 6
+  run 2 15
+  run 0 10
+  run 8 1
+  run 0 6
+  run 3 15
+  run 0 10
+  run 8 1
+  run 0 166
+  run 1 32
+  run 9 79
+  run 2 9
+  run 9 23
+  run 2 9
+  run 9 23
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 17
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 177
+  run 1 32
+  run 9 79
+  run 2 9
+  run 9 23
+  run 2 9
+  run 9 23
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 17
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 177
+  run 1 32
+  run 9 79
+  run 2 9
+  run 9 23
+  run 2 9
+  run 9 23
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 14
+  run 8 1
+  run 0 2
+  run 2 15
+  run 0 14
+  run 8 1
+  run 0 2
+  run 3 15
+  run 0 177
+  run 1 32
+  run 9 79
+  run 2 9
+  run 9 23
+  run 2 9
+  run 9 23
+  run 3 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 2 8
+  run 9 15
+  run 0 9
+  run 8 8
+  run 2 15
+  run 0 17
+  run 2 15
+  run 0 17
+  run 3 15
+  run 0 93
   run 6 3
-  run 0 260
+  run 0 29
+  run 6 3
+  run 0 49
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 26
+  run 9 79
+  run 2 17
+  run 9 15
+  run 2 17
+  run 9 15
+  run 3 17
+  run 9 15
+  run 0 17
+  run 9 1
+  run 6 3
+  run 9 11
+  run 0 17
+  run 2 1
+  run 6 3
+  run 2 11
+  run 0 17
+  run 2 7
+  run 9 1
+  run 2 2
+  run 9 1
+  run 2 4
+  run 0 17
+  run 3 7
+  run 9 4
+  run 3 4
+  run 0 30
   run 5 1
   run 0 31
   run 5 1
   run 0 30
   run 6 3
-  run 0 30
-  run 6 1
-  run 0 229
-  run 1 32
-  run 2 96
-  run 3 32
-  run 0 89
+  run 0 29
   run 6 3
-  run 0 260
+  run 0 49
   run 1 32
-  run 2 96
+  run 9 32
+  run 2 64
   run 3 32
-  run 0 352
+  run 0 2
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 30
+  run 6 3
+  run 0 12
+  run 6 3
+  run 0 14
+  run 6 3
+  run 0 12
+  run 6 3
+  run 0 153
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 49
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 36
+  run 2 14
+  run 9 5
+  run 2 9
+  run 9 4
+  run 2 28
+  run 9 4
+  run 4 12
+  run 3 2
+  run 2 5
+  run 3 9
+  run 9 4
+  run 0 13
+  run 5 1
+  run 9 5
+  run 0 9
+  run 9 4
+  run 0 13
+  run 5 1
+  run 0 14
+  run 9 4
+  run 0 12
+  run 6 3
+  run 0 14
+  run 6 3
+  run 0 12
+  run 6 3
+  run 0 237
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 5
+  run 2 10
+  run 9 21
+  run 2 14
+  run 9 5
+  run 2 9
+  run 9 4
+  run 2 1
+  run 4 10
+  run 2 17
+  run 9 4
+  run 4 1
+  run 0 10
+  run 4 1
+  run 3 2
+  run 2 5
+  run 3 9
+  run 9 4
+  run 0 14
+  run 9 5
+  run 0 9
+  run 9 4
+  run 0 28
+  run 9 4
+  run 0 12
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 237
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 5
+  run 2 10
+  run 9 21
+  run 2 14
+  run 9 5
+  run 2 9
+  run 9 4
+  run 2 1
+  run 4 10
+  run 2 17
+  run 9 4
+  run 4 1
+  run 0 10
+  run 4 1
+  run 3 2
+  run 2 5
+  run 3 9
+  run 9 4
+  run 0 14
+  run 9 5
+  run 0 9
+  run 9 4
+  run 0 28
+  run 9 4
+  run 0 284
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 5
+  run 2 10
+  run 9 21
+  run 2 15
+  run 9 5
+  run 2 8
+  run 9 4
+  run 2 1
+  run 4 10
+  run 2 4
+  run 9 5
+  run 2 8
+  run 9 4
+  run 4 1
+  run 0 10
+  run 4 1
+  run 3 3
+  run 2 5
+  run 3 8
+  run 9 4
+  run 0 15
+  run 2 5
+  run 0 8
+  run 9 4
+  run 0 15
+  run 9 5
+  run 0 8
+  run 9 4
+  run 0 284
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 5
+  run 2 10
+  run 9 21
+  run 2 15
+  run 9 5
+  run 2 8
+  run 9 4
+  run 2 1
+  run 4 10
+  run 2 4
+  run 9 5
+  run 2 8
+  run 9 4
+  run 4 1
+  run 0 10
+  run 4 1
+  run 3 3
+  run 2 5
+  run 3 8
+  run 9 4
+  run 5 12
+  run 0 3
+  run 2 5
+  run 0 8
+  run 9 4
+  run 5 1
+  run 0 10
+  run 5 1
+  run 0 3
+  run 9 5
+  run 0 8
+  run 9 4
+  run 0 284
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 5
+  run 2 10
+  run 9 21
+  run 2 15
+  run 9 5
+  run 2 8
+  run 9 4
+  run 2 1
+  run 4 10
+  run 2 4
+  run 9 5
+  run 2 8
+  run 9 4
+  run 4 1
+  run 0 10
+  run 4 1
+  run 3 3
+  run 2 5
+  run 3 8
+  run 9 4
+  run 0 15
+  run 2 5
+  run 0 8
+  run 9 4
+  run 0 15
+  run 9 5
+  run 0 8
+  run 9 4
+  run 0 284
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 32
+  run 2 19
+  run 9 4
+  run 2 28
+  run 9 4
+  run 2 9
+  run 3 3
+  run 9 6
+  run 4 7
+  run 3 3
+  run 9 4
+  run 3 9
+  run 0 4
+  run 6 1
+  run 7 1
+  run 8 1
+  run 5 1
+  run 0 11
+  run 2 4
+  run 0 13
+  run 6 1
+  run 7 1
+  run 8 1
+  run 5 1
+  run 0 11
+  run 2 4
+  run 0 12
+  run 9 6
+  run 0 10
+  run 9 4
+  run 0 265
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 32
+  run 2 11
+  run 9 12
+  run 2 20
+  run 9 12
+  run 2 9
+  run 3 3
+  run 9 6
+  run 3 2
+  run 9 12
+  run 3 9
+  run 0 11
+  run 2 12
+  run 0 20
+  run 2 12
+  run 0 20
+  run 3 8
+  run 9 4
+  run 0 265
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 32
+  run 2 11
+  run 9 12
+  run 2 20
+  run 9 12
+  run 2 9
+  run 3 3
+  run 9 6
+  run 3 2
+  run 9 12
+  run 3 9
+  run 0 11
+  run 2 12
+  run 0 20
+  run 2 12
+  run 0 20
+  run 3 8
+  run 9 4
+  run 0 265
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 32
+  run 2 11
+  run 9 11
+  run 2 21
+  run 9 11
+  run 2 10
+  run 3 11
+  run 9 11
+  run 3 10
+  run 0 11
+  run 2 11
+  run 0 21
+  run 2 11
+  run 0 21
+  run 3 11
+  run 0 266
   run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
+  run 9 32
+  run 2 11
+  run 9 11
+  run 2 21
+  run 9 11
+  run 2 10
+  run 3 11
+  run 9 11
+  run 3 10
+  run 0 11
+  run 2 11
+  run 0 21
+  run 2 11
+  run 0 21
+  run 3 11
+  run 0 266
   run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
+  run 9 32
+  run 2 11
+  run 9 11
+  run 2 21
+  run 9 11
+  run 2 10
+  run 3 11
+  run 9 11
+  run 3 10
+  run 0 11
+  run 2 11
+  run 0 21
+  run 2 11
+  run 0 21
+  run 3 11
+  run 0 266
   run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
+  run 9 32
+  run 2 11
+  run 9 11
+  run 2 21
+  run 9 11
+  run 2 10
+  run 3 11
+  run 9 11
+  run 3 10
+  run 0 11
+  run 2 11
+  run 0 21
+  run 2 11
+  run 0 21
+  run 3 11
+  run 0 266
   run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
-  run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
-  run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
-  run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
-  run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
-  run 1 32
-  run 2 96
-  run 7 10
-  run 3 12
-  run 8 10
-  run 0 352
+  run 9 32
+  run 2 11
+  run 9 11
+  run 2 21
+  run 9 11
+  run 2 10
+  run 3 11
+  run 9 11
+  run 3 10
+  run 0 11
+  run 2 11
+  run 0 21
+  run 2 11
+  run 0 21
+  run 3 11
+  run 0 266
 end chunk
-fluid water.pool caxecraft:water volume 2 4 2 4 1 4
-fluid water.spring caxecraft:water source 3 4 3
+fluid water.falls-pool caxecraft:water volume 5 4 19 10 1 5
+fluid water.waterfall-column caxecraft:water volume 8 5 17 2 6 2
+fluid water.waterfall-source caxecraft:water source 8 10 17
 object enemy.mossling
   tag enemy
-  placement entity caxecraft:mossling 13500 5000 13800 0
+  placement entity caxecraft:mossling 19500 7000 21500 225
 end object
 object guide.nia
   tag friend
-  placement npc caxecraft:nia dialogue.nia.welcome 14500 5000 13500 90
+  placement npc caxecraft:nia dialogue.nia.welcome 17500 8000 25500 180
 end object
 object item.tideweave
   tag quest
-  placement item caxecraft:tideweave-suit 1 6500 5000 4500 0
+  placement item caxecraft:tideweave-suit 1 4500 6000 19500 90
 end object
 object player.start
   tag player
-  placement player-spawn 12500 5000 16500 180
+  placement player-spawn 16500 8000 27500 180
 end object
 dialogue dialogue.nia.welcome
   line speaker guide.nia message nia_welcome

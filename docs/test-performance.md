@@ -626,7 +626,12 @@ The graphical campaign claim has its own system owner:
 loads the staged manifest and Western Falls at runtime, triggers the one
 unambiguous typed edge, and validates generation 2 plus one publication through
 framebuffer telemetry. It also retains a 1280x720 review frame that visibly
-labels `western-falls`. The explicit cold/no-native-cache sample built all 116
+labels `western-falls`. The broader title-to-Adventure journey now also
+requires the destination frame to contain a tall, vertically continuous water
+landmark; a generation counter beside the former flat placeholder is no longer
+enough. The focused Haxe campaign probe instead owns valid runtime loading,
+receipts, and cross-target semantic agreement so designers can reshape the
+level without rewriting Haxe expectations. The explicit cold/no-native-cache sample built all 116
 native objects, linked, and ran both graphical repetitions in 79.44 seconds.
 The immediate warm sample reused generated C, all 116 objects, and the link
 after 684.4 ms of reuse validation and finished in 18.53 seconds overall. The

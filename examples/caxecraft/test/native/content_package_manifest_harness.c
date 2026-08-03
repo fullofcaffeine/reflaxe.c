@@ -30,7 +30,7 @@ int main(void)
 	       && hxc_caxecraft_qa_ContentPackageManifestProbe_traceIdentity
 	              == INT32_C(105150)
 	       && hxc_caxecraft_qa_ContentPackageManifestProbe_traceBytes
-	              == INT32_C(9481128)
+	              == INT32_C(9486319)
 	       && hxc_caxecraft_qa_ContentPackageManifestProbe_traceKinds
 	              == INT32_C(127)
 	           ? 0

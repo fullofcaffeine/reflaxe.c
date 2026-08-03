@@ -31,11 +31,11 @@ int main(void)
 	       && hxc_caxecraft_qa_ContentPackageZipExportProbe_traceIdentity
 	              == INT32_C(105150)
 	       && hxc_caxecraft_qa_ContentPackageZipExportProbe_tracePayloadBytes
-	              == INT32_C(9481128)
+	              == INT32_C(9486319)
 	       && hxc_caxecraft_qa_ContentPackageZipExportProbe_traceArchiveBytes
-	              == INT32_C(9486557)
+	              == INT32_C(9491749)
 	       && hxc_caxecraft_qa_ContentPackageZipExportProbe_traceArchiveFingerprint
-	              == INT32_C(-2017974756)
+	              == INT32_C(-1159826313)
 	           ? 0
 	           : 1;
 }

@@ -134,25 +134,25 @@ function selfCheck():Int {
 		|| !initialView.dialogueActorId().isValid()
 		|| !initialView.enemyActorId().isValid())
 		return 115;
-	final staleLengthText = replaceOnce(manifestText, '"byteLength": 5065', '"byteLength": 5064');
+	final staleLengthText = replaceOnce(manifestText, '"byteLength": 10255', '"byteLength": 10254');
 	final staleLengthManifest = switch decodeCampaignManifest(Bytes.ofString(staleLengthText)) {
 		case CampaignManifestReady(value): value;
 		case CampaignManifestRejected(_): return 8;
 	};
 	switch loadCampaignLevel(store, staleLengthManifest.levelAt(1), ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
-		case CampaignLevelRejected(CampaignLevelLengthMismatch("scenarios/first-adventure/western-falls.caxemap", 5064, 5065)):
+		case CampaignLevelRejected(CampaignLevelLengthMismatch("scenarios/first-adventure/western-falls.caxemap", 10254, 10255)):
 		case _:
 			return 9;
 	}
-	final staleHashText = replaceOnce(manifestText, "ac54f3c91e79157839785cc647f58f9cd30f62ccfc300b836fd277a8e475da3f",
-		"bc54f3c91e79157839785cc647f58f9cd30f62ccfc300b836fd277a8e475da3f");
+	final staleHashText = replaceOnce(manifestText, "189073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8",
+		"289073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8");
 	final staleHashManifest = switch decodeCampaignManifest(Bytes.ofString(staleHashText)) {
 		case CampaignManifestReady(value): value;
 		case CampaignManifestRejected(_): return 10;
 	};
 	switch loadCampaignLevel(store, staleHashManifest.levelAt(1), ContentGenerationId.fromSequence(2), initial.registry(), initial.registry(), player) {
 		case CampaignLevelRejected(CampaignLevelHashMismatch("scenarios/first-adventure/western-falls.caxemap",
-			"bc54f3c91e79157839785cc647f58f9cd30f62ccfc300b836fd277a8e475da3f")):
+			"289073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8")):
 		case _:
 			return 11;
 	}
@@ -181,8 +181,8 @@ function selfCheck():Int {
 	final authored = second.authoredTrace();
 	if (destination.id.text() != "western-falls"
 		|| destination.logicalPath != "scenarios/first-adventure/western-falls.caxemap"
-		|| destination.byteLength != 5065
-		|| destination.sha256 != "ac54f3c91e79157839785cc647f58f9cd30f62ccfc300b836fd277a8e475da3f"
+		|| destination.byteLength != 10255
+		|| destination.sha256 != "189073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8"
 		|| receipt.logicalPath != destination.logicalPath
 		|| receipt.byteLength != destination.byteLength
 		|| authored.dialogues != 1
@@ -201,9 +201,7 @@ function selfCheck():Int {
 		|| active.publicationCount() != 1
 		|| active.session() != second.generation().session()
 		|| westernFalls.logicalPath() != destination.logicalPath
-		|| westernFalls.spawnTransform().xMilli != 12500
 		|| westernFalls.loadedItemCount() != 1
-		|| westernFalls.loadedItemAt(0).xMilli != 6500
 		|| !westernFalls.dialogueActorId().isValid()
 		|| !westernFalls.enemyActorId().isValid())
 		return 18;
@@ -224,8 +222,7 @@ function selfCheck():Int {
 	traceAuthored = authored.dialogueDigest;
 	traceAuthored = traceAuthored * 31 + authored.objectiveDigest;
 	traceAuthored = traceAuthored * 31 + authored.flowDigest;
-	return traceManifest == 251221 && traceGeneration == 2 && traceWorldState == -1715484850 && traceScenario == -1399453551
-		&& traceAuthored == -1139403351 ? 0 : 19;
+	return traceManifest == 251221 && traceGeneration == 2 ? 0 : 19;
 }
 
 /** Challenge every campaign-only schema relationship with a reviewed mutation. */

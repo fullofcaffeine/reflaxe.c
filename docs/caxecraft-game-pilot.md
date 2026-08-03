@@ -224,7 +224,7 @@ manifest supplies the sole outgoing typed edge; the script contains no level
 path or destination name. The app prepares Western Falls through the ordinary
 runtime loader, publishes it through `ActiveContent`, then renders a frame whose
 HUD reads `western-falls`. Telemetry must report generation 2, one publication,
-and the independently authored destination spawn at x=12.5, y=5, z=16.5. The
+and the independently authored destination spawn at x=16.5, y=8, z=27.5. The
 headless campaign tracer remains responsible for malformed manifests, stale
 receipts, missing destinations, and unchanged-state failures.
 
@@ -238,15 +238,21 @@ manifest: `caxecraft:first-adventure`, with `evergrove` leading to
 `western-falls`. A second confirm launches its entry level. The pilot then
 sends the same typed “continue” action as the narrower campaign-travel pilot
 and retains a third frame at Western Falls. The native observer checks all
-three visible stages, while focused Haxe probes own the exact screen
-transitions and manifest values. Generation 2 and one publication can only be
-reached while the app is both playing and in Adventure mode, so a Creative
+three visible stages. The destination check specifically requires a tall,
+vertically continuous water landmark, so the former flat meadow and tiny pool
+cannot pass merely by reporting generation 2. Focused Haxe probes separately
+own the exact screen transitions, manifest receipts, and valid runtime loading;
+they do not freeze decorative terrain or actor coordinates. Generation 2 and
+one publication can only be reached while the app is both playing and in Adventure mode, so a Creative
 launch, a hidden campaign screen, or a script that bypasses the title cannot
 satisfy this owner.
 
 This is evidence for the current two-level forward journey. The player still
 presses `N` to use the manifest's sole exit; authored exit volumes, branching,
-return travel, saves, and a fuller Western Falls level remain future work.
+return travel, saves, Fallskeeper dialogue, the journal/code interaction,
+opening the suit vault, and the flooded ruins remain future work. The current
+destination HUD also retains Evergrove's objective text after publication;
+`haxe_c-xge.20.2.2` owns rebinding that presentation to the active level.
 
 ## How semantic state leaves the native game
 

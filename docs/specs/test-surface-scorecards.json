@@ -538,8 +538,13 @@
           "doesNotProve": "Live renderer consumption, diagnostic source mapping, arbitrary mods, package release readiness, portability, or full playability."
         },
         {
+          "path": "examples/caxecraft/test/caxecraft/qa/CampaignRuntimeProbe.hx",
+          "proves": "The admitted two-level campaign publishes Western Falls from independently receipted runtime bytes, retains its required actor/item/objective roles, and preserves Eval/generated-C semantic agreement without freezing decorative map coordinates.",
+          "doesNotProve": "Fallskeeper behavior, journal/code progression, opening the vault, flooded ruins, branching, return travel, saves, arbitrary campaigns, portability, or release readiness."
+        },
+        {
           "path": "examples/caxecraft/play.py",
-          "proves": "The direct campaign-travel owner diagnoses one typed runtime transition. The separate adventure-journey owner begins on the real title screen, visibly selects Adventure, presents the runtime manifest-backed first-adventure card and its two-level route, launches it through shared menu behavior, reaches generation 2 with one publication, and retains the title choice, campaign card, and Western Falls as real 1280x720 Raylib frames. The aquatic-gear owner separately records real equipment, submersion, sand mining, and dry-after-submerged exit observations from the generated native game.",
+          "proves": "The direct campaign-travel owner diagnoses one typed runtime transition. The separate adventure-journey owner begins on the real title screen, visibly selects Adventure, presents the runtime manifest-backed first-adventure card and its two-level route, launches it through shared menu behavior, reaches generation 2 with one publication, and retains the title choice, campaign card, and Western Falls as real 1280x720 Raylib frames. Its destination observer requires a tall continuous water landmark, so the old meadow and tiny pool cannot satisfy the claim. The aquatic-gear owner separately records real equipment, submersion, sand mining, and dry-after-submerged exit observations from the generated native game.",
           "doesNotProve": "Branching or return travel, saves, editor campaign authoring, arbitrary mods, sanitizer success, portability, or release readiness."
         }
       ],
