@@ -63,6 +63,7 @@ import caxecraft.domain.VoxelRaycast;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldView;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
+import caxecraft.scenario.LocaleId;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
@@ -1183,7 +1184,8 @@ final class CaxecraftApp {
 					guideInteractionAvailable: guideInteractionAvailable,
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase,
-					levelLabel: levelLabel
+					levelLabel: levelLabel,
+					objectiveTitle: levelView.initialObjectiveTitle(scenarioLocale(locale))
 				};
 				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
 			}
@@ -1471,8 +1473,8 @@ final class CaxecraftApp {
 		if (headSubmerged)
 			drawBreath(breathTicks, maximumBreathTicks, width, height);
 		drawUiText(uiCatalog, locale, UiMessage.Controls, 20, height - 22, 14, text);
-		if (mode == GameMode.Adventure)
-			drawScenarioText(locale, ScenarioMessage.AdventureProgress, 32, 110, 14, CaxecraftPalette.selection());
+		if (mode == GameMode.Adventure && view.objectiveTitle.length > 0)
+			Raylib.DrawTextString(view.objectiveTitle, 32, 110, 14, CaxecraftPalette.selection());
 		if (guideInteractionAvailable) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
 			if (guidePhase == GuidePhase.Waiting)
@@ -1541,6 +1543,14 @@ final class CaxecraftApp {
 	/** Draw one campaign-owned message after its catalog resolves the locale. */
 	static inline function drawScenarioText(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
 		Raylib.DrawText(FirstPlayableCatalog.text(locale, message), x, y, fontSize, color);
+
+	/** Map the closed UI locale cursor to the spelling used by CAXEMAP catalogs. */
+	static inline function scenarioLocale(locale:LocaleCursor):LocaleId
+		return switch locale {
+			case Locale0: new LocaleId("en");
+			case Locale1: new LocaleId("es-mx");
+			case _: new LocaleId("en");
+		};
 
 	/** Draw ten bubbles from deterministic fixed-tick breath, with no text. */
 	static function drawBreath(breathTicks:Int, maximumBreathTicks:Int, width:Int, height:Int):Void {

@@ -15,8 +15,13 @@ import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioLexer;
+import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.ScenarioMessages;
+import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.ScenarioContentRegistry;
+import caxecraft.scenario.ScenarioStory.ObjectiveState;
+import caxecraft.scenario.ScenarioText;
 import caxecraft.scenario.ScenarioValidator;
 import haxe.io.Bytes;
 #if caxecraft_runtime_level_testing
@@ -127,6 +132,66 @@ typedef RuntimeLevelAuthoredTrace = {
 }
 
 /**
+ * Keeps the player-visible title and starting objective from one validated map.
+ *
+ * Runtime loading used to retain only counts and identity digests for story
+ * data. That was enough to prove parsing, but the game then had to draw text
+ * from the entry map's compile-time catalog after travelling elsewhere. This
+ * value instead keeps the validated message catalog and the selected text
+ * references beside the unpublished generation. `ActivePlayableLevel` can
+ * therefore replace the world and its matching words in one publication.
+ *
+ * The loader owns the parsed scenario exclusively and never exposes its
+ * mutable Arrays, so retaining that private catalog does not share mutation
+ * authority with the editor or caller. A later live objective-state owner can
+ * supersede the explicitly bounded “initial active objective” selection.
+ */
+@:allow(caxecraft.content.RuntimeLevelLoader)
+final class RuntimeLevelPresentation {
+	final messages:ScenarioMessages;
+	final title:ScenarioText;
+	final objectiveTitle:Null<ScenarioText>;
+	final objectiveBody:Null<ScenarioText>;
+
+	/** Retain presentation facts only after the complete scenario validates. */
+	private function new(scenario:Scenario) {
+		messages = scenario.messages;
+		title = scenario.title;
+		var selectedTitle:Null<ScenarioText> = null;
+		var selectedBody:Null<ScenarioText> = null;
+		for (objective in scenario.story.objectives)
+			if (selectedTitle == null && objective.initialState == ObjectiveState.Active) {
+				selectedTitle = objective.title;
+				selectedBody = objective.body;
+			}
+		objectiveTitle = selectedTitle;
+		objectiveBody = selectedBody;
+	}
+
+	/** Resolve the map title in the requested locale, using its declared fallback. */
+	public inline function scenarioTitle(locale:LocaleId):String
+		return resolve(title, locale);
+
+	/** Resolve the first initially active objective title, or empty text when absent. */
+	public inline function initialObjectiveTitle(locale:LocaleId):String
+		return objectiveTitle == null ? "" : resolve(objectiveTitle, locale);
+
+	/** Resolve the matching initial objective body, or empty text when absent. */
+	public inline function initialObjectiveBody(locale:LocaleId):String
+		return objectiveBody == null ? "" : resolve(objectiveBody, locale);
+
+	/** Turn a literal or validated message reference into runtime-owned text. */
+	function resolve(value:ScenarioText, locale:LocaleId):String {
+		return switch value {
+			case Literal(text): text;
+			case Message(id):
+				final translated = resolveScenarioMessage(messages, locale, id);
+				translated == null ? "" : translated;
+		};
+	}
+}
+
+/**
  * Owns one complete unpublished generation and its source evidence.
  *
  * A class is appropriate because the generation owns mutable session identity
@@ -138,11 +203,14 @@ final class RuntimeLevelCandidate {
 	final loadedGeneration:LoadedContentGeneration;
 	final sourceReceipt:RuntimeLevelReceipt;
 	final authored:RuntimeLevelAuthoredTrace;
+	final presentationValue:RuntimeLevelPresentation;
 
-	private function new(generation:LoadedContentGeneration, receipt:RuntimeLevelReceipt, authoredTrace:RuntimeLevelAuthoredTrace) {
+	private function new(generation:LoadedContentGeneration, receipt:RuntimeLevelReceipt, authoredTrace:RuntimeLevelAuthoredTrace,
+			presentation:RuntimeLevelPresentation) {
 		loadedGeneration = generation;
 		sourceReceipt = receipt;
 		authored = authoredTrace;
+		presentationValue = presentation;
 	}
 
 	/** Complete generation that may be passed to `ActiveContent.publish`. */
@@ -172,6 +240,10 @@ final class RuntimeLevelCandidate {
 			flowRules: authored.flowRules,
 			flowDigest: authored.flowDigest
 		};
+
+	/** Player-visible facts validated from the same map as `generation()`. */
+	public inline function presentation():RuntimeLevelPresentation
+		return presentationValue;
 }
 
 /** Exact stage that rejected a runtime-level request before publication. */
@@ -250,7 +322,7 @@ function loadRuntimeLevelWithFault(source:RuntimeLevelSource, generationId:Conte
 function rebuildRuntimeLevelForPublicationTesting(candidate:RuntimeLevelCandidate, generationId:ContentGenerationId):RuntimeLevelLoadResult {
 	return switch LoadedContentGeneration.build(generationId, candidate.generation().plan(), candidate.generation().presentation()) {
 		case ContentGenerationReady(generation):
-			RuntimeLevelReady(new RuntimeLevelCandidate(generation, candidate.receipt(), candidate.authoredTrace()));
+			RuntimeLevelReady(new RuntimeLevelCandidate(generation, candidate.receipt(), candidate.authoredTrace(), candidate.presentation()));
 		case ContentGenerationRejected(error):
 			RuntimeLevelRejected(RuntimeLevelGenerationRejected(error));
 	};
@@ -301,7 +373,7 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 				byteLength: input.bytes.length,
 				inputHash: hashBytes(input.bytes),
 				readAttempts: input.readAttempts
-			}, authoredTrace(scenario)));
+			}, authoredTrace(scenario), new RuntimeLevelPresentation(scenario)));
 		case ContentGenerationRejected(error):
 			RuntimeLevelRejected(RuntimeLevelGenerationRejected(error));
 	};

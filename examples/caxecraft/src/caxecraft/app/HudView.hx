@@ -68,6 +68,9 @@ typedef HudView = {
 
 	/** Runtime-selected campaign level ID, or the standalone map path. */
 	final levelLabel:String;
+
+	/** Localized initial objective selected from the same published level. */
+	final objectiveTitle:String;
 }
 
 /** Small debug-panel snapshot for one rendered frame. */

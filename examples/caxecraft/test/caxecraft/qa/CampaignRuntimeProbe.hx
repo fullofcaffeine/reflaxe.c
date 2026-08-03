@@ -19,6 +19,7 @@ import caxecraft.content.RuntimeLevelLoader.RuntimeLevelLoadError;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
+import caxecraft.scenario.LocaleId;
 import haxe.io.Bytes;
 
 /**
@@ -122,6 +123,17 @@ function selfCheck():Int {
 	final initialView = active.level();
 	if (initialView.logicalPath() != entry.logicalPath)
 		return 115;
+	final english = new LocaleId("en");
+	final spanish = new LocaleId("es-mx");
+	final initialPresentation = initial.level().presentation();
+	if (initialView.presentation() != initialPresentation
+		|| initialView.scenarioTitle(english) != initialPresentation.scenarioTitle(english)
+		|| initialView.scenarioTitle(spanish) != initialPresentation.scenarioTitle(spanish)
+		|| initialView.initialObjectiveTitle(english) != initialPresentation.initialObjectiveTitle(english)
+		|| initialView.initialObjectiveTitle(spanish) != initialPresentation.initialObjectiveTitle(spanish)
+		|| initialView.initialObjectiveBody(english) != initialPresentation.initialObjectiveBody(english)
+		|| initialView.initialObjectiveBody(spanish) != initialPresentation.initialObjectiveBody(spanish))
+		return 118;
 	final staleLength = destination.byteLength == 1 ? 2 : destination.byteLength - 1;
 	final destinationIdentity = '"id": "${destination.id.text()}"';
 	final staleLengthText = replaceObjectField(manifestText, destinationIdentity, '"byteLength": ${destination.byteLength}', '"byteLength": $staleLength');
@@ -191,12 +203,26 @@ function selfCheck():Int {
 		|| active.session() != second.generation().session()
 		|| destinationView.logicalPath() != destination.logicalPath)
 		return 18;
+	final destinationPresentation = second.presentation();
+	if (destinationView.presentation() != destinationPresentation
+		|| destinationView.scenarioTitle(english) != destinationPresentation.scenarioTitle(english)
+		|| destinationView.scenarioTitle(spanish) != destinationPresentation.scenarioTitle(spanish)
+		|| destinationView.initialObjectiveTitle(english) != destinationPresentation.initialObjectiveTitle(english)
+		|| destinationView.initialObjectiveTitle(spanish) != destinationPresentation.initialObjectiveTitle(spanish)
+		|| destinationView.initialObjectiveBody(english) != destinationPresentation.initialObjectiveBody(english)
+		|| destinationView.initialObjectiveBody(spanish) != destinationPresentation.initialObjectiveBody(spanish))
+		return 119;
 	switch active.publish(initial.level()) {
 		case PlayableLevelPublicationRejected(_):
 		case _:
 			return 116;
 	}
-	if (active.generationId().value() != 2 || active.publicationCount() != 1 || active.level().logicalPath() != destination.logicalPath)
+	if (active.generationId().value() != 2
+		|| active.publicationCount() != 1
+		|| active.level().logicalPath() != destination.logicalPath
+		|| active.level().presentation() != destinationPresentation
+		|| active.level().scenarioTitle(english) != destinationPresentation.scenarioTitle(english)
+		|| active.level().initialObjectiveTitle(english) != destinationPresentation.initialObjectiveTitle(english))
 		return 117;
 
 	final semantic = active.semanticTrace();

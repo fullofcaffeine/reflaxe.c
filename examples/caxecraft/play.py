@@ -3509,7 +3509,7 @@ def main(argv: list[str]) -> int:
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
         requested_snapshot: dict[str, object] | None = None
         reusable_profile = not args.sanitizers
-        if reusable_profile and not (args.compile_only or args.build_only):
+        if reusable_profile and not args.compile_only:
             snapshot_started = time.monotonic()
             requested_snapshot = play_request_snapshot(
                 args,
@@ -3518,7 +3518,7 @@ def main(argv: list[str]) -> int:
                 native_sanitizer_flags=native_sanitizer_flags,
             )
             snapshot_ms = (time.monotonic() - snapshot_started) * 1000.0
-            fast_path_eligible = (
+            fast_path_eligible = not args.build_only and (
                 not args.rebuild_raylib
                 and not args.rebuild_raygui
                 and not args.benchmark_renderer

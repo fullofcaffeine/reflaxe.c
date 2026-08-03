@@ -1,0 +1,39 @@
+CAXEMAP 1
+feature required caxecraft:core
+map qa.runtime-presentation
+asset-pack packs/caxecraft/base
+default-locale en
+locale en
+  message objective.body "Cross the test bridge."
+  message objective.title "Reach the test marker"
+  message scenario.title "Runtime presentation probe"
+end locale
+locale es-mx
+  message objective.body "Cruza el puente de prueba."
+  message objective.title "Llega al marcador de prueba"
+  message scenario.title "Prueba de presentacion en ejecucion"
+end locale
+title message scenario.title
+mode adventure
+world 32 16 32
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+chunk world.base 0 0 0 32 16 32
+  run 1 32
+  run 0 16352
+end chunk
+object guide.nia
+  tag friend
+  placement npc caxecraft:nia dialogue.guide 2500 1000 1500 270
+end object
+object player.start
+  tag player
+  placement player-spawn 1500 1000 1500 0
+end object
+dialogue dialogue.guide
+  line speaker guide.nia literal "Synthetic engine fixture"
+end dialogue
+objective objective.marker active title message objective.title
+  body message objective.body
+end objective
+end-map

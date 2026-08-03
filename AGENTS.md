@@ -234,6 +234,31 @@ quality-assurance workload for haxe.c. It should continually exercise ordinary
 Haxe, typed `c.*` interop, generated-C quality, runtime selection, native tools,
 performance, packaging, and developer experience together.
 
+- Use **reloadable game content** for game-specific facts and behavior that
+  creators should be able to edit, reload, and exercise without rebuilding
+  Caxecraft. This umbrella includes maps, levels, campaigns, dialogue,
+  objectives, cutscenes, encounters, scripted events, and mod/pack manifests,
+  whether their current concrete format is CAXEMAP, CaxeFlow, JSON, or a later
+  editor-authored form. Within it, call executable rules such as CaxeFlow
+  **content logic**; call a reloadable automated player journey and its expected
+  observations a **Piloscript content test**. Do not describe ordinary map or
+  campaign data as a script.
+
+  Compiled Haxe owns the generic engine that validates, loads, publishes,
+  simulates, renders, edits, and observes reloadable game content. It must not
+  know a particular campaign's names, prose, route, coordinates, or expected
+  outcome; do not place literals such as a level title or objective sentence in
+  the game loop, engine module, compiled `PilotScript`, or generic engine probe.
+  Keep those facts in reloadable content and let a generic Piloscript runner
+  exercise them through the same executable used for ordinary play. Haxe tests
+  should strongly protect the reusable schema, content-logic interpreter,
+  publication, simulation, renderer, editor, and runner contracts with small
+  synthetic fixtures. Content checks should stay few, journey-shaped, and
+  reloadable. If the current runner cannot express a needed content expectation
+  without recompilation, use generic state evidence plus a reviewable content
+  frame for the immediate proof and create a Beads owner for the missing
+  reloadable Piloscript capability; do not hard-code the campaign into the
+  engine as a shortcut.
 - When a flagship workload breaks or exposes weak output, first reproduce and
   classify the problem: application design, binding, compiler semantics,
   generated-C structure/readability, runtime/ABI, build tooling, or test cost.

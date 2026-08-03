@@ -25,6 +25,7 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldRead.query as queryWorld;
 import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
+import caxecraft.scenario.LocaleId;
 import haxe.io.Bytes;
 
 /**
@@ -90,11 +91,32 @@ function selfCheck():Int {
 		initialHealth: MAX_HEALTH,
 		aquaticProfile: standardAquaticProfile()
 	};
-	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final store = switch ContentPackageStore.open(".", "caxecraft-source", ContentPackageStore.MAXIMUM_PACKAGE_BYTES) {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 1;
 	};
+	final presentationPath = "test/fixtures/caxemap/runtime-presentation.caxemap";
+	final presentationCandidate = switch loadRuntimeLevel(NativePackageFile(store, presentationPath), ContentGenerationId.fromSequence(99), registry,
+		registry, options) {
+		case RuntimeLevelReady(candidate): candidate;
+		case RuntimeLevelRejected(RuntimeLevelSourceRejected(_)): return 101;
+		case RuntimeLevelRejected(RuntimeLevelScenarioRejected(_)): return 103;
+		case RuntimeLevelRejected(RuntimeLevelPlanRejected(_)): return 104;
+		case RuntimeLevelRejected(RuntimeLevelGenerationRejected(_)): return 105;
+	};
+	final presentation = presentationCandidate.presentation();
+	final english = new LocaleId("en");
+	final spanish = new LocaleId("es-mx");
+	final fallback = new LocaleId("fr");
+	if (presentation.scenarioTitle(english) != "Runtime presentation probe"
+		|| presentation.scenarioTitle(spanish) != "Prueba de presentacion en ejecucion"
+		|| presentation.scenarioTitle(fallback) != "Runtime presentation probe"
+		|| presentation.initialObjectiveTitle(english) != "Reach the test marker"
+		|| presentation.initialObjectiveTitle(spanish) != "Llega al marcador de prueba"
+		|| presentation.initialObjectiveBody(english) != "Cross the test bridge."
+		|| presentation.initialObjectiveBody(spanish) != "Cruza el puente de prueba.")
+		return 102;
+	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final checkedIn = switch store.read(logicalPath) {
 		case PackageBytesRead(value): value;
 		case PackageBytesRejected(_): return 2;

@@ -8,8 +8,10 @@ import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
 import caxecraft.content.LoadedContentGeneration.LoadedContentGeneration;
 import caxecraft.content.LoadedContentGeneration.LoadedContentGenerationTrace;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelCandidate;
+import caxecraft.content.RuntimeLevelLoader.RuntimeLevelPresentation;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
+import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 
 /**
@@ -76,6 +78,7 @@ enum PlayableLevelPublicationResult {
 /** Immutable application bindings derived from one runtime level candidate. */
 final class PlayableLevelView {
 	final loadedGeneration:LoadedContentGeneration;
+	final levelPresentation:RuntimeLevelPresentation;
 	final sourcePath:String;
 	final dialogueId:EntityId;
 	final enemyId:EntityId;
@@ -88,6 +91,7 @@ final class PlayableLevelView {
 	private function new(candidate:RuntimeLevelCandidate, dialogueActorId:EntityId, enemyActorId:EntityId, loadedItems:Array<LoadedWorldItem>,
 			spawn:ScenarioTransform, waterPresentationCell:Int) {
 		loadedGeneration = candidate.generation();
+		levelPresentation = candidate.presentation();
 		sourcePath = candidate.receipt().logicalPath;
 		dialogueId = dialogueActorId;
 		enemyId = enemyActorId;
@@ -99,6 +103,22 @@ final class PlayableLevelView {
 	/** Package-relative map path that produced this exact view. */
 	public inline function logicalPath():String
 		return sourcePath;
+
+	/** Immutable title and starting-objective facts paired with this generation. */
+	public inline function presentation():RuntimeLevelPresentation
+		return levelPresentation;
+
+	/** Resolve this level's validated scenario title for one requested locale. */
+	public inline function scenarioTitle(locale:LocaleId):String
+		return levelPresentation.scenarioTitle(locale);
+
+	/** Resolve this level's first initially active objective title. */
+	public inline function initialObjectiveTitle(locale:LocaleId):String
+		return levelPresentation.initialObjectiveTitle(locale);
+
+	/** Resolve the body paired with this level's first initially active objective. */
+	public inline function initialObjectiveBody(locale:LocaleId):String
+		return levelPresentation.initialObjectiveBody(locale);
 
 	/** Temporary fixed-HUD dialogue actor selected by generic authored role. */
 	public inline function dialogueActorId():EntityId
