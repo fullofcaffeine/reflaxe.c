@@ -170,9 +170,9 @@ function verifyCanonicalArchive(bytes:Bytes):Int {
 	traceArchiveBytes = bytes.length;
 	traceArchiveFingerprint = archiveFingerprint(bytes);
 	return traceIdentity == 105150
-		&& tracePayloadBytes == 9486319
-		&& traceArchiveBytes == 9491749
-		&& traceArchiveFingerprint == -1159826313 ? 0 : 12;
+		&& tracePayloadBytes == 9487237
+		&& traceArchiveBytes == 9492667
+		&& traceArchiveFingerprint == 1338236009 ? 0 : 12;
 }
 
 /** Prove a selected asset cannot disappear before archive construction. */

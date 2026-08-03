@@ -13,8 +13,8 @@
     {
       "id": "western-falls",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 10255,
-      "sha256": "189073de5a6de3114a53f28fb97d6fdac95ad70294918d8e4cdad45e9ca3aeb8"
+      "byteLength": 11173,
+      "sha256": "8f6c64d53cb9e39439585588e0b438ae1ac81468ce1f45288b34d745637421dc"
     }
   ],
   "transitions": [

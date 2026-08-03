@@ -4,8 +4,8 @@ map adventure.western-falls
 asset-pack packs/caxecraft/base
 default-locale en
 locale en
-  message adventure_progress "ADVENTURE: WESTERN FALLS"
-  message adventure_tagline "CROSS THE FALLS. READ THE FOUR MARKS."
+  message adventure_progress "FIND TIDEWEAVE BENEATH THE FALLS"
+  message adventure_tagline "BREAK THE MARKED SAND. DIVE THROUGH THE FLOODED GROTTO."
   message berry_pickup_one "+1 BERRY"
   message berry_pickup_two "+2 BERRIES"
   message berry_recovery "BERRIES: +1 HEART"
@@ -25,8 +25,8 @@ locale en
   message telegraphed_hit "TELEGRAPHED HIT: DODGE THE NEXT"
 end locale
 locale es-mx
-  message adventure_progress "AVENTURA: CATARATAS DEL OESTE"
-  message adventure_tagline "CRUZA LAS CATARATAS. LEE LAS CUATRO MARCAS."
+  message adventure_progress "BUSCA TIDEWEAVE BAJO LAS CATARATAS"
+  message adventure_tagline "ROMPE LA ARENA MARCADA. CRUZA LA GRUTA INUNDADA."
   message berry_pickup_one "+1 BAYA"
   message berry_pickup_two "+2 BAYAS"
   message berry_recovery "BAYAS: +1 CORAZON"
@@ -389,33 +389,39 @@ chunk world.base 0 0 0 32 16 32
   run 3 2
   run 2 5
   run 3 9
-  run 9 4
-  run 0 13
+  run 9 7
+  run 4 1
+  run 0 2
+  run 4 6
+  run 0 1
   run 5 1
   run 9 5
   run 0 9
-  run 9 4
-  run 0 13
+  run 9 7
+  run 0 10
   run 5 1
   run 0 14
-  run 9 4
-  run 0 12
+  run 9 7
+  run 0 9
   run 6 3
   run 0 14
-  run 6 3
-  run 0 12
+  run 6 1
+  run 9 5
+  run 0 9
   run 6 3
   run 0 237
   run 1 32
   run 9 5
   run 2 10
   run 9 21
-  run 2 14
+  run 2 1
+  run 4 10
+  run 2 3
   run 9 5
   run 2 9
   run 9 4
   run 2 1
-  run 4 10
+  run 0 10
   run 2 17
   run 9 4
   run 4 1
@@ -424,28 +430,38 @@ chunk world.base 0 0 0 32 16 32
   run 3 2
   run 2 5
   run 3 9
-  run 9 4
-  run 0 14
+  run 9 7
+  run 0 8
+  run 4 1
+  run 0 2
   run 9 5
   run 0 9
-  run 9 4
-  run 0 28
-  run 9 4
-  run 0 12
+  run 9 3
+  run 0 3
+  run 4 1
+  run 0 25
+  run 9 3
+  run 0 3
+  run 4 1
+  run 0 9
   run 6 3
-  run 0 29
+  run 0 15
+  run 9 5
+  run 0 9
   run 6 3
   run 0 237
   run 1 32
   run 9 5
   run 2 10
   run 9 21
-  run 2 14
+  run 2 1
+  run 4 10
+  run 2 3
   run 9 5
   run 2 9
   run 9 4
   run 2 1
-  run 4 10
+  run 0 10
   run 2 17
   run 9 4
   run 4 1
@@ -454,24 +470,70 @@ chunk world.base 0 0 0 32 16 32
   run 3 2
   run 2 5
   run 3 9
-  run 9 4
-  run 0 14
+  run 9 7
+  run 0 8
+  run 4 1
+  run 0 2
   run 9 5
   run 0 9
-  run 9 4
-  run 0 28
-  run 9 4
-  run 0 284
+  run 9 3
+  run 0 3
+  run 4 1
+  run 0 25
+  run 9 3
+  run 0 3
+  run 4 1
+  run 0 27
+  run 9 5
+  run 0 249
   run 1 32
   run 9 5
   run 2 10
   run 9 21
-  run 2 15
+  run 2 1
+  run 4 10
+  run 2 4
   run 9 5
   run 2 8
   run 9 4
   run 2 1
+  run 0 10
+  run 2 4
+  run 9 5
+  run 2 8
+  run 9 4
+  run 4 1
+  run 0 10
+  run 4 1
+  run 3 3
+  run 2 5
+  run 3 8
+  run 9 7
+  run 0 8
+  run 4 1
+  run 0 3
+  run 2 5
+  run 0 8
+  run 9 7
+  run 0 12
+  run 9 5
+  run 0 8
+  run 9 7
+  run 0 27
+  run 9 5
+  run 0 249
+  run 1 32
+  run 9 5
+  run 2 10
+  run 9 21
+  run 2 1
   run 4 10
+  run 2 4
+  run 9 5
+  run 2 8
+  run 9 4
+  run 2 1
+  run 0 10
   run 2 4
   run 9 5
   run 2 8
@@ -483,37 +545,9 @@ chunk world.base 0 0 0 32 16 32
   run 2 5
   run 3 8
   run 9 4
-  run 0 15
-  run 2 5
-  run 0 8
-  run 9 4
-  run 0 15
-  run 9 5
-  run 0 8
-  run 9 4
-  run 0 284
-  run 1 32
-  run 9 5
-  run 2 10
-  run 9 21
-  run 2 15
-  run 9 5
-  run 2 8
-  run 9 4
-  run 2 1
-  run 4 10
-  run 2 4
-  run 9 5
-  run 2 8
-  run 9 4
   run 4 1
-  run 0 10
+  run 5 10
   run 4 1
-  run 3 3
-  run 2 5
-  run 3 8
-  run 9 4
-  run 5 12
   run 0 3
   run 2 5
   run 0 8
@@ -530,12 +564,14 @@ chunk world.base 0 0 0 32 16 32
   run 9 5
   run 2 10
   run 9 21
-  run 2 15
+  run 2 1
+  run 4 10
+  run 2 4
   run 9 5
   run 2 8
   run 9 4
   run 2 1
-  run 4 10
+  run 0 10
   run 2 4
   run 9 5
   run 2 8
@@ -547,7 +583,10 @@ chunk world.base 0 0 0 32 16 32
   run 2 5
   run 3 8
   run 9 4
-  run 0 15
+  run 4 1
+  run 0 10
+  run 4 1
+  run 0 3
   run 2 5
   run 0 8
   run 9 4
@@ -558,30 +597,43 @@ chunk world.base 0 0 0 32 16 32
   run 0 284
   run 1 32
   run 9 32
-  run 2 19
+  run 2 11
+  run 9 3
+  run 2 5
   run 9 4
-  run 2 28
+  run 2 19
+  run 9 1
+  run 0 3
+  run 9 1
+  run 2 4
   run 9 4
   run 2 9
   run 3 3
   run 9 6
-  run 4 7
+  run 4 1
+  run 9 1
+  run 0 3
+  run 9 1
+  run 4 1
   run 3 3
   run 9 4
   run 3 9
   run 0 4
-  run 6 1
-  run 7 1
-  run 8 1
-  run 5 1
-  run 0 11
+  run 4 6
+  run 9 1
+  run 0 3
+  run 9 1
+  run 4 1
+  run 0 3
   run 2 4
   run 0 13
   run 6 1
   run 7 1
   run 8 1
   run 5 1
-  run 0 11
+  run 0 2
+  run 9 5
+  run 0 4
   run 2 4
   run 0 12
   run 9 6
@@ -592,56 +644,77 @@ chunk world.base 0 0 0 32 16 32
   run 9 32
   run 2 11
   run 9 12
-  run 2 20
-  run 9 12
+  run 2 19
+  run 9 1
+  run 0 3
+  run 9 9
   run 2 9
   run 3 3
   run 9 6
-  run 3 2
-  run 9 12
+  run 3 1
+  run 9 1
+  run 0 4
+  run 9 8
   run 3 9
-  run 0 11
-  run 2 12
-  run 0 20
-  run 2 12
-  run 0 20
-  run 3 8
+  run 0 10
+  run 9 1
+  run 0 5
   run 9 4
+  run 2 3
+  run 0 19
+  run 9 4
+  run 0 3
+  run 9 3
+  run 2 3
+  run 0 20
+  run 3 4
+  run 0 3
+  run 9 5
   run 0 265
   run 1 32
   run 9 32
   run 2 11
   run 9 12
   run 2 20
-  run 9 12
+  run 0 3
+  run 9 9
   run 2 9
   run 3 3
   run 9 6
   run 3 2
-  run 9 12
+  run 0 4
+  run 9 8
   run 3 9
-  run 0 11
-  run 2 12
-  run 0 20
-  run 2 12
-  run 0 20
-  run 3 8
+  run 0 16
   run 9 4
+  run 2 3
+  run 0 20
+  run 9 3
+  run 0 3
+  run 9 3
+  run 2 3
+  run 0 20
+  run 3 4
+  run 0 3
+  run 9 5
   run 0 265
   run 1 32
   run 9 32
   run 2 11
   run 9 11
   run 2 21
-  run 9 11
+  run 0 3
+  run 9 8
   run 2 10
   run 3 11
-  run 9 11
+  run 0 3
+  run 9 8
   run 3 10
-  run 0 11
-  run 2 11
+  run 0 14
+  run 2 8
   run 0 21
-  run 2 11
+  run 9 3
+  run 2 8
   run 0 21
   run 3 11
   run 0 266
@@ -714,7 +787,8 @@ chunk world.base 0 0 0 32 16 32
   run 3 11
   run 0 266
 end chunk
-fluid water.falls-pool caxecraft:water volume 5 4 19 10 1 5
+fluid water.falls-pool caxecraft:water volume 5 3 19 10 2 5
+fluid water.flooded-grotto caxecraft:water volume 11 3 24 3 2 4
 fluid water.waterfall-column caxecraft:water volume 8 5 17 2 6 2
 fluid water.waterfall-source caxecraft:water source 8 10 17
 object enemy.mossling
@@ -724,6 +798,10 @@ end object
 object guide.nia
   tag friend
   placement npc caxecraft:nia dialogue.nia.welcome 17500 8000 25500 180
+end object
+object item.grotto-lantern
+  tag reward
+  placement item caxecraft:lantern 1 12500 4000 26500 0
 end object
 object item.tideweave
   tag quest
