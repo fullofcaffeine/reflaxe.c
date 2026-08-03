@@ -259,6 +259,18 @@ performance, packaging, and developer experience together.
   frame for the immediate proof and create a Beads owner for the missing
   reloadable Piloscript capability; do not hard-code the campaign into the
   engine as a shortcut.
+- Use Minecraft and Luanti as practical reference points when Caxecraft needs
+  a proven voxel-game dynamic, mechanic, or creator workflow. This is especially
+  useful for movement, jumping and swimming, buoyancy and fluids, block reach,
+  mining and placement, inventory, terrain interaction, and mod/content
+  authoring. Begin with the observable player contract, then state deliberately
+  where Caxecraft matches it and where its own game design differs; familiar
+  behavior is a useful default, not an accidental promise of exact compatibility.
+  Borrow ideas and mechanics, not another game's identity, proprietary assets,
+  prose, or unreviewed implementation. Keep Caxecraft's lore, art direction,
+  progression, and authored experience distinct. Before adapting source code or
+  data from an open-source project such as Luanti, record its provenance and
+  confirm that its license and this repository's policy permit that specific use.
 - When a flagship workload breaks or exposes weak output, first reproduce and
   classify the problem: application design, binding, compiler semantics,
   generated-C structure/readability, runtime/ABI, build tooling, or test cost.
