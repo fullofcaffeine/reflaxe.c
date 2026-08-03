@@ -480,7 +480,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "28487e2bbc0fcd637aef4b2c266a91237c961b4d2aa39597c827f7dfaa7efc58",
+      "sha256": "dc37f43ebfa17dea98b591d28fa9a8d6db1d6cec27fa2685531b2ada868052c1",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -490,7 +490,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "0f573a0a39f8639c1dbdc6226237fd1ee0da64e9222621dcbf110256fc8df297",
+      "sha256": "8c181a257332791aa10b2e460920d592cd68b2e05ca40ddbd3596ca73c069bf0",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },

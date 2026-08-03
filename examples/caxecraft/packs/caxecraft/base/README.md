@@ -19,6 +19,13 @@ atlas cells. They then resolve the first-playable map with Eval and with real
 generated C compiled under the host's strict C toolchain and sanitizers where
 available.
 
+Sand is the first water-route material with a complete public item contract:
+the pack declares that it drops `caxecraft:sand-block`, and that item places
+`caxecraft:sand` again. The current bounded gameplay switch implements the
+same rule. Making every terrain edit dispatch generically through these pack
+facts remains part of `haxe_c-xge.20.4`; this agreement is not evidence that
+the broader migration is already complete.
+
 ## Runtime authority
 
 The launcher copies this file beside the executable. The Haxe package loader

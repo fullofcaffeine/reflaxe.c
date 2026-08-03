@@ -81,7 +81,7 @@ function selfCheck():Int {
 		bytes += receipt.byteLength;
 		kinds |= kindBit(entry.kind);
 	}
-	if (bytes != 9480851 || kinds != 127)
+	if (bytes != 9481128 || kinds != 127)
 		return 6;
 	if (!verifyDecoderRejections())
 		return 7;

@@ -62,8 +62,8 @@
       "id": "caxecraft:sand",
       "storageCode": 5,
       "collision": "solid",
-      "edit": "immutable",
-      "dropItem": null,
+      "edit": "collectable",
+      "dropItem": "caxecraft:sand-block",
       "renderProfile": "river-sand"
     },
     {
@@ -208,6 +208,17 @@
       "icon": {
         "asset": "items",
         "cell": "lantern"
+      }
+    },
+    {
+      "id": "caxecraft:sand-block",
+      "maxStack": 64,
+      "useProfile": "place-block",
+      "placementBlock": "caxecraft:sand",
+      "aquaticProfile": null,
+      "icon": {
+        "asset": "items",
+        "cell": "sand-block"
       }
     },
     {

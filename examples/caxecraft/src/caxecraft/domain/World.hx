@@ -102,12 +102,14 @@ final class World {
 	}
 
 	/**
-	 * Remove only materials whose current content definitions declare drops.
+	 * Remove only materials that have a bounded item-and-drop contract today.
 	 *
 	 * The bounded inventory has grass, dirt, stone, and sand items. Authored
 	 * forest, snow, and ash remain scenery until the content pack gives them
 	 * matching items; silently deleting them would lose data in Adventure and
-	 * would make Creative promise an item model it does not have yet.
+	 * would make Creative promise an item model it does not have yet. This
+	 * closed switch mirrors the validated built-in pack; `haxe_c-xge.20.4` owns
+	 * the later migration where generic gameplay reads every pack edit rule.
 	 */
 	public static function remove(cells:WorldCells, coord:BlockCoord):Bool {
 		final current = query(cells, coord);

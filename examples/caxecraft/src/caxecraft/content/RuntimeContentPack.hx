@@ -71,7 +71,7 @@ final class RuntimePresentation {
  * Immutable content registry shared by authoring validation and level loading.
  *
  * Arrays stay private and are never returned. Bounded linear lookup is
- * deliberate for the current reviewed pack (10 blocks and 9 items): it keeps
+ * deliberate for the current reviewed pack (10 blocks and 10 items): it keeps
  * one deterministic ownership model and avoids a second mutable index whose
  * consistency would need separate publication rules.
  */
@@ -176,6 +176,28 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		return block == null ? -1 : block.storageCode;
 	}
 
+	/** True when the admitted pack allows this terrain to become its declared drop. */
+	public function blockIsCollectable(id:ContentId):Bool {
+		final block = findBlock(id.text());
+		return block != null && block.collectable;
+	}
+
+	/**
+		Return the pack-local item code produced by one terrain definition.
+
+		A pack-local code is the validated item's position in the registry, not a
+		hotbar slot. `-1` means the block is unknown or deliberately has no drop.
+	**/
+	public function blockDropItemStorageCode(id:ContentId):Int {
+		final block = findBlock(id.text());
+		if (block == null)
+			return -1;
+		return switch block.dropItem {
+			case RuntimeReferenceReady(reference): itemStorageCode(new ContentId(reference.id));
+			case NoRuntimeReference: -1;
+		};
+	}
+
 	/** Resolve one terrain ID into its nominal engine storage value. */
 	public function resolveTerrain(id:ContentId):TerrainContentResolution {
 		final block = findBlock(id.text());
@@ -223,6 +245,16 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	/** Return the selected item's closed action after validating its code. */
 	public function itemUseProfile(code:Int):RuntimeItemUseProfile
 		return isValidItemStorageCode(code) ? items[code].useProfile : NoItemUse;
+
+	/** Return the terrain storage code placed by this item, or `-1` when it places none. */
+	public function itemPlacementBlockStorageCode(code:Int):Int {
+		if (!isValidItemStorageCode(code))
+			return -1;
+		return switch items[code].placementBlock {
+			case RuntimeReferenceReady(reference): blockStorageCode(new ContentId(reference.id));
+			case NoRuntimeReference: -1;
+		};
+	}
 
 	/** Return the selected item's reviewed icon, or null for an invalid code. */
 	public function itemPresentation(code:Int):Null<RuntimePresentation>

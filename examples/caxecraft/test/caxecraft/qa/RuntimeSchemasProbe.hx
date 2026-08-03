@@ -7,6 +7,7 @@ import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.RuntimeAssetInventory;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
+import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.localization.RuntimeUiCatalog;
@@ -74,13 +75,28 @@ function selfCheck():Int {
 	};
 
 	tracePack = registry.semanticProof();
+	final sand = new ContentId("caxecraft:sand");
+	final sandBlock = new ContentId("caxecraft:sand-block");
+	final sandBlockCode = registry.itemStorageCode(sandBlock);
+	final sandPresentation = registry.itemPresentation(sandBlockCode);
 	if (tracePack != 132089
 		|| registry.packId() != "caxecraft:base"
 		|| registry.packVersion() != 1
 		|| registry.blockCount() != 10
-		|| registry.itemCount() != 9
+		|| registry.itemCount() != 10
 		|| registry.blockStorageCode(new ContentId("caxecraft:grass")) != 1
-		|| registry.itemStorageCode(new ContentId("caxecraft:tideweave-suit")) != 8
+		|| registry.blockStorageCode(sand) != 5
+		|| !registry.blockIsCollectable(sand)
+		|| registry.blockDropItemStorageCode(sand) != sandBlockCode
+		|| sandBlockCode != 7
+		|| registry.itemUseProfile(sandBlockCode) != RuntimeItemUseProfile.PlaceBlock
+		|| registry.itemPlacementBlockStorageCode(sandBlockCode) != 5
+		|| registry.maximumItemQuantity(sandBlock) != 64
+		|| sandPresentation == null
+		|| sandPresentation.asset != "items"
+		|| sandPresentation.cell != "sand-block"
+		|| sandPresentation.cellIndex != 14
+		|| registry.itemStorageCode(new ContentId("caxecraft:tideweave-suit")) != 9
 		|| registry.maximumItemQuantity(new ContentId("caxecraft:berries")) != 64)
 		return 6;
 	switch registry.resolveFluid(new ContentId("caxecraft:water")) {
