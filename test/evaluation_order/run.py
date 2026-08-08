@@ -96,16 +96,6 @@ class GotoProvenance:
 CONTROL_FLOW_ARTIFACT_PATH = "synthetic-control-flow.c"
 EXPECTED_CONTROL_FLOW_GOTO_PROVENANCE = (
     GotoProvenance(
-        "loop-break-through-switch",
-        "synthetic.loop-switch-break",
-        "hxc_bounded_control_flow",
-        "dispatch",
-        "exit",
-        "hxc_bounded_label_3",
-        CONTROL_FLOW_ARTIFACT_PATH,
-        1,
-    ),
-    GotoProvenance(
         "irreducible-cfg",
         "synthetic.nested-irreducible",
         "hxc_legacy_control_flow",
@@ -299,7 +289,7 @@ def control_flow_goto_provenance(
                 f"control-flow goto occurrence must be a positive integer: {item!r}"
             )
         category = item["category"]
-        if category not in {"loop-break-through-switch", "irreducible-cfg"}:
+        if category != "irreducible-cfg":
             raise EvaluationOrderFailure(f"unknown typed goto category {category!r}")
         result.append(
             GotoProvenance(
@@ -320,9 +310,7 @@ def control_flow_goto_provenance(
             f"{provenance!r}"
         )
     category_counts = Counter(item.category for item in provenance)
-    if category_counts != Counter(
-        {"loop-break-through-switch": 1, "irreducible-cfg": 6}
-    ):
+    if category_counts != Counter({"irreducible-cfg": 6}):
         raise EvaluationOrderFailure(
             f"control-flow goto category counts drifted: {category_counts!r}"
         )
@@ -358,16 +346,17 @@ def validate_control_flow_emission(
         )
     bounded = source[bounded_start:legacy_start]
     legacy = source[legacy_start:main_start]
-    if bounded.count("goto ") != 1:
+    if "goto " in bounded or "hxc_bounded_label_3:" in bounded:
         raise EvaluationOrderFailure(
-            "bounded structural escape did not emit exactly one goto"
+            "bounded structural escape retained a goto or label"
         )
     if (
-        bounded.count("goto hxc_bounded_label_3;") != 1
-        or bounded.count("hxc_bounded_label_3:") != 1
+        bounded.count("bool hxc_bounded_label_3_break_requested = false;") != 1
+        or bounded.count("hxc_bounded_label_3_break_requested = true;") != 1
+        or bounded.count("if (hxc_bounded_label_3_break_requested)") != 1
     ):
         raise EvaluationOrderFailure(
-            "bounded structural escape lost its single owned exit label"
+            "bounded structural escape lost its loop-owned break flag"
         )
     if legacy.count("goto ") != 6:
         raise EvaluationOrderFailure(
@@ -407,7 +396,7 @@ def validate_control_flow_emission(
     if (
         actual_gotos != expected_gotos
         or sum(actual_gotos.values()) != len(all_emitted_gotos)
-        or len(all_emitted_gotos) != 7
+        or len(all_emitted_gotos) != 6
     ):
         raise EvaluationOrderFailure(
             "emitted gotos are not covered exactly by typed plan provenance: "
@@ -824,7 +813,9 @@ def synthetic_function_mappings(
     provenance: tuple[GotoProvenance, ...],
 ) -> tuple[FunctionSourceMapping, ...]:
     owner = ArtifactOwner(OwnerKind.SYNTHETIC_FIXTURE)
-    identities: dict[str, str] = {}
+    identities: dict[str, str] = {
+        "hxc_bounded_control_flow": "synthetic.loop-switch-break"
+    }
     for item in provenance:
         existing = identities.get(item.c_function_name)
         if existing is not None and existing != item.function_id:
@@ -906,15 +897,16 @@ def validate_evaluation_maintainability_report(
     if (
         len(actual_gotos) != len(gotos)
         or actual_gotos != expected_gotos
-        or summary.get("gotoCount") != 7
+        or summary.get("gotoCount") != 6
         or summary.get("gotoCategoryCounts")
         != [
             {"category": "irreducible-cfg", "occurrences": 6},
-            {"category": "loop-break-through-switch", "occurrences": 1},
+            {"category": "loop-break-through-switch", "occurrences": 0},
         ]
     ):
         raise EvaluationOrderFailure(
-            "synthetic maintainability report does not exactly consume plan-derived goto authorities"
+            "synthetic maintainability report does not exactly consume plan-derived goto authorities: "
+            f"actual={actual_gotos!r} expected={expected_gotos!r} summary={summary!r}"
         )
 
 

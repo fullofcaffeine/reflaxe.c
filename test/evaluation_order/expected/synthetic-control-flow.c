@@ -5,6 +5,7 @@ static void hxc_bounded_control_flow(bool condition, int32_t selector)
 {
   while (1)
   {
+    bool hxc_bounded_label_3_break_requested = false;
     if (!condition)
     {
       break;
@@ -12,16 +13,19 @@ static void hxc_bounded_control_flow(bool condition, int32_t selector)
     switch (selector) {
       case 1:
         {
-          goto hxc_bounded_label_3;
+          hxc_bounded_label_3_break_requested = true;
+          break;
         }
       default:
         {
           continue;
         }
     }
+    if (hxc_bounded_label_3_break_requested)
+    {
+      break;
+    }
   }
-hxc_bounded_label_3:
-    ;
   return;
 }
 

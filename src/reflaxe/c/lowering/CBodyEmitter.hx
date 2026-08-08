@@ -152,7 +152,8 @@ private typedef CBodyEmissionState = {
 	final nonReturningFunctionIds:Null<Map<String, Bool>>;
 	final boundsAbortName:Null<CIdentifier>;
 	final lineDirectives:Bool;
-	final labeledTargets:Map<String, Bool>;
+	final deferredBreakNames:Map<String, CIdentifier>;
+	final activeDeferredBreaks:Map<String, Bool>;
 	final coalescing:CBodyValueCoalescingPlan;
 	final managedRootSlots:Map<String, Array<CBodyEmitterManagedRootSlot>>;
 	var managedRootArray:Null<CIdentifier>;
@@ -560,7 +561,8 @@ class CBodyEmitter {
 			nonReturningFunctionIds: nonReturningFunctionIds,
 			boundsAbortName: boundsAbortName,
 			lineDirectives: lineDirectives,
-			labeledTargets: [],
+			deferredBreakNames: [],
+			activeDeferredBreaks: [],
 			coalescing: coalescing,
 			managedRootSlots: [],
 			managedRootArray: null,
@@ -588,9 +590,11 @@ class CBodyEmitter {
 		CPhaseTiming.stopDetail(setupTimer);
 		final emissionTimer = CPhaseTiming.startDetail(CDTBodyCASTEmission);
 		switch plan {
-			case CCFStructured(root, labeledTargets):
-				for (target in labeledTargets)
-					state.labeledTargets.set(target, true);
+			case CCFStructured(root, deferredBreakTargets):
+				for (target in deferredBreakTargets) {
+					final label = requireLabelName(labelNames, target, fn.id);
+					state.deferredBreakNames.set(target, new CIdentifier(label.value + "_break_requested"));
+				}
 				emitRegion(statements, root, state, fn);
 			case CCFLegacyIrreducible(_):
 				emitLegacyGraph(statements, state, fn);
@@ -927,25 +931,42 @@ class CBodyEmitter {
 					statements.push(SIf(condition, SBlock(trueStatements), falseStatements.length == 0 ? null : SBlock(falseStatements)));
 				}
 				false;
-			case CFNWhile(_, decisionBlockId, conditionValueId, continuesWhenTrue, conditionRegion, body, _):
+			case CFNWhile(_, decisionBlockId, conditionValueId, continuesWhenTrue, conditionRegion, body, exitBlockId):
 				final loopStatements:Array<CStmt> = [];
+				final hasDeferredBreak = regionContainsDeferredBreak(body, exitBlockId);
+				if (hasDeferredBreak) {
+					loopStatements.push(deferredBreakDeclaration(state, exitBlockId, fn.id));
+					state.activeDeferredBreaks.set(exitBlockId, true);
+				}
 				emitRegion(loopStatements, conditionRegion, state, fn);
 				final decision = requireBlock(fn, decisionBlockId);
 				addTerminatorLineDirective(loopStatements, decision, state.lineDirectives, fn.id);
 				final condition = requireValue(state.values, conditionValueId, fn.id);
 				loopStatements.push(SIf(continuesWhenTrue ? EUnary(LogicalNot, condition) : condition, SBreak, null));
 				emitRegion(loopStatements, body, state, fn);
+				if (hasDeferredBreak)
+					state.activeDeferredBreaks.remove(exitBlockId);
 				statements.push(SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(loopStatements)));
+				emitDeferredBreakPropagation(statements, [conditionRegion, body], state, fn.id);
 				false;
-			case CFNDoWhile(_, decisionBlockId, conditionValueId, continuesWhenTrue, body, conditionRegion, _):
+			case CFNDoWhile(_, decisionBlockId, conditionValueId, continuesWhenTrue, body, conditionRegion, exitBlockId):
 				final loopStatements:Array<CStmt> = [];
+				final hasDeferredBreak = regionContainsDeferredBreak(body, exitBlockId)
+					|| regionContainsDeferredBreak(conditionRegion, exitBlockId);
+				if (hasDeferredBreak) {
+					loopStatements.push(deferredBreakDeclaration(state, exitBlockId, fn.id));
+					state.activeDeferredBreaks.set(exitBlockId, true);
+				}
 				emitRegion(loopStatements, body, state, fn);
 				emitRegion(loopStatements, conditionRegion, state, fn);
 				final decision = requireBlock(fn, decisionBlockId);
 				addTerminatorLineDirective(loopStatements, decision, state.lineDirectives, fn.id);
 				final condition = requireValue(state.values, conditionValueId, fn.id);
 				loopStatements.push(SIf(continuesWhenTrue ? EUnary(LogicalNot, condition) : condition, SBreak, null));
+				if (hasDeferredBreak)
+					state.activeDeferredBreaks.remove(exitBlockId);
 				statements.push(SDoWhile(SBlock(loopStatements), EInt(CIntegerLiteral.decimal("1"))));
+				emitDeferredBreakPropagation(statements, [body, conditionRegion], state, fn.id);
 				false;
 			case CFNSwitch(blockId, valueId, arms, _):
 				emitStructuredSwitch(statements, blockId, valueId, arms, false, state, fn);
@@ -1006,6 +1027,12 @@ class CBodyEmitter {
 		};
 		addTerminatorLineDirective(statements, block, state.lineDirectives, fn.id);
 		statements.push(SSwitch(subject, emittedCases));
+		for (targetBlockId in switchDeferredBreakTargets(arms)) {
+			if (state.activeDeferredBreaks.exists(targetBlockId)) {
+				final flag = requireDeferredBreakName(state, targetBlockId, fn.id);
+				statements.push(SIf(EIdentifier(flag), SBreak, null));
+			}
+		}
 		return false;
 	}
 
@@ -1040,14 +1067,88 @@ class CBodyEmitter {
 					emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName, state.localNames, state.globalNames,
 						state.spanLengthNames, state.spanValueLengths);
 				}
-			case CFCGoto(ownerBlockId, targetBlockId, _):
+			case CFCDeferredBreak(ownerBlockId, targetBlockId, _):
 				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
-				statements.push(SGoto(requireLabelName(state.labelNames, targetBlockId, fn.id)));
+				if (!state.activeDeferredBreaks.exists(targetBlockId))
+					fail('deferred break `$ownerBlockId` -> `$targetBlockId` in `${fn.id}` has no active owning loop');
+				statements.push(SExpr(EBinary(Assign, EIdentifier(requireDeferredBreakName(state, targetBlockId, fn.id)), EBool(true))));
+				statements.push(SBreak);
 		}
 	}
 
+	/** Declare the Boolean that carries one nested switch break to its loop. */
+	static function deferredBreakDeclaration(state:CBodyEmissionState, targetBlockId:String, functionId:String):CStmt
+		return SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TBool),
+			declarator: DName(requireDeferredBreakName(state, targetBlockId, functionId)),
+			initializer: IExpr(EBool(false)),
+			attributes: []
+		});
+
+	/** Return the finalized carrier name, or fail before plausible C is emitted. */
+	static function requireDeferredBreakName(state:CBodyEmissionState, targetBlockId:String, functionId:String):CIdentifier {
+		final name = state.deferredBreakNames.get(targetBlockId);
+		if (name == null)
+			return fail('deferred break target `$targetBlockId` in `$functionId` has no finalized name');
+		return name;
+	}
+
+	/** List each enclosing-loop break requested anywhere inside these switch arms. */
+	static function switchDeferredBreakTargets(arms:Array<CBodyControlFlowSwitchArm>):Array<String> {
+		final found:Map<String, Bool> = [];
+		for (arm in arms)
+			collectDeferredBreakTargets(arm.body, found);
+		final result = [for (target in found.keys()) target];
+		result.sort(compareUtf8);
+		return result;
+	}
+
+	/** Carry an outer-loop break across a nested loop that intercepted the first C break. */
+	static function emitDeferredBreakPropagation(statements:Array<CStmt>, regions:Array<CBodyControlFlowRegion>, state:CBodyEmissionState,
+			functionId:String):Void {
+		final found:Map<String, Bool> = [];
+		for (region in regions)
+			collectDeferredBreakTargets(region, found);
+		final targets = [for (target in found.keys()) target];
+		targets.sort(compareUtf8);
+		for (targetBlockId in targets)
+			if (state.activeDeferredBreaks.exists(targetBlockId))
+				statements.push(SIf(EIdentifier(requireDeferredBreakName(state, targetBlockId, functionId)), SBreak, null));
+	}
+
+	/** Report whether this region can request the named enclosing-loop exit. */
+	static function regionContainsDeferredBreak(region:CBodyControlFlowRegion, targetBlockId:String):Bool {
+		final found:Map<String, Bool> = [];
+		collectDeferredBreakTargets(region, found);
+		return found.exists(targetBlockId);
+	}
+
+	/** Collect deferred targets recursively without changing their structural owners. */
+	static function collectDeferredBreakTargets(region:CBodyControlFlowRegion, found:Map<String, Bool>):Void {
+		switch region.completion {
+			case CFCDeferredBreak(_, targetBlockId, CDBRLoopBreakThroughSwitch):
+				found.set(targetBlockId, true);
+			case _:
+		}
+		for (node in region.nodes)
+			switch node {
+				case CFNBlock(_):
+				case CFNIf(_, _, whenTrue, whenFalse, _):
+					collectDeferredBreakTargets(whenTrue, found);
+					collectDeferredBreakTargets(whenFalse, found);
+				case CFNWhile(_, _, _, _, condition, body, _) | CFNDoWhile(_, _, _, _, body, condition, _):
+					collectDeferredBreakTargets(condition, found);
+					collectDeferredBreakTargets(body, found);
+				case CFNSwitch(_, _, arms, _) | CFNTagSwitch(_, _, arms, _):
+					for (arm in arms)
+						collectDeferredBreakTargets(arm.body, found);
+			}
+	}
+
 	function emitBlockInstructions(statements:Array<CStmt>, block:HxcIRBlock, state:CBodyEmissionState, fn:HxcIRFunction, forceLabel:Bool):Bool {
-		if (forceLabel || state.labeledTargets.exists(block.id))
+		if (forceLabel)
 			statements.push(SLabel(requireLabelName(state.labelNames, block.id, fn.id), SEmpty));
 		var terminatedByNonReturningCall = false;
 		for (instruction in block.instructions) {

@@ -12,6 +12,8 @@ final class Main {
 		final copied = nodes.copy();
 		copied[0] = second;
 		copied.push(first);
+		final found = findNode(nodes, 20);
+		final missing = findNode(nodes, 99);
 		// Cross both the Array growth boundary and the collector's deterministic
 		// one-mebibyte pressure threshold. The final assertions then prove that a
 		// collection traced the live Array slots and the first<->second cycle rather
@@ -32,7 +34,15 @@ final class Main {
 		while (nodes.length != 40003 || copied.length != 4 || copied[0] != second || copied[3] != first || nodes[0].value != 15 || nodes[1] != first
 			|| nodes[2] != null || first.value != 15 || originalFirstLinks.length != 1 || originalFirstLinks[0] != second
 			|| replacementFirstLinks.length != 2 || first.linkCount() != 2 || second.linkCount() != 1 || first.sampleCount() != 1 || absent != null
-			|| present == null || present.length != 1 || present[0] != first) {}
+			|| present == null || present.length != 1 || present[0] != first || found != second || missing != null) {}
+	}
+
+	/** Return one matching class reference directly from an Array iteration. */
+	static function findNode(nodes:Array<ManagedNode>, wanted:Int):Null<ManagedNode> {
+		for (node in nodes)
+			if (node != null && node.value == wanted)
+				return node;
+		return null;
 	}
 
 	/**

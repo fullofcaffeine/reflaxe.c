@@ -795,7 +795,7 @@
         "statement and value switch subjects execute once and every emitted C case/default immediately jumps to a typed target without user-observable fallthrough",
         "every effectful load and consumed call is materialized; only total pure expressions over stable values remain inline",
         "portable, metal, and runtime-none production C is byte-stable, warning-clean at O0/O2, runtime-free, and matches the pinned Eval oracle under GCC and Clang",
-        "schema-validated maintainability snapshots bound the production program and synthetic control-flow corpus, and every synthetic goto reconciles exactly with one typed plan reason: six irreducible CFG edges and one loop-break-through-switch edge"
+        "schema-validated maintainability snapshots bound the production program and synthetic control-flow corpus; the reducible loop-break-through-switch case uses a Boolean handoff, and each of the six remaining synthetic gotos reconciles with one irreducible-CFG plan reason"
       ]
     },
     {

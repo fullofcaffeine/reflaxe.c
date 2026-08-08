@@ -64,10 +64,11 @@ separate input: regenerating a report cannot silently raise its own limits.
 
 The analyzer never approves a jump because its label happens to have a familiar
 prefix. The caller must provide provenance from the typed control-flow plan.
-The two currently admitted reasons are:
+The report schema names two reviewed reasons:
 
-- `loop-break-through-switch`: Haxe `break` exits a loop even when it appears
-  inside a switch, while a plain C `break` would exit only the switch; and
+- `loop-break-through-switch`: the historical bounded escape for a Haxe
+  `break` inside a switch; current reducible lowering uses a loop-owned Boolean
+  handoff instead of emitting this jump; and
 - `irreducible-cfg`: validation proved that the control-flow graph has more than
   one entry and cannot be represented by ordinary nested C constructs without
   changing behavior.
@@ -75,7 +76,9 @@ The two currently admitted reasons are:
 An occurrence that does not match exactly one typed authority is a failure.
 Caxecraft admits neither reason: its current domain graph is reducible and must
 remain free of compiler labels and jumps. The synthetic evaluation-order fixture
-keeps the two exceptional forms visible and native-tested.
+keeps the structured handoff and the irreducible fallback visible and
+native-tested. Its current generated C contains only the six explicitly owned
+irreducible jumps.
 
 ## Representative corpus
 

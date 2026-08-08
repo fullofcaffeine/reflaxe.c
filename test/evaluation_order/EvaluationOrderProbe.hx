@@ -20,7 +20,7 @@ import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlan;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlanner;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowRegion;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlanVerifier;
-import reflaxe.c.lowering.CBodyControlFlow.CBodyGotoReason;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyDeferredBreakReason;
 import reflaxe.c.lowering.CBodyEmitter;
 import reflaxe.c.lowering.CBodyEmissionError;
 import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlanner;
@@ -50,7 +50,6 @@ typedef EvaluationSourceRecord = {
 }
 
 enum abstract EvaluationGotoCategory(String) to String {
-	var EGCLoopBreakThroughSwitch = "loop-break-through-switch";
 	var EGCIrreducibleCfg = "irreducible-cfg";
 }
 
@@ -626,7 +625,7 @@ class EvaluationOrderProbe {
 			syntheticBlock("common-tail", IRTReturn(null, []), source)
 		], source);
 		requireStructured("switch with an abrupt arm and common normal tail", normalJoinSwitch, planner.plan(normalJoinSwitch), verifier);
-		final loopSwitchBreak = syntheticFunction("synthetic.loop-switch-break", [condition, selector], "loop-header", [
+		final loopSwitchAbruptTail = syntheticFunction("synthetic.loop-switch-abrupt-tail", [condition, selector], "loop-header", [
 			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
 			syntheticBlock("dispatch", IRTSwitch("selector", [
 				{
@@ -638,11 +637,34 @@ class EvaluationOrderProbe {
 			syntheticBlock("advance", IRTJump(plainEdge("loop-header")), source),
 			syntheticBlock("exit", IRTReturn(null, []), source)
 		], source);
+		final loopSwitchAbruptPlan = planner.plan(loopSwitchAbruptTail);
+		switch loopSwitchAbruptPlan {
+			case CCFStructured(root, deferredBreakTargets):
+				verifier.requireValid(loopSwitchAbruptTail, loopSwitchAbruptPlan);
+				if (deferredBreakTargets.length != 0 || countDeferredSwitchBreaks(root) != 0)
+					throw new haxe.Exception("loop switch return tail retained a needless structural goto");
+			case CCFLegacyIrreducible(_):
+				throw new haxe.Exception("reducible loop switch return selected the irreducible fallback");
+		}
+		final loopSwitchBreak = syntheticFunction("synthetic.loop-switch-break", [condition, selector], "loop-header", [
+			syntheticBlock("loop-header", IRTBranch("condition", plainEdge("dispatch"), plainEdge("exit")), source),
+			syntheticBlock("dispatch", IRTSwitch("selector", [
+				{
+					value: IRCInt("1"),
+					edge: plainEdge("exit")
+				}
+			],
+				plainEdge("advance")),
+				source),
+			syntheticBlock("advance", IRTJump(plainEdge("loop-header")), source),
+			syntheticBlock("exit", IRTJump(plainEdge("function-return")), source),
+			syntheticBlock("function-return", IRTReturn(null, []), source)
+		], source);
 		final loopSwitchPlan = planner.plan(loopSwitchBreak);
 		switch loopSwitchPlan {
-			case CCFStructured(root, labeledTargets):
+			case CCFStructured(root, deferredBreakTargets):
 				verifier.requireValid(loopSwitchBreak, loopSwitchPlan);
-				if (labeledTargets.join(",") != "exit" || countBoundedSwitchGotos(root) != 1)
+				if (deferredBreakTargets.join(",") != "exit" || countDeferredSwitchBreaks(root) != 1)
 					throw new haxe.Exception("loop switch break did not retain its single bounded structural escape");
 			case CCFLegacyIrreducible(_):
 				throw new haxe.Exception("reducible loop switch break selected the irreducible fallback");
@@ -819,18 +841,12 @@ class EvaluationOrderProbe {
 		final gotoProvenance:Array<EvaluationGotoProvenance> = [];
 		addSyntheticControlFlowFunction(unit, emitter, bounded, boundedPlan, boundedName, "hxc_bounded_label", gotoProvenance);
 		addSyntheticControlFlowFunction(unit, emitter, irreducible, irreduciblePlan, irreducibleName, "hxc_legacy_label", gotoProvenance);
-		var boundedGotoCount = 0;
 		var irreducibleGotoCount = 0;
-		for (item in gotoProvenance) {
-			switch item.category {
-				case EGCLoopBreakThroughSwitch:
-					boundedGotoCount++;
-				case EGCIrreducibleCfg:
-					irreducibleGotoCount++;
-			}
-		}
-		if (boundedGotoCount != 1 || irreducibleGotoCount != 6)
-			throw new haxe.Exception('synthetic goto provenance expected 1 bounded and 6 irreducible gotos, received $boundedGotoCount and $irreducibleGotoCount');
+		for (item in gotoProvenance)
+			if (item.category == EGCIrreducibleCfg)
+				irreducibleGotoCount++;
+		if (irreducibleGotoCount != 6)
+			throw new haxe.Exception('synthetic goto provenance expected 6 irreducible gotos, received $irreducibleGotoCount');
 		unit.declarations.push(DFunction({
 			storage: [],
 			functionSpecifiers: [],
@@ -880,8 +896,7 @@ class EvaluationOrderProbe {
 	static function appendPlanGotoProvenance(result:Array<EvaluationGotoProvenance>, fn:HxcIRFunction, plan:CBodyControlFlowPlan, cName:CIdentifier,
 			labelNames:Map<String, CIdentifier>):Void {
 		switch plan {
-			case CCFStructured(root, _):
-				appendStructuredGotoProvenance(result, fn, root, cName, labelNames);
+			case CCFStructured(_, _):
 			case CCFLegacyIrreducible(_):
 				for (block in fn.blocks) {
 					final terminator = switch block.terminator {
@@ -904,35 +919,6 @@ class EvaluationOrderProbe {
 					for (targetBlockId in targets)
 						appendGotoProvenance(result, EGCIrreducibleCfg, fn, cName, block.id, targetBlockId, labelNames);
 				}
-		}
-	}
-
-	static function appendStructuredGotoProvenance(result:Array<EvaluationGotoProvenance>, fn:HxcIRFunction, region:CBodyControlFlowRegion, cName:CIdentifier,
-			labelNames:Map<String, CIdentifier>):Void {
-		for (node in region.nodes) {
-			switch node {
-				case CFNBlock(_):
-				case CFNIf(_, _, whenTrue, whenFalse, _):
-					appendStructuredGotoProvenance(result, fn, whenTrue, cName, labelNames);
-					appendStructuredGotoProvenance(result, fn, whenFalse, cName, labelNames);
-				case CFNWhile(_, _, _, _, condition, body, _):
-					appendStructuredGotoProvenance(result, fn, condition, cName, labelNames);
-					appendStructuredGotoProvenance(result, fn, body, cName, labelNames);
-				case CFNDoWhile(_, _, _, _, body, condition, _):
-					appendStructuredGotoProvenance(result, fn, body, cName, labelNames);
-					appendStructuredGotoProvenance(result, fn, condition, cName, labelNames);
-				case CFNSwitch(_, _, arms, _) | CFNTagSwitch(_, _, arms, _):
-					for (arm in arms)
-						appendStructuredGotoProvenance(result, fn, arm.body, cName, labelNames);
-			}
-		}
-		switch region.completion {
-			case CFCGoto(ownerBlockId, targetBlockId, reason):
-				final category = switch reason {
-					case CBGRLoopBreakThroughSwitch: EGCLoopBreakThroughSwitch;
-				};
-				appendGotoProvenance(result, category, fn, cName, ownerBlockId, targetBlockId, labelNames);
-			case CFCFallthrough | CFCClosed | CFCReturn(_) | CFCThrow(_) | CFCUnreachable(_) | CFCBreak(_, _) | CFCContinue(_, _) | CFCSharedAbrupt(_, _):
 		}
 	}
 
@@ -994,26 +980,26 @@ class EvaluationOrderProbe {
 		return count;
 	}
 
-	static function countBoundedSwitchGotos(region:CBodyControlFlowRegion):Int {
+	static function countDeferredSwitchBreaks(region:CBodyControlFlowRegion):Int {
 		var count = switch region.completion {
-			case CFCGoto(_, _, CBGRLoopBreakThroughSwitch): 1;
+			case CFCDeferredBreak(_, _, CDBRLoopBreakThroughSwitch): 1;
 			case _: 0;
 		};
 		for (node in region.nodes) {
 			switch node {
 				case CFNBlock(_):
 				case CFNIf(_, _, whenTrue, whenFalse, _):
-					count += countBoundedSwitchGotos(whenTrue);
-					count += countBoundedSwitchGotos(whenFalse);
+					count += countDeferredSwitchBreaks(whenTrue);
+					count += countDeferredSwitchBreaks(whenFalse);
 				case CFNWhile(_, _, _, _, condition, body, _):
-					count += countBoundedSwitchGotos(condition);
-					count += countBoundedSwitchGotos(body);
+					count += countDeferredSwitchBreaks(condition);
+					count += countDeferredSwitchBreaks(body);
 				case CFNDoWhile(_, _, _, _, body, condition, _):
-					count += countBoundedSwitchGotos(body);
-					count += countBoundedSwitchGotos(condition);
+					count += countDeferredSwitchBreaks(body);
+					count += countDeferredSwitchBreaks(condition);
 				case CFNSwitch(_, _, arms, _) | CFNTagSwitch(_, _, arms, _):
 					for (arm in arms)
-						count += countBoundedSwitchGotos(arm.body);
+						count += countDeferredSwitchBreaks(arm.body);
 			}
 		}
 		return count;

@@ -45,13 +45,13 @@
   "inputs": [
     {
       "path": "synthetic-control-flow.c",
-      "sha256": "aa27fb90e1f2ff1aa804698d57bfc046e9b9add2c5477cec645d97a88ff26107"
+      "sha256": "325a5a23c6e814d08d5a135094673775c4d147ae17f3f6ab4bde565a1993fa25"
     }
   ],
   "summary": {
     "artifactCount": 1,
-    "physicalLineCount": 70,
-    "codeLineCount": 67,
+    "physicalLineCount": 74,
+    "codeLineCount": 71,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -64,17 +64,17 @@
     "lineMappedFunctionBasisPoints": 0,
     "ownerMappedArtifactCount": 1,
     "ownerMappedArtifactBasisPoints": 10000,
-    "branchCount": 10,
+    "branchCount": 11,
     "temporaryDeclarationCount": 0,
     "temporaryReferenceCount": 0,
     "temporaryDeclarationsPerKFunctionCodeLines": 0,
     "maxIdentifier": {
-      "name": "hxc_bounded_control_flow",
-      "bytes": 24,
+      "name": "hxc_bounded_label_3_break_requested",
+      "bytes": 35,
       "coordinate": {
         "path": "synthetic-control-flow.c",
-        "line": 4,
-        "column": 13,
+        "line": 8,
+        "column": 10,
         "functionId": null
       }
     },
@@ -90,7 +90,7 @@
     "hashSuffixIdentifierCount": 0,
     "explainedHashSuffixIdentifierCount": 0,
     "unexplainedHashSuffixIdentifierCount": 0,
-    "gotoCount": 7,
+    "gotoCount": 6,
     "unauthorizedGotoCount": 0,
     "gotoCategoryCounts": [
       {
@@ -99,7 +99,7 @@
       },
       {
         "category": "loop-break-through-switch",
-        "occurrences": 1
+        "occurrences": 0
       }
     ],
     "violationCount": 0
@@ -108,46 +108,13 @@
   "gotoOccurrences": [
     {
       "path": "synthetic-control-flow.c",
-      "line": 15,
-      "column": 11,
-      "functionId": "synthetic.loop-switch-break",
-      "targetLabel": "hxc_bounded_label_3",
-      "occurrence": 1,
-      "category": "loop-break-through-switch",
-      "labelLine": 23,
-      "labelColumn": 1
-    },
-    {
-      "path": "synthetic-control-flow.c",
-      "line": 57,
+      "line": 61,
       "column": 5,
       "functionId": "synthetic.nested-irreducible",
       "targetLabel": "hxc_legacy_label_0",
       "occurrence": 1,
       "category": "irreducible-cfg",
-      "labelLine": 30,
-      "labelColumn": 1
-    },
-    {
-      "path": "synthetic-control-flow.c",
-      "line": 35,
-      "column": 9,
-      "functionId": "synthetic.nested-irreducible",
-      "targetLabel": "hxc_legacy_label_1",
-      "occurrence": 1,
-      "category": "irreducible-cfg",
-      "labelLine": 46,
-      "labelColumn": 1
-    },
-    {
-      "path": "synthetic-control-flow.c",
-      "line": 53,
-      "column": 5,
-      "functionId": "synthetic.nested-irreducible",
-      "targetLabel": "hxc_legacy_label_1",
-      "occurrence": 2,
-      "category": "irreducible-cfg",
-      "labelLine": 46,
+      "labelLine": 34,
       "labelColumn": 1
     },
     {
@@ -155,21 +122,21 @@
       "line": 39,
       "column": 9,
       "functionId": "synthetic.nested-irreducible",
-      "targetLabel": "hxc_legacy_label_2",
+      "targetLabel": "hxc_legacy_label_1",
       "occurrence": 1,
       "category": "irreducible-cfg",
-      "labelLine": 49,
+      "labelLine": 50,
       "labelColumn": 1
     },
     {
       "path": "synthetic-control-flow.c",
-      "line": 48,
-      "column": 3,
+      "line": 57,
+      "column": 5,
       "functionId": "synthetic.nested-irreducible",
-      "targetLabel": "hxc_legacy_label_2",
+      "targetLabel": "hxc_legacy_label_1",
       "occurrence": 2,
       "category": "irreducible-cfg",
-      "labelLine": 49,
+      "labelLine": 50,
       "labelColumn": 1
     },
     {
@@ -177,34 +144,56 @@
       "line": 43,
       "column": 9,
       "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_2",
+      "occurrence": 1,
+      "category": "irreducible-cfg",
+      "labelLine": 53,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 52,
+      "column": 3,
+      "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_2",
+      "occurrence": 2,
+      "category": "irreducible-cfg",
+      "labelLine": 53,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 47,
+      "column": 9,
+      "functionId": "synthetic.nested-irreducible",
       "targetLabel": "hxc_legacy_label_3",
       "occurrence": 1,
       "category": "irreducible-cfg",
-      "labelLine": 59,
+      "labelLine": 63,
       "labelColumn": 1
     }
   ],
   "files": [
     {
       "path": "synthetic-control-flow.c",
-      "sha256": "aa27fb90e1f2ff1aa804698d57bfc046e9b9add2c5477cec645d97a88ff26107",
+      "sha256": "325a5a23c6e814d08d5a135094673775c4d147ae17f3f6ab4bde565a1993fa25",
       "owner": {
         "kind": "synthetic-fixture",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 70,
-      "codeLineCount": 67,
+      "physicalLineCount": 74,
+      "codeLineCount": 71,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 68,
+      "identifierCount": 74,
       "maxIdentifier": {
-        "name": "hxc_bounded_control_flow",
-        "bytes": 24,
-        "line": 4,
-        "column": 13
+        "name": "hxc_bounded_label_3_break_requested",
+        "bytes": 35,
+        "line": 8,
+        "column": 10
       },
       "temporaryDeclarationCount": 0,
       "temporaryReferenceCount": 0,
@@ -220,13 +209,13 @@
           },
           "source": null,
           "startLine": 4,
-          "endLine": 26,
-          "physicalLineCount": 23,
-          "codeLineCount": 23,
-          "bodyCodeLineCount": 20,
+          "endLine": 30,
+          "physicalLineCount": 27,
+          "codeLineCount": 27,
+          "bodyCodeLineCount": 24,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 5,
+          "branchCount": 6,
           "maxNestingDepth": 3,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -242,8 +231,8 @@
             "source": null
           },
           "source": null,
-          "startLine": 28,
-          "endLine": 62,
+          "startLine": 32,
+          "endLine": 66,
           "physicalLineCount": 35,
           "codeLineCount": 35,
           "bodyCodeLineCount": 32,
@@ -265,8 +254,8 @@
             "source": null
           },
           "source": null,
-          "startLine": 64,
-          "endLine": 70,
+          "startLine": 68,
+          "endLine": 74,
           "physicalLineCount": 7,
           "codeLineCount": 7,
           "bodyCodeLineCount": 4,

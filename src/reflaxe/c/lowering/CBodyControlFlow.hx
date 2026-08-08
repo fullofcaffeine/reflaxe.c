@@ -31,9 +31,9 @@ enum CBodySwitchProof {
 	CSPClosed;
 }
 
-/** The closed authority set for the rare structured escape that needs a label. */
-enum CBodyGotoReason {
-	CBGRLoopBreakThroughSwitch;
+/** Why a nested switch must hand a break to its enclosing loop. */
+enum CBodyDeferredBreakReason {
+	CDBRLoopBreakThroughSwitch;
 }
 
 /** One typed C switch label. Labels sharing a target share one arm body. */
@@ -75,13 +75,13 @@ enum CBodyControlFlowCompletion {
 	CFCSharedAbrupt(ownerBlockId:String, targetBlockId:String);
 
 	/**
-		A bounded structural escape that C cannot spell with the nearest `break`.
+		A bounded break that must cross a generated C switch.
 
-		The current admitted use is a loop break nested inside a generated C
-		switch. It targets that loop's already-validated exit block; it is not a
-		fallback for ordinary sequencing or reducible selection.
+		The emitter sets a loop-owned Boolean inside the switch, leaves the switch,
+		and then breaks the loop. The target is the loop's validated exit block.
+		This is not a fallback for ordinary sequencing or reducible selection.
 	**/
-	CFCGoto(ownerBlockId:String, targetBlockId:String, reason:CBodyGotoReason);
+	CFCDeferredBreak(ownerBlockId:String, targetBlockId:String, reason:CBodyDeferredBreakReason);
 }
 
 /** A sequence owns every listed node exactly once and declares how it ends. */
@@ -131,7 +131,7 @@ enum CBodyControlFlowNode {
 
 /** The only two admitted whole-function control-flow policies. */
 enum CBodyControlFlowPlan {
-	CCFStructured(root:CBodyControlFlowRegion, labeledTargets:Array<String>);
+	CCFStructured(root:CBodyControlFlowRegion, deferredBreakTargets:Array<String>);
 
 	/** A validated but genuinely irreducible graph retains the legacy CFG form. */
 	CCFLegacyIrreducible(entryBlockIds:Array<String>);
@@ -344,7 +344,7 @@ private class CBodyControlFlowBuilder {
 	final fn:HxcIRFunction;
 	final analysis:CBodyControlFlowAnalysis;
 	final planned:Map<String, Bool> = [];
-	final labeledTargets:Map<String, Bool> = [];
+	final deferredBreakTargets:Map<String, Bool> = [];
 
 	public function new(fn:HxcIRFunction, analysis:CBodyControlFlowAnalysis) {
 		this.fn = fn;
@@ -357,9 +357,9 @@ private class CBodyControlFlowBuilder {
 			if (!planned.exists(blockId))
 				fail('structural plan for `${fn.id}` omitted reachable block `$blockId`');
 		}
-		final labels = [for (blockId in labeledTargets.keys()) blockId];
-		labels.sort(analysis.compareBlockIds);
-		return CCFStructured(root, labels);
+		final targets = [for (blockId in deferredBreakTargets.keys()) blockId];
+		targets.sort(analysis.compareBlockIds);
+		return CCFStructured(root, targets);
 	}
 
 	function buildSequence(startBlockId:String, stopBlockId:Null<String>, loop:Null<CBodyLoopContext>, breakIsDirect:Bool, allowed:Map<String, Bool>,
@@ -847,20 +847,32 @@ private class CBodyControlFlowBuilder {
 	}
 
 	function edgeCompletion(ownerBlockId:String, targetBlockId:String, loop:Null<CBodyLoopContext>, breakIsDirect:Bool):Null<CBodyControlFlowCompletion> {
+		/*
+			A loop exit can also be the function's shared return tail. In that case,
+			the return is the more exact meaning of the edge. Repeating its validated
+			cleanup and return inside a nested switch avoids a multi-level `goto` and
+			preserves the source's immediate function exit.
+		 */
+		if (isAbruptTarget(targetBlockId)) {
+			/*
+				The loop owns its exit block after the loop. A nested return may
+				still repeat that block inside an arm, but it must not claim the
+				original block before the loop continuation emits it.
+			 */
+			final repeatsLoopExit = loop != null && targetBlockId == loop.breakTargetBlockId;
+			if (!repeatsLoopExit && !planned.exists(targetBlockId))
+				claim(targetBlockId);
+			return CFCSharedAbrupt(ownerBlockId, targetBlockId);
+		}
 		if (loop != null) {
 			if (targetBlockId == loop.breakTargetBlockId) {
 				if (breakIsDirect)
 					return CFCBreak(ownerBlockId, targetBlockId);
-				labeledTargets.set(targetBlockId, true);
-				return CFCGoto(ownerBlockId, targetBlockId, CBGRLoopBreakThroughSwitch);
+				deferredBreakTargets.set(targetBlockId, true);
+				return CFCDeferredBreak(ownerBlockId, targetBlockId, CDBRLoopBreakThroughSwitch);
 			}
 			if (loop.continueTargetBlockId != null && targetBlockId == loop.continueTargetBlockId)
 				return CFCContinue(ownerBlockId, targetBlockId);
-		}
-		if (isAbruptTarget(targetBlockId)) {
-			if (!planned.exists(targetBlockId))
-				claim(targetBlockId);
-			return CFCSharedAbrupt(ownerBlockId, targetBlockId);
 		}
 		return null;
 	}
@@ -957,8 +969,8 @@ private class CBodyControlFlowPlanValidator {
 	final fn:HxcIRFunction;
 	final analysis:CBodyControlFlowAnalysis;
 	final counts:Map<String, Int> = [];
-	final labeled:Map<String, Bool> = [];
-	final usedLabels:Map<String, Bool> = [];
+	final deferredBreakTargets:Map<String, Bool> = [];
+	final usedDeferredBreakTargets:Map<String, Bool> = [];
 	final sharedAbruptTargets:Map<String, Bool> = [];
 
 	public function new(fn:HxcIRFunction, analysis:CBodyControlFlowAnalysis) {
@@ -976,15 +988,15 @@ private class CBodyControlFlowPlanValidator {
 				for (index in 0...entries.length)
 					if (entries[index] != analysis.irreducibleEntries[index])
 						fail('legacy control-flow fallback for `${fn.id}` has invalid irreducible entry `${entries[index]}`');
-			case CCFStructured(root, labeledTargets):
+			case CCFStructured(root, plannedDeferredBreakTargets):
 				if (analysis.irreducibleEntries.length > 0)
 					fail('structured plan for irreducible function `${fn.id}` is not admitted');
-				final orderedLabeledTargets = labeledTargets.copy();
-				orderedLabeledTargets.sort(analysis.compareBlockIds);
-				for (target in orderedLabeledTargets) {
-					if (labeled.exists(target) || !analysis.reachable.exists(target))
-						fail('structured plan for `${fn.id}` has an invalid labeled target `$target`');
-					labeled.set(target, true);
+				final orderedTargets = plannedDeferredBreakTargets.copy();
+				orderedTargets.sort(analysis.compareBlockIds);
+				for (target in orderedTargets) {
+					if (deferredBreakTargets.exists(target) || !analysis.reachable.exists(target))
+						fail('structured plan for `${fn.id}` has an invalid deferred-break target `$target`');
+					deferredBreakTargets.set(target, true);
 				}
 				validateRegion(root, null, true);
 				requireRegionEntry(root, fn.entryBlockId, fn.entryBlockId, null);
@@ -995,9 +1007,9 @@ private class CBodyControlFlowPlanValidator {
 					if (count == null || count != 1)
 						fail('structured plan for `${fn.id}` covers block `$blockId` ${count == null ? 0 : count} times');
 				}
-				for (target in orderedLabeledTargets)
-					if (!usedLabels.exists(target))
-						fail('structured plan for `${fn.id}` declares unused label target `$target`');
+				for (target in orderedTargets)
+					if (!usedDeferredBreakTargets.exists(target))
+						fail('structured plan for `${fn.id}` declares unused deferred-break target `$target`');
 		}
 	}
 
@@ -1194,18 +1206,19 @@ private class CBodyControlFlowPlanValidator {
 				// Several mutually exclusive completions may render the same
 				// abrupt tail, but it remains one HxcIR block with one semantic
 				// owner for coverage and diagnostics.
-				if (!sharedAbruptTargets.exists(targetBlockId)) {
+				final repeatsLoopExit = loop != null && targetBlockId == loop.breakTargetBlockId;
+				if (!repeatsLoopExit && !sharedAbruptTargets.exists(targetBlockId)) {
 					sharedAbruptTargets.set(targetBlockId, true);
 					count(targetBlockId);
 				}
-			case CFCGoto(ownerBlockId, targetBlockId, reason):
-				if (reason != CBGRLoopBreakThroughSwitch
+			case CFCDeferredBreak(ownerBlockId, targetBlockId, reason):
+				if (reason != CDBRLoopBreakThroughSwitch
 					|| loop == null
 					|| breakIsDirect
 					|| loop.breakTargetBlockId != targetBlockId
-					|| !labeled.exists(targetBlockId))
-					fail('structured goto `$ownerBlockId` -> `$targetBlockId` in `${fn.id}` has no admitted bounded reason');
-				usedLabels.set(targetBlockId, true);
+					|| !deferredBreakTargets.exists(targetBlockId))
+					fail('deferred break `$ownerBlockId` -> `$targetBlockId` in `${fn.id}` has no admitted loop owner');
+				usedDeferredBreakTargets.set(targetBlockId, true);
 				requireEdgeCompletion(ownerBlockId, targetBlockId);
 		}
 	}
@@ -1243,7 +1256,8 @@ private class CBodyControlFlowPlanValidator {
 		}
 		final matches = switch region.completion {
 			case CFCFallthrough: fallthroughTarget != null && expectedBlockId == fallthroughTarget;
-			case CFCBreak(owner, target) | CFCContinue(owner, target) | CFCSharedAbrupt(owner, target) | CFCGoto(owner, target, _): owner == ownerBlockId && target == expectedBlockId;
+			case CFCBreak(owner, target) | CFCContinue(owner, target) | CFCSharedAbrupt(owner, target) | CFCDeferredBreak(owner, target, _):
+				owner == ownerBlockId && target == expectedBlockId;
 			case _: false;
 		};
 		if (!matches)
@@ -1268,7 +1282,7 @@ private class CBodyControlFlowPlanValidator {
 			case CFCReturn(ownerBlockId) | CFCThrow(ownerBlockId) | CFCUnreachable(ownerBlockId):
 				requireLastBlockOwner(last, ownerBlockId);
 			case CFCBreak(ownerBlockId, targetBlockId) | CFCContinue(ownerBlockId, targetBlockId) | CFCSharedAbrupt(ownerBlockId, targetBlockId) |
-				CFCGoto(ownerBlockId, targetBlockId, _):
+				CFCDeferredBreak(ownerBlockId, targetBlockId, _):
 				requireLastBlockOwner(last, ownerBlockId);
 				requireNodeContinuation(last, targetBlockId);
 		}

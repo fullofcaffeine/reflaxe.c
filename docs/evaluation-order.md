@@ -279,10 +279,10 @@ skipped lazy operands, and the indexed compound-assignment IR; directly probes
 reducible diamonds, abrupt-arm branch/switch normal joins, same-target arms,
 direct loop escapes, converging break chains, loops with early break/return,
 inverted pre/post-test condition edges, maximal and nested irreducible graphs,
-the bounded loop-break-through-switch escape, and malformed
+the loop-owned Boolean handoff for a break through a switch, and malformed
 region/edge/sequence/reachability rejection. The bounded and irreducible plans
 are also passed through `CBodyEmitter`, CAST, and the printer; their checked-in
-strict-C fixture proves the bounded exit label and an irreducible backedge to
+strict-C fixture proves the structured handoff and an irreducible backedge to
 the function-entry label natively. The suite runs an Eval oracle; builds real
 production projects including `hxc_runtime=none`; and compiles/runs checked-in
 and production-generated C
