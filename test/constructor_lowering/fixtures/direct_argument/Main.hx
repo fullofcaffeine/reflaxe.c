@@ -49,6 +49,26 @@ final class ScoreSink {
 		return resolver.score(seed);
 }
 
+/**
+	Forwards one borrowed object through two exact instance-method bodies.
+
+	Both methods are known because this class is final. Neither stores, returns,
+	throws, captures, or forwards the reference to an unknown target, so the
+	caller's automatic object remains alive for the complete synchronous chain.
+**/
+final class ForwardingSink {
+	/** Create the stateless forwarding owner. */
+	public function new() {}
+
+	/** Forward the caller-owned object to the exact private helper below. */
+	public function read(resolver:OffsetResolver, seed:Int):Int
+		return readDirect(resolver, seed);
+
+	/** Read the borrow without retaining it beyond this method call. */
+	function readDirect(resolver:OffsetResolver, seed:Int):Int
+		return resolver.score(seed);
+}
+
 /** Executes class, interface, managed-neighbor, and direct-instance call shapes. */
 final class Main {
 	/**
@@ -71,6 +91,9 @@ final class Main {
 		final throughInterface = readInterface([1], new OffsetResolver(40, false), true ? [1] : [100]);
 		final sink = new ScoreSink();
 		final throughMethod = sink.read(new OffsetResolver(40, false), 2);
-		while (concrete != 42 || throughInterface != 42 || throughMethod != 42) {}
+		final forwardedValue = new OffsetResolver(40, false);
+		final forwardingSink = new ForwardingSink();
+		final throughForwarding = forwardingSink.read(forwardedValue, 2);
+		while (concrete != 42 || throughInterface != 42 || throughMethod != 42 || throughForwarding != 42) {}
 	}
 }

@@ -260,6 +260,7 @@ DIRECT_ARGUMENT_NATIVE_COVERAGE = frozenset(
         "constructor-direct-argument-class-borrow",
         "constructor-direct-argument-interface-borrow",
         "constructor-direct-argument-instance-method",
+        "constructor-direct-argument-instance-forwarding",
         "constructor-direct-argument-left-to-right-order",
         "constructor-direct-argument-partial-cleanup",
         "constructor-direct-argument-immediate-cleanup",
@@ -1095,13 +1096,16 @@ def validate_direct_argument_project(output: Path) -> None:
             "direct class argument lost call-bounded reverse cleanup order"
         )
     if (
-        source.count("struct hxc_OffsetResolver hxc_l_tmp_object_storage_") != 3
-        or source.count("if (!hxc_compiler_constructor_OffsetResolver(") != 3
+        source.count("struct hxc_OffsetResolver hxc_l_tmp_object_storage_") != 4
+        or "struct hxc_OffsetResolver *hxc_l_forwardedValue" not in main_body
+        or source.count("if (!hxc_compiler_constructor_OffsetResolver(") != 4
         or "struct hxc_OffsetResolver *hxc_l_resolver" not in headers
         or "struct hxc_compiler_interface_dispatch_ScoreResolver_value hxc_l_resolver"
         not in headers
         or "hxc_Main_readInterface(" not in main_body
         or "hxc_ScoreSink_read(" not in main_body
+        or "hxc_ForwardingSink_read(" not in main_body
+        or "hxc_ForwardingSink_readDirect(" not in source
         or ".object = hxc_l_tmp_class_object_address_" not in main_body
         or ".table = &hxc_itable_compiler_interface_dispatch_OffsetResolver_itable_layout_ScoreResolver"
         not in main_body

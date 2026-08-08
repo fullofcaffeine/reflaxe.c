@@ -3327,8 +3327,13 @@ private class FunctionPreparer {
 	}
 }
 
+private typedef BorrowForwardTarget = {
+	final target:PreparedBodyFunction;
+	final explicitParameterOffset:Int;
+}
+
 /**
-	Propagates direct static-call ownership requirements back to their callers.
+	Propagates exact direct-call ownership requirements back to their callers.
 
 	The first syntax pass can prove that a parameter is not returned, stored,
 	thrown, captured, or handed to a constructor in its own body. A direct helper
@@ -3337,7 +3342,7 @@ private class FunctionPreparer {
 	through several helpers, and it never turns an owning parameter into a borrow.
 **/
 private class BorrowContractRefiner {
-	/** Settle all named static-function parameters before representation planning. */
+	/** Settle all direct function and method parameters before representation planning. */
 	public static function refine(functions:Array<PreparedBodyFunction>, byId:Map<String, PreparedBodyFunction>):Void {
 		var changed = true;
 		var remaining = 1;
@@ -3355,7 +3360,7 @@ private class BorrowContractRefiner {
 				final parameters:Array<PreparedParameter> = [];
 				for (parameter in fn.parameters) {
 					final borrowed = parameter.borrowedReference
-						&& forwardsOnlyToBorrowingStaticTargets(fn.bodyExpression, parameter.compilerId, byId);
+						&& forwardsOnlyToBorrowingTargets(fn.bodyExpression, parameter.compilerId, byId);
 					if (borrowed != parameter.borrowedReference)
 						parameterChanged = true;
 					parameters.push({
@@ -3382,8 +3387,8 @@ private class BorrowContractRefiner {
 		}
 	}
 
-	/** Keep one borrow only when each direct forwarding target also borrows it. */
-	static function forwardsOnlyToBorrowingStaticTargets(body:TypedExpr, compilerId:Int, byId:Map<String, PreparedBodyFunction>):Bool {
+	/** Keep one borrow only when each exact forwarding target also borrows it. */
+	static function forwardsOnlyToBorrowingTargets(body:TypedExpr, compilerId:Int, byId:Map<String, PreparedBodyFunction>):Bool {
 		var safe = true;
 		function visit(expression:TypedExpr):Void {
 			if (!safe)
@@ -3392,8 +3397,11 @@ private class BorrowContractRefiner {
 				case TCall(callee, arguments):
 					for (index in 0...arguments.length)
 						if (FunctionPreparer.isDirectParameterValue(arguments[index], compilerId)) {
-							final target = directStaticTarget(callee, byId);
-							if (target == null || index >= target.parameters.length || !target.parameters[index].borrowedReference) {
+							final forwarding = directForwardTarget(callee, byId);
+							final parameterIndex = forwarding == null ? -1 : index + forwarding.explicitParameterOffset;
+							if (forwarding == null
+								|| parameterIndex >= forwarding.target.parameters.length
+								|| !forwarding.target.parameters[parameterIndex].borrowedReference) {
 								safe = false;
 								return;
 							}
@@ -3407,14 +3415,28 @@ private class BorrowContractRefiner {
 		return safe;
 	}
 
-	/** Resolve only non-generic named static functions; other calls stay owning. */
-	static function directStaticTarget(callee:TypedExpr, byId:Map<String, PreparedBodyFunction>):Null<PreparedBodyFunction> {
+	/**
+		Resolve only non-generic calls whose exact body is already compiler-known.
+
+		Instance methods use the same private/final/non-virtual proof as call lowering.
+		Their prepared signature begins with the implicit receiver, so explicit Haxe
+		argument zero maps to prepared parameter one. Unknown virtual, interface, and
+		indirect calls deliberately return null and revoke the caller's borrow.
+	**/
+	static function directForwardTarget(callee:TypedExpr, byId:Map<String, PreparedBodyFunction>):Null<BorrowForwardTarget> {
 		return switch callee.expr {
 			case TField(_, FStatic(classReference, fieldReference)):
 				final owner = classReference.get();
 				final field = fieldReference.get();
-				if (field.params.length != 0) null; else byId.get(CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name));
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directStaticTarget(inner, byId);
+				final target = field.params.length == 0 ? byId.get(CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name)) : null;
+				target == null ? null : {target: target, explicitParameterOffset: 0};
+			case TField(receiver, FInstance(owner, _, fieldReference)):
+				final field = fieldReference.get();
+				final declaration = CBodyDispatchCatalog.declaringClass(owner, fieldReference);
+				final direct = field.params.length == 0 && CBodyDispatchCatalog.directReason(receiver, declaration, field) != null;
+				final target = direct ? byId.get(CBodyDispatchCatalog.methodIdForAccess(owner, fieldReference)) : null;
+				target == null ? null : {target: target, explicitParameterOffset: 1};
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directForwardTarget(inner, byId);
 			case _: null;
 		};
 	}
