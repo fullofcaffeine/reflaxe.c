@@ -25,6 +25,12 @@ import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
 import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
 import caxecraft.gameplay.Recovery.decide as decideRecovery;
 import caxecraft.gameplay.RecoveryDecision;
+import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlowExecutor;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
+import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioLimits;
 import caxecraft.domain.Vitals.isDefeated as characterVitalsDefeated;
 #if c
 import c.CArray;
@@ -60,6 +66,10 @@ typedef GameTickResult = {
 	final immersion:Immersion;
 	final drowningDamage:Int;
 	final water:WaterTickResult;
+
+	/** Authored-rule observations committed after mechanics, or null before a flow is installed. */
+	final flow:Null<FlowTickResult>;
+
 	final committed:Bool;
 }
 
@@ -176,6 +186,18 @@ final class GameSession {
 	/** Number of fixed simulation steps that this session has committed. */
 	var completedTicks:Int = 0;
 
+	/** Validated authored rules sharing this session's fixed simulation clock. */
+	var flowExecutor:Null<CaxeFlowExecutor> = null;
+
+	/** Runtime actor identities paired with their stable authored identities. */
+	var authoredActorEntities:Array<EntityId> = [];
+
+	/** Stable CAXEMAP identities in the same order as `authoredActorEntities`. */
+	var authoredActorIds:Array<ScenarioId> = [];
+
+	/** Semantic events waiting for the next successfully committed fixed tick. */
+	var pendingFlowEvents:Array<FlowEvent> = [];
+
 	/** Deterministic water work state, shared by loading and fixed simulation. */
 	final water:WaterSimulation = new WaterSimulation();
 
@@ -210,6 +232,59 @@ final class GameSession {
 		}
 		#end
 		water.resetPending();
+	}
+
+	/**
+		Attach the validated authored rule model before this candidate can publish.
+
+		Only `RuntimeLevelLoader` receives this authority. The loader has already
+		parsed and validated the complete scenario, and every candidate owns a fresh
+		session, so a second installation is an internal construction defect rather
+		than recoverable content input.
+	**/
+	@:allow(caxecraft.content.RuntimeLevelLoader)
+	private function installValidatedScenarioFlow(scenario:Scenario, actorEntities:Array<EntityId>, actorIds:Array<ScenarioId>):Void {
+		if (flowExecutor != null)
+			throw "CaxeFlow is already installed for this GameSession";
+		if (actorEntities.length != actorIds.length || actorEntities.length != actorControllers.length)
+			throw "CaxeFlow actor bindings do not match this GameSession";
+		for (index in 0...actorEntities.length)
+			if (actorEntities[index] != actorControllers[index].characterId)
+				throw "CaxeFlow actor binding order does not match this GameSession";
+		authoredActorEntities = actorEntities.copy();
+		authoredActorIds = actorIds.copy();
+		flowExecutor = new CaxeFlowExecutor(scenario);
+	}
+
+	/**
+		Queue one committed semantic fact for authored rules on the next game tick.
+
+		Input, artificial-intelligence, and mechanics owners call this only after the
+		fact actually happened. A bounded false result leaves the queue unchanged, so
+		the caller can stop instead of silently dropping campaign progression.
+	**/
+	public function queueFlowEvent(event:FlowEvent):Bool {
+		if (flowExecutor == null || pendingFlowEvents.length >= ScenarioLimits.MAX_EVENTS_PER_TICK)
+			return false;
+		pendingFlowEvents.push(event);
+		return true;
+	}
+
+	/**
+		Commit one available actor interaction as a typed authored event.
+
+		The session checks the same range rule that controls the interaction prompt.
+		It then converts the numeric runtime identity to the matching CAXEMAP identity.
+		A false result changes no rule state and means that no valid interaction was
+		available or the bounded event queue could not accept the event.
+	**/
+	public function interactWithActor(id:EntityId):Bool {
+		if (!actorInteractionAvailable(id))
+			return false;
+		for (index in 0...authoredActorEntities.length)
+			if (authoredActorEntities[index] == id)
+				return queueFlowEvent(FlowEvent.Interact(authoredActorIds[index]));
+		return false;
 	}
 
 	/**
@@ -795,6 +870,7 @@ final class GameSession {
 				immersion: observeAquatics(readCells, original.body),
 				drowningDamage: 0,
 				water: {processed: 0, changed: 0, remaining: water.pending()},
+				flow: null,
 				committed: false
 			};
 		}
@@ -805,12 +881,21 @@ final class GameSession {
 		final tickIndex = committed ? completedTicks : -1;
 		if (committed)
 			completedTicks++;
+		var flowResult:Null<FlowTickResult> = null;
+		if (committed) {
+			final executor = flowExecutor;
+			if (executor != null) {
+				flowResult = executor.runTick({events: pendingFlowEvents, positions: []});
+				pendingFlowEvents.resize(0);
+			}
+		}
 		return {
 			tickIndex: tickIndex,
 			character: characterResult.character,
 			immersion: characterResult.immersion,
 			drowningDamage: characterResult.drowningDamage,
 			water: waterResult,
+			flow: flowResult,
 			committed: committed
 		};
 	}

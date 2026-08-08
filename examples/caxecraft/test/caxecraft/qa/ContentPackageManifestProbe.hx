@@ -81,7 +81,7 @@ function selfCheck():Int {
 		bytes += receipt.byteLength;
 		kinds |= kindBit(entry.kind);
 	}
-	if (bytes != 9487172 || kinds != 127)
+	if (bytes != 9487513 || kinds != 127)
 		return 6;
 	if (!verifyDecoderRejections())
 		return 7;
@@ -159,15 +159,15 @@ function verifyEntryFailures(store:ContentPackageStore):Bool {
 			return false;
 	}
 	final staleLength = decode(document("caxecraft:test", 1, '["levels"]',
-		oneEntry("level", "scenarios/first-playable/map.caxemap", 14222, "871959eefd18d410e5faeb1955c1136337ba955ecb52c335c39dfec899d8a52e"), "[]"));
+		oneEntry("level", "scenarios/first-playable/map.caxemap", 14563, "754cc35aef1f696e19d7c38ecaff533f518f3838c34f1f75c6976605acc5a781"), "[]"));
 	if (staleLength == null)
 		return false;
 	switch verifyContentPackage(store, staleLength) {
-		case ContentPackageRejected(ContentPackageEntryLengthMismatch("scenarios/first-playable/map.caxemap", 14222, 14223)):
+		case ContentPackageRejected(ContentPackageEntryLengthMismatch("scenarios/first-playable/map.caxemap", 14563, 14564)):
 		case _:
 			return false;
 	}
-	final staleHash = decode(document("caxecraft:test", 1, '["levels"]', oneEntry("level", "scenarios/first-playable/map.caxemap", 14223, ZERO_HASH), "[]"));
+	final staleHash = decode(document("caxecraft:test", 1, '["levels"]', oneEntry("level", "scenarios/first-playable/map.caxemap", 14564, ZERO_HASH), "[]"));
 	if (staleHash == null)
 		return false;
 	return switch verifyContentPackage(store, staleHash) {

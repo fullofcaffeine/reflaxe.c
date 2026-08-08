@@ -12,6 +12,7 @@ import caxecraft.content.RuntimeLevelLoader.RuntimeLevelPresentation;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 
 /**
@@ -119,6 +120,14 @@ final class PlayableLevelView {
 	/** Resolve the body paired with this level's first initially active objective. */
 	public inline function initialObjectiveBody(locale:LocaleId):String
 		return levelPresentation.initialObjectiveBody(locale);
+
+	/** Return the stable identity of this level's first active objective. */
+	public inline function initialObjectiveId():Null<ScenarioId>
+		return levelPresentation.initialObjectiveId();
+
+	/** Resolve the current objective title from this level's validated map data. */
+	public inline function objectiveTitle(id:Null<ScenarioId>, locale:LocaleId):String
+		return levelPresentation.objectiveTitle(id, locale);
 
 	/** Temporary fixed-HUD dialogue actor selected by generic authored role. */
 	public inline function dialogueActorId():EntityId

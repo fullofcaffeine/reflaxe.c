@@ -11,13 +11,16 @@ import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanError;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanResult;
 import caxecraft.domain.CaxecraftTrace;
+import caxecraft.domain.EntityId;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
+import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
@@ -150,22 +153,26 @@ typedef RuntimeLevelAuthoredTrace = {
 final class RuntimeLevelPresentation {
 	final messages:ScenarioMessages;
 	final title:ScenarioText;
-	final objectiveTitle:Null<ScenarioText>;
-	final objectiveBody:Null<ScenarioText>;
+	final objectives:Array<ScenarioObjective>;
+	final startingObjective:Null<ScenarioId>;
 
 	/** Retain presentation facts only after the complete scenario validates. */
 	private function new(scenario:Scenario) {
 		messages = scenario.messages;
 		title = scenario.title;
-		var selectedTitle:Null<ScenarioText> = null;
-		var selectedBody:Null<ScenarioText> = null;
-		for (objective in scenario.story.objectives)
-			if (selectedTitle == null && objective.initialState == ObjectiveState.Active) {
-				selectedTitle = objective.title;
-				selectedBody = objective.body;
-			}
-		objectiveTitle = selectedTitle;
-		objectiveBody = selectedBody;
+		objectives = [];
+		var selected:Null<ScenarioId> = null;
+		for (objective in scenario.story.objectives) {
+			objectives.push({
+				id: objective.id,
+				title: objective.title,
+				body: objective.body,
+				initialState: objective.initialState
+			});
+			if (selected == null && objective.initialState == ObjectiveState.Active)
+				selected = objective.id;
+		}
+		startingObjective = selected;
 	}
 
 	/** Resolve the map title in the requested locale, using its declared fallback. */
@@ -174,11 +181,35 @@ final class RuntimeLevelPresentation {
 
 	/** Resolve the first initially active objective title, or empty text when absent. */
 	public inline function initialObjectiveTitle(locale:LocaleId):String
-		return objectiveTitle == null ? "" : resolve(objectiveTitle, locale);
+		return objectiveTitle(startingObjective, locale);
 
 	/** Resolve the matching initial objective body, or empty text when absent. */
 	public inline function initialObjectiveBody(locale:LocaleId):String
-		return objectiveBody == null ? "" : resolve(objectiveBody, locale);
+		return objectiveBody(startingObjective, locale);
+
+	/** Return the first objective that starts active, or null when none does. */
+	public inline function initialObjectiveId():Null<ScenarioId>
+		return startingObjective;
+
+	/** Resolve one validated objective title by stable authored identity. */
+	public function objectiveTitle(id:Null<ScenarioId>, locale:LocaleId):String {
+		if (id == null)
+			return "";
+		for (objective in objectives)
+			if (objective.id.text() == id.text())
+				return resolve(objective.title, locale);
+		return "";
+	}
+
+	/** Resolve one validated objective body by stable authored identity. */
+	public function objectiveBody(id:Null<ScenarioId>, locale:LocaleId):String {
+		if (id == null)
+			return "";
+		for (objective in objectives)
+			if (objective.id.text() == id.text())
+				return resolve(objective.body, locale);
+		return "";
+	}
 
 	/** Turn a literal or validated message reference into runtime-owned text. */
 	function resolve(value:ScenarioText, locale:LocaleId):String {
@@ -366,6 +397,13 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 		#end
 	return switch built {
 		case ContentGenerationReady(generation):
+			final actorEntities:Array<EntityId> = [];
+			final actorIds:Array<ScenarioId> = [];
+			for (binding in generation.actorBindings()) {
+				actorEntities.push(binding.entityId);
+				actorIds.push(binding.authoredId);
+			}
+			generation.session().installValidatedScenarioFlow(scenario, actorEntities, actorIds);
 			RuntimeLevelReady(new RuntimeLevelCandidate(generation, {
 				authority: input.authority,
 				rootLabel: input.rootLabel,

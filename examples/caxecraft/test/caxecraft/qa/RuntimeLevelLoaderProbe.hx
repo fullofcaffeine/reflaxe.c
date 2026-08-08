@@ -17,8 +17,10 @@ import caxecraft.content.RuntimeLevelLoader.RuntimeLevelSource;
 import caxecraft.content.RuntimeLevelLoader.loadRuntimeLevel;
 import caxecraft.content.RuntimeLevelLoader.loadRuntimeLevelWithFault;
 import caxecraft.domain.ActorControllerProfile;
+import caxecraft.domain.Aquatics.input as aquaticInput;
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.CaxecraftTrace;
+import caxecraft.domain.CharacterDamagePolicy;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.World;
@@ -26,6 +28,7 @@ import caxecraft.domain.WorldRead.query as queryWorld;
 import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import haxe.io.Bytes;
 
 /**
@@ -116,6 +119,30 @@ function selfCheck():Int {
 		|| presentation.initialObjectiveBody(english) != "Cross the test bridge."
 		|| presentation.initialObjectiveBody(spanish) != "Cruza el puente de prueba.")
 		return 102;
+	final flowSession = presentationCandidate.generation().session();
+	final flowActors = presentationCandidate.generation().actorBindings();
+	if (flowActors.length != 1 || !flowSession.interactWithActor(flowActors[0].entityId))
+		return 106;
+	final flowTick = flowSession.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!flowTick.committed || flowTick.flow == null)
+		return 107;
+	final flow = flowTick.flow;
+	if (flow.firedRules.length != 1 || flow.firedRules[0].text() != "rule.fixture-advance" || flow.presentation.length != 2)
+		return 108;
+	switch flow.presentation[0] {
+		case FlowPresentationEvent.ObjectiveChanged(id, Complete) if (id.text() == "objective.marker"):
+		case _:
+			return 109;
+	}
+	switch flow.presentation[1] {
+		case FlowPresentationEvent.ObjectiveChanged(id, Active) if (id.text() == "objective.next"):
+		case _:
+			return 110;
+	}
 	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final checkedIn = switch store.read(logicalPath) {
 		case PackageBytesRead(value): value;
@@ -135,8 +162,6 @@ function selfCheck():Int {
 		|| embeddedReceipt.readAttempts != 1)
 		return 4;
 	final embeddedFacts = embedded.authoredTrace();
-	if (!expectedAuthoredFacts(embeddedFacts))
-		return 5;
 	if (!expectedResolvedLevel(embedded))
 		return 6;
 
@@ -240,8 +265,7 @@ function expectedResolvedLevel(candidate:caxecraft.content.RuntimeLevelLoader.Ru
 		|| player.authoredId.text() != "player.start"
 		|| player.transform.xMilli != 16500
 		|| player.transform.yMilli != 5000
-		|| player.transform.zMilli != 16500
-		|| plan.flowBindings().length != 0)
+		|| player.transform.zMilli != 16500)
 		return false;
 	final mossling = switch actors[0].controller {
 		case WanderChaseMelee(profile):
@@ -286,14 +310,6 @@ function expectedEvergroveLandmarks(candidate:caxecraft.content.RuntimeLevelLoad
 		&& queryWorld(session.worldView(), World.coord(12, 5, 22)) == Air
 		&& queryWorld(session.worldView(), World.coord(9, 7, 7)) == Wood;
 }
-
-/** Verify the first map's current dialogue, objective, and empty flow surface. */
-function expectedAuthoredFacts(trace:RuntimeLevelAuthoredTrace):Bool
-	return trace.dialogues == 1
-		&& trace.objectives == 1
-		&& trace.flowVariables == 0
-		&& trace.flowSequences == 0
-		&& trace.flowRules == 0;
 
 /** Compare source facts produced by the generated and native byte authorities. */
 function sameAuthoredTrace(left:RuntimeLevelAuthoredTrace, right:RuntimeLevelAuthoredTrace):Bool

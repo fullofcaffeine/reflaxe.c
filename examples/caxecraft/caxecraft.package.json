@@ -68,7 +68,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 958,
-      "sha256": "72cfa5445783c62ef6424e9594b1c5f9132a9570f40da57cd44c44759af69c9c"
+      "sha256": "2a71e52de2f560a2dea58a384903de332071fb3c764bb7ba2da0aabfb3f2a661"
     },
     {
       "kind": "localization",
@@ -86,7 +86,7 @@
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 898,
-      "sha256": "0400bd7be1d466bc163cd832045456387ccd9c61084b75f4fccc8cadad6649e1"
+      "sha256": "cba489d7b03d822334bb57b05ed8f7244e3852043214873fdcaf5205e3c69c76"
     },
     {
       "kind": "level",
@@ -97,8 +97,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-playable/map.caxemap",
-      "byteLength": 14223,
-      "sha256": "871959eefd18d410e5faeb1955c1136337ba955ecb52c335c39dfec899d8a52e"
+      "byteLength": 14564,
+      "sha256": "754cc35aef1f696e19d7c38ecaff533f518f3838c34f1f75c6976605acc5a781"
     }
   ],
   "dependencies": []

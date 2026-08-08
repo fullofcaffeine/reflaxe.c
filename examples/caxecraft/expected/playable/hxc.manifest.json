@@ -105,7 +105,9 @@
       "src/modules/caxecraft/localization/RuntimeUiCatalog.c",
       "src/modules/caxecraft/scenario/CaxeFlow.c",
       "src/modules/caxecraft/scenario/CaxeFlowActionRegistry.c",
+      "src/modules/caxecraft/scenario/CaxeFlowClock.c",
       "src/modules/caxecraft/scenario/CaxeFlowExecutor.c",
+      "src/modules/caxecraft/scenario/CaxeFlowFrame.c",
       "src/modules/caxecraft/scenario/CaxeFlowReader.c",
       "src/modules/caxecraft/scenario/CaxeFlowRulePlanner.c",
       "src/modules/caxecraft/scenario/CaxeFlowState.c",
@@ -254,7 +256,9 @@
       "include/hxc/modules/caxecraft/localization/RuntimeUiCatalog.h",
       "include/hxc/modules/caxecraft/scenario/CaxeFlow.h",
       "include/hxc/modules/caxecraft/scenario/CaxeFlowActionRegistry.h",
+      "include/hxc/modules/caxecraft/scenario/CaxeFlowClock.h",
       "include/hxc/modules/caxecraft/scenario/CaxeFlowExecutor.h",
+      "include/hxc/modules/caxecraft/scenario/CaxeFlowFrame.h",
       "include/hxc/modules/caxecraft/scenario/CaxeFlowReader.h",
       "include/hxc/modules/caxecraft/scenario/CaxeFlowRulePlanner.h",
       "include/hxc/modules/caxecraft/scenario/CaxeFlowRuntime.h",
@@ -473,7 +477,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "867fca014a04a8d448f39fce877df2b76293e29044e58f5557e8b8d41ca4df35",
+      "sha256": "81714b158262ad2e6687bc00e00772baece8a8615f614c8866548c4f46108b20",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -483,7 +487,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "ca2c6e42d3889e7b56652d17b07614938f7aa99d950f3bcd75a7d4412712f7da",
+      "sha256": "07745003f2997cf5abe84d2c44c31e526660df434c2bf442556953d290e731d1",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -493,12 +497,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "afc47ba3a889107cb79501f940426b645fb74e80441d46f276f52174236b3902",
+      "sha256": "21444c44e3b992560b9ecbf5ddcff898d3009bbd1f49ca68e8311c1e18fc7292",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "414283959cb9d0522ae630ff915b9e3eea99849a1f56133aeb6d91d79aa87bef",
+      "sha256": "53b98a20b33c685085a586e7558e964d28d13990f32f33549ba0eccd37921734",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -508,12 +512,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "d98d8ac33536a94bb97c0ffc7b178a745634346a50f8a75038a723824a491a7e",
+      "sha256": "56bc05bb68f4fa3822554b360d530d990458fe69a916c5c3653f0be15762cbc3",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "85143128fd1ed0f5ef4dd63198dba3bd339c6c62cef4794ae85578d479ba9db2",
+      "sha256": "0a7b634a6e44681f6bd01847dd89df02aa99533f6bed6406a44b46d8a68db85a",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -733,7 +737,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "20b2fc42aa1ca542a126979a918bea14fd44bbef8d914f1d0b0742f16640a6ad",
+      "sha256": "3d6c043fb6030ac6e571ca83412ae367e908b90c9691385aa4767d68dcb4f3b6",
       "path": "include/hxc/modules/caxecraft/content/RuntimeLevelLoader.h",
       "kind": "private-header"
     },
@@ -868,7 +872,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "e57da84896a4787d03d0989c4d8dac4f94dfe0d1cd6153d778b31c14f104ed1b",
+      "sha256": "058b73482b39a76e21e9c399d870ac8712dc0e511e0091e52e8dd0036a3e1eb8",
       "path": "include/hxc/modules/caxecraft/domain/GameSession.h",
       "kind": "private-header"
     },
@@ -1098,8 +1102,18 @@
       "kind": "private-header"
     },
     {
-      "sha256": "25914fc66c9a99357c8acd626a1043871880ec1e0e290b296421d72f3fb9f347",
+      "sha256": "bea1f4b20564c2356de23722dc7f579395fe953b6d32b5e1a7a2d1b7497dc7a2",
+      "path": "include/hxc/modules/caxecraft/scenario/CaxeFlowClock.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "09cb261ce2e889661a3c8832f6dcd5a66f5e3b87e54d0e63049ee66cc0a0223f",
       "path": "include/hxc/modules/caxecraft/scenario/CaxeFlowExecutor.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "4796f5842356627e2b59203fa6f51654a144326b0c482a22aabee0b6462497ab",
+      "path": "include/hxc/modules/caxecraft/scenario/CaxeFlowFrame.h",
       "kind": "private-header"
     },
     {
@@ -1108,17 +1122,17 @@
       "kind": "private-header"
     },
     {
-      "sha256": "2a0f38401fa32d870a9598ddb9022515236fdcf311b330487aa6037280e6e687",
+      "sha256": "05a7a6e16d6a58e0fd428ae00f2c1f8397fdbf0521dc4ac9acedeb575edb25f5",
       "path": "include/hxc/modules/caxecraft/scenario/CaxeFlowRulePlanner.h",
       "kind": "private-header"
     },
     {
-      "sha256": "98252a12aa966f9bbcb712834278d701a01c43221de4bccc51760200b34d59ac",
+      "sha256": "9e641ea45f6028d5a6f5245c7252da1a3630223e81a6628f8ce53e7bd8eec355",
       "path": "include/hxc/modules/caxecraft/scenario/CaxeFlowRuntime.h",
       "kind": "private-header"
     },
     {
-      "sha256": "47c8b27fd1e577c0d3dfcce5c582c3b5e3d8d35cf48991f79e49053cf5728577",
+      "sha256": "d860767c3e8029535fa5fbf26915d2fe8d4fa17b8ffd101604e7855b34389434",
       "path": "include/hxc/modules/caxecraft/scenario/CaxeFlowState.h",
       "kind": "private-header"
     },
@@ -1328,12 +1342,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "a9b29e0fc3b7e165a1a2ad10924e21ad30ef87f1b25b93eae78b3ff38f49f0d8",
+      "sha256": "ecefc3ebfbe79b64b6224dda9348319c5679140004262c9578eecc2c4e6d5d93",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "de00eccab8028b61b7b5d48dccd1db37632c84bb264d47782d10cebb87d2f365",
+      "sha256": "26d9c47159f87f050db601652a39ff83592fca57b8fc90a6bc187a0be6ccdb6b",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1493,7 +1507,7 @@
       "kind": "source"
     },
     {
-      "sha256": "2c8f6858b6c582b154d9511179a2f4a0647b583f6dfd755003692301a381e102",
+      "sha256": "a4aab3458eaa9d859deb7ad0851e153bbd1d7df4d9ea3a6abd68be4a94b4f81f",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1523,7 +1537,7 @@
       "kind": "source"
     },
     {
-      "sha256": "e3536eee801d76db59ade249fc84a08402e4153c0783172b05cb0cb2fd94e7ab",
+      "sha256": "6d216130c0647382978c55b97efe24b348921870c56e1cd08e57c0f39aebb9d3",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -1638,7 +1652,7 @@
       "kind": "source"
     },
     {
-      "sha256": "d8d7755a68e63631e84a93455f36643477f498b0a405adad8b8d46c178453b7e",
+      "sha256": "1a70a50b04bd081ca1190dc4ff0e6f5a8a9a36f8ae4d45f947b584e860aab5b8",
       "path": "src/modules/caxecraft/content/ContentJson.c",
       "kind": "source"
     },
@@ -1688,7 +1702,7 @@
       "kind": "source"
     },
     {
-      "sha256": "708554a69b6ad378c20db340dcece8de8ac5103ae2b4973c2cfe57d1f1fae273",
+      "sha256": "4dbcd8fb66a5e2b50c7da4548d483d560185dd703013c3566c61dfe5dd3d1a50",
       "path": "src/modules/caxecraft/content/RuntimeLevelLoader.c",
       "kind": "source"
     },
@@ -1723,7 +1737,7 @@
       "kind": "source"
     },
     {
-      "sha256": "097d4a56927975772fc2a93c703de2763bbaa47bde1d4c222d2ab8deb8a7de83",
+      "sha256": "1ed23573781ea3755512177a42c67fa975bb320d0e1916ae565862da2b2f1651",
       "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
       "kind": "source"
     },
@@ -1733,7 +1747,7 @@
       "kind": "source"
     },
     {
-      "sha256": "098b8d489e2d3c81c06667e5aeebafa68db1ae107fe2875878dd034d9e2c0d8c",
+      "sha256": "4bb74ddf20e7d1c16b74d34314a5641c16ab949ab32ce549200bc072c6b8c64a",
       "path": "src/modules/caxecraft/domain/GameSession.c",
       "kind": "source"
     },
@@ -1758,7 +1772,7 @@
       "kind": "source"
     },
     {
-      "sha256": "48e1c0325b6f4d7fc0fa0f46630934205db20d3f66f0be0393741cd5773dedde",
+      "sha256": "1f1b6d60768d875023c528b8224d4e478376ac01b0255fcaa7477fdd730837e9",
       "path": "src/modules/caxecraft/domain/WaterSimulation.c",
       "kind": "source"
     },
@@ -1788,7 +1802,7 @@
       "kind": "source"
     },
     {
-      "sha256": "be446c5de3f2379379d7e710fa116f1929ad71dcfd169e37be548d6ead28ad1a",
+      "sha256": "838e16d83a16eb867ebe6a3bcfde94c1f1b61644d5dcbbba16590b1fa4f492b2",
       "path": "src/modules/caxecraft/editor/EditorHistory.c",
       "kind": "source"
     },
@@ -1893,8 +1907,18 @@
       "kind": "source"
     },
     {
-      "sha256": "70320bc6d0296bc765b1d9f1c212f534a67926b89b4c251c14c602e540a2bbf5",
+      "sha256": "2e083531dc9debd298487f46f952f4b211a07a93bf86d2b8258e49df5874dd36",
+      "path": "src/modules/caxecraft/scenario/CaxeFlowClock.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "a739a4679b5a2399b88aef65a86b92aa8337396a79cfeee20d9d6c378ac2c5d8",
       "path": "src/modules/caxecraft/scenario/CaxeFlowExecutor.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "8a5e15e5f78ce1f33402d6d272cb1b3824afe906ed51f62dc13be83b76a892b4",
+      "path": "src/modules/caxecraft/scenario/CaxeFlowFrame.c",
       "kind": "source"
     },
     {
@@ -1903,12 +1927,12 @@
       "kind": "source"
     },
     {
-      "sha256": "9a7d1e7874e77854616404f3944ce2812b54e4ac0978a09fa5c4e4943fcfa428",
+      "sha256": "038819c8b7f008a63653124412693562f75616351309596de8fc67749ec8caf6",
       "path": "src/modules/caxecraft/scenario/CaxeFlowRulePlanner.c",
       "kind": "source"
     },
     {
-      "sha256": "5b1252e91acfe8a6e4335f754f40db142f693c9051aa6541794d3c21dce7fe30",
+      "sha256": "7279360ba4198bcb9f0f2f399e093ce212f2c94829f4def557c5b86830e8e6eb",
       "path": "src/modules/caxecraft/scenario/CaxeFlowState.c",
       "kind": "source"
     },
@@ -1993,7 +2017,7 @@
       "kind": "source"
     },
     {
-      "sha256": "5cf199b202ee17394c51086b1390756ace381dc654393f237654178ac605d11f",
+      "sha256": "1f2f34751d817e8c09183fcb4e3cd16981da1da56032efe0fbdd240b4d7e96fb",
       "path": "src/modules/caxecraft/scenario/ScenarioWorldValidator.c",
       "kind": "source"
     },

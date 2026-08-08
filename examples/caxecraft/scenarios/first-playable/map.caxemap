@@ -1117,7 +1117,16 @@ end object
 dialogue dialogue.nia.welcome
   line speaker guide.nia message nia_welcome
 end dialogue
+objective objective.explore hidden title literal "FIND THE TIDEWEAVE SUIT"
+  body literal "Search beyond the village and test the water route."
+end objective
 objective objective.prologue active title message adventure_progress
   body message adventure_tagline
 end objective
+rule rule.nia-starts-exploration priority 100 once
+  when interact guide.nia
+  if (always)
+  do objective objective.prologue complete
+  do objective objective.explore active
+end rule
 end-map

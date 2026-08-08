@@ -308,7 +308,7 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 8
+PILOT_TELEMETRY_VERSION = 9
 PILOT_TELEMETRY_WORDS = 42
 PILOT_TELEMETRY_COLORS = tuple(
     (
@@ -1095,7 +1095,7 @@ def build_pilot_report(
         raise PlayFailure("pilot telemetry render counters cannot be negative")
     if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 9 or not 0 <= signed[29] <= 2:
         raise PlayFailure("pilot telemetry gameplay carriers are outside their closed ranges")
-    if not 0 <= signed[31] <= 1023:
+    if not 0 <= signed[31] <= 4095:
         raise PlayFailure("pilot telemetry presentation flags contain unknown bits")
     if signed[32] < 0 or signed[33] < 0 or signed[34] < 0 or signed[35] not in (0, 1):
         raise PlayFailure("pilot telemetry terrain-cache counters are outside their closed ranges")
@@ -1151,6 +1151,8 @@ def build_pilot_report(
     submersion_observed = bool(signed[31] & 128)
     water_exit_observed = bool(signed[31] & 256)
     sand_mined_observed = bool(signed[31] & 512)
+    flow_rule_observed = bool(signed[31] & 1024)
+    objective_change_observed = bool(signed[31] & 2048)
     if not review_screenshot_observed:
         raise PlayFailure(
             f"pilot {pilot!r} reached its final state frame, but the native "
@@ -1194,6 +1196,13 @@ def build_pilot_report(
         raise PlayFailure(
             "move-jump-edit pilot did not select terrain, remove one block, and place one block "
             f"(selection={signed[15]}, removed={signed[22]}, placed={signed[23]}, rejected={signed[24]})"
+        )
+    if pilot == "full-inventory-gift" and not (
+        flow_rule_observed and objective_change_observed
+    ):
+        raise PlayFailure(
+            "full-inventory-gift pilot did not carry the real interaction into CaxeFlow "
+            f"(rule={flow_rule_observed}, objective={objective_change_observed})"
         )
 
     raylib_lock = provision.load_lock()
@@ -1260,6 +1269,8 @@ def build_pilot_report(
             "submersionObserved": submersion_observed,
             "waterExitObserved": water_exit_observed,
             "sandMinedObserved": sand_mined_observed,
+            "flowRuleObserved": flow_rule_observed,
+            "objectiveChangeObserved": objective_change_observed,
         },
         "content": {
             "generation": signed[40],
@@ -2603,7 +2614,19 @@ def validate_generated_playable(
     # structured C rather than becoming compiler-generated `goto`.
     for forbidden in (r"\bgoto\b", r"\bmalloc\s*\(", r"\bcalloc\s*\(", r"\brealloc\s*\(", r"\bfree\s*\("):
         if re.search(forbidden, combined):
-            raise PlayFailure(f"generated Caxecraft sources contain forbidden pattern {forbidden}")
+            locations: list[str] = []
+            for source in sources:
+                for line_number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), start=1):
+                    if re.search(forbidden, line):
+                        locations.append(f"{source.relative_to(generated)}:{line_number}: {line.strip()}")
+                        if len(locations) == 8:
+                            break
+                if len(locations) == 8:
+                    break
+            raise PlayFailure(
+                f"generated Caxecraft sources contain forbidden pattern {forbidden}: "
+                + " | ".join(locations)
+            )
 
 
 def snapshot_values() -> dict[str, object]:
@@ -3132,7 +3155,10 @@ def run_pilot_sample(
             expected_inventory_full=pilot
             in ("full-inventory-gift", "full-inventory-mining"),
             expected_entities=pilot == "full-inventory-gift",
-            expected_open_sky=pilot != "move-jump-edit",
+            # The edit pilot aims at terrain. The full-inventory gift pilot
+            # aims at Nia so the real interaction target is visible. Neither
+            # camera must also frame the sun to prove its own behavior.
+            expected_open_sky=pilot not in ("move-jump-edit", "full-inventory-gift"),
         )
         if pilot == "adventure-journey":
             validate_western_falls_screenshot(screenshot, platform_name=platform_name)

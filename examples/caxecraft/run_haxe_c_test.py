@@ -249,7 +249,7 @@ EVAL_CASES = {
             EvalProbe("scenario-model.hxml", "scenario-model: 264908270\n"),
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 14223 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 14564 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -276,7 +276,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 14223 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 14564 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -1117,6 +1117,8 @@ CASES = {
             "status",
             "alloc",
             "array",
+            "object",
+            "gc",
             "string-literal",
             "string-scalar",
             "string",
@@ -1132,6 +1134,7 @@ CASES = {
                 forbidden_markers=("goto ",),
             ),
         ),
+        runs_generated_main=True,
     ),
     "terrain-chunks": HaxeCTestCase(
         case_id="terrain-chunks",

@@ -36,4 +36,13 @@ end dialogue
 objective objective.marker active title message objective.title
   body message objective.body
 end objective
+objective objective.next hidden title literal "Inspect the engine result"
+  body literal "This objective exists only to prove generic runtime progression."
+end objective
+rule rule.fixture-advance priority 10 once
+  when interact guide.nia
+  if (always)
+  do objective objective.marker complete
+  do objective objective.next active
+end rule
 end-map

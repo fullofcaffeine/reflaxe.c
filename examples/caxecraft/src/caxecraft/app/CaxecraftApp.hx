@@ -65,6 +65,8 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldView;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
+import caxecraft.scenario.ScenarioStory.ObjectiveState;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
@@ -329,6 +331,7 @@ final class CaxecraftApp {
 		inventory = PilotScript.initialInventory(pilotName);
 		#end
 		var guidePhase = GuidePhase.Waiting;
+		var currentObjectiveId = initialLevel.initialObjectiveId();
 		var guideInteractionAvailable = initialSession.actorInteractionAvailable(initialLevel.dialogueActorId());
 		var dialogueActor = initialSession.readCharacter(initialLevel.dialogueActorId());
 		var enemyActor = initialSession.readCharacter(initialLevel.enemyActorId());
@@ -408,6 +411,8 @@ final class CaxecraftApp {
 		var submersionObserved = false;
 		var waterExitObserved = false;
 		var sandMinedObserved = false;
+		var flowRuleObserved = false;
+		var objectiveChangeObserved = false;
 		// The review capture happens before the final state frame. Keep Raylib's
 		// immediate filesystem observation so final telemetry can attribute a
 		// missing image to the native producer instead of leaving the host to guess.
@@ -634,6 +639,7 @@ final class CaxecraftApp {
 								} else {
 									character = initialView.localPlayer;
 									guidePhase = GuidePhase.Waiting;
+									currentObjectiveId = levelView.initialObjectiveId();
 									guideInteractionAvailable = session.actorInteractionAvailable(levelView.dialogueActorId());
 									dialogueActor = session.readCharacter(levelView.dialogueActorId());
 									enemyActor = session.readCharacter(levelView.enemyActorId());
@@ -690,18 +696,22 @@ final class CaxecraftApp {
 						resetMotionThisFrame = true;
 					}
 				} else if (session.actorInteractionAvailable(dialogueActorId)) {
-					final sharesBerries = guidePhase == GuidePhase.Welcomed;
-					if (sharesBerries) {
-						final acceptedGift = Inventory.acceptedAmount(inventory, ItemKind.Berries, 2);
-						if (acceptedGift == 2) {
-							inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
-							guidePhase = advanceGuidePhase(guidePhase);
-						} else {
-							inventoryFullReason = InventoryFullReason.BerryStack;
-							inventoryFullFrames = 90;
-						}
+					if (!session.interactWithActor(dialogueActorId)) {
+						quit = true;
 					} else {
-						guidePhase = advanceGuidePhase(guidePhase);
+						final sharesBerries = guidePhase == GuidePhase.Welcomed;
+						if (sharesBerries) {
+							final acceptedGift = Inventory.acceptedAmount(inventory, ItemKind.Berries, 2);
+							if (acceptedGift == 2) {
+								inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
+								guidePhase = advanceGuidePhase(guidePhase);
+							} else {
+								inventoryFullReason = InventoryFullReason.BerryStack;
+								inventoryFullFrames = 90;
+							}
+						} else {
+							guidePhase = advanceGuidePhase(guidePhase);
+						}
 					}
 				}
 			}
@@ -869,6 +879,28 @@ final class CaxecraftApp {
 					waterUpdateBudget: 64
 				});
 				character = gameTick.character;
+				final flow = gameTick.flow;
+				if (flow != null) {
+					#if caxecraft_pilot
+					if (flow.firedRules.length > 0)
+						flowRuleObserved = true;
+					#end
+					for (event in flow.presentation)
+						switch event {
+							case FlowPresentationEvent.ObjectiveChanged(id, state):
+								#if caxecraft_pilot
+								objectiveChangeObserved = true;
+								#end
+								switch state {
+									case ObjectiveState.Active:
+										currentObjectiveId = id;
+									case ObjectiveState.Hidden | ObjectiveState.Complete | ObjectiveState.Failed:
+										final current = currentObjectiveId;
+										if (current != null && current.text() == id.text()) currentObjectiveId = null;
+								}
+							case _:
+						}
+				}
 				#if caxecraft_pilot
 				if (pilotName == PilotScriptName.AquaticGear) {
 					if (character.aquatic.medium == AquaticMedium.Submerged)
@@ -1224,7 +1256,7 @@ final class CaxecraftApp {
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase,
 					levelLabel: levelLabel,
-					objectiveTitle: levelView.initialObjectiveTitle(scenarioLocale(locale))
+					objectiveTitle: levelView.objectiveTitle(currentObjectiveId, scenarioLocale(locale))
 				};
 				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
 			}
@@ -1235,16 +1267,18 @@ final class CaxecraftApp {
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
-					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, visibleTerrainFaces, rebuiltTerrainChunks,
-					totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds, measuredTerrainFrames, measuredUpdateMicroseconds,
-					measuredPreparationMicroseconds, activeLevel.generationId().value(), activeLevel.publicationCount());
+					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
+					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds,
+					measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds, activeLevel.generationId().value(),
+					activeLevel.publicationCount());
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
 					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
-					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, visibleTerrainFaces, rebuiltTerrainChunks,
-					totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(), activeLevel.publicationCount());
+					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
+					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(),
+					activeLevel.publicationCount());
 			#end
 			var capturePilotFrame = pilotComplete;
 			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
