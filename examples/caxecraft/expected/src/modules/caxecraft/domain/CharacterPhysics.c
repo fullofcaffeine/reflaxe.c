@@ -145,7 +145,10 @@ struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_CharacterPhysics_moveA
       continue;
     }
     hxc_l_blocked = true;
-    break;
+    double hxc_l_tmp_load_result_n31 = hxc_l_currentX;
+    double hxc_l_tmp_load_result_n32 = hxc_l_currentY;
+    double hxc_l_tmp_load_result_n33 = hxc_l_currentZ;
+    return (struct hxc_caxecraft_domain_AxisMove){ .hxc_blocked = hxc_l_blocked, .hxc_x = hxc_l_tmp_load_result_n31, .hxc_y = hxc_l_tmp_load_result_n32, .hxc_z = hxc_l_tmp_load_result_n33 };
   }
   double hxc_l_tmp_load_result_n31 = hxc_l_currentX;
   double hxc_l_tmp_load_result_n32 = hxc_l_currentY;

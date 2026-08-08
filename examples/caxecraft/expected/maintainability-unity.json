@@ -64,13 +64,13 @@
     },
     {
       "path": "src/program.c",
-      "sha256": "9794d6ce3fef6abe91f869e669bea0d20016e2e1b9e2d1e1167348905b0317d1"
+      "sha256": "ac514b0793196e3b69dbfe7608c1da2ddbf014abd695b79a3afd4d63f7d467ff"
     }
   ],
   "summary": {
     "artifactCount": 2,
-    "physicalLineCount": 2495,
-    "codeLineCount": 2312,
+    "physicalLineCount": 2498,
+    "codeLineCount": 2315,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -407,23 +407,23 @@
     },
     {
       "path": "src/program.c",
-      "sha256": "9794d6ce3fef6abe91f869e669bea0d20016e2e1b9e2d1e1167348905b0317d1",
+      "sha256": "ac514b0793196e3b69dbfe7608c1da2ddbf014abd695b79a3afd4d63f7d467ff",
       "owner": {
         "kind": "amalgamation",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 2255,
-      "codeLineCount": 2136,
+      "physicalLineCount": 2258,
+      "codeLineCount": 2139,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 5265,
+      "identifierCount": 5284,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
         "bytes": 53,
-        "line": 1496,
+        "line": 1499,
         "column": 43
       },
       "temporaryDeclarationCount": 0,
@@ -1642,10 +1642,10 @@
             "endColumn": 2
           },
           "startLine": 1315,
-          "endLine": 1401,
-          "physicalLineCount": 87,
-          "codeLineCount": 87,
-          "bodyCodeLineCount": 84,
+          "endLine": 1404,
+          "physicalLineCount": 90,
+          "codeLineCount": 90,
+          "bodyCodeLineCount": 87,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
           "branchCount": 9,
@@ -1676,8 +1676,8 @@
             "endLine": 223,
             "endColumn": 2
           },
-          "startLine": 1403,
-          "endLine": 1468,
+          "startLine": 1406,
+          "endLine": 1471,
           "physicalLineCount": 66,
           "codeLineCount": 66,
           "bodyCodeLineCount": 63,
@@ -1711,8 +1711,8 @@
             "endLine": 111,
             "endColumn": 2
           },
-          "startLine": 1470,
-          "endLine": 1494,
+          "startLine": 1473,
+          "endLine": 1497,
           "physicalLineCount": 25,
           "codeLineCount": 25,
           "bodyCodeLineCount": 22,
@@ -1746,8 +1746,8 @@
             "endLine": 157,
             "endColumn": 2
           },
-          "startLine": 1496,
-          "endLine": 1549,
+          "startLine": 1499,
+          "endLine": 1552,
           "physicalLineCount": 54,
           "codeLineCount": 54,
           "bodyCodeLineCount": 51,
@@ -1781,8 +1781,8 @@
             "endLine": 122,
             "endColumn": 2
           },
-          "startLine": 1551,
-          "endLine": 1588,
+          "startLine": 1554,
+          "endLine": 1591,
           "physicalLineCount": 38,
           "codeLineCount": 38,
           "bodyCodeLineCount": 35,
@@ -1816,8 +1816,8 @@
             "endLine": 30,
             "endColumn": 2
           },
-          "startLine": 1590,
-          "endLine": 1605,
+          "startLine": 1593,
+          "endLine": 1608,
           "physicalLineCount": 16,
           "codeLineCount": 16,
           "bodyCodeLineCount": 13,
@@ -1851,8 +1851,8 @@
             "endLine": 22,
             "endColumn": 2
           },
-          "startLine": 1607,
-          "endLine": 1617,
+          "startLine": 1610,
+          "endLine": 1620,
           "physicalLineCount": 11,
           "codeLineCount": 11,
           "bodyCodeLineCount": 8,
@@ -1886,8 +1886,8 @@
             "endLine": 210,
             "endColumn": 3
           },
-          "startLine": 1619,
-          "endLine": 1639,
+          "startLine": 1622,
+          "endLine": 1642,
           "physicalLineCount": 21,
           "codeLineCount": 21,
           "bodyCodeLineCount": 18,
@@ -1921,8 +1921,8 @@
             "endLine": 50,
             "endColumn": 3
           },
-          "startLine": 1641,
-          "endLine": 1646,
+          "startLine": 1644,
+          "endLine": 1649,
           "physicalLineCount": 6,
           "codeLineCount": 6,
           "bodyCodeLineCount": 3,
@@ -1956,8 +1956,8 @@
             "endLine": 215,
             "endColumn": 3
           },
-          "startLine": 1648,
-          "endLine": 1661,
+          "startLine": 1651,
+          "endLine": 1664,
           "physicalLineCount": 14,
           "codeLineCount": 14,
           "bodyCodeLineCount": 11,
@@ -1991,8 +1991,8 @@
             "endLine": 202,
             "endColumn": 3
           },
-          "startLine": 1663,
-          "endLine": 2249,
+          "startLine": 1666,
+          "endLine": 2252,
           "physicalLineCount": 587,
           "codeLineCount": 587,
           "bodyCodeLineCount": 584,
@@ -2014,8 +2014,8 @@
             "source": null
           },
           "source": null,
-          "startLine": 2251,
-          "endLine": 2255,
+          "startLine": 2254,
+          "endLine": 2258,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
