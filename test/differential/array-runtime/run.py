@@ -279,6 +279,29 @@ def hxcir_function(hxcir: str, function_id: str) -> str:
     return hxcir[start : end + len(end_marker)]
 
 
+def require_ordered_events(
+    section: str, label: str, expected: tuple[str, ...]
+) -> None:
+    """Require exact ownership-event order while ignoring unrelated typed work."""
+    event_names = (
+        "retain-record-array-field",
+        "release-array-field-assignment-target",
+        "store-array-field-assignment-replacement",
+        "array-create-literal",
+        "array-copy",
+    )
+    events = [
+        event
+        for line in section.splitlines()
+        for event in event_names
+        if f".{event}\"" in line
+    ]
+    if events != list(expected):
+        raise ArrayRuntimeFailure(
+            f"{label} Array field replacement order drifted: {events!r}"
+        )
+
+
 def validate_generated_hxcir(hxcir: str) -> None:
     """Prove Array ownership before C syntax is selected."""
     for marker in (
@@ -389,6 +412,87 @@ def validate_generated_hxcir(hxcir: str) -> None:
     choose_array = hxcir_function(hxcir, "function.Main.chooseArray")
     selected_pair_sum = hxcir_function(hxcir, "function.Main.selectedPairSum")
     delayed_plan = hxcir_function(hxcir, "function.Main.delayedPlanLength")
+    field_self_assignment = hxcir_function(
+        hxcir, "method.ArrayFieldOwner.assignToSelf"
+    )
+    field_borrowed_assignment = hxcir_function(
+        hxcir, "method.ArrayFieldOwner.replaceBorrowed"
+    )
+    field_fresh_assignment = hxcir_function(
+        hxcir, "method.ArrayFieldOwner.reset"
+    )
+    field_call_assignment = hxcir_function(
+        hxcir, "method.ArrayFieldOwner.replaceFromCall"
+    )
+    field_conditional_assignment = hxcir_function(
+        hxcir, "method.ArrayFieldOwner.replaceConditional"
+    )
+    require_ordered_events(
+        field_self_assignment,
+        "same-container alias",
+        (
+            "retain-record-array-field",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+            "retain-record-array-field",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+        ),
+    )
+    require_ordered_events(
+        field_borrowed_assignment,
+        "borrowed parameter",
+        (
+            "retain-record-array-field",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+            "retain-record-array-field",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+        ),
+    )
+    require_ordered_events(
+        field_fresh_assignment,
+        "fresh empty literal",
+        (
+            "array-create-literal",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+            "array-create-literal",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+        ),
+    )
+    require_ordered_events(
+        field_call_assignment,
+        "fresh call result",
+        (
+            "array-copy",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+        ),
+    )
+    require_ordered_events(
+        field_conditional_assignment,
+        "conditional fresh-or-borrowed value",
+        (
+            "array-create-literal",
+            "release-array-field-assignment-target",
+            "store-array-field-assignment-replacement",
+        ),
+    )
+    for marker in (
+        "assignment-target-address",
+        "declare-managed-carrier",
+        "ownership=move-fresh",
+        'ownership=retain-borrowed(runtime("array"))',
+        "move-managed-carrier",
+        "assignment-target-address-load",
+    ):
+        if marker not in field_conditional_assignment:
+            raise ArrayRuntimeFailure(
+                f"conditional Array field replacement omitted {marker}"
+            )
     for label, section in (
         ("Int", constructed_integers),
         ("String", constructed_strings),
@@ -947,6 +1051,17 @@ def render_managed_class_pair(root: Path) -> Path:
     ):
         if marker not in hxcir:
             raise ArrayRuntimeFailure(f"generated Array<Class> HxcIR omitted {marker}")
+    traced_field_replacement = hxcir_function(
+        hxcir, "method.ManagedNode.replaceLinks"
+    )
+    if (
+        traced_field_replacement.count("store-traced-array-field-replacement") != 1
+        or " retain " in traced_field_replacement
+        or " release " in traced_field_replacement
+    ):
+        raise ArrayRuntimeFailure(
+            "traced Array<Class> field replacement gained reference-count ownership"
+        )
 
     plan = json.loads((normal_split / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if plan.get("features") != [

@@ -23,10 +23,15 @@ final class Main {
 		alias.add(5);
 		first.connect(second);
 		second.connect(first);
+		final originalFirstLinks = first.links;
+		final replacementFirstLinks = [second];
+		first.replaceLinks(replacementFirstLinks);
+		first.connect(first);
 		nodes[1] = first;
 
 		while (nodes.length != 40003 || copied.length != 4 || copied[0] != second || copied[3] != first || nodes[0].value != 15 || nodes[1] != first
-			|| nodes[2] != null || first.value != 15 || first.linkCount() != 1 || second.linkCount() != 1 || first.sampleCount() != 1 || absent != null
+			|| nodes[2] != null || first.value != 15 || originalFirstLinks.length != 1 || originalFirstLinks[0] != second
+			|| replacementFirstLinks.length != 2 || first.linkCount() != 2 || second.linkCount() != 1 || first.sampleCount() != 1 || absent != null
 			|| present == null || present.length != 1 || present[0] != first) {}
 	}
 

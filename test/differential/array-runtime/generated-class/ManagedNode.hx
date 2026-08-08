@@ -8,7 +8,7 @@
 **/
 final class ManagedNode {
 	public var value:Int;
-	public final links:Array<ManagedNode> = [];
+	public var links:Array<ManagedNode> = [];
 
 	/** Ordinary value Array released by this class's generated GC finalizer. */
 	public final samples:Array<Int> = [];
@@ -20,6 +20,10 @@ final class ManagedNode {
 
 	public function connect(other:ManagedNode):Void
 		links.push(other);
+
+	/** Replace the traced child list while preserving aliases to either Array. */
+	public function replaceLinks(replacement:Array<ManagedNode>):Void
+		links = replacement;
 
 	public function add(delta:Int):Void
 		value += delta;

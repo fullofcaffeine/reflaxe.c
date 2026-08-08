@@ -15,6 +15,7 @@
     "runtime/hxrt/src/array.c",
     "test/differential/array-runtime/ArrayRuntimeOracle.hx",
     "test/differential/array-runtime/array_runtime.c",
+    "test/differential/array-runtime/generated/ArrayFieldOwner.hx",
     "test/differential/array-runtime/generated/History.hx",
     "test/differential/array-runtime/generated/HistoryEntry.hx",
     "test/differential/array-runtime/generated/Main.hx",

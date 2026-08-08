@@ -9464,7 +9464,8 @@ private class FunctionBuilder {
 			unsupported(expression, "TBinop(OpAssign:fixed-array-whole-value-not-admitted)");
 		if (target.mapping.ownedClassValue() != null)
 			unsupported(expression, "TBinop(OpAssign:owned-class-field-reassignment-not-admitted)");
-		if (target.mapping.arrayValue() != null)
+		final managedArray = target.mapping.arrayValue();
+		if (managedArray != null && !isDirectMutableArrayField(left))
 			unsupported(expression, "TBinop(OpAssign:managed-Array-reassignment-not-admitted)");
 		if (target.mapping.stringMapValue() != null)
 			unsupported(expression, "TBinop(OpAssign:managed-StringMap-reassignment-not-admitted)");
@@ -9475,6 +9476,27 @@ private class FunctionBuilder {
 		final value = coerce(source, target.mapping, right.pos, "TBinop(OpAssign:right)");
 		rejectOwnedClassBorrow(value, right.pos, "TBinop(OpAssign:owned-class-borrow-escape)");
 		final stableTarget = restoreStagedPlace(stagedTarget, "assignment-target");
+		if (managedArray != null) {
+			// An Array whose elements can reach collector-managed objects is traced
+			// through the receiving field, so changing the pointer needs no separate
+			// reference-count operation. The old graph becomes collectible once the
+			// store removes its final traced path.
+			if (managedArray.managedByCollector) {
+				appendInstruction(null, IRIOStore(stableTarget.place, value.id), sourceSpan(expression.pos), "store-traced-array-field-replacement");
+				return value;
+			}
+			// Acquire the replacement before releasing the field's prior owner.
+			// Besides preserving the old value when right-side allocation fails,
+			// this ordering keeps an alias to the same container alive through
+			// `field = aliasOfField`.
+			final replacement = captureManagedValue(value, target.mapping, right.pos, "array-field-assignment-replacement");
+			final sourceSpan = sourceSpan(expression.pos);
+			appendInstruction(null, IRIORelease(stableTarget.place, IRIRuntime("array")), sourceSpan, "release-array-field-assignment-target");
+			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-array-field-assignment-replacement");
+			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "ordinary Haxe Array field replacement", sourceSpan,
+				expression.pos));
+			return replacement;
+		}
 		final optional = target.mapping.optionalValue();
 		if (optional != null && optional.managedLifetime) {
 			final destroyId = optional.destroyImplementationId();
@@ -9516,6 +9538,25 @@ private class FunctionBuilder {
 		}
 		appendInstruction(null, IRIOStore(stableTarget.place, value.id), sourceSpan(expression.pos), "store");
 		return value;
+	}
+
+	/**
+	 * Recognize the narrow whole-Array destination whose ownership is proven.
+	 *
+	 * Constructor initialization has a separate path because no previous field
+	 * owner exists yet. Ordinary replacement is admitted only for a mutable
+	 * instance field; local, static, indexed, and indirect whole-Array places
+	 * keep their existing fail-closed diagnostic until they have an equivalent
+	 * lifetime proof.
+	 */
+	static function isDirectMutableArrayField(expression:TypedExpr):Bool {
+		return switch unwrapExpression(expression).expr {
+			// `lowerPlace` has already proved this field is writable. Keep this
+			// helper responsible only for the direct instance-field shape.
+			case TField(_, FInstance(_, _, _)): true;
+			case _:
+				false;
+		};
 	}
 
 	/** Lower `array[index] = value` without pretending a resizable Array is a C place. */

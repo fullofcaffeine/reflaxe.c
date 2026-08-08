@@ -104,6 +104,21 @@ final class Main {
 		final constructedStringLength = constructedStringArrayLength();
 		final freshStaticLength = borrowedLength([2, 3, 5]);
 		final freshInstanceLength = new FreshArrayReader().length([7, 11]);
+		final fieldOwner = new ArrayFieldOwner();
+		final originalFieldValues = fieldOwner.values;
+		final originalFieldLabels = fieldOwner.labels;
+		final borrowedFieldValues = [41];
+		final borrowedFieldLabels = [fromCode(65)];
+		final returnedFieldValues = fieldOwner.replaceBorrowed(borrowedFieldValues, borrowedFieldLabels);
+		fieldOwner.assignToSelf();
+		fieldOwner.values.push(1);
+		fieldOwner.labels.push("B");
+		fieldOwner.reset();
+		fieldOwner.replaceFromCall([20, 22]);
+		final conditionalFieldValues = [30, 12];
+		fieldOwner.replaceConditional(false, conditionalFieldValues);
+		final borrowedConditionalFieldValues = fieldOwner.values;
+		fieldOwner.replaceConditional(true, conditionalFieldValues);
 		final clearedIntegers = [31, 32, 33];
 		final clearedIntegersAlias = clearedIntegers;
 		clearedIntegers.resize(0);
@@ -248,6 +263,23 @@ final class Main {
 			|| constructedStringLength != 1
 			|| freshStaticLength != 3
 			|| freshInstanceLength != 2
+			|| originalFieldValues.length != 1
+			|| originalFieldValues[0] != 1
+			|| originalFieldLabels.length != 1
+			|| originalFieldLabels[0] != "old"
+			|| returnedFieldValues != borrowedFieldValues
+			|| borrowedFieldValues.length != 2
+			|| borrowedFieldValues[1] != 1
+			|| borrowedFieldLabels.length != 2
+			|| borrowedFieldLabels[0] != "A"
+			|| borrowedFieldLabels[1] != "B"
+			|| borrowedConditionalFieldValues != conditionalFieldValues
+			|| borrowedConditionalFieldValues.length != 2
+			|| borrowedConditionalFieldValues[0] != 30
+			|| borrowedConditionalFieldValues[1] != 12
+			|| fieldOwner.values.length != 1
+			|| fieldOwner.values[0] != 73
+			|| fieldOwner.labels.length != 0
 			|| clearedIntegersAlias.length != 0
 			|| clearedRecordsAlias.length != 0
 			|| firstConditionalValue != 10
