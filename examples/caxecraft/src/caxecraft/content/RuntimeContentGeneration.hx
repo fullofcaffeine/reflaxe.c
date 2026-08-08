@@ -18,6 +18,7 @@ import caxecraft.content.RuntimeLevelLoader.rebuildRuntimeLevelForPublicationTes
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
 import caxecraft.content.RuntimeContentDigest.runtimeSha256;
+import caxecraft.content.RuntimeContentReceiptWriter.runtimeGenerationInput;
 import caxecraft.domain.EntityId;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
@@ -513,10 +514,10 @@ private function readSha256(reader:RuntimeSchemaReader, node:ContentJson.Content
 
 /** Recompute the ordered package generation identity from parsed receipts. */
 private function generationMatches(receipt:ParsedRuntimeContentReceipt):Bool {
-	final value = "asset-manifest\x00" + receipt.assetManifestId + "\x00" + receipt.assetManifestSha256 + "\n" + receipt.content.kind + "\x00"
-		+ receipt.content.logicalPath + "\x00" + receipt.content.sha256 + "\n" + receipt.ui.kind + "\x00" + receipt.ui.logicalPath + "\x00"
-		+ receipt.ui.sha256 + "\n" + receipt.map.kind + "\x00" + receipt.map.logicalPath + "\x00" + receipt.map.sha256 + "\n";
-	return sha256Matches(Bytes.ofString(value), receipt.generationSha256);
+	final content = new ContentReceipt(receipt.content.logicalPath, receipt.content.byteLength, receipt.content.sha256);
+	final ui = new ContentReceipt(receipt.ui.logicalPath, receipt.ui.byteLength, receipt.ui.sha256);
+	final map = new ContentReceipt(receipt.map.logicalPath, receipt.map.byteLength, receipt.map.sha256);
+	return sha256Matches(runtimeGenerationInput(receipt.assetManifestId, receipt.assetManifestSha256, content, ui, map), receipt.generationSha256);
 }
 
 /** Compare SHA-256 bytes directly so validation does not require hex output APIs. */

@@ -99,7 +99,13 @@ silently recompiles.
 After building the desired executable once, the ordinary editing loop is:
 
 ```sh
-# Fast structural check of the exact files the game will read.
+# Canonicalize maps and refresh all dependent package receipts.
+npm run caxecraft:content:refresh
+
+# Read-only check of the same package graph.
+npm run caxecraft:content:check
+
+# Fast production-loader check of the exact files the game will read.
 npm run caxecraft:content:validate -- --raylib-configuration memory-software
 
 # One player-visible title -> Adventure -> destination journey.
@@ -109,13 +115,25 @@ npm run caxecraft:content -- --pilot adventure-journey --raylib-configuration me
 npm run caxecraft:content
 ```
 
-The first command reaches the production package reader, campaign decoder,
-CaxeMap parser, validators, resolver, and generation builder, then completes
-the shortest three-frame in-memory launch pilot. The second adds one
-representative player journey. Neither command runs Haxe, haxe.c, a C compiler,
-an archiver, or a linker. A stale or missing executable is an honest failure,
-not permission to build. Use the corresponding ordinary `caxecraft:play` pilot
-once after engine or compiler changes to qualify a replacement.
+The refresh command processes the complete package by default. During one-map
+work, pass its package-relative path:
+
+```sh
+npm run caxecraft:content:refresh -- --level scenarios/first-adventure/western-falls.caxemap
+```
+
+The refresh command runs a small Haxe authoring tool. It does not rebuild the
+game. The tool validates and canonicalizes each selected CAXEMAP file first.
+Then it computes the complete campaign, runtime-receipt, and package output in
+memory. It publishes all changed files or restores every original file after
+a write error.
+
+The validation command reaches the production package reader, campaign
+decoder, CaxeMap parser, validators, resolver, and generation builder. It then
+completes the shortest three-frame in-memory launch pilot. The journey command
+adds one representative player path. Neither command compiles or links the
+game. A stale or missing executable is an honest error. Use the corresponding
+ordinary `caxecraft:play` pilot after engine or compiler changes.
 This is runtime authority for the five admitted staged files, not arbitrary mod
 discovery or hot reload while one process is already running.
 

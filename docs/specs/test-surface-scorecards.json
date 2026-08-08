@@ -482,6 +482,7 @@
         "test:caxecraft-pilot",
         "test:caxecraft-gameplay",
         "test:caxecraft-package-manifest",
+        "test:caxecraft-content-refresh",
         "test:caxecraft-package-zip-source",
         "test:caxecraft-package-zip-export",
         "test:caxecraft-runtime-content-generation",
@@ -502,6 +503,11 @@
         "Pinned Haxe Eval traces and declared real example observers"
       ],
       "evidence": [
+        {
+          "path": "examples/caxecraft/test/caxecraft/qa/ContentPackageRefreshProbe.hx",
+          "proves": "One Haxe authoring operation canonicalizes editor-style map bytes and plans the map, campaign, runtime receipt, and outer package in dependency order before publication.",
+          "doesNotProve": "Native editor save integration, arbitrary package graphs, crash-atomic multi-file replacement, gameplay quality, compiler conformance, or public platform support."
+        },
         {
           "path": "test/diagnostics/run.py",
           "proves": "Registered diagnostic IDs, structured renders, source-path policy, and malformed registry inputs are checked.",

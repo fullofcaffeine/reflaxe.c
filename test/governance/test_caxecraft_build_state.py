@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import io
 import json
 import shutil
@@ -35,7 +34,6 @@ from play import (  # noqa: E402
     main as play_main,
     parse_args,
     play_build_inputs,
-    runtime_content_report,
     stage_content_catalogs,
     tool_identity,
     validate_content_platform_output,
@@ -199,13 +197,14 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         decision = self.decision()
         self.assertTrue(decision.hit)
 
-    def test_alternate_runtime_content_is_hashed_and_staged_from_its_real_bytes(self) -> None:
+    def test_alternate_runtime_content_is_staged_from_its_exact_source_bytes(self) -> None:
         source_root = self.root / "content-source"
         for relative in (
             "assets/manifest.json",
             "campaigns/first-adventure/campaign.json",
             "locales/ui.json",
             "packs/caxecraft/base/content.json",
+            "packs/caxecraft/base/runtime-content.json",
             "scenarios/first-adventure/western-falls.caxemap",
             "scenarios/first-playable/map.caxemap",
         ):
@@ -213,17 +212,6 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             target = source_root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, target)
-        ui = source_root / "locales/ui.json"
-        ui.write_bytes(ui.read_bytes() + b"\n")
-
-        report = runtime_content_report(source_root)
-        files = {
-            str(record["path"]): record
-            for record in report["files"]
-        }
-        expected_ui_hash = hashlib.sha256(ui.read_bytes()).hexdigest()
-        self.assertEqual(files["locales/ui.json"]["sha256"], expected_ui_hash)
-
         (self.output_root / ".hxc-caxecraft-play-root.json").write_text(
             json.dumps({"kind": "caxecraft-play-output", "schemaVersion": 1}) + "\n",
             encoding="utf-8",
@@ -232,10 +220,10 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             self.executable.parent,
             source_root=source_root,
         )
-        self.assertEqual(published, report)
+        self.assertIsNone(published)
         self.assertEqual(
             (self.executable.parent / "content/locales/ui.json").read_bytes(),
-            ui.read_bytes(),
+            (source_root / "locales/ui.json").read_bytes(),
         )
         self.assertEqual(
             (
@@ -245,12 +233,8 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             (source_root / "scenarios/first-adventure/western-falls.caxemap").read_bytes(),
         )
         self.assertEqual(
-            json.loads(
-                (self.executable.parent / "content/packs/caxecraft/base/runtime-content.json").read_text(
-                    encoding="utf-8"
-                )
-            ),
-            report,
+            (self.executable.parent / "content/packs/caxecraft/base/runtime-content.json").read_bytes(),
+            (source_root / "packs/caxecraft/base/runtime-content.json").read_bytes(),
         )
 
     def test_windows_generation_selects_typed_unsupported_package_capability(

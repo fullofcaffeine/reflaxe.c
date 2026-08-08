@@ -128,9 +128,8 @@ complete save format. The native playable now reads the staged
 `map.caxemap` after startup, runs the shared Haxe lexer, parser, validator, and
 resolver, builds a complete unpublished generation, and selects that generation
 before opening Raylib. A map edit therefore changes the next launch without
-running Haxe, haxe.c, the C compiler, or the linker. The packaged CaxeMap bytes
-are the only level authority; the old per-level Haxe generator and fallback
-have been removed.
+rebuilding the game. The packaged CaxeMap bytes are the only level authority;
+the old per-level Haxe generator and fallback have been removed.
 
 Tideweave pickup/equipment is connected through validated content and the
 deterministic pilot protocol; its display-backed visual
@@ -143,16 +142,22 @@ loader, then run only the Piloscript journey that protects the changed player
 flow:
 
 ```sh
+npm run caxecraft:content:refresh
 npm run caxecraft:content:validate -- --raylib-configuration memory-software
 npm run caxecraft:content -- --pilot adventure-journey --raylib-configuration memory-software
 ```
 
-Both commands reuse the already-qualified executable and refuse to fall back
-to compilation. `npm run caxecraft:content` without a pilot relaunches the
-existing desktop game for free play and visual review. Reusable parser,
-movement, water, publication, compiler, and native-boundary changes still use
-their focused Haxe/generated-C owners; ordinary content edits do not run that
-portfolio as a quota.
+The refresh command canonicalizes each CAXEMAP file. Then it updates the
+campaign, runtime receipt, and package manifest as one group. Use
+`npm run caxecraft:content:check` for a read-only result. The editor can call
+the same Haxe planner with unsaved map bytes before its save or export step.
+
+The content commands reuse the already-qualified game executable and refuse
+to compile or link the game. `npm run caxecraft:content` runs the refresh first.
+Without a pilot, it relaunches the existing desktop game for free play and
+visual review. Reusable parser, movement, water, publication, compiler, and
+native-boundary changes still use their focused Haxe and generated-C checks.
+Ordinary content edits do not run that portfolio as a quota.
 
 ## Why the source contains `#if c`
 

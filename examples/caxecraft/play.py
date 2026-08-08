@@ -482,63 +482,11 @@ def stage_runtime_assets(destination: Path) -> None:
     )
 
 
-def runtime_content_report(source_root: Path = CASE) -> dict[str, object]:
-    """Describe the exact runtime inputs without making them compiler inputs.
-
-    The report is regenerated from current source bytes whenever play stages a
-    package. Its checked-in copy is a focused oracle and review surface; play
-    never trusts that copy to describe edited content.
-    """
-
-    manifest = load_object(source_root / "assets/manifest.json", "Caxecraft asset manifest")
-    if manifest.get("schemaVersion") != 1 or not isinstance(manifest.get("packId"), str):
-        raise PlayFailure("Caxecraft asset manifest identity is invalid")
-    file_kinds = {
-        "packs/caxecraft/base/content.json": "content-pack",
-        "locales/ui.json": "ui-catalog",
-        "scenarios/first-playable/map.caxemap": "level-map",
-    }
-    ordered_paths = (
-        "packs/caxecraft/base/content.json",
-        "locales/ui.json",
-        "scenarios/first-playable/map.caxemap",
-    )
-    files: list[dict[str, object]] = []
-    for raw_path in ordered_paths:
-        source = source_root.joinpath(*PurePosixPath(raw_path).parts)
-        files.append(
-            {
-                "kind": file_kinds[raw_path],
-                "path": raw_path,
-                "byteLength": source.stat().st_size,
-                "sha256": sha256_file(source),
-            }
-        )
-    asset_hash = sha256_file(source_root / "assets/manifest.json")
-    generation_input = (
-        f"asset-manifest\0{manifest['packId']}\0{asset_hash}\n"
-        + "".join(
-            f"{record['kind']}\0{record['path']}\0{record['sha256']}\n"
-            for record in files
-        )
-    ).encode("utf-8")
-    return {
-        "schemaVersion": 1,
-        "generationSha256": hashlib.sha256(generation_input).hexdigest(),
-        "assetManifest": {
-            "schemaVersion": manifest["schemaVersion"],
-            "packId": manifest["packId"],
-            "sha256": asset_hash,
-        },
-        "files": files,
-    }
-
-
 def stage_content_catalogs(
     destination: Path,
     *,
     source_root: Path = CASE,
-) -> dict[str, object]:
+) -> None:
     """Publish the exact authored content tree consumed beside the executable.
 
     Native play reads the staged CaxeMap after process startup. The base content
@@ -565,7 +513,7 @@ def stage_content_catalogs(
                 unexpected,
                 unowned_error=f"unowned files occupy the Caxecraft staged content root: {unexpected}",
             )
-    for raw_path in RUNTIME_CONTENT_FILES:
+    for raw_path in (*RUNTIME_CONTENT_FILES, RUNTIME_CONTENT_REPORT):
         relative = validated_relative(raw_path, f"runtime content {raw_path}")
         source = source_root.joinpath(*relative.parts)
         if source.is_symlink() or not source.is_file():
@@ -576,18 +524,6 @@ def stage_content_catalogs(
             f"Caxecraft runtime content {raw_path}",
         )
         shutil.copyfile(source, target)
-    report_target = prepare_stage_destination(
-        stage_root,
-        PurePosixPath(RUNTIME_CONTENT_REPORT),
-        "Caxecraft runtime content report",
-    )
-    published_report = runtime_content_report(source_root)
-    report_target.write_text(
-        json.dumps(published_report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    return published_report
 
 
 def development_tool(name: str) -> str:

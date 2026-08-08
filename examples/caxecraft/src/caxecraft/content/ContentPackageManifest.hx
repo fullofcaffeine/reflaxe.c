@@ -1,6 +1,7 @@
 package caxecraft.content;
 
 import caxecraft.content.ContentJson.ContentJsonNode;
+import caxecraft.content.ContentJsonWriter.appendJsonString;
 import caxecraft.content.ContentPackageModel.ContentPackageError;
 import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
 import caxecraft.content.RuntimeContentDigest.runtimeSha256;
@@ -211,6 +212,82 @@ enum ContentPackageLoadResult {
 /** Decode bounded manifest bytes without touching a package source. */
 function decodeContentPackageManifest(input:Bytes):ContentPackageManifestReadResult
 	return ContentPackageManifestDecoder.decode(input);
+
+/**
+ * Write one validated package with replacement receipts for changed entries.
+ *
+ * Roles, paths, kinds, dependencies, and their canonical order come from the
+ * decoded model. Refresh planning supplies only final byte counts and digests.
+ */
+function writeContentPackageManifest(manifest:ContentPackageManifest, updates:Array<ContentReceipt>):Bytes {
+	final output = new StringBuf();
+	output.add('{\n  "schemaVersion": 1,\n  "packageId": ');
+	appendJsonString(output, manifest.id.text());
+	output.add(',\n  "packageVersion": ${manifest.version},\n  "roles": [\n');
+	for (index in 0...manifest.roleCount()) {
+		output.add('    ');
+		appendJsonString(output, packageRoleText(manifest.roleAt(index)));
+		output.add(index + 1 == manifest.roleCount() ? '\n' : ',\n');
+	}
+	output.add('  ],\n  "entries": [\n');
+	for (index in 0...manifest.entryCount()) {
+		final entry = manifest.entryAt(index);
+		final logicalPath = entry.logicalPath.text();
+		final update = packageReceiptFor(updates, logicalPath);
+		final byteLength = update == null ? entry.byteLength : update.byteLength;
+		final sha256 = update == null ? entry.sha256 : update.sha256;
+		output.add('    {\n      "kind": ');
+		appendJsonString(output, packageKindText(entry.kind));
+		output.add(',\n      "path": ');
+		appendJsonString(output, logicalPath);
+		output.add(',\n      "byteLength": $byteLength,\n      "sha256": ');
+		appendJsonString(output, sha256);
+		output.add(index + 1 == manifest.entryCount() ? '\n    }\n' : '\n    },\n');
+	}
+	output.add('  ],\n  "dependencies": [');
+	if (manifest.dependencyCount() > 0)
+		output.add('\n');
+	for (index in 0...manifest.dependencyCount()) {
+		final dependency = manifest.dependencyAt(index);
+		output.add('    {\n      "packageId": ');
+		appendJsonString(output, dependency.id.text());
+		output.add(',\n      "minimumVersion": ${dependency.minimumVersion},\n      "maximumVersion": ${dependency.maximumVersion}');
+		output.add(index + 1 == manifest.dependencyCount() ? '\n    }\n' : '\n    },\n');
+	}
+	output.add(manifest.dependencyCount() == 0 ? ']\n}\n' : '  ]\n}\n');
+	return Bytes.ofString(output.toString());
+}
+
+/** Find one exact package-entry replacement. */
+private function packageReceiptFor(updates:Array<ContentReceipt>, logicalPath:String):Null<ContentReceipt> {
+	for (update in updates)
+		if (update.logicalPath == logicalPath)
+			return update;
+	return null;
+}
+
+/** Return the canonical JSON spelling for one admitted role. */
+private function packageRoleText(role:ContentPackageRole):String
+	return switch role {
+		case Assets: "assets";
+		case Campaign: "campaign";
+		case Content: "content";
+		case Levels: "levels";
+		case Localization: "localization";
+		case Mod: "mod";
+	};
+
+/** Return the canonical JSON spelling for one admitted entry kind. */
+private function packageKindText(kind:ContentPackageEntryKind):String
+	return switch kind {
+		case Asset: "asset";
+		case AssetManifest: "asset-manifest";
+		case CampaignManifest: "campaign";
+		case ContentPack: "content-pack";
+		case Level: "level";
+		case LocalizationCatalog: "localization";
+		case RuntimeContent: "runtime-content";
+	};
 
 /** Read a manifest and verify all its payload entries through one source capability. */
 function loadContentPackage(source:ContentPackageSource, manifestPath:String):ContentPackageLoadResult {

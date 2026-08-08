@@ -1,0 +1,3 @@
+-cp src
+--main caxecraft.tools.ContentRefreshMain
+--interp

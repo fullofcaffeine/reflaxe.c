@@ -16,6 +16,19 @@ import haxe.io.Bytes;
 function runtimeSha256(input:Bytes):Bytes
 	return new RuntimeSha256Worker().digest(input);
 
+/** Return the package digest as the canonical lowercase 64-digit receipt. */
+function runtimeSha256Hex(input:Bytes):String {
+	final digest = runtimeSha256(input);
+	final digits = "0123456789abcdef";
+	final output = new StringBuf();
+	for (index in 0...digest.length) {
+		final value = digest.get(index);
+		output.addChar(digits.charCodeAt(value >>> 4));
+		output.addChar(digits.charCodeAt(value & 15));
+	}
+	return output.toString();
+}
+
 /**
 	Hashes one immutable byte sequence with fixed working storage.
 

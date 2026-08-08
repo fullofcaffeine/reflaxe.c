@@ -198,6 +198,20 @@ AFFECTED_OWNER_RULES = (
     (
         re.compile(
             r"^examples/caxecraft/(?:"
+            r"content-refresh(?:-test)?\.hxml"
+            r"|src/caxecraft/content/(?:ContentJsonWriter|ContentPackageRefresh|ContentReceipt|RuntimeContentReceiptWriter)\.hx"
+            r"|src/caxecraft/tools/ContentRefreshMain\.hx"
+            r"|test/caxecraft/qa/ContentPackageRefreshProbe\.hx"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-content-refresh",
+            "content canonicalization or the package receipt dependency graph changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?:"
             r"package-manifest(?:-c)?\.hxml"
             r"|src/caxecraft/content/(?:ContentJson|ContentPackageManifest|ContentPackageModel|ContentPackagePath)\.hx"
             r"|test/caxecraft/qa/ContentPackageManifestProbe\.hx"

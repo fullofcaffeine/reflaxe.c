@@ -1,6 +1,7 @@
 package caxecraft.content;
 
 import caxecraft.content.ContentJson.ContentJsonNode;
+import caxecraft.content.ContentJsonWriter.appendJsonString;
 import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
@@ -243,6 +244,58 @@ enum CampaignManifestReadResult {
 /** Decode one bounded UTF-8 campaign document into the closed product model. */
 function decodeCampaignManifest(input:Bytes):CampaignManifestReadResult
 	return CampaignManifestDecoder.decode(input);
+
+/**
+ * Write one validated campaign with replacement receipts for changed maps.
+ *
+ * The decoder already proves identity, path, and graph order. This writer keeps
+ * those authored facts and changes only the byte receipts named by `updates`.
+ */
+function writeCampaignManifest(manifest:CampaignManifest, updates:Array<ContentReceipt>):Bytes {
+	final output = new StringBuf();
+	output.add('{\n  "schemaVersion": 1,\n  "campaignId": ');
+	appendJsonString(output, manifest.id.text());
+	output.add(',\n  "campaignVersion": ${manifest.version},\n  "entryLevel": ');
+	appendJsonString(output, manifest.entryLevelId().text());
+	output.add(',\n  "levels": [\n');
+	for (index in 0...manifest.levelCount()) {
+		final level = manifest.levelAt(index);
+		final update = receiptFor(updates, level.logicalPath);
+		final byteLength = update == null ? level.byteLength : update.byteLength;
+		final sha256 = update == null ? level.sha256 : update.sha256;
+		output.add('    {\n      "id": ');
+		appendJsonString(output, level.id.text());
+		output.add(',\n      "path": ');
+		appendJsonString(output, level.logicalPath);
+		output.add(',\n      "byteLength": $byteLength,\n      "sha256": ');
+		appendJsonString(output, sha256);
+		output.add(index + 1 == manifest.levelCount() ? '\n    }\n' : '\n    },\n');
+	}
+	output.add('  ],\n  "transitions": [\n');
+	for (index in 0...manifest.transitionCount()) {
+		final transition = manifest.transitionAt(index);
+		output.add('    {\n      "exit": ');
+		appendJsonString(output, transition.exit.text());
+		output.add(',\n      "sourceLevel": ');
+		appendJsonString(output, transition.sourceLevel.text());
+		output.add(',\n      "destinationLevel": ');
+		appendJsonString(output, transition.destinationLevel.text());
+		output.add(',\n      "destinationEntrance": ');
+		appendJsonString(output, transition.destinationEntrance.text());
+		output.add(',\n      "required": ${transition.required ? "true" : "false"}');
+		output.add(index + 1 == manifest.transitionCount() ? '\n    }\n' : '\n    },\n');
+	}
+	output.add('  ]\n}\n');
+	return Bytes.ofString(output.toString());
+}
+
+/** Find the replacement for one exact logical path without an open map type. */
+private function receiptFor(updates:Array<ContentReceipt>, logicalPath:String):Null<ContentReceipt> {
+	for (update in updates)
+		if (update.logicalPath == logicalPath)
+			return update;
+	return null;
+}
 
 /** Request-local decoder that owns all intermediate source locations. */
 private final class CampaignManifestDecoder {
