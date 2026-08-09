@@ -47,10 +47,12 @@ expect 153 position 5,3,21
 # Cross the opened lower cache, equip Tideweave, and enter the flooded grotto.
 hold 152 167 right
 expect 171 equipment caxecraft:tideweave-suit
+expect 171 objective objective.explore-grotto
 expect 171 sand 1
 hold 172 227 backward
 hold 228 311 left-descend
 expect 312 equipment caxecraft:tideweave-suit
+expect 312 objective none
 expect 312 lanterns 2
 expect 312 sand 1
 expect 312 medium submerged
@@ -59,7 +61,7 @@ hold 312 343 right-rise
 
 expect 349 screen playing
 expect 349 level western-falls
-expect 349 objective objective.find-tideweave
+expect 349 objective none
 expect 349 equipment caxecraft:tideweave-suit
 expect 349 lanterns 2
 expect 349 sand 1

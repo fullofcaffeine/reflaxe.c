@@ -111,7 +111,8 @@ final class ScenarioModelProbe {
 			SignalReceived(content),
 			TimerExpired(objectId),
 			ObjectiveChanged(objectId),
-			StateChanged(objectId)
+			StateChanged(objectId),
+			ItemCollected(content)
 		];
 		final scopes:Array<FlowScope> = [FlowScope.Map, FlowScope.Player, FlowScope.Quest, FlowScope.Local(otherId)];
 		final values:Array<FlowValue> = [FlowValue.Flag(false), FlowValue.Counter(0), FlowValue.State(content)];
@@ -518,6 +519,7 @@ final class ScenarioModelProbe {
 			case TimerExpired(_): 8;
 			case ObjectiveChanged(_): 9;
 			case StateChanged(_): 10;
+			case ItemCollected(_): 11;
 		};
 
 	static function scopeCode(value:FlowScope):Int

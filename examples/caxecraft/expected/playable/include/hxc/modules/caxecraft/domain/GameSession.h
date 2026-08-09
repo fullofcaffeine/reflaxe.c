@@ -21,6 +21,7 @@ struct hxc_caxecraft_domain_GameSession {
   struct hxc_caxecraft_scenario_CaxeFlowExecutor *hxc_flowExecutor;
   struct hxc_array_ref *hxc_authoredActorEntities;
   struct hxc_array_ref *hxc_authoredActorIds;
+  struct hxc_array_ref *hxc_authoredItemContentIds;
   struct hxc_array_ref *hxc_pendingFlowEvents;
   struct hxc_caxecraft_domain_WaterSimulation hxc_water;
   uint8_t hxc_worldStorage[16384];
@@ -93,6 +94,8 @@ struct hxc_caxecraft_domain_ActorControllerTickResult hxc_caxecraft_domain_GameS
 
 bool hxc_caxecraft_domain_GameSession_actorInteractionAvailable(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_id);
 
+bool hxc_caxecraft_domain_GameSession_authoredItemCollectionEventAvailable(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_index);
+
 bool hxc_caxecraft_domain_GameSession_authoredItemIsActive(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_index);
 
 const int32_t *hxc_caxecraft_domain_GameSession_authoredItemsView(struct hxc_caxecraft_domain_GameSession *hxc_l_self, size_t *hxc_l_returned_span_length);
@@ -109,7 +112,7 @@ struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_Gam
 
 struct hxc_caxecraft_domain_CharacterDamageResult hxc_caxecraft_domain_GameSession_damageCharacter(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_id, int32_t hxc_l_amount);
 
-void hxc_caxecraft_domain_GameSession_installValidatedScenarioFlow(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_Scenario hxc_l_scenario, struct hxc_array_ref *hxc_l_actorEntities, struct hxc_array_ref *hxc_l_actorIds);
+void hxc_caxecraft_domain_GameSession_installValidatedScenarioFlow(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_Scenario hxc_l_scenario, struct hxc_array_ref *hxc_l_actorEntities, struct hxc_array_ref *hxc_l_actorIds, struct hxc_array_ref *hxc_l_itemContentIds);
 
 bool hxc_caxecraft_domain_GameSession_interactWithActor(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_id);
 
@@ -120,6 +123,8 @@ bool hxc_caxecraft_domain_GameSession_placeInitialWaterVolume(struct hxc_caxecra
 bool hxc_caxecraft_domain_GameSession_placeTerrain(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord, enum hxc_caxecraft_domain_BlockKind hxc_l_kind);
 
 bool hxc_caxecraft_domain_GameSession_placeWaterSource(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord);
+
+void hxc_caxecraft_domain_GameSession_queueAuthoredItemCollected(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_index);
 
 bool hxc_caxecraft_domain_GameSession_queueFlowEvent(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_FlowEvent hxc_l_event);
 

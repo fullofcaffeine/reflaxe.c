@@ -53,6 +53,9 @@ final class CaxeFlowValueReader {
 			case "use-item" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				final content = ScenarioTokenGrammar.contentId(record.tokens[2]);
 				content == null ? null : UseItem(content);
+			case "collect-item" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
+				final content = ScenarioTokenGrammar.contentId(record.tokens[2]);
+				content == null ? null : ItemCollected(content);
 			case "signal" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				final content = ScenarioTokenGrammar.contentId(record.tokens[2]);
 				content == null ? null : SignalReceived(content);

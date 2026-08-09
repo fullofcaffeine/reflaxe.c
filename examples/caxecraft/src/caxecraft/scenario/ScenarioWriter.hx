@@ -279,6 +279,7 @@ final class ScenarioWriter {
 			case Interact(id): 'interact ${id.text()}';
 			case BlockChanged(zone, block): 'block-changed ${zone.text()} ${block.text()}';
 			case UseItem(item): 'use-item ${item.text()}';
+			case ItemCollected(item): 'collect-item ${item.text()}';
 			case EntityDefeated(entity): 'entity-defeated ${entity.text()}';
 			case SignalReceived(signal): 'signal ${signal.text()}';
 			case TimerExpired(timer): 'timer ${timer.text()}';

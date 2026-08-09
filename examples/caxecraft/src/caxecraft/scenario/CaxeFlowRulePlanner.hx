@@ -184,7 +184,7 @@ final class CaxeFlowRulePlanner {
 				[ObjectiveChanged(left), ObjectiveChanged(right)] | [StateChanged(left), StateChanged(right)]:
 				sameId(left, right);
 			case [BlockChanged(leftZone, leftBlock), BlockChanged(rightZone, rightBlock)]: sameId(leftZone, rightZone) && sameContent(leftBlock, rightBlock);
-			case [UseItem(left), UseItem(right)] | [SignalReceived(left), SignalReceived(right)]:
+			case [UseItem(left), UseItem(right)] | [ItemCollected(left), ItemCollected(right)] | [SignalReceived(left), SignalReceived(right)]:
 				sameContent(left, right);
 			case _: false;
 		};

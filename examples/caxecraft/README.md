@@ -89,8 +89,11 @@ overlook now faces a tall waterfall and pool; a stepped stone route leads to a
 bridge, a four-material clue shrine, a concealed Tideweave alcove, and distant
 snow and ash silhouettes. Moss now waits at the overlook, points the player
 toward the four marks left by the Fallskeeper, and starts the Tideweave route.
+Collecting Tideweave now completes that search and opens the grotto objective;
+collecting the grotto lantern completes the current authored route. Both
+changes come from CaxeFlow rules in the map, not campaign names in engine Haxe.
 The runtime loader checks that the edited map remains valid, while the real
-title-to-Adventure Piloscript checks the objective change and captures the
+title-to-Adventure Piloscript checks each objective change and captures the
 authored arrival for review. Decorative coordinates are deliberately not
 frozen by a Haxe test, so designers can keep reshaping the route. This is early
 campaign progress, not the finished suit quest: the Fallskeeper, journal,
@@ -730,9 +733,9 @@ absent from production source. This evidence still does not claim arbitrary
 package support, live hot-reload during one running process, a public C
 application binary interface (ABI), or platform qualification.
 
-The active runtime level owns its title, objective, dialogue, encounter, and
-failure text. Edit the CAXEMAP catalog and use the content loop. The game does
-not need a Haxe or C rebuild for these text changes.
+The active runtime level owns its title, objectives, dialogue, encounter,
+failure text, and item-driven CaxeFlow progression. Edit the CAXEMAP and use
+the content loop. The game does not need a Haxe or C rebuild for these changes.
 
 Terrain, authored fluid records, fluid presentation, actors, items, and player
 spawn are read from the packaged CaxeMap by the ordinary native loader. The
@@ -747,9 +750,12 @@ npm run test:caxecraft-runtime-level-loader
 
 The play launcher stages the current map before every launch and deliberately
 excludes it from the compiler build key. An edited map therefore cannot be
-silently replaced by stale generated facts. Some CaxeFlow and presentation
-composition still has temporary application coupling; `haxe_c-xge.20.4` owns
-removing it.
+silently replaced by stale generated facts. A committed authored-item pickup
+now emits the item's validated content ID to CaxeFlow. A rejected pickup, such
+as one blocked by a full inventory, changes neither the item nor the flow. The
+broader shared event-source registry remains owned by `haxe_c-xge.19.10`.
+Some CaxeFlow and presentation composition still has temporary application
+coupling; `haxe_c-xge.20.4` owns removing it.
 
 The runtime schema and level-loader checks reject incomplete locales, duplicate
 IDs or JSON keys, unknown fields, and invalid UTF-8 or control text. They also

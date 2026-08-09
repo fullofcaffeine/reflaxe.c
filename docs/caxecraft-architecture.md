@@ -230,6 +230,11 @@ authored aquatic-equipment collection enter through public typed session
 operations. Those operations preserve inventory or item atomicity, commit the
 owned character before a later fixed tick can read it, and report enough typed
 outcome data for presentation to invalidate a renderer cache or show feedback.
+When an authored pickup commits, the session also queues one typed
+`ItemCollected` event with the validated content ID for CaxeFlow. It reserves
+event capacity before changing inventory or world state. A full inventory,
+inactive item, missing binding, or full event queue therefore leaves both the
+item and flow unchanged instead of losing progression.
 
 There is deliberately no public whole-character replacement method. Before
 this boundary, the application calculated a complete `Character` snapshot and
@@ -463,6 +468,10 @@ an obvious local return value.
 CaxeFlow consumes admitted game events and plans actions through its one typed
 action registry. Console commands, CaxeTest/PilotScript, cutscenes, and authored
 triggers reuse that command/action boundary where their meanings overlap.
+The current item adapter reports only committed authored pickups. The broader
+event-source registry and remaining mechanic adapters are still owned by
+`haxe_c-xge.19.10`; this first adapter is not evidence that every listed event
+family is connected.
 
 ## Fixed-tick order
 

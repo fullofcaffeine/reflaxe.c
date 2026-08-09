@@ -91,7 +91,7 @@ final class CaxeFlowValidator {
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
 				if (!context.registry.hasBlock(block))
 					context.addAtCoordinate(UnresolvedContent(block), coordinate);
-			case UseItem(item):
+			case UseItem(item), ItemCollected(item):
 				if (!context.registry.hasItem(item))
 					context.addAtCoordinate(UnresolvedContent(item), coordinate);
 			case SignalReceived(signal):

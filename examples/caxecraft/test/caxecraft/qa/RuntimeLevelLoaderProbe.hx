@@ -25,8 +25,11 @@ import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldRead.query as queryWorld;
+import caxecraft.gameplay.Inventory;
+import caxecraft.gameplay.ItemKind;
 import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
+import caxecraft.qa.FocusedContentFixture.tideweaveAquaticProfile;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.ScenarioId;
@@ -171,6 +174,49 @@ function selfCheck():Int {
 		case _:
 			return 110;
 	}
+	final collected = flowSession.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Lantern, 1);
+	if (!collected.resolved || collected.collected != 1 || collected.inventory.lantern != 1)
+		return 112;
+	final collectionTick = flowSession.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!collectionTick.committed
+		|| collectionTick.flow == null
+		|| collectionTick.flow.firedRules.length != 1
+		|| collectionTick.flow.firedRules[0].text() != "rule.fixture-collect"
+		|| collectionTick.flow.activeObjective == null
+		|| collectionTick.flow.activeObjective.text() != "objective.collected")
+		return 113;
+	if (!flowSession.activateAuthoredItemDuringLoad(0))
+		return 114;
+	final fullInventory = Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, Inventory.MAX_STACK);
+	final rejectedCollection = flowSession.collectAuthoredInventoryItem(0, fullInventory, ItemKind.Lantern, 1);
+	if (!rejectedCollection.resolved || rejectedCollection.collected != 0 || !flowSession.authoredItemIsActive(0))
+		return 115;
+	final rejectedCollectionTick = flowSession.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!rejectedCollectionTick.committed || rejectedCollectionTick.flow == null || rejectedCollectionTick.flow.firedRules.length != 0)
+		return 116;
+	final equipped = flowSession.collectAuthoredAquaticEquipment(1, tideweaveAquaticProfile());
+	if (!equipped.resolved || !equipped.collected || equipped.character.aquaticProfile.maximumBreathTicks != 1200)
+		return 117;
+	final equipmentTick = flowSession.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!equipmentTick.committed
+		|| equipmentTick.flow == null
+		|| equipmentTick.flow.firedRules.length != 1
+		|| equipmentTick.flow.firedRules[0].text() != "rule.fixture-equip"
+		|| equipmentTick.flow.activeObjective == null
+		|| equipmentTick.flow.activeObjective.text() != "objective.equipped")
+		return 118;
 	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final checkedIn = switch store.read(logicalPath) {
 		case PackageBytesRead(value): value;

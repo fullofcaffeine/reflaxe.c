@@ -30,6 +30,7 @@ import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlowExecutor;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
+import caxecraft.scenario.ContentId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioLimits;
@@ -210,6 +211,9 @@ final class GameSession {
 	/** Stable CAXEMAP identities in the same order as `authoredActorEntities`. */
 	var authoredActorIds:Array<ScenarioId> = [];
 
+	/** Validated content IDs in the same slot order as authored-item activity. */
+	var authoredItemContentIds:Array<ContentId> = [];
+
 	/** Semantic events waiting for the next successfully committed fixed tick. */
 	var pendingFlowEvents:Array<FlowEvent> = [];
 
@@ -253,12 +257,14 @@ final class GameSession {
 		Attach the validated authored rule model before this candidate can publish.
 
 		Only `RuntimeLevelLoader` receives this authority. The loader has already
-		parsed and validated the complete scenario, and every candidate owns a fresh
-		session, so a second installation is an internal construction defect rather
-		than recoverable content input.
+		parsed and validated the complete scenario. Actor and item identities use the
+		same stable slot order as the session so later events can report authored IDs.
+		Every candidate owns a fresh session, so a second installation is an internal
+		construction defect rather than recoverable content input.
 	**/
 	@:allow(caxecraft.content.RuntimeLevelLoader)
-	private function installValidatedScenarioFlow(scenario:Scenario, actorEntities:Array<EntityId>, actorIds:Array<ScenarioId>):Void {
+	private function installValidatedScenarioFlow(scenario:Scenario, actorEntities:Array<EntityId>, actorIds:Array<ScenarioId>,
+			itemContentIds:Array<ContentId>):Void {
 		if (flowExecutor != null)
 			throw "CaxeFlow is already installed for this GameSession";
 		if (actorEntities.length != actorIds.length || actorEntities.length != actorControllers.length)
@@ -266,8 +272,11 @@ final class GameSession {
 		for (index in 0...actorEntities.length)
 			if (actorEntities[index] != actorControllers[index].characterId)
 				throw "CaxeFlow actor binding order does not match this GameSession";
+		if (itemContentIds.length > AuthoredItemSlots.CAPACITY)
+			throw "CaxeFlow item bindings exceed this GameSession";
 		authoredActorEntities = actorEntities.copy();
 		authoredActorIds = actorIds.copy();
+		authoredItemContentIds = itemContentIds.copy();
 		flowExecutor = new CaxeFlowExecutor(scenario);
 	}
 
@@ -774,8 +783,9 @@ final class GameSession {
 
 		The caller resolves content data into `replacement`; it never receives the
 		item buffer. The session first proves the item and character exist, then
-		commits the character profile, and only then clears the item flag. Rejection
-		leaves both character and item unchanged.
+		reserves room for its CaxeFlow event, commits the character profile, clears the
+		item flag, and queues that event. Rejection leaves the character, item, and
+		flow unchanged.
 	**/
 	public function collectAuthoredAquaticEquipment(index:Int, replacement:AquaticProfile):AuthoredAquaticEquipmentResult {
 		final original = readLocalPlayer();
@@ -793,9 +803,18 @@ final class GameSession {
 				resolved: true
 			};
 		}
+		if (!authoredItemCollectionEventAvailable(index)) {
+			return {
+				character: original,
+				collected: false,
+				resolved: false
+			};
+		}
 		final committed = commitLocalCharacter(original, adoptCharacterProfile(original, replacement));
-		if (committed.resolved)
+		if (committed.resolved) {
 			authoredItemStorage[index] = 0;
+			queueAuthoredItemCollected(index);
+		}
 		return {
 			character: committed.character,
 			collected: committed.resolved,
@@ -806,8 +825,9 @@ final class GameSession {
 	/**
 		Move one complete authored stack into a bounded inventory.
 
-		The item flag changes only after the full quantity fits. This rule prevents a
-		world reward from disappearing when the inventory has insufficient space.
+		The item flag changes only after the full quantity fits and its CaxeFlow event
+		can be preserved. This rule prevents a world reward from disappearing when the
+		inventory has insufficient space or progression cannot be queued.
 	**/
 	public function collectAuthoredInventoryItem(index:Int, inventory:InventoryState, kind:ItemKind, quantity:Int):AuthoredInventoryItemResult {
 		if (index < 0 || index >= AuthoredItemSlots.CAPACITY || quantity <= 0 || quantity > Inventory.MAX_STACK) {
@@ -824,13 +844,34 @@ final class GameSession {
 				resolved: true
 			};
 		}
+		if (!authoredItemCollectionEventAvailable(index)) {
+			return {
+				inventory: inventory,
+				collected: 0,
+				resolved: false
+			};
+		}
 		final replacement = Inventory.collectItem(inventory, kind, quantity);
 		authoredItemStorage[index] = 0;
+		queueAuthoredItemCollected(index);
 		return {
 			inventory: replacement,
 			collected: quantity,
 			resolved: true
 		};
+	}
+
+	/** True when a successful pickup can preserve its authored-rule event. */
+	function authoredItemCollectionEventAvailable(index:Int):Bool {
+		if (flowExecutor == null)
+			return true;
+		return index >= 0 && index < authoredItemContentIds.length && pendingFlowEvents.length < ScenarioLimits.MAX_EVENTS_PER_TICK;
+	}
+
+	/** Queue the validated item identity after its matching transaction commits. */
+	function queueAuthoredItemCollected(index:Int):Void {
+		if (flowExecutor != null)
+			pendingFlowEvents.push(FlowEvent.ItemCollected(authoredItemContentIds[index]));
 	}
 
 	/**

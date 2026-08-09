@@ -36,9 +36,12 @@ than the former flat placeholder: its arrival overlook faces a tall waterfall
 and pool, a stepped route reaches the valley, and a bridge, four-material clue
 shrine, concealed Tideweave alcove, snow shelf, and ash silhouettes establish
 the planned route's first visible landmarks. Moss waits at the overlook and
-directs the player toward the four marks left by the Fallskeeper. The
+directs the player toward the four marks left by the Fallskeeper. The authored
+objective now advances when the player collects Tideweave, then completes the
+current grotto route when the player collects its lantern. These rules live in
+the Western Falls CaxeMap and can change without rebuilding the game. The
 Fallskeeper, journal entry, four-glyph code interaction, sealed-vault
-progression, and flooded ruins are still designs rather than playable
+progression, and larger flooded ruins are still designs rather than playable
 mechanics. Branching, return travel,
 persistence, authored exit zones, and the broader Adventure campaign also
 remain unimplemented. Do not describe concept art, semantic editor tests, or

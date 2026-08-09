@@ -28,6 +28,14 @@ object guide.nia
   tag friend
   placement npc caxecraft:nia dialogue.guide 2500 1000 1500 270
 end object
+object item.fixture-lantern
+  tag reward
+  placement item caxecraft:lantern 1 1500 1000 1500 0
+end object
+object item.fixture-tideweave
+  tag equipment
+  placement item caxecraft:tideweave-suit 1 1500 1000 1500 0
+end object
 object player.start
   tag player
   placement player-spawn 1500 1000 1500 0
@@ -41,10 +49,28 @@ end objective
 objective objective.next hidden title literal "Inspect the engine result"
   body literal "This objective exists only to prove generic runtime progression."
 end objective
+objective objective.collected hidden title literal "Collection reached authored rules"
+  body literal "A committed item pickup selected this objective."
+end objective
+objective objective.equipped hidden title literal "Equipment reached authored rules"
+  body literal "A committed aquatic-equipment pickup selected this objective."
+end objective
 rule rule.fixture-advance priority 10 once
   when interact guide.nia
   if (always)
   do objective objective.marker complete
   do objective objective.next active
+end rule
+rule rule.fixture-collect priority 10 repeat
+  when collect-item caxecraft:lantern
+  if (always)
+  do objective objective.next complete
+  do objective objective.collected active
+end rule
+rule rule.fixture-equip priority 10 once
+  when collect-item caxecraft:tideweave-suit
+  if (always)
+  do objective objective.collected complete
+  do objective objective.equipped active
 end rule
 end-map

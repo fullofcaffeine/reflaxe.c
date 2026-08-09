@@ -13,6 +13,7 @@ import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanResult;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.EntityId;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
@@ -444,11 +445,14 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 		case ContentGenerationReady(generation):
 			final actorEntities:Array<EntityId> = [];
 			final actorIds:Array<ScenarioId> = [];
+			final itemContentIds:Array<ContentId> = [];
 			for (binding in generation.actorBindings()) {
 				actorEntities.push(binding.entityId);
 				actorIds.push(binding.authoredId);
 			}
-			generation.session().installValidatedScenarioFlow(scenario, actorEntities, actorIds);
+			for (binding in generation.itemBindings())
+				itemContentIds.push(binding.contentId);
+			generation.session().installValidatedScenarioFlow(scenario, actorEntities, actorIds, itemContentIds);
 			RuntimeLevelReady(new RuntimeLevelCandidate(generation, {
 				authority: input.authority,
 				rootLabel: input.rootLabel,

@@ -660,13 +660,18 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:water";
 
 	public function hasItem(id:ContentId):Bool
-		return id.text() == "caxecraft:haxe-pick" || id.text() == "caxecraft:tideweave-suit";
+		return id.text() == "caxecraft:berries" || id.text() == "caxecraft:haxe-pick" || id.text() == "caxecraft:lantern"
+			|| id.text() == "caxecraft:tideweave-suit";
 
 	public function itemStorageCode(id:ContentId):Int {
-		if (id.text() == "caxecraft:haxe-pick")
+		if (id.text() == "caxecraft:berries")
 			return 0;
+		if (id.text() == "caxecraft:haxe-pick")
+			return 9;
+		if (id.text() == "caxecraft:lantern")
+			return 6;
 		if (id.text() == "caxecraft:tideweave-suit")
-			return 1;
+			return 8;
 		return -1;
 	}
 

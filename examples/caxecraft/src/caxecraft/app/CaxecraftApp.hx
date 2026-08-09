@@ -782,7 +782,7 @@ final class CaxecraftApp {
 				if (selectedCampaign != null)
 					observedLevel = selectedCampaign.levelAt(selectedCampaignLevelIndex).id.text();
 			}
-			final observedObjective = currentObjectiveId == null ? "" : currentObjectiveId.text();
+			final observedObjective = currentObjectiveId == null ? "none" : currentObjectiveId.text();
 			final observedDialogue = activeDialogue == null ? "none" : activeDialogue.text();
 			final observedScreen = onTitle ? "title" : onCampaignSelect ? "campaign" : onEditor ? "editor" : paused ? "paused" : "playing";
 			final observedMode = selectedMode == GameMode.Creative ? "creative" : "adventure";

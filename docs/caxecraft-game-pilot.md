@@ -294,7 +294,10 @@ satisfy this owner.
 This is evidence for the current two-level forward journey and one repeatable
 Western Falls exploration route. The runtime Piloscript launches Western Falls
 through the visible Adventure menus, checks that Moss is the first objective,
-interacts with Moss, and checks that the Tideweave objective becomes active.
+interacts with Moss, checks that the Tideweave objective becomes active, checks
+that collecting Tideweave opens the grotto objective, and checks that collecting
+the lantern leaves no active objective. Those expected IDs remain in the
+content-owned Piloscript rather than compiled engine code.
 Its principal review image shows the arrival rather than freezing decorative
 coordinates in a Haxe test. The player still presses `N` to use the manifest's
 sole exit. Authored exit volumes, branching, return travel between levels,

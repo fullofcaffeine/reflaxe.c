@@ -42,6 +42,7 @@ enum FlowEvent {
 	Interact(objectId:ScenarioId);
 	BlockChanged(zone:ScenarioId, blockType:ContentId);
 	UseItem(itemType:ContentId);
+	ItemCollected(itemType:ContentId);
 	EntityDefeated(entity:ScenarioId);
 	SignalReceived(signal:ContentId);
 	TimerExpired(timer:ScenarioId);

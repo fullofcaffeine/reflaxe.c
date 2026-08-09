@@ -15,6 +15,8 @@ locale en
   message enemy_windup "MOSSLING WINDUP: DODGE"
   message guide_talk "E  TALK TO MOSS"
   message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
+  message objective_grotto_body "TIDEWEAVE MAKES THE FLOODED PASSAGE SAFE. RECOVER ITS LANTERN."
+  message objective_grotto_title "CROSS THE FLOODED GROTTO"
   message objective_meet_moss_body "MOSS WAITS BESIDE THE FALLSKEEPER'S SHRINE."
   message objective_meet_moss_title "ASK MOSS ABOUT THE FOUR MARKS"
   message pickup_many "+2 BERRIES"
@@ -37,6 +39,8 @@ locale es-mx
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
   message guide_talk "E  HABLAR CON MOSS"
   message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
+  message objective_grotto_body "TIDEWEAVE HACE SEGURO EL PASO INUNDADO. RECUPERA SU LINTERNA."
+  message objective_grotto_title "CRUZA LA GRUTA INUNDADA"
   message objective_meet_moss_body "MOSS ESPERA JUNTO AL SANTUARIO DEL GUARDIAN DE LAS CATARATAS."
   message objective_meet_moss_title "PREGUNTA A MOSS POR LAS CUATRO MARCAS"
   message pickup_many "+2 BAYAS"
@@ -816,17 +820,31 @@ end object
 dialogue dialogue.moss.falls
   line speaker guide.moss message guide_welcome
 end dialogue
+objective objective.explore-grotto hidden title message objective_grotto_title
+  body message objective_grotto_body
+end objective
 objective objective.find-tideweave hidden title message adventure_progress
   body message adventure_tagline
 end objective
 objective objective.meet-moss active title message objective_meet_moss_title
   body message objective_meet_moss_body
 end objective
+rule rule.lantern-completes-the-grotto priority 80 once
+  when collect-item caxecraft:lantern
+  if (objective objective.explore-grotto active)
+  do objective objective.explore-grotto complete
+end rule
 rule rule.moss-opens-the-western-route priority 100 once
   when interact guide.moss
   if (always)
   do dialogue dialogue.moss.falls
   do objective objective.meet-moss complete
   do objective objective.find-tideweave active
+end rule
+rule rule.tideweave-opens-the-grotto priority 90 once
+  when collect-item caxecraft:tideweave-suit
+  if (objective objective.find-tideweave active)
+  do objective objective.find-tideweave complete
+  do objective objective.explore-grotto active
 end rule
 end-map

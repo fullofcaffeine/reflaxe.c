@@ -494,7 +494,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "904362abb6837e918a5d34e0db3cebdc68514dd1142b77605e15a259b9839424",
+      "sha256": "4bbaf0d01a55a18838502bbc8ebefef843c1a98812a69c6f8a299a7820763a97",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -504,12 +504,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "bec24275d6f06a64ba526d8df88168778f1953d3c1c43f646fa5412e6bcaaf44",
+      "sha256": "21e42e769ac642b730c727e1d88816c1be331ce2524b57f9d58b3236f9e63915",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "67d2cacddc6f15b787e7af04d9ef8cb30b6d2ba11169cf706a1f7c922b6bfa3e",
+      "sha256": "2623e67da58b6e49e1eace89bb12f3deec0c2ec6555257def07978aa30dd995c",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -519,7 +519,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "1fd2849e66986a442ff5e8155f3bb8b06880c5faa76092e8ea135f703f92a603",
+      "sha256": "1d4be8ec7c6b881aa1aa2469d2d102af61c37719f2790706e6b140d76866bd21",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -904,7 +904,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "c51b01d245d645f38ecfec94b1f95424ba3bb22ce9874173ac0163d085b5e082",
+      "sha256": "a0cfa6c69cb79d3fcb1eff458c370c2af1c5aeee68d0c75c05f36e90422fccc5",
       "path": "include/hxc/modules/caxecraft/domain/GameSession.h",
       "kind": "private-header"
     },
@@ -1114,7 +1114,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "1a8192f8b744c0bd54e8f3566170d09f4af962bc1683444ae2848d6d8204310d",
+      "sha256": "a75f2d58d26590caaa2ebc2c9f6a8419715ed1180f491d092489cbbef692a5ab",
       "path": "include/hxc/modules/caxecraft/scenario/CaxeFlow.h",
       "kind": "private-header"
     },
@@ -1529,7 +1529,7 @@
       "kind": "source"
     },
     {
-      "sha256": "b157437f7aec5d4a3477f7f1a2476763158f767e05aca11b8de23fa76430d820",
+      "sha256": "1ccbdfa2d8a5976c2d47a51a53fe4274b0cb28f194ff7c8cae4fa59f621d8488",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1749,7 +1749,7 @@
       "kind": "source"
     },
     {
-      "sha256": "76f38ecf54cc377fc8d8446b6af9b1b6f8163299cb99b2124f9d723a7bf0b6bc",
+      "sha256": "b261cb401132e13a69c815150494b6035abf4ac3d079531120352002fff9a6d1",
       "path": "src/modules/caxecraft/content/RuntimeLevelLoader.c",
       "kind": "source"
     },
@@ -1794,7 +1794,7 @@
       "kind": "source"
     },
     {
-      "sha256": "b538c55a4d7913d12234a6322a1924f6c1d6fef9178e4dd02291f703a43b240e",
+      "sha256": "ac9564a733ac9560a7d80d891c8f9be2c6b568cbe9dbb84b9f4ceb454e6a9f7c",
       "path": "src/modules/caxecraft/domain/GameSession.c",
       "kind": "source"
     },
@@ -1969,7 +1969,7 @@
       "kind": "source"
     },
     {
-      "sha256": "038819c8b7f008a63653124412693562f75616351309596de8fc67749ec8caf6",
+      "sha256": "3a4200b1cd3f8338c0abfa320661a759880072c070acfd5f307376612736216f",
       "path": "src/modules/caxecraft/scenario/CaxeFlowRulePlanner.c",
       "kind": "source"
     },
@@ -1979,12 +1979,12 @@
       "kind": "source"
     },
     {
-      "sha256": "dc9351c0e0f821b0f061509d90cc8b958efe54aa7a99faf03fc0853b62be1e93",
+      "sha256": "2e3d5b16e215ef07aa1599df2b01eebe2b1e41247a2b347be3ba3af9c269b79d",
       "path": "src/modules/caxecraft/scenario/CaxeFlowValidator.c",
       "kind": "source"
     },
     {
-      "sha256": "d081381a448599f310cc0270c75d7ed837b432e6923e3c3179fedaf336176017",
+      "sha256": "9afc90d9ae3eccd574e98b26d3ac3bad5c4a5b1aee8e373785713dbd39364d00",
       "path": "src/modules/caxecraft/scenario/CaxeFlowValueReader.c",
       "kind": "source"
     },
@@ -2064,7 +2064,7 @@
       "kind": "source"
     },
     {
-      "sha256": "5d9ec1eb462fd846d9b776ff60cf9edadf6fdfcb1f2eed7e7d822c49822f4be4",
+      "sha256": "7fef9a96074daa7798bb79c74c23c3cfe4364d8da89ce9d739f34f7d066c327d",
       "path": "src/modules/caxecraft/scenario/ScenarioWriter.c",
       "kind": "source"
     },
