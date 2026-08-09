@@ -497,7 +497,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "90a93c20622f672cf10172ebcf844bbc7c44aa1f47a4ebe028ba550d6d67665c",
+      "sha256": "0fde4f2612e44dea3d7cdfaeca2bf52bfd074305472da2a7170ef2fa9d5a93a4",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -507,12 +507,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "d6a22c495d3abcc8e34a745ba62ea8abdb12adf3352e62f556eccbdf0bc2c6b1",
+      "sha256": "c5e65200acd30d3169883174a3485c01d8d8d37fed59973241dea4d9c1cb2cd1",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "378f96b586cd06d7ea92ae2331104f541ba4783468ae874d5770c4a6710759f6",
+      "sha256": "f1df2dbc9b5a7b389024c670d0640d1753792534bfdd3733fe6876f5332a20df",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -522,7 +522,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "728125bc521134153c84c0fd46df6c2126bf9dc463403ffdb306cfcf259f3e3e",
+      "sha256": "2c4ef9567edc133202f7a971882ea426b7f241c8fb850167f5d92bd2572cf4f1",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -562,7 +562,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "9b07d3f385ac2f43b44e2f4b9b7986cbd5a68240bcb90a077626ec78063fe742",
+      "sha256": "b8f1b903bdfe45de007227a954e3ee56a30b0d02cd2926e8bd97d35c48981617",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
       "kind": "private-header"
     },
@@ -617,7 +617,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "2182e12ad5aa12c9f7a1f287b2be64a1b8ed53e68168879bbe189de88636a1d2",
+      "sha256": "a7c9a2f01341ef5f4a824a9922bc9b46f24c3d14bdd938f69f03bc42e93f9c7d",
       "path": "include/hxc/modules/caxecraft/app/StatefulObjectRenderer.h",
       "kind": "private-header"
     },
@@ -1577,7 +1577,7 @@
       "kind": "source"
     },
     {
-      "sha256": "d868ad1f37d54bbd85c11676de4ee1fedc770806c12f122c5e2b61107333874a",
+      "sha256": "a582dfef5481ce3666cb8d7dc2fa7e80b8408bd1022f347aabc74de0a5c56280",
       "path": "src/modules/caxecraft/app/CaxecraftAtlas.c",
       "kind": "source"
     },
@@ -1617,7 +1617,7 @@
       "kind": "source"
     },
     {
-      "sha256": "da9d7d0ee11765ed1f194b3682f532010c094314168bcc1084716b292d3caf59",
+      "sha256": "2419632ad9bbe8395af3bf7fccf1da42dc77f8eb320d052972393ad4d89f28a6",
       "path": "src/modules/caxecraft/app/StatefulObjectRenderer.c",
       "kind": "source"
     },

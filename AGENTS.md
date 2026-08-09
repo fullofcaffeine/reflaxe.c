@@ -268,7 +268,24 @@ performance, packaging, and developer experience together.
   a proven voxel-game dynamic, mechanic, or creator workflow. This is especially
   useful for movement, jumping and swimming, buoyancy and fluids, block reach,
   mining and placement, inventory, terrain interaction, and mod/content
-  authoring. Begin with the observable player contract, then state deliberately
+  authoring. Use Minecraft's familiar interaction grammar as the default when
+  no accepted Caxecraft design gives a stronger answer: the player looks at a
+  world object, sees a clear target or prompt, uses a small consistent set of
+  controls, receives immediate visual or sound feedback, and can safely recover
+  from an unintended action. Make useful world objects discoverable and
+  interactive instead of treating the map as scenery around quest prompts.
+  Apply the same reference to the graphical user interface and complete item
+  loop: crosshair and target feedback, hotbar selection, inventory layout and
+  movement, item stacks, use/place/mine controls, crafting or discovery,
+  contextual prompts, menus, pause behavior, and mouse, keyboard, or controller
+  consistency. Keep Caxecraft's interface visually distinct and simplify it
+  when that makes the game safer or clearer for children. Any unfamiliar
+  behavior must solve a stated Caxecraft need; it must not arise from an
+  incomplete or inconsistent implementation.
+  Caxecraft may extend that grammar with the Haxeforge, Ivvy, authored puzzles,
+  dialogue, and creator-facing rules, but those additions must remain coherent
+  with ordinary mining, placing, using, talking, collecting, and exploring.
+  Begin with the observable player contract, then state deliberately
   where Caxecraft matches it and where its own game design differs; familiar
   behavior is a useful default, not an accidental promise of exact compatibility.
   Borrow ideas and mechanics, not another game's identity, proprietary assets,

@@ -137,6 +137,96 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawItem(struct Texture hxc_l_texture, enu
   return;
 }
 
+bool hxc_caxecraft_app_CaxecraftAtlas_drawWorldBox(struct Texture hxc_l_texture, int32_t hxc_l_cellIndex, struct Vector3 hxc_l_center, double hxc_l_width, double hxc_l_height, double hxc_l_depth)
+{
+  double hxc_l_halfPixelV = { 0 };
+  double hxc_l_u0 = { 0 };
+  double hxc_l_u1 = { 0 };
+  double hxc_l_v0 = { 0 };
+  double hxc_l_v1 = { 0 };
+  double hxc_l_centerX = { 0 };
+  double hxc_l_centerY = { 0 };
+  double hxc_l_centerZ = { 0 };
+  double hxc_l_x0 = { 0 };
+  double hxc_l_x1 = { 0 };
+  double hxc_l_y0 = { 0 };
+  double hxc_l_y1 = { 0 };
+  double hxc_l_z0 = { 0 };
+  double hxc_l_z1 = { 0 };
+  struct Texture hxc_l_raw = { 0 };
+  int32_t hxc_l_column = { 0 };
+  int32_t hxc_l_row = { 0 };
+  double hxc_l_halfPixelU = { 0 };
+  bool hxc_l_tmp_short_circuit_result_n6 = hxc_l_cellIndex < 0;
+  if (!(hxc_l_cellIndex < 0))
+  {
+    hxc_l_tmp_short_circuit_result_n6 = hxc_l_cellIndex >= 16;
+  }
+  if (!hxc_l_tmp_short_circuit_result_n6)
+  {
+    hxc_l_column = hxc_i32_modulo_zero_safe(hxc_l_cellIndex, 4);
+    hxc_l_row = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_cellIndex, (double)4));
+    hxc_l_halfPixelU = hxc_f64_divide_zero_safe(0.5, (double)(int32_t)hxc_l_texture.width);
+    hxc_l_halfPixelV = hxc_f64_divide_zero_safe(0.5, (double)(int32_t)hxc_l_texture.height);
+    int32_t hxc_l_tmp_load_result_n3 = hxc_l_column;
+    hxc_l_u0 = hxc_f64_divide_zero_safe((double)hxc_l_tmp_load_result_n3, 4.0) + hxc_l_halfPixelU;
+    int32_t hxc_l_tmp_load_result_n5 = hxc_l_column;
+    hxc_l_u1 = hxc_f64_divide_zero_safe((double)hxc_i32_add_wrapping(hxc_l_tmp_load_result_n5, 1), 4.0) - hxc_l_halfPixelU;
+    int32_t hxc_l_tmp_load_result_n7 = hxc_l_row;
+    hxc_l_v0 = hxc_f64_divide_zero_safe((double)hxc_l_tmp_load_result_n7, 4.0) + hxc_l_halfPixelV;
+    int32_t hxc_l_tmp_load_result_n9 = hxc_l_row;
+    hxc_l_v1 = hxc_f64_divide_zero_safe((double)hxc_i32_add_wrapping(hxc_l_tmp_load_result_n9, 1), 4.0) - hxc_l_halfPixelV;
+    hxc_l_centerX = (double)hxc_l_center.x;
+    hxc_l_centerY = (double)hxc_l_center.y;
+    hxc_l_centerZ = (double)hxc_l_center.z;
+    hxc_l_x0 = hxc_l_centerX - hxc_l_width * 0.5;
+    hxc_l_x1 = hxc_l_centerX + hxc_l_width * 0.5;
+    hxc_l_y0 = hxc_l_centerY - hxc_l_height * 0.5;
+    hxc_l_y1 = hxc_l_centerY + hxc_l_height * 0.5;
+    hxc_l_z0 = hxc_l_centerZ - hxc_l_depth * 0.5;
+    hxc_l_z1 = hxc_l_centerZ + hxc_l_depth * 0.5;
+    hxc_l_raw = hxc_l_texture;
+    uint32_t *hxc_l_tmp_imported_field_address_n20 = &hxc_l_raw.id;
+    uint32_t hxc_l_tmp_imported_field_load_result_n21 = *hxc_l_tmp_imported_field_address_n20;
+    rlSetTexture(hxc_l_tmp_imported_field_load_result_n21);
+    rlBegin((int32_t)7);
+    double hxc_l_tmp_load_result_n22 = hxc_l_x0;
+    double hxc_l_tmp_load_result_n23 = hxc_l_x1;
+    double hxc_l_tmp_load_result_n24 = hxc_l_y0;
+    double hxc_l_tmp_load_result_n25 = hxc_l_y1;
+    double hxc_l_tmp_load_result_n26 = hxc_l_z0;
+    double hxc_l_tmp_load_result_n27 = hxc_l_z1;
+    double hxc_l_tmp_load_result_n28 = hxc_l_u0;
+    double hxc_l_tmp_load_result_n29 = hxc_l_u1;
+    double hxc_l_tmp_load_result_n30 = hxc_l_v0;
+    hxc_caxecraft_app_CaxecraftAtlas_emitTiledNorthSouth(hxc_l_tmp_load_result_n22, hxc_l_tmp_load_result_n23, hxc_l_tmp_load_result_n24, hxc_l_tmp_load_result_n25, hxc_l_tmp_load_result_n26, hxc_l_tmp_load_result_n27, hxc_l_tmp_load_result_n28, hxc_l_tmp_load_result_n29, hxc_l_tmp_load_result_n30, hxc_l_v1);
+    double hxc_l_tmp_load_result_n32 = hxc_l_x0;
+    double hxc_l_tmp_load_result_n33 = hxc_l_x1;
+    double hxc_l_tmp_load_result_n34 = hxc_l_y0;
+    double hxc_l_tmp_load_result_n35 = hxc_l_y1;
+    double hxc_l_tmp_load_result_n36 = hxc_l_z0;
+    double hxc_l_tmp_load_result_n37 = hxc_l_z1;
+    double hxc_l_tmp_load_result_n38 = hxc_l_u0;
+    double hxc_l_tmp_load_result_n39 = hxc_l_u1;
+    double hxc_l_tmp_load_result_n40 = hxc_l_v0;
+    hxc_caxecraft_app_CaxecraftAtlas_emitTiledEastWest(hxc_l_tmp_load_result_n32, hxc_l_tmp_load_result_n33, hxc_l_tmp_load_result_n34, hxc_l_tmp_load_result_n35, hxc_l_tmp_load_result_n36, hxc_l_tmp_load_result_n37, hxc_l_tmp_load_result_n38, hxc_l_tmp_load_result_n39, hxc_l_tmp_load_result_n40, hxc_l_v1);
+    double hxc_l_tmp_load_result_n42 = hxc_l_x0;
+    double hxc_l_tmp_load_result_n43 = hxc_l_x1;
+    double hxc_l_tmp_load_result_n44 = hxc_l_y0;
+    double hxc_l_tmp_load_result_n45 = hxc_l_y1;
+    double hxc_l_tmp_load_result_n46 = hxc_l_z0;
+    double hxc_l_tmp_load_result_n47 = hxc_l_z1;
+    double hxc_l_tmp_load_result_n48 = hxc_l_u0;
+    double hxc_l_tmp_load_result_n49 = hxc_l_u1;
+    double hxc_l_tmp_load_result_n50 = hxc_l_v0;
+    hxc_caxecraft_app_CaxecraftAtlas_emitTiledTopBottom(hxc_l_tmp_load_result_n42, hxc_l_tmp_load_result_n43, hxc_l_tmp_load_result_n44, hxc_l_tmp_load_result_n45, hxc_l_tmp_load_result_n46, hxc_l_tmp_load_result_n47, hxc_l_tmp_load_result_n48, hxc_l_tmp_load_result_n49, hxc_l_tmp_load_result_n50, hxc_l_v1);
+    rlEnd();
+    rlSetTexture((uint32_t)0);
+    return true;
+  }
+  return false;
+}
+
 void hxc_caxecraft_app_CaxecraftAtlas_drawWorldSprite(struct Camera3D hxc_l_camera, struct Texture hxc_l_texture, int32_t hxc_l_cellIndex, struct Vector3 hxc_l_position, double hxc_l_width, double hxc_l_height)
 {
   double hxc_l_sourceWidth = { 0 };
@@ -164,6 +254,279 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawWorldSprite(struct Camera3D hxc_l_came
     double hxc_l_tmp_load_result_n9 = hxc_l_sourceHeight;
     DrawBillboardRec(hxc_l_camera, hxc_l_texture, (struct Rectangle){ .x = (float)((double)hxc_l_tmp_load_result_n4 * hxc_l_tmp_load_result_n5), .y = (float)((double)hxc_l_tmp_load_result_n6 * hxc_l_tmp_load_result_n7), .width = (float)hxc_l_tmp_load_result_n8, .height = (float)hxc_l_tmp_load_result_n9 }, hxc_l_position, (struct Vector2){ .x = (float)hxc_l_width, .y = (float)hxc_l_height }, hxc_l_this1);
     return;
+  }
+  return;
+}
+
+void hxc_caxecraft_app_CaxecraftAtlas_emitTiledEastWest(double hxc_l_x0, double hxc_l_x1, double hxc_l_y0, double hxc_l_y1, double hxc_l_z0, double hxc_l_z1, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+{
+  double hxc_l_z = hxc_l_z0;
+  while (1)
+  {
+    if (!(hxc_l_z < hxc_l_z1))
+    {
+      break;
+    }
+    double hxc_l_tmp_load_result_n1 = hxc_l_z;
+    double hxc_l_tmp_conditional_result_n12 = 0.0;
+    if (hxc_l_tmp_load_result_n1 + 1.0 < hxc_l_z1)
+    {
+      hxc_l_tmp_conditional_result_n12 = hxc_l_z + 1.0;
+    }
+    else
+    {
+      hxc_l_tmp_conditional_result_n12 = hxc_l_z1;
+    }
+    double hxc_l_nextZ = hxc_l_tmp_conditional_result_n12;
+    double hxc_l_y = hxc_l_y0;
+    while (1)
+    {
+      if (!(hxc_l_y < hxc_l_y1))
+      {
+        break;
+      }
+      double hxc_l_tmp_load_result_n5 = hxc_l_y;
+      double hxc_l_tmp_conditional_result_n15 = 0.0;
+      if (hxc_l_tmp_load_result_n5 + 1.0 < hxc_l_y1)
+      {
+        hxc_l_tmp_conditional_result_n15 = hxc_l_y + 1.0;
+      }
+      else
+      {
+        hxc_l_tmp_conditional_result_n15 = hxc_l_y1;
+      }
+      double hxc_l_nextY = hxc_l_tmp_conditional_result_n15;
+      struct Color hxc_l_raw_h2805f16948c3 = (struct Color){ .r = 235, .g = 241, .b = 230, .a = 255 };
+      uint8_t *hxc_l_tmp_imported_field_address_n9 = &hxc_l_raw_h2805f16948c3.r;
+      uint8_t hxc_l_tmp_imported_field_load_result_n10 = *hxc_l_tmp_imported_field_address_n9;
+      uint8_t *hxc_l_tmp_imported_field_address_n11 = &hxc_l_raw_h2805f16948c3.g;
+      uint8_t hxc_l_tmp_imported_field_load_result_n12 = *hxc_l_tmp_imported_field_address_n11;
+      uint8_t *hxc_l_tmp_imported_field_address_n13 = &hxc_l_raw_h2805f16948c3.b;
+      uint8_t hxc_l_tmp_imported_field_load_result_n14 = *hxc_l_tmp_imported_field_address_n13;
+      uint8_t *hxc_l_tmp_imported_field_address_n15 = &hxc_l_raw_h2805f16948c3.a;
+      uint8_t hxc_l_tmp_imported_field_load_result_n16 = *hxc_l_tmp_imported_field_address_n15;
+      rlColor4ub(hxc_l_tmp_imported_field_load_result_n10, hxc_l_tmp_imported_field_load_result_n12, hxc_l_tmp_imported_field_load_result_n14, hxc_l_tmp_imported_field_load_result_n16);
+      rlNormal3f((float)1.0, (float)0.0, (float)0.0);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n17 = hxc_l_y;
+      rlVertex3f((float)hxc_l_x1, (float)hxc_l_tmp_load_result_n17, (float)hxc_l_z);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n19 = hxc_l_nextY;
+      rlVertex3f((float)hxc_l_x1, (float)hxc_l_tmp_load_result_n19, (float)hxc_l_z);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n21 = hxc_l_nextY;
+      rlVertex3f((float)hxc_l_x1, (float)hxc_l_tmp_load_result_n21, (float)hxc_l_nextZ);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n23 = hxc_l_y;
+      rlVertex3f((float)hxc_l_x1, (float)hxc_l_tmp_load_result_n23, (float)hxc_l_nextZ);
+      struct Color hxc_l_raw_hed704932c93a = (struct Color){ .r = 211, .g = 225, .b = 220, .a = 255 };
+      uint8_t *hxc_l_tmp_imported_field_address_n26 = &hxc_l_raw_hed704932c93a.r;
+      uint8_t hxc_l_tmp_imported_field_load_result_n27 = *hxc_l_tmp_imported_field_address_n26;
+      uint8_t *hxc_l_tmp_imported_field_address_n28 = &hxc_l_raw_hed704932c93a.g;
+      uint8_t hxc_l_tmp_imported_field_load_result_n29 = *hxc_l_tmp_imported_field_address_n28;
+      uint8_t *hxc_l_tmp_imported_field_address_n30 = &hxc_l_raw_hed704932c93a.b;
+      uint8_t hxc_l_tmp_imported_field_load_result_n31 = *hxc_l_tmp_imported_field_address_n30;
+      uint8_t *hxc_l_tmp_imported_field_address_n32 = &hxc_l_raw_hed704932c93a.a;
+      uint8_t hxc_l_tmp_imported_field_load_result_n33 = *hxc_l_tmp_imported_field_address_n32;
+      rlColor4ub(hxc_l_tmp_imported_field_load_result_n27, hxc_l_tmp_imported_field_load_result_n29, hxc_l_tmp_imported_field_load_result_n31, hxc_l_tmp_imported_field_load_result_n33);
+      rlNormal3f((float)-1.0, (float)0.0, (float)0.0);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n34 = hxc_l_y;
+      rlVertex3f((float)hxc_l_x0, (float)hxc_l_tmp_load_result_n34, (float)hxc_l_z);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n36 = hxc_l_y;
+      rlVertex3f((float)hxc_l_x0, (float)hxc_l_tmp_load_result_n36, (float)hxc_l_nextZ);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n38 = hxc_l_nextY;
+      rlVertex3f((float)hxc_l_x0, (float)hxc_l_tmp_load_result_n38, (float)hxc_l_nextZ);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n40 = hxc_l_nextY;
+      rlVertex3f((float)hxc_l_x0, (float)hxc_l_tmp_load_result_n40, (float)hxc_l_z);
+      hxc_l_y = hxc_l_nextY;
+    }
+    hxc_l_z = hxc_l_nextZ;
+  }
+  return;
+}
+
+void hxc_caxecraft_app_CaxecraftAtlas_emitTiledNorthSouth(double hxc_l_x0, double hxc_l_x1, double hxc_l_y0, double hxc_l_y1, double hxc_l_z0, double hxc_l_z1, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+{
+  double hxc_l_x = hxc_l_x0;
+  while (1)
+  {
+    if (!(hxc_l_x < hxc_l_x1))
+    {
+      break;
+    }
+    double hxc_l_tmp_load_result_n1 = hxc_l_x;
+    double hxc_l_tmp_conditional_result_n12 = 0.0;
+    if (hxc_l_tmp_load_result_n1 + 1.0 < hxc_l_x1)
+    {
+      hxc_l_tmp_conditional_result_n12 = hxc_l_x + 1.0;
+    }
+    else
+    {
+      hxc_l_tmp_conditional_result_n12 = hxc_l_x1;
+    }
+    double hxc_l_nextX = hxc_l_tmp_conditional_result_n12;
+    double hxc_l_y = hxc_l_y0;
+    while (1)
+    {
+      if (!(hxc_l_y < hxc_l_y1))
+      {
+        break;
+      }
+      double hxc_l_tmp_load_result_n5 = hxc_l_y;
+      double hxc_l_tmp_conditional_result_n15 = 0.0;
+      if (hxc_l_tmp_load_result_n5 + 1.0 < hxc_l_y1)
+      {
+        hxc_l_tmp_conditional_result_n15 = hxc_l_y + 1.0;
+      }
+      else
+      {
+        hxc_l_tmp_conditional_result_n15 = hxc_l_y1;
+      }
+      double hxc_l_nextY = hxc_l_tmp_conditional_result_n15;
+      struct Color hxc_l_raw_hfce52b8a1f2e = (struct Color){ .r = 211, .g = 225, .b = 220, .a = 255 };
+      uint8_t *hxc_l_tmp_imported_field_address_n9 = &hxc_l_raw_hfce52b8a1f2e.r;
+      uint8_t hxc_l_tmp_imported_field_load_result_n10 = *hxc_l_tmp_imported_field_address_n9;
+      uint8_t *hxc_l_tmp_imported_field_address_n11 = &hxc_l_raw_hfce52b8a1f2e.g;
+      uint8_t hxc_l_tmp_imported_field_load_result_n12 = *hxc_l_tmp_imported_field_address_n11;
+      uint8_t *hxc_l_tmp_imported_field_address_n13 = &hxc_l_raw_hfce52b8a1f2e.b;
+      uint8_t hxc_l_tmp_imported_field_load_result_n14 = *hxc_l_tmp_imported_field_address_n13;
+      uint8_t *hxc_l_tmp_imported_field_address_n15 = &hxc_l_raw_hfce52b8a1f2e.a;
+      uint8_t hxc_l_tmp_imported_field_load_result_n16 = *hxc_l_tmp_imported_field_address_n15;
+      rlColor4ub(hxc_l_tmp_imported_field_load_result_n10, hxc_l_tmp_imported_field_load_result_n12, hxc_l_tmp_imported_field_load_result_n14, hxc_l_tmp_imported_field_load_result_n16);
+      rlNormal3f((float)0.0, (float)0.0, (float)-1.0);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n17 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n17, (float)hxc_l_y, (float)hxc_l_z0);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n19 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n19, (float)hxc_l_nextY, (float)hxc_l_z0);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n21 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n21, (float)hxc_l_nextY, (float)hxc_l_z0);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n23 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n23, (float)hxc_l_y, (float)hxc_l_z0);
+      struct Color hxc_l_raw_h137e9b2af151 = (struct Color){ .r = 235, .g = 241, .b = 230, .a = 255 };
+      uint8_t *hxc_l_tmp_imported_field_address_n26 = &hxc_l_raw_h137e9b2af151.r;
+      uint8_t hxc_l_tmp_imported_field_load_result_n27 = *hxc_l_tmp_imported_field_address_n26;
+      uint8_t *hxc_l_tmp_imported_field_address_n28 = &hxc_l_raw_h137e9b2af151.g;
+      uint8_t hxc_l_tmp_imported_field_load_result_n29 = *hxc_l_tmp_imported_field_address_n28;
+      uint8_t *hxc_l_tmp_imported_field_address_n30 = &hxc_l_raw_h137e9b2af151.b;
+      uint8_t hxc_l_tmp_imported_field_load_result_n31 = *hxc_l_tmp_imported_field_address_n30;
+      uint8_t *hxc_l_tmp_imported_field_address_n32 = &hxc_l_raw_h137e9b2af151.a;
+      uint8_t hxc_l_tmp_imported_field_load_result_n33 = *hxc_l_tmp_imported_field_address_n32;
+      rlColor4ub(hxc_l_tmp_imported_field_load_result_n27, hxc_l_tmp_imported_field_load_result_n29, hxc_l_tmp_imported_field_load_result_n31, hxc_l_tmp_imported_field_load_result_n33);
+      rlNormal3f((float)0.0, (float)0.0, (float)1.0);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n34 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n34, (float)hxc_l_y, (float)hxc_l_z1);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n36 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n36, (float)hxc_l_y, (float)hxc_l_z1);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n38 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n38, (float)hxc_l_nextY, (float)hxc_l_z1);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n40 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n40, (float)hxc_l_nextY, (float)hxc_l_z1);
+      hxc_l_y = hxc_l_nextY;
+    }
+    hxc_l_x = hxc_l_nextX;
+  }
+  return;
+}
+
+void hxc_caxecraft_app_CaxecraftAtlas_emitTiledTopBottom(double hxc_l_x0, double hxc_l_x1, double hxc_l_y0, double hxc_l_y1, double hxc_l_z0, double hxc_l_z1, double hxc_l_u0, double hxc_l_u1, double hxc_l_v0, double hxc_l_v1)
+{
+  double hxc_l_x = hxc_l_x0;
+  while (1)
+  {
+    if (!(hxc_l_x < hxc_l_x1))
+    {
+      break;
+    }
+    double hxc_l_tmp_load_result_n1 = hxc_l_x;
+    double hxc_l_tmp_conditional_result_n12 = 0.0;
+    if (hxc_l_tmp_load_result_n1 + 1.0 < hxc_l_x1)
+    {
+      hxc_l_tmp_conditional_result_n12 = hxc_l_x + 1.0;
+    }
+    else
+    {
+      hxc_l_tmp_conditional_result_n12 = hxc_l_x1;
+    }
+    double hxc_l_nextX = hxc_l_tmp_conditional_result_n12;
+    double hxc_l_z = hxc_l_z0;
+    while (1)
+    {
+      if (!(hxc_l_z < hxc_l_z1))
+      {
+        break;
+      }
+      double hxc_l_tmp_load_result_n5 = hxc_l_z;
+      double hxc_l_tmp_conditional_result_n15 = 0.0;
+      if (hxc_l_tmp_load_result_n5 + 1.0 < hxc_l_z1)
+      {
+        hxc_l_tmp_conditional_result_n15 = hxc_l_z + 1.0;
+      }
+      else
+      {
+        hxc_l_tmp_conditional_result_n15 = hxc_l_z1;
+      }
+      double hxc_l_nextZ = hxc_l_tmp_conditional_result_n15;
+      struct Color hxc_l_raw_h56b208e5795e = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
+      uint8_t *hxc_l_tmp_imported_field_address_n9 = &hxc_l_raw_h56b208e5795e.r;
+      uint8_t hxc_l_tmp_imported_field_load_result_n10 = *hxc_l_tmp_imported_field_address_n9;
+      uint8_t *hxc_l_tmp_imported_field_address_n11 = &hxc_l_raw_h56b208e5795e.g;
+      uint8_t hxc_l_tmp_imported_field_load_result_n12 = *hxc_l_tmp_imported_field_address_n11;
+      uint8_t *hxc_l_tmp_imported_field_address_n13 = &hxc_l_raw_h56b208e5795e.b;
+      uint8_t hxc_l_tmp_imported_field_load_result_n14 = *hxc_l_tmp_imported_field_address_n13;
+      uint8_t *hxc_l_tmp_imported_field_address_n15 = &hxc_l_raw_h56b208e5795e.a;
+      uint8_t hxc_l_tmp_imported_field_load_result_n16 = *hxc_l_tmp_imported_field_address_n15;
+      rlColor4ub(hxc_l_tmp_imported_field_load_result_n10, hxc_l_tmp_imported_field_load_result_n12, hxc_l_tmp_imported_field_load_result_n14, hxc_l_tmp_imported_field_load_result_n16);
+      rlNormal3f((float)0.0, (float)1.0, (float)0.0);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n17 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n17, (float)hxc_l_y1, (float)hxc_l_z);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n19 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n19, (float)hxc_l_y1, (float)hxc_l_nextZ);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n21 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n21, (float)hxc_l_y1, (float)hxc_l_nextZ);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n23 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n23, (float)hxc_l_y1, (float)hxc_l_z);
+      struct Color hxc_l_raw_h058c6ba10874 = (struct Color){ .r = 178, .g = 191, .b = 188, .a = 255 };
+      uint8_t *hxc_l_tmp_imported_field_address_n26 = &hxc_l_raw_h058c6ba10874.r;
+      uint8_t hxc_l_tmp_imported_field_load_result_n27 = *hxc_l_tmp_imported_field_address_n26;
+      uint8_t *hxc_l_tmp_imported_field_address_n28 = &hxc_l_raw_h058c6ba10874.g;
+      uint8_t hxc_l_tmp_imported_field_load_result_n29 = *hxc_l_tmp_imported_field_address_n28;
+      uint8_t *hxc_l_tmp_imported_field_address_n30 = &hxc_l_raw_h058c6ba10874.b;
+      uint8_t hxc_l_tmp_imported_field_load_result_n31 = *hxc_l_tmp_imported_field_address_n30;
+      uint8_t *hxc_l_tmp_imported_field_address_n32 = &hxc_l_raw_h058c6ba10874.a;
+      uint8_t hxc_l_tmp_imported_field_load_result_n33 = *hxc_l_tmp_imported_field_address_n32;
+      rlColor4ub(hxc_l_tmp_imported_field_load_result_n27, hxc_l_tmp_imported_field_load_result_n29, hxc_l_tmp_imported_field_load_result_n31, hxc_l_tmp_imported_field_load_result_n33);
+      rlNormal3f((float)0.0, (float)-1.0, (float)0.0);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n34 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n34, (float)hxc_l_y0, (float)hxc_l_z);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v0);
+      double hxc_l_tmp_load_result_n36 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n36, (float)hxc_l_y0, (float)hxc_l_z);
+      rlTexCoord2f((float)hxc_l_u1, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n38 = hxc_l_nextX;
+      rlVertex3f((float)hxc_l_tmp_load_result_n38, (float)hxc_l_y0, (float)hxc_l_nextZ);
+      rlTexCoord2f((float)hxc_l_u0, (float)hxc_l_v1);
+      double hxc_l_tmp_load_result_n40 = hxc_l_x;
+      rlVertex3f((float)hxc_l_tmp_load_result_n40, (float)hxc_l_y0, (float)hxc_l_nextZ);
+      hxc_l_z = hxc_l_nextZ;
+    }
+    hxc_l_x = hxc_l_nextX;
   }
   return;
 }

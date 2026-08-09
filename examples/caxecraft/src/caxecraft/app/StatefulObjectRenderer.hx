@@ -38,13 +38,28 @@ function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSessio
 		final depth = bounds.depthMilli / 1000.0;
 		final position = Vector3.fromFloat(transform.xMilli / 1000.0, transform.yMilli / 1000.0 + height * 0.5, transform.zMilli / 1000.0);
 		final boxVisual = width > 1.2 || height > 1.2 || depth > 1.2;
-		if (boxVisual)
-			Raylib.DrawCube(position, c.Float32.fromFloat(width), c.Float32.fromFloat(height), c.Float32.fromFloat(depth), CaxecraftPalette.selection());
-		if (!drawPresentation(camera, resolved.asset, resolved.cellIndex, position, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
-			adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady)
-			&& !boxVisual)
+		final drawn = boxVisual ? drawBoxPresentation(resolved.asset, resolved.cellIndex, position, width, height, depth, entityTexture, entityTextureReady,
+			itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture,
+			terrainTextureReady) : drawPresentation(camera, resolved.asset, resolved.cellIndex, position, entityTexture, entityTextureReady, itemTexture,
+				itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady);
+		if (!drawn)
 			Raylib.DrawCube(position, c.Float32.fromFloat(width), c.Float32.fromFloat(height), c.Float32.fromFloat(depth), CaxecraftPalette.selection());
 	}
+}
+
+/** Select one loaded atlas and cover a structure with its authored cell. */
+private function drawBoxPresentation(asset:String, cellIndex:Int, position:Vector3, width:Float, height:Float, depth:Float, entityTexture:Texture2D,
+		entityTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool,
+		terrainTexture:Texture2D, terrainTextureReady:Bool):Bool {
+	if (asset == "entities" && entityTextureReady)
+		return CaxecraftAtlas.drawWorldBox(entityTexture, cellIndex, position, width, height, depth);
+	if (asset == "items" && itemTextureReady)
+		return CaxecraftAtlas.drawWorldBox(itemTexture, cellIndex, position, width, height, depth);
+	if (asset == "adventure-items" && adventureItemTextureReady)
+		return CaxecraftAtlas.drawWorldBox(adventureItemTexture, cellIndex, position, width, height, depth);
+	if (asset == "terrain" && terrainTextureReady)
+		return CaxecraftAtlas.drawWorldBox(terrainTexture, cellIndex, position, width, height, depth);
+	return false;
 }
 
 /** Select one loaded world atlas and report whether a picture was drawn. */
