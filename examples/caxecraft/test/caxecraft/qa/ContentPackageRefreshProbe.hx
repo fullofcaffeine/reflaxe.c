@@ -1,11 +1,46 @@
 package caxecraft.qa;
 
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
+import caxecraft.content.ContentPackageModel.ContentPackageProvenance;
+import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
+import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
+import caxecraft.content.ContentPackageManifest.ContentPackageManifestReadResult;
+import caxecraft.content.ContentPackageManifest.decodeContentPackageManifest;
 import caxecraft.content.ContentPackageRefresh.ContentRefreshResult;
 import caxecraft.content.ContentPackageRefresh.planContentPackageRefresh;
+import caxecraft.content.ContentPackageSource;
 import caxecraft.content.ContentPackageStore;
+import caxecraft.content.RuntimeContentDigest.runtimeSha256Hex;
 import haxe.io.Bytes;
 import sys.io.File;
+
+/** Replace one creator-owned file while preserving confined source provenance. */
+private final class ReplacedContentSource implements ContentPackageSource {
+	final source:ContentPackageSource;
+	final path:String;
+	final replacement:Bytes;
+
+	/** Retain the replacement bytes used by one in-memory refresh request. */
+	public function new(source:ContentPackageSource, path:String, replacement:Bytes) {
+		this.source = source;
+		this.path = path;
+		this.replacement = replacement;
+	}
+
+	/** Return changed bytes only for the selected package-relative path. */
+	public function read(logicalPath:String):ContentPackageReadResult {
+		final original = source.read(logicalPath);
+		if (logicalPath != path)
+			return original;
+		return switch original {
+			case PackageBytesRejected(error): PackageBytesRejected(error);
+			case PackageBytesRead(content):
+				PackageBytesRead(new LoadedPackageBytes(replacement,
+					new ContentPackageProvenance(content.provenance.rootLabel, content.provenance.logicalPath, replacement.length,
+						content.provenance.readAttempts)));
+		};
+	}
+}
 
 /** Proves the read-only package planner and the editor-owned replacement seam. */
 final class ContentPackageRefreshProbe {
@@ -34,6 +69,37 @@ final class ContentPackageRefreshProbe {
 		for (index in 0...changed.fileCount())
 			require(changed.fileAt(index).changed(), 'planned dependency did not change: ${changed.fileAt(index).logicalPath}');
 
+		final contentPath = "packs/caxecraft/base/content.json";
+		final contentBytes = File.getBytes(contentPath);
+		final changedContent = Bytes.ofString("\n" + contentBytes.toString());
+		final contentPlan = ready(planContentPackageRefresh(new ReplacedContentSource(store, contentPath, changedContent), "caxecraft.package.json", null,
+			null));
+		final runtimeReceipt = file(contentPlan, "packs/caxecraft/base/runtime-content.json");
+		final outerPackage = file(contentPlan, "caxecraft.package.json");
+		final expectedHash = runtimeSha256Hex(changedContent);
+		require(runtimeReceipt.changed() && outerPackage.changed(), "a base-pack edit did not refresh both dependent receipts");
+		require(runtimeReceipt.next.toString().indexOf('"byteLength": ${changedContent.length}') >= 0
+			&& runtimeReceipt.next.toString().indexOf(expectedHash) >= 0,
+			"the runtime receipt lost the changed base-pack receipt");
+		final nextManifest = switch decodeContentPackageManifest(outerPackage.next) {
+			case ContentPackageManifestRejected(diagnostic): throw new haxe.Exception('refreshed package did not decode: ${Std.string(diagnostic)}');
+			case ContentPackageManifestReady(manifest): manifest;
+		};
+		var contentReceiptFound = false;
+		for (index in 0...nextManifest.entryCount()) {
+			final entry = nextManifest.entryAt(index);
+			if (entry.logicalPath.text() == contentPath)
+				contentReceiptFound = entry.byteLength == changedContent.length && entry.sha256 == expectedHash;
+		}
+		require(contentReceiptFound, "the outer package lost the changed base-pack receipt");
+		switch planContentPackageRefresh(new ReplacedContentSource(store, contentPath, Bytes.ofString("{")), "caxecraft.package.json", null, null) {
+			case ContentRefreshRejected(ContentPackRejected(_)):
+			case ContentRefreshReady(_):
+				throw new haxe.Exception("a malformed base pack produced a plausible refresh plan");
+			case ContentRefreshRejected(error):
+				throw new haxe.Exception('a malformed base pack produced the wrong error: ${Std.string(error)}');
+		}
+
 		switch planContentPackageRefresh(store, "caxecraft.package.json", "scenarios/missing.caxemap", null) {
 			case ContentRefreshReady(_):
 				throw new haxe.Exception("an unknown level produced a plausible refresh plan");
@@ -42,7 +108,7 @@ final class ContentPackageRefreshProbe {
 			case ContentRefreshRejected(error):
 				throw new haxe.Exception('an unknown level produced the wrong error: ${Std.string(error)}');
 		}
-		Sys.println("content-package-refresh: current package, canonical editor bytes, four-file dependency cascade, and unknown-level rejection passed");
+		Sys.println("content-package-refresh: current package, map and base-pack receipt cascades, canonical editor bytes, and unknown-level rejection passed");
 	}
 
 	/** Unwrap one expected complete plan. */
@@ -51,6 +117,15 @@ final class ContentPackageRefreshProbe {
 			case ContentRefreshRejected(error): throw new haxe.Exception('refresh planning failed: ${Std.string(error)}');
 			case ContentRefreshReady(plan): plan;
 		};
+
+	/** Find one exact planned path or stop before a partial assertion can pass. */
+	static function file(plan:caxecraft.content.ContentPackageRefresh.ContentRefreshPlan,
+			logicalPath:String):caxecraft.content.ContentPackageRefresh.ContentRefreshFile {
+		for (index in 0...plan.fileCount())
+			if (plan.fileAt(index).logicalPath == logicalPath)
+				return plan.fileAt(index);
+		throw new haxe.Exception('refresh plan omitted $logicalPath');
+	}
 
 	/** Stop with one focused assertion message. */
 	static function require(condition:Bool, message:String):Void {

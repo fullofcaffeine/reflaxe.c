@@ -206,6 +206,7 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 	final nextCampaign = writeCampaignManifest(campaign, mapReceipts);
 	files.push(new ContentRefreshFile(campaignPath, campaignBytes, nextCampaign));
 	final packageUpdates = mapReceipts.copy();
+	packageUpdates.push(receipt(contentEntry.logicalPath.text(), contentBytes));
 	packageUpdates.push(receipt(campaignPath, nextCampaign));
 
 	final runtimePath = runtimeEntry.logicalPath.text();
