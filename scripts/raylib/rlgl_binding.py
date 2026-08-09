@@ -2,7 +2,7 @@
 """Extract and render the precise rlgl quad-batch slice used by Caxecraft.
 
 ``rlgl.h`` is a separate upstream API from ``raylib.h``.  This generator keeps
-that boundary explicit: Clang supplies the eight function declarations and the
+that boundary explicit: Clang supplies the ten function declarations and the
 preprocessor value of ``RL_QUADS``; a generated C probe verifies the same facts
 against a real pinned raylib build.
 """
@@ -51,7 +51,9 @@ INCLUDE_PLACEHOLDER = "${RAYLIB_INCLUDE}"
 EXPECTED_FUNCTIONS = (
     "rlBegin",
     "rlColor4ub",
+    "rlDisableDepthMask",
     "rlDrawRenderBatchActive",
+    "rlEnableDepthMask",
     "rlEnd",
     "rlNormal3f",
     "rlSetTexture",
@@ -66,7 +68,7 @@ def load_selection(path: Path = SELECTION_PATH) -> dict[str, object]:
     if value.get("schemaVersion") != 1:
         raise BindingFailure("raylib rlgl selection schemaVersion must be 1")
     if tuple(require_names(value.get("functions"), "selection.functions")) != EXPECTED_FUNCTIONS:
-        raise BindingFailure("raylib rlgl selection must retain the reviewed eight-function quad-and-flush slice")
+        raise BindingFailure("raylib rlgl selection must retain the reviewed ten-function transparent-quad slice")
     constant = require_mapping(value.get("constant"), "selection.constant")
     require_exact_keys(constant, ("name", "value"), "selection.constant")
     if constant != {"name": "RL_QUADS", "value": 7}:
@@ -248,7 +250,7 @@ def validate_lock(
         raise BindingFailure("raylib rlgl selection hash is stale")
     if selection_lock.get("path") != "docs/specs/raylib-rlgl-selection.json" or selection_lock.get("coverageState") != "caxecraft-quad-batch-only":
         raise BindingFailure("raylib rlgl selection identity drifted")
-    if selection_lock.get("counts") != {"constants": 1, "functions": 8, "omittedFamilies": 1} or selection_lock.get("omissions") != selected["omissions"]:
+    if selection_lock.get("counts") != {"constants": 1, "functions": 10, "omittedFamilies": 1} or selection_lock.get("omissions") != selected["omissions"]:
         raise BindingFailure("raylib rlgl selection counts or omissions are stale")
     declarations = require_mapping(lock.get("declarations"), "lock.declarations")
     require_exact_keys(declarations, ("constant", "functions"), "lock.declarations")

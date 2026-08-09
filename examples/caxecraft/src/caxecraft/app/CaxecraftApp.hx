@@ -158,6 +158,9 @@ final class CaxecraftApp {
 	/** Persistent terrain faces rebuilt only after successful world edits. */
 	final terrainRenderer:TerrainRenderer = new TerrainRenderer();
 
+	/** Persistent transparent-face storage reused by each water frame. */
+	final waterRenderer:WaterRenderer = new WaterRenderer();
+
 	/** Held-direction clock shared by real controller input and native pilots. */
 	final editorNavigation:NavigationRepeater;
 
@@ -1272,7 +1275,8 @@ final class CaxecraftApp {
 					measuredTerrainFrames++;
 				}
 				#end
-				final waterCounters = WaterRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, levelView.waterPresentationCell());
+				final waterCounters = waterRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, levelView.waterPresentationCell(), eyeX,
+					eyeY, eyeZ);
 				final totalVisible = renderCounters.visible + waterCounters.visible;
 				final totalDrawCalls = renderCounters.drawCalls + waterCounters.drawCalls;
 				#if caxecraft_pilot

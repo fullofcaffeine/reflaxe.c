@@ -1,5 +1,5 @@
 {
-  "declarationSha256": "778d92fb36594c7ff7bcb06523c6eebb19baae5e1a7eeac3ee04a949463f3fe1",
+  "declarationSha256": "7e3cba0299321277d5af23a9bc83ba79e58b75ed4ba4c5fdbdf4a95b55f93d2b",
   "declarations": {
     "constant": {
       "name": "RL_QUADS",
@@ -69,6 +69,16 @@
         "sourceLine": 625
       },
       {
+        "name": "rlDisableDepthMask",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 674
+      },
+      {
         "name": "rlDrawRenderBatchActive",
         "parameters": [],
         "returnType": {
@@ -77,6 +87,16 @@
           "haxeType": "Void"
         },
         "sourceLine": 728
+      },
+      {
+        "name": "rlEnableDepthMask",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 673
       },
       {
         "name": "rlEnd",
@@ -240,7 +260,7 @@
   "selection": {
     "counts": {
       "constants": 1,
-      "functions": 8,
+      "functions": 10,
       "omittedFamilies": 1
     },
     "coverageState": "caxecraft-quad-batch-only",
@@ -248,11 +268,11 @@
       {
         "family": "remaining-rlgl-api",
         "owner": "haxe_c-xge.10",
-        "reason": "Caxecraft needs one texture-bound quad batch plus an explicit flush for deterministic current-frame captures; matrices, shaders, buffers, framebuffers, and other raw graphics state remain outside this reviewed slice."
+        "reason": "Caxecraft needs one texture-bound quad batch, an explicit flush for deterministic current-frame captures, and one balanced depth-write toggle for its sorted transparent-water pass; matrices, shaders, buffers, framebuffers, and other raw graphics state remain outside this reviewed slice."
       }
     ],
     "path": "docs/specs/raylib-rlgl-selection.json",
-    "sha256": "cf263285ca722241e289d213f7f769f5797e35b98bc65257f1df47b21b05a765"
+    "sha256": "19929d9aa7fc8ea568800e2eb87d124c69627471329413b9886b52877ad9455b"
   },
   "upstream": {
     "commit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",

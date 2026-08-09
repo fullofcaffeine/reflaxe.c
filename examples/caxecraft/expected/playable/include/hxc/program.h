@@ -24,6 +24,7 @@
 #include "hxc/modules/caxecraft/app/TerrainRenderer.h"
 #include "hxc/modules/caxecraft/app/TitleMenu.h"
 #include "hxc/modules/caxecraft/app/TitleMenuFlow.h"
+#include "hxc/modules/caxecraft/app/WaterRenderOrder.h"
 #include "hxc/modules/caxecraft/app/WaterRenderer.h"
 #include "hxc/modules/caxecraft/app/WaterSurfaceGeometry.h"
 #include "hxc/modules/caxecraft/content/ActiveContent.h"

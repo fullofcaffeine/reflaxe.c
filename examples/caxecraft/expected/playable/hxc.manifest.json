@@ -46,6 +46,7 @@
       "src/modules/caxecraft/app/TerrainRenderer.c",
       "src/modules/caxecraft/app/TitleMenu.c",
       "src/modules/caxecraft/app/TitleMenuFlow.c",
+      "src/modules/caxecraft/app/WaterRenderOrder.c",
       "src/modules/caxecraft/app/WaterRenderer.c",
       "src/modules/caxecraft/app/WaterSurfaceGeometry.c",
       "src/modules/caxecraft/content/ActiveContent.c",
@@ -166,6 +167,7 @@
       "include/hxc/modules/caxecraft/app/TerrainRenderer.h",
       "include/hxc/modules/caxecraft/app/TitleMenu.h",
       "include/hxc/modules/caxecraft/app/TitleMenuFlow.h",
+      "include/hxc/modules/caxecraft/app/WaterRenderOrder.h",
       "include/hxc/modules/caxecraft/app/WaterRenderer.h",
       "include/hxc/modules/caxecraft/app/WaterSurfaceGeometry.h",
       "include/hxc/modules/caxecraft/content/ActiveContent.h",
@@ -483,7 +485,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "36ccda079ac315852223fdb7004875fbe67635c95f8ebb56a5ed94a4c0d3617b",
+      "sha256": "f38f769dee151d4f0268831ba647019221bb9c3b125f36ea45838c4aef697427",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -493,7 +495,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "f5870cb779dfb02a9e7b363674e6abba27439d3960d9a49bfc078493d020f909",
+      "sha256": "13bb4153aa508ba8d9142c0007ad9b65b8781c32c8a0203bc44fadeabfd26157",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -503,12 +505,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "7d07b895fa02844f2566c37d400db9b40f3d7143591c6f7357e23e90064a44bb",
+      "sha256": "71e20486df1d3683fc25de4e01c7f5782af7acc3971da214dbee3ca4c260ff5a",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "318af88d78e97614b3ba69a3cd051dc8988b939cb3387a501d6d68da8066937b",
+      "sha256": "453cd843918849efcc749d7c224d7c3ea49a040440483d97b224023bb03af23f",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -518,12 +520,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "ce77dc8319f3a0c6f6ef1e1166952e68738bb015c2556da6e25765ead8e174d8",
+      "sha256": "634121e88e828e0db3c1bd775161dc12fd609ced586ca9d98c7491d0624a06a5",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "3009c3585d2048001e7b53d88366b3e50c310844f3db7f755c2f0c7807a48458",
+      "sha256": "3a8e3f88647522c550281f1335014429efdf7c1110d6621281f3e36959a5d2e5",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -553,7 +555,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "9989a9eba8b641367874251c8087db359d2603fc866f53deb3f4a390609c4be8",
+      "sha256": "022db579a8a570da02c421b9570c8d2c9236f8fbb6e78276aa44967c10aae352",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftApp.h",
       "kind": "private-header"
     },
@@ -643,7 +645,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "42ce2239953f6b7b529ebefe262efa4b4a785cf6c92f56cf3bebf943ad62a22c",
+      "sha256": "f8c236e4c5a5778e1b3a1f82bbf71bf9f623c3b32b79dd74738fcb6aa8c2a72d",
+      "path": "include/hxc/modules/caxecraft/app/WaterRenderOrder.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "4ba761be0854c9e624c70b3878c666c8ff842af735e0865ece1546ad86e8e8a0",
       "path": "include/hxc/modules/caxecraft/app/WaterRenderer.h",
       "kind": "private-header"
     },
@@ -1363,12 +1370,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "02b2df929b9047ede5b20e53a7a3296d5b5e95fcbcdaa9107e42461d7436c4a8",
+      "sha256": "42f07273579e4851fa988783a686993172e608d74aad4db1465e560e0010b367",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "983b80cf7f125af44469f664fa20c8bf20051fc2b9a79c4ee4ec84dc13f7f988",
+      "sha256": "218af962fe4119f82e835727c5b9e32755782810142d065ed69efcdea6f49081",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -1528,7 +1535,7 @@
       "kind": "source"
     },
     {
-      "sha256": "3b27020a65ef2754dacf6e717abac0a72d52775e221963151c67b599bb64b645",
+      "sha256": "86e7133ad52ad9dd04711bdad9800336bf26196b4f0ffaa47eaf6e866f078b41",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1558,7 +1565,7 @@
       "kind": "source"
     },
     {
-      "sha256": "130b6a85aa7455594559116bdc9c701ae192d46285462dee5f0de3f08e2eca13",
+      "sha256": "79bc34d1d79be2fcbcb420a50a0d1a1ea849b640dab66d410358f4d732ec14de",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -1583,7 +1590,7 @@
       "kind": "source"
     },
     {
-      "sha256": "0406dad71d3573f10454b1aa0c61c2922c9ee63e7b2484b5c8ca328e5d84edb0",
+      "sha256": "c689ff2e472992d7d383a7362f4e715fbe98e8d12af6fbcc806b638de5603740",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -1633,7 +1640,12 @@
       "kind": "source"
     },
     {
-      "sha256": "c913561c435e926d175aa6ca5d80322494ff90ae67acfee28155a7d782eaa438",
+      "sha256": "6fd20a01668df92131ed39a38fd3a23382c66db890759031991c413fcd5392e1",
+      "path": "src/modules/caxecraft/app/WaterRenderOrder.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "d22708bd3d95b98a0aa847f3a5547a3fa7e475dd86927779fb43ba943f3a7639",
       "path": "src/modules/caxecraft/app/WaterRenderer.c",
       "kind": "source"
     },

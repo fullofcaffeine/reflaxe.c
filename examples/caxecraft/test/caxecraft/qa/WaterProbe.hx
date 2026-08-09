@@ -3,6 +3,8 @@ package caxecraft.qa;
 import caxecraft.app.WaterSurfaceGeometry.cornerHeight as waterCornerHeight;
 import caxecraft.app.WaterSurfaceGeometry.sideIsExposed as waterSideIsExposed;
 import caxecraft.app.WaterSurfaceGeometry.surfaceTop as waterSurfaceTop;
+import caxecraft.app.WaterRenderOrder.compareDepth as compareWaterDepth;
+import caxecraft.app.WaterRenderOrder.faceDepthSquared as waterFaceDepthSquared;
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.WaterCellState;
@@ -198,6 +200,17 @@ final class WaterProbe {
 			|| waterSideIsExposed(Blocked)
 			|| waterSideIsExposed(InvalidStorage(99)))
 			return 53;
+
+		// Transparent faces use their center distance for camera-relative
+		// back-to-front drawing. A stable key resolves equal-distance faces.
+		final farDepth = waterFaceDepthSquared(0.5, 0.5, 0.5, 0.5, 8.5, 0.5);
+		final nearDepth = waterFaceDepthSquared(0.5, 0.5, 0.5, 0.5, 2.5, 0.5);
+		if (farDepth != 64.0 || nearDepth != 4.0 || compareWaterDepth(farDepth, 10, nearDepth, 20) >= 0)
+			return 54;
+		if (compareWaterDepth(nearDepth, 20, farDepth, 10) <= 0
+			|| compareWaterDepth(nearDepth, 10, nearDepth, 20) >= 0
+			|| compareWaterDepth(nearDepth, 20, nearDepth, 10) <= 0)
+			return 55;
 		return 0;
 	}
 

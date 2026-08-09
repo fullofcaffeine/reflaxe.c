@@ -6,7 +6,7 @@ private typedef RawTexture2D = raylib.raw.Texture2D;
 private typedef RawRlgl = raylib.raw.Rlgl;
 
 /**
- * Small zero-allocation facade for one textured `RL_QUADS` render batch.
+ * Small zero-allocation facade for textured `RL_QUADS` render batches.
  *
  * rlgl is raylib's low-level immediate drawing API. `BeginQuads` binds one
  * already-owned texture; `Normal`, `Color`, `TexCoord`, and `Vertex` then add
@@ -15,7 +15,7 @@ private typedef RawRlgl = raylib.raw.Rlgl;
  * selects hxrt. Calls must stay balanced on raylib's main render thread.
  *
  * This is intentionally not a general OpenGL or rlgl wrapper. The exact raw
- * eight-function slice is generated and verified from pinned `rlgl.h`; expand
+ * ten-function slice is generated and verified from pinned `rlgl.h`; expand
  * it only when another reviewed rendering need earns the additional state.
  */
 final class Rlgl {
@@ -42,6 +42,26 @@ final class Rlgl {
 	public static inline function EndQuads():Void {
 		RawRlgl.rlEnd();
 		RawRlgl.rlSetTexture(c.IntConvert.modulo(0));
+	}
+
+	/**
+	 * Begin sorted transparent geometry without changing depth testing.
+	 *
+	 * The caller must submit far-to-near geometry and call
+	 * `EndTransparentQuads`. Existing solid depth can still hide water, but one
+	 * water face cannot prevent a later water face from blending into the frame.
+	 */
+	public static inline function BeginTransparentQuads(texture:Texture2D):Void {
+		RawRlgl.rlDrawRenderBatchActive();
+		RawRlgl.rlDisableDepthMask();
+		BeginQuads(texture);
+	}
+
+	/** Finish and flush transparent geometry before restoring depth writes. */
+	public static inline function EndTransparentQuads():Void {
+		EndQuads();
+		RawRlgl.rlDrawRenderBatchActive();
+		RawRlgl.rlEnableDepthMask();
 	}
 
 	public static inline function Normal(x:Float, y:Float, z:Float):Void

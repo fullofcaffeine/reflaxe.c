@@ -191,6 +191,11 @@ values; and typed function-pointer compatibility for all 67 functions. This is
 ABI evidence for the selected target/configuration lanes, not a promise for an
 unprobed platform.
 
+The separate generated `rlgl` slice contains ten functions. Eight own one
+texture-bound quad batch and explicit current-frame flush. The remaining two
+disable and restore depth writes around a sorted transparent pass. Depth
+testing stays enabled, so already-drawn solid terrain can still hide water.
+
 ## Deliberate omissions
 
 Callbacks, variadics, borrowed or retained pointers, other resource-owning APIs,

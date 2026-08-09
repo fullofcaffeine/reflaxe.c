@@ -7,7 +7,9 @@
   "functions": [
     "rlBegin",
     "rlColor4ub",
+    "rlDisableDepthMask",
     "rlDrawRenderBatchActive",
+    "rlEnableDepthMask",
     "rlEnd",
     "rlNormal3f",
     "rlSetTexture",
@@ -17,7 +19,7 @@
   "omissions": [
     {
       "family": "remaining-rlgl-api",
-      "reason": "Caxecraft needs one texture-bound quad batch plus an explicit flush for deterministic current-frame captures; matrices, shaders, buffers, framebuffers, and other raw graphics state remain outside this reviewed slice.",
+      "reason": "Caxecraft needs one texture-bound quad batch, an explicit flush for deterministic current-frame captures, and one balanced depth-write toggle for its sorted transparent-water pass; matrices, shaders, buffers, framebuffers, and other raw graphics state remain outside this reviewed slice.",
       "owner": "haxe_c-xge.10"
     }
   ]

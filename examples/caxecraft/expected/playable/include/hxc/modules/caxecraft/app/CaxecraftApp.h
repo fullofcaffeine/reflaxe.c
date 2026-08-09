@@ -3,10 +3,12 @@
 
 #include "hxc/detail/program_types.h"
 #include "hxc/modules/caxecraft/app/TerrainRenderer.h"
+#include "hxc/modules/caxecraft/app/WaterRenderer.h"
 #include "hxc/modules/caxecraft/input/NavigationInput.h"
 
 struct hxc_caxecraft_app_CaxecraftApp {
   struct hxc_caxecraft_app_TerrainRenderer hxc_terrainRenderer;
+  struct hxc_caxecraft_app_WaterRenderer hxc_waterRenderer;
   struct hxc_caxecraft_input_NavigationRepeater hxc_editorNavigation;
 };
 
