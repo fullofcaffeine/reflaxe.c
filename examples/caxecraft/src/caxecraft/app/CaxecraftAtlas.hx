@@ -19,12 +19,6 @@ enum HudGlyph {
 	HealthEmpty;
 }
 
-/** Original entity-atlas cells used by the current world presentation. */
-enum WorldSprite {
-	NiaFront;
-	MosslingFront;
-}
-
 /**
  * Typed coordinates for the checked-in 4x4 HUD and item atlases.
  *
@@ -33,14 +27,13 @@ enum WorldSprite {
  * inventory rules or game loop.
  */
 final class CaxecraftAtlas {
-	public static function drawWorldSprite(camera:Camera3D, texture:Texture2D, sprite:WorldSprite, position:Vector3, width:Float, height:Float):Void {
-		var row = 1;
-		switch (sprite) {
-			case NiaFront:
-			case MosslingFront:
-				row = 2;
-		}
-		CaxecraftTextures.drawAtlasBillboard(camera, texture, 0, row, 4, 4, position, width, height, CaxecraftPalette.textureTint());
+	/** Draw one manifest-validated cell from the checked-in 4x4 entity atlas. */
+	public static function drawWorldSprite(camera:Camera3D, texture:Texture2D, cellIndex:Int, position:Vector3, width:Float, height:Float):Void {
+		if (cellIndex < 0 || cellIndex >= 16)
+			return;
+		final column = cellIndex % 4;
+		final row = Std.int(cellIndex / 4);
+		CaxecraftTextures.drawAtlasBillboard(camera, texture, column, row, 4, 4, position, width, height, CaxecraftPalette.textureTint());
 	}
 
 	public static function drawHudGlyph(texture:Texture2D, glyph:HudGlyph, x:Int, y:Int, size:Int):Void {

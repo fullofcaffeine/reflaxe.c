@@ -90,6 +90,15 @@ enum ItemContentResolution {
 	UnknownItemContent;
 }
 
+/** Result of resolving one character-like content ID into an entity-atlas cell. */
+enum ActorPresentationResolution {
+	/** The content exists and names one validated cell in the admitted actor atlas. */
+	ActorPresentationResolved(cellIndex:Int);
+
+	/** No NPC or enemy definition in the selected pack owns this ID. */
+	UnknownActorPresentation;
+}
+
 /**
  * Typed content operations needed to resolve one complete level.
  *
@@ -106,4 +115,7 @@ interface LevelContentResolver extends ActorContentResolver {
 
 	/** Resolve one validated item ID into pack-local runtime storage. */
 	function resolveItem(id:ContentId):ItemContentResolution;
+
+	/** Resolve one validated NPC or enemy ID into its actor presentation cell. */
+	function resolveActorPresentation(id:ContentId):ActorPresentationResolution;
 }

@@ -4,6 +4,7 @@ import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
+import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.RuntimeAssetInventory;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
@@ -103,6 +104,14 @@ function selfCheck():Int {
 		case FluidContentResolved(_, 5):
 		case _:
 			return 7;
+	}
+	switch [
+		registry.resolveActorPresentation(new ContentId("caxecraft:nia")),
+		registry.resolveActorPresentation(new ContentId("caxecraft:mossling"))
+	] {
+		case [ActorPresentationResolved(4), ActorPresentationResolved(8)]:
+		case _:
+			return 39;
 	}
 
 	if (catalog.localeCount() != 2
@@ -222,6 +231,9 @@ function negativeChecks():Int {
 		return 22;
 	if (!rejectsPack(replaceOnce(minimal, '"cell":"teal-water"', '"cell":"missing"'), UnknownAssetCell))
 		return 23;
+	if (!rejectsPack(replaceOnce(minimal, '"presentation":{"asset":"entities","cell":"mossling-front"}', '"presentation":{"asset":"items","cell":"berries"}'),
+		InvalidInvariant))
+		return 40;
 	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:air"', '"id":"caxecraft:zz-air"'), NonCanonicalOrder))
 		return 24;
 	if (!rejectsPack(replaceOnce(minimal, '"maxStack":64', '"maxStack":65'), InvalidInteger))
@@ -345,6 +357,7 @@ private enum ExpectedSchemaFamily {
 	DuplicateId;
 	CrossKindId;
 	InvalidClosedValue;
+	InvalidInvariant;
 	UnresolvedReference;
 	WrongReferenceKind;
 	UnknownAsset;
@@ -368,6 +381,7 @@ function sameFamily(actual:RuntimeSchemaErrorKind, expected:ExpectedSchemaFamily
 		case [SchemaDuplicateId(_, _), DuplicateId]: true;
 		case [SchemaCrossKindId(_), CrossKindId]: true;
 		case [SchemaInvalidClosedValue(_, _), InvalidClosedValue]: true;
+		case [SchemaInvalidInvariant(_), InvalidInvariant]: true;
 		case [SchemaUnresolvedReference(_, _, _), UnresolvedReference]: true;
 		case [SchemaWrongReferenceKind(_, _, _), WrongReferenceKind]: true;
 		case [SchemaUnknownAsset(_, _), UnknownAsset]: true;

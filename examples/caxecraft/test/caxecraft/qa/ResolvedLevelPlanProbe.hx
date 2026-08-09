@@ -3,6 +3,7 @@ package caxecraft.qa;
 import caxecraft.content.ActorContentResolver.ActorContentKind;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
 import caxecraft.content.LevelContentResolver;
+import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
 import caxecraft.content.LevelContentResolver.TerrainContentResolution;
@@ -129,6 +130,7 @@ function selfCheck():Int {
 	final actors = values.plan.actors();
 	final player = values.plan.player();
 	final presentationFluids = values.presentation.fluidRequests();
+	final presentationActors = values.presentation.actorRequests();
 	if (terrain.length == 0
 		|| terrain[0].storage.value() != 4
 		|| terrain[0].count != 32
@@ -139,6 +141,9 @@ function selfCheck():Int {
 		|| actors.length != 2
 		|| actors[0].authoredId.text() != "enemy.mossling"
 		|| actors[1].authoredId.text() != "guide.nia"
+		|| presentationActors.length != 2
+		|| presentationActors[0].cellIndex != 8
+		|| presentationActors[1].cellIndex != 4
 		|| player.authoredId.text() != "player.start"
 		|| player.transform.xMilli != 16500
 		|| presentationFluids.length != 2
@@ -353,6 +358,9 @@ private final class RejectingLevelRegistry implements LevelContentResolver {
 
 	public function resolveItem(id:ContentId):ItemContentResolution
 		return base.resolveItem(id);
+
+	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution
+		return base.resolveActorPresentation(id);
 
 	public function resolveNpc(id:ContentId):ActorContentResolution
 		return base.resolveNpc(id);

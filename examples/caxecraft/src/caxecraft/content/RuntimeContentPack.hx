@@ -7,6 +7,7 @@ import caxecraft.content.ContentJson.ContentJsonNode;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
 import caxecraft.content.LevelContentResolver.ItemStorageCode;
+import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.LevelFluidSimulation;
 import caxecraft.content.LevelContentResolver.TerrainContentResolution;
 import caxecraft.content.LevelContentResolver.TerrainStorageCode;
@@ -236,6 +237,15 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public function resolveItem(id:ContentId):ItemContentResolution {
 		final code = itemStorageCode(id);
 		return code < 0 ? UnknownItemContent : ItemContentResolved(ItemStorageCode.fromValidated(code));
+	}
+
+	/** Resolve one NPC or enemy visual from the same validated pack definition. */
+	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution {
+		final npc = findNpc(id.text());
+		if (npc != null)
+			return ActorPresentationResolved(npc.presentation.cellIndex);
+		final enemy = findEnemy(id.text());
+		return enemy == null ? UnknownActorPresentation : ActorPresentationResolved(enemy.presentation.cellIndex);
 	}
 
 	/** True when a runtime integer can safely index the item registry. */
@@ -774,7 +784,7 @@ final class RuntimeContentPack {
 			final behavior = readClosed(reader, reader.field(fields, "behaviorProfile"), path + ".behaviorProfile", ["stationary-dialogue"]);
 			final health = reader.integer(reader.field(fields, "maxHealth"), path + ".maxHealth", 1, 10000);
 			final radius = reader.integer(reader.field(fields, "interactionRadiusMilli"), path + ".interactionRadiusMilli", 250, 32000);
-			final presentation = readPresentation(reader, reader.field(fields, "presentation"), path + ".presentation", assets);
+			final presentation = readActorPresentation(reader, reader.field(fields, "presentation"), path + ".presentation", assets);
 			if (reader.failure != null || id == null || behavior == null || health == null || radius == null || presentation == null)
 				return null;
 			result.push(new RuntimeNpcDefinition(id, idNode.line, idNode.column, health, radius, presentation));
@@ -817,7 +827,7 @@ final class RuntimeContentPack {
 			final step = reader.integer(reader.field(fields, "stepMilli"), path + ".stepMilli", 1, 10000);
 			final dropNode = reader.field(fields, "drop");
 			final drop = readContentId(reader, dropNode, path + ".drop");
-			final presentation = readPresentation(reader, reader.field(fields, "presentation"), path + ".presentation", assets);
+			final presentation = readActorPresentation(reader, reader.field(fields, "presentation"), path + ".presentation", assets);
 			if (reader.failure != null || id == null || behavior == null || health == null || notice == null || strike == null || attack == null
 				|| windup == null || recovery == null || step == null || drop == null || presentation == null)
 				return null;
@@ -899,6 +909,25 @@ final class RuntimeContentPack {
 			return null;
 		}
 		return new RuntimePresentation(asset, cell, index);
+	}
+
+	/**
+		Resolve a visual that the current native actor renderer can draw safely.
+
+		The schema can validate many asset kinds, but the admitted actor shell owns
+		only the `entities` texture. Rejecting another valid atlas here prevents a
+		cell index from being applied to the wrong texture.
+	**/
+	static function readActorPresentation(reader:RuntimeSchemaReader, node:ContentJsonNode, path:String,
+			assets:RuntimeAssetInventory):Null<RuntimePresentation> {
+		final presentation = readPresentation(reader, node, path, assets);
+		if (presentation == null)
+			return null;
+		if (presentation.asset != "entities") {
+			reader.reject(node, SchemaInvalidInvariant(path + ".asset"));
+			return null;
+		}
+		return presentation;
 	}
 
 	/** Parse one registered lower-case mechanic/profile value. */

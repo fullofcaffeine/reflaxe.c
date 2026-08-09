@@ -2,6 +2,7 @@ package caxecraft.qa;
 
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
 import caxecraft.content.LevelContentResolver;
+import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
 import caxecraft.content.LevelContentResolver.ItemStorageCode;
@@ -133,6 +134,15 @@ final class FocusedContentRegistry implements ScenarioContentRegistry implements
 	public function resolveItem(id:ContentId):ItemContentResolution {
 		final code = itemStorageCode(id);
 		return code < 0 ? UnknownItemContent : ItemContentResolved(ItemStorageCode.fromValidated(code));
+	}
+
+	/** Resolve the two manually reviewed entity-atlas cells used by focused maps. */
+	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution {
+		return switch id.text() {
+			case "caxecraft:nia": ActorPresentationResolved(4);
+			case "caxecraft:mossling": ActorPresentationResolved(8);
+			case _: UnknownActorPresentation;
+		}
 	}
 
 	/** Resolve Nia's manually reviewed mechanics or report exact kind/absence. */

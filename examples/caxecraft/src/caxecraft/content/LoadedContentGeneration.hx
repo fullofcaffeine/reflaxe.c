@@ -73,6 +73,9 @@ typedef LoadedActorBinding = {
 
 	/** Closed presentation/gameplay role resolved for the placed actor. */
 	final role:CharacterSpawnRole;
+
+	/** Manifest-validated cell in the native entity atlas. */
+	final presentationCellIndex:Int;
 }
 
 /** Stable item identity and compact storage retained by a loaded generation. */
@@ -377,7 +380,7 @@ final class LoadedContentGeneration {
 			return ContentGenerationRejected(PresentationPlanMismatch);
 
 		final trace = plan.semanticTrace(presentation);
-		final actorBindings = buildActorBindings(actors);
+		final actorBindings = buildActorBindings(actors, presentationActors);
 		final itemBindings = buildItemBindings(items);
 		#if caxecraft_generation_testing
 		if (fault == FailBeforeTerrain)
@@ -457,6 +460,7 @@ final class LoadedContentGeneration {
 		for (index in 0...actors.length)
 			if (actors[index].authoredId != presentationActors[index].authoredId
 				|| actors[index].contentId != presentationActors[index].contentId
+				|| presentationActors[index].cellIndex < 0
 				|| !sameRole(actors[index].role, presentationActors[index].role))
 				return false;
 		return true;
@@ -481,15 +485,18 @@ final class LoadedContentGeneration {
 	}
 
 	/** Copy stable actor bindings before any mutable session construction starts. */
-	static function buildActorBindings(plans:Array<CharacterSpawnPlan>):Array<LoadedActorBinding> {
+	static function buildActorBindings(plans:Array<CharacterSpawnPlan>, presentation:Array<ResolvedActorPresentation>):Array<LoadedActorBinding> {
 		final result:Array<LoadedActorBinding> = [];
-		for (plan in plans)
+		for (index in 0...plans.length) {
+			final plan = plans[index];
 			result.push({
 				authoredId: plan.authoredId,
 				entityId: plan.entityId,
 				contentId: plan.contentId,
-				role: copyRole(plan.role)
+				role: copyRole(plan.role),
+				presentationCellIndex: presentation[index].cellIndex
 			});
+		}
 		return result;
 	}
 

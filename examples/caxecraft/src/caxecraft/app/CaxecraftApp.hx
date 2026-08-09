@@ -71,7 +71,6 @@ import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.app.CaxecraftAtlas.HotbarFrame;
 import caxecraft.app.CaxecraftAtlas.HudGlyph;
-import caxecraft.app.CaxecraftAtlas.WorldSprite;
 import caxecraft.gameplay.BerryDrop.collectAmount as collectBerryDropAmount;
 import caxecraft.gameplay.BerryDrop.fromDefeatedCharacter as berryDropFromDefeatedCharacter;
 import caxecraft.gameplay.BerryDrop.isInRange as berryDropIsInRange;
@@ -1281,7 +1280,8 @@ final class CaxecraftApp {
 				totalRebuiltTerrainChunks = renderCounters.totalRebuiltChunks;
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
-				drawActors(camera, entityTexture, entityTextureReady, dialogueActor, enemyActor, enemyPhase.phase, berryDrop);
+				drawActors(camera, entityTexture, entityTextureReady, dialogueActor, enemyActor, levelView.dialogueActorPresentationCell(),
+					levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)
@@ -1527,28 +1527,27 @@ final class CaxecraftApp {
 		presentation helper borrows those immutable values for one frame; it cannot
 		change movement, health, or controller timing.
 	**/
-	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, guide:Character, enemy:Character,
-			enemyPhase:ActorControllerPhase, berryDrop:BerryDropState):Void {
+	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, guide:Character, enemy:Character, guideCell:Int,
+			enemyCell:Int, enemyPhase:ActorControllerPhase, berryDrop:BerryDropState):Void {
 		if (entityTextureReady)
-			CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.NiaFront, Vector3.fromFloat(guide.body.x, guide.body.y + 0.76, guide.body.z),
-				0.95, 1.52);
+			CaxecraftAtlas.drawWorldSprite(camera, entityTexture, guideCell, Vector3.fromFloat(guide.body.x, guide.body.y + 0.76, guide.body.z), 0.95, 1.52);
 		else {
 			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 0.54, guide.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
-				c.Float32.fromFloat(0.42), CaxecraftPalette.niaCoat());
+				c.Float32.fromFloat(0.42), CaxecraftPalette.selection());
 			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 1.18, guide.body.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
-				c.Float32.fromFloat(0.44), CaxecraftPalette.niaSkin());
+				c.Float32.fromFloat(0.44), CaxecraftPalette.hudText());
 			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 1.41, guide.body.z), c.Float32.fromFloat(0.48), c.Float32.fromFloat(0.16),
-				c.Float32.fromFloat(0.48), CaxecraftPalette.niaHair());
+				c.Float32.fromFloat(0.48), CaxecraftPalette.hudPanel());
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
 			if (entityTextureReady)
-				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.MosslingFront,
-					Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05, 0.96);
+				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, enemyCell, Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05,
+					0.96);
 			else {
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.30, enemy.body.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),
-					c.Float32.fromFloat(0.70), CaxecraftPalette.mosslingBody());
+					c.Float32.fromFloat(0.70), CaxecraftPalette.damage());
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.66, enemy.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
-					c.Float32.fromFloat(0.50), CaxecraftPalette.mosslingCrown());
+					c.Float32.fromFloat(0.50), CaxecraftPalette.selection());
 			}
 			if (enemyPhase == ActorControllerPhase.Windup)
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 1.02, enemy.body.z), c.Float32.fromFloat(0.20), c.Float32.fromFloat(0.20),

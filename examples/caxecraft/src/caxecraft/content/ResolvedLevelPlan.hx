@@ -5,6 +5,7 @@ import caxecraft.content.ActorCompositionPlanner.CharacterSpawnPlan;
 import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.ActorCompositionPlanner.planActorComposition;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
+import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
 import caxecraft.content.LevelContentResolver.ItemStorageCode;
 import caxecraft.content.LevelContentResolver.LevelFluidSimulation;
@@ -155,6 +156,9 @@ typedef ResolvedActorPresentation = {
 	final authoredId:ScenarioId;
 	final contentId:ContentId;
 	final role:CharacterSpawnRole;
+
+	/** Manifest-validated cell in the current entity atlas. */
+	final cellIndex:Int;
 }
 
 /**
@@ -213,6 +217,9 @@ enum ResolvedLevelPlanError {
 
 	/** Generic actor identity, content-kind, capacity, or mechanics planning failed. */
 	ActorResolutionRejected(error:ActorCompositionError);
+
+	/** Actor mechanics resolved, but its independently owned visual did not. */
+	ActorPresentationRejected(authoredId:ScenarioId, contentId:ContentId);
 
 	/** The document has no unique player-spawn construction fact. */
 	PlayerSpawnCountMismatch(count:Int);
@@ -374,12 +381,19 @@ final class ResolvedLevelPlan {
 		};
 		final flow = resolveFlowBindings(scenario);
 		final actorPresentation:Array<ResolvedActorPresentation> = [];
-		for (actor in actors)
+		for (actor in actors) {
+			final cellIndex = switch registry.resolveActorPresentation(actor.contentId) {
+				case ActorPresentationResolved(value) if (value >= 0): value;
+				case ActorPresentationResolved(_) | UnknownActorPresentation:
+					return LevelPlanRejected(ActorPresentationRejected(actor.authoredId, actor.contentId));
+			};
 			actorPresentation.push({
 				authoredId: actor.authoredId,
 				contentId: actor.contentId,
-				role: copyRole(actor.role)
+				role: copyRole(actor.role),
+				cellIndex: cellIndex
 			});
+		}
 		final presentation = new ResolvedLevelPresentationPlan(fluids.presentation, items.presentation, actorPresentation);
 		final plan = new ResolvedLevelPlan(scenario.id, terrain.runs, fluids.construction, items.construction, actors, player, flow, digestFlowBindings(flow),
 			digestPresentation(presentation));
@@ -893,6 +907,7 @@ final class ResolvedLevelPlan {
 		for (actor in value.actorRequests()) {
 			result = hashText(result, actor.authoredId.text());
 			result = hashText(result, actor.contentId.text());
+			result = hashInt(result, actor.cellIndex);
 			result = switch actor.role {
 				case DialogueNpc(dialogue): hashText(hashInt(result, 1), dialogue.text());
 				case EnemyActor: hashInt(result, 2);

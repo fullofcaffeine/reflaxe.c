@@ -5,6 +5,7 @@ import caxecraft.content.ActiveContent.ContentPublicationError;
 import caxecraft.content.ActiveContent.ContentPublicationResult;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
 import caxecraft.content.LevelContentResolver;
+import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
 import caxecraft.content.LevelContentResolver.TerrainContentResolution;
@@ -265,6 +266,13 @@ final class AlternatePresentationRegistry implements LevelContentResolver {
 	/** Preserve ordinary item resolution. */
 	public function resolveItem(id:ContentId):ItemContentResolution
 		return base.resolveItem(id);
+
+	/** Select neighboring actor cells so presentation mismatch covers actors too. */
+	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution
+		return switch base.resolveActorPresentation(id) {
+			case ActorPresentationResolved(cell): ActorPresentationResolved(cell + 1);
+			case UnknownActorPresentation: UnknownActorPresentation;
+		};
 
 	/** Preserve ordinary non-player-character mechanics resolution. */
 	public function resolveNpc(id:ContentId):ActorContentResolution
