@@ -110,6 +110,11 @@ class Main {
 		}
 	}
 
+	/** Keep the first conditional result alive while the second opens another join. */
+	static function mismatchedOptionalFacts(left:Null<Int>, right:Null<Int>):Bool {
+		return (left == 1) != (right == 0);
+	}
+
 	/** Read every primitive optional from one ordinary immutable record. */
 	static function recordScore(value:PrimitiveRecord):Int {
 		return (value.flag == null ? -8 : value.flag ? 8 : 0) + (value.count == null ? -4 : value.count) + (value.code == null ? -2 : Std.int(value.code))
@@ -204,6 +209,10 @@ class Main {
 			|| optionalStatementSwitch(34) != 1
 			|| optionalStatementSwitch(92) != 2
 			|| optionalStatementSwitch(7) != 0
+			|| mismatchedOptionalFacts(null, null)
+			|| !mismatchedOptionalFacts(1, null)
+			|| !mismatchedOptionalFacts(null, 0)
+			|| mismatchedOptionalFacts(1, 0)
 			|| recordScore(missingRecord) != -15
 			|| recordScore(zeroRecord) != 0
 			|| packetScore(Flag(null)) != -8

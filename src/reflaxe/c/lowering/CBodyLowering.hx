@@ -13923,6 +13923,8 @@ private class FunctionBuilder {
 			case TFor(_, _, _) | TWhile(_, _, _) | TTry(_, _): true;
 			case TBreak | TContinue: true;
 			case TBinop(OpBoolAnd, _, _) | TBinop(OpBoolOr, _, _): true;
+			case TBinop(OpEq, left, right) | TBinop(OpNotEq, left, right): expressionCreatesFlow(left) || expressionCreatesFlow(right) || optionalScalarEqualityCreatesFlow(left,
+					right);
 			case TBinop(_, left, right): expressionCreatesFlow(left) || expressionCreatesFlow(right);
 			case TArray(collection, index): expressionCreatesFlow(collection) || expressionCreatesFlow(index);
 			case TField(receiver, _) | TEnumParameter(receiver, _, _) | TEnumIndex(receiver): expressionCreatesFlow(receiver);
@@ -13944,6 +13946,21 @@ private class FunctionBuilder {
 			case TFunction(_): false;
 			case TConst(_) | TLocal(_) | TTypeExpr(_) | TIdent(_): false;
 		};
+	}
+
+	/**
+	 * True when equality must branch to unwrap one present optional scalar.
+	 *
+	 * The typed expression contains no source `if`, but lowering still creates a
+	 * compare block and a join. An enclosing call, record, enum, or binary
+	 * expression must therefore stage values evaluated before this expression.
+	 */
+	function optionalScalarEqualityCreatesFlow(left:TypedExpr, right:TypedExpr):Bool {
+		if (isNullConstantExpression(left) || isNullConstantExpression(right))
+			return false;
+		final leftOptional = bodyValueType(left.t, left.pos, "flow-discovery:optional-equality-left").optionalValue() != null;
+		final rightOptional = bodyValueType(right.t, right.pos, "flow-discovery:optional-equality-right").optionalValue() != null;
+		return leftOptional != rightOptional;
 	}
 
 	/** True when an expression to the right can move lowering into another block. */
