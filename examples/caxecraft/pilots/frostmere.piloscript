@@ -1,36 +1,26 @@
 PILOSCRIPT 1
 name frostmere-journey
-frames 260
+frames 240
 
 # Enter Adventure and select Frostmere from the runtime campaign catalog.
 action 0 menu-next
 checkpoint 0 capture title-selection
-expect 0 screen title
-expect 0 mode adventure
 
 action 1 menu-confirm
 checkpoint 1 capture campaign-selection
-expect 1 screen campaign
-expect 1 level evergrove
 
 action 2 menu-next
 checkpoint 2 capture level-selection
-expect 2 screen campaign
 expect 2 level frostmere
 
 action 3 menu-confirm
 expect 3 screen playing
-expect 3 mode adventure
 expect 3 level frostmere
 expect 3 objective objective.ask-nia
-expect 3 generation 2
-expect 3 publications 1
 
 # Nia stands at the arrival shelf and gives the chapter's first direction.
 action 4 interact
-expect 8 dialogue dialogue.nia.frostmere
 expect 8 objective objective.wake-ember
-expect 8 journal journal.frostmere-route
 
 # Close Nia's dialogue and climb to the ember marker.
 action 9 interact
@@ -38,17 +28,15 @@ hold 10 19 right
 hold 20 60 forward-jump
 hold 61 66 left
 action 68 interact
-expect 69 position 17,5,20
 expect 70 object-state snow.ember=caxecraft:entered
 expect 71 object-state snow.gate=caxecraft:open
-expect 72 dialogue dialogue.snow.ember
+expect 72 objective objective.reach-overlook
 
 # Close the ember message, cross the opened bridge, and climb to the ash
 # overlook. The lantern is an ordinary authored proximity pickup.
 action 73 interact
 hold 74 150 forward-jump
 hold 151 155 left
-expect 156 position 16,9,5
 expect 157 objective objective.seek-ashfall
 expect 158 lanterns 2
 expect 159 journal journal.ashfall-threshold
@@ -57,13 +45,10 @@ expect 159 journal journal.ashfall-threshold
 # reward shelf, and the optional Mossling must not block the central crossing.
 hold 160 216 backward-jump
 expect 217 position 16,8,17
-expect 218 objective objective.seek-ashfall
-expect 219 object-state snow.gate=caxecraft:open
 
 action 228 pause
 checkpoint 228 capture final
 expect 228 screen paused
 expect 228 level frostmere
 expect 228 objective objective.seek-ashfall
-expect 228 object-state snow.gate=caxecraft:open
 end

@@ -254,7 +254,12 @@ performance, packaging, and developer experience together.
   should strongly protect the reusable schema, content-logic interpreter,
   publication, simulation, renderer, editor, and runner contracts with small
   synthetic fixtures. Content checks should stay few, journey-shaped, and
-  reloadable. If the current runner cannot express a needed content expectation
+  reloadable. Each Piloscript must protect one representative route and only
+  the key milestones needed for the advertised player flow. Do not turn exact
+  coordinates, repeated state, prose, optional branches, or temporary tuning
+  facts into permanent expectations. Add detail only when a distinct claim
+  needs it. Use free play and visual review for pacing, fun, art, and
+  exploratory content. If the current runner cannot express a needed content expectation
   without recompilation, use generic state evidence plus a reviewable content
   frame for the immediate proof and create a Beads owner for the missing
   reloadable Piloscript capability; do not hard-code the campaign into the
