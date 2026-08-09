@@ -35,9 +35,11 @@ Western Falls at runtime. Western Falls is now a compact authored region rather
 than the former flat placeholder: its arrival overlook faces a tall waterfall
 and pool, a stepped route reaches the valley, and a bridge, four-material clue
 shrine, concealed Tideweave alcove, snow shelf, and ash silhouettes establish
-the planned route's first visible landmarks. The Fallskeeper, journal entry,
-four-glyph code interaction, sealed-vault progression, and flooded ruins are
-still designs rather than playable mechanics. Branching, return travel,
+the planned route's first visible landmarks. Moss waits at the overlook and
+directs the player toward the four marks left by the Fallskeeper. The
+Fallskeeper, journal entry, four-glyph code interaction, sealed-vault
+progression, and flooded ruins are still designs rather than playable
+mechanics. Branching, return travel,
 persistence, authored exit zones, and the broader Adventure campaign also
 remain unimplemented. Do not describe concept art, semantic editor tests, or
 the remaining design-only atlases as evidence that those capabilities run.

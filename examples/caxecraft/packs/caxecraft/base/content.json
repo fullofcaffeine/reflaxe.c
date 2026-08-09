@@ -246,6 +246,16 @@
   ],
   "npcs": [
     {
+      "id": "caxecraft:moss",
+      "behaviorProfile": "stationary-dialogue",
+      "maxHealth": 6,
+      "interactionRadiusMilli": 3500,
+      "presentation": {
+        "asset": "entities",
+        "cell": "moss-front"
+      }
+    },
+    {
       "id": "caxecraft:nia",
       "behaviorProfile": "stationary-dialogue",
       "maxHealth": 6,

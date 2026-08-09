@@ -116,9 +116,9 @@ function selfCheck():Int {
 		return 17;
 	final selected = active.generation();
 	final receipt = selected.receipt();
-	if (receipt.generationSha256 != "4b66987eeebf02739b8fe7ba8fa39bb32341cce50b5550fe10696f1bbf45253e"
+	if (receipt.generationSha256 != "2c6086f253db746964aaaddda2f9754d915ac99dee22cece658e810e8594f866"
 		|| receipt.assetManifestSha256 != "dbd7fae77851790c589296f96782750ab000067a7e9936820406966f4cc6cba5"
-		|| receipt.content.sha256 != "fa5614043ccaffc7a777c7998fb78c32f006282372ccaba10585b6663398b163"
+		|| receipt.content.sha256 != "e4aa78502b11ea07a0dfa3c472c391dd1ad4af7b90fd1f529548bcc06fe71b94"
 		|| receipt.ui.sha256 != "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
 		|| receipt.map.sha256 != "61c38dc78cce29c99c9b38ccc211ed1149f8e6f968c2ad7efac9ca6043d21f16")
 		return 9;
@@ -133,7 +133,7 @@ function selfCheck():Int {
 		+ selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	traceWorldState = selected.level().generation().semanticTrace().worldState;
 	traceSourceBytes = receipt.content.byteLength + receipt.ui.byteLength + receipt.map.byteLength;
-	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 3528 && traceWorldState == 454073574 && traceSourceBytes == 28098 ? 0 : 10;
+	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 3528 && traceWorldState == 454073574 && traceSourceBytes == 28339 ? 0 : 10;
 }
 
 /** Load one real complete candidate through the shared package path. */
@@ -178,7 +178,7 @@ function verifyReceiptBytes(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes):I
 	final unlisted = replaceOnce(receiptText, "scenarios/first-playable/map.caxemap", "scenarios/first-playable/unlisted.caxemap");
 	if (!receiptRejected(Bytes.ofString(unlisted), content, ui, map, "", generation, player))
 		return 4;
-	final stale = replaceOnce(receiptText, '"byteLength": 7167', '"byteLength": 7166');
+	final stale = replaceOnce(receiptText, '"byteLength": 7408', '"byteLength": 7407');
 	if (!lengthRejected(Bytes.ofString(stale), content, ui, map, generation, player))
 		return 5;
 	final mismatchedContent = Bytes.alloc(content.length);
@@ -224,7 +224,7 @@ function lengthRejected(receipt:Bytes, content:Bytes, ui:Bytes, map:Bytes, gener
 		map: map,
 		missingLogicalPath: ""
 	}, generation, player) {
-		case RuntimeContentRejected(RuntimeContentLengthMismatch("packs/caxecraft/base/content.json", 7166, 7167)): true;
+		case RuntimeContentRejected(RuntimeContentLengthMismatch("packs/caxecraft/base/content.json", 7407, 7408)): true;
 		case _: false;
 	};
 }

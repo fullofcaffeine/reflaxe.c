@@ -87,13 +87,14 @@ when its stack is full. Underwater mining still requires an equipped capability.
 Western Falls is the second runtime-loaded campaign region. Its safe arrival
 overlook now faces a tall waterfall and pool; a stepped stone route leads to a
 bridge, a four-material clue shrine, a concealed Tideweave alcove, and distant
-snow and ash silhouettes. The runtime loader checks that the edited map remains
-valid, while the real title-to-Adventure pilot requires the waterfall to be
-visibly tall in the final framebuffer. Decorative coordinates are deliberately
-not frozen by a Haxe test, so designers can keep reshaping the route. This is
-environmental campaign progress, not the finished suit quest: the Fallskeeper,
-journal, four-glyph interaction, opening the vault, and flooded ruins remain
-open work.
+snow and ash silhouettes. Moss now waits at the overlook, points the player
+toward the four marks left by the Fallskeeper, and starts the Tideweave route.
+The runtime loader checks that the edited map remains valid, while the real
+title-to-Adventure Piloscript checks the objective change and captures the
+authored arrival for review. Decorative coordinates are deliberately not
+frozen by a Haxe test, so designers can keep reshaping the route. This is early
+campaign progress, not the finished suit quest: the Fallskeeper, journal,
+four-glyph interaction, opening the vault, and flooded ruins remain open work.
 `EntityStore` now keeps a local player and generic non-player in one
 deterministically ordered `Array<Character>`, and `GameSession` advances either
 through the same movement, water, and health rules. Its two focused generated-C

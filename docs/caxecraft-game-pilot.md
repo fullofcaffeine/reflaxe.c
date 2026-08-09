@@ -295,10 +295,14 @@ launch, a hidden campaign screen, or a script that bypasses the title cannot
 satisfy this owner.
 
 This is evidence for the current two-level forward journey and one repeatable
-Western Falls exploration route. The player still presses `N` to use the
-manifest's sole exit. Authored exit volumes, branching, return travel between
-levels, saves, Fallskeeper dialogue, the journal/code interaction, and opening
-the vault through story logic remain future work. Subjective route readability,
+Western Falls exploration route. The runtime Piloscript launches Western Falls
+through the visible Adventure menus, checks that Moss is the first objective,
+interacts with Moss, and checks that the Tideweave objective becomes active.
+Its principal review image shows the arrival rather than freezing decorative
+coordinates in a Haxe test. The player still presses `N` to use the manifest's
+sole exit. Authored exit volumes, branching, return travel between levels,
+saves, the Fallskeeper encounter, the journal/code interaction, and opening the
+vault through story logic remain future work. Subjective route readability,
 waterfall appearance, puzzle quality, and fun still require hands-on review.
 
 ## How semantic state leaves the native game

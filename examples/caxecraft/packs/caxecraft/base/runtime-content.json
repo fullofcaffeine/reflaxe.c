@@ -6,10 +6,10 @@
   },
   "files": [
     {
-      "byteLength": 7167,
+      "byteLength": 7408,
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "sha256": "fa5614043ccaffc7a777c7998fb78c32f006282372ccaba10585b6663398b163"
+      "sha256": "e4aa78502b11ea07a0dfa3c472c391dd1ad4af7b90fd1f529548bcc06fe71b94"
     },
     {
       "byteLength": 6401,
@@ -24,6 +24,6 @@
       "sha256": "61c38dc78cce29c99c9b38ccc211ed1149f8e6f968c2ad7efac9ca6043d21f16"
     }
   ],
-  "generationSha256": "4b66987eeebf02739b8fe7ba8fa39bb32341cce50b5550fe10696f1bbf45253e",
+  "generationSha256": "2c6086f253db746964aaaddda2f9754d915ac99dee22cece658e810e8594f866",
   "schemaVersion": 1
 }

@@ -20,14 +20,17 @@ expect 2 screen campaign
 expect 2 level western-falls
 
 action 3 menu-confirm
+# The principal review image shows the authored arrival. The separate state
+# image still records the final semantic checkpoint at frame 349.
+checkpoint 3 capture final
 expect 3 screen playing
 expect 3 mode adventure
 expect 3 level western-falls
-expect 3 objective objective.meet-nia
+expect 3 objective objective.meet-moss
 expect 3 generation 2
 expect 3 publications 1
 
-# Ask Nia about the sealed route, then leave the Falls spawn.
+# Ask Moss about the four marks, then leave the Falls spawn.
 action 4 interact
 expect 8 objective objective.find-tideweave
 
@@ -55,7 +58,6 @@ expect 312 medium submerged
 expect 312 position 13,3,25
 hold 312 343 right-rise
 
-checkpoint 349 capture final
 expect 349 screen playing
 expect 349 level western-falls
 expect 349 objective objective.find-tideweave

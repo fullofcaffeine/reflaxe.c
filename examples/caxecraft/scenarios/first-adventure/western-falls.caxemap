@@ -5,7 +5,7 @@ asset-pack packs/caxecraft/base
 default-locale en
 locale en
   message adventure_progress "FIND TIDEWEAVE BENEATH THE FALLS"
-  message adventure_tagline "BREAK THE MARKED SAND. DIVE THROUGH THE FLOODED GROTTO."
+  message adventure_tagline "FOLLOW THE FOUR MARKS. BREAK THE SAND. CROSS THE FLOODED GROTTO."
   message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
@@ -13,11 +13,11 @@ locale en
   message enemy_dropped_items "MOSSLING DROPPED BERRIES"
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "MOSSLING WINDUP: DODGE"
-  message guide_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
-  message guide_talk "E  TALK TO NIA"
-  message guide_welcome "NIA: THE FALLS MARK A SEALED WAY WEST"
-  message objective_meet_nia_body "NIA IS WAITING BESIDE THE FALLS."
-  message objective_meet_nia_title "ASK NIA ABOUT THE SEALED WAY"
+  message guide_gift "MOSS: BERRIES FOR THE GROTTO, HAXIRIO"
+  message guide_talk "E  TALK TO MOSS"
+  message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
+  message objective_meet_moss_body "MOSS WAITS BESIDE THE FALLSKEEPER'S SHRINE."
+  message objective_meet_moss_title "ASK MOSS ABOUT THE FOUR MARKS"
   message pickup_many "+2 BERRIES"
   message pickup_one "+1 BERRY"
   message player_fallen "HAXIRIO HAS FALLEN"
@@ -28,7 +28,7 @@ locale en
 end locale
 locale es-mx
   message adventure_progress "BUSCA TIDEWEAVE BAJO LAS CATARATAS"
-  message adventure_tagline "ROMPE LA ARENA MARCADA. CRUZA LA GRUTA INUNDADA."
+  message adventure_tagline "SIGUE LAS CUATRO MARCAS. ROMPE LA ARENA. CRUZA LA GRUTA."
   message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
@@ -36,11 +36,11 @@ locale es-mx
   message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
-  message guide_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
-  message guide_talk "E  HABLAR CON NIA"
-  message guide_welcome "NIA: LAS CATARATAS MARCAN UN CAMINO SELLADO"
-  message objective_meet_nia_body "NIA ESPERA JUNTO A LAS CATARATAS."
-  message objective_meet_nia_title "PREGUNTA A NIA POR EL CAMINO SELLADO"
+  message guide_gift "MOSS: BAYAS PARA LA GRUTA, HAXIRIO"
+  message guide_talk "E  HABLAR CON MOSS"
+  message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
+  message objective_meet_moss_body "MOSS ESPERA JUNTO AL SANTUARIO DEL GUARDIAN DE LAS CATARATAS."
+  message objective_meet_moss_title "PREGUNTA A MOSS POR LAS CUATRO MARCAS"
   message pickup_many "+2 BAYAS"
   message pickup_one "+1 BAYA"
   message player_fallen "HAXIRIO HA CAIDO"
@@ -799,9 +799,9 @@ object enemy.mossling
   tag enemy
   placement entity caxecraft:mossling 19500 7000 21500 225
 end object
-object guide.nia
+object guide.moss
   tag friend
-  placement npc caxecraft:nia dialogue.nia.welcome 17500 8000 25500 180
+  placement npc caxecraft:moss dialogue.moss.falls 17500 8000 25500 180
 end object
 object item.grotto-lantern
   tag reward
@@ -815,19 +815,19 @@ object player.start
   tag player
   placement player-spawn 16500 8000 27500 180
 end object
-dialogue dialogue.nia.welcome
-  line speaker guide.nia message guide_welcome
+dialogue dialogue.moss.falls
+  line speaker guide.moss message guide_welcome
 end dialogue
 objective objective.find-tideweave hidden title message adventure_progress
   body message adventure_tagline
 end objective
-objective objective.meet-nia active title message objective_meet_nia_title
-  body message objective_meet_nia_body
+objective objective.meet-moss active title message objective_meet_moss_title
+  body message objective_meet_moss_body
 end objective
-rule rule.nia-opens-the-western-route priority 100 once
-  when interact guide.nia
+rule rule.moss-opens-the-western-route priority 100 once
+  when interact guide.moss
   if (always)
-  do objective objective.meet-nia complete
+  do objective objective.meet-moss complete
   do objective objective.find-tideweave active
 end rule
 end-map
