@@ -40,14 +40,17 @@ first visible landmarks. Moss directs the player to a distinct Fallskeeper.
 The Fallskeeper repeats the exact bilingual sequence--river, root, moon,
 flame--and adds it to the pause-overlay journal. The objective then points to
 Tideweave, and the current grotto route completes when the player collects its
-lantern. The NPCs, dialogue, journal text, objectives, and rules live in the
-Western Falls CaxeMap and can change without rebuilding the game.
+lantern. At the concealed cache, one runic pedestal presents the four marks in
+that order. Each accepted mark advances the pedestal. A wrong mark resets it.
+The final flame mark opens a solid vault gate before the player can collect
+Tideweave. The NPCs, dialogue, journal text, objectives, gate states, and rules
+live in the Western Falls CaxeMap and can change without rebuilding the game.
 
-Ordered code entry, a sealed vault door, multiple journal entries, and larger
-flooded ruins are still designs rather than playable mechanics. Branching, return travel,
-persistence, authored exit zones, and the broader Adventure campaign also
-remain unimplemented. Do not describe concept art, semantic editor tests, or
-the remaining design-only atlases as evidence that those capabilities run.
+Multiple journal entries and larger flooded ruins are still designs rather
+than playable mechanics. Branching, return travel, persistence, authored exit
+zones, and the broader Adventure campaign also remain unimplemented. Do not
+describe concept art, semantic editor tests, or the remaining design-only
+atlases as evidence that those capabilities run.
 
 Evergrove itself is now a compact authored village rather than the former flat
 meadow: the runtime-loaded CAXEMAP includes the arrival road and gate, a house,
