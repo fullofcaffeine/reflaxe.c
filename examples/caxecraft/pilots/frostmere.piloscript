@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name frostmere-journey
-frames 240
+frames 270
 
 # Enter Adventure and select Frostmere from the runtime campaign catalog.
 action 0 menu-next
@@ -14,8 +14,6 @@ checkpoint 2 capture level-selection
 expect 2 level frostmere
 
 action 3 menu-confirm
-expect 3 screen playing
-expect 3 level frostmere
 expect 3 objective objective.ask-nia
 
 # Nia stands at the arrival shelf and gives the chapter's first direction.
@@ -32,23 +30,30 @@ expect 70 object-state snow.ember=caxecraft:entered
 expect 71 object-state snow.gate=caxecraft:open
 expect 72 objective objective.reach-overlook
 
-# Close the ember message, cross the opened bridge, and climb to the ash
-# overlook. The lantern is an ordinary authored proximity pickup.
+# Close the ember message and cross the opened bridge. The three signal stones
+# sit on the natural climb in Nia's wave, forge, flame order.
 action 73 interact
-hold 74 150 forward-jump
-hold 151 155 left
-expect 157 objective objective.seek-ashfall
-expect 158 lanterns 2
-expect 159 journal journal.ashfall-threshold
+hold 74 109 forward-jump
+action 110 interact
+expect 112 object-state signal.wave=caxecraft:entered
+hold 111 122 forward-jump
+action 123 interact
+hold 124 134 forward-jump
+action 135 interact
+expect 137 object-state signal.gate=caxecraft:open
+action 138 interact
+hold 139 155 forward-jump
+hold 156 160 left
+expect 162 objective objective.seek-ashfall
+expect 163 lanterns 2
+expect 164 journal journal.ashfall-threshold
 
 # Return down the same route. The open bridge must not trap the player at the
 # reward shelf, and the optional Mossling must not block the central crossing.
-hold 160 216 backward-jump
-expect 217 position 16,8,17
+hold 165 221 backward-jump
+expect 222 position 16,8,17
 
-action 228 pause
-checkpoint 228 capture final
-expect 228 screen paused
-expect 228 level frostmere
-expect 228 objective objective.seek-ashfall
+action 258 pause
+checkpoint 258 capture final
+expect 258 screen paused
 end

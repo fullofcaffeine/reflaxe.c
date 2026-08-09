@@ -5,7 +5,7 @@ asset-pack packs/caxecraft/base
 default-locale en
 locale en
   message adventure_progress "REACH THE ASHFALL BEACON"
-  message adventure_tagline "SPEAK WITH NIA. WAKE THE EMBER MARK. CROSS THE FROZEN RAVINE."
+  message adventure_tagline "WAKE THE EMBER. TUNE THE ASHFALL SIGNALS. REACH THE BEACON."
   message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
@@ -17,15 +17,17 @@ locale en
   message guide_talk "E  TALK"
   message journal_ashfall_body "THE RECOVERED LANTERN BURNS GOLD AGAINST THE ASH. TWO STONE CAIRNS MARK THE ROAD INTO THE FALL."
   message journal_ashfall_title "THE ASHFALL THRESHOLD"
-  message journal_frostmere_body "NIA MARKED A TIMBER BRIDGE NORTH OF THE EMBER STONE. THE ASH SKY BEGINS BEYOND IT."
+  message journal_frostmere_body "NIA'S SIGNAL ORDER: MELTWATER, HAXEFORGE, EMBER. FOLLOW WAVE, FORGE, FLAME BEYOND THE TIMBER BRIDGE."
   message journal_frostmere_title "THE FROSTMERE ASCENT"
-  message nia_welcome "NIA: THE WIND BURIED THE BRIDGE LOCK. WAKE THE ORANGE EMBER MARK, THEN CLIMB TOWARD THE ASH SKY."
+  message nia_welcome "NIA: WAKE THE ORANGE EMBER TO CROSS. BEYOND IT, TUNE WAVE, FORGE, FLAME. WRONG NOTES RESET SAFELY."
   message objective_arrival_body "NIA WAITS BETWEEN THE TWO SOUTHERN PINES."
   message objective_arrival_title "ASK NIA ABOUT THE SNOW SHELF"
   message objective_ember_body "FOLLOW THE RISING SNOW PATH TO THE ORANGE MARK BESIDE THE RAVINE."
   message objective_ember_title "WAKE THE EMBER MARK"
-  message objective_overlook_body "CROSS THE TIMBER BRIDGE AND RECOVER THE LANTERN ABOVE THE SNOWBOUND MOSSLING."
-  message objective_overlook_title "REACH THE ASHFALL OVERLOOK"
+  message objective_lantern_body "THE SIGNAL GATE IS OPEN. CLIMB TO THE GOLD LANTERN AND ASHFALL BEACON."
+  message objective_lantern_title "RECOVER THE ASHFALL LANTERN"
+  message objective_overlook_body "BEYOND THE TIMBER BRIDGE, WAKE WAVE, FORGE, THEN FLAME. WRONG NOTES RESET SAFELY."
+  message objective_overlook_title "TUNE THE THREE ASHFALL SIGNALS"
   message objective_seek_ashfall_body "THE SNOW ENDS UNDER A DARKENING SKY. THE ASHFALL BRIDGE LIES AHEAD."
   message objective_seek_ashfall_title "ASHFALL LIES BEYOND FROSTMERE"
   message pickup_many "+2 BERRIES"
@@ -34,10 +36,12 @@ locale en
   message recovery_empty "NO BERRIES LEFT"
   message recovery_used "BERRIES: +1 HEART"
   message scenario_title "Caxecraft: Frostmere"
+  message signals_reset "THE SIGNALS FALL QUIET. BEGIN AGAIN: WAVE, FORGE, FLAME."
+  message signals_solved "THE THREE SIGNALS HARMONIZE. THE ASHFALL GATE OPENS."
 end locale
 locale es-mx
   message adventure_progress "LLEGA AL FARO DE ASHFALL"
-  message adventure_tagline "HABLA CON NIA. ENCIENDE LA MARCA. CRUZA EL BARRANCO HELADO."
+  message adventure_tagline "ENCIENDE LA BRASA. AFINA LAS SENALES. LLEGA AL FARO."
   message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
@@ -49,15 +53,17 @@ locale es-mx
   message guide_talk "E  HABLAR"
   message journal_ashfall_body "LA LINTERNA RECUPERADA ARDE DORADA CONTRA LA CENIZA. DOS MOJONES DE PIEDRA MARCAN EL CAMINO."
   message journal_ashfall_title "EL UMBRAL DE ASHFALL"
-  message journal_frostmere_body "NIA MARCO UN PUENTE DE MADERA AL NORTE DE LA PIEDRA DE BRASA. EL CIELO DE CENIZA EMPIEZA MAS ALLA."
+  message journal_frostmere_body "ORDEN DE NIA: DESHIELO, HAXEFORGE, BRASA. SIGUE OLA, FORJA, LLAMA TRAS EL PUENTE."
   message journal_frostmere_title "EL ASCENSO DE FROSTMERE"
-  message nia_welcome "NIA: EL VIENTO ENTERRO EL CERROJO DEL PUENTE. ENCIENDE LA MARCA NARANJA Y SUBE HACIA EL CIELO DE CENIZA."
+  message nia_welcome "NIA: ENCIENDE LA BRASA PARA CRUZAR. DESPUES AFINA OLA, FORJA, LLAMA. UN ERROR REINICIA SIN PELIGRO."
   message objective_arrival_body "NIA ESPERA ENTRE LOS DOS PINOS DEL SUR."
   message objective_arrival_title "PREGUNTA A NIA POR LA MESETA NEVADA"
   message objective_ember_body "SIGUE EL SENDERO DE NIEVE HASTA LA MARCA NARANJA JUNTO AL BARRANCO."
   message objective_ember_title "ENCIENDE LA MARCA DE BRASA"
-  message objective_overlook_body "CRUZA EL PUENTE Y RECUPERA LA LINTERNA SOBRE EL MUSGUITO DE NIEVE."
-  message objective_overlook_title "LLEGA AL MIRADOR DE ASHFALL"
+  message objective_lantern_body "LA PUERTA ESTA ABIERTA. SUBE A LA LINTERNA DORADA Y AL FARO DE ASHFALL."
+  message objective_lantern_title "RECUPERA LA LINTERNA DE ASHFALL"
+  message objective_overlook_body "TRAS EL PUENTE, ENCIENDE OLA, FORJA Y LLAMA. UN ERROR REINICIA SIN PELIGRO."
+  message objective_overlook_title "AFINA LAS TRES SENALES DE ASHFALL"
   message objective_seek_ashfall_body "LA NIEVE TERMINA BAJO UN CIELO OSCURO. EL PUENTE DE ASHFALL ESTA ADELANTE."
   message objective_seek_ashfall_title "ASHFALL ESTA MAS ALLA DE FROSTMERE"
   message pickup_many "+2 BAYAS"
@@ -66,6 +72,8 @@ locale es-mx
   message recovery_empty "NO QUEDAN BAYAS"
   message recovery_used "BAYAS: +1 CORAZON"
   message scenario_title "Caxecraft: Frostmere"
+  message signals_reset "LAS SENALES CALLAN. EMPIEZA DE NUEVO: OLA, FORJA, LLAMA."
+  message signals_solved "LAS TRES SENALES ARMONIZAN. LA PUERTA DE ASHFALL SE ABRE."
 end locale
 title message scenario_title
 mode adventure
@@ -872,6 +880,22 @@ object player.start
   tag player
   placement player-spawn 16500 4000 28500 180
 end object
+object signal.flame
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 16500 8000 9500 0
+end object
+object signal.forge
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-moon caxecraft:waiting 16500 8000 11500 0
+end object
+object signal.gate
+  tag mechanism
+  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 8000 8500 0
+end object
+object signal.wave
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-river caxecraft:waiting 16500 7000 13500 0
+end object
 object snow.ember
   tag mechanism
   placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 16500 6000 18500 0
@@ -882,6 +906,12 @@ object snow.gate
 end object
 dialogue dialogue.nia.frostmere
   line speaker guide.nia message nia_welcome
+end dialogue
+dialogue dialogue.signals.reset
+  line speaker guide.nia message signals_reset
+end dialogue
+dialogue dialogue.signals.solved
+  line speaker guide.nia message signals_solved
 end dialogue
 dialogue dialogue.snow.ember
   line speaker guide.nia message ember_awake
@@ -898,12 +928,16 @@ end objective
 objective objective.reach-overlook hidden title message objective_overlook_title
   body message objective_overlook_body
 end objective
+objective objective.recover-lantern hidden title message objective_lantern_title
+  body message objective_lantern_body
+end objective
 objective objective.seek-ashfall hidden title message objective_seek_ashfall_title
   body message objective_seek_ashfall_body
 end objective
 objective objective.wake-ember hidden title message objective_ember_title
   body message objective_ember_body
 end objective
+variable quest.signal-progress quest counter 0
 rule rule.ember-opens-the-bridge priority 100 once
   when interact snow.ember
   if (objective objective.wake-ember active)
@@ -915,9 +949,9 @@ rule rule.ember-opens-the-bridge priority 100 once
 end rule
 rule rule.lantern-reveals-ashfall priority 100 once
   when collect-item caxecraft:lantern
-  if (objective objective.reach-overlook active)
+  if (objective objective.recover-lantern active)
   do journal journal.ashfall-threshold
-  do objective objective.reach-overlook complete
+  do objective objective.recover-lantern complete
   do objective objective.seek-ashfall active
 end rule
 rule rule.nia-marks-the-ascent priority 100 once
@@ -927,5 +961,54 @@ rule rule.nia-marks-the-ascent priority 100 once
   do journal journal.frostmere-route
   do objective objective.ask-nia complete
   do objective objective.wake-ember active
+end rule
+rule rule.signal-flame-completes-the-tune priority 100 once
+  when interact signal.flame
+  if (counter quest.signal-progress equal 2)
+  do set-object-state signal.flame caxecraft:entered
+  do set-object-state signal.gate caxecraft:open
+  do set-counter quest.signal-progress 3
+  do dialogue dialogue.signals.solved
+  do objective objective.reach-overlook complete
+  do objective objective.recover-lantern active
+end rule
+rule rule.signal-flame-resets-the-tune priority 90 repeat
+  when interact signal.flame
+  if (not (counter quest.signal-progress equal 2))
+  do set-counter quest.signal-progress 0
+  do set-object-state signal.flame caxecraft:waiting
+  do set-object-state signal.forge caxecraft:waiting
+  do set-object-state signal.wave caxecraft:waiting
+  do dialogue dialogue.signals.reset
+end rule
+rule rule.signal-forge-continues-the-tune priority 100 repeat
+  when interact signal.forge
+  if (counter quest.signal-progress equal 1)
+  do set-object-state signal.forge caxecraft:entered
+  do set-counter quest.signal-progress 2
+end rule
+rule rule.signal-forge-resets-the-tune priority 90 repeat
+  when interact signal.forge
+  if (not (counter quest.signal-progress equal 1))
+  do set-counter quest.signal-progress 0
+  do set-object-state signal.flame caxecraft:waiting
+  do set-object-state signal.forge caxecraft:waiting
+  do set-object-state signal.wave caxecraft:waiting
+  do dialogue dialogue.signals.reset
+end rule
+rule rule.signal-wave-begins-the-tune priority 100 repeat
+  when interact signal.wave
+  if (counter quest.signal-progress equal 0)
+  do set-object-state signal.wave caxecraft:entered
+  do set-counter quest.signal-progress 1
+end rule
+rule rule.signal-wave-resets-the-tune priority 90 repeat
+  when interact signal.wave
+  if (not (counter quest.signal-progress equal 0))
+  do set-counter quest.signal-progress 0
+  do set-object-state signal.flame caxecraft:waiting
+  do set-object-state signal.forge caxecraft:waiting
+  do set-object-state signal.wave caxecraft:waiting
+  do dialogue dialogue.signals.reset
 end rule
 end-map
