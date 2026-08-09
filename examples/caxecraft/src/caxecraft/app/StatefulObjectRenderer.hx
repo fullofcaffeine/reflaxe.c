@@ -67,7 +67,7 @@ private function drawPresentation(camera:Camera3D, asset:String, cellIndex:Int, 
 		itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool, terrainTexture:Texture2D,
 		terrainTextureReady:Bool):Bool {
 	if (asset == "entities" && entityTextureReady) {
-		CaxecraftAtlas.drawWorldSprite(camera, entityTexture, cellIndex, position, 0.82, 1.16);
+		CaxecraftAtlas.drawEntitySprite(camera, entityTexture, cellIndex, position, 0.82, 1.16);
 		return true;
 	}
 	if (asset == "items" && itemTextureReady) {

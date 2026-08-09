@@ -1616,7 +1616,7 @@ final class CaxecraftApp {
 		for (index in 0...level.dialogueActorCount()) {
 			final actor = dialogueActors[index];
 			if (entityTextureReady)
-				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, level.dialogueActorPresentationCellAt(index),
+				CaxecraftAtlas.drawEntitySprite(camera, entityTexture, level.dialogueActorPresentationCellAt(index),
 					Vector3.fromFloat(actor.body.x, actor.body.y + 0.76, actor.body.z), 0.95, 1.52);
 			else {
 				Raylib.DrawCube(Vector3.fromFloat(actor.body.x, actor.body.y + 0.54, actor.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
@@ -1629,7 +1629,7 @@ final class CaxecraftApp {
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
 			if (entityTextureReady)
-				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, enemyCell, Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05,
+				CaxecraftAtlas.drawEntitySprite(camera, entityTexture, enemyCell, Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05,
 					0.96);
 			else {
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.30, enemy.body.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),

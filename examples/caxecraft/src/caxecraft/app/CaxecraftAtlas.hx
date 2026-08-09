@@ -2,6 +2,11 @@ package caxecraft.app;
 
 #if c
 import caxecraft.gameplay.ItemKind;
+import caxecraft.app.AtlasLayout.entityAtlasCellIsValid;
+import caxecraft.app.AtlasLayout.entityAtlasColumn;
+import caxecraft.app.AtlasLayout.entityAtlasColumns;
+import caxecraft.app.AtlasLayout.entityAtlasRow;
+import caxecraft.app.AtlasLayout.entityAtlasRows;
 import raylib.Camera3D;
 import raylib.Color;
 import raylib.Rlgl;
@@ -29,13 +34,21 @@ enum HudGlyph {
  * inventory rules or game loop.
  */
 final class CaxecraftAtlas {
-	/** Draw one manifest-validated cell from the checked-in 4x4 entity atlas. */
+	/** Draw one cell from a checked-in 4x4 item or material atlas. */
 	public static function drawWorldSprite(camera:Camera3D, texture:Texture2D, cellIndex:Int, position:Vector3, width:Float, height:Float):Void {
 		if (cellIndex < 0 || cellIndex >= 16)
 			return;
 		final column = cellIndex % 4;
 		final row = Std.int(cellIndex / 4);
 		CaxecraftTextures.drawAtlasBillboard(camera, texture, column, row, 4, 4, position, width, height, CaxecraftPalette.textureTint());
+	}
+
+	/** Draw exactly one manifest-validated cell from the 4x5 entity atlas. */
+	public static function drawEntitySprite(camera:Camera3D, texture:Texture2D, cellIndex:Int, position:Vector3, width:Float, height:Float):Void {
+		if (!entityAtlasCellIsValid(cellIndex))
+			return;
+		CaxecraftTextures.drawAtlasBillboard(camera, texture, entityAtlasColumn(cellIndex), entityAtlasRow(cellIndex), entityAtlasColumns(),
+			entityAtlasRows(), position, width, height, CaxecraftPalette.textureTint());
 	}
 
 	/**

@@ -385,7 +385,7 @@ void hxc_caxecraft_app_CaxecraftApp_drawActors(struct Camera3D hxc_l_camera, str
       }
       double hxc_l_tmp_record_field_load_result_n13 = hxc_l_actor.hxc_body.hxc_x;
       double hxc_l_tmp_load_result_n14 = hxc_l_y_h20d5daea5e54;
-      hxc_caxecraft_app_CaxecraftAtlas_drawWorldSprite(hxc_l_camera, hxc_l_entityTexture, hxc_l_tmp_array_get_result_n11.hxc_presentationCellIndex, (struct Vector3){ .x = (float)hxc_l_tmp_record_field_load_result_n13, .y = (float)hxc_l_tmp_load_result_n14, .z = (float)hxc_l_z_h71bf271acc09 }, 0.95, 1.52);
+      hxc_caxecraft_app_CaxecraftAtlas_drawEntitySprite(hxc_l_camera, hxc_l_entityTexture, hxc_l_tmp_array_get_result_n11.hxc_presentationCellIndex, (struct Vector3){ .x = (float)hxc_l_tmp_record_field_load_result_n13, .y = (float)hxc_l_tmp_load_result_n14, .z = (float)hxc_l_z_h71bf271acc09 }, 0.95, 1.52);
     }
     else
     {
@@ -413,7 +413,7 @@ void hxc_caxecraft_app_CaxecraftApp_drawActors(struct Camera3D hxc_l_camera, str
       double hxc_l_y_hce02091a3278 = hxc_l_enemy.hxc_body.hxc_y + 0.48;
       double hxc_l_z_h01979b7e385c = hxc_l_enemy.hxc_body.hxc_z;
       double hxc_l_tmp_load_result_n46 = hxc_l_y_hce02091a3278;
-      hxc_caxecraft_app_CaxecraftAtlas_drawWorldSprite(hxc_l_camera, hxc_l_entityTexture, hxc_l_enemyCell, (struct Vector3){ .x = (float)hxc_l_enemy.hxc_body.hxc_x, .y = (float)hxc_l_tmp_load_result_n46, .z = (float)hxc_l_z_h01979b7e385c }, 1.05, 0.96);
+      hxc_caxecraft_app_CaxecraftAtlas_drawEntitySprite(hxc_l_camera, hxc_l_entityTexture, hxc_l_enemyCell, (struct Vector3){ .x = (float)hxc_l_enemy.hxc_body.hxc_x, .y = (float)hxc_l_tmp_load_result_n46, .z = (float)hxc_l_z_h01979b7e385c }, 1.05, 0.96);
     }
     else
     {

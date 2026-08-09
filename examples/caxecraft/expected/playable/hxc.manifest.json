@@ -507,12 +507,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "c5e65200acd30d3169883174a3485c01d8d8d37fed59973241dea4d9c1cb2cd1",
+      "sha256": "cb20c158a1786bb962466d0a9be20776fa8ee546bb2cce4c9f58921784bcf43c",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "f1df2dbc9b5a7b389024c670d0640d1753792534bfdd3733fe6876f5332a20df",
+      "sha256": "feebe2e73d7640ce9ad2bfb6780d59ef32e418c5ab408a72f7534225994162ff",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -522,7 +522,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "2c4ef9567edc133202f7a971882ea426b7f241c8fb850167f5d92bd2572cf4f1",
+      "sha256": "5d0b780615b5b8e4a56bfca1c5945e87dfe7f8f54e10a3216ee395561a6b6323",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -562,7 +562,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "b8f1b903bdfe45de007227a954e3ee56a30b0d02cd2926e8bd97d35c48981617",
+      "sha256": "e3e45a07c5a9ce39514a083d250c19630e7a1b3471d1f8610828907c4903fc44",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
       "kind": "private-header"
     },
@@ -1572,12 +1572,12 @@
       "kind": "source"
     },
     {
-      "sha256": "7e2f5a186bace88943b879200982c8f517bcf94b0ed98dcf5279c8b42fb806f3",
+      "sha256": "a55512ed95a6cc3257e8e24dd4e0b350adf21c4b39490b3285646d9fc0797338",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
     {
-      "sha256": "a582dfef5481ce3666cb8d7dc2fa7e80b8408bd1022f347aabc74de0a5c56280",
+      "sha256": "c41e2fd6729069d39965e6da38138a6d555589fec3f66703525d2a9e73ae0a43",
       "path": "src/modules/caxecraft/app/CaxecraftAtlas.c",
       "kind": "source"
     },
@@ -1617,7 +1617,7 @@
       "kind": "source"
     },
     {
-      "sha256": "2419632ad9bbe8395af3bf7fccf1da42dc77f8eb320d052972393ad4d89f28a6",
+      "sha256": "402ff909e42b760a6184450309842de7494b70948ecbace7cb5e61b997f850c9",
       "path": "src/modules/caxecraft/app/StatefulObjectRenderer.c",
       "kind": "source"
     },

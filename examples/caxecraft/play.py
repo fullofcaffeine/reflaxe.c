@@ -2577,11 +2577,13 @@ def validate_generated_playable(
             f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 9"
         )
     billboard_count = combined.count("DrawBillboardRec(")
-    # Actors use one entity-atlas borrow. Authored world items add one branch
-    # for each admitted item atlas; all three remain typed by-value raylib calls.
-    if billboard_count != 3:
+    # Actors and entity-backed stateful objects share one explicit 4x5 entity
+    # borrow. Generic 4x4 stateful sprites retain a separate borrow, and
+    # authored world items add one branch for each admitted item atlas. All four
+    # remain typed by-value raylib calls with independently checked grid owners.
+    if billboard_count != 4:
         raise PlayFailure(
-            f"generated Caxecraft sources contain {billboard_count} direct DrawBillboardRec call sites; expected three typed atlas borrows"
+            f"generated Caxecraft sources contain {billboard_count} direct DrawBillboardRec call sites; expected four typed atlas borrows"
         )
     # Application code may call the exact compiler-selected `hxrt_*` API for
     # ordinary Haxe semantics. It must not bypass that typed ownership boundary

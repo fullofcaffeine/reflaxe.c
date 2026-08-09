@@ -1,5 +1,11 @@
 package caxecraft.qa;
 
+import caxecraft.app.AtlasLayout.entityAtlasCellCount;
+import caxecraft.app.AtlasLayout.entityAtlasCellIsValid;
+import caxecraft.app.AtlasLayout.entityAtlasColumn;
+import caxecraft.app.AtlasLayout.entityAtlasColumns;
+import caxecraft.app.AtlasLayout.entityAtlasRow;
+import caxecraft.app.AtlasLayout.entityAtlasRows;
 import caxecraft.app.MotionInterpolation.advance;
 import caxecraft.app.MotionInterpolation.reset;
 import caxecraft.app.MotionInterpolation.sample;
@@ -59,6 +65,19 @@ function selfCheck():Int {
 	final invalidClock = sample(history, 0.04, 0.0);
 	if (!near(invalidClock.x, -30.0) || !near(invalidClock.y, 40.0) || !near(invalidClock.z, 70.0))
 		return 8;
+
+	// The reviewed entity atlas is 1024x1280 with 4x5 square cells. Nia starts
+	// the second row at index 4; the Fallskeeper occupies the admitted fifth row.
+	if (entityAtlasColumns() != 4 || entityAtlasRows() != 5 || entityAtlasCellCount() != 20)
+		return 9;
+	if (entityAtlasColumn(4) != 0 || entityAtlasRow(4) != 1)
+		return 10;
+	if (entityAtlasColumn(19) != 3 || entityAtlasRow(19) != 4)
+		return 11;
+	if (!entityAtlasCellIsValid(0) || !entityAtlasCellIsValid(19) || entityAtlasCellIsValid(-1) || entityAtlasCellIsValid(20))
+		return 12;
+	if (Std.int(1024 / entityAtlasColumns()) != 256 || Std.int(1280 / entityAtlasRows()) != 256)
+		return 13;
 	return 0;
 }
 
