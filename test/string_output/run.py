@@ -26,7 +26,7 @@ RUNTIME_CATALOG = ROOT / "runtime/hxrt/features.json"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 TOOLCHAINS = ("gcc", "clang")
 EXPECTED_STDOUT = b"ASCII\n" + "é🙂\n".encode() + b"embedded\x00NUL\nMain.hx:9: traced\n"
-EXPECTED_RUNTIME_STRING_STDOUT = b"runtime-1\nborrowed\nonce\n"
+EXPECTED_RUNTIME_STRING_STDOUT = b"runtime-1\nborrowed\nselected=chosen\nselected=fallback\nonce\n"
 EXPECTED_FEATURES = ["runtime-base", "status", "string-literal", "io"]
 EXPECTED_RUNTIME_ARTIFACTS = [
     "runtime/include/hxrt/base.h",

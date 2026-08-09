@@ -9764,14 +9764,10 @@ private class FunctionBuilder {
 		final rightMapping = bodyValueType(right.t, right.pos, "TBinop(String-concat:right-type)");
 		var leftValue = lowerStringConcatOperand(left, leftMapping, resultMapping, "TBinop(String-concat:left)");
 		leftValue = stabilizeFreshManagedString(leftValue, left.pos, "string-concat-left");
-		final stableLeftValue = if (expressionCreatesFlow(right)) {
-			final localId = createFlowLocal(leftMapping, leftValue.id, sourceSpan(left.pos), "string-concat-left");
-			loadPlace({place: IRPLocal(localId), mapping: leftMapping, mutable: false}, left.pos, "string-concat-left-load");
-		} else {
-			leftValue;
-		}
+		final stagedLeft = stageFlowValue(leftValue, left, expressionCreatesFlow(right), "string-concat-left");
 		var rightValue = lowerStringConcatOperand(right, rightMapping, resultMapping, "TBinop(String-concat:right)");
 		rightValue = stabilizeFreshManagedString(rightValue, right.pos, "string-concat-right");
+		final stableLeftValue = restoreStagedLoweredValue(stagedLeft, "string-concat-left-load");
 		return lowerManagedStringConcatValues(expression, stableLeftValue, rightValue, resultMapping, "string-concat");
 	}
 

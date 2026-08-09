@@ -19,10 +19,17 @@ class Main {
 		return "runtime-" + Std.string(evaluationCount);
 	}
 
+	/** Keep the conditional result alive across the outer concatenation join. */
+	static function selectedLabel(primary:Bool):String {
+		return "selected=" + (primary ? "chosen" : "fallback");
+	}
+
 	/** Print borrowed and fresh values, then expose the evaluation count. */
 	static function main():Void {
 		Sys.println(nextValue());
 		printValue("borrowed");
+		printValue(selectedLabel(true));
+		printValue(selectedLabel(false));
 		if (evaluationCount == 1)
 			Sys.println("once");
 		else
