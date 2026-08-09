@@ -75,10 +75,18 @@ enum FlowPresentationEvent {
 	EffectRequested(effect:ContentId, objectId:Null<ScenarioId>);
 }
 
-/** Complete observable result of one fixed CaxeFlow tick. */
+/**
+	Complete observable result of one fixed CaxeFlow tick.
+
+	`activeObjective` is the first active objective in authored order after a
+	successful tick. It is null when no objective is active. A diagnostic also
+	forces it to null, so presentation cannot accidentally publish a partially
+	executed action prefix; consumers must inspect `diagnostics` first.
+**/
 typedef FlowTickResult = {
 	final tick:FlowTick;
 	final firedRules:Array<ScenarioId>;
 	final presentation:Array<FlowPresentationEvent>;
+	final activeObjective:Null<ScenarioId>;
 	final diagnostics:Array<FlowRuntimeDiagnostic>;
 }

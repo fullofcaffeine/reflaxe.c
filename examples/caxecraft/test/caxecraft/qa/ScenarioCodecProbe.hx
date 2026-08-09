@@ -44,7 +44,8 @@ final class ScenarioCodecProbe {
 		final shippedCanonical = File.getBytes("scenarios/first-playable/map.caxemap");
 		final shippedScenario = readValid(shippedCanonical);
 		require(ScenarioWriter.write(shippedScenario).compare(shippedCanonical) == 0, "shipped first-playable CaxeMap did not round-trip byte-identically");
-		require(resolveScenarioMessage(shippedScenario.messages, new LocaleId("es-mx"), new MessageId("nia_welcome")) == "NIA: EL BOSQUE TE ESCUCHA. E: REGALO",
+		require(resolveScenarioMessage(shippedScenario.messages, new LocaleId("es-mx"),
+			new MessageId("guide_welcome")) == "NIA: EL BOSQUE TE ESCUCHA. E: REGALO",
 			"shipped Nia dialogue did not come from the embedded Spanish catalog");
 
 		final malformed = Bytes.alloc(10);

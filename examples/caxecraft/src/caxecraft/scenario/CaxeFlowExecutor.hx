@@ -427,6 +427,7 @@ final class CaxeFlowExecutor {
 			tick: currentTick,
 			firedRules: firedRules,
 			presentation: presentation,
+			activeObjective: hasFailed() ? null : state.activeObjectiveId(),
 			diagnostics: diagnostics
 		};
 

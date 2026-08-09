@@ -129,6 +129,17 @@ function selfCheck():Int {
 		return 102;
 	final flowSession = presentationCandidate.generation().session();
 	final flowActors = presentationCandidate.generation().actorBindings();
+	final initialFlowTick = flowSession.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!initialFlowTick.committed
+		|| initialFlowTick.flow == null
+		|| initialFlowTick.flow.diagnostics.length != 0
+		|| initialFlowTick.flow.activeObjective == null
+		|| initialFlowTick.flow.activeObjective.text() != "objective.marker")
+		return 111;
 	if (flowActors.length != 1 || !flowSession.interactWithActor(flowActors[0].entityId))
 		return 106;
 	final flowTick = flowSession.tick({
@@ -139,7 +150,12 @@ function selfCheck():Int {
 	if (!flowTick.committed || flowTick.flow == null)
 		return 107;
 	final flow = flowTick.flow;
-	if (flow.firedRules.length != 1 || flow.firedRules[0].text() != "rule.fixture-advance" || flow.presentation.length != 2)
+	if (flow.firedRules.length != 1
+		|| flow.firedRules[0].text() != "rule.fixture-advance"
+		|| flow.presentation.length != 2
+		|| flow.diagnostics.length != 0
+		|| flow.activeObjective == null
+		|| flow.activeObjective.text() != "objective.next")
 		return 108;
 	switch flow.presentation[0] {
 		case FlowPresentationEvent.ObjectiveChanged(id, Complete) if (id.text() == "objective.marker"):

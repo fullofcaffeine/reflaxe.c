@@ -1844,7 +1844,7 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
       }
       hxc_l_tmp_instance_call_argument_0_owner_n14 = (struct hxc_caxecraft_scenario_FlowTickInput){ .hxc_events = hxc_l_tmp_record_field_events_owned_load_result_n31, .hxc_positions = hxc_l_tmp_array_create_result_n32 };
       struct hxc_caxecraft_scenario_FlowTickResult hxc_l_tmp_instance_call_result_n35 = hxc_caxecraft_scenario_CaxeFlowExecutor_runTick(hxc_l_tmp_load_result_n29, hxc_l_tmp_instance_call_argument_0_owner_n14);
-      hxc_optional_d3b7e5a2_destroy(&hxc_l_flowResult);
+      hxc_optional_b8d3265c_destroy(&hxc_l_flowResult);
       hxc_l_flowResult = (struct hxc_optional_caxecraft_scenario_FlowTickResult){ .hxc_has_value = true, .hxc_value = hxc_l_tmp_instance_call_result_n35 };
       struct hxc_array_ref *hxc_l_tmp_class_field_load_result_n37 = (*hxc_l_self).hxc_pendingFlowEvents;
       if (hxc_l_tmp_class_field_load_result_n37 == NULL)
@@ -1864,13 +1864,13 @@ struct hxc_caxecraft_domain_GameTickResult hxc_caxecraft_domain_GameSession_tick
   int32_t hxc_l_tmp_record_field_load_result_n41 = hxc_l_characterResult.hxc_drowningDamage;
   struct hxc_caxecraft_domain_WaterTickResult hxc_l_tmp_load_result_n42 = hxc_l_waterResult;
   struct hxc_optional_caxecraft_scenario_FlowTickResult hxc_l_tmp_record_field_flow_owner_n15 = hxc_l_flowResult;
-  if (hxc_optional_d3b7e5a2_retain(&hxc_l_tmp_record_field_flow_owner_n15) != HXC_STATUS_OK)
+  if (hxc_optional_b8d3265c_retain(&hxc_l_tmp_record_field_flow_owner_n15) != HXC_STATUS_OK)
   {
     abort();
   }
   struct hxc_optional_caxecraft_scenario_FlowTickResult hxc_l_tmp_record_field_flow_owned_load_result_n44 = hxc_l_tmp_record_field_flow_owner_n15;
   bool hxc_l_tmp_load_result_n45 = hxc_l_committed;
-  hxc_optional_d3b7e5a2_destroy(&hxc_l_flowResult);
+  hxc_optional_b8d3265c_destroy(&hxc_l_flowResult);
   if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
   {
     abort();

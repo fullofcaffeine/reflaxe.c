@@ -171,6 +171,20 @@ final class CaxeFlowState {
 		return objective == null ? null : objective.state;
 	}
 
+	/**
+		Select the first active objective in the order authored by the scenario.
+
+		Several objectives may be active at once. Returning one deterministic ID lets
+		presentation show a compact current objective without reconstructing state from
+		the order of change events. Null means that no objective is currently active.
+	**/
+	public function activeObjectiveId():Null<ScenarioId> {
+		for (objective in objectives)
+			if (objective.state == Active)
+				return objective.id;
+		return null;
+	}
+
 	public function setObjectiveState(id:ScenarioId, value:ObjectiveState):Bool {
 		final objective = findObjective(id);
 		if (objective == null)

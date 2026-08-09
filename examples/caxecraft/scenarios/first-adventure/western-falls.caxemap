@@ -16,6 +16,8 @@ locale en
   message guide_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
   message guide_talk "E  TALK TO NIA"
   message guide_welcome "NIA: THE FALLS MARK A SEALED WAY WEST"
+  message objective_meet_nia_body "NIA IS WAITING BESIDE THE FALLS."
+  message objective_meet_nia_title "ASK NIA ABOUT THE SEALED WAY"
   message pickup_many "+2 BERRIES"
   message pickup_one "+1 BERRY"
   message player_fallen "HAXIRIO HAS FALLEN"
@@ -37,6 +39,8 @@ locale es-mx
   message guide_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
   message guide_talk "E  HABLAR CON NIA"
   message guide_welcome "NIA: LAS CATARATAS MARCAN UN CAMINO SELLADO"
+  message objective_meet_nia_body "NIA ESPERA JUNTO A LAS CATARATAS."
+  message objective_meet_nia_title "PREGUNTA A NIA POR EL CAMINO SELLADO"
   message pickup_many "+2 BAYAS"
   message pickup_one "+1 BAYA"
   message player_fallen "HAXIRIO HA CAIDO"
@@ -814,7 +818,16 @@ end object
 dialogue dialogue.nia.welcome
   line speaker guide.nia message guide_welcome
 end dialogue
-objective objective.western-falls active title message adventure_progress
+objective objective.find-tideweave hidden title message adventure_progress
   body message adventure_tagline
 end objective
+objective objective.meet-nia active title message objective_meet_nia_title
+  body message objective_meet_nia_body
+end objective
+rule rule.nia-opens-the-western-route priority 100 once
+  when interact guide.nia
+  if (always)
+  do objective objective.meet-nia complete
+  do objective objective.find-tideweave active
+end rule
 end-map

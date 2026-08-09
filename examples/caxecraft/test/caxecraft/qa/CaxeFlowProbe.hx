@@ -43,6 +43,9 @@ final class CaxeFlowProbe {
 	static final DIALOGUE = id("dialogue.ivvy");
 	static final JOURNAL = id("journal.bridge");
 	static final OBJECTIVE = id("objective.bridge");
+	static final FIRST_OBJECTIVE = id("objective.first");
+	static final SECOND_OBJECTIVE = id("objective.second");
+	static final THIRD_OBJECTIVE = id("objective.third");
 	static final FLAG = id("map.flag");
 	static final COUNTER = id("map.counter");
 	static final FOLLOW_COUNT = id("map.follow-count");
@@ -68,7 +71,50 @@ final class CaxeFlowProbe {
 		checkTickEdges();
 		checkBudgets();
 		checkScheduledFailurePolicy();
+		checkActiveObjectiveProjection();
 		Sys.println('caxeflow: 10 events, 12 predicates, 18 actions; stable order/repeat/defer/sequence/budgets; trace=$forward');
+	}
+
+	/**
+		Prove the HUD-facing objective is derived from complete authored state.
+
+		More than one objective can be active while rules run. The first active
+		objective in authored order is the deterministic public choice. Completing or
+		failing that objective must reveal an objective that was already active; an
+		unrelated presentation event must not change the choice.
+	**/
+	static function checkActiveObjectiveProjection():Void {
+		final source = scenario({
+			variables: [],
+			sequences: [],
+			rules: [
+				rule("rule.complete-second", 0, Once, Interact(BRIDGE), Always, [ShowDialogue(DIALOGUE), SetObjective(SECOND_OBJECTIVE, Complete)]),
+				rule("rule.fail-third", 0, Once, UseItem(PICK), Always, [SetObjective(THIRD_OBJECTIVE, Failed)]),
+				rule("rule.activate-first", 0, Once, SignalReceived(SIGNAL), Always, [SetObjective(FIRST_OBJECTIVE, Active)])
+			]
+		});
+		source.story.objectives.resize(0);
+		source.story.objectives.push(objective(FIRST_OBJECTIVE, Hidden));
+		source.story.objectives.push(objective(SECOND_OBJECTIVE, Active));
+		source.story.objectives.push(objective(THIRD_OBJECTIVE, Active));
+		final executor = new CaxeFlowExecutor(source);
+
+		final initial = executor.runTick({events: [], positions: []});
+		requireNoDiagnostic(initial, "initial objective projection");
+		require(objectiveName(initial) == SECOND_OBJECTIVE.text(), "initial projection ignored authored objective order");
+
+		final fallback = executor.runTick({events: [Interact(BRIDGE)], positions: []});
+		requireNoDiagnostic(fallback, "completed objective fallback");
+		require(hasPresentation(fallback, "dialogue"), "unrelated presentation event was not exercised");
+		require(objectiveName(fallback) == THIRD_OBJECTIVE.text(), "completing the selected objective did not reveal an already-active objective");
+
+		final empty = executor.runTick({events: [UseItem(PICK)], positions: []});
+		requireNoDiagnostic(empty, "failed objective fallback");
+		require(objectiveName(empty) == "", "projection retained an objective after every objective became inactive");
+
+		final reactivated = executor.runTick({events: [SignalReceived(SIGNAL)], positions: []});
+		requireNoDiagnostic(reactivated, "reactivated objective projection");
+		require(objectiveName(reactivated) == FIRST_OBJECTIVE.text(), "projection did not publish a newly active objective");
 	}
 
 	static function runCoverage(reverseRules:Bool):String {
@@ -294,6 +340,7 @@ final class CaxeFlowProbe {
 			actionFlood.push(PlayEffect(SPARK, null));
 		final actionResult = expectActionLimit(actionFlood, Actions, ScenarioLimits.MAX_ACTIONS_PER_TICK);
 		require(actionResult.presentation.length == ScenarioLimits.MAX_ACTIONS_PER_TICK, "action-budget failure did not preserve the exact completed prefix");
+		require(actionResult.activeObjective == null, "action-budget failure published a partial active-objective projection");
 
 		final emptySequence:FlowSequence = {id: id("sequence.empty"), parameters: [], actions: []};
 		final callFlood:Array<FlowAction> = [];
@@ -458,6 +505,14 @@ final class CaxeFlowProbe {
 	static function choice(weight:Int, actions:Array<FlowAction>):FlowChoice
 		return {weight: weight, actions: actions};
 
+	static function objective(objectiveId:ScenarioId, state:ObjectiveState):caxecraft.scenario.ScenarioStory.ScenarioObjective
+		return {
+			id: objectiveId,
+			title: ScenarioText.Literal(objectiveId.text()),
+			body: ScenarioText.Literal(objectiveId.text()),
+			initialState: state
+		};
+
 	static function position(objectId:ScenarioId, x:Int, y:Int, z:Int):caxecraft.scenario.CaxeFlowRuntime.FlowPosition
 		return {
 			objectId: objectId,
@@ -482,6 +537,11 @@ final class CaxeFlowProbe {
 		for (ruleId in result.firedRules)
 			names.push(ruleId.text());
 		return names.join(",");
+	}
+
+	static function objectiveName(result:FlowTickResult):String {
+		final active = result.activeObjective;
+		return active == null ? "" : active.text();
 	}
 
 	static function hasPresentation(result:FlowTickResult, expected:String):Bool {

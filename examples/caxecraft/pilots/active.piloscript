@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name adventure-journey
-frames 350
+frames 351
 
 # Move from Creative to Adventure, then open the staged campaign.
 action 0 menu-next
@@ -23,41 +23,45 @@ action 3 menu-confirm
 expect 3 screen playing
 expect 3 mode adventure
 expect 3 level western-falls
-expect 3 objective objective.western-falls
+expect 3 objective objective.meet-nia
 expect 3 generation 2
 expect 3 publications 1
 
-# Leave the Falls spawn, open the sand seam, and reach the lower cache.
-hold 4 91 forward-left
-hold 92 97 look-left
-action 98 mine
-hold 99 134 forward-rise
-hold 135 150 rise
+# Ask Nia about the sealed route, then leave the Falls spawn.
+action 4 interact
+expect 8 objective objective.find-tideweave
+
+# Open the sand seam and reach the lower cache.
+hold 5 92 forward-left
+hold 93 98 look-left
+action 99 mine
+hold 100 135 forward-rise
+hold 136 151 rise
 
 # At this point the route has opened the sand seam and equipped Tideweave.
-expect 152 sand 1
-expect 152 position 5,3,21
+expect 153 sand 1
+expect 153 position 5,3,21
 
 # Cross the opened lower cache, equip Tideweave, and enter the flooded grotto.
-hold 151 166 right
-expect 170 equipment caxecraft:tideweave-suit
-expect 170 sand 1
-hold 171 226 backward
-hold 227 310 left-descend
-expect 311 equipment caxecraft:tideweave-suit
-expect 311 lanterns 2
-expect 311 sand 1
-expect 311 medium submerged
-expect 311 position 13,3,25
-hold 311 342 right-rise
+hold 152 167 right
+expect 171 equipment caxecraft:tideweave-suit
+expect 171 sand 1
+hold 172 227 backward
+hold 228 311 left-descend
+expect 312 equipment caxecraft:tideweave-suit
+expect 312 lanterns 2
+expect 312 sand 1
+expect 312 medium submerged
+expect 312 position 13,3,25
+hold 312 343 right-rise
 
-checkpoint 348 capture final
-expect 348 screen playing
-expect 348 level western-falls
-expect 348 objective objective.western-falls
-expect 348 equipment caxecraft:tideweave-suit
-expect 348 lanterns 2
-expect 348 sand 1
-expect 348 medium dry
-expect 348 position 13,6,22
+checkpoint 349 capture final
+expect 349 screen playing
+expect 349 level western-falls
+expect 349 objective objective.find-tideweave
+expect 349 equipment caxecraft:tideweave-suit
+expect 349 lanterns 2
+expect 349 sand 1
+expect 349 medium dry
+expect 349 position 13,6,22
 end

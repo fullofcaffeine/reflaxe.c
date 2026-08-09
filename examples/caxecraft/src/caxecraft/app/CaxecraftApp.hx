@@ -66,8 +66,6 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldView;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.LocaleId;
-import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
-import caxecraft.scenario.ScenarioStory.ObjectiveState;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
@@ -956,21 +954,17 @@ final class CaxecraftApp {
 					if (flow.firedRules.length > 0)
 						flowRuleObserved = true;
 					#end
-					for (event in flow.presentation)
-						switch event {
-							case FlowPresentationEvent.ObjectiveChanged(id, state):
-								#if caxecraft_pilot
-								objectiveChangeObserved = true;
-								#end
-								switch state {
-									case ObjectiveState.Active:
-										currentObjectiveId = id;
-									case ObjectiveState.Hidden | ObjectiveState.Complete | ObjectiveState.Failed:
-										final current = currentObjectiveId;
-										if (current != null && current.text() == id.text()) currentObjectiveId = null;
-								}
-							case _:
-						}
+					if (flow.diagnostics.length == 0) {
+						#if caxecraft_pilot
+						final beforeObjective = currentObjectiveId;
+						final afterObjective = flow.activeObjective;
+						if ((beforeObjective == null && afterObjective != null)
+							|| (beforeObjective != null && afterObjective == null)
+							|| (beforeObjective != null && afterObjective != null && beforeObjective.text() != afterObjective.text()))
+							objectiveChangeObserved = true;
+						#end
+						currentObjectiveId = flow.activeObjective;
+					}
 				}
 				#if caxecraft_pilot
 				if (pilotName == PilotScriptName.AquaticGear) {
