@@ -4,6 +4,8 @@ import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.GameInputFrame.GameInputFrames;
 import caxecraft.pilot.GameInputSource;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
+import caxecraft.pilot.PilotCatalog.PilotExecutionKind;
+import caxecraft.pilot.PilotCatalog.allPilotMetadata;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
 import caxecraft.gameplay.Inventory;
@@ -11,21 +13,18 @@ import caxecraft.gameplay.Inventory;
 /** Focused acceptance proof for the target-neutral game-pilot contract. */
 final class PilotProbe {
 	static function main():Void {
+		var scripts = 0;
 		var sampledFrames = 0;
 		var checkpoints = 0;
 
-		sampledFrames += checkBounded(PilotScriptName.LaunchSmoke, 4);
-		sampledFrames += checkBounded(PilotScriptName.MoveJumpEdit, 14);
-		sampledFrames += checkBounded(PilotScriptName.PauseRecapture, 7);
-		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 40);
-		sampledFrames += checkBounded(PilotScriptName.RecoveryUse, 4);
-		sampledFrames += checkBounded(PilotScriptName.FullInventoryGift, 4);
-		sampledFrames += checkBounded(PilotScriptName.FullInventoryMining, 7);
-		sampledFrames += checkBounded(PilotScriptName.ResizeLayout, 6);
-		sampledFrames += checkBounded(PilotScriptName.AquaticGear, 150);
-		sampledFrames += checkBounded(PilotScriptName.SmoothMotion, 12);
-		sampledFrames += checkBounded(PilotScriptName.EditorShell, 4);
-		sampledFrames += checkBounded(PilotScriptName.CampaignTravel, 5);
+		final seenScripts:Map<Int, Bool> = [];
+		for (metadata in allPilotMetadata()) {
+			if (metadata.execution != PilotExecutionKind.Compiled || seenScripts.exists(metadata.scriptCode))
+				continue;
+			seenScripts.set(metadata.scriptCode, true);
+			scripts++;
+			sampledFrames += checkBounded(metadata.script);
+		}
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
@@ -40,12 +39,12 @@ final class PilotProbe {
 		checkpoints += checkCampaignTravel();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 12 compiled scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: $scripts compiled scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
-	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
+	static function checkBounded(name:PilotScriptName):Int {
 		final stableName = PilotScript.stableName(name);
-		require(PilotScript.frameLimit(name) == expectedLimit, '$stableName changed its frame limit');
+		final expectedLimit = PilotScript.frameLimit(name);
 		require(PilotScript.frameLimit(name) <= PilotScript.ABSOLUTE_FRAME_LIMIT, '$stableName exceeded the absolute limit');
 		var frame = 0;
 		while (frame < expectedLimit + 3) {

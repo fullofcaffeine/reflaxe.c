@@ -520,7 +520,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "a4f1e312eb69ff352a1476f72c479ae661aa1e34c6cc6d951b9e08aa9eb5bde7",
+      "sha256": "93867cbb02becd75a0cab1f901cd0918062d3efcc723546e8189fbaa7133bac0",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },

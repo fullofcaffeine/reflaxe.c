@@ -3,17 +3,22 @@
 
 from __future__ import annotations
 
+import io
+import json
 import re
 import struct
 import subprocess
 import sys
 import tempfile
 import zlib
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 CASE = Path(__file__).resolve().parent
 ROOT = CASE.parents[1]
 PILOT = CASE / "src/caxecraft/pilot"
+PILOT_CATALOG_SOURCE = PILOT / "PilotCatalog.hx"
+PILOT_CATALOG = CASE / "pilot-catalog.json"
 APP_SCREEN = CASE / "src/caxecraft/app/AppScreen.hx"
 MOTION_INTERPOLATION = CASE / "src/caxecraft/app/MotionInterpolation.hx"
 HUD_VIEW = CASE / "src/caxecraft/app/HudView.hx"
@@ -30,13 +35,10 @@ from run import (  # noqa: E402
     resolve_haxe_arguments,
     verify_pinned_haxe,
 )
+import run as domain_runner  # noqa: E402
 import play as playable  # noqa: E402
 import benchmark_renderer as renderer_benchmark  # noqa: E402
 
-EXPECTED_TRACE = (
-    "caxecraft-pilot: 12 compiled scripts, 257 deterministic frames, 14 checkpoints; "
-    "bounded quit and shared input interface\n"
-)
 FORBIDDEN_PILOT_TEXT = (
     re.compile(r"#if\b"),
     re.compile(r"\bDynamic\b"),
@@ -52,6 +54,94 @@ FORBIDDEN_PILOT_TEXT = (
 
 class PilotFailure(RuntimeError):
     pass
+
+
+def check_pilot_catalog_authority() -> None:
+    """Require one Haxe-owned pilot catalog and its checked host manifest."""
+    if not PILOT_CATALOG_SOURCE.is_file():
+        raise PilotFailure(
+            "pilot metadata has no Haxe catalog authority at "
+            f"{PILOT_CATALOG_SOURCE.relative_to(ROOT)}"
+        )
+    if not PILOT_CATALOG.is_file():
+        raise PilotFailure(
+            "pilot metadata has no generated host manifest at "
+            f"{PILOT_CATALOG.relative_to(ROOT)}"
+        )
+    installation = pinned_haxe_installation()
+    verify_pinned_haxe(installation)
+    arguments = resolve_haxe_arguments(("pilot-catalog.hxml",), locale="C")
+    result = subprocess.run(
+        [str(installation.compiler), *arguments],
+        cwd=CASE,
+        env=pinned_haxe_environment("C", installation),
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=30,
+    )
+    expected = f"caxecraft-pilot-catalog: OK: {len(playable.PILOT_CATALOG)} Haxe-owned pilot records\n"
+    if result.returncode != 0 or result.stdout != expected or result.stderr:
+        raise PilotFailure(
+            "Haxe-owned pilot catalog is stale or invalid:\n"
+            f"exit:            {result.returncode}\n"
+            f"expected stdout: {expected!r}\n"
+            f"actual stdout:   {result.stdout!r}\n"
+            f"actual stderr:   {result.stderr!r}"
+        )
+
+    runner = Path(playable.__file__).read_text(encoding="utf-8")
+    for obsolete in (
+        "PILOT_SCRIPT_CODES =",
+        "PILOT_FRAME_LIMITS =",
+        "PILOT_SCREENSHOT_NAMES =",
+        "pilot_defines =",
+    ):
+        if obsolete in runner:
+            raise PilotFailure(f"Python restored duplicated pilot metadata through {obsolete!r}")
+
+    with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-pilot-catalog-") as temporary:
+        malformed = Path(temporary) / "pilot-catalog.json"
+        manifest = json.loads(PILOT_CATALOG.read_text(encoding="utf-8"))
+        manifest["pilots"] = [{"id": "unsafe/path"}]
+        malformed.write_text(json.dumps(manifest), encoding="utf-8")
+        try:
+            playable.load_pilot_catalog(malformed)
+        except playable.PlayFailure as error:
+            if "unknown or missing fields" not in str(error):
+                raise PilotFailure(f"malformed pilot catalog failed unclearly: {error}") from error
+        else:
+            raise PilotFailure("host runner admitted malformed pilot metadata")
+
+        manifest["authoritySha256"] = "0" * 64
+        malformed.write_text(json.dumps(manifest), encoding="utf-8")
+        try:
+            playable.load_pilot_catalog(malformed)
+        except playable.PlayFailure as error:
+            if "pilot catalog is stale" not in str(error):
+                raise PilotFailure(f"stale pilot catalog failed unclearly: {error}") from error
+        else:
+            raise PilotFailure("host runner admitted stale Haxe pilot metadata")
+
+
+def check_domain_runner_failure_path() -> None:
+    """Keep a normal domain error inside the runner's documented failure path."""
+    original = domain_runner.validate_asset_pack
+
+    def fail_before_compile(_root: Path) -> None:
+        raise domain_runner.CaxecraftFailure("focused failure-path fixture")
+
+    domain_runner.validate_asset_pack = fail_before_compile
+    stderr = io.StringIO()
+    stdout = io.StringIO()
+    try:
+        with redirect_stderr(stderr), redirect_stdout(stdout):
+            status = domain_runner.main(())
+    finally:
+        domain_runner.validate_asset_pack = original
+    if status != 1 or "caxecraft-domain: ERROR: focused failure-path fixture" not in stderr.getvalue():
+        raise PilotFailure("Caxecraft domain runner no longer reports a controlled pre-compile failure")
 
 
 def png_chunk(kind: bytes, payload: bytes) -> bytes:
@@ -135,8 +225,9 @@ def check_native_telemetry_decoder() -> None:
         # observe its review capture. This keeps the producer diagnosis ahead of
         # the later host-side PNG checks.
         report_words = list(words)
-        report_words[3] = playable.PILOT_SCRIPT_CODES["launch-smoke"]
-        report_words[5] = playable.PILOT_FRAME_LIMITS["launch-smoke"]
+        launch = playable.pilot_metadata("launch-smoke")
+        report_words[3] = launch.script_code
+        report_words[5] = launch.frame_limit
         report_words[27] = 6
         report_words[28] = 0
         report_words[29] = 0
@@ -340,7 +431,11 @@ def check_target_neutral_boundary() -> None:
     # content parser has its own Eval/native contract and deliberately uses
     # managed arrays for author-sized records.
     sources = [
-        *(path for path in PILOT.glob("*.hx") if path.name != "RuntimePilotScript.hx"),
+        *(
+            path
+            for path in PILOT.glob("*.hx")
+            if path.name not in ("PilotCatalog.hx", "RuntimePilotScript.hx")
+        ),
         APP_SCREEN,
         MOTION_INTERPOLATION,
         HUD_VIEW,
@@ -506,11 +601,35 @@ def run_probe(locale: str) -> str:
         encoding="utf-8",
         timeout=30,
     )
-    if result.returncode != 0 or result.stdout != EXPECTED_TRACE or result.stderr:
+    trace = re.fullmatch(
+        r"caxecraft-pilot: (\d+) compiled scripts, (\d+) deterministic frames, "
+        r"(\d+) checkpoints; bounded quit and shared input interface\n",
+        result.stdout,
+    )
+    compiled: dict[int, int] = {}
+    for metadata in playable.PILOT_CATALOG:
+        if metadata.execution != "compiled":
+            continue
+        previous = compiled.get(metadata.script_code)
+        if previous is not None and previous != metadata.frame_limit:
+            raise PilotFailure(
+                f"compiled pilot aliases disagree on script {metadata.script_code} frame bounds"
+            )
+        compiled[metadata.script_code] = metadata.frame_limit
+    expected_scripts = len(compiled)
+    expected_frames = sum(compiled.values())
+    if (
+        result.returncode != 0
+        or trace is None
+        or int(trace.group(1)) != expected_scripts
+        or int(trace.group(2)) != expected_frames
+        or int(trace.group(3)) <= 0
+        or result.stderr
+    ):
         raise PilotFailure(
             f"{locale} pilot probe changed:\n"
             f"exit:            {result.returncode}\n"
-            f"expected stdout: {EXPECTED_TRACE!r}\n"
+            f"expected scripts/frames: {expected_scripts}/{expected_frames}\n"
             f"actual stdout:   {result.stdout!r}\n"
             f"actual stderr:   {result.stderr!r}"
         )
@@ -519,6 +638,8 @@ def run_probe(locale: str) -> str:
 
 def main() -> int:
     try:
+        check_pilot_catalog_authority()
+        check_domain_runner_failure_path()
         check_target_neutral_boundary()
         check_hud_presentation_boundary()
         check_outer_application_boundary()

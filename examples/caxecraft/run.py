@@ -2069,7 +2069,6 @@ def main(argv: Iterable[str] = ()) -> int:
         CFixtureFailure,
         CaxecraftFailure,
         HaxeServerFailure,
-        LocalizationCheckFailure,
         MaintainabilityError,
         OSError,
         UnicodeError,

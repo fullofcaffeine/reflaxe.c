@@ -6,6 +6,9 @@ import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.pilot.GameInputFrame.GameInputFrames;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
+import caxecraft.pilot.PilotCatalog.pilotFrameLimit;
+import caxecraft.pilot.PilotCatalog.pilotScriptCode;
+import caxecraft.pilot.PilotCatalog.pilotStableName;
 
 /** Closed, allocation-free names for deterministic game scripts. */
 enum abstract PilotScriptName(Int) to Int {
@@ -77,7 +80,7 @@ final class PilotScript {
 
 	/** Stable numeric identity carried by native telemetry without a C string. */
 	public static function scriptCode(name:PilotScriptName):Int
-		return name;
+		return pilotScriptCode(name);
 
 	/**
 	 * Hash every scripted input and initial fixture fact for reproducible reports.
@@ -111,57 +114,11 @@ final class PilotScript {
 		return mix(hash, inventory.sand);
 	}
 
-	public static function frameLimit(name:PilotScriptName):Int {
-		if (name == LaunchSmoke)
-			return 4;
-		if (name == MoveJumpEdit)
-			return 14;
-		if (name == PauseRecapture)
-			return 7;
-		if (name == CombatDrop)
-			return 40;
-		if (name == FullInventoryMining)
-			return 7;
-		if (name == ResizeLayout)
-			return 6;
-		if (name == AquaticGear)
-			return 150;
-		if (name == SmoothMotion)
-			return 12;
-		if (name == EditorShell)
-			return 4;
-		if (name == CampaignTravel)
-			return 5;
-		return 4;
-	}
+	public static function frameLimit(name:PilotScriptName):Int
+		return pilotFrameLimit(name);
 
-	public static function stableName(name:PilotScriptName):String {
-		if (name == LaunchSmoke)
-			return "launch-smoke";
-		if (name == MoveJumpEdit)
-			return "move-jump-edit";
-		if (name == PauseRecapture)
-			return "pause-recapture";
-		if (name == CombatDrop)
-			return "combat-drop";
-		if (name == RecoveryUse)
-			return "recovery-use";
-		if (name == FullInventoryGift)
-			return "full-inventory-gift";
-		if (name == FullInventoryMining)
-			return "full-inventory-mining";
-		if (name == AquaticGear)
-			return "aquatic-gear";
-		if (name == SmoothMotion)
-			return "smooth-motion";
-		if (name == EditorShell)
-			return "editor-shell";
-		if (name == CampaignTravel)
-			return "campaign-travel";
-		if (name == RuntimeContentJourney)
-			return "runtime-content-journey";
-		return "resize-layout";
-	}
+	public static function stableName(name:PilotScriptName):String
+		return pilotStableName(name);
 
 	public static function actionAt(name:PilotScriptName, frameNumber:Int):PilotAction {
 		if (frameNumber >= frameLimit(name) - 1)

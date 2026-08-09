@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "authoritySha256": "7f5145c3b9c221d50740e36c8c3ee47ec6fdd59d9318bdc25ed4839874d6257d",
+  "pilots": [
+    {
+      "id": "launch-smoke",
+      "scriptCode": 0,
+      "frameLimit": 4,
+      "haxeDefine": "caxecraft_pilot_launch_smoke",
+      "screenshot": "caxecraft-smoke.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "secondary-locale",
+      "scriptCode": 0,
+      "frameLimit": 4,
+      "haxeDefine": "caxecraft_pilot_secondary_locale",
+      "screenshot": "caxecraft-secondary-locale.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "move-jump-edit",
+      "scriptCode": 1,
+      "frameLimit": 14,
+      "haxeDefine": "caxecraft_pilot_move_jump_edit",
+      "screenshot": "caxecraft-pilot-move.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "pause-recapture",
+      "scriptCode": 2,
+      "frameLimit": 7,
+      "haxeDefine": "caxecraft_pilot_pause_recapture",
+      "screenshot": "caxecraft-pilot-pause.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "combat-drop",
+      "scriptCode": 3,
+      "frameLimit": 40,
+      "haxeDefine": "caxecraft_pilot_combat_drop",
+      "screenshot": "caxecraft-pilot-combat.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "recovery-use",
+      "scriptCode": 4,
+      "frameLimit": 4,
+      "haxeDefine": "caxecraft_pilot_recovery_use",
+      "screenshot": "caxecraft-pilot-recovery.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "full-inventory-gift",
+      "scriptCode": 5,
+      "frameLimit": 4,
+      "haxeDefine": "caxecraft_pilot_full_inventory_gift",
+      "screenshot": "caxecraft-pilot-full-inventory.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "full-inventory-mining",
+      "scriptCode": 6,
+      "frameLimit": 7,
+      "haxeDefine": "caxecraft_pilot_full_inventory_mining",
+      "screenshot": "caxecraft-pilot-full-mining.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "resize-layout",
+      "scriptCode": 7,
+      "frameLimit": 6,
+      "haxeDefine": "caxecraft_pilot_resize_layout",
+      "screenshot": "caxecraft-pilot-resize.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "aquatic-gear",
+      "scriptCode": 8,
+      "frameLimit": 150,
+      "haxeDefine": "caxecraft_pilot_aquatic_gear",
+      "screenshot": "caxecraft-pilot-aquatic-gear.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "smooth-motion",
+      "scriptCode": 9,
+      "frameLimit": 12,
+      "haxeDefine": "caxecraft_pilot_smooth_motion",
+      "screenshot": "caxecraft-pilot-smooth-motion.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "editor-shell",
+      "scriptCode": 10,
+      "frameLimit": 4,
+      "haxeDefine": "caxecraft_pilot_editor_shell",
+      "screenshot": "caxecraft-pilot-editor.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "campaign-travel",
+      "scriptCode": 11,
+      "frameLimit": 5,
+      "haxeDefine": "caxecraft_pilot_campaign_travel",
+      "screenshot": "caxecraft-pilot-campaign-travel.png",
+      "execution": "compiled"
+    },
+    {
+      "id": "adventure-journey",
+      "scriptCode": 12,
+      "frameLimit": 400,
+      "haxeDefine": "caxecraft_pilot_runtime",
+      "screenshot": "caxecraft-pilot-runtime-final.png",
+      "execution": "runtime-content"
+    }
+  ]
+}

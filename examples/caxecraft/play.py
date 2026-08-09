@@ -18,6 +18,7 @@ import sys
 import tempfile
 import time
 import zlib
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Callable
 
@@ -319,58 +320,116 @@ PILOT_TELEMETRY_COLORS = tuple(
     )
     for nibble in range(16)
 )
-PILOT_SCRIPT_CODES = {
-    "launch-smoke": 0,
-    "secondary-locale": 0,
-    "move-jump-edit": 1,
-    "pause-recapture": 2,
-    "combat-drop": 3,
-    "recovery-use": 4,
-    "full-inventory-gift": 5,
-    "full-inventory-mining": 6,
-    "resize-layout": 7,
-    "aquatic-gear": 8,
-    "smooth-motion": 9,
-    "editor-shell": 10,
-    "campaign-travel": 11,
-    "adventure-journey": 12,
-}
-PILOT_FRAME_LIMITS = {
-    "launch-smoke": 4,
-    "secondary-locale": 4,
-    "move-jump-edit": 14,
-    "pause-recapture": 7,
-    "combat-drop": 40,
-    "recovery-use": 4,
-    "full-inventory-gift": 4,
-    "full-inventory-mining": 7,
-    "resize-layout": 6,
-    "aquatic-gear": 150,
-    "smooth-motion": 12,
-    "editor-shell": 4,
-    "campaign-travel": 5,
-}
-RUNTIME_PILOT_MAX_FRAMES = 400
-PILOT_SCREENSHOT_NAMES = {
-    "launch-smoke": "caxecraft-smoke.png",
-    "secondary-locale": "caxecraft-secondary-locale.png",
-    "move-jump-edit": "caxecraft-pilot-move.png",
-    "pause-recapture": "caxecraft-pilot-pause.png",
-    "combat-drop": "caxecraft-pilot-combat.png",
-    "recovery-use": "caxecraft-pilot-recovery.png",
-    "full-inventory-gift": "caxecraft-pilot-full-inventory.png",
-    "full-inventory-mining": "caxecraft-pilot-full-mining.png",
-    "resize-layout": "caxecraft-pilot-resize.png",
-    "aquatic-gear": "caxecraft-pilot-aquatic-gear.png",
-    "smooth-motion": "caxecraft-pilot-smooth-motion.png",
-    "editor-shell": "caxecraft-pilot-editor.png",
-    "campaign-travel": "caxecraft-pilot-campaign-travel.png",
-    "adventure-journey": "caxecraft-pilot-runtime-final.png",
-}
-
-
 class PlayFailure(RuntimeError):
     """The playable could not be built without weakening its contracts."""
+
+
+@dataclass(frozen=True)
+class PilotMetadata:
+    """One validated host record exported from the typed Haxe pilot catalog."""
+
+    id: str
+    script_code: int
+    frame_limit: int
+    haxe_define: str
+    screenshot: str
+    execution: str
+
+
+PILOT_CATALOG_PATH = CASE / "pilot-catalog.json"
+PILOT_CATALOG_AUTHORITY = CASE / "src/caxecraft/pilot/PilotCatalog.hx"
+
+
+def load_pilot_catalog(path: Path) -> tuple[PilotMetadata, ...]:
+    """Load the Haxe-derived pilot manifest and reject every unknown shape."""
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise PlayFailure(f"Caxecraft pilot catalog is unreadable: {error}") from error
+    if not isinstance(raw, dict) or set(raw) != {"schemaVersion", "authoritySha256", "pilots"}:
+        raise PlayFailure(
+            "Caxecraft pilot catalog must contain only schemaVersion, authoritySha256, and pilots"
+        )
+    if raw["schemaVersion"] != 1:
+        raise PlayFailure(f"Caxecraft pilot catalog uses unsupported schema {raw['schemaVersion']!r}")
+    authority_sha256 = raw["authoritySha256"]
+    if not isinstance(authority_sha256, str) or re.fullmatch(r"[0-9a-f]{64}", authority_sha256) is None:
+        raise PlayFailure("Caxecraft pilot catalog has an invalid authority digest")
+    try:
+        actual_authority_sha256 = hashlib.sha256(PILOT_CATALOG_AUTHORITY.read_bytes()).hexdigest()
+    except OSError as error:
+        raise PlayFailure(f"Caxecraft pilot catalog authority is unreadable: {error}") from error
+    if authority_sha256 != actual_authority_sha256:
+        raise PlayFailure(
+            "Caxecraft pilot catalog is stale; run npm run caxecraft:pilot-catalog:refresh"
+        )
+    rows = raw["pilots"]
+    if not isinstance(rows, list) or not rows:
+        raise PlayFailure("Caxecraft pilot catalog must contain at least one pilot")
+
+    pilots: list[PilotMetadata] = []
+    ids: set[str] = set()
+    defines: set[str] = set()
+    screenshots: set[str] = set()
+    expected_keys = {
+        "id",
+        "scriptCode",
+        "frameLimit",
+        "haxeDefine",
+        "screenshot",
+        "execution",
+    }
+    for index, row in enumerate(rows):
+        label = f"Caxecraft pilot catalog row {index}"
+        if not isinstance(row, dict) or set(row) != expected_keys:
+            raise PlayFailure(f"{label} has unknown or missing fields")
+        pilot_id = row["id"]
+        script_code = row["scriptCode"]
+        frame_limit = row["frameLimit"]
+        haxe_define = row["haxeDefine"]
+        screenshot = row["screenshot"]
+        execution = row["execution"]
+        if not isinstance(pilot_id, str) or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", pilot_id) is None:
+            raise PlayFailure(f"{label} has an unsafe ID")
+        if isinstance(script_code, bool) or not isinstance(script_code, int) or script_code < 0:
+            raise PlayFailure(f"{label} has an invalid script code")
+        if isinstance(frame_limit, bool) or not isinstance(frame_limit, int) or not 2 <= frame_limit <= 400:
+            raise PlayFailure(f"{label} has an invalid frame limit")
+        if not isinstance(haxe_define, str) or re.fullmatch(r"caxecraft_pilot_[a-z0-9_]+", haxe_define) is None:
+            raise PlayFailure(f"{label} has an unsafe Haxe define")
+        if not isinstance(screenshot, str) or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*\.png", screenshot) is None:
+            raise PlayFailure(f"{label} has an unsafe screenshot basename")
+        if execution not in ("compiled", "runtime-content"):
+            raise PlayFailure(f"{label} has an unknown execution kind")
+        if pilot_id in ids or haxe_define in defines or screenshot in screenshots:
+            raise PlayFailure(f"{label} duplicates an ID, Haxe define, or screenshot")
+        ids.add(pilot_id)
+        defines.add(haxe_define)
+        screenshots.add(screenshot)
+        pilots.append(
+            PilotMetadata(
+                id=pilot_id,
+                script_code=script_code,
+                frame_limit=frame_limit,
+                haxe_define=haxe_define,
+                screenshot=screenshot,
+                execution=execution,
+            )
+        )
+    return tuple(pilots)
+
+
+PILOT_CATALOG = load_pilot_catalog(PILOT_CATALOG_PATH)
+PILOT_METADATA_BY_ID = {pilot.id: pilot for pilot in PILOT_CATALOG}
+PILOT_NAMES = tuple(pilot.id for pilot in PILOT_CATALOG)
+
+
+def pilot_metadata(pilot: str) -> PilotMetadata:
+    """Return one admitted pilot or fail before any build or launch begins."""
+    metadata = PILOT_METADATA_BY_ID.get(pilot)
+    if metadata is None:
+        raise PlayFailure(f"unknown Caxecraft pilot script {pilot!r}")
+    return metadata
 
 
 def is_current_compiler_boundary(message: str) -> bool:
@@ -1002,18 +1061,19 @@ def build_pilot_report(
     logical_size = (960, 540) if pilot == "resize-layout" else (1280, 720)
     words = decode_pilot_telemetry(state_path, logical_size)
     script_code = signed_word(words[3])
-    expected_code = PILOT_SCRIPT_CODES[pilot]
+    metadata = pilot_metadata(pilot)
+    expected_code = metadata.script_code
     if script_code != expected_code:
         raise PlayFailure(f"pilot {pilot!r} emitted script code {script_code}; expected {expected_code}")
     completed_frames = signed_word(words[5])
     completed_ticks = signed_word(words[6])
-    if pilot == "adventure-journey":
-        if not 2 <= completed_frames <= RUNTIME_PILOT_MAX_FRAMES:
+    if metadata.execution == "runtime-content":
+        if not 2 <= completed_frames <= metadata.frame_limit:
             raise PlayFailure(
-                f"runtime pilot completed {completed_frames} frames; expected 2 through {RUNTIME_PILOT_MAX_FRAMES}"
+                f"runtime pilot completed {completed_frames} frames; expected 2 through {metadata.frame_limit}"
             )
     else:
-        expected_frames = PILOT_FRAME_LIMITS[pilot]
+        expected_frames = metadata.frame_limit
         if completed_frames != expected_frames:
             raise PlayFailure(
                 f"pilot {pilot!r} completed {completed_frames} frames; expected its bounded {expected_frames}"
@@ -1507,6 +1567,7 @@ def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
         InputPath("repo/compiler/runtime", ROOT / "runtime/hxrt"),
         InputPath("repo/vendor/reflaxe", ROOT / "vendor/reflaxe/src"),
         InputPath("repo/caxecraft/play.hxml", CASE / "play.hxml"),
+        InputPath("repo/caxecraft/pilot-catalog.json", PILOT_CATALOG_PATH),
         InputPath("repo/caxecraft/src", CASE / "src"),
         InputPath("repo/caxecraft/assets", CASE / "assets"),
         *source_tooling_inputs(),
@@ -1843,26 +1904,9 @@ def compile_haxe(
     if benchmark_renderer:
         arguments.extend(["-D", "caxecraft_render_benchmark"])
     if pilot is not None:
-        pilot_defines = {
-            "launch-smoke": "caxecraft_pilot_launch_smoke",
-            "secondary-locale": "caxecraft_pilot_secondary_locale",
-            "move-jump-edit": "caxecraft_pilot_move_jump_edit",
-            "pause-recapture": "caxecraft_pilot_pause_recapture",
-            "combat-drop": "caxecraft_pilot_combat_drop",
-            "recovery-use": "caxecraft_pilot_recovery_use",
-            "full-inventory-gift": "caxecraft_pilot_full_inventory_gift",
-            "full-inventory-mining": "caxecraft_pilot_full_inventory_mining",
-            "resize-layout": "caxecraft_pilot_resize_layout",
-            "aquatic-gear": "caxecraft_pilot_aquatic_gear",
-            "smooth-motion": "caxecraft_pilot_smooth_motion",
-            "editor-shell": "caxecraft_pilot_editor_shell",
-            "campaign-travel": "caxecraft_pilot_campaign_travel",
-            "adventure-journey": "caxecraft_pilot_runtime",
-        }
-        pilot_define = pilot_defines.get(pilot)
-        if pilot_define is None:
-            raise PlayFailure(f"unknown Caxecraft pilot script {pilot!r}")
-        arguments.extend(["-D", "caxecraft_pilot", "-D", pilot_define])
+        arguments.extend(
+            ["-D", "caxecraft_pilot", "-D", pilot_metadata(pilot).haxe_define]
+        )
     arguments.extend(["--custom-target", f"c={generated}"])
     if server_lease is None:
         run(
@@ -2970,10 +3014,7 @@ def run_pilot_sample(
     owns deriving the remaining host filename metadata from that one authority.
     """
 
-    screenshot_name = PILOT_SCREENSHOT_NAMES.get(pilot)
-    if screenshot_name is None:
-        raise PlayFailure(f"unknown Caxecraft pilot script {pilot!r}")
-    screenshot = executable.parent / screenshot_name
+    screenshot = executable.parent / pilot_metadata(pilot).screenshot
     supporting_screenshots = (
         (
             executable.parent / "caxecraft-pilot-runtime-title-selection.png",
@@ -3177,22 +3218,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--pilot",
-        choices=(
-            "launch-smoke",
-            "secondary-locale",
-            "move-jump-edit",
-            "pause-recapture",
-            "combat-drop",
-            "recovery-use",
-            "full-inventory-gift",
-            "full-inventory-mining",
-            "resize-layout",
-            "aquatic-gear",
-            "smooth-motion",
-            "editor-shell",
-            "campaign-travel",
-            "adventure-journey",
-        ),
+        choices=PILOT_NAMES,
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
     parser.add_argument("--allow-network", action="store_true", help="allow the first checksum-pinned Raylib and Raygui archive downloads")

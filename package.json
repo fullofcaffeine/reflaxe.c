@@ -67,6 +67,8 @@
     "test:caxecraft-caxeflow": "python3 examples/caxecraft/run_haxe_c_test.py caxeflow",
     "test:caxecraft-editor": "python3 examples/caxecraft/run_haxe_c_test.py editor",
     "test:caxecraft-pilot": "python3 examples/caxecraft/check_pilot.py",
+    "caxecraft:pilot-catalog:refresh": "haxe --cwd examples/caxecraft -cp src --run caxecraft.tools.PilotCatalogMain --write",
+    "caxecraft:pilot-catalog:check": "haxe --cwd examples/caxecraft -cp src --run caxecraft.tools.PilotCatalogMain --check",
     "test:caxecraft-inventory": "python3 examples/caxecraft/run_haxe_c_test.py inventory",
     "test:caxecraft-gameplay": "python3 examples/caxecraft/run_haxe_c_test.py gameplay",
     "test:caxecraft-scenario-determinism": "python3 examples/caxecraft/run_haxe_c_test.py scenario-determinism",

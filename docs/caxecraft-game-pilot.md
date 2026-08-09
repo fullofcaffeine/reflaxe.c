@@ -134,6 +134,38 @@ later action is `Quit`, which protects against a script accidentally becoming
 an unattended interactive session. The Python runner adds an independent
 15-second wall-clock timeout.
 
+## Where pilot metadata lives
+
+[`PilotCatalog.hx`](../examples/caxecraft/src/caxecraft/pilot/PilotCatalog.hx)
+is the only authored owner of host-facing pilot metadata. Each row connects one
+Haxe script to its command name, telemetry code, frame bound, compile define,
+and review-image name. The catalog also records whether the actions are
+compiled engine checks or a runtime content journey.
+
+The Haxe command below exports that typed catalog to
+[`pilot-catalog.json`](../examples/caxecraft/pilot-catalog.json):
+
+```sh
+npm run caxecraft:pilot-catalog:refresh
+npm run caxecraft:pilot-catalog:check
+```
+
+The JSON file is derived data for the host runner. It includes the SHA-256
+digest of its Haxe authority. `play.py` checks that digest and validates every
+field before it accepts a pilot option. A stale, malformed, duplicated, unsafe,
+or unknown record fails before Haxe compilation or native launch begins.
+
+To add a compiled pilot, add its actions and checkpoints to `PilotScript`, then
+add one host-metadata row and its closed name, code, and frame facts to
+`PilotCatalog`. Refresh the manifest and run `npm run test:caxecraft-pilot`.
+For campaign-specific play, prefer a runtime Piloscript journey. Do not add its
+route, objective IDs, or expected game state to the catalog.
+
+Python still owns suitable host work: starting compilers and processes,
+enforcing wall-clock timeouts, decoding the bounded telemetry carrier, and
+checking portable PNG and report structure. It does not own the pilot registry,
+game actions, checkpoints, or expected gameplay state.
+
 The launch image check requires the staged panorama and wordmark by semantic
 color/region evidence. Gameplay checks require independent terrain, heads-up
 display, light UI, and enough color variety. Pilots whose camera remains near

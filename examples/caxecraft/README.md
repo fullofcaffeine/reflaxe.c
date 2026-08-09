@@ -410,6 +410,11 @@ npm run caxecraft:play -- --pilot smooth-motion
 # Prove the generated native application enters and presents the raygui editor
 npm run caxecraft:play -- --pilot editor-shell
 
+# After changing compiled pilot metadata, refresh and check the Haxe-derived
+# host manifest. Ordinary content journeys do not need this step.
+npm run caxecraft:pilot-catalog:refresh
+npm run caxecraft:pilot-catalog:check
+
 # Verify every source byte in an already extracted Raylib tree
 npm run caxecraft:play -- \
   --authority offline-source \
