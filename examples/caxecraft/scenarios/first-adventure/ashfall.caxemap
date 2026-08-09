@@ -30,7 +30,10 @@ locale en
   message objective_nia_body "NIA WAITS AT THE SNOWLINE SHELTER."
   message objective_nia_title "ASK NIA ABOUT THE BROKEN SPAN"
   message reset "THE EARLY BEACON PULSE RELEASES BOTH UNFINISHED SUPPORTS. SET THE SLUICE AND BRACE AGAIN, THEN FORGE THE SPAN."
-  message reward "THE OLD ROAD CACHE HOLDS BREAD FOR THE CASTLE CLIMB."
+  message reward "AN ASHFALL ROADWORKER LEFT BREAD HERE FOR THE CASTLE CLIMB."
+  message road_cache_body "A SOOT-DARK ROADWORKER DOOR HIDES A SMALL SUPPLY NOOK WEST OF THE CASTLE ROAD. ITS BREAD IS OPTIONAL, BUT USEFUL BEFORE THE CLIMB."
+  message road_cache_open "THE ROADWORKER CACHE OPENS. BREAD WAITS INSIDE."
+  message road_cache_title "ASHFALL ROADWORKER CACHE"
   message root_ready "THE WEST ROOT BRACE LOCKS. OPEN THE EAST RIVER SLUICE."
   message scenario_title "Caxecraft: Ashfall Bridge"
   message wave_ready "THE EAST RIVER SLUICE OPENS. LOCK THE WEST ROOT BRACE."
@@ -62,7 +65,10 @@ locale es-mx
   message objective_nia_body "NIA ESPERA EN EL REFUGIO DEL LIMITE DE NIEVE."
   message objective_nia_title "PREGUNTA A NIA POR EL PUENTE ROTO"
   message reset "EL PULSO PREMATURO DEL FARO SUELTA LOS SOPORTES INCOMPLETOS. AJUSTA LA COMPUERTA Y EL REFUERZO OTRA VEZ."
-  message reward "EL VIEJO ALIJO TIENE PAN PARA LA SUBIDA AL CASTILLO."
+  message reward "UN CAMINERO DE ASHFALL DEJO PAN AQUI PARA LA SUBIDA AL CASTILLO."
+  message road_cache_body "UNA PUERTA OSCURA DE HOLLIN ESCONDE UN PEQUENO DEPOSITO AL OESTE DEL CAMINO AL CASTILLO. EL PAN ES OPCIONAL, PERO UTIL PARA LA SUBIDA."
+  message road_cache_open "EL DEPOSITO DEL CAMINERO SE ABRE. HAY PAN ADENTRO."
+  message road_cache_title "DEPOSITO DEL CAMINERO DE ASHFALL"
   message root_ready "EL REFUERZO DE RAIZ OESTE QUEDA FIJO. ABRE LA COMPUERTA DEL RIO AL ESTE."
   message scenario_title "Caxecraft: Puente de Ashfall"
   message wave_ready "LA COMPUERTA DEL RIO AL ESTE SE ABRE. FIJA EL REFUERZO DE RAIZ AL OESTE."
@@ -379,6 +385,10 @@ object ash.river-sluice
   tag mechanism
   placement stateful caxecraft:vault-glyph-river caxecraft:waiting 24500 6000 21500 270
 end object
+object ash.roadworker-cache
+  tag secret
+  placement stateful caxecraft:vault-gate caxecraft:sealed 6500 6000 8500 90
+end object
 object ash.root-brace
   tag mechanism
   placement stateful caxecraft:vault-glyph-leaf caxecraft:waiting 7500 6000 21500 90
@@ -393,7 +403,7 @@ object guide.nia
 end object
 object item.castle-bread
   tag reward
-  placement item caxecraft:bread 1 12500 6000 3500 0
+  placement item caxecraft:bread 1 4500 6000 8500 0
 end object
 object player.start
   tag player
@@ -421,6 +431,9 @@ end dialogue
 dialogue dialogue.reward
   line speaker guide.nia message reward
 end dialogue
+dialogue dialogue.roadworker-cache
+  line speaker guide.nia message road_cache_open
+end dialogue
 dialogue dialogue.support.river
   line speaker guide.nia message wave_ready
 end dialogue
@@ -429,6 +442,9 @@ dialogue dialogue.support.root
 end dialogue
 journal journal.castle-road title message castle_title
   body message castle_body
+end journal
+journal journal.roadworker-cache title message road_cache_title
+  body message road_cache_body
 end journal
 objective objective.ask-nia active title message objective_nia_title
   body message objective_nia_body
@@ -507,6 +523,13 @@ rule rule.river-sluice-opens priority 100 repeat
   do set-flag quest.river-sluice-ready true
   do set-object-state ash.river-sluice caxecraft:entered
   do dialogue dialogue.support.river
+end rule
+rule rule.roadworker-cache-opens priority 100 once
+  when interact ash.roadworker-cache
+  if (object-state ash.roadworker-cache caxecraft:sealed)
+  do set-object-state ash.roadworker-cache caxecraft:open
+  do dialogue dialogue.roadworker-cache
+  do journal journal.roadworker-cache
 end rule
 rule rule.root-brace-locks priority 100 repeat
   when interact ash.root-brace
