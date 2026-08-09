@@ -2,8 +2,6 @@ package caxecraft.app;
 
 #if c
 import caxecraft.content.CampaignManifest.CampaignManifest;
-import caxecraft.localization.FirstPlayableCatalog;
-import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
@@ -59,9 +57,9 @@ final class CampaignMenu {
 		return NoCampaignMenuHit;
 	}
 
-	/** Draw one validated campaign card, its selected level, and launch/back actions. */
+	/** Draw one validated campaign card with runtime-loaded title and summary text. */
 	public static function draw(title:Texture2D, titleReady:Bool, wordmark:Texture2D, wordmarkReady:Bool, campaign:CampaignManifest, locale:LocaleCursor,
-			catalog:RuntimeUiCatalog, selectedLevelIndex:Int):Void {
+			catalog:RuntimeUiCatalog, selectedLevelIndex:Int, scenarioTitle:String, adventureTagline:String):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (titleReady)
@@ -79,8 +77,8 @@ final class CampaignMenu {
 		Raylib.DrawRectangle(panelLeft, panelTop, PANEL_WIDTH, PANEL_HEIGHT, Color.rgba(6, 26, 36, 238));
 		Raylib.DrawRectangleLines(panelLeft, panelTop, PANEL_WIDTH, PANEL_HEIGHT, Color.rgba(92, 194, 188));
 		drawUiText(catalog, locale, UiMessage.MenuAdventure, panelLeft + 32, panelTop + 24, 26, Color.rgba(255, 190, 55));
-		drawScenarioText(locale, ScenarioMessage.ScenarioTitle, panelLeft + 32, panelTop + 66, 23, Color.rgba(242, 249, 245));
-		drawScenarioText(locale, ScenarioMessage.AdventureTagline, panelLeft + 32, panelTop + 102, 16, Color.rgba(255, 205, 91));
+		Raylib.DrawTextString(scenarioTitle, panelLeft + 32, panelTop + 66, 23, Color.rgba(242, 249, 245));
+		Raylib.DrawTextString(adventureTagline, panelLeft + 32, panelTop + 102, 16, Color.rgba(255, 205, 91));
 		Raylib.DrawTextString(campaign.id.text(), panelLeft + 32, panelTop + 140, 17, Color.rgba(142, 210, 205));
 
 		final levelTop = panelTop + 190;
@@ -110,8 +108,5 @@ final class CampaignMenu {
 
 	static inline function drawUiText(catalog:RuntimeUiCatalog, locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
 		Raylib.DrawTextString(catalog.text(locale, message), x, y, fontSize, color);
-
-	static inline function drawScenarioText(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
-		Raylib.DrawText(FirstPlayableCatalog.text(locale, message), x, y, fontSize, color);
 }
 #end

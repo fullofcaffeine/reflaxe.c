@@ -93,8 +93,7 @@ import caxecraft.gameplay.SwordCombat;
 import caxecraft.gameplay.SwordCombatDecision;
 import caxecraft.gameplay.SwordCombatState;
 import caxecraft.gameplay.WorldItemPickup.isInRange as authoredItemIsInRange;
-import caxecraft.localization.FirstPlayableCatalog;
-import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
+import caxecraft.app.GameplayMessage.gameplayMessageId;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
@@ -1164,14 +1163,15 @@ final class CaxecraftApp {
 			// must observe committed state and must not advance simulation itself.
 			Raylib.BeginDrawing();
 			if (onTitle) {
-				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale, uiCatalog);
+				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale, uiCatalog,
+					levelView.adventureTagline(scenarioLocale(locale)));
 			} else if (onCampaignSelect) {
 				final selectedCampaign = campaign;
 				if (selectedCampaign == null)
 					screen = closeCampaignSelection(screen);
 				else
 					CampaignMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedCampaign, locale, uiCatalog,
-						selectedCampaignLevelIndex);
+						selectedCampaignLevelIndex, levelView.scenarioTitle(scenarioLocale(locale)), levelView.adventureTagline(scenarioLocale(locale)));
 			} else if (onEditor) {
 				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
 					screen = closeEditor(screen);
@@ -1256,7 +1256,8 @@ final class CaxecraftApp {
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase,
 					levelLabel: levelLabel,
-					objectiveTitle: levelView.objectiveTitle(currentObjectiveId, scenarioLocale(locale))
+					objectiveTitle: levelView.objectiveTitle(currentObjectiveId, scenarioLocale(locale)),
+					presentation: levelView.presentation()
 				};
 				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
 			}
@@ -1513,6 +1514,7 @@ final class CaxecraftApp {
 		final headSubmerged = view.character.headSubmerged;
 		final breathTicks = view.character.breathTicks;
 		final maximumBreathTicks = view.character.maximumBreathTicks;
+		final presentation = view.presentation;
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		final centerX = Std.int(width / 2);
@@ -1551,39 +1553,39 @@ final class CaxecraftApp {
 		if (guideInteractionAvailable) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
 			if (guidePhase == GuidePhase.Waiting)
-				drawScenarioText(locale, ScenarioMessage.NiaTalk, centerX - 110, centerY + 74, 18, text);
+				drawScenarioText(presentation, locale, GameplayMessage.GuideTalk, centerX - 110, centerY + 74, 18, text);
 			else if (guidePhase == GuidePhase.Welcomed)
-				drawScenarioText(locale, ScenarioMessage.NiaWelcome, centerX - 225, centerY + 74, 16, text);
+				drawScenarioText(presentation, locale, GameplayMessage.GuideWelcome, centerX - 225, centerY + 74, 16, text);
 			else
-				drawScenarioText(locale, ScenarioMessage.NiaGift, centerX - 205, centerY + 74, 16, text);
+				drawScenarioText(presentation, locale, GameplayMessage.GuideGift, centerX - 205, centerY + 74, 16, text);
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
 			if (enemyPhase == ActorControllerPhase.Windup)
-				drawScenarioText(locale, ScenarioMessage.MosslingWindup, width - 300, 28, 16, CaxecraftPalette.damage());
+				drawScenarioText(presentation, locale, GameplayMessage.EnemyWindup, width - 300, 28, 16, CaxecraftPalette.damage());
 			else if (enemyPhase == ActorControllerPhase.Chasing)
-				drawScenarioText(locale, ScenarioMessage.MosslingAlert, width - 180, 28, 16, CaxecraftPalette.selection());
+				drawScenarioText(presentation, locale, GameplayMessage.EnemyAlert, width - 180, 28, 16, CaxecraftPalette.selection());
 		}
 		if (strikeHit)
-			drawScenarioText(locale, ScenarioMessage.CopperStrike, centerX - 70, centerY - 54, 18, CaxecraftPalette.selection());
+			drawScenarioText(presentation, locale, GameplayMessage.AttackHit, centerX - 70, centerY - 54, 18, CaxecraftPalette.selection());
 		if (enemyDefeated)
-			drawScenarioText(locale, ScenarioMessage.MosslingDroppedBerries, width - 285, 54, 16, CaxecraftPalette.selection());
+			drawScenarioText(presentation, locale, GameplayMessage.EnemyDroppedItems, width - 285, 54, 16, CaxecraftPalette.selection());
 		if (enemyAttacked)
-			drawScenarioText(locale, ScenarioMessage.TelegraphedHit, width - 330, 82, 16, CaxecraftPalette.damage());
+			drawScenarioText(presentation, locale, GameplayMessage.EnemyHitWarning, width - 330, 82, 16, CaxecraftPalette.damage());
 		if (pickedUp) {
-			final pickupMessage = pickupAmount == 1 ? ScenarioMessage.BerryPickupOne : ScenarioMessage.BerryPickupTwo;
-			drawScenarioText(locale, pickupMessage, centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
+			final pickupMessage = pickupAmount == 1 ? GameplayMessage.PickupOne : GameplayMessage.PickupMany;
+			drawScenarioText(presentation, locale, pickupMessage, centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
 		}
 		if (inventoryFullReason == InventoryFullReason.BerryStack)
-			drawScenarioText(locale, ScenarioMessage.BerryStackFull, centerX - 150, centerY + 48, 16, CaxecraftPalette.inventoryFull());
+			drawScenarioText(presentation, locale, GameplayMessage.BerryStackFull, centerX - 150, centerY + 48, 16, CaxecraftPalette.inventoryFull());
 		else if (inventoryFullReason == InventoryFullReason.BlockStack)
-			drawScenarioText(locale, ScenarioMessage.BlockStackFull, centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
+			drawScenarioText(presentation, locale, GameplayMessage.BlockStackFull, centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
 		if (recoveryVisible) {
 			if (recoveryFeedback == RecoveryDecision.UseBerries)
-				drawScenarioText(locale, ScenarioMessage.BerryRecovery, centerX - 88, centerY + 24, 18, CaxecraftPalette.recovery());
+				drawScenarioText(presentation, locale, GameplayMessage.RecoveryUsed, centerX - 88, centerY + 24, 18, CaxecraftPalette.recovery());
 			else if (recoveryFeedback == RecoveryDecision.HealthAlreadyFull)
 				drawUiText(uiCatalog, locale, UiMessage.HealthFull, centerX - 96, centerY + 24, 18, CaxecraftPalette.selection());
 			else if (recoveryFeedback == RecoveryDecision.RecoveryStackEmpty)
-				drawScenarioText(locale, ScenarioMessage.NoBerries, centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
+				drawScenarioText(presentation, locale, GameplayMessage.RecoveryEmpty, centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
 		}
 		if (aquaticEquipmentVisible)
 			drawUiText(uiCatalog, locale, UiMessage.AquaticGearEquipped, centerX - 128, centerY + 24, 18, CaxecraftPalette.selection());
@@ -1592,8 +1594,8 @@ final class CaxecraftApp {
 		if (characterIsDefeated(vitals)) {
 			Raylib.DrawRectangle(centerX - 250, centerY - 74, 500, 148, CaxecraftPalette.hudPanel());
 			Raylib.DrawRectangleLines(centerX - 250, centerY - 74, 500, 148, CaxecraftPalette.damage());
-			drawScenarioText(locale, ScenarioMessage.HaxirioFallen, centerX - 122, centerY - 42, 24, text);
-			drawScenarioText(locale, ScenarioMessage.ReturnToMeadow, centerX - 125, centerY + 10, 18, CaxecraftPalette.selection());
+			drawScenarioText(presentation, locale, GameplayMessage.PlayerFallen, centerX - 122, centerY - 42, 24, text);
+			drawScenarioText(presentation, locale, GameplayMessage.ReturnPrompt, centerX - 125, centerY + 10, 18, CaxecraftPalette.selection());
 		}
 		if (paused) {
 			Raylib.DrawRectangle(centerX - 170, centerY - 48, 340, 96, CaxecraftPalette.hudPanel());
@@ -1613,9 +1615,10 @@ final class CaxecraftApp {
 	static inline function drawUiText(catalog:RuntimeUiCatalog, locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
 		Raylib.DrawTextString(catalog.text(locale, message), x, y, fontSize, color);
 
-	/** Draw one campaign-owned message after its catalog resolves the locale. */
-	static inline function drawScenarioText(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
-		Raylib.DrawText(FirstPlayableCatalog.text(locale, message), x, y, fontSize, color);
+	/** Draw one gameplay notice from the active map's validated runtime catalog. */
+	static inline function drawScenarioText(presentation:caxecraft.content.RuntimeLevelLoader.RuntimeLevelPresentation, locale:LocaleCursor,
+			message:GameplayMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
+		Raylib.DrawTextString(presentation.message(gameplayMessageId(message), scenarioLocale(locale)), x, y, fontSize, color);
 
 	/** Map the closed UI locale cursor to the spelling used by CAXEMAP catalogs. */
 	static inline function scenarioLocale(locale:LocaleCursor):LocaleId

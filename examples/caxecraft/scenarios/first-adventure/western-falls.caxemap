@@ -6,44 +6,44 @@ default-locale en
 locale en
   message adventure_progress "FIND TIDEWEAVE BENEATH THE FALLS"
   message adventure_tagline "BREAK THE MARKED SAND. DIVE THROUGH THE FLOODED GROTTO."
-  message berry_pickup_one "+1 BERRY"
-  message berry_pickup_two "+2 BERRIES"
-  message berry_recovery "BERRIES: +1 HEART"
+  message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
-  message copper_strike "COPPER STRIKE"
-  message haxirio_fallen "HAXIRIO HAS FALLEN"
-  message mossling_alert "MOSSLING ALERT"
-  message mossling_dropped_berries "MOSSLING DROPPED BERRIES"
-  message mossling_windup "MOSSLING WINDUP: DODGE"
-  message nia_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
-  message nia_talk "E  TALK TO NIA"
-  message nia_welcome "NIA: THE FALLS MARK A SEALED WAY WEST"
-  message no_berries "NO BERRIES LEFT"
-  message return_to_meadow "E  RETURN TO EVERGROVE"
+  message enemy_alert "MOSSLING ALERT"
+  message enemy_dropped_items "MOSSLING DROPPED BERRIES"
+  message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
+  message enemy_windup "MOSSLING WINDUP: DODGE"
+  message guide_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
+  message guide_talk "E  TALK TO NIA"
+  message guide_welcome "NIA: THE FALLS MARK A SEALED WAY WEST"
+  message pickup_many "+2 BERRIES"
+  message pickup_one "+1 BERRY"
+  message player_fallen "HAXIRIO HAS FALLEN"
+  message recovery_empty "NO BERRIES LEFT"
+  message recovery_used "BERRIES: +1 HEART"
+  message return_prompt "E  RETURN TO EVERGROVE"
   message scenario_title "Caxecraft: Western Falls"
-  message telegraphed_hit "TELEGRAPHED HIT: DODGE THE NEXT"
 end locale
 locale es-mx
   message adventure_progress "BUSCA TIDEWEAVE BAJO LAS CATARATAS"
   message adventure_tagline "ROMPE LA ARENA MARCADA. CRUZA LA GRUTA INUNDADA."
-  message berry_pickup_one "+1 BAYA"
-  message berry_pickup_two "+2 BAYAS"
-  message berry_recovery "BAYAS: +1 CORAZON"
+  message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
-  message copper_strike "GOLPE DE COBRE"
-  message haxirio_fallen "HAXIRIO HA CAIDO"
-  message mossling_alert "MUSGUITO ALERTA"
-  message mossling_dropped_berries "EL MUSGUITO SOLTO BAYAS"
-  message mossling_windup "MUSGUITO CARGANDO: ESQUIVA"
-  message nia_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
-  message nia_talk "E  HABLAR CON NIA"
-  message nia_welcome "NIA: LAS CATARATAS MARCAN UN CAMINO SELLADO"
-  message no_berries "NO QUEDAN BAYAS"
-  message return_to_meadow "E  VOLVER A LA ARBOLEDA"
+  message enemy_alert "MUSGUITO ALERTA"
+  message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
+  message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
+  message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
+  message guide_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
+  message guide_talk "E  HABLAR CON NIA"
+  message guide_welcome "NIA: LAS CATARATAS MARCAN UN CAMINO SELLADO"
+  message pickup_many "+2 BAYAS"
+  message pickup_one "+1 BAYA"
+  message player_fallen "HAXIRIO HA CAIDO"
+  message recovery_empty "NO QUEDAN BAYAS"
+  message recovery_used "BAYAS: +1 CORAZON"
+  message return_prompt "E  VOLVER A LA ARBOLEDA"
   message scenario_title "Caxecraft: Cataratas del Oeste"
-  message telegraphed_hit "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
 end locale
 title message scenario_title
 mode adventure
@@ -811,7 +811,7 @@ object player.start
   placement player-spawn 16500 8000 27500 180
 end object
 dialogue dialogue.nia.welcome
-  line speaker guide.nia message nia_welcome
+  line speaker guide.nia message guide_welcome
 end dialogue
 objective objective.western-falls active title message adventure_progress
   body message adventure_tagline

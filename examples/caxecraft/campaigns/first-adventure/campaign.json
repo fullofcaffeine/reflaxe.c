@@ -7,14 +7,14 @@
     {
       "id": "evergrove",
       "path": "scenarios/first-playable/map.caxemap",
-      "byteLength": 14564,
-      "sha256": "754cc35aef1f696e19d7c38ecaff533f518f3838c34f1f75c6976605acc5a781"
+      "byteLength": 14530,
+      "sha256": "61c38dc78cce29c99c9b38ccc211ed1149f8e6f968c2ad7efac9ca6043d21f16"
     },
     {
       "id": "western-falls",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 11108,
-      "sha256": "fc39dddb502ab704ef9cc87eaa346a7657686ee91d7e5c76fec790931c4b6455"
+      "byteLength": 11074,
+      "sha256": "c9baf9ba154ed5347179dac190e885c327e95e76f18a9b32e3d3e3d41bd3fea9"
     }
   ],
   "transitions": [

@@ -4,11 +4,13 @@ map qa.runtime-presentation
 asset-pack packs/caxecraft/base
 default-locale en
 locale en
+  message adventure_tagline "A runtime-authored adventure"
   message objective.body "Cross the test bridge."
   message objective.title "Reach the test marker"
   message scenario.title "Runtime presentation probe"
 end locale
 locale es-mx
+  message adventure_tagline "Una aventura creada en tiempo de ejecucion"
   message objective.body "Cruza el puente de prueba."
   message objective.title "Llega al marcador de prueba"
   message scenario.title "Prueba de presentacion en ejecucion"

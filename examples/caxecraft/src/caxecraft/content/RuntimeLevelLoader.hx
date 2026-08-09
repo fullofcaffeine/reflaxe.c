@@ -18,6 +18,7 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.MessageId;
 import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
@@ -178,6 +179,22 @@ final class RuntimeLevelPresentation {
 	/** Resolve the map title in the requested locale, using its declared fallback. */
 	public inline function scenarioTitle(locale:LocaleId):String
 		return resolve(title, locale);
+
+	/**
+	 * Resolve one stable message ID from this map's validated runtime catalog.
+	 *
+	 * The requested locale falls back through the map's declared default. An
+	 * unknown ID returns empty text, so no partial catalog or nullable value
+	 * escapes into the presentation layer.
+	 */
+	public function message(id:MessageId, locale:LocaleId):String {
+		final translated = resolveScenarioMessage(messages, locale, id);
+		return translated == null ? "" : translated;
+	}
+
+	/** Resolve the authored Adventure summary used by the title and campaign menus. */
+	public inline function adventureTagline(locale:LocaleId):String
+		return message(new MessageId("adventure_tagline"), locale);
 
 	/** Resolve the first initially active objective title, or empty text when absent. */
 	public inline function initialObjectiveTitle(locale:LocaleId):String

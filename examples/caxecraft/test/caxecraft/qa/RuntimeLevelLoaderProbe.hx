@@ -28,6 +28,7 @@ import caxecraft.domain.WorldRead.query as queryWorld;
 import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.MessageId;
 import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import haxe.io.Bytes;
 
@@ -114,6 +115,13 @@ function selfCheck():Int {
 	if (presentation.scenarioTitle(english) != "Runtime presentation probe"
 		|| presentation.scenarioTitle(spanish) != "Prueba de presentacion en ejecucion"
 		|| presentation.scenarioTitle(fallback) != "Runtime presentation probe"
+		|| presentation.message(new MessageId("objective.title"), english) != "Reach the test marker"
+		|| presentation.message(new MessageId("objective.title"), spanish) != "Llega al marcador de prueba"
+		|| presentation.message(new MessageId("objective.title"), fallback) != "Reach the test marker"
+		|| presentation.message(new MessageId("missing.message"), english) != ""
+		|| presentation.adventureTagline(english) != "A runtime-authored adventure"
+		|| presentation.adventureTagline(spanish) != "Una aventura creada en tiempo de ejecucion"
+		|| presentation.adventureTagline(fallback) != "A runtime-authored adventure"
 		|| presentation.initialObjectiveTitle(english) != "Reach the test marker"
 		|| presentation.initialObjectiveTitle(spanish) != "Llega al marcador de prueba"
 		|| presentation.initialObjectiveBody(english) != "Cross the test bridge."

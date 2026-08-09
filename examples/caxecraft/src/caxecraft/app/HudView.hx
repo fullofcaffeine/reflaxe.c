@@ -4,6 +4,7 @@ import caxecraft.domain.ActorControllerPhase;
 import caxecraft.domain.Character;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.VitalsState;
+import caxecraft.content.RuntimeLevelLoader.RuntimeLevelPresentation;
 import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
@@ -71,6 +72,9 @@ typedef HudView = {
 
 	/** Localized initial objective selected from the same published level. */
 	final objectiveTitle:String;
+
+	/** Validated message catalog selected with the same published level. */
+	final presentation:RuntimeLevelPresentation;
 }
 
 /** Small debug-panel snapshot for one rendered frame. */

@@ -113,6 +113,10 @@ final class PlayableLevelView {
 	public inline function scenarioTitle(locale:LocaleId):String
 		return levelPresentation.scenarioTitle(locale);
 
+	/** Resolve this level's authored Adventure summary for the menu screens. */
+	public inline function adventureTagline(locale:LocaleId):String
+		return levelPresentation.adventureTagline(locale);
+
 	/** Resolve this level's first initially active objective title. */
 	public inline function initialObjectiveTitle(locale:LocaleId):String
 		return levelPresentation.initialObjectiveTitle(locale);

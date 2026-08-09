@@ -1,8 +1,6 @@
 package caxecraft.app;
 
 #if c
-import caxecraft.localization.FirstPlayableCatalog;
-import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
@@ -32,8 +30,9 @@ final class TitleMenu {
 		return -1;
 	}
 
+	/** Draw the title controls and the runtime-selected Adventure summary. */
 	public static inline function draw(title:Texture2D, titleReady:Bool, wordmark:Texture2D, wordmarkReady:Bool, selected:GameMode, locale:LocaleCursor,
-			catalog:RuntimeUiCatalog):Void {
+			catalog:RuntimeUiCatalog, adventureTagline:String):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (titleReady)
@@ -54,8 +53,8 @@ final class TitleMenu {
 		drawButton(firstTop + BUTTON_HEIGHT + BUTTON_GAP, selected == GameMode.Adventure, UiMessage.MenuAdventure, locale, width, catalog);
 		drawButton(firstTop + (BUTTON_HEIGHT + BUTTON_GAP) * 2, false, UiMessage.MenuEditor, locale, width, catalog);
 		drawUiText(catalog, locale, UiMessage.MenuInstructions, Std.int(width / 2) - 285, height - 58, 16, Color.rgba(229, 241, 235));
-		if (selected == GameMode.Adventure)
-			drawScenarioText(locale, ScenarioMessage.AdventureTagline, Std.int(width / 2) - 230, firstTop - 36, 17, Color.rgba(255, 205, 91));
+		if (selected == GameMode.Adventure && adventureTagline.length > 0)
+			Raylib.DrawTextString(adventureTagline, Std.int(width / 2) - 230, firstTop - 36, 17, Color.rgba(255, 205, 91));
 	}
 
 	static inline function drawButton(top:Int, active:Bool, message:UiMessage, locale:LocaleCursor, width:Int, catalog:RuntimeUiCatalog):Void {
@@ -73,10 +72,6 @@ final class TitleMenu {
 	/** Keep native drawing separate from reusable locale and message lookup. */
 	static inline function drawUiText(catalog:RuntimeUiCatalog, locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
 		Raylib.DrawTextString(catalog.text(locale, message), x, y, fontSize, color);
-
-	/** Render campaign copy selected by the campaign-owned catalog. */
-	static inline function drawScenarioText(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
-		Raylib.DrawText(FirstPlayableCatalog.text(locale, message), x, y, fontSize, color);
 
 	static inline function buttonTop(height:Int):Int
 		return height - 293;

@@ -690,14 +690,9 @@ absent from production source. This evidence still does not claim arbitrary
 package support, live hot-reload during one running process, a public C
 application binary interface (ABI), or platform qualification.
 
-The legacy campaign-dialogue fallback remains a temporary foundation seam. If
-work intentionally changes that compatibility path, regenerate and check it
-with:
-
-```sh
-python3 examples/caxecraft/localization_catalog.py
-npm run test:caxecraft-localization
-```
+The active runtime level owns its title, objective, dialogue, encounter, and
+failure text. Edit the CAXEMAP catalog and use the content loop. The game does
+not need a Haxe or C rebuild for these text changes.
 
 Terrain, authored fluid records, fluid presentation, actors, items, and player
 spawn are read from the packaged CaxeMap by the ordinary native loader. The
@@ -716,10 +711,9 @@ silently replaced by stale generated facts. Some CaxeFlow and presentation
 composition still has temporary application coupling; `haxe_c-xge.20.4` owns
 removing it.
 
-The focused check rejects incomplete locales, duplicate IDs or JSON keys,
-unknown fields, invalid UTF-8/control text, stale generated catalogs, and any
-return of language-specific prose or branching to
-`CaxecraftApp.hx`/`Main.hx`/`TitleMenu.hx`.
+The runtime schema and level-loader checks reject incomplete locales, duplicate
+IDs or JSON keys, unknown fields, and invalid UTF-8 or control text. They also
+check locale fallback without embedding shipped campaign prose in Haxe tests.
 The deterministic secondary-locale graphical pilot is:
 
 ```sh

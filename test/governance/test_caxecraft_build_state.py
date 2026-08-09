@@ -295,6 +295,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         forbidden = (
             "import caxecraft.content.BaseContentPack",
             "BaseContentPack.",
+            "FirstPlayableCatalog",
             "UiCatalog.text(",
         )
         violations = []
@@ -308,6 +309,18 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             [],
             "playable product source still has a generated content authority:\n"
             + "\n".join(violations),
+        )
+
+        removed_catalog_tools = (
+            CASE / "check_localization.py",
+            CASE / "localization.hxml",
+            CASE / "localization_catalog.py",
+            CASE / "src/caxecraft/localization/FirstPlayableCatalog.hx",
+            CASE / "test/caxecraft/qa/LocalizationProbe.hx",
+        )
+        self.assertFalse(
+            any(path.exists() for path in removed_catalog_tools),
+            "the compiled first-playable catalog or its generator returned",
         )
 
     def test_removed_content_pack_fixture_cannot_return(self) -> None:

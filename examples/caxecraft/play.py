@@ -154,7 +154,6 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/domain/Vitals.c": "c",
     "playable/src/modules/caxecraft/gameplay/Recovery.c": "c",
     "playable/src/modules/caxecraft/gameplay/Mining.c": "c",
-    "playable/src/modules/caxecraft/localization/FirstPlayableCatalog.c": "c",
     "playable/src/modules/caxecraft/localization/RuntimeUiCatalog.c": "c",
     "playable/src/modules/caxecraft/domain/Aquatics.c": "c",
     "playable/src/modules/caxecraft/domain/Character.c": "c",
@@ -2436,11 +2435,10 @@ def validate_generated_playable(
                 "native content bypassed the Haxe-authored metal package reader "
                 f"through {forbidden}"
             )
-    # Catalogs select text and the application renderer draws it. Both lookup
-    # functions must reach C, while every Raylib draw remains outside their
-    # generated modules. Catalog completeness is checked against source data by
-    # test:caxecraft-localization rather than inferred from call-site counts.
-    for lookup in ("UiCatalog_text(", "FirstPlayableCatalog_text("):
+    # Runtime catalogs select text and the application renderer draws it. Both
+    # lookup functions must reach C, while every Raylib draw remains outside
+    # their generated modules. Focused Haxe tests own catalog completeness.
+    for lookup in ("UiCatalog_text(", "RuntimeLevelPresentation_message("):
         if lookup not in combined:
             raise PlayFailure(f"generated Caxecraft output omitted typed localization lookup {lookup}")
     if "DrawText(" not in app:
