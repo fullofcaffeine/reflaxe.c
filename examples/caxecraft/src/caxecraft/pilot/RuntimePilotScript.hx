@@ -41,6 +41,9 @@ enum abstract RuntimePilotExpectationKind(Int) to Int {
 
 	/** Stable ID of the authored dialogue currently shown, or `none`. */
 	var Dialogue = 11;
+
+	/** Stable ID of the latest unlocked journal entry, or `none`. */
+	var Journal = 12;
 }
 
 /** One source-located expectation owned by a runtime Piloscript file. */
@@ -82,6 +85,9 @@ typedef RuntimePilotObservation = {
 
 	/** Authored dialogue ID selected by the latest CaxeFlow presentation event. */
 	final dialogue:String;
+
+	/** Latest journal ID selected by a committed CaxeFlow presentation event. */
+	final journal:String;
 
 	/** Active generation sequence supplied by `ActivePlayableLevel`. */
 	final generation:Int;
@@ -406,6 +412,8 @@ final class RuntimePilotScript {
 			return observation.objective;
 		if (kind == Dialogue)
 			return observation.dialogue;
+		if (kind == Journal)
+			return observation.journal;
 		if (kind == Generation)
 			return Std.string(observation.generation);
 		if (kind == Publications)
@@ -433,6 +441,8 @@ final class RuntimePilotScript {
 			return "objective";
 		if (kind == Dialogue)
 			return "dialogue";
+		if (kind == Journal)
+			return "journal";
 		if (kind == Generation)
 			return "generation";
 		if (kind == Publications)
@@ -539,6 +549,8 @@ final class RuntimePilotScript {
 			return KnownRuntimePilotExpectation(Objective);
 		if (value == "dialogue")
 			return KnownRuntimePilotExpectation(Dialogue);
+		if (value == "journal")
+			return KnownRuntimePilotExpectation(Journal);
 		if (value == "generation")
 			return KnownRuntimePilotExpectation(Generation);
 		if (value == "publications")

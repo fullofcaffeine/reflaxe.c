@@ -354,6 +354,7 @@ final class CaxecraftApp {
 		inventory = PilotScript.initialInventory(pilotName);
 		#end
 		var activeDialogue:Null<ScenarioId> = null;
+		var latestJournalId:Null<ScenarioId> = null;
 		var currentObjectiveId = initialLevel.initialObjectiveId();
 		var guideInteractionAvailable = initialSession.actorInteractionAvailable(initialLevel.dialogueActorId());
 		var dialogueActor = initialSession.readCharacter(initialLevel.dialogueActorId());
@@ -669,6 +670,7 @@ final class CaxecraftApp {
 								} else {
 									character = initialView.localPlayer;
 									activeDialogue = null;
+									latestJournalId = null;
 									currentObjectiveId = levelView.initialObjectiveId();
 									guideInteractionAvailable = session.actorInteractionAvailable(levelView.dialogueActorId());
 									dialogueActor = session.readCharacter(levelView.dialogueActorId());
@@ -784,6 +786,7 @@ final class CaxecraftApp {
 			}
 			final observedObjective = currentObjectiveId == null ? "none" : currentObjectiveId.text();
 			final observedDialogue = activeDialogue == null ? "none" : activeDialogue.text();
+			final observedJournal = latestJournalId == null ? "none" : latestJournalId.text();
 			final observedScreen = onTitle ? "title" : onCampaignSelect ? "campaign" : onEditor ? "editor" : paused ? "paused" : "playing";
 			final observedMode = selectedMode == GameMode.Creative ? "creative" : "adventure";
 			final observedMedium = if (character.aquatic.medium == AquaticMedium.Dry) "dry" else if (character.aquatic.medium == AquaticMedium.Wading)
@@ -795,6 +798,7 @@ final class CaxecraftApp {
 				level: observedLevel,
 				objective: observedObjective,
 				dialogue: observedDialogue,
+				journal: observedJournal,
 				generation: activeLevel.generationId().value(),
 				publications: activeLevel.publicationCount(),
 				cellX: Std.int(character.body.x),
@@ -944,6 +948,8 @@ final class CaxecraftApp {
 							switch event {
 								case FlowPresentationEvent.DialogueRequested(id):
 									activeDialogue = id;
+								case FlowPresentationEvent.JournalAdded(id):
+									latestJournalId = id;
 								case _:
 							}
 						#if caxecraft_pilot
@@ -1324,6 +1330,8 @@ final class CaxecraftApp {
 					enemyPhase: enemyPhase.phase,
 					levelLabel: levelLabel,
 					objectiveTitle: levelView.objectiveTitle(currentObjectiveId, scenarioLocale(locale)),
+					journalTitle: latestJournalId == null ? "" : levelView.presentation().journalTitle(latestJournalId, scenarioLocale(locale)),
+					journalBody: latestJournalId == null ? "" : levelView.presentation().journalBody(latestJournalId, scenarioLocale(locale)),
 					presentation: levelView.presentation()
 				};
 				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
@@ -1610,10 +1618,10 @@ final class CaxecraftApp {
 		drawUiText(uiCatalog, locale, UiMessage.Controls, 20, height - 22, 14, text);
 		if (mode == GameMode.Adventure && view.objectiveTitle.length > 0)
 			Raylib.DrawTextString(view.objectiveTitle, 32, 110, 14, CaxecraftPalette.selection());
-		if (activeDialogue != null) {
+		if (!paused && activeDialogue != null) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
 			Raylib.DrawTextString(presentation.dialogueLine(activeDialogue, 0, scenarioLocale(locale)), centerX - 225, centerY + 74, 16, text);
-		} else if (guideInteractionAvailable) {
+		} else if (!paused && guideInteractionAvailable) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
 			drawScenarioText(presentation, locale, GameplayMessage.GuideTalk, centerX - 110, centerY + 74, 18, text);
 		}
@@ -1656,10 +1664,19 @@ final class CaxecraftApp {
 			drawScenarioText(presentation, locale, GameplayMessage.ReturnPrompt, centerX - 125, centerY + 10, 18, CaxecraftPalette.selection());
 		}
 		if (paused) {
-			Raylib.DrawRectangle(centerX - 170, centerY - 48, 340, 96, CaxecraftPalette.hudPanel());
-			Raylib.DrawRectangleLines(centerX - 170, centerY - 48, 340, 96, CaxecraftPalette.selection());
-			drawUiText(uiCatalog, locale, UiMessage.PauseTitle, centerX - 48, centerY - 30, 24, text);
-			drawUiText(uiCatalog, locale, UiMessage.PauseHelp, centerX - 160, centerY + 8, 16, text);
+			final hasJournal = view.journalTitle.length > 0 || view.journalBody.length > 0;
+			final panelX = hasJournal ? centerX - 330 : centerX - 170;
+			final panelY = hasJournal ? centerY - 110 : centerY - 48;
+			final panelWidth = hasJournal ? 660 : 340;
+			final panelHeight = hasJournal ? 220 : 96;
+			Raylib.DrawRectangle(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.hudPanel());
+			Raylib.DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.selection());
+			drawUiText(uiCatalog, locale, UiMessage.PauseTitle, centerX - 48, panelY + 18, 24, text);
+			if (hasJournal) {
+				Raylib.DrawTextString(view.journalTitle, panelX + 30, panelY + 68, 18, CaxecraftPalette.selection());
+				drawWrappedText(view.journalBody, panelX + 30, panelY + 104, 16, 58, 22, 3, text);
+			}
+			drawUiText(uiCatalog, locale, UiMessage.PauseHelp, centerX - 160, panelY + panelHeight - 34, 16, text);
 		} else if (placementBlocked) {
 			drawUiText(uiCatalog, locale, UiMessage.PlaceBlocked, centerX - 170, centerY + 26, 14, CaxecraftPalette.selection());
 		} else if (!captured) {
@@ -1667,6 +1684,33 @@ final class CaxecraftApp {
 		} else if (!hit.hit) {
 			drawUiText(uiCatalog, locale, UiMessage.NoBlockInReach, centerX - 105, centerY + 26, 14, text);
 		}
+	}
+
+	/**
+	 * Draw a short authored paragraph inside a fixed panel without clipping words.
+	 *
+	 * The caller supplies a conservative character width and line limit selected
+	 * for its panel. This is presentation-only wrapping: it does not change or
+	 * truncate the validated journal text stored by the active level.
+	 */
+	static function drawWrappedText(value:String, x:Int, y:Int, fontSize:Int, maximumCharacters:Int, lineHeight:Int, maximumLines:Int, color:Color):Void {
+		final words = value.split(" ");
+		var line = "";
+		var lineIndex = 0;
+		for (word in words) {
+			final candidate = line.length == 0 ? word : line + " " + word;
+			if (line.length > 0 && candidate.length > maximumCharacters) {
+				if (lineIndex >= maximumLines)
+					return;
+				Raylib.DrawTextString(line, x, y + lineIndex * lineHeight, fontSize, color);
+				lineIndex++;
+				line = word;
+			} else {
+				line = candidate;
+			}
+		}
+		if (line.length > 0 && lineIndex < maximumLines)
+			Raylib.DrawTextString(line, x, y + lineIndex * lineHeight, fontSize, color);
 	}
 
 	/** Keep native drawing in the UI layer; the catalog only chooses text. */

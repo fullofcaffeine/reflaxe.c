@@ -5,12 +5,16 @@ asset-pack packs/caxecraft/base
 default-locale en
 locale en
   message adventure_tagline "A runtime-authored adventure"
+  message journal.body "Keep the clue available after dialogue closes."
+  message journal.title "Runtime journal clue"
   message objective.body "Cross the test bridge."
   message objective.title "Reach the test marker"
   message scenario.title "Runtime presentation probe"
 end locale
 locale es-mx
   message adventure_tagline "Una aventura creada en tiempo de ejecucion"
+  message journal.body "Conserva la pista despues de cerrar el dialogo."
+  message journal.title "Pista del diario en ejecucion"
   message objective.body "Cruza el puente de prueba."
   message objective.title "Llega al marcador de prueba"
   message scenario.title "Prueba de presentacion en ejecucion"
@@ -43,6 +47,9 @@ end object
 dialogue dialogue.guide
   line speaker guide.nia literal "Synthetic engine fixture"
 end dialogue
+journal journal.fixture title message journal.title
+  body message journal.body
+end journal
 objective objective.marker active title message objective.title
   body message objective.body
 end objective
@@ -58,6 +65,7 @@ end objective
 rule rule.fixture-advance priority 10 once
   when interact guide.nia
   if (always)
+  do journal journal.fixture
   do objective objective.marker complete
   do objective objective.next active
 end rule

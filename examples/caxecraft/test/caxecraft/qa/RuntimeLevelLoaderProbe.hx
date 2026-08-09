@@ -131,6 +131,11 @@ function selfCheck():Int {
 		|| presentation.initialObjectiveBody(english) != "Cross the test bridge."
 		|| presentation.initialObjectiveBody(spanish) != "Cruza el puente de prueba."
 		|| presentation.dialogueLine(new ScenarioId("dialogue.guide"), 0, english) != "Synthetic engine fixture"
+		|| presentation.journalTitle(new ScenarioId("journal.fixture"), english) != "Runtime journal clue"
+		|| presentation.journalTitle(new ScenarioId("journal.fixture"), spanish) != "Pista del diario en ejecucion"
+		|| presentation.journalBody(new ScenarioId("journal.fixture"), english) != "Keep the clue available after dialogue closes."
+		|| presentation.journalTitle(new ScenarioId("journal.missing"), english) != ""
+		|| presentation.journalBody(new ScenarioId("journal.missing"), english) != ""
 		|| presentation.dialogueLine(new ScenarioId("dialogue.missing"), 0, english) != ""
 		|| presentation.dialogueLine(new ScenarioId("dialogue.guide"), 1, english) != "")
 		return 102;
@@ -159,20 +164,25 @@ function selfCheck():Int {
 	final flow = flowTick.flow;
 	if (flow.firedRules.length != 1
 		|| flow.firedRules[0].text() != "rule.fixture-advance"
-		|| flow.presentation.length != 2
+		|| flow.presentation.length != 3
 		|| flow.diagnostics.length != 0
 		|| flow.activeObjective == null
 		|| flow.activeObjective.text() != "objective.next")
 		return 108;
 	switch flow.presentation[0] {
-		case FlowPresentationEvent.ObjectiveChanged(id, Complete) if (id.text() == "objective.marker"):
+		case FlowPresentationEvent.JournalAdded(id) if (id.text() == "journal.fixture"):
 		case _:
 			return 109;
 	}
 	switch flow.presentation[1] {
-		case FlowPresentationEvent.ObjectiveChanged(id, Active) if (id.text() == "objective.next"):
+		case FlowPresentationEvent.ObjectiveChanged(id, Complete) if (id.text() == "objective.marker"):
 		case _:
 			return 110;
+	}
+	switch flow.presentation[2] {
+		case FlowPresentationEvent.ObjectiveChanged(id, Active) if (id.text() == "objective.next"):
+		case _:
+			return 112;
 	}
 	final collected = flowSession.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Lantern, 1);
 	if (!collected.resolved || collected.collected != 1 || collected.inventory.lantern != 1)

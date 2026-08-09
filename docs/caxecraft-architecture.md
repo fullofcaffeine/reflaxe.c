@@ -473,6 +473,14 @@ event-source registry and remaining mechanic adapters are still owned by
 `haxe_c-xge.19.10`; this first adapter is not evidence that every listed event
 family is connected.
 
+The first journal presentation path follows the same boundary. CaxeFlow adds a
+validated journal ID and emits `JournalAdded` only after the rule tick succeeds.
+The application retains that ID as presentation state, resolves its localized
+title and body through the active level, and passes immutable text to the
+paused heads-up display. Drawing cannot mutate the journal or inspect the
+scenario model. This slice shows only the latest entry; navigation and save
+persistence remain future owners.
+
 ## Fixed-tick order
 
 Update order is observable behavior. The initial planned schedule is:

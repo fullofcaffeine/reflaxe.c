@@ -92,12 +92,15 @@ toward the four marks left by the Fallskeeper, and starts the Tideweave route.
 Collecting Tideweave now completes that search and opens the grotto objective;
 collecting the grotto lantern completes the current authored route. Both
 changes come from CaxeFlow rules in the map, not campaign names in engine Haxe.
+Moss also records the current Fallskeeper lead as an authored journal entry.
+Pause after unlocking it to read the latest clue; both languages come from the
+active CaxeMap rather than the executable.
 The runtime loader checks that the edited map remains valid, while the real
 title-to-Adventure Piloscript checks each objective change and captures the
 authored arrival for review. Decorative coordinates are deliberately not
 frozen by a Haxe test, so designers can keep reshaping the route. This is early
-campaign progress, not the finished suit quest: the Fallskeeper, journal,
-four-glyph interaction, opening the vault, and flooded ruins remain open work.
+campaign progress, not the finished suit quest: the Fallskeeper encounter,
+exact four-glyph code, opening the vault, and flooded ruins remain open work.
 `EntityStore` now keeps a local player and generic non-player in one
 deterministically ordered `Array<Character>`, and `GameSession` advances either
 through the same movement, water, and health rules. Its two focused generated-C
@@ -439,8 +442,8 @@ selected item's primary action: remove a block normally or strike while the
 Copper Sword is selected. Right click uses the selected item's secondary
 action: it places a selected block or eats selected berries when health is not
 full. Number keys `1` through `8` or the
-mouse wheel to select the hotbar, Escape to pause or release the cursor, and
-`Q` to quit. Creative mode does not consume placed blocks; the current
+mouse wheel to select the hotbar, Escape to pause and read the latest unlocked
+journal clue, and `Q` to quit. Creative mode does not consume placed blocks; the current
 Adventure feasibility path has finite stacks and returns eligible mined blocks
 to them. It checks room before removal, so a full matching stack leaves the
 block in the world and shows a capacity message. Losing focus pauses and releases the cursor; clicking the paused
@@ -734,8 +737,9 @@ package support, live hot-reload during one running process, a public C
 application binary interface (ABI), or platform qualification.
 
 The active runtime level owns its title, objectives, dialogue, encounter,
-failure text, and item-driven CaxeFlow progression. Edit the CAXEMAP and use
-the content loop. The game does not need a Haxe or C rebuild for these changes.
+failure text, journal entries, and item-driven CaxeFlow progression. Edit the
+CAXEMAP and use the content loop. The game does not need a Haxe or C rebuild
+for these changes.
 
 Terrain, authored fluid records, fluid presentation, actors, items, and player
 spawn are read from the packaged CaxeMap by the ordinary native loader. The

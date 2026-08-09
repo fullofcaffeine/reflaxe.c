@@ -40,7 +40,9 @@ directs the player toward the four marks left by the Fallskeeper. The authored
 objective now advances when the player collects Tideweave, then completes the
 current grotto route when the player collects its lantern. These rules live in
 the Western Falls CaxeMap and can change without rebuilding the game. The
-Fallskeeper, journal entry, four-glyph code interaction, sealed-vault
+Moss interaction also unlocks a bilingual journal note that keeps the current
+Fallskeeper lead readable from the pause overlay. It does not contain the vault
+code. The Fallskeeper encounter, exact code entry, multi-entry journal, sealed-vault
 progression, and larger flooded ruins are still designs rather than playable
 mechanics. Branching, return travel,
 persistence, authored exit zones, and the broader Adventure campaign also

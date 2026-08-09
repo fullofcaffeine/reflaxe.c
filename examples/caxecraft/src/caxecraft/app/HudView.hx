@@ -73,6 +73,12 @@ typedef HudView = {
 	/** Localized initial objective selected from the same published level. */
 	final objectiveTitle:String;
 
+	/** Localized title of the latest unlocked journal entry, or empty text. */
+	final journalTitle:String;
+
+	/** Localized body of the latest unlocked journal entry, or empty text. */
+	final journalBody:String;
+
 	/** Validated message catalog selected with the same published level. */
 	final presentation:RuntimeLevelPresentation;
 }

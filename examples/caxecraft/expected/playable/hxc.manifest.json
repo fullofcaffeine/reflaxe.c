@@ -494,7 +494,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "4bbaf0d01a55a18838502bbc8ebefef843c1a98812a69c6f8a299a7820763a97",
+      "sha256": "baeffaf85f91cd342357feed09efdbdf64fdf7d0031e92eb98118ef089b42b03",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -504,12 +504,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "21e42e769ac642b730c727e1d88816c1be331ce2524b57f9d58b3236f9e63915",
+      "sha256": "3d3f3ee5bb6096f45eafaeabba1b14e9c9a666add31bd1f3a34265f460dcdd73",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "2623e67da58b6e49e1eace89bb12f3deec0c2ec6555257def07978aa30dd995c",
+      "sha256": "2edb17b1848bfc9b6627df75d5e4c90b951e0bfd5a9d960525fe5d1684c505ae",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -519,12 +519,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "1d4be8ec7c6b881aa1aa2469d2d102af61c37719f2790706e6b140d76866bd21",
+      "sha256": "f4865c1228c5dd61abfaa0e9d46960e1d17498db7a5291dfae814c75efb6d522",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "041ccc2946259e7ce980c055bfe7cc13dbe221e1f925a358f923fb3fa5d0bf0d",
+      "sha256": "70832f2e7558ad4cf6d7e60548b5fd9424f490921cd258961e8f40fc7aa35d15",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -554,7 +554,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "b3a9c54ac64d61d4ec87645a5fb8c96d0cf09b1c37989a4367508fdfac58e021",
+      "sha256": "e2b9d469588c657708b6b924643c25aacbd5afdb29a68325716489f872e02790",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftApp.h",
       "kind": "private-header"
     },
@@ -584,7 +584,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "763cb5ff5514decd52451c9938b934009cb176ec62daf6074cc7f66b6936f925",
+      "sha256": "667045f9bbda8b747f79762b2560e669238013921ac3ffb17fdb7b8ba598511c",
       "path": "include/hxc/modules/caxecraft/app/HudView.h",
       "kind": "private-header"
     },
@@ -769,7 +769,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "ae80272a56573dc909fee183a8190e96a0310e05685a3b89eed9a482a6d65a36",
+      "sha256": "3db84c9b1fe89708f685067ef9a5473cc3f6720bf5a7a5d040231c1bcdf6625e",
       "path": "include/hxc/modules/caxecraft/content/RuntimeLevelLoader.h",
       "kind": "private-header"
     },
@@ -1529,7 +1529,7 @@
       "kind": "source"
     },
     {
-      "sha256": "1ccbdfa2d8a5976c2d47a51a53fe4274b0cb28f194ff7c8cae4fa59f621d8488",
+      "sha256": "572d69275603f658db59aa5d70f9a838c3235532762e7d6b67593aa596928dbe",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1559,7 +1559,7 @@
       "kind": "source"
     },
     {
-      "sha256": "08de123c9d5e30ad5a5507e6aa4c4a5cc3c145b0a00dae71d9cef4fc3fdad3a7",
+      "sha256": "72c9b264cb628dd9a9cc8f48feaead56e308d0bbd9830419d66806eefefa38c5",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
@@ -1749,7 +1749,7 @@
       "kind": "source"
     },
     {
-      "sha256": "b261cb401132e13a69c815150494b6035abf4ac3d079531120352002fff9a6d1",
+      "sha256": "fcae4f9990d5508c1c7f9bc95ce718a743594acca5ba51469db302c391fff1d4",
       "path": "src/modules/caxecraft/content/RuntimeLevelLoader.c",
       "kind": "source"
     },

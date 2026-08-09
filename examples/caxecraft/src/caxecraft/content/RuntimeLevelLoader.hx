@@ -24,6 +24,7 @@ import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogueLine;
+import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.ScenarioContentRegistry;
@@ -139,14 +140,15 @@ typedef RuntimeLevelAuthoredTrace = {
 }
 
 /**
- * Keeps the player-visible title and starting objective from one validated map.
+ * Keeps player-visible story text from one validated map.
  *
  * Runtime loading used to retain only counts and identity digests for story
  * data. That was enough to prove parsing, but the game then had to draw text
  * from the entry map's compile-time catalog after travelling elsewhere. This
- * value instead keeps the validated message catalog and the selected text
- * references beside the unpublished generation. `ActivePlayableLevel` can
- * therefore replace the world and its matching words in one publication.
+ * value instead keeps the validated message catalog, dialogue, journal, and
+ * objective references beside the unpublished generation.
+ * `ActivePlayableLevel` can therefore replace the world and its matching words
+ * in one publication.
  *
  * The loader owns the parsed scenario exclusively and never exposes its
  * mutable Arrays, so retaining that private catalog does not share mutation
@@ -158,6 +160,7 @@ final class RuntimeLevelPresentation {
 	final messages:ScenarioMessages;
 	final title:ScenarioText;
 	final dialogues:Array<ScenarioDialogue>;
+	final journal:Array<ScenarioJournalEntry>;
 	final objectives:Array<ScenarioObjective>;
 	final startingObjective:Null<ScenarioId>;
 
@@ -172,6 +175,9 @@ final class RuntimeLevelPresentation {
 				lines.push({speaker: line.speaker, text: line.text});
 			dialogues.push({id: dialogue.id, lines: lines});
 		}
+		journal = [];
+		for (entry in scenario.story.journal)
+			journal.push({id: entry.id, title: entry.title, body: entry.body});
 		objectives = [];
 		var selected:Null<ScenarioId> = null;
 		for (objective in scenario.story.objectives) {
@@ -234,6 +240,22 @@ final class RuntimeLevelPresentation {
 		for (dialogue in dialogues)
 			if (dialogue.id.text() == id.text())
 				return lineIndex < dialogue.lines.length ? resolve(dialogue.lines[lineIndex].text, locale) : "";
+		return "";
+	}
+
+	/** Resolve one unlocked journal title by stable authored identity. */
+	public function journalTitle(id:ScenarioId, locale:LocaleId):String {
+		for (entry in journal)
+			if (entry.id.text() == id.text())
+				return resolve(entry.title, locale);
+		return "";
+	}
+
+	/** Resolve one unlocked journal body by stable authored identity. */
+	public function journalBody(id:ScenarioId, locale:LocaleId):String {
+		for (entry in journal)
+			if (entry.id.text() == id.text())
+				return resolve(entry.body, locale);
 		return "";
 	}
 

@@ -298,10 +298,12 @@ interacts with Moss, checks that the Tideweave objective becomes active, checks
 that collecting Tideweave opens the grotto objective, and checks that collecting
 the lantern leaves no active objective. Those expected IDs remain in the
 content-owned Piloscript rather than compiled engine code.
-Its principal review image shows the arrival rather than freezing decorative
-coordinates in a Haxe test. The player still presses `N` to use the manifest's
+The interaction also checks the authored journal ID. The final review image
+pauses after the return route and shows the resolved journal title and wrapped
+body, while focused Haxe tests own generic text lookup and missing-ID behavior.
+The player still presses `N` to use the manifest's
 sole exit. Authored exit volumes, branching, return travel between levels,
-saves, the Fallskeeper encounter, the journal/code interaction, and opening the
+saves, the Fallskeeper encounter, exact code interaction, and opening the
 vault through story logic remain future work. Subjective route readability,
 waterfall appearance, puzzle quality, and fun still require hands-on review.
 

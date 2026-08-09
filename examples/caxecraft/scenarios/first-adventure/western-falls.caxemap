@@ -15,6 +15,8 @@ locale en
   message enemy_windup "MOSSLING WINDUP: DODGE"
   message guide_talk "E  TALK TO MOSS"
   message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
+  message journal_fallskeeper_body "MOSS SAYS THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY. FIND THE FALLSKEEPER BEFORE TRYING THE VAULT."
+  message journal_fallskeeper_title "THE FALLSKEEPER'S FOUR MARKS"
   message objective_grotto_body "TIDEWEAVE MAKES THE FLOODED PASSAGE SAFE. RECOVER ITS LANTERN."
   message objective_grotto_title "CROSS THE FLOODED GROTTO"
   message objective_meet_moss_body "MOSS WAITS BESIDE THE FALLSKEEPER'S SHRINE."
@@ -39,6 +41,8 @@ locale es-mx
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
   message guide_talk "E  HABLAR CON MOSS"
   message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
+  message journal_fallskeeper_body "MOSS DICE QUE EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS JUNTO AL PASO SELLADO. BUSCALO ANTES DE PROBAR LA BOVEDA."
+  message journal_fallskeeper_title "LAS CUATRO MARCAS DEL GUARDIAN"
   message objective_grotto_body "TIDEWEAVE HACE SEGURO EL PASO INUNDADO. RECUPERA SU LINTERNA."
   message objective_grotto_title "CRUZA LA GRUTA INUNDADA"
   message objective_meet_moss_body "MOSS ESPERA JUNTO AL SANTUARIO DEL GUARDIAN DE LAS CATARATAS."
@@ -820,6 +824,9 @@ end object
 dialogue dialogue.moss.falls
   line speaker guide.moss message guide_welcome
 end dialogue
+journal journal.fallskeeper-lead title message journal_fallskeeper_title
+  body message journal_fallskeeper_body
+end journal
 objective objective.explore-grotto hidden title message objective_grotto_title
   body message objective_grotto_body
 end objective
@@ -838,6 +845,7 @@ rule rule.moss-opens-the-western-route priority 100 once
   when interact guide.moss
   if (always)
   do dialogue dialogue.moss.falls
+  do journal journal.fallskeeper-lead
   do objective objective.meet-moss complete
   do objective objective.find-tideweave active
 end rule

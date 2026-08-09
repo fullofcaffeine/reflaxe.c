@@ -29,9 +29,9 @@ expect 3 publications 1
 
 # Ask Moss about the four marks, then leave the Falls spawn.
 action 4 interact
-checkpoint 8 capture final
 expect 8 objective objective.find-tideweave
 expect 8 dialogue dialogue.moss.falls
+expect 8 journal journal.fallskeeper-lead
 
 # Open the sand seam and reach the lower cache.
 hold 5 92 forward-left
@@ -59,7 +59,9 @@ expect 312 medium submerged
 expect 312 position 13,3,25
 hold 312 343 right-rise
 
-expect 349 screen playing
+action 349 pause
+checkpoint 349 capture final
+expect 349 screen paused
 expect 349 level western-falls
 expect 349 objective none
 expect 349 equipment caxecraft:tideweave-suit
