@@ -1,0 +1,931 @@
+CAXEMAP 1
+feature required caxecraft:core
+map adventure.frostmere
+asset-pack packs/caxecraft/base
+default-locale en
+locale en
+  message adventure_progress "REACH THE ASHFALL BEACON"
+  message adventure_tagline "SPEAK WITH NIA. WAKE THE EMBER MARK. CROSS THE FROZEN RAVINE."
+  message attack_hit "COPPER STRIKE"
+  message berry_stack_full "BERRIES FULL: USE ONE FIRST"
+  message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
+  message ember_awake "THE EMBER MARK WAKES. THE RAVINE BRIDGE OPENS."
+  message enemy_alert "SNOWBOUND MOSSLING ALERT"
+  message enemy_dropped_items "MOSSLING DROPPED BERRIES"
+  message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
+  message enemy_windup "MOSSLING WINDUP: DODGE"
+  message guide_talk "E  TALK"
+  message journal_ashfall_body "THE RECOVERED LANTERN BURNS GOLD AGAINST THE ASH. TWO STONE CAIRNS MARK THE ROAD INTO THE FALL."
+  message journal_ashfall_title "THE ASHFALL THRESHOLD"
+  message journal_frostmere_body "NIA MARKED A TIMBER BRIDGE NORTH OF THE EMBER STONE. THE ASH SKY BEGINS BEYOND IT."
+  message journal_frostmere_title "THE FROSTMERE ASCENT"
+  message nia_welcome "NIA: THE WIND BURIED THE BRIDGE LOCK. WAKE THE ORANGE EMBER MARK, THEN CLIMB TOWARD THE ASH SKY."
+  message objective_arrival_body "NIA WAITS BETWEEN THE TWO SOUTHERN PINES."
+  message objective_arrival_title "ASK NIA ABOUT THE SNOW SHELF"
+  message objective_ember_body "FOLLOW THE RISING SNOW PATH TO THE ORANGE MARK BESIDE THE RAVINE."
+  message objective_ember_title "WAKE THE EMBER MARK"
+  message objective_overlook_body "CROSS THE TIMBER BRIDGE AND RECOVER THE LANTERN ABOVE THE SNOWBOUND MOSSLING."
+  message objective_overlook_title "REACH THE ASHFALL OVERLOOK"
+  message objective_seek_ashfall_body "THE SNOW ENDS UNDER A DARKENING SKY. THE ASHFALL BRIDGE LIES AHEAD."
+  message objective_seek_ashfall_title "ASHFALL LIES BEYOND FROSTMERE"
+  message pickup_many "+2 BERRIES"
+  message pickup_one "+1 BERRY"
+  message player_fallen "HAXIRIO HAS FALLEN"
+  message recovery_empty "NO BERRIES LEFT"
+  message recovery_used "BERRIES: +1 HEART"
+  message scenario_title "Caxecraft: Frostmere"
+end locale
+locale es-mx
+  message adventure_progress "LLEGA AL FARO DE ASHFALL"
+  message adventure_tagline "HABLA CON NIA. ENCIENDE LA MARCA. CRUZA EL BARRANCO HELADO."
+  message attack_hit "GOLPE DE COBRE"
+  message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
+  message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
+  message ember_awake "LA MARCA DE BRASA DESPIERTA. EL PUENTE DEL BARRANCO SE ABRE."
+  message enemy_alert "MUSGUITO DE NIEVE ALERTA"
+  message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
+  message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
+  message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
+  message guide_talk "E  HABLAR"
+  message journal_ashfall_body "LA LINTERNA RECUPERADA ARDE DORADA CONTRA LA CENIZA. DOS MOJONES DE PIEDRA MARCAN EL CAMINO."
+  message journal_ashfall_title "EL UMBRAL DE ASHFALL"
+  message journal_frostmere_body "NIA MARCO UN PUENTE DE MADERA AL NORTE DE LA PIEDRA DE BRASA. EL CIELO DE CENIZA EMPIEZA MAS ALLA."
+  message journal_frostmere_title "EL ASCENSO DE FROSTMERE"
+  message nia_welcome "NIA: EL VIENTO ENTERRO EL CERROJO DEL PUENTE. ENCIENDE LA MARCA NARANJA Y SUBE HACIA EL CIELO DE CENIZA."
+  message objective_arrival_body "NIA ESPERA ENTRE LOS DOS PINOS DEL SUR."
+  message objective_arrival_title "PREGUNTA A NIA POR LA MESETA NEVADA"
+  message objective_ember_body "SIGUE EL SENDERO DE NIEVE HASTA LA MARCA NARANJA JUNTO AL BARRANCO."
+  message objective_ember_title "ENCIENDE LA MARCA DE BRASA"
+  message objective_overlook_body "CRUZA EL PUENTE Y RECUPERA LA LINTERNA SOBRE EL MUSGUITO DE NIEVE."
+  message objective_overlook_title "LLEGA AL MIRADOR DE ASHFALL"
+  message objective_seek_ashfall_body "LA NIEVE TERMINA BAJO UN CIELO OSCURO. EL PUENTE DE ASHFALL ESTA ADELANTE."
+  message objective_seek_ashfall_title "ASHFALL ESTA MAS ALLA DE FROSTMERE"
+  message pickup_many "+2 BAYAS"
+  message pickup_one "+1 BAYA"
+  message player_fallen "HAXIRIO HA CAIDO"
+  message recovery_empty "NO QUEDAN BAYAS"
+  message recovery_used "BAYAS: +1 CORAZON"
+  message scenario_title "Caxecraft: Frostmere"
+end locale
+title message scenario_title
+mode adventure
+world 32 16 32
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+palette 2 caxecraft:dirt
+palette 5 caxecraft:wood
+palette 6 caxecraft:leaves
+palette 7 caxecraft:snow
+palette 8 caxecraft:ash
+palette 9 caxecraft:stone
+chunk world.base 0 0 0 32 16 32
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 3
+  run 9 1
+  run 8 2
+  run 9 5
+  run 8 2
+  run 7 1
+  run 9 1
+  run 8 1
+  run 2 4
+  run 9 4
+  run 2 4
+  run 8 3
+  run 7 1
+  run 0 7
+  run 9 3
+  run 0 5
+  run 7 1
+  run 8 4
+  run 2 4
+  run 7 1
+  run 8 3
+  run 0 12
+  run 5 1
+  run 0 11
+  run 7 1
+  run 8 3
+  run 7 1
+  run 0 15
+  run 5 1
+  run 0 143
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 4
+  run 7 1
+  run 8 1
+  run 9 5
+  run 7 1
+  run 8 4
+  run 2 4
+  run 9 4
+  run 2 4
+  run 8 1
+  run 7 1
+  run 8 1
+  run 9 1
+  run 0 7
+  run 9 3
+  run 0 6
+  run 8 2
+  run 7 1
+  run 8 1
+  run 2 4
+  run 8 4
+  run 7 1
+  run 0 22
+  run 7 1
+  run 8 1
+  run 9 1
+  run 8 2
+  run 0 160
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 2
+  run 7 1
+  run 8 3
+  run 9 5
+  run 8 5
+  run 2 4
+  run 9 4
+  run 2 4
+  run 8 4
+  run 7 1
+  run 0 1
+  run 9 2
+  run 0 3
+  run 9 3
+  run 0 3
+  run 9 2
+  run 0 1
+  run 7 1
+  run 9 1
+  run 8 2
+  run 2 4
+  run 8 3
+  run 7 1
+  run 0 6
+  run 9 2
+  run 0 9
+  run 9 2
+  run 0 5
+  run 8 3
+  run 7 1
+  run 0 10
+  run 8 1
+  run 9 1
+  run 0 9
+  run 9 1
+  run 8 1
+  run 0 8
+  run 7 1
+  run 0 11
+  run 8 1
+  run 0 9
+  run 8 1
+  run 0 106
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 1
+  run 8 1
+  run 9 1
+  run 8 4
+  run 7 1
+  run 8 5
+  run 9 1
+  run 7 1
+  run 8 1
+  run 2 4
+  run 9 4
+  run 2 4
+  run 8 4
+  run 0 2
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 1
+  run 8 4
+  run 2 4
+  run 8 1
+  run 7 1
+  run 8 2
+  run 0 6
+  run 8 1
+  run 0 11
+  run 8 1
+  run 0 5
+  run 8 1
+  run 7 1
+  run 8 2
+  run 0 160
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 5
+  run 7 1
+  run 8 3
+  run 9 1
+  run 8 2
+  run 7 1
+  run 8 3
+  run 2 4
+  run 9 4
+  run 2 4
+  run 8 2
+  run 7 1
+  run 8 1
+  run 0 16
+  run 8 3
+  run 7 1
+  run 2 4
+  run 8 4
+  run 0 24
+  run 9 1
+  run 8 3
+  run 0 160
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 3
+  run 7 1
+  run 8 1
+  run 9 1
+  run 8 4
+  run 7 1
+  run 8 5
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 1
+  run 8 3
+  run 0 16
+  run 9 1
+  run 7 1
+  run 8 2
+  run 2 4
+  run 8 2
+  run 9 1
+  run 8 1
+  run 0 24
+  run 8 4
+  run 0 160
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 1
+  run 7 1
+  run 8 6
+  run 7 1
+  run 8 3
+  run 9 1
+  run 8 2
+  run 7 1
+  run 2 4
+  run 9 4
+  run 2 4
+  run 8 4
+  run 0 16
+  run 8 4
+  run 2 4
+  run 8 2
+  run 7 1
+  run 8 1
+  run 0 20
+  run 7 1
+  run 0 3
+  run 8 2
+  run 7 1
+  run 9 1
+  run 0 1
+  run 7 1
+  run 0 158
+  run 1 32
+  run 9 200
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 6
+  run 7 1
+  run 8 1
+  run 9 1
+  run 8 4
+  run 7 1
+  run 8 2
+  run 2 4
+  run 9 4
+  run 2 4
+  run 8 1
+  run 9 1
+  run 8 1
+  run 7 1
+  run 0 16
+  run 8 1
+  run 7 3
+  run 2 4
+  run 7 1
+  run 8 3
+  run 0 1
+  run 7 1
+  run 0 22
+  run 7 1
+  run 8 3
+  run 0 28
+  run 7 1
+  run 0 28
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 29
+  run 8 2
+  run 9 1
+  run 0 36
+  run 1 32
+  run 9 168
+  run 2 16
+  run 9 12
+  run 2 4
+  run 8 4
+  run 7 1
+  run 8 6
+  run 7 1
+  run 8 3
+  run 9 1
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 3
+  run 8 1
+  run 0 1
+  run 7 1
+  run 0 14
+  run 8 1
+  run 7 3
+  run 2 4
+  run 8 1
+  run 9 1
+  run 8 2
+  run 0 22
+  run 5 1
+  run 0 1
+  run 8 4
+  run 0 26
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 9
+  run 6 3
+  run 0 18
+  run 6 1
+  run 5 1
+  run 6 1
+  run 0 8
+  run 6 3
+  run 0 18
+  run 6 3
+  run 0 8
+  run 8 1
+  run 7 1
+  run 8 1
+  run 0 18
+  run 8 1
+  run 7 1
+  run 8 1
+  run 0 36
+  run 1 32
+  run 9 168
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 1
+  run 5 1
+  run 0 22
+  run 7 4
+  run 0 5
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 30
+  run 6 1
+  run 5 1
+  run 6 1
+  run 0 18
+  run 6 3
+  run 0 8
+  run 6 3
+  run 0 18
+  run 6 3
+  run 0 8
+  run 6 3
+  run 0 18
+  run 6 3
+  run 0 36
+  run 1 32
+  run 9 168
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 68
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 57
+  run 1 32
+  run 9 168
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 192
+  run 1 32
+  run 9 136
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 224
+  run 1 32
+  run 9 136
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 224
+  run 1 32
+  run 9 5
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 9
+  run 2 1
+  run 0 10
+  run 5 3
+  run 0 9
+  run 2 1
+  run 9 4
+  run 2 4
+  run 7 1
+  run 0 22
+  run 7 1
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 224
+  run 1 32
+  run 9 5
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 9
+  run 2 1
+  run 0 10
+  run 5 3
+  run 0 9
+  run 2 1
+  run 9 4
+  run 2 4
+  run 7 1
+  run 0 22
+  run 7 1
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 224
+  run 1 32
+  run 9 5
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 10
+  run 0 22
+  run 9 9
+  run 2 1
+  run 0 10
+  run 5 3
+  run 0 9
+  run 2 1
+  run 9 4
+  run 2 4
+  run 7 1
+  run 0 22
+  run 7 1
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 224
+  run 1 32
+  run 9 104
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 256
+  run 1 32
+  run 9 104
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 89
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 100
+  run 1 32
+  run 9 104
+  run 2 16
+  run 9 12
+  run 2 4
+  run 7 16
+  run 2 4
+  run 9 4
+  run 2 4
+  run 7 4
+  run 0 16
+  run 7 4
+  run 2 4
+  run 7 4
+  run 0 22
+  run 5 1
+  run 0 1
+  run 7 4
+  run 0 5
+  run 6 3
+  run 0 18
+  run 5 1
+  run 0 10
+  run 6 3
+  run 0 18
+  run 5 1
+  run 0 10
+  run 6 3
+  run 0 17
+  run 6 1
+  run 5 1
+  run 6 1
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 100
+  run 1 32
+  run 9 68
+  run 2 24
+  run 9 8
+  run 7 24
+  run 9 4
+  run 2 4
+  run 0 2
+  run 5 1
+  run 0 21
+  run 2 4
+  run 7 4
+  run 0 2
+  run 5 1
+  run 0 21
+  run 7 4
+  run 0 6
+  run 5 1
+  run 0 30
+  run 6 1
+  run 5 1
+  run 6 1
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 17
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 100
+  run 1 32
+  run 9 68
+  run 2 24
+  run 9 8
+  run 7 24
+  run 9 4
+  run 2 4
+  run 0 24
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 37
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 184
+  run 1 32
+  run 9 68
+  run 2 24
+  run 9 8
+  run 7 24
+  run 9 4
+  run 2 4
+  run 0 24
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 288
+  run 1 32
+  run 9 68
+  run 2 24
+  run 9 8
+  run 7 24
+  run 9 4
+  run 2 4
+  run 0 24
+  run 2 4
+  run 7 4
+  run 0 24
+  run 7 4
+  run 0 288
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 120
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 197
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 25
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 10
+  run 6 3
+  run 0 17
+  run 6 1
+  run 5 1
+  run 6 1
+  run 0 9
+  run 6 3
+  run 0 17
+  run 6 3
+  run 0 9
+  run 6 3
+  run 0 17
+  run 6 3
+  run 0 197
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 5
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 30
+  run 6 1
+  run 5 1
+  run 6 1
+  run 0 17
+  run 6 3
+  run 0 9
+  run 6 3
+  run 0 17
+  run 6 3
+  run 0 9
+  run 6 3
+  run 0 17
+  run 6 3
+  run 0 197
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 100
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 29
+  run 6 3
+  run 0 217
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 384
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 384
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 384
+  run 1 32
+  run 9 32
+  run 2 32
+  run 7 32
+  run 0 384
+end chunk
+fluid snow.ravine-meltwater caxecraft:water volume 5 3 14 22 2 3
+object ashfall.beacon
+  tag landmark
+  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 16500 12000 500 180
+end object
+object enemy.snow-mossling
+  tag enemy
+  placement entity caxecraft:mossling 18500 7000 12500 180
+end object
+object guide.nia
+  tag friend
+  placement npc caxecraft:nia dialogue.nia.frostmere 16500 4000 25500 180
+end object
+object item.ashfall-lantern
+  tag reward
+  placement item caxecraft:lantern 1 16500 9000 5500 0
+end object
+object player.start
+  tag player
+  placement player-spawn 16500 4000 28500 180
+end object
+object snow.ember
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 16500 6000 18500 0
+end object
+object snow.gate
+  tag mechanism
+  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 6000 15500 0
+end object
+dialogue dialogue.nia.frostmere
+  line speaker guide.nia message nia_welcome
+end dialogue
+dialogue dialogue.snow.ember
+  line speaker guide.nia message ember_awake
+end dialogue
+journal journal.ashfall-threshold title message journal_ashfall_title
+  body message journal_ashfall_body
+end journal
+journal journal.frostmere-route title message journal_frostmere_title
+  body message journal_frostmere_body
+end journal
+objective objective.ask-nia active title message objective_arrival_title
+  body message objective_arrival_body
+end objective
+objective objective.reach-overlook hidden title message objective_overlook_title
+  body message objective_overlook_body
+end objective
+objective objective.seek-ashfall hidden title message objective_seek_ashfall_title
+  body message objective_seek_ashfall_body
+end objective
+objective objective.wake-ember hidden title message objective_ember_title
+  body message objective_ember_body
+end objective
+rule rule.ember-opens-the-bridge priority 100 once
+  when interact snow.ember
+  if (objective objective.wake-ember active)
+  do set-object-state snow.ember caxecraft:entered
+  do set-object-state snow.gate caxecraft:open
+  do dialogue dialogue.snow.ember
+  do objective objective.wake-ember complete
+  do objective objective.reach-overlook active
+end rule
+rule rule.lantern-reveals-ashfall priority 100 once
+  when collect-item caxecraft:lantern
+  if (objective objective.reach-overlook active)
+  do journal journal.ashfall-threshold
+  do objective objective.reach-overlook complete
+  do objective objective.seek-ashfall active
+end rule
+rule rule.nia-marks-the-ascent priority 100 once
+  when interact guide.nia
+  if (objective objective.ask-nia active)
+  do dialogue dialogue.nia.frostmere
+  do journal journal.frostmere-route
+  do objective objective.ask-nia complete
+  do objective objective.wake-ember active
+end rule
+end-map

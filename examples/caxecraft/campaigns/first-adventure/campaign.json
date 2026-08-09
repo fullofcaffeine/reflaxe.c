@@ -11,6 +11,12 @@
       "sha256": "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee"
     },
     {
+      "id": "frostmere",
+      "path": "scenarios/first-adventure/frostmere.caxemap",
+      "byteLength": 15315,
+      "sha256": "74da0c9aeb0725de3329d51535b455f3dd6b7757dac35c9abb96e84c230f0e85"
+    },
+    {
       "id": "western-falls",
       "path": "scenarios/first-adventure/western-falls.caxemap",
       "byteLength": 18706,
