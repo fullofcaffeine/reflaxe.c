@@ -34,7 +34,8 @@ final class RuntimePilotScriptProbe {
 			+ "hold 2 4 forward\n" + "checkpoint 1 capture title-selection\n" + "expect 1 screen campaign\n" + "expect 1 level synthetic-level\n"
 			+ "expect 1 objective objective.synthetic\n" + "expect 1 dialogue dialogue.synthetic\n" + "expect 1 journal journal.synthetic\n"
 			+ "expect 1 generation 2\n" + "expect 1 publications 1\n" + "action 5 forward-descend\n" + "expect 5 medium submerged\n"
-			+ "expect 5 equipment synthetic-gear\n" + "expect 5 lanterns 2\n" + "expect 5 sand 1\n" + "expect 5 position 4,3,2\n" + "end\n");
+			+ "expect 5 equipment synthetic-gear\n" + "expect 5 lanterns 2\n" + "expect 5 sand 1\n" + "expect 5 position 4,3,2\n"
+			+ "expect 5 object-state synthetic.gate=synthetic:open\n" + "end\n");
 		final script = switch RuntimePilotScript.read(source, "synthetic.piloscript") {
 			case RuntimePilotReady(value): value;
 			case RuntimePilotRejected(diagnostic):
@@ -67,12 +68,19 @@ final class RuntimePilotScriptProbe {
 			aquaticMedium: "submerged",
 			aquaticEquipment: "synthetic-gear",
 			lanterns: 2,
-			sand: 1
+			sand: 1,
+			statefulObjectIds: ["synthetic.gate"],
+			statefulObjectStates: ["synthetic:open"]
 		};
 		switch script.observe(1, matching) {
 			case RuntimePilotFrameAccepted:
 			case RuntimePilotFrameRejected(_):
 				throw "matching semantic state was rejected";
+		}
+		switch script.observe(5, matching) {
+			case RuntimePilotFrameAccepted:
+			case RuntimePilotFrameRejected(_):
+				throw "matching generic object state was rejected";
 		}
 		final wrong:RuntimePilotObservation = {
 			screen: "campaign",
@@ -89,7 +97,9 @@ final class RuntimePilotScriptProbe {
 			aquaticMedium: "submerged",
 			aquaticEquipment: "synthetic-gear",
 			lanterns: 2,
-			sand: 1
+			sand: 1,
+			statefulObjectIds: ["synthetic.gate"],
+			statefulObjectStates: ["synthetic:sealed"]
 		};
 		switch script.observe(1, wrong) {
 			case RuntimePilotFrameRejected(diagnostic):
@@ -100,11 +110,12 @@ final class RuntimePilotScriptProbe {
 		}
 
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\naction 1 unknown\nend\n", 4, "unknown action");
-		expectRejected("PILOSCRIPT 1\nname bad\nframes 401\nend\n", 3, "frame limit");
+		expectRejected("PILOSCRIPT 1\nname bad\nframes 501\nend\n", 3, "frame limit");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\ncheckpoint 1 capture ../escape\nend\n", 4, "capture label");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\naction 0 idle\naction 0 menu-next\nend\n", 5, "duplicate action");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 4\nhold 1 3 forward\nend\n", 4, "held final frame");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 5\nhold 1 3 forward\naction 2 idle\nend\n", 5, "overlapping action");
+		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\nexpect 1 object-state missing-pair\nend\n", 4, "object-state pair");
 		return 0;
 	}
 

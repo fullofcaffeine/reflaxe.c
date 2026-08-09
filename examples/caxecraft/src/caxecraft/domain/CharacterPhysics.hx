@@ -45,6 +45,25 @@ function tryStepUp(cells:WorldView, original:CharacterBody, velocityX:Float, vel
 	return advanced.x != original.x || advanced.z != original.z ? advanced : original;
 }
 
+/** Try one block-height step against terrain and runtime-authored solid boxes. */
+function tryStepUpWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, original:CharacterBody, velocityX:Float,
+		velocityZ:Float):CharacterBody {
+	final raisedY = floorToInt(original.y) + 1.0 + EPSILON;
+	if (raisedY - original.y > 1.0 + EPSILON || overlapsWithCollisions(cells, collisions, original.x, raisedY, original.z))
+		return original;
+	final raised:CharacterBody = {
+		x: original.x,
+		y: raisedY,
+		z: original.z,
+		velocityX: original.velocityX,
+		velocityY: 0.0,
+		velocityZ: original.velocityZ,
+		grounded: false
+	};
+	final advanced = resolveVelocityWithCollisions(cells, collisions, raised, velocityX, 0.0, velocityZ);
+	return advanced.x != original.x || advanced.z != original.z ? advanced : original;
+}
+
 /** Create one stationary character body at a feet-center position. */
 function body(x:Float, y:Float, z:Float):CharacterBody {
 	return {
@@ -121,6 +140,17 @@ function step(cells:WorldView, original:CharacterBody, command:StepInput):Charac
 	return resolveVelocity(cells, state, velocityX, velocityY, velocityZ);
 }
 
+/** Advance one tick against terrain and runtime-authored solid boxes. */
+function stepWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, original:CharacterBody, command:StepInput):CharacterBody {
+	var state = original;
+	if (overlapsWithCollisions(cells, collisions, original.x, original.y, original.z))
+		state = recoverSpawnWithCollisions(cells, collisions, original);
+	final velocityX = command.moveX * MOVE_SPEED;
+	final velocityZ = command.moveZ * MOVE_SPEED;
+	final velocityY = command.jump && state.grounded ? JUMP_SPEED : state.velocityY + GRAVITY * FIXED_SECONDS;
+	return resolveVelocityWithCollisions(cells, collisions, state, velocityX, velocityY, velocityZ);
+}
+
 /**
 	Resolve an already-computed velocity through the shared character collision box.
 
@@ -153,6 +183,77 @@ function resolveVelocity(cells:WorldView, state:CharacterBody, velocityX:Float, 
 		velocityY: velocityY,
 		velocityZ: finalVelocityZ,
 		grounded: grounded
+	};
+}
+
+/** Resolve velocity against terrain and runtime-authored solid boxes. */
+function resolveVelocityWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, state:CharacterBody, velocityX:Float, requestedVelocityY:Float,
+		velocityZ:Float):CharacterBody {
+	var velocityY = requestedVelocityY;
+	final movedX = moveAxisWithCollisions(cells, collisions, state.x, state.y, state.z, velocityX * FIXED_SECONDS, 0);
+	final movedZ = moveAxisWithCollisions(cells, collisions, movedX.x, movedX.y, movedX.z, velocityZ * FIXED_SECONDS, 2);
+	final movedY = moveAxisWithCollisions(cells, collisions, movedZ.x, movedZ.y, movedZ.z, velocityY * FIXED_SECONDS, 1);
+	var grounded = movedY.blocked && velocityY <= 0.0;
+	if (movedY.blocked)
+		velocityY = 0.0;
+	if (!grounded)
+		grounded = overlapsWithCollisions(cells, collisions, movedY.x, movedY.y - 0.02, movedY.z);
+	var finalVelocityX = velocityX;
+	if (movedX.blocked)
+		finalVelocityX = 0.0;
+	var finalVelocityZ = velocityZ;
+	if (movedZ.blocked)
+		finalVelocityZ = 0.0;
+
+	return {
+		x: movedY.x,
+		y: movedY.y,
+		z: movedY.z,
+		velocityX: finalVelocityX,
+		velocityY: velocityY,
+		velocityZ: finalVelocityZ,
+		grounded: grounded
+	};
+}
+
+private function moveAxisWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, x:Float, y:Float, z:Float, delta:Float, axis:Int):AxisMove {
+	final magnitude = abs(delta);
+	if (magnitude == 0.0)
+		return {
+			x: x,
+			y: y,
+			z: z,
+			blocked: false
+		};
+	var count = Std.int(magnitude / MAX_SUBSTEP);
+	if (count * MAX_SUBSTEP < magnitude)
+		count++;
+	if (count < 1)
+		count = 1;
+	final increment = delta / count;
+	var currentX = x;
+	var currentY = y;
+	var currentZ = z;
+	var blocked = false;
+	var stepIndex = 0;
+	while (stepIndex < count) {
+		final candidateX = axis == 0 ? currentX + increment : currentX;
+		final candidateY = axis == 1 ? currentY + increment : currentY;
+		final candidateZ = axis == 2 ? currentZ + increment : currentZ;
+		if (overlapsWithCollisions(cells, collisions, candidateX, candidateY, candidateZ)) {
+			blocked = true;
+			break;
+		}
+		currentX = candidateX;
+		currentY = candidateY;
+		currentZ = candidateZ;
+		stepIndex++;
+	}
+	return {
+		x: currentX,
+		y: currentY,
+		z: currentZ,
+		blocked: blocked
 	};
 }
 
@@ -220,6 +321,41 @@ private function overlaps(cells:WorldView, x:Float, y:Float, z:Float):Bool {
 		blockY++;
 	}
 	return false;
+}
+
+private function overlapsWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, x:Float, y:Float, z:Float):Bool {
+	if (overlaps(cells, x, y, z))
+		return true;
+	final bodyMinimumX = x - HALF_WIDTH;
+	final bodyMaximumX = x + HALF_WIDTH;
+	final bodyMinimumY = y;
+	final bodyMaximumY = y + HEIGHT;
+	final bodyMinimumZ = z - HALF_WIDTH;
+	final bodyMaximumZ = z + HALF_WIDTH;
+	for (box in collisions)
+		if (bodyMaximumX > box.minimumX && bodyMinimumX < box.maximumX && bodyMaximumY > box.minimumY && bodyMinimumY < box.maximumY
+			&& bodyMaximumZ > box.minimumZ && bodyMinimumZ < box.maximumZ)
+			return true;
+	return false;
+}
+
+/** Lift an invalid body until terrain and dynamic boxes both leave it clear. */
+private function recoverSpawnWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, state:CharacterBody):CharacterBody {
+	var recoveredY = state.y;
+	var attempts = 0;
+	while (overlapsWithCollisions(cells, collisions, state.x, recoveredY, state.z) && attempts < World.HEIGHT) {
+		recoveredY += 1.0;
+		attempts++;
+	}
+	return {
+		x: state.x,
+		y: recoveredY,
+		z: state.z,
+		velocityX: state.velocityX,
+		velocityY: 0.0,
+		velocityZ: state.velocityZ,
+		grounded: false
+	};
 }
 
 private function floorToInt(value:Float):Int {

@@ -99,6 +99,49 @@ enum ActorPresentationResolution {
 	UnknownActorPresentation;
 }
 
+/** Closed collision behavior selected by one authored object state. */
+enum StatefulObjectCollisionProfile {
+	/** Characters may move through the object's authored box in this state. */
+	StatefulObjectPassable;
+
+	/** The object's authored box blocks character movement in this state. */
+	StatefulObjectSolid;
+}
+
+/** One closed state mechanic retained for later CaxeFlow state changes. */
+typedef StatefulObjectStateMechanics = {
+	/** Stable state identity used by CaxeFlow. */
+	final state:ContentId;
+
+	/** Whether this state contributes the object's collision box. */
+	final collision:StatefulObjectCollisionProfile;
+
+	/** Whether presentation draws this state. */
+	final visible:Bool;
+}
+
+/** Milliblock dimensions of one box centered on the placement's X/Z position. */
+typedef StatefulObjectBounds = {
+	/** Full extent along the object's local X axis. */
+	final widthMilli:Int;
+
+	/** Full extent above the placement's world Y position. */
+	final heightMilli:Int;
+
+	/** Full extent along the object's local Z axis. */
+	final depthMilli:Int;
+}
+
+/** Result of resolving one interactive-object profile in one authored state. */
+enum StatefulObjectContentResolution {
+	/** Complete mechanics and initial presentation agree for this object profile. */
+	StatefulObjectContentResolved(interactionRadiusMilli:Int, bounds:StatefulObjectBounds, states:Array<StatefulObjectStateMechanics>,
+		presentationAsset:String, presentationCell:Int);
+
+	/** The object is absent or does not admit the requested state. */
+	UnknownStatefulObjectContent;
+}
+
 /**
  * Typed content operations needed to resolve one complete level.
  *
@@ -118,4 +161,7 @@ interface LevelContentResolver extends ActorContentResolver {
 
 	/** Resolve one validated NPC or enemy ID into its actor presentation cell. */
 	function resolveActorPresentation(id:ContentId):ActorPresentationResolution;
+
+	/** Resolve one stateful object and its initial state into bounded runtime facts. */
+	function resolveStatefulObject(id:ContentId, state:ContentId):StatefulObjectContentResolution;
 }

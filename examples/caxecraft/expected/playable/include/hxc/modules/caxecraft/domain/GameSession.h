@@ -22,6 +22,15 @@ struct hxc_caxecraft_domain_GameSession {
   struct hxc_array_ref *hxc_authoredActorEntities;
   struct hxc_array_ref *hxc_authoredActorIds;
   struct hxc_array_ref *hxc_authoredItemContentIds;
+  struct hxc_array_ref *hxc_statefulObjectIds;
+  struct hxc_array_ref *hxc_statefulObjectPositionsMilli;
+  struct hxc_array_ref *hxc_statefulObjectRadiiMilli;
+  struct hxc_array_ref *hxc_statefulObjectBoundsMilli;
+  struct hxc_array_ref *hxc_statefulObjectStateStarts;
+  struct hxc_array_ref *hxc_statefulObjectStateCounts;
+  struct hxc_array_ref *hxc_statefulObjectCollisionStates;
+  struct hxc_array_ref *hxc_statefulObjectCollisionSolid;
+  struct hxc_array_ref *hxc_activeStatefulCollision;
   struct hxc_array_ref *hxc_pendingFlowEvents;
   struct hxc_caxecraft_domain_WaterSimulation hxc_water;
   uint8_t hxc_worldStorage[16384];
@@ -112,9 +121,11 @@ struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_Gam
 
 struct hxc_caxecraft_domain_CharacterDamageResult hxc_caxecraft_domain_GameSession_damageCharacter(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_id, int32_t hxc_l_amount);
 
-void hxc_caxecraft_domain_GameSession_installValidatedScenarioFlow(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_Scenario hxc_l_scenario, struct hxc_array_ref *hxc_l_actorEntities, struct hxc_array_ref *hxc_l_actorIds, struct hxc_array_ref *hxc_l_itemContentIds);
+void hxc_caxecraft_domain_GameSession_installValidatedScenarioFlow(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_Scenario hxc_l_scenario, struct hxc_array_ref *hxc_l_actorEntities, struct hxc_array_ref *hxc_l_actorIds, struct hxc_array_ref *hxc_l_itemContentIds, struct hxc_array_ref *hxc_l_objectIds, struct hxc_array_ref *hxc_l_objectPositionsMilli, struct hxc_array_ref *hxc_l_objectRadiiMilli, struct hxc_array_ref *hxc_l_objectBoundsMilli, struct hxc_array_ref *hxc_l_objectStateStarts, struct hxc_array_ref *hxc_l_objectStateCounts, struct hxc_array_ref *hxc_l_objectCollisionStates, struct hxc_array_ref *hxc_l_objectCollisionSolid);
 
 bool hxc_caxecraft_domain_GameSession_interactWithActor(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_id);
+
+bool hxc_caxecraft_domain_GameSession_interactWithStatefulObject(struct hxc_caxecraft_domain_GameSession *hxc_l_self, hxc_string hxc_l_id);
 
 struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_domain_GameSession_mineTerrain(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord, struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory);
 
@@ -132,11 +143,19 @@ struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_GameSession_readChara
 
 struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_receiveLocalPlayerAttack(struct hxc_caxecraft_domain_GameSession *hxc_l_self);
 
+void hxc_caxecraft_domain_GameSession_refreshStatefulCollision(struct hxc_caxecraft_domain_GameSession *hxc_l_self);
+
 bool hxc_caxecraft_domain_GameSession_removeTerrain(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord);
 
 bool hxc_caxecraft_domain_GameSession_replaceAuthoredActors(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_array_ref *hxc_l_characters, struct hxc_array_ref *hxc_l_controllers);
 
 struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_reviveLocalPlayerAt(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_domain_CharacterBody hxc_l_body);
+
+bool hxc_caxecraft_domain_GameSession_statefulObjectInteractionAvailable(struct hxc_caxecraft_domain_GameSession *hxc_l_self, hxc_string hxc_l_id);
+
+bool hxc_caxecraft_domain_GameSession_statefulObjectIsActive(struct hxc_caxecraft_domain_GameSession *hxc_l_self, hxc_string hxc_l_id);
+
+hxc_string hxc_caxecraft_domain_GameSession_statefulObjectState(struct hxc_caxecraft_domain_GameSession *hxc_l_self, hxc_string hxc_l_id);
 
 struct hxc_caxecraft_domain_ActorControllerTickResult hxc_caxecraft_domain_GameSession_stepAuthoredActorControllers(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_tickNumber, int32_t hxc_l_damagePolicy);
 

@@ -180,6 +180,40 @@ function selfCheck():Int {
 		|| interleaved.construction[1].authoredId.text() != "water.a-source"
 		|| interleaved.presentation[1].authoredId.text() != "water.a-source")
 		return 7;
+	final stateful = switch resolveFirstPlayable(withStatefulObject(freshScenario, new ContentId("caxecraft:active")), registry) {
+		case LevelPlanResolved(plan, presentation): {plan: plan, presentation: presentation};
+		case LevelPlanRejected(_): return 13;
+	};
+	final statefulConstruction = stateful.plan.statefulObjects();
+	final statefulPresentation = stateful.presentation.statefulObjectRequests();
+	if (statefulConstruction.length != 1
+		|| statefulConstruction[0].authoredId.text() != "object.glyph-control"
+		|| statefulConstruction[0].contentId.text() != "caxecraft:glyph-control"
+		|| statefulConstruction[0].initialState.text() != "caxecraft:active"
+		|| statefulConstruction[0].interactionRadiusMilli != 2500
+		|| statefulConstruction[0].transform.xMilli != 8500
+		|| statefulPresentation.length != 1
+		|| statefulPresentation[0].asset != "adventure-items"
+		|| statefulPresentation[0].cellIndex != 1
+		|| !stateful.plan.acceptsPresentation(stateful.presentation))
+		return 14;
+	statefulConstruction.pop();
+	statefulPresentation.pop();
+	if (stateful.plan.statefulObjects().length != 1 || stateful.presentation.statefulObjectRequests().length != 1)
+		return 15;
+	switch resolveFirstPlayable(withStatefulObject(freshScenario, new ContentId("caxecraft:missing")), registry) {
+		case LevelPlanRejected(StatefulObjectResolutionRejected(authoredId, contentId, state))
+			if (authoredId.text() == "object.glyph-control"
+				&& contentId.text() == "caxecraft:glyph-control"
+				&& state.text() == "caxecraft:missing"):
+		case _:
+			return 16;
+	}
+	switch resolveFirstPlayable(withStatefulObject(freshScenario, new ContentId("caxecraft:active"), 45), registry) {
+		case LevelPlanRejected(UnsupportedStatefulObjectCollisionYaw(authoredId, 45)) if (authoredId.text() == "object.glyph-control"):
+		case _:
+			return 28;
+	}
 	switch resolveFirstPlayable(freshScenario, new RejectingLevelRegistry(MissingTerrain)) {
 		case LevelPlanRejected(UnknownTerrain(_, id)) if (id.text() == "caxecraft:grass"):
 		case _:
@@ -235,12 +269,44 @@ function sameTrace(left:caxecraft.content.ResolvedLevelPlan.ResolvedLevelSemanti
 		&& left.fluidDigest == right.fluidDigest
 		&& left.items == right.items
 		&& left.itemDigest == right.itemDigest
+		&& left.statefulObjects == right.statefulObjects
+		&& left.statefulObjectDigest == right.statefulObjectDigest
 		&& left.actors == right.actors
 		&& left.actorDigest == right.actorDigest
 		&& left.flowBindings == right.flowBindings
 		&& left.flowDigest == right.flowDigest
 		&& left.playerDigest == right.playerDigest
 		&& left.presentationDigest == right.presentationDigest;
+
+/** Add one generic interactable while preserving every validated base-level fact. */
+function withStatefulObject(source:Scenario, state:ContentId, yawDegrees:Int = 90):Scenario {
+	final objects = source.objects.copy();
+	objects.push({
+		id: new ScenarioId("object.glyph-control"),
+		tags: [],
+		placement: ObjectPlacement.StatefulObject(new ContentId("caxecraft:glyph-control"), state, {
+			xMilli: 8500,
+			yMilli: 5000,
+			zMilli: 10500,
+			yawDegrees: yawDegrees
+		})
+	});
+	return {
+		formatVersion: source.formatVersion,
+		requiredFeatures: source.requiredFeatures.copy(),
+		optionalFeatures: source.optionalFeatures.copy(),
+		id: source.id,
+		assetPack: source.assetPack,
+		messages: source.messages,
+		title: source.title,
+		mode: source.mode,
+		world: source.world,
+		objects: objects,
+		story: source.story,
+		flow: source.flow,
+		extensions: source.extensions.copy()
+	};
+}
 
 /**
  * Rename the fixture fluids so lexical ID order conflicts with placement order.
@@ -361,6 +427,9 @@ private final class RejectingLevelRegistry implements LevelContentResolver {
 
 	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution
 		return base.resolveActorPresentation(id);
+
+	public function resolveStatefulObject(id:ContentId, state:ContentId):caxecraft.content.LevelContentResolver.StatefulObjectContentResolution
+		return base.resolveStatefulObject(id, state);
 
 	public function resolveNpc(id:ContentId):ActorContentResolution
 		return base.resolveNpc(id);

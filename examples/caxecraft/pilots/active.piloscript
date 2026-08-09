@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name adventure-journey
-frames 353
+frames 380
 
 # Move from Creative to Adventure, then open the staged campaign.
 action 0 menu-next
@@ -40,40 +40,53 @@ expect 45 objective objective.find-tideweave
 expect 45 dialogue dialogue.fallskeeper.marks
 expect 45 journal journal.fallskeeper-lead
 
-# Open the sand seam and reach the lower cache.
+# Follow the original route to the sand seam in front of the sealed Tideweave
+# cache. These frames intentionally retain the established navigation proof.
 hold 42 94 forward-left
 hold 95 100 look-left
 action 101 mine
 hold 102 137 forward-rise
 hold 138 153 rise
-
-# At this point the route has opened the sand seam and equipped Tideweave.
 expect 155 sand 1
 expect 155 position 5,3,21
 
-# Cross the opened lower cache, equip Tideweave, and enter the flooded grotto.
-hold 154 169 right
-expect 173 equipment caxecraft:tideweave-suit
-expect 173 objective objective.explore-grotto
-expect 173 sand 1
-hold 174 229 backward
-hold 230 313 left-descend
-expect 314 equipment caxecraft:tideweave-suit
-expect 314 objective none
-expect 314 lanterns 2
-expect 314 sand 1
-expect 314 medium submerged
-expect 314 position 13,3,25
-hold 314 345 right-rise
+# Enter the four content-authored marks at the cache. The final mark opens the
+# gate before the player can collect Tideweave.
+action 156 interact
+action 158 interact
+expect 159 object-state vault.glyph-river=caxecraft:entered
+action 160 interact
+expect 161 object-state vault.glyph-leaf=caxecraft:entered
+action 162 interact
+expect 163 object-state vault.glyph-moon=caxecraft:entered
+action 164 interact
+expect 165 object-state vault.gate=caxecraft:open
+expect 165 dialogue dialogue.vault.open
+action 166 interact
 
-action 351 pause
-checkpoint 351 capture final
-expect 351 screen paused
-expect 351 level western-falls
-expect 351 objective none
-expect 351 equipment caxecraft:tideweave-suit
-expect 351 lanterns 2
-expect 351 sand 1
-expect 351 medium dry
-expect 351 position 13,6,22
+# Cross the opened cache, equip Tideweave, and enter the flooded grotto.
+hold 167 182 right
+expect 186 equipment caxecraft:tideweave-suit
+expect 186 objective objective.explore-grotto
+expect 186 sand 1
+hold 187 242 backward
+hold 243 326 left-descend
+expect 327 equipment caxecraft:tideweave-suit
+expect 327 objective none
+expect 327 lanterns 2
+expect 327 sand 1
+expect 327 medium submerged
+expect 327 position 13,3,25
+hold 327 358 right-rise
+
+action 364 pause
+checkpoint 364 capture final
+expect 364 screen paused
+expect 364 level western-falls
+expect 364 objective none
+expect 364 equipment caxecraft:tideweave-suit
+expect 364 lanterns 2
+expect 364 medium dry
+expect 364 position 13,6,22
+expect 364 object-state vault.gate=caxecraft:open
 end

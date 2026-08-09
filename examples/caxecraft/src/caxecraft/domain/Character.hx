@@ -4,6 +4,7 @@ import caxecraft.domain.Aquatics.adoptProfile as adoptAquaticProfile;
 import caxecraft.domain.Aquatics.observe as observeAquatics;
 import caxecraft.domain.Aquatics.start as startAquatics;
 import caxecraft.domain.Aquatics.step as stepAquatics;
+import caxecraft.domain.Aquatics.stepWithCollisions as stepAquaticsWithCollisions;
 import caxecraft.domain.CharacterPhysics.body as createBody;
 import caxecraft.domain.Vitals.applyAttack as applyVitalsAttack;
 import caxecraft.domain.Vitals.applyDamage as applyVitalsDamage;
@@ -83,6 +84,36 @@ function step(cells:WorldView, original:Character, intent:CharacterIntent, damag
 	}
 
 	final aquaticStep = stepAquatics(cells, original.body, original.aquatic, intent, original.aquaticProfile);
+	var vitals = original.vitals;
+	if (damagePolicy == CharacterDamagePolicy.Survival) {
+		vitals = stepVitals(vitals);
+		vitals = applyVitalsAttack(vitals, aquaticStep.drowningDamage > 0);
+	}
+	return {
+		character: {
+			id: original.id,
+			body: aquaticStep.body,
+			aquatic: aquaticStep.aquatic,
+			aquaticProfile: original.aquaticProfile,
+			vitals: vitals
+		},
+		immersion: aquaticStep.immersion,
+		drowningDamage: aquaticStep.drowningDamage
+	};
+}
+
+/** Advance one character against terrain and runtime-authored solid boxes. */
+function stepWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, original:Character, intent:CharacterIntent,
+		damagePolicy:CharacterDamagePolicy):CharacterStep {
+	if (vitalsAreDefeated(original.vitals)) {
+		return {
+			character: original,
+			immersion: observeAquatics(cells, original.body),
+			drowningDamage: 0
+		};
+	}
+
+	final aquaticStep = stepAquaticsWithCollisions(cells, collisions, original.body, original.aquatic, intent, original.aquaticProfile);
 	var vitals = original.vitals;
 	if (damagePolicy == CharacterDamagePolicy.Survival) {
 		vitals = stepVitals(vitals);

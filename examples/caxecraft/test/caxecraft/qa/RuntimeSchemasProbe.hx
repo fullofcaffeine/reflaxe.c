@@ -5,6 +5,8 @@ import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
+import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
+import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
@@ -112,6 +114,19 @@ function selfCheck():Int {
 		case _:
 			return 39;
 	}
+	final gateId = new ContentId("caxecraft:vault-gate");
+	final gateOpen = new ContentId("caxecraft:open");
+	final gateSealed = new ContentId("caxecraft:sealed");
+	if (registry.statefulObjectInteractionRadiusMilli(gateId) != 0
+		|| registry.statefulObjectVisible(gateId, gateOpen)
+		|| !registry.statefulObjectVisible(gateId, gateSealed))
+		return 52;
+	switch registry.resolveStatefulObject(gateId, gateSealed) {
+		case StatefulObjectContentResolved(0, bounds, states, "terrain", 10)
+			if (bounds.widthMilli == 7000 && bounds.heightMilli == 3000 && bounds.depthMilli == 500 && states.length == 2):
+		case _:
+			return 53;
+	}
 
 	if (catalog.localeCount() != 2
 		|| catalog.messageCount() != 35
@@ -194,10 +209,53 @@ function negativeChecks():Int {
 		return 11;
 	final minimal = minimalPack();
 	switch RuntimeContentPack.decode(Bytes.ofString(minimal)) {
-		case RuntimeContentPackReady(_):
+		case RuntimeContentPackReady(registry):
+			final objectId = new ContentId("caxecraft:glyph-control");
+			final active = new ContentId("caxecraft:active");
+			final idle = new ContentId("caxecraft:idle");
+			final activePresentation = registry.statefulObjectPresentation(objectId, active);
+			final idlePresentation = registry.statefulObjectPresentation(objectId, idle);
+			if (!registry.hasStatefulObject(objectId)
+				|| !registry.hasState(active)
+				|| !registry.hasState(idle)
+				|| registry.statefulObjectInteractionRadiusMilli(objectId) != 2500
+				|| activePresentation == null
+				|| activePresentation.cell != "glyph-leaf"
+				|| idlePresentation == null
+				|| idlePresentation.cell != "glyph-wave"
+				|| !registry.statefulObjectVisible(objectId, active)
+				|| registry.statefulObjectVisible(objectId, idle))
+				return 45;
+			switch registry.resolveStatefulObject(objectId, active) {
+				case StatefulObjectContentResolved(_, bounds, states, _, _):
+					if (bounds.widthMilli != 1000
+						|| bounds.heightMilli != 1000
+						|| bounds.depthMilli != 1000
+						|| states.length != 2
+						|| states[0].state != active
+						|| states[0].collision != StatefulObjectSolid
+						|| !states[0].visible
+						|| states[1].state != idle
+						|| states[1].collision != StatefulObjectPassable
+						|| states[1].visible) return 48;
+				case UnknownStatefulObjectContent:
+					return 48;
+			}
 		case RuntimeContentPackRejected(_):
 			return 37;
 	}
+	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:idle","collision"', '"id":"caxecraft:missing","collision"'), UnresolvedReference))
+		return 46;
+	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:active","collision"', '"id":"caxecraft:idle","collision"'), DuplicateId))
+		return 47;
+	if (!rejectsPack(replaceOnce(minimal, '"widthMilli":1000', '"widthMilli":0'), InvalidInteger))
+		return 49;
+	if (!rejectsPack(replaceOnce(minimal, '"collision":"solid"', '"collision":"blocking"'), InvalidClosedValue))
+		return 50;
+	if (!rejectsPack(replaceOnce(minimal, '"render":"hidden"', '"render":"sometimes"'), InvalidClosedValue))
+		return 51;
+	if (!rejectsPack(replaceOnce(minimal, '"interaction":"activate"', '"interaction":"none"'), InvalidInvariant))
+		return 54;
 	if (!rejectsPack(replaceOnce(minimal, '"id":"entities"', '"id":"adventure-items"'), DuplicateId))
 		return 41;
 	if (!rejectsPack(replaceOnce(minimal, '"grass-block"', '"berries"'), DuplicateValue))
@@ -268,7 +326,8 @@ function locatedUnsupportedVersionPack():String
  */
 function minimalPack():String
 	return '{"schemaVersion":2,"logicalPath":"packs/test","packId":"caxecraft:test","packVersion":1,"assetManifestId":"caxecraft-showcase-v1-draft",'
-		+ '"assetCells":[{"id":"adventure-items","cells":["tideweave-suit-folded"]},{"id":"entities","cells":["mossling-front"]},'
+		+ '"assetCells":[{"id":"adventure-items","cells":["glyph-wave","glyph-leaf","tideweave-suit-folded"]},'
+		+ '{"id":"entities","cells":["mossling-front"]},'
 		+ '{"id":"items","cells":["berries","grass-block"]},{"id":"terrain","cells":["teal-water"]}],'
 		+ '"airBlock":"caxecraft:air","defaultAquaticProfile":"caxecraft:standard","features":["caxecraft:core"],'
 		+ '"blocks":[{"id":"caxecraft:air","storageCode":0,"collision":"passable","edit":"immutable","dropItem":null,"renderProfile":"air"},'
@@ -286,7 +345,12 @@ function minimalPack():String
 		+ '"strikeRadiusMilli":3000,"attackRadiusMilli":1400,"windupTicks":8,"recoveryTicks":12,"stepMilli":80,"drop":"caxecraft:drop",'
 		+ '"presentation":{"asset":"entities","cell":"mossling-front"}}],'
 		+ '"drops":[{"id":"caxecraft:drop","item":"caxecraft:item","quantity":1,"pickupRadiusMilli":1500,"presentation":{"asset":"items","cell":"berries"}}],'
-		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],"prefabs":[],"statefulObjects":[],"states":[],"signals":[]}';
+		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],"prefabs":[],'
+		+ '"statefulObjects":[{"id":"caxecraft:glyph-control","interaction":"activate","interactionRadiusMilli":2500,'
+		+ '"bounds":{"widthMilli":1000,"heightMilli":1000,"depthMilli":1000},'
+		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf"}},'
+		+ '{"id":"caxecraft:idle","collision":"passable","render":"hidden","presentation":{"asset":"adventure-items","cell":"glyph-wave"}}]}],'
+		+ '"states":["caxecraft:active","caxecraft:idle"],"signals":[]}';
 
 /**
  * Return the first two correctly shaped typed messages for fast UI negatives.

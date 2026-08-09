@@ -274,6 +274,10 @@ final class AlternatePresentationRegistry implements LevelContentResolver {
 			case UnknownActorPresentation: UnknownActorPresentation;
 		};
 
+	/** Preserve ordinary stateful-object resolution. */
+	public function resolveStatefulObject(id:ContentId, state:ContentId):caxecraft.content.LevelContentResolver.StatefulObjectContentResolution
+		return base.resolveStatefulObject(id, state);
+
 	/** Preserve ordinary non-player-character mechanics resolution. */
 	public function resolveNpc(id:ContentId):ActorContentResolution
 		return base.resolveNpc(id);

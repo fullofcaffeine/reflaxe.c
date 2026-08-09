@@ -51,18 +51,18 @@ struct hxc_caxecraft_domain_Character hxc_caxecraft_domain_Character_start(int32
   return (struct hxc_caxecraft_domain_Character){ .hxc_aquatic = hxc_l_tmp_call_result_n0, .hxc_aquaticProfile = hxc_l_aquaticProfile, .hxc_body = hxc_l_body, .hxc_id = hxc_l_id, .hxc_vitals = hxc_l_tmp_call_result_n1 };
 }
 
-struct hxc_caxecraft_domain_CharacterStep hxc_caxecraft_domain_Character_step(const uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_domain_Character hxc_l_original, struct hxc_caxecraft_domain_CharacterIntent hxc_l_intent, int32_t hxc_l_damagePolicy)
+struct hxc_caxecraft_domain_CharacterStep hxc_caxecraft_domain_Character_stepWithCollisions(const uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_array_ref *hxc_l_collisions, struct hxc_caxecraft_domain_Character hxc_l_original, struct hxc_caxecraft_domain_CharacterIntent hxc_l_intent, int32_t hxc_l_damagePolicy)
 {
   const uint8_t *hxc_l_borrow = hxc_l_cells;
-  size_t hxc_l_tmp_length_n4 = hxc_l_length;
+  size_t hxc_l_tmp_length_n5 = hxc_l_length;
   (void)hxc_l_borrow;
-  (void)hxc_l_tmp_length_n4;
+  (void)hxc_l_tmp_length_n5;
   if (hxc_l_original.hxc_vitals.hxc_health <= 0)
   {
     struct hxc_caxecraft_domain_Immersion hxc_l_tmp_call_result_n3 = hxc_caxecraft_domain_Aquatics_observe(hxc_l_cells, hxc_l_length, hxc_l_original.hxc_body);
     return (struct hxc_caxecraft_domain_CharacterStep){ .hxc_character = hxc_l_original, .hxc_drowningDamage = 0, .hxc_immersion = hxc_l_tmp_call_result_n3 };
   }
-  struct hxc_caxecraft_domain_AquaticStep hxc_l_tmp_call_result_n8 = hxc_caxecraft_domain_Aquatics_step(hxc_l_cells, hxc_l_length, hxc_l_original.hxc_body, hxc_l_original.hxc_aquatic, hxc_l_intent, hxc_l_original.hxc_aquaticProfile);
+  struct hxc_caxecraft_domain_AquaticStep hxc_l_tmp_call_result_n8 = hxc_caxecraft_domain_Aquatics_stepWithCollisions(hxc_l_cells, hxc_l_length, hxc_l_collisions, hxc_l_original.hxc_body, hxc_l_original.hxc_aquatic, hxc_l_intent, hxc_l_original.hxc_aquaticProfile);
   struct hxc_caxecraft_domain_AquaticStep hxc_l_aquaticStep = hxc_l_tmp_call_result_n8;
   struct hxc_caxecraft_domain_VitalsState hxc_l_vitals = hxc_l_original.hxc_vitals;
   if (hxc_l_damagePolicy == 1)

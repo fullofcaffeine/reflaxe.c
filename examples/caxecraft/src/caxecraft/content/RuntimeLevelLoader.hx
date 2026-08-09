@@ -7,6 +7,7 @@ import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildError;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationBuildResult;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
+import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
 import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanError;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPlanResult;
@@ -468,13 +469,44 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 			final actorEntities:Array<EntityId> = [];
 			final actorIds:Array<ScenarioId> = [];
 			final itemContentIds:Array<ContentId> = [];
+			final statefulObjectIds:Array<ScenarioId> = [];
+			final statefulObjectPositionsMilli:Array<Int> = [];
+			final statefulObjectRadiiMilli:Array<Int> = [];
+			final statefulObjectBoundsMilli:Array<Int> = [];
+			final statefulObjectStateStarts:Array<Int> = [];
+			final statefulObjectStateCounts:Array<Int> = [];
+			final statefulObjectCollisionStates:Array<ContentId> = [];
+			final statefulObjectCollisionSolid:Array<Int> = [];
 			for (binding in generation.actorBindings()) {
 				actorEntities.push(binding.entityId);
 				actorIds.push(binding.authoredId);
 			}
 			for (binding in generation.itemBindings())
 				itemContentIds.push(binding.contentId);
-			generation.session().installValidatedScenarioFlow(scenario, actorEntities, actorIds, itemContentIds);
+			for (binding in generation.statefulObjectBindings()) {
+				statefulObjectIds.push(binding.authoredId);
+				statefulObjectPositionsMilli.push(binding.transform.xMilli);
+				statefulObjectPositionsMilli.push(binding.transform.yMilli);
+				statefulObjectPositionsMilli.push(binding.transform.zMilli);
+				statefulObjectRadiiMilli.push(binding.interactionRadiusMilli);
+				statefulObjectBoundsMilli.push(binding.bounds.widthMilli);
+				statefulObjectBoundsMilli.push(binding.bounds.heightMilli);
+				statefulObjectBoundsMilli.push(binding.bounds.depthMilli);
+				statefulObjectBoundsMilli.push(binding.transform.yawDegrees);
+				statefulObjectStateStarts.push(statefulObjectCollisionStates.length);
+				statefulObjectStateCounts.push(binding.states.length);
+				for (state in binding.states) {
+					statefulObjectCollisionStates.push(state.state);
+					statefulObjectCollisionSolid.push(switch state.collision {
+						case StatefulObjectPassable: 0;
+						case StatefulObjectSolid: 1;
+					});
+				}
+			}
+			generation.session()
+				.installValidatedScenarioFlow(scenario, actorEntities, actorIds, itemContentIds, statefulObjectIds, statefulObjectPositionsMilli,
+					statefulObjectRadiiMilli, statefulObjectBoundsMilli, statefulObjectStateStarts, statefulObjectStateCounts, statefulObjectCollisionStates,
+					statefulObjectCollisionSolid);
 			RuntimeLevelReady(new RuntimeLevelCandidate(generation, {
 				authority: input.authority,
 				rootLabel: input.rootLabel,

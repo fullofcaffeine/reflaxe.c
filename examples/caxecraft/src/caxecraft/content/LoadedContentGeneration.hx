@@ -6,6 +6,9 @@ import caxecraft.content.ActorPublication.ActorPublicationError;
 import caxecraft.content.ActorPublication.ActorPublicationResult;
 import caxecraft.content.ActorPublication.publishActorPlans;
 import caxecraft.content.LevelContentResolver.ItemStorageCode;
+import caxecraft.content.LevelContentResolver.StatefulObjectBounds;
+import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
+import caxecraft.content.LevelContentResolver.StatefulObjectStateMechanics;
 import caxecraft.content.ResolvedLevelPlan.ResolvedActorPresentation;
 import caxecraft.content.ResolvedLevelPlan.ResolvedFlowBinding;
 import caxecraft.content.ResolvedLevelPlan.ResolvedFluid;
@@ -16,6 +19,8 @@ import caxecraft.content.ResolvedLevelPlan.ResolvedItemPresentation;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelPresentationPlan;
 import caxecraft.content.ResolvedLevelPlan.ResolvedLevelSemanticTrace;
 import caxecraft.content.ResolvedLevelPlan.ResolvedPlayer;
+import caxecraft.content.ResolvedLevelPlan.ResolvedStatefulObject;
+import caxecraft.content.ResolvedLevelPlan.ResolvedStatefulObjectPresentation;
 import caxecraft.content.ResolvedLevelPlan.ResolvedTerrainRun;
 import caxecraft.domain.CaxecraftTrace;
 import caxecraft.domain.Character.start as startCharacter;
@@ -93,6 +98,27 @@ typedef LoadedItemBinding = {
 	final quantity:Int;
 
 	/** Copy-owned authored placement retained outside fixed activity storage. */
+	final transform:ScenarioTransform;
+}
+
+/** Immutable identity, proximity, and placement for one generic interactable. */
+typedef LoadedStatefulObjectBinding = {
+	/** Stable CAXEMAP identity used by CaxeFlow events and state observations. */
+	final authoredId:ScenarioId;
+
+	/** Content profile used to resolve the visual for the current authored state. */
+	final contentId:ContentId;
+
+	/** Maximum interaction distance in integer thousandths of a block. */
+	final interactionRadiusMilli:Int;
+
+	/** Validated box dimensions used by state-dependent collision and drawing. */
+	final bounds:StatefulObjectBounds;
+
+	/** Complete closed mechanics for every compatible CaxeFlow state. */
+	final states:Array<StatefulObjectStateMechanics>;
+
+	/** Copy-owned placement used by interaction and presentation. */
 	final transform:ScenarioTransform;
 }
 
@@ -254,9 +280,11 @@ final class LoadedContentGeneration {
 	final ownedSession:GameSession;
 	final actors:Array<LoadedActorBinding>;
 	final items:Array<LoadedItemBinding>;
+	final statefulObjects:Array<LoadedStatefulObjectBinding>;
 
 	private function new(generationId:ContentGenerationId, plan:ResolvedLevelPlan, presentation:ResolvedLevelPresentationPlan,
-			trace:ResolvedLevelSemanticTrace, session:GameSession, actors:Array<LoadedActorBinding>, items:Array<LoadedItemBinding>) {
+			trace:ResolvedLevelSemanticTrace, session:GameSession, actors:Array<LoadedActorBinding>, items:Array<LoadedItemBinding>,
+			statefulObjects:Array<LoadedStatefulObjectBinding>) {
 		generationIdValue = generationId;
 		resolvedPlan = plan;
 		presentationPlan = presentation;
@@ -264,6 +292,7 @@ final class LoadedContentGeneration {
 		ownedSession = session;
 		this.actors = actors.copy();
 		this.items = items.copy();
+		this.statefulObjects = copyStatefulObjectBindings(statefulObjects);
 	}
 
 	/**
@@ -322,6 +351,10 @@ final class LoadedContentGeneration {
 	public function itemBindings():Array<LoadedItemBinding>
 		return items.copy();
 
+	/** Return copy-owned generic interactable bindings in authored-ID order. */
+	public function statefulObjectBindings():Array<LoadedStatefulObjectBinding>
+		return copyStatefulObjectBindings(statefulObjects);
+
 	/** Return copy-owned CaxeFlow IDs retained by the resolved plan. */
 	public inline function flowBindings():Array<ResolvedFlowBinding>
 		return resolvedPlan.flowBindings();
@@ -370,18 +403,22 @@ final class LoadedContentGeneration {
 		final terrain = plan.terrainRuns();
 		final fluids = plan.fluids();
 		final items = plan.items();
+		final statefulObjects = plan.statefulObjects();
 		final actors = plan.actors();
 		final player = plan.player();
 		final presentationFluids = presentation.fluidRequests();
 		final presentationItems = presentation.itemRequests();
 		final presentationActors = presentation.actorRequests();
+		final presentationStatefulObjects = presentation.statefulObjectRequests();
 		if (!plan.acceptsPresentation(presentation)
-			|| !presentationMatches(fluids, items, actors, presentationFluids, presentationItems, presentationActors))
+			|| !presentationMatches(fluids, items, statefulObjects, actors, presentationFluids, presentationItems, presentationStatefulObjects,
+				presentationActors))
 			return ContentGenerationRejected(PresentationPlanMismatch);
 
 		final trace = plan.semanticTrace(presentation);
 		final actorBindings = buildActorBindings(actors, presentationActors);
 		final itemBindings = buildItemBindings(items);
+		final statefulObjectBindings = buildStatefulObjectBindings(statefulObjects);
 		#if caxecraft_generation_testing
 		if (fault == FailBeforeTerrain)
 			return ContentGenerationRejected(InjectedFailure(TerrainConstruction));
@@ -437,15 +474,17 @@ final class LoadedContentGeneration {
 		if (fault == FailBeforeFinalization)
 			return ContentGenerationRejected(InjectedFailure(GenerationFinalization));
 		#end
-		return ContentGenerationReady(new LoadedContentGeneration(generationId, plan, presentation, trace, session, actorBindings, itemBindings));
+		return ContentGenerationReady(new LoadedContentGeneration(generationId, plan, presentation, trace, session, actorBindings, itemBindings,
+			statefulObjectBindings));
 	}
 
 	/** Check every presentation identity before constructing a mutable session. */
-	static function presentationMatches(fluids:Array<ResolvedFluid>, items:Array<ResolvedItem>, actors:Array<CharacterSpawnPlan>,
-			presentationFluids:Array<ResolvedFluidPresentation>, presentationItems:Array<ResolvedItemPresentation>,
-			presentationActors:Array<ResolvedActorPresentation>):Bool {
+	static function presentationMatches(fluids:Array<ResolvedFluid>, items:Array<ResolvedItem>, statefulObjects:Array<ResolvedStatefulObject>,
+			actors:Array<CharacterSpawnPlan>, presentationFluids:Array<ResolvedFluidPresentation>, presentationItems:Array<ResolvedItemPresentation>,
+			presentationStatefulObjects:Array<ResolvedStatefulObjectPresentation>, presentationActors:Array<ResolvedActorPresentation>):Bool {
 		if (fluids.length != presentationFluids.length
 			|| items.length != presentationItems.length
+			|| statefulObjects.length != presentationStatefulObjects.length
 			|| actors.length != presentationActors.length)
 			return false;
 		for (index in 0...fluids.length)
@@ -456,6 +495,13 @@ final class LoadedContentGeneration {
 		for (index in 0...items.length)
 			if (items[index].authoredId != presentationItems[index].authoredId
 				|| items[index].contentId != presentationItems[index].contentId)
+				return false;
+		for (index in 0...statefulObjects.length)
+			if (statefulObjects[index].authoredId != presentationStatefulObjects[index].authoredId
+				|| statefulObjects[index].contentId != presentationStatefulObjects[index].contentId
+				|| statefulObjects[index].initialState != presentationStatefulObjects[index].state
+				|| presentationStatefulObjects[index].asset.length == 0
+				|| presentationStatefulObjects[index].cellIndex < 0)
 				return false;
 		for (index in 0...actors.length)
 			if (actors[index].authoredId != presentationActors[index].authoredId
@@ -514,6 +560,59 @@ final class LoadedContentGeneration {
 		return result;
 	}
 
+	/** Copy generic interactable bindings before mutable flow state is installed. */
+	static function buildStatefulObjectBindings(plans:Array<ResolvedStatefulObject>):Array<LoadedStatefulObjectBinding> {
+		final result:Array<LoadedStatefulObjectBinding> = [];
+		for (plan in plans)
+			result.push({
+				authoredId: plan.authoredId,
+				contentId: plan.contentId,
+				interactionRadiusMilli: plan.interactionRadiusMilli,
+				bounds: {
+					widthMilli: plan.bounds.widthMilli,
+					heightMilli: plan.bounds.heightMilli,
+					depthMilli: plan.bounds.depthMilli
+				},
+				states: copyStatefulObjectStates(plan.states),
+				transform: copyTransform(plan.transform)
+			});
+		return result;
+	}
+
+	/** Copy loaded bindings without sharing their nested state arrays. */
+	static function copyStatefulObjectBindings(values:Array<LoadedStatefulObjectBinding>):Array<LoadedStatefulObjectBinding> {
+		final result:Array<LoadedStatefulObjectBinding> = [];
+		for (value in values)
+			result.push({
+				authoredId: value.authoredId,
+				contentId: value.contentId,
+				interactionRadiusMilli: value.interactionRadiusMilli,
+				bounds: {
+					widthMilli: value.bounds.widthMilli,
+					heightMilli: value.bounds.heightMilli,
+					depthMilli: value.bounds.depthMilli
+				},
+				states: copyStatefulObjectStates(value.states),
+				transform: copyTransform(value.transform)
+			});
+		return result;
+	}
+
+	/** Deep-copy state mechanics before the mutable session is constructed. */
+	static function copyStatefulObjectStates(values:Array<StatefulObjectStateMechanics>):Array<StatefulObjectStateMechanics> {
+		final result:Array<StatefulObjectStateMechanics> = [];
+		for (value in values)
+			result.push({
+				state: value.state,
+				collision: switch value.collision {
+					case StatefulObjectPassable: StatefulObjectPassable;
+					case StatefulObjectSolid: StatefulObjectSolid;
+				},
+				visible: value.visible
+			});
+		return result;
+	}
+
 	/** Compare the two closed role variants without relying on enum identity. */
 	static function sameRole(left:CharacterSpawnRole, right:CharacterSpawnRole):Bool
 		return switch [left, right] {
@@ -547,6 +646,8 @@ final class LoadedContentGeneration {
 		digest = CaxecraftTrace.mix(digest, trace.fluidDigest);
 		digest = CaxecraftTrace.mix(digest, trace.items);
 		digest = CaxecraftTrace.mix(digest, trace.itemDigest);
+		digest = CaxecraftTrace.mix(digest, trace.statefulObjects);
+		digest = CaxecraftTrace.mix(digest, trace.statefulObjectDigest);
 		digest = CaxecraftTrace.mix(digest, trace.actors);
 		digest = CaxecraftTrace.mix(digest, trace.actorDigest);
 		digest = CaxecraftTrace.mix(digest, trace.flowBindings);

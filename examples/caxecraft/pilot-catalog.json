@@ -101,7 +101,7 @@
     {
       "id": "adventure-journey",
       "scriptCode": 12,
-      "frameLimit": 400,
+      "frameLimit": 500,
       "haxeDefine": "caxecraft_pilot_runtime",
       "screenshot": "caxecraft-pilot-runtime-final.png",
       "execution": "runtime-content"

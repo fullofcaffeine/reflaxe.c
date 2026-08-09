@@ -184,6 +184,61 @@ function selfCheck():Int {
 		case _:
 			return 112;
 	}
+	final statefulBindings = presentationCandidate.generation().statefulObjectBindings();
+	if (statefulBindings.length != 1
+		|| statefulBindings[0].authoredId.text() != "object.glyph-control"
+		|| statefulBindings[0].contentId.text() != "caxecraft:glyph-control"
+		|| statefulBindings[0].interactionRadiusMilli != 2500
+		|| statefulBindings[0].bounds.widthMilli != 1000
+		|| statefulBindings[0].bounds.heightMilli != 1000
+		|| statefulBindings[0].bounds.depthMilli != 1000
+		|| statefulBindings[0].states.length != 2
+		|| flowSession.activeStatefulCollisionCount() != 1
+		|| !flowSession.statefulObjectInteractionAvailable(statefulBindings[0].authoredId))
+		return 119;
+	final gateApproach = flowSession.tick({
+		intent: aquaticInput(1.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	final gateBlocked = flowSession.tick({
+		intent: aquaticInput(1.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!gateApproach.committed
+		|| !gateBlocked.committed
+		|| gateApproach.character.body.x <= 1.5
+		|| gateBlocked.character.body.x != gateApproach.character.body.x)
+		return 122;
+	if (!flowSession.interactWithStatefulObject(statefulBindings[0].authoredId))
+		return 119;
+	final statefulTick = flowSession.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!statefulTick.committed
+		|| statefulTick.flow == null
+		|| statefulTick.flow.firedRules.length != 1
+		|| statefulTick.flow.firedRules[0].text() != "rule.fixture-glyph"
+		|| statefulTick.flow.presentation.length != 1
+		|| flowSession.activeStatefulCollisionCount() != 0
+		|| flowSession.statefulObjectState(statefulBindings[0].authoredId) == null
+		|| flowSession.statefulObjectState(statefulBindings[0].authoredId).text() != "caxecraft:idle")
+		return 120;
+	switch statefulTick.flow.presentation[0] {
+		case FlowPresentationEvent.ObjectStateChanged(id, state) if (id.text() == "object.glyph-control" && state.text() == "caxecraft:idle"):
+		case _:
+			return 121;
+	}
+	final gatePassed = flowSession.tick({
+		intent: aquaticInput(1.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!gatePassed.committed || gatePassed.character.body.x <= gateBlocked.character.body.x)
+		return 123;
 	final collected = flowSession.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Lantern, 1);
 	if (!collected.resolved || collected.collected != 1 || collected.inventory.lantern != 1)
 		return 112;

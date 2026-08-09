@@ -12,7 +12,7 @@ import caxecraft.domain.Character.applyAttack as applyCharacterAttack;
 import caxecraft.domain.Character.applyDamage as applyCharacterDamage;
 import caxecraft.domain.Character.isValid as isValidCharacter;
 import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
-import caxecraft.domain.Character.step as advanceCharacterState;
+import caxecraft.domain.Character.stepWithCollisions as advanceCharacterState;
 import caxecraft.domain.Character.withVitals as withCharacterVitals;
 import caxecraft.domain.PlayerAgent.bind as bindPlayerAgent;
 import caxecraft.domain.WaterCellCodec.isSolidCode as isSolidStorageCode;
@@ -214,6 +214,33 @@ final class GameSession {
 	/** Validated content IDs in the same slot order as authored-item activity. */
 	var authoredItemContentIds:Array<ContentId> = [];
 
+	/** Stable authored IDs for generic interactables in deterministic load order. */
+	var statefulObjectIds:Array<ScenarioId> = [];
+
+	/** Interaction centers in integer thousandths of a block, stored as x/y/z triples. */
+	var statefulObjectPositionsMilli:Array<Int> = [];
+
+	/** Maximum interaction distance paired with each `statefulObjectIds` entry. */
+	var statefulObjectRadiiMilli:Array<Int> = [];
+
+	/** Width, height, depth, and cardinal yaw for each object's authored box. */
+	var statefulObjectBoundsMilli:Array<Int> = [];
+
+	/** First flattened state-mechanics slot for each generic object. */
+	var statefulObjectStateStarts:Array<Int> = [];
+
+	/** Number of flattened state-mechanics slots for each generic object. */
+	var statefulObjectStateCounts:Array<Int> = [];
+
+	/** Compatible CaxeFlow state IDs in object-major canonical order. */
+	var statefulObjectCollisionStates:Array<ContentId> = [];
+
+	/** One zero/passable or one/solid flag per flattened state slot. */
+	var statefulObjectCollisionSolid:Array<Int> = [];
+
+	/** Solid boxes rebuilt from the authoritative CaxeFlow state after each tick. */
+	var activeStatefulCollision:Array<DynamicCollisionBox> = [];
+
 	/** Semantic events waiting for the next successfully committed fixed tick. */
 	var pendingFlowEvents:Array<FlowEvent> = [];
 
@@ -264,7 +291,9 @@ final class GameSession {
 	**/
 	@:allow(caxecraft.content.RuntimeLevelLoader)
 	private function installValidatedScenarioFlow(scenario:Scenario, actorEntities:Array<EntityId>, actorIds:Array<ScenarioId>,
-			itemContentIds:Array<ContentId>):Void {
+			itemContentIds:Array<ContentId>, objectIds:Array<ScenarioId>, objectPositionsMilli:Array<Int>, objectRadiiMilli:Array<Int>,
+			objectBoundsMilli:Array<Int>, objectStateStarts:Array<Int>, objectStateCounts:Array<Int>, objectCollisionStates:Array<ContentId>,
+			objectCollisionSolid:Array<Int>):Void {
 		if (flowExecutor != null)
 			throw "CaxeFlow is already installed for this GameSession";
 		if (actorEntities.length != actorIds.length || actorEntities.length != actorControllers.length)
@@ -274,10 +303,50 @@ final class GameSession {
 				throw "CaxeFlow actor binding order does not match this GameSession";
 		if (itemContentIds.length > AuthoredItemSlots.CAPACITY)
 			throw "CaxeFlow item bindings exceed this GameSession";
+		if (objectPositionsMilli.length != objectIds.length * 3 || objectRadiiMilli.length != objectIds.length)
+			throw "CaxeFlow stateful-object bindings do not match this GameSession";
+		if (objectBoundsMilli.length != objectIds.length * 4
+			|| objectStateStarts.length != objectIds.length
+			|| objectStateCounts.length != objectIds.length
+			|| objectCollisionStates.length != objectCollisionSolid.length)
+			throw "CaxeFlow stateful-object collision bindings do not match this GameSession";
+		for (radius in objectRadiiMilli)
+			if (radius < 0)
+				throw "CaxeFlow stateful-object interaction range is invalid";
+		var expectedStateStart = 0;
+		for (objectIndex in 0...objectIds.length) {
+			final boundsOffset = objectIndex * 4;
+			final yaw = objectBoundsMilli[boundsOffset + 3];
+			if (objectBoundsMilli[boundsOffset] <= 0
+				|| objectBoundsMilli[boundsOffset + 1] <= 0
+				|| objectBoundsMilli[boundsOffset + 2] <= 0)
+				throw "CaxeFlow stateful-object collision bounds are invalid";
+			if (yaw != 0 && yaw != 90 && yaw != 180 && yaw != 270)
+				throw "CaxeFlow stateful-object collision yaw is invalid";
+			if (objectStateStarts[objectIndex] != expectedStateStart || objectStateCounts[objectIndex] <= 0)
+				throw "CaxeFlow stateful-object collision state range is invalid";
+			expectedStateStart += objectStateCounts[objectIndex];
+			if (expectedStateStart > objectCollisionStates.length)
+				throw "CaxeFlow stateful-object collision state range exceeds its values";
+		}
+		if (expectedStateStart != objectCollisionStates.length)
+			throw "CaxeFlow stateful-object collision states are not completely owned";
+		for (solid in objectCollisionSolid)
+			if (solid != 0 && solid != 1)
+				throw "CaxeFlow stateful-object collision flag is invalid";
 		authoredActorEntities = actorEntities.copy();
 		authoredActorIds = actorIds.copy();
 		authoredItemContentIds = itemContentIds.copy();
+		statefulObjectIds = objectIds.copy();
+		statefulObjectPositionsMilli = objectPositionsMilli.copy();
+		statefulObjectRadiiMilli = objectRadiiMilli.copy();
+		statefulObjectBoundsMilli = objectBoundsMilli.copy();
+		statefulObjectStateStarts = objectStateStarts.copy();
+		statefulObjectStateCounts = objectStateCounts.copy();
+		statefulObjectCollisionStates = objectCollisionStates.copy();
+		statefulObjectCollisionSolid = objectCollisionSolid.copy();
 		flowExecutor = new CaxeFlowExecutor(scenario);
+		refreshStatefulCollision();
 	}
 
 	/**
@@ -310,6 +379,54 @@ final class GameSession {
 				return queueFlowEvent(FlowEvent.Interact(authoredActorIds[index]));
 		return false;
 	}
+
+	/**
+		Commit one nearby generic-object interaction as an authored event.
+
+		CaxeFlow owns whether the object is active and what state it has. The session
+		owns proximity to the current player. This command joins those two facts and
+		queues the same typed `Interact` event used by other authored rules.
+	**/
+	public function interactWithStatefulObject(id:ScenarioId):Bool
+		return statefulObjectInteractionAvailable(id) && queueFlowEvent(FlowEvent.Interact(id));
+
+	/** True when one active generic object is within its content-defined range. */
+	public function statefulObjectInteractionAvailable(id:ScenarioId):Bool {
+		final executor = flowExecutor;
+		if (executor == null || !executor.objectActive(id))
+			return false;
+		final player = readLocalPlayer();
+		if (!isValidCharacter(player))
+			return false;
+		for (index in 0...statefulObjectIds.length)
+			if (statefulObjectIds[index] == id) {
+				final offset = index * 3;
+				final dx:Float = player.body.x * 1000.0 - statefulObjectPositionsMilli[offset];
+				final dy:Float = player.body.y * 1000.0 - statefulObjectPositionsMilli[offset + 1];
+				final dz:Float = player.body.z * 1000.0 - statefulObjectPositionsMilli[offset + 2];
+				final radius:Float = statefulObjectRadiiMilli[index];
+				if (radius <= 0.0)
+					return false;
+				return dx * dx + dy * dy + dz * dz <= radius * radius;
+			}
+		return false;
+	}
+
+	/** Observe the current CaxeFlow state without exposing its mutable owner. */
+	public function statefulObjectState(id:ScenarioId):Null<ContentId> {
+		final executor = flowExecutor;
+		return executor == null ? null : executor.objectState(id);
+	}
+
+	/** Observe whether CaxeFlow currently admits an object to interaction and drawing. */
+	public function statefulObjectIsActive(id:ScenarioId):Bool {
+		final executor = flowExecutor;
+		return executor != null && executor.objectActive(id);
+	}
+
+	/** Number of solid authored boxes active for the current committed flow state. */
+	public inline function activeStatefulCollisionCount():Int
+		return activeStatefulCollision.length;
 
 	/**
 		Install the one locally controlled character and bind human input to its ID.
@@ -973,6 +1090,7 @@ final class GameSession {
 			if (executor != null) {
 				flowResult = executor.runTick({events: pendingFlowEvents, positions: []});
 				pendingFlowEvents.resize(0);
+				refreshStatefulCollision();
 			}
 		}
 		return {
@@ -1003,7 +1121,7 @@ final class GameSession {
 				resolved: false
 			};
 		}
-		final result = advanceCharacterState(readCells, original, intent, damagePolicy);
+		final result = advanceCharacterState(readCells, activeStatefulCollision, original, intent, damagePolicy);
 		final resolved = entities.replace(original.id, result.character);
 		return {
 			character: resolved ? result.character : original,
@@ -1011,6 +1129,59 @@ final class GameSession {
 			drowningDamage: result.drowningDamage,
 			resolved: resolved
 		};
+	}
+
+	/** Rebuild collision from the same authoritative state read by presentation. */
+	function refreshStatefulCollision():Void {
+		activeStatefulCollision.resize(0);
+		final executor = flowExecutor;
+		if (executor == null)
+			return;
+		for (objectIndex in 0...statefulObjectIds.length) {
+			final objectId = statefulObjectIds[objectIndex];
+			if (!executor.objectActive(objectId))
+				continue;
+			final currentState = executor.objectState(objectId);
+			if (currentState == null)
+				continue;
+			final start = statefulObjectStateStarts[objectIndex];
+			final end = start + statefulObjectStateCounts[objectIndex];
+			var stateIndex = start;
+			var solid = false;
+			while (stateIndex < end) {
+				if (statefulObjectCollisionStates[stateIndex] == currentState) {
+					solid = statefulObjectCollisionSolid[stateIndex] != 0;
+					stateIndex = end;
+				} else
+					stateIndex++;
+			}
+			if (!solid)
+				continue;
+			final positionOffset = objectIndex * 3;
+			final boundsOffset = objectIndex * 4;
+			var widthMilli = statefulObjectBoundsMilli[boundsOffset];
+			final heightMilli = statefulObjectBoundsMilli[boundsOffset + 1];
+			var depthMilli = statefulObjectBoundsMilli[boundsOffset + 2];
+			final yaw = statefulObjectBoundsMilli[boundsOffset + 3];
+			if (yaw == 90 || yaw == 270) {
+				final swap = widthMilli;
+				widthMilli = depthMilli;
+				depthMilli = swap;
+			}
+			final centerX = statefulObjectPositionsMilli[positionOffset] / 1000.0;
+			final minimumY = statefulObjectPositionsMilli[positionOffset + 1] / 1000.0;
+			final centerZ = statefulObjectPositionsMilli[positionOffset + 2] / 1000.0;
+			final halfWidth = widthMilli / 2000.0;
+			final halfDepth = depthMilli / 2000.0;
+			activeStatefulCollision.push({
+				minimumX: centerX - halfWidth,
+				maximumX: centerX + halfWidth,
+				minimumY: minimumY,
+				maximumY: minimumY + heightMilli / 1000.0,
+				minimumZ: centerZ - halfDepth,
+				maximumZ: centerZ + halfDepth
+			});
+		}
 	}
 
 	/**

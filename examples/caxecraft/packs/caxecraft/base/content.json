@@ -356,7 +356,143 @@
     }
   ],
   "prefabs": [],
-  "statefulObjects": [],
-  "states": [],
+  "statefulObjects": [
+    {
+      "id": "caxecraft:vault-gate",
+      "interaction": "none",
+      "interactionRadiusMilli": 0,
+      "bounds": { "widthMilli": 7000, "heightMilli": 3000, "depthMilli": 500 },
+      "states": [
+        {
+          "id": "caxecraft:open",
+          "collision": "passable",
+          "render": "hidden",
+          "presentation": {
+            "asset": "terrain",
+            "cell": "field-cobble"
+          }
+        },
+        {
+          "id": "caxecraft:sealed",
+          "collision": "solid",
+          "render": "visible",
+          "presentation": {
+            "asset": "terrain",
+            "cell": "field-cobble"
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:vault-glyph-flame",
+      "interaction": "activate",
+      "interactionRadiusMilli": 2500,
+      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:entered",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "checkpoint"
+          }
+        },
+        {
+          "id": "caxecraft:waiting",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "glyph-ember"
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:vault-glyph-leaf",
+      "interaction": "activate",
+      "interactionRadiusMilli": 2500,
+      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:entered",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "checkpoint"
+          }
+        },
+        {
+          "id": "caxecraft:waiting",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "glyph-leaf"
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:vault-glyph-moon",
+      "interaction": "activate",
+      "interactionRadiusMilli": 2500,
+      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:entered",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "checkpoint"
+          }
+        },
+        {
+          "id": "caxecraft:waiting",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "glyph-forge"
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:vault-glyph-river",
+      "interaction": "activate",
+      "interactionRadiusMilli": 2500,
+      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:entered",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "checkpoint"
+          }
+        },
+        {
+          "id": "caxecraft:waiting",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "glyph-wave"
+          }
+        }
+      ]
+    }
+  ],
+  "states": [
+    "caxecraft:entered",
+    "caxecraft:open",
+    "caxecraft:sealed",
+    "caxecraft:waiting"
+  ],
   "signals": []
 }

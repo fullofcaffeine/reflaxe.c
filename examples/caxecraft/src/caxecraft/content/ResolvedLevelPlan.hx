@@ -11,6 +11,10 @@ import caxecraft.content.LevelContentResolver.ItemStorageCode;
 import caxecraft.content.LevelContentResolver.LevelFluidSimulation;
 import caxecraft.content.LevelContentResolver.TerrainContentResolution;
 import caxecraft.content.LevelContentResolver.TerrainStorageCode;
+import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
+import caxecraft.content.LevelContentResolver.StatefulObjectBounds;
+import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
+import caxecraft.content.LevelContentResolver.StatefulObjectStateMechanics;
 import caxecraft.domain.ActorControllerProfile;
 import caxecraft.domain.AquaticProfile;
 import caxecraft.domain.EntityId;
@@ -101,6 +105,30 @@ typedef ResolvedItem = {
 	final transform:ScenarioTransform;
 }
 
+/** Fully resolved generic interactable owned by one loaded level. */
+typedef ResolvedStatefulObject = {
+	/** Stable authored identity used by CaxeFlow interaction and state changes. */
+	final authoredId:ScenarioId;
+
+	/** Content profile that supplies range and state visuals. */
+	final contentId:ContentId;
+
+	/** Initial state selected by the validated CAXEMAP placement. */
+	final initialState:ContentId;
+
+	/** Maximum semantic interaction distance in integer thousandths of a block. */
+	final interactionRadiusMilli:Int;
+
+	/** Box dimensions resolved before a mutable session can exist. */
+	final bounds:StatefulObjectBounds;
+
+	/** Complete closed mechanics for every state this profile admits. */
+	final states:Array<StatefulObjectStateMechanics>;
+
+	/** Copied world transform used for proximity and presentation. */
+	final transform:ScenarioTransform;
+}
+
 /** Fully resolved local-player construction facts. */
 typedef ResolvedPlayer = {
 	/** Stable authored ID of the CAXEMAP player-spawn object. */
@@ -161,6 +189,18 @@ typedef ResolvedActorPresentation = {
 	final cellIndex:Int;
 }
 
+/** Visual request for one stateful interactable's initial state. */
+typedef ResolvedStatefulObjectPresentation = {
+	final authoredId:ScenarioId;
+	final contentId:ContentId;
+	final state:ContentId;
+	final asset:String;
+	final cellIndex:Int;
+
+	/** Whether the initial state contributes a visual. */
+	final visible:Bool;
+}
+
 /**
  * Compact deterministic evidence for one fully resolved level.
  *
@@ -178,6 +218,8 @@ typedef ResolvedLevelSemanticTrace = {
 	final fluidDigest:Int;
 	final items:Int;
 	final itemDigest:Int;
+	final statefulObjects:Int;
+	final statefulObjectDigest:Int;
 	final actors:Int;
 	final actorDigest:Int;
 	final flowBindings:Int;
@@ -215,6 +257,12 @@ enum ResolvedLevelPlanError {
 	/** The registry returned an invalid pack-local item code. */
 	InvalidItemStorage(authoredId:ScenarioId, contentId:ContentId, storageCode:Int);
 
+	/** One object profile/state pair did not resolve into complete runtime facts. */
+	StatefulObjectResolutionRejected(authoredId:ScenarioId, contentId:ContentId, state:ContentId);
+
+	/** A solid authored box uses a yaw that this axis-aligned collision slice excludes. */
+	UnsupportedStatefulObjectCollisionYaw(authoredId:ScenarioId, yawDegrees:Int);
+
 	/** Generic actor identity, content-kind, capacity, or mechanics planning failed. */
 	ActorResolutionRejected(error:ActorCompositionError);
 
@@ -250,11 +298,14 @@ final class ResolvedLevelPresentationPlan {
 	final fluids:Array<ResolvedFluidPresentation>;
 	final items:Array<ResolvedItemPresentation>;
 	final actors:Array<ResolvedActorPresentation>;
+	final statefulObjects:Array<ResolvedStatefulObjectPresentation>;
 
-	private function new(fluids:Array<ResolvedFluidPresentation>, items:Array<ResolvedItemPresentation>, actors:Array<ResolvedActorPresentation>) {
+	private function new(fluids:Array<ResolvedFluidPresentation>, items:Array<ResolvedItemPresentation>, actors:Array<ResolvedActorPresentation>,
+			statefulObjects:Array<ResolvedStatefulObjectPresentation>) {
 		this.fluids = fluids.copy();
 		this.items = items.copy();
 		this.actors = actors.copy();
+		this.statefulObjects = statefulObjects.copy();
 	}
 
 	/** Return a caller-owned copy of all fluid presentation requests. */
@@ -268,6 +319,10 @@ final class ResolvedLevelPresentationPlan {
 	/** Return a caller-owned copy of all actor presentation requests. */
 	public function actorRequests():Array<ResolvedActorPresentation>
 		return actors.copy();
+
+	/** Return a caller-owned copy of all stateful-object visual requests. */
+	public function statefulObjectRequests():Array<ResolvedStatefulObjectPresentation>
+		return statefulObjects.copy();
 }
 
 private typedef TerrainPlan = {
@@ -290,6 +345,11 @@ private typedef ItemPlans = {
 	final presentation:Array<ResolvedItemPresentation>;
 }
 
+private typedef StatefulObjectPlans = {
+	final construction:Array<ResolvedStatefulObject>;
+	final presentation:Array<ResolvedStatefulObjectPresentation>;
+}
+
 private enum TerrainPlanResult {
 	TerrainPlanned(value:TerrainPlan);
 	TerrainRejected(error:ResolvedLevelPlanError);
@@ -303,6 +363,11 @@ private enum FluidPlanResult {
 private enum ItemPlanResult {
 	ItemsPlanned(value:ItemPlans);
 	ItemsRejected(error:ResolvedLevelPlanError);
+}
+
+private enum StatefulObjectPlanResult {
+	StatefulObjectsPlanned(value:StatefulObjectPlans);
+	StatefulObjectsRejected(error:ResolvedLevelPlanError);
 }
 
 private enum PlayerPlanResult {
@@ -324,6 +389,7 @@ final class ResolvedLevelPlan {
 	final resolvedTerrain:Array<ResolvedTerrainRun>;
 	final resolvedFluids:Array<ResolvedFluid>;
 	final resolvedItems:Array<ResolvedItem>;
+	final resolvedStatefulObjects:Array<ResolvedStatefulObject>;
 	final resolvedActors:Array<CharacterSpawnPlan>;
 	final resolvedPlayer:ResolvedPlayer;
 	final resolvedFlow:Array<ResolvedFlowBinding>;
@@ -331,11 +397,13 @@ final class ResolvedLevelPlan {
 	final resolvedPresentationDigest:Int;
 
 	private function new(scenarioId:ScenarioId, terrain:Array<ResolvedTerrainRun>, fluids:Array<ResolvedFluid>, items:Array<ResolvedItem>,
-			actors:Array<CharacterSpawnPlan>, player:ResolvedPlayer, flow:Array<ResolvedFlowBinding>, flowDigest:Int, presentationDigest:Int) {
+			statefulObjects:Array<ResolvedStatefulObject>, actors:Array<CharacterSpawnPlan>, player:ResolvedPlayer, flow:Array<ResolvedFlowBinding>,
+			flowDigest:Int, presentationDigest:Int) {
 		resolvedScenarioId = scenarioId;
 		resolvedTerrain = terrain.copy();
 		resolvedFluids = fluids.copy();
 		resolvedItems = items.copy();
+		resolvedStatefulObjects = copyStatefulObjects(statefulObjects);
 		resolvedActors = copyActors(actors);
 		resolvedPlayer = copyPlayer(player);
 		resolvedFlow = flow.copy();
@@ -371,6 +439,10 @@ final class ResolvedLevelPlan {
 			case ItemsPlanned(value): value;
 			case ItemsRejected(error): return LevelPlanRejected(error);
 		};
+		final statefulObjects = switch resolveStatefulObjects(scenario, registry) {
+			case StatefulObjectsPlanned(value): value;
+			case StatefulObjectsRejected(error): return LevelPlanRejected(error);
+		};
 		final actors = switch planActorComposition(scenario.objects, registry) {
 			case ActorCompositionPlanned(plans): plans;
 			case ActorCompositionRejected(error): return LevelPlanRejected(ActorResolutionRejected(error));
@@ -394,9 +466,9 @@ final class ResolvedLevelPlan {
 				cellIndex: cellIndex
 			});
 		}
-		final presentation = new ResolvedLevelPresentationPlan(fluids.presentation, items.presentation, actorPresentation);
-		final plan = new ResolvedLevelPlan(scenario.id, terrain.runs, fluids.construction, items.construction, actors, player, flow, digestFlowBindings(flow),
-			digestPresentation(presentation));
+		final presentation = new ResolvedLevelPresentationPlan(fluids.presentation, items.presentation, actorPresentation, statefulObjects.presentation);
+		final plan = new ResolvedLevelPlan(scenario.id, terrain.runs, fluids.construction, items.construction, statefulObjects.construction, actors, player,
+			flow, digestFlowBindings(flow), digestPresentation(presentation));
 		return LevelPlanResolved(plan, presentation);
 	}
 
@@ -415,6 +487,10 @@ final class ResolvedLevelPlan {
 	/** Return a caller-owned copy of authored item construction facts. */
 	public function items():Array<ResolvedItem>
 		return resolvedItems.copy();
+
+	/** Return a caller-owned copy of generic interactable construction facts. */
+	public function statefulObjects():Array<ResolvedStatefulObject>
+		return copyStatefulObjects(resolvedStatefulObjects);
 
 	/** Return a caller-owned, deeply copied actor construction plan. */
 	public function actors():Array<CharacterSpawnPlan>
@@ -483,6 +559,25 @@ final class ResolvedLevelPlan {
 		var actorDigest = hashStart();
 		for (actor in resolvedActors)
 			actorDigest = hashActor(actorDigest, actor);
+		var statefulObjectDigest = hashStart();
+		for (object in resolvedStatefulObjects) {
+			statefulObjectDigest = hashText(statefulObjectDigest, object.authoredId.text());
+			statefulObjectDigest = hashText(statefulObjectDigest, object.contentId.text());
+			statefulObjectDigest = hashText(statefulObjectDigest, object.initialState.text());
+			statefulObjectDigest = hashInt(statefulObjectDigest, object.interactionRadiusMilli);
+			statefulObjectDigest = hashInt(statefulObjectDigest, object.bounds.widthMilli);
+			statefulObjectDigest = hashInt(statefulObjectDigest, object.bounds.heightMilli);
+			statefulObjectDigest = hashInt(statefulObjectDigest, object.bounds.depthMilli);
+			for (state in object.states) {
+				statefulObjectDigest = hashText(statefulObjectDigest, state.state.text());
+				statefulObjectDigest = hashInt(statefulObjectDigest, switch state.collision {
+					case StatefulObjectPassable: 0;
+					case StatefulObjectSolid: 1;
+				});
+				statefulObjectDigest = hashInt(statefulObjectDigest, state.visible ? 1 : 0);
+			}
+			statefulObjectDigest = hashTransform(statefulObjectDigest, object.transform);
+		}
 		return {
 			scenarioDigest: hashText(hashStart(), resolvedScenarioId.text()),
 			worldCells: worldCells,
@@ -492,6 +587,8 @@ final class ResolvedLevelPlan {
 			fluidDigest: fluidDigest,
 			items: resolvedItems.length,
 			itemDigest: itemDigest,
+			statefulObjects: resolvedStatefulObjects.length,
+			statefulObjectDigest: statefulObjectDigest,
 			actors: resolvedActors.length,
 			actorDigest: actorDigest,
 			flowBindings: resolvedFlow.length,
@@ -647,6 +744,67 @@ final class ResolvedLevelPlan {
 		return ItemsPlanned({construction: construction, presentation: presentation});
 	}
 
+	/** Resolve each generic interactable without giving the level planner campaign knowledge. */
+	static function resolveStatefulObjects(scenario:Scenario, registry:LevelContentResolver):StatefulObjectPlanResult {
+		final construction:Array<ResolvedStatefulObject> = [];
+		final presentation:Array<ResolvedStatefulObjectPresentation> = [];
+		for (object in scenario.objects)
+			switch object.placement {
+				case StatefulObject(contentId, initialState, transform):
+					final resolved = switch registry.resolveStatefulObject(contentId, initialState) {
+						case StatefulObjectContentResolved(interactionRadiusMilli, bounds, states, presentationAsset, presentationCell)
+							if (interactionRadiusMilli >= 0 && presentationAsset.length > 0 && presentationCell >= 0):
+							{
+								interactionRadiusMilli: interactionRadiusMilli,
+								bounds: copyStatefulObjectBounds(bounds),
+								states: copyStatefulObjectStates(states),
+								presentationAsset: presentationAsset,
+								presentationCell: presentationCell
+							};
+						case StatefulObjectContentResolved(_, _, _, _, _) | UnknownStatefulObjectContent:
+							return StatefulObjectsRejected(StatefulObjectResolutionRejected(object.id, contentId, initialState));
+					};
+					var initialVisible = false;
+					var foundInitialState = false;
+					var hasSolidState = false;
+					for (state in resolved.states)
+						switch state.collision {
+							case StatefulObjectPassable:
+							case StatefulObjectSolid: hasSolidState = true;
+						}
+					for (state in resolved.states)
+						if (state.state == initialState) {
+							initialVisible = state.visible;
+							foundInitialState = true;
+						}
+					if (!foundInitialState)
+						return StatefulObjectsRejected(StatefulObjectResolutionRejected(object.id, contentId, initialState));
+					if (hasSolidState && transform.yawDegrees % 90 != 0)
+						return StatefulObjectsRejected(UnsupportedStatefulObjectCollisionYaw(object.id, transform.yawDegrees));
+					construction.push({
+						authoredId: object.id,
+						contentId: contentId,
+						initialState: initialState,
+						interactionRadiusMilli: resolved.interactionRadiusMilli,
+						bounds: resolved.bounds,
+						states: resolved.states,
+						transform: copyTransform(transform)
+					});
+					presentation.push({
+						authoredId: object.id,
+						contentId: contentId,
+						state: initialState,
+						asset: resolved.presentationAsset,
+						cellIndex: resolved.presentationCell,
+						visible: initialVisible
+					});
+				case _:
+			}
+		construction.sort((left, right) -> compareText(left.authoredId.text(), right.authoredId.text()));
+		presentation.sort((left, right) -> compareText(left.authoredId.text(), right.authoredId.text()));
+		return StatefulObjectsPlanned({construction: construction, presentation: presentation});
+	}
+
 	static function resolvePlayer(scenario:Scenario, options:LevelPlayerOptions):PlayerPlanResult {
 		var count = 0;
 		var authoredId = new ScenarioId("invalid");
@@ -721,6 +879,41 @@ final class ResolvedLevelPlan {
 				return difference;
 		}
 		return leftBytes.length - rightBytes.length;
+	}
+
+	/** Copy one stateful box so no registry-owned record escapes resolution. */
+	static function copyStatefulObjectBounds(value:StatefulObjectBounds):StatefulObjectBounds
+		return {widthMilli: value.widthMilli, heightMilli: value.heightMilli, depthMilli: value.depthMilli};
+
+	/** Copy closed state mechanics without sharing the registry's array owner. */
+	static function copyStatefulObjectStates(values:Array<StatefulObjectStateMechanics>):Array<StatefulObjectStateMechanics> {
+		final result:Array<StatefulObjectStateMechanics> = [];
+		for (value in values)
+			result.push({
+				state: value.state,
+				collision: switch value.collision {
+					case StatefulObjectPassable: StatefulObjectPassable;
+					case StatefulObjectSolid: StatefulObjectSolid;
+				},
+				visible: value.visible
+			});
+		return result;
+	}
+
+	/** Deep-copy generic object mechanics retained by an immutable plan. */
+	static function copyStatefulObjects(values:Array<ResolvedStatefulObject>):Array<ResolvedStatefulObject> {
+		final result:Array<ResolvedStatefulObject> = [];
+		for (value in values)
+			result.push({
+				authoredId: value.authoredId,
+				contentId: value.contentId,
+				initialState: value.initialState,
+				interactionRadiusMilli: value.interactionRadiusMilli,
+				bounds: copyStatefulObjectBounds(value.bounds),
+				states: copyStatefulObjectStates(value.states),
+				transform: copyTransform(value.transform)
+			});
+		return result;
 	}
 
 	static function copyActors(values:Array<CharacterSpawnPlan>):Array<CharacterSpawnPlan> {
@@ -912,6 +1105,14 @@ final class ResolvedLevelPlan {
 				case DialogueNpc(dialogue): hashText(hashInt(result, 1), dialogue.text());
 				case EnemyActor: hashInt(result, 2);
 			}
+		}
+		for (object in value.statefulObjectRequests()) {
+			result = hashText(result, object.authoredId.text());
+			result = hashText(result, object.contentId.text());
+			result = hashText(result, object.state.text());
+			result = hashText(result, object.asset);
+			result = hashInt(result, object.cellIndex);
+			result = hashInt(result, object.visible ? 1 : 0);
 		}
 		return result;
 	}

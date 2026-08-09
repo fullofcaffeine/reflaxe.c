@@ -1634,17 +1634,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 230,
+              "startLine": 361,
               "startColumn": 41,
-              "endLine": 232,
+              "endLine": 363,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 230,
+            "startLine": 361,
             "startColumn": 41,
-            "endLine": 232,
+            "endLine": 363,
             "endColumn": 2
           },
           "startLine": 1104,
@@ -1669,17 +1669,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 49,
+              "startLine": 68,
               "startColumn": 56,
-              "endLine": 59,
+              "endLine": 78,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 49,
+            "startLine": 68,
             "startColumn": 56,
-            "endLine": 59,
+            "endLine": 78,
             "endColumn": 2
           },
           "startLine": 1113,
@@ -1704,17 +1704,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 71,
+              "startLine": 90,
               "startColumn": 65,
-              "endLine": 92,
+              "endLine": 111,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 71,
+            "startLine": 90,
             "startColumn": 65,
-            "endLine": 92,
+            "endLine": 111,
             "endColumn": 2
           },
           "startLine": 1118,
@@ -1739,17 +1739,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 225,
+              "startLine": 356,
               "startColumn": 46,
-              "endLine": 228,
+              "endLine": 359,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 225,
+            "startLine": 356,
             "startColumn": 46,
-            "endLine": 228,
+            "endLine": 359,
             "endColumn": 2
           },
           "startLine": 1154,
@@ -1774,17 +1774,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 62,
+              "startLine": 81,
               "startColumn": 63,
-              "endLine": 68,
+              "endLine": 87,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 62,
+            "startLine": 81,
             "startColumn": 63,
-            "endLine": 68,
+            "endLine": 87,
             "endColumn": 2
           },
           "startLine": 1164,
@@ -1809,17 +1809,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 159,
+              "startLine": 261,
               "startColumn": 103,
-              "endLine": 198,
+              "endLine": 290,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 159,
+            "startLine": 261,
             "startColumn": 103,
-            "endLine": 198,
+            "endLine": 290,
             "endColumn": 2
           },
           "startLine": 1169,
@@ -1844,17 +1844,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 200,
+              "startLine": 292,
               "startColumn": 76,
-              "endLine": 223,
+              "endLine": 315,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 200,
+            "startLine": 292,
             "startColumn": 76,
-            "endLine": 223,
+            "endLine": 315,
             "endColumn": 2
           },
           "startLine": 1260,
@@ -1879,17 +1879,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 95,
+              "startLine": 114,
               "startColumn": 75,
-              "endLine": 111,
+              "endLine": 130,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 95,
+            "startLine": 114,
             "startColumn": 75,
-            "endLine": 111,
+            "endLine": 130,
             "endColumn": 2
           },
           "startLine": 1327,
@@ -1914,17 +1914,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 131,
+              "startLine": 161,
               "startColumn": 138,
-              "endLine": 157,
+              "endLine": 187,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 131,
+            "startLine": 161,
             "startColumn": 138,
-            "endLine": 157,
+            "endLine": 187,
             "endColumn": 2
           },
           "startLine": 1353,
@@ -1949,17 +1949,17 @@
             "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
               "path": "caxecraft/domain/CharacterPhysics.hx",
-              "startLine": 114,
+              "startLine": 133,
               "startColumn": 89,
-              "endLine": 122,
+              "endLine": 141,
               "endColumn": 2
             }
           },
           "source": {
             "path": "caxecraft/domain/CharacterPhysics.hx",
-            "startLine": 114,
+            "startLine": 133,
             "startColumn": 89,
-            "endLine": 122,
+            "endLine": 141,
             "endColumn": 2
           },
           "startLine": 1408,

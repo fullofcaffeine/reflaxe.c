@@ -393,7 +393,7 @@ def load_pilot_catalog(path: Path) -> tuple[PilotMetadata, ...]:
             raise PlayFailure(f"{label} has an unsafe ID")
         if isinstance(script_code, bool) or not isinstance(script_code, int) or script_code < 0:
             raise PlayFailure(f"{label} has an invalid script code")
-        if isinstance(frame_limit, bool) or not isinstance(frame_limit, int) or not 2 <= frame_limit <= 400:
+        if isinstance(frame_limit, bool) or not isinstance(frame_limit, int) or not 2 <= frame_limit <= 500:
             raise PlayFailure(f"{label} has an invalid frame limit")
         if not isinstance(haxe_define, str) or re.fullmatch(r"caxecraft_pilot_[a-z0-9_]+", haxe_define) is None:
             raise PlayFailure(f"{label} has an unsafe Haxe define")
@@ -2348,7 +2348,7 @@ def validate_generated_playable(
         "WaterSimulation_tick(",
         "WaterSimulation_placeInitialVolume(",
         "WaterSimulation_placeSource(",
-        "Character_step(",
+        "Character_stepWithCollisions(",
     ):
         if required not in session_source:
             raise PlayFailure(

@@ -9,6 +9,10 @@ import caxecraft.content.LevelContentResolver.ItemStorageCode;
 import caxecraft.content.LevelContentResolver.LevelFluidSimulation;
 import caxecraft.content.LevelContentResolver.TerrainContentResolution;
 import caxecraft.content.LevelContentResolver.TerrainStorageCode;
+import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
+import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
+import caxecraft.content.LevelContentResolver.StatefulObjectBounds;
+import caxecraft.content.LevelContentResolver.StatefulObjectStateMechanics;
 import caxecraft.domain.ActorControllerProfile;
 import caxecraft.domain.AquaticProfile;
 import caxecraft.domain.Aquatics.profile as createAquaticProfile;
@@ -95,13 +99,13 @@ final class FocusedContentRegistry implements ScenarioContentRegistry implements
 	public function hasPrefab(id:ContentId):Bool
 		return false;
 
-	/** Stateful-object definitions are outside this fixture's admitted slice. */
+	/** Admit one generic control profile used by the focused level-plan contract. */
 	public function hasStatefulObject(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:glyph-control";
 
-	/** Named state definitions are outside this fixture's admitted slice. */
+	/** Admit the two closed visual states used by the generic control fixture. */
 	public function hasState(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:active" || id.text() == "caxecraft:idle";
 
 	/** Admit the two feedback effects referenced by existing scenario tests. */
 	public function hasEffect(id:ContentId):Bool
@@ -143,6 +147,22 @@ final class FocusedContentRegistry implements ScenarioContentRegistry implements
 			case "caxecraft:mossling": ActorPresentationResolved(8);
 			case _: UnknownActorPresentation;
 		}
+	}
+
+	/** Resolve the manually authored range and state visuals for one generic control. */
+	public function resolveStatefulObject(id:ContentId, state:ContentId):StatefulObjectContentResolution {
+		if (!hasStatefulObject(id))
+			return UnknownStatefulObjectContent;
+		final states:Array<StatefulObjectStateMechanics> = [
+			{state: new ContentId("caxecraft:active"), collision: StatefulObjectSolid, visible: true},
+			{state: new ContentId("caxecraft:idle"), collision: StatefulObjectPassable, visible: false}
+		];
+		final bounds:StatefulObjectBounds = {widthMilli: 1000, heightMilli: 1000, depthMilli: 1000};
+		return switch state.text() {
+			case "caxecraft:active": StatefulObjectContentResolved(2500, bounds, states, "adventure-items", 1);
+			case "caxecraft:idle": StatefulObjectContentResolved(2500, bounds, states, "adventure-items", 2);
+			case _: UnknownStatefulObjectContent;
+		};
 	}
 
 	/** Resolve Nia's manually reviewed mechanics or report exact kind/absence. */

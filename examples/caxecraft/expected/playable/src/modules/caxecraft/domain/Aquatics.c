@@ -281,12 +281,12 @@ struct hxc_caxecraft_domain_AquaticState hxc_caxecraft_domain_Aquatics_start(str
   return (struct hxc_caxecraft_domain_AquaticState){ .hxc_breathTicks = hxc_l_capability.hxc_maximumBreathTicks, .hxc_drowningTicks = hxc_l_capability.hxc_drowningIntervalTicks, .hxc_headSubmerged = false, .hxc_medium = 0, .hxc_submersion = 0.0 };
 }
 
-struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(const uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_caxecraft_domain_CharacterBody hxc_l_original, struct hxc_caxecraft_domain_AquaticState hxc_l_aquatic, struct hxc_caxecraft_domain_CharacterIntent hxc_l_command, struct hxc_caxecraft_domain_AquaticProfile hxc_l_capability)
+struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_stepWithCollisions(const uint8_t *hxc_l_cells, size_t hxc_l_length, struct hxc_array_ref *hxc_l_collisions, struct hxc_caxecraft_domain_CharacterBody hxc_l_original, struct hxc_caxecraft_domain_AquaticState hxc_l_aquatic, struct hxc_caxecraft_domain_CharacterIntent hxc_l_command, struct hxc_caxecraft_domain_AquaticProfile hxc_l_capability)
 {
   const uint8_t *hxc_l_borrow = hxc_l_cells;
-  size_t hxc_l_tmp_length_n5 = hxc_l_length;
+  size_t hxc_l_tmp_length_n6 = hxc_l_length;
   (void)hxc_l_borrow;
-  (void)hxc_l_tmp_length_n5;
+  (void)hxc_l_tmp_length_n6;
   struct hxc_caxecraft_domain_Immersion hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_Aquatics_observe(hxc_l_cells, hxc_l_length, hxc_l_original);
   struct hxc_caxecraft_domain_Immersion hxc_l_before = hxc_l_tmp_call_result_n0;
   int32_t hxc_l_tmp_call_result_n3 = hxc_caxecraft_domain_Aquatics_classifyMedium(hxc_l_aquatic.hxc_medium, hxc_l_before);
@@ -295,7 +295,7 @@ struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(const
   if (hxc_l_beforeMedium == 0)
   {
     struct hxc_caxecraft_domain_StepInput hxc_l_tmp_call_result_n8 = hxc_caxecraft_domain_CharacterPhysics_input(hxc_l_command.hxc_moveX, hxc_l_command.hxc_moveZ, hxc_l_command.hxc_jump);
-    struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n9 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_l_cells, hxc_l_length, hxc_l_original, hxc_l_tmp_call_result_n8);
+    struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n9 = hxc_caxecraft_domain_CharacterPhysics_stepWithCollisions(hxc_l_cells, hxc_l_length, hxc_l_collisions, hxc_l_original, hxc_l_tmp_call_result_n8);
     hxc_l_moved = hxc_l_tmp_call_result_n9;
   }
   else
@@ -332,49 +332,49 @@ struct hxc_caxecraft_domain_AquaticStep hxc_caxecraft_domain_Aquatics_step(const
     hxc_l_velocityY = hxc_l_tmp_call_result_n44;
     double hxc_l_tmp_load_result_n45 = hxc_l_velocityX;
     double hxc_l_tmp_load_result_n46 = hxc_l_velocityY;
-    struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n48 = hxc_caxecraft_domain_CharacterPhysics_resolveVelocity(hxc_l_cells, hxc_l_length, hxc_l_original, hxc_l_tmp_load_result_n45, hxc_l_tmp_load_result_n46, hxc_l_velocityZ);
+    struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n48 = hxc_caxecraft_domain_CharacterPhysics_resolveVelocityWithCollisions(hxc_l_cells, hxc_l_length, hxc_l_collisions, hxc_l_original, hxc_l_tmp_load_result_n45, hxc_l_tmp_load_result_n46, hxc_l_velocityZ);
     hxc_l_moved = hxc_l_tmp_call_result_n48;
-    bool hxc_l_tmp_short_circuit_result_n18 = hxc_l_command.hxc_moveX != 0.0;
+    bool hxc_l_tmp_short_circuit_result_n19 = hxc_l_command.hxc_moveX != 0.0;
     if (hxc_l_command.hxc_moveX != 0.0)
     {
-      hxc_l_tmp_short_circuit_result_n18 = hxc_l_moved.hxc_velocityX == 0.0;
+      hxc_l_tmp_short_circuit_result_n19 = hxc_l_moved.hxc_velocityX == 0.0;
     }
-    bool hxc_l_tmp_short_circuit_load_result_n51 = hxc_l_tmp_short_circuit_result_n18;
-    bool hxc_l_tmp_short_circuit_result_n19 = hxc_l_tmp_short_circuit_load_result_n51;
+    bool hxc_l_tmp_short_circuit_load_result_n51 = hxc_l_tmp_short_circuit_result_n19;
+    bool hxc_l_tmp_short_circuit_result_n20 = hxc_l_tmp_short_circuit_load_result_n51;
     if (!hxc_l_tmp_short_circuit_load_result_n51)
     {
-      bool hxc_l_tmp_short_circuit_result_n20 = hxc_l_command.hxc_moveZ != 0.0;
+      bool hxc_l_tmp_short_circuit_result_n21 = hxc_l_command.hxc_moveZ != 0.0;
       if (hxc_l_command.hxc_moveZ != 0.0)
       {
-        hxc_l_tmp_short_circuit_result_n20 = hxc_l_moved.hxc_velocityZ == 0.0;
+        hxc_l_tmp_short_circuit_result_n21 = hxc_l_moved.hxc_velocityZ == 0.0;
       }
-      hxc_l_tmp_short_circuit_result_n19 = hxc_l_tmp_short_circuit_result_n20;
+      hxc_l_tmp_short_circuit_result_n20 = hxc_l_tmp_short_circuit_result_n21;
     }
-    bool hxc_l_horizontalBlocked = hxc_l_tmp_short_circuit_result_n19;
+    bool hxc_l_horizontalBlocked = hxc_l_tmp_short_circuit_result_n20;
     bool hxc_l_tmp_record_field_project_n56 = hxc_l_command.hxc_jump;
-    bool hxc_l_tmp_short_circuit_result_n21 = hxc_l_tmp_record_field_project_n56;
+    bool hxc_l_tmp_short_circuit_result_n22 = hxc_l_tmp_record_field_project_n56;
     if (hxc_l_tmp_record_field_project_n56)
     {
-      hxc_l_tmp_short_circuit_result_n21 = hxc_l_horizontalBlocked;
+      hxc_l_tmp_short_circuit_result_n22 = hxc_l_horizontalBlocked;
     }
-    if (hxc_l_tmp_short_circuit_result_n21)
+    if (hxc_l_tmp_short_circuit_result_n22)
     {
       double hxc_l_tmp_load_result_n59 = hxc_l_velocityX;
-      struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n61 = hxc_caxecraft_domain_CharacterPhysics_tryStepUp(hxc_l_cells, hxc_l_length, hxc_l_original, hxc_l_tmp_load_result_n59, hxc_l_velocityZ);
+      struct hxc_caxecraft_domain_CharacterBody hxc_l_tmp_call_result_n61 = hxc_caxecraft_domain_CharacterPhysics_tryStepUpWithCollisions(hxc_l_cells, hxc_l_length, hxc_l_collisions, hxc_l_original, hxc_l_tmp_load_result_n59, hxc_l_velocityZ);
       struct hxc_caxecraft_domain_CharacterBody hxc_l_stepped = hxc_l_tmp_call_result_n61;
       double hxc_l_tmp_record_field_load_result_n62 = hxc_l_stepped.hxc_x;
-      bool hxc_l_tmp_short_circuit_result_n23 = hxc_l_tmp_record_field_load_result_n62 != hxc_l_original.hxc_x;
+      bool hxc_l_tmp_short_circuit_result_n24 = hxc_l_tmp_record_field_load_result_n62 != hxc_l_original.hxc_x;
       if (!(hxc_l_tmp_record_field_load_result_n62 != hxc_l_original.hxc_x))
       {
-        hxc_l_tmp_short_circuit_result_n23 = hxc_l_stepped.hxc_y != hxc_l_original.hxc_y;
+        hxc_l_tmp_short_circuit_result_n24 = hxc_l_stepped.hxc_y != hxc_l_original.hxc_y;
       }
-      bool hxc_l_tmp_short_circuit_load_result_n66 = hxc_l_tmp_short_circuit_result_n23;
-      bool hxc_l_tmp_short_circuit_result_n24 = hxc_l_tmp_short_circuit_load_result_n66;
+      bool hxc_l_tmp_short_circuit_load_result_n66 = hxc_l_tmp_short_circuit_result_n24;
+      bool hxc_l_tmp_short_circuit_result_n25 = hxc_l_tmp_short_circuit_load_result_n66;
       if (!hxc_l_tmp_short_circuit_load_result_n66)
       {
-        hxc_l_tmp_short_circuit_result_n24 = hxc_l_stepped.hxc_z != hxc_l_original.hxc_z;
+        hxc_l_tmp_short_circuit_result_n25 = hxc_l_stepped.hxc_z != hxc_l_original.hxc_z;
       }
-      if (hxc_l_tmp_short_circuit_result_n24)
+      if (hxc_l_tmp_short_circuit_result_n25)
       {
         hxc_l_moved = hxc_l_stepped;
       }

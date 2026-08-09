@@ -46,6 +46,7 @@ import caxecraft.app.MotionInterpolation.reset as resetMotion;
 import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
+import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
 import caxecraft.domain.CharacterDamagePolicy;
 import caxecraft.domain.Character;
 import caxecraft.domain.ActorControllerEvent;
@@ -128,6 +129,18 @@ import raylib.Vector3;
 private typedef ActorPhaseObservation = {
 	final valid:Bool;
 	final phase:ActorControllerPhase;
+}
+
+/** One nearest semantic interaction selected without campaign-specific IDs. */
+private enum AvailableInteractionTarget {
+	/** No authored interaction is currently valid. */
+	NoAvailableInteraction;
+
+	/** A dialogue actor owns the nearest valid interaction. */
+	DialogueInteraction(id:EntityId);
+
+	/** A generic stateful object owns the nearest valid interaction. */
+	StatefulObjectInteraction(id:ScenarioId);
 }
 
 /**
@@ -357,7 +370,7 @@ final class CaxecraftApp {
 		var activeDialogue:Null<ScenarioId> = null;
 		var latestJournalId:Null<ScenarioId> = null;
 		var currentObjectiveId = initialLevel.initialObjectiveId();
-		var guideInteractionAvailable = nearestAvailableDialogueActor(initialSession, initialLevel).isValid();
+		var guideInteractionAvailable = hasAvailableInteraction(nearestAvailableInteraction(initialSession, initialLevel));
 		var enemyActor = initialSession.readCharacter(initialLevel.enemyActorId());
 		var initialActorPhases = initialSession.actorControllerStateSnapshots();
 		var enemyPhase = observeActorPhase(initialActorPhases, initialLevel.enemyActorId(), ActorControllerPhase.Resting);
@@ -671,7 +684,7 @@ final class CaxecraftApp {
 									activeDialogue = null;
 									latestJournalId = null;
 									currentObjectiveId = levelView.initialObjectiveId();
-									guideInteractionAvailable = nearestAvailableDialogueActor(session, levelView).isValid();
+									guideInteractionAvailable = hasAvailableInteraction(nearestAvailableInteraction(session, levelView));
 									enemyActor = session.readCharacter(levelView.enemyActorId());
 									final phases = session.actorControllerStateSnapshots();
 									enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
@@ -730,9 +743,15 @@ final class CaxecraftApp {
 				} else if (activeDialogue != null) {
 					activeDialogue = null;
 				} else {
-					final dialogueTarget = nearestAvailableDialogueActor(session, levelView);
-					if (dialogueTarget.isValid() && !session.interactWithActor(dialogueTarget))
-						quit = true;
+					switch nearestAvailableInteraction(session, levelView) {
+						case NoAvailableInteraction:
+						case DialogueInteraction(id):
+							if (!session.interactWithActor(id))
+								quit = true;
+						case StatefulObjectInteraction(id):
+							if (!session.interactWithStatefulObject(id))
+								quit = true;
+					}
 				}
 			}
 
@@ -794,6 +813,15 @@ final class CaxecraftApp {
 			final observedMedium = if (character.aquatic.medium == AquaticMedium.Dry) "dry" else if (character.aquatic.medium == AquaticMedium.Wading)
 				"wading" else if (character.aquatic.medium == AquaticMedium.Floating) "floating" else "submerged";
 			final observedEquipment = aquaticEquipmentCode < 0 ? "none" : contentRegistry.itemIdForStorageCode(aquaticEquipmentCode);
+			final observedStatefulObjectIds:Array<String> = [];
+			final observedStatefulObjectStates:Array<String> = [];
+			final pilotLevelView = levelView;
+			for (index in 0...pilotLevelView.statefulObjectCount()) {
+				final authoredId = pilotLevelView.statefulObjectIdAt(index);
+				final state = session.statefulObjectState(authoredId);
+				observedStatefulObjectIds.push(authoredId.text());
+				observedStatefulObjectStates.push(state == null ? "missing" : state.text());
+			}
 			switch runtimePilot.observe(frameCount, {
 				screen: observedScreen,
 				mode: observedMode,
@@ -809,7 +837,9 @@ final class CaxecraftApp {
 				aquaticMedium: observedMedium,
 				aquaticEquipment: observedEquipment,
 				lanterns: inventory.lantern,
-				sand: inventory.sand
+				sand: inventory.sand,
+				statefulObjectIds: observedStatefulObjectIds,
+				statefulObjectStates: observedStatefulObjectStates
 			}) {
 				case RuntimePilotFrameAccepted:
 				case RuntimePilotFrameRejected(diagnostic):
@@ -1186,7 +1216,7 @@ final class CaxecraftApp {
 				quit = true;
 			else
 				character = committedView.localPlayer;
-			guideInteractionAvailable = nearestAvailableDialogueActor(session, levelView).isValid();
+			guideInteractionAvailable = hasAvailableInteraction(nearestAvailableInteraction(session, levelView));
 			final presentationActorPhases = session.actorControllerStateSnapshots();
 			enemyPhase = observeActorPhase(presentationActorPhases, enemyActorId, ActorControllerPhase.Defeated);
 			enemyActor = session.readCharacter(enemyActorId);
@@ -1279,6 +1309,8 @@ final class CaxecraftApp {
 				#end
 				drawActors(camera, entityTexture, entityTextureReady, dialogueActors, levelView, enemyActor, levelView.enemyActorPresentationCell(),
 					enemyPhase.phase, berryDrop);
+				drawStatefulObjects(contentRegistry, session, levelView, camera, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
+					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)
@@ -1502,13 +1534,14 @@ final class CaxecraftApp {
 		return {valid: false, phase: fallback};
 	}
 
-	/** Select the nearest available actor, with authored order as the tie-break. */
-	static function nearestAvailableDialogueActor(session:GameSession, level:PlayableLevelView):EntityId {
+	/** Select the nearest available semantic target, with published order as the tie-break. */
+	static function nearestAvailableInteraction(session:GameSession, level:PlayableLevelView):AvailableInteractionTarget {
 		final view = session.view();
 		if (!view.valid)
-			return EntityId.invalid();
+			return NoAvailableInteraction;
 		final player = view.localPlayer;
-		var selected = EntityId.invalid();
+		var selected:AvailableInteractionTarget = NoAvailableInteraction;
+		var hasSelection = false;
 		var selectedDistance = 0.0;
 		for (index in 0...level.dialogueActorCount()) {
 			final id = level.dialogueActorIdAt(index);
@@ -1517,14 +1550,36 @@ final class CaxecraftApp {
 				final dx = actor.body.x - player.body.x;
 				final dz = actor.body.z - player.body.z;
 				final distance = dx * dx + dz * dz;
-				if (!selected.isValid() || distance < selectedDistance) {
-					selected = id;
+				if (!hasSelection || distance < selectedDistance) {
+					selected = DialogueInteraction(id);
+					hasSelection = true;
+					selectedDistance = distance;
+				}
+			}
+		}
+		for (index in 0...level.statefulObjectCount()) {
+			final id = level.statefulObjectIdAt(index);
+			if (session.statefulObjectInteractionAvailable(id)) {
+				final transform = level.statefulObjectTransformAt(index);
+				final dx = transform.xMilli / 1000.0 - player.body.x;
+				final dz = transform.zMilli / 1000.0 - player.body.z;
+				final distance = dx * dx + dz * dz;
+				if (!hasSelection || distance < selectedDistance) {
+					selected = StatefulObjectInteraction(id);
+					hasSelection = true;
 					selectedDistance = distance;
 				}
 			}
 		}
 		return selected;
 	}
+
+	/** True when nearest-target selection produced a semantic interaction. */
+	static function hasAvailableInteraction(target:AvailableInteractionTarget):Bool
+		return switch target {
+			case NoAvailableInteraction: false;
+			case DialogueInteraction(_) | StatefulObjectInteraction(_): true;
+		};
 
 	/**
 		Make sure that each published dialogue actor still has matching session state.

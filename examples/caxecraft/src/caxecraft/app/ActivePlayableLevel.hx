@@ -8,11 +8,14 @@ import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
 import caxecraft.content.LoadedContentGeneration.LoadedContentGeneration;
 import caxecraft.content.LoadedContentGeneration.LoadedContentGenerationTrace;
 import caxecraft.content.LoadedContentGeneration.LoadedActorBinding;
+import caxecraft.content.LoadedContentGeneration.LoadedStatefulObjectBinding;
+import caxecraft.content.LevelContentResolver.StatefulObjectBounds;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelCandidate;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelPresentation;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 
@@ -110,6 +113,7 @@ final class PlayableLevelView {
 	final levelPresentation:RuntimeLevelPresentation;
 	final sourcePath:String;
 	final dialogueActors:Array<PlayableDialogueActor>;
+	final statefulObjects:Array<LoadedStatefulObjectBinding>;
 	final enemyId:EntityId;
 	final enemyCell:Int;
 	final items:Array<LoadedWorldItem>;
@@ -119,11 +123,12 @@ final class PlayableLevelView {
 	/** Retain only facts proven to belong to the supplied generation. */
 	@:allow(caxecraft.app.ActivePlayableLevel)
 	private function new(candidate:RuntimeLevelCandidate, loadedDialogueActors:Array<PlayableDialogueActor>, enemyActorId:EntityId, enemyPresentationCell:Int,
-			loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
+			loadedStatefulObjects:Array<LoadedStatefulObjectBinding>, loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
 		loadedGeneration = candidate.generation();
 		levelPresentation = candidate.presentation();
 		sourcePath = candidate.receipt().logicalPath;
 		dialogueActors = loadedDialogueActors.copy();
+		statefulObjects = loadedStatefulObjects.copy();
 		enemyId = enemyActorId;
 		enemyCell = enemyPresentationCell;
 		items = loadedItems.copy();
@@ -190,6 +195,35 @@ final class PlayableLevelView {
 	/** Validated entity-atlas cell selected by the enemy actor content. */
 	public inline function enemyActorPresentationCell():Int
 		return enemyCell;
+
+	/** Number of generic interactables retained in deterministic authored order. */
+	public inline function statefulObjectCount():Int
+		return statefulObjects.length;
+
+	/** Stable authored identity for one bounds-checked generic interactable. */
+	public inline function statefulObjectIdAt(index:Int):ScenarioId
+		return statefulObjects[index].authoredId;
+
+	/** Content profile for one bounds-checked generic interactable. */
+	public inline function statefulObjectContentIdAt(index:Int):ContentId
+		return statefulObjects[index].contentId;
+
+	/** Copy-owned placement for one bounds-checked generic interactable. */
+	public function statefulObjectTransformAt(index:Int):ScenarioTransform {
+		final value = statefulObjects[index].transform;
+		return {
+			xMilli: value.xMilli,
+			yMilli: value.yMilli,
+			zMilli: value.zMilli,
+			yawDegrees: value.yawDegrees
+		};
+	}
+
+	/** Copy-owned dimensions for one generic object's visual and collision box. */
+	public function statefulObjectBoundsAt(index:Int):StatefulObjectBounds {
+		final value = statefulObjects[index].bounds;
+		return {widthMilli: value.widthMilli, heightMilli: value.heightMilli, depthMilli: value.depthMilli};
+	}
 
 	/** Number of immutable item placements belonging to this level. */
 	public inline function loadedItemCount():Int
@@ -320,8 +354,8 @@ final class ActivePlayableLevel {
 				yMilli: binding.transform.yMilli,
 				zMilli: binding.transform.zMilli
 			});
-		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActors, enemyActorId, enemyPresentationCell, loadedItems,
-			candidate.generation().plan().player().transform, waterPresentationCell));
+		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActors, enemyActorId, enemyPresentationCell,
+			candidate.generation().statefulObjectBindings(), loadedItems, candidate.generation().plan().player().transform, waterPresentationCell));
 	}
 }
 

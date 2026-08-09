@@ -4,9 +4,12 @@ import caxecraft.domain.CharacterPhysics.FIXED_SECONDS;
 import caxecraft.domain.CharacterPhysics.HEIGHT;
 import caxecraft.domain.CharacterPhysics.input as landInput;
 import caxecraft.domain.CharacterPhysics.resolveVelocity;
+import caxecraft.domain.CharacterPhysics.resolveVelocityWithCollisions;
 import caxecraft.domain.CharacterPhysics.step as stepOnLand;
+import caxecraft.domain.CharacterPhysics.stepWithCollisions as stepOnLandWithCollisions;
 import caxecraft.domain.WaterCellCodec.stateInView as waterStateAt;
 import caxecraft.domain.CharacterPhysics.tryStepUp;
+import caxecraft.domain.CharacterPhysics.tryStepUpWithCollisions;
 
 /**
 	Fixed-tick swimming, floating, breath, and waterline state.
@@ -176,6 +179,55 @@ function step(cells:WorldView, original:CharacterBody, aquatic:AquaticState, com
 		final horizontalBlocked = (command.moveX != 0.0 && moved.velocityX == 0.0) || (command.moveZ != 0.0 && moved.velocityZ == 0.0);
 		if (command.jump && horizontalBlocked) {
 			final stepped = tryStepUp(cells, original, velocityX, velocityZ);
+			if (stepped.x != original.x || stepped.y != original.y || stepped.z != original.z)
+				moved = stepped;
+		}
+	}
+	final after = observe(cells, moved);
+	final medium = classifyMedium(beforeMedium, after);
+	final breath = advanceBreath(aquatic, after, capability);
+	return {
+		body: moved,
+		immersion: after,
+		aquatic: {
+			medium: medium,
+			submersion: after.submersion,
+			headSubmerged: after.headWet,
+			breathTicks: breath.remaining,
+			drowningTicks: breath.drowningTicks
+		},
+		drowningDamage: breath.damage
+	};
+}
+
+/** Advance movement and breath against terrain plus runtime-authored solids. */
+function stepWithCollisions(cells:WorldView, collisions:Array<DynamicCollisionBox>, original:CharacterBody, aquatic:AquaticState, command:CharacterIntent,
+		capability:AquaticProfile):AquaticStep {
+	final before = observe(cells, original);
+	final beforeMedium = classifyMedium(aquatic.medium, before);
+	var moved = original;
+	if (beforeMedium == Dry) {
+		moved = stepOnLandWithCollisions(cells, collisions, original, landInput(command.moveX, command.moveZ, command.jump));
+	} else {
+		final wet = before.submersion;
+		final speed = MIN_WATER_SPEED + WATER_SPEED_RANGE * capability.horizontalControl;
+		final acceleration = MIN_HORIZONTAL_ACCELERATION + HORIZONTAL_ACCELERATION_RANGE * capability.horizontalControl;
+		var velocityX = approach(original.velocityX, command.moveX * speed, acceleration * FIXED_SECONDS);
+		var velocityZ = approach(original.velocityZ, command.moveZ * speed, acceleration * FIXED_SECONDS);
+		final drag = 1.0 - capability.dragPerTick * wet;
+		velocityX *= drag;
+		velocityZ *= drag;
+		var verticalAcceleration = LAND_GRAVITY * (1.0 - 0.85 * wet) + capability.buoyancyAcceleration * wet;
+		if (command.jump)
+			verticalAcceleration += capability.ascentAcceleration * wet;
+		if (command.descend)
+			verticalAcceleration -= capability.descentAcceleration * wet;
+		var velocityY = (original.velocityY + verticalAcceleration * FIXED_SECONDS) * drag;
+		velocityY = clamp(velocityY, -MAX_VERTICAL_SPEED, MAX_VERTICAL_SPEED);
+		moved = resolveVelocityWithCollisions(cells, collisions, original, velocityX, velocityY, velocityZ);
+		final horizontalBlocked = (command.moveX != 0.0 && moved.velocityX == 0.0) || (command.moveZ != 0.0 && moved.velocityZ == 0.0);
+		if (command.jump && horizontalBlocked) {
+			final stepped = tryStepUpWithCollisions(cells, collisions, original, velocityX, velocityZ);
 			if (stepped.x != original.x || stepped.y != original.y || stepped.z != original.z)
 				moved = stepped;
 		}

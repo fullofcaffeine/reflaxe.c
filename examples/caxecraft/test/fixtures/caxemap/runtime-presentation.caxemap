@@ -40,6 +40,10 @@ object item.fixture-tideweave
   tag equipment
   placement item caxecraft:tideweave-suit 1 1500 1000 1500 0
 end object
+object object.glyph-control
+  tag interaction
+  placement stateful caxecraft:glyph-control caxecraft:active 2500 1000 1500 0
+end object
 object player.start
   tag player
   placement player-spawn 1500 1000 1500 0
@@ -68,6 +72,11 @@ rule rule.fixture-advance priority 10 once
   do journal journal.fixture
   do objective objective.marker complete
   do objective objective.next active
+end rule
+rule rule.fixture-glyph priority 10 repeat
+  when interact object.glyph-control
+  if (object-state object.glyph-control caxecraft:active)
+  do set-object-state object.glyph-control caxecraft:idle
 end rule
 rule rule.fixture-collect priority 10 repeat
   when collect-item caxecraft:lantern

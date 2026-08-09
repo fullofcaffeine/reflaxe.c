@@ -44,6 +44,9 @@ enum abstract RuntimePilotExpectationKind(Int) to Int {
 
 	/** Stable ID of the latest unlocked journal entry, or `none`. */
 	var Journal = 12;
+
+	/** Authored state of one generic runtime object, written as `object-id=state-id`. */
+	var ObjectState = 13;
 }
 
 /** One source-located expectation owned by a runtime Piloscript file. */
@@ -111,6 +114,11 @@ typedef RuntimePilotObservation = {
 	final lanterns:Int;
 
 	final sand:Int;
+
+	/** Parallel authored IDs and current states for generic runtime objects. */
+	final statefulObjectIds:Array<String>;
+
+	final statefulObjectStates:Array<String>;
 }
 
 /** One fail-closed parser or semantic comparison error. */
@@ -172,8 +180,8 @@ private enum RuntimePilotExpectationReadResult {
  * frame, so malformed host timing cannot create an interactive test channel.
  */
 final class RuntimePilotScript {
-	/** Runtime journey limit. At 50 ms per frame, this permits 20 seconds of play. */
-	public static inline final ABSOLUTE_FRAME_LIMIT:Int = 400;
+	/** Runtime journey limit. At 50 ms per frame, this permits 25 seconds of play. */
+	public static inline final ABSOLUTE_FRAME_LIMIT:Int = 500;
 
 	static inline final MAXIMUM_SOURCE_BYTES:Int = 64 * 1024;
 	static inline final MAXIMUM_EXPECTATIONS_PER_FRAME:Int = 8;
@@ -249,7 +257,7 @@ final class RuntimePilotScript {
 					return rejected(source, lineNumber, "expected a frames record");
 				final limit = nonNegativeInteger(words[1], ABSOLUTE_FRAME_LIMIT);
 				if (limit < 2 || limit > ABSOLUTE_FRAME_LIMIT)
-					return rejected(source, lineNumber, "frame limit must be from 2 through 400");
+					return rejected(source, lineNumber, "frame limit must be from 2 through 500");
 				var frame = 0;
 				while (frame < limit) {
 					actions.push(PilotAction.Idle);
@@ -329,6 +337,8 @@ final class RuntimePilotScript {
 						if ((kind == Generation || kind == Publications || kind == Lanterns || kind == Sand)
 							&& !validNonNegativeInteger(words[3]))
 							return rejected(source, lineNumber, "numeric expectation must be a non-negative decimal integer");
+						if (kind == ObjectState && !validObjectStateExpectation(words[3]))
+							return rejected(source, lineNumber, "object-state expectation must be one safe object-id=state-id pair");
 						expectations.push(new RuntimePilotExpectation(frame, kind, words[3], lineNumber));
 				}
 				continue;
@@ -388,7 +398,7 @@ final class RuntimePilotScript {
 		for (expectation in expectations) {
 			if (expectation.frame != frame)
 				continue;
-			final actual = observedValue(expectation.kind, observation);
+			final actual = observedValue(expectation.kind, expectation.expected, observation);
 			if (actual != expectation.expected)
 				return RuntimePilotFrameRejected(new RuntimePilotDiagnostic(source, expectation.line,
 					'expected ${expectationName(expectation.kind)} ${expectation.expected} but observed $actual'));
@@ -401,7 +411,7 @@ final class RuntimePilotScript {
 		return frame >= actions.length - 1;
 
 	/** Convert one application observation to the expected stable spelling. */
-	static function observedValue(kind:RuntimePilotExpectationKind, observation:RuntimePilotObservation):String {
+	static function observedValue(kind:RuntimePilotExpectationKind, expected:String, observation:RuntimePilotObservation):String {
 		if (kind == Screen)
 			return observation.screen;
 		if (kind == Mode)
@@ -426,6 +436,17 @@ final class RuntimePilotScript {
 			return observation.aquaticEquipment;
 		if (kind == Lanterns)
 			return Std.string(observation.lanterns);
+		if (kind == ObjectState) {
+			final separator = expected.indexOf("=");
+			final objectId = expected.substring(0, separator);
+			var index = 0;
+			while (index < observation.statefulObjectIds.length) {
+				if (observation.statefulObjectIds[index] == objectId)
+					return objectId + "=" + (index < observation.statefulObjectStates.length ? observation.statefulObjectStates[index] : "missing");
+				index++;
+			}
+			return objectId + "=missing";
+		}
 		return Std.string(observation.sand);
 	}
 
@@ -455,6 +476,8 @@ final class RuntimePilotScript {
 			return "equipment";
 		if (kind == Lanterns)
 			return "lanterns";
+		if (kind == ObjectState)
+			return "object-state";
 		return "sand";
 	}
 
@@ -565,6 +588,8 @@ final class RuntimePilotScript {
 			return KnownRuntimePilotExpectation(Lanterns);
 		if (value == "sand")
 			return KnownRuntimePilotExpectation(Sand);
+		if (value == "object-state")
+			return KnownRuntimePilotExpectation(ObjectState);
 		return UnknownRuntimePilotExpectation;
 	}
 
@@ -637,6 +662,12 @@ final class RuntimePilotScript {
 			index++;
 		}
 		return true;
+	}
+
+	/** Require one unambiguous pair while leaving both IDs content-owned. */
+	static function validObjectStateExpectation(value:String):Bool {
+		final separator = value.indexOf("=");
+		return separator > 0 && separator == value.lastIndexOf("=") && separator < value.length - 1;
 	}
 
 	/** Accept a decimal integer whose normalized spelling is non-negative. */

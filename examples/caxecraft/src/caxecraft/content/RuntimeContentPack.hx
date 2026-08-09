@@ -11,6 +11,10 @@ import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.LevelFluidSimulation;
 import caxecraft.content.LevelContentResolver.TerrainContentResolution;
 import caxecraft.content.LevelContentResolver.TerrainStorageCode;
+import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
+import caxecraft.content.LevelContentResolver.StatefulObjectBounds;
+import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
+import caxecraft.content.LevelContentResolver.StatefulObjectStateMechanics;
 import caxecraft.content.RuntimeSchema.LocatedOptionalString;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
@@ -93,12 +97,15 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	final enemies:Array<RuntimeEnemyDefinition>;
 	final drops:Array<RuntimeDropDefinition>;
 	final effects:Array<RuntimeEffectDefinition>;
+	final statefulObjects:Array<RuntimeStatefulObjectDefinition>;
+	final states:Array<RuntimeLocatedId>;
 
 	/** Construct one complete registry after every candidate check passed. */
 	public function new(packId:String, packVersion:Int, logicalPath:String, assetManifestId:String, airBlock:String, defaultAquaticProfileId:String,
 			features:Array<RuntimeLocatedId>, blocks:Array<RuntimeBlockDefinition>, fluids:Array<RuntimeFluidDefinition>,
 			aquaticProfiles:Array<RuntimeAquaticDefinition>, items:Array<RuntimeItemDefinition>, npcs:Array<RuntimeNpcDefinition>,
-			enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>, effects:Array<RuntimeEffectDefinition>) {
+			enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>, effects:Array<RuntimeEffectDefinition>,
+			statefulObjects:Array<RuntimeStatefulObjectDefinition>, states:Array<RuntimeLocatedId>) {
 		this.packIdValue = packId;
 		this.packVersionValue = packVersion;
 		this.logicalPathValue = logicalPath;
@@ -114,6 +121,8 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		this.enemies = enemies;
 		this.drops = drops;
 		this.effects = effects;
+		this.statefulObjects = statefulObjects;
+		this.states = states;
 	}
 
 	/** Stable pack identity copied from the admitted document. */
@@ -352,13 +361,49 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public function hasPrefab(id:ContentId):Bool
 		return false;
 
-	/** Reserved stateful objects remain unsupported and therefore always absent. */
+	/** True when the pack owns one bounded interactive object profile. */
 	public function hasStatefulObject(id:ContentId):Bool
-		return false;
+		return findStatefulObject(id.text()) != null;
 
-	/** Reserved states remain unsupported and therefore always absent. */
-	public function hasState(id:ContentId):Bool
+	/** True when the pack owns one closed authored state value. */
+	public function hasState(id:ContentId):Bool {
+		for (state in states)
+			if (state.id == id.text())
+				return true;
 		return false;
+	}
+
+	/** Return one interactive object's bounded proximity, or zero when unknown. */
+	public function statefulObjectInteractionRadiusMilli(id:ContentId):Int {
+		final object = findStatefulObject(id.text());
+		return object == null ? 0 : object.interactionRadiusMilli;
+	}
+
+	/** Return the visual for one valid object/state pair, or null when incompatible. */
+	public function statefulObjectPresentation(id:ContentId, state:ContentId):Null<RuntimePresentation> {
+		final object = findStatefulObject(id.text());
+		if (object == null)
+			return null;
+		return object.presentationFor(state.text());
+	}
+
+	/** True when one compatible state asks presentation to draw the object. */
+	public function statefulObjectVisible(id:ContentId, state:ContentId):Bool {
+		final object = findStatefulObject(id.text());
+		return object != null && object.visibleFor(state.text());
+	}
+
+	/** Resolve one compatible object/state pair for level construction. */
+	public function resolveStatefulObject(id:ContentId, state:ContentId):StatefulObjectContentResolution {
+		final object = findStatefulObject(id.text());
+		if (object == null)
+			return UnknownStatefulObjectContent;
+		final presentation = object.presentationFor(state.text());
+		if (presentation == null)
+			return UnknownStatefulObjectContent;
+		return StatefulObjectContentResolved(object.interactionRadiusMilli, object.copyBounds(), object.copyStateMechanics(), presentation.asset,
+			presentation.cellIndex);
+	}
 
 	/** Reserved signals remain unsupported and therefore always absent. */
 	public function hasSignal(id:ContentId):Bool
@@ -460,6 +505,14 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 				return drop;
 		return null;
 	}
+
+	/** Find one stateful-object profile without exposing its state table. */
+	function findStatefulObject(id:String):Null<RuntimeStatefulObjectDefinition> {
+		for (object in statefulObjects)
+			if (object.id == id)
+				return object;
+		return null;
+	}
 }
 
 /** Stateless entry point for one bounded content-pack admission request. */
@@ -557,8 +610,14 @@ final class RuntimeContentPack {
 		final effects = readEffects(reader, reader.field(fields, "effects"));
 		if (effects == null)
 			return rejected(reader);
+		final states = readIdArray(reader, reader.field(fields, "states"), "states", 0, 128);
+		if (states == null)
+			return rejected(reader);
+		final statefulObjects = readStatefulObjects(reader, reader.field(fields, "statefulObjects"), assets);
+		if (statefulObjects == null)
+			return rejected(reader);
 
-		for (reserved in ["prefabs", "statefulObjects", "states", "signals"]) {
+		for (reserved in ["prefabs", "signals"]) {
 			final reservedNode = reader.field(fields, reserved);
 			final values = reader.array(reservedNode, reserved, 0, 128);
 			if (values == null)
@@ -575,10 +634,11 @@ final class RuntimeContentPack {
 		}
 		final airReference = new RuntimeReference(air, airNode.line, airNode.column);
 		final defaultAquaticReference = new RuntimeReference(defaultAquatic, defaultAquaticNode.line, defaultAquaticNode.column);
-		if (!validatePack(reader, airReference, defaultAquaticReference, features, blocks, fluids, aquaticProfiles, items, npcs, enemies, drops, effects))
+		if (!validatePack(reader, airReference, defaultAquaticReference, features, blocks, fluids, aquaticProfiles, items, npcs, enemies, drops, effects,
+			statefulObjects, states))
 			return rejected(reader);
 		return RuntimeContentPackReady(new RuntimeContentRegistry(packId, packVersion, logicalPath, manifestId, air, defaultAquatic, features, blocks, fluids,
-			aquaticProfiles, items, npcs, enemies, drops, effects));
+			aquaticProfiles, items, npcs, enemies, drops, effects, statefulObjects, states));
 	}
 
 	/** Decode the ordered atlas cells that presentation records can name. */
@@ -939,6 +999,59 @@ final class RuntimeContentPack {
 		return validateEffectOrder(reader, "effects", result) ? result : null;
 	}
 
+	/** Parse bounded interactive profiles and each profile's closed state visuals. */
+	static function readStatefulObjects(reader:RuntimeSchemaReader, node:ContentJsonNode,
+			assets:RuntimeAssetInventory):Null<Array<RuntimeStatefulObjectDefinition>> {
+		final values = reader.array(node, "statefulObjects", 0, 128);
+		if (values == null)
+			return null;
+		final result:Array<RuntimeStatefulObjectDefinition> = [];
+		for (index in 0...values.length) {
+			final path = "statefulObjects[" + index + "]";
+			final fields = reader.object(values[index], path, ["id", "interaction", "interactionRadiusMilli", "bounds", "states"]);
+			if (fields == null)
+				return null;
+			final idNode = reader.field(fields, "id");
+			final id = readContentId(reader, idNode, path + ".id");
+			final interaction = readClosed(reader, reader.field(fields, "interaction"), path + ".interaction", ["activate", "none"]);
+			final radius = reader.integer(reader.field(fields, "interactionRadiusMilli"), path + ".interactionRadiusMilli", 0, 32000);
+			final boundsPath = path + ".bounds";
+			final boundsFields = reader.object(reader.field(fields, "bounds"), boundsPath, ["widthMilli", "heightMilli", "depthMilli"]);
+			if (boundsFields == null)
+				return null;
+			final width = reader.integer(reader.field(boundsFields, "widthMilli"), boundsPath + ".widthMilli", 1, 32000);
+			final height = reader.integer(reader.field(boundsFields, "heightMilli"), boundsPath + ".heightMilli", 1, 32000);
+			final depth = reader.integer(reader.field(boundsFields, "depthMilli"), boundsPath + ".depthMilli", 1, 32000);
+			final stateNodes = reader.array(reader.field(fields, "states"), path + ".states", 1, 32);
+			if (id == null || interaction == null || radius == null || width == null || height == null || depth == null || stateNodes == null)
+				return null;
+			if ((interaction == "none") != (radius == 0)) {
+				reader.reject(values[index], SchemaInvalidInvariant(path + ".interactionRadiusMilli"));
+				return null;
+			}
+			final objectStates:Array<RuntimeStatefulObjectState> = [];
+			for (stateIndex in 0...stateNodes.length) {
+				final statePath = path + ".states[" + stateIndex + "]";
+				final stateFields = reader.object(stateNodes[stateIndex], statePath, ["id", "collision", "render", "presentation"]);
+				if (stateFields == null)
+					return null;
+				final stateNode = reader.field(stateFields, "id");
+				final stateId = readContentId(reader, stateNode, statePath + ".id");
+				final collision = readClosed(reader, reader.field(stateFields, "collision"), statePath + ".collision", ["passable", "solid"]);
+				final render = readClosed(reader, reader.field(stateFields, "render"), statePath + ".render", ["hidden", "visible"]);
+				final presentation = readPresentation(reader, reader.field(stateFields, "presentation"), statePath + ".presentation", assets);
+				if (stateId == null || collision == null || render == null || presentation == null)
+					return null;
+				objectStates.push(new RuntimeStatefulObjectState(stateId, stateNode.line, stateNode.column, collision == "solid", render == "visible",
+					presentation));
+			}
+			if (!validateStatefulObjectStateOrder(reader, path + ".states", objectStates))
+				return null;
+			result.push(new RuntimeStatefulObjectDefinition(id, idNode.line, idNode.column, radius, width, height, depth, objectStates));
+		}
+		return validateStatefulObjectOrder(reader, "statefulObjects", result) ? result : null;
+	}
+
 	/** Resolve one presentation against independently reviewed manifest facts. */
 	static function readPresentation(reader:RuntimeSchemaReader, node:ContentJsonNode, path:String, assets:RuntimeAssetInventory):Null<RuntimePresentation> {
 		final fields = reader.object(node, path, ["asset", "cell"]);
@@ -1108,11 +1221,28 @@ final class RuntimeContentPack {
 		return true;
 	}
 
+	/** Validate stateful-object IDs in canonical order. */
+	static function validateStatefulObjectOrder(reader:RuntimeSchemaReader, path:String, values:Array<RuntimeStatefulObjectDefinition>):Bool {
+		for (index in 1...values.length)
+			if (!validatePair(reader, path, values[index - 1], values[index]))
+				return false;
+		return true;
+	}
+
+	/** Validate one object's state references in canonical order. */
+	static function validateStatefulObjectStateOrder(reader:RuntimeSchemaReader, path:String, values:Array<RuntimeStatefulObjectState>):Bool {
+		for (index in 1...values.length)
+			if (!validatePair(reader, path, values[index - 1], values[index]))
+				return false;
+		return true;
+	}
+
 	/** Validate cross-kind uniqueness, terrain invariants, and every reference. */
 	static function validatePack(reader:RuntimeSchemaReader, airReference:RuntimeReference, defaultAquaticReference:RuntimeReference,
 			features:Array<RuntimeLocatedId>, blocks:Array<RuntimeBlockDefinition>, fluids:Array<RuntimeFluidDefinition>,
 			aquatic:Array<RuntimeAquaticDefinition>, items:Array<RuntimeItemDefinition>, npcs:Array<RuntimeNpcDefinition>,
-			enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>, effects:Array<RuntimeEffectDefinition>):Bool {
+			enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>, effects:Array<RuntimeEffectDefinition>,
+			statefulObjects:Array<RuntimeStatefulObjectDefinition>, states:Array<RuntimeLocatedId>):Bool {
 		final kinds:Array<RuntimeKindId> = [];
 		for (entry in features)
 			if (!addKind(reader, kinds, entry, "feature"))
@@ -1140,6 +1270,12 @@ final class RuntimeContentPack {
 				return false;
 		for (entry in effects)
 			if (!addKind(reader, kinds, entry, "effect"))
+				return false;
+		for (entry in statefulObjects)
+			if (!addKind(reader, kinds, entry, "stateful object"))
+				return false;
+		for (entry in states)
+			if (!addKind(reader, kinds, entry, "state"))
 				return false;
 
 		var air:Null<RuntimeBlockDefinition> = null;
@@ -1203,6 +1339,11 @@ final class RuntimeContentPack {
 		for (enemy in enemies)
 			if (kindOf(kinds, enemy.drop.id) != "drop" && !rejectReference(reader, enemy.drop, "enemy.drop", "drop", kinds))
 				return false;
+		for (object in statefulObjects)
+			for (state in object.states)
+				if (kindOf(kinds, state.id) != "state"
+					&& !rejectReference(reader, state.reference(), "statefulObject.states", "state", kinds))
+					return false;
 		return true;
 	}
 
@@ -1314,6 +1455,91 @@ private final class RuntimeKindId {
 	public function new(id:String, kind:String) {
 		this.id = id;
 		this.kind = kind;
+	}
+}
+
+/** One admitted state and the visual selected while an object has that state. */
+private final class RuntimeStatefulObjectState extends RuntimeLocatedId {
+	/** Whether this state contributes the profile's collision box. */
+	public final solid:Bool;
+
+	/** Whether this state contributes its reviewed visual. */
+	public final visible:Bool;
+
+	/** Atlas cell resolved before this state can enter the registry. */
+	public final presentation:RuntimePresentation;
+
+	/** Construct one state reference with its validated presentation. */
+	public function new(id:String, line:Int, column:Int, solid:Bool, visible:Bool, presentation:RuntimePresentation) {
+		super(id, line, column);
+		this.solid = solid;
+		this.visible = visible;
+		this.presentation = presentation;
+	}
+
+	/** Preserve the source coordinate when cross-reference validation rejects. */
+	public inline function reference():RuntimeReference
+		return new RuntimeReference(id, line, column);
+}
+
+/** One generic interactive-object profile with a closed visual state table. */
+private final class RuntimeStatefulObjectDefinition extends RuntimeLocatedId {
+	/** Maximum player distance for one semantic interaction. */
+	public final interactionRadiusMilli:Int;
+
+	/** Axis-aligned width centered on the placement before cardinal yaw. */
+	public final widthMilli:Int;
+
+	/** Height measured upward from the placement's Y position. */
+	public final heightMilli:Int;
+
+	/** Axis-aligned depth centered on the placement before cardinal yaw. */
+	public final depthMilli:Int;
+
+	/** Canonical state references; this array never escapes the registry module. */
+	public final states:Array<RuntimeStatefulObjectState>;
+
+	/** Retain one checked profile and a private copy of its states. */
+	public function new(id:String, line:Int, column:Int, interactionRadiusMilli:Int, widthMilli:Int, heightMilli:Int, depthMilli:Int,
+			states:Array<RuntimeStatefulObjectState>) {
+		super(id, line, column);
+		this.interactionRadiusMilli = interactionRadiusMilli;
+		this.widthMilli = widthMilli;
+		this.heightMilli = heightMilli;
+		this.depthMilli = depthMilli;
+		this.states = states.copy();
+	}
+
+	/** Return the matching visual, or null when this profile excludes the state. */
+	public function presentationFor(stateId:String):Null<RuntimePresentation> {
+		for (state in states)
+			if (state.id == stateId)
+				return state.presentation;
+		return null;
+	}
+
+	/** True only for a compatible state whose visual is enabled. */
+	public function visibleFor(stateId:String):Bool {
+		for (state in states)
+			if (state.id == stateId)
+				return state.visible;
+		return false;
+	}
+
+	/** Copy the box dimensions across the private registry boundary. */
+	public function copyBounds():StatefulObjectBounds
+		return {widthMilli: widthMilli, heightMilli: heightMilli, depthMilli: depthMilli};
+
+	/** Copy every closed state mechanic for later CaxeFlow changes. */
+	public function copyStateMechanics():Array<StatefulObjectStateMechanics> {
+		final result:Array<StatefulObjectStateMechanics> = [];
+		for (state in states)
+			result.push({
+				state: new ContentId(state.id),
+				collision: state.solid ? StatefulObjectSolid : StatefulObjectPassable,
+				visible: state.visible
+			});
+		return result;
 	}
 }
 
