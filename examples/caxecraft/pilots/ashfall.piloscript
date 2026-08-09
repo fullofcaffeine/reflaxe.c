@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name ashfall-journey
-frames 380
+frames 450
 
 # Enter Adventure and select Ashfall from the runtime campaign catalog. This
 # protects the real title -> campaign -> level boundary without freezing every
@@ -59,8 +59,8 @@ expect 326 objective objective.reach-castle-road
 # final frame is review evidence, so it should show the place reached instead
 # of ending with the camera pressed against a wall.
 hold 327 346 backward
-hold 347 351 look-left
-action 355 pause
-checkpoint 355 capture final
-expect 355 screen paused
+hold 347 410 turn-left
+action 415 pause
+checkpoint 415 capture final
+expect 415 screen paused
 end
