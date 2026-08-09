@@ -40,13 +40,13 @@ import raylib.Raylib;
  * `reviewScreenshotObserved` bit reports Raylib's immediate file observation;
  * it does not replace the runner's independent image validation.
  */
-function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldView, selection:RaycastHit,
-		removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int, guidePhase:GuidePhase,
-		mosslingAlive:Bool, onTitle:Bool, onEditor:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool, interpolationObserved:Bool,
-		reviewScreenshotObserved:Bool, submersionObserved:Bool, waterExitObserved:Bool, sandMinedObserved:Bool, flowRuleObserved:Bool,
-		objectiveChangeObserved:Bool, visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool,
-		measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int,
-		contentGeneration:Int, contentPublications:Int):Void {
+function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldView,
+		selection:RaycastHit, removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int,
+		guidePhase:GuidePhase, mosslingAlive:Bool, onTitle:Bool, onEditor:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool,
+		interpolationObserved:Bool, reviewScreenshotObserved:Bool, submersionObserved:Bool, waterExitObserved:Bool, sandMinedObserved:Bool,
+		flowRuleObserved:Bool, objectiveChangeObserved:Bool, visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int,
+		terrainCacheValid:Bool, measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int,
+		measuredPreparationMicroseconds:Int, contentGeneration:Int, contentPublications:Int):Void {
 	var flags = 0;
 	if (onTitle)
 		flags |= 1;
@@ -78,7 +78,7 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 	word = drawWord(word, 9); // Protocol version.
 	word = drawWord(word, 42); // Number of words in this closed version.
 	word = drawWord(word, PilotScript.scriptCode(name));
-	word = drawWord(word, PilotScript.inputHash(name));
+	word = drawWord(word, inputHash);
 	word = drawWord(word, completedFrames);
 	word = drawWord(word, completedTicks);
 	word = drawWord(word, Std.int(player.x * 1000.0));

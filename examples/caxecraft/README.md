@@ -159,6 +159,39 @@ visual review. Reusable parser, movement, water, publication, compiler, and
 native-boundary changes still use their focused Haxe and generated-C checks.
 Ordinary content edits do not run that portfolio as a quota.
 
+The active content journey is
+[`pilots/active.piloscript`](pilots/active.piloscript). The game reads this file
+after startup. Therefore, an action or expectation edit does not rebuild Haxe,
+generated C, or the native executable.
+
+`PILOSCRIPT 1` is a small line-based format. It has these records:
+
+```text
+PILOSCRIPT 1
+name example-journey
+frames 6
+action 0 menu-next
+checkpoint 0 capture title-selection
+expect 0 screen title
+expect 0 mode adventure
+end
+```
+
+`frames` includes the final quit frame and must be from 2 through 150. Frames
+without an `action` record stay idle. The last frame and all later frames quit.
+This rule prevents a damaged journey from becoming an unattended game session.
+
+An `expect` record compares one real application fact after that frame's
+action. Version 1 supports `screen`, `mode`, `level`, `objective`, `generation`,
+and `publications`. Expected level and objective values come from the journey
+file, not from compiled engine code. Capture roles are `title-selection`,
+`campaign-selection`, `level-selection`, and `final`.
+
+Haxe validates the complete file before the window opens. An invalid record
+reports its source line and produces no success report. Python stages the file,
+starts the process, and collects images. It does not parse Piloscript or decide
+whether game state matches an expectation.
+
 ## Why the source contains `#if c`
 
 `c` is a Haxe compile-time define exposed by the verified

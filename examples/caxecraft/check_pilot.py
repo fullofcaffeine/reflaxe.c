@@ -34,7 +34,7 @@ import play as playable  # noqa: E402
 import benchmark_renderer as renderer_benchmark  # noqa: E402
 
 EXPECTED_TRACE = (
-    "caxecraft-pilot: 13 named scripts, 264 deterministic frames, 18 checkpoints; "
+    "caxecraft-pilot: 12 compiled scripts, 257 deterministic frames, 14 checkpoints; "
     "bounded quit and shared input interface\n"
 )
 FORBIDDEN_PILOT_TEXT = (
@@ -336,7 +336,15 @@ def check_renderer_benchmark_contract() -> None:
 
 
 def check_target_neutral_boundary() -> None:
-    sources = [*PILOT.glob("*.hx"), APP_SCREEN, MOTION_INTERPOLATION, HUD_VIEW]
+    # The compiled engine-regression pilots remain allocation-free. The runtime
+    # content parser has its own Eval/native contract and deliberately uses
+    # managed arrays for author-sized records.
+    sources = [
+        *(path for path in PILOT.glob("*.hx") if path.name != "RuntimePilotScript.hx"),
+        APP_SCREEN,
+        MOTION_INTERPOLATION,
+        HUD_VIEW,
+    ]
     sources = sorted(sources, key=lambda path: path.as_posix().encode("utf-8"))
     if not sources:
         raise PilotFailure("target-neutral pilot source inventory is empty")

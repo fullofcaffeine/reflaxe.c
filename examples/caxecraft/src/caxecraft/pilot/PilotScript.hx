@@ -21,7 +21,7 @@ enum abstract PilotScriptName(Int) to Int {
 	var SmoothMotion = 9;
 	var EditorShell = 10;
 	var CampaignTravel = 11;
-	var AdventureJourney = 12;
+	var RuntimeContentJourney = 12;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -118,8 +118,6 @@ final class PilotScript {
 			return 4;
 		if (name == CampaignTravel)
 			return 5;
-		if (name == AdventureJourney)
-			return 7;
 		return 4;
 	}
 
@@ -146,8 +144,8 @@ final class PilotScript {
 			return "editor-shell";
 		if (name == CampaignTravel)
 			return "campaign-travel";
-		if (name == AdventureJourney)
-			return "adventure-journey";
+		if (name == RuntimeContentJourney)
+			return "runtime-content-journey";
 		return "resize-layout";
 	}
 
@@ -183,13 +181,6 @@ final class PilotScript {
 			return Idle;
 		if (name == CampaignTravel)
 			return frameNumber == 0 ? Travel : Idle;
-		if (name == AdventureJourney) {
-			if (frameNumber == 0)
-				return MenuNext;
-			if (frameNumber == 1 || frameNumber == 3)
-				return MenuConfirm;
-			return frameNumber == 2 ? MenuNext : Idle;
-		}
 		return fullInventoryMiningAction(frameNumber);
 	}
 
@@ -285,11 +276,6 @@ final class PilotScript {
 				frameNumber == 2 ? new PilotCheckpoint("editor-shell.frame", CaptureScreenshot) : null;
 			case CampaignTravel:
 				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot) : null;
-			case AdventureJourney:
-				if (frameNumber == 0) new PilotCheckpoint("adventure-journey.selected",
-					CaptureScreenshot); else if (frameNumber == 1) new PilotCheckpoint("adventure-journey.campaign",
-					CaptureScreenshot); else if (frameNumber == 2) new PilotCheckpoint("adventure-journey.level",
-					CaptureScreenshot); else if (frameNumber == 5) new PilotCheckpoint("adventure-journey.destination", CaptureScreenshot); else null;
 			case _: null;
 		};
 	}

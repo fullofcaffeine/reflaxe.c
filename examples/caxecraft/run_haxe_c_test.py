@@ -292,6 +292,37 @@ EVAL_CASES = {
 
 
 CASES = {
+    "runtime-piloscript": HaxeCTestCase(
+        case_id="runtime-piloscript",
+        eval_hxml="runtime-piloscript.hxml",
+        c_hxml="runtime-piloscript-c.hxml",
+        native_harness="test/native/runtime_piloscript_harness.c",
+        generated_source="src/modules/caxecraft/pilot/RuntimePilotScript.c",
+        required_source_markers=(
+            "RuntimePilotScript_read",
+            "RuntimePilotScript_observe",
+            "RuntimePilotReadResult_RuntimePilotReady",
+            "RuntimePilotReadResult_RuntimePilotRejected",
+        ),
+        forbidden_source_markers=("Dynamic", "Reflect", "goto "),
+        output_line_count=1,
+        success_line="0",
+        expected_runtime_features=(
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+            "string-scalar",
+            "string",
+            "bytes-string",
+            "object",
+            "gc",
+            "string-split",
+        ),
+        runs_generated_main=True,
+    ),
     "actor-composition": HaxeCTestCase(
         case_id="actor-composition",
         eval_hxml="actor-composition.hxml",

@@ -208,6 +208,15 @@ the invariant directly. A water pilot, for example, should prove that a player
 can enter authored water and that breath changes; the Haxe water tests own the
 complete spread and recession rule table.
 
+Keep engine-regression pilots in compiled Haxe when they protect a reusable
+mechanic or adapter. Put campaign-specific actions and expected content IDs in
+the runtime `PILOSCRIPT 1` file. The generic Haxe parser and observer own valid
+records, frame limits, input mapping, and comparisons. They must not contain a
+campaign, level, objective, character, or prose literal. A content author can
+then edit and rerun that journey against the existing executable. If a runtime
+journey finds an engine error, add a focused Haxe regression for the mechanic
+and retain the journey as the real-boundary proof.
+
 Use deterministic seeds, fixed simulation steps, explicit work budgets, and
 bounded timeouts. Generated-C snapshots own compiler output shape, not game
 correctness. Keep a fast focused command for each mechanic and retain the

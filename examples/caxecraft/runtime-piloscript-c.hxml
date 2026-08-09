@@ -1,0 +1,5 @@
+-cp src
+-cp test
+-lib reflaxe.c
+--main caxecraft.qa.RuntimePilotScriptProbe
+-D hxc_runtime=auto

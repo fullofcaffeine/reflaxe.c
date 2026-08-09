@@ -205,6 +205,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "locales/ui.json",
             "packs/caxecraft/base/content.json",
             "packs/caxecraft/base/runtime-content.json",
+            "pilots/active.piloscript",
             "scenarios/first-adventure/western-falls.caxemap",
             "scenarios/first-playable/map.caxemap",
         ):
@@ -231,6 +232,10 @@ class CaxecraftBuildStateTests(unittest.TestCase):
                 / "content/scenarios/first-adventure/western-falls.caxemap"
             ).read_bytes(),
             (source_root / "scenarios/first-adventure/western-falls.caxemap").read_bytes(),
+        )
+        self.assertEqual(
+            (self.executable.parent / "content/pilots/active.piloscript").read_bytes(),
+            (source_root / "pilots/active.piloscript").read_bytes(),
         )
         self.assertEqual(
             (self.executable.parent / "content/packs/caxecraft/base/runtime-content.json").read_bytes(),

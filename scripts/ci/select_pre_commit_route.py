@@ -306,6 +306,21 @@ AFFECTED_OWNER_RULES = (
     (
         re.compile(
             r"^examples/caxecraft/(?:"
+            r"runtime-piloscript(?:-c)?\.hxml"
+            r"|src/caxecraft/pilot/RuntimePilotScript\.hx"
+            r"|test/caxecraft/qa/RuntimePilotScriptProbe\.hx"
+            r"|test/native/runtime_piloscript_harness\.c"
+            r"|pilots/[^/]+\.piloscript"
+            r")$"
+        ),
+        AffectedOwner(
+            "test:caxecraft-runtime-piloscript",
+            "runtime Piloscript syntax, bounds, actions, or semantic observations changed",
+        ),
+    ),
+    (
+        re.compile(
+            r"^examples/caxecraft/(?:"
             r"campaign-runtime(?:-c)?\.hxml"
             r"|src/caxecraft/app/ActivePlayableLevel\.hx"
             r"|src/caxecraft/content/(?:CampaignManifest|CampaignRuntime|RuntimeSchema|RuntimeLevelLoader|ActiveContent)\.hx"
@@ -400,6 +415,11 @@ AFFECTED_OWNER_RULES = (
             r"|test/caxecraft/qa/RuntimeContentGenerationProbe\.hx"
             r"|test/native/runtime_content_generation_harness\.c"
             r"|packs/caxecraft/base/runtime-content\.json"
+            r"|runtime-piloscript(?:-c)?\.hxml"
+            r"|src/caxecraft/pilot/RuntimePilotScript\.hx"
+            r"|test/caxecraft/qa/RuntimePilotScriptProbe\.hx"
+            r"|test/native/runtime_piloscript_harness\.c"
+            r"|pilots/[^/]+\.piloscript"
             r"|campaign-runtime(?:-c)?\.hxml"
             r"|src/caxecraft/content/(?:CampaignManifest|CampaignRuntime)\.hx"
             r"|test/caxecraft/qa/CampaignRuntimeProbe\.hx"

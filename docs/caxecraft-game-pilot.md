@@ -46,8 +46,9 @@ remain tied to the committed body in both cases.
 
 This is **Playwright-like** in one limited sense. Playwright drives a program
 through named actions and inspects deliberate checkpoints. Caxecraft does the
-same for a native game: it compiles a named action script into a test build,
-runs the real generated C executable, flushes and captures the final frame,
+same for a native game. Engine-regression pilots compile a named action script.
+Content journeys load a validated Piloscript file after startup. Both run the
+real generated C executable, flush and capture the final frame,
 presents it through `EndDrawing`, validates visible scene roles, and exits by
 itself. It is not a
 general macro recorder or a replacement for manual checks of mouse feel,
@@ -120,11 +121,13 @@ npm run caxecraft:play -- --pilot campaign-travel
 npm run caxecraft:play -- --pilot adventure-journey
 ```
 
-The thirteen closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+The twelve compiled script names are `LaunchSmoke`, `MoveJumpEdit`,
 `PauseRecapture`, `CombatDrop`, `RecoveryUse`, `FullInventoryGift`, and
 `FullInventoryMining`, plus `ResizeLayout`, `AquaticGear`, `SmoothMotion`, and
-`EditorShell`, `CampaignTravel`, and `AdventureJourney`.
-Each has a small fixed frame limit below the absolute 120-frame policy. Its
+`EditorShell` and `CampaignTravel`. The `adventure-journey` content journey
+loads [`active.piloscript`](../examples/caxecraft/pilots/active.piloscript) at
+runtime.
+Each has a fixed frame limit at or below the absolute 150-frame policy. Its
 final and every later action is `Quit`, which protects against a script
 accidentally becoming an unattended interactive session. The Python runner
 adds an independent 15-second wall-clock timeout.
@@ -229,20 +232,21 @@ headless campaign tracer remains responsible for malformed manifests, stale
 receipts, missing destinations, and unchanged-state failures. Neither owner
 freezes the destination's spawn coordinates or decoration.
 
-The adventure-journey pilot protects the path a player actually sees. It
-starts with Creative highlighted on the real title screen, sends the same
-device-independent next/confirm choices used by keyboard input, and retains a
-frame showing Adventure highlighted. Confirming Adventure opens a separate
-campaign screen instead of launching the old prototype immediately. That
-screen reads the exact campaign identity and route from the staged runtime
-manifest: `caxecraft:first-adventure`, with `evergrove` leading to
-`western-falls`. A second confirm launches its entry level. The pilot then
-sends the same typed “continue” action as the narrower campaign-travel pilot
-and retains a third frame at Western Falls. The native observer checks all
-three visible stages. The destination check pairs a real water-render
-submission with water-texture colors that persist through many consecutive
-rows anywhere in the gameplay view, so the former flat meadow and tiny pool cannot pass merely by
-reporting generation 2, while a designer can move the waterfall horizontally.
+The adventure-journey pilot protects the path a player actually sees. Its
+actions and expected content IDs live in the staged `PILOSCRIPT 1` file. The
+compiled parser and observer contain no campaign or level identity.
+
+The journey starts with Creative highlighted on the real title screen. It
+sends the same device-independent next and confirm choices used by keyboard
+input. It retains a frame that shows Adventure highlighted. Confirming
+Adventure opens the campaign screen. The staged campaign manifest supplies
+the route from `evergrove` to `western-falls`. The journey selects Western
+Falls and launches it through that screen.
+
+Haxe compares the visible screen, selected mode, level ID, active objective ID,
+content generation, and publication count with the runtime file. The final
+capture keeps a generic presented-gameplay check for review. It does not freeze
+the waterfall shape, terrain decoration, actor placement, or camera framing.
 Focused Haxe probes separately own the exact screen transitions, manifest
 receipts, and valid runtime loading; they do not freeze decorative terrain or
 actor coordinates. Generation 2 and
@@ -253,9 +257,7 @@ satisfy this owner.
 This is evidence for the current two-level forward journey. The player still
 presses `N` to use the manifest's sole exit; authored exit volumes, branching,
 return travel, saves, Fallskeeper dialogue, the journal/code interaction,
-opening the suit vault, and the flooded ruins remain future work. The current
-destination HUD also retains Evergrove's objective text after publication;
-`haxe_c-xge.20.2.2` owns rebinding that presentation to the active level.
+opening the suit vault, and the flooded ruins remain future work.
 
 ## How semantic state leaves the native game
 
@@ -437,7 +439,8 @@ therefore makes one compile-time provider choice:
 
 - an ordinary build samples `RaylibGameInput` into `GameInputFrame`;
 - a build with the internal `caxecraft_pilot` define asks `PilotScript` for
-  the current closed action and any explicitly declared initial fixture fact.
+  the current closed engine-test action or asks the validated runtime
+  Piloscript for a content-journey action.
 
 Haxe removes the inactive branch before haxe.c sees the program. This is an
 appropriate `#if` boundary: it selects a test adapter with different external

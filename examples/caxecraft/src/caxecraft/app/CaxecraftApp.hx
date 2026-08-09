@@ -109,6 +109,11 @@ import raylib.Rlgl;
 import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
+#if caxecraft_pilot_runtime
+import caxecraft.pilot.RuntimePilotScript;
+import caxecraft.pilot.RuntimePilotScript.RuntimePilotReadResult;
+import caxecraft.pilot.RuntimePilotScript.RuntimePilotRunResult;
+#end
 import raylib.Camera3D;
 import raylib.CameraProjection;
 import raylib.Color;
@@ -200,8 +205,8 @@ final class CaxecraftApp {
 		final pilotName:PilotScriptName = PilotScriptName.EditorShell;
 		#elseif caxecraft_pilot_campaign_travel
 		final pilotName:PilotScriptName = PilotScriptName.CampaignTravel;
-		#elseif caxecraft_pilot_adventure_journey
-		final pilotName:PilotScriptName = PilotScriptName.AdventureJourney;
+		#elseif caxecraft_pilot_runtime
+		final pilotName:PilotScriptName = PilotScriptName.RuntimeContentJourney;
 		#end
 		var initialHealth = MAX_HEALTH;
 		#if caxecraft_pilot
@@ -218,6 +223,25 @@ final class CaxecraftApp {
 				Sys.println("caxecraft: runtime content root rejected");
 				return;
 		};
+		#if caxecraft_pilot_runtime
+		// The launcher stages the selected content journey at one generic package
+		// path. Haxe owns parsing and semantics; the host never interprets records.
+		final runtimePilot = switch contentStore.read("pilots/active.piloscript") {
+			case PackageBytesRejected(_):
+				Sys.println("caxecraft: runtime Piloscript read failed: pilots/active.piloscript");
+				return;
+			case PackageBytesRead(content):
+				switch RuntimePilotScript.read(content.bytes, content.provenance.logicalPath.text()) {
+					case RuntimePilotRejected(diagnostic):
+						Sys.println('caxecraft: runtime Piloscript rejected at ${diagnostic.source}:${diagnostic.line}: ${diagnostic.message}');
+						return;
+					case RuntimePilotReady(script): script;
+				}
+		};
+		final pilotInputHash = runtimePilot.inputHash();
+		#elseif caxecraft_pilot
+		final pilotInputHash = PilotScript.inputHash(pilotName);
+		#end
 		final completeCandidate = switch loadRuntimeContent(contentStore, ContentGenerationId.fromSequence(1), {
 			entityId: EntityId.fromValidatedStorageCode(1),
 			initialHealth: initialHealth
@@ -376,7 +400,7 @@ final class CaxecraftApp {
 		final showInitialTitle = pilotName == PilotScriptName.LaunchSmoke
 			|| pilotName == PilotScriptName.ResizeLayout
 			|| pilotName == PilotScriptName.EditorShell
-			|| pilotName == PilotScriptName.AdventureJourney;
+			|| pilotName == PilotScriptName.RuntimeContentJourney;
 		#else
 		final showInitialTitle = true;
 		#end
@@ -446,21 +470,31 @@ final class CaxecraftApp {
 			#if caxecraft_pilot
 			// Pilots own an exact display cadence; interactive builds read the same
 			// Raylib frame clock once and share it between UI repeat and simulation.
+			#if caxecraft_pilot_runtime
+			var frameSeconds = 0.05;
+			#else
 			var frameSeconds = PilotScript.frameDurationMilliseconds(pilotName, frameCount) / 1000.0;
+			#end
 			#else
 			var frameSeconds = Raylib.GetFrameTime().toFloat();
 			#end
 			if (frameSeconds > MAX_FRAME_SECONDS)
 				frameSeconds = MAX_FRAME_SECONDS;
 			#if caxecraft_pilot
+			#if caxecraft_pilot_runtime
+			final requestedWindowWidth = 0;
+			final requestedWindowHeight = 0;
+			final pilotAction = runtimePilot.actionAt(frameCount);
+			#else
 			final requestedWindowWidth = PilotScript.requestedWindowWidth(pilotName, frameCount);
 			// Keep both conditional results stable before the native call. haxe_c-af1
 			// owns the compiler fix that will make this explicit local unnecessary.
 			final requestedWindowHeight = PilotScript.requestedWindowHeight(pilotName, frameCount);
+			final pilotAction = PilotScript.actionAt(pilotName, frameCount);
+			#end
 			if (requestedWindowWidth > 0)
 				Raylib.SetWindowSize(requestedWindowWidth, requestedWindowHeight);
 			final focused = true;
-			final pilotAction = PilotScript.actionAt(pilotName, frameCount);
 			final moveForward = PilotScript.moveForward(pilotAction);
 			final moveRight = PilotScript.moveRight(pilotAction);
 			final lookYaw = PilotScript.lookYaw(pilotAction);
@@ -757,6 +791,32 @@ final class CaxecraftApp {
 			final onEditor = screenShowsEditor(screen);
 			final paused = screenPausesSimulation(screen);
 			final captured = screenCapturesPointer(screen);
+			#if caxecraft_pilot_runtime
+			var runtimePilotFrameAccepted = true;
+			var observedLevel = levelLabel;
+			if (onCampaignSelect) {
+				final selectedCampaign = campaign;
+				if (selectedCampaign != null)
+					observedLevel = selectedCampaign.levelAt(selectedCampaignLevelIndex).id.text();
+			}
+			final observedObjective = currentObjectiveId == null ? "" : currentObjectiveId.text();
+			final observedScreen = onTitle ? "title" : onCampaignSelect ? "campaign" : onEditor ? "editor" : paused ? "paused" : "playing";
+			final observedMode = selectedMode == GameMode.Creative ? "creative" : "adventure";
+			switch runtimePilot.observe(frameCount, {
+				screen: observedScreen,
+				mode: observedMode,
+				level: observedLevel,
+				objective: observedObjective,
+				generation: activeLevel.generationId().value(),
+				publications: activeLevel.publicationCount()
+			}) {
+				case RuntimePilotFrameAccepted:
+				case RuntimePilotFrameRejected(diagnostic):
+					runtimePilotFrameAccepted = false;
+					quit = true;
+					Sys.println('caxecraft: runtime Piloscript mismatch at ${diagnostic.source}:${diagnostic.line}: ${diagnostic.message}');
+			}
+			#end
 			var editorNavigationCommand = NavigationCommand.None;
 			#if !caxecraft_pilot
 			if (onEditor)
@@ -1262,11 +1322,15 @@ final class CaxecraftApp {
 				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
 			}
 			#if caxecraft_pilot
+			#if caxecraft_pilot_runtime
+			final pilotComplete = runtimePilot.complete(frameCount);
+			#else
 			final pilotComplete = PilotScript.complete(pilotName, frameCount);
+			#end
 			#if caxecraft_render_benchmark
 			if (pilotComplete)
-				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
-					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
+				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
+					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds,
@@ -1274,8 +1338,8 @@ final class CaxecraftApp {
 					activeLevel.publicationCount());
 			#else
 			if (pilotComplete)
-				drawPilotTelemetry(pilotName, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks, placedBlocks,
-					rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
+				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
+					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(),
@@ -1293,10 +1357,13 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
 				|| (pilotName == PilotScriptName.EditorShell && frameCount == 2)
-				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
-				|| (pilotName == PilotScriptName.AdventureJourney
-					&& (frameCount == 0 || frameCount == 1 || frameCount == 2 || frameCount == 5)))
+				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
 				capturePilotFrame = true;
+			#if caxecraft_pilot_runtime
+			final runtimeCheckpoint = runtimePilot.checkpointAt(frameCount);
+			if (runtimeCheckpoint != null && runtimePilotFrameAccepted)
+				capturePilotFrame = true;
+			#end
 			// Submit this frame before reading it. `EndDrawing()` would otherwise
 			// swap the buffers first, causing Raylib's screenshot function to read
 			// the previous frame on a double-buffered desktop window.
@@ -1331,14 +1398,18 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor.png");
 			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
-			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 0)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-adventure-selected.png");
-			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 1)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-selected.png");
-			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 2)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-level-selected.png");
-			if (pilotName == PilotScriptName.AdventureJourney && frameCount == 5)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-adventure-journey.png");
+			#if caxecraft_pilot_runtime
+			if (runtimeCheckpoint != null && runtimePilotFrameAccepted) {
+				if (runtimeCheckpoint.label == "title-selection")
+					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-title-selection.png");
+				else if (runtimeCheckpoint.label == "campaign-selection")
+					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-campaign-selection.png");
+				else if (runtimeCheckpoint.label == "level-selection")
+					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-level-selection.png");
+				else
+					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-final.png");
+			}
+			#end
 			if (pilotComplete)
 				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end
