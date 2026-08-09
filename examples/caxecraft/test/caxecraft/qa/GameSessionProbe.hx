@@ -170,6 +170,26 @@ function selfCheck():Int {
 		|| repeatedEquipment.character.aquaticProfile.maximumBreathTicks != 1200
 		|| session.authoredItemIsActive(0))
 		return 23;
+	if (!session.activateAuthoredItemDuringLoad(0))
+		return 46;
+	final lanternPickup = session.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), caxecraft.gameplay.ItemKind.Lantern, 1);
+	if (!lanternPickup.resolved
+		|| lanternPickup.collected != 1
+		|| lanternPickup.inventory.lantern != 1
+		|| session.authoredItemIsActive(0))
+		return 47;
+	if (!session.activateAuthoredItemDuringLoad(0))
+		return 48;
+	final fullLanternPickup = session.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, Inventory.MAX_STACK),
+		caxecraft.gameplay.ItemKind.Lantern, 1);
+	if (!fullLanternPickup.resolved
+		|| fullLanternPickup.collected != 0
+		|| fullLanternPickup.inventory.lantern != Inventory.MAX_STACK
+		|| !session.authoredItemIsActive(0))
+		return 49;
+	final invalidLanternPickup = session.collectAuthoredInventoryItem(-1, lanternPickup.inventory, caxecraft.gameplay.ItemKind.Lantern, 1);
+	if (invalidLanternPickup.resolved || invalidLanternPickup.collected != 0 || invalidLanternPickup.inventory.lantern != 1)
+		return 50;
 	final damaged = session.receiveLocalPlayerAttack();
 	if (!damaged.resolved || damaged.character.vitals.health != 3 || damaged.character.vitals.safeTicks <= 0)
 		return 24;

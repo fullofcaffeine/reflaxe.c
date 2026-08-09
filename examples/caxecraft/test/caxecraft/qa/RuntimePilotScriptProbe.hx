@@ -30,20 +30,23 @@ final class RuntimePilotScriptProbe {
 
 	/** Check parsing, bounds, generic observations, and located rejection. */
 	static function runChecks():Int {
-		final source = Bytes.ofString("PILOSCRIPT 1\n" + "name synthetic-journey\n" + "frames 6\n" + "action 0 menu-next\n" + "action 1 menu-confirm\n"
-			+ "checkpoint 1 capture title-selection\n" + "expect 1 screen campaign\n" + "expect 1 level synthetic-level\n"
-			+ "expect 1 objective objective.synthetic\n" + "expect 1 generation 2\n" + "expect 1 publications 1\n" + "end\n");
+		final source = Bytes.ofString("PILOSCRIPT 1\n" + "name synthetic-journey\n" + "frames 8\n" + "action 0 menu-next\n" + "action 1 menu-confirm\n"
+			+ "hold 2 4 forward\n" + "checkpoint 1 capture title-selection\n" + "expect 1 screen campaign\n" + "expect 1 level synthetic-level\n"
+			+ "expect 1 objective objective.synthetic\n" + "expect 1 generation 2\n" + "expect 1 publications 1\n" + "action 5 forward-descend\n"
+			+ "expect 5 medium submerged\n" + "expect 5 equipment synthetic-gear\n" + "expect 5 lanterns 2\n" + "expect 5 sand 1\n"
+			+ "expect 5 position 4,3,2\n" + "end\n");
 		final script = switch RuntimePilotScript.read(source, "synthetic.piloscript") {
 			case RuntimePilotReady(value): value;
 			case RuntimePilotRejected(diagnostic):
 				throw 'valid synthetic Piloscript was rejected at ${diagnostic.line}: ${diagnostic.message}';
 		};
 		require(script.stableName() == "synthetic-journey", "the stable script name changed");
-		require(script.frameLimit() == 6, "the frame limit changed");
+		require(script.frameLimit() == 8, "the frame limit changed");
 		require(script.actionAt(0) == PilotAction.MenuNext, "the first action changed");
 		require(script.actionAt(1) == PilotAction.MenuConfirm, "the second action changed");
-		require(script.actionAt(2) == PilotAction.Idle, "an omitted frame did not stay idle");
-		require(script.actionAt(5) == PilotAction.Quit && script.actionAt(9) == PilotAction.Quit, "the bounded quit rule changed");
+		require(script.actionAt(2) == PilotAction.Forward && script.actionAt(4) == PilotAction.Forward, "the held action range changed");
+		require(script.actionAt(5) == PilotAction.ForwardDescend, "the downward-swim action changed");
+		require(script.actionAt(7) == PilotAction.Quit && script.actionAt(9) == PilotAction.Quit, "the bounded quit rule changed");
 		final checkpoint = script.checkpointAt(1);
 		require(checkpoint != null && checkpoint.label == "title-selection", "the capture checkpoint changed");
 		require(script.expectationCountAt(1) == 5, "the expectation count changed");
@@ -55,7 +58,14 @@ final class RuntimePilotScriptProbe {
 			level: "synthetic-level",
 			objective: "objective.synthetic",
 			generation: 2,
-			publications: 1
+			publications: 1,
+			cellX: 4,
+			cellY: 3,
+			cellZ: 2,
+			aquaticMedium: "submerged",
+			aquaticEquipment: "synthetic-gear",
+			lanterns: 2,
+			sand: 1
 		};
 		switch script.observe(1, matching) {
 			case RuntimePilotFrameAccepted:
@@ -68,20 +78,29 @@ final class RuntimePilotScriptProbe {
 			level: "wrong-level",
 			objective: "objective.synthetic",
 			generation: 2,
-			publications: 1
+			publications: 1,
+			cellX: 4,
+			cellY: 3,
+			cellZ: 2,
+			aquaticMedium: "submerged",
+			aquaticEquipment: "synthetic-gear",
+			lanterns: 2,
+			sand: 1
 		};
 		switch script.observe(1, wrong) {
 			case RuntimePilotFrameRejected(diagnostic):
-				require(diagnostic.line == 8, "the mismatch lost its expectation line");
+				require(diagnostic.line == 9, "the mismatch lost its expectation line");
 				require(diagnostic.message.indexOf("synthetic-level") >= 0, "the mismatch lost its independent expectation");
 			case RuntimePilotFrameAccepted:
 				throw "wrong semantic state passed";
 		}
 
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\naction 1 unknown\nend\n", 4, "unknown action");
-		expectRejected("PILOSCRIPT 1\nname bad\nframes 151\nend\n", 3, "frame limit");
+		expectRejected("PILOSCRIPT 1\nname bad\nframes 401\nend\n", 3, "frame limit");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\ncheckpoint 1 capture ../escape\nend\n", 4, "capture label");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\naction 0 idle\naction 0 menu-next\nend\n", 5, "duplicate action");
+		expectRejected("PILOSCRIPT 1\nname bad\nframes 4\nhold 1 3 forward\nend\n", 4, "held final frame");
+		expectRejected("PILOSCRIPT 1\nname bad\nframes 5\nhold 1 3 forward\naction 2 idle\nend\n", 5, "overlapping action");
 		return 0;
 	}
 

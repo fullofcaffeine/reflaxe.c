@@ -127,10 +127,12 @@ The twelve compiled script names are `LaunchSmoke`, `MoveJumpEdit`,
 `EditorShell` and `CampaignTravel`. The `adventure-journey` content journey
 loads [`active.piloscript`](../examples/caxecraft/pilots/active.piloscript) at
 runtime.
-Each has a fixed frame limit at or below the absolute 150-frame policy. Its
-final and every later action is `Quit`, which protects against a script
-accidentally becoming an unattended interactive session. The Python runner
-adds an independent 15-second wall-clock timeout.
+Each compiled engine pilot has a fixed frame limit at or below 150. The
+reloadable content journey may declare up to 400 frames so it can cover a real
+chapter route without compiling campaign steps into Haxe. Its final and every
+later action is `Quit`, which protects against a script accidentally becoming
+an unattended interactive session. The Python runner adds an independent
+15-second wall-clock timeout.
 
 The launch image check requires the staged panorama and wordmark by semantic
 color/region evidence. Gameplay checks require independent terrain, heads-up
@@ -244,20 +246,28 @@ the route from `evergrove` to `western-falls`. The journey selects Western
 Falls and launches it through that screen.
 
 Haxe compares the visible screen, selected mode, level ID, active objective ID,
-content generation, and publication count with the runtime file. The final
-capture keeps a generic presented-gameplay check for review. It does not freeze
-the waterfall shape, terrain decoration, actor placement, or camera framing.
+content generation, publication count, grid position, aquatic medium,
+equipment, and selected inventory counts with the runtime file. The journey
+then mines the concealed route, collects and equips Tideweave through ordinary
+world-item behavior, enters the flooded grotto, collects its lantern, and
+returns to dry ground. The final capture keeps a generic presented-gameplay
+check for review. It does not freeze the waterfall shape, terrain decoration,
+actor placement, or camera framing.
+
 Focused Haxe probes separately own the exact screen transitions, manifest
-receipts, and valid runtime loading; they do not freeze decorative terrain or
-actor coordinates. Generation 2 and
-one publication can only be reached while the app is both playing and in Adventure mode, so a Creative
+receipts, item transaction rules, Piloscript grammar, and valid runtime
+loading. They do not contain Western Falls names, prose, routes, decorative
+terrain, or actor coordinates. Generation 2 and one publication can only be
+reached while the app is both playing and in Adventure mode, so a Creative
 launch, a hidden campaign screen, or a script that bypasses the title cannot
 satisfy this owner.
 
-This is evidence for the current two-level forward journey. The player still
-presses `N` to use the manifest's sole exit; authored exit volumes, branching,
-return travel, saves, Fallskeeper dialogue, the journal/code interaction,
-opening the suit vault, and the flooded ruins remain future work.
+This is evidence for the current two-level forward journey and one repeatable
+Western Falls exploration route. The player still presses `N` to use the
+manifest's sole exit. Authored exit volumes, branching, return travel between
+levels, saves, Fallskeeper dialogue, the journal/code interaction, and opening
+the vault through story logic remain future work. Subjective route readability,
+waterfall appearance, puzzle quality, and fun still require hands-on review.
 
 ## How semantic state leaves the native game
 

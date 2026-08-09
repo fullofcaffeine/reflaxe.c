@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name adventure-journey
-frames 7
+frames 350
 
 # Move from Creative to Adventure, then open the staged campaign.
 action 0 menu-next
@@ -27,9 +27,37 @@ expect 3 objective objective.western-falls
 expect 3 generation 2
 expect 3 publications 1
 
-# Keep two stable rendered frames before the final evidence capture.
-checkpoint 5 capture final
-expect 5 screen playing
-expect 5 level western-falls
-expect 5 objective objective.western-falls
+# Leave the Falls spawn, open the sand seam, and reach the lower cache.
+hold 4 91 forward-left
+hold 92 97 look-left
+action 98 mine
+hold 99 134 forward-rise
+hold 135 150 rise
+
+# At this point the route has opened the sand seam and equipped Tideweave.
+expect 152 sand 1
+expect 152 position 5,3,21
+
+# Cross the opened lower cache, equip Tideweave, and enter the flooded grotto.
+hold 151 166 right
+expect 170 equipment caxecraft:tideweave-suit
+expect 170 sand 1
+hold 171 226 backward
+hold 227 310 left-descend
+expect 311 equipment caxecraft:tideweave-suit
+expect 311 lanterns 2
+expect 311 sand 1
+expect 311 medium submerged
+expect 311 position 13,3,25
+hold 311 342 right-rise
+
+checkpoint 348 capture final
+expect 348 screen playing
+expect 348 level western-falls
+expect 348 objective objective.western-falls
+expect 348 equipment caxecraft:tideweave-suit
+expect 348 lanterns 2
+expect 348 sand 1
+expect 348 medium dry
+expect 348 position 13,6,22
 end

@@ -12,6 +12,9 @@ typedef LoadedWorldItem = {
 	/** Pack-local item code already validated by the selected content registry. */
 	final storageCode:Int;
 
+	/** Complete stack quantity that enters inventory in one pickup transaction. */
+	final quantity:Int;
+
 	/** Horizontal placement in thousandths of one world block. */
 	final xMilli:Int;
 

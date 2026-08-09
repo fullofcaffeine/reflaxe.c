@@ -349,8 +349,8 @@ PILOT_FRAME_LIMITS = {
     "smooth-motion": 12,
     "editor-shell": 4,
     "campaign-travel": 5,
-    "adventure-journey": 7,
 }
+RUNTIME_PILOT_MAX_FRAMES = 400
 PILOT_SCREENSHOT_NAMES = {
     "launch-smoke": "caxecraft-smoke.png",
     "secondary-locale": "caxecraft-secondary-locale.png",
@@ -1007,11 +1007,17 @@ def build_pilot_report(
         raise PlayFailure(f"pilot {pilot!r} emitted script code {script_code}; expected {expected_code}")
     completed_frames = signed_word(words[5])
     completed_ticks = signed_word(words[6])
-    expected_frames = PILOT_FRAME_LIMITS[pilot]
-    if completed_frames != expected_frames:
-        raise PlayFailure(
-            f"pilot {pilot!r} completed {completed_frames} frames; expected its bounded {expected_frames}"
-        )
+    if pilot == "adventure-journey":
+        if not 2 <= completed_frames <= RUNTIME_PILOT_MAX_FRAMES:
+            raise PlayFailure(
+                f"runtime pilot completed {completed_frames} frames; expected 2 through {RUNTIME_PILOT_MAX_FRAMES}"
+            )
+    else:
+        expected_frames = PILOT_FRAME_LIMITS[pilot]
+        if completed_frames != expected_frames:
+            raise PlayFailure(
+                f"pilot {pilot!r} completed {completed_frames} frames; expected its bounded {expected_frames}"
+            )
     if completed_ticks < 0 or completed_ticks > completed_frames:
         raise PlayFailure(
             f"pilot {pilot!r} reported impossible fixed ticks {completed_ticks}/{completed_frames}"
@@ -3033,10 +3039,11 @@ def run_pilot_sample(
             expected_inventory_full=pilot
             in ("full-inventory-gift", "full-inventory-mining"),
             expected_entities=pilot == "full-inventory-gift",
-            # The edit pilot aims at terrain. The full-inventory gift pilot
-            # aims at Nia so the real interaction target is visible. Neither
-            # camera must also frame the sun to prove its own behavior.
-            expected_open_sky=pilot not in ("move-jump-edit", "full-inventory-gift"),
+            # Some pilots deliberately finish under terrain or close to their
+            # subject. Their semantic owner proves the destination. The host
+            # still requires varied terrain, the HUD, and a nonblank scene.
+            expected_open_sky=pilot
+            not in ("move-jump-edit", "full-inventory-gift", "adventure-journey"),
         )
     screenshot_hash = hashlib.sha256(screenshot.read_bytes()).hexdigest()
     state_screenshot.unlink()

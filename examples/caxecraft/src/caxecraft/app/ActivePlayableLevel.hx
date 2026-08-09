@@ -265,6 +265,7 @@ final class ActivePlayableLevel {
 		for (binding in candidate.generation().itemBindings())
 			loadedItems.push({
 				storageCode: binding.storage.value(),
+				quantity: binding.quantity,
 				xMilli: binding.transform.xMilli,
 				yMilli: binding.transform.yMilli,
 				zMilli: binding.transform.zMilli

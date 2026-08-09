@@ -51,6 +51,12 @@ struct hxc_caxecraft_domain_CharacterCommandStepResult {
   bool hxc_resolved;
 };
 
+struct hxc_caxecraft_domain_AuthoredInventoryItemResult {
+  int32_t hxc_collected;
+  struct hxc_caxecraft_gameplay_InventoryState hxc_inventory;
+  bool hxc_resolved;
+};
+
 struct hxc_caxecraft_domain_GameTickResult {
   struct hxc_caxecraft_domain_Character hxc_character;
   bool hxc_committed;
@@ -96,6 +102,8 @@ bool hxc_caxecraft_domain_GameSession_bindLocalPlayer(struct hxc_caxecraft_domai
 void hxc_caxecraft_domain_GameSession_clearActorControllerEvents(struct hxc_caxecraft_domain_GameSession *hxc_l_self);
 
 struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult hxc_caxecraft_domain_GameSession_collectAuthoredAquaticEquipment(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_index, struct hxc_caxecraft_domain_AquaticProfile hxc_l_replacement);
+
+struct hxc_caxecraft_domain_AuthoredInventoryItemResult hxc_caxecraft_domain_GameSession_collectAuthoredInventoryItem(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_index, struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory, enum hxc_caxecraft_gameplay_ItemKind hxc_l_kind, int32_t hxc_l_quantity);
 
 struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_commitLocalCharacter(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_domain_Character hxc_l_original, struct hxc_caxecraft_domain_Character hxc_l_replacement);
 

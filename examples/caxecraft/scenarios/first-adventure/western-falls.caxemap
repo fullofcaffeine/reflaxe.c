@@ -789,6 +789,7 @@ chunk world.base 0 0 0 32 16 32
 end chunk
 fluid water.falls-pool caxecraft:water volume 5 3 19 10 2 5
 fluid water.flooded-grotto caxecraft:water volume 11 3 24 3 2 4
+fluid water.flooded-grotto-source caxecraft:water source 12 5 25
 fluid water.waterfall-source caxecraft:water source 8 10 17
 object enemy.mossling
   tag enemy
@@ -804,7 +805,7 @@ object item.grotto-lantern
 end object
 object item.tideweave
   tag quest
-  placement item caxecraft:tideweave-suit 1 4500 6000 19500 90
+  placement item caxecraft:tideweave-suit 1 4500 4000 19500 90
 end object
 object player.start
   tag player

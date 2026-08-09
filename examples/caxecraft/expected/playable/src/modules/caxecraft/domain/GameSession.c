@@ -450,6 +450,73 @@ struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult hxc_caxecraft_domain_
   return (struct hxc_caxecraft_domain_AuthoredAquaticEquipmentResult){ .hxc_character = hxc_l_tmp_record_field_load_result_n15, .hxc_collected = hxc_l_tmp_record_field_load_result_n16, .hxc_resolved = hxc_l_committed.hxc_resolved };
 }
 
+struct hxc_caxecraft_domain_AuthoredInventoryItemResult hxc_caxecraft_domain_GameSession_collectAuthoredInventoryItem(struct hxc_caxecraft_domain_GameSession *hxc_l_self, int32_t hxc_l_index, struct hxc_caxecraft_gameplay_InventoryState hxc_l_inventory, enum hxc_caxecraft_gameplay_ItemKind hxc_l_kind, int32_t hxc_l_quantity)
+{
+  const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_self };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 1, &hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_gameplay_InventoryState hxc_l_replacement = { 0 };
+  bool hxc_l_tmp_short_circuit_result_n5 = hxc_l_index < 0;
+  if (!(hxc_l_index < 0))
+  {
+    hxc_l_tmp_short_circuit_result_n5 = hxc_l_index >= 256;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n0 = hxc_l_tmp_short_circuit_result_n5;
+  bool hxc_l_tmp_short_circuit_result_n6 = hxc_l_tmp_short_circuit_load_result_n0;
+  if (!hxc_l_tmp_short_circuit_load_result_n0)
+  {
+    hxc_l_tmp_short_circuit_result_n6 = hxc_l_quantity <= 0;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n1 = hxc_l_tmp_short_circuit_result_n6;
+  bool hxc_l_tmp_short_circuit_result_n7 = hxc_l_tmp_short_circuit_load_result_n1;
+  if (!hxc_l_tmp_short_circuit_load_result_n1)
+  {
+    hxc_l_tmp_short_circuit_result_n7 = hxc_l_quantity > 64;
+  }
+  if (hxc_l_tmp_short_circuit_result_n7)
+  {
+    if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return (struct hxc_caxecraft_domain_AuthoredInventoryItemResult){ .hxc_collected = 0, .hxc_inventory = hxc_l_inventory, .hxc_resolved = false };
+  }
+  if (hxc_l_self == NULL)
+  {
+    abort();
+  }
+  bool hxc_l_tmp_instance_call_result_n4 = hxc_caxecraft_domain_GameSession_authoredItemIsActive(hxc_l_self, hxc_l_index);
+  bool hxc_l_tmp_short_circuit_result_n8 = !hxc_l_tmp_instance_call_result_n4;
+  if (!!hxc_l_tmp_instance_call_result_n4)
+  {
+    int32_t hxc_l_tmp_call_result_n5 = hxc_caxecraft_gameplay_Inventory_acceptedAmount(hxc_l_inventory, hxc_l_kind, hxc_l_quantity);
+    hxc_l_tmp_short_circuit_result_n8 = hxc_l_tmp_call_result_n5 != hxc_l_quantity;
+  }
+  if (!hxc_l_tmp_short_circuit_result_n8)
+  {
+    struct hxc_caxecraft_gameplay_InventoryState hxc_l_tmp_call_result_n8 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_l_inventory, hxc_l_kind, hxc_l_quantity);
+    hxc_l_replacement = hxc_l_tmp_call_result_n8;
+    if (hxc_l_index < 0 || (size_t)hxc_l_index >= 256)
+    {
+      abort();
+    }
+    (*hxc_l_self).hxc_authoredItemStorage[(size_t)hxc_l_index] = 0;
+    if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return (struct hxc_caxecraft_domain_AuthoredInventoryItemResult){ .hxc_collected = hxc_l_quantity, .hxc_inventory = hxc_l_replacement, .hxc_resolved = true };
+  }
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return (struct hxc_caxecraft_domain_AuthoredInventoryItemResult){ .hxc_collected = 0, .hxc_inventory = hxc_l_inventory, .hxc_resolved = true };
+}
+
 struct hxc_caxecraft_domain_LocalCharacterCommandResult hxc_caxecraft_domain_GameSession_commitLocalCharacter(struct hxc_caxecraft_domain_GameSession *hxc_l_self, struct hxc_caxecraft_domain_Character hxc_l_original, struct hxc_caxecraft_domain_Character hxc_l_replacement)
 {
   const void *hxc_l_gc_roots[1] = { (const void *)hxc_l_self };

@@ -44,6 +44,7 @@ import caxecraft.app.MotionInterpolation.advance as advanceMotion;
 import caxecraft.app.MotionInterpolation.reset as resetMotion;
 import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
+import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.domain.CharacterDamagePolicy;
 import caxecraft.domain.Character;
 import caxecraft.domain.ActorControllerEvent;
@@ -512,9 +513,7 @@ final class CaxecraftApp {
 			final hotbarCycle = PilotScript.hotbarCycle(pilotAction);
 			final menuNextPressed = PilotScript.menuNextPressed(pilotAction);
 			final menuConfirmPressed = PilotScript.menuConfirmPressed(pilotAction);
-			// Existing deterministic scripts do not request downward swimming yet.
-			// A dedicated water pilot will own that authored action when added.
-			final descendHeld = false;
+			final descendHeld = PilotScript.descendHeld(pilotAction);
 			#else
 			final focused = Raylib.IsWindowFocused();
 			final frameInput:GameInputFrame = RaylibGameInput.sample(screenCapturesPointer(screen), screenPausesSimulation(screen));
@@ -802,13 +801,23 @@ final class CaxecraftApp {
 			final observedObjective = currentObjectiveId == null ? "" : currentObjectiveId.text();
 			final observedScreen = onTitle ? "title" : onCampaignSelect ? "campaign" : onEditor ? "editor" : paused ? "paused" : "playing";
 			final observedMode = selectedMode == GameMode.Creative ? "creative" : "adventure";
+			final observedMedium = if (character.aquatic.medium == AquaticMedium.Dry) "dry" else if (character.aquatic.medium == AquaticMedium.Wading)
+				"wading" else if (character.aquatic.medium == AquaticMedium.Floating) "floating" else "submerged";
+			final observedEquipment = aquaticEquipmentCode < 0 ? "none" : contentRegistry.itemIdForStorageCode(aquaticEquipmentCode);
 			switch runtimePilot.observe(frameCount, {
 				screen: observedScreen,
 				mode: observedMode,
 				level: observedLevel,
 				objective: observedObjective,
 				generation: activeLevel.generationId().value(),
-				publications: activeLevel.publicationCount()
+				publications: activeLevel.publicationCount(),
+				cellX: Std.int(character.body.x),
+				cellY: Std.int(character.body.y),
+				cellZ: Std.int(character.body.z),
+				aquaticMedium: observedMedium,
+				aquaticEquipment: observedEquipment,
+				lanterns: inventory.lantern,
+				sand: inventory.sand
 			}) {
 				case RuntimePilotFrameAccepted:
 				case RuntimePilotFrameRejected(diagnostic):
@@ -991,6 +1000,14 @@ final class CaxecraftApp {
 								else if (equipment.collected) {
 									aquaticEquipmentCode = itemCode;
 									aquaticEquipmentFrames = 120;
+								}
+							} else {
+								final inventoryKind = inventoryKindForRuntimeItem(contentRegistry, itemCode);
+								if (inventoryKind != null) {
+									final pickup = session.collectAuthoredInventoryItem(pickupIndex, inventory, inventoryKind, loadedItem.quantity);
+									inventory = pickup.inventory;
+									if (!pickup.resolved)
+										quit = true;
 								}
 							}
 						}

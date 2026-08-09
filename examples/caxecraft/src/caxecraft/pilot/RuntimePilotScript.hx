@@ -23,6 +23,21 @@ enum abstract RuntimePilotExpectationKind(Int) to Int {
 
 	/** Number of successful level publications after startup. */
 	var Publications = 5;
+
+	/** Integer voxel cell that contains the local player's feet. */
+	var Position = 6;
+
+	/** Stable aquatic state: `dry`, `wading`, `floating`, or `submerged`. */
+	var Medium = 7;
+
+	/** Stable equipped content ID, or `none`. */
+	var Equipment = 8;
+
+	/** Number of lanterns in the bounded inventory. */
+	var Lanterns = 9;
+
+	/** Number of mined sand blocks in the bounded inventory. */
+	var Sand = 10;
 }
 
 /** One source-located expectation owned by a runtime Piloscript file. */
@@ -67,6 +82,23 @@ typedef RuntimePilotObservation = {
 
 	/** Successful publication count supplied by `ActivePlayableLevel`. */
 	final publications:Int;
+
+	/** Integer voxel position derived from the committed local-player body. */
+	final cellX:Int;
+
+	final cellY:Int;
+	final cellZ:Int;
+
+	/** Stable aquatic state selected by the generic application adapter. */
+	final aquaticMedium:String;
+
+	/** Stable equipped item ID, or `none`. */
+	final aquaticEquipment:String;
+
+	/** Bounded inventory counts that content rewards can observe. */
+	final lanterns:Int;
+
+	final sand:Int;
 }
 
 /** One fail-closed parser or semantic comparison error. */
@@ -128,8 +160,8 @@ private enum RuntimePilotExpectationReadResult {
  * frame, so malformed host timing cannot create an interactive test channel.
  */
 final class RuntimePilotScript {
-	/** Format limit shared with compiled deterministic pilots. */
-	public static inline final ABSOLUTE_FRAME_LIMIT:Int = 150;
+	/** Runtime journey limit. At 50 ms per frame, this permits 20 seconds of play. */
+	public static inline final ABSOLUTE_FRAME_LIMIT:Int = 400;
 
 	static inline final MAXIMUM_SOURCE_BYTES:Int = 64 * 1024;
 	static inline final MAXIMUM_EXPECTATIONS_PER_FRAME:Int = 8;
@@ -205,7 +237,7 @@ final class RuntimePilotScript {
 					return rejected(source, lineNumber, "expected a frames record");
 				final limit = nonNegativeInteger(words[1], ABSOLUTE_FRAME_LIMIT);
 				if (limit < 2 || limit > ABSOLUTE_FRAME_LIMIT)
-					return rejected(source, lineNumber, "frame limit must be from 2 through 150");
+					return rejected(source, lineNumber, "frame limit must be from 2 through 400");
 				var frame = 0;
 				while (frame < limit) {
 					actions.push(PilotAction.Idle);
@@ -223,6 +255,28 @@ final class RuntimePilotScript {
 			}
 			if (words.length < 3)
 				return rejected(source, lineNumber, "record is incomplete");
+			if (words[0] == "hold") {
+				if (words.length != 4)
+					return rejected(source, lineNumber, "hold record must have first frame, last frame, and action name");
+				final firstFrame = nonNegativeInteger(words[1], actions.length - 2);
+				final lastFrame = nonNegativeInteger(words[2], actions.length - 2);
+				if (firstFrame < 0 || lastFrame < firstFrame || lastFrame >= actions.length - 1)
+					return rejected(source, lineNumber, "hold range must be ordered and before the final quit frame");
+				final heldAction = switch readAction(words[3]) {
+					case UnknownRuntimePilotAction:
+						return rejected(source, lineNumber, "unknown action " + words[3]);
+					case KnownRuntimePilotAction(action): action;
+				};
+				var heldFrame = firstFrame;
+				while (heldFrame <= lastFrame) {
+					if (actionOwned[heldFrame])
+						return rejected(source, lineNumber, "hold range overlaps another action");
+					actions[heldFrame] = heldAction;
+					actionOwned[heldFrame] = true;
+					heldFrame++;
+				}
+				continue;
+			}
 			final frame = nonNegativeInteger(words[1], actions.length - 2);
 			if (frame < 0 || frame >= actions.length - 1)
 				return rejected(source, lineNumber, "record frame must be before the final quit frame");
@@ -260,7 +314,8 @@ final class RuntimePilotScript {
 					case KnownRuntimePilotExpectation(kind):
 						if (hasExpectation(expectations, frame, kind))
 							return rejected(source, lineNumber, "duplicate expectation for frame and fact");
-						if ((kind == Generation || kind == Publications) && !validNonNegativeInteger(words[3]))
+						if ((kind == Generation || kind == Publications || kind == Lanterns || kind == Sand)
+							&& !validNonNegativeInteger(words[3]))
 							return rejected(source, lineNumber, "numeric expectation must be a non-negative decimal integer");
 						expectations.push(new RuntimePilotExpectation(frame, kind, words[3], lineNumber));
 				}
@@ -345,7 +400,17 @@ final class RuntimePilotScript {
 			return observation.objective;
 		if (kind == Generation)
 			return Std.string(observation.generation);
-		return Std.string(observation.publications);
+		if (kind == Publications)
+			return Std.string(observation.publications);
+		if (kind == Position)
+			return Std.string(observation.cellX) + "," + Std.string(observation.cellY) + "," + Std.string(observation.cellZ);
+		if (kind == Medium)
+			return observation.aquaticMedium;
+		if (kind == Equipment)
+			return observation.aquaticEquipment;
+		if (kind == Lanterns)
+			return Std.string(observation.lanterns);
+		return Std.string(observation.sand);
 	}
 
 	/** Stable diagnostic name for one closed observed fact. */
@@ -360,7 +425,17 @@ final class RuntimePilotScript {
 			return "objective";
 		if (kind == Generation)
 			return "generation";
-		return "publications";
+		if (kind == Publications)
+			return "publications";
+		if (kind == Position)
+			return "position";
+		if (kind == Medium)
+			return "medium";
+		if (kind == Equipment)
+			return "equipment";
+		if (kind == Lanterns)
+			return "lanterns";
+		return "sand";
 	}
 
 	/** Parse one closed input action without aliases or case folding. */
@@ -373,16 +448,44 @@ final class RuntimePilotScript {
 			return KnownRuntimePilotAction(PilotAction.ForwardTurn);
 		if (value == "forward-jump")
 			return KnownRuntimePilotAction(PilotAction.ForwardJump);
+		if (value == "jump")
+			return KnownRuntimePilotAction(PilotAction.Jump);
+		if (value == "backward-jump")
+			return KnownRuntimePilotAction(PilotAction.BackwardJump);
+		if (value == "left-jump")
+			return KnownRuntimePilotAction(PilotAction.LeftJump);
+		if (value == "right-jump")
+			return KnownRuntimePilotAction(PilotAction.RightJump);
+		if (value == "left-descend")
+			return KnownRuntimePilotAction(PilotAction.LeftDescend);
+		if (value == "right-rise")
+			return KnownRuntimePilotAction(PilotAction.RightRise);
 		if (value == "forward-left")
 			return KnownRuntimePilotAction(PilotAction.ForwardLeft);
 		if (value == "forward-rise")
 			return KnownRuntimePilotAction(PilotAction.ForwardRise);
 		if (value == "rise")
 			return KnownRuntimePilotAction(PilotAction.Rise);
+		if (value == "backward")
+			return KnownRuntimePilotAction(PilotAction.Backward);
+		if (value == "left")
+			return KnownRuntimePilotAction(PilotAction.Left);
+		if (value == "right")
+			return KnownRuntimePilotAction(PilotAction.Right);
+		if (value == "turn-left")
+			return KnownRuntimePilotAction(PilotAction.TurnLeft);
+		if (value == "turn-right")
+			return KnownRuntimePilotAction(PilotAction.TurnRight);
+		if (value == "forward-descend")
+			return KnownRuntimePilotAction(PilotAction.ForwardDescend);
+		if (value == "descend")
+			return KnownRuntimePilotAction(PilotAction.Descend);
 		if (value == "right-look")
 			return KnownRuntimePilotAction(PilotAction.RightLook);
 		if (value == "look-down")
 			return KnownRuntimePilotAction(PilotAction.LookDown);
+		if (value == "look-up")
+			return KnownRuntimePilotAction(PilotAction.LookUp);
 		if (value == "look-left")
 			return KnownRuntimePilotAction(PilotAction.LookLeft);
 		if (value == "mine")
@@ -428,6 +531,16 @@ final class RuntimePilotScript {
 			return KnownRuntimePilotExpectation(Generation);
 		if (value == "publications")
 			return KnownRuntimePilotExpectation(Publications);
+		if (value == "position")
+			return KnownRuntimePilotExpectation(Position);
+		if (value == "medium")
+			return KnownRuntimePilotExpectation(Medium);
+		if (value == "equipment")
+			return KnownRuntimePilotExpectation(Equipment);
+		if (value == "lanterns")
+			return KnownRuntimePilotExpectation(Lanterns);
+		if (value == "sand")
+			return KnownRuntimePilotExpectation(Sand);
 		return UnknownRuntimePilotExpectation;
 	}
 

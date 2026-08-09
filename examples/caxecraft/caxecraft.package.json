@@ -68,7 +68,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 958,
-      "sha256": "98a5a48b7776a0cb91bd7985282f5ba03c21d167540334247d0cdd7724c440cb"
+      "sha256": "bee1113a5f7dfec71076da4b738935cccca17b1343ca7d0ca71664b5dd0633ec"
     },
     {
       "kind": "localization",
@@ -91,8 +91,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 11074,
-      "sha256": "c9baf9ba154ed5347179dac190e885c327e95e76f18a9b32e3d3e3d41bd3fea9"
+      "byteLength": 11139,
+      "sha256": "48cff4b399effbf72d693b3daf7e1ce837452585bbed04c764d20b2a392c293f"
     },
     {
       "kind": "level",

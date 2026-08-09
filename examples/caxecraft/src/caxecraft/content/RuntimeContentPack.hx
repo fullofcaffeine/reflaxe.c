@@ -246,6 +246,10 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public function itemUseProfile(code:Int):RuntimeItemUseProfile
 		return isValidItemStorageCode(code) ? items[code].useProfile : NoItemUse;
 
+	/** Return the selected item's stable content ID, or an empty value for an invalid code. */
+	public function itemIdForStorageCode(code:Int):String
+		return isValidItemStorageCode(code) ? items[code].id : "";
+
 	/** Return the terrain storage code placed by this item, or `-1` when it places none. */
 	public function itemPlacementBlockStorageCode(code:Int):Int {
 		if (!isValidItemStorageCode(code))

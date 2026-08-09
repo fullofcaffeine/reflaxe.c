@@ -17,7 +17,9 @@ import caxecraft.domain.Character.withVitals as withCharacterVitals;
 import caxecraft.domain.PlayerAgent.bind as bindPlayerAgent;
 import caxecraft.domain.WaterCellCodec.isSolidCode as isSolidStorageCode;
 import caxecraft.gameplay.AuthoredItemSlots;
+import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryState;
+import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mining.attempt as attemptMining;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.MiningResult;
@@ -141,6 +143,19 @@ typedef LocalRecoveryResult = {
 typedef AuthoredAquaticEquipmentResult = {
 	final character:Character;
 	final collected:Bool;
+	final resolved:Bool;
+}
+
+/**
+	The result of moving one authored world item into the player inventory.
+
+	The operation collects the complete authored stack or leaves both owners
+	unchanged. `resolved` is false only for invalid input. A full inventory is a
+	valid no-op and returns zero in `collected`.
+**/
+typedef AuthoredInventoryItemResult = {
+	final inventory:InventoryState;
+	final collected:Int;
 	final resolved:Bool;
 }
 
@@ -785,6 +800,36 @@ final class GameSession {
 			character: committed.character,
 			collected: committed.resolved,
 			resolved: committed.resolved
+		};
+	}
+
+	/**
+		Move one complete authored stack into a bounded inventory.
+
+		The item flag changes only after the full quantity fits. This rule prevents a
+		world reward from disappearing when the inventory has insufficient space.
+	**/
+	public function collectAuthoredInventoryItem(index:Int, inventory:InventoryState, kind:ItemKind, quantity:Int):AuthoredInventoryItemResult {
+		if (index < 0 || index >= AuthoredItemSlots.CAPACITY || quantity <= 0 || quantity > Inventory.MAX_STACK) {
+			return {
+				inventory: inventory,
+				collected: 0,
+				resolved: false
+			};
+		}
+		if (!authoredItemIsActive(index) || Inventory.acceptedAmount(inventory, kind, quantity) != quantity) {
+			return {
+				inventory: inventory,
+				collected: 0,
+				resolved: true
+			};
+		}
+		final replacement = Inventory.collectItem(inventory, kind, quantity);
+		authoredItemStorage[index] = 0;
+		return {
+			inventory: replacement,
+			collected: quantity,
+			resolved: true
 		};
 	}
 

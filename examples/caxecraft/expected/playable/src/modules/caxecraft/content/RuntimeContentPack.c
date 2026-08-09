@@ -9298,6 +9298,45 @@ bool hxc_caxecraft_content_RuntimeContentPack_validatePair(struct hxc_caxecraft_
   return false;
 }
 
+int32_t hxc_caxecraft_content_RuntimeContentRegistry_blockStorageCode(struct hxc_caxecraft_content_RuntimeContentRegistry *hxc_l_self, hxc_string hxc_l_id)
+{
+  const void *hxc_l_gc_roots[5] = { (const void *)hxc_l_self, NULL, NULL, NULL, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 5, &hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  if (hxc_l_self == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeBlockDefinition *hxc_l_tmp_instance_call_result_n0 = hxc_caxecraft_content_RuntimeContentRegistry_findBlock(hxc_l_self, hxc_l_id);
+  hxc_l_gc_roots[1] = (const void *)hxc_l_tmp_instance_call_result_n0;
+  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeBlockDefinition *hxc_l_block = hxc_l_tmp_instance_call_result_n0;
+  hxc_l_gc_roots[2] = (const void *)hxc_l_block;
+  hxc_l_gc_roots[3] = (const void *)NULL;
+  if (!(hxc_l_block == NULL))
+  {
+    struct hxc_caxecraft_content_RuntimeContentPack_RuntimeBlockDefinition *hxc_l_tmp_load_result_n2 = hxc_l_block;
+    hxc_l_gc_roots[4] = (const void *)hxc_l_tmp_load_result_n2;
+    if (hxc_l_tmp_load_result_n2 == NULL)
+    {
+      abort();
+    }
+    int32_t hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_tmp_load_result_n2).hxc_storageCode;
+    if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return hxc_l_tmp_class_field_load_result_n3;
+  }
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return -1;
+}
+
 struct hxc_caxecraft_domain_AquaticProfile hxc_caxecraft_content_RuntimeContentRegistry_defaultAquaticProfile(struct hxc_caxecraft_content_RuntimeContentRegistry *hxc_l_self)
 {
   const void *hxc_l_gc_roots[5] = { (const void *)hxc_l_self, NULL, NULL, NULL, NULL };
@@ -10236,6 +10275,100 @@ struct hxc_caxecraft_domain_AquaticProfile hxc_caxecraft_content_RuntimeContentR
     abort();
   }
   return hxc_l_tmp_instance_call_result_n15;
+}
+
+int32_t hxc_caxecraft_content_RuntimeContentRegistry_itemPlacementBlockStorageCode(struct hxc_caxecraft_content_RuntimeContentRegistry *hxc_l_self, int32_t hxc_l_code)
+{
+  const void *hxc_l_gc_roots[9] = { (const void *)hxc_l_self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+  struct hxc_gc_root_frame hxc_l_gc_frame = HXC_GC_ROOT_FRAME_INITIALIZER;
+  if (hxc_gc_root_frame_push(&hxc_program_gc_thread, hxc_l_gc_roots, 9, &hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeReference *hxc_l_reference = { 0 };
+  bool hxc_l_tmp_short_circuit_result_n2 = hxc_l_code >= 0;
+  if (hxc_l_code >= 0)
+  {
+    if (hxc_l_self == NULL)
+    {
+      abort();
+    }
+    struct hxc_array_ref *hxc_l_tmp_class_field_load_result_n0 = (*hxc_l_self).hxc_items;
+    hxc_l_gc_roots[1] = (const void *)hxc_l_tmp_class_field_load_result_n0;
+    int32_t hxc_l_tmp_array_length_result_n1;
+    if (hxc_array_ref_length(hxc_l_tmp_class_field_load_result_n0, &hxc_l_tmp_array_length_result_n1) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    hxc_l_tmp_short_circuit_result_n2 = hxc_l_code < hxc_l_tmp_array_length_result_n1;
+  }
+  if (!hxc_l_tmp_short_circuit_result_n2)
+  {
+    if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+    {
+      abort();
+    }
+    return -1;
+  }
+  if (hxc_l_self == NULL)
+  {
+    abort();
+  }
+  struct hxc_array_ref *hxc_l_tmp_class_field_load_result_n3 = (*hxc_l_self).hxc_items;
+  hxc_l_gc_roots[2] = (const void *)hxc_l_tmp_class_field_load_result_n3;
+  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeItemDefinition *hxc_l_tmp_array_get_result_n4;
+  if (hxc_array_ref_get_copy(hxc_l_tmp_class_field_load_result_n3, (size_t)hxc_l_code, &hxc_l_tmp_array_get_result_n4) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  hxc_l_gc_roots[3] = (const void *)hxc_l_tmp_array_get_result_n4;
+  if (hxc_l_tmp_array_get_result_n4 == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference hxc_l_tmp_class_field_load_result_n5 = (*hxc_l_tmp_array_get_result_n4).hxc_placementBlock;
+  hxc_l_gc_roots[4] = hxc_l_tmp_class_field_load_result_n5.hxc_tag == hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference_RuntimeReferenceReady ? (const void *)hxc_l_tmp_class_field_load_result_n5.hxc_payload.hxc_RuntimeReferenceReady.hxc_reference : NULL;
+  struct hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference hxc_l_g = hxc_l_tmp_class_field_load_result_n5;
+  hxc_l_gc_roots[5] = hxc_l_g.hxc_tag == hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference_RuntimeReferenceReady ? (const void *)hxc_l_g.hxc_payload.hxc_RuntimeReferenceReady.hxc_reference : NULL;
+  switch (hxc_l_g.hxc_tag) {
+    case hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference_NoRuntimeReference:
+      {
+        break;
+      }
+    case hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference_RuntimeReferenceReady:
+      {
+        hxc_l_gc_roots[6] = hxc_l_g.hxc_tag == hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference_RuntimeReferenceReady ? (const void *)hxc_l_g.hxc_payload.hxc_RuntimeReferenceReady.hxc_reference : NULL;
+        if (hxc_l_g.hxc_tag != hxc_caxecraft_content_RuntimeContentPack_RuntimeOptionalReference_RuntimeReferenceReady)
+        {
+          abort();
+        }
+        struct hxc_caxecraft_content_RuntimeContentPack_RuntimeReference *hxc_l_tmp_enum_payload_project_n8 = hxc_l_g.hxc_payload.hxc_RuntimeReferenceReady.hxc_reference;
+        hxc_l_gc_roots[7] = (const void *)hxc_l_tmp_enum_payload_project_n8;
+        hxc_l_reference = hxc_l_tmp_enum_payload_project_n8;
+        struct hxc_caxecraft_content_RuntimeContentPack_RuntimeReference *hxc_l_tmp_load_result_n9 = hxc_l_reference;
+        hxc_l_gc_roots[8] = (const void *)hxc_l_tmp_load_result_n9;
+        if (hxc_l_tmp_load_result_n9 == NULL)
+        {
+          abort();
+        }
+        hxc_string hxc_l_tmp_class_field_load_result_n10 = (*hxc_l_tmp_load_result_n9).hxc_id;
+        int32_t hxc_l_tmp_instance_call_result_n11 = hxc_caxecraft_content_RuntimeContentRegistry_blockStorageCode(hxc_l_self, hxc_l_tmp_class_field_load_result_n10);
+        if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+        {
+          abort();
+        }
+        return hxc_l_tmp_instance_call_result_n11;
+      }
+    default:
+      {
+        abort();
+      }
+  }
+  if (hxc_gc_root_frame_pop(&hxc_l_gc_frame) != HXC_STATUS_OK)
+  {
+    abort();
+  }
+  return -1;
 }
 
 struct hxc_caxecraft_content_RuntimePresentation *hxc_caxecraft_content_RuntimeContentRegistry_itemPresentation(struct hxc_caxecraft_content_RuntimeContentRegistry *hxc_l_self, int32_t hxc_l_code)

@@ -50,6 +50,20 @@ enum abstract PilotAction(Int) to Int {
 	var LookLeft = 21;
 	var ForwardRise = 22;
 	var Rise = 23;
+	var Backward = 24;
+	var Left = 25;
+	var Right = 26;
+	var TurnLeft = 27;
+	var TurnRight = 28;
+	var ForwardDescend = 29;
+	var Descend = 30;
+	var LookUp = 31;
+	var Jump = 32;
+	var BackwardJump = 33;
+	var LeftJump = 34;
+	var RightJump = 35;
+	var LeftDescend = 36;
+	var RightRise = 37;
 }
 
 /**
@@ -188,27 +202,36 @@ final class PilotScript {
 		final action = actionAt(name, frameNumber);
 		return GameInputFrames.make(moveForward(action), moveRight(action), lookYaw(action), lookPitch(action), jumpPressed(action), primaryPressed(action),
 			secondaryPressed(action), interactPressed(action), travelPressed(action), pausePressed(action), capturePressed(action), quitPressed(action),
-			hotbarSelection(action), hotbarCycle(action), false, menuNextPressed(action), menuConfirmPressed(action), riseHeld(action));
+			hotbarSelection(action), hotbarCycle(action), descendHeld(action), menuNextPressed(action), menuConfirmPressed(action), riseHeld(action));
 	}
 
 	public static inline function moveForward(action:PilotAction):Float
-		return action == Forward || action == ForwardTurn || action == ForwardJump || action == ForwardLeft || action == ForwardRise ? 1.0 : 0.0;
+		return action == Backward
+			|| action == BackwardJump ? -1.0 : action == Forward || action == ForwardTurn || action == ForwardJump || action == ForwardLeft
+			|| action == ForwardRise || action == ForwardDescend ? 1.0 : 0.0;
 
 	public static inline function moveRight(action:PilotAction):Float
-		return action == RightLook ? 1.0 : action == ForwardLeft ? -1.0 : 0.0;
+		return action == RightLook
+			|| action == Right
+			|| action == RightJump
+			|| action == RightRise ? 1.0 : action == ForwardLeft || action == Left || action == LeftJump || action == LeftDescend ? -1.0 : 0.0;
 
 	public static inline function lookYaw(action:PilotAction):Float
-		return action == LookLeft ? 0.25 : action == ForwardTurn ? -0.05 : 0.0;
+		return action == LookLeft ? 0.25 : action == TurnLeft ? 0.05 : action == ForwardTurn || action == TurnRight ? -0.05 : 0.0;
 
 	public static inline function lookPitch(action:PilotAction):Float
-		return action == RightLook ? 0.04 : action == LookDown ? -0.25 : action == LookLeft ? -0.08 : 0.0;
+		return action == LookUp ? 0.25 : action == RightLook ? 0.04 : action == LookDown ? -0.25 : action == LookLeft ? -0.08 : 0.0;
 
 	public static inline function jumpPressed(action:PilotAction):Bool
-		return action == ForwardJump;
+		return action == ForwardJump || action == BackwardJump || action == LeftJump || action == RightJump || action == Jump;
 
 	/** Hold the same upward-swim intent supplied by interactive Space input. */
 	public static inline function riseHeld(action:PilotAction):Bool
-		return action == ForwardRise || action == Rise;
+		return action == ForwardRise || action == RightRise || action == Rise;
+
+	/** Hold the same downward-swim intent supplied by interactive Shift input. */
+	public static inline function descendHeld(action:PilotAction):Bool
+		return action == ForwardDescend || action == LeftDescend || action == Descend;
 
 	public static inline function primaryPressed(action:PilotAction):Bool
 		return action == Mine || action == Strike;

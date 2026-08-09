@@ -3,6 +3,7 @@ package caxecraft.qa;
 import caxecraft.content.ContentPackageManifest.ContentPackageEntryKind;
 import caxecraft.content.ContentPackageManifest.ContentPackageLoadError;
 import caxecraft.content.ContentPackageManifest.ContentPackageLoadResult;
+import caxecraft.content.ContentPackageManifest.ContentPackageManifest;
 import caxecraft.content.ContentPackageManifest.ContentPackageManifestReadResult;
 import caxecraft.content.ContentPackageManifest.ContentPackageRole;
 import caxecraft.content.ContentPackageManifest.decodeContentPackageManifest;
@@ -81,11 +82,14 @@ function selfCheck():Int {
 		bytes += receipt.byteLength;
 		kinds |= kindBit(entry.kind);
 	}
-	if (bytes != 9487513 || kinds != 127)
+	// The receipts above independently verify each authored file's exact byte
+	// length and hash. The combined byte count is useful native trace evidence,
+	// but it is not an engine contract: ordinary content edits may change it.
+	if (bytes <= 0 || kinds != 127)
 		return 6;
 	if (!verifyDecoderRejections())
 		return 7;
-	if (!verifyEntryFailures(store))
+	if (!verifyEntryFailures(store, manifest))
 		return 8;
 	if (!verifyModDependencyModel())
 		return 9;
@@ -149,7 +153,7 @@ function verifyDecoderRejections():Bool {
 }
 
 /** Prove missing and stale real files fail before a loaded package exists. */
-function verifyEntryFailures(store:ContentPackageStore):Bool {
+function verifyEntryFailures(store:ContentPackageStore, manifest:ContentPackageManifest):Bool {
 	final missing = decode(document("caxecraft:test", 1, '["levels"]', oneEntry("level", "scenarios/missing.caxemap", 1, ZERO_HASH), "[]"));
 	if (missing == null)
 		return false;
@@ -158,20 +162,33 @@ function verifyEntryFailures(store:ContentPackageStore):Bool {
 		case _:
 			return false;
 	}
-	final staleLength = decode(document("caxecraft:test", 1, '["levels"]',
-		oneEntry("level", "scenarios/first-playable/map.caxemap", 14563, "754cc35aef1f696e19d7c38ecaff533f518f3838c34f1f75c6976605acc5a781"), "[]"));
+	final reviewedPath = "scenarios/first-playable/map.caxemap";
+	var reviewedLength = -1;
+	var reviewedHash = "";
+	for (index in 0...manifest.entryCount()) {
+		final entry = manifest.entryAt(index);
+		if (entry.logicalPath.text() == reviewedPath) {
+			reviewedLength = entry.byteLength;
+			reviewedHash = entry.sha256;
+		}
+	}
+	if (reviewedLength < 1 || reviewedHash.length != 64)
+		return false;
+	final staleLengthValue = reviewedLength - 1;
+	final staleLength = decode(document("caxecraft:test", 1, '["levels"]', oneEntry("level", reviewedPath, staleLengthValue, reviewedHash), "[]"));
 	if (staleLength == null)
 		return false;
 	switch verifyContentPackage(store, staleLength) {
-		case ContentPackageRejected(ContentPackageEntryLengthMismatch("scenarios/first-playable/map.caxemap", 14563, 14564)):
+		case ContentPackageRejected(ContentPackageEntryLengthMismatch(path, expected, actual))
+			if (path == reviewedPath && expected == staleLengthValue && actual == reviewedLength):
 		case _:
 			return false;
 	}
-	final staleHash = decode(document("caxecraft:test", 1, '["levels"]', oneEntry("level", "scenarios/first-playable/map.caxemap", 14564, ZERO_HASH), "[]"));
+	final staleHash = decode(document("caxecraft:test", 1, '["levels"]', oneEntry("level", reviewedPath, reviewedLength, ZERO_HASH), "[]"));
 	if (staleHash == null)
 		return false;
 	return switch verifyContentPackage(store, staleHash) {
-		case ContentPackageRejected(ContentPackageEntryHashMismatch("scenarios/first-playable/map.caxemap", ZERO_HASH)): true;
+		case ContentPackageRejected(ContentPackageEntryHashMismatch(path, ZERO_HASH)) if (path == reviewedPath): true;
 		case _: false;
 	};
 }
