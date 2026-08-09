@@ -537,7 +537,7 @@ def check_runtime_campaign_staging_boundary() -> None:
         "scenarios/first-adventure/western-falls.caxemap",
         "scenarios/first-playable/map.caxemap",
     }
-    staged = set(playable.RUNTIME_CONTENT_FILES)
+    staged = set(playable.runtime_content_files(CASE))
     if not required <= staged:
         raise PilotFailure(
             "runtime campaign staging lost " + ", ".join(sorted(required - staged))

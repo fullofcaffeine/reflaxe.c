@@ -34,6 +34,7 @@ from play import (  # noqa: E402
     main as play_main,
     parse_args,
     play_build_inputs,
+    runtime_content_files,
     stage_content_catalogs,
     tool_identity,
     validate_content_platform_output,
@@ -200,12 +201,10 @@ class CaxecraftBuildStateTests(unittest.TestCase):
     def test_alternate_runtime_content_is_staged_from_its_exact_source_bytes(self) -> None:
         source_root = self.root / "content-source"
         for relative in (
-            "assets/manifest.json",
             "campaigns/first-adventure/campaign.json",
             "locales/ui.json",
             "packs/caxecraft/base/content.json",
             "packs/caxecraft/base/runtime-content.json",
-            "pilots/active.piloscript",
             "scenarios/first-adventure/western-falls.caxemap",
             "scenarios/first-playable/map.caxemap",
         ):
@@ -213,6 +212,26 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             target = source_root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, target)
+        alternate_level = source_root / "scenarios/alternate.caxemap"
+        alternate_level.write_bytes(
+            (source_root / "scenarios/first-adventure/western-falls.caxemap").read_bytes()
+        )
+        selected_pilot = source_root / "pilots/selected.piloscript"
+        selected_pilot.parent.mkdir(parents=True)
+        selected_pilot.write_text("PILOSCRIPT 1\nname selected\nframes 1\nend\n", encoding="utf-8")
+        entries = [
+            {"kind": "campaign", "path": "campaigns/first-adventure/campaign.json"},
+            {"kind": "localization", "path": "locales/ui.json"},
+            {"kind": "content-pack", "path": "packs/caxecraft/base/content.json"},
+            {"kind": "runtime-content", "path": "packs/caxecraft/base/runtime-content.json"},
+            {"kind": "level", "path": "scenarios/alternate.caxemap"},
+            {"kind": "level", "path": "scenarios/first-adventure/western-falls.caxemap"},
+            {"kind": "level", "path": "scenarios/first-playable/map.caxemap"},
+        ]
+        (source_root / "caxecraft.package.json").write_text(
+            json.dumps({"entries": entries}) + "\n",
+            encoding="utf-8",
+        )
         (self.output_root / ".hxc-caxecraft-play-root.json").write_text(
             json.dumps({"kind": "caxecraft-play-output", "schemaVersion": 1}) + "\n",
             encoding="utf-8",
@@ -220,11 +239,19 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         published = stage_content_catalogs(
             self.executable.parent,
             source_root=source_root,
+            runtime_pilot="pilots/selected.piloscript",
         )
         self.assertIsNone(published)
         self.assertEqual(
             (self.executable.parent / "content/locales/ui.json").read_bytes(),
             (source_root / "locales/ui.json").read_bytes(),
+        )
+        self.assertEqual(
+            (
+                self.executable.parent
+                / "content/scenarios/alternate.caxemap"
+            ).read_bytes(),
+            (source_root / "scenarios/alternate.caxemap").read_bytes(),
         )
         self.assertEqual(
             (
@@ -235,12 +262,49 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         )
         self.assertEqual(
             (self.executable.parent / "content/pilots/active.piloscript").read_bytes(),
-            (source_root / "pilots/active.piloscript").read_bytes(),
+            (source_root / "pilots/selected.piloscript").read_bytes(),
         )
         self.assertEqual(
             (self.executable.parent / "content/packs/caxecraft/base/runtime-content.json").read_bytes(),
             (source_root / "packs/caxecraft/base/runtime-content.json").read_bytes(),
         )
+
+    def test_runtime_content_manifest_selection_fails_closed(self) -> None:
+        source_root = self.root / "manifest-source"
+        source_root.mkdir()
+        manifest = source_root / "caxecraft.package.json"
+
+        def publish(entries: object) -> None:
+            manifest.write_text(json.dumps({"entries": entries}) + "\n", encoding="utf-8")
+
+        publish(
+            [
+                {"kind": "asset", "path": "assets/terrain.png"},
+                {"kind": "level", "path": "scenarios/frostmere.caxemap"},
+            ]
+        )
+        self.assertEqual(
+            runtime_content_files(source_root),
+            ("scenarios/frostmere.caxemap", "pilots/active.piloscript"),
+        )
+
+        rejected = (
+            ("not-an-array", "entries must be an array"),
+            ([{"kind": "level", "path": "../escape.caxemap"}], "normalized relative path"),
+            (
+                [
+                    {"kind": "level", "path": "scenarios/a.caxemap"},
+                    {"kind": "level", "path": "scenarios/a.caxemap"},
+                ],
+                "repeats path",
+            ),
+            ([{"kind": "unknown", "path": "scenarios/a.caxemap"}], "unknown kind"),
+        )
+        for entries, message in rejected:
+            publish(entries)
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(PlayFailure, message):
+                    runtime_content_files(source_root)
 
     def test_windows_generation_selects_typed_unsupported_package_capability(
         self,

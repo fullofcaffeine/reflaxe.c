@@ -188,15 +188,11 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "string-map",
     "string-split",
 )
-RUNTIME_CONTENT_FILES = (
-    "campaigns/first-adventure/campaign.json",
-    "locales/ui.json",
-    "packs/caxecraft/base/content.json",
-    "pilots/active.piloscript",
-    "scenarios/first-adventure/western-falls.caxemap",
-    "scenarios/first-playable/map.caxemap",
+RUNTIME_CONTENT_ENTRY_KINDS = frozenset(
+    ("campaign", "content-pack", "level", "localization", "runtime-content")
 )
-RUNTIME_CONTENT_REPORT = "packs/caxecraft/base/runtime-content.json"
+RUNTIME_ASSET_ENTRY_KINDS = frozenset(("asset", "asset-manifest"))
+RUNTIME_LAUNCHER_FILES = ("pilots/active.piloscript",)
 
 
 def remove_owned_stale_stage_files(
@@ -545,6 +541,7 @@ def stage_content_catalogs(
     destination: Path,
     *,
     source_root: Path = CASE,
+    runtime_pilot: str = "pilots/active.piloscript",
 ) -> None:
     """Publish the exact authored content tree consumed beside the executable.
 
@@ -553,8 +550,9 @@ def stage_content_catalogs(
     bytes are runtime inputs and are deliberately absent from the compile key.
     """
 
+    runtime_files = runtime_content_files(source_root)
     stage_root = destination / "content"
-    expected = {*RUNTIME_CONTENT_FILES, RUNTIME_CONTENT_REPORT}
+    expected = set(runtime_files)
     if stage_root.exists() or stage_root.is_symlink():
         if stage_root.is_symlink() or not stage_root.is_dir():
             raise PlayFailure("Caxecraft staged content root is not a real directory")
@@ -572,17 +570,73 @@ def stage_content_catalogs(
                 unexpected,
                 unowned_error=f"unowned files occupy the Caxecraft staged content root: {unexpected}",
             )
-    for raw_path in (*RUNTIME_CONTENT_FILES, RUNTIME_CONTENT_REPORT):
+    pilot_relative = validated_relative(runtime_pilot, "selected runtime Piloscript")
+    if pilot_relative.suffix != ".piloscript":
+        raise PlayFailure("selected runtime Piloscript must use the .piloscript suffix")
+    for raw_path in runtime_files:
         relative = validated_relative(raw_path, f"runtime content {raw_path}")
-        source = source_root.joinpath(*relative.parts)
+        source_relative = (
+            pilot_relative
+            if raw_path == "pilots/active.piloscript"
+            else relative
+        )
+        source = source_root.joinpath(*source_relative.parts)
         if source.is_symlink() or not source.is_file():
-            raise PlayFailure(f"Caxecraft runtime content is missing or a symlink: {raw_path}")
+            raise PlayFailure(
+                "Caxecraft runtime content is missing or a symlink: "
+                f"{source_relative.as_posix()}"
+            )
         target = prepare_stage_destination(
             stage_root,
             relative,
             f"Caxecraft runtime content {raw_path}",
         )
         shutil.copyfile(source, target)
+
+
+def runtime_content_files(source_root: Path = CASE) -> tuple[str, ...]:
+    """Select staged package files without interpreting their game semantics.
+
+    The Haxe package decoder remains the authority for IDs, roles, receipts,
+    and cross-file meaning. This host adapter reads only the manifest entry
+    kind and normalized path needed to copy every runtime-owned file beside the
+    executable. Assets keep their separate staged owner, while Piloscript is a
+    launcher input outside the distributable package.
+    """
+
+    manifest_path = source_root / "caxecraft.package.json"
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise PlayFailure("Caxecraft package manifest is missing or a symlink")
+    try:
+        document = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise PlayFailure(f"Caxecraft package manifest cannot be read: {error}") from error
+    if not isinstance(document, dict) or not isinstance(document.get("entries"), list):
+        raise PlayFailure("Caxecraft package manifest entries must be an array")
+
+    selected: list[str] = []
+    seen: set[str] = set()
+    for index, entry in enumerate(document["entries"]):
+        if not isinstance(entry, dict):
+            raise PlayFailure(f"Caxecraft package manifest entry {index} must be an object")
+        kind = entry.get("kind")
+        raw_path = entry.get("path")
+        if not isinstance(kind, str) or not isinstance(raw_path, str):
+            raise PlayFailure(f"Caxecraft package manifest entry {index} needs string kind and path")
+        validated_relative(raw_path, f"Caxecraft package entry {index}")
+        if raw_path in seen:
+            raise PlayFailure(f"Caxecraft package manifest repeats path {raw_path}")
+        seen.add(raw_path)
+        if kind in RUNTIME_CONTENT_ENTRY_KINDS:
+            selected.append(raw_path)
+        elif kind not in RUNTIME_ASSET_ENTRY_KINDS:
+            raise PlayFailure(f"Caxecraft package manifest entry {index} has unknown kind {kind!r}")
+
+    for raw_path in RUNTIME_LAUNCHER_FILES:
+        if raw_path in seen:
+            raise PlayFailure(f"launcher runtime path collides with package entry {raw_path}")
+        selected.append(raw_path)
+    return tuple(selected)
 
 
 def development_tool(name: str) -> str:
@@ -781,6 +835,7 @@ def validate_smoke_screenshot(
     expected_inventory_full: bool = False,
     expected_entities: bool = False,
     expected_open_sky: bool = True,
+    expected_green_terrain: bool = True,
 ) -> tuple[int, int]:
     """Prove the captured title frame contains staged art and readable UI."""
     width, height, pixels = decode_rgba_png(path, "smoke")
@@ -879,7 +934,7 @@ def validate_smoke_screenshot(
         # evidence; a first-person camera is allowed to look away from the sun.
         or (expected_open_sky and sky_scene_pixels < width * height // 5)
         or (expected_open_sky and sun_scene_pixels < 1_000)
-        or green_scene_pixels < width * height // 20
+        or (expected_green_terrain and green_scene_pixels < width * height // 20)
         or dark_panel_pixels < 2_000
         or light_ui_pixels < 250
         or len(quantized_colors) < 120
@@ -1303,8 +1358,9 @@ def validate_presented_screenshot(
     expected_inventory_full: bool = False,
     expected_entities: bool = False,
     expected_open_sky: bool = True,
+    expected_green_terrain: bool = True,
 ) -> tuple[int, int]:
-    """Require a real, nonblank presented frame without prescribing its scene."""
+    """Require a real, nonblank frame with only caller-owned scene assumptions."""
 
     return validate_smoke_screenshot(
         path,
@@ -1316,6 +1372,7 @@ def validate_presented_screenshot(
         expected_inventory_full=expected_inventory_full,
         expected_entities=expected_entities,
         expected_open_sky=expected_open_sky,
+        expected_green_terrain=expected_green_terrain,
     )
 
 
@@ -3074,6 +3131,9 @@ def run_pilot_sample(
             # still requires varied terrain, the HUD, and a nonblank scene.
             expected_open_sky=pilot
             not in ("move-jump-edit", "adventure-journey"),
+            # Runtime journeys can validly present snow, ash, desert, caves, or
+            # modded terrain. Their script owns the level-specific expectation.
+            expected_green_terrain=pilot != "adventure-journey",
         )
     screenshot_hash = hashlib.sha256(screenshot.read_bytes()).hexdigest()
     state_screenshot.unlink()
@@ -3140,7 +3200,7 @@ def run_content_feedback(
                 "content feedback refused compiler or linker fallback; rebuild deliberately first: "
                 + decision.reason
             )
-        stage_content_catalogs(executable.parent)
+        stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
         print(
             "caxecraft: content-feedback reused the verified executable and restaged current runtime bytes"
         )
@@ -3209,6 +3269,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--pilot",
         choices=PILOT_NAMES,
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
+    )
+    parser.add_argument(
+        "--piloscript",
+        default="pilots/active.piloscript",
+        help=(
+            "repository-relative Piloscript staged for --pilot adventure-journey; "
+            "changing it does not rebuild the executable"
+        ),
     )
     parser.add_argument("--allow-network", action="store_true", help="allow the first checksum-pinned Raylib and Raygui archive downloads")
     parser.add_argument("--authority", choices=("pinned-source", "offline-source"), default="pinned-source")
@@ -3347,6 +3415,8 @@ def main(argv: list[str]) -> int:
             if args.smoke or (args.content_feedback and args.validate_only)
             else args.pilot
         )
+        if args.piloscript != "pilots/active.piloscript" and selected_pilot != "adventure-journey":
+            raise PlayFailure("--piloscript requires --pilot adventure-journey")
         if args.smoke and args.pilot is not None:
             raise PlayFailure("--smoke is the launch-smoke pilot alias and cannot be combined with --pilot")
         if (args.smoke or args.pilot is not None) and (args.check_snapshots or args.compile_only or args.build_only):
@@ -3462,7 +3532,7 @@ def main(argv: list[str]) -> int:
                     generation_miss = str(error)
                 validation_ms = (time.monotonic() - validation_started) * 1000.0
                 if decision is not None and decision.hit:
-                    stage_content_catalogs(executable.parent)
+                    stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
                     total_ms = snapshot_ms + validation_ms
                     print(
                         "caxecraft: unchanged build hit; reused generated C, native executable, "
@@ -3611,7 +3681,7 @@ def main(argv: list[str]) -> int:
             f"link {'hit' if native_result.link_hit else 'miss'}"
         )
         stage_runtime_assets(executable.parent)
-        stage_content_catalogs(executable.parent)
+        stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
         print(f"caxecraft: built native executable at {executable}")
         if requested_snapshot is not None:
             final_snapshot = play_request_snapshot(
