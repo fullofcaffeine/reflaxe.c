@@ -250,7 +250,6 @@
       "include/hxc/modules/caxecraft/editor/EditorWorldViewport.h",
       "include/hxc/modules/caxecraft/gameplay/BerryDrop.h",
       "include/hxc/modules/caxecraft/gameplay/BerryDropState.h",
-      "include/hxc/modules/caxecraft/gameplay/GuidePhase.h",
       "include/hxc/modules/caxecraft/gameplay/Inventory.h",
       "include/hxc/modules/caxecraft/gameplay/InventoryState.h",
       "include/hxc/modules/caxecraft/gameplay/ItemKind.h",
@@ -495,7 +494,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "3414bdab0706f1a460a2626a6ac674cc4a1cf6705018c03a8cc0c7af4a6819ce",
+      "sha256": "904362abb6837e918a5d34e0db3cebdc68514dd1142b77605e15a259b9839424",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -505,12 +504,12 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "1b9b3b552e9a7a45829f1c82db326942c61459207c72604e27c1fdb09f58572e",
+      "sha256": "bec24275d6f06a64ba526d8df88168778f1953d3c1c43f646fa5412e6bcaaf44",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
     {
-      "sha256": "13cc8d7e5c9a76dacb1acbb267691ec957586d407a08282edc482a1f8e4b4c54",
+      "sha256": "67d2cacddc6f15b787e7af04d9ef8cb30b6d2ba11169cf706a1f7c922b6bfa3e",
       "path": "hxc.specializations.json",
       "kind": "specialization-report"
     },
@@ -520,12 +519,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "93867cbb02becd75a0cab1f901cd0918062d3efcc723546e8189fbaa7133bac0",
+      "sha256": "1fd2849e66986a442ff5e8155f3bb8b06880c5faa76092e8ea135f703f92a603",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "ea1357b299f5550a7cf9e8ff654d76c7f56af802360059edece3d02d5c25e4d9",
+      "sha256": "041ccc2946259e7ce980c055bfe7cc13dbe221e1f925a358f923fb3fa5d0bf0d",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -535,7 +534,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "57b3e2fec6c96a9c1c3c532eb78c93476ddd574967ab40a6fbbef0b18171051c",
+      "sha256": "8a790429e1bdc02313c3896de583ec5628c218d668c990004f1b55b6125d46a7",
       "path": "include/hxc/modules/caxecraft/app/ActivePlayableLevel.h",
       "kind": "private-header"
     },
@@ -555,12 +554,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "022db579a8a570da02c421b9570c8d2c9236f8fbb6e78276aa44967c10aae352",
+      "sha256": "b3a9c54ac64d61d4ec87645a5fb8c96d0cf09b1c37989a4367508fdfac58e021",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftApp.h",
       "kind": "private-header"
     },
     {
-      "sha256": "d1a64d7eb198a7be7ca70cb8130cc11d9aa419d2f5e8b8c80e58abb3034ed886",
+      "sha256": "9b07d3f385ac2f43b44e2f4b9b7986cbd5a68240bcb90a077626ec78063fe742",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
       "kind": "private-header"
     },
@@ -585,7 +584,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "b1e59dc8cf6df01d44df1752e9b5f7c6d8e1357bf2c3b826ef2b45aacd98866d",
+      "sha256": "763cb5ff5514decd52451c9938b934009cb176ec62daf6074cc7f66b6936f925",
       "path": "include/hxc/modules/caxecraft/app/HudView.h",
       "kind": "private-header"
     },
@@ -730,17 +729,17 @@
       "kind": "private-header"
     },
     {
-      "sha256": "c65a85815b648f9563ba0d67ae3bb5fa28ff392bd356519a3c5e96388accb65e",
+      "sha256": "e6b08cf44f797cdade4e1fa14d053416c0ac62eac7e9b8a7c8ad3e8543e96d9d",
       "path": "include/hxc/modules/caxecraft/content/LevelContentResolver.h",
       "kind": "private-header"
     },
     {
-      "sha256": "69b924a8ad7b5f4f3b91b280aa66df723abc61e9e079f0248110db97dea6db5e",
+      "sha256": "d67357e3b0987d7cc13ba246ac2a1a4126162c8a0bc1bc832d34d7aaa2d21b6d",
       "path": "include/hxc/modules/caxecraft/content/LoadedContentGeneration.h",
       "kind": "private-header"
     },
     {
-      "sha256": "0a373ffdafb89f0a443ba63d068ada93b1ad0d64508c830e095445e7f8a2a409",
+      "sha256": "2ed7bfdaea8a6e7099932f94fbca22ba6e36e87d03f438d3d547bcad6cd8ad57",
       "path": "include/hxc/modules/caxecraft/content/ResolvedLevelPlan.h",
       "kind": "private-header"
     },
@@ -760,7 +759,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "918643ecaccf2d02e08eaad575d57e2556da3d6cc984c5f29d293b73bee4e709",
+      "sha256": "eb5b3cff16e6a0628c0761267c89564f4c3c819130534798a40938ad725ea770",
       "path": "include/hxc/modules/caxecraft/content/RuntimeContentPack.h",
       "kind": "private-header"
     },
@@ -770,7 +769,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "e27009e5898cf16c57dc8b3b5275581274afdc3f92d8dd5454d311cb5db52cdc",
+      "sha256": "ae80272a56573dc909fee183a8190e96a0310e05685a3b89eed9a482a6d65a36",
       "path": "include/hxc/modules/caxecraft/content/RuntimeLevelLoader.h",
       "kind": "private-header"
     },
@@ -1057,11 +1056,6 @@
     {
       "sha256": "81db6d7d6769ba281ca8071b4b2f42ac846662523f987fb72f977ca73ca7e067",
       "path": "include/hxc/modules/caxecraft/gameplay/BerryDropState.h",
-      "kind": "private-header"
-    },
-    {
-      "sha256": "d48846e1942aae657ccba1bc190d1307612d5d4104b18cea556e4c98fbde2ca8",
-      "path": "include/hxc/modules/caxecraft/gameplay/GuidePhase.h",
       "kind": "private-header"
     },
     {
@@ -1370,7 +1364,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "42f07273579e4851fa988783a686993172e608d74aad4db1465e560e0010b367",
+      "sha256": "a9ed76f763c983c8a01db224f24416114271aea8fc5c4a7f9768a52c4aae516a",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
@@ -1535,7 +1529,7 @@
       "kind": "source"
     },
     {
-      "sha256": "962c388cef8f83c09a33290b8a4f9f244b7a4b8939eb28069c5a958bdb152c07",
+      "sha256": "b157437f7aec5d4a3477f7f1a2476763158f767e05aca11b8de23fa76430d820",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -1545,7 +1539,7 @@
       "kind": "source"
     },
     {
-      "sha256": "b5a013ec95e7b6765e08c7abfd742c9becbf67235cd3c33b96b14f8210381074",
+      "sha256": "c07ddca5f4f70b91bd3be4b89117c5950a92fc0c1e5ffb539bc725480561f3c1",
       "path": "src/modules/caxecraft/app/ActivePlayableLevel.c",
       "kind": "source"
     },
@@ -1565,12 +1559,12 @@
       "kind": "source"
     },
     {
-      "sha256": "05e68e8f804cc684ccb7b7d89417fcd594365621f7e1ca0317c99aae1ad7bd27",
+      "sha256": "08de123c9d5e30ad5a5507e6aa4c4a5cc3c145b0a00dae71d9cef4fc3fdad3a7",
       "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
     {
-      "sha256": "b48852118199c6de38bd15d82bbd7498b1afd546cb4c50089cebcaa5c63ff82d",
+      "sha256": "d868ad1f37d54bbd85c11676de4ee1fedc770806c12f122c5e2b61107333874a",
       "path": "src/modules/caxecraft/app/CaxecraftAtlas.c",
       "kind": "source"
     },
@@ -1580,7 +1574,7 @@
       "kind": "source"
     },
     {
-      "sha256": "2f287d32e646039918b4b75d8a781e3d8d512d073bdf92aa3d33a3121f2fc465",
+      "sha256": "2559abd033529733f39a41f70864803de73231f4b8c942c3a283c73002ca3316",
       "path": "src/modules/caxecraft/app/GameplayMessage.c",
       "kind": "source"
     },
@@ -1720,12 +1714,12 @@
       "kind": "source"
     },
     {
-      "sha256": "750b76a5ef93e951d1900069da8ace68ddf0be7da22e3ebc30fb3f28b812a757",
+      "sha256": "c69f6b2b18a9f6fc6710576a86653b2e13931a0fb64120d7184efc9c35fdecfb",
       "path": "src/modules/caxecraft/content/LoadedContentGeneration.c",
       "kind": "source"
     },
     {
-      "sha256": "e2f824c45da1f1a7be1db6cc935542df9c266d8d68a06d5b90ed9bc94cfc019d",
+      "sha256": "b1a50e9c8ea39a33772edc32e2b2313acdbd628e33b149f5b0d80b388a3d5d17",
       "path": "src/modules/caxecraft/content/ResolvedLevelPlan.c",
       "kind": "source"
     },
@@ -1745,7 +1739,7 @@
       "kind": "source"
     },
     {
-      "sha256": "a19d5f302ccffb836857d7432a5c0681fe159837a16684e7cda2533451b95567",
+      "sha256": "d66dedaec8ec0d6f282600c559fbc8838d6c3b14274e404e28443e6e1b600344",
       "path": "src/modules/caxecraft/content/RuntimeContentPack.c",
       "kind": "source"
     },
@@ -1755,7 +1749,7 @@
       "kind": "source"
     },
     {
-      "sha256": "f3790ef7fe5f75e45220520b1403339ff9e926094da5cebb5b22c53743e8dd5e",
+      "sha256": "76f38ecf54cc377fc8d8446b6af9b1b6f8163299cb99b2124f9d723a7bf0b6bc",
       "path": "src/modules/caxecraft/content/RuntimeLevelLoader.c",
       "kind": "source"
     },

@@ -90,9 +90,6 @@ npm run caxecraft:play -- --pilot combat-drop
 # Start one heart below full, consume berries, prove recovery feedback, and quit.
 npm run caxecraft:play -- --pilot recovery-use
 
-# Fill the berry stack, ask Nia for her gift, prove it remains retryable, and quit.
-npm run caxecraft:play -- --pilot full-inventory-gift
-
 # Fill all block stacks, try to mine, prove the block is not discarded, and quit.
 npm run caxecraft:play -- --pilot full-inventory-mining
 
@@ -121,12 +118,12 @@ npm run caxecraft:play -- --pilot campaign-travel
 npm run caxecraft:play -- --pilot adventure-journey
 ```
 
-The twelve compiled script names are `LaunchSmoke`, `MoveJumpEdit`,
-`PauseRecapture`, `CombatDrop`, `RecoveryUse`, `FullInventoryGift`, and
-`FullInventoryMining`, plus `ResizeLayout`, `AquaticGear`, `SmoothMotion`, and
-`EditorShell` and `CampaignTravel`. The `adventure-journey` content journey
-loads [`active.piloscript`](../examples/caxecraft/pilots/active.piloscript) at
-runtime.
+The compiled scripts are `LaunchSmoke`, `MoveJumpEdit`, `PauseRecapture`,
+`CombatDrop`, `RecoveryUse`, `FullInventoryMining`, `ResizeLayout`,
+`AquaticGear`, `SmoothMotion`, `EditorShell`, and `CampaignTravel`.
+`secondary-locale` reuses `LaunchSmoke` with a different locale. The
+`adventure-journey` content journey loads
+[`active.piloscript`](../examples/caxecraft/pilots/active.piloscript) at runtime.
 Each compiled engine pilot has a fixed frame limit at or below 150. The
 reloadable content journey may declare up to 400 frames so it can cover a real
 chapter route without compiling campaign steps into Haxe. Its final and every

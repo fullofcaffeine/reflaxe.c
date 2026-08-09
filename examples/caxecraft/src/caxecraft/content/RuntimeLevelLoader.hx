@@ -21,6 +21,8 @@ import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
+import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
+import caxecraft.scenario.ScenarioStory.ScenarioDialogueLine;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.ScenarioContentRegistry;
@@ -154,6 +156,7 @@ typedef RuntimeLevelAuthoredTrace = {
 final class RuntimeLevelPresentation {
 	final messages:ScenarioMessages;
 	final title:ScenarioText;
+	final dialogues:Array<ScenarioDialogue>;
 	final objectives:Array<ScenarioObjective>;
 	final startingObjective:Null<ScenarioId>;
 
@@ -161,6 +164,13 @@ final class RuntimeLevelPresentation {
 	private function new(scenario:Scenario) {
 		messages = scenario.messages;
 		title = scenario.title;
+		dialogues = [];
+		for (dialogue in scenario.story.dialogues) {
+			final lines:Array<ScenarioDialogueLine> = [];
+			for (line in dialogue.lines)
+				lines.push({speaker: line.speaker, text: line.text});
+			dialogues.push({id: dialogue.id, lines: lines});
+		}
 		objectives = [];
 		var selected:Null<ScenarioId> = null;
 		for (objective in scenario.story.objectives) {
@@ -207,6 +217,24 @@ final class RuntimeLevelPresentation {
 	/** Return the first objective that starts active, or null when none does. */
 	public inline function initialObjectiveId():Null<ScenarioId>
 		return startingObjective;
+
+	/**
+	 * Resolve one authored dialogue line, or empty text when it is unavailable.
+	 *
+	 * The active level owns the validated dialogue records and locale catalog as
+	 * one immutable presentation value. The HUD can therefore respond to a
+	 * `DialogueRequested` event without knowing which NPC, campaign, or source
+	 * file supplied the text. This first playable slice presents one line; a
+	 * later conversation UI can use the same stable ID with an explicit cursor.
+	 */
+	public function dialogueLine(id:ScenarioId, lineIndex:Int, locale:LocaleId):String {
+		if (lineIndex < 0)
+			return "";
+		for (dialogue in dialogues)
+			if (dialogue.id.text() == id.text())
+				return lineIndex < dialogue.lines.length ? resolve(dialogue.lines[lineIndex].text, locale) : "";
+		return "";
+	}
 
 	/** Resolve one validated objective title by stable authored identity. */
 	public function objectiveTitle(id:Null<ScenarioId>, locale:LocaleId):String {

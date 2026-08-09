@@ -38,6 +38,9 @@ enum abstract RuntimePilotExpectationKind(Int) to Int {
 
 	/** Number of mined sand blocks in the bounded inventory. */
 	var Sand = 10;
+
+	/** Stable ID of the authored dialogue currently shown, or `none`. */
+	var Dialogue = 11;
 }
 
 /** One source-located expectation owned by a runtime Piloscript file. */
@@ -76,6 +79,9 @@ typedef RuntimePilotObservation = {
 
 	/** Active objective ID supplied by runtime level content. */
 	final objective:String;
+
+	/** Authored dialogue ID selected by the latest CaxeFlow presentation event. */
+	final dialogue:String;
 
 	/** Active generation sequence supplied by `ActivePlayableLevel`. */
 	final generation:Int;
@@ -398,6 +404,8 @@ final class RuntimePilotScript {
 			return observation.level;
 		if (kind == Objective)
 			return observation.objective;
+		if (kind == Dialogue)
+			return observation.dialogue;
 		if (kind == Generation)
 			return Std.string(observation.generation);
 		if (kind == Publications)
@@ -423,6 +431,8 @@ final class RuntimePilotScript {
 			return "level";
 		if (kind == Objective)
 			return "objective";
+		if (kind == Dialogue)
+			return "dialogue";
 		if (kind == Generation)
 			return "generation";
 		if (kind == Publications)
@@ -527,6 +537,8 @@ final class RuntimePilotScript {
 			return KnownRuntimePilotExpectation(Level);
 		if (value == "objective")
 			return KnownRuntimePilotExpectation(Objective);
+		if (value == "dialogue")
+			return KnownRuntimePilotExpectation(Dialogue);
 		if (value == "generation")
 			return KnownRuntimePilotExpectation(Generation);
 		if (value == "publications")

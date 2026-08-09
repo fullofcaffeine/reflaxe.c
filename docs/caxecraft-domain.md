@@ -461,13 +461,16 @@ validated placements; `ActorCompositionPlanner` and `ActorPublication` resolve
 and publish them through the selected content registry; and `GameSession`
 advances their controllers in authored order. `CaxecraftApp` consumes typed
 controller events and read-only character observations rather than owning
-separate `GuideNpc` or `Mossling` movement state.
+separate character-specific movement state. Generic interaction observations
+now enter CaxeFlow, which selects authored dialogue IDs for the active level;
+the HUD resolves the selected text without knowing the actor's name.
 
 The surrounding level bridge remains first-playable-specific and build-time.
 `haxe_c-xge.20.4.3.6` removes it after native package loading is proven.
-Inventory setup, dialogue progression, weapons, effects, and HUD copy still
-have first-playable-specific seams; their owning CaxeFlow/content migrations
-remain separate work rather than hidden inside the controller scheduler.
+Inventory setup, multi-line dialogue progression, weapons, effects, and some
+HUD copy still have first-playable-specific seams; their owning
+CaxeFlow/content migrations remain separate work rather than hidden inside the
+controller scheduler.
 
 ### Array representation and allocation
 
@@ -586,7 +589,7 @@ does not authorize a mechanical repository-wide rewrite.
 | Classification | Current types | Reason |
 | --- | --- | --- |
 | Migrated | `Recovery`, `Mining`, `BerryDrop`, `SwordCombat`, `CharacterPhysics`, `Aquatics`, `Character`, `Vitals`, `EditorCommandReducer`, `EditorPolicy`, `EditorScenarioFactory`, `EditorScenarioSnapshot`, and `EditorWorldGrid` | Stateless gameplay, domain, and editor operations with stable module-shaped call sites; the character and sword slices also have real non-player consumers. The editor modules keep their result types beside the functions while `EditorSession` remains the supported stateful boundary. |
-| Migrate by ownership slice | `CaxecraftAtlas`, `CaxecraftPalette`, `CaxecraftTextures`, `HudDigits`, `RaylibGameInput`, `TerrainAtlas`, `TitleMenu`, `CaxecraftTrace`, `VoxelRaycast`, `World`, `WorldStorage`, `GuideNpc`, `Inventory`, `Mossling`, `PilotScript`, `CaxeFlowClock`, `CaxeFlowValueReader`, `ScenarioLexer`, `ScenarioLimits`, `ScenarioTokenGrammar`, and `ScenarioWriter` | They currently expose only stateless functions/constants over explicit state. Migrate when that subsystem is next changed, after checking target-boundary and generated-C evidence. |
+| Migrate by ownership slice | `CaxecraftAtlas`, `CaxecraftPalette`, `CaxecraftTextures`, `HudDigits`, `RaylibGameInput`, `TerrainAtlas`, `TitleMenu`, `CaxecraftTrace`, `VoxelRaycast`, `World`, `WorldStorage`, `Inventory`, `Mossling`, `PilotScript`, `CaxeFlowClock`, `CaxeFlowValueReader`, `ScenarioLexer`, `ScenarioLimits`, `ScenarioTokenGrammar`, and `ScenarioWriter` | They currently expose only stateless functions/constants over explicit state. Migrate when that subsystem is next changed, after checking target-boundary and generated-C evidence. |
 | Retain as stateful owners | `TerrainChunkCache`, `TerrainRenderer` | Their mutable derived face data has a real lifetime across frames. Classes make that ownership explicit without moving world authority out of `GameSession`. |
 | Retain as a named boundary | `Main`, `GameInputFrames`, `ScenarioMessages`/`ScenarioMessageLookup`, `ScenarioParser`, and `ScenarioValidator` | The current name is an intentional application, factory, lookup, or public parsing/validation boundary. Revisit only with an API-focused reason, not to remove a class count. |
 | Runtime text | `RuntimeUiCatalog`, `RuntimeLevelPresentation` | The staged package supplies reusable interface text and active-map presentation text. The application keeps only stable message slots and draws the selected runtime strings. A content edit therefore changes the next launch without rebuilding Caxecraft. |

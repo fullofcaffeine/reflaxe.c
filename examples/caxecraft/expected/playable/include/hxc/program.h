@@ -107,7 +107,6 @@
 #include "hxc/modules/caxecraft/editor/EditorWorldViewport.h"
 #include "hxc/modules/caxecraft/gameplay/BerryDrop.h"
 #include "hxc/modules/caxecraft/gameplay/BerryDropState.h"
-#include "hxc/modules/caxecraft/gameplay/GuidePhase.h"
 #include "hxc/modules/caxecraft/gameplay/Inventory.h"
 #include "hxc/modules/caxecraft/gameplay/InventoryState.h"
 #include "hxc/modules/caxecraft/gameplay/ItemKind.h"

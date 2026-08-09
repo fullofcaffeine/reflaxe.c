@@ -32,9 +32,9 @@ final class RuntimePilotScriptProbe {
 	static function runChecks():Int {
 		final source = Bytes.ofString("PILOSCRIPT 1\n" + "name synthetic-journey\n" + "frames 8\n" + "action 0 menu-next\n" + "action 1 menu-confirm\n"
 			+ "hold 2 4 forward\n" + "checkpoint 1 capture title-selection\n" + "expect 1 screen campaign\n" + "expect 1 level synthetic-level\n"
-			+ "expect 1 objective objective.synthetic\n" + "expect 1 generation 2\n" + "expect 1 publications 1\n" + "action 5 forward-descend\n"
-			+ "expect 5 medium submerged\n" + "expect 5 equipment synthetic-gear\n" + "expect 5 lanterns 2\n" + "expect 5 sand 1\n"
-			+ "expect 5 position 4,3,2\n" + "end\n");
+			+ "expect 1 objective objective.synthetic\n" + "expect 1 dialogue dialogue.synthetic\n" + "expect 1 generation 2\n" + "expect 1 publications 1\n"
+			+ "action 5 forward-descend\n" + "expect 5 medium submerged\n" + "expect 5 equipment synthetic-gear\n" + "expect 5 lanterns 2\n"
+			+ "expect 5 sand 1\n" + "expect 5 position 4,3,2\n" + "end\n");
 		final script = switch RuntimePilotScript.read(source, "synthetic.piloscript") {
 			case RuntimePilotReady(value): value;
 			case RuntimePilotRejected(diagnostic):
@@ -49,7 +49,7 @@ final class RuntimePilotScriptProbe {
 		require(script.actionAt(7) == PilotAction.Quit && script.actionAt(9) == PilotAction.Quit, "the bounded quit rule changed");
 		final checkpoint = script.checkpointAt(1);
 		require(checkpoint != null && checkpoint.label == "title-selection", "the capture checkpoint changed");
-		require(script.expectationCountAt(1) == 5, "the expectation count changed");
+		require(script.expectationCountAt(1) == 6, "the expectation count changed");
 		require(script.expectationAt(1, 0).kind == RuntimePilotExpectationKind.Screen, "the first expectation kind changed");
 
 		final matching:RuntimePilotObservation = {
@@ -57,6 +57,7 @@ final class RuntimePilotScriptProbe {
 			mode: "adventure",
 			level: "synthetic-level",
 			objective: "objective.synthetic",
+			dialogue: "dialogue.synthetic",
 			generation: 2,
 			publications: 1,
 			cellX: 4,
@@ -77,6 +78,7 @@ final class RuntimePilotScriptProbe {
 			mode: "adventure",
 			level: "wrong-level",
 			objective: "objective.synthetic",
+			dialogue: "dialogue.synthetic",
 			generation: 2,
 			publications: 1,
 			cellX: 4,

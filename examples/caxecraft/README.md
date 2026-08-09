@@ -7,14 +7,14 @@ game-only workarounds. The repository now contains a first playable feasibility
 slice: a finite voxel world, authored terrain and water, block edits, voxel raycasting,
 fixed-step first-person collision, and a C-specific Raylib window/input/render
 adapter. Its authored spawn meadow now contains a friendly Nia interaction,
-one-time berry gift, and a Mossling that notices, chases, and returns on the
+an authored berry pickup, and a Mossling that notices, chases, and returns on the
 fixed clock. It also wanders on a deterministic home route, warns before one
 bounded attack, and pauses to recover afterward. Adventure can strike that
 Mossling with a fixed-step Copper Sword, collect its visible berry drop, and
 return to the meadow after defeat. Selecting berries and using the secondary
 action consumes one
-bundle only when it can restore one heart. A full stack preserves Nia's gift,
-any uncollected part of a world drop, and a mined block whose matching stack
+bundle only when it can restore one heart. A full stack preserves authored
+world items, any uncollected part of a world drop, and a mined block whose matching stack
 cannot accept it. The complete
 Creative/Adventure/editor/Ivvy direction and its honest
 present-versus-planned gates live in the
@@ -558,8 +558,8 @@ remain available while high-DPI support is fixed separately.
 
 This is a finite playable feasibility slice with a textured title, typed
 eight-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
-bounded collect/consume/place rules. Nia provides the first two-step friendly
-interaction and one-time gift; one original Mossling provides bounded
+bounded collect/consume/place rules. Nia provides the first authored friendly
+interaction, and nearby berries demonstrate content-owned pickups; one original Mossling provides bounded
 rest/wander/chase/return movement, a warned attack and recovery cycle, aimed
 fixed-step sword combat, health, defeat, revive, one visible collectible drop,
 bounded berry recovery, and clear
@@ -574,10 +574,11 @@ is complete.
 The renderer no longer selects English or Spanish with gameplay conditionals.
 It carries an opaque locale cursor and asks for typed message IDs. Reusable
 menus, controls, pause, and generic feedback live in
-[`locales/ui.json`](locales/ui.json). Nia's dialogue, Mossling feedback, the
-Adventure tagline, named items, and other authored prose live with the
-scenario in
+[`locales/ui.json`](locales/ui.json). Nia's dialogue and the first-playable
+feedback live in
 [`scenarios/first-playable/map.caxemap`](scenarios/first-playable/map.caxemap).
+Moss's dialogue and the Western Falls prose live in its own CaxeMap. Named item
+definitions remain in the active content pack.
 
 That distinction matters: moving or sharing a scenario must also move the text
 that gives its characters and objectives meaning. A `.caxemap` refers to those
@@ -765,10 +766,9 @@ within the normal 15-second bound.
 
 Collection is lossless at the fixed stack boundary. If only one slot remains,
 one berry enters the inventory and the rest stays visible in the world. If the
-stack is full, a Mossling drop remains available and Nia keeps her gift at the
-same dialogue step until the player uses a berry. Mining follows the same
-lossless rule: a full Grass, Dirt, or Stone stack leaves the matching block in
-the world.
+stack is full, an authored pickup or Mossling drop remains available. Mining
+follows the same lossless rule: a full Grass, Dirt, or Stone stack leaves the
+matching block in the world.
 
 It compares the same 38-line semantic trace under pinned Haxe Eval and all three
 generated-C layouts, checks the registered split/package/unity snapshots, and
@@ -974,8 +974,8 @@ The first actor loop has a separate sub-second renderer-independent proof:
 npm run test:caxecraft-gameplay
 ```
 
-It checks the authored meadow height, Nia's bounded welcome/gift states,
-lossless berry collection, deterministic Mossling wandering and pursuit, its
+It checks generic actor interaction and controller state, lossless berry
+collection, deterministic Mossling wandering and pursuit, its
 warned one-impact/recovery cycle, paced sword decisions, health, and recovery
 in two locales. The native movement and combat pilots then require exact actor,
 damage-feedback, and drop evidence in real presented framebuffers.

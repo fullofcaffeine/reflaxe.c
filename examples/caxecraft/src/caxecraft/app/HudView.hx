@@ -5,11 +5,11 @@ import caxecraft.domain.Character;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.VitalsState;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelPresentation;
-import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.localization.UiTypes.LocaleCursor;
+import caxecraft.scenario.ScenarioId;
 
 /**
 	Read-only facts needed to draw one Caxecraft heads-up display (HUD) frame.
@@ -23,9 +23,9 @@ import caxecraft.localization.UiTypes.LocaleCursor;
 
 	The nested records group facts by purpose and give every call-site value a
 	name. The compiler lowers these immutable records to direct C structs with no
-	heap allocation. First-playable prompt state remains an explicit content
-	migration seam, but actor position, health, and controller phase now come from
-	the authoritative generic session rather than copied Guide/Mossling state.
+	heap allocation. Dialogue is identified by the stable ID requested by
+	CaxeFlow; the active level resolves its words. Actor position, health, and
+	controller phase come from the authoritative generic session.
 **/
 typedef HudView = {
 	/** Performance and deterministic-clock facts shown by the debug panel. */
@@ -55,8 +55,8 @@ typedef HudView = {
 	/** Immutable bounded inventory snapshot. */
 	final inventory:InventoryState;
 
-	/** Current first-playable dialogue progress; temporary authored-content seam. */
-	final guidePhase:GuidePhase;
+	/** Authored dialogue currently presented, or null while the talk prompt is shown. */
+	final activeDialogue:Null<ScenarioId>;
 
 	/** Whether the generic stationary controller currently offers interaction. */
 	final guideInteractionAvailable:Bool;

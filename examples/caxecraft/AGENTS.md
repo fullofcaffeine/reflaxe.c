@@ -169,11 +169,12 @@ not a general runtime loader, dependency system, or mod marketplace.
   mechanic, render through logical presentation IDs, and retain focused plus
   flagship end-to-end evidence.
 
-For example, Nia should be a `ScenarioObject.Npc` instantiated through the
-generic NPC runtime. Her placement, dialogue, gift, and conversation progress
-belong to the shipped map and CaxeFlow rules. A reusable NPC interaction system
-may be a class if it carries per-instance state, but `GuideNpc` must not remain
-a Nia-specific static API beside a second hardcoded copy in `Main.hx`.
+For example, an authored guide should be a `ScenarioObject.Npc` instantiated
+through the generic NPC runtime. The guide's placement, dialogue, rewards, and
+conversation progress belong to the shipped map and CaxeFlow rules. A reusable
+NPC interaction system may be a class if it carries per-instance state, but the
+engine must not add a character-specific API or a second hardcoded copy in the
+application root.
 
 ## Test Ownership and Automation
 

@@ -59,7 +59,6 @@ function allPilotMetadata():Array<PilotMetadata> {
 		compiled(PilotScriptName.PauseRecapture, "caxecraft_pilot_pause_recapture", "caxecraft-pilot-pause.png"),
 		compiled(PilotScriptName.CombatDrop, "caxecraft_pilot_combat_drop", "caxecraft-pilot-combat.png"),
 		compiled(PilotScriptName.RecoveryUse, "caxecraft_pilot_recovery_use", "caxecraft-pilot-recovery.png"),
-		compiled(PilotScriptName.FullInventoryGift, "caxecraft_pilot_full_inventory_gift", "caxecraft-pilot-full-inventory.png"),
 		compiled(PilotScriptName.FullInventoryMining, "caxecraft_pilot_full_inventory_mining", "caxecraft-pilot-full-mining.png"),
 		compiled(PilotScriptName.ResizeLayout, "caxecraft_pilot_resize_layout", "caxecraft-pilot-resize.png"),
 		compiled(PilotScriptName.AquaticGear, "caxecraft_pilot_aquatic_gear", "caxecraft-pilot-aquatic-gear.png"),
@@ -86,7 +85,6 @@ function pilotScriptCode(script:PilotScriptName):Int {
 		case PauseRecapture: 2;
 		case CombatDrop: 3;
 		case RecoveryUse: 4;
-		case FullInventoryGift: 5;
 		case FullInventoryMining: 6;
 		case ResizeLayout: 7;
 		case AquaticGear: 8;
@@ -100,7 +98,7 @@ function pilotScriptCode(script:PilotScriptName):Int {
 /** Return the exact compiled length of one engine-regression script. */
 function pilotFrameLimit(script:PilotScriptName):Int {
 	return switch script {
-		case LaunchSmoke | RecoveryUse | FullInventoryGift | EditorShell: 4;
+		case LaunchSmoke | RecoveryUse | EditorShell: 4;
 		case MoveJumpEdit: 14;
 		case PauseRecapture | FullInventoryMining: 7;
 		case CombatDrop: 40;
@@ -120,7 +118,6 @@ function pilotStableName(script:PilotScriptName):String {
 		case PauseRecapture: "pause-recapture";
 		case CombatDrop: "combat-drop";
 		case RecoveryUse: "recovery-use";
-		case FullInventoryGift: "full-inventory-gift";
 		case FullInventoryMining: "full-inventory-mining";
 		case ResizeLayout: "resize-layout";
 		case AquaticGear: "aquatic-gear";

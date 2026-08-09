@@ -17,7 +17,6 @@ enum abstract PilotScriptName(Int) to Int {
 	var PauseRecapture = 2;
 	var CombatDrop = 3;
 	var RecoveryUse = 4;
-	var FullInventoryGift = 5;
 	var FullInventoryMining = 6;
 	var ResizeLayout = 7;
 	var AquaticGear = 8;
@@ -133,8 +132,6 @@ final class PilotScript {
 			return combatAction(frameNumber);
 		if (name == RecoveryUse)
 			return recoveryAction(frameNumber);
-		if (name == FullInventoryGift)
-			return fullInventoryGiftAction(frameNumber);
 		if (name == AquaticGear) {
 			if (frameNumber < 88)
 				return ForwardLeft;
@@ -242,8 +239,6 @@ final class PilotScript {
 				frameNumber == 38 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot) : null;
 			case RecoveryUse:
 				frameNumber == 2 ? new PilotCheckpoint("recovery-use.frame", CaptureScreenshot) : null;
-			case FullInventoryGift:
-				frameNumber == 2 ? new PilotCheckpoint("full-inventory-gift.frame", CaptureScreenshot) : null;
 			case FullInventoryMining:
 				frameNumber == 5 ? new PilotCheckpoint("full-inventory-mining.frame", CaptureScreenshot) : null;
 			case ResizeLayout:
@@ -306,9 +301,6 @@ final class PilotScript {
 	 */
 	public static function initialInventory(name:PilotScriptName):InventoryState {
 		final starter = Inventory.starter();
-		if (name == FullInventoryGift)
-			return Inventory.make(starter.selected, starter.grass, starter.dirt, starter.stone, starter.haxeforge, starter.sword, Inventory.MAX_STACK,
-				starter.bread, starter.lantern);
 		if (name == FullInventoryMining)
 			return Inventory.make(starter.selected, Inventory.MAX_STACK, Inventory.MAX_STACK, Inventory.MAX_STACK, starter.haxeforge, starter.sword,
 				starter.berries, starter.bread, starter.lantern, Inventory.MAX_STACK);
@@ -363,13 +355,6 @@ final class PilotScript {
 		return switch frameNumber {
 			case 0: SelectBerries;
 			case 1: EatBerries;
-			case _: Idle;
-		};
-	}
-
-	static function fullInventoryGiftAction(frameNumber:Int):PilotAction {
-		return switch frameNumber {
-			case 0 | 1: Interact;
 			case _: Idle;
 		};
 	}

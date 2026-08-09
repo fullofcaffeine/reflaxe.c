@@ -631,9 +631,11 @@ The playable now loads both Nia and the Mossling from the checked-in CaxeMap,
 publishes their generic characters and controller states through
 `GameSession`, and advances those states once per fixed tick. `CaxecraftApp`
 observes typed interaction, attack, and drop events; it no longer creates or
-steps `GuideNpc` or `Mossling` controller state. The first-playable gift
-sequence and HUD wording remain explicit content-migration seams until
-CaxeFlow and runtime content loading own them.
+steps character-specific controller state. CaxeFlow now turns a generic actor
+interaction into an authored dialogue request, and the HUD resolves that
+request from the active level. Nia's berries are an authored world item rather
+than an application-owned reward. Multi-line conversations, journal history,
+and reusable inventory actions remain later content-system work.
 
 One engine capability must connect all authoring surfaces without becoming
 five implementations:

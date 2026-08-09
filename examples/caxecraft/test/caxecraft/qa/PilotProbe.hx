@@ -30,7 +30,6 @@ final class PilotProbe {
 		checkpoints += checkPause();
 		checkpoints += checkCombat();
 		checkpoints += checkRecovery();
-		checkpoints += checkFullInventory();
 		checkpoints += checkFullInventoryMining();
 		checkpoints += checkResize();
 		checkpoints += checkAquaticGear();
@@ -129,17 +128,6 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 2);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "recovery-use.frame",
 			"recovery screenshot checkpoint changed");
-		return 1;
-	}
-
-	static function checkFullInventory():Int {
-		final name = PilotScriptName.FullInventoryGift;
-		require(PilotScript.initialInventory(name).berries == Inventory.MAX_STACK, "full-inventory fixture lost the exact berry cap");
-		require(PilotScript.sample(name, 0).interactPressed && PilotScript.sample(name, 1).interactPressed,
-			"full-inventory script lost Nia's two dialogue actions");
-		final screenshot = PilotScript.checkpoint(name, 2);
-		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "full-inventory-gift.frame",
-			"full-inventory screenshot checkpoint changed");
 		return 1;
 	}
 

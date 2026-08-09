@@ -21,9 +21,7 @@ enum abstract GameplayMessage(Int) {
 	var EnemyAlert = 7;
 	var EnemyDroppedItems = 8;
 	var EnemyWindup = 9;
-	var GuideGift = 10;
 	var GuideTalk = 11;
-	var GuideWelcome = 12;
 	var RecoveryEmpty = 13;
 	var ReturnPrompt = 14;
 	var EnemyHitWarning = 15;
@@ -42,9 +40,7 @@ function gameplayMessageId(message:GameplayMessage):MessageId {
 		case EnemyAlert: "enemy_alert";
 		case EnemyDroppedItems: "enemy_dropped_items";
 		case EnemyWindup: "enemy_windup";
-		case GuideGift: "guide_gift";
 		case GuideTalk: "guide_talk";
-		case GuideWelcome: "guide_welcome";
 		case RecoveryEmpty: "recovery_empty";
 		case ReturnPrompt: "return_prompt";
 		case EnemyHitWarning: "enemy_hit_warning";

@@ -9,8 +9,8 @@ The deterministic domain, first original art pack, and first native Raylib
 feasibility slice exist today. That slice can move, collide, jump, select,
 remove, and place colored blocks; it now has the textured title, a typed
 eight-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
-input pilots. A small authored spawn meadow now introduces Nia through a
-two-step welcome/berry gift and renders Nia and one fixed-step Mossling from
+input pilots. A small authored spawn meadow now introduces Nia through
+content-owned dialogue and berries, and renders Nia and one fixed-step Mossling from
 their reviewed original entity-atlas cells, with code-drawn fallbacks if the
 GPU texture cannot load. The Mossling has bounded rest/wander/notice/chase/
 return behavior. Adventure now adds the first complete
@@ -21,7 +21,7 @@ input on that fixed game clock and has a four-tick cooldown; three aimed hits
 defeat the Mossling and create a visible berry drop. Health uses three
 half-step hearts, a selected berry restores one heart without exceeding the
 limit, and a fallen player can return to the meadow. Full stacks preserve
-Nia's gift, any uncollected part of a world drop, and a mined block whose
+authored pickups, any uncollected part of a world drop, and a mined block whose
 matching stack is full instead of silently deleting items. Adventure checks
 capacity before changing the world; Creative removal remains unlimited. This
 is the first actor loop, not the planned finished game. The

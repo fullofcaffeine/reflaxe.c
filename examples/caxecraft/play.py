@@ -309,7 +309,7 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 9
+PILOT_TELEMETRY_VERSION = 10
 PILOT_TELEMETRY_WORDS = 42
 PILOT_TELEMETRY_COLORS = tuple(
     (
@@ -1095,7 +1095,7 @@ def build_pilot_report(
         raise PlayFailure("pilot telemetry edit counters cannot be negative")
     if signed[25] < 0 or signed[26] < 0:
         raise PlayFailure("pilot telemetry render counters cannot be negative")
-    if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 9 or not 0 <= signed[29] <= 2:
+    if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 9 or signed[29] not in (0, 1):
         raise PlayFailure("pilot telemetry gameplay carriers are outside their closed ranges")
     if not 0 <= signed[31] <= 4095:
         raise PlayFailure("pilot telemetry presentation flags contain unknown bits")
@@ -1196,14 +1196,6 @@ def build_pilot_report(
             "move-jump-edit pilot did not select terrain, remove one block, and place one block "
             f"(selection={signed[15]}, removed={signed[22]}, placed={signed[23]}, rejected={signed[24]})"
         )
-    if pilot == "full-inventory-gift" and not (
-        flow_rule_observed and objective_change_observed
-    ):
-        raise PlayFailure(
-            "full-inventory-gift pilot did not carry the real interaction into CaxeFlow "
-            f"(rule={flow_rule_observed}, objective={objective_change_observed})"
-        )
-
     raylib_lock = provision.load_lock()
     upstream = raylib_lock.get("upstream")
     if not isinstance(upstream, dict):
@@ -1262,7 +1254,7 @@ def build_pilot_report(
         "gameplay": {
             "health": signed[27],
             "hotbarSlot": signed[28],
-            "guidePhase": signed[29],
+            "dialogueVisible": signed[29] == 1,
             "mosslingAlive": signed[30] == 1,
             "aquaticGearEquipped": aquatic_gear_equipped,
             "submersionObserved": submersion_observed,
@@ -2291,8 +2283,6 @@ def validate_generated_playable(
         "WorldStorage_writeCode(",
         "GameSession_replaceLocalPlayer(",
         "GameSession_deactivateAuthoredItem(",
-        "GuideNpc_start(",
-        "GuideNpc_interact(",
         "Mossling_start(",
         "Mossling_step(",
         "Mossling_strike(",
@@ -3077,14 +3067,13 @@ def run_pilot_sample(
             expected_drop=pilot == "combat-drop",
             expected_attack=pilot == "combat-drop",
             expected_recovery=pilot == "recovery-use",
-            expected_inventory_full=pilot
-            in ("full-inventory-gift", "full-inventory-mining"),
-            expected_entities=pilot == "full-inventory-gift",
+            expected_inventory_full=pilot == "full-inventory-mining",
+            expected_entities=False,
             # Some pilots deliberately finish under terrain or close to their
             # subject. Their semantic owner proves the destination. The host
             # still requires varied terrain, the HUD, and a nonblank scene.
             expected_open_sky=pilot
-            not in ("move-jump-edit", "full-inventory-gift", "adventure-journey"),
+            not in ("move-jump-edit", "adventure-journey"),
         )
     screenshot_hash = hashlib.sha256(screenshot.read_bytes()).hexdigest()
     state_screenshot.unlink()

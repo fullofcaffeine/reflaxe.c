@@ -20,9 +20,6 @@ expect 2 screen campaign
 expect 2 level western-falls
 
 action 3 menu-confirm
-# The principal review image shows the authored arrival. The separate state
-# image still records the final semantic checkpoint at frame 349.
-checkpoint 3 capture final
 expect 3 screen playing
 expect 3 mode adventure
 expect 3 level western-falls
@@ -32,7 +29,9 @@ expect 3 publications 1
 
 # Ask Moss about the four marks, then leave the Falls spawn.
 action 4 interact
+checkpoint 8 capture final
 expect 8 objective objective.find-tideweave
+expect 8 dialogue dialogue.moss.falls
 
 # Open the sand seam and reach the lower cache.
 hold 5 92 forward-left

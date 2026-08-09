@@ -66,6 +66,8 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldView;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
@@ -76,7 +78,6 @@ import caxecraft.gameplay.BerryDrop.fromDefeatedCharacter as berryDropFromDefeat
 import caxecraft.gameplay.BerryDrop.isInRange as berryDropIsInRange;
 import caxecraft.gameplay.BerryDrop.none as emptyBerryDrop;
 import caxecraft.gameplay.BerryDropState;
-import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.SwordCombat.after as afterSwordCombat;
@@ -192,8 +193,6 @@ final class CaxecraftApp {
 		final pilotName:PilotScriptName = PilotScriptName.CombatDrop;
 		#elseif caxecraft_pilot_recovery_use
 		final pilotName:PilotScriptName = PilotScriptName.RecoveryUse;
-		#elseif caxecraft_pilot_full_inventory_gift
-		final pilotName:PilotScriptName = PilotScriptName.FullInventoryGift;
 		#elseif caxecraft_pilot_full_inventory_mining
 		final pilotName:PilotScriptName = PilotScriptName.FullInventoryMining;
 		#elseif caxecraft_pilot_resize_layout
@@ -354,7 +353,7 @@ final class CaxecraftApp {
 		// exercise the same typed inventory transitions as a real player.
 		inventory = PilotScript.initialInventory(pilotName);
 		#end
-		var guidePhase = GuidePhase.Waiting;
+		var activeDialogue:Null<ScenarioId> = null;
 		var currentObjectiveId = initialLevel.initialObjectiveId();
 		var guideInteractionAvailable = initialSession.actorInteractionAvailable(initialLevel.dialogueActorId());
 		var dialogueActor = initialSession.readCharacter(initialLevel.dialogueActorId());
@@ -383,7 +382,6 @@ final class CaxecraftApp {
 		#if (caxecraft_pilot_move_jump_edit
 			|| caxecraft_pilot_combat_drop
 			|| caxecraft_pilot_recovery_use
-			|| caxecraft_pilot_full_inventory_gift
 			|| caxecraft_pilot_full_inventory_mining
 			|| caxecraft_pilot_aquatic_gear
 			|| caxecraft_pilot_campaign_travel)
@@ -670,7 +668,7 @@ final class CaxecraftApp {
 									quit = true;
 								} else {
 									character = initialView.localPlayer;
-									guidePhase = GuidePhase.Waiting;
+									activeDialogue = null;
 									currentObjectiveId = levelView.initialObjectiveId();
 									guideInteractionAvailable = session.actorInteractionAvailable(levelView.dialogueActorId());
 									dialogueActor = session.readCharacter(levelView.dialogueActorId());
@@ -727,24 +725,10 @@ final class CaxecraftApp {
 						accumulator = 0.0;
 						resetMotionThisFrame = true;
 					}
-				} else if (session.actorInteractionAvailable(dialogueActorId)) {
-					if (!session.interactWithActor(dialogueActorId)) {
-						quit = true;
-					} else {
-						final sharesBerries = guidePhase == GuidePhase.Welcomed;
-						if (sharesBerries) {
-							final acceptedGift = Inventory.acceptedAmount(inventory, ItemKind.Berries, 2);
-							if (acceptedGift == 2) {
-								inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
-								guidePhase = advanceGuidePhase(guidePhase);
-							} else {
-								inventoryFullReason = InventoryFullReason.BerryStack;
-								inventoryFullFrames = 90;
-							}
-						} else {
-							guidePhase = advanceGuidePhase(guidePhase);
-						}
-					}
+				} else if (activeDialogue != null) {
+					activeDialogue = null;
+				} else if (session.actorInteractionAvailable(dialogueActorId) && !session.interactWithActor(dialogueActorId)) {
+					quit = true;
 				}
 			}
 
@@ -799,6 +783,7 @@ final class CaxecraftApp {
 					observedLevel = selectedCampaign.levelAt(selectedCampaignLevelIndex).id.text();
 			}
 			final observedObjective = currentObjectiveId == null ? "" : currentObjectiveId.text();
+			final observedDialogue = activeDialogue == null ? "none" : activeDialogue.text();
 			final observedScreen = onTitle ? "title" : onCampaignSelect ? "campaign" : onEditor ? "editor" : paused ? "paused" : "playing";
 			final observedMode = selectedMode == GameMode.Creative ? "creative" : "adventure";
 			final observedMedium = if (character.aquatic.medium == AquaticMedium.Dry) "dry" else if (character.aquatic.medium == AquaticMedium.Wading)
@@ -809,6 +794,7 @@ final class CaxecraftApp {
 				mode: observedMode,
 				level: observedLevel,
 				objective: observedObjective,
+				dialogue: observedDialogue,
 				generation: activeLevel.generationId().value(),
 				publications: activeLevel.publicationCount(),
 				cellX: Std.int(character.body.x),
@@ -954,6 +940,12 @@ final class CaxecraftApp {
 						flowRuleObserved = true;
 					#end
 					if (flow.diagnostics.length == 0) {
+						for (event in flow.presentation)
+							switch event {
+								case FlowPresentationEvent.DialogueRequested(id):
+									activeDialogue = id;
+								case _:
+							}
 						#if caxecraft_pilot
 						final beforeObjective = currentObjectiveId;
 						final afterObjective = flow.activeObjective;
@@ -1326,7 +1318,7 @@ final class CaxecraftApp {
 					mode: selectedMode,
 					locale: locale,
 					inventory: inventory,
-					guidePhase: guidePhase,
+					activeDialogue: activeDialogue,
 					guideInteractionAvailable: guideInteractionAvailable,
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase,
@@ -1345,7 +1337,7 @@ final class CaxecraftApp {
 			#if caxecraft_render_benchmark
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
-					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
+					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, activeDialogue != null,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds,
@@ -1354,7 +1346,7 @@ final class CaxecraftApp {
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
-					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, guidePhase,
+					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, activeDialogue != null,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(),
@@ -1366,7 +1358,6 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.PauseRecapture && frameCount == 4)
 				|| (pilotName == PilotScriptName.CombatDrop && frameCount == 38)
 				|| (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
-				|| (pilotName == PilotScriptName.FullInventoryGift && frameCount == 2)
 				|| (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
@@ -1399,8 +1390,6 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-combat.png");
 			if (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-recovery.png");
-			if (pilotName == PilotScriptName.FullInventoryGift && frameCount == 2)
-				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-full-inventory.png");
 			if (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-full-mining.png");
 			if (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
@@ -1493,20 +1482,6 @@ final class CaxecraftApp {
 	}
 
 	/**
-		Advance the temporary first-playable dialogue progress value.
-
-		This is story state, not actor movement state: the generic stationary
-		controller owns Nia's position and interaction range. CaxeFlow will later
-		own this three-step gift sequence when the playable consumes runtime rules.
-	**/
-	static function advanceGuidePhase(phase:GuidePhase):GuidePhase
-		return switch phase {
-			case Waiting: Welcomed;
-			case Welcomed: SharedBerries;
-			case SharedBerries: SharedBerries;
-		};
-
-	/**
 		Find one controller phase in a copy-owned session observation.
 
 		`valid` stays separate from the fallback phase so a missing actor cannot be
@@ -1575,7 +1550,7 @@ final class CaxecraftApp {
 		final mode = view.mode;
 		final locale = view.locale;
 		final inventory = view.inventory;
-		final guidePhase = view.guidePhase;
+		final activeDialogue = view.activeDialogue;
 		final guideInteractionAvailable = view.guideInteractionAvailable;
 		final enemy = view.enemy;
 		final enemyPhase = view.enemyPhase;
@@ -1635,14 +1610,12 @@ final class CaxecraftApp {
 		drawUiText(uiCatalog, locale, UiMessage.Controls, 20, height - 22, 14, text);
 		if (mode == GameMode.Adventure && view.objectiveTitle.length > 0)
 			Raylib.DrawTextString(view.objectiveTitle, 32, 110, 14, CaxecraftPalette.selection());
-		if (guideInteractionAvailable) {
+		if (activeDialogue != null) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
-			if (guidePhase == GuidePhase.Waiting)
-				drawScenarioText(presentation, locale, GameplayMessage.GuideTalk, centerX - 110, centerY + 74, 18, text);
-			else if (guidePhase == GuidePhase.Welcomed)
-				drawScenarioText(presentation, locale, GameplayMessage.GuideWelcome, centerX - 225, centerY + 74, 16, text);
-			else
-				drawScenarioText(presentation, locale, GameplayMessage.GuideGift, centerX - 205, centerY + 74, 16, text);
+			Raylib.DrawTextString(presentation.dialogueLine(activeDialogue, 0, scenarioLocale(locale)), centerX - 225, centerY + 74, 16, text);
+		} else if (guideInteractionAvailable) {
+			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
+			drawScenarioText(presentation, locale, GameplayMessage.GuideTalk, centerX - 110, centerY + 74, 18, text);
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
 			if (enemyPhase == ActorControllerPhase.Windup)

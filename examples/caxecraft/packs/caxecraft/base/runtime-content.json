@@ -18,12 +18,12 @@
       "sha256": "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
     },
     {
-      "byteLength": 14530,
+      "byteLength": 14551,
       "kind": "level-map",
       "path": "scenarios/first-playable/map.caxemap",
-      "sha256": "61c38dc78cce29c99c9b38ccc211ed1149f8e6f968c2ad7efac9ca6043d21f16"
+      "sha256": "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee"
     }
   ],
-  "generationSha256": "2c6086f253db746964aaaddda2f9754d915ac99dee22cece658e810e8594f866",
+  "generationSha256": "b680f8eba09dc4af20904840b579e1ea7484f56230a73076dfef41a9bac1bccf",
   "schemaVersion": 1
 }

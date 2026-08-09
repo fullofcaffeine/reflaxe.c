@@ -5,7 +5,6 @@ import caxecraft.domain.CharacterBody;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.WorldRead.stateHash as worldStateHash;
 import caxecraft.domain.WorldView;
-import caxecraft.gameplay.GuidePhase;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
 import raylib.Color;
@@ -42,7 +41,7 @@ import raylib.Raylib;
  */
 function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldView,
 		selection:RaycastHit, removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int,
-		guidePhase:GuidePhase, mosslingAlive:Bool, onTitle:Bool, onEditor:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool,
+		dialogueVisible:Bool, mosslingAlive:Bool, onTitle:Bool, onEditor:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool,
 		interpolationObserved:Bool, reviewScreenshotObserved:Bool, submersionObserved:Bool, waterExitObserved:Bool, sandMinedObserved:Bool,
 		flowRuleObserved:Bool, objectiveChangeObserved:Bool, visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int,
 		terrainCacheValid:Bool, measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int,
@@ -75,7 +74,7 @@ function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames
 
 	var word = 0;
 	word = drawWord(word, 0x43585054); // "CXPT": Caxecraft pilot telemetry.
-	word = drawWord(word, 9); // Protocol version.
+	word = drawWord(word, 10); // Protocol version.
 	word = drawWord(word, 42); // Number of words in this closed version.
 	word = drawWord(word, PilotScript.scriptCode(name));
 	word = drawWord(word, inputHash);
@@ -103,7 +102,7 @@ function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames
 	word = drawWord(word, terrainDrawCalls);
 	word = drawWord(word, health);
 	word = drawWord(word, hotbarSlot);
-	word = drawWord(word, guidePhaseCode(guidePhase));
+	word = drawWord(word, dialogueVisible ? 1 : 0);
 	word = drawWord(word, mosslingAlive ? 1 : 0);
 	word = drawWord(word, flags);
 	word = drawWord(word, visibleTerrainFaces);
@@ -116,15 +115,6 @@ function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames
 	word = drawWord(word, measuredPreparationMicroseconds);
 	word = drawWord(word, contentGeneration);
 	drawWord(word, contentPublications);
-}
-
-/** Convert the nominal game state to the pilot protocol's stable integer code. */
-private function guidePhaseCode(value:GuidePhase):Int {
-	return switch value {
-		case Waiting: 0;
-		case Welcomed: 1;
-		case SharedBerries: 2;
-	};
 }
 
 /** Draw eight high-to-low hexadecimal digits and return the next word slot. */

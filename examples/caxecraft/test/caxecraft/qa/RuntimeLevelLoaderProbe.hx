@@ -29,6 +29,7 @@ import caxecraft.qa.FocusedContentFixture.FocusedContentRegistry;
 import caxecraft.qa.FocusedContentFixture.standardAquaticProfile;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
+import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import haxe.io.Bytes;
 
@@ -125,7 +126,10 @@ function selfCheck():Int {
 		|| presentation.initialObjectiveTitle(english) != "Reach the test marker"
 		|| presentation.initialObjectiveTitle(spanish) != "Llega al marcador de prueba"
 		|| presentation.initialObjectiveBody(english) != "Cross the test bridge."
-		|| presentation.initialObjectiveBody(spanish) != "Cruza el puente de prueba.")
+		|| presentation.initialObjectiveBody(spanish) != "Cruza el puente de prueba."
+		|| presentation.dialogueLine(new ScenarioId("dialogue.guide"), 0, english) != "Synthetic engine fixture"
+		|| presentation.dialogueLine(new ScenarioId("dialogue.missing"), 0, english) != ""
+		|| presentation.dialogueLine(new ScenarioId("dialogue.guide"), 1, english) != "")
 		return 102;
 	final flowSession = presentationCandidate.generation().session();
 	final flowActors = presentationCandidate.generation().actorBindings();
@@ -275,10 +279,13 @@ function expectedResolvedLevel(candidate:caxecraft.content.RuntimeLevelLoader.Ru
 		|| fluids[2].authoredId.text() != "water.evergrove-stream-under-bridge"
 		|| fluids[3].authoredId.text() != "water.village-well"
 		|| fluids[4].authoredId.text() != "water.evergrove-stream-source"
-		|| items.length != 1
-		|| items[0].authoredId.text() != "item.tideweave"
-		|| items[0].contentId.text() != "caxecraft:tideweave-suit"
-		|| items[0].storage.value() != 8
+		|| items.length != 2
+		|| items[0].authoredId.text() != "item.nia-berries"
+		|| items[0].contentId.text() != "caxecraft:berries"
+		|| items[0].quantity != 2
+		|| items[1].authoredId.text() != "item.tideweave"
+		|| items[1].contentId.text() != "caxecraft:tideweave-suit"
+		|| items[1].storage.value() != 8
 		|| actors.length != 2
 		|| actors[0].authoredId.text() != "enemy.mossling"
 		|| actors[0].contentId.text() != "caxecraft:mossling"

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "authoritySha256": "7f5145c3b9c221d50740e36c8c3ee47ec6fdd59d9318bdc25ed4839874d6257d",
+  "authoritySha256": "b77c6464cc01fa7e91845b7d5d86ad9abbf84f71938bdacb26b7ac49dcbcf9e7",
   "pilots": [
     {
       "id": "launch-smoke",
@@ -48,14 +48,6 @@
       "frameLimit": 4,
       "haxeDefine": "caxecraft_pilot_recovery_use",
       "screenshot": "caxecraft-pilot-recovery.png",
-      "execution": "compiled"
-    },
-    {
-      "id": "full-inventory-gift",
-      "scriptCode": 5,
-      "frameLimit": 4,
-      "haxeDefine": "caxecraft_pilot_full_inventory_gift",
-      "screenshot": "caxecraft-pilot-full-inventory.png",
       "execution": "compiled"
     },
     {

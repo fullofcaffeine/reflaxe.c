@@ -137,32 +137,33 @@ void hxc_caxecraft_app_CaxecraftAtlas_drawItem(struct Texture hxc_l_texture, enu
   return;
 }
 
-void hxc_caxecraft_app_CaxecraftAtlas_drawWorldSprite(struct Camera3D hxc_l_camera, struct Texture hxc_l_texture, enum hxc_caxecraft_app_WorldSprite hxc_l_sprite, struct Vector3 hxc_l_position, double hxc_l_width, double hxc_l_height)
+void hxc_caxecraft_app_CaxecraftAtlas_drawWorldSprite(struct Camera3D hxc_l_camera, struct Texture hxc_l_texture, int32_t hxc_l_cellIndex, struct Vector3 hxc_l_position, double hxc_l_width, double hxc_l_height)
 {
-  int32_t hxc_l_row = 1;
-  switch (hxc_l_sprite) {
-    case hxc_caxecraft_app_WorldSprite_NiaFront:
-      {
-        break;
-      }
-    case hxc_caxecraft_app_WorldSprite_MosslingFront:
-      {
-        hxc_l_row = 2;
-        break;
-      }
-    default:
-      {
-        abort();
-      }
+  double hxc_l_sourceWidth = { 0 };
+  double hxc_l_sourceHeight = { 0 };
+  int32_t hxc_l_column = { 0 };
+  int32_t hxc_l_row = { 0 };
+  struct Color hxc_l_this1 = { 0 };
+  bool hxc_l_tmp_short_circuit_result_n6 = hxc_l_cellIndex < 0;
+  if (!(hxc_l_cellIndex < 0))
+  {
+    hxc_l_tmp_short_circuit_result_n6 = hxc_l_cellIndex >= 16;
   }
-  struct Color hxc_l_this1 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
-  double hxc_l_sourceWidth = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.width, (double)4);
-  double hxc_l_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.height, (double)4);
-  double hxc_l_tmp_load_result_n3 = hxc_l_sourceWidth;
-  int32_t hxc_l_tmp_load_result_n4 = hxc_l_row;
-  double hxc_l_tmp_load_result_n5 = hxc_l_sourceHeight;
-  double hxc_l_tmp_load_result_n6 = hxc_l_sourceWidth;
-  double hxc_l_tmp_load_result_n7 = hxc_l_sourceHeight;
-  DrawBillboardRec(hxc_l_camera, hxc_l_texture, (struct Rectangle){ .x = (float)((double)0 * hxc_l_tmp_load_result_n3), .y = (float)((double)hxc_l_tmp_load_result_n4 * hxc_l_tmp_load_result_n5), .width = (float)hxc_l_tmp_load_result_n6, .height = (float)hxc_l_tmp_load_result_n7 }, hxc_l_position, (struct Vector2){ .x = (float)hxc_l_width, .y = (float)hxc_l_height }, hxc_l_this1);
+  if (!hxc_l_tmp_short_circuit_result_n6)
+  {
+    hxc_l_column = hxc_i32_modulo_zero_safe(hxc_l_cellIndex, 4);
+    hxc_l_row = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_cellIndex, (double)4));
+    hxc_l_this1 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
+    hxc_l_sourceWidth = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.width, (double)4);
+    hxc_l_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_l_texture.height, (double)4);
+    int32_t hxc_l_tmp_load_result_n4 = hxc_l_column;
+    double hxc_l_tmp_load_result_n5 = hxc_l_sourceWidth;
+    int32_t hxc_l_tmp_load_result_n6 = hxc_l_row;
+    double hxc_l_tmp_load_result_n7 = hxc_l_sourceHeight;
+    double hxc_l_tmp_load_result_n8 = hxc_l_sourceWidth;
+    double hxc_l_tmp_load_result_n9 = hxc_l_sourceHeight;
+    DrawBillboardRec(hxc_l_camera, hxc_l_texture, (struct Rectangle){ .x = (float)((double)hxc_l_tmp_load_result_n4 * hxc_l_tmp_load_result_n5), .y = (float)((double)hxc_l_tmp_load_result_n6 * hxc_l_tmp_load_result_n7), .width = (float)hxc_l_tmp_load_result_n8, .height = (float)hxc_l_tmp_load_result_n9 }, hxc_l_position, (struct Vector2){ .x = (float)hxc_l_width, .y = (float)hxc_l_height }, hxc_l_this1);
+    return;
+  }
   return;
 }

@@ -68,7 +68,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 958,
-      "sha256": "16507d613aa46a81f28f242c8cf9b65b7d991193373d9c049fe2967103905142"
+      "sha256": "83c8ea7a4646925ebce90530172b2160d0a47d152913e4b3648cc6d1defaa4af"
     },
     {
       "kind": "localization",
@@ -86,19 +86,19 @@
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 898,
-      "sha256": "7f1004454f81b4d3a468333594b63d53ff74556f765bd5278846155020e7db6b"
+      "sha256": "6f0601bfa5bef116cc77d99f87950e04416acff72ec0ba548c77e6ec486bda7a"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 11844,
-      "sha256": "d0f2cb3d64aa1e8cabfb25d3eef373af1539730f385510e9416a3934f41638ec"
+      "byteLength": 11759,
+      "sha256": "1cc15efe2402aa2c93d9951f19816d0e13362dbbdb0573724669e4661fb73ffd"
     },
     {
       "kind": "level",
       "path": "scenarios/first-playable/map.caxemap",
-      "byteLength": 14530,
-      "sha256": "61c38dc78cce29c99c9b38ccc211ed1149f8e6f968c2ad7efac9ca6043d21f16"
+      "byteLength": 14551,
+      "sha256": "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee"
     }
   ],
   "dependencies": []

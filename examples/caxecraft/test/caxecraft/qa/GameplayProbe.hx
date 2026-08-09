@@ -20,8 +20,6 @@ import caxecraft.domain.Vitals.revive as reviveVitals;
 import caxecraft.domain.Vitals.start as startVitals;
 import caxecraft.domain.Vitals.startAt as startVitalsAt;
 import caxecraft.domain.Vitals.step as stepVitals;
-import caxecraft.gameplay.GuideNpc;
-import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.BerryDrop.collectAmount as collectBerryDropAmount;
 import caxecraft.gameplay.BerryDrop.fromDefeatedCharacter as berryDropFromDefeatedCharacter;
 import caxecraft.gameplay.BerryDrop.isInRange as berryDropIsInRange;
@@ -84,25 +82,7 @@ final class GameplayProbe {
 			&& World.query(cells, World.coord(16, 0, 16)) == caxecraft.domain.BlockKind.Bedrock,
 			"immutable bedrock remains a separate non-capacity outcome");
 
-		var guide = GuideNpc.start(view, 17.5, 13.5);
-		require(GuideNpc.phase(guide) == GuidePhase.Waiting, "guide starts ready to meet");
-		require(GuideNpc.isInRange(guide, 16.5, 16.5), "spawn can reach guide interaction");
-		guide = GuideNpc.interact(guide);
-		require(GuideNpc.phase(guide) == GuidePhase.Welcomed, "first interaction welcomes");
-		require(GuideNpc.sharesBerriesOnNextInteraction(guide), "second interaction declares gift");
 		var inventory = Inventory.starter();
-		final berriesBefore = inventory.berries;
-		inventory = Inventory.collectItem(inventory, ItemKind.Berries, 2);
-		guide = GuideNpc.interact(guide);
-		require(GuideNpc.phase(guide) == GuidePhase.SharedBerries && inventory.berries == berriesBefore + 2, "one-time gift is explicit");
-		require(GuideNpc.phase(GuideNpc.interact(guide)) == GuidePhase.SharedBerries, "finished conversation is stable");
-		var waitingGift = GuideNpc.interact(GuideNpc.start(view, 17.5, 13.5));
-		final fullBerries = Inventory.make(5, 0, 0, 0, 0, 0, Inventory.MAX_STACK, 0, 0);
-		final acceptedGift = Inventory.acceptedAmount(fullBerries, ItemKind.Berries, 2);
-		if (acceptedGift == 2)
-			waitingGift = GuideNpc.interact(waitingGift);
-		require(acceptedGift == 0
-			&& GuideNpc.phase(waitingGift) == GuidePhase.Welcomed, "full stack keeps Nia's gift available for retry");
 
 		var mossling = Mossling.start(view, 12.5, 12.5);
 		final initialX = mossling.x;

@@ -116,11 +116,11 @@ function selfCheck():Int {
 		return 17;
 	final selected = active.generation();
 	final receipt = selected.receipt();
-	if (receipt.generationSha256 != "2c6086f253db746964aaaddda2f9754d915ac99dee22cece658e810e8594f866"
+	if (receipt.generationSha256 != "b680f8eba09dc4af20904840b579e1ea7484f56230a73076dfef41a9bac1bccf"
 		|| receipt.assetManifestSha256 != "dbd7fae77851790c589296f96782750ab000067a7e9936820406966f4cc6cba5"
 		|| receipt.content.sha256 != "e4aa78502b11ea07a0dfa3c472c391dd1ad4af7b90fd1f529548bcc06fe71b94"
 		|| receipt.ui.sha256 != "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
-		|| receipt.map.sha256 != "61c38dc78cce29c99c9b38ccc211ed1149f8e6f968c2ad7efac9ca6043d21f16")
+		|| receipt.map.sha256 != "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee")
 		return 9;
 	traceGenerationId = selected.generationId().value();
 	#if !c
@@ -133,7 +133,7 @@ function selfCheck():Int {
 		+ selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	traceWorldState = selected.level().generation().semanticTrace().worldState;
 	traceSourceBytes = receipt.content.byteLength + receipt.ui.byteLength + receipt.map.byteLength;
-	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 3528 && traceWorldState == 454073574 && traceSourceBytes == 28339 ? 0 : 10;
+	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 3528 && traceWorldState == 454073574 && traceSourceBytes == 28360 ? 0 : 10;
 }
 
 /** Load one real complete candidate through the shared package path. */

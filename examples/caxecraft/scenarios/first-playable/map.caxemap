@@ -13,7 +13,6 @@ locale en
   message enemy_dropped_items "MOSSLING DROPPED BERRIES"
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "MOSSLING WINDUP: DODGE"
-  message guide_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
   message guide_talk "E  TALK TO NIA"
   message guide_welcome "NIA: THE GROVE LISTENS. E: A SMALL GIFT"
   message pickup_many "+2 BERRIES"
@@ -34,7 +33,6 @@ locale es-mx
   message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
-  message guide_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
   message guide_talk "E  HABLAR CON NIA"
   message guide_welcome "NIA: EL BOSQUE TE ESCUCHA. E: REGALO"
   message pickup_many "+2 BAYAS"
@@ -1104,6 +1102,10 @@ object guide.nia
   tag friend
   placement npc caxecraft:nia dialogue.nia.welcome 17500 5000 13500 270
 end object
+object item.nia-berries
+  tag gift
+  placement item caxecraft:berries 2 17500 5000 14500 0
+end object
 object item.tideweave
   tag deferred-vault-proof
   tag mechanics-proof
@@ -1126,6 +1128,7 @@ end objective
 rule rule.nia-starts-exploration priority 100 once
   when interact guide.nia
   if (always)
+  do dialogue dialogue.nia.welcome
   do objective objective.prologue complete
   do objective objective.explore active
 end rule

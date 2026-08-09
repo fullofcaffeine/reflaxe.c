@@ -13,7 +13,6 @@ locale en
   message enemy_dropped_items "MOSSLING DROPPED BERRIES"
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "MOSSLING WINDUP: DODGE"
-  message guide_gift "MOSS: BERRIES FOR THE GROTTO, HAXIRIO"
   message guide_talk "E  TALK TO MOSS"
   message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
   message objective_meet_moss_body "MOSS WAITS BESIDE THE FALLSKEEPER'S SHRINE."
@@ -36,7 +35,6 @@ locale es-mx
   message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
-  message guide_gift "MOSS: BAYAS PARA LA GRUTA, HAXIRIO"
   message guide_talk "E  HABLAR CON MOSS"
   message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
   message objective_meet_moss_body "MOSS ESPERA JUNTO AL SANTUARIO DEL GUARDIAN DE LAS CATARATAS."
@@ -827,6 +825,7 @@ end objective
 rule rule.moss-opens-the-western-route priority 100 once
   when interact guide.moss
   if (always)
+  do dialogue dialogue.moss.falls
   do objective objective.meet-moss complete
   do objective objective.find-tideweave active
 end rule
