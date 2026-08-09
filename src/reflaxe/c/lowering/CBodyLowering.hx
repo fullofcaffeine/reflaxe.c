@@ -9522,6 +9522,20 @@ private class FunctionBuilder {
 				expression.pos));
 			return replacement;
 		}
+		final managedEnum = target.mapping.enumValue();
+		if (managedEnum != null && managedEnum.managedLifetime) {
+			final destroyId = managedEnum.destroyImplementationId();
+			if (destroyId == null)
+				throw new CBodyEmissionError('managed enum `${managedEnum.instanceId}` lost its destroy plan');
+			// First, give the replacement its own payload references. Then release the
+			// old value. This order keeps `selected = selected` safe when both sides
+			// refer to the same active payload.
+			final replacement = captureManagedValue(value, target.mapping, right.pos, "enum-assignment-replacement");
+			final sourceSpan = sourceSpan(expression.pos);
+			appendInstruction(null, IRIORelease(stableTarget.place, IRIProgramLocal(destroyId)), sourceSpan, "release-enum-assignment-target");
+			appendInstruction(null, IRIOStore(stableTarget.place, replacement.id), sourceSpan, "store-enum-assignment-replacement");
+			return replacement;
+		}
 		final managedAggregate = target.mapping.aggregateValue();
 		if (managedAggregate != null && managedAggregate.managedLifetime) {
 			final destroyId = managedAggregate.destroyImplementationId();

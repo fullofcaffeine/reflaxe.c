@@ -349,6 +349,30 @@ final class Main {
 		return selected;
 	}
 
+	/**
+	 * Replace one owned enum local along ordinary statement control flow.
+	 *
+	 * This is the reduced form of an application selector that starts with an
+	 * empty case, finds better candidates in a loop, and returns the last choice.
+	 * Each assignment must acquire the replacement before it destroys the old
+	 * active payload. The final return transfers the local's one remaining owner.
+	 */
+	static function replaceSelection(selectFirst:Bool, selectSecond:Bool):ValidationResult {
+		var selected:ValidationResult = ValidationFailed;
+		if (selectFirst)
+			selected = validate();
+		if (selectSecond)
+			selected = validate();
+		return selected;
+	}
+
+	/** Replace a fresh local with a borrowed alias without invalidating either owner. */
+	static function replaceSelectionWithBorrowed(borrowed:ValidationResult):ValidationResult {
+		var selected = validate();
+		selected = borrowed;
+		return selected;
+	}
+
 	/** Mutate the projected shared buffer without reading an inactive union arm. */
 	static function improve(value:ValidationResult):Void {
 		switch value {
@@ -387,6 +411,10 @@ final class Main {
 		final blockSwitchBorrowed = chooseBlockSwitch(ChooseBorrowed, original);
 		final blockSwitchFresh = chooseBlockSwitch(ChooseFresh, original);
 		final blockSwitchFailed = chooseBlockSwitch(ChooseFailed, original);
+		final replacementEmpty = replaceSelection(false, false);
+		final replacementFirst = replaceSelection(true, false);
+		final replacementSecond = replaceSelection(true, true);
+		final replacementBorrowed = replaceSelectionWithBorrowed(original);
 		final failed = ValidationFailed;
 		improve(copied);
 		while (score(original) != 19
@@ -409,6 +437,10 @@ final class Main {
 			|| score(blockSwitchBorrowed) != 19
 			|| score(blockSwitchFresh) != 15
 			|| score(blockSwitchFailed) != -1
+			|| score(replacementEmpty) != -1
+			|| score(replacementFirst) != 15
+			|| score(replacementSecond) != 15
+			|| score(replacementBorrowed) != 19
 			|| familyForChoice(ChooseFresh) != FreshFamily
 			|| familyForChoice(ChooseBorrowed) != BorrowedFamily
 			|| familyForChoice(ChooseFailed) != FailedFamily
