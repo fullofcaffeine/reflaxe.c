@@ -92,6 +92,24 @@ final class ContentPackageRefreshProbe {
 				contentReceiptFound = entry.byteLength == changedContent.length && entry.sha256 == expectedHash;
 		}
 		require(contentReceiptFound, "the outer package lost the changed base-pack receipt");
+
+		final uiPath = "locales/ui.json";
+		final uiBytes = File.getBytes(uiPath);
+		final changedUi = Bytes.ofString(StringTools.replace(uiBytes.toString(), "E TALK", "E INTERACT"));
+		final uiPlan = ready(planContentPackageRefresh(new ReplacedContentSource(store, uiPath, changedUi), "caxecraft.package.json", null, null));
+		final uiPackage = file(uiPlan, "caxecraft.package.json");
+		final expectedUiHash = runtimeSha256Hex(changedUi);
+		final nextUiManifest = switch decodeContentPackageManifest(uiPackage.next) {
+			case ContentPackageManifestRejected(diagnostic): throw new haxe.Exception('UI refresh package did not decode: ${Std.string(diagnostic)}');
+			case ContentPackageManifestReady(manifest): manifest;
+		};
+		var uiReceiptFound = false;
+		for (index in 0...nextUiManifest.entryCount()) {
+			final entry = nextUiManifest.entryAt(index);
+			if (entry.logicalPath.text() == uiPath)
+				uiReceiptFound = entry.byteLength == changedUi.length && entry.sha256 == expectedUiHash;
+		}
+		require(uiReceiptFound, "the outer package lost the changed UI-catalog receipt");
 		switch planContentPackageRefresh(new ReplacedContentSource(store, contentPath, Bytes.ofString("{")), "caxecraft.package.json", null, null) {
 			case ContentRefreshRejected(ContentPackRejected(_)):
 			case ContentRefreshReady(_):
@@ -108,7 +126,7 @@ final class ContentPackageRefreshProbe {
 			case ContentRefreshRejected(error):
 				throw new haxe.Exception('an unknown level produced the wrong error: ${Std.string(error)}');
 		}
-		Sys.println("content-package-refresh: current package, map and base-pack receipt cascades, canonical editor bytes, and unknown-level rejection passed");
+		Sys.println("content-package-refresh: current package, map, base-pack, and UI receipt cascades, canonical editor bytes, and unknown-level rejection passed");
 	}
 
 	/** Unwrap one expected complete plan. */

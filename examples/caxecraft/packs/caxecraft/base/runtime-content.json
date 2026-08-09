@@ -12,18 +12,18 @@
       "sha256": "d24ca7ea60cbba2a6fd4bf87049f6ffc092dabd47311200c107570ca8fc01551"
     },
     {
-      "byteLength": 6401,
+      "byteLength": 6434,
       "kind": "ui-catalog",
       "path": "locales/ui.json",
-      "sha256": "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
+      "sha256": "7bcf71a9c51f5df553fb7a472a4df781cb2bdaae61c8eb13bbf53a7c85850388"
     },
     {
-      "byteLength": 14551,
+      "byteLength": 14612,
       "kind": "level-map",
       "path": "scenarios/first-playable/map.caxemap",
-      "sha256": "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee"
+      "sha256": "6d88734d17fcdc601575b38d4570b6acbb63ce1ba1bf5ce5fc1aee8824c561a4"
     }
   ],
-  "generationSha256": "c9f1d2da83c0ff12ae8bf858565a716e27581e568f7eeed3b3655cdb729c2d93",
+  "generationSha256": "70c088c6628d15d1a2c3b1a77087ddf370e1f75591c4ce88bc0fb1f45a3d1807",
   "schemaVersion": 1
 }

@@ -5,22 +5,28 @@
   "entryLevel": "evergrove",
   "levels": [
     {
+      "id": "ashfall",
+      "path": "scenarios/first-adventure/ashfall.caxemap",
+      "byteLength": 14191,
+      "sha256": "352bde93d964fa46e50cc617e6e955657ee0d40e22830b5fb526ab166943f901"
+    },
+    {
       "id": "evergrove",
       "path": "scenarios/first-playable/map.caxemap",
-      "byteLength": 14551,
-      "sha256": "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee"
+      "byteLength": 14612,
+      "sha256": "6d88734d17fcdc601575b38d4570b6acbb63ce1ba1bf5ce5fc1aee8824c561a4"
     },
     {
       "id": "frostmere",
       "path": "scenarios/first-adventure/frostmere.caxemap",
-      "byteLength": 18930,
-      "sha256": "d142d79796454d3d9888953e444ea916f3ade1584ae33929cf3033597bd1c371"
+      "byteLength": 18991,
+      "sha256": "d252259fe5e4f25f8bda973d7f65113cdef72178594433c11d5ed71deec74259"
     },
     {
       "id": "western-falls",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 18706,
-      "sha256": "d5eb15997330da3df34d395feda0a7be0361f253cc52992392276078df34ce90"
+      "byteLength": 18767,
+      "sha256": "93da8eeb9e0d177d09bf6d21f9bb538381c77a61f315d604db81a93b9b7e0628"
     }
   ],
   "transitions": [
@@ -28,6 +34,13 @@
       "exit": "evergrove-west",
       "sourceLevel": "evergrove",
       "destinationLevel": "western-falls",
+      "destinationEntrance": "default",
+      "required": true
+    },
+    {
+      "exit": "frostmere-north",
+      "sourceLevel": "frostmere",
+      "destinationLevel": "ashfall",
       "destinationEntrance": "default",
       "required": true
     },

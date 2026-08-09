@@ -47,6 +47,9 @@ import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
+import caxecraft.app.InteractionPrompt.InteractionPrompt;
+import caxecraft.app.InteractionPrompt.InteractionTargetKind;
+import caxecraft.app.InteractionPrompt.interactionPrompt;
 import caxecraft.domain.CharacterDamagePolicy;
 import caxecraft.domain.Character;
 import caxecraft.domain.ActorControllerEvent;
@@ -370,7 +373,7 @@ final class CaxecraftApp {
 		var activeDialogue:Null<ScenarioId> = null;
 		var latestJournalId:Null<ScenarioId> = null;
 		var currentObjectiveId = initialLevel.initialObjectiveId();
-		var guideInteractionAvailable = hasAvailableInteraction(nearestAvailableInteraction(initialSession, initialLevel));
+		var availableInteractionPrompt = promptForAvailableInteraction(nearestAvailableInteraction(initialSession, initialLevel));
 		var enemyActor = initialSession.readCharacter(initialLevel.enemyActorId());
 		var initialActorPhases = initialSession.actorControllerStateSnapshots();
 		var enemyPhase = observeActorPhase(initialActorPhases, initialLevel.enemyActorId(), ActorControllerPhase.Resting);
@@ -684,7 +687,7 @@ final class CaxecraftApp {
 									activeDialogue = null;
 									latestJournalId = null;
 									currentObjectiveId = levelView.initialObjectiveId();
-									guideInteractionAvailable = hasAvailableInteraction(nearestAvailableInteraction(session, levelView));
+									availableInteractionPrompt = promptForAvailableInteraction(nearestAvailableInteraction(session, levelView));
 									enemyActor = session.readCharacter(levelView.enemyActorId());
 									final phases = session.actorControllerStateSnapshots();
 									enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
@@ -1045,12 +1048,12 @@ final class CaxecraftApp {
 						final actorTick = session.stepAuthoredActorControllers(gameTick.tickIndex, damagePolicy);
 						switch actorTick.status {
 							case ControllersAdvanced:
-								guideInteractionAvailable = false;
+								availableInteractionPrompt = InteractionPrompt.NoInteractionPrompt;
 								for (event in session.actorControllerEventSnapshots())
 									switch event {
 										case NoControllerEvent:
 										case InteractionAvailable(source):
-											if (levelView.hasDialogueActor(source)) guideInteractionAvailable = true;
+											if (levelView.hasDialogueActor(source)) availableInteractionPrompt = InteractionPrompt.TalkInteractionPrompt;
 										case LocalPlayerAttack(source):
 											if (source == enemyActorId) enemyAttackFrames = 120;
 										case DropRequested(source, drop):
@@ -1216,7 +1219,7 @@ final class CaxecraftApp {
 				quit = true;
 			else
 				character = committedView.localPlayer;
-			guideInteractionAvailable = hasAvailableInteraction(nearestAvailableInteraction(session, levelView));
+			availableInteractionPrompt = promptForAvailableInteraction(nearestAvailableInteraction(session, levelView));
 			final presentationActorPhases = session.actorControllerStateSnapshots();
 			enemyPhase = observeActorPhase(presentationActorPhases, enemyActorId, ActorControllerPhase.Defeated);
 			enemyActor = session.readCharacter(enemyActorId);
@@ -1356,7 +1359,7 @@ final class CaxecraftApp {
 					locale: locale,
 					inventory: inventory,
 					activeDialogue: activeDialogue,
-					guideInteractionAvailable: guideInteractionAvailable,
+					interactionPrompt: availableInteractionPrompt,
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase,
 					levelLabel: levelLabel,
@@ -1574,12 +1577,13 @@ final class CaxecraftApp {
 		return selected;
 	}
 
-	/** True when nearest-target selection produced a semantic interaction. */
-	static function hasAvailableInteraction(target:AvailableInteractionTarget):Bool
-		return switch target {
-			case NoAvailableInteraction: false;
-			case DialogueInteraction(_) | StatefulObjectInteraction(_): true;
-		};
+	/** Reduce one identity-bearing target to the prompt meaning needed by the HUD. */
+	static function promptForAvailableInteraction(target:AvailableInteractionTarget):InteractionPrompt
+		return interactionPrompt(switch target {
+			case NoAvailableInteraction: InteractionTargetKind.NoInteractionTarget;
+			case DialogueInteraction(_): InteractionTargetKind.DialogueInteractionTarget;
+			case StatefulObjectInteraction(_): InteractionTargetKind.MechanismInteractionTarget;
+		});
 
 	/**
 		Make sure that each published dialogue actor still has matching session state.
@@ -1664,7 +1668,7 @@ final class CaxecraftApp {
 		final locale = view.locale;
 		final inventory = view.inventory;
 		final activeDialogue = view.activeDialogue;
-		final guideInteractionAvailable = view.guideInteractionAvailable;
+		final availableInteractionPrompt = view.interactionPrompt;
 		final enemy = view.enemy;
 		final enemyPhase = view.enemyPhase;
 		final vitals = view.character.vitals;
@@ -1726,9 +1730,14 @@ final class CaxecraftApp {
 		if (!paused && activeDialogue != null) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
 			Raylib.DrawTextString(presentation.dialogueLine(activeDialogue, 0, scenarioLocale(locale)), centerX - 225, centerY + 74, 16, text);
-		} else if (!paused && guideInteractionAvailable) {
+		} else if (!paused && availableInteractionPrompt != InteractionPrompt.NoInteractionPrompt) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
-			drawScenarioText(presentation, locale, GameplayMessage.GuideTalk, centerX - 110, centerY + 74, 18, text);
+			final prompt = switch availableInteractionPrompt {
+				case TalkInteractionPrompt: GameplayMessage.GuideTalk;
+				case UseInteractionPrompt: GameplayMessage.ObjectUse;
+				case NoInteractionPrompt: GameplayMessage.GuideTalk;
+			};
+			drawScenarioText(presentation, locale, prompt, centerX - 110, centerY + 74, 18, text);
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
 			if (enemyPhase == ActorControllerPhase.Windup)

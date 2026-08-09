@@ -67,14 +67,14 @@
     {
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
-      "byteLength": 1167,
-      "sha256": "75f0a735a0c1bae7892a803ae4fbbb10d4e6d2ab6299493fe87a4b7373458b16"
+      "byteLength": 1552,
+      "sha256": "91c6f3e2af5d290e302cb858f46c3b55c42cbf9019a4611ce88cbcfe2b4b0ffc"
     },
     {
       "kind": "localization",
       "path": "locales/ui.json",
-      "byteLength": 6401,
-      "sha256": "f8796e676ab529bfed5035d461a70c4dbb3a5684f51d7a3817c7af071907739a"
+      "byteLength": 6434,
+      "sha256": "7bcf71a9c51f5df553fb7a472a4df781cb2bdaae61c8eb13bbf53a7c85850388"
     },
     {
       "kind": "content-pack",
@@ -86,25 +86,31 @@
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "f563d836725f5fa1409d53cc8b325c336d1846a1a55ed9c242643b7f087af666"
+      "sha256": "fad39ec3ef8997150bbf09a492c9789d4bc9d39a9e53b074452858de1ad260a3"
+    },
+    {
+      "kind": "level",
+      "path": "scenarios/first-adventure/ashfall.caxemap",
+      "byteLength": 14191,
+      "sha256": "352bde93d964fa46e50cc617e6e955657ee0d40e22830b5fb526ab166943f901"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/frostmere.caxemap",
-      "byteLength": 18930,
-      "sha256": "d142d79796454d3d9888953e444ea916f3ade1584ae33929cf3033597bd1c371"
+      "byteLength": 18991,
+      "sha256": "d252259fe5e4f25f8bda973d7f65113cdef72178594433c11d5ed71deec74259"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 18706,
-      "sha256": "d5eb15997330da3df34d395feda0a7be0361f253cc52992392276078df34ce90"
+      "byteLength": 18767,
+      "sha256": "93da8eeb9e0d177d09bf6d21f9bb538381c77a61f315d604db81a93b9b7e0628"
     },
     {
       "kind": "level",
       "path": "scenarios/first-playable/map.caxemap",
-      "byteLength": 14551,
-      "sha256": "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee"
+      "byteLength": 14612,
+      "sha256": "6d88734d17fcdc601575b38d4570b6acbb63ce1ba1bf5ce5fc1aee8824c561a4"
     }
   ],
   "dependencies": []

@@ -221,6 +221,9 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 		case RefreshBytesRejected(error): return ContentRefreshRejected(error);
 		case RefreshBytesReady(bytes): bytes;
 	};
+	// UI text is creator-owned runtime content. Its receipt must advance with
+	// the runtime receipt and outer package in the same atomic refresh plan.
+	packageUpdates.push(receipt(uiEntry.logicalPath.text(), uiBytes));
 	final assetBytes = switch readRefreshBytes(source, assetEntry.logicalPath.text()) {
 		case RefreshBytesRejected(error): return ContentRefreshRejected(error);
 		case RefreshBytesReady(bytes): bytes;

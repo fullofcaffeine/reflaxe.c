@@ -1,5 +1,8 @@
 package caxecraft.qa;
 
+import caxecraft.app.InteractionPrompt.InteractionPrompt;
+import caxecraft.app.InteractionPrompt.InteractionTargetKind;
+import caxecraft.app.InteractionPrompt.interactionPrompt;
 import caxecraft.app.AtlasLayout.entityAtlasCellCount;
 import caxecraft.app.AtlasLayout.entityAtlasCellIsValid;
 import caxecraft.app.AtlasLayout.entityAtlasColumn;
@@ -78,6 +81,12 @@ function selfCheck():Int {
 		return 12;
 	if (Std.int(1024 / entityAtlasColumns()) != 256 || Std.int(1280 / entityAtlasRows()) != 256)
 		return 13;
+	if (interactionPrompt(InteractionTargetKind.NoInteractionTarget) != InteractionPrompt.NoInteractionPrompt)
+		return 14;
+	if (interactionPrompt(InteractionTargetKind.DialogueInteractionTarget) != InteractionPrompt.TalkInteractionPrompt)
+		return 15;
+	if (interactionPrompt(InteractionTargetKind.MechanismInteractionTarget) != InteractionPrompt.UseInteractionPrompt)
+		return 16;
 	return 0;
 }
 

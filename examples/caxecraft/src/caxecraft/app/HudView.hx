@@ -10,6 +10,7 @@ import caxecraft.gameplay.InventoryState;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.app.InteractionPrompt.InteractionPrompt;
 
 /**
 	Read-only facts needed to draw one Caxecraft heads-up display (HUD) frame.
@@ -58,8 +59,8 @@ typedef HudView = {
 	/** Authored dialogue currently presented, or null while the talk prompt is shown. */
 	final activeDialogue:Null<ScenarioId>;
 
-	/** Whether the generic stationary controller currently offers interaction. */
-	final guideInteractionAvailable:Bool;
+	/** Player-facing meaning of the nearest available authored interaction. */
+	final interactionPrompt:InteractionPrompt;
 
 	/** Committed first-playable enemy character from the generic entity store. */
 	final enemy:Character;

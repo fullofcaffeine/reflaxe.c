@@ -13,6 +13,7 @@
 #include "hxc/modules/caxecraft/app/HudDigits.h"
 #include "hxc/modules/caxecraft/app/HudResources.h"
 #include "hxc/modules/caxecraft/app/HudView.h"
+#include "hxc/modules/caxecraft/app/InteractionPrompt.h"
 #include "hxc/modules/caxecraft/app/LoadedWorldItem.h"
 #include "hxc/modules/caxecraft/app/Main.h"
 #include "hxc/modules/caxecraft/app/MotionInterpolation.h"

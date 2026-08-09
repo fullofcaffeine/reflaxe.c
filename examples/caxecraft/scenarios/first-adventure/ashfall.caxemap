@@ -1,0 +1,518 @@
+CAXEMAP 1
+feature required caxecraft:core
+map adventure.ashfall
+asset-pack packs/caxecraft/base
+default-locale en
+locale en
+  message adventure_progress "RESTORE THE ASHFALL BRIDGE"
+  message adventure_tagline "REPAIR BOTH SUPPORTS. FORGE THE SPAN. LIGHT ITS BEACON."
+  message attack_hit "COPPER STRIKE"
+  message berry_stack_full "BERRIES FULL: USE ONE FIRST"
+  message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
+  message bridge_open "THE ASHFALL SPAN ANSWERS. THE ROAD TO BROWSER'S CASTLE IS OPEN."
+  message castle_body "BEYOND THE RESTORED SPAN, BLACK STONE TEETH FRAME BROWSER'S CASTLE ROAD. CEESH IS SOMEWHERE PAST THAT GATE."
+  message castle_title "THE CASTLE ROAD"
+  message enemy_alert "ASH MOSSLING ALERT"
+  message enemy_dropped_items "MOSSLING DROPPED BERRIES"
+  message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
+  message enemy_windup "MOSSLING WINDUP: DODGE"
+  message forge_early "THE BRIDGE FORGE NEEDS BOTH SUPPORTS: OPEN THE RIVER SLUICE AND LOCK THE ROOT BRACE."
+  message forge_ready "BOTH SUPPORTS HOLD. THE HAXEFORGE SHAPES A SAFE SPAN TO THE BEACON."
+  message guide_talk "E  TALK"
+  message nia_welcome "NIA: BROWSER BROKE THE ASHFALL SPAN. OPEN THE EAST RIVER SLUICE AND LOCK THE WEST ROOT BRACE. THEN USE THE BRIDGE FORGE AND LIGHT ITS BEACON."
+  message object_use "E  USE"
+  message objective_anchors_body "OPEN THE RIVER SLUICE ON THE EAST SUPPORT AND LOCK THE ROOT BRACE ON THE WEST. EITHER MAY COME FIRST."
+  message objective_anchors_title "REPAIR THE TWO BRIDGE SUPPORTS"
+  message objective_castle_body "CROSS THE RESTORED SPAN AND READ THE CASTLE ROAD MARKER."
+  message objective_castle_title "REACH THE CASTLE ROAD"
+  message objective_finish_body "BOTH SUPPORTS HOLD. USE THE CENTRAL BRIDGE FORGE, THEN LIGHT THE BEACON BESIDE THE SPAN."
+  message objective_finish_title "FORGE THE SPAN AND LIGHT ITS BEACON"
+  message objective_nia_body "NIA WAITS AT THE SNOWLINE SHELTER."
+  message objective_nia_title "ASK NIA ABOUT THE BROKEN SPAN"
+  message reset "THE EARLY BEACON PULSE RELEASES BOTH UNFINISHED SUPPORTS. SET THE SLUICE AND BRACE AGAIN, THEN FORGE THE SPAN."
+  message reward "THE OLD ROAD CACHE HOLDS BREAD FOR THE CASTLE CLIMB."
+  message root_ready "THE WEST ROOT BRACE LOCKS. OPEN THE EAST RIVER SLUICE."
+  message scenario_title "Caxecraft: Ashfall Bridge"
+  message wave_ready "THE EAST RIVER SLUICE OPENS. LOCK THE WEST ROOT BRACE."
+end locale
+locale es-mx
+  message adventure_progress "RESTAURA EL PUENTE DE ASHFALL"
+  message adventure_tagline "REPARA DOS SOPORTES. FORJA EL TRAMO. ENCIENDE SU FARO."
+  message attack_hit "GOLPE DE COBRE"
+  message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
+  message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
+  message bridge_open "EL TRAMO DE ASHFALL RESPONDE. EL CAMINO AL CASTILLO DE BROWSER ESTA ABIERTO."
+  message castle_body "TRAS EL PUENTE, DIENTES DE PIEDRA NEGRA MARCAN EL CAMINO AL CASTILLO DE BROWSER. CEESH ESTA MAS ALLA."
+  message castle_title "EL CAMINO AL CASTILLO"
+  message enemy_alert "MUSGUITO DE CENIZA ALERTA"
+  message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
+  message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
+  message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
+  message forge_early "LA FORJA DEL PUENTE NECESITA DOS SOPORTES: ABRE LA COMPUERTA DEL RIO Y FIJA EL REFUERZO DE RAIZ."
+  message forge_ready "LOS DOS SOPORTES RESISTEN. LA HAXEFORGE FORMA UN TRAMO SEGURO HASTA EL FARO."
+  message guide_talk "E  HABLAR"
+  message nia_welcome "NIA: BROWSER ROMPIO EL TRAMO DE ASHFALL. ABRE LA COMPUERTA DEL RIO AL ESTE Y FIJA EL REFUERZO DE RAIZ AL OESTE. LUEGO USA LA FORJA DEL PUENTE Y ENCIENDE SU FARO."
+  message object_use "E  USAR"
+  message objective_anchors_body "ABRE LA COMPUERTA DEL RIO EN EL SOPORTE ESTE Y FIJA EL REFUERZO DE RAIZ AL OESTE. PUEDES EMPEZAR POR CUALQUIERA."
+  message objective_anchors_title "REPARA LOS DOS SOPORTES DEL PUENTE"
+  message objective_castle_body "CRUZA EL PUENTE RESTAURADO Y LEE LA MARCA DEL CAMINO AL CASTILLO."
+  message objective_castle_title "LLEGA AL CAMINO DEL CASTILLO"
+  message objective_finish_body "LOS DOS SOPORTES RESISTEN. USA LA FORJA CENTRAL Y ENCIENDE EL FARO JUNTO AL TRAMO."
+  message objective_finish_title "FORJA EL TRAMO Y ENCIENDE SU FARO"
+  message objective_nia_body "NIA ESPERA EN EL REFUGIO DEL LIMITE DE NIEVE."
+  message objective_nia_title "PREGUNTA A NIA POR EL PUENTE ROTO"
+  message reset "EL PULSO PREMATURO DEL FARO SUELTA LOS SOPORTES INCOMPLETOS. AJUSTA LA COMPUERTA Y EL REFUERZO OTRA VEZ."
+  message reward "EL VIEJO ALIJO TIENE PAN PARA LA SUBIDA AL CASTILLO."
+  message root_ready "EL REFUERZO DE RAIZ OESTE QUEDA FIJO. ABRE LA COMPUERTA DEL RIO AL ESTE."
+  message scenario_title "Caxecraft: Puente de Ashfall"
+  message wave_ready "LA COMPUERTA DEL RIO AL ESTE SE ABRE. FIJA EL REFUERZO DE RAIZ AL OESTE."
+end locale
+title message scenario_title
+mode adventure
+world 32 16 32
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+palette 5 caxecraft:wood
+palette 7 caxecraft:snow
+palette 8 caxecraft:ash
+palette 9 caxecraft:stone
+chunk world.castle-shelf 0 0 0 32 16 6
+  run 1 32
+  run 9 128
+  run 8 32
+  run 0 320
+  run 1 32
+  run 9 128
+  run 8 32
+  run 0 320
+  run 1 32
+  run 9 128
+  run 8 32
+  run 0 320
+  run 1 32
+  run 9 128
+  run 8 32
+  run 0 320
+  run 1 32
+  run 9 128
+  run 8 32
+  run 0 320
+  run 1 32
+  run 9 128
+  run 8 32
+  run 0 320
+end chunk
+chunk world.gorge-west 0 0 6 13 16 6
+  run 1 13
+  run 9 39
+  run 0 156
+  run 1 13
+  run 9 39
+  run 0 156
+  run 1 13
+  run 9 39
+  run 0 156
+  run 1 13
+  run 9 39
+  run 0 156
+  run 1 13
+  run 9 39
+  run 0 156
+  run 1 13
+  run 9 39
+  run 0 156
+end chunk
+chunk world.bridge 13 0 6 7 16 6
+  run 1 7
+  run 9 21
+  run 5 7
+  run 0 77
+  run 1 7
+  run 9 21
+  run 5 7
+  run 0 77
+  run 1 7
+  run 9 21
+  run 5 7
+  run 0 77
+  run 1 7
+  run 9 21
+  run 5 7
+  run 0 77
+  run 1 7
+  run 9 21
+  run 5 7
+  run 0 77
+  run 1 7
+  run 9 21
+  run 5 7
+  run 0 77
+end chunk
+chunk world.gorge-east 20 0 6 12 16 6
+  run 1 12
+  run 9 36
+  run 0 144
+  run 1 12
+  run 9 36
+  run 0 144
+  run 1 12
+  run 9 36
+  run 0 144
+  run 1 12
+  run 9 36
+  run 0 144
+  run 1 12
+  run 9 36
+  run 0 144
+  run 1 12
+  run 9 36
+  run 0 144
+end chunk
+chunk world.bridge-approach 0 0 12 32 16 7
+  run 1 32
+  run 9 96
+  run 8 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 32
+  run 0 352
+end chunk
+chunk world.anchor-west 0 0 19 4 16 6
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+end chunk
+chunk world.root-mesa 4 0 19 8 16 6
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+end chunk
+chunk world.anchor-center 12 0 19 8 16 6
+  run 1 8
+  run 9 24
+  run 8 8
+  run 0 88
+  run 1 8
+  run 9 24
+  run 8 8
+  run 0 88
+  run 1 8
+  run 9 24
+  run 8 8
+  run 0 88
+  run 1 8
+  run 9 24
+  run 8 8
+  run 0 88
+  run 1 8
+  run 9 24
+  run 8 8
+  run 0 88
+  run 1 8
+  run 9 24
+  run 8 8
+  run 0 88
+end chunk
+chunk world.river-mesa 20 0 19 8 16 6
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+  run 1 8
+  run 9 32
+  run 8 8
+  run 0 80
+end chunk
+chunk world.anchor-east 28 0 19 4 16 6
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+  run 1 4
+  run 9 12
+  run 8 4
+  run 0 44
+end chunk
+chunk world.snowline-refuge 0 0 25 32 16 7
+  run 1 32
+  run 9 96
+  run 7 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 7 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 7 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 7 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 7 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 7 32
+  run 0 352
+  run 1 32
+  run 9 96
+  run 7 32
+  run 0 352
+end chunk
+fluid ash.cooling-pool caxecraft:water volume 21 6 22 4 1 3
+object ash.bridge-beacon
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 16500 5000 13500 0
+end object
+object ash.bridge-forge
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-moon caxecraft:waiting 16500 5000 17500 0
+end object
+object ash.bridge-gate
+  tag mechanism
+  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 5000 10500 0
+end object
+object ash.castle-gate
+  tag landmark
+  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 6000 2500 0
+end object
+object ash.river-sluice
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-river caxecraft:waiting 24500 6000 21500 270
+end object
+object ash.root-brace
+  tag mechanism
+  placement stateful caxecraft:vault-glyph-leaf caxecraft:waiting 7500 6000 21500 90
+end object
+object enemy.ash-mossling
+  tag enemy
+  placement entity caxecraft:mossling 25500 6000 21500 180
+end object
+object guide.nia
+  tag friend
+  placement npc caxecraft:nia dialogue.nia.ashfall 16500 5000 26500 180
+end object
+object item.castle-bread
+  tag reward
+  placement item caxecraft:bread 1 12500 6000 3500 0
+end object
+object player.start
+  tag player
+  placement player-spawn 16500 5000 28500 180
+end object
+object zone.castle-road
+  tag destination
+  placement trigger-zone 10 4 0 12 8 9
+end object
+dialogue dialogue.beacon.open
+  line speaker guide.nia message bridge_open
+end dialogue
+dialogue dialogue.beacon.reset
+  line speaker guide.nia message reset
+end dialogue
+dialogue dialogue.bridge-forge.early
+  line speaker guide.nia message forge_early
+end dialogue
+dialogue dialogue.bridge-forge.ready
+  line speaker guide.nia message forge_ready
+end dialogue
+dialogue dialogue.nia.ashfall
+  line speaker guide.nia message nia_welcome
+end dialogue
+dialogue dialogue.reward
+  line speaker guide.nia message reward
+end dialogue
+dialogue dialogue.support.river
+  line speaker guide.nia message wave_ready
+end dialogue
+dialogue dialogue.support.root
+  line speaker guide.nia message root_ready
+end dialogue
+journal journal.castle-road title message castle_title
+  body message castle_body
+end journal
+objective objective.ask-nia active title message objective_nia_title
+  body message objective_nia_body
+end objective
+objective objective.cool-anchors hidden title message objective_anchors_title
+  body message objective_anchors_body
+end objective
+objective objective.finish-bridge hidden title message objective_finish_title
+  body message objective_finish_body
+end objective
+objective objective.reach-castle-road hidden title message objective_castle_title
+  body message objective_castle_body
+end objective
+variable quest.river-sluice-ready quest flag false
+variable quest.root-brace-ready quest flag false
+variable quest.span-forged quest flag false
+rule rule.beacon-opens-the-span priority 100 once
+  when interact ash.bridge-beacon
+  if (flag quest.span-forged true)
+  do set-object-state ash.bridge-beacon caxecraft:entered
+  do set-object-state ash.bridge-gate caxecraft:open
+  do dialogue dialogue.beacon.open
+  do objective objective.finish-bridge complete
+  do objective objective.reach-castle-road active
+end rule
+rule rule.beacon-resets-unfinished-supports priority 90 repeat
+  when interact ash.bridge-beacon
+  if (flag quest.span-forged false)
+  do set-flag quest.root-brace-ready false
+  do set-flag quest.river-sluice-ready false
+  do set-object-state ash.root-brace caxecraft:waiting
+  do set-object-state ash.river-sluice caxecraft:waiting
+  do dialogue dialogue.beacon.reset
+end rule
+rule rule.both-supports-point-to-forge priority 80 once
+  when state-changed quest.river-sluice-ready
+  if (all (flag quest.river-sluice-ready true) (flag quest.root-brace-ready true))
+  do objective objective.cool-anchors complete
+  do objective objective.finish-bridge active
+end rule
+rule rule.both-supports-point-to-forge-reversed priority 80 once
+  when state-changed quest.root-brace-ready
+  if (all (flag quest.river-sluice-ready true) (flag quest.root-brace-ready true))
+  do objective objective.cool-anchors complete
+  do objective objective.finish-bridge active
+end rule
+rule rule.bridge-forge-needs-both-supports priority 90 repeat
+  when interact ash.bridge-forge
+  if (not (all (flag quest.river-sluice-ready true) (flag quest.root-brace-ready true)))
+  do dialogue dialogue.bridge-forge.early
+end rule
+rule rule.bridge-forge-shapes-the-span priority 100 once
+  when interact ash.bridge-forge
+  if (all (flag quest.river-sluice-ready true) (flag quest.root-brace-ready true))
+  do set-flag quest.span-forged true
+  do set-object-state ash.bridge-forge caxecraft:entered
+  do dialogue dialogue.bridge-forge.ready
+end rule
+rule rule.castle-road-recorded priority 100 once
+  when enter-zone zone.castle-road
+  if (objective objective.reach-castle-road active)
+  do journal journal.castle-road
+  do dialogue dialogue.reward
+  do objective objective.reach-castle-road complete
+end rule
+rule rule.nia-explains-the-span priority 100 once
+  when interact guide.nia
+  if (objective objective.ask-nia active)
+  do dialogue dialogue.nia.ashfall
+  do objective objective.ask-nia complete
+  do objective objective.cool-anchors active
+end rule
+rule rule.river-sluice-opens priority 100 repeat
+  when interact ash.river-sluice
+  if (flag quest.river-sluice-ready false)
+  do set-flag quest.river-sluice-ready true
+  do set-object-state ash.river-sluice caxecraft:entered
+  do dialogue dialogue.support.river
+end rule
+rule rule.root-brace-locks priority 100 repeat
+  when interact ash.root-brace
+  if (flag quest.root-brace-ready false)
+  do set-flag quest.root-brace-ready true
+  do set-object-state ash.root-brace caxecraft:entered
+  do dialogue dialogue.support.root
+end rule
+end-map

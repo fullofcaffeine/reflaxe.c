@@ -1,0 +1,61 @@
+PILOSCRIPT 1
+name ashfall-journey
+frames 350
+
+# Enter Adventure and select Ashfall from the runtime campaign catalog. This
+# protects the real title -> campaign -> level boundary without freezing every
+# line of authored content into automation.
+action 0 menu-next
+checkpoint 0 capture title-selection
+action 1 menu-confirm
+checkpoint 1 capture campaign-selection
+action 2 menu-next
+action 4 menu-next
+action 6 menu-next
+checkpoint 7 capture level-selection
+expect 7 level ashfall
+action 8 menu-confirm
+expect 9 objective objective.ask-nia
+
+# Nia owns the repeatable clue at the safe snowline shelter.
+action 10 interact
+expect 14 objective objective.cool-anchors
+
+# Close Nia's clue and climb onto the western root-brace mesa.
+action 15 interact
+hold 16 50 forward-left
+hold 51 70 left-jump
+hold 71 80 forward-jump
+action 82 interact
+expect 85 object-state ash.root-brace=caxecraft:entered
+
+# Cross the open central lane to the river sluice. The nearby Mossling provides
+# bounded pressure, but does not own puzzle progress.
+action 86 interact
+hold 87 170 right-jump
+action 172 interact
+expect 175 object-state ash.river-sluice=caxecraft:entered
+expect 176 objective objective.finish-bridge
+
+# Return to the centre, forge the span, then light its beacon.
+action 177 interact
+hold 178 216 left-jump
+hold 217 236 forward-jump
+action 238 interact
+expect 241 object-state ash.bridge-forge=caxecraft:entered
+action 242 interact
+hold 243 262 forward-jump
+action 264 interact
+expect 267 object-state ash.bridge-gate=caxecraft:open
+
+# The real player crosses the opened timber span and reaches the still-sealed
+# castle road. This is the chapter boundary, not a claim that the castle exists.
+action 268 interact
+hold 269 300 forward-jump
+hold 301 324 forward
+expect 326 objective objective.reach-castle-road
+
+action 330 pause
+checkpoint 330 capture final
+expect 330 screen paused
+end
