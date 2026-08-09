@@ -25,8 +25,8 @@
     {
       "kind": "asset",
       "path": "assets/atlases/entities.png",
-      "byteLength": 788010,
-      "sha256": "6f41e7b20f31b368f50ca934725c7edeb2fb355ef303817cfa744e801afe0f1a"
+      "byteLength": 1280129,
+      "sha256": "3bf66a401458f3288261b3ee27efe49b4335f54185074e0bde2c19b85573e927"
     },
     {
       "kind": "asset",
@@ -55,8 +55,8 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 17945,
-      "sha256": "dbd7fae77851790c589296f96782750ab000067a7e9936820406966f4cc6cba5"
+      "byteLength": 18461,
+      "sha256": "4afeab8fd096f7e7c726e6335b5cb76ab8727f4740116e10fb5e0e5d265bb9fc"
     },
     {
       "kind": "asset",
@@ -68,7 +68,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 958,
-      "sha256": "013fbfcdd31a212c7796e7011152e2526b4454ae3185a9805c55b5f615741370"
+      "sha256": "83c7f88d1ef014b327e3ce0bd31eb9700999a4223b62eb2bcc37f54036506458"
     },
     {
       "kind": "localization",
@@ -79,20 +79,20 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 7408,
-      "sha256": "e4aa78502b11ea07a0dfa3c472c391dd1ad4af7b90fd1f529548bcc06fe71b94"
+      "byteLength": 9191,
+      "sha256": "7f5de2d4ce4c61690f791f53099a0290143ab8700936a3e356b711a611e44a67"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 898,
-      "sha256": "6f0601bfa5bef116cc77d99f87950e04416acff72ec0ba548c77e6ec486bda7a"
+      "sha256": "287779c21386cca36972743e29f3ba04ccfbee10933bcc1e1e8e2a3c2f36992e"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 13255,
-      "sha256": "e19b355b24fb560f99a4a3e90349cc207ac066a6a28dcb463ea3dab2f0ae690f"
+      "byteLength": 13908,
+      "sha256": "81d14f70474a49cf055b8104a3f52cd768952beb70fe204ef35584edb302c70b"
     },
     {
       "kind": "level",

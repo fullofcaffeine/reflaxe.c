@@ -30,8 +30,9 @@ import haxe.io.Bytes;
  * The receipt is read first and names exactly one pack, UI catalog, and map.
  * Each file is then read into owned bytes, checked against its SHA-256 and byte
  * count, decoded at its lowest faithful layer, and finally resolved into a
- * fresh level. Nothing escapes until all four inputs agree. The renderer and
- * application may borrow the resulting registry/catalog only from this owner.
+ * fresh level. Nothing escapes until the receipt and all three source files
+ * agree. The renderer and application may borrow the resulting registry and
+ * catalog only from this owner.
  */
 /** Application-selected player facts; the pack owns the aquatic profile. */
 typedef RuntimeContentPlayerOptions = {
@@ -65,10 +66,10 @@ typedef RuntimeContentReceipt = {
 	/** Reviewed asset-manifest schema version. */
 	final assetManifestSchemaVersion:Int;
 
-	/** Reviewed asset package identity. */
+	/** Asset package identity that the decoded content pack must also name. */
 	final assetManifestId:String;
 
-	/** SHA-256 of the complete reviewed asset manifest. */
+	/** SHA-256 of the complete staged asset manifest. */
 	final assetManifestSha256:String;
 
 	/** Exact base-pack source receipt. */
@@ -97,6 +98,9 @@ enum RuntimeContentLoadError {
 
 	/** The base pack failed its exact runtime schema. */
 	RuntimeContentPackSchemaRejected(diagnostic:RuntimeSchemaDiagnostic);
+
+	/** The verified receipt and content pack name different asset manifests. */
+	RuntimeContentAssetManifestMismatch(receiptId:String, contentId:String);
 
 	/** The UI catalog failed its exact runtime schema. */
 	RuntimeContentUiSchemaRejected(diagnostic:RuntimeSchemaDiagnostic);
@@ -349,11 +353,12 @@ private function loadRuntimeContentFromSource(source:RuntimeContentSource, gener
 		case VerifiedRuntimeContentRejected(error): return RuntimeContentRejected(error);
 	};
 
-	final assets = RuntimeAssetInventory.reviewedBase();
-	final registry = switch RuntimeContentPack.decode(content.loaded.bytes, assets) {
+	final registry = switch RuntimeContentPack.decode(content.loaded.bytes) {
 		case RuntimeContentPackReady(value): value;
 		case RuntimeContentPackRejected(diagnostic): return RuntimeContentRejected(RuntimeContentPackSchemaRejected(diagnostic));
 	};
+	if (registry.assetManifestId() != parsed.assetManifestId)
+		return RuntimeContentRejected(RuntimeContentAssetManifestMismatch(parsed.assetManifestId, registry.assetManifestId()));
 	final catalog = switch RuntimeUiCatalog.decode(ui.loaded.bytes) {
 		case RuntimeUiCatalogReady(value): value;
 		case RuntimeUiCatalogRejected(diagnostic): return RuntimeContentRejected(RuntimeContentUiSchemaRejected(diagnostic));
@@ -438,9 +443,7 @@ private function parseReceipt(input:Bytes):ParsedRuntimeContentReceiptResult {
 	final assetHash = readSha256(reader, assetHashNode, "assetManifest.sha256");
 	if (assetVersion == null || assetId == null || assetHash == null)
 		return rejectedReceipt(reader);
-	if (assetVersion != 1
-		|| assetId != RuntimeAssetInventory.reviewedBase().manifestId()
-		|| assetHash != RuntimeAssetInventory.REVIEWED_MANIFEST_SHA256) {
+	if (assetVersion != 1) {
 		reader.reject(assetNode, SchemaInvalidInvariant("assetManifest"));
 		return rejectedReceipt(reader);
 	}

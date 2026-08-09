@@ -82,11 +82,14 @@
     "entities": {
       "mode": "openai-built-in-imagegen",
       "artifactIds": [
-        "exec-24dc2123-03e2-4f59-a8bf-5284d5397a99"
+        "exec-24dc2123-03e2-4f59-a8bf-5284d5397a99",
+        "exec-dab4388b-6b61-419b-9926-a82fef11cd92"
       ],
-      "promptSummary": "Original transparent 4x4 polished voxel-RPG atlas with four views each for friendly trailkeeper Moss, craftsmith Nia, hostile Mossling, and hostile Ember Wisp; distinct family-friendly silhouettes; no existing characters, text, or watermark.",
-      "referenceInputs": [],
-      "processing": "Selected built-in output, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+      "promptSummary": "Original transparent polished voxel-RPG atlas with four views each for friendly trailkeeper Moss, craftsmith Nia, hostile Mossling, hostile Ember Wisp, and the older waterfall guardian called the Fallskeeper; distinct family-friendly silhouettes; no existing characters, text, or watermark.",
+      "referenceInputs": [
+        "The checked-in 4x4 entity atlas was a visual-style and scale reference for the new Fallskeeper row; its existing sixteen cells were not edit targets."
+      ],
+      "processing": "Generated the four-view Fallskeeper row with the built-in tool, removed its flat magenta key with the installed soft-matte/despill helper, normalized each view into one 256x256 cell, and appended the row. The original sixteen decoded cells remain unchanged."
     },
     "hud": {
       "mode": "openai-built-in-imagegen",
@@ -294,14 +297,14 @@
       "path": "atlases/entities.png",
       "kind": "sprite-atlas",
       "width": 1024,
-      "height": 1024,
+      "height": 1280,
       "alpha": true,
-      "sha256": "6f41e7b20f31b368f50ca934725c7edeb2fb355ef303817cfa744e801afe0f1a",
+      "sha256": "3bf66a401458f3288261b3ee27efe49b4335f54185074e0bde2c19b85573e927",
       "generationRecord": "entities",
       "rights": "caxecraft-original",
       "grid": {
         "columns": 4,
-        "rows": 4,
+        "rows": 5,
         "cellWidth": 256,
         "cellHeight": 256,
         "cells": [
@@ -320,7 +323,11 @@
           "ember-wisp-front",
           "ember-wisp-three-quarter",
           "ember-wisp-side",
-          "ember-wisp-back"
+          "ember-wisp-back",
+          "fallskeeper-front",
+          "fallskeeper-three-quarter",
+          "fallskeeper-side",
+          "fallskeeper-back"
         ]
       }
     },

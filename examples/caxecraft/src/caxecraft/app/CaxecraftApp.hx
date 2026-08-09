@@ -5,6 +5,7 @@ import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.ActiveRuntimeContent;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelPublicationResult;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
 import caxecraft.content.CampaignManifest.CampaignLevel;
 import caxecraft.content.CampaignManifest.CampaignManifest;
 import caxecraft.content.CampaignRuntime.CampaignLevelLoadError;
@@ -356,13 +357,11 @@ final class CaxecraftApp {
 		var activeDialogue:Null<ScenarioId> = null;
 		var latestJournalId:Null<ScenarioId> = null;
 		var currentObjectiveId = initialLevel.initialObjectiveId();
-		var guideInteractionAvailable = initialSession.actorInteractionAvailable(initialLevel.dialogueActorId());
-		var dialogueActor = initialSession.readCharacter(initialLevel.dialogueActorId());
+		var guideInteractionAvailable = nearestAvailableDialogueActor(initialSession, initialLevel).isValid();
 		var enemyActor = initialSession.readCharacter(initialLevel.enemyActorId());
 		var initialActorPhases = initialSession.actorControllerStateSnapshots();
-		var dialoguePhase = observeActorPhase(initialActorPhases, initialLevel.dialogueActorId(), ActorControllerPhase.Stationary);
 		var enemyPhase = observeActorPhase(initialActorPhases, initialLevel.enemyActorId(), ActorControllerPhase.Resting);
-		if (!dialogueActor.id.isValid() || !enemyActor.id.isValid() || !dialoguePhase.valid || !enemyPhase.valid)
+		if (!dialogueActorsAreValid(initialSession, initialLevel, initialActorPhases) || !enemyActor.id.isValid() || !enemyPhase.valid)
 			return;
 		var swordCombat:SwordCombatState = startSwordCombat();
 		var berryDrop:BerryDropState = emptyBerryDrop();
@@ -672,12 +671,14 @@ final class CaxecraftApp {
 									activeDialogue = null;
 									latestJournalId = null;
 									currentObjectiveId = levelView.initialObjectiveId();
-									guideInteractionAvailable = session.actorInteractionAvailable(levelView.dialogueActorId());
-									dialogueActor = session.readCharacter(levelView.dialogueActorId());
+									guideInteractionAvailable = nearestAvailableDialogueActor(session, levelView).isValid();
 									enemyActor = session.readCharacter(levelView.enemyActorId());
 									final phases = session.actorControllerStateSnapshots();
-									dialoguePhase = observeActorPhase(phases, levelView.dialogueActorId(), ActorControllerPhase.Stationary);
 									enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
+									if (!dialogueActorsAreValid(session, levelView, phases)
+										|| !enemyActor.id.isValid()
+										|| !enemyPhase.valid)
+										quit = true;
 									swordCombat = startSwordCombat();
 									berryDrop = emptyBerryDrop();
 									cameraWaterBlend = 0.0;
@@ -707,7 +708,6 @@ final class CaxecraftApp {
 				}
 			}
 
-			final dialogueActorId = levelView.dialogueActorId();
 			final enemyActorId = levelView.enemyActorId();
 			final spawnTransform = levelView.spawnTransform();
 			if (quitPressed)
@@ -729,8 +729,10 @@ final class CaxecraftApp {
 					}
 				} else if (activeDialogue != null) {
 					activeDialogue = null;
-				} else if (session.actorInteractionAvailable(dialogueActorId) && !session.interactWithActor(dialogueActorId)) {
-					quit = true;
+				} else {
+					final dialogueTarget = nearestAvailableDialogueActor(session, levelView);
+					if (dialogueTarget.isValid() && !session.interactWithActor(dialogueTarget))
+						quit = true;
 				}
 			}
 
@@ -1018,7 +1020,7 @@ final class CaxecraftApp {
 									switch event {
 										case NoControllerEvent:
 										case InteractionAvailable(source):
-											if (source == dialogueActorId) guideInteractionAvailable = true;
+											if (levelView.hasDialogueActor(source)) guideInteractionAvailable = true;
 										case LocalPlayerAttack(source):
 											if (source == enemyActorId) enemyAttackFrames = 120;
 										case DropRequested(source, drop):
@@ -1034,11 +1036,9 @@ final class CaxecraftApp {
 						}
 					}
 					final actorPhases = session.actorControllerStateSnapshots();
-					dialoguePhase = observeActorPhase(actorPhases, dialogueActorId, ActorControllerPhase.Stationary);
 					enemyPhase = observeActorPhase(actorPhases, enemyActorId, ActorControllerPhase.Defeated);
-					dialogueActor = session.readCharacter(dialogueActorId);
 					enemyActor = session.readCharacter(enemyActorId);
-					if (!dialoguePhase.valid || !enemyPhase.valid || !dialogueActor.id.isValid() || !enemyActor.id.isValid())
+					if (!dialogueActorsAreValid(session, levelView, actorPhases) || !enemyPhase.valid || !enemyActor.id.isValid())
 						quit = true;
 					swordCombat = stepSwordCombat(swordCombat);
 					if (swordQueued) {
@@ -1186,14 +1186,13 @@ final class CaxecraftApp {
 				quit = true;
 			else
 				character = committedView.localPlayer;
-			guideInteractionAvailable = session.actorInteractionAvailable(dialogueActorId);
+			guideInteractionAvailable = nearestAvailableDialogueActor(session, levelView).isValid();
 			final presentationActorPhases = session.actorControllerStateSnapshots();
-			dialoguePhase = observeActorPhase(presentationActorPhases, dialogueActorId, ActorControllerPhase.Stationary);
 			enemyPhase = observeActorPhase(presentationActorPhases, enemyActorId, ActorControllerPhase.Defeated);
-			dialogueActor = session.readCharacter(dialogueActorId);
 			enemyActor = session.readCharacter(enemyActorId);
-			if (!dialoguePhase.valid || !enemyPhase.valid || !dialogueActor.id.isValid() || !enemyActor.id.isValid())
+			if (!dialogueActorsAreValid(session, levelView, presentationActorPhases) || !enemyPhase.valid || !enemyActor.id.isValid())
 				quit = true;
+			final dialogueActors = dialogueActorSnapshots(session, levelView);
 			final completedTicks = committedView.completedTicks;
 			if (resetMotionThisFrame)
 				motionHistory = resetMotion(character.body);
@@ -1278,8 +1277,8 @@ final class CaxecraftApp {
 				totalRebuiltTerrainChunks = renderCounters.totalRebuiltChunks;
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
-				drawActors(camera, entityTexture, entityTextureReady, dialogueActor, enemyActor, levelView.dialogueActorPresentationCell(),
-					levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
+				drawActors(camera, entityTexture, entityTextureReady, dialogueActors, levelView, enemyActor, levelView.enemyActorPresentationCell(),
+					enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)
@@ -1503,24 +1502,75 @@ final class CaxecraftApp {
 		return {valid: false, phase: fallback};
 	}
 
+	/** Select the nearest available actor, with authored order as the tie-break. */
+	static function nearestAvailableDialogueActor(session:GameSession, level:PlayableLevelView):EntityId {
+		final view = session.view();
+		if (!view.valid)
+			return EntityId.invalid();
+		final player = view.localPlayer;
+		var selected = EntityId.invalid();
+		var selectedDistance = 0.0;
+		for (index in 0...level.dialogueActorCount()) {
+			final id = level.dialogueActorIdAt(index);
+			if (session.actorInteractionAvailable(id)) {
+				final actor = session.readCharacter(id);
+				final dx = actor.body.x - player.body.x;
+				final dz = actor.body.z - player.body.z;
+				final distance = dx * dx + dz * dz;
+				if (!selected.isValid() || distance < selectedDistance) {
+					selected = id;
+					selectedDistance = distance;
+				}
+			}
+		}
+		return selected;
+	}
+
+	/**
+		Make sure that each published dialogue actor still has matching session state.
+
+		A level transition replaces the view and session together. This check stops
+		presentation if those owners disagree instead of hiding a missing actor.
+	**/
+	static function dialogueActorsAreValid(session:GameSession, level:PlayableLevelView, states:Array<ActorControllerState>):Bool {
+		for (index in 0...level.dialogueActorCount()) {
+			final id = level.dialogueActorIdAt(index);
+			if (!session.readCharacter(id).id.isValid() || !observeActorPhase(states, id, ActorControllerPhase.Stationary).valid)
+				return false;
+		}
+		return true;
+	}
+
+	/** Copy the committed dialogue characters before presentation starts. */
+	static function dialogueActorSnapshots(session:GameSession, level:PlayableLevelView):Array<Character> {
+		final actors:Array<Character> = [];
+		for (index in 0...level.dialogueActorCount())
+			actors.push(session.readCharacter(level.dialogueActorIdAt(index)));
+		return actors;
+	}
+
 	/**
 		Draw committed actor observations without advancing or reconstructing them.
 
-		`GameSession` owns both characters and the enemy controller phase. This
-		presentation helper borrows those immutable values for one frame; it cannot
+		`GameSession` owns all characters and the enemy controller phase. This
+		presentation helper reads the published dialogue list for one frame; it cannot
 		change movement, health, or controller timing.
 	**/
-	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, guide:Character, enemy:Character, guideCell:Int,
-			enemyCell:Int, enemyPhase:ActorControllerPhase, berryDrop:BerryDropState):Void {
-		if (entityTextureReady)
-			CaxecraftAtlas.drawWorldSprite(camera, entityTexture, guideCell, Vector3.fromFloat(guide.body.x, guide.body.y + 0.76, guide.body.z), 0.95, 1.52);
-		else {
-			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 0.54, guide.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
-				c.Float32.fromFloat(0.42), CaxecraftPalette.selection());
-			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 1.18, guide.body.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
-				c.Float32.fromFloat(0.44), CaxecraftPalette.hudText());
-			Raylib.DrawCube(Vector3.fromFloat(guide.body.x, guide.body.y + 1.41, guide.body.z), c.Float32.fromFloat(0.48), c.Float32.fromFloat(0.16),
-				c.Float32.fromFloat(0.48), CaxecraftPalette.hudPanel());
+	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, dialogueActors:Array<Character>, level:PlayableLevelView,
+			enemy:Character, enemyCell:Int, enemyPhase:ActorControllerPhase, berryDrop:BerryDropState):Void {
+		for (index in 0...level.dialogueActorCount()) {
+			final actor = dialogueActors[index];
+			if (entityTextureReady)
+				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, level.dialogueActorPresentationCellAt(index),
+					Vector3.fromFloat(actor.body.x, actor.body.y + 0.76, actor.body.z), 0.95, 1.52);
+			else {
+				Raylib.DrawCube(Vector3.fromFloat(actor.body.x, actor.body.y + 0.54, actor.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
+					c.Float32.fromFloat(0.42), CaxecraftPalette.selection());
+				Raylib.DrawCube(Vector3.fromFloat(actor.body.x, actor.body.y + 1.18, actor.body.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
+					c.Float32.fromFloat(0.44), CaxecraftPalette.hudText());
+				Raylib.DrawCube(Vector3.fromFloat(actor.body.x, actor.body.y + 1.41, actor.body.z), c.Float32.fromFloat(0.48), c.Float32.fromFloat(0.16),
+					c.Float32.fromFloat(0.48), CaxecraftPalette.hudPanel());
+			}
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
 			if (entityTextureReady)

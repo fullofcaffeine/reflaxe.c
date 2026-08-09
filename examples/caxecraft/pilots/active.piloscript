@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name adventure-journey
-frames 351
+frames 353
 
 # Move from Creative to Adventure, then open the staged campaign.
 action 0 menu-next
@@ -23,50 +23,57 @@ action 3 menu-confirm
 expect 3 screen playing
 expect 3 mode adventure
 expect 3 level western-falls
-expect 3 objective objective.meet-moss
+expect 3 objective objective.find-fallskeeper
 expect 3 generation 2
 expect 3 publications 1
 
 # Ask Moss about the four marks, then leave the Falls spawn.
 action 4 interact
-expect 8 objective objective.find-tideweave
+expect 8 objective objective.find-fallskeeper
 expect 8 dialogue dialogue.moss.falls
-expect 8 journal journal.fallskeeper-lead
+
+# Close Moss's hint while walking west, then ask the nearby Fallskeeper.
+hold 5 39 forward-left
+action 40 interact
+action 41 interact
+expect 45 objective objective.find-tideweave
+expect 45 dialogue dialogue.fallskeeper.marks
+expect 45 journal journal.fallskeeper-lead
 
 # Open the sand seam and reach the lower cache.
-hold 5 92 forward-left
-hold 93 98 look-left
-action 99 mine
-hold 100 135 forward-rise
-hold 136 151 rise
+hold 42 94 forward-left
+hold 95 100 look-left
+action 101 mine
+hold 102 137 forward-rise
+hold 138 153 rise
 
 # At this point the route has opened the sand seam and equipped Tideweave.
-expect 153 sand 1
-expect 153 position 5,3,21
+expect 155 sand 1
+expect 155 position 5,3,21
 
 # Cross the opened lower cache, equip Tideweave, and enter the flooded grotto.
-hold 152 167 right
-expect 171 equipment caxecraft:tideweave-suit
-expect 171 objective objective.explore-grotto
-expect 171 sand 1
-hold 172 227 backward
-hold 228 311 left-descend
-expect 312 equipment caxecraft:tideweave-suit
-expect 312 objective none
-expect 312 lanterns 2
-expect 312 sand 1
-expect 312 medium submerged
-expect 312 position 13,3,25
-hold 312 343 right-rise
+hold 154 169 right
+expect 173 equipment caxecraft:tideweave-suit
+expect 173 objective objective.explore-grotto
+expect 173 sand 1
+hold 174 229 backward
+hold 230 313 left-descend
+expect 314 equipment caxecraft:tideweave-suit
+expect 314 objective none
+expect 314 lanterns 2
+expect 314 sand 1
+expect 314 medium submerged
+expect 314 position 13,3,25
+hold 314 345 right-rise
 
-action 349 pause
-checkpoint 349 capture final
-expect 349 screen paused
-expect 349 level western-falls
-expect 349 objective none
-expect 349 equipment caxecraft:tideweave-suit
-expect 349 lanterns 2
-expect 349 sand 1
-expect 349 medium dry
-expect 349 position 13,6,22
+action 351 pause
+checkpoint 351 capture final
+expect 351 screen paused
+expect 351 level western-falls
+expect 351 objective none
+expect 351 equipment caxecraft:tideweave-suit
+expect 351 lanterns 2
+expect 351 sand 1
+expect 351 medium dry
+expect 351 position 13,6,22
 end

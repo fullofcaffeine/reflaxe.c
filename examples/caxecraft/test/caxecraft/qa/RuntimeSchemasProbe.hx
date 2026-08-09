@@ -5,7 +5,6 @@ import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
-import caxecraft.content.RuntimeAssetInventory;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
@@ -66,7 +65,7 @@ function selfCheck():Int {
 	if (ui == null)
 		return 3;
 
-	final registry = switch RuntimeContentPack.decode(content.bytes, RuntimeAssetInventory.reviewedBase()) {
+	final registry = switch RuntimeContentPack.decode(content.bytes) {
 		case RuntimeContentPackReady(value): value;
 		case RuntimeContentPackRejected(_): return 4;
 	};
@@ -194,11 +193,19 @@ function negativeChecks():Int {
 	if (version.line != 2 || version.column <= 0)
 		return 11;
 	final minimal = minimalPack();
-	switch RuntimeContentPack.decode(Bytes.ofString(minimal), RuntimeAssetInventory.reviewedBase()) {
+	switch RuntimeContentPack.decode(Bytes.ofString(minimal)) {
 		case RuntimeContentPackReady(_):
 		case RuntimeContentPackRejected(_):
 			return 37;
 	}
+	if (!rejectsPack(replaceOnce(minimal, '"id":"entities"', '"id":"adventure-items"'), DuplicateId))
+		return 41;
+	if (!rejectsPack(replaceOnce(minimal, '"grass-block"', '"berries"'), DuplicateValue))
+		return 42;
+	if (!rejectsPack(replaceOnce(minimal, '"id":"adventure-items"', '"id":"zz-assets"'), NonCanonicalOrder))
+		return 43;
+	if (!rejectsPack(replaceOnce(minimal, '"mossling-front"', '"Mossling"'), InvalidString))
+		return 44;
 	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1,', ""), MissingField))
 		return 12;
 	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1', '"surprise":1'), UnknownField))
@@ -247,7 +254,7 @@ function negativeChecks():Int {
 
 /** Build a tiny exact root whose unsupported version begins on source line two. */
 function locatedUnsupportedVersionPack():String
-	return '{\n"schemaVersion":3,"logicalPath":null,"packId":null,"packVersion":null,"assetManifestId":null,"airBlock":null,'
+	return '{\n"schemaVersion":3,"logicalPath":null,"packId":null,"packVersion":null,"assetManifestId":null,"assetCells":null,"airBlock":null,'
 		+ '"defaultAquaticProfile":null,"features":null,"blocks":null,"fluids":null,"aquaticProfiles":null,"items":null,"npcs":null,"enemies":null,'
 		+ '"drops":null,"effects":null,"prefabs":null,"statefulObjects":null,"states":null,"signals":null}';
 
@@ -261,6 +268,8 @@ function locatedUnsupportedVersionPack():String
  */
 function minimalPack():String
 	return '{"schemaVersion":2,"logicalPath":"packs/test","packId":"caxecraft:test","packVersion":1,"assetManifestId":"caxecraft-showcase-v1-draft",'
+		+ '"assetCells":[{"id":"adventure-items","cells":["tideweave-suit-folded"]},{"id":"entities","cells":["mossling-front"]},'
+		+ '{"id":"items","cells":["berries","grass-block"]},{"id":"terrain","cells":["teal-water"]}],'
 		+ '"airBlock":"caxecraft:air","defaultAquaticProfile":"caxecraft:standard","features":["caxecraft:core"],'
 		+ '"blocks":[{"id":"caxecraft:air","storageCode":0,"collision":"passable","edit":"immutable","dropItem":null,"renderProfile":"air"},'
 		+ '{"id":"caxecraft:dirt","storageCode":1,"collision":"solid","edit":"collectable","dropItem":"caxecraft:block-item","renderProfile":"rich-soil"}],'
@@ -316,7 +325,7 @@ function rejectsPack(source:String, family:ExpectedSchemaFamily):Bool
 
 /** Return one located pack diagnostic when its family is the expected one. */
 function expectPackRejection(source:String, family:ExpectedSchemaFamily):Null<RuntimeSchemaDiagnostic> {
-	return switch RuntimeContentPack.decode(Bytes.ofString(source), RuntimeAssetInventory.reviewedBase()) {
+	return switch RuntimeContentPack.decode(Bytes.ofString(source)) {
 		case RuntimeContentPackRejected(diagnostic) if (sameFamily(diagnostic.kind, family) && diagnostic.line > 0 && diagnostic.column > 0): diagnostic;
 		case _: null;
 	};
@@ -355,6 +364,8 @@ private enum ExpectedSchemaFamily {
 	UnknownField;
 	WrongType;
 	DuplicateId;
+	DuplicateValue;
+	InvalidString;
 	CrossKindId;
 	InvalidClosedValue;
 	InvalidInvariant;
@@ -379,6 +390,8 @@ function sameFamily(actual:RuntimeSchemaErrorKind, expected:ExpectedSchemaFamily
 		case [SchemaUnknownField(_, _), UnknownField]: true;
 		case [SchemaWrongType(_, _), WrongType]: true;
 		case [SchemaDuplicateId(_, _), DuplicateId]: true;
+		case [SchemaDuplicateValue(_, _), DuplicateValue]: true;
+		case [SchemaInvalidString(_), InvalidString]: true;
 		case [SchemaCrossKindId(_), CrossKindId]: true;
 		case [SchemaInvalidClosedValue(_, _), InvalidClosedValue]: true;
 		case [SchemaInvalidInvariant(_), InvalidInvariant]: true;

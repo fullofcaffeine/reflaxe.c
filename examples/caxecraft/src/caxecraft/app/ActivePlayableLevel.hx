@@ -7,6 +7,7 @@ import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
 import caxecraft.content.LoadedContentGeneration.LoadedContentGeneration;
 import caxecraft.content.LoadedContentGeneration.LoadedContentGenerationTrace;
+import caxecraft.content.LoadedContentGeneration.LoadedActorBinding;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelCandidate;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelPresentation;
 import caxecraft.domain.EntityId;
@@ -19,7 +20,7 @@ import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 	Keeps every application-facing view of one loaded level together.
 
 	The runtime loader owns the complete simulation generation. The Raylib shell
-	also needs a smaller set of derived facts: its two temporary actor slots, item
+	also needs a smaller set of derived facts: its actor views, item
 	placements, player spawn, water presentation cell, and source path. Preparing
 	those facts as one immutable value means a frame cannot accidentally pair a
 	new session with old presentation data after a campaign transition.
@@ -33,9 +34,6 @@ enum PlayableLevelPreparationError {
 	/** The current fixed HUD has no dialogue actor to present. */
 	DialogueActorMissing;
 
-	/** More than one dialogue actor would make the fixed HUD slot ambiguous. */
-	DialogueActorAmbiguous;
-
 	/** The current fixed combat presentation has no enemy actor to present. */
 	EnemyActorMissing;
 
@@ -48,6 +46,36 @@ enum PlayableLevelPreparationError {
 	/** The first renderer can draw only one connected presentation cell. */
 	FluidPresentationAmbiguous(firstCell:Int, otherCell:Int);
 }
+
+/** One dialogue actor identity and its validated atlas cell. */
+typedef PlayableDialogueActor = {
+	/** Runtime identity used for interaction and character observation. */
+	final entityId:EntityId;
+
+	/** Validated entity-atlas cell selected by the actor's content profile. */
+	final presentationCellIndex:Int;
+}
+
+/** Copy generic dialogue bindings into the smaller application view. */
+private function collectDialogueActors(bindings:Array<LoadedActorBinding>):Array<PlayableDialogueActor> {
+	final actors:Array<PlayableDialogueActor> = [];
+	for (binding in bindings)
+		switch binding.role {
+			case DialogueNpc(_):
+				actors.push({
+					entityId: binding.entityId,
+					presentationCellIndex: binding.presentationCellIndex
+				});
+			case EnemyActor:
+		};
+	return actors;
+}
+
+#if caxecraft_runtime_level_testing
+/** Test the same ordered copy operation that prepares a published level. */
+function collectDialogueActorsForTesting(bindings:Array<LoadedActorBinding>):Array<PlayableDialogueActor>
+	return collectDialogueActors(bindings);
+#end
 
 /** A ready initial owner, or the exact presentation preflight that rejected it. */
 enum PlayableLevelCreationResult {
@@ -81,9 +109,8 @@ final class PlayableLevelView {
 	final loadedGeneration:LoadedContentGeneration;
 	final levelPresentation:RuntimeLevelPresentation;
 	final sourcePath:String;
-	final dialogueId:EntityId;
+	final dialogueActors:Array<PlayableDialogueActor>;
 	final enemyId:EntityId;
-	final dialogueCell:Int;
 	final enemyCell:Int;
 	final items:Array<LoadedWorldItem>;
 	final playerSpawn:ScenarioTransform;
@@ -91,14 +118,13 @@ final class PlayableLevelView {
 
 	/** Retain only facts proven to belong to the supplied generation. */
 	@:allow(caxecraft.app.ActivePlayableLevel)
-	private function new(candidate:RuntimeLevelCandidate, dialogueActorId:EntityId, enemyActorId:EntityId, dialoguePresentationCell:Int,
-			enemyPresentationCell:Int, loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
+	private function new(candidate:RuntimeLevelCandidate, loadedDialogueActors:Array<PlayableDialogueActor>, enemyActorId:EntityId, enemyPresentationCell:Int,
+			loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
 		loadedGeneration = candidate.generation();
 		levelPresentation = candidate.presentation();
 		sourcePath = candidate.receipt().logicalPath;
-		dialogueId = dialogueActorId;
+		dialogueActors = loadedDialogueActors.copy();
 		enemyId = enemyActorId;
-		dialogueCell = dialoguePresentationCell;
 		enemyCell = enemyPresentationCell;
 		items = loadedItems.copy();
 		playerSpawn = spawn;
@@ -137,17 +163,29 @@ final class PlayableLevelView {
 	public inline function objectiveTitle(id:Null<ScenarioId>, locale:LocaleId):String
 		return levelPresentation.objectiveTitle(id, locale);
 
-	/** Temporary fixed-HUD dialogue actor selected by generic authored role. */
-	public inline function dialogueActorId():EntityId
-		return dialogueId;
+	/** Number of dialogue actors retained in deterministic authored order. */
+	public inline function dialogueActorCount():Int
+		return dialogueActors.length;
+
+	/** Runtime identity for one bounds-checked dialogue actor. */
+	public inline function dialogueActorIdAt(index:Int):EntityId
+		return dialogueActors[index].entityId;
+
+	/** True when one retained dialogue actor has the supplied runtime identity. */
+	public function hasDialogueActor(id:EntityId):Bool {
+		for (actor in dialogueActors)
+			if (actor.entityId == id)
+				return true;
+		return false;
+	}
 
 	/** Temporary fixed-combat enemy selected by generic authored role. */
 	public inline function enemyActorId():EntityId
 		return enemyId;
 
-	/** Validated entity-atlas cell selected by the dialogue actor content. */
-	public inline function dialogueActorPresentationCell():Int
-		return dialogueCell;
+	/** Validated entity-atlas cell for one bounds-checked dialogue actor. */
+	public inline function dialogueActorPresentationCellAt(index:Int):Int
+		return dialogueActors[index].presentationCellIndex;
 
 	/** Validated entity-atlas cell selected by the enemy actor content. */
 	public inline function enemyActorPresentationCell():Int
@@ -247,24 +285,20 @@ final class ActivePlayableLevel {
 
 	/** Derive every temporary app binding before a level can become visible. */
 	static function prepare(candidate:RuntimeLevelCandidate):PlayableLevelPreparationResult {
-		var dialogueActorId = EntityId.invalid();
+		final actorBindings = candidate.generation().actorBindings();
+		final dialogueActors = collectDialogueActors(actorBindings);
 		var enemyActorId = EntityId.invalid();
-		var dialoguePresentationCell = -1;
 		var enemyPresentationCell = -1;
-		for (binding in candidate.generation().actorBindings())
+		for (binding in actorBindings)
 			switch binding.role {
 				case DialogueNpc(_):
-					if (dialogueActorId.isValid())
-						return PlayableLevelNotPrepared(DialogueActorAmbiguous);
-					dialogueActorId = binding.entityId;
-					dialoguePresentationCell = binding.presentationCellIndex;
 				case EnemyActor:
 					if (enemyActorId.isValid())
 						return PlayableLevelNotPrepared(EnemyActorAmbiguous);
 					enemyActorId = binding.entityId;
 					enemyPresentationCell = binding.presentationCellIndex;
 			};
-		if (!dialogueActorId.isValid())
+		if (dialogueActors.length == 0)
 			return PlayableLevelNotPrepared(DialogueActorMissing);
 		if (!enemyActorId.isValid())
 			return PlayableLevelNotPrepared(EnemyActorMissing);
@@ -286,8 +320,8 @@ final class ActivePlayableLevel {
 				yMilli: binding.transform.yMilli,
 				zMilli: binding.transform.zMilli
 			});
-		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActorId, enemyActorId, dialoguePresentationCell, enemyPresentationCell,
-			loadedItems, candidate.generation().plan().player().transform, waterPresentationCell));
+		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActors, enemyActorId, enemyPresentationCell, loadedItems,
+			candidate.generation().plan().player().transform, waterPresentationCell));
 	}
 }
 

@@ -18,6 +18,7 @@ from typing import Any, Callable
 
 CASE = Path(__file__).resolve().parent
 ASSET_ROOT = CASE / "assets"
+RUNTIME_CONTENT = CASE / "packs/caxecraft/base/content.json"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -66,6 +67,10 @@ CUTSCENE_EDITOR_REFERENCE = (
 ITEMS_EDIT_REFERENCE = (
     "The checked-in items atlas was the sole edit target and visual-style reference."
 )
+ENTITIES_EDIT_REFERENCE = (
+    "The checked-in 4x4 entity atlas was a visual-style and scale reference for the new "
+    "Fallskeeper row; its existing sixteen cells were not edit targets."
+)
 EXPECTED_GRID_CELLS = {
     "adventure-characters": (
         "haxirio-front", "haxirio-three-quarter", "haxirio-side", "haxirio-back",
@@ -96,6 +101,7 @@ EXPECTED_GRID_CELLS = {
         "nia-front", "nia-three-quarter", "nia-side", "nia-back",
         "mossling-front", "mossling-three-quarter", "mossling-side", "mossling-back",
         "ember-wisp-front", "ember-wisp-three-quarter", "ember-wisp-side", "ember-wisp-back",
+        "fallskeeper-front", "fallskeeper-three-quarter", "fallskeeper-side", "fallskeeper-back",
     ),
     "hud": (
         "health-full", "health-half", "health-empty", "armor",
@@ -326,6 +332,8 @@ def validate_generation_records(records: dict[str, Any]) -> None:
             expected_references = [CUTSCENE_EDITOR_REFERENCE]
         elif record_id == "items":
             expected_references = [ITEMS_EDIT_REFERENCE]
+        elif record_id == "entities":
+            expected_references = [ENTITIES_EDIT_REFERENCE]
         else:
             expected_references = []
         if references != expected_references:
@@ -494,6 +502,40 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
     return len(raw_assets)
 
 
+def validate_runtime_cells() -> int:
+    """Make sure that runtime cell indices match the reviewed atlas order."""
+    manifest = require_object(
+        json.loads((ASSET_ROOT / "manifest.json").read_text(encoding="utf-8")),
+        "asset manifest",
+    )
+    content = require_object(
+        json.loads(RUNTIME_CONTENT.read_text(encoding="utf-8")),
+        "runtime content",
+    )
+    if content.get("assetManifestId") != manifest.get("packId"):
+        fail("runtime content names a different asset manifest")
+    manifest_cells = {
+        require_id(asset.get("id"), "asset.id"): require_array(
+            require_object(asset.get("grid"), "asset.grid").get("cells"),
+            "asset.grid.cells",
+        )
+        for asset in require_array(manifest.get("assets"), "assets")
+        if asset.get("grid") is not None
+    }
+    runtime_assets = require_array(content.get("assetCells"), "content.assetCells")
+    ids: list[str] = []
+    for index, raw_asset in enumerate(runtime_assets):
+        asset = require_object(raw_asset, f"content.assetCells[{index}]")
+        asset_id = require_id(asset.get("id"), f"content.assetCells[{index}].id")
+        cells = require_array(asset.get("cells"), f"content.assetCells[{index}].cells")
+        if asset_id not in manifest_cells or cells != manifest_cells[asset_id]:
+            fail(f"runtime cell order differs from the asset manifest for {asset_id}")
+        ids.append(asset_id)
+    if ids != sorted(ids) or len(ids) != len(set(ids)):
+        fail("runtime asset IDs must be unique and sorted")
+    return len(runtime_assets)
+
+
 def write_manifest(asset_root: Path, manifest: dict[str, Any]) -> None:
     (asset_root / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -574,13 +616,14 @@ def negative_contracts() -> None:
 def main() -> int:
     try:
         count = validate_asset_pack()
+        runtime_count = validate_runtime_cells()
         negative_contracts()
     except (AssetValidationError, OSError, UnicodeError, ValueError) as error:
         print(f"caxecraft-assets: ERROR: {error}", file=sys.stderr)
         return 1
     print(
         "caxecraft-assets: OK: "
-        f"{count} exact offline primary-source PNGs, semantic atlas grids, complete file inventory, "
+        f"{count} exact offline primary-source PNGs, {runtime_count} runtime atlas bindings, semantic atlas grids, complete file inventory, "
         "minimal metadata, repository-scoped privacy records, and negative mutations passed"
     )
     return 0

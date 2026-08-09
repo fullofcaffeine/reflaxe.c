@@ -2,14 +2,14 @@
   "assetManifest": {
     "packId": "caxecraft-showcase-v1-draft",
     "schemaVersion": 1,
-    "sha256": "dbd7fae77851790c589296f96782750ab000067a7e9936820406966f4cc6cba5"
+    "sha256": "4afeab8fd096f7e7c726e6335b5cb76ab8727f4740116e10fb5e0e5d265bb9fc"
   },
   "files": [
     {
-      "byteLength": 7408,
+      "byteLength": 9191,
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "sha256": "e4aa78502b11ea07a0dfa3c472c391dd1ad4af7b90fd1f529548bcc06fe71b94"
+      "sha256": "7f5de2d4ce4c61690f791f53099a0290143ab8700936a3e356b711a611e44a67"
     },
     {
       "byteLength": 6401,
@@ -24,6 +24,6 @@
       "sha256": "4949dc90304da79a9fa6c3b03f581c5ee6ea561be6cd186fee4ddb5c731db2ee"
     }
   ],
-  "generationSha256": "b680f8eba09dc4af20904840b579e1ea7484f56230a73076dfef41a9bac1bccf",
+  "generationSha256": "017c0923e5ca81d7b43d45e08ea82c0ed24b4368c9230acd4cc758cf540e7fc7",
   "schemaVersion": 1
 }

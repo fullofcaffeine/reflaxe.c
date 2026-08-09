@@ -15,7 +15,6 @@ import caxecraft.content.ContentPackageModel.ContentPackageProvenance;
 import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
-import caxecraft.content.RuntimeAssetInventory;
 import caxecraft.content.RuntimeContentDigest.runtimeSha256Hex;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
@@ -179,7 +178,7 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 		case RefreshBytesRejected(error): return ContentRefreshRejected(error);
 		case RefreshBytesReady(bytes): bytes;
 	};
-	final registry = switch RuntimeContentPack.decode(contentBytes, RuntimeAssetInventory.reviewedBase()) {
+	final registry = switch RuntimeContentPack.decode(contentBytes) {
 		case RuntimeContentPackRejected(diagnostic): return ContentRefreshRejected(ContentPackRejected(Std.string(diagnostic)));
 		case RuntimeContentPackReady(value): value;
 	};
@@ -227,10 +226,8 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 		case RefreshBytesReady(bytes): bytes;
 	};
 	final assetReceipt = receipt(assetEntry.logicalPath.text(), assetBytes);
-	if (assetReceipt.sha256 != RuntimeAssetInventory.REVIEWED_MANIFEST_SHA256)
-		return ContentRefreshRejected(PackageGraphRejected("the asset manifest does not match the reviewed runtime inventory"));
-	final nextRuntime = writeRuntimeContentReceipt(RuntimeAssetInventory.reviewedBase().manifestId(), assetReceipt,
-		receipt(contentEntry.logicalPath.text(), contentBytes), receipt(uiEntry.logicalPath.text(), uiBytes), receipt(runtimeMapPath, runtimeMapBytes));
+	final nextRuntime = writeRuntimeContentReceipt(registry.assetManifestId(), assetReceipt, receipt(contentEntry.logicalPath.text(), contentBytes),
+		receipt(uiEntry.logicalPath.text(), uiBytes), receipt(runtimeMapPath, runtimeMapBytes));
 	files.push(new ContentRefreshFile(runtimePath, runtimeBytes, nextRuntime));
 	packageUpdates.push(receipt(runtimePath, nextRuntime));
 

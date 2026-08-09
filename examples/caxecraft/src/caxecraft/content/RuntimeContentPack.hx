@@ -14,6 +14,7 @@ import caxecraft.content.LevelContentResolver.TerrainStorageCode;
 import caxecraft.content.RuntimeSchema.LocatedOptionalString;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
+import caxecraft.content.RuntimeAssetInventory.RuntimeAssetFacts;
 import caxecraft.domain.ActorControllerProfile;
 import caxecraft.domain.AquaticProfile;
 import caxecraft.domain.Aquatics.profile as createAquaticProfile;
@@ -80,6 +81,7 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	final packIdValue:String;
 	final packVersionValue:Int;
 	final logicalPathValue:String;
+	final assetManifestIdValue:String;
 	final airBlock:String;
 	final defaultAquaticProfileId:String;
 	final features:Array<RuntimeLocatedId>;
@@ -93,13 +95,14 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	final effects:Array<RuntimeEffectDefinition>;
 
 	/** Construct one complete registry after every candidate check passed. */
-	public function new(packId:String, packVersion:Int, logicalPath:String, airBlock:String, defaultAquaticProfileId:String, features:Array<RuntimeLocatedId>,
-			blocks:Array<RuntimeBlockDefinition>, fluids:Array<RuntimeFluidDefinition>, aquaticProfiles:Array<RuntimeAquaticDefinition>,
-			items:Array<RuntimeItemDefinition>, npcs:Array<RuntimeNpcDefinition>, enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>,
-			effects:Array<RuntimeEffectDefinition>) {
+	public function new(packId:String, packVersion:Int, logicalPath:String, assetManifestId:String, airBlock:String, defaultAquaticProfileId:String,
+			features:Array<RuntimeLocatedId>, blocks:Array<RuntimeBlockDefinition>, fluids:Array<RuntimeFluidDefinition>,
+			aquaticProfiles:Array<RuntimeAquaticDefinition>, items:Array<RuntimeItemDefinition>, npcs:Array<RuntimeNpcDefinition>,
+			enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>, effects:Array<RuntimeEffectDefinition>) {
 		this.packIdValue = packId;
 		this.packVersionValue = packVersion;
 		this.logicalPathValue = logicalPath;
+		this.assetManifestIdValue = assetManifestId;
 		this.airBlock = airBlock;
 		this.defaultAquaticProfileId = defaultAquaticProfileId;
 		this.features = features;
@@ -124,6 +127,10 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	/** Canonical package logical path copied from the admitted document. */
 	public inline function logicalPath():String
 		return logicalPathValue;
+
+	/** Asset-manifest identity named by the same verified content bytes. */
+	public inline function assetManifestId():String
+		return assetManifestIdValue;
 
 	/** Number of admitted terrain definitions. */
 	public inline function blockCount():Int
@@ -458,7 +465,7 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 /** Stateless entry point for one bounded content-pack admission request. */
 final class RuntimeContentPack {
 	/** Decode one complete content-pack candidate without filesystem authority. */
-	public static function decode(input:Bytes, assets:RuntimeAssetInventory):RuntimeContentPackResult {
+	public static function decode(input:Bytes):RuntimeContentPackResult {
 		final reader = new RuntimeSchemaReader();
 		final root = reader.parse(input);
 		if (root == null)
@@ -469,6 +476,7 @@ final class RuntimeContentPack {
 			"packId",
 			"packVersion",
 			"assetManifestId",
+			"assetCells",
 			"airBlock",
 			"defaultAquaticProfile",
 			"features",
@@ -518,10 +526,9 @@ final class RuntimeContentPack {
 		final defaultAquatic = readContentId(reader, defaultAquaticNode, "defaultAquaticProfile");
 		if (defaultAquatic == null)
 			return rejected(reader);
-		if (manifestId != assets.manifestId()) {
-			reader.reject(manifestNode, SchemaInvalidInvariant("assetManifestId"));
+		final assets = readAssetInventory(reader, reader.field(fields, "assetCells"), manifestId);
+		if (assets == null)
 			return rejected(reader);
-		}
 
 		final features = readIdArray(reader, reader.field(fields, "features"), "features", 1, 32);
 		if (features == null)
@@ -570,8 +577,52 @@ final class RuntimeContentPack {
 		final defaultAquaticReference = new RuntimeReference(defaultAquatic, defaultAquaticNode.line, defaultAquaticNode.column);
 		if (!validatePack(reader, airReference, defaultAquaticReference, features, blocks, fluids, aquaticProfiles, items, npcs, enemies, drops, effects))
 			return rejected(reader);
-		return RuntimeContentPackReady(new RuntimeContentRegistry(packId, packVersion, logicalPath, air, defaultAquatic, features, blocks, fluids,
+		return RuntimeContentPackReady(new RuntimeContentRegistry(packId, packVersion, logicalPath, manifestId, air, defaultAquatic, features, blocks, fluids,
 			aquaticProfiles, items, npcs, enemies, drops, effects));
+	}
+
+	/** Decode the ordered atlas cells that presentation records can name. */
+	static function readAssetInventory(reader:RuntimeSchemaReader, node:ContentJsonNode, manifestId:String):Null<RuntimeAssetInventory> {
+		final values = reader.array(node, "assetCells", 1, 32);
+		if (values == null)
+			return null;
+		final assets:Array<RuntimeAssetFacts> = [];
+		final located:Array<RuntimeLocatedId> = [];
+		for (index in 0...values.length) {
+			final path = "assetCells[" + index + "]";
+			final fields = reader.object(values[index], path, ["id", "cells"]);
+			if (fields == null)
+				return null;
+			final idNode = reader.field(fields, "id");
+			final id = reader.string(idNode, path + ".id", 128);
+			if (id == null || !RuntimeSchemaReader.validProfile(id)) {
+				reader.reject(idNode, SchemaInvalidString(path + ".id"));
+				return null;
+			}
+			final cellNodes = reader.array(reader.field(fields, "cells"), path + ".cells", 1, 256);
+			if (cellNodes == null)
+				return null;
+			final cells:Array<String> = [];
+			for (cellIndex in 0...cellNodes.length) {
+				final cellPath = path + ".cells[" + cellIndex + "]";
+				final cell = reader.string(cellNodes[cellIndex], cellPath, 128);
+				if (cell == null || !RuntimeSchemaReader.validProfile(cell)) {
+					reader.reject(cellNodes[cellIndex], SchemaInvalidString(cellPath));
+					return null;
+				}
+				for (previous in cells)
+					if (previous == cell) {
+						reader.reject(cellNodes[cellIndex], SchemaDuplicateValue(path + ".cells", cell));
+						return null;
+					}
+				cells.push(cell);
+			}
+			assets.push(new RuntimeAssetFacts(id, cells));
+			located.push(new RuntimeLocatedId(id, idNode.line, idNode.column));
+		}
+		if (!validateOrder(reader, node, "assetCells", located))
+			return null;
+		return new RuntimeAssetInventory(manifestId, assets);
 	}
 
 	/** Parse one canonical namespaced ID and retain its source coordinate. */

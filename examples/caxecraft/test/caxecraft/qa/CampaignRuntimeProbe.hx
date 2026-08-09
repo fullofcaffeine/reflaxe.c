@@ -3,6 +3,9 @@ package caxecraft.qa;
 import caxecraft.app.ActivePlayableLevel;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelPublicationResult;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
+import caxecraft.app.ActivePlayableLevel.collectDialogueActorsForTesting;
+import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.CampaignManifest.CampaignManifestReadResult;
 import caxecraft.content.CampaignManifest.decodeCampaignManifest;
 import caxecraft.content.CampaignRuntime.CampaignLevelLoadResult;
@@ -11,6 +14,7 @@ import caxecraft.content.CampaignRuntime.loadCampaignLevel;
 import caxecraft.content.CampaignRuntime.loadCampaignManifest;
 import caxecraft.content.ContentPackageStore;
 import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
+import caxecraft.content.LoadedContentGeneration.LoadedActorBinding;
 import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions;
@@ -115,7 +119,6 @@ function selfCheck():Int {
 		initialHealth: initialPlayer.initialHealth,
 		aquaticProfile: initial.registry().defaultAquaticProfile()
 	};
-
 	final active = switch ActivePlayableLevel.create(initial.level()) {
 		case PlayableLevelCreated(value): value;
 		case PlayableLevelCreationRejected(_): return 114;
@@ -188,6 +191,8 @@ function selfCheck():Int {
 		case CampaignLevelRejected(CampaignLevelRuntimeRejected(_, RuntimeLevelGenerationRejected(_))): return 113;
 		case CampaignLevelRejected(_): return 15;
 	};
+	if (!verifyDialogueActorCollection(second.generation().actorBindings()))
+		return 123;
 	final receipt = second.receipt();
 	final authored = second.authoredTrace();
 	if (receipt.logicalPath != destination.logicalPath || receipt.byteLength != destination.byteLength)
@@ -203,6 +208,8 @@ function selfCheck():Int {
 		|| active.session() != second.generation().session()
 		|| destinationView.logicalPath() != destination.logicalPath)
 		return 18;
+	if (!viewMatchesDialogueBindings(destinationView, second.generation().actorBindings()))
+		return 124;
 	final destinationPresentation = second.presentation();
 	if (destinationView.presentation() != destinationPresentation
 		|| destinationView.scenarioTitle(english) != destinationPresentation.scenarioTitle(english)
@@ -235,6 +242,50 @@ function selfCheck():Int {
 	traceAuthored = traceAuthored * 31 + authored.objectiveDigest;
 	traceAuthored = traceAuthored * 31 + authored.flowDigest;
 	return traceGeneration == 2 ? 0 : 19;
+}
+
+/** Prove that two manually authored dialogue bindings remain distinct and ordered. */
+function verifyDialogueActorCollection(bindings:Array<LoadedActorBinding>):Bool {
+	final input:Array<LoadedActorBinding> = [];
+	for (binding in bindings)
+		switch binding.role {
+			case DialogueNpc(_):
+				if (input.length == 0)
+					input.push(binding);
+			case EnemyActor:
+		};
+	if (input.length != 1)
+		return false;
+	final first = input[0];
+	input.push({
+		authoredId: new caxecraft.scenario.ScenarioId("guide.fixture-companion"),
+		entityId: EntityId.fromValidatedStorageCode(99),
+		contentId: first.contentId,
+		role: first.role,
+		presentationCellIndex: first.presentationCellIndex
+	});
+	final views = collectDialogueActorsForTesting(input);
+	return views.length == 2
+		&& views[0].entityId == first.entityId
+		&& views[0].presentationCellIndex == first.presentationCellIndex
+		&& views[1].entityId.storageCode() == 99
+		&& views[1].presentationCellIndex == first.presentationCellIndex;
+}
+
+/** Match every real published dialogue view to the validated generation order. */
+function viewMatchesDialogueBindings(view:PlayableLevelView, bindings:Array<LoadedActorBinding>):Bool {
+	var dialogueIndex = 0;
+	for (binding in bindings)
+		switch binding.role {
+			case DialogueNpc(_):
+				if (dialogueIndex >= view.dialogueActorCount()
+					|| view.dialogueActorIdAt(dialogueIndex) != binding.entityId
+					|| view.dialogueActorPresentationCellAt(dialogueIndex) != binding.presentationCellIndex)
+					return false;
+				dialogueIndex++;
+			case EnemyActor:
+		};
+	return dialogueIndex >= 2 && dialogueIndex == view.dialogueActorCount();
 }
 
 /** Provide a tiny independent schema oracle unrelated to shipped campaign art. */

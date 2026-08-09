@@ -26,25 +26,25 @@ matching stack is full instead of silently deleting items. Adventure checks
 capacity before changing the world; Creative removal remains unlimited. This
 is the first actor loop, not the planned finished game. The
 target-neutral editor command/history/test-play layer now exists, but the
-in-game Raylib interface does not. The menu can choose Creative or Adventure;
-the authored mode content does not run yet beyond that first encounter. Broader
-combat and enemies, broader item recovery, NPC dialogue, persistence, complete
-localization, Ivvy behavior, terrain and Adventure-cast art, and audio remain
-unimplemented. One admitted two-level campaign can now travel from Evergrove to
-Western Falls at runtime. Western Falls is now a compact authored region rather
-than the former flat placeholder: its arrival overlook faces a tall waterfall
-and pool, a stepped route reaches the valley, and a bridge, four-material clue
-shrine, concealed Tideweave alcove, snow shelf, and ash silhouettes establish
-the planned route's first visible landmarks. Moss waits at the overlook and
-directs the player toward the four marks left by the Fallskeeper. The authored
-objective now advances when the player collects Tideweave, then completes the
-current grotto route when the player collects its lantern. These rules live in
-the Western Falls CaxeMap and can change without rebuilding the game. The
-Moss interaction also unlocks a bilingual journal note that keeps the current
-Fallskeeper lead readable from the pause overlay. It does not contain the vault
-code. The Fallskeeper encounter, exact code entry, multi-entry journal, sealed-vault
-progression, and larger flooded ruins are still designs rather than playable
-mechanics. Branching, return travel,
+in-game Raylib interface does not. The menu can choose Creative or Adventure,
+and Adventure can load the admitted two-level campaign from Evergrove to
+Western Falls at runtime. Broader combat and enemies, persistence, complete
+localization, Ivvy behavior, additional Adventure-cast art, and audio remain
+unimplemented.
+
+Western Falls is now a compact authored region rather than the former flat
+placeholder. Its arrival overlook faces a tall waterfall and pool; a stepped
+route reaches the valley; and a bridge, four-material clue shrine, concealed
+Tideweave alcove, snow shelf, and ash silhouettes establish the planned route's
+first visible landmarks. Moss directs the player to a distinct Fallskeeper.
+The Fallskeeper repeats the exact bilingual sequence--river, root, moon,
+flame--and adds it to the pause-overlay journal. The objective then points to
+Tideweave, and the current grotto route completes when the player collects its
+lantern. The NPCs, dialogue, journal text, objectives, and rules live in the
+Western Falls CaxeMap and can change without rebuilding the game.
+
+Ordered code entry, a sealed vault door, multiple journal entries, and larger
+flooded ruins are still designs rather than playable mechanics. Branching, return travel,
 persistence, authored exit zones, and the broader Adventure campaign also
 remain unimplemented. Do not describe concept art, semantic editor tests, or
 the remaining design-only atlases as evidence that those capabilities run.

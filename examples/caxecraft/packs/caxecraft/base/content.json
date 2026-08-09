@@ -4,6 +4,45 @@
   "packId": "caxecraft:base",
   "packVersion": 1,
   "assetManifestId": "caxecraft-showcase-v1-draft",
+  "assetCells": [
+    {
+      "id": "adventure-items",
+      "cells": [
+        "tideweave-suit-folded", "tideweave-helmet", "tideweave-air-canister", "tideweave-suit-pickup",
+        "bounds-ward", "inlining-spark", "zero-cost-charm", "cleanup-crest",
+        "glyph-wave", "glyph-leaf", "glyph-ember", "glyph-forge",
+        "bridge-input", "bridge-routing-elbow", "checkpoint", "ceesh-scroll"
+      ]
+    },
+    {
+      "id": "entities",
+      "cells": [
+        "moss-front", "moss-three-quarter", "moss-side", "moss-back",
+        "nia-front", "nia-three-quarter", "nia-side", "nia-back",
+        "mossling-front", "mossling-three-quarter", "mossling-side", "mossling-back",
+        "ember-wisp-front", "ember-wisp-three-quarter", "ember-wisp-side", "ember-wisp-back",
+        "fallskeeper-front", "fallskeeper-three-quarter", "fallskeeper-side", "fallskeeper-back"
+      ]
+    },
+    {
+      "id": "items",
+      "cells": [
+        "grass-block", "soil-block", "slate-stone", "oak-log",
+        "wood-pick", "stone-axe", "stone-shovel", "copper-sword",
+        "amber-shard", "copper-nugget", "berries", "bread",
+        "map", "lantern", "sand-block", "quest-token"
+      ]
+    },
+    {
+      "id": "terrain",
+      "cells": [
+        "meadow-grass-top", "grass-side", "rich-soil", "slate-stone",
+        "river-sand", "teal-water", "bark-side", "log-top",
+        "leafy-canopy", "oak-planks", "field-cobble", "clay-brick",
+        "charcoal-ore", "copper-ore", "amber-crystal-ore", "foundation-rock"
+      ]
+    }
+  ],
   "airBlock": "caxecraft:air",
   "defaultAquaticProfile": "caxecraft:standard-aquatics",
   "features": [
@@ -245,6 +284,16 @@
     }
   ],
   "npcs": [
+    {
+      "id": "caxecraft:fallskeeper",
+      "behaviorProfile": "stationary-dialogue",
+      "maxHealth": 8,
+      "interactionRadiusMilli": 3500,
+      "presentation": {
+        "asset": "entities",
+        "cell": "fallskeeper-front"
+      }
+    },
     {
       "id": "caxecraft:moss",
       "behaviorProfile": "stationary-dialogue",

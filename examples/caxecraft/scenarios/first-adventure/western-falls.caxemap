@@ -13,14 +13,15 @@ locale en
   message enemy_dropped_items "MOSSLING DROPPED BERRIES"
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "MOSSLING WINDUP: DODGE"
-  message guide_talk "E  TALK TO MOSS"
+  message fallskeeper_welcome "FALLSKEEPER: THE FOUR MARKS ARE RIVER, ROOT, MOON, FLAME. READ THEM IN THAT ORDER."
+  message guide_talk "E  TALK"
   message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
-  message journal_fallskeeper_body "MOSS SAYS THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY. FIND THE FALLSKEEPER BEFORE TRYING THE VAULT."
+  message journal_fallskeeper_body "VAULT CODE: RIVER, ROOT, MOON, FLAME. THE FALLSKEEPER SAYS TO READ THE MARKS IN THAT ORDER."
   message journal_fallskeeper_title "THE FALLSKEEPER'S FOUR MARKS"
+  message objective_fallskeeper_body "MOSS KNOWS THE PATH. THE FALLSKEEPER WAITS WEST OF THE SHRINE."
+  message objective_fallskeeper_title "ASK THE FALLSKEEPER FOR THE FOUR MARKS"
   message objective_grotto_body "TIDEWEAVE MAKES THE FLOODED PASSAGE SAFE. RECOVER ITS LANTERN."
   message objective_grotto_title "CROSS THE FLOODED GROTTO"
-  message objective_meet_moss_body "MOSS WAITS BESIDE THE FALLSKEEPER'S SHRINE."
-  message objective_meet_moss_title "ASK MOSS ABOUT THE FOUR MARKS"
   message pickup_many "+2 BERRIES"
   message pickup_one "+1 BERRY"
   message player_fallen "HAXIRIO HAS FALLEN"
@@ -39,14 +40,15 @@ locale es-mx
   message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
-  message guide_talk "E  HABLAR CON MOSS"
+  message fallskeeper_welcome "GUARDIAN: LAS CUATRO MARCAS SON RIO, RAIZ, LUNA, LLAMA. LEELAS EN ESE ORDEN."
+  message guide_talk "E  HABLAR"
   message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
-  message journal_fallskeeper_body "MOSS DICE QUE EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS JUNTO AL PASO SELLADO. BUSCALO ANTES DE PROBAR LA BOVEDA."
+  message journal_fallskeeper_body "CLAVE DE LA BOVEDA: RIO, RAIZ, LUNA, LLAMA. EL GUARDIAN DICE QUE LAS LEAS EN ESE ORDEN."
   message journal_fallskeeper_title "LAS CUATRO MARCAS DEL GUARDIAN"
+  message objective_fallskeeper_body "MOSS CONOCE EL CAMINO. EL GUARDIAN ESPERA AL OESTE DEL SANTUARIO."
+  message objective_fallskeeper_title "PIDE AL GUARDIAN LAS CUATRO MARCAS"
   message objective_grotto_body "TIDEWEAVE HACE SEGURO EL PASO INUNDADO. RECUPERA SU LINTERNA."
   message objective_grotto_title "CRUZA LA GRUTA INUNDADA"
-  message objective_meet_moss_body "MOSS ESPERA JUNTO AL SANTUARIO DEL GUARDIAN DE LAS CATARATAS."
-  message objective_meet_moss_title "PREGUNTA A MOSS POR LAS CUATRO MARCAS"
   message pickup_many "+2 BAYAS"
   message pickup_one "+1 BAYA"
   message player_fallen "HAXIRIO HA CAIDO"
@@ -805,6 +807,10 @@ object enemy.mossling
   tag enemy
   placement entity caxecraft:mossling 19500 7000 21500 225
 end object
+object guide.fallskeeper
+  tag friend
+  placement npc caxecraft:fallskeeper dialogue.fallskeeper.marks 13500 8000 25500 180
+end object
 object guide.moss
   tag friend
   placement npc caxecraft:moss dialogue.moss.falls 17500 8000 25500 180
@@ -821,6 +827,9 @@ object player.start
   tag player
   placement player-spawn 16500 8000 27500 180
 end object
+dialogue dialogue.fallskeeper.marks
+  line speaker guide.fallskeeper message fallskeeper_welcome
+end dialogue
 dialogue dialogue.moss.falls
   line speaker guide.moss message guide_welcome
 end dialogue
@@ -830,12 +839,20 @@ end journal
 objective objective.explore-grotto hidden title message objective_grotto_title
   body message objective_grotto_body
 end objective
+objective objective.find-fallskeeper active title message objective_fallskeeper_title
+  body message objective_fallskeeper_body
+end objective
 objective objective.find-tideweave hidden title message adventure_progress
   body message adventure_tagline
 end objective
-objective objective.meet-moss active title message objective_meet_moss_title
-  body message objective_meet_moss_body
-end objective
+rule rule.fallskeeper-reveals-the-marks priority 110 once
+  when interact guide.fallskeeper
+  if (objective objective.find-fallskeeper active)
+  do dialogue dialogue.fallskeeper.marks
+  do journal journal.fallskeeper-lead
+  do objective objective.find-fallskeeper complete
+  do objective objective.find-tideweave active
+end rule
 rule rule.lantern-completes-the-grotto priority 80 once
   when collect-item caxecraft:lantern
   if (objective objective.explore-grotto active)
@@ -845,9 +862,6 @@ rule rule.moss-opens-the-western-route priority 100 once
   when interact guide.moss
   if (always)
   do dialogue dialogue.moss.falls
-  do journal journal.fallskeeper-lead
-  do objective objective.meet-moss complete
-  do objective objective.find-tideweave active
 end rule
 rule rule.tideweave-opens-the-grotto priority 90 once
   when collect-item caxecraft:tideweave-suit
