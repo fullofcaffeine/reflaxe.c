@@ -142,7 +142,9 @@ function selfCheck():Int {
 		|| actors[0].authoredId.text() != "enemy.mossling"
 		|| actors[1].authoredId.text() != "guide.nia"
 		|| presentationActors.length != 2
+		|| presentationActors[0].asset != "entities"
 		|| presentationActors[0].cellIndex != 8
+		|| presentationActors[1].asset != "fixture-actors"
 		|| presentationActors[1].cellIndex != 4
 		|| player.authoredId.text() != "player.start"
 		|| player.transform.xMilli != 16500

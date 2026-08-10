@@ -393,13 +393,12 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
         fail("runtimeIntegration.packagedPrimaryAssets contains a duplicate ID")
     required_runtime_ids = {
         "caxecraft-wordmark", "title-panorama", "hud", "items",
-        "adventure-items", "adventure-terrain", "entities", "terrain",
+        "adventure-characters", "adventure-items", "adventure-terrain", "entities", "terrain",
     }
     if not required_runtime_ids.issubset(packaged_ids):
         missing = ", ".join(sorted(required_runtime_ids - set(packaged_ids)))
         fail(f"required runtime assets are missing: {missing}")
     if runtime.get("designOnlyAssets") != [
-        "adventure-characters",
         "cutscene-editor",
         "ivvy",
     ]:

@@ -262,13 +262,16 @@ function verifyDialogueActorCollection(bindings:Array<LoadedActorBinding>):Bool 
 		entityId: EntityId.fromValidatedStorageCode(99),
 		contentId: first.contentId,
 		role: first.role,
+		presentationAsset: first.presentationAsset,
 		presentationCellIndex: first.presentationCellIndex
 	});
 	final views = collectDialogueActorsForTesting(input);
 	return views.length == 2
 		&& views[0].entityId == first.entityId
+		&& views[0].presentationAsset == first.presentationAsset
 		&& views[0].presentationCellIndex == first.presentationCellIndex
 		&& views[1].entityId.storageCode() == 99
+		&& views[1].presentationAsset == first.presentationAsset
 		&& views[1].presentationCellIndex == first.presentationCellIndex;
 }
 
@@ -280,6 +283,7 @@ function viewMatchesDialogueBindings(view:PlayableLevelView, bindings:Array<Load
 			case DialogueNpc(_):
 				if (dialogueIndex >= view.dialogueActorCount()
 					|| view.dialogueActorIdAt(dialogueIndex) != binding.entityId
+					|| view.dialogueActorPresentationAssetAt(dialogueIndex) != binding.presentationAsset
 					|| view.dialogueActorPresentationCellAt(dialogueIndex) != binding.presentationCellIndex)
 					return false;
 				dialogueIndex++;

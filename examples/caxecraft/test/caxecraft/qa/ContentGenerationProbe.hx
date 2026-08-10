@@ -270,7 +270,7 @@ final class AlternatePresentationRegistry implements LevelContentResolver {
 	/** Select neighboring actor cells so presentation mismatch covers actors too. */
 	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution
 		return switch base.resolveActorPresentation(id) {
-			case ActorPresentationResolved(cell): ActorPresentationResolved(cell + 1);
+			case ActorPresentationResolved(asset, cell): ActorPresentationResolved(asset, cell + 1);
 			case UnknownActorPresentation: UnknownActorPresentation;
 		};
 

@@ -9,6 +9,7 @@ locale en
   message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
+  message ceesh_castle "CEESH: GOOD, YOU FOUND MY BYPASS. I JAMMED THE FORGE LIFT BEFORE BROWSER COULD FEED IT ANOTHER BAD BUILD. NOW HELP ME FIND A SECOND WAY INTO THE ARCHIVE."
   message ceesh_note "CEESH'S NOTE: BROWSER CHAINED THE COURTYARD GATE TO BOTH TOWERS. I CUT THE LOCK'S ORDER CHECK. SET THE WEST COUNTERWEIGHT AND EAST RELAY IN EITHER ORDER. - CEESH"
   message courtyard_open "THE TWO TOWERS ANSWER TOGETHER. THE SABOTAGED COURTYARD GATE OPENS."
   message east_ready "THE EAST RELAY HUMS. SET THE WEST COUNTERWEIGHT."
@@ -17,11 +18,10 @@ locale en
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "EMBER WISP WINDUP: DODGE"
   message guide_talk "E  TALK"
-  message inner_keep_body "FRESH CUT MARKS CROSS THE INNER DOOR. CEESH DISABLED THE FORGE LIFT AND MOVED INTO THE ARCHIVE. BROWSER'S INNER KEEP IS STILL SEALED."
+  message inner_keep_body "CEESH'S TOOLS ARE WEDGED INTO THE INNER DOOR. THE FORGE LIFT IS DISABLED, BUT BROWSER SEALED HIMSELF IN THE ARCHIVE. CEESH NEEDS A SECOND ROUTE."
   message inner_keep_title "THE INNER KEEP"
   message lantern_found "A CASTLE LAMPLIGHTER HID A SPARE LANTERN IN THE WESTERN NOOK."
   message lantern_title "THE LAMPLIGHTER'S NOOK"
-  message nia_castle "NIA: CEESH'S NOTE IS FRESH. SHE WANTS US THROUGH THE COURTYARD, NOT FIGHTING THE WALLS."
   message object_use "E  USE"
   message objective_controls_body "SET THE WEST COUNTERWEIGHT AND EAST RELAY. CEESH REMOVED THE ORDER CHECK, SO EITHER CONTROL MAY COME FIRST."
   message objective_controls_title "SET BOTH TOWER CONTROLS"
@@ -38,6 +38,7 @@ locale es-mx
   message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
+  message ceesh_castle "CEESH: BIEN, ENCONTRASTE MI DESVIO. BLOQUEE EL ELEVADOR DE LA FORJA ANTES DE QUE BROWSER LE DIERA OTRA COMPILACION MALA. AHORA AYUDAME A HALLAR OTRA RUTA AL ARCHIVO."
   message ceesh_note "NOTA DE CEESH: BROWSER UNIO LA REJA DEL PATIO A LAS DOS TORRES. CORTE LA REVISION DE ORDEN. ACTIVA EL CONTRAPESO OESTE Y EL RELE ESTE EN CUALQUIER ORDEN. - CEESH"
   message courtyard_open "LAS DOS TORRES RESPONDEN JUNTAS. LA REJA SABOTEADA DEL PATIO SE ABRE."
   message east_ready "EL RELE ESTE ZUMBA. ACTIVA EL CONTRAPESO OESTE."
@@ -46,11 +47,10 @@ locale es-mx
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "FUEGO FATUO CARGANDO: ESQUIVA"
   message guide_talk "E  HABLAR"
-  message inner_keep_body "MARCAS RECIENTES CRUZAN LA PUERTA INTERIOR. CEESH DESACTIVO EL ELEVADOR DE LA FORJA Y ENTRO AL ARCHIVO. EL TORREON DE BROWSER SIGUE SELLADO."
+  message inner_keep_body "LAS HERRAMIENTAS DE CEESH TRABAN LA PUERTA INTERIOR. EL ELEVADOR DE LA FORJA ESTA DESACTIVADO, PERO BROWSER SE ENCERRO EN EL ARCHIVO. CEESH NECESITA OTRA RUTA."
   message inner_keep_title "EL TORREON INTERIOR"
   message lantern_found "UN FAROLERO DEL CASTILLO ESCONDIO UNA LINTERNA EN EL RINCON OESTE."
   message lantern_title "EL RINCON DEL FAROLERO"
-  message nia_castle "NIA: LA NOTA DE CEESH ES RECIENTE. QUIERE QUE CRUCEMOS EL PATIO, NO QUE LUCHEMOS CONTRA LOS MUROS."
   message object_use "E  USAR"
   message objective_controls_body "ACTIVA EL CONTRAPESO OESTE Y EL RELE ESTE. CEESH QUITO LA REVISION DE ORDEN, ASI QUE PUEDES EMPEZAR POR CUALQUIERA."
   message objective_controls_title "ACTIVA LOS DOS CONTROLES"
@@ -871,9 +871,9 @@ object enemy.courtyard-wisp
   tag enemy
   placement entity caxecraft:ember-wisp 24500 5000 16500 180
 end object
-object guide.nia
+object guide.ceesh
   tag friend
-  placement npc caxecraft:nia dialogue.nia.castle 21500 5000 28500 180
+  placement npc caxecraft:ceesh dialogue.ceesh.castle 18500 5000 9500 270
 end object
 object item.lamplighter-lantern
   tag secret
@@ -884,25 +884,25 @@ object player.start
   placement player-spawn 16500 5000 29500 180
 end object
 dialogue dialogue.ceesh-note
-  line speaker guide.nia message ceesh_note
+  line speaker guide.ceesh message ceesh_note
+end dialogue
+dialogue dialogue.ceesh.castle
+  line speaker guide.ceesh message ceesh_castle
 end dialogue
 dialogue dialogue.courtyard-open
-  line speaker guide.nia message courtyard_open
+  line speaker guide.ceesh message courtyard_open
 end dialogue
 dialogue dialogue.east-ready
-  line speaker guide.nia message east_ready
+  line speaker guide.ceesh message east_ready
 end dialogue
 dialogue dialogue.inner-keep
-  line speaker guide.nia message inner_keep_body
+  line speaker guide.ceesh message inner_keep_body
 end dialogue
 dialogue dialogue.lantern-found
-  line speaker guide.nia message lantern_found
-end dialogue
-dialogue dialogue.nia.castle
-  line speaker guide.nia message nia_castle
+  line speaker guide.ceesh message lantern_found
 end dialogue
 dialogue dialogue.west-ready
-  line speaker guide.nia message west_ready
+  line speaker guide.ceesh message west_ready
 end dialogue
 journal journal.inner-keep title message inner_keep_title
   body message inner_keep_body

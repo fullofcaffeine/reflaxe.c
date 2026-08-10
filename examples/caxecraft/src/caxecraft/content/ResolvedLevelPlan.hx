@@ -185,7 +185,10 @@ typedef ResolvedActorPresentation = {
 	final contentId:ContentId;
 	final role:CharacterSpawnRole;
 
-	/** Manifest-validated cell in the current entity atlas. */
+	/** Manifest-validated atlas selected by the actor's content profile. */
+	final asset:String;
+
+	/** Manifest-validated cell in that atlas. */
 	final cellIndex:Int;
 }
 
@@ -454,16 +457,17 @@ final class ResolvedLevelPlan {
 		final flow = resolveFlowBindings(scenario);
 		final actorPresentation:Array<ResolvedActorPresentation> = [];
 		for (actor in actors) {
-			final cellIndex = switch registry.resolveActorPresentation(actor.contentId) {
-				case ActorPresentationResolved(value) if (value >= 0): value;
-				case ActorPresentationResolved(_) | UnknownActorPresentation:
+			final resolvedPresentation = switch registry.resolveActorPresentation(actor.contentId) {
+				case ActorPresentationResolved(asset, cell) if (asset.length > 0 && cell >= 0): {asset: asset, cell: cell};
+				case ActorPresentationResolved(_, _) | UnknownActorPresentation:
 					return LevelPlanRejected(ActorPresentationRejected(actor.authoredId, actor.contentId));
 			};
 			actorPresentation.push({
 				authoredId: actor.authoredId,
 				contentId: actor.contentId,
 				role: copyRole(actor.role),
-				cellIndex: cellIndex
+				asset: resolvedPresentation.asset,
+				cellIndex: resolvedPresentation.cell
 			});
 		}
 		final presentation = new ResolvedLevelPresentationPlan(fluids.presentation, items.presentation, actorPresentation, statefulObjects.presentation);
@@ -1100,6 +1104,7 @@ final class ResolvedLevelPlan {
 		for (actor in value.actorRequests()) {
 			result = hashText(result, actor.authoredId.text());
 			result = hashText(result, actor.contentId.text());
+			result = hashText(result, actor.asset);
 			result = hashInt(result, actor.cellIndex);
 			result = switch actor.role {
 				case DialogueNpc(dialogue): hashText(hashInt(result, 1), dialogue.text());

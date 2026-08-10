@@ -6,6 +6,15 @@
   "assetManifestId": "caxecraft-showcase-v1-draft",
   "assetCells": [
     {
+      "id": "adventure-characters",
+      "cells": [
+        "haxirio-front", "haxirio-three-quarter", "haxirio-side", "haxirio-back",
+        "ceesh-front", "ceesh-three-quarter", "ceesh-side", "ceesh-back",
+        "browser-front", "browser-three-quarter", "browser-side", "browser-back",
+        "browser-roar", "browser-charge", "browser-tail-sweep", "browser-stunned"
+      ]
+    },
+    {
       "id": "adventure-items",
       "cells": [
         "tideweave-suit-folded", "tideweave-helmet", "tideweave-air-canister", "tideweave-suit-pickup",
@@ -297,6 +306,16 @@
     }
   ],
   "npcs": [
+    {
+      "id": "caxecraft:ceesh",
+      "behaviorProfile": "stationary-dialogue",
+      "maxHealth": 8,
+      "interactionRadiusMilli": 2500,
+      "presentation": {
+        "asset": "adventure-characters",
+        "cell": "ceesh-front"
+      }
+    },
     {
       "id": "caxecraft:fallskeeper",
       "behaviorProfile": "stationary-dialogue",

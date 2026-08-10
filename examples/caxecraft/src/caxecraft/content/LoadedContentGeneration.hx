@@ -79,7 +79,10 @@ typedef LoadedActorBinding = {
 	/** Closed presentation/gameplay role resolved for the placed actor. */
 	final role:CharacterSpawnRole;
 
-	/** Manifest-validated cell in the native entity atlas. */
+	/** Manifest-validated atlas selected by the actor profile. */
+	final presentationAsset:String;
+
+	/** Manifest-validated cell in that atlas. */
 	final presentationCellIndex:Int;
 }
 
@@ -540,6 +543,7 @@ final class LoadedContentGeneration {
 				entityId: plan.entityId,
 				contentId: plan.contentId,
 				role: copyRole(plan.role),
+				presentationAsset: presentation[index].asset,
 				presentationCellIndex: presentation[index].cellIndex
 			});
 		}

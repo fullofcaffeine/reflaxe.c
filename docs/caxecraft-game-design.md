@@ -60,6 +60,12 @@ mine one sand-bank block, and climb back onto dry ground with held rise. This
 proves that bounded interaction only; it does not yet implement the planned
 flooded ruins, complete village story, Ivvy route, or finished campaign.
 
+The Castle Courtyard is also playable from the Adventure level picker. The
+player reads Ceesh's note, sets two tower controls, fights an Ember Wisp, and
+opens the outer gate. Ceesh now appears beyond the sealed inner gate from the
+reloadable `adventure-characters` atlas. This scene proves pack-defined
+character art, but it does not prove the castle interior or Browser boss.
+
 The durable work owners are:
 
 - `haxe_c-xge.7`: first playable C/raylib vertical slice;
@@ -902,8 +908,9 @@ existing game marks and characters, and the current pack contains no official
 Haxe logo binary. The exact selected PNGs are pinned and offline; online image
 generation is never a clean-build dependency. The registered validator checks
 their hashes, semantic atlas order, complete file inventory, and minimal PNG
-metadata. The title panorama, wordmark, HUD, and item atlas are now packaged as
-their exact verified primary bytes and owned by one explicit texture adapter;
+metadata. The title panorama, wordmark, HUD, item atlases, and Adventure
+character atlas are now packaged as exact verified primary bytes. Explicit
+texture owners release these files before the graphics device closes. However,
 the game has native title and hotbar screenshots, but not pinned
 software-render goldens. Before `haxe_c-xge.15` closes, any derived runtime
 assets need a deterministic conversion pipeline, and the complete visual pass

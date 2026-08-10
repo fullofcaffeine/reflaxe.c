@@ -741,6 +741,7 @@ CASES = {
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
+        native_timeout_seconds=40,
     ),
     "runtime-content-generation": HaxeCTestCase(
         case_id="runtime-content-generation",

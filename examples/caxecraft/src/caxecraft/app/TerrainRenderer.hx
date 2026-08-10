@@ -255,23 +255,23 @@ private function faceTint(face:VoxelFace, distance:Int):Color {
 	if (distance >= 22) {
 		return switch (face) {
 			case Top: Color.rgba(220, 235, 226);
-			case South | East: Color.rgba(197, 218, 212);
-			case North | West: Color.rgba(181, 205, 204);
+			case North | East: Color.rgba(197, 218, 212);
+			case South | West: Color.rgba(181, 205, 204);
 			case Bottom: Color.rgba(158, 182, 185);
 		};
 	}
 	if (distance >= 12) {
 		return switch (face) {
 			case Top: Color.rgba(240, 246, 239);
-			case South | East: Color.rgba(219, 231, 222);
-			case North | West: Color.rgba(199, 216, 211);
+			case North | East: Color.rgba(219, 231, 222);
+			case South | West: Color.rgba(199, 216, 211);
 			case Bottom: Color.rgba(173, 190, 188);
 		};
 	}
 	return switch (face) {
 		case Top: Color.rgba(255, 255, 255);
-		case South | East: Color.rgba(235, 241, 230);
-		case North | West: Color.rgba(211, 225, 220);
+		case North | East: Color.rgba(235, 241, 230);
+		case South | West: Color.rgba(211, 225, 220);
 		case Bottom: Color.rgba(178, 191, 188);
 	};
 }

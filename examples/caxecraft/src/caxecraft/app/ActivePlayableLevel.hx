@@ -50,12 +50,15 @@ enum PlayableLevelPreparationError {
 	FluidPresentationAmbiguous(firstCell:Int, otherCell:Int);
 }
 
-/** One dialogue actor identity and its validated atlas cell. */
+/** One dialogue actor identity and its validated atlas selection. */
 typedef PlayableDialogueActor = {
 	/** Runtime identity used for interaction and character observation. */
 	final entityId:EntityId;
 
-	/** Validated entity-atlas cell selected by the actor's content profile. */
+	/** Validated atlas selected by the actor's content profile. */
+	final presentationAsset:String;
+
+	/** Validated cell in that atlas. */
 	final presentationCellIndex:Int;
 }
 
@@ -67,6 +70,7 @@ private function collectDialogueActors(bindings:Array<LoadedActorBinding>):Array
 			case DialogueNpc(_):
 				actors.push({
 					entityId: binding.entityId,
+					presentationAsset: binding.presentationAsset,
 					presentationCellIndex: binding.presentationCellIndex
 				});
 			case EnemyActor:
@@ -115,6 +119,7 @@ final class PlayableLevelView {
 	final dialogueActors:Array<PlayableDialogueActor>;
 	final statefulObjects:Array<LoadedStatefulObjectBinding>;
 	final enemyId:EntityId;
+	final enemyAsset:String;
 	final enemyCell:Int;
 	final items:Array<LoadedWorldItem>;
 	final playerSpawn:ScenarioTransform;
@@ -122,14 +127,16 @@ final class PlayableLevelView {
 
 	/** Retain only facts proven to belong to the supplied generation. */
 	@:allow(caxecraft.app.ActivePlayableLevel)
-	private function new(candidate:RuntimeLevelCandidate, loadedDialogueActors:Array<PlayableDialogueActor>, enemyActorId:EntityId, enemyPresentationCell:Int,
-			loadedStatefulObjects:Array<LoadedStatefulObjectBinding>, loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
+	private function new(candidate:RuntimeLevelCandidate, loadedDialogueActors:Array<PlayableDialogueActor>, enemyActorId:EntityId,
+			enemyPresentationAsset:String, enemyPresentationCell:Int, loadedStatefulObjects:Array<LoadedStatefulObjectBinding>,
+			loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
 		loadedGeneration = candidate.generation();
 		levelPresentation = candidate.presentation();
 		sourcePath = candidate.receipt().logicalPath;
 		dialogueActors = loadedDialogueActors.copy();
 		statefulObjects = loadedStatefulObjects.copy();
 		enemyId = enemyActorId;
+		enemyAsset = enemyPresentationAsset;
 		enemyCell = enemyPresentationCell;
 		items = loadedItems.copy();
 		playerSpawn = spawn;
@@ -188,7 +195,15 @@ final class PlayableLevelView {
 	public inline function enemyActorId():EntityId
 		return enemyId;
 
-	/** Validated entity-atlas cell for one bounds-checked dialogue actor. */
+	/** Validated atlas selected by the current enemy profile. */
+	public inline function enemyActorPresentationAsset():String
+		return enemyAsset;
+
+	/** Validated atlas for one bounds-checked dialogue actor. */
+	public inline function dialogueActorPresentationAssetAt(index:Int):String
+		return dialogueActors[index].presentationAsset;
+
+	/** Validated atlas cell for one bounds-checked dialogue actor. */
 	public inline function dialogueActorPresentationCellAt(index:Int):Int
 		return dialogueActors[index].presentationCellIndex;
 
@@ -322,6 +337,7 @@ final class ActivePlayableLevel {
 		final actorBindings = candidate.generation().actorBindings();
 		final dialogueActors = collectDialogueActors(actorBindings);
 		var enemyActorId = EntityId.invalid();
+		var enemyPresentationAsset = "";
 		var enemyPresentationCell = -1;
 		for (binding in actorBindings)
 			switch binding.role {
@@ -330,6 +346,7 @@ final class ActivePlayableLevel {
 					if (enemyActorId.isValid())
 						return PlayableLevelNotPrepared(EnemyActorAmbiguous);
 					enemyActorId = binding.entityId;
+					enemyPresentationAsset = binding.presentationAsset;
 					enemyPresentationCell = binding.presentationCellIndex;
 			};
 		if (dialogueActors.length == 0)
@@ -354,7 +371,7 @@ final class ActivePlayableLevel {
 				yMilli: binding.transform.yMilli,
 				zMilli: binding.transform.zMilli
 			});
-		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActors, enemyActorId, enemyPresentationCell,
+		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActors, enemyActorId, enemyPresentationAsset, enemyPresentationCell,
 			candidate.generation().statefulObjectBindings(), loadedItems, candidate.generation().plan().player().transform, waterPresentationCell));
 	}
 }

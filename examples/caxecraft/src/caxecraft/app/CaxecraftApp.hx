@@ -1302,12 +1302,8 @@ final class CaxecraftApp {
 					screen = closeEditor(screen);
 			} else {
 				Raylib.ClearBackground(CaxecraftPalette.sky());
-				// The sun is a screen-space backdrop, so it remains calm and legible
-				// while the camera moves. Terrain and actors are drawn over it below.
-				final sunX = Raylib.GetScreenWidth() - 260;
-				Raylib.DrawCircle(sunX, 86, c.Float32.fromFloat(42.0), CaxecraftPalette.sunGlow());
-				Raylib.DrawCircle(sunX, 86, c.Float32.fromFloat(30.0), CaxecraftPalette.sunCore());
 				Raylib.BeginMode3D(camera);
+				drawWorldSun();
 				#if caxecraft_render_benchmark
 				final terrainStarted = Raylib.GetTime();
 				#end
@@ -1332,8 +1328,8 @@ final class CaxecraftApp {
 				totalRebuiltTerrainChunks = renderCounters.totalRebuiltChunks;
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
-				drawActors(camera, entityTexture, entityTextureReady, dialogueActors, levelView, enemyActor, levelView.enemyActorPresentationCell(),
-					enemyPhase.phase, berryDrop);
+				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
+					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				drawStatefulObjects(contentRegistry, session, levelView, camera, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
@@ -1506,6 +1502,19 @@ final class CaxecraftApp {
 		Raylib.CloseWindow();
 	}
 
+	/**
+		Draw the daylight source at one fixed world position.
+
+		The old sun used screen coordinates, so mouse look could not move it. This
+		world-space sphere now obeys the same camera transform as terrain. Its
+		north-east position also matches the brighter terrain faces.
+	**/
+	static function drawWorldSun():Void {
+		final center = Vector3.fromFloat(52.0, 18.0, -38.0);
+		Raylib.DrawSphere(center, c.Float32.fromFloat(3.4), CaxecraftPalette.sunCore());
+		Raylib.DrawSphere(center, c.Float32.fromFloat(4.8), CaxecraftPalette.sunGlow());
+	}
+
 	/** Turn one closed campaign-load failure into a path-and-stage console hint. */
 	static function campaignLevelLoadFailure(error:CampaignLevelLoadError):String {
 		return switch error {
@@ -1638,14 +1647,14 @@ final class CaxecraftApp {
 		presentation helper reads the published dialogue list for one frame; it cannot
 		change movement, health, or controller timing.
 	**/
-	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, dialogueActors:Array<Character>, level:PlayableLevelView,
-			enemy:Character, enemyCell:Int, enemyPhase:ActorControllerPhase, berryDrop:BerryDropState):Void {
+	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog,
+			dialogueActors:Array<Character>, level:PlayableLevelView, enemy:Character, enemyAsset:String, enemyCell:Int, enemyPhase:ActorControllerPhase,
+			berryDrop:BerryDropState):Void {
 		for (index in 0...level.dialogueActorCount()) {
 			final actor = dialogueActors[index];
-			if (entityTextureReady)
-				CaxecraftAtlas.drawEntitySprite(camera, entityTexture, level.dialogueActorPresentationCellAt(index),
-					Vector3.fromFloat(actor.body.x, actor.body.y + 0.76, actor.body.z), 0.95, 1.52);
-			else {
+			final position = Vector3.fromFloat(actor.body.x, actor.body.y + 0.76, actor.body.z);
+			if (!drawActorPresentation(camera, level.dialogueActorPresentationAssetAt(index), level.dialogueActorPresentationCellAt(index), position, 0.95,
+				1.52, entityTexture, entityTextureReady, runtimeTextures)) {
 				Raylib.DrawCube(Vector3.fromFloat(actor.body.x, actor.body.y + 0.54, actor.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
 					c.Float32.fromFloat(0.42), CaxecraftPalette.selection());
 				Raylib.DrawCube(Vector3.fromFloat(actor.body.x, actor.body.y + 1.18, actor.body.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
@@ -1655,10 +1664,8 @@ final class CaxecraftApp {
 			}
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
-			if (entityTextureReady)
-				CaxecraftAtlas.drawEntitySprite(camera, entityTexture, enemyCell, Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05,
-					0.96);
-			else {
+			if (!drawActorPresentation(camera, enemyAsset, enemyCell, Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05, 0.96,
+				entityTexture, entityTextureReady, runtimeTextures)) {
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.30, enemy.body.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),
 					c.Float32.fromFloat(0.70), CaxecraftPalette.damage());
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.66, enemy.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
@@ -1674,6 +1681,16 @@ final class CaxecraftApp {
 			Raylib.DrawCube(Vector3.fromFloat(berryDrop.x + 0.12, berryDrop.y, berryDrop.z), c.Float32.fromFloat(0.18), c.Float32.fromFloat(0.18),
 				c.Float32.fromFloat(0.18), CaxecraftPalette.berry());
 		}
+	}
+
+	/** Route one validated actor visual to its owning legacy or reloadable atlas. */
+	static function drawActorPresentation(camera:Camera3D, asset:String, cellIndex:Int, position:Vector3, width:Float, height:Float, entityTexture:Texture2D,
+			entityTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Bool {
+		if (asset == "entities" && entityTextureReady) {
+			CaxecraftAtlas.drawEntitySprite(camera, entityTexture, cellIndex, position, width, height);
+			return true;
+		}
+		return runtimeTextures.drawSprite(camera, asset, cellIndex, position, width, height);
 	}
 
 	/** Draw one immutable post-simulation HUD snapshot using borrowed textures. */

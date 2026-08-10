@@ -110,6 +110,28 @@ final class ContentPackageRefreshProbe {
 				uiReceiptFound = entry.byteLength == changedUi.length && entry.sha256 == expectedUiHash;
 		}
 		require(uiReceiptFound, "the outer package lost the changed UI-catalog receipt");
+
+		final assetPath = "assets/manifest.json";
+		final assetBytes = File.getBytes(assetPath);
+		final changedAssets = Bytes.ofString("\n" + assetBytes.toString());
+		final assetPlan = ready(planContentPackageRefresh(new ReplacedContentSource(store, assetPath, changedAssets), "caxecraft.package.json", null, null));
+		final assetRuntime = file(assetPlan, "packs/caxecraft/base/runtime-content.json");
+		final assetPackage = file(assetPlan, "caxecraft.package.json");
+		final expectedAssetHash = runtimeSha256Hex(changedAssets);
+		require(assetRuntime.changed() && assetPackage.changed(), "an asset-manifest edit did not refresh both dependent receipts");
+		require(assetRuntime.next.toString().indexOf(expectedAssetHash) >= 0, "the runtime receipt lost the changed asset-manifest receipt");
+		final nextAssetManifest = switch decodeContentPackageManifest(assetPackage.next) {
+			case ContentPackageManifestRejected(diagnostic):
+				throw new haxe.Exception('asset refresh package did not decode: ${Std.string(diagnostic)}');
+			case ContentPackageManifestReady(manifest): manifest;
+		};
+		var assetReceiptFound = false;
+		for (index in 0...nextAssetManifest.entryCount()) {
+			final entry = nextAssetManifest.entryAt(index);
+			if (entry.logicalPath.text() == assetPath)
+				assetReceiptFound = entry.byteLength == changedAssets.length && entry.sha256 == expectedAssetHash;
+		}
+		require(assetReceiptFound, "the outer package lost the changed asset-manifest receipt");
 		switch planContentPackageRefresh(new ReplacedContentSource(store, contentPath, Bytes.ofString("{")), "caxecraft.package.json", null, null) {
 			case ContentRefreshRejected(ContentPackRejected(_)):
 			case ContentRefreshReady(_):
@@ -126,7 +148,7 @@ final class ContentPackageRefreshProbe {
 			case ContentRefreshRejected(error):
 				throw new haxe.Exception('an unknown level produced the wrong error: ${Std.string(error)}');
 		}
-		Sys.println("content-package-refresh: current package, map, base-pack, and UI receipt cascades, canonical editor bytes, and unknown-level rejection passed");
+		Sys.println("content-package-refresh: current package, map, base-pack, UI, and asset receipt cascades, canonical editor bytes, and unknown-level rejection passed");
 	}
 
 	/** Unwrap one expected complete plan. */

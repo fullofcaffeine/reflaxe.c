@@ -140,11 +140,11 @@ final class FocusedContentRegistry implements ScenarioContentRegistry implements
 		return code < 0 ? UnknownItemContent : ItemContentResolved(ItemStorageCode.fromValidated(code));
 	}
 
-	/** Resolve the two manually reviewed entity-atlas cells used by focused maps. */
+	/** Resolve one synthetic supplemental atlas and one legacy entity cell for focused maps. */
 	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution {
 		return switch id.text() {
-			case "caxecraft:nia": ActorPresentationResolved(4);
-			case "caxecraft:mossling": ActorPresentationResolved(8);
+			case "caxecraft:nia": ActorPresentationResolved("fixture-actors", 4);
+			case "caxecraft:mossling": ActorPresentationResolved("entities", 8);
 			case _: UnknownActorPresentation;
 		}
 	}

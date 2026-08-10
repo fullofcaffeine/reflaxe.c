@@ -259,9 +259,9 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	public function resolveActorPresentation(id:ContentId):ActorPresentationResolution {
 		final npc = findNpc(id.text());
 		if (npc != null)
-			return ActorPresentationResolved(npc.presentation.cellIndex);
+			return ActorPresentationResolved(npc.presentation.asset, npc.presentation.cellIndex);
 		final enemy = findEnemy(id.text());
-		return enemy == null ? UnknownActorPresentation : ActorPresentationResolved(enemy.presentation.cellIndex);
+		return enemy == null ? UnknownActorPresentation : ActorPresentationResolved(enemy.presentation.asset, enemy.presentation.cellIndex);
 	}
 
 	/** True when a runtime integer can safely index the item registry. */
@@ -1075,24 +1075,9 @@ final class RuntimeContentPack {
 		return new RuntimePresentation(asset, cell, index);
 	}
 
-	/**
-		Resolve a visual that the current native actor renderer can draw safely.
-
-		The schema can validate many asset kinds, but the admitted actor shell owns
-		only the `entities` texture. Rejecting another valid atlas here prevents a
-		cell index from being applied to the wrong texture.
-	**/
-	static function readActorPresentation(reader:RuntimeSchemaReader, node:ContentJsonNode, path:String,
-			assets:RuntimeAssetInventory):Null<RuntimePresentation> {
-		final presentation = readPresentation(reader, node, path, assets);
-		if (presentation == null)
-			return null;
-		if (presentation.asset != "entities") {
-			reader.reject(node, SchemaInvalidInvariant(path + ".asset"));
-			return null;
-		}
-		return presentation;
-	}
+	/** Resolve one actor visual through the same validated asset inventory as other world presentation. */
+	static function readActorPresentation(reader:RuntimeSchemaReader, node:ContentJsonNode, path:String, assets:RuntimeAssetInventory):Null<RuntimePresentation>
+		return readPresentation(reader, node, path, assets);
 
 	/** Parse one registered lower-case mechanic/profile value. */
 	static function readClosed(reader:RuntimeSchemaReader, node:ContentJsonNode, path:String, admitted:Array<String>):Null<String> {

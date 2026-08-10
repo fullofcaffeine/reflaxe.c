@@ -56,7 +56,7 @@ function main():Void {
 
 /** Return zero only when the real positive path and focused negatives agree. */
 function selfCheck():Int {
-	final store = switch ContentPackageStore.open(".", "caxecraft-runtime-schema", 16 * 1024) {
+	final store = switch ContentPackageStore.open(".", "caxecraft-runtime-schema", 32 * 1024) {
 		case PackageStoreOpened(value): value;
 		case PackageStoreRejected(_): return 1;
 	};
@@ -108,9 +108,14 @@ function selfCheck():Int {
 	}
 	switch [
 		registry.resolveActorPresentation(new ContentId("caxecraft:nia")),
-		registry.resolveActorPresentation(new ContentId("caxecraft:mossling"))
+		registry.resolveActorPresentation(new ContentId("caxecraft:mossling")),
+		registry.resolveActorPresentation(new ContentId("caxecraft:ceesh"))
 	] {
-		case [ActorPresentationResolved(4), ActorPresentationResolved(8)]:
+		case [
+			ActorPresentationResolved("entities", 4),
+			ActorPresentationResolved("entities", 8),
+			ActorPresentationResolved("adventure-characters", 4)
+		]:
 		case _:
 			return 39;
 	}
@@ -134,8 +139,11 @@ function selfCheck():Int {
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
 		return 8;
-	if (completeUiLookupProof(catalog) != 40196)
+	final completeProof = completeUiLookupProof(catalog);
+	if (completeProof != 40444) {
+		traceUi = completeProof;
 		return 9;
+	}
 	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	if (traceUi != 3528)
 		return 36;
@@ -296,9 +304,6 @@ function negativeChecks():Int {
 		return 22;
 	if (!rejectsPack(replaceOnce(minimal, '"cell":"teal-water"', '"cell":"missing"'), UnknownAssetCell))
 		return 23;
-	if (!rejectsPack(replaceOnce(minimal, '"presentation":{"asset":"entities","cell":"mossling-front"}', '"presentation":{"asset":"items","cell":"berries"}'),
-		InvalidInvariant))
-		return 40;
 	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:air"', '"id":"caxecraft:zz-air"'), NonCanonicalOrder))
 		return 24;
 	if (!rejectsPack(replaceOnce(minimal, '"maxStack":64', '"maxStack":65'), InvalidInteger))

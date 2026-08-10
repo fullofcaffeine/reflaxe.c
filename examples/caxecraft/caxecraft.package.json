@@ -67,8 +67,8 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 21489,
-      "sha256": "e381a7988c2d743aac97bffc012aea00e37548056d78b82f5f182475c86edc63"
+      "byteLength": 21492,
+      "sha256": "2bf7de18c0ca343f9e1728d4630f44a12e70a7881e512ddde2a02f163ef0e3ec"
     },
     {
       "kind": "asset",
@@ -80,7 +80,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 1966,
-      "sha256": "f080bb6183dd52360b785edd02a189e76c7bb1819477d618c714ece562320b11"
+      "sha256": "cd048d580d28a8154c8a586dec52db89a22266e38a10c9a493d218b7dec2ec87"
     },
     {
       "kind": "localization",
@@ -91,14 +91,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 16621,
-      "sha256": "e8f08689fc562c1027f038c8505b3eb1400a83099f83d7b189716a69900429c5"
+      "byteLength": 17270,
+      "sha256": "14c0b4e362339f48c71854cb57e32026222df19351c8b5dbe1f8bd663f739802"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "01a4eadd3fcd3e1fc9187a1ce51a05179b3a1b7589c6dc2c3d744238902ba50b"
+      "sha256": "3a201e780572b9557fa331cec1762fd46621fcc40a82f452a0e2d7e8ca919c7c"
     },
     {
       "kind": "level",
@@ -109,8 +109,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/castle-courtyard.caxemap",
-      "byteLength": 17346,
-      "sha256": "3a4cd1403918e11951bced3f903e155bff3601bdbc4d3b759e256f0f1555efd8"
+      "byteLength": 17536,
+      "sha256": "6740d054df9a7a2ed45ef1be4dd4affadf263a65f96d10196dbd4332a4ca3d53"
     },
     {
       "kind": "level",

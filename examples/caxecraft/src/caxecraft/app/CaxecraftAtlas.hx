@@ -162,13 +162,13 @@ private function emitTiledNorthSouth(x0:Float, x1:Float, y0:Float, y1:Float, z0:
 		var y = y0;
 		while (y < y1) {
 			final nextY = y + 1.0 < y1 ? y + 1.0 : y1;
-			Rlgl.Color(Color.rgba(211, 225, 220));
+			Rlgl.Color(Color.rgba(235, 241, 230));
 			Rlgl.Normal(0.0, 0.0, -1.0);
 			vertex(u0, v1, x, y, z0);
 			vertex(u0, v0, x, nextY, z0);
 			vertex(u1, v0, nextX, nextY, z0);
 			vertex(u1, v1, nextX, y, z0);
-			Rlgl.Color(Color.rgba(235, 241, 230));
+			Rlgl.Color(Color.rgba(211, 225, 220));
 			Rlgl.Normal(0.0, 0.0, 1.0);
 			vertex(u0, v1, x, y, z1);
 			vertex(u1, v1, nextX, y, z1);

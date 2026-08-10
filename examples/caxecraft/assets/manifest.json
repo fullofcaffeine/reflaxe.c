@@ -15,6 +15,7 @@
   "runtimeIntegration": {
     "owner": "haxe_c-xge.15.2.2",
     "packagedPrimaryAssets": [
+      "adventure-characters",
       "caxecraft-wordmark",
       "title-panorama",
       "hud",
@@ -27,13 +28,12 @@
       "terrain"
     ],
     "designOnlyAssets": [
-      "adventure-characters",
       "cutscene-editor",
       "ivvy"
     ],
     "pathPolicy": "Exact manifest paths below the executable assets directory; no host or source-checkout path is embedded.",
     "lifetimePolicy": "Each valid LoadTexture result has one explicit owner and one UnloadTexture call before CloseWindow; copied Texture2D values are non-owning aliases.",
-    "derivation": "The ten packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
+    "derivation": "The eleven packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
   },
   "rights": {
     "caxecraft-original": {

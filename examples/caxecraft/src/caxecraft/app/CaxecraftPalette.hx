@@ -13,7 +13,7 @@ final class CaxecraftPalette {
 		return Color.rgba(207, 226, 216);
 
 	public static inline function sunGlow():Color
-		return Color.rgba(255, 226, 136);
+		return Color.rgba(255, 226, 136, 88);
 
 	public static inline function sunCore():Color
 		return Color.rgba(255, 246, 205);

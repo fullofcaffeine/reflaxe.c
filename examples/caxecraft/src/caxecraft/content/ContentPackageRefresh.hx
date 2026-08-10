@@ -229,6 +229,10 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 		case RefreshBytesReady(bytes): bytes;
 	};
 	final assetReceipt = receipt(assetEntry.logicalPath.text(), assetBytes);
+	// The runtime receipt and outer package both authenticate the asset manifest.
+	// Updating only the inner receipt leaves the final package graph impossible to
+	// open after an ordinary art-manifest edit.
+	packageUpdates.push(assetReceipt);
 	final nextRuntime = writeRuntimeContentReceipt(registry.assetManifestId(), assetReceipt, receipt(contentEntry.logicalPath.text(), contentBytes),
 		receipt(uiEntry.logicalPath.text(), uiBytes), receipt(runtimeMapPath, runtimeMapBytes));
 	files.push(new ContentRefreshFile(runtimePath, runtimeBytes, nextRuntime));
