@@ -1,0 +1,978 @@
+CAXEMAP 1
+feature required caxecraft:core
+map adventure.castle-courtyard
+asset-pack packs/caxecraft/base
+default-locale en
+locale en
+  message adventure_progress "BREACH THE CASTLE COURTYARD"
+  message adventure_tagline "READ CEESH'S NOTE. SET BOTH TOWERS. ENTER THE KEEP."
+  message attack_hit "COPPER STRIKE"
+  message berry_stack_full "BERRIES FULL: USE ONE FIRST"
+  message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
+  message ceesh_note "CEESH'S NOTE: BROWSER CHAINED THE COURTYARD GATE TO BOTH TOWERS. I CUT THE LOCK'S ORDER CHECK. SET THE WEST COUNTERWEIGHT AND EAST RELAY IN EITHER ORDER. - CEESH"
+  message courtyard_open "THE TWO TOWERS ANSWER TOGETHER. THE SABOTAGED COURTYARD GATE OPENS."
+  message east_ready "THE EAST RELAY HUMS. SET THE WEST COUNTERWEIGHT."
+  message enemy_alert "EMBER WISP ALERT"
+  message enemy_dropped_items "THE EMBER WISP DROPPED A LANTERN"
+  message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
+  message enemy_windup "EMBER WISP WINDUP: DODGE"
+  message guide_talk "E  TALK"
+  message inner_keep_body "FRESH CUT MARKS CROSS THE INNER DOOR. CEESH DISABLED THE FORGE LIFT AND MOVED INTO THE ARCHIVE. BROWSER'S INNER KEEP IS STILL SEALED."
+  message inner_keep_title "THE INNER KEEP"
+  message lantern_found "A CASTLE LAMPLIGHTER HID A SPARE LANTERN IN THE WESTERN NOOK."
+  message lantern_title "THE LAMPLIGHTER'S NOOK"
+  message nia_castle "NIA: CEESH'S NOTE IS FRESH. SHE WANTS US THROUGH THE COURTYARD, NOT FIGHTING THE WALLS."
+  message object_use "E  USE"
+  message objective_controls_body "SET THE WEST COUNTERWEIGHT AND EAST RELAY. CEESH REMOVED THE ORDER CHECK, SO EITHER CONTROL MAY COME FIRST."
+  message objective_controls_title "SET BOTH TOWER CONTROLS"
+  message objective_enter_body "PASS THROUGH THE OPEN OUTER GATE, CROSS THE COURTYARD, AND INSPECT THE SEALED INNER GATE."
+  message objective_enter_title "REACH THE INNER KEEP"
+  message objective_note_body "CEESH LEFT A FIELD NOTE BESIDE THE ASHFALL ROAD."
+  message objective_note_title "READ CEESH'S FIELD NOTE"
+  message scenario_title "Caxecraft: Castle Courtyard"
+  message west_ready "THE WEST COUNTERWEIGHT DROPS. SET THE EAST RELAY."
+end locale
+locale es-mx
+  message adventure_progress "IRRUMPE EN EL PATIO DEL CASTILLO"
+  message adventure_tagline "LEE LA NOTA DE CEESH. ACTIVA DOS TORRES. LLEGA AL TORREON."
+  message attack_hit "GOLPE DE COBRE"
+  message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
+  message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
+  message ceesh_note "NOTA DE CEESH: BROWSER UNIO LA REJA DEL PATIO A LAS DOS TORRES. CORTE LA REVISION DE ORDEN. ACTIVA EL CONTRAPESO OESTE Y EL RELE ESTE EN CUALQUIER ORDEN. - CEESH"
+  message courtyard_open "LAS DOS TORRES RESPONDEN JUNTAS. LA REJA SABOTEADA DEL PATIO SE ABRE."
+  message east_ready "EL RELE ESTE ZUMBA. ACTIVA EL CONTRAPESO OESTE."
+  message enemy_alert "FUEGO FATUO ALERTA"
+  message enemy_dropped_items "EL FUEGO FATUO SOLTO UNA LINTERNA"
+  message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
+  message enemy_windup "FUEGO FATUO CARGANDO: ESQUIVA"
+  message guide_talk "E  HABLAR"
+  message inner_keep_body "MARCAS RECIENTES CRUZAN LA PUERTA INTERIOR. CEESH DESACTIVO EL ELEVADOR DE LA FORJA Y ENTRO AL ARCHIVO. EL TORREON DE BROWSER SIGUE SELLADO."
+  message inner_keep_title "EL TORREON INTERIOR"
+  message lantern_found "UN FAROLERO DEL CASTILLO ESCONDIO UNA LINTERNA EN EL RINCON OESTE."
+  message lantern_title "EL RINCON DEL FAROLERO"
+  message nia_castle "NIA: LA NOTA DE CEESH ES RECIENTE. QUIERE QUE CRUCEMOS EL PATIO, NO QUE LUCHEMOS CONTRA LOS MUROS."
+  message object_use "E  USAR"
+  message objective_controls_body "ACTIVA EL CONTRAPESO OESTE Y EL RELE ESTE. CEESH QUITO LA REVISION DE ORDEN, ASI QUE PUEDES EMPEZAR POR CUALQUIERA."
+  message objective_controls_title "ACTIVA LOS DOS CONTROLES"
+  message objective_enter_body "CRUZA LA REJA EXTERIOR Y EL PATIO. EXAMINA LA REJA SELLADA DEL TORREON."
+  message objective_enter_title "LLEGA AL TORREON INTERIOR"
+  message objective_note_body "CEESH DEJO UNA NOTA JUNTO AL CAMINO DE ASHFALL."
+  message objective_note_title "LEE LA NOTA DE CEESH"
+  message scenario_title "Caxecraft: Patio del Castillo"
+  message west_ready "EL CONTRAPESO OESTE CAE. ACTIVA EL RELE ESTE."
+end locale
+title message scenario_title
+mode adventure
+world 32 16 32
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+palette 5 caxecraft:wood
+palette 8 caxecraft:ash
+palette 9 caxecraft:stone
+chunk world.castle-shaped 0 0 0 32 16 32
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 1
+  run 9 6
+  run 8 7
+  run 5 5
+  run 8 6
+  run 9 6
+  run 8 1
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 3
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 256
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 160
+  run 1 32
+  run 9 256
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 256
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 160
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 3
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 162
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 35
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 34
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 162
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 1
+  run 9 5
+  run 0 20
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 35
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 1
+  run 9 1
+  run 0 24
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 34
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 162
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 1
+  run 9 1
+  run 0 24
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 35
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 1
+  run 9 1
+  run 0 24
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 34
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 162
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 1
+  run 9 5
+  run 0 20
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 35
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 102
+  run 5 21
+  run 9 5
+  run 0 1
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 34
+  run 9 1
+  run 0 27
+  run 9 1
+  run 0 162
+  run 1 32
+  run 9 103
+  run 5 18
+  run 9 7
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 3
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 103
+  run 5 18
+  run 9 7
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 162
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 3
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 109
+  run 8 1
+  run 5 5
+  run 8 1
+  run 9 25
+  run 0 7
+  run 9 25
+  run 0 7
+  run 9 25
+  run 0 7
+  run 9 25
+  run 0 7
+  run 9 12
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 9
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 160
+  run 1 32
+  run 9 109
+  run 8 1
+  run 5 5
+  run 8 1
+  run 9 25
+  run 0 7
+  run 9 25
+  run 0 7
+  run 9 25
+  run 0 7
+  run 9 25
+  run 0 7
+  run 9 12
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 7
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 161
+  run 1 32
+  run 9 96
+  run 8 1
+  run 9 6
+  run 5 18
+  run 9 6
+  run 8 1
+  run 0 1
+  run 9 7
+  run 0 5
+  run 9 1
+  run 0 5
+  run 9 1
+  run 0 5
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 162
+  run 1 32
+  run 9 96
+  run 8 5
+  run 5 23
+  run 8 4
+  run 0 7
+  run 9 1
+  run 0 5
+  run 9 1
+  run 0 5
+  run 9 1
+  run 0 5
+  run 9 1
+  run 0 326
+  run 1 32
+  run 9 96
+  run 8 5
+  run 5 23
+  run 8 4
+  run 0 7
+  run 9 7
+  run 0 5
+  run 9 7
+  run 0 326
+  run 1 32
+  run 9 96
+  run 8 5
+  run 5 23
+  run 8 4
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 5
+  run 5 23
+  run 8 4
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+  run 1 32
+  run 9 96
+  run 8 14
+  run 5 5
+  run 8 13
+  run 0 352
+end chunk
+fluid castle.moat-east caxecraft:water volume 20 5 23 5 1 2
+fluid castle.moat-west caxecraft:water volume 8 5 23 5 1 2
+object castle.ceesh-note
+  tag clue
+  placement stateful caxecraft:ceesh-field-note caxecraft:waiting 12500 5000 27500 0
+end object
+object castle.east-relay
+  tag mechanism
+  placement stateful caxecraft:gate-relay caxecraft:waiting 26500 5000 25500 270
+end object
+object castle.inner-gate
+  tag landmark
+  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 5000 8500 0
+end object
+object castle.inner-lock
+  tag clue
+  placement stateful caxecraft:gate-relay caxecraft:waiting 15500 5000 10500 0
+end object
+object castle.outer-gate
+  tag mechanism
+  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 5000 21500 0
+end object
+object castle.west-winch
+  tag mechanism
+  placement stateful caxecraft:gate-winch caxecraft:waiting 6500 5000 25500 90
+end object
+object enemy.courtyard-wisp
+  tag enemy
+  placement entity caxecraft:ember-wisp 24500 5000 16500 180
+end object
+object guide.nia
+  tag friend
+  placement npc caxecraft:nia dialogue.nia.castle 21500 5000 28500 180
+end object
+object item.lamplighter-lantern
+  tag secret
+  placement item caxecraft:lantern 1 6500 5000 14500 0
+end object
+object player.start
+  tag player
+  placement player-spawn 16500 5000 29500 180
+end object
+dialogue dialogue.ceesh-note
+  line speaker guide.nia message ceesh_note
+end dialogue
+dialogue dialogue.courtyard-open
+  line speaker guide.nia message courtyard_open
+end dialogue
+dialogue dialogue.east-ready
+  line speaker guide.nia message east_ready
+end dialogue
+dialogue dialogue.inner-keep
+  line speaker guide.nia message inner_keep_body
+end dialogue
+dialogue dialogue.lantern-found
+  line speaker guide.nia message lantern_found
+end dialogue
+dialogue dialogue.nia.castle
+  line speaker guide.nia message nia_castle
+end dialogue
+dialogue dialogue.west-ready
+  line speaker guide.nia message west_ready
+end dialogue
+journal journal.inner-keep title message inner_keep_title
+  body message inner_keep_body
+end journal
+journal journal.lamplighter-nook title message lantern_title
+  body message lantern_found
+end journal
+objective objective.enter-keep hidden title message objective_enter_title
+  body message objective_enter_body
+end objective
+objective objective.read-note active title message objective_note_title
+  body message objective_note_body
+end objective
+objective objective.set-controls hidden title message objective_controls_title
+  body message objective_controls_body
+end objective
+variable quest.east-relay-ready quest flag false
+variable quest.lamplighter-nook-found quest flag false
+variable quest.west-winch-ready quest flag false
+rule rule.ceesh-note-read priority 100 once
+  when interact castle.ceesh-note
+  if (objective objective.read-note active)
+  do set-object-state castle.ceesh-note caxecraft:entered
+  do dialogue dialogue.ceesh-note
+  do objective objective.read-note complete
+  do objective objective.set-controls active
+end rule
+rule rule.courtyard-opens-from-east priority 110 once
+  when state-changed quest.east-relay-ready
+  if (all (flag quest.east-relay-ready true) (flag quest.west-winch-ready true))
+  do set-object-state castle.outer-gate caxecraft:open
+  do dialogue dialogue.courtyard-open
+  do objective objective.set-controls complete
+  do objective objective.enter-keep active
+end rule
+rule rule.courtyard-opens-from-west priority 110 once
+  when state-changed quest.west-winch-ready
+  if (all (flag quest.east-relay-ready true) (flag quest.west-winch-ready true))
+  do set-object-state castle.outer-gate caxecraft:open
+  do dialogue dialogue.courtyard-open
+  do objective objective.set-controls complete
+  do objective objective.enter-keep active
+end rule
+rule rule.east-relay-set priority 100 once
+  when interact castle.east-relay
+  if (flag quest.east-relay-ready false)
+  do set-flag quest.east-relay-ready true
+  do set-object-state castle.east-relay caxecraft:entered
+  do dialogue dialogue.east-ready
+end rule
+rule rule.inner-keep-inspected priority 100 once
+  when interact castle.inner-lock
+  if (objective objective.enter-keep active)
+  do set-object-state castle.inner-lock caxecraft:entered
+  do dialogue dialogue.inner-keep
+  do journal journal.inner-keep
+  do objective objective.enter-keep complete
+end rule
+rule rule.lamplighter-nook-found priority 100 once
+  when collect-item caxecraft:lantern
+  if (flag quest.lamplighter-nook-found false)
+  do set-flag quest.lamplighter-nook-found true
+  do dialogue dialogue.lantern-found
+  do journal journal.lamplighter-nook
+end rule
+rule rule.west-winch-set priority 100 once
+  when interact castle.west-winch
+  if (flag quest.west-winch-ready false)
+  do set-flag quest.west-winch-ready true
+  do set-object-state castle.west-winch caxecraft:entered
+  do dialogue dialogue.west-ready
+end rule
+end-map

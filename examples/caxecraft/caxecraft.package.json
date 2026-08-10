@@ -67,8 +67,8 @@
     {
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
-      "byteLength": 1552,
-      "sha256": "e88c91a469d767ef48ac704875ecc834b5a677de6298ac267c35468560d30424"
+      "byteLength": 1966,
+      "sha256": "233efc0efdba598d3e4e07f194339133c63017a6683a8024e4ec6aedfcb95354"
     },
     {
       "kind": "localization",
@@ -79,20 +79,26 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 12791,
-      "sha256": "d24ca7ea60cbba2a6fd4bf87049f6ffc092dabd47311200c107570ca8fc01551"
+      "byteLength": 15575,
+      "sha256": "15c9ce636b0332f437ab0e513b3664f97ae285225eaae5dde7c93eed7c39a657"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "fad39ec3ef8997150bbf09a492c9789d4bc9d39a9e53b074452858de1ad260a3"
+      "sha256": "be1b86222200581c8a56cc52fa683775957b58cc0750260f0adaa42e47a0df4e"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/ashfall.caxemap",
       "byteLength": 16020,
       "sha256": "f6d0795b0218fae9208d1f1cd1fc03a5f7b6887af4e3c40b349abcf408b187b4"
+    },
+    {
+      "kind": "level",
+      "path": "scenarios/first-adventure/castle-courtyard.caxemap",
+      "byteLength": 17332,
+      "sha256": "bdaddf872031dbf62aed0e2eee91a26712515e5f45ccaaca1c8299ef02ba045e"
     },
     {
       "kind": "level",

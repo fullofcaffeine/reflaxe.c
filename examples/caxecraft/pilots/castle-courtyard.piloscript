@@ -1,0 +1,62 @@
+PILOSCRIPT 1
+name castle-courtyard-journey
+frames 420
+
+# Enter Adventure and select the castle courtyard from the runtime campaign.
+action 0 menu-next
+checkpoint 0 capture title-selection
+action 1 menu-confirm
+checkpoint 1 capture campaign-selection
+action 2 menu-next
+action 4 menu-next
+action 6 menu-next
+action 8 menu-next
+checkpoint 9 capture level-selection
+expect 9 level castle-courtyard
+action 10 menu-confirm
+expect 12 screen playing
+expect 12 mode adventure
+expect 12 level castle-courtyard
+expect 12 objective objective.read-note
+expect 12 generation 2
+expect 12 publications 1
+
+# Read Ceesh's fresh field note on the western edge of the arrival road.
+hold 13 28 forward-left
+action 30 interact
+expect 34 object-state castle.ceesh-note=caxecraft:entered
+expect 34 objective objective.set-controls
+action 35 interact
+
+# Set the west counterweight, then cross the broad approach to the east relay.
+# The controls intentionally accept either order; this route proves one real
+# order without turning both permutations into permanent content automation.
+hold 36 72 left
+action 74 interact
+expect 78 object-state castle.west-winch=caxecraft:entered
+action 79 interact
+hold 80 171 right
+hold 172 185 forward
+action 187 interact
+expect 191 object-state castle.east-relay=caxecraft:entered
+expect 192 object-state castle.outer-gate=caxecraft:open
+expect 193 objective objective.enter-keep
+action 194 interact
+
+# Return to the dry central causeway, pass the opened outer gate, and stop at
+# the still-sealed inner keep. Browser remains off-stage in this chapter.
+hold 195 285 forward-left
+hold 286 325 forward
+hold 326 342 right
+hold 343 363 forward
+action 366 interact
+expect 371 object-state castle.inner-lock=caxecraft:entered
+expect 372 objective none
+expect 373 journal journal.inner-keep
+action 374 interact
+
+hold 375 393 backward
+action 400 pause
+checkpoint 400 capture final
+expect 400 screen paused
+end

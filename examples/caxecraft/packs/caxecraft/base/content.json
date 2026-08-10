@@ -317,6 +317,22 @@
   ],
   "enemies": [
     {
+      "id": "caxecraft:ember-wisp",
+      "behaviorProfile": "wander-chase-melee",
+      "maxHealth": 2,
+      "noticeRadiusMilli": 6500,
+      "strikeRadiusMilli": 3000,
+      "attackRadiusMilli": 1400,
+      "windupTicks": 10,
+      "recoveryTicks": 14,
+      "stepMilli": 90,
+      "drop": "caxecraft:ember-wisp-lantern",
+      "presentation": {
+        "asset": "entities",
+        "cell": "ember-wisp-front"
+      }
+    },
+    {
       "id": "caxecraft:mossling",
       "behaviorProfile": "wander-chase-melee",
       "maxHealth": 3,
@@ -334,6 +350,16 @@
     }
   ],
   "drops": [
+    {
+      "id": "caxecraft:ember-wisp-lantern",
+      "item": "caxecraft:lantern",
+      "quantity": 1,
+      "pickupRadiusMilli": 1500,
+      "presentation": {
+        "asset": "items",
+        "cell": "lantern"
+      }
+    },
     {
       "id": "caxecraft:mossling-berries",
       "item": "caxecraft:berries",
@@ -357,6 +383,84 @@
   ],
   "prefabs": [],
   "statefulObjects": [
+    {
+      "id": "caxecraft:ceesh-field-note",
+      "interaction": "activate",
+      "interactionRadiusMilli": 2500,
+      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:entered",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "checkpoint"
+          }
+        },
+        {
+          "id": "caxecraft:waiting",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "ceesh-scroll"
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:gate-relay",
+      "interaction": "activate",
+      "interactionRadiusMilli": 2500,
+      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:entered",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "checkpoint"
+          }
+        },
+        {
+          "id": "caxecraft:waiting",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "bridge-routing-elbow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "caxecraft:gate-winch",
+      "interaction": "activate",
+      "interactionRadiusMilli": 2500,
+      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "states": [
+        {
+          "id": "caxecraft:entered",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "checkpoint"
+          }
+        },
+        {
+          "id": "caxecraft:waiting",
+          "collision": "passable",
+          "render": "visible",
+          "presentation": {
+            "asset": "adventure-items",
+            "cell": "bridge-input"
+          }
+        }
+      ]
+    },
     {
       "id": "caxecraft:vault-gate",
       "interaction": "none",
