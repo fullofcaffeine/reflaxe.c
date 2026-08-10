@@ -70,10 +70,24 @@ final class ScenarioCodecProbe {
 		checkRoleSpecificReferences(canonical, fullCanonical);
 		checkNarratorIdentity(canonical);
 		checkFlowVariableScopes(fullCanonical);
+		checkCampaignExitAction(fullCanonical);
 		checkFlowBoundsAndGrammar(canonical, fullCanonical);
 		checkBoundedFailures(canonical);
 
 		Sys.println('scenario-codec: ${written.length} + ${fullCanonical.length} + ${shippedCanonical.length} bytes, staged round-trip and exact malformed-input audit');
+	}
+
+	/**
+	 * Protect the map-owned half of campaign travel without requiring a campaign.
+	 *
+	 * A CaxeMap names an exit request, while the separately loaded campaign graph
+	 * decides whether that exit has a destination. Keeping this codec expectation
+	 * independent lets every map remain parseable and test-playable on its own.
+	 */
+	static function checkCampaignExitAction(fullCanonical:Bytes):Void {
+		final withExit = replace(fullCanonical, "  do journal journal.bridge\n", "  do journal journal.bridge\n  do campaign-exit western-falls-east\n");
+		final scenario = readValid(withExit);
+		require(ScenarioWriter.write(scenario).compare(withExit) == 0, "campaign exit action did not round-trip byte-identically");
 	}
 
 	static function checkTokenKinds(canonical:Bytes, fullCanonical:Bytes):Void {

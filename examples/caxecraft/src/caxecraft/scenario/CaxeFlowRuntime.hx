@@ -73,6 +73,9 @@ enum FlowPresentationEvent {
 	CheckpointChanged(id:ScenarioId);
 	ObjectiveChanged(id:ScenarioId, value:ObjectiveState);
 	EffectRequested(effect:ContentId, objectId:Null<ScenarioId>);
+
+	/** Ask the campaign shell to resolve one map-authored exit ID. */
+	CampaignExitRequested(exit:ScenarioId);
 }
 
 /**

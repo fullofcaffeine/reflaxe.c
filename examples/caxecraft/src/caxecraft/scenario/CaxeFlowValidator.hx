@@ -193,6 +193,9 @@ final class CaxeFlowValidator {
 					context.addAtCoordinate(UnresolvedContent(effect), coordinate);
 				if (target != null && !context.hasObject(target))
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
+			case RequestCampaignExit(_):
+				// Campaign edges are outside an independently valid CaxeMap. The
+				// campaign loader resolves this stable request after map validation.
 			case EmitSignal(signal):
 				if (!context.registry.hasSignal(signal))
 					context.addAtCoordinate(UnresolvedContent(signal), coordinate);

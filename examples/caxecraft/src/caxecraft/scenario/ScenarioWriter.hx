@@ -342,6 +342,7 @@ final class ScenarioWriter {
 			case SetObjective(id, value): '$syntax ${id.text()} ${objectiveState(value)}';
 			case PlayEffect(effect, null): '$syntax ${effect.text()}';
 			case PlayEffect(effect, objectId): '$syntax ${effect.text()} at ${objectId.text()}';
+			case RequestCampaignExit(exit): '$syntax ${exit.text()}';
 			case EmitSignal(signal): '$syntax ${signal.text()}';
 			case Schedule(timer, ticks, sequence, arguments):
 				'$syntax ${timer.text()} $ticks ${sequence.text()}${arguments.length == 0 ? "" : " " + [for (argument in arguments) argumentText(argument)].join(" ")}';

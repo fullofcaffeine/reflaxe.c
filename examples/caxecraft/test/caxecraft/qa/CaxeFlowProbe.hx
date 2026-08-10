@@ -72,7 +72,7 @@ final class CaxeFlowProbe {
 		checkBudgets();
 		checkScheduledFailurePolicy();
 		checkActiveObjectiveProjection();
-		Sys.println('caxeflow: 10 events, 12 predicates, 18 actions; stable order/repeat/defer/sequence/budgets; trace=$forward');
+		Sys.println('caxeflow: 10 events, 12 predicates, 19 actions; stable order/repeat/defer/sequence/budgets; trace=$forward');
 	}
 
 	/**
@@ -215,6 +215,7 @@ final class CaxeFlowProbe {
 			SetCheckpoint(CHECKPOINT),
 			SetObjective(OBJECTIVE, Complete),
 			PlayEffect(SPARK, BRIDGE),
+			RequestCampaignExit(id("exit.coverage")),
 			EmitSignal(SIGNAL),
 			Schedule(TIMER, 2, SCHEDULED_SEQUENCE, [Variable(COUNTER)]),
 			CallSequence(IMMEDIATE_SEQUENCE, [Variable(COUNTER)]),
@@ -585,6 +586,7 @@ final class CaxeFlowProbe {
 			case CheckpointChanged(id): 'checkpoint:${id.text()}';
 			case ObjectiveChanged(id, value): 'objective:${id.text()}:${objectiveStateText(value)}';
 			case EffectRequested(effect, objectId): 'effect:${effect.text()}:${objectId == null ? "none" : objectId.text()}';
+			case CampaignExitRequested(exit): 'campaign-exit:${exit.text()}';
 		};
 
 	static function flowValueText(value:FlowValue):String

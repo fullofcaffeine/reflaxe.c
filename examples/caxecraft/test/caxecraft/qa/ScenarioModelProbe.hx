@@ -182,6 +182,7 @@ final class ScenarioModelProbe {
 			SetCheckpoint(objectId),
 			SetObjective(objectId, ObjectiveState.Complete),
 			PlayEffect(content, objectId),
+			RequestCampaignExit(otherId),
 			EmitSignal(content),
 			Schedule(otherId, 1, otherId, arguments),
 			CallSequence(otherId, arguments),
@@ -413,7 +414,7 @@ final class ScenarioModelProbe {
 	static function verifyActionRegistry(actions:Array<FlowAction>):Void {
 		final ids = allFlowActionIds();
 		final descriptors = allFlowActionDescriptors();
-		require(ids.length == 18 && descriptors.length == actions.length, "action registry lost constructor coverage");
+		require(ids.length == 19 && descriptors.length == actions.length, "action registry lost constructor coverage");
 		require(validateFlowActionDescriptors(descriptors).length == 0, "canonical action descriptors failed their own contract");
 
 		for (index in 0...descriptors.length) {
@@ -586,10 +587,11 @@ final class ScenarioModelProbe {
 			case SetCheckpoint(_): 12;
 			case SetObjective(_, _): 13;
 			case PlayEffect(_, _): 14;
-			case EmitSignal(_): 15;
-			case Schedule(_, _, _, _): 16;
-			case CallSequence(_, _): 17;
-			case ChooseSeeded(_, _): 18;
+			case RequestCampaignExit(_): 15;
+			case EmitSignal(_): 16;
+			case Schedule(_, _, _, _): 17;
+			case CallSequence(_, _): 18;
+			case ChooseSeeded(_, _): 19;
 		};
 
 	static function argumentCode(value:FlowArgument):Int

@@ -99,6 +99,7 @@ enum FlowAction {
 	SetCheckpoint(checkpoint:ScenarioId);
 	SetObjective(objective:ScenarioId, value:ObjectiveState);
 	PlayEffect(effect:ContentId, objectId:Null<ScenarioId>);
+	RequestCampaignExit(exit:ScenarioId);
 	EmitSignal(signal:ContentId);
 	Schedule(timer:ScenarioId, ticks:Int, sequence:ScenarioId, arguments:Array<FlowArgument>);
 	CallSequence(sequence:ScenarioId, arguments:Array<FlowArgument>);

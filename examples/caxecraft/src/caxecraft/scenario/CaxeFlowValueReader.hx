@@ -176,6 +176,7 @@ final class CaxeFlowValueReader {
 			case SpawnAction if (remaining == 2): actionId(record.tokens[at + 1], Spawn);
 			case DespawnAction if (remaining == 2): actionId(record.tokens[at + 1], Despawn);
 			case CheckpointAction if (remaining == 2): actionId(record.tokens[at + 1], SetCheckpoint);
+			case CampaignExitAction if (remaining == 2): actionId(record.tokens[at + 1], RequestCampaignExit);
 			case SetFlagAction if (remaining == 3): setFlagAction(record, at);
 			case SetCounterAction if (remaining == 3): counterAction(record, at, SetCounter);
 			case AddCounterAction if (remaining == 3): counterAction(record, at, AddCounter);

@@ -162,8 +162,8 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "caxeflow.hxml",
-                "caxeflow: 10 events, 12 predicates, 18 actions; "
-                "stable order/repeat/defer/sequence/budgets; trace=2142133802\n",
+                "caxeflow: 10 events, 12 predicates, 19 actions; "
+                "stable order/repeat/defer/sequence/budgets; trace=-670871898\n",
             ),
         ),
         alternate_locale=True,
@@ -246,10 +246,10 @@ EVAL_CASES = {
     "scenario-model": EvalTestCase(
         case_id="scenario-model",
         probes=(
-            EvalProbe("scenario-model.hxml", "scenario-model: -2064217881\n"),
+            EvalProbe("scenario-model.hxml", "scenario-model: -1725217016\n"),
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 14551 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 14612 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -276,7 +276,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 14551 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 14612 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),

@@ -28,6 +28,7 @@ enum abstract FlowActionId(String) {
 	var CheckpointAction = "checkpoint";
 	var ObjectiveAction = "objective";
 	var EffectAction = "effect";
+	var CampaignExitAction = "campaign-exit";
 	var SignalAction = "signal";
 	var ScheduleAction = "schedule";
 	var CallAction = "call";
@@ -62,6 +63,7 @@ enum FlowScenarioArgumentRole {
 	ObjectReference;
 	CheckpointReference;
 	ObjectiveReference;
+	CampaignExitReference;
 	TimerReference;
 	SequenceReference;
 	SeedVariableReference;
@@ -168,6 +170,7 @@ function allFlowActionIds():Array<FlowActionId>
 		CheckpointAction,
 		ObjectiveAction,
 		EffectAction,
+		CampaignExitAction,
 		SignalAction,
 		ScheduleAction,
 		CallAction,
@@ -178,7 +181,7 @@ function allFlowActionIds():Array<FlowActionId>
 function flowActionDescriptorById(id:FlowActionId):FlowActionDescriptor {
 	final family = switch id {
 		case DialogueAction, EffectAction: PresentationAction;
-		case SignalAction, ScheduleAction, CallAction, ChooseAction: ControlAction;
+		case CampaignExitAction, SignalAction, ScheduleAction, CallAction, ChooseAction: ControlAction;
 		case _: WorldAction;
 	};
 	final schema = switch id {
@@ -194,6 +197,7 @@ function flowActionDescriptorById(id:FlowActionId):FlowActionDescriptor {
 		case CheckpointAction: OneScenario(CheckpointReference);
 		case ObjectiveAction: ObjectiveTransition;
 		case EffectAction: EffectWithOptionalObject;
+		case CampaignExitAction: OneScenario(CampaignExitReference);
 		case SignalAction: OneContent(SignalContent);
 		case ScheduleAction: ScheduleSequence;
 		case CallAction: SequenceCall;
@@ -245,6 +249,7 @@ function flowActionId(action:FlowAction):FlowActionId
 		case SetCheckpoint(_): CheckpointAction;
 		case SetObjective(_, _): ObjectiveAction;
 		case PlayEffect(_, _): EffectAction;
+		case RequestCampaignExit(_): CampaignExitAction;
 		case EmitSignal(_): SignalAction;
 		case Schedule(_, _, _, _): ScheduleAction;
 		case CallSequence(_, _): CallAction;
@@ -357,6 +362,7 @@ private function schemaMatchesId(id:FlowActionId, schema:FlowActionSchema):Bool
 		case [CheckpointAction, OneScenario(CheckpointReference)]: true;
 		case [ObjectiveAction, ObjectiveTransition]: true;
 		case [EffectAction, EffectWithOptionalObject]: true;
+		case [CampaignExitAction, OneScenario(CampaignExitReference)]: true;
 		case [SignalAction, OneContent(SignalContent)]: true;
 		case [ScheduleAction, ScheduleSequence]: true;
 		case [CallAction, SequenceCall]: true;

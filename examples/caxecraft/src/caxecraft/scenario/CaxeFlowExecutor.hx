@@ -256,6 +256,8 @@ final class CaxeFlowExecutor {
 				}
 			case PlayEffect(effect, objectId):
 				presentation.push(EffectRequested(effect, objectId));
+			case RequestCampaignExit(exit):
+				presentation.push(CampaignExitRequested(exit));
 			case EmitSignal(signal):
 				enqueueEventAfter(1, SignalReceived(signal), owner);
 			case Schedule(timer, ticks, sequence, arguments):
