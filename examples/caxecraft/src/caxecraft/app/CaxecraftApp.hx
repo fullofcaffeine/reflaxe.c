@@ -21,16 +21,19 @@ import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
 import caxecraft.app.AppScreen;
+import caxecraft.app.AppScreen.beginLoading;
 import caxecraft.app.AppScreen.capturesPointer as screenCapturesPointer;
 import caxecraft.app.AppScreen.closeCampaignSelection;
 import caxecraft.app.AppScreen.closeEditor;
 import caxecraft.app.AppScreen.initialScreen;
+import caxecraft.app.AppScreen.finishLoading;
 import caxecraft.app.AppScreen.isPlaying as screenIsPlaying;
 import caxecraft.app.AppScreen.loseFocus as pauseAfterFocusLoss;
 import caxecraft.app.AppScreen.openEditor;
 import caxecraft.app.AppScreen.pausesSimulation as screenPausesSimulation;
 import caxecraft.app.AppScreen.recapture as recapturePointer;
 import caxecraft.app.AppScreen.showsEditor as screenShowsEditor;
+import caxecraft.app.AppScreen.showsLoading as screenShowsLoading;
 import caxecraft.app.AppScreen.showsCampaignSelection as screenShowsCampaignSelection;
 import caxecraft.app.AppScreen.showsTitle as screenShowsTitle;
 import caxecraft.app.AppScreen.startSelectedCampaign;
@@ -284,6 +287,9 @@ final class CaxecraftApp {
 		};
 		var campaign:Null<CampaignManifest> = null;
 		var campaignLevel:Null<CampaignLevel> = null;
+		var pendingCampaignLevel:Null<CampaignLevel> = null;
+		var pendingCampaignLabel = "";
+		var loadingFramePresented = false;
 		switch loadCampaignManifest(contentStore, "campaigns/first-adventure/campaign.json") {
 			case CampaignPackageReady(manifest):
 				final entry = manifest.entryLevel();
@@ -490,6 +496,7 @@ final class CaxecraftApp {
 		// Its frequency may follow VSync, window load, or GPU speed without changing
 		// the duration of a gameplay tick.
 		while (!quit && !Raylib.WindowShouldClose()) {
+			final loadingAtFrameStart = screenShowsLoading(screen);
 			// Work on one immutable view for this frame. Every owned player change
 			// below enters through a semantic GameSession operation; presentation
 			// never receives the mutable session or its entity store.
@@ -575,7 +582,11 @@ final class CaxecraftApp {
 			final descendHeld = frameInput.descendHeld;
 			#end
 			var requestedCampaignLevel:Null<CampaignLevel> = null;
+			if (loadingAtFrameStart && loadingFramePresented)
+				requestedCampaignLevel = pendingCampaignLevel;
 			var requestedFromCampaignMenu = false;
+			final requestedFromAuthoredExit = requestedCampaignLevel != null && loadingAtFrameStart;
+			#if (caxecraft_devmode || caxecraft_pilot_campaign_travel)
 			if (!quit && allowsCampaignTravel(screen, selectedMode) && travelPressed) {
 				final selectedCampaign = campaign;
 				final sourceLevel = campaignLevel;
@@ -592,6 +603,7 @@ final class CaxecraftApp {
 					}
 				}
 			}
+			#end
 
 			if (screenShowsCampaignSelection(screen) && focused) {
 				var campaignLaunchRequested = menuConfirmPressed;
@@ -672,10 +684,9 @@ final class CaxecraftApp {
 				}
 			}
 
-			// Both the in-world Continue action and the developer level picker enter
-			// through the same checked loader. The new map replaces live state only
-			// after its package receipt, schema, content references, and playable
-			// bindings all succeed.
+			// Authored exits and the developer level picker enter through the same
+			// checked loader. The new map replaces live state only after its package
+			// receipt, schema, content references, and playable bindings all succeed.
 			final destination = requestedCampaignLevel;
 			if (destination != null) {
 				final playerOptions:LevelPlayerOptions = {
@@ -744,6 +755,14 @@ final class CaxecraftApp {
 								}
 						}
 				}
+				if (requestedFromAuthoredExit) {
+					pendingCampaignLevel = null;
+					pendingCampaignLabel = "";
+					loadingFramePresented = false;
+					screen = finishLoading(screen);
+					recapturedThisFrame = true;
+					Raylib.DisableCursor();
+				}
 			}
 
 			final enemyActorId = levelView.enemyActorId();
@@ -789,6 +808,7 @@ final class CaxecraftApp {
 			}
 			if (!screenShowsTitle(screen)
 				&& !screenShowsCampaignSelection(screen)
+				&& !screenShowsLoading(screen)
 				&& !screenShowsEditor(screen)
 				&& focused
 				&& pausePressed) {
@@ -804,6 +824,7 @@ final class CaxecraftApp {
 			}
 			if (!screenShowsTitle(screen)
 				&& !screenShowsCampaignSelection(screen)
+				&& !screenShowsLoading(screen)
 				&& !screenShowsEditor(screen)
 				&& focused
 				&& screenPausesSimulation(screen)
@@ -816,9 +837,11 @@ final class CaxecraftApp {
 			}
 
 			// These are read-only projections of one closed state, not independent
-			// flags. No screen transition occurs after this point in the frame.
+			// flags. A fixed tick can begin a campaign handoff later in this frame;
+			// gameplay mutations after that tick therefore re-read the live screen.
 			final onTitle = screenShowsTitle(screen);
 			final onCampaignSelect = screenShowsCampaignSelection(screen);
+			final onLoading = screenShowsLoading(screen);
 			final onEditor = screenShowsEditor(screen);
 			final paused = screenPausesSimulation(screen);
 			final captured = screenCapturesPointer(screen);
@@ -833,7 +856,7 @@ final class CaxecraftApp {
 			final observedObjective = currentObjectiveId == null ? "none" : currentObjectiveId.text();
 			final observedDialogue = activeDialogue == null ? "none" : activeDialogue.text();
 			final observedJournal = latestJournalId == null ? "none" : latestJournalId.text();
-			final observedScreen = onTitle ? "title" : onCampaignSelect ? "campaign" : onEditor ? "editor" : paused ? "paused" : "playing";
+			final observedScreen = onTitle ? "title" : onCampaignSelect ? "campaign" : onLoading ? "loading" : onEditor ? "editor" : paused ? "paused" : "playing";
 			final observedMode = selectedMode == GameMode.Creative ? "creative" : "adventure";
 			final observedMedium = if (character.aquatic.medium == AquaticMedium.Dry) "dry" else if (character.aquatic.medium == AquaticMedium.Wading)
 				"wading" else if (character.aquatic.medium == AquaticMedium.Floating) "floating" else "submerged";
@@ -977,7 +1000,7 @@ final class CaxecraftApp {
 			// Inner fixed-step loop: a slow rendered frame may need several gameplay
 			// ticks, while a fast frame may need none. Every tick receives the same
 			// documented duration, so game rules never depend on frame rate.
-			while (!paused && accumulator >= FIXED_SECONDS) {
+			while (!screenPausesSimulation(screen) && accumulator >= FIXED_SECONDS) {
 				// Water owns a bounded amount of work per game tick. A large leak
 				// therefore continues over later ticks without freezing a frame.
 				var moveX = moveForward * lookX - moveRight * lookZ;
@@ -1007,6 +1030,32 @@ final class CaxecraftApp {
 									activeDialogue = id;
 								case FlowPresentationEvent.JournalAdded(id):
 									latestJournalId = id;
+								case FlowPresentationEvent.CampaignExitRequested(exit):
+									final selectedCampaign = campaign;
+									final sourceLevel = campaignLevel;
+									if (selectedMode != GameMode.Adventure || !screenIsPlaying(screen)) {
+										Sys.println("caxecraft: ignored campaign exit outside active Adventure play: " + exit.text());
+									} else if (selectedCampaign == null || sourceLevel == null) {
+										Sys.println("caxecraft: ignored campaign exit without an active campaign: " + exit.text());
+									} else {
+										final transition = selectedCampaign.transitionForRequest(sourceLevel.id, exit);
+										if (transition == null) {
+											Sys.println('caxecraft: ignored unknown campaign exit ${exit.text()} from ${sourceLevel.id.text()}');
+										} else {
+											final nextLevel = selectedCampaign.level(transition.destinationLevel);
+											if (nextLevel == null) {
+												Sys.println("caxecraft: campaign destination disappeared after manifest validation");
+											} else {
+												pendingCampaignLevel = nextLevel;
+												pendingCampaignLabel = nextLevel.id.text();
+												loadingFramePresented = false;
+												screen = beginLoading(screen);
+												accumulator = 0.0;
+												jumpQueued = false;
+												Raylib.EnableCursor();
+											}
+										}
+									}
 								case _:
 							}
 						#if caxecraft_pilot
@@ -1126,7 +1175,7 @@ final class CaxecraftApp {
 			final selectionEyeY = character.body.y + 1.62;
 			final selectionEyeZ = character.body.z;
 			final hit = VoxelRaycast.trace(session.worldView(), selectionEyeX, selectionEyeY, selectionEyeZ, lookX, lookY, lookZ, PICK_DISTANCE);
-			if (captured && !recapturedThisFrame && primaryPressed) {
+			if (screenCapturesPointer(screen) && !recapturedThisFrame && primaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
 					if (selectedMode == GameMode.Adventure) {
 						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword)
@@ -1166,7 +1215,7 @@ final class CaxecraftApp {
 					}
 				}
 			}
-			if (captured && secondaryPressed) {
+			if (screenCapturesPointer(screen) && secondaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
 					final recovery = session.useSelectedRecovery(inventory);
 					character = recovery.character;
@@ -1201,7 +1250,7 @@ final class CaxecraftApp {
 			}
 			if (placementBlockedFrames > 0)
 				placementBlockedFrames--;
-			if (!paused) {
+			if (!screenPausesSimulation(screen)) {
 				if (berryDropIsInRange(berryDrop, character.body.x, character.body.y, character.body.z)) {
 					final acceptedDrop = Inventory.acceptedAmount(inventory, ItemKind.Berries, berryDrop.amount);
 					if (acceptedDrop > 0) {
@@ -1297,6 +1346,8 @@ final class CaxecraftApp {
 				else
 					CampaignMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedCampaign, locale, uiCatalog,
 						selectedCampaignLevelIndex, levelView.scenarioTitle(scenarioLocale(locale)), levelView.adventureTagline(scenarioLocale(locale)));
+			} else if (onLoading) {
+				drawCampaignLoading(pendingCampaignLabel, locale, uiCatalog);
 			} else if (onEditor) {
 				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
 					screen = closeEditor(screen);
@@ -1478,6 +1529,8 @@ final class CaxecraftApp {
 				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end
 			Raylib.EndDrawing();
+			if (onLoading)
+				loadingFramePresented = true;
 			frameCount++;
 		}
 
@@ -1638,6 +1691,27 @@ final class CaxecraftApp {
 		for (index in 0...level.dialogueActorCount())
 			actors.push(session.readCharacter(level.dialogueActorIdAt(index)));
 		return actors;
+	}
+
+	/**
+	 * Draw one honest synchronous campaign handoff between two playable maps.
+	 *
+	 * The campaign level ID comes from the validated reloadable manifest. The card
+	 * deliberately has no progress bar because the next frame performs one bounded
+	 * checked load rather than an asynchronous operation with measurable progress.
+	 */
+	static function drawCampaignLoading(destinationLabel:String, locale:LocaleCursor, catalog:RuntimeUiCatalog):Void {
+		final width = Raylib.GetScreenWidth();
+		final height = Raylib.GetScreenHeight();
+		final panelWidth = 460;
+		final panelHeight = 150;
+		final panelX = Std.int((width - panelWidth) / 2);
+		final panelY = Std.int((height - panelHeight) / 2);
+		Raylib.ClearBackground(CaxecraftPalette.sky());
+		Raylib.DrawRectangle(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.selection());
+		drawUiText(catalog, locale, UiMessage.MenuAdventure, panelX + 28, panelY + 24, 22, CaxecraftPalette.selection());
+		Raylib.DrawTextString(destinationLabel, panelX + 28, panelY + 76, 30, CaxecraftPalette.hudText());
 	}
 
 	/**

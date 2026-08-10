@@ -22,7 +22,7 @@ import haxe.io.Bytes;
 /**
  * Proves one complete authored directory becomes one reproducible shared ZIP.
  *
- * The package data selects eight real PNG assets in addition to the semantic
+ * The package data selects eleven real PNG assets in addition to the semantic
  * campaign, levels, packs, localization, and asset inventory. Two independent
  * exports must match byte-for-byte, and the existing ZIP reader must recover
  * the same verified package identity and receipts from those bytes.
@@ -30,7 +30,7 @@ import haxe.io.Bytes;
 /** First failed export or round-trip invariant, or zero after success. */
 var observed:Int = 0;
 
-/** Stable package identity including all fifteen directly owned payloads. */
+/** Stable package identity including all twenty directly owned payloads. */
 var traceIdentity:Int = 0;
 
 /** Sum of all verified semantic and selected-asset payload bytes. */

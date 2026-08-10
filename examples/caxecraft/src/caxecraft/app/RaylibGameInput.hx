@@ -37,9 +37,13 @@ final class RaylibGameInput {
 		final primaryPressed = captured && leftPressed;
 		final secondaryPressed = captured && Raylib.IsMouseButtonPressed(MouseButton.Right);
 		final interactPressed = captured && Raylib.IsKeyPressed(KeyboardKey.E);
-		// N means “continue” only for a campaign level with one unambiguous exit.
-		// The campaign manifest, not this device adapter, chooses the destination.
+		#if caxecraft_devmode
+		// Developer builds retain N as a quick map-preview shortcut. Release play
+		// travels only when reloadable content raises an authored exit request.
 		final travelPressed = captured && Raylib.IsKeyPressed(KeyboardKey.N);
+		#else
+		final travelPressed = false;
+		#end
 		var hotbarSelection = -1;
 		if (Raylib.IsKeyPressed(KeyboardKey.One))
 			hotbarSelection = 0;

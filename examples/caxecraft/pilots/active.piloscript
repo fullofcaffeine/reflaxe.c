@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name adventure-journey
-frames 380
+frames 395
 
 # Move from Creative to Adventure, then open the staged campaign.
 action 0 menu-next
@@ -15,78 +15,81 @@ expect 1 level evergrove
 
 # Select Western Falls and launch it through the campaign screen.
 action 2 menu-next
-checkpoint 2 capture level-selection
-expect 2 screen campaign
-expect 2 level western-falls
-
-action 3 menu-confirm
-expect 3 screen playing
-expect 3 mode adventure
+action 3 menu-next
+checkpoint 3 capture level-selection
+expect 3 screen campaign
 expect 3 level western-falls
-expect 3 objective objective.find-fallskeeper
-expect 3 generation 2
-expect 3 publications 1
+
+action 4 menu-confirm
+expect 4 screen playing
+expect 4 mode adventure
+expect 4 level western-falls
+expect 4 objective objective.find-fallskeeper
+expect 4 generation 2
+expect 4 publications 1
 
 # Ask Moss about the four marks, then leave the Falls spawn.
-action 4 interact
-expect 8 objective objective.find-fallskeeper
-expect 8 dialogue dialogue.moss.falls
+action 5 interact
+expect 9 objective objective.find-fallskeeper
+expect 9 dialogue dialogue.moss.falls
 
 # Close Moss's hint while walking west, then ask the nearby Fallskeeper.
-hold 5 39 forward-left
-action 40 interact
+hold 6 40 forward-left
 action 41 interact
-expect 45 objective objective.find-tideweave
-expect 45 dialogue dialogue.fallskeeper.marks
-expect 45 journal journal.fallskeeper-lead
+action 42 interact
+expect 46 objective objective.find-tideweave
+expect 46 dialogue dialogue.fallskeeper.marks
+expect 46 journal journal.fallskeeper-lead
 
 # Follow the original route to the sand seam in front of the sealed Tideweave
 # cache. These frames intentionally retain the established navigation proof.
-hold 42 94 forward-left
-hold 95 100 look-left
-action 101 mine
-hold 102 137 forward-rise
-hold 138 153 rise
-expect 155 sand 1
-expect 155 position 5,3,21
+hold 43 95 forward-left
+hold 96 101 look-left
+action 102 mine
+hold 103 138 forward-rise
+hold 139 154 rise
+expect 156 sand 1
+expect 156 position 5,3,21
 
 # Enter the four content-authored marks at the cache. The final mark opens the
 # gate before the player can collect Tideweave.
-action 156 interact
-action 158 interact
-expect 159 object-state vault.glyph-river=caxecraft:entered
-action 160 interact
-expect 161 object-state vault.glyph-leaf=caxecraft:entered
-action 162 interact
-expect 163 object-state vault.glyph-moon=caxecraft:entered
-action 164 interact
-expect 165 object-state vault.gate=caxecraft:open
-expect 165 dialogue dialogue.vault.open
-action 166 interact
+action 157 interact
+action 159 interact
+expect 160 object-state vault.glyph-river=caxecraft:entered
+action 161 interact
+expect 162 object-state vault.glyph-leaf=caxecraft:entered
+action 163 interact
+expect 164 object-state vault.glyph-moon=caxecraft:entered
+action 165 interact
+expect 166 object-state vault.gate=caxecraft:open
+expect 166 dialogue dialogue.vault.open
+action 167 interact
 
 # Cross the opened cache, equip Tideweave, and enter the flooded grotto.
-hold 167 182 right
-expect 186 equipment caxecraft:tideweave-suit
-expect 186 objective objective.explore-grotto
-expect 186 sand 1
-hold 187 242 backward
-hold 243 326 left-descend
-expect 327 equipment caxecraft:tideweave-suit
-expect 327 objective none
-expect 327 lanterns 2
-expect 327 sand 1
-expect 327 medium submerged
-expect 327 position 13,3,25
-hold 327 358 right-rise
+hold 168 183 right
+expect 187 equipment caxecraft:tideweave-suit
+expect 187 objective objective.explore-grotto
+expect 187 sand 1
+hold 188 243 backward
+hold 244 327 left-descend
+expect 328 equipment caxecraft:tideweave-suit
+expect 328 objective none
+expect 328 lanterns 2
+expect 328 sand 1
+expect 328 medium submerged
+expect 328 position 13,3,25
+hold 328 359 right-rise
 
-action 364 pause
-checkpoint 364 capture final
-expect 364 screen paused
-expect 364 level western-falls
-expect 364 objective none
-expect 364 equipment caxecraft:tideweave-suit
-expect 364 lanterns 2
-expect 364 medium dry
-expect 364 position 13,6,22
-expect 364 object-state vault.gate=caxecraft:open
+# Continue along the western mountain road after solving the grotto. The
+# map-authored volume—not a keyboard shortcut—requests Frostmere and publishes it once.
+hold 360 385 forward-jump
+expect 388 screen playing
+expect 388 level frostmere
+expect 388 generation 3
+expect 388 publications 2
+
+action 390 pause
+checkpoint 390 capture final
+expect 390 screen paused
+expect 390 level frostmere
 end

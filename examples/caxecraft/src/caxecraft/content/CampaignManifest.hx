@@ -6,6 +6,7 @@ import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
+import caxecraft.scenario.ScenarioId;
 import haxe.io.Bytes;
 
 /**
@@ -200,6 +201,21 @@ final class CampaignManifest {
 	public function transition(exit:CampaignExitId):Null<CampaignTransition> {
 		for (candidate in admittedTransitions)
 			if (candidate.exit.text() == exit.text())
+				return candidate;
+		return null;
+	}
+
+	/**
+	 * Resolve one map-authored exit only when it belongs to the active level.
+	 *
+	 * CaxeFlow raises a generic `ScenarioId`; the campaign graph owns its meaning.
+	 * Matching the source as well as the exit prevents stale or malicious content
+	 * from taking an edge that belongs to a different loaded map. The decoder has
+	 * already proved that exit IDs are unique, so no order-dependent choice occurs.
+	 */
+	public function transitionForRequest(source:CampaignLevelId, requestedExit:ScenarioId):Null<CampaignTransition> {
+		for (candidate in admittedTransitions)
+			if (candidate.sourceLevel.text() == source.text() && candidate.exit.text() == requestedExit.text())
 				return candidate;
 		return null;
 	}

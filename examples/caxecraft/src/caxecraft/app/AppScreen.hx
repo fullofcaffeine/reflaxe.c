@@ -10,14 +10,18 @@ package caxecraft.app;
  * Keeping those rules here makes impossible combinations unrepresentable and
  * keeps Raylib device calls at the application edge.
  *
- * The editor variant became real with the first RayguiHx shell. Loading,
- * settings, and exit variants still belong here only when their screens exist.
+ * Loading is a real one-frame boundary between an authored campaign exit and
+ * the checked level publication on the next outer frame. It pauses simulation
+ * and releases the pointer without pretending that synchronous loading has a
+ * measurable progress value. Settings and exit variants still belong here only
+ * when their screens exist.
  */
 enum AppScreen {
 	Title;
 	CampaignSelect;
 	Playing;
 	Paused;
+	Loading;
 	Editor;
 }
 
@@ -35,6 +39,7 @@ function showsTitle(screen:AppScreen):Bool {
 		case CampaignSelect: false;
 		case Playing: false;
 		case Paused: false;
+		case Loading: false;
 		case Editor: false;
 	};
 }
@@ -43,7 +48,15 @@ function showsTitle(screen:AppScreen):Bool {
 function showsCampaignSelection(screen:AppScreen):Bool {
 	return switch screen {
 		case CampaignSelect: true;
-		case Title | Playing | Paused | Editor: false;
+		case Title | Playing | Paused | Loading | Editor: false;
+	};
+}
+
+/** Report whether a real campaign handoff owns this presentation frame. */
+function showsLoading(screen:AppScreen):Bool {
+	return switch screen {
+		case Loading: true;
+		case Title | CampaignSelect | Playing | Paused | Editor: false;
 	};
 }
 
@@ -54,6 +67,7 @@ function showsEditor(screen:AppScreen):Bool {
 		case CampaignSelect: false;
 		case Playing: false;
 		case Paused: false;
+		case Loading: false;
 		case Editor: true;
 	};
 }
@@ -65,6 +79,7 @@ function isPlaying(screen:AppScreen):Bool {
 		case CampaignSelect: false;
 		case Playing: true;
 		case Paused: false;
+		case Loading: false;
 		case Editor: false;
 	};
 }
@@ -76,6 +91,7 @@ function capturesPointer(screen:AppScreen):Bool {
 		case CampaignSelect: false;
 		case Playing: true;
 		case Paused: false;
+		case Loading: false;
 		case Editor: false;
 	};
 }
@@ -87,6 +103,7 @@ function pausesSimulation(screen:AppScreen):Bool {
 		case CampaignSelect: true;
 		case Playing: false;
 		case Paused: true;
+		case Loading: true;
 		case Editor: true;
 	};
 }
@@ -98,6 +115,7 @@ function startPlaying(screen:AppScreen):AppScreen {
 		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Paused;
+		case Loading: Loading;
 		case Editor: Editor;
 	};
 }
@@ -109,6 +127,7 @@ function openCampaignSelection(screen:AppScreen):AppScreen {
 		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Paused;
+		case Loading: Loading;
 		case Editor: Editor;
 	};
 }
@@ -120,6 +139,7 @@ function startSelectedCampaign(screen:AppScreen):AppScreen {
 		case Title: Title;
 		case Playing: Playing;
 		case Paused: Paused;
+		case Loading: Loading;
 		case Editor: Editor;
 	};
 }
@@ -131,6 +151,7 @@ function closeCampaignSelection(screen:AppScreen):AppScreen {
 		case Title: Title;
 		case Playing: Playing;
 		case Paused: Paused;
+		case Loading: Loading;
 		case Editor: Editor;
 	};
 }
@@ -142,6 +163,7 @@ function loseFocus(screen:AppScreen):AppScreen {
 		case CampaignSelect: CampaignSelect;
 		case Playing: Paused;
 		case Paused: Paused;
+		case Loading: Loading;
 		case Editor: Editor;
 	};
 }
@@ -153,6 +175,7 @@ function togglePause(screen:AppScreen):AppScreen {
 		case CampaignSelect: CampaignSelect;
 		case Playing: Paused;
 		case Paused: Playing;
+		case Loading: Loading;
 		case Editor: Editor;
 	};
 }
@@ -164,6 +187,31 @@ function recapture(screen:AppScreen):AppScreen {
 		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Playing;
+		case Loading: Loading;
+		case Editor: Editor;
+	};
+}
+
+/** Start a campaign handoff only from active play. */
+function beginLoading(screen:AppScreen):AppScreen {
+	return switch screen {
+		case Playing: Loading;
+		case Title: Title;
+		case CampaignSelect: CampaignSelect;
+		case Paused: Paused;
+		case Loading: Loading;
+		case Editor: Editor;
+	};
+}
+
+/** Resume active play after either a successful or rejected handoff. */
+function finishLoading(screen:AppScreen):AppScreen {
+	return switch screen {
+		case Loading: Playing;
+		case Title: Title;
+		case CampaignSelect: CampaignSelect;
+		case Playing: Playing;
+		case Paused: Paused;
 		case Editor: Editor;
 	};
 }
@@ -175,6 +223,7 @@ function openEditor(screen:AppScreen):AppScreen {
 		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Paused;
+		case Loading: Loading;
 		case Editor: Editor;
 	};
 }
@@ -186,6 +235,7 @@ function closeEditor(screen:AppScreen):AppScreen {
 		case CampaignSelect: CampaignSelect;
 		case Playing: Playing;
 		case Paused: Paused;
+		case Loading: Loading;
 		case Editor: Title;
 	};
 }

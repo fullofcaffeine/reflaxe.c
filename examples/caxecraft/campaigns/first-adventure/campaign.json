@@ -31,8 +31,8 @@
     {
       "id": "western-falls",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 18767,
-      "sha256": "93da8eeb9e0d177d09bf6d21f9bb538381c77a61f315d604db81a93b9b7e0628"
+      "byteLength": 19057,
+      "sha256": "18b3b21aeebf5605a703c8bdeadb08f1de1800c33462555232f225eca3efd90c"
     }
   ],
   "transitions": [
@@ -63,6 +63,13 @@
       "destinationLevel": "evergrove",
       "destinationEntrance": "default",
       "required": false
+    },
+    {
+      "exit": "western-falls-frostmere-road",
+      "sourceLevel": "western-falls",
+      "destinationLevel": "frostmere",
+      "destinationEntrance": "default",
+      "required": true
     }
   ]
 }

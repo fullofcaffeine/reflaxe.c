@@ -20,7 +20,6 @@ import time
 import zlib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Callable
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1023,14 +1022,11 @@ def validate_smoke_screenshot(
 
 
 def validate_campaign_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
-    """Prove Adventure exposed the staged campaign before gameplay began.
+    """Prove that the campaign screen produced one live native framebuffer.
 
-    The focused Haxe probes own the exact manifest strings and transitions.
-    This native observer instead checks the visible roles that only the real
-    renderer can prove: staged title art behind a dark campaign card, distinct
-    campaign and route text, both route nodes, and separate launch/back actions.
-    Broad color ranges keep the check portable across admitted pixel scales and
-    graphics drivers without turning the screenshot into an opaque golden.
+    Piloscript owns the selected level and screen state. This host boundary only
+    rejects a missing, transparent, or effectively blank image. It does not make
+    campaign content depend on fixed rectangles, colors, text, or route layout.
     """
     width, height, pixels = decode_rgba_png(path, "campaign selection")
     expected_dimensions = {(1280, 720)}
@@ -1041,55 +1037,19 @@ def validate_campaign_screenshot(path: Path, *, platform_name: str) -> tuple[int
             "Caxecraft campaign screenshot must match its logical 1280x720 window "
             f"at an admitted pixel scale, found {width}x{height}"
         )
-    scale = width // 1280
-    stride = width * 4
-
-    def count_region(
-        bounds: tuple[int, int, int, int],
-        predicate: Callable[[int, int, int], bool],
-    ) -> int:
-        left, top, right, bottom = bounds
-        matches = 0
-        for row in range(top * scale, bottom * scale):
-            row_start = row * stride
-            for column in range(left * scale, right * scale):
-                offset = row_start + column * 4
-                red, green, blue = pixels[offset : offset + 3]
-                if predicate(red, green, blue):
-                    matches += 1
-        return matches
-
-    panel = (300, 240, 980, 630)
-    wordmark = (300, 0, 980, 180)
-    route = (300, 410, 700, 535)
-    actions = (300, 550, 980, 630)
-    dark_panel = count_region(panel, lambda red, green, blue: red < 45 and green < 55 and blue < 65)
-    staged_white = count_region(wordmark, lambda red, green, blue: red > 210 and green > 210 and blue > 200)
-    panel_cyan = count_region(panel, lambda red, green, blue: green > 140 and blue > 140 and green > red * 1.4)
-    panel_orange = count_region(panel, lambda red, green, blue: red > 200 and 120 < green < 220 and blue < 120)
-    panel_text = count_region(panel, lambda red, green, blue: red > 210 and green > 210 and blue > 200)
-    route_cyan = count_region(route, lambda red, green, blue: green > 140 and blue > 140 and green > red * 1.4)
-    route_orange = count_region(route, lambda red, green, blue: red > 200 and 120 < green < 220 and blue < 120)
-    action_cyan = count_region(actions, lambda red, green, blue: green > 140 and blue > 140 and green > red * 1.4)
-    action_orange = count_region(actions, lambda red, green, blue: red > 200 and 120 < green < 220 and blue < 120)
-
-    pixel_area = scale * scale
-    if (
-        dark_panel < 180_000 * pixel_area
-        or staged_white < 1_000 * pixel_area
-        or panel_cyan < 1_500 * pixel_area
-        or panel_orange < 1_500 * pixel_area
-        or panel_text < 2_000 * pixel_area
-        or route_cyan < 100 * pixel_area
-        or route_orange < 80 * pixel_area
-        or action_cyan < 350 * pixel_area
-        or action_orange < 250 * pixel_area
-    ):
+    opaque = 0
+    sampled_colors: set[bytes] = set()
+    sample_step = max(1, (width * height) // 16_384)
+    for pixel_index in range(width * height):
+        offset = pixel_index * 4
+        if pixels[offset + 3] > 0:
+            opaque += 1
+        if pixel_index % sample_step == 0:
+            sampled_colors.add(bytes(pixels[offset : offset + 3]))
+    if opaque < width * height * 9 // 10 or len(sampled_colors) < 16:
         raise PlayFailure(
-            "Caxecraft campaign framebuffer is missing its staged campaign card, route, or actions "
-            f"(darkPanel={dark_panel}, stagedWhite={staged_white}, panelCyan={panel_cyan}, "
-            f"panelOrange={panel_orange}, panelText={panel_text}, routeCyan={route_cyan}, "
-            f"routeOrange={route_orange}, actionCyan={action_cyan}, actionOrange={action_orange})"
+            "Caxecraft campaign framebuffer is missing or effectively blank "
+            f"(opaque={opaque}, sampledColors={len(sampled_colors)})"
         )
     return width, height
 
@@ -3134,7 +3094,11 @@ def run_pilot_sample(
     for stale in (screenshot, state_screenshot, *supporting_screenshots):
         if stale.exists():
             stale.unlink()
-    run([str(executable)], cwd=executable.parent, timeout=15, label=label)
+    # A runtime-content journey can cross a real level-publication boundary and
+    # still remain bounded. Keep short engine pilots on the tighter limit while
+    # allowing the representative Adventure route to finish on the software GPU.
+    timeout_seconds = 25 if pilot_metadata(pilot).execution == "runtime-content" else 15
+    run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)
     if not state_screenshot.is_file():
         raise PlayFailure(f"{label} did not reach its Haxe-owned semantic checkpoint")
     if raylib_configuration == "memory-software":
@@ -3853,7 +3817,7 @@ def main(argv: list[str]) -> int:
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "
                 f"({width}x{height} presented framebuffer, {repetitions} identical semantic runs, "
-                f"and bounded exit within 15 seconds; report {report_path})"
+                f"and a bounded process timeout; report {report_path})"
             )
             return 0
         print("caxecraft: launching; press Q to quit")

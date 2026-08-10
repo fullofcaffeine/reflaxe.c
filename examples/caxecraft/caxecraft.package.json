@@ -12,6 +12,12 @@
   "entries": [
     {
       "kind": "asset",
+      "path": "assets/atlases/adventure-characters.png",
+      "byteLength": 1113948,
+      "sha256": "7122505cca4a57091121840377c5033287eb7fd71ccb4ede244c77d06265df88"
+    },
+    {
+      "kind": "asset",
       "path": "assets/atlases/adventure-items.png",
       "byteLength": 813741,
       "sha256": "4317ec8e7a23a3ef358124c01bb2982fb2846da46f83ab146e6a9aa522664938"
@@ -79,8 +85,8 @@
     {
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
-      "byteLength": 1966,
-      "sha256": "cd048d580d28a8154c8a586dec52db89a22266e38a10c9a493d218b7dec2ec87"
+      "byteLength": 2165,
+      "sha256": "7f67255cb70f05a5d4965f00c86941118212f5bf1142c1ff950612a544db6e54"
     },
     {
       "kind": "localization",
@@ -121,8 +127,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 18767,
-      "sha256": "93da8eeb9e0d177d09bf6d21f9bb538381c77a61f315d604db81a93b9b7e0628"
+      "byteLength": 19057,
+      "sha256": "18b3b21aeebf5605a703c8bdeadb08f1de1800c33462555232f225eca3efd90c"
     },
     {
       "kind": "level",

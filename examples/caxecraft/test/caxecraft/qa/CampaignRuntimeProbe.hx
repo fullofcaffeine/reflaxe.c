@@ -24,6 +24,7 @@ import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.ScenarioId;
 import haxe.io.Bytes;
 
 /**
@@ -109,6 +110,12 @@ function selfCheck():Int {
 	final forward = manifest.unambiguousTransitionFrom(entry.id);
 	if (manifest.id.text() != "caxecraft:first-adventure" || forward == null || !forward.required)
 		return 6;
+	final requested = manifest.transitionForRequest(entry.id, new ScenarioId(forward.exit.text()));
+	if (requested == null || requested.exit.text() != forward.exit.text())
+		return 119;
+	if (manifest.transitionForRequest(forward.destinationLevel, new ScenarioId(forward.exit.text())) != null
+		|| manifest.transitionForRequest(entry.id, new ScenarioId("missing-exit")) != null)
+		return 120;
 	final destination = manifest.level(forward.destinationLevel);
 	if (destination == null)
 		return 6;
@@ -323,8 +330,11 @@ function verifySchemaRejections(source:String):Bool {
 	final unsafePath = replaceOnce(source, '"path":"scenarios/b.caxemap"', '"path":"../b.caxemap"');
 	if (!rejects(unsafePath, 7))
 		return false;
+	final duplicateExit = replaceOnce(source, '"exit":"b-a"', '"exit":"a-b"');
+	if (!rejects(duplicateExit, 8))
+		return false;
 	final requiredCycle = replaceOnce(source, '"required":false', '"required":true');
-	return rejects(requiredCycle, 8);
+	return rejects(requiredCycle, 9);
 }
 
 /** Match one located closed diagnostic without accepting a neighboring error. */
@@ -349,7 +359,8 @@ function rejects(source:String, expected:Int):Bool {
 						SchemaUnresolvedReference("transitions[0].destinationLevel", "missing", "campaign level")
 					]: true;
 					case [7, SchemaInvalidLogicalPath("levels[1].path")]: true;
-					case [8, SchemaRequiredTransitionCycle(_)]: true;
+					case [8, SchemaDuplicateId("transitions", "a-b")]: true;
+					case [9, SchemaRequiredTransitionCycle(_)]: true;
 					case _: false;
 				}
 			}

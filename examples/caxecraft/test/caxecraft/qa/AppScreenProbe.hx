@@ -1,7 +1,9 @@
 package caxecraft.qa;
 
 import caxecraft.app.AppScreen;
+import caxecraft.app.AppScreen.beginLoading;
 import caxecraft.app.AppScreen.capturesPointer;
+import caxecraft.app.AppScreen.finishLoading;
 import caxecraft.app.AppScreen.initialScreen;
 import caxecraft.app.AppScreen.isPlaying;
 import caxecraft.app.AppScreen.loseFocus;
@@ -14,6 +16,7 @@ import caxecraft.app.AppScreen.pausesSimulation;
 import caxecraft.app.AppScreen.recapture;
 import caxecraft.app.AppScreen.closeEditor;
 import caxecraft.app.AppScreen.showsEditor;
+import caxecraft.app.AppScreen.showsLoading;
 import caxecraft.app.AppScreen.showsTitle;
 import caxecraft.app.AppScreen.startPlaying;
 import caxecraft.app.AppScreen.togglePause;
@@ -97,5 +100,12 @@ function selfCheck():Int {
 	final editorFromTitle = applyTitleMenuCommand(initialMenu, TitleMenuCommand.OpenEditor);
 	if (editorFromTitle.screen != AppScreen.Editor || editorFromTitle.mode != GameMode.Creative)
 		return 20;
+	final loading = beginLoading(playing);
+	if (loading != AppScreen.Loading || !showsLoading(loading) || !pausesSimulation(loading) || capturesPointer(loading) || isPlaying(loading))
+		return 21;
+	if (beginLoading(title) != AppScreen.Title || togglePause(loading) != AppScreen.Loading || recapture(loading) != AppScreen.Loading)
+		return 22;
+	if (finishLoading(loading) != AppScreen.Playing || finishLoading(title) != AppScreen.Title)
+		return 23;
 	return 0;
 }

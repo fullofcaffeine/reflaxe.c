@@ -637,7 +637,10 @@ CASES = {
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
         eval_timeout_seconds=120,
-        native_timeout_seconds=120,
+        # This correctness lane writes the complete runtime asset closure through
+        # unoptimized generated C. Keep it bounded, but allow the 11-asset
+        # flagship package to complete on a developer machine under load.
+        native_timeout_seconds=240,
     ),
     "content-json": HaxeCTestCase(
         case_id="content-json",

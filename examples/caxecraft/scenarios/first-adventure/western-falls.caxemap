@@ -853,6 +853,10 @@ object vault.glyph-river
   tag vault-control
   placement stateful caxecraft:vault-glyph-river caxecraft:waiting 5000 3000 21000 0
 end object
+object zone.frostmere-road
+  tag destination
+  placement trigger-zone 5 0 19 5 16 8
+end object
 dialogue dialogue.fallskeeper.marks
   line speaker guide.fallskeeper message fallskeeper_welcome
 end dialogue
@@ -910,6 +914,11 @@ rule rule.flame-resets-wrong-code priority 120 repeat
   do set-object-state vault.glyph-moon caxecraft:waiting
   do set-object-state vault.glyph-river caxecraft:waiting
   do dialogue dialogue.vault.reset
+end rule
+rule rule.frostmere-road-opens priority 100 once
+  when enter-zone zone.frostmere-road
+  if (objective objective.explore-grotto complete)
+  do campaign-exit western-falls-frostmere-road
 end rule
 rule rule.lantern-completes-the-grotto priority 80 once
   when collect-item caxecraft:lantern
