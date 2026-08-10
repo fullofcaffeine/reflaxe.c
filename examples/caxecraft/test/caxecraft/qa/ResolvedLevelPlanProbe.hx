@@ -24,6 +24,7 @@ import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
+import caxecraft.scenario.ScenarioWorld.VoxelChunk;
 
 /**
  * Proves the private level-construction boundary on Eval and generated C.
@@ -133,7 +134,7 @@ function selfCheck():Int {
 	final presentationActors = values.presentation.actorRequests();
 	if (terrain.length == 0
 		|| terrain[0].storage.value() != 4
-		|| terrain[0].count != 32
+		|| terrain[0].count != 33
 		|| fluids.length != 2
 		|| items.length != 1
 		|| items[0].authoredId.text() != "item.tideweave"
@@ -242,6 +243,22 @@ function selfCheck():Int {
 		case _:
 			return 11;
 	}
+	if (storageAt(values.plan.terrainRuns(), World.indexOf(World.coord(32, 0, 0))) != World.kindCode(caxecraft.domain.BlockKind.Bedrock)
+		|| storageAt(values.plan.terrainRuns(), World.indexOf(World.coord(33, 0, 0))) != World.kindCode(caxecraft.domain.BlockKind.Air))
+		return 29;
+	final fullWidth = withWorldWidth(freshScenario, World.WIDTH);
+	switch resolveFirstPlayable(fullWidth, registry) {
+		case LevelPlanResolved(plan, _):
+			if (storageAt(plan.terrainRuns(), World.indexOf(World.coord(32, 0, 0))) != World.kindCode(caxecraft.domain.BlockKind.Air))
+				return 30;
+		case LevelPlanRejected(_):
+			return 31;
+	}
+	switch resolveFirstPlayable(withWorldWidth(freshScenario, 48), registry) {
+		case LevelPlanRejected(WorldSizeMismatch(48, 16, 32)):
+		case _:
+			return 32;
+	}
 
 	traceScenario = before.scenarioDigest;
 	traceWorldCells = before.worldCells;
@@ -258,6 +275,54 @@ function selfCheck():Int {
 	tracePlayer = before.playerDigest;
 	tracePresentation = before.presentationDigest;
 	return before.worldCells == World.VOLUME && before.fluids == 2 && before.items == 1 && before.actors == 2 ? 0 : 12;
+}
+
+/** Read one physical storage code from the resolver's compact ascending runs. */
+function storageAt(runs:Array<caxecraft.content.ResolvedLevelPlan.ResolvedTerrainRun>, target:Int):Int {
+	var start = 0;
+	for (run in runs) {
+		if (target < start + run.count)
+			return run.storage.value();
+		start += run.count;
+	}
+	return -1;
+}
+
+/**
+ * Copy the focused fixture at another authored width.
+ *
+ * A full-width copy adds one explicit air chunk. Other widths intentionally
+ * retain incomplete terrain because dimension rejection must happen first.
+ */
+function withWorldWidth(source:Scenario, width:Int):Scenario {
+	final chunks:Array<VoxelChunk> = source.world.chunks.copy();
+	if (width == World.WIDTH)
+		chunks.push({
+			id: new ScenarioId("world.east"),
+			origin: {x: World.COMPACT_WIDTH, y: 0, z: 0},
+			size: {width: World.COMPACT_WIDTH, height: World.HEIGHT, depth: World.DEPTH},
+			runs: [{paletteCode: 0, count: World.COMPACT_WIDTH * World.HEIGHT * World.DEPTH}]
+		});
+	return {
+		formatVersion: source.formatVersion,
+		requiredFeatures: source.requiredFeatures.copy(),
+		optionalFeatures: source.optionalFeatures.copy(),
+		id: source.id,
+		assetPack: source.assetPack,
+		messages: source.messages,
+		title: source.title,
+		mode: source.mode,
+		world: {
+			size: {width: width, height: source.world.size.height, depth: source.world.size.depth},
+			palette: source.world.palette.copy(),
+			chunks: chunks,
+			fluids: source.world.fluids.copy()
+		},
+		objects: source.objects.copy(),
+		story: source.story,
+		flow: source.flow,
+		extensions: source.extensions.copy()
+	};
 }
 
 /** Compare every scalar in the target-neutral semantic trace. */

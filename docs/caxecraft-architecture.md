@@ -257,7 +257,7 @@ current command boundary does not claim that later slice is complete.
 
 Rendering and other bounded readers call `worldView()` directly as an argument
 to a read-only consumer. On C, haxe.c returns `const uint8_t *` and writes the
-known 16,384-element length through a hidden `size_t *` parameter. This is a
+known 32,768-element length through a hidden `size_t *` parameter. This is a
 borrow: the session still owns the array and no bytes are copied. The compiler
 proves that the method returns this receiver's immediate fixed-array field, then
 rejects assigning the result to a local, saving it in another value, returning

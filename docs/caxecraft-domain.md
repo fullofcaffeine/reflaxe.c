@@ -145,7 +145,7 @@ macros, reflection, `Dynamic`, `hxrt`, or a C-shaped game DSL.
 `Bedrock`. A material is not exposed as an arbitrary integer. `WorldStorage`
 alone maps those cases to stable codes 0 through 4. The C carrier stores each
 code in one `UInt8`; exact widening and explicit modulo narrowing go through
-`c.IntConvert`. This gives the 32 x 16 x 32 world a 16 KiB cell payload.
+`c.IntConvert`. This gives the 64 x 16 x 32 world a 32 KiB cell payload.
 
 `WorldCells` is the only target-shaped seam:
 
@@ -162,23 +162,24 @@ backend through one universal IR or one runtime container.
 
 ## Terrain presentation cache
 
-The playable renderer divides the finite 32-by-16-by-32 world into a four-by-
+The playable renderer divides the finite 64-by-16-by-32 world into an eight-by-
 four horizontal grid. Each **chunk** is an 8-by-16-by-8 rendering group. It is
 not a level, save region, gameplay area, or promise of infinite streaming. The
-group exists so a frame does not need to inspect all 16,384 world cells merely
+group exists so a frame does not need to inspect all 32,768 world cells merely
 to rediscover which solid faces touch air.
 
 `TerrainChunkCache` is a stateful class because its derived face data survives
 from one rendered frame to the next. `GameSession` still owns the authoritative
-world. On the first frame the cache builds all sixteen chunks. A successful
+world. On the first frame the cache builds all 32 chunks. A successful
 terrain edit marks its owning chunk dirty. An edit on an 8-cell boundary also
 marks the one face-sharing neighbor; a corner can therefore mark three chunks,
 but never the diagonal chunk because diagonals share no voxel face. Before the
 next draw, `prepare` rebuilds only those dirty partitions. An unchanged frame
 rebuilds none.
 
-The C representation embeds four fixed byte arrays for face x, y, z, and a
-packed material/face code. One chunk owns 3,072 slots. That is not a guessed
+The C representation embeds two banks for face x, y, z, and a packed
+material/face code. Each bank owns 16 chunks. One chunk owns 3,072 slots. That
+is not a guessed
 limit: an 8-by-16-by-8 three-dimensional checkerboard contains 512 solid cells,
 and every one can expose all six faces, reaching exactly 3,072. The focused
 test constructs that maximum. If the proof ever drifts, the cache clears the

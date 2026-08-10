@@ -719,7 +719,7 @@ def validate_generated_text(
             f"generated Caxecraft C retained compiler control-flow marker {marker!r}"
         )
     for marker in (
-        "uint8_t hxc_l_storage[16384]",
+        "uint8_t hxc_l_storage[32768]",
         projected_method_name(
             method_symbols,
             "caxecraft.domain.VoxelRaycast.trace(span:const<u8>, f64, f64, f64, f64, f64, f64, f64)",

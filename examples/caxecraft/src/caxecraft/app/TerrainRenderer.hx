@@ -51,7 +51,7 @@ private typedef TerrainSheetCounters = {
 }
 
 /**
-	Stateful chunked renderer for the complete current 32x32 world.
+	Stateful chunked renderer for the complete current 64x32 world.
 
 	`TerrainChunkCache` discovers exposed faces once, then rebuilds only chunks
 	touched by a successful edit. This class owns that derived state across frames,

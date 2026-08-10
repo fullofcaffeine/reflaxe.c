@@ -1,4 +1,4 @@
 package caxecraft.app;
 
-/** Phantom fixed-array identity for the bounded exposed-terrain face cache. */
+/** Phantom fixed-array identity for one sixteen-chunk terrain face bank. */
 final class TerrainFaceSlots {}

@@ -443,7 +443,10 @@ final class WaterSimulation {
 	static inline function smaller(current:Int, candidate:Int):Int
 		return candidate >= 0 && candidate < current ? candidate : current;
 
-	/** Reverse the fixed 32 x 16 x 32 linear layout without division. */
-	static inline function coordFromIndex(index:Int):BlockCoord
-		return World.coord(index & 31, (index >>> 5) & 15, index >>> 9);
+	/** Reverse the fixed world layout through its declared dimensions. */
+	static inline function coordFromIndex(index:Int):BlockCoord {
+		final x = index % World.WIDTH;
+		final layer = Std.int(index / World.WIDTH);
+		return World.coord(x, layer % World.HEIGHT, Std.int(layer / World.HEIGHT));
+	}
 }

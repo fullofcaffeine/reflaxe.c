@@ -86,6 +86,7 @@ class HaxeCTestCase:
     haxe_defines: tuple[str, ...] = ()
     native_runs_from_case_root: bool = False
     eval_timeout_seconds: int = 30
+    c_build_timeout_seconds: int = 60
     native_timeout_seconds: int = 20
 
 
@@ -1050,8 +1051,11 @@ CASES = {
         native_runs_from_case_root=True,
         # The authored village now has more than one thousand compact terrain
         # runs. This complete parser/publication fault matrix is intentionally
-        # broader than the focused landmark check; keep its diagnostic timeout
-        # bounded without treating an unoptimized native test as a load budget.
+        # broader than the focused landmark check. The wider physical world
+        # also doubles its resolved terrain initialization. Keep both timeouts
+        # bounded without treating this unoptimized diagnostic lane as a load
+        # or generation-time budget.
+        c_build_timeout_seconds=120,
         native_timeout_seconds=40,
     ),
     "scenario-native-codec": HaxeCTestCase(
@@ -2027,7 +2031,7 @@ def execute(
                 f"c={generated}",
             ],
             cwd=ROOT,
-            timeout=60,
+            timeout=test_case.c_build_timeout_seconds,
             label=f"{test_case.case_id} Haxe-to-C build",
         )
         runtime_plan = json.loads(

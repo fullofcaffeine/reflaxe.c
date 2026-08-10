@@ -257,7 +257,7 @@ struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(c
   int32_t hxc_l_visited = 1;
   while (1)
   {
-    if (!(hxc_l_visited < 88))
+    if (!(hxc_l_visited < 120))
     {
       break;
     }

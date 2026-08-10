@@ -10,6 +10,7 @@ import caxecraft.app.TerrainChunkLayout.CHUNKS_X;
 import caxecraft.app.TerrainChunkLayout.CHUNKS_Z;
 import caxecraft.app.TerrainChunkLayout.FACE_CAPACITY;
 import caxecraft.app.TerrainChunkLayout.FACES_PER_CHUNK;
+import caxecraft.app.TerrainChunkLayout.chunkFor;
 import caxecraft.app.TerrainChunkLayout.packFace;
 import caxecraft.app.TerrainChunkLayout.unpackFace;
 import caxecraft.app.TerrainChunkLayout.unpackKind;
@@ -49,8 +50,11 @@ function selfCheck():Int {
 	final cache = new TerrainChunkCache();
 	if (CHUNK_WIDTH * CHUNKS_X != World.WIDTH
 		|| CHUNK_DEPTH * CHUNKS_Z != World.DEPTH
-		|| CHUNK_COUNT != 16
-		|| FACE_CAPACITY != 49152)
+		|| World.WIDTH != 64
+		|| CHUNK_COUNT != 32
+		|| FACE_CAPACITY != 98304
+		|| chunkFor(World.coord(63, 15, 31)) != 31
+		|| chunkFor(World.coord(64, 0, 0)) != -1)
 		return 1;
 	if (unpackKind(packFace(BlockKind.Ash, VoxelFace.West)) != BlockKind.Ash
 		|| unpackFace(packFace(BlockKind.Ash, VoxelFace.West)) != VoxelFace.West)
@@ -70,7 +74,7 @@ function selfCheck():Int {
 	var view:WorldView = WorldView.borrow(cells);
 	#end
 	var preparation = cache.prepare(view);
-	if (!preparation.valid || preparation.rebuiltChunks != 16 || preparation.faces != 0 || preparation.visibleBlocks != 0)
+	if (!preparation.valid || preparation.rebuiltChunks != 32 || preparation.faces != 0 || preparation.visibleBlocks != 0)
 		return 3;
 	preparation = cache.prepare(view);
 	if (!preparation.valid || preparation.rebuiltChunks != 0)
@@ -138,6 +142,26 @@ function selfCheck():Int {
 		|| cache.visibleBlocks(TerrainSheet.Base) != 0
 		|| cache.visibleBlocks(TerrainSheet.Adventure) != 512)
 		return 14;
+
+	clear(cells);
+	z = 16;
+	while (z < 16 + CHUNK_DEPTH) {
+		var y = 0;
+		while (y < World.HEIGHT) {
+			var x = 0;
+			while (x < CHUNK_WIDTH) {
+				if (((x + y + z) & 1) == 0)
+					World.replace(cells, World.coord(x, y, z), BlockKind.Snow);
+				x++;
+			}
+			y++;
+		}
+		z++;
+	}
+	cache.invalidateAll();
+	preparation = cache.prepare(view);
+	if (!preparation.valid || cache.chunkFaceCount(16) != FACES_PER_CHUNK || preparation.faces != FACES_PER_CHUNK)
+		return 15;
 	return 0;
 }
 

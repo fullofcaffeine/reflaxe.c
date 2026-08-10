@@ -5,7 +5,7 @@ bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_domain_BlockCoord 
   bool hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x >= 0;
   if (hxc_l_coord.hxc_x >= 0)
   {
-    hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x < 32;
+    hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x < 64;
   }
   bool hxc_l_tmp_short_circuit_load_result_n2 = hxc_l_tmp_short_circuit_result_n1;
   bool hxc_l_tmp_short_circuit_result_n2 = hxc_l_tmp_short_circuit_load_result_n2;
@@ -48,7 +48,7 @@ void hxc_caxecraft_domain_World_generate(uint8_t *hxc_l_cells, size_t hxc_l_leng
   int32_t hxc_l_index = 0;
   while (1)
   {
-    if (!(hxc_l_index < 16384))
+    if (!(hxc_l_index < 32768))
     {
       break;
     }
@@ -65,7 +65,7 @@ void hxc_caxecraft_domain_World_generate(uint8_t *hxc_l_cells, size_t hxc_l_leng
     int32_t hxc_l_x = 0;
     while (1)
     {
-      if (!(hxc_l_x < 32))
+      if (!(hxc_l_x < 64))
       {
         break;
       }
@@ -131,7 +131,7 @@ int32_t hxc_caxecraft_domain_World_indexOf(struct hxc_caxecraft_domain_BlockCoor
   bool hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_contains(hxc_l_coord);
   if (!!hxc_l_tmp_call_result_n0)
   {
-    return hxc_i32_add_wrapping(hxc_l_coord.hxc_x, hxc_i32_multiply_wrapping(32, hxc_i32_add_wrapping(hxc_l_coord.hxc_y, hxc_i32_multiply_wrapping(16, hxc_l_coord.hxc_z))));
+    return hxc_i32_add_wrapping(hxc_l_coord.hxc_x, hxc_i32_multiply_wrapping(64, hxc_i32_add_wrapping(hxc_l_coord.hxc_y, hxc_i32_multiply_wrapping(16, hxc_l_coord.hxc_z))));
   }
   return -1;
 }
@@ -405,7 +405,7 @@ int32_t hxc_caxecraft_domain_World_stateHash(uint8_t *hxc_l_cells, size_t hxc_l_
   int32_t hxc_l_index = 0;
   while (1)
   {
-    if (!(hxc_l_index < 16384))
+    if (!(hxc_l_index < 32768))
     {
       break;
     }

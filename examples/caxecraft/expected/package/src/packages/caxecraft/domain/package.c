@@ -2,7 +2,7 @@
 
 int32_t hxc_caxecraft_domain_CaxecraftTrace_collisionTrace(void)
 {
-  uint8_t hxc_l_storage[16384] = { 0 };
+  uint8_t hxc_l_storage[32768] = { 0 };
   uint8_t *hxc_l_cells = hxc_l_storage;
   size_t hxc_l_tmp_length_n1 = sizeof(hxc_l_storage) / sizeof(hxc_l_storage[0]);
   hxc_caxecraft_domain_CaxecraftTrace_makeFloor(hxc_l_cells, hxc_l_tmp_length_n1);
@@ -40,7 +40,7 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_collisionTrace(void)
 
 int32_t hxc_caxecraft_domain_CaxecraftTrace_editTrace(void)
 {
-  uint8_t hxc_l_storage[16384] = { 0 };
+  uint8_t hxc_l_storage[32768] = { 0 };
   uint8_t *hxc_l_cells = hxc_l_storage;
   size_t hxc_l_tmp_length_n1 = sizeof(hxc_l_storage) / sizeof(hxc_l_storage[0]);
   hxc_caxecraft_domain_World_generate(hxc_l_cells, hxc_l_tmp_length_n1, 324508639);
@@ -74,7 +74,7 @@ void hxc_caxecraft_domain_CaxecraftTrace_makeFloor(uint8_t *hxc_l_cells, size_t 
     int32_t hxc_l_x = 0;
     while (1)
     {
-      if (!(hxc_l_x < 32))
+      if (!(hxc_l_x < 64))
       {
         break;
       }
@@ -95,7 +95,7 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_mix(int32_t hxc_l_hash, int32_t hxc_
 
 int32_t hxc_caxecraft_domain_CaxecraftTrace_propertyTrace(int32_t hxc_l_seed)
 {
-  uint8_t hxc_l_storage[16384] = { 0 };
+  uint8_t hxc_l_storage[32768] = { 0 };
   uint8_t *hxc_l_cells = hxc_l_storage;
   size_t hxc_l_tmp_length_n2 = sizeof(hxc_l_storage) / sizeof(hxc_l_storage[0]);
   hxc_caxecraft_domain_World_generate(hxc_l_cells, hxc_l_tmp_length_n2, hxc_i32_add_wrapping(hxc_i32_multiply_wrapping(hxc_l_seed, 1103515245), 12345));
@@ -183,7 +183,7 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_propertyTrace(int32_t hxc_l_seed)
 
 int32_t hxc_caxecraft_domain_CaxecraftTrace_rayTrace(void)
 {
-  uint8_t hxc_l_storage[16384] = { 0 };
+  uint8_t hxc_l_storage[32768] = { 0 };
   uint8_t *hxc_l_cells = hxc_l_storage;
   size_t hxc_l_tmp_length_n1 = sizeof(hxc_l_storage) / sizeof(hxc_l_storage[0]);
   struct hxc_caxecraft_domain_BlockCoord hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_coord(8, 8, 8);
@@ -254,7 +254,7 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_runTrace(void)
 
 int32_t hxc_caxecraft_domain_CaxecraftTrace_terrainTrace(void)
 {
-  uint8_t hxc_l_storage[16384] = { 0 };
+  uint8_t hxc_l_storage[32768] = { 0 };
   uint8_t *hxc_l_cells = hxc_l_storage;
   size_t hxc_l_tmp_length_n1 = sizeof(hxc_l_storage) / sizeof(hxc_l_storage[0]);
   hxc_caxecraft_domain_World_generate(hxc_l_cells, hxc_l_tmp_length_n1, 324508639);
@@ -519,7 +519,7 @@ struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(c
   int32_t hxc_l_visited = 1;
   while (1)
   {
-    if (!(hxc_l_visited < 88))
+    if (!(hxc_l_visited < 120))
     {
       break;
     }
@@ -656,7 +656,7 @@ bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_domain_BlockCoord 
   bool hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x >= 0;
   if (hxc_l_coord.hxc_x >= 0)
   {
-    hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x < 32;
+    hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x < 64;
   }
   bool hxc_l_tmp_short_circuit_load_result_n2 = hxc_l_tmp_short_circuit_result_n1;
   bool hxc_l_tmp_short_circuit_result_n2 = hxc_l_tmp_short_circuit_load_result_n2;
@@ -699,7 +699,7 @@ void hxc_caxecraft_domain_World_generate(uint8_t *hxc_l_cells, size_t hxc_l_leng
   int32_t hxc_l_index = 0;
   while (1)
   {
-    if (!(hxc_l_index < 16384))
+    if (!(hxc_l_index < 32768))
     {
       break;
     }
@@ -716,7 +716,7 @@ void hxc_caxecraft_domain_World_generate(uint8_t *hxc_l_cells, size_t hxc_l_leng
     int32_t hxc_l_x = 0;
     while (1)
     {
-      if (!(hxc_l_x < 32))
+      if (!(hxc_l_x < 64))
       {
         break;
       }
@@ -782,7 +782,7 @@ int32_t hxc_caxecraft_domain_World_indexOf(struct hxc_caxecraft_domain_BlockCoor
   bool hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_contains(hxc_l_coord);
   if (!!hxc_l_tmp_call_result_n0)
   {
-    return hxc_i32_add_wrapping(hxc_l_coord.hxc_x, hxc_i32_multiply_wrapping(32, hxc_i32_add_wrapping(hxc_l_coord.hxc_y, hxc_i32_multiply_wrapping(16, hxc_l_coord.hxc_z))));
+    return hxc_i32_add_wrapping(hxc_l_coord.hxc_x, hxc_i32_multiply_wrapping(64, hxc_i32_add_wrapping(hxc_l_coord.hxc_y, hxc_i32_multiply_wrapping(16, hxc_l_coord.hxc_z))));
   }
   return -1;
 }
@@ -1056,7 +1056,7 @@ int32_t hxc_caxecraft_domain_World_stateHash(uint8_t *hxc_l_cells, size_t hxc_l_
   int32_t hxc_l_index = 0;
   while (1)
   {
-    if (!(hxc_l_index < 16384))
+    if (!(hxc_l_index < 32768))
     {
       break;
     }

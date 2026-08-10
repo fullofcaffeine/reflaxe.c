@@ -9,16 +9,19 @@ import caxecraft.domain.World;
 	Pure chunk-coordinate rules shared by the terrain cache and its tests.
 
 	A chunk is an 8-by-16-by-8 rendering group, not a level or gameplay region.
-	The current finite world therefore has four chunks across and four deep. The
+	The current finite world therefore has eight chunks across and four deep. The
 	full world height stays together because 16 cells are already a small bounded
 	column and terrain edits need no vertical chunk neighbor.
 **/
 inline final CHUNK_WIDTH:Int = 8;
 
 inline final CHUNK_DEPTH:Int = 8;
-inline final CHUNKS_X:Int = 4;
+inline final CHUNKS_X:Int = 8;
 inline final CHUNKS_Z:Int = 4;
 inline final CHUNK_COUNT:Int = CHUNKS_X * CHUNKS_Z;
+
+/** Number of chunks in one fixed-array cache bank. */
+inline final CHUNKS_PER_BANK:Int = 16;
 
 /**
 	Maximum exposed faces owned by one chunk.
@@ -31,6 +34,9 @@ inline final CHUNK_COUNT:Int = CHUNKS_X * CHUNKS_Z;
 inline final FACES_PER_CHUNK:Int = 3072;
 
 inline final FACE_CAPACITY:Int = CHUNK_COUNT * FACES_PER_CHUNK;
+
+/** Face entries in one bank, below haxe.c's 65,536-byte fixed-array limit. */
+inline final FACES_PER_BANK:Int = CHUNKS_PER_BANK * FACES_PER_CHUNK;
 
 /** Return the stable row-major chunk that owns one in-bounds voxel. */
 function chunkFor(coord:BlockCoord):Int {

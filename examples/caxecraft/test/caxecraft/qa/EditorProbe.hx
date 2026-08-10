@@ -192,6 +192,7 @@ final class EditorProbe {
 			"checkpoint",
 			"objective",
 			"effect",
+			"campaign-exit",
 			"signal",
 			"schedule",
 			"call",

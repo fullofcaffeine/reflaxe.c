@@ -1,11 +1,33 @@
 #include "hxc/program.h"
 
+bool hxc_caxecraft_domain_World_admitsAuthoredSize(int32_t hxc_l_width, int32_t hxc_l_height, int32_t hxc_l_depth)
+{
+  bool hxc_l_tmp_short_circuit_result_n3 = hxc_l_width == 32;
+  if (!(hxc_l_width == 32))
+  {
+    hxc_l_tmp_short_circuit_result_n3 = hxc_l_width == 64;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n0 = hxc_l_tmp_short_circuit_result_n3;
+  bool hxc_l_tmp_short_circuit_result_n4 = hxc_l_tmp_short_circuit_load_result_n0;
+  if (hxc_l_tmp_short_circuit_load_result_n0)
+  {
+    hxc_l_tmp_short_circuit_result_n4 = hxc_l_height == 16;
+  }
+  bool hxc_l_tmp_short_circuit_load_result_n1 = hxc_l_tmp_short_circuit_result_n4;
+  bool hxc_l_tmp_short_circuit_result_n5 = hxc_l_tmp_short_circuit_load_result_n1;
+  if (hxc_l_tmp_short_circuit_load_result_n1)
+  {
+    hxc_l_tmp_short_circuit_result_n5 = hxc_l_depth == 32;
+  }
+  return hxc_l_tmp_short_circuit_result_n5;
+}
+
 bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_scenario_VoxelPoint hxc_l_coord)
 {
   bool hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x >= 0;
   if (hxc_l_coord.hxc_x >= 0)
   {
-    hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x < 32;
+    hxc_l_tmp_short_circuit_result_n1 = hxc_l_coord.hxc_x < 64;
   }
   bool hxc_l_tmp_short_circuit_load_result_n2 = hxc_l_tmp_short_circuit_result_n1;
   bool hxc_l_tmp_short_circuit_result_n2 = hxc_l_tmp_short_circuit_load_result_n2;
@@ -44,7 +66,7 @@ int32_t hxc_caxecraft_domain_World_indexOf(struct hxc_caxecraft_scenario_VoxelPo
   bool hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_contains(hxc_l_coord);
   if (!!hxc_l_tmp_call_result_n0)
   {
-    return hxc_i32_add_wrapping(hxc_l_coord.hxc_x, hxc_i32_multiply_wrapping(32, hxc_i32_add_wrapping(hxc_l_coord.hxc_y, hxc_i32_multiply_wrapping(16, hxc_l_coord.hxc_z))));
+    return hxc_i32_add_wrapping(hxc_l_coord.hxc_x, hxc_i32_multiply_wrapping(64, hxc_i32_add_wrapping(hxc_l_coord.hxc_y, hxc_i32_multiply_wrapping(16, hxc_l_coord.hxc_z))));
   }
   return -1;
 }

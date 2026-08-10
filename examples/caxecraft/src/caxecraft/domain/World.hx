@@ -1,11 +1,30 @@
 package caxecraft.domain;
 
-/** Finite voxel storage, deterministic terrain, and edit rules. */
+/**
+	Finite voxel storage, deterministic terrain, and edit rules.
+
+	The physical envelope holds two 32-wide outdoor regions side by side. Level
+	resolution can enclose a narrower authored map inside this storage, so world
+	indexing and every gameplay system retain one fixed layout.
+**/
 final class World {
-	public static inline final WIDTH:Int = 32;
+	/** Width used by existing compact mechanic and regression maps. */
+	public static inline final COMPACT_WIDTH:Int = 32;
+
+	public static inline final WIDTH:Int = 64;
 	public static inline final HEIGHT:Int = 16;
 	public static inline final DEPTH:Int = 32;
 	public static inline final VOLUME:Int = WIDTH * HEIGHT * DEPTH;
+
+	/**
+		Return whether one authored map fits an admitted physical layout.
+
+		The first larger-world stage accepts the established compact width and the
+		complete outdoor width. General runtime dimensions remain deferred.
+	**/
+	public static function admitsAuthoredSize(width:Int, height:Int, depth:Int):Bool {
+		return (width == COMPACT_WIDTH || width == WIDTH) && height == HEIGHT && depth == DEPTH;
+	}
 
 	public static function coord(x:Int, y:Int, z:Int):BlockCoord {
 		return {x: x, y: y, z: z};
@@ -19,7 +38,7 @@ final class World {
 		Return a checked linear element index, or `-1` outside the finite world.
 
 		Bounds are checked before arithmetic. The admitted dimensions prove the
-		largest intermediate (`16383`) fits in Haxe `Int`, so no overflow-prone
+		largest intermediate (`32767`) fits in Haxe `Int`, so no overflow-prone
 		untrusted coordinate participates in the multiplication.
 	**/
 	public static function indexOf(coord:BlockCoord):Int {

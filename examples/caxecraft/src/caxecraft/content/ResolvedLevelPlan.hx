@@ -17,6 +17,7 @@ import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
 import caxecraft.content.LevelContentResolver.StatefulObjectStateMechanics;
 import caxecraft.domain.ActorControllerProfile;
 import caxecraft.domain.AquaticProfile;
+import caxecraft.domain.BlockKind;
 import caxecraft.domain.EntityId;
 import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.domain.WaterCellCodec.isSolidCode;
@@ -423,9 +424,7 @@ final class ResolvedLevelPlan {
 	 * copied before success escapes.
 	 */
 	public static function resolve(scenario:Scenario, registry:LevelContentResolver, playerOptions:LevelPlayerOptions):ResolvedLevelPlanResult {
-		if (scenario.world.size.width != World.WIDTH
-			|| scenario.world.size.height != World.HEIGHT
-			|| scenario.world.size.depth != World.DEPTH)
+		if (!World.admitsAuthoredSize(scenario.world.size.width, scenario.world.size.height, scenario.world.size.depth))
 			return LevelPlanRejected(WorldSizeMismatch(scenario.world.size.width, scenario.world.size.height, scenario.world.size.depth));
 		if (!validPlayerOptions(playerOptions))
 			return LevelPlanRejected(InvalidPlayerOptions);
@@ -618,7 +617,19 @@ final class ResolvedLevelPlan {
 			paletteStorage.push(storage);
 		}
 
-		final cells:Array<Int> = [for (_ in 0...World.VOLUME) -1];
+		final authoredWidth = scenario.world.size.width;
+		final cells:Array<Int> = [];
+		var physicalIndex = 0;
+		while (physicalIndex < World.VOLUME) {
+			final x = physicalIndex % World.WIDTH;
+			if (x < authoredWidth)
+				cells.push(-1);
+			else if (x == authoredWidth)
+				cells.push(World.kindCode(BlockKind.Bedrock));
+			else
+				cells.push(World.kindCode(BlockKind.Air));
+			physicalIndex++;
+		}
 		for (chunk in scenario.world.chunks) {
 			var localIndex = 0;
 			for (run in chunk.runs) {

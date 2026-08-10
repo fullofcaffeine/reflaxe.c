@@ -8,6 +8,7 @@ import caxecraft.app.TerrainChunkLayout.CHUNK_WIDTH;
 import caxecraft.app.TerrainChunkLayout.CHUNKS_X;
 import caxecraft.app.TerrainChunkLayout.CHUNKS_Z;
 import caxecraft.app.TerrainChunkLayout.FACE_CAPACITY;
+import caxecraft.app.TerrainChunkLayout.FACES_PER_BANK;
 import caxecraft.app.TerrainChunkLayout.FACES_PER_CHUNK;
 import caxecraft.app.TerrainChunkLayout.chunkFor;
 import caxecraft.app.TerrainChunkLayout.chunkOriginX;
@@ -49,27 +50,35 @@ typedef TerrainChunkPreparation = {
 	face code. A successful edit invalidates its chunk and any axial neighbor that
 	shares the edited boundary. `prepare` rebuilds only those dirty partitions.
 
-	The C build embeds four fixed byte arrays and small per-chunk counters directly
-	in the owner. Eval uses ordinary arrays so the exact chunk and invalidation
-	rules can run as an independent oracle. Haxe removes the inactive carrier at
-	compile time; the cache algorithm is shared and the C frame loop allocates
-	nothing.
+	The C build embeds two sixteen-chunk banks for each stored face value. Each
+	49,152-byte bank stays below haxe.c's 65,536-byte fixed-array limit. Eval uses
+	ordinary arrays with the same bank split, so it checks the index mapping as an
+	independent oracle. Haxe removes the inactive carrier at compile time; the
+	cache algorithm is shared and the C frame loop allocates nothing.
 **/
 final class TerrainChunkCache {
 	#if c
-	final faceX:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACE_CAPACITY);
-	final faceY:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACE_CAPACITY);
-	final faceZ:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACE_CAPACITY);
-	final packedFaces:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACE_CAPACITY);
+	final faceX0:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
+	final faceX1:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
+	final faceY0:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
+	final faceY1:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
+	final faceZ0:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
+	final faceZ1:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
+	final packedFaces0:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
+	final packedFaces1:CArray<UInt8, TerrainFaceSlots> = CArray.zero(FACES_PER_BANK);
 	final faceCounts:CArray<Int, TerrainChunkSlots> = CArray.zero(CHUNK_COUNT);
 	final baseVisible:CArray<Int, TerrainChunkSlots> = CArray.zero(CHUNK_COUNT);
 	final adventureVisible:CArray<Int, TerrainChunkSlots> = CArray.zero(CHUNK_COUNT);
 	final dirty:CArray<UInt8, TerrainChunkSlots> = CArray.zero(CHUNK_COUNT);
 	#else
-	final faceX:Array<Int> = [];
-	final faceY:Array<Int> = [];
-	final faceZ:Array<Int> = [];
-	final packedFaces:Array<Int> = [];
+	final faceX0:Array<Int> = [];
+	final faceX1:Array<Int> = [];
+	final faceY0:Array<Int> = [];
+	final faceY1:Array<Int> = [];
+	final faceZ0:Array<Int> = [];
+	final faceZ1:Array<Int> = [];
+	final packedFaces0:Array<Int> = [];
+	final packedFaces1:Array<Int> = [];
 	final faceCounts:Array<Int> = [];
 	final baseVisible:Array<Int> = [];
 	final adventureVisible:Array<Int> = [];
@@ -80,11 +89,15 @@ final class TerrainChunkCache {
 	public function new() {
 		#if !c
 		var face = 0;
-		while (face < FACE_CAPACITY) {
-			faceX.push(0);
-			faceY.push(0);
-			faceZ.push(0);
-			packedFaces.push(0);
+		while (face < FACES_PER_BANK) {
+			faceX0.push(0);
+			faceX1.push(0);
+			faceY0.push(0);
+			faceY1.push(0);
+			faceZ0.push(0);
+			faceZ1.push(0);
+			packedFaces0.push(0);
+			packedFaces1.push(0);
 			face++;
 		}
 		var chunk = 0;
@@ -198,19 +211,19 @@ final class TerrainChunkCache {
 
 	/** Read one cached x coordinate after the caller checks its chunk count. */
 	public inline function xAt(index:Int):Int
-		return readFaceByte(faceX, index);
+		return readFaceX(index);
 
 	/** Read one cached y coordinate after the caller checks its chunk count. */
 	public inline function yAt(index:Int):Int
-		return readFaceByte(faceY, index);
+		return readFaceY(index);
 
 	/** Read one cached z coordinate after the caller checks its chunk count. */
 	public inline function zAt(index:Int):Int
-		return readFaceByte(faceZ, index);
+		return readFaceZ(index);
 
 	/** Read one cached material/face code after the caller checks its chunk count. */
 	public inline function packedAt(index:Int):Int
-		return readFaceByte(packedFaces, index);
+		return readPackedFace(index);
 
 	function rebuild(cells:WorldView, chunk:Int):Bool {
 		final originX = chunkOriginX(chunk);
@@ -306,10 +319,10 @@ final class TerrainChunkCache {
 		if (count >= FACES_PER_CHUNK)
 			return -1;
 		final index = facePartitionStart(chunk) + count;
-		writeFaceByte(faceX, index, x);
-		writeFaceByte(faceY, index, y);
-		writeFaceByte(faceZ, index, z);
-		writeFaceByte(packedFaces, index, packFace(kind, face));
+		writeFaceX(index, x);
+		writeFaceY(index, y);
+		writeFaceZ(index, z);
+		writePackedFace(index, packFace(kind, face));
 		return count + 1;
 	}
 
@@ -343,17 +356,91 @@ final class TerrainChunkCache {
 		#end
 	}
 
-	#if c
-	inline function readFaceByte(storage:CArray<UInt8, TerrainFaceSlots>, index:Int):Int
-		return IntConvert.exact(storage[index]);
+	inline function readFaceX(index:Int):Int {
+		#if c
+		return index < FACES_PER_BANK ? IntConvert.exact(faceX0[index]) : IntConvert.exact(faceX1[index - FACES_PER_BANK]);
+		#else
+		return index < FACES_PER_BANK ? faceX0[index] : faceX1[index - FACES_PER_BANK];
+		#end
+	}
 
-	inline function writeFaceByte(storage:CArray<UInt8, TerrainFaceSlots>, index:Int, value:Int):Void
-		storage[index] = IntConvert.modulo(value);
-	#else
-	inline function readFaceByte(storage:Array<Int>, index:Int):Int
-		return storage[index];
+	inline function readFaceY(index:Int):Int {
+		#if c
+		return index < FACES_PER_BANK ? IntConvert.exact(faceY0[index]) : IntConvert.exact(faceY1[index - FACES_PER_BANK]);
+		#else
+		return index < FACES_PER_BANK ? faceY0[index] : faceY1[index - FACES_PER_BANK];
+		#end
+	}
 
-	inline function writeFaceByte(storage:Array<Int>, index:Int, value:Int):Void
-		storage[index] = value;
-	#end
+	inline function readFaceZ(index:Int):Int {
+		#if c
+		return index < FACES_PER_BANK ? IntConvert.exact(faceZ0[index]) : IntConvert.exact(faceZ1[index - FACES_PER_BANK]);
+		#else
+		return index < FACES_PER_BANK ? faceZ0[index] : faceZ1[index - FACES_PER_BANK];
+		#end
+	}
+
+	inline function readPackedFace(index:Int):Int {
+		#if c
+		return index < FACES_PER_BANK ? IntConvert.exact(packedFaces0[index]) : IntConvert.exact(packedFaces1[index - FACES_PER_BANK]);
+		#else
+		return index < FACES_PER_BANK ? packedFaces0[index] : packedFaces1[index - FACES_PER_BANK];
+		#end
+	}
+
+	inline function writeFaceX(index:Int, value:Int):Void {
+		#if c
+		if (index < FACES_PER_BANK)
+			faceX0[index] = IntConvert.modulo(value);
+		else
+			faceX1[index - FACES_PER_BANK] = IntConvert.modulo(value);
+		#else
+		if (index < FACES_PER_BANK)
+			faceX0[index] = value;
+		else
+			faceX1[index - FACES_PER_BANK] = value;
+		#end
+	}
+
+	inline function writeFaceY(index:Int, value:Int):Void {
+		#if c
+		if (index < FACES_PER_BANK)
+			faceY0[index] = IntConvert.modulo(value);
+		else
+			faceY1[index - FACES_PER_BANK] = IntConvert.modulo(value);
+		#else
+		if (index < FACES_PER_BANK)
+			faceY0[index] = value;
+		else
+			faceY1[index - FACES_PER_BANK] = value;
+		#end
+	}
+
+	inline function writeFaceZ(index:Int, value:Int):Void {
+		#if c
+		if (index < FACES_PER_BANK)
+			faceZ0[index] = IntConvert.modulo(value);
+		else
+			faceZ1[index - FACES_PER_BANK] = IntConvert.modulo(value);
+		#else
+		if (index < FACES_PER_BANK)
+			faceZ0[index] = value;
+		else
+			faceZ1[index - FACES_PER_BANK] = value;
+		#end
+	}
+
+	inline function writePackedFace(index:Int, value:Int):Void {
+		#if c
+		if (index < FACES_PER_BANK)
+			packedFaces0[index] = IntConvert.modulo(value);
+		else
+			packedFaces1[index - FACES_PER_BANK] = IntConvert.modulo(value);
+		#else
+		if (index < FACES_PER_BANK)
+			packedFaces0[index] = value;
+		else
+			packedFaces1[index - FACES_PER_BANK] = value;
+		#end
+	}
 }

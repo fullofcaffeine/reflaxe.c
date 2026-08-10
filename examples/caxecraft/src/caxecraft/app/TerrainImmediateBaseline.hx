@@ -22,7 +22,7 @@ private typedef ImmediateSheetCounters = {
 /**
 	Benchmark-only copy of the renderer used before the chunk cache.
 
-	Each frame scans all 16,384 cells once per ready atlas and rediscovers every
+	Each frame scans all 32,768 cells once per ready atlas and rediscovers every
 	exposed neighbor. It shares face submission, atlas selection, and tinting with
 	the current renderer, so the benchmark changes only discovery/caching policy.
 	The `caxecraft_renderer_baseline` define is accepted only by the dedicated

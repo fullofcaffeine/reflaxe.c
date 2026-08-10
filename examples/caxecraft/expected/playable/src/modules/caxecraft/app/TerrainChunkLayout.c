@@ -5,7 +5,7 @@ int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkFor(struct hxc_caxecraft_scena
   bool hxc_l_tmp_call_result_n0 = hxc_caxecraft_domain_World_contains(hxc_l_coord);
   if (!!hxc_l_tmp_call_result_n0)
   {
-    return hxc_i32_add_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_coord.hxc_x, (double)8)), hxc_i32_multiply_wrapping(4, hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_coord.hxc_z, (double)8))));
+    return hxc_i32_add_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_coord.hxc_x, (double)8)), hxc_i32_multiply_wrapping(8, hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_coord.hxc_z, (double)8))));
   }
   return -1;
 }
@@ -15,11 +15,11 @@ int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkOriginX(int32_t hxc_l_chunk)
   bool hxc_l_tmp_short_circuit_result_n1 = hxc_l_chunk < 0;
   if (!(hxc_l_chunk < 0))
   {
-    hxc_l_tmp_short_circuit_result_n1 = hxc_l_chunk >= 16;
+    hxc_l_tmp_short_circuit_result_n1 = hxc_l_chunk >= 32;
   }
   if (!hxc_l_tmp_short_circuit_result_n1)
   {
-    return hxc_i32_multiply_wrapping(hxc_i32_modulo_zero_safe(hxc_l_chunk, 4), 8);
+    return hxc_i32_multiply_wrapping(hxc_i32_modulo_zero_safe(hxc_l_chunk, 8), 8);
   }
   return -1;
 }
@@ -29,11 +29,11 @@ int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkOriginZ(int32_t hxc_l_chunk)
   bool hxc_l_tmp_short_circuit_result_n1 = hxc_l_chunk < 0;
   if (!(hxc_l_chunk < 0))
   {
-    hxc_l_tmp_short_circuit_result_n1 = hxc_l_chunk >= 16;
+    hxc_l_tmp_short_circuit_result_n1 = hxc_l_chunk >= 32;
   }
   if (!hxc_l_tmp_short_circuit_result_n1)
   {
-    return hxc_i32_multiply_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_chunk, (double)4)), 8);
+    return hxc_i32_multiply_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_l_chunk, (double)8)), 8);
   }
   return -1;
 }

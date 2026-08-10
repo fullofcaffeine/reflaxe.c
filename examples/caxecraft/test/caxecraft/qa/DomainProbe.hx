@@ -53,7 +53,7 @@ final class DomainProbe {
 	public static function selfCheck():Int {
 		#if c
 		// This is intentionally native fixed storage, not merely a way to make the
-		// test compile. It proves that a bounded 32 x 16 x 32 world can become one
+		// test compile. It proves that a bounded 64 x 16 x 32 world can become one
 		// direct C byte array with no Haxe Array, heap allocation, GC, or hxrt. The
 		// Eval branch below supplies equivalent initialized storage only so an
 		// independent Haxe target can execute the shared gameplay as an oracle.
@@ -75,11 +75,11 @@ final class DomainProbe {
 
 		if (World.indexOf(World.coord(0, 0, 0)) != 0)
 			return 1;
-		if (World.indexOf(World.coord(31, 15, 31)) != World.VOLUME - 1)
+		if (World.indexOf(World.coord(63, 15, 31)) != World.VOLUME - 1)
 			return 2;
 		if (World.indexOf(World.coord(-2147483647, 15, 31)) != -1)
 			return 3;
-		if (World.replace(cells, World.coord(32, 0, 0), BlockKind.Stone))
+		if (World.replace(cells, World.coord(64, 0, 0), BlockKind.Stone))
 			return 4;
 		if (!World.replace(cells, World.coord(8, 8, 8), BlockKind.Stone))
 			return 5;
@@ -128,8 +128,8 @@ final class DomainProbe {
 		if (tooShort.hit || tooShort.previousX != 7)
 			return 16;
 
-		final worldEdge = VoxelRaycast.trace(view, 30.5, 14.5, 30.5, 1.0, 0.0, 0.0, 8.0);
-		if (worldEdge.hit || worldEdge.previousX != 31 || !near(worldEdge.distance, 1.5))
+		final worldEdge = VoxelRaycast.trace(view, 62.5, 14.5, 30.5, 1.0, 0.0, 0.0, 8.0);
+		if (worldEdge.hit || worldEdge.previousX != 63 || !near(worldEdge.distance, 1.5))
 			return 17;
 
 		if (!World.remove(cells, World.coord(8, 8, 8)) || World.remove(cells, World.coord(8, 8, 8)))
@@ -204,7 +204,7 @@ final class DomainProbe {
 	static function clear(cells:WorldCells):Void {
 		var index = 0;
 		while (index < World.VOLUME) {
-			World.replace(cells, World.coord(index & 31, (index >>> 5) & 15, index >>> 9), BlockKind.Air);
+			World.replace(cells, World.coord(index & 63, (index >>> 6) & 15, index >>> 10), BlockKind.Air);
 			index++;
 		}
 	}

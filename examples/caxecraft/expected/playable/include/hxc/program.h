@@ -19,6 +19,7 @@
 #include "hxc/modules/caxecraft/app/MotionInterpolation.h"
 #include "hxc/modules/caxecraft/app/RaylibNavigationInput.h"
 #include "hxc/modules/caxecraft/app/RuntimeInventoryBinding.h"
+#include "hxc/modules/caxecraft/app/RuntimeTextureAtlasCatalog.h"
 #include "hxc/modules/caxecraft/app/StatefulObjectRenderer.h"
 #include "hxc/modules/caxecraft/app/TerrainAtlas.h"
 #include "hxc/modules/caxecraft/app/TerrainChunkCache.h"

@@ -35,19 +35,20 @@ GOTO_STATEMENT = re.compile(r"\bgoto\s+[A-Za-z_]")
 HXRT_REFERENCE = re.compile(r'(?:[<\"/]hxrt(?:[/>\"]|_)|\bhxrt_)')
 C_BASELINE_RESULT = re.compile(
     r"^caxecraft-c-baseline: terrainMicroseconds=([0-9]+) measuredFrames=12 "
-    r"faces=2744 visible=2430 drawCalls=2 streamHash=([0-9a-f]{8})$",
+    r"faces=([0-9]+) visible=([0-9]+) drawCalls=([0-9]+) streamHash=([0-9a-f]{8})$",
     re.MULTILINE,
 )
 
-# TerrainChunkCache owns four byte arrays with FACE_CAPACITY entries, three
-# Int arrays with CHUNK_COUNT entries, and one dirty byte array. These are
+# TerrainChunkCache owns four face values in each of two banks, three Int
+# arrays with CHUNK_COUNT entries, and one dirty byte array. These are
 # explicit carrier bytes. C ABI padding around the enclosing class is reported
 # separately only after a native sizeof probe exists; guessing it here would
 # make the cross-compiler report look more exact than its evidence.
-FACE_CAPACITY = 49_152
-CHUNK_COUNT = 16
+FACE_BANK_CAPACITY = 49_152
+FACE_BANK_COUNT = 2
+CHUNK_COUNT = 32
 CHUNK_CACHE_PAYLOAD = {
-    "faceCoordinateAndMaterialBytes": 4 * FACE_CAPACITY,
+    "faceCoordinateAndMaterialBytes": 4 * FACE_BANK_COUNT * FACE_BANK_CAPACITY,
     "chunkCounterBytes": 3 * CHUNK_COUNT * 4,
     "dirtyFlagBytes": CHUNK_COUNT,
 }
@@ -237,16 +238,27 @@ def benchmark_scene() -> tuple[bytes, str]:
         raise BenchmarkFailure("benchmark CAXEMAP terrain envelope is incomplete")
 
     codes = storage_codes()
-    cells = bytearray()
+    authored_cells = bytearray()
     for palette_index, length in runs:
         content_id = palette.get(palette_index)
         if content_id is None or content_id not in codes:
             raise BenchmarkFailure(f"terrain run references unknown palette value {palette_index}")
-        cells.extend([codes[content_id]] * length)
-        if len(cells) > 32 * 16 * 32:
+        authored_cells.extend([codes[content_id]] * length)
+        if len(authored_cells) > 32 * 16 * 32:
             raise BenchmarkFailure("benchmark terrain runs exceed the admitted world volume")
-    if len(cells) != 32 * 16 * 32:
-        raise BenchmarkFailure(f"benchmark terrain has {len(cells)} cells, expected 16384")
+    if len(authored_cells) != 32 * 16 * 32:
+        raise BenchmarkFailure(f"benchmark terrain has {len(authored_cells)} cells, expected 16384")
+
+    # Match the resolver's compatibility rule. The benchmark remains bound to
+    # the reviewed compact map, but both renderer implementations receive the
+    # same 64-wide physical world that ordinary play now uses.
+    cells = bytearray([codes["caxecraft:air"]] * (64 * 16 * 32))
+    for z in range(32):
+        for y in range(16):
+            authored_start = 32 * (y + 16 * z)
+            physical_start = 64 * (y + 16 * z)
+            cells[physical_start : physical_start + 32] = authored_cells[authored_start : authored_start + 32]
+            cells[physical_start + 32] = codes["caxecraft:bedrock"]
     source_hash = hashlib.sha256(source.encode("utf-8")).hexdigest()
     return bytes(cells), source_hash
 
@@ -260,7 +272,7 @@ def write_scene_header(path: Path, cells: bytes, source_hash: str) -> None:
         "#define CAXECRAFT_BENCHMARK_SCENE_H_INCLUDED",
         "",
         f"/* CAXEMAP SHA-256: {source_hash} */",
-        "static const unsigned char CAXECRAFT_BENCHMARK_SCENE_CELLS[16384] = {",
+        "static const unsigned char CAXECRAFT_BENCHMARK_SCENE_CELLS[32768] = {",
     ]
     for start in range(0, len(cells), 32):
         values = ", ".join(str(value) for value in cells[start : start + 32])
@@ -365,9 +377,20 @@ def run_handwritten_c_reference(args: argparse.Namespace) -> dict[str, object]:
                     f"exit: {result.returncode}\nstdout:\n{result.stdout}stderr:\n{result.stderr}"
                 )
             samples.append(int(match.group(1)))
+            sample_faces = int(match.group(2))
+            sample_visible = int(match.group(3))
+            sample_draw_calls = int(match.group(4))
             if stream_hash is None:
-                stream_hash = match.group(2)
-            elif stream_hash != match.group(2):
+                stream_hash = match.group(5)
+                faces = sample_faces
+                visible = sample_visible
+                draw_calls = sample_draw_calls
+            elif (
+                stream_hash != match.group(5)
+                or faces != sample_faces
+                or visible != sample_visible
+                or draw_calls != sample_draw_calls
+            ):
                 raise BenchmarkFailure("handwritten C renderer face stream changed between samples")
 
         source_text = C_BASELINE.read_text(encoding="utf-8")
@@ -379,9 +402,9 @@ def run_handwritten_c_reference(args: argparse.Namespace) -> dict[str, object]:
             "terrainMedianMicrosecondsPerFrame": median / 12,
             "measuredFramesPerSample": 12,
             "sampleCount": 7,
-            "faces": 2744,
-            "visibleOpaqueBlocks": 2430,
-            "drawCalls": 2,
+            "faces": faces,
+            "visibleOpaqueBlocks": visible,
+            "drawCalls": draw_calls,
             "faceStreamHash": stream_hash,
             "sceneSourceSha256": scene_hash,
             "artifacts": {

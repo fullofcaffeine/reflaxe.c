@@ -133,7 +133,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/CaxecraftTrace.c",
-      "sha256": "9b2fe97a709cd167082d95e1f429d5cfe75e263fb8edb54dbaf1c02d76a8c11b"
+      "sha256": "536f5df39fed9c573b28340a3c630203bb620fe163183f8f607d28acf08b9a6d"
     },
     {
       "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
@@ -141,11 +141,11 @@
     },
     {
       "path": "src/modules/caxecraft/domain/VoxelRaycast.c",
-      "sha256": "84fd3f75ed49ead47bb6ad7e6914a1fb7129ffd71b6173aeed54b207f7a0e1b8"
+      "sha256": "56f8705236fa07cbeb72001d607d0dac3bbabdf37be9d2a24ad0b2807c43ad37"
     },
     {
       "path": "src/modules/caxecraft/domain/World.c",
-      "sha256": "485935fca44c2c8965fee572f9445606b32765d91741d766d0b5a69ce6c2adf4"
+      "sha256": "178b4a2009c8f2a635653aad00a24f41077d7b2356c2c88977660bc4194e91c0"
     },
     {
       "path": "src/modules/caxecraft/domain/WorldRead.c",
@@ -157,7 +157,7 @@
     },
     {
       "path": "src/modules/caxecraft/qa/DomainProbe.c",
-      "sha256": "4d1d9940a67af4949e4b4f66930f1bcb56db3e0e8f9f638c7e026b652c1c4a93"
+      "sha256": "1d12a051f13c632e57f510b3cf838b8cc3cfe6e3c6c33a1fa75382ddc7fe47b4"
     }
   ],
   "summary": {
@@ -924,7 +924,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/CaxecraftTrace.c",
-      "sha256": "9b2fe97a709cd167082d95e1f429d5cfe75e263fb8edb54dbaf1c02d76a8c11b",
+      "sha256": "536f5df39fed9c573b28340a3c630203bb620fe163183f8f607d28acf08b9a6d",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.CaxecraftTrace",
@@ -1606,7 +1606,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/VoxelRaycast.c",
-      "sha256": "84fd3f75ed49ead47bb6ad7e6914a1fb7129ffd71b6173aeed54b207f7a0e1b8",
+      "sha256": "56f8705236fa07cbeb72001d607d0dac3bbabdf37be9d2a24ad0b2807c43ad37",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.VoxelRaycast",
@@ -1807,7 +1807,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/World.c",
-      "sha256": "485935fca44c2c8965fee572f9445606b32765d91741d766d0b5a69ce6c2adf4",
+      "sha256": "178b4a2009c8f2a635653aad00a24f41077d7b2356c2c88977660bc4194e91c0",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.World",
@@ -1838,17 +1838,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 14,
+              "startLine": 33,
               "startColumn": 57,
-              "endLine": 16,
+              "endLine": 35,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 14,
+            "startLine": 33,
             "startColumn": 57,
-            "endLine": 16,
+            "endLine": 35,
             "endColumn": 3
           },
           "startLine": 3,
@@ -1873,17 +1873,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 10,
+              "startLine": 29,
               "startColumn": 63,
-              "endLine": 12,
+              "endLine": 31,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 10,
+            "startLine": 29,
             "startColumn": 63,
-            "endLine": 12,
+            "endLine": 31,
             "endColumn": 3
           },
           "startLine": 37,
@@ -1908,17 +1908,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 133,
+              "startLine": 152,
               "startColumn": 67,
-              "endLine": 162,
+              "endLine": 181,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 133,
+            "startLine": 152,
             "startColumn": 67,
-            "endLine": 162,
+            "endLine": 181,
             "endColumn": 3
           },
           "startLine": 42,
@@ -1943,17 +1943,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 25,
+              "startLine": 44,
               "startColumn": 55,
-              "endLine": 29,
+              "endLine": 48,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 25,
+            "startLine": 44,
             "startColumn": 55,
-            "endLine": 29,
+            "endLine": 48,
             "endColumn": 3
           },
           "startLine": 129,
@@ -1978,17 +1978,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 68,
+              "startLine": 87,
               "startColumn": 58,
-              "endLine": 73,
+              "endLine": 92,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 68,
+            "startLine": 87,
             "startColumn": 58,
-            "endLine": 73,
+            "endLine": 92,
             "endColumn": 3
           },
           "startLine": 139,
@@ -2013,17 +2013,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 61,
+              "startLine": 80,
               "startColumn": 54,
-              "endLine": 66,
+              "endLine": 85,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 61,
+            "startLine": 80,
             "startColumn": 54,
-            "endLine": 66,
+            "endLine": 85,
             "endColumn": 3
           },
           "startLine": 166,
@@ -2048,17 +2048,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 31,
+              "startLine": 50,
               "startColumn": 54,
-              "endLine": 44,
+              "endLine": 63,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 31,
+            "startLine": 50,
             "startColumn": 54,
-            "endLine": 44,
+            "endLine": 63,
             "endColumn": 3
           },
           "startLine": 193,
@@ -2083,17 +2083,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 46,
+              "startLine": 65,
               "startColumn": 58,
-              "endLine": 59,
+              "endLine": 78,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 46,
+            "startLine": 65,
             "startColumn": 58,
-            "endLine": 59,
+            "endLine": 78,
             "endColumn": 3
           },
           "startLine": 244,
@@ -2118,17 +2118,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 123,
+              "startLine": 142,
               "startColumn": 88,
-              "endLine": 130,
+              "endLine": 149,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 123,
+            "startLine": 142,
             "startColumn": 88,
-            "endLine": 130,
+            "endLine": 149,
             "endColumn": 3
           },
           "startLine": 291,
@@ -2153,17 +2153,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 88,
+              "startLine": 107,
               "startColumn": 77,
-              "endLine": 93,
+              "endLine": 112,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 88,
+            "startLine": 107,
             "startColumn": 77,
-            "endLine": 93,
+            "endLine": 112,
             "endColumn": 3
           },
           "startLine": 329,
@@ -2188,17 +2188,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 114,
+              "startLine": 133,
               "startColumn": 73,
-              "endLine": 120,
+              "endLine": 139,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 114,
+            "startLine": 133,
             "startColumn": 73,
-            "endLine": 120,
+            "endLine": 139,
             "endColumn": 3
           },
           "startLine": 346,
@@ -2223,17 +2223,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 96,
+              "startLine": 115,
               "startColumn": 90,
-              "endLine": 102,
+              "endLine": 121,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 96,
+            "startLine": 115,
             "startColumn": 90,
-            "endLine": 102,
+            "endLine": 121,
             "endColumn": 3
           },
           "startLine": 380,
@@ -2258,17 +2258,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 196,
+              "startLine": 215,
               "startColumn": 57,
-              "endLine": 204,
+              "endLine": 223,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 196,
+            "startLine": 215,
             "startColumn": 57,
-            "endLine": 204,
+            "endLine": 223,
             "endColumn": 3
           },
           "startLine": 398,
@@ -2293,17 +2293,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 206,
+              "startLine": 225,
               "startColumn": 59,
-              "endLine": 210,
+              "endLine": 229,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 206,
+            "startLine": 225,
             "startColumn": 59,
-            "endLine": 210,
+            "endLine": 229,
             "endColumn": 3
           },
           "startLine": 420,
@@ -2515,7 +2515,7 @@
     },
     {
       "path": "src/modules/caxecraft/qa/DomainProbe.c",
-      "sha256": "4d1d9940a67af4949e4b4f66930f1bcb56db3e0e8f9f638c7e026b652c1c4a93",
+      "sha256": "1d12a051f13c632e57f510b3cf838b8cc3cfe6e3c6c33a1fa75382ddc7fe47b4",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.qa.DomainProbe",

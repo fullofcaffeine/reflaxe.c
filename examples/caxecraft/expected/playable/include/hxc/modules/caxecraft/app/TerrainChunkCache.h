@@ -4,14 +4,18 @@
 #include "hxc/detail/program_types.h"
 
 struct hxc_caxecraft_app_TerrainChunkCache {
-  uint8_t hxc_faceX[49152];
-  uint8_t hxc_faceY[49152];
-  uint8_t hxc_faceZ[49152];
-  uint8_t hxc_packedFaces[49152];
-  int32_t hxc_faceCounts[16];
-  int32_t hxc_baseVisible[16];
-  int32_t hxc_adventureVisible[16];
-  uint8_t hxc_dirty[16];
+  uint8_t hxc_faceX0[49152];
+  uint8_t hxc_faceX1[49152];
+  uint8_t hxc_faceY0[49152];
+  uint8_t hxc_faceY1[49152];
+  uint8_t hxc_faceZ0[49152];
+  uint8_t hxc_faceZ1[49152];
+  uint8_t hxc_packedFaces0[49152];
+  uint8_t hxc_packedFaces1[49152];
+  int32_t hxc_faceCounts[32];
+  int32_t hxc_baseVisible[32];
+  int32_t hxc_adventureVisible[32];
+  uint8_t hxc_dirty[32];
 };
 
 struct hxc_caxecraft_app_TerrainChunkPreparation {

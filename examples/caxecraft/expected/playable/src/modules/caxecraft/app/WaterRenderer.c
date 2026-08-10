@@ -266,7 +266,7 @@ struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_dra
       int32_t hxc_l_x = 0;
       while (1)
       {
-        if (!(hxc_l_x < 32))
+        if (!(hxc_l_x < 64))
         {
           break;
         }

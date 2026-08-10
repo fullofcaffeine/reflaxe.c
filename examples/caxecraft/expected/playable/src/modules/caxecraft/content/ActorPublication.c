@@ -171,7 +171,7 @@ bool hxc_caxecraft_content_ActorPublication_validPlan(struct hxc_caxecraft_conte
   bool hxc_l_tmp_short_circuit_result_n5 = hxc_l_tmp_short_circuit_load_result_n11;
   if (hxc_l_tmp_short_circuit_load_result_n11)
   {
-    hxc_l_tmp_short_circuit_result_n5 = hxc_l_plan.hxc_transform.hxc_xMilli < 32000;
+    hxc_l_tmp_short_circuit_result_n5 = hxc_l_plan.hxc_transform.hxc_xMilli < 64000;
   }
   bool hxc_l_tmp_short_circuit_load_result_n14 = hxc_l_tmp_short_circuit_result_n5;
   bool hxc_l_tmp_short_circuit_result_n6 = hxc_l_tmp_short_circuit_load_result_n14;
