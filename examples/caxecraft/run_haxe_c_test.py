@@ -873,7 +873,10 @@ CASES = {
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
-        native_timeout_seconds=40,
+        # This vertical probe parses the shipped entry and destination maps in
+        # an unoptimized native test build. Keep a bounded allowance for the
+        # admitted 64-wide destination while haxe_c-xty2 owns measurement.
+        native_timeout_seconds=120,
     ),
     "resolved-level-plan": HaxeCTestCase(
         case_id="resolved-level-plan",

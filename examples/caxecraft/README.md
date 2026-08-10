@@ -84,10 +84,13 @@ one-block shore performs one collision-checked swim step instead of trapping
 the player at the waterline. Sand is a normal finite Adventure block item, so
 mining a bank is lossless when inventory has room and leaves the world unchanged
 when its stack is full. Underwater mining still requires an equipped capability.
-Western Falls is the second runtime-loaded campaign region. Its safe arrival
-overlook now faces a tall waterfall and pool; a stepped stone route leads to a
+Western Falls is the second runtime-loaded campaign region. Its 64 by 16 by 32
+map includes Evergrove's west river road and the falls terrain. A ridge route
+and a lower streambank route rejoin near the Fallskeeper. An optional Ceesh
+survey note rewards exploration without blocking the main route. The arrival
+overlook faces the falls and pool. A stepped stone route then leads to a
 bridge, a four-material clue shrine, a concealed Tideweave alcove, and distant
-snow and ash silhouettes. Moss now waits at the overlook, points the player
+snow and ash silhouettes. Moss waits near the falls and points the player
 toward the four marks left by the Fallskeeper, and starts the Tideweave route.
 Collecting Tideweave now completes that search and opens the grotto objective;
 collecting the grotto lantern completes the current authored route. Both
@@ -95,12 +98,12 @@ changes come from CaxeFlow rules in the map, not campaign names in engine Haxe.
 Moss also records the current Fallskeeper lead as an authored journal entry.
 Pause after unlocking it to read the latest clue; both languages come from the
 active CaxeMap rather than the executable.
-The runtime loader checks that the edited map remains valid, while the real
-title-to-Adventure Piloscript checks each objective change and captures the
-authored arrival for review. Decorative coordinates are deliberately not
-frozen by a Haxe test, so designers can keep reshaping the route. This is early
-campaign progress, not the finished suit quest: the Fallskeeper encounter,
-exact four-glyph code, opening the vault, and flooded ruins remain open work.
+The runtime loader checks that the edited map remains valid. One real
+title-to-Adventure Piloscript checks the Nia objective and the transition to
+the outdoor region. It also captures the overlook for review. Haxe tests do
+not freeze decorative coordinates, so designers can reshape the route. This
+is early campaign progress, not a finished chapter. More landmarks,
+encounters, route polish, and the flooded ruins remain open work.
 `EntityStore` now keeps a local player and generic non-player in one
 deterministically ordered `Array<Character>`, and `GameSession` advances either
 through the same movement, water, and health rules. Its two focused generated-C

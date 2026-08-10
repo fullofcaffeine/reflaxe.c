@@ -26,17 +26,18 @@ matching stack is full instead of silently deleting items. Adventure checks
 capacity before changing the world; Creative removal remains unlimited. This
 is the first actor loop, not the planned finished game. The
 target-neutral editor command/history/test-play layer now exists, but the
-in-game Raylib interface does not. The menu can choose Creative or Adventure,
-and Adventure can load the admitted two-level campaign from Evergrove to
-Western Falls at runtime. Broader combat and enemies, persistence, complete
+in-game Raylib interface does not. The menu can choose Creative or Adventure.
+Adventure starts in Evergrove and can load the admitted five-level campaign at
+runtime. Broader combat and enemies, persistence, complete
 localization, Ivvy behavior, additional Adventure-cast art, and audio remain
 unimplemented.
 
-Western Falls is now a compact authored region rather than the former flat
-placeholder. Its arrival overlook faces a tall waterfall and pool; a stepped
-route reaches the valley; and a bridge, four-material clue shrine, concealed
-Tideweave alcove, snow shelf, and ash silhouettes establish the planned route's
-first visible landmarks. Moss directs the player to a distinct Fallskeeper.
+Evergrove now has one authored west gate. After Nia gives the player the river
+objective, that gate loads a 64 by 16 by 32 outdoor level. The level joins an
+Evergrove river road to Western Falls. It includes a ridge route, a lower
+streambank route, an overlook story beat, and an optional Ceesh survey note.
+The two routes rejoin near the Fallskeeper. Moss directs the player to that
+distinct character.
 The Fallskeeper repeats the exact bilingual sequence--river, root, moon,
 flame--and adds it to the pause-overlay journal. The objective then points to
 Tideweave, and the current grotto route completes when the player collects its
@@ -46,11 +47,11 @@ The final flame mark opens a solid vault gate before the player can collect
 Tideweave. The NPCs, dialogue, journal text, objectives, gate states, and rules
 live in the Western Falls CaxeMap and can change without rebuilding the game.
 
-Multiple journal entries and larger flooded ruins are still designs rather
-than playable mechanics. Branching, return travel, persistence, authored exit
-zones, and the broader Adventure campaign also remain unimplemented. Do not
-describe concept art, semantic editor tests, or the remaining design-only
-atlases as evidence that those capabilities run.
+The merged outdoor map is a tracer region, not the finished chapter. Its
+terrain still needs more landmarks, route polish, encounters, and play-time.
+Multiple journal entries and larger flooded ruins remain designs. Return
+travel and persistence are also unimplemented. Do not use concept art or
+semantic editor tests as evidence that these features run.
 
 Evergrove itself is now a compact authored village rather than the former flat
 meadow: the runtime-loaded CAXEMAP includes the arrival road and gate, a house,

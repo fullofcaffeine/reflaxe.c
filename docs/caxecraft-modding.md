@@ -152,13 +152,13 @@ before every construction stage leave the active trace unchanged, and repeated
 loads pass Eval, generated native C, and sanitizers.
 
 Inventory setup, dialogue progression, rewards, HUD copy, and rule composition
-still contain temporary Haxe wiring. `haxe_c-xge.20.4` owns removing that
-remaining coupling. The admitted first campaign now loads its manifest from the
-confined staged root, starts in Evergrove, and lets the player press `N` to take
-the sole unambiguous authored exit to Western Falls. The destination is prepared
-privately and replaces the active level only after all checks pass. Branching,
-return travel, save persistence, arbitrary campaign discovery, and arbitrary
-pack discovery remain separate work.
+still contain temporary Haxe wiring. `haxe_c-xge.20.4` owns that remaining
+coupling. The first campaign loads its manifest from the confined staged root.
+It starts in Evergrove. After the player talks to Nia, an authored west-gate
+zone requests the transition to Western Falls. The destination is prepared
+privately. It replaces the active level only after all checks pass. Return
+travel, save persistence, arbitrary campaign discovery, and arbitrary pack
+discovery remain separate work.
 
 ## Where each kind of change belongs
 
@@ -168,7 +168,7 @@ pack discovery remain separate work.
 | dialogue, objectives, and translated story text | the level's CaxeMap | prose travels with the content that uses it |
 | triggers, gifts, state changes, encounters, and progression | CaxeFlow rules inside CaxeMap | these are authored cause-and-effect rules |
 | item, actor, behavior, render, audio, and effect definitions | validated content pack | levels reference stable definitions rather than copying their implementation |
-| level order and transitions | campaign data | the first closed JSON manifest connects two independently valid maps; broader authoring and packaging remain planned |
+| level order and transitions | campaign data | the closed JSON manifest connects independently valid maps; broader authoring and discovery remain planned |
 | movement, inventory transfer, combat, dialogue playback, and rule execution | ordinary typed Haxe | these are reusable game mechanics |
 | menus and product-wide interface text | `locales/ui.json` | global interface text is not level story content |
 | asset selection and provenance | `assets/manifest.json` | this lock selects reviewed visual IDs and records where their bytes came from |

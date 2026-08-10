@@ -4,8 +4,8 @@ map adventure.first-playable
 asset-pack packs/caxecraft/base
 default-locale en
 locale en
-  message adventure_progress "ADVENTURE: PROLOGUE IN PROGRESS"
-  message adventure_tagline "SAVE CEESH. FIND IVVY. STOP BROWSER."
+  message adventure_progress "ASK NIA ABOUT THE WESTERN ROAD"
+  message adventure_tagline "CEESH FOLLOWED THE RIVER. NIA KNOWS WHERE HER TRAIL LEADS."
   message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
@@ -14,8 +14,10 @@ locale en
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "MOSSLING WINDUP: DODGE"
   message guide_talk "E  TALK TO NIA"
-  message guide_welcome "NIA: THE GROVE LISTENS. E: A SMALL GIFT"
+  message guide_welcome "NIA: BROWSER TOOK CEESH AND THE FORGE ARCHIVE. FOLLOW THE RIVER WEST; I LEFT BERRIES FOR THE ROAD."
   message object_use "E  USE"
+  message objective_west_body "CROSS EVERGROVE'S WEST GATE AND FOLLOW THE RIVER TOWARD THE FALLS."
+  message objective_west_title "FOLLOW CEESH'S TRAIL WEST"
   message pickup_many "+2 BERRIES"
   message pickup_one "+1 BERRY"
   message player_fallen "HAXIRIO HAS FALLEN"
@@ -25,8 +27,8 @@ locale en
   message scenario_title "Caxecraft: Evergrove Prologue"
 end locale
 locale es-mx
-  message adventure_progress "AVENTURA: PROLOGO EN CONSTRUCCION"
-  message adventure_tagline "SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER."
+  message adventure_progress "PREGUNTA A NIA POR EL CAMINO DEL OESTE"
+  message adventure_tagline "CEESH SIGUIO EL RIO. NIA SABE ADONDE LLEVA SU RASTRO."
   message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
@@ -35,8 +37,10 @@ locale es-mx
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
   message guide_talk "E  HABLAR CON NIA"
-  message guide_welcome "NIA: EL BOSQUE TE ESCUCHA. E: REGALO"
+  message guide_welcome "NIA: BROWSER SE LLEVO A CEESH Y EL ARCHIVO. SIGUE EL RIO AL OESTE; DEJE BAYAS PARA EL CAMINO."
   message object_use "E  USAR"
+  message objective_west_body "CRUZA LA PUERTA OESTE DE EVERGROVE Y SIGUE EL RIO HACIA LAS CATARATAS."
+  message objective_west_title "SIGUE EL RASTRO DE CEESH AL OESTE"
   message pickup_many "+2 BAYAS"
   message pickup_one "+1 BAYA"
   message player_fallen "HAXIRIO HA CAIDO"
@@ -1118,11 +1122,15 @@ object player.start
   tag player
   placement player-spawn 16500 5000 16500 0
 end object
+object zone.evergrove-west-road
+  tag destination
+  placement trigger-zone 3 0 16 3 16 8
+end object
 dialogue dialogue.nia.welcome
   line speaker guide.nia message guide_welcome
 end dialogue
-objective objective.explore hidden title literal "FIND THE TIDEWEAVE SUIT"
-  body literal "Search beyond the village and test the water route."
+objective objective.explore hidden title message objective_west_title
+  body message objective_west_body
 end objective
 objective objective.prologue active title message adventure_progress
   body message adventure_tagline
@@ -1133,5 +1141,11 @@ rule rule.nia-starts-exploration priority 100 once
   do dialogue dialogue.nia.welcome
   do objective objective.prologue complete
   do objective objective.explore active
+end rule
+rule rule.west-road-enters-the-broad-world priority 100 once
+  when enter-zone zone.evergrove-west-road
+  if (objective objective.explore active)
+  do objective objective.explore complete
+  do campaign-exit evergrove-west
 end rule
 end-map
