@@ -20,32 +20,36 @@ import raylib.raw.Raylib as RawRaylib;
  * `isValid` returned true, and do so before `Raylib.CloseWindow`.
  */
 final class CaxecraftTextures {
+	/** Load one manifest-validated runtime path without requiring a compiled string literal. */
+	public static inline function loadRuntime(path:String):Texture2D
+		return RawRaylib.LoadTexture(c.CStringRef.to(path));
+
 	public static inline function loadTitlePanorama():Texture2D
-		return RawRaylib.LoadTexture("assets/showcase/title-panorama.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/showcase/title-panorama.png"));
 
 	public static inline function loadWordmark():Texture2D
-		return RawRaylib.LoadTexture("assets/branding/caxecraft-wordmark.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/branding/caxecraft-wordmark.png"));
 
 	public static inline function loadHudAtlas():Texture2D
-		return RawRaylib.LoadTexture("assets/atlases/hud.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/atlases/hud.png"));
 
 	public static inline function loadItemAtlas():Texture2D
-		return RawRaylib.LoadTexture("assets/atlases/items.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/atlases/items.png"));
 
 	/** Load campaign item pictures declared by the validated base content pack. */
 	public static inline function loadAdventureItemAtlas():Texture2D
-		return RawRaylib.LoadTexture("assets/atlases/adventure-items.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/atlases/adventure-items.png"));
 
 	public static inline function loadEntityAtlas():Texture2D
-		return RawRaylib.LoadTexture("assets/atlases/entities.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/atlases/entities.png"));
 
 	/** Load the reviewed 4x4 material atlas used by the base voxel renderer. */
 	public static inline function loadTerrainAtlas():Texture2D
-		return RawRaylib.LoadTexture("assets/atlases/terrain.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/atlases/terrain.png"));
 
 	/** Load the reviewed snow and ash pictures used by authored biomes. */
 	public static inline function loadAdventureTerrainAtlas():Texture2D
-		return RawRaylib.LoadTexture("assets/atlases/adventure-terrain.png");
+		return RawRaylib.LoadTexture(c.CStringRef.to("assets/atlases/adventure-terrain.png"));
 
 	public static inline function isValid(texture:Texture2D):Bool
 		return RawRaylib.IsTextureValid(texture);

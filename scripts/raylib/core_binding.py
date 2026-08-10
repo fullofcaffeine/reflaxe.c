@@ -35,6 +35,11 @@ GENERATOR_PATH = "scripts/raylib/core_binding.py"
 HEADER_PLACEHOLDER = "${RAYLIB_HEADER}"
 INCLUDE_PLACEHOLDER = "${RAYLIB_INCLUDE}"
 
+# Raylib reads this path only while LoadTexture executes. Keep the generated
+# source contract call-bounded so runtime-authored asset paths do not need to be
+# misrepresented as static C literals.
+CALL_SCOPED_CSTRING_PARAMETERS = frozenset({("LoadTexture", "fileName")})
+
 
 class BindingFailure(RuntimeError):
     """The selected raw binding could not be proved exactly."""
@@ -1105,9 +1110,14 @@ def render_raylib(functions: object, resource_contracts: object) -> str:
             parameter_name = parameter.get("name")
             if not isinstance(parameter_name, str):
                 raise BindingFailure(f"function {name} has an unnamed parameter")
-            rendered_parameters.append(
-                f"{parameter_name}:{haxe_type(parameter.get('type'))}"
-            )
+            parameter_type = haxe_type(parameter.get("type"))
+            if (name, parameter_name) in CALL_SCOPED_CSTRING_PARAMETERS:
+                if parameter_type != "c.CString":
+                    raise BindingFailure(
+                        f"call-scoped text override {name}.{parameter_name} no longer has const-char ABI"
+                    )
+                parameter_type = "c.CStringRef"
+            rendered_parameters.append(f"{parameter_name}:{parameter_type}")
         if index:
             lines.append("")
         documentation = resource_docs.get(name)

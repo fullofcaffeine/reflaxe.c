@@ -36,11 +36,17 @@ enum HudGlyph {
 final class CaxecraftAtlas {
 	/** Draw one cell from a checked-in 4x4 item or material atlas. */
 	public static function drawWorldSprite(camera:Camera3D, texture:Texture2D, cellIndex:Int, position:Vector3, width:Float, height:Float):Void {
-		if (cellIndex < 0 || cellIndex >= 16)
+		drawAtlasSprite(camera, texture, cellIndex, 4, 4, position, width, height);
+	}
+
+	/** Draw one cell from any validated regular atlas as a world billboard. */
+	public static function drawAtlasSprite(camera:Camera3D, texture:Texture2D, cellIndex:Int, columns:Int, rows:Int, position:Vector3, width:Float,
+			height:Float):Void {
+		if (columns <= 0 || rows <= 0 || cellIndex < 0 || cellIndex >= columns * rows)
 			return;
-		final column = cellIndex % 4;
-		final row = Std.int(cellIndex / 4);
-		CaxecraftTextures.drawAtlasBillboard(camera, texture, column, row, 4, 4, position, width, height, CaxecraftPalette.textureTint());
+		final column = cellIndex % columns;
+		final row = Std.int(cellIndex / columns);
+		CaxecraftTextures.drawAtlasBillboard(camera, texture, column, row, columns, rows, position, width, height, CaxecraftPalette.textureTint());
 	}
 
 	/** Draw exactly one manifest-validated cell from the 4x5 entity atlas. */
@@ -60,16 +66,21 @@ final class CaxecraftAtlas {
 	 * only submits the six visible faces to raylib's current 3D frame.
 	 */
 	public static function drawWorldBox(texture:Texture2D, cellIndex:Int, center:Vector3, width:Float, height:Float, depth:Float):Bool {
-		if (cellIndex < 0 || cellIndex >= 16)
+		return drawAtlasBox(texture, cellIndex, 4, 4, center, width, height, depth);
+	}
+
+	/** Cover one box with a cell from any validated regular atlas grid. */
+	public static function drawAtlasBox(texture:Texture2D, cellIndex:Int, columns:Int, rows:Int, center:Vector3, width:Float, height:Float, depth:Float):Bool {
+		if (columns <= 0 || rows <= 0 || cellIndex < 0 || cellIndex >= columns * rows)
 			return false;
-		final column = cellIndex % 4;
-		final row = Std.int(cellIndex / 4);
+		final column = cellIndex % columns;
+		final row = Std.int(cellIndex / columns);
 		final halfPixelU = 0.5 / texture.width;
 		final halfPixelV = 0.5 / texture.height;
-		final u0 = column / 4.0 + halfPixelU;
-		final u1 = (column + 1) / 4.0 - halfPixelU;
-		final v0 = row / 4.0 + halfPixelV;
-		final v1 = (row + 1) / 4.0 - halfPixelV;
+		final u0 = column / (columns + 0.0) + halfPixelU;
+		final u1 = (column + 1) / (columns + 0.0) - halfPixelU;
+		final v0 = row / (rows + 0.0) + halfPixelV;
+		final v1 = (row + 1) / (rows + 0.0) - halfPixelV;
 		final centerX = center.x.toFloat();
 		final centerY = center.y.toFloat();
 		final centerZ = center.z.toFloat();

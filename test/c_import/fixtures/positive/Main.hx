@@ -4,6 +4,15 @@ typedef PointResources = {
 	final ready:Bool;
 }
 
+/** Owns one copied header-defined value for an ordinary Haxe object lifetime. */
+class PointOwner {
+	public final point:Point;
+
+	/** Store the caller's by-value point without retaining any borrowed address. */
+	public function new(point:Point)
+		this.point = point;
+}
+
 class Main {
 	/**
 	 * Model the shape used by generated localization catalogs: ordinary Haxe
@@ -80,7 +89,8 @@ class Main {
 		var inPlace = PointLib.make(PointLib.one, PointLib.negativeThree);
 		PointLib.translateInPlace(c.Ref.to(inPlace), PointLib.one, PointLib.five);
 		var resources = pointResources(localPoint(PointLib.seven, true));
-		var right = selectPoint(false, left, resources.point);
+		var owner = new PointOwner(resources.point);
+		var right = selectPoint(false, left, owner.point);
 		final zeroed:Point = c.StructInit.zero();
 		left.x = PointLib.one;
 		var delta = left.x;

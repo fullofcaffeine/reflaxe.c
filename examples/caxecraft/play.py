@@ -164,7 +164,6 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/domain/World.c": "c",
     "playable/src/modules/caxecraft/gameplay/WorldItemPickup.c": "c",
 }
-RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items", "adventure-items", "adventure-terrain", "entities", "terrain")
 RUNTIME_ASSET_REPORT = "caxecraft-runtime-assets.json"
 # Caxecraft deliberately uses ordinary Haxe Array, String, Map, enum, and
 # escaping-class APIs. The compiler must therefore select this exact
@@ -474,10 +473,24 @@ def stage_runtime_assets(destination: Path) -> None:
             raise PlayFailure("Caxecraft asset manifest contains a missing or duplicate asset ID")
         by_id[asset_id] = raw_asset
 
+    runtime = manifest.get("runtimeIntegration")
+    if not isinstance(runtime, dict):
+        raise PlayFailure("Caxecraft asset manifest omitted its runtime integration policy")
+    raw_selected_ids = runtime.get("packagedPrimaryAssets")
+    if not isinstance(raw_selected_ids, list) or not raw_selected_ids:
+        raise PlayFailure("Caxecraft asset manifest omitted its packaged runtime assets")
+    selected_ids: list[str] = []
+    selected_id_set: set[str] = set()
+    for asset_id in raw_selected_ids:
+        if not isinstance(asset_id, str) or not asset_id or asset_id in selected_id_set:
+            raise PlayFailure("Caxecraft packaged runtime asset IDs must be unique non-empty strings")
+        selected_ids.append(asset_id)
+        selected_id_set.add(asset_id)
+
     stage_root = destination / "assets"
-    selected: list[dict[str, str]] = []
+    selected: list[dict[str, object]] = []
     expected_files = {RUNTIME_ASSET_REPORT}
-    for asset_id in RUNTIME_ASSET_IDS:
+    for asset_id in selected_ids:
         asset = by_id.get(asset_id)
         if asset is None:
             raise PlayFailure(f"Caxecraft runtime asset {asset_id!r} is missing from the manifest")
@@ -492,8 +505,42 @@ def stage_runtime_assets(destination: Path) -> None:
         actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
         if actual_hash != expected_hash:
             raise PlayFailure(f"Caxecraft runtime asset hash drifted: {raw_path}")
+        kind = asset.get("kind")
+        if not isinstance(kind, str) or not kind:
+            raise PlayFailure(f"Caxecraft runtime asset {asset_id!r} lost its kind")
+        columns = 1
+        rows = 1
+        if kind == "tile-atlas":
+            grid = asset.get("grid")
+            if not isinstance(grid, dict):
+                raise PlayFailure(f"Caxecraft runtime tile atlas {asset_id!r} omitted its grid")
+            raw_columns = grid.get("columns")
+            raw_rows = grid.get("rows")
+            raw_cells = grid.get("cells")
+            if (
+                not isinstance(raw_columns, int)
+                or isinstance(raw_columns, bool)
+                or raw_columns <= 0
+                or not isinstance(raw_rows, int)
+                or isinstance(raw_rows, bool)
+                or raw_rows <= 0
+                or not isinstance(raw_cells, list)
+                or len(raw_cells) != raw_columns * raw_rows
+            ):
+                raise PlayFailure(f"Caxecraft runtime tile atlas {asset_id!r} has an invalid grid")
+            columns = raw_columns
+            rows = raw_rows
         expected_files.add(raw_path)
-        selected.append({"id": asset_id, "path": raw_path, "sha256": expected_hash})
+        selected.append(
+            {
+                "columns": columns,
+                "id": asset_id,
+                "kind": kind,
+                "path": raw_path,
+                "rows": rows,
+                "sha256": expected_hash,
+            }
+        )
 
     if stage_root.exists() or stage_root.is_symlink():
         if stage_root.is_symlink() or not stage_root.is_dir():
@@ -2553,19 +2600,29 @@ def validate_generated_playable(
         raise PlayFailure(
             "generated Caxecraft mining must check capacity before removal, collect after removal, and retain closed full/collected outcomes"
         )
-    # Eight reviewed image owners enter the application, are checked before
-    # use, and leave in reverse order before CloseWindow. Exact counts make a
-    # missing unload or an accidental hidden resource registry fail locally.
-    for function_name, expected_count in (
+    # The eight original image owners remain visible in the application shell.
+    # Supplemental content atlases use a generic manifest-driven owner, whose
+    # load/validate/unload loop appears elsewhere in the generated project.
+    # Failure cleanup legitimately duplicates legacy unload call sites, so
+    # ownership is checked by required presence and final ordering instead of a
+    # brittle repository-wide textual quota.
+    for function_name, minimum_count in (
         ("LoadTexture", 8),
         ("IsTextureValid", 8),
         ("UnloadTexture", 8),
     ):
         actual_count = app.count(f"{function_name}(")
-        if actual_count != expected_count:
+        if actual_count < minimum_count:
             raise PlayFailure(
-                f"generated Caxecraft app contains {actual_count} direct {function_name} call sites; expected {expected_count}"
+                f"generated Caxecraft app contains {actual_count} direct {function_name} call sites; expected at least {minimum_count}"
             )
+    for function_name in ("LoadTexture", "IsTextureValid", "UnloadTexture"):
+        if combined.count(f"{function_name}(") <= app.count(f"{function_name}("):
+            raise PlayFailure(
+                f"generated Caxecraft sources omitted the supplemental runtime-atlas {function_name} owner"
+            )
+    if app.rfind("UnloadTexture(") > app.rfind("CloseWindow("):
+        raise PlayFailure("generated Caxecraft app unloads a legacy texture after CloseWindow")
     draw_texture_count = combined.count("DrawTexturePro(")
     # Title, wordmark, hotbar frame, item, and health-glyph helpers own the
     # original five sites. The equipped-item badge adds one reviewed branch for

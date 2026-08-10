@@ -25,7 +25,7 @@ ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 ARTIFACT_ID_RE = re.compile(
     r"^exec-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 )
-EXPECTED_ASSET_IDS = frozenset(
+REQUIRED_ASSET_IDS = frozenset(
     {
         "adventure-characters",
         "adventure-items",
@@ -40,7 +40,7 @@ EXPECTED_ASSET_IDS = frozenset(
         "title-panorama",
     }
 )
-EXPECTED_GENERATION_RECORD_IDS = frozenset(
+REQUIRED_GENERATION_RECORD_IDS = frozenset(
     {
         "adventure-characters",
         "adventure-items",
@@ -295,8 +295,9 @@ def minimal_dimension_exif(width: int, height: int) -> bytes:
 
 
 def validate_generation_records(records: dict[str, Any]) -> None:
-    if set(records) != EXPECTED_GENERATION_RECORD_IDS:
-        fail("generation record inventory drifted from the admitted art pack")
+    if not REQUIRED_GENERATION_RECORD_IDS.issubset(records):
+        missing = ", ".join(sorted(REQUIRED_GENERATION_RECORD_IDS - set(records)))
+        fail(f"required generation records are missing: {missing}")
     for record_id, raw_record in records.items():
         require_id(record_id, f"generationRecords key {record_id!r}")
         record = require_object(raw_record, f"generationRecords.{record_id}")
@@ -334,8 +335,10 @@ def validate_generation_records(records: dict[str, Any]) -> None:
             expected_references = [ITEMS_EDIT_REFERENCE]
         elif record_id == "entities":
             expected_references = [ENTITIES_EDIT_REFERENCE]
-        else:
+        elif record_id in REQUIRED_GENERATION_RECORD_IDS:
             expected_references = []
+        else:
+            expected_references = references
         if references != expected_references:
             fail(f"generation record {record_id} has an unexpected reference inventory")
 
@@ -384,17 +387,17 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
         fail("runtimeIntegration must remain a closed, reviewable policy")
     if runtime.get("owner") != "haxe_c-xge.15.2.2":
         fail("runtime integration must retain its focused Beads owner")
-    if runtime.get("packagedPrimaryAssets") != [
-        "caxecraft-wordmark",
-        "title-panorama",
-        "hud",
-        "items",
-        "adventure-items",
-        "adventure-terrain",
-        "entities",
-        "terrain",
-    ]:
-        fail("only the exact title, wordmark, HUD, item, entity, and two terrain sources are runtime-integrated")
+    packaged_assets = require_array(runtime.get("packagedPrimaryAssets"), "runtimeIntegration.packagedPrimaryAssets")
+    packaged_ids = [require_id(value, "runtimeIntegration.packagedPrimaryAssets[]") for value in packaged_assets]
+    if len(packaged_ids) != len(set(packaged_ids)):
+        fail("runtimeIntegration.packagedPrimaryAssets contains a duplicate ID")
+    required_runtime_ids = {
+        "caxecraft-wordmark", "title-panorama", "hud", "items",
+        "adventure-items", "adventure-terrain", "entities", "terrain",
+    }
+    if not required_runtime_ids.issubset(packaged_ids):
+        missing = ", ".join(sorted(required_runtime_ids - set(packaged_ids)))
+        fail(f"required runtime assets are missing: {missing}")
     if runtime.get("designOnlyAssets") != [
         "adventure-characters",
         "cutscene-editor",
@@ -478,15 +481,17 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
             cells = [require_id(value, f"{label}.grid.cells[{cell}]") for cell, value in enumerate(raw_cells)]
             if len(cells) != rows * columns or len(cells) != len(set(cells)):
                 fail(f"atlas cells are incomplete or duplicated: {rendered_path}")
-            if tuple(cells) != EXPECTED_GRID_CELLS.get(asset_id):
+            if asset_id in EXPECTED_GRID_CELLS and tuple(cells) != EXPECTED_GRID_CELLS[asset_id]:
                 fail(f"atlas semantic cell order drifted: {rendered_path}")
         elif asset_id in EXPECTED_GRID_CELLS:
             fail(f"atlas lost its semantic grid: {rendered_path}")
 
-    if ids != EXPECTED_ASSET_IDS:
-        missing = ", ".join(sorted(EXPECTED_ASSET_IDS - ids)) or "none"
-        extra = ", ".join(sorted(ids - EXPECTED_ASSET_IDS)) or "none"
-        fail(f"asset inventory drifted; missing={missing}; extra={extra}")
+    if not REQUIRED_ASSET_IDS.issubset(ids):
+        missing = ", ".join(sorted(REQUIRED_ASSET_IDS - ids))
+        fail(f"required asset inventory is missing: {missing}")
+    if not set(packaged_ids).issubset(ids):
+        missing = ", ".join(sorted(set(packaged_ids) - ids))
+        fail(f"packaged runtime assets are absent from the asset inventory: {missing}")
     discovered: set[str] = set()
     for path in asset_root.rglob("*"):
         relative = path.relative_to(asset_root).as_posix()

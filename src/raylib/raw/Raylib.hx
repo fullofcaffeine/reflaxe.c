@@ -157,7 +157,7 @@ extern class Raylib {
 	 * LoadTexture may return an invalid value; callers check IsTextureValid before drawing and do not unload a value that never became valid.
 	 * Call `UnloadTexture` exactly once before closing the graphics device.
 	 */
-	public static function LoadTexture(fileName:c.CString):Texture2D;
+	public static function LoadTexture(fileName:c.CStringRef):Texture2D;
 
 	public static function SetConfigFlags(flags:c.UInt32):Void;
 

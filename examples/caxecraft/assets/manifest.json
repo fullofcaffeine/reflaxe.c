@@ -21,6 +21,7 @@
       "items",
       "adventure-items",
       "adventure-terrain",
+      "castle-gate",
       "entities",
       "terrain"
     ],
@@ -31,7 +32,7 @@
     ],
     "pathPolicy": "Exact manifest paths below the executable assets directory; no host or source-checkout path is embedded.",
     "lifetimePolicy": "Each valid LoadTexture result has one explicit owner and one UnloadTexture call before CloseWindow; copied Texture2D values are non-owning aliases.",
-    "derivation": "The eight packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
+    "derivation": "The nine packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
   },
   "rights": {
     "caxecraft-original": {
@@ -67,6 +68,17 @@
       "promptSummary": "Original seamless 4x4 voxel material atlas for snow, ice, ash, basalt, pine, underwater ruins, castle, copper roof, and bridge runes; edge-to-edge square textures; no text, logos, or copied game textures.",
       "referenceInputs": [],
       "processing": "Selected built-in output and packed to 1024x1024 RGB."
+    },
+    "castle-gate": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-90f9b6f5-a836-4355-9f65-4978fcfff8bd"
+      ],
+      "promptSummary": "Original seamless family-friendly voxel-RPG castle portcullis tile with dark iron bars, charcoal oak, copper rivets, and chain hardware; flat even lighting; no text, characters, logos, watermark, or copied game texture.",
+      "referenceInputs": [
+        "The checked-in Adventure terrain atlas was reviewed only for visual style and material scale; it was not an edit target."
+      ],
+      "processing": "Selected the 1254x1254 RGB built-in output as one primary tile, then normalized its PNG container with the platform encoder to remove private ancillary metadata; pixel dimensions and visual content were unchanged."
     },
     "cutscene-editor": {
       "mode": "openai-built-in-imagegen",
@@ -254,6 +266,26 @@
           "fortress-brick",
           "teal-copper-roof",
           "bridge-rune-tile"
+        ]
+      }
+    },
+    {
+      "id": "castle-gate",
+      "path": "atlases/castle-gate.png",
+      "kind": "tile-atlas",
+      "width": 1254,
+      "height": 1254,
+      "alpha": false,
+      "sha256": "0e0278630196ece89b231c538b2ab4a3ca2cb2d9319b552fc097348f0f6cf9f2",
+      "generationRecord": "castle-gate",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 1,
+        "rows": 1,
+        "cellWidth": 1254,
+        "cellHeight": 1254,
+        "cells": [
+          "sealed-portcullis"
         ]
       }
     },

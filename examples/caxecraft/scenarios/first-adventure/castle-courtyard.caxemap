@@ -853,7 +853,7 @@ object castle.east-relay
 end object
 object castle.inner-gate
   tag landmark
-  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 5000 8500 0
+  placement stateful caxecraft:castle-portcullis caxecraft:sealed 16500 5000 8500 0
 end object
 object castle.inner-lock
   tag clue
@@ -861,7 +861,7 @@ object castle.inner-lock
 end object
 object castle.outer-gate
   tag mechanism
-  placement stateful caxecraft:vault-gate caxecraft:sealed 16500 5000 21500 0
+  placement stateful caxecraft:castle-portcullis caxecraft:sealed 16500 5000 21500 0
 end object
 object castle.west-winch
   tag mechanism

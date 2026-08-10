@@ -24,6 +24,12 @@
     },
     {
       "kind": "asset",
+      "path": "assets/atlases/castle-gate.png",
+      "byteLength": 1653747,
+      "sha256": "0e0278630196ece89b231c538b2ab4a3ca2cb2d9319b552fc097348f0f6cf9f2"
+    },
+    {
+      "kind": "asset",
       "path": "assets/atlases/entities.png",
       "byteLength": 1280129,
       "sha256": "3bf66a401458f3288261b3ee27efe49b4335f54185074e0bde2c19b85573e927"
@@ -55,8 +61,8 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 18461,
-      "sha256": "4afeab8fd096f7e7c726e6335b5cb76ab8727f4740116e10fb5e0e5d265bb9fc"
+      "byteLength": 19800,
+      "sha256": "c6bede9313b2777ba0ac702009ae7c9142574d2e1551a542bd9bb5c0472436d8"
     },
     {
       "kind": "asset",
@@ -68,7 +74,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 1966,
-      "sha256": "233efc0efdba598d3e4e07f194339133c63017a6683a8024e4ec6aedfcb95354"
+      "sha256": "f080bb6183dd52360b785edd02a189e76c7bb1819477d618c714ece562320b11"
     },
     {
       "kind": "localization",
@@ -79,14 +85,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 15575,
-      "sha256": "15c9ce636b0332f437ab0e513b3664f97ae285225eaae5dde7c93eed7c39a657"
+      "byteLength": 16365,
+      "sha256": "9662e374115779a18f3adcf1778ab51645272d938fbe5386e784d767b759f8f7"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "be1b86222200581c8a56cc52fa683775957b58cc0750260f0adaa42e47a0df4e"
+      "sha256": "7a48e8c696a8979918454d7defce3a3a0dbcb1941f19be2c88431f905516ee22"
     },
     {
       "kind": "level",
@@ -97,8 +103,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/castle-courtyard.caxemap",
-      "byteLength": 17332,
-      "sha256": "bdaddf872031dbf62aed0e2eee91a26712515e5f45ccaaca1c8299ef02ba045e"
+      "byteLength": 17346,
+      "sha256": "3a4cd1403918e11951bced3f903e155bff3601bdbc4d3b759e256f0f1555efd8"
     },
     {
       "kind": "level",

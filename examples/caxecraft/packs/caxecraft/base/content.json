@@ -15,6 +15,12 @@
       ]
     },
     {
+      "id": "castle-gate",
+      "cells": [
+        "sealed-portcullis"
+      ]
+    },
+    {
       "id": "entities",
       "cells": [
         "moss-front", "moss-three-quarter", "moss-side", "moss-back",
@@ -383,6 +389,32 @@
   ],
   "prefabs": [],
   "statefulObjects": [
+    {
+      "id": "caxecraft:castle-portcullis",
+      "interaction": "none",
+      "interactionRadiusMilli": 0,
+      "bounds": { "widthMilli": 7000, "heightMilli": 3000, "depthMilli": 500 },
+      "states": [
+        {
+          "id": "caxecraft:open",
+          "collision": "passable",
+          "render": "hidden",
+          "presentation": {
+            "asset": "castle-gate",
+            "cell": "sealed-portcullis"
+          }
+        },
+        {
+          "id": "caxecraft:sealed",
+          "collision": "solid",
+          "render": "visible",
+          "presentation": {
+            "asset": "castle-gate",
+            "cell": "sealed-portcullis"
+          }
+        }
+      ]
+    },
     {
       "id": "caxecraft:ceesh-field-note",
       "interaction": "activate",

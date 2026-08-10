@@ -1,8 +1,10 @@
 {
   "selectedFeatures": [],
   "directDecisions": [
+    "bounded-stack-construction",
     "closed-anonymous-value-records",
     "compiler-planned-eager-static-initialization",
+    "concrete-class-reference-layouts",
     "direct-calls",
     "executable-entry-point",
     "explicit-evaluation-order",
@@ -19,8 +21,10 @@
   "manualOverrides": [],
   "noRuntimeProof": {
     "directDecisions": [
+      "bounded-stack-construction",
       "closed-anonymous-value-records",
       "compiler-planned-eager-static-initialization",
+      "concrete-class-reference-layouts",
       "direct-calls",
       "executable-entry-point",
       "explicit-evaluation-order",
@@ -32,20 +36,20 @@
       "ub-safe-primitive-operations"
     ],
     "reachability": {
-      "typeInstances": 6,
-      "functions": 12,
-      "blocks": 45,
+      "typeInstances": 7,
+      "functions": 13,
+      "blocks": 46,
       "modules": 7,
       "runtimeIntents": 0,
-      "instructions": 251,
-      "cleanupActions": 0
+      "instructions": 261,
+      "cleanupActions": 2
     },
     "programLocalHelpers": [
       "hxc.f64.divide.zero-safe",
       "hxc.i32.add.wrapping",
       "hxc.u32.to.i32.bits"
     ],
-    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls, plus shape-deduplicated closed anonymous records with direct value storage and no runtime intent, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation, with eager static initialization planned and emitted entirely by the compiler",
+    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls, plus shape-deduplicated closed anonymous records with direct value storage and no runtime intent, plus nullable concrete class references with base-prefix subobjects, explicit null checks, and private direct field storage, with compiler-proven stack construction, explicit partial/initialized cleanup order, and no escaping object lifetime, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation, with eager static initialization planned and emitted entirely by the compiler",
     "scope": "reachable-whole-program",
     "status": "eligible",
     "schemaVersion": 1,

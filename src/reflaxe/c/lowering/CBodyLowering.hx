@@ -3645,6 +3645,8 @@ private class ConstructorPreparer {
 					case IRTFloat(width): 'f$width';
 					case _: throw new CBodyEmissionError('constructor primitive `$role` has unexpected IR type `${Std.string(value.irType)}`');
 				}
+			case CBVKImport(value):
+				'c-import:${Std.string(value.semanticValueType())}';
 			case CBVKClass(classValue, nullable):
 				'class-reference:${nullable ? "nullable" : "nonnull"}:${classValue.instanceId}';
 			case CBVKAggregate(aggregate):
@@ -3802,6 +3804,7 @@ private class FunctionBuilder {
 	final initializedStaticStringFields:Map<String, Bool> = [];
 	final initializedManagedStringFields:Map<String, Bool> = [];
 	final initializedManagedDirectFields:Map<String, Bool> = [];
+	final initializedFinalImportFields:Map<String, Bool> = [];
 	final initializedFinalPrimitiveFields:Map<String, Bool> = [];
 	final initializedDirectAggregateFields:Map<String, Bool> = [];
 	final initializedUnmanagedEnumFields:Map<String, Bool> = [];
@@ -4804,6 +4807,9 @@ private class FunctionBuilder {
 			case TBinop(OpAssign, left, right) if (lowerManagedDirectFieldInitializer(left, right)):
 				// A managed enum, record, optional, or Bytes value receives one
 				// exact owner through its already prepared lifecycle plan.
+			case TBinop(OpAssign, left, right) if (lowerFinalImportFieldInitializer(left, right)):
+				// Header-owned structs, enums, and typedef values cross this boundary
+				// by value. The constructor establishes the final field exactly once.
 			case TBinop(OpAssign, left, right) if (lowerFinalPrimitiveFieldInitializer(left, right)):
 				// A primitive is an ownership-free scalar. The declaring
 				// constructor may establish its final value exactly once.
@@ -5155,6 +5161,44 @@ private class FunctionBuilder {
 		final value = captureManagedValue(raw, field.type, right.pos, 'TField($fieldName:managed-field-initializer)');
 		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-managed-field");
 		initializedManagedDirectFields.set(fieldName, true);
+		return true;
+	}
+
+	/**
+	 * Initialize one final header-owned C value in its declaring constructor.
+	 *
+	 * A prepared C import is already proven to be a direct by-value ABI carrier;
+	 * pointer-like and call-bounded borrow abstracts never enter `CBVKImport`.
+	 * Copying that value into a zero-initialized owned Haxe object therefore adds
+	 * no hidden ownership. Only the first direct `this.field = value` is accepted.
+	 */
+	function lowerFinalImportFieldInitializer(left:TypedExpr, right:TypedExpr):Bool {
+		switch prepared.role {
+			case PBRConstructor(_):
+			case _:
+				return false;
+		}
+		final fieldName = switch unwrapExpression(left).expr {
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				switch unwrapExpression(receiver).expr {
+					case TConst(TThis): fieldReference.get().name;
+					case _: return false;
+				}
+			case _:
+				return false;
+		};
+		if (initializedFinalImportFields.exists(fieldName))
+			return false;
+		final self = selfValue;
+		if (self == null)
+			throw new CBodyEmissionError('constructor `${prepared.irId}` lost its self parameter while initializing C-import field `$fieldName`');
+		final owner = self.mapping.classValue();
+		final field = owner == null ? null : owner.field(fieldName);
+		if (field == null || field.mutable || field.type.importedValue() == null)
+			return false;
+		final value = coerce(lowerValue(right, field.type), field.type, right.pos, 'TField($fieldName:C-import-field-initializer)');
+		appendInstruction(null, IRIOStore(IRPField(IRPDereference(self.id), fieldName), value.id), sourceSpan(left.pos), "initialize-C-import-field");
+		initializedFinalImportFields.set(fieldName, true);
 		return true;
 	}
 

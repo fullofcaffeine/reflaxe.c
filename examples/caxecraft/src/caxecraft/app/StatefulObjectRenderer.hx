@@ -20,7 +20,7 @@ import raylib.Vector3;
 /** Draw all active stateful objects using their current content-owned visual. */
 function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSession, level:PlayableLevelView, camera:Camera3D, entityTexture:Texture2D,
 		entityTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool,
-		terrainTexture:Texture2D, terrainTextureReady:Bool):Void {
+		terrainTexture:Texture2D, terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Void {
 	for (index in 0...level.statefulObjectCount()) {
 		final authoredId = level.statefulObjectIdAt(index);
 		if (!session.statefulObjectIsActive(authoredId))
@@ -39,9 +39,9 @@ function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSessio
 		final position = Vector3.fromFloat(transform.xMilli / 1000.0, transform.yMilli / 1000.0 + height * 0.5, transform.zMilli / 1000.0);
 		final boxVisual = width > 1.2 || height > 1.2 || depth > 1.2;
 		final drawn = boxVisual ? drawBoxPresentation(resolved.asset, resolved.cellIndex, position, width, height, depth, entityTexture, entityTextureReady,
-			itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture,
-			terrainTextureReady) : drawPresentation(camera, resolved.asset, resolved.cellIndex, position, entityTexture, entityTextureReady, itemTexture,
-				itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady);
+			itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady,
+			runtimeTextures) : drawPresentation(camera, resolved.asset, resolved.cellIndex, position, entityTexture, entityTextureReady, itemTexture,
+				itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures);
 		if (!drawn)
 			Raylib.DrawCube(position, c.Float32.fromFloat(width), c.Float32.fromFloat(height), c.Float32.fromFloat(depth), CaxecraftPalette.selection());
 	}
@@ -50,7 +50,7 @@ function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSessio
 /** Select one loaded atlas and cover a structure with its authored cell. */
 private function drawBoxPresentation(asset:String, cellIndex:Int, position:Vector3, width:Float, height:Float, depth:Float, entityTexture:Texture2D,
 		entityTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool,
-		terrainTexture:Texture2D, terrainTextureReady:Bool):Bool {
+		terrainTexture:Texture2D, terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Bool {
 	if (asset == "entities" && entityTextureReady)
 		return CaxecraftAtlas.drawWorldBox(entityTexture, cellIndex, position, width, height, depth);
 	if (asset == "items" && itemTextureReady)
@@ -59,13 +59,13 @@ private function drawBoxPresentation(asset:String, cellIndex:Int, position:Vecto
 		return CaxecraftAtlas.drawWorldBox(adventureItemTexture, cellIndex, position, width, height, depth);
 	if (asset == "terrain" && terrainTextureReady)
 		return CaxecraftAtlas.drawWorldBox(terrainTexture, cellIndex, position, width, height, depth);
-	return false;
+	return runtimeTextures.drawBox(asset, cellIndex, position, width, height, depth);
 }
 
 /** Select one loaded world atlas and report whether a picture was drawn. */
 private function drawPresentation(camera:Camera3D, asset:String, cellIndex:Int, position:Vector3, entityTexture:Texture2D, entityTextureReady:Bool,
 		itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool, terrainTexture:Texture2D,
-		terrainTextureReady:Bool):Bool {
+		terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Bool {
 	if (asset == "entities" && entityTextureReady) {
 		CaxecraftAtlas.drawEntitySprite(camera, entityTexture, cellIndex, position, 0.82, 1.16);
 		return true;
@@ -82,6 +82,6 @@ private function drawPresentation(camera:Camera3D, asset:String, cellIndex:Int, 
 		CaxecraftAtlas.drawWorldSprite(camera, terrainTexture, cellIndex, position, 0.82, 1.16);
 		return true;
 	}
-	return false;
+	return runtimeTextures.drawSprite(camera, asset, cellIndex, position, 0.82, 1.16);
 }
 #end

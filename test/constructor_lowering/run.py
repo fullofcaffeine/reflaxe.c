@@ -102,7 +102,7 @@ NEGATIVE_CASES = {
         "TFunction(constructor-argument:source:"
         "interface-retention-must-target-this-field)"
     ),
-    "array_parameter_escape": "TBinop(OpAssign:managed-Array-reassignment-not-admitted)",
+    "array_parameter_escape": "TField(static:values:reference-Array-non-null)",
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
     "owned_mutable": "field:child:owned-class-field-must-be-final",
 }

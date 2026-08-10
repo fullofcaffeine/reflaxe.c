@@ -1,26 +1,22 @@
 /** Proves an Array constructor parameter cannot escape through an unowned field. */
 
-/** A separate object whose mutable field has no constructor ownership proof. */
+/** Holds a process-wide Array whose replacement ownership is not admitted. */
 private final class OtherOwner {
-	/** An existing managed field whose replacement lifetime is not yet admitted. */
-	public var values:Array<Int> = [];
-
-	/** Uses the declaration initializer as this field's one proven owner. */
-	public function new() {}
+	/** A static destination has no instance cleanup owner for a replacement yet. */
+	public static var values:Array<Int> = [];
 }
 
 /** Attempts to retain a constructor parameter outside the object being built. */
 private final class InvalidArrayCapture {
-	final other:OtherOwner = new OtherOwner();
-
 	/**
-	 * This assignment needs a general mutable-field replacement contract.
+	 * This assignment needs a static-field replacement contract.
 	 *
-	 * Until that contract can retain the new value and release the old one
-	 * exactly once, haxe.c must reject it rather than leak or dangle the Array.
+	 * Instance fields now acquire the replacement, release the previous owner,
+	 * and store safely. A static owner has a different lifetime, so haxe.c must
+	 * still reject this escape rather than leak or dangle the Array.
 	 */
 	public function new(values:Array<Int>) {
-		other.values = values;
+		OtherOwner.values = values;
 	}
 }
 

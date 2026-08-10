@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "pointlib.h"
 
@@ -51,12 +52,20 @@ static inline int32_t hxc_i32_add_wrapping(int32_t hxc_l_left, int32_t hxc_l_rig
   return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_l_left + (uint64_t)(uint32_t)hxc_l_right));
 }
 
+struct hxc_PointOwner;
+
 struct hxc_PointResources {
   struct pointlib_point hxc_point;
   bool hxc_ready;
 };
 
+struct hxc_PointOwner {
+  struct pointlib_point hxc_point;
+};
+
 extern int32_t hxc_InlineFloat32Probe_sideEffectCount;
+
+void hxc_compiler_constructor_PointOwner(struct hxc_PointOwner *hxc_l_self, struct pointlib_point hxc_l_point);
 
 float hxc_InlineFloat32Probe_narrowWithoutInlining(double hxc_l_value);
 

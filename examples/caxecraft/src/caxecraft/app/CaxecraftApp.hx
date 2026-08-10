@@ -362,6 +362,28 @@ final class CaxecraftApp {
 		final terrainTextureReady = CaxecraftTextures.isValid(terrainTexture);
 		final adventureTerrainTexture:Texture2D = CaxecraftTextures.loadAdventureTerrainAtlas();
 		final adventureTerrainTextureReady = CaxecraftTextures.isValid(adventureTerrainTexture);
+		final loadedRuntimeTextures = RuntimeTextureAtlasCatalog.load("assets/caxecraft-runtime-assets.json");
+		if (loadedRuntimeTextures == null) {
+			if (adventureTerrainTextureReady)
+				CaxecraftTextures.unload(adventureTerrainTexture);
+			if (terrainTextureReady)
+				CaxecraftTextures.unload(terrainTexture);
+			if (entityTextureReady)
+				CaxecraftTextures.unload(entityTexture);
+			if (adventureItemTextureReady)
+				CaxecraftTextures.unload(adventureItemTexture);
+			if (itemTextureReady)
+				CaxecraftTextures.unload(itemTexture);
+			if (hudTextureReady)
+				CaxecraftTextures.unload(hudTexture);
+			if (wordmarkTextureReady)
+				CaxecraftTextures.unload(wordmarkTexture);
+			if (titleTextureReady)
+				CaxecraftTextures.unload(titleTexture);
+			Raylib.CloseWindow();
+			return;
+		}
+		final runtimeTextures:RuntimeTextureAtlasCatalog = loadedRuntimeTextures;
 		var cameraWaterBlend = 0.0;
 		var inventory:InventoryState = Inventory.starter();
 		#if caxecraft_pilot
@@ -1313,7 +1335,7 @@ final class CaxecraftApp {
 				drawActors(camera, entityTexture, entityTextureReady, dialogueActors, levelView, enemyActor, levelView.enemyActorPresentationCell(),
 					enemyPhase.phase, berryDrop);
 				drawStatefulObjects(contentRegistry, session, levelView, camera, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
-					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady);
+					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)
@@ -1464,6 +1486,7 @@ final class CaxecraftApp {
 		}
 
 		Raylib.EnableCursor();
+		runtimeTextures.unload();
 		if (adventureTerrainTextureReady)
 			CaxecraftTextures.unload(adventureTerrainTexture);
 		if (terrainTextureReady)
