@@ -713,17 +713,17 @@ chunk region.western-falls 0 0 0 32 16 32
   run 4 1
   run 3 3
   run 9 4
-  run 4 4
-  run 3 5
+  run 4 1
+  run 3 8
   run 0 4
   run 4 6
   run 9 1
   run 0 3
   run 9 1
   run 4 1
+  run 2 6
+  run 3 2
   run 0 3
-  run 2 4
-  run 0 4
   run 5 2
   run 0 7
   run 6 1
@@ -732,22 +732,22 @@ chunk region.western-falls 0 0 0 32 16 32
   run 5 1
   run 0 2
   run 9 5
-  run 0 4
-  run 2 4
-  run 0 4
+  run 2 5
+  run 3 2
+  run 0 5
   run 5 2
   run 0 6
   run 9 6
-  run 0 10
-  run 4 4
   run 0 4
+  run 3 7
+  run 0 7
   run 5 2
   run 0 30
   run 5 2
   run 0 30
   run 5 2
-  run 0 29
-  run 6 4
+  run 0 30
+  run 6 3
   run 0 29
   run 6 2
   run 0 131
@@ -766,23 +766,27 @@ chunk region.western-falls 0 0 0 32 16 32
   run 9 1
   run 0 4
   run 9 8
-  run 3 9
+  run 3 1
+  run 4 3
+  run 3 5
   run 0 10
   run 9 1
-  run 0 5
+  run 0 4
+  run 2 1
   run 9 4
-  run 2 3
-  run 0 19
+  run 2 2
+  run 4 2
+  run 0 18
   run 9 4
-  run 0 3
+  run 0 1
+  run 2 2
   run 9 3
-  run 2 3
-  run 0 20
-  run 3 4
-  run 0 3
-  run 9 5
-  run 0 99
-  run 6 4
+  run 4 2
+  run 0 21
+  run 3 2
+  run 4 7
+  run 0 103
+  run 6 3
   run 0 162
   run 1 32
   run 9 32
@@ -798,19 +802,20 @@ chunk region.western-falls 0 0 0 32 16 32
   run 0 4
   run 9 8
   run 3 9
-  run 0 16
+  run 0 15
+  run 2 1
   run 9 4
-  run 2 3
-  run 0 20
+  run 2 2
+  run 3 2
+  run 0 19
   run 9 3
-  run 0 3
+  run 0 1
+  run 2 2
   run 9 3
-  run 2 3
-  run 0 20
-  run 3 4
-  run 0 3
-  run 9 5
-  run 0 265
+  run 3 2
+  run 0 21
+  run 3 9
+  run 0 268
   run 1 32
   run 9 32
   run 2 11
