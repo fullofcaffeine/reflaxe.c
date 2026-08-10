@@ -53,6 +53,10 @@ final class ArrayFieldOwner {
 	public function replaceConditional(useFresh:Bool, borrowed:Array<Int>):Void
 		values = useFresh ? [73] : borrowed;
 
+	/** Store and return one conditionally selected element through the owned field. */
+	public function setConditional(index:Int, selectFirst:Bool):Int
+		return values[index] = selectFirst ? 77 : 88;
+
 	/** Reassign both fields through aliases to the same containers without invalidating them. */
 	public function assignToSelf():Void {
 		final sameValues = values;

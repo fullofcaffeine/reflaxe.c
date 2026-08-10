@@ -148,6 +148,8 @@ function selfCheck():Int {
 	});
 	if (!initialFlowTick.committed
 		|| initialFlowTick.flow == null
+		|| initialFlowTick.flow.firedRules.length != 1
+		|| initialFlowTick.flow.firedRules[0].text() != "rule.fixture-zone-enter"
 		|| initialFlowTick.flow.diagnostics.length != 0
 		|| initialFlowTick.flow.activeObjective == null
 		|| initialFlowTick.flow.activeObjective.text() != "objective.marker")
@@ -239,6 +241,23 @@ function selfCheck():Int {
 	});
 	if (!gatePassed.committed || gatePassed.character.body.x <= gateBlocked.character.body.x)
 		return 123;
+	var leaveRuleCount = 0;
+	var zoneExitTicks = 0;
+	while (zoneExitTicks < 20) {
+		final zoneExit = flowSession.tick({
+			intent: aquaticInput(1.0, 0.0, false, false),
+			damagePolicy: CharacterDamagePolicy.Invulnerable,
+			waterUpdateBudget: 0
+		});
+		if (!zoneExit.committed || zoneExit.flow == null || zoneExit.flow.diagnostics.length != 0)
+			return 124;
+		for (ruleId in zoneExit.flow.firedRules)
+			if (ruleId.text() == "rule.fixture-zone-leave")
+				leaveRuleCount++;
+		zoneExitTicks++;
+	}
+	if (leaveRuleCount != 1)
+		return 125;
 	final collected = flowSession.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Lantern, 1);
 	if (!collected.resolved || collected.collected != 1 || collected.inventory.lantern != 1)
 		return 112;

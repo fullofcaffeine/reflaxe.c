@@ -244,6 +244,15 @@ final class GameSession {
 	/** Semantic events waiting for the next successfully committed fixed tick. */
 	var pendingFlowEvents:Array<FlowEvent> = [];
 
+	/** Stable authored identities for trigger zones in deterministic map order. */
+	var triggerZoneIds:Array<ScenarioId> = [];
+
+	/** Integer x/y/z origin and width/height/depth for each half-open zone. */
+	var triggerZoneBounds:Array<Int> = [];
+
+	/** Last membership reported to CaxeFlow, as one zero/outside or one/inside flag. */
+	var triggerZoneInside:Array<Int> = [];
+
 	/** Deterministic water work state, shared by loading and fixed simulation. */
 	final water:WaterSimulation = new WaterSimulation();
 
@@ -293,7 +302,7 @@ final class GameSession {
 	private function installValidatedScenarioFlow(scenario:Scenario, actorEntities:Array<EntityId>, actorIds:Array<ScenarioId>,
 			itemContentIds:Array<ContentId>, objectIds:Array<ScenarioId>, objectPositionsMilli:Array<Int>, objectRadiiMilli:Array<Int>,
 			objectBoundsMilli:Array<Int>, objectStateStarts:Array<Int>, objectStateCounts:Array<Int>, objectCollisionStates:Array<ContentId>,
-			objectCollisionSolid:Array<Int>):Void {
+			objectCollisionSolid:Array<Int>, zoneIds:Array<ScenarioId>, zoneBounds:Array<Int>):Void {
 		if (flowExecutor != null)
 			throw "CaxeFlow is already installed for this GameSession";
 		if (actorEntities.length != actorIds.length || actorEntities.length != actorControllers.length)
@@ -334,6 +343,13 @@ final class GameSession {
 		for (solid in objectCollisionSolid)
 			if (solid != 0 && solid != 1)
 				throw "CaxeFlow stateful-object collision flag is invalid";
+		if (zoneBounds.length != zoneIds.length * 6)
+			throw "CaxeFlow trigger-zone bindings do not match this GameSession";
+		for (zoneIndex in 0...zoneIds.length) {
+			final offset = zoneIndex * 6;
+			if (zoneBounds[offset + 3] <= 0 || zoneBounds[offset + 4] <= 0 || zoneBounds[offset + 5] <= 0)
+				throw "CaxeFlow trigger-zone bounds are invalid";
+		}
 		authoredActorEntities = actorEntities.copy();
 		authoredActorIds = actorIds.copy();
 		authoredItemContentIds = itemContentIds.copy();
@@ -345,6 +361,11 @@ final class GameSession {
 		statefulObjectStateCounts = objectStateCounts.copy();
 		statefulObjectCollisionStates = objectCollisionStates.copy();
 		statefulObjectCollisionSolid = objectCollisionSolid.copy();
+		triggerZoneIds = zoneIds.copy();
+		triggerZoneBounds = zoneBounds.copy();
+		triggerZoneInside.resize(0);
+		for (_ in triggerZoneIds)
+			triggerZoneInside.push(0);
 		flowExecutor = new CaxeFlowExecutor(scenario);
 		refreshStatefulCollision();
 	}
@@ -1088,6 +1109,7 @@ final class GameSession {
 		if (committed) {
 			final executor = flowExecutor;
 			if (executor != null) {
+				queueTriggerZoneTransitions(characterResult.character);
 				flowResult = executor.runTick({events: pendingFlowEvents, positions: []});
 				pendingFlowEvents.resize(0);
 				refreshStatefulCollision();
@@ -1102,6 +1124,35 @@ final class GameSession {
 			flow: flowResult,
 			committed: committed
 		};
+	}
+
+	/**
+		Queue each trigger-zone boundary crossing once after movement commits.
+
+		A character's body origin is the stable observation point. Bounds use the
+		CAXEMAP half-open voxel rule, so touching an excluded maximum edge counts as
+		leaving. If the bounded event queue is full, the stored membership does not
+		advance; the next committed tick retries the same transition.
+	**/
+	function queueTriggerZoneTransitions(character:Character):Void {
+		for (zoneIndex in 0...triggerZoneIds.length) {
+			final offset = zoneIndex * 6;
+			final minimumX:Float = triggerZoneBounds[offset];
+			final minimumY:Float = triggerZoneBounds[offset + 1];
+			final minimumZ:Float = triggerZoneBounds[offset + 2];
+			final inside = character.body.x >= minimumX
+				&& character.body.x < minimumX + triggerZoneBounds[offset + 3]
+				&& character.body.y >= minimumY
+				&& character.body.y < minimumY + triggerZoneBounds[offset + 4]
+				&& character.body.z >= minimumZ
+				&& character.body.z < minimumZ + triggerZoneBounds[offset + 5];
+			final wasInside = triggerZoneInside[zoneIndex] != 0;
+			if (inside != wasInside) {
+				final event = inside ? FlowEvent.EnterZone(triggerZoneIds[zoneIndex]) : FlowEvent.LeaveZone(triggerZoneIds[zoneIndex]);
+				if (queueFlowEvent(event))
+					triggerZoneInside[zoneIndex] = inside ? 1 : 0;
+			}
+		}
 	}
 
 	/**

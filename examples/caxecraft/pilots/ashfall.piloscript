@@ -48,12 +48,13 @@ hold 243 262 forward-jump
 action 264 interact
 expect 267 object-state ash.bridge-gate=caxecraft:open
 
-# The real player crosses the opened timber span and reaches the still-sealed
-# castle road. This is the chapter boundary, not a claim that the castle exists.
+# The real player crosses the opened timber span and enters the castle-road
+# trigger zone. Its journal entry is the durable chapter-boundary observation;
+# the generic engine does not know which campaign authored it.
 action 268 interact
 hold 269 300 forward-jump
 hold 301 324 forward
-expect 326 objective objective.reach-castle-road
+expect 326 journal journal.castle-road
 
 # Step back from the castle marker and turn toward the restored approach. The
 # final frame is review evidence, so it should show the place reached instead

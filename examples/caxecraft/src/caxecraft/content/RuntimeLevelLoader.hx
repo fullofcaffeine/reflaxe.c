@@ -16,6 +16,7 @@ import caxecraft.domain.EntityId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioLexer;
@@ -477,6 +478,8 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 			final statefulObjectStateCounts:Array<Int> = [];
 			final statefulObjectCollisionStates:Array<ContentId> = [];
 			final statefulObjectCollisionSolid:Array<Int> = [];
+			final triggerZoneIds:Array<ScenarioId> = [];
+			final triggerZoneBounds:Array<Int> = [];
 			for (binding in generation.actorBindings()) {
 				actorEntities.push(binding.entityId);
 				actorIds.push(binding.authoredId);
@@ -503,10 +506,22 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 					});
 				}
 			}
+			for (object in scenario.objects)
+				switch object.placement {
+					case TriggerZone(bounds):
+						triggerZoneIds.push(object.id);
+						triggerZoneBounds.push(bounds.origin.x);
+						triggerZoneBounds.push(bounds.origin.y);
+						triggerZoneBounds.push(bounds.origin.z);
+						triggerZoneBounds.push(bounds.size.width);
+						triggerZoneBounds.push(bounds.size.height);
+						triggerZoneBounds.push(bounds.size.depth);
+					case _:
+				}
 			generation.session()
 				.installValidatedScenarioFlow(scenario, actorEntities, actorIds, itemContentIds, statefulObjectIds, statefulObjectPositionsMilli,
 					statefulObjectRadiiMilli, statefulObjectBoundsMilli, statefulObjectStateStarts, statefulObjectStateCounts, statefulObjectCollisionStates,
-					statefulObjectCollisionSolid);
+					statefulObjectCollisionSolid, triggerZoneIds, triggerZoneBounds);
 			RuntimeLevelReady(new RuntimeLevelCandidate(generation, {
 				authority: input.authority,
 				rootLabel: input.rootLabel,

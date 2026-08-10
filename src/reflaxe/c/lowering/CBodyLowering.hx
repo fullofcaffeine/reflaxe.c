@@ -9590,12 +9590,21 @@ private class FunctionBuilder {
 		final array = receiverMapping.arrayValue();
 		if (array == null)
 			return null;
-		final receiver = coerce(lowerValue(indexed.collection, receiverMapping), receiverMapping, indexed.collection.pos, "TArray(set:receiver)");
+		final receiver = stabilizeFreshManagedArray(coerce(lowerValue(indexed.collection, receiverMapping), receiverMapping, indexed.collection.pos,
+			"TArray(set:receiver)"), indexed.collection.pos,
+			"array-set-receiver");
+		final receiverAcrossIndex = stageFlowValue(receiver, indexed.collection, expressionCreatesFlow(indexed.index), "array-set-receiver");
 		final indexMapping = CBodyValueType.primitive(primitiveMapping(indexed.index.t, indexed.index.pos, "TArray(set:index-type)"));
 		if (typeKey(indexMapping.irType) != typeKey(IRTInt(32, true)))
 			return unsupported(indexed.index, "TArray(set:index-must-be-Int)");
 		final index = coerce(lowerValue(indexed.index, indexMapping), indexMapping, indexed.index.pos, "TArray(set:index)");
+		final restoredReceiver = restoreStagedLoweredValue(receiverAcrossIndex, "array-set-receiver-load");
+		final rightCreatesFlow = expressionCreatesFlow(right);
+		final receiverForSet = stageFlowValue(restoredReceiver, indexed.collection, rightCreatesFlow, "array-set-value-receiver");
+		final indexForSet = stageFlowValue(index, indexed.index, rightCreatesFlow, "array-set-value-index");
 		final element = coerce(lowerValue(right, array.element), array.element, right.pos, "TArray(set:value)");
+		final stableReceiver = restoreStagedLoweredValue(receiverForSet, "array-set-value-receiver-load");
+		final stableIndex = restoreStagedLoweredValue(indexForSet, "array-set-value-index-load");
 		final resultMapping = bodyValueType(expression.t, expression.pos, "TArray(set:result-type)");
 		if (typeKey(resultMapping.irType) != typeKey(array.element.irType))
 			return unsupported(expression, "TArray(set:assignment-result-mismatch)");
@@ -9603,7 +9612,7 @@ private class FunctionBuilder {
 		final source = sourceSpan(expression.pos);
 		appendInstruction(result, IRIOCall({
 			dispatch: IRCDRuntime("array", "set"),
-			arguments: [receiver.id, index.id, element.id],
+			arguments: [stableReceiver.id, stableIndex.id, element.id],
 			returnType: result.type,
 			failure: managedArrayFailure()
 		}), source, "array-set");

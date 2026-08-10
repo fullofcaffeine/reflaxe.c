@@ -119,6 +119,7 @@ final class Main {
 		fieldOwner.replaceConditional(false, conditionalFieldValues);
 		final borrowedConditionalFieldValues = fieldOwner.values;
 		fieldOwner.replaceConditional(true, conditionalFieldValues);
+		final conditionalFieldElement = fieldOwner.setConditional(0, true);
 		final clearedIntegers = [31, 32, 33];
 		final clearedIntegersAlias = clearedIntegers;
 		clearedIntegers.resize(0);
@@ -127,6 +128,7 @@ final class Main {
 		final emptyCopy = ([] : Array<Int>).copy();
 		final valuesCopy = values.copy();
 		valuesCopy[0] = 99;
+		valuesCopy[1] = firstConditionalValue == 10 ? 77 : 88;
 		valuesCopy.push(30);
 		final returnedCopy = copyAndAppend(values);
 		// Build this through the ordinary managed Array operations so the test
@@ -278,7 +280,8 @@ final class Main {
 			|| borrowedConditionalFieldValues[0] != 30
 			|| borrowedConditionalFieldValues[1] != 12
 			|| fieldOwner.values.length != 1
-			|| fieldOwner.values[0] != 73
+			|| fieldOwner.values[0] != 77
+			|| conditionalFieldElement != 77
 			|| fieldOwner.labels.length != 0
 			|| clearedIntegersAlias.length != 0
 			|| clearedRecordsAlias.length != 0
@@ -287,6 +290,7 @@ final class Main {
 			|| emptyCopy.length != 0
 			|| valuesCopy.length != 3
 			|| valuesCopy[0] != 99
+			|| valuesCopy[1] != 77
 			|| values[0] != 10
 			|| returnedCopy.length != 3
 			|| returnedCopy[2] != 77

@@ -44,6 +44,10 @@ object object.glyph-control
   tag interaction
   placement stateful caxecraft:glyph-control caxecraft:active 2500 1000 1500 0
 end object
+object zone.fixture-start
+  tag qa
+  placement trigger-zone 1 0 1 1 3 1
+end object
 object player.start
   tag player
   placement player-spawn 1500 1000 1500 0
@@ -66,6 +70,8 @@ end objective
 objective objective.equipped hidden title literal "Equipment reached authored rules"
   body literal "A committed aquatic-equipment pickup selected this objective."
 end objective
+variable fixture.zone-entered map flag false
+variable fixture.zone-left map flag false
 rule rule.fixture-advance priority 10 once
   when interact guide.nia
   if (always)
@@ -89,5 +95,15 @@ rule rule.fixture-equip priority 10 once
   if (always)
   do objective objective.collected complete
   do objective objective.equipped active
+end rule
+rule rule.fixture-zone-enter priority 20 repeat
+  when enter-zone zone.fixture-start
+  if (always)
+  do set-flag fixture.zone-entered true
+end rule
+rule rule.fixture-zone-leave priority 20 repeat
+  when leave-zone zone.fixture-start
+  if (always)
+  do set-flag fixture.zone-left true
 end rule
 end-map
