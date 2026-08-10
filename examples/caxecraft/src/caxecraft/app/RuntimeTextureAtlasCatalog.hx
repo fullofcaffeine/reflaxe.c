@@ -13,10 +13,10 @@ import raylib.Texture2D;
 import raylib.Vector3;
 
 /**
- * Owns reloadable tile atlases that are not part of the original fixed renderer.
+ * Owns reloadable grid atlases that are not part of the original fixed renderer.
  *
  * The launcher writes a validated runtime-asset receipt beside the executable.
- * This catalog reads that receipt, loads every additional tile atlas, and keeps
+ * This catalog reads that receipt, loads every additional tile, sprite, or icon atlas, and keeps
  * the GPU handle paired with its authored grid dimensions. New campaign art can
  * therefore be staged and drawn without adding its ID to compiled Haxe. The
  * original renderer atlases remain separate for now so this focused migration
@@ -30,7 +30,7 @@ final class RuntimeTextureAtlasCatalog {
 		this.atlases = atlases;
 
 	/**
-	 * Parse the staged receipt and load every additional tile atlas.
+	 * Parse the staged receipt and load every additional grid atlas.
 	 *
 	 * A malformed receipt, duplicate ID, unsafe path, or failed texture load
 	 * returns `null`. Any handles loaded before a later failure are released
@@ -73,7 +73,7 @@ final class RuntimeTextureAtlasCatalog {
 					return null;
 				}
 			seen.push(record.id);
-			if (record.kind != "tile-atlas" || isLegacyRendererAtlas(record.id))
+			if (!runtimeAtlasKind(record.kind) || isLegacyRendererAtlas(record.id))
 				continue;
 			final texture = CaxecraftTextures.loadRuntime("assets/" + record.path);
 			if (!CaxecraftTextures.isValid(texture)) {
@@ -149,6 +149,10 @@ final class RuntimeTextureAtlasCatalog {
 			case PathAccepted(_): true;
 			case PathRejected(_): false;
 		};
+
+	/** Admit only manifest kinds whose files carry an authored rectangular cell grid. */
+	private static function runtimeAtlasKind(kind:String):Bool
+		return kind == "tile-atlas" || kind == "sprite-atlas" || kind == "icon-atlas";
 
 	/** Keep original fixed atlas owners out of this migration to avoid loading one GPU resource twice. */
 	private static function isLegacyRendererAtlas(id:String):Bool

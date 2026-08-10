@@ -30,6 +30,12 @@
     },
     {
       "kind": "asset",
+      "path": "assets/atlases/castle-mechanisms.png",
+      "byteLength": 1447199,
+      "sha256": "0da18e9299aec1bf34a7ba03d0079b88d039bceefb92e967ff5b6088d87fbcc8"
+    },
+    {
+      "kind": "asset",
       "path": "assets/atlases/entities.png",
       "byteLength": 1280129,
       "sha256": "3bf66a401458f3288261b3ee27efe49b4335f54185074e0bde2c19b85573e927"
@@ -61,8 +67,8 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 19800,
-      "sha256": "c6bede9313b2777ba0ac702009ae7c9142574d2e1551a542bd9bb5c0472436d8"
+      "byteLength": 21489,
+      "sha256": "e381a7988c2d743aac97bffc012aea00e37548056d78b82f5f182475c86edc63"
     },
     {
       "kind": "asset",
@@ -85,14 +91,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 16365,
-      "sha256": "9662e374115779a18f3adcf1778ab51645272d938fbe5386e784d767b759f8f7"
+      "byteLength": 16621,
+      "sha256": "e8f08689fc562c1027f038c8505b3eb1400a83099f83d7b189716a69900429c5"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "7a48e8c696a8979918454d7defce3a3a0dbcb1941f19be2c88431f905516ee22"
+      "sha256": "01a4eadd3fcd3e1fc9187a1ce51a05179b3a1b7589c6dc2c3d744238902ba50b"
     },
     {
       "kind": "level",

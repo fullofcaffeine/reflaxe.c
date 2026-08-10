@@ -191,6 +191,7 @@ RUNTIME_CONTENT_ENTRY_KINDS = frozenset(
     ("campaign", "content-pack", "level", "localization", "runtime-content")
 )
 RUNTIME_ASSET_ENTRY_KINDS = frozenset(("asset", "asset-manifest"))
+RUNTIME_GRID_ASSET_KINDS = frozenset(("icon-atlas", "sprite-atlas", "tile-atlas"))
 RUNTIME_LAUNCHER_FILES = ("pilots/active.piloscript",)
 
 
@@ -510,10 +511,10 @@ def stage_runtime_assets(destination: Path) -> None:
             raise PlayFailure(f"Caxecraft runtime asset {asset_id!r} lost its kind")
         columns = 1
         rows = 1
-        if kind == "tile-atlas":
+        if kind in RUNTIME_GRID_ASSET_KINDS:
             grid = asset.get("grid")
             if not isinstance(grid, dict):
-                raise PlayFailure(f"Caxecraft runtime tile atlas {asset_id!r} omitted its grid")
+                raise PlayFailure(f"Caxecraft runtime atlas {asset_id!r} omitted its grid")
             raw_columns = grid.get("columns")
             raw_rows = grid.get("rows")
             raw_cells = grid.get("cells")
@@ -527,7 +528,7 @@ def stage_runtime_assets(destination: Path) -> None:
                 or not isinstance(raw_cells, list)
                 or len(raw_cells) != raw_columns * raw_rows
             ):
-                raise PlayFailure(f"Caxecraft runtime tile atlas {asset_id!r} has an invalid grid")
+                raise PlayFailure(f"Caxecraft runtime atlas {asset_id!r} has an invalid grid")
             columns = raw_columns
             rows = raw_rows
         expected_files.add(raw_path)
@@ -1665,7 +1666,6 @@ def play_build_inputs(args: argparse.Namespace) -> list[InputPath]:
         InputPath("repo/caxecraft/play.hxml", CASE / "play.hxml"),
         InputPath("repo/caxecraft/pilot-catalog.json", PILOT_CATALOG_PATH),
         InputPath("repo/caxecraft/src", CASE / "src"),
-        InputPath("repo/caxecraft/assets", CASE / "assets"),
         *source_tooling_inputs(),
         InputPath("tooling/haxeshim.js", resolved_executable(development_tool("haxe"), "Haxe shim")),
         *haxe_install_inputs(),

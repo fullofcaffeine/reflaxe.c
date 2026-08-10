@@ -36,6 +36,7 @@ from play import (  # noqa: E402
     play_build_inputs,
     runtime_content_files,
     stage_content_catalogs,
+    stage_runtime_assets,
     tool_identity,
     validate_content_platform_output,
 )
@@ -197,6 +198,32 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         staged.write_text("new authored world\n", encoding="utf-8")
         decision = self.decision()
         self.assertTrue(decision.hit)
+
+    def test_runtime_asset_receipt_preserves_every_selected_atlas_grid(self) -> None:
+        """Sprite, icon, and tile atlases keep their authored cell geometry."""
+        destination = self.root / "runtime-stage"
+        destination.mkdir()
+        stage_runtime_assets(destination)
+        manifest = json.loads((CASE / "assets/manifest.json").read_text(encoding="utf-8"))
+        report = json.loads(
+            (destination / "assets/caxecraft-runtime-assets.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        selected_ids = set(manifest["runtimeIntegration"]["packagedPrimaryAssets"])
+        expected = {
+            asset["id"]: (
+                asset.get("grid", {}).get("columns", 1),
+                asset.get("grid", {}).get("rows", 1),
+            )
+            for asset in manifest["assets"]
+            if asset["id"] in selected_ids
+        }
+        actual = {
+            asset["id"]: (asset["columns"], asset["rows"])
+            for asset in report["assets"]
+        }
+        self.assertEqual(actual, expected)
 
     def test_alternate_runtime_content_is_staged_from_its_exact_source_bytes(self) -> None:
         source_root = self.root / "content-source"
@@ -455,7 +482,6 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "repo/vendor/reflaxe",
             "repo/caxecraft/play.hxml",
             "repo/caxecraft/src",
-            "repo/caxecraft/assets",
             "repo/caxecraft/tooling/play.py",
             "repo/caxecraft/tooling/dev_build_state.py",
             "repo/caxecraft/tooling/dev_generation.py",
@@ -471,6 +497,7 @@ class CaxecraftBuildStateTests(unittest.TestCase):
             "haxe/std",
         }
         self.assertTrue(required_roots.issubset(logical_names))
+        self.assertNotIn("repo/caxecraft/assets", logical_names)
         self.assertNotIn("repo/caxecraft/locales", logical_names)
         self.assertNotIn("repo/caxecraft/packs", logical_names)
         self.assertNotIn("repo/caxecraft/scenarios", logical_names)

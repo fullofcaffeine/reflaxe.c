@@ -531,16 +531,17 @@ def check_outer_application_boundary() -> None:
 
 
 def check_runtime_campaign_staging_boundary() -> None:
-    """Keep campaign/map bytes staged at launch and outside the compile identity."""
-    required = {
+    """Keep package content staged at launch and outside the compile identity."""
+    staged_content = {
         "campaigns/first-adventure/campaign.json",
         "scenarios/first-adventure/western-falls.caxemap",
         "scenarios/first-playable/map.caxemap",
     }
     staged = set(playable.runtime_content_files(CASE))
-    if not required <= staged:
+    if not staged_content <= staged:
         raise PilotFailure(
-            "runtime campaign staging lost " + ", ".join(sorted(required - staged))
+            "runtime campaign staging lost "
+            + ", ".join(sorted(staged_content - staged))
         )
 
     request_inputs = playable.play_build_inputs(
@@ -550,7 +551,11 @@ def check_runtime_campaign_staging_boundary() -> None:
             {"source": None, "raygui_source": None, "prebuilt_raylib_report": None},
         )()
     )
-    for relative in required:
+    runtime_paths = staged_content | {
+        "assets/manifest.json",
+        "assets/atlases/terrain.png",
+    }
+    for relative in runtime_paths:
         runtime_path = (CASE / relative).resolve()
         for build_input in request_inputs:
             build_path = build_input.path.resolve()

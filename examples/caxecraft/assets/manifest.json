@@ -22,6 +22,7 @@
       "adventure-items",
       "adventure-terrain",
       "castle-gate",
+      "castle-mechanisms",
       "entities",
       "terrain"
     ],
@@ -32,7 +33,7 @@
     ],
     "pathPolicy": "Exact manifest paths below the executable assets directory; no host or source-checkout path is embedded.",
     "lifetimePolicy": "Each valid LoadTexture result has one explicit owner and one UnloadTexture call before CloseWindow; copied Texture2D values are non-owning aliases.",
-    "derivation": "The nine packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
+    "derivation": "The ten packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
   },
   "rights": {
     "caxecraft-original": {
@@ -79,6 +80,17 @@
         "The checked-in Adventure terrain atlas was reviewed only for visual style and material scale; it was not an edit target."
       ],
       "processing": "Selected the 1254x1254 RGB built-in output as one primary tile, then normalized its PNG container with the platform encoder to remove private ancillary metadata; pixel dimensions and visual content were unchanged."
+    },
+    "castle-mechanisms": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-b07857bc-c3ab-4b91-94c0-ec164e6b6dca"
+      ],
+      "promptSummary": "Original transparent 3x2 family-friendly voxel-RPG castle interaction atlas: Ceesh field note, gate winch, and crystal relay, each with a visually matched waiting and completed state; teal, copper, charcoal, cream, and dark slate; no fire, checkpoint marker, readable text, logo, or watermark.",
+      "referenceInputs": [
+        "The checked-in Adventure item and castle-gate atlases were reviewed only for visual style, material language, and scale; neither was an edit target."
+      ],
+      "processing": "Selected the built-in 1536x1024 output, removed its flat magenta chroma key with the installed border-key soft-matte/despill helper, retained the regular 3x2 512-pixel cell grid, and normalized the PNG container with the platform encoder to remove private ancillary metadata."
     },
     "cutscene-editor": {
       "mode": "openai-built-in-imagegen",
@@ -286,6 +298,31 @@
         "cellHeight": 1254,
         "cells": [
           "sealed-portcullis"
+        ]
+      }
+    },
+    {
+      "id": "castle-mechanisms",
+      "path": "atlases/castle-mechanisms.png",
+      "kind": "sprite-atlas",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "0da18e9299aec1bf34a7ba03d0079b88d039bceefb92e967ff5b6088d87fbcc8",
+      "generationRecord": "castle-mechanisms",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 3,
+        "rows": 2,
+        "cellWidth": 512,
+        "cellHeight": 512,
+        "cells": [
+          "ceesh-note-waiting",
+          "gate-winch-waiting",
+          "gate-relay-waiting",
+          "ceesh-note-read",
+          "gate-winch-engaged",
+          "gate-relay-active"
         ]
       }
     },

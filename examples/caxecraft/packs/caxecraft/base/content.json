@@ -21,6 +21,13 @@
       ]
     },
     {
+      "id": "castle-mechanisms",
+      "cells": [
+        "ceesh-note-waiting", "gate-winch-waiting", "gate-relay-waiting",
+        "ceesh-note-read", "gate-winch-engaged", "gate-relay-active"
+      ]
+    },
+    {
       "id": "entities",
       "cells": [
         "moss-front", "moss-three-quarter", "moss-side", "moss-back",
@@ -426,8 +433,8 @@
           "collision": "passable",
           "render": "visible",
           "presentation": {
-            "asset": "adventure-items",
-            "cell": "checkpoint"
+            "asset": "castle-mechanisms",
+            "cell": "ceesh-note-read"
           }
         },
         {
@@ -435,8 +442,8 @@
           "collision": "passable",
           "render": "visible",
           "presentation": {
-            "asset": "adventure-items",
-            "cell": "ceesh-scroll"
+            "asset": "castle-mechanisms",
+            "cell": "ceesh-note-waiting"
           }
         }
       ]
@@ -452,8 +459,8 @@
           "collision": "passable",
           "render": "visible",
           "presentation": {
-            "asset": "adventure-items",
-            "cell": "checkpoint"
+            "asset": "castle-mechanisms",
+            "cell": "gate-relay-active"
           }
         },
         {
@@ -461,8 +468,8 @@
           "collision": "passable",
           "render": "visible",
           "presentation": {
-            "asset": "adventure-items",
-            "cell": "bridge-routing-elbow"
+            "asset": "castle-mechanisms",
+            "cell": "gate-relay-waiting"
           }
         }
       ]
@@ -478,8 +485,8 @@
           "collision": "passable",
           "render": "visible",
           "presentation": {
-            "asset": "adventure-items",
-            "cell": "checkpoint"
+            "asset": "castle-mechanisms",
+            "cell": "gate-winch-engaged"
           }
         },
         {
@@ -487,8 +494,8 @@
           "collision": "passable",
           "render": "visible",
           "presentation": {
-            "asset": "adventure-items",
-            "cell": "bridge-input"
+            "asset": "castle-mechanisms",
+            "cell": "gate-winch-waiting"
           }
         }
       ]
