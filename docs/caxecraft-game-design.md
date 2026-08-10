@@ -35,7 +35,8 @@ unimplemented.
 Evergrove now has one authored west gate. After Nia gives the player the river
 objective, that gate loads a 64 by 16 by 32 outdoor level. The level joins an
 Evergrove river road to Western Falls. It includes a ridge route, a lower
-streambank route, an overlook story beat, and an optional Ceesh survey note.
+streambank route, and an overlook story beat. A walk-through root arch frames
+the split. A bread cache and Ceesh survey note reward the quieter lower side.
 The two routes rejoin near the Fallskeeper. Moss directs the player to that
 distinct character.
 The Fallskeeper repeats the exact bilingual sequence--river, root, moon,

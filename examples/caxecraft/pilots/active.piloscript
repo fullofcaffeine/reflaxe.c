@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name adventure-journey
-frames 145
+frames 170
 
 # Enter Adventure and launch the campaign's real Evergrove entry level.
 action 0 menu-next
@@ -42,8 +42,9 @@ expect 125 generation 3
 expect 125 publications 2
 
 action 126 interact
-action 135 pause
-checkpoint 135 capture final
-expect 135 screen paused
-expect 135 level western-falls
+hold 127 158 turn-left
+action 160 pause
+checkpoint 160 capture final
+expect 160 screen paused
+expect 160 level western-falls
 end

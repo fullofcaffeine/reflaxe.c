@@ -86,9 +86,10 @@ mining a bank is lossless when inventory has room and leaves the world unchanged
 when its stack is full. Underwater mining still requires an equipped capability.
 Western Falls is the second runtime-loaded campaign region. Its 64 by 16 by 32
 map includes Evergrove's west river road and the falls terrain. A ridge route
-and a lower streambank route rejoin near the Fallskeeper. An optional Ceesh
-survey note rewards exploration without blocking the main route. The arrival
-overlook faces the falls and pool. A stepped stone route then leads to a
+and a lower streambank route start beneath a walk-through root arch. They
+rejoin near the Fallskeeper. A bread cache and optional Ceesh survey note
+reward exploration without blocking the main route. The arrival overlook
+faces the falls and pool. A stepped stone route then leads to a
 bridge, a four-material clue shrine, a concealed Tideweave alcove, and distant
 snow and ash silhouettes. Moss waits near the falls and points the player
 toward the four marks left by the Fallskeeper, and starts the Tideweave route.
