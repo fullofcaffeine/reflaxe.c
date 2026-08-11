@@ -3245,7 +3245,30 @@ def read_agent_response(
         return observation
 
 
-def run_agent_session(executable: Path, record_directory: Path | None) -> int:
+def prepare_agent_session_screenshot(
+    executable: Path,
+    observation: dict[str, object],
+    raylib_configuration: str,
+) -> None:
+    """Make the response screenshot directly reviewable before publication."""
+    if raylib_configuration != "memory-software":
+        return
+    screenshot = observation.get("screenshot")
+    if screenshot == "none":
+        return
+    if screenshot != "caxecraft-agent-session.png":
+        raise PlayFailure("the live Caxecraft process named an unknown agent screenshot")
+    path = executable.parent / screenshot
+    if path.is_symlink() or not path.is_file():
+        raise PlayFailure("the live Caxecraft process did not publish its agent screenshot")
+    normalize_memory_software_capture(path)
+
+
+def run_agent_session(
+    executable: Path,
+    record_directory: Path | None,
+    raylib_configuration: str,
+) -> int:
     """Keep one game process alive while stdin supplies bounded Piloscript batches."""
 
     active_request = executable.parent / "content/pilots/active.piloscript"
@@ -3276,6 +3299,7 @@ def run_agent_session(executable: Path, record_directory: Path | None) -> int:
     recorded_requests = 0
     try:
         initial = read_agent_response(process, selector, timeout_seconds=15.0)
+        prepare_agent_session_screenshot(executable, initial, raylib_configuration)
         print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(initial, ensure_ascii=False, separators=(",", ":")), flush=True)
         for input_line in sys.stdin:
             if not input_line.strip():
@@ -3297,6 +3321,7 @@ def run_agent_session(executable: Path, record_directory: Path | None) -> int:
                 continue
             last_payload = publish_agent_request(active_request, envelope["piloscript"])
             response = read_agent_response(process, selector, timeout_seconds=15.0)
+            prepare_agent_session_screenshot(executable, response, raylib_configuration)
             print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
             if record_directory is not None and response.get("type") != "error":
                 recorded_requests += 1
@@ -3911,7 +3936,7 @@ def main(argv: list[str]) -> int:
             return 0
         if args.agent_session:
             print("caxecraft: live agent session ready; send one JSON envelope per line", flush=True)
-            return run_agent_session(executable, args.agent_record_dir)
+            return run_agent_session(executable, args.agent_record_dir, args.raylib_configuration)
         if selected_pilot is not None:
             reports: list[dict[str, object]] = []
             screenshot_hashes: list[str] = []

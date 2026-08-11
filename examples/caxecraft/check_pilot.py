@@ -295,12 +295,17 @@ def check_memory_software_capture_normalization() -> None:
             red, green, blue, alpha = intended[source_at : source_at + 4]
             raw[destination_at : destination_at + 4] = bytes((blue, green, red, alpha))
     with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-software-capture-") as temporary:
-        path = Path(temporary) / "software.png"
+        executable = Path(temporary) / "caxecraft"
+        path = Path(temporary) / "caxecraft-agent-session.png"
         playable.write_rgba_png(path, width, height, bytes(raw))
-        playable.normalize_memory_software_capture(path)
+        playable.prepare_agent_session_screenshot(
+            executable,
+            {"screenshot": path.name},
+            "memory-software",
+        )
         actual_width, actual_height, actual = playable.decode_rgba_png(path, "normalized fixture")
         if (actual_width, actual_height, actual) != (width, height, intended):
-            raise PilotFailure("memory/software capture normalization changed orientation or RGBA channels")
+            raise PilotFailure("live memory/software capture normalization changed orientation or RGBA channels")
 
 
 def check_native_sanitizer_profile() -> None:
@@ -398,10 +403,10 @@ def check_renderer_benchmark_contract() -> None:
     else:
         raise PilotFailure("renderer benchmark admitted different world state")
 
-    if sum(renderer_benchmark.CHUNK_CACHE_PAYLOAD.values()) != 196_816:
+    if sum(renderer_benchmark.CHUNK_CACHE_PAYLOAD.values()) != 393_632:
         raise PilotFailure("renderer benchmark cache payload accounting drifted")
     cells, scene_hash = renderer_benchmark.benchmark_scene()
-    if len(cells) != 16_384 or re.fullmatch(r"[0-9a-f]{64}", scene_hash) is None:
+    if len(cells) != 32_768 or re.fullmatch(r"[0-9a-f]{64}", scene_hash) is None:
         raise PilotFailure("handwritten C benchmark scene is incomplete or has no source identity")
     c_source = renderer_benchmark.C_BASELINE.read_text(encoding="utf-8")
     for required in ("draw_sheet", "GetTime", "UnloadTexture(adventure)", "CloseWindow()"):
@@ -428,13 +433,17 @@ def check_renderer_benchmark_contract() -> None:
 
 def check_target_neutral_boundary() -> None:
     # The compiled engine-regression pilots remain allocation-free. The runtime
-    # content parser has its own Eval/native contract and deliberately uses
-    # managed arrays for author-sized records.
+    # content parser and live observation schema have their own Eval/native
+    # contracts. They deliberately use managed arrays for bounded records.
     sources = [
         *(
             path
             for path in PILOT.glob("*.hx")
-            if path.name not in ("PilotCatalog.hx", "RuntimePilotScript.hx")
+            if path.name not in (
+                "AgentWorldObservation.hx",
+                "PilotCatalog.hx",
+                "RuntimePilotScript.hx",
+            )
         ),
         APP_SCREEN,
         MOTION_INTERPOLATION,

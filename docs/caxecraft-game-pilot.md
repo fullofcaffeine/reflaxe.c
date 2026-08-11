@@ -520,6 +520,10 @@ running Haxe game checks this file at 20 Hz. It accepts a changed batch only
 after the normal parser validates its size, name, actions, frames, and optional
 inspection radius.
 
+For the memory-software renderer, the host corrects the known Raylib row and
+channel convention before it publishes each response. The screenshot path can
+therefore be reviewed directly. Desktop captures do not use this conversion.
+
 This request file is a private transitional carrier. It exists because typed
 Haxe standard input is not available in the current compiler slice. Bead
 `haxe_c-8al` owns that stream support. Bead `haxe_c-xge.19.8.1.1` must replace

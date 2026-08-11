@@ -107,7 +107,7 @@ typedef AgentWorldObservation = {
 	final screenshot:String;
 }
 
-/** Render one stable JSON object without an untyped serialization boundary. */
+/** Render one stable JSON object through the closed observation fields. */
 function renderAgentWorldObservation(observation:AgentWorldObservation):String {
 	final output = new StringBuf();
 	output.add('{"schemaVersion":1,"sequence":${observation.sequence},"frame":${observation.frame},"tick":${observation.tick}');
