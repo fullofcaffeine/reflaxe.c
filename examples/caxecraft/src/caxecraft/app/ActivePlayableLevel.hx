@@ -52,6 +52,9 @@ enum PlayableLevelPreparationError {
 
 /** One dialogue actor identity and its validated atlas selection. */
 typedef PlayableDialogueActor = {
+	/** Stable CaxeMap identity used by agent observations and content logic. */
+	final authoredId:ScenarioId;
+
 	/** Runtime identity used for interaction and character observation. */
 	final entityId:EntityId;
 
@@ -69,6 +72,7 @@ private function collectDialogueActors(bindings:Array<LoadedActorBinding>):Array
 		switch binding.role {
 			case DialogueNpc(_):
 				actors.push({
+					authoredId: binding.authoredId,
 					entityId: binding.entityId,
 					presentationAsset: binding.presentationAsset,
 					presentationCellIndex: binding.presentationCellIndex
@@ -182,6 +186,10 @@ final class PlayableLevelView {
 	/** Runtime identity for one bounds-checked dialogue actor. */
 	public inline function dialogueActorIdAt(index:Int):EntityId
 		return dialogueActors[index].entityId;
+
+	/** Stable authored identity for one bounds-checked dialogue actor. */
+	public inline function dialogueActorAuthoredIdAt(index:Int):ScenarioId
+		return dialogueActors[index].authoredId;
 
 	/** True when one retained dialogue actor has the supplied runtime identity. */
 	public function hasDialogueActor(id:EntityId):Bool {

@@ -5,7 +5,8 @@ structural image checks, a versioned semantic report, repeated-run comparison,
 and bounded automatic exit are implemented under `haxe_c-xge.31`. Linux CI
 runs the title proof on a virtual desktop and the movement/edit proof through
 Raylib's pinned in-memory software renderer. Both preserve the report plus a
-review image. A live command connection remains later work.
+review image. Runtime Piloscript checkpoints also emit versioned JSON world
+observations. A live command connection remains later work.
 
 ## What the pilot does
 
@@ -465,7 +466,7 @@ CaxeTest language, save format, or live agent bridge.
 | Carrier | Useful property | Cost or risk | Decision |
 | --- | --- | --- | --- |
 | framebuffer strip | works through the already admitted Haxe/Raylib path and proves a rendered frame | low bandwidth and tied to graphics | keep only for the current one-shot bootstrap |
-| Haxe standard output | simplest final structured report; the launcher already owns the child process | needs general `haxe.io.Output`, strings/bytes, and framing | next replacement for final telemetry |
+| Haxe standard output | simplest final structured report; the launcher already owns the child process | needs strings, framing, and limits | implemented for checkpoint world observations; final telemetry replacement remains open |
 | Haxe standard input/output pipes | private two-way channel with no port, firewall, discovery, or remote bind | needs framing, limits, backpressure, and clean end-of-file behavior | preferred live agent transport when the runner launches the game |
 | Haxe file output | easy to inspect after a crash | introduces paths, stale files, permissions, and atomic-write policy | use for ordinary evidence/save artifacts after filesystem support, not live control |
 | loopback socket | permits attaching to an existing process or multiple tools | port allocation, authentication, firewall, timeout, and platform socket policy | add only if a real attach/multi-client need justifies it |
@@ -479,6 +480,27 @@ JSON support if JSON Lines remains the selected message spelling, and
 `haxe_c-xge.19.8.1` owns the disabled-by-default Caxecraft agent bridge. A
 Caxecraft-specific C function or application-owned `extern` shim is explicitly
 not an alternative.
+
+## JSON world observations
+
+A runtime Piloscript checkpoint now produces one `CAXECRAFT_AGENT_OBSERVATION`
+line. The line contains a versioned JSON object from the committed game state.
+The host copies this object into the pilot report. The host does not calculate
+gameplay results.
+
+The object reports the current screen, level, objective, dialogue, journal,
+player position, heading, health, breath, hotbar, crosshair target, and recent
+events. It also reports nearby actors and mechanisms within 12 blocks. A
+clipped 7-by-7 surface map gives the agent a small navigation view.
+
+Each checkpoint JSON object names its matching framebuffer capture. The JSON
+explains what the game knows. The image remains the authority for appearance,
+layout, animation, and other visual results.
+
+This checkpoint path is not live control. The process still reads one complete
+Piloscript before play and exits at its bounded final frame. Bead
+`haxe_c-xge.19.8.1.1` owns the persistent request and response session. Its
+transport can change without changing the versioned observation meaning.
 
 ## Why the native path has one compile-time condition
 

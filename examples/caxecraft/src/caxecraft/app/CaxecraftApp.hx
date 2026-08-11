@@ -117,6 +117,11 @@ import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
 #if caxecraft_pilot_runtime
+import caxecraft.app.AgentWorldProjection.agentInventory;
+import caxecraft.app.AgentWorldProjection.agentNearby;
+import caxecraft.app.AgentWorldProjection.agentTarget;
+import caxecraft.app.AgentWorldProjection.agentTerrain;
+import caxecraft.pilot.AgentWorldObservation.renderAgentWorldObservation;
 import caxecraft.pilot.RuntimePilotScript;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotReadResult;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotRunResult;
@@ -1515,6 +1520,7 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
 			#if caxecraft_pilot_runtime
 			if (runtimeCheckpoint != null && runtimePilotFrameAccepted) {
+				final observationScreenshot = runtimeCheckpointScreenshot(runtimeCheckpoint.label);
 				if (runtimeCheckpoint.label == "title-selection")
 					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-title-selection.png");
 				else if (runtimeCheckpoint.label == "campaign-selection")
@@ -1523,6 +1529,63 @@ final class CaxecraftApp {
 					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-level-selection.png");
 				else
 					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-final.png");
+				final recentEvents:Array<String> = [];
+				if (placementBlockedFrames > 0)
+					recentEvents.push("placement-blocked");
+				if (strikeHitFrames > 0)
+					recentEvents.push("strike-hit");
+				if (enemyDefeatedFrames > 0)
+					recentEvents.push("enemy-defeated");
+				if (enemyAttackFrames > 0)
+					recentEvents.push("player-attacked");
+				if (pickupFrames > 0)
+					recentEvents.push("item-collected");
+				if (recoveryFeedbackFrames > 0)
+					recentEvents.push("recovery-used");
+				final interaction = switch nearestAvailableInteraction(session, levelView) {
+					case NoAvailableInteraction: "none";
+					case DialogueInteraction(id): "talk:" + authoredDialogueId(levelView, id);
+					case StatefulObjectInteraction(id): "use:" + id.text();
+				};
+				final playerCellX = Std.int(character.body.x);
+				final playerCellY = Std.int(character.body.y);
+				final playerCellZ = Std.int(character.body.z);
+				Sys.println("CAXECRAFT_AGENT_OBSERVATION=" + renderAgentWorldObservation({
+					sequence: frameCount + 1,
+					frame: frameCount,
+					tick: completedTicks,
+					screen: observedScreen,
+					mode: observedMode,
+					level: observedLevel,
+					objective: observedObjective,
+					dialogue: observedDialogue,
+					journal: observedJournal,
+					interaction: interaction,
+					aquaticMedium: observedMedium,
+					aquaticEquipment: observedEquipment,
+					position: {
+						xMilli: Std.int(character.body.x * 1000.0),
+						yMilli: Std.int(character.body.y * 1000.0),
+						zMilli: Std.int(character.body.z * 1000.0),
+						cellX: playerCellX,
+						cellY: playerCellY,
+						cellZ: playerCellZ
+					},
+					heading: {xMilli: Std.int(lookX * 1000.0), yMilli: Std.int(lookY * 1000.0), zMilli: Std.int(lookZ * 1000.0)},
+					vitals: {
+						health: character.vitals.health,
+						safeTicks: character.vitals.safeTicks,
+						breathTicks: character.aquatic.breathTicks,
+						maximumBreathTicks: character.aquaticProfile.maximumBreathTicks
+					},
+					inventory: agentInventory(inventory),
+					target: agentTarget(hit, session.worldView()),
+					nearby: agentNearby(session, levelView, character),
+					terrainRadius: 3,
+					terrain: agentTerrain(session.worldView(), playerCellX, playerCellZ),
+					events: recentEvents,
+					screenshot: reviewScreenshotObserved ? observationScreenshot : "none"
+				}));
 			}
 			#end
 			if (pilotComplete)
@@ -1586,6 +1649,28 @@ final class CaxecraftApp {
 	}
 
 	#if caxecraft_pilot
+
+	#if caxecraft_pilot_runtime
+	/** Select the fixed review image that belongs to one admitted checkpoint. */
+	static function runtimeCheckpointScreenshot(label:String):String {
+		if (label == "title-selection")
+			return "caxecraft-pilot-runtime-title-selection.png";
+		if (label == "campaign-selection")
+			return "caxecraft-pilot-runtime-campaign-selection.png";
+		if (label == "level-selection")
+			return "caxecraft-pilot-runtime-level-selection.png";
+		return "caxecraft-pilot-runtime-final.png";
+	}
+
+	/** Recover the authored dialogue ID that matches one validated runtime ID. */
+	static function authoredDialogueId(level:PlayableLevelView, entityId:EntityId):String {
+		for (index in 0...level.dialogueActorCount())
+			if (level.dialogueActorIdAt(index) == entityId)
+				return level.dialogueActorAuthoredIdAt(index).text();
+		return "missing";
+	}
+	#end
+
 	/**
 	 * Capture one flushed review frame and immediately observe its published file.
 	 *

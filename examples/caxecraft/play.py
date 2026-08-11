@@ -3098,7 +3098,24 @@ def run_pilot_sample(
     # still remain bounded. Keep short engine pilots on the tighter limit while
     # allowing the representative Adventure route to finish on the software GPU.
     timeout_seconds = 25 if pilot_metadata(pilot).execution == "runtime-content" else 15
-    run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)
+    process = run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)
+    observations: list[dict[str, object]] = []
+    observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="
+    previous_sequence = -1
+    for line in process.stdout.splitlines():
+        if not line.startswith(observation_prefix):
+            continue
+        try:
+            observation = json.loads(line[len(observation_prefix) :])
+        except json.JSONDecodeError as error:
+            raise PlayFailure(f"{label} emitted invalid agent-observation JSON: {error}") from error
+        if not isinstance(observation, dict) or observation.get("schemaVersion") != 1:
+            raise PlayFailure(f"{label} emitted an unknown agent-observation schema")
+        sequence = observation.get("sequence")
+        if not isinstance(sequence, int) or sequence <= previous_sequence:
+            raise PlayFailure(f"{label} emitted an unordered agent-observation sequence")
+        previous_sequence = sequence
+        observations.append(observation)
     if not state_screenshot.is_file():
         raise PlayFailure(f"{label} did not reach its Haxe-owned semantic checkpoint")
     if raylib_configuration == "memory-software":
@@ -3115,6 +3132,10 @@ def run_pilot_sample(
         cc=cc,
         compiler_version=compiler_version,
     )
+    if pilot == "adventure-journey":
+        if not observations:
+            raise PlayFailure(f"{label} emitted no agent world observations")
+        report["agentObservations"] = observations
     if raylib_configuration == "memory-software":
         normalize_memory_software_capture(screenshot)
         for supporting_screenshot in supporting_screenshots:
