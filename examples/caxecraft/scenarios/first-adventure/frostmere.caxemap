@@ -20,7 +20,7 @@ locale en
   message journal_frostmere_title "THE FROSTMERE ASCENT"
   message journal_western_road_body "A ROOT ARCH MARKS THE LAST GREEN STONE. THE SNOW ROAD BENDS WEST TO NIA; A CAIRN OVERLOOKS THE FALLS."
   message journal_western_road_title "CEESH'S FROSTMERE ROAD"
-  message nia_welcome "NIA: CEESH BUILT A WINCH INTO THE OLD RAVINE SHRINE. TURN IT TO LOWER THE BRIDGE. BEYOND IT, TUNE WAVE, FORGE, FLAME."
+  message nia_welcome "NIA: FOLLOW THE ROAD WEST. CEESH'S BLUE WINCH LOWERS THE RAVINE BRIDGE."
   message object_use "E  USE"
   message objective_arrival_body "PASS UNDER THE ROOT ARCH. NIA WAITS WHERE GREEN STONE GIVES WAY TO SNOW."
   message objective_arrival_title "FOLLOW THE WESTERN ROAD TO NIA"
@@ -60,7 +60,7 @@ locale es-mx
   message journal_frostmere_title "EL ASCENSO DE FROSTMERE"
   message journal_western_road_body "UN ARCO DE RAICES MARCA LA ULTIMA PIEDRA VERDE. EL CAMINO GIRA AL OESTE HACIA NIA; UN MOJON MIRA A LAS CATARATAS."
   message journal_western_road_title "EL CAMINO DE CEESH A FROSTMERE"
-  message nia_welcome "NIA: CEESH CONSTRUYO UN TORNO EN EL SANTUARIO DEL BARRANCO. GIRALO PARA BAJAR EL PUENTE. DESPUES AFINA OLA, FORJA Y LLAMA."
+  message nia_welcome "NIA: SIGUE EL CAMINO AL OESTE. EL TORNO AZUL DE CEESH BAJA EL PUENTE."
   message object_use "E  USAR"
   message objective_arrival_body "PASA BAJO EL ARCO DE RAICES. NIA ESPERA DONDE LA PIEDRA VERDE SE VUELVE NIEVE."
   message objective_arrival_title "SIGUE EL CAMINO DEL OESTE HASTA NIA"
@@ -1793,11 +1793,11 @@ object ashfall.beacon
 end object
 object enemy.snow-mossling
   tag enemy
-  placement entity caxecraft:mossling 18500 7000 12500 180
+  placement entity caxecraft:mossling 59500 8000 20500 180
 end object
 object guide.nia
   tag friend
-  placement npc caxecraft:nia dialogue.nia.frostmere 35500 4000 24500 180
+  placement npc caxecraft:nia dialogue.nia.frostmere 34500 4000 24500 180
 end object
 object item.ashfall-lantern
   tag reward
