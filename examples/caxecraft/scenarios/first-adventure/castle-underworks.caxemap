@@ -6,9 +6,9 @@ default-locale en
 locale en
   message adventure_progress "INFILTRATE THE CASTLE UNDERWORKS"
   message adventure_tagline "CHOOSE A SERVICE ROUTE. ISOLATE THE SABOTAGE. REACH THE ARCHIVE."
-  message archive_body "THE FORGE ARCHIVE DOOR IS AHEAD. BROWSER IS BEYOND IT, BUT THIS WING IS SAFE."
+  message archive_body "THE SEALED FORGE ARCHIVE DOOR IS AHEAD. BROWSER IS BEYOND IT, BUT THIS WING IS SAFE."
   message archive_title "FORGE ARCHIVE ANTECHAMBER"
-  message cache_body "CEESH STORED EMERGENCY BREAD ABOVE THE COOLANT GALLERY."
+  message cache_body "CEESH STORED EMERGENCY BERRIES BESIDE THE COOLANT GALLERY."
   message cache_title "ENGINEER'S CACHE"
   message ceesh_briefing "CEESH: THE LIFT IS SABOTAGED. COOLANT GALLERY OR ASH VENT. EITHER CAN ISOLATE THIS WING."
   message coolant_ready "THE COOLANT RELAY CUTS BROWSER'S FEED. THE ARCHIVE PASSAGE OPENS."
@@ -28,9 +28,9 @@ end locale
 locale es-mx
   message adventure_progress "INFILTRATE LOS TUNELES DEL CASTILLO"
   message adventure_tagline "ELIGE UNA RUTA. AISLA EL SABOTAJE. LLEGA AL ARCHIVO."
-  message archive_body "LA PUERTA DEL ARCHIVO DE LA FORJA ESTA ADELANTE. BROWSER ESTA DETRAS, PERO ESTA ALA YA ES SEGURA."
+  message archive_body "LA PUERTA SELLADA DEL ARCHIVO ESTA ADELANTE. BROWSER ESTA DETRAS, PERO ESTA ALA YA ES SEGURA."
   message archive_title "ANTESALA DEL ARCHIVO DE LA FORJA"
-  message cache_body "CEESH GUARDO PAN DE EMERGENCIA SOBRE LA GALERIA DE REFRIGERACION."
+  message cache_body "CEESH GUARDO BAYAS DE EMERGENCIA JUNTO A LA GALERIA DE REFRIGERACION."
   message cache_title "RESERVA DE LA INGENIERA"
   message ceesh_briefing "CEESH: EL ELEVADOR ESTA SABOTEADO. LA GALERIA O EL RESPIRADERO PUEDEN AISLAR ESTA ALA."
   message coolant_ready "EL RELE DE REFRIGERACION CORTA LA CONEXION DE BROWSER. EL PASO AL ARCHIVO SE ABRE."
@@ -965,33 +965,25 @@ chunk underworks.east 32 0 0 32 16 32
   run 9 96
   run 5 18
   run 9 14
-  run 0 13
-  run 5 1
-  run 0 6
+  run 0 20
   run 9 1
   run 0 6
   run 5 1
   run 0 2
   run 9 2
-  run 0 13
-  run 5 1
-  run 0 6
+  run 0 20
   run 9 1
   run 0 6
   run 5 1
   run 0 2
   run 9 2
-  run 0 13
-  run 5 1
-  run 0 6
+  run 0 20
   run 9 1
   run 0 6
   run 5 1
   run 0 2
   run 9 2
-  run 0 13
-  run 5 1
-  run 0 6
+  run 0 20
   run 9 1
   run 0 6
   run 5 1
@@ -1257,33 +1249,18 @@ chunk underworks.east 32 0 0 32 16 32
   run 9 106
   run 5 19
   run 9 15
-  run 0 18
-  run 9 14
-  run 0 18
-  run 9 11
-  run 0 21
-  run 9 11
-  run 0 21
-  run 9 11
-  run 0 21
-  run 9 2
-  run 5 9
-  run 0 21
-  run 9 2
-  run 5 9
-  run 0 21
-  run 9 34
-  run 0 96
-  run 1 32
-  run 9 140
-  run 0 18
-  run 9 14
-  run 0 18
-  run 9 11
-  run 0 21
-  run 9 11
-  run 0 21
-  run 9 11
+  run 0 19
+  run 5 1
+  run 9 12
+  run 0 19
+  run 5 1
+  run 9 9
+  run 0 22
+  run 5 1
+  run 9 9
+  run 0 22
+  run 5 1
+  run 9 9
   run 0 21
   run 9 2
   run 5 9
@@ -1295,14 +1272,18 @@ chunk underworks.east 32 0 0 32 16 32
   run 0 96
   run 1 32
   run 9 140
-  run 0 18
-  run 9 14
-  run 0 18
-  run 9 11
-  run 0 21
-  run 9 11
-  run 0 21
-  run 9 11
+  run 0 19
+  run 8 1
+  run 9 12
+  run 0 19
+  run 8 1
+  run 9 9
+  run 0 22
+  run 8 1
+  run 9 9
+  run 0 22
+  run 5 1
+  run 9 9
   run 0 21
   run 9 2
   run 5 9
@@ -1314,14 +1295,41 @@ chunk underworks.east 32 0 0 32 16 32
   run 0 96
   run 1 32
   run 9 140
-  run 0 18
-  run 9 14
-  run 0 18
-  run 9 11
+  run 0 19
+  run 8 1
+  run 9 12
+  run 0 19
+  run 8 1
+  run 9 9
+  run 0 22
+  run 8 1
+  run 9 9
+  run 0 22
+  run 5 1
+  run 9 9
   run 0 21
-  run 9 11
+  run 9 2
+  run 5 9
   run 0 21
-  run 9 11
+  run 9 2
+  run 5 9
+  run 0 21
+  run 9 34
+  run 0 96
+  run 1 32
+  run 9 140
+  run 0 19
+  run 8 1
+  run 9 12
+  run 0 19
+  run 8 1
+  run 9 9
+  run 0 22
+  run 8 1
+  run 9 9
+  run 0 22
+  run 5 1
+  run 9 9
   run 0 21
   run 9 2
   run 5 9
@@ -1335,14 +1343,18 @@ chunk underworks.east 32 0 0 32 16 32
   run 9 106
   run 5 19
   run 9 15
-  run 0 18
-  run 9 14
-  run 0 18
-  run 9 11
-  run 0 21
-  run 9 11
-  run 0 21
-  run 9 11
+  run 0 19
+  run 5 1
+  run 9 12
+  run 0 19
+  run 5 1
+  run 9 9
+  run 0 22
+  run 5 1
+  run 9 9
+  run 0 22
+  run 5 1
+  run 9 9
   run 0 21
   run 9 2
   run 5 9
@@ -1805,8 +1817,10 @@ object guide.ceesh
   placement npc caxecraft:ceesh dialogue.ceesh.briefing 11500 5000 16500 270
 end object
 object item.engineer-cache
+  tag discovery
+  tag reward
   tag secret
-  placement item caxecraft:bread 3 45500 5000 6500 0
+  placement item caxecraft:berries 3 45500 6000 6500 0
 end object
 object player.start
   tag player
@@ -1884,7 +1898,7 @@ rule rule.coolant-gallery-isolates-wing priority 100 once
   do objective objective.reach-archive active
 end rule
 rule rule.engineer-cache-found priority 100 once
-  when collect-item caxecraft:bread
+  when collect-item caxecraft:berries
   if (flag quest.engineer-cache-found false)
   do set-flag quest.engineer-cache-found true
   do dialogue dialogue.cache-found

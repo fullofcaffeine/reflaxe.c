@@ -43,10 +43,11 @@ hold 352 381 turn-right
 hold 382 422 forward
 hold 423 452 turn-left
 hold 453 480 forward
+action 482 interact
+checkpoint 485 capture final
+expect 485 level castle-underworks
+expect 485 objective none
+expect 485 journal journal.archive-antechamber
 action 490 pause
-checkpoint 490 capture final
 expect 490 screen paused
-expect 490 level castle-underworks
-expect 490 objective none
-expect 490 journal journal.archive-antechamber
 end
