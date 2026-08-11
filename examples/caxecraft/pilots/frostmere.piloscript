@@ -16,15 +16,17 @@ expect 2 level frostmere
 action 3 menu-confirm
 expect 3 objective objective.ask-nia
 
-# Nia waits beyond the root arch and gives the chapter's first direction.
-action 4 interact
-expect 8 objective objective.wake-ember
+# Pass beneath the root arch, follow the road west, and meet Nia at its bend.
+# She points out the old ravine winch that Ceesh built into the snow shrine.
+hold 4 22 forward-jump
+hold 23 88 left
+action 90 interact
+expect 93 objective objective.turn-winch
 
-# Close Nia's dialogue, follow the road west into the snow shelf, then climb
-# the unchanged ascent to the ember marker.
-action 9 interact
-hold 10 28 forward-jump
-hold 29 190 left
+# Close Nia's dialogue, continue west into the snow shelf, then climb to the
+# winch. Turning it lowers the timber bridge.
+action 94 interact
+hold 95 190 left
 hold 191 240 forward-jump
 action 242 interact
 expect 246 objective objective.reach-overlook

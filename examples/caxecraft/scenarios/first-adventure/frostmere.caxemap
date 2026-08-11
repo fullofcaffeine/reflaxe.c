@@ -5,11 +5,10 @@ asset-pack packs/caxecraft/base
 default-locale en
 locale en
   message adventure_progress "REACH THE ASHFALL BEACON"
-  message adventure_tagline "WAKE THE EMBER. TUNE THE ASHFALL SIGNALS. REACH THE BEACON."
+  message adventure_tagline "FIND NIA. OPEN THE RAVINE. TUNE THE ASHFALL SIGNALS."
   message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
-  message ember_awake "THE EMBER MARK WAKES. THE RAVINE BRIDGE OPENS."
   message enemy_alert "SNOWBOUND MOSSLING ALERT"
   message enemy_dropped_items "MOSSLING DROPPED BERRIES"
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
@@ -21,21 +20,22 @@ locale en
   message journal_frostmere_title "THE FROSTMERE ASCENT"
   message journal_western_road_body "A ROOT ARCH MARKS THE LAST GREEN STONE. THE SNOW ROAD BENDS WEST TO NIA; A CAIRN OVERLOOKS THE FALLS."
   message journal_western_road_title "CEESH'S FROSTMERE ROAD"
-  message nia_welcome "NIA: WAKE THE ORANGE EMBER TO CROSS. BEYOND IT, TUNE WAVE, FORGE, FLAME. WRONG NOTES RESET SAFELY."
+  message nia_welcome "NIA: CEESH BUILT A WINCH INTO THE OLD RAVINE SHRINE. TURN IT TO LOWER THE BRIDGE. BEYOND IT, TUNE WAVE, FORGE, FLAME."
   message object_use "E  USE"
   message objective_arrival_body "PASS UNDER THE ROOT ARCH. NIA WAITS WHERE GREEN STONE GIVES WAY TO SNOW."
   message objective_arrival_title "FOLLOW THE WESTERN ROAD TO NIA"
-  message objective_ember_body "FOLLOW THE RISING SNOW PATH TO THE ORANGE MARK BESIDE THE RAVINE."
-  message objective_ember_title "WAKE THE EMBER MARK"
   message objective_lantern_body "THE SIGNAL GATE IS OPEN. CLIMB TO THE GOLD LANTERN AND ASHFALL BEACON."
   message objective_lantern_title "RECOVER THE ASHFALL LANTERN"
   message objective_overlook_body "BEYOND THE TIMBER BRIDGE, WAKE WAVE, FORGE, THEN FLAME. WRONG NOTES RESET SAFELY."
   message objective_overlook_title "TUNE THE THREE ASHFALL SIGNALS"
   message objective_seek_ashfall_body "THE SNOW ENDS UNDER A DARKENING SKY. THE ASHFALL BRIDGE LIES AHEAD."
   message objective_seek_ashfall_title "ASHFALL LIES BEYOND FROSTMERE"
+  message objective_winch_body "FOLLOW THE RISING SNOW PATH TO CEESH'S BLUE WINCH IN THE RAVINE SHRINE."
+  message objective_winch_title "LOWER THE RAVINE BRIDGE"
   message pickup_many "+2 BERRIES"
   message pickup_one "+1 BERRY"
   message player_fallen "HAXIRIO HAS FALLEN"
+  message ravine_winch_opened "CEESH'S WINCH TURNS. TIMBERS SETTLE ACROSS THE RAVINE."
   message recovery_empty "NO BERRIES LEFT"
   message recovery_used "BERRIES: +1 HEART"
   message road_marker_found "CEESH'S ROAD MARKER: WATER BELOW, FROST ABOVE. NIA KEEPS THE SAFE ASCENT."
@@ -45,11 +45,10 @@ locale en
 end locale
 locale es-mx
   message adventure_progress "LLEGA AL FARO DE ASHFALL"
-  message adventure_tagline "ENCIENDE LA BRASA. AFINA LAS SENALES. LLEGA AL FARO."
+  message adventure_tagline "ENCUENTRA A NIA. ABRE EL BARRANCO. AFINA LAS SENALES."
   message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
-  message ember_awake "LA MARCA DE BRASA DESPIERTA. EL PUENTE DEL BARRANCO SE ABRE."
   message enemy_alert "MUSGUITO DE NIEVE ALERTA"
   message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
@@ -61,21 +60,22 @@ locale es-mx
   message journal_frostmere_title "EL ASCENSO DE FROSTMERE"
   message journal_western_road_body "UN ARCO DE RAICES MARCA LA ULTIMA PIEDRA VERDE. EL CAMINO GIRA AL OESTE HACIA NIA; UN MOJON MIRA A LAS CATARATAS."
   message journal_western_road_title "EL CAMINO DE CEESH A FROSTMERE"
-  message nia_welcome "NIA: ENCIENDE LA BRASA PARA CRUZAR. DESPUES AFINA OLA, FORJA, LLAMA. UN ERROR REINICIA SIN PELIGRO."
+  message nia_welcome "NIA: CEESH CONSTRUYO UN TORNO EN EL SANTUARIO DEL BARRANCO. GIRALO PARA BAJAR EL PUENTE. DESPUES AFINA OLA, FORJA Y LLAMA."
   message object_use "E  USAR"
   message objective_arrival_body "PASA BAJO EL ARCO DE RAICES. NIA ESPERA DONDE LA PIEDRA VERDE SE VUELVE NIEVE."
   message objective_arrival_title "SIGUE EL CAMINO DEL OESTE HASTA NIA"
-  message objective_ember_body "SIGUE EL SENDERO DE NIEVE HASTA LA MARCA NARANJA JUNTO AL BARRANCO."
-  message objective_ember_title "ENCIENDE LA MARCA DE BRASA"
   message objective_lantern_body "LA PUERTA ESTA ABIERTA. SUBE A LA LINTERNA DORADA Y AL FARO DE ASHFALL."
   message objective_lantern_title "RECUPERA LA LINTERNA DE ASHFALL"
   message objective_overlook_body "TRAS EL PUENTE, ENCIENDE OLA, FORJA Y LLAMA. UN ERROR REINICIA SIN PELIGRO."
   message objective_overlook_title "AFINA LAS TRES SENALES DE ASHFALL"
   message objective_seek_ashfall_body "LA NIEVE TERMINA BAJO UN CIELO OSCURO. EL PUENTE DE ASHFALL ESTA ADELANTE."
   message objective_seek_ashfall_title "ASHFALL ESTA MAS ALLA DE FROSTMERE"
+  message objective_winch_body "SIGUE EL SENDERO DE NIEVE HASTA EL TORNO AZUL DE CEESH EN EL SANTUARIO DEL BARRANCO."
+  message objective_winch_title "BAJA EL PUENTE DEL BARRANCO"
   message pickup_many "+2 BAYAS"
   message pickup_one "+1 BAYA"
   message player_fallen "HAXIRIO HA CAIDO"
+  message ravine_winch_opened "EL TORNO DE CEESH GIRA. LAS VIGAS CUBREN EL BARRANCO."
   message recovery_empty "NO QUEDAN BAYAS"
   message recovery_used "BAYAS: +1 CORAZON"
   message road_marker_found "MARCA DE CEESH: AGUA ABAJO, HIELO ARRIBA. NIA GUARDA EL ASCENSO SEGURO."
@@ -1368,7 +1368,7 @@ object enemy.snow-mossling
 end object
 object guide.nia
   tag friend
-  placement npc caxecraft:nia dialogue.nia.frostmere 48500 4000 27500 180
+  placement npc caxecraft:nia dialogue.nia.frostmere 35500 4000 24500 180
 end object
 object item.ashfall-lantern
   tag reward
@@ -1394,13 +1394,13 @@ object signal.wave
   tag mechanism
   placement stateful caxecraft:vault-glyph-river caxecraft:waiting 16500 7000 13500 0
 end object
-object snow.ember
-  tag mechanism
-  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 16500 6000 18500 0
-end object
 object snow.gate
   tag mechanism
   placement stateful caxecraft:vault-gate caxecraft:sealed 16500 6000 15500 0
+end object
+object snow.winch
+  tag mechanism
+  placement stateful caxecraft:gate-winch caxecraft:waiting 16500 6000 18500 0
 end object
 object zone.courier-overlook
   tag secret
@@ -1418,8 +1418,8 @@ end dialogue
 dialogue dialogue.signals.solved
   line speaker guide.nia message signals_solved
 end dialogue
-dialogue dialogue.snow.ember
-  line speaker guide.nia message ember_awake
+dialogue dialogue.snow.winch
+  line speaker guide.nia message ravine_winch_opened
 end dialogue
 journal journal.ashfall-threshold title message journal_ashfall_title
   body message journal_ashfall_body
@@ -1442,8 +1442,8 @@ end objective
 objective objective.seek-ashfall hidden title message objective_seek_ashfall_title
   body message objective_seek_ashfall_body
 end objective
-objective objective.wake-ember hidden title message objective_ember_title
-  body message objective_ember_body
+objective objective.turn-winch hidden title message objective_winch_title
+  body message objective_winch_body
 end objective
 variable quest.signal-progress quest counter 0
 variable quest.western-road-recorded quest flag false
@@ -1453,15 +1453,6 @@ rule rule.courier-overlook-recorded priority 70 once
   do set-flag quest.western-road-recorded true
   do dialogue dialogue.courier-overlook
   do journal journal.western-road
-end rule
-rule rule.ember-opens-the-bridge priority 100 once
-  when interact snow.ember
-  if (objective objective.wake-ember active)
-  do set-object-state snow.ember caxecraft:entered
-  do set-object-state snow.gate caxecraft:open
-  do dialogue dialogue.snow.ember
-  do objective objective.wake-ember complete
-  do objective objective.reach-overlook active
 end rule
 rule rule.lantern-reveals-ashfall priority 100 once
   when collect-item caxecraft:lantern
@@ -1476,7 +1467,16 @@ rule rule.nia-marks-the-ascent priority 100 once
   do dialogue dialogue.nia.frostmere
   do journal journal.frostmere-route
   do objective objective.ask-nia complete
-  do objective objective.wake-ember active
+  do objective objective.turn-winch active
+end rule
+rule rule.ravine-winch-opens priority 100 once
+  when interact snow.winch
+  if (objective objective.turn-winch active)
+  do set-object-state snow.winch caxecraft:entered
+  do set-object-state snow.gate caxecraft:open
+  do dialogue dialogue.snow.winch
+  do objective objective.turn-winch complete
+  do objective objective.reach-overlook active
 end rule
 rule rule.signal-flame-completes-the-tune priority 100 once
   when interact signal.flame
