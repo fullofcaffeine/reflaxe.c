@@ -1810,7 +1810,7 @@ object item.courier-supplies
 end object
 object player.start
   tag player
-  placement player-spawn 48500 4000 30500 180
+  placement player-spawn 48500 4000 30500 0
 end object
 object road.ceesh-note
   tag secret

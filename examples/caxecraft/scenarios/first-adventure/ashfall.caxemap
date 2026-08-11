@@ -497,7 +497,7 @@ object item.castle-bread
 end object
 object player.start
   tag player
-  placement player-spawn 16500 5000 28500 180
+  placement player-spawn 16500 5000 28500 0
 end object
 object zone.castle-road
   tag destination

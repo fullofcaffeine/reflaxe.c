@@ -7,14 +7,20 @@
     {
       "id": "ashfall",
       "path": "scenarios/first-adventure/ashfall.caxemap",
-      "byteLength": 15889,
-      "sha256": "3086e42cac84fd994552353db65a75e243ed946bf0c37966ff37becab8facfe2"
+      "byteLength": 15887,
+      "sha256": "7dfcbbe96d89044e84fd51811279f4074aa2e532769aa587a5cfc9a30efa10bd"
     },
     {
       "id": "castle-courtyard",
       "path": "scenarios/first-adventure/castle-courtyard.caxemap",
-      "byteLength": 17390,
-      "sha256": "a4df38d718caa4724e0f5ace943d288f6e8651a574ddae21b620e5914001e159"
+      "byteLength": 18345,
+      "sha256": "6dd715129747a4ecd02e5d9b169a411a21b1ce98d2d41683f58eb51d577bc54f"
+    },
+    {
+      "id": "castle-underworks",
+      "path": "scenarios/first-adventure/castle-underworks.caxemap",
+      "byteLength": 25270,
+      "sha256": "8ff452a3775655ec42ebf71514a79c6d307a29fe239806c2706bd815a4ea3d33"
     },
     {
       "id": "evergrove",
@@ -25,8 +31,8 @@
     {
       "id": "frostmere",
       "path": "scenarios/first-adventure/frostmere.caxemap",
-      "byteLength": 30231,
-      "sha256": "90f2dfbeba4a8948ed7aabec6eaea93e2f6646872afc9540269a7033cb0857ed"
+      "byteLength": 30229,
+      "sha256": "7a95ada5ad699c2bc0b4528e385513b80b952f38fdf9decaf3dd27d54fd37fc5"
     },
     {
       "id": "western-falls",
@@ -40,6 +46,13 @@
       "exit": "ashfall-castle-road",
       "sourceLevel": "ashfall",
       "destinationLevel": "castle-courtyard",
+      "destinationEntrance": "default",
+      "required": true
+    },
+    {
+      "exit": "castle-underworks-entry",
+      "sourceLevel": "castle-courtyard",
+      "destinationLevel": "castle-underworks",
       "destinationEntrance": "default",
       "required": true
     },

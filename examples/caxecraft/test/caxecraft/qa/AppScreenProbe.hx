@@ -21,6 +21,7 @@ import caxecraft.app.AppScreen.showsTitle;
 import caxecraft.app.AppScreen.startPlaying;
 import caxecraft.app.AppScreen.togglePause;
 import caxecraft.app.GameMode;
+import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.TitleMenuFlow.TitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
 import caxecraft.app.TitleMenuFlow.applyTitleMenuCommand;
@@ -107,5 +108,37 @@ function selfCheck():Int {
 		return 22;
 	if (finishLoading(loading) != AppScreen.Playing || finishLoading(title) != AppScreen.Title)
 		return 23;
+	final east = headingForSpawn({
+		xMilli: 5500,
+		yMilli: 5000,
+		zMilli: 16500,
+		yawDegrees: 90
+	});
+	if (east.x < 0.999 || east.x > 1.001 || east.y != -0.18 || east.z < -0.001 || east.z > 0.001)
+		return 24;
+	final north = headingForSpawn({
+		xMilli: 0,
+		yMilli: 0,
+		zMilli: 0,
+		yawDegrees: 0
+	});
+	if (north.x < -0.001 || north.x > 0.001 || north.z < -1.001 || north.z > -0.999)
+		return 25;
+	final west = headingForSpawn({
+		xMilli: 0,
+		yMilli: 0,
+		zMilli: 0,
+		yawDegrees: 270
+	});
+	if (west.x < -1.001 || west.x > -0.999 || west.z < -0.001 || west.z > 0.001)
+		return 26;
+	final south = headingForSpawn({
+		xMilli: 0,
+		yMilli: 0,
+		zMilli: 0,
+		yawDegrees: 180
+	});
+	if (south.x < -0.001 || south.x > 0.001 || south.z < 0.999 || south.z > 1.001)
+		return 27;
 	return 0;
 }

@@ -1,0 +1,52 @@
+PILOSCRIPT 1
+name castle-underworks-journey
+frames 498
+
+# Enter Adventure and choose Castle Underworks from reloadable campaign data.
+action 0 menu-next
+checkpoint 0 capture title-selection
+action 1 menu-confirm
+checkpoint 1 capture campaign-selection
+action 2 menu-next
+action 4 menu-next
+action 6 menu-next
+action 8 menu-next
+action 10 menu-next
+checkpoint 11 capture level-selection
+expect 11 level castle-underworks
+action 12 menu-confirm
+expect 20 screen playing
+expect 20 mode adventure
+expect 20 level castle-underworks
+expect 20 objective objective.isolate-wing
+
+# Hear Ceesh's plan, then take the safer coolant gallery around the sabotaged
+# lift. The ash-vent alternative remains a free-play choice, not a duplicate
+# permanent journey.
+hold 13 32 forward
+action 34 interact
+action 39 interact
+hold 40 69 turn-left
+hold 70 110 forward
+hold 112 141 turn-right
+hold 142 245 forward
+action 247 interact
+expect 250 objective objective.reach-archive
+expect 250 object-state underworks.coolant-relay=caxecraft:entered
+expect 251 object-state underworks.archive-gate=caxecraft:open
+action 252 interact
+
+# Follow the rejoined service walkway into the Archive antechamber. This
+# chapter stops before Browser's chamber instead of pretending the boss exists.
+hold 253 350 forward
+hold 352 381 turn-right
+hold 382 422 forward
+hold 423 452 turn-left
+hold 453 480 forward
+action 490 pause
+checkpoint 490 capture final
+expect 490 screen paused
+expect 490 level castle-underworks
+expect 490 objective none
+expect 490 journal journal.archive-antechamber
+end

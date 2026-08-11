@@ -51,12 +51,16 @@ hold 326 342 right
 hold 343 363 forward
 action 366 interact
 expect 371 object-state castle.inner-lock=caxecraft:entered
-expect 372 objective none
+expect 372 objective objective.enter-underworks
 expect 373 journal journal.inner-keep
 action 374 interact
 
-hold 375 393 backward
+# Continue through the opened maintenance bypass. The existing executable loads
+# the new reloadable level through the campaign transition at runtime.
+hold 375 393 forward
 action 400 pause
 checkpoint 400 capture final
 expect 400 screen paused
+expect 400 level castle-underworks
+expect 400 objective objective.isolate-wing
 end

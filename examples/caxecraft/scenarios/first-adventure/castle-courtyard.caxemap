@@ -9,7 +9,7 @@ locale en
   message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
-  message ceesh_castle "CEESH: GOOD, YOU FOUND MY BYPASS. I JAMMED THE FORGE LIFT BEFORE BROWSER COULD FEED IT ANOTHER BAD BUILD. NOW HELP ME FIND A SECOND WAY INTO THE ARCHIVE."
+  message ceesh_castle "CEESH: I JAMMED THE FORGE LIFT. OPEN THIS LOCK, THEN FOLLOW MY MAINTENANCE BYPASS INTO THE UNDERWORKS."
   message ceesh_note "CEESH: I CUT THE GATE'S ORDER LOCK. SET THE WEST WINCH AND EAST RELAY IN EITHER ORDER."
   message courtyard_open "THE TWO TOWERS ANSWER TOGETHER. THE SABOTAGED COURTYARD GATE OPENS."
   message east_ready "THE EAST RELAY HUMS. SET THE WEST COUNTERWEIGHT."
@@ -18,7 +18,7 @@ locale en
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "EMBER WISP WINDUP: DODGE"
   message guide_talk "E  TALK"
-  message inner_keep_body "CEESH'S TOOLS ARE WEDGED INTO THE INNER DOOR. THE FORGE LIFT IS DISABLED, BUT BROWSER SEALED HIMSELF IN THE ARCHIVE. CEESH NEEDS A SECOND ROUTE."
+  message inner_keep_body "CEESH'S BYPASS OPENS THE INNER GATE. FOLLOW THE SERVICE PASSAGE INTO THE CASTLE UNDERWORKS."
   message inner_keep_title "THE INNER KEEP"
   message lantern_found "A CASTLE LAMPLIGHTER HID A SPARE LANTERN IN THE WESTERN NOOK."
   message lantern_title "THE LAMPLIGHTER'S NOOK"
@@ -29,6 +29,8 @@ locale en
   message objective_enter_title "REACH THE INNER KEEP"
   message objective_note_body "CEESH LEFT A FIELD NOTE BESIDE THE ASHFALL ROAD."
   message objective_note_title "READ CEESH'S FIELD NOTE"
+  message objective_underworks_body "PASS THROUGH THE OPEN INNER GATE AND ENTER CEESH'S MAINTENANCE BYPASS."
+  message objective_underworks_title "ENTER THE CASTLE UNDERWORKS"
   message scenario_title "Caxecraft: Castle Courtyard"
   message west_ready "THE WEST COUNTERWEIGHT DROPS. SET THE EAST RELAY."
 end locale
@@ -38,7 +40,7 @@ locale es-mx
   message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
-  message ceesh_castle "CEESH: BIEN, ENCONTRASTE MI DESVIO. BLOQUEE EL ELEVADOR DE LA FORJA ANTES DE QUE BROWSER LE DIERA OTRA COMPILACION MALA. AHORA AYUDAME A HALLAR OTRA RUTA AL ARCHIVO."
+  message ceesh_castle "CEESH: BLOQUEE EL ELEVADOR. ABRE ESTA CERRADURA Y SIGUE MI DESVIO DE MANTENIMIENTO A LOS TUNELES."
   message ceesh_note "CEESH: CORTE EL BLOQUEO DE ORDEN. ACTIVA EL TORNO OESTE Y EL RELE ESTE EN CUALQUIER ORDEN."
   message courtyard_open "LAS DOS TORRES RESPONDEN JUNTAS. LA REJA SABOTEADA DEL PATIO SE ABRE."
   message east_ready "EL RELE ESTE ZUMBA. ACTIVA EL CONTRAPESO OESTE."
@@ -47,7 +49,7 @@ locale es-mx
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "FUEGO FATUO CARGANDO: ESQUIVA"
   message guide_talk "E  HABLAR"
-  message inner_keep_body "LAS HERRAMIENTAS DE CEESH TRABAN LA PUERTA INTERIOR. EL ELEVADOR DE LA FORJA ESTA DESACTIVADO, PERO BROWSER SE ENCERRO EN EL ARCHIVO. CEESH NECESITA OTRA RUTA."
+  message inner_keep_body "EL DESVIO DE CEESH ABRE LA REJA INTERIOR. SIGUE EL PASO DE SERVICIO A LOS TUNELES DEL CASTILLO."
   message inner_keep_title "EL TORREON INTERIOR"
   message lantern_found "UN FAROLERO DEL CASTILLO ESCONDIO UNA LINTERNA EN EL RINCON OESTE."
   message lantern_title "EL RINCON DEL FAROLERO"
@@ -58,6 +60,8 @@ locale es-mx
   message objective_enter_title "LLEGA AL TORREON INTERIOR"
   message objective_note_body "CEESH DEJO UNA NOTA JUNTO AL CAMINO DE ASHFALL."
   message objective_note_title "LEE LA NOTA DE CEESH"
+  message objective_underworks_body "CRUZA LA REJA INTERIOR Y ENTRA AL DESVIO DE MANTENIMIENTO DE CEESH."
+  message objective_underworks_title "ENTRA A LOS TUNELES DEL CASTILLO"
   message scenario_title "Caxecraft: Patio del Castillo"
   message west_ready "EL CONTRAPESO OESTE CAE. ACTIVA EL RELE ESTE."
 end locale
@@ -137,7 +141,15 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 1
   run 0 161
   run 1 32
-  run 9 256
+  run 9 143
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 14
   run 0 1
   run 9 6
   run 0 18
@@ -176,7 +188,15 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 1
   run 0 160
   run 1 32
-  run 9 256
+  run 9 143
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 14
   run 0 1
   run 9 6
   run 0 18
@@ -215,7 +235,15 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 1
   run 0 161
   run 1 32
-  run 9 256
+  run 9 143
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 29
+  run 0 3
+  run 9 14
   run 0 1
   run 9 6
   run 0 18
@@ -881,7 +909,11 @@ object item.lamplighter-lantern
 end object
 object player.start
   tag player
-  placement player-spawn 16500 5000 29500 180
+  placement player-spawn 16500 5000 29500 0
+end object
+object zone.underworks-entry
+  tag destination
+  placement trigger-zone 14 4 2 5 8 5
 end object
 dialogue dialogue.ceesh-note
   line speaker guide.ceesh message ceesh_note
@@ -912,6 +944,9 @@ journal journal.lamplighter-nook title message lantern_title
 end journal
 objective objective.enter-keep hidden title message objective_enter_title
   body message objective_enter_body
+end objective
+objective objective.enter-underworks hidden title message objective_underworks_title
+  body message objective_underworks_body
 end objective
 objective objective.read-note active title message objective_note_title
   body message objective_note_body
@@ -957,9 +992,11 @@ rule rule.inner-keep-inspected priority 100 once
   when interact castle.inner-lock
   if (objective objective.enter-keep active)
   do set-object-state castle.inner-lock caxecraft:entered
+  do set-object-state castle.inner-gate caxecraft:open
   do dialogue dialogue.inner-keep
   do journal journal.inner-keep
   do objective objective.enter-keep complete
+  do objective objective.enter-underworks active
 end rule
 rule rule.lamplighter-nook-found priority 100 once
   when collect-item caxecraft:lantern
@@ -967,6 +1004,12 @@ rule rule.lamplighter-nook-found priority 100 once
   do set-flag quest.lamplighter-nook-found true
   do dialogue dialogue.lantern-found
   do journal journal.lamplighter-nook
+end rule
+rule rule.underworks-entry-reached priority 100 once
+  when enter-zone zone.underworks-entry
+  if (objective objective.enter-underworks active)
+  do objective objective.enter-underworks complete
+  do campaign-exit castle-underworks-entry
 end rule
 rule rule.west-winch-set priority 100 once
   when interact castle.west-winch

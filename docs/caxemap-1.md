@@ -211,6 +211,10 @@ globally unique. Positions use integer thousandths of a block; this avoids
 locale-sensitive decimal parsing and cross-target floating-point text drift.
 Yaw is an integer from 0 through 359.
 
+Player-spawn yaw sets the camera direction when play starts, after a level
+transition, and after revival. Yaw `0` faces negative Z. Yaw `90` faces
+positive X, yaw `180` faces positive Z, and yaw `270` faces negative X.
+
 The complete placement forms are:
 
 ```text

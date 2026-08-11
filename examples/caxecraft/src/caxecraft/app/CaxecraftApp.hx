@@ -49,6 +49,7 @@ import caxecraft.app.MotionInterpolation.reset as resetMotion;
 import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
+import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
 import caxecraft.app.InteractionPrompt.InteractionPrompt;
 import caxecraft.app.InteractionPrompt.InteractionTargetKind;
@@ -421,9 +422,10 @@ final class CaxecraftApp {
 			return;
 		var swordCombat:SwordCombatState = startSwordCombat();
 		var berryDrop:BerryDropState = emptyBerryDrop();
-		var lookX = 0.0;
-		var lookY = -0.18;
-		var lookZ = -1.0;
+		final initialHeading = headingForSpawn(initialLevel.spawnTransform());
+		var lookX = initialHeading.x;
+		var lookY = initialHeading.y;
+		var lookZ = initialHeading.z;
 		// Real frame time collects here until there is enough for one or more
 		// authoritative fixed simulation steps. The remainder selects a visual
 		// position between the last two committed bodies; it never changes gameplay.
@@ -766,6 +768,10 @@ final class CaxecraftApp {
 									swordCombat = startSwordCombat();
 									berryDrop = emptyBerryDrop();
 									cameraWaterBlend = 0.0;
+									final publishedHeading = headingForSpawn(levelView.spawnTransform());
+									lookX = publishedHeading.x;
+									lookY = publishedHeading.y;
+									lookZ = publishedHeading.z;
 									accumulator = 0.0;
 									motionHistory = resetMotion(character.body);
 									jumpQueued = false;
@@ -815,6 +821,10 @@ final class CaxecraftApp {
 					if (!revival.resolved)
 						quit = true;
 					else {
+						final revivedHeading = headingForSpawn(spawnTransform);
+						lookX = revivedHeading.x;
+						lookY = revivedHeading.y;
+						lookZ = revivedHeading.z;
 						cameraWaterBlend = 0.0;
 						accumulator = 0.0;
 						resetMotionThisFrame = true;
