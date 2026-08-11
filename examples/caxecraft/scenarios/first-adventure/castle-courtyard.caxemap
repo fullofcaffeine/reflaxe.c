@@ -869,7 +869,7 @@ object castle.west-winch
 end object
 object enemy.courtyard-wisp
   tag enemy
-  placement entity caxecraft:ember-wisp 24500 5000 16500 180
+  placement entity caxecraft:ember-wisp 21500 5000 15500 180
 end object
 object guide.ceesh
   tag friend
