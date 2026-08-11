@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name castle-underworks-journey
-frames 498
+frames 272
 
 # Enter Adventure and choose Castle Underworks from reloadable campaign data.
 action 0 menu-next
@@ -12,42 +12,29 @@ action 4 menu-next
 action 6 menu-next
 action 8 menu-next
 action 10 menu-next
-checkpoint 11 capture level-selection
-expect 11 level castle-underworks
-action 12 menu-confirm
-expect 20 screen playing
-expect 20 mode adventure
-expect 20 level castle-underworks
-expect 20 objective objective.isolate-wing
+action 12 menu-next
+checkpoint 13 capture level-selection
+expect 13 level castle-underworks
+action 14 menu-confirm
+expect 22 screen playing
+expect 22 mode adventure
+expect 22 level castle-underworks
+expect 22 objective objective.isolate-wing
 
 # Hear Ceesh's plan, then take the safer coolant gallery around the sabotaged
 # lift. The ash-vent alternative remains a free-play choice, not a duplicate
 # permanent journey.
-hold 13 32 forward
-action 34 interact
-action 39 interact
-hold 40 69 turn-left
-hold 70 110 forward
-hold 112 141 turn-right
-hold 142 245 forward
-action 247 interact
-expect 250 objective objective.reach-archive
-expect 250 object-state underworks.coolant-relay=caxecraft:entered
-expect 251 object-state underworks.archive-gate=caxecraft:open
-action 252 interact
-
-# Follow the rejoined service walkway into the Archive antechamber. This
-# chapter stops before Browser's chamber instead of pretending the boss exists.
-hold 253 350 forward
-hold 352 381 turn-right
-hold 382 422 forward
-hold 423 452 turn-left
-hold 453 480 forward
-action 482 interact
-checkpoint 485 capture final
-expect 485 level castle-underworks
-expect 485 objective none
-expect 485 journal journal.archive-antechamber
-action 490 pause
-expect 490 screen paused
+hold 15 34 forward
+action 36 interact
+action 41 interact
+hold 42 71 turn-left
+hold 72 112 forward
+hold 114 143 turn-right
+hold 144 247 forward
+action 249 interact
+expect 252 objective objective.reach-archive
+expect 252 object-state underworks.coolant-relay=caxecraft:entered
+expect 253 object-state underworks.archive-gate=caxecraft:open
+action 254 interact
+checkpoint 257 capture final
 end

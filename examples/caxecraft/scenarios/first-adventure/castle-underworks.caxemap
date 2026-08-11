@@ -1881,6 +1881,7 @@ rule rule.archive-antechamber-reached priority 100 once
   do dialogue dialogue.archive-reached
   do journal journal.archive-antechamber
   do objective objective.reach-archive complete
+  do campaign-exit castle-underworks-archive
 end rule
 rule rule.ceesh-briefing priority 90 repeat
   when interact guide.ceesh

@@ -85,8 +85,8 @@
     {
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
-      "byteLength": 2405,
-      "sha256": "b5616dfab893c60846ade3fb2aa2db616491922c0865698affd0a003e414f351"
+      "byteLength": 2826,
+      "sha256": "c3974f039608674d4128f6ec4512ce46a497dd040a6de3fb7ccf15e43fb7ce83"
     },
     {
       "kind": "localization",
@@ -121,8 +121,14 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/castle-underworks.caxemap",
-      "byteLength": 25418,
-      "sha256": "e70754595f28ecbcc3f94726abdfdb0d799f8416252b03b94e6c88d1bbd9f88f"
+      "byteLength": 25463,
+      "sha256": "cd80cfe684f1c98de5e582161108dc26d55f3b824bc49672376f4e4ea7fe1101"
+    },
+    {
+      "kind": "level",
+      "path": "scenarios/first-adventure/forge-archive.caxemap",
+      "byteLength": 26769,
+      "sha256": "2814fde86391b259780e15ddebddba4ea88483e97484130998942224fd674cb0"
     },
     {
       "kind": "level",
