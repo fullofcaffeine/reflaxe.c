@@ -1882,6 +1882,11 @@ objective objective.turn-winch hidden title message objective_winch_title
 end objective
 variable quest.signal-progress quest counter 0
 variable quest.western-road-recorded quest flag false
+rule rule.beacon-enters-ashfall priority 100 once
+  when interact ashfall.beacon
+  if (objective objective.seek-ashfall active)
+  do campaign-exit frostmere-north
+end rule
 rule rule.courier-overlook-recorded priority 70 once
   when interact road.ceesh-note
   if (flag quest.western-road-recorded false)

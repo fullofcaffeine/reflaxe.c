@@ -86,7 +86,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 1975,
-      "sha256": "a36f0c7cc363411027ea3e1c7ba8bc179272133e6061854fa3e7eb62ae5d9699"
+      "sha256": "ba83299daadf113769798f099ffab3e2af79ac1527f424163fbc43503129356b"
     },
     {
       "kind": "localization",
@@ -121,8 +121,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/frostmere.caxemap",
-      "byteLength": 30059,
-      "sha256": "51d512058f14cdab26092daad89e3fffced606e3282ee9d2d0b5a44a71774cf1"
+      "byteLength": 30231,
+      "sha256": "90f2dfbeba4a8948ed7aabec6eaea93e2f6646872afc9540269a7033cb0857ed"
     },
     {
       "kind": "level",
