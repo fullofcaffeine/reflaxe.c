@@ -1034,7 +1034,11 @@ final class CaxecraftApp {
 				&& selectedMode == GameMode.Adventure
 				&& Inventory.selectedIs(inventory, ItemKind.CopperSword))
 				swordQueued = true;
-			if (!paused)
+			// A live agent alternates between a bounded action batch and an
+			// observation. Hold the world while it decides what to do next, just as
+			// the pause menu holds the world for a human player. Otherwise breath,
+			// enemies, and content logic continue while no input can be supplied.
+			if (!paused #if caxecraft_pilot_runtime && !(agentSession && agentWaiting) #end)
 				accumulator += frameSeconds;
 			#if caxecraft_render_benchmark
 			final updateStarted = Raylib.GetTime();

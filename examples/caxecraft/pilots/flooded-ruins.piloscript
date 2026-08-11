@@ -1,0 +1,22 @@
+PILOSCRIPT 1
+name flooded-ruins-journey
+frames 90
+
+# Enter Adventure and select Flooded Ruins from the reloadable campaign catalog.
+action 0 menu-next
+checkpoint 0 capture title-selection
+action 1 menu-confirm
+checkpoint 1 capture campaign-selection
+action 2 menu-next
+checkpoint 2 capture level-selection
+action 3 menu-confirm
+expect 6 level flooded-ruins
+expect 6 objective objective.descend
+
+# Enter the Tideglass nave with the Fallskeeper's safety equipment. Live play
+# owns route finding, the optional cache, and the final dive to the lock.
+hold 5 64 forward
+expect 70 objective objective.open-lock
+expect 70 equipment caxecraft:tideweave-suit
+checkpoint 75 capture final
+end

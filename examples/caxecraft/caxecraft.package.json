@@ -85,8 +85,8 @@
     {
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
-      "byteLength": 3253,
-      "sha256": "e00bfba43bb95774b16b39075e92f4480f1240bc24dc507b40a9ae2fcc801abe"
+      "byteLength": 3878,
+      "sha256": "4b0f309e83595829a081c569a9ee8f51026d2fb4f70a544f65ea3ab70362f461"
     },
     {
       "kind": "localization",
@@ -132,6 +132,12 @@
     },
     {
       "kind": "level",
+      "path": "scenarios/first-adventure/flooded-ruins.caxemap",
+      "byteLength": 26525,
+      "sha256": "a063896bd3f0cb4bd94b348ea13b17e6cb7cfc9e23748a0e23c1b3634a59cfb8"
+    },
+    {
+      "kind": "level",
       "path": "scenarios/first-adventure/forge-archive.caxemap",
       "byteLength": 26818,
       "sha256": "babf484e8c6c877d2668c7016df442ca573f766d2685d4fd6a57883c7bbb2adc"
@@ -145,8 +151,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 33218,
-      "sha256": "98941b5c97a124e0af38f0d5b69582986cbe2f8df9e1d039dd731532fb1c5f38"
+      "byteLength": 34448,
+      "sha256": "2317ebe1cf6985c87f40dd69e2589cfa739b423575499e230070a0fedeeb6ab6"
     },
     {
       "kind": "level",

@@ -35,6 +35,12 @@
       "sha256": "9caf7c4ec08fcf319bc4ffab69067309c64242a01dcb6d03ca8b1c41c1d1ec37"
     },
     {
+      "id": "flooded-ruins",
+      "path": "scenarios/first-adventure/flooded-ruins.caxemap",
+      "byteLength": 26525,
+      "sha256": "a063896bd3f0cb4bd94b348ea13b17e6cb7cfc9e23748a0e23c1b3634a59cfb8"
+    },
+    {
       "id": "forge-archive",
       "path": "scenarios/first-adventure/forge-archive.caxemap",
       "byteLength": 26818,
@@ -49,8 +55,8 @@
     {
       "id": "western-falls",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 33218,
-      "sha256": "98941b5c97a124e0af38f0d5b69582986cbe2f8df9e1d039dd731532fb1c5f38"
+      "byteLength": 34448,
+      "sha256": "2317ebe1cf6985c87f40dd69e2589cfa739b423575499e230070a0fedeeb6ab6"
     }
   ],
   "transitions": [
@@ -83,6 +89,13 @@
       "required": true
     },
     {
+      "exit": "flooded-ruins-castle-drain",
+      "sourceLevel": "flooded-ruins",
+      "destinationLevel": "castle-courtyard",
+      "destinationEntrance": "default",
+      "required": false
+    },
+    {
       "exit": "forge-archive-browser-chamber",
       "sourceLevel": "forge-archive",
       "destinationLevel": "browser-chamber",
@@ -95,6 +108,13 @@
       "destinationLevel": "ashfall",
       "destinationEntrance": "default",
       "required": true
+    },
+    {
+      "exit": "western-falls-flooded-ruins",
+      "sourceLevel": "western-falls",
+      "destinationLevel": "flooded-ruins",
+      "destinationEntrance": "default",
+      "required": false
     },
     {
       "exit": "western-falls-frostmere-road",

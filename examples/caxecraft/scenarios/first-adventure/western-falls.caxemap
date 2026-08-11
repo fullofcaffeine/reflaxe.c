@@ -14,6 +14,8 @@ locale en
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "MOSSLING WINDUP: DODGE"
   message fallskeeper_welcome "FALLSKEEPER: THE FOUR MARKS ARE RIVER, ROOT, MOON, FLAME. READ THEM IN THAT ORDER."
+  message flooded_route_body "THE TIDE RELAY OPENS THE SUBMERGED RUINS. THE WEST ROAD REMAINS OPEN TOWARD FROSTMERE."
+  message flooded_route_title "TWO WAYS TO THE CASTLE"
   message guide_talk "E  TALK"
   message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
   message journal_fallskeeper_body "VAULT CODE: RIVER, ROOT, MOON, FLAME. THE FALLSKEEPER SAYS TO READ THE MARKS IN THAT ORDER."
@@ -33,6 +35,7 @@ locale en
   message survey_note_body "CEESH MAPPED TWO SAFE DESCENTS: THE ROOT BRIDGE AND THE LOWER STREAMBANK. THEY REJOIN AT THE FALLSKEEPER'S SHRINE."
   message survey_note_found "CEESH'S SURVEY: THE ROOT BRIDGE AND STREAMBANK REJOIN BY THE FALLSKEEPER."
   message survey_note_title "CEESH'S RIVER SURVEY"
+  message tide_gate_ready "THE TIDE RELAY ANSWERS THE SUIT. THE FLOODED RUINS OPEN BELOW."
   message vault_open "THE FOUR MARKS ANSWER. THE SEALED WAY OPENS."
   message vault_reset "THE MARKS FALL SILENT. BEGIN AGAIN WITH RIVER."
 end locale
@@ -47,6 +50,8 @@ locale es-mx
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
   message fallskeeper_welcome "GUARDIAN: LAS CUATRO MARCAS SON RIO, RAIZ, LUNA, LLAMA. LEELAS EN ESE ORDEN."
+  message flooded_route_body "EL RELE DE MAREA ABRE LAS RUINAS SUMERGIDAS. EL CAMINO OESTE SIGUE ABIERTO HACIA FROSTMERE."
+  message flooded_route_title "DOS CAMINOS AL CASTILLO"
   message guide_talk "E  HABLAR"
   message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
   message journal_fallskeeper_body "CLAVE DE LA BOVEDA: RIO, RAIZ, LUNA, LLAMA. EL GUARDIAN DICE QUE LAS LEAS EN ESE ORDEN."
@@ -66,6 +71,7 @@ locale es-mx
   message survey_note_body "CEESH TRAZO DOS DESCENSOS SEGUROS: EL PUENTE DE RAICES Y LA ORILLA BAJA. SE UNEN EN EL SANTUARIO DEL GUARDIAN."
   message survey_note_found "MAPA DE CEESH: EL PUENTE DE RAICES Y LA ORILLA SE UNEN JUNTO AL GUARDIAN."
   message survey_note_title "MAPA DEL RIO DE CEESH"
+  message tide_gate_ready "EL RELE RESPONDE AL TRAJE. LAS RUINAS INUNDADAS SE ABREN ABAJO."
   message vault_open "LAS CUATRO MARCAS RESPONDEN. EL PASO SELLADO SE ABRE."
   message vault_reset "LAS MARCAS CALLAN. EMPIEZA DE NUEVO CON RIO."
 end locale
@@ -1986,6 +1992,11 @@ object player.start
   tag player
   placement player-spawn 35500 5000 18500 270
 end object
+object route.flooded-ruins-relay
+  tag destination
+  tag mechanism
+  placement stateful caxecraft:gate-relay caxecraft:waiting 14500 3000 26500 180
+end object
 object vault.gate
   tag vault-gate
   placement stateful caxecraft:vault-gate caxecraft:sealed 5000 3000 20000 0
@@ -2017,6 +2028,9 @@ end object
 dialogue dialogue.fallskeeper.marks
   line speaker guide.fallskeeper message fallskeeper_welcome
 end dialogue
+dialogue dialogue.flooded-route
+  line narrator message tide_gate_ready
+end dialogue
 dialogue dialogue.moss.falls
   line speaker guide.moss message guide_welcome
 end dialogue
@@ -2037,6 +2051,9 @@ journal journal.ceesh-river-survey title message survey_note_title
 end journal
 journal journal.fallskeeper-lead title message journal_fallskeeper_title
   body message journal_fallskeeper_body
+end journal
+journal journal.flooded-route title message flooded_route_title
+  body message flooded_route_body
 end journal
 objective objective.explore-grotto hidden title message objective_grotto_title
   body message objective_grotto_body
@@ -2080,6 +2097,14 @@ rule rule.flame-resets-wrong-code priority 120 repeat
   do set-object-state vault.glyph-moon caxecraft:waiting
   do set-object-state vault.glyph-river caxecraft:waiting
   do dialogue dialogue.vault.reset
+end rule
+rule rule.flooded-ruins-route-opens priority 100 once
+  when interact route.flooded-ruins-relay
+  if (objective objective.explore-grotto complete)
+  do set-object-state route.flooded-ruins-relay caxecraft:entered
+  do dialogue dialogue.flooded-route
+  do journal journal.flooded-route
+  do campaign-exit western-falls-flooded-ruins
 end rule
 rule rule.frostmere-road-opens priority 100 once
   when enter-zone zone.frostmere-road
