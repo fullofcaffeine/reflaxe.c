@@ -1605,7 +1605,9 @@ chunk region.western-road 32 0 0 32 16 32
   run 0 1
   run 5 1
   run 0 1
-  run 7 25
+  run 7 15
+  run 0 5
+  run 7 5
   run 0 5
   run 5 1
   run 0 30
@@ -1801,9 +1803,19 @@ object item.ashfall-lantern
   tag reward
   placement item caxecraft:lantern 1 16500 9000 5500 0
 end object
+object item.courier-supplies
+  tag secret
+  tag reward
+  placement item caxecraft:berries 2 58500 8000 20500 0
+end object
 object player.start
   tag player
   placement player-spawn 48500 4000 30500 180
+end object
+object road.ceesh-note
+  tag secret
+  tag lore
+  placement stateful caxecraft:ceesh-field-note caxecraft:waiting 55500 8000 20500 180
 end object
 object signal.flame
   tag mechanism
@@ -1828,10 +1840,6 @@ end object
 object snow.winch
   tag mechanism
   placement stateful caxecraft:gate-winch caxecraft:waiting 16500 6000 18500 0
-end object
-object zone.courier-overlook
-  tag secret
-  placement trigger-zone 53 0 17 7 16 6
 end object
 dialogue dialogue.courier-overlook
   line narrator message road_marker_found
@@ -1875,9 +1883,10 @@ end objective
 variable quest.signal-progress quest counter 0
 variable quest.western-road-recorded quest flag false
 rule rule.courier-overlook-recorded priority 70 once
-  when enter-zone zone.courier-overlook
+  when interact road.ceesh-note
   if (flag quest.western-road-recorded false)
   do set-flag quest.western-road-recorded true
+  do set-object-state road.ceesh-note caxecraft:entered
   do dialogue dialogue.courier-overlook
   do journal journal.western-road
 end rule
