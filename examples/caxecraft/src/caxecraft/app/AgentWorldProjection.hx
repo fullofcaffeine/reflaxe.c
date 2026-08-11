@@ -2,7 +2,9 @@ package caxecraft.app;
 
 import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
 import caxecraft.domain.BlockKind;
+import caxecraft.domain.ActorControllerPhase;
 import caxecraft.domain.Character;
+import caxecraft.domain.EntityId;
 import caxecraft.domain.GameSession;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.World;
@@ -67,6 +69,20 @@ function agentNearby(session:GameSession, level:PlayableLevelView, player:Charac
 				state: actor.vitals.health > 0 ? "active" : "defeated"
 			});
 	}
+	final enemyId = level.enemyActorId();
+	final enemy = session.readCharacter(enemyId);
+	final enemyDistanceSquared = horizontalDistanceSquaredMilliBlocks(player.body.x, player.body.z, enemy.body.x, enemy.body.z);
+	if (enemyDistanceSquared <= 144000000)
+		nearby.push({
+			id: level.enemyActorScenarioId().text(),
+			kind: "enemy",
+			xMilli: Std.int(enemy.body.x * 1000.0),
+			yMilli: Std.int(enemy.body.y * 1000.0),
+			zMilli: Std.int(enemy.body.z * 1000.0),
+			distanceSquaredMilliBlocks: enemyDistanceSquared,
+			interactable: false,
+			state: enemy.vitals.health <= 0 ? "defeated" : enemyPhase(session, enemyId)
+		});
 	for (index in 0...level.statefulObjectCount()) {
 		final id = level.statefulObjectIdAt(index);
 		final transform = level.statefulObjectTransformAt(index);
@@ -88,6 +104,27 @@ function agentNearby(session:GameSession, level:PlayableLevelView, player:Charac
 		}
 	}
 	return nearby;
+}
+
+/** Resolve the current controller phase for the observed hostile actor. */
+private function enemyPhase(session:GameSession, enemyId:EntityId):String {
+	for (controller in session.actorControllerStateSnapshots())
+		if (controller.characterId == enemyId)
+			return switch controller.phase {
+				case Stationary: "stationary";
+				case Resting: "resting";
+				case Wandering: "wandering";
+				case Chasing: "chasing";
+				case Returning: "returning";
+				case Windup: "windup";
+				case Recovering: "recovering";
+				case Roaring: "roaring";
+				case Charging: "charging";
+				case TailSweep: "tail-sweep";
+				case Stunned: "stunned";
+				case Defeated: "defeated";
+			};
+	return "missing";
 }
 
 /** Build one clipped surface map with the parser-validated radius. */

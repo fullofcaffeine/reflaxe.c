@@ -123,6 +123,7 @@ final class PlayableLevelView {
 	final dialogueActors:Array<PlayableDialogueActor>;
 	final statefulObjects:Array<LoadedStatefulObjectBinding>;
 	final enemyId:EntityId;
+	final enemyAuthoredId:ScenarioId;
 	final enemyAsset:String;
 	final enemyCell:Int;
 	final items:Array<LoadedWorldItem>;
@@ -132,14 +133,15 @@ final class PlayableLevelView {
 	/** Retain only facts proven to belong to the supplied generation. */
 	@:allow(caxecraft.app.ActivePlayableLevel)
 	private function new(candidate:RuntimeLevelCandidate, loadedDialogueActors:Array<PlayableDialogueActor>, enemyActorId:EntityId,
-			enemyPresentationAsset:String, enemyPresentationCell:Int, loadedStatefulObjects:Array<LoadedStatefulObjectBinding>,
-			loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
+			loadedEnemyAuthoredId:ScenarioId, enemyPresentationAsset:String, enemyPresentationCell:Int,
+			loadedStatefulObjects:Array<LoadedStatefulObjectBinding>, loadedItems:Array<LoadedWorldItem>, spawn:ScenarioTransform, waterPresentationCell:Int) {
 		loadedGeneration = candidate.generation();
 		levelPresentation = candidate.presentation();
 		sourcePath = candidate.receipt().logicalPath;
 		dialogueActors = loadedDialogueActors.copy();
 		statefulObjects = loadedStatefulObjects.copy();
 		enemyId = enemyActorId;
+		enemyAuthoredId = loadedEnemyAuthoredId;
 		enemyAsset = enemyPresentationAsset;
 		enemyCell = enemyPresentationCell;
 		items = loadedItems.copy();
@@ -202,6 +204,10 @@ final class PlayableLevelView {
 	/** Temporary fixed-combat enemy selected by generic authored role. */
 	public inline function enemyActorId():EntityId
 		return enemyId;
+
+	/** Stable CaxeMap identity for the level's one validated hostile actor. */
+	public inline function enemyActorScenarioId():ScenarioId
+		return enemyAuthoredId;
 
 	/** Validated atlas selected by the current enemy profile. */
 	public inline function enemyActorPresentationAsset():String
@@ -345,6 +351,7 @@ final class ActivePlayableLevel {
 		final actorBindings = candidate.generation().actorBindings();
 		final dialogueActors = collectDialogueActors(actorBindings);
 		var enemyActorId = EntityId.invalid();
+		var enemyAuthoredId = new ScenarioId("");
 		var enemyPresentationAsset = "";
 		var enemyPresentationCell = -1;
 		for (binding in actorBindings)
@@ -354,6 +361,7 @@ final class ActivePlayableLevel {
 					if (enemyActorId.isValid())
 						return PlayableLevelNotPrepared(EnemyActorAmbiguous);
 					enemyActorId = binding.entityId;
+					enemyAuthoredId = binding.authoredId;
 					enemyPresentationAsset = binding.presentationAsset;
 					enemyPresentationCell = binding.presentationCellIndex;
 			};
@@ -379,8 +387,9 @@ final class ActivePlayableLevel {
 				yMilli: binding.transform.yMilli,
 				zMilli: binding.transform.zMilli
 			});
-		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActors, enemyActorId, enemyPresentationAsset, enemyPresentationCell,
-			candidate.generation().statefulObjectBindings(), loadedItems, candidate.generation().plan().player().transform, waterPresentationCell));
+		return PlayableLevelPrepared(new PlayableLevelView(candidate, dialogueActors, enemyActorId, enemyAuthoredId, enemyPresentationAsset,
+			enemyPresentationCell, candidate.generation().statefulObjectBindings(), loadedItems, candidate.generation().plan().player().transform,
+			waterPresentationCell));
 	}
 }
 

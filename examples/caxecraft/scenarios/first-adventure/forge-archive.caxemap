@@ -1862,6 +1862,7 @@ rule rule.browser-threshold-reached priority 100 once
   do dialogue dialogue.browser-threshold
   do journal journal.browser-threshold
   do objective objective.reach-browser complete
+  do campaign-exit forge-archive-browser-chamber
 end rule
 rule rule.ceesh-holds-main-line priority 100 once
   when interact guide.ceesh

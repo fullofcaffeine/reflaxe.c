@@ -85,8 +85,8 @@
     {
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
-      "byteLength": 2826,
-      "sha256": "c3974f039608674d4128f6ec4512ce46a497dd040a6de3fb7ccf15e43fb7ce83"
+      "byteLength": 3253,
+      "sha256": "e00bfba43bb95774b16b39075e92f4480f1240bc24dc507b40a9ae2fcc801abe"
     },
     {
       "kind": "localization",
@@ -114,6 +114,12 @@
     },
     {
       "kind": "level",
+      "path": "scenarios/first-adventure/browser-chamber.caxemap",
+      "byteLength": 13596,
+      "sha256": "ed2316833b6a56266b984dfc0c0e161902461824f0516db82ed0f41a588b0672"
+    },
+    {
+      "kind": "level",
       "path": "scenarios/first-adventure/castle-courtyard.caxemap",
       "byteLength": 18345,
       "sha256": "6dd715129747a4ecd02e5d9b169a411a21b1ce98d2d41683f58eb51d577bc54f"
@@ -127,8 +133,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/forge-archive.caxemap",
-      "byteLength": 26769,
-      "sha256": "2814fde86391b259780e15ddebddba4ea88483e97484130998942224fd674cb0"
+      "byteLength": 26818,
+      "sha256": "babf484e8c6c877d2668c7016df442ca573f766d2685d4fd6a57883c7bbb2adc"
     },
     {
       "kind": "level",

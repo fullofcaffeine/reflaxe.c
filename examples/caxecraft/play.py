@@ -3251,6 +3251,8 @@ def prepare_agent_session_screenshot(
     raylib_configuration: str,
 ) -> None:
     """Make the response screenshot directly reviewable before publication."""
+    if observation.get("type") == "error":
+        return
     if raylib_configuration != "memory-software":
         return
     screenshot = observation.get("screenshot")

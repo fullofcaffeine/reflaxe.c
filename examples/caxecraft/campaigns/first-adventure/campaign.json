@@ -11,6 +11,12 @@
       "sha256": "7dfcbbe96d89044e84fd51811279f4074aa2e532769aa587a5cfc9a30efa10bd"
     },
     {
+      "id": "browser-chamber",
+      "path": "scenarios/first-adventure/browser-chamber.caxemap",
+      "byteLength": 13596,
+      "sha256": "ed2316833b6a56266b984dfc0c0e161902461824f0516db82ed0f41a588b0672"
+    },
+    {
       "id": "castle-courtyard",
       "path": "scenarios/first-adventure/castle-courtyard.caxemap",
       "byteLength": 18345,
@@ -31,8 +37,8 @@
     {
       "id": "forge-archive",
       "path": "scenarios/first-adventure/forge-archive.caxemap",
-      "byteLength": 26769,
-      "sha256": "2814fde86391b259780e15ddebddba4ea88483e97484130998942224fd674cb0"
+      "byteLength": 26818,
+      "sha256": "babf484e8c6c877d2668c7016df442ca573f766d2685d4fd6a57883c7bbb2adc"
     },
     {
       "id": "frostmere",
@@ -73,6 +79,13 @@
       "exit": "evergrove-west",
       "sourceLevel": "evergrove",
       "destinationLevel": "western-falls",
+      "destinationEntrance": "default",
+      "required": true
+    },
+    {
+      "exit": "forge-archive-browser-chamber",
+      "sourceLevel": "forge-archive",
+      "destinationLevel": "browser-chamber",
       "destinationEntrance": "default",
       "required": true
     },

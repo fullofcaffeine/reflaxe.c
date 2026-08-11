@@ -1,0 +1,648 @@
+CAXEMAP 1
+feature required caxecraft:core
+map adventure.browser-chamber
+asset-pack packs/caxecraft/base
+default-locale en
+locale en
+  message adventure_progress "BREAK BROWSER'S HOLD"
+  message adventure_tagline "PREPARE WITH CEESH. READ THE ATTACK. STRIKE TOGETHER."
+  message attack_hit "HAXEFORGE STRIKE"
+  message browser_defeated "CEESH: THE ARCHIVE IS OURS AGAIN. YOU MADE THE OPENING; WE FINISHED IT TOGETHER."
+  message ceesh_briefing "CEESH: I BUILT TWO FORGE RELAYS INTO THE BRACES. PRIME BOTH, THEN DRAW HIS CHARGE AND STRIKE ONLY WHEN MY LINE HOLDS."
+  message east_ready "CEESH: EAST RELAY STEADY. ONE MORE LINE WILL OPEN THE CHAMBER."
+  message enemy_alert "BROWSER CHARGES - DODGE SIDEWAYS"
+  message enemy_dropped_items "BROWSER DROPPED THE LAST OF HIS STOLEN RATIONS"
+  message enemy_hit_warning "TAIL SWEEP - BACK AWAY"
+  message enemy_vulnerable "CEESH'S FORGE LINE HOLDS - STRIKE NOW"
+  message enemy_windup "BROWSER ROARS - MAKE SPACE"
+  message guide_talk "E  TALK TO CEESH"
+  message object_use "E  USE FORGE RELAY"
+  message objective_browser_body "DODGE THE ROAR, CHARGE, AND TAIL SWEEP. ATTACK ONLY WHILE BROWSER IS STUNNED."
+  message objective_browser_title "DEFEAT BROWSER"
+  message objective_ceesh_body "MEET CEESH IN THE PREPARATION HALL."
+  message objective_ceesh_title "PLAN THE LAST MOVE WITH CEESH"
+  message objective_prepare_body "PRIME THE WEST AND EAST RELAYS. CEESH WILL OPEN THE SAFETY GATE."
+  message objective_prepare_title "PRIME BOTH FORGE RELAYS"
+  message objective_return_body "CROSS THE OPEN CROWN GATE AND STEP ONTO THE QUIET TERRACE."
+  message objective_return_title "STEP INTO THE RESTORED ARCHIVE"
+  message player_fallen "HAXIRIO HAS FALLEN"
+  message return_prompt "E  RETURN TO THE CHAMBER"
+  message scenario_title "Caxecraft: Browser's Last Stand"
+  message victory_body "THE ARCHIVE BREATHES AGAIN. ITS CROWN DOOR STAYS OPEN FOR EVERY CREATOR."
+  message victory_title "THE ARCHIVE, RESTORED"
+  message west_ready "CEESH: WEST RELAY LOCKED. PRIME THE EAST LINE AND I WILL OPEN THE GATE."
+end locale
+locale es-mx
+  message adventure_progress "ROMPE EL CONTROL DE BROWSER"
+  message adventure_tagline "PREPARATE CON CEESH. LEE EL ATAQUE. GOLPEEN JUNTOS."
+  message attack_hit "GOLPE DE HAXEFORJA"
+  message browser_defeated "CEESH: EL ARCHIVO ES NUESTRO OTRA VEZ. TU ABRISTE EL CAMINO; LO TERMINAMOS JUNTOS."
+  message ceesh_briefing "CEESH: CONECTE DOS RELEVADORES A LOS SOPORTES. ACTIVA AMBOS, ATRAE SU CARGA Y GOLPEA CUANDO MI LINEA LO DETENGA."
+  message east_ready "CEESH: RELEVADOR ESTE ESTABLE. UNA LINEA MAS ABRIRA LA CAMARA."
+  message enemy_alert "BROWSER CARGA - ESQUIVA A UN LADO"
+  message enemy_dropped_items "BROWSER SOLTO SUS ULTIMAS RACIONES ROBADAS"
+  message enemy_hit_warning "GOLPE DE COLA - RETROCEDE"
+  message enemy_vulnerable "LA LINEA DE CEESH RESISTE - GOLPEA AHORA"
+  message enemy_windup "BROWSER RUGE - ABRE ESPACIO"
+  message guide_talk "E  HABLAR CON CEESH"
+  message object_use "E  USAR RELEVADOR"
+  message objective_browser_body "ESQUIVA EL RUGIDO, LA CARGA Y LA COLA. ATACA SOLO CUANDO BROWSER ESTE ATURDIDO."
+  message objective_browser_title "DERROTA A BROWSER"
+  message objective_ceesh_body "ENCUENTRA A CEESH EN LA SALA DE PREPARACION."
+  message objective_ceesh_title "PLANEA EL ULTIMO MOVIMIENTO CON CEESH"
+  message objective_prepare_body "ACTIVA LOS RELEVADORES OESTE Y ESTE. CEESH ABRIRA LA PUERTA DE SEGURIDAD."
+  message objective_prepare_title "ACTIVA LOS DOS RELEVADORES"
+  message objective_return_body "CRUZA LA PUERTA ABIERTA Y ENTRA EN LA TERRAZA TRANQUILA."
+  message objective_return_title "ENTRA AL ARCHIVO RESTAURADO"
+  message player_fallen "HAXIRIO HA CAIDO"
+  message return_prompt "E  VOLVER A LA CAMARA"
+  message scenario_title "Caxecraft: La ultima batalla de Browser"
+  message victory_body "EL ARCHIVO RESPIRA OTRA VEZ. SU PUERTA QUEDA ABIERTA PARA CADA CREADOR."
+  message victory_title "EL ARCHIVO, RESTAURADO"
+  message west_ready "CEESH: RELEVADOR OESTE FIJO. ACTIVA LA LINEA ESTE Y ABRIRE LA PUERTA."
+end locale
+title message scenario_title
+mode adventure
+world 32 16 32
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+palette 5 caxecraft:wood
+palette 8 caxecraft:ash
+palette 9 caxecraft:stone
+chunk chamber.whole 0 0 0 32 16 32
+  run 1 32
+  run 9 256
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 106
+  run 5 12
+  run 9 11
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 140
+  run 0 8
+  run 9 24
+  run 0 8
+  run 9 24
+  run 0 8
+  run 9 24
+  run 0 8
+  run 9 12
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 3
+  run 5 1
+  run 0 20
+  run 5 1
+  run 9 3
+  run 0 1
+  run 9 2
+  run 0 4
+  run 5 1
+  run 0 20
+  run 5 1
+  run 0 4
+  run 9 2
+  run 0 4
+  run 5 1
+  run 0 20
+  run 5 1
+  run 0 4
+  run 9 2
+  run 0 4
+  run 5 1
+  run 0 20
+  run 5 1
+  run 0 4
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 8 18
+  run 9 8
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 8 18
+  run 9 8
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 3
+  run 5 1
+  run 0 20
+  run 5 1
+  run 9 3
+  run 0 1
+  run 9 2
+  run 0 4
+  run 5 1
+  run 0 20
+  run 5 1
+  run 0 4
+  run 9 2
+  run 0 4
+  run 5 1
+  run 0 20
+  run 5 1
+  run 0 4
+  run 9 2
+  run 0 4
+  run 5 1
+  run 0 20
+  run 5 1
+  run 0 4
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 140
+  run 0 8
+  run 9 24
+  run 0 8
+  run 9 24
+  run 0 8
+  run 9 24
+  run 0 8
+  run 9 12
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 5 1
+  run 9 16
+  run 5 1
+  run 9 8
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 5 1
+  run 9 16
+  run 5 1
+  run 9 8
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 5 1
+  run 9 16
+  run 5 1
+  run 9 8
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 5 1
+  run 9 16
+  run 5 1
+  run 9 8
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 5 1
+  run 9 16
+  run 5 1
+  run 9 8
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 103
+  run 5 1
+  run 9 16
+  run 5 1
+  run 9 8
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 256
+  run 0 224
+end chunk
+fluid chamber.coolant caxecraft:water volume 2 5 26 3 1 2
+object arena.entry-gate
+  tag gate
+  placement stateful caxecraft:castle-portcullis caxecraft:sealed 15500 5000 22500 0
+end object
+object arena.exit-gate
+  tag gate
+  placement stateful caxecraft:castle-portcullis caxecraft:sealed 15500 5000 4500 0
+end object
+object arena.relay-east
+  tag mechanism
+  placement stateful caxecraft:gate-relay caxecraft:waiting 23500 5000 26500 0
+end object
+object arena.relay-west
+  tag mechanism
+  placement stateful caxecraft:gate-relay caxecraft:waiting 7500 5000 26500 0
+end object
+object enemy.browser
+  tag boss
+  tag enemy
+  placement entity caxecraft:browser 15500 5000 9000 180
+end object
+object guide.ceesh
+  tag friend
+  placement npc caxecraft:ceesh dialogue.ceesh-briefing 15500 5000 27500 180
+end object
+object player.start
+  tag player
+  placement player-spawn 15500 5000 29500 0
+end object
+object zone.victory
+  tag destination
+  placement trigger-zone 10 4 1 12 6 3
+end object
+dialogue dialogue.browser-defeated
+  line speaker guide.ceesh message browser_defeated
+end dialogue
+dialogue dialogue.ceesh-briefing
+  line speaker guide.ceesh message ceesh_briefing
+end dialogue
+dialogue dialogue.east-ready
+  line speaker guide.ceesh message east_ready
+end dialogue
+dialogue dialogue.victory
+  line speaker guide.ceesh message victory_body
+end dialogue
+dialogue dialogue.west-ready
+  line speaker guide.ceesh message west_ready
+end dialogue
+journal journal.browser-defeated title message objective_return_title
+  body message browser_defeated
+end journal
+journal journal.victory title message victory_title
+  body message victory_body
+end journal
+objective objective.confront-browser hidden title message objective_browser_title
+  body message objective_browser_body
+end objective
+objective objective.join-ceesh active title message objective_ceesh_title
+  body message objective_ceesh_body
+end objective
+objective objective.prepare-arena hidden title message objective_prepare_title
+  body message objective_prepare_body
+end objective
+objective objective.return-to-ceesh hidden title message objective_return_title
+  body message objective_return_body
+end objective
+variable quest.east-relay-ready quest flag false
+variable quest.west-relay-ready quest flag false
+rule rule.browser-defeated priority 100 once
+  when entity-defeated enemy.browser
+  if (objective objective.confront-browser active)
+  do set-object-state arena.exit-gate caxecraft:open
+  do dialogue dialogue.browser-defeated
+  do journal journal.browser-defeated
+  do objective objective.confront-browser complete
+  do objective objective.return-to-ceesh active
+end rule
+rule rule.ceesh-briefing priority 100 once
+  when interact guide.ceesh
+  if (objective objective.join-ceesh active)
+  do dialogue dialogue.ceesh-briefing
+  do objective objective.join-ceesh complete
+  do objective objective.prepare-arena active
+end rule
+rule rule.east-opens-entry priority 90 once
+  when interact arena.relay-east
+  if (all (objective objective.prepare-arena active) (flag quest.east-relay-ready false) (flag quest.west-relay-ready true))
+  do set-object-state arena.entry-gate caxecraft:open
+  do objective objective.prepare-arena complete
+  do objective objective.confront-browser active
+end rule
+rule rule.east-relay-ready priority 100 once
+  when interact arena.relay-east
+  if (all (objective objective.prepare-arena active) (flag quest.east-relay-ready false))
+  do set-flag quest.east-relay-ready true
+  do set-object-state arena.relay-east caxecraft:entered
+  do dialogue dialogue.east-ready
+end rule
+rule rule.victory-reached priority 100 once
+  when enter-zone zone.victory
+  if (objective objective.return-to-ceesh active)
+  do dialogue dialogue.victory
+  do journal journal.victory
+  do objective objective.return-to-ceesh complete
+end rule
+rule rule.west-opens-entry priority 90 once
+  when interact arena.relay-west
+  if (all (objective objective.prepare-arena active) (flag quest.east-relay-ready true) (flag quest.west-relay-ready false))
+  do set-object-state arena.entry-gate caxecraft:open
+  do objective objective.prepare-arena complete
+  do objective objective.confront-browser active
+end rule
+rule rule.west-relay-ready priority 100 once
+  when interact arena.relay-west
+  if (all (objective objective.prepare-arena active) (flag quest.west-relay-ready false))
+  do set-flag quest.west-relay-ready true
+  do set-object-state arena.relay-west caxecraft:entered
+  do dialogue dialogue.west-ready
+end rule
+end-map
