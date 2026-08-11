@@ -599,6 +599,7 @@ rule rule.castle-road-recorded priority 100 once
   do journal journal.castle-road
   do dialogue dialogue.reward
   do objective objective.reach-castle-road complete
+  do campaign-exit ashfall-castle-road
 end rule
 rule rule.nia-explains-the-span priority 100 once
   when interact guide.nia

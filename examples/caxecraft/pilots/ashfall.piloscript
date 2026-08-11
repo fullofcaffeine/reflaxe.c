@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name ashfall-journey
-frames 450
+frames 325
 
 # Enter Adventure and select Ashfall from the runtime campaign catalog. This
 # protects the real title -> campaign -> level boundary without freezing every
@@ -49,19 +49,15 @@ action 264 interact
 expect 267 object-state ash.bridge-gate=caxecraft:open
 
 # The real player crosses the opened timber span and enters the castle-road
-# trigger zone. Its journal entry is the durable chapter-boundary observation;
-# the generic engine does not know which campaign authored it.
+# trigger zone. The campaign carries the same player into the castle courtyard;
+# the generic engine does not know which campaign authored that transition.
 action 268 interact
 hold 269 300 forward-jump
-hold 301 324 forward
-expect 326 journal journal.castle-road
+hold 301 308 forward
+expect 310 level castle-courtyard
+expect 310 objective objective.read-note
 
-# Step back from the castle marker and turn toward the restored approach. The
-# final frame is review evidence, so it should show the place reached instead
-# of ending with the camera pressed against a wall.
-hold 327 346 backward
-hold 347 410 turn-left
-action 415 pause
-checkpoint 415 capture final
-expect 415 screen paused
+action 315 pause
+checkpoint 315 capture final
+expect 315 screen paused
 end

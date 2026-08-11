@@ -86,7 +86,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 1975,
-      "sha256": "0d13b6f7d680a4bb82d5bf8456c553596009ef610927a2c90e85a7bae7c80c34"
+      "sha256": "5f93f033d5657b3d7081e0cae61c7e912010d86bc703b467e2cc11f230fe318c"
     },
     {
       "kind": "localization",
@@ -109,8 +109,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/ashfall.caxemap",
-      "byteLength": 15850,
-      "sha256": "df6f4fef4be39384e604982615bfee9f5362559d0807ce78eab09ed7512cdf38"
+      "byteLength": 15889,
+      "sha256": "3086e42cac84fd994552353db65a75e243ed946bf0c37966ff37becab8facfe2"
     },
     {
       "kind": "level",
