@@ -10,7 +10,7 @@ locale en
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
   message ceesh_castle "CEESH: GOOD, YOU FOUND MY BYPASS. I JAMMED THE FORGE LIFT BEFORE BROWSER COULD FEED IT ANOTHER BAD BUILD. NOW HELP ME FIND A SECOND WAY INTO THE ARCHIVE."
-  message ceesh_note "CEESH'S NOTE: BROWSER CHAINED THE COURTYARD GATE TO BOTH TOWERS. I CUT THE LOCK'S ORDER CHECK. SET THE WEST COUNTERWEIGHT AND EAST RELAY IN EITHER ORDER. - CEESH"
+  message ceesh_note "CEESH: I CUT THE GATE'S ORDER LOCK. SET THE WEST WINCH AND EAST RELAY IN EITHER ORDER."
   message courtyard_open "THE TWO TOWERS ANSWER TOGETHER. THE SABOTAGED COURTYARD GATE OPENS."
   message east_ready "THE EAST RELAY HUMS. SET THE WEST COUNTERWEIGHT."
   message enemy_alert "EMBER WISP ALERT"
@@ -39,7 +39,7 @@ locale es-mx
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
   message ceesh_castle "CEESH: BIEN, ENCONTRASTE MI DESVIO. BLOQUEE EL ELEVADOR DE LA FORJA ANTES DE QUE BROWSER LE DIERA OTRA COMPILACION MALA. AHORA AYUDAME A HALLAR OTRA RUTA AL ARCHIVO."
-  message ceesh_note "NOTA DE CEESH: BROWSER UNIO LA REJA DEL PATIO A LAS DOS TORRES. CORTE LA REVISION DE ORDEN. ACTIVA EL CONTRAPESO OESTE Y EL RELE ESTE EN CUALQUIER ORDEN. - CEESH"
+  message ceesh_note "CEESH: CORTE EL BLOQUEO DE ORDEN. ACTIVA EL TORNO OESTE Y EL RELE ESTE EN CUALQUIER ORDEN."
   message courtyard_open "LAS DOS TORRES RESPONDEN JUNTAS. LA REJA SABOTEADA DEL PATIO SE ABRE."
   message east_ready "EL RELE ESTE ZUMBA. ACTIVA EL CONTRAPESO OESTE."
   message enemy_alert "FUEGO FATUO ALERTA"
@@ -845,7 +845,7 @@ fluid castle.moat-east caxecraft:water volume 20 5 23 5 1 2
 fluid castle.moat-west caxecraft:water volume 8 5 23 5 1 2
 object castle.ceesh-note
   tag clue
-  placement stateful caxecraft:ceesh-field-note caxecraft:waiting 12500 5000 27500 0
+  placement stateful caxecraft:ceesh-field-note caxecraft:waiting 14500 5000 26500 0
 end object
 object castle.east-relay
   tag mechanism
