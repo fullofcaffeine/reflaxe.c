@@ -19,7 +19,8 @@ enum abstract EditorFocusTarget(Int) {
 	var ToolList = 5;
 	var AdvancedTools = 6;
 	var WorldName = 7;
-	var Back = 8;
+	var SceneObjects = 8;
+	var Back = 9;
 }
 
 /**
@@ -57,7 +58,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case TestPlay: ToolList;
 				case ToolList: AdvancedTools;
 				case AdvancedTools: WorldName;
-				case WorldName: Back;
+				case WorldName: SceneObjects;
+				case SceneObjects: Back;
 				case Back: NewWorld;
 			}
 		case Backward:
@@ -70,7 +72,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case ToolList: TestPlay;
 				case AdvancedTools: ToolList;
 				case WorldName: AdvancedTools;
-				case Back: WorldName;
+				case SceneObjects: WorldName;
+				case Back: SceneObjects;
 			}
 	};
 }

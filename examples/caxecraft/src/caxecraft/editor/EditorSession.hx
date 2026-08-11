@@ -76,6 +76,24 @@ final class EditorSession {
 	}
 
 	/**
+	 * Open one CAXEMAP byte owner as an isolated editable draft.
+	 *
+	 * Runtime content can give the editor the exact validated bytes it already
+	 * owns. The snapshot parser copies those bytes before this session publishes
+	 * mutable history, so later caller changes cannot alter the draft.
+	 */
+	public static function openBytes(source:Bytes, registry:ScenarioContentRegistry, ?requested:EditorSettings):EditorOpenResult {
+		final settings = requested == null ? defaultEditorSettings() : requested;
+		final invalidSetting = validateEditorSettings(settings);
+		if (invalidSetting != null)
+			return EditorOpenRejected(invalidSetting);
+		return switch restoreScenario(source) {
+			case ImageRejected(error): EditorOpenRejected(error);
+			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings));
+		}
+	}
+
+	/**
 		Apply one command against the session's current in-process draft.
 
 		This is the small convenience API for code that already owns the session

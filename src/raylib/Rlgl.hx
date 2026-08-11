@@ -6,7 +6,7 @@ private typedef RawTexture2D = raylib.raw.Texture2D;
 private typedef RawRlgl = raylib.raw.Rlgl;
 
 /**
- * Small zero-allocation facade for textured `RL_QUADS` render batches.
+ * Small zero-allocation facade for `RL_QUADS` render batches.
  *
  * rlgl is raylib's low-level immediate drawing API. `BeginQuads` binds one
  * already-owned texture; `Normal`, `Color`, `TexCoord`, and `Vertex` then add
@@ -31,7 +31,13 @@ final class Rlgl {
 	public static inline function FlushBatch():Void
 		RawRlgl.rlDrawRenderBatchActive();
 
-	/** Bind `texture` and begin one quad region. The caller keeps ownership. */
+	/** Use Raylib's default white texture and begin one solid-color quad region. */
+	public static inline function BeginSolidQuads():Void {
+		RawRlgl.rlSetTexture(c.IntConvert.modulo(0));
+		RawRlgl.rlBegin(c.IntConvert.exact(7));
+	}
+
+	/** Bind `texture` and begin one textured quad region. The caller keeps ownership. */
 	public static inline function BeginQuads(texture:Texture2D):Void {
 		final raw:RawTexture2D = texture;
 		RawRlgl.rlSetTexture(raw.id);

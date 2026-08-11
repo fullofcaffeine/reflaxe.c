@@ -303,13 +303,15 @@ final class RuntimeLevelPresentation {
 final class RuntimeLevelCandidate {
 	final loadedGeneration:LoadedContentGeneration;
 	final sourceReceipt:RuntimeLevelReceipt;
+	final editableSource:Bytes;
 	final authored:RuntimeLevelAuthoredTrace;
 	final presentationValue:RuntimeLevelPresentation;
 
 	private function new(generation:LoadedContentGeneration, receipt:RuntimeLevelReceipt, authoredTrace:RuntimeLevelAuthoredTrace,
-			presentation:RuntimeLevelPresentation) {
+			presentation:RuntimeLevelPresentation, source:Bytes) {
 		loadedGeneration = generation;
 		sourceReceipt = receipt;
+		editableSource = source.sub(0, source.length);
 		authored = authoredTrace;
 		presentationValue = presentation;
 	}
@@ -341,6 +343,16 @@ final class RuntimeLevelCandidate {
 			flowRules: authored.flowRules,
 			flowDigest: authored.flowDigest
 		};
+
+	/**
+	 * Copy the exact validated CAXEMAP bytes owned by this generation.
+	 *
+	 * The visual editor opens this copy instead of rereading a path that may now
+	 * name another generation. Mutating the returned bytes cannot alter gameplay
+	 * or a later editor session.
+	 */
+	public function sourceBytes():Bytes
+		return editableSource.sub(0, editableSource.length);
 
 	/** Player-visible facts validated from the same map as `generation()`. */
 	public inline function presentation():RuntimeLevelPresentation
@@ -423,7 +435,8 @@ function loadRuntimeLevelWithFault(source:RuntimeLevelSource, generationId:Conte
 function rebuildRuntimeLevelForPublicationTesting(candidate:RuntimeLevelCandidate, generationId:ContentGenerationId):RuntimeLevelLoadResult {
 	return switch LoadedContentGeneration.build(generationId, candidate.generation().plan(), candidate.generation().presentation()) {
 		case ContentGenerationReady(generation):
-			RuntimeLevelReady(new RuntimeLevelCandidate(generation, candidate.receipt(), candidate.authoredTrace(), candidate.presentation()));
+			RuntimeLevelReady(new RuntimeLevelCandidate(generation, candidate.receipt(), candidate.authoredTrace(), candidate.presentation(),
+				candidate.sourceBytes()));
 		case ContentGenerationRejected(error):
 			RuntimeLevelRejected(RuntimeLevelGenerationRejected(error));
 	};
@@ -529,7 +542,7 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 				byteLength: input.bytes.length,
 				inputHash: hashBytes(input.bytes),
 				readAttempts: input.readAttempts
-			}, authoredTrace(scenario), new RuntimeLevelPresentation(scenario)));
+			}, authoredTrace(scenario), new RuntimeLevelPresentation(scenario), input.bytes));
 		case ContentGenerationRejected(error):
 			RuntimeLevelRejected(RuntimeLevelGenerationRejected(error));
 	};

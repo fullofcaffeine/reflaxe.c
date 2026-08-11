@@ -1,7 +1,9 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
+import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioWorld;
 
 /**
@@ -20,6 +22,63 @@ typedef EditorWorldProjection = {
 	final height:Int;
 	final depth:Int;
 	final cells:Array<Int>;
+
+	/** Top solid and material for each non-empty x/z column in canonical order. */
+	final columns:Array<EditorTerrainColumn>;
+
+	/** Top solid Y for every x/z column, or `-1` when that column is empty. */
+	final surfaceTops:Array<Int>;
+
+	/** Greedy rectangles for the visible top surface. */
+	final surfacePatches:Array<EditorTerrainPatch>;
+}
+
+/** One compact surface-overview column backed by the exact voxel cache. */
+typedef EditorTerrainColumn = {
+	final x:Int;
+	final z:Int;
+	final topY:Int;
+	final paletteCode:Int;
+}
+
+/** One rectangular run of equal-height, equal-material top cells. */
+typedef EditorTerrainPatch = {
+	final x:Int;
+	final z:Int;
+	final width:Int;
+	final depth:Int;
+	final topY:Int;
+	final paletteCode:Int;
+}
+
+/** Visual role for one authored object without renderer or campaign details. */
+enum EditorObjectGizmoKind {
+	PlayerSpawnGizmo;
+	CheckpointGizmo;
+	ItemGizmo;
+	EntityGizmo;
+	NpcGizmo;
+	PrefabGizmo;
+	TriggerZoneGizmo;
+	StatefulObjectGizmo;
+}
+
+/**
+ * Read-only box used to show one stable CAXEMAP object in a 3D editor.
+ *
+ * Point placements use a small standard marker around their authored
+ * thousandth-block position. Trigger zones preserve their exact half-open
+ * bounds. The box is a selection aid, not an actor collision or art model.
+ */
+typedef EditorObjectGizmo = {
+	final id:ScenarioId;
+	final kind:EditorObjectGizmoKind;
+	final x:Float;
+	final y:Float;
+	final z:Float;
+	final width:Float;
+	final height:Float;
+	final depth:Float;
 }
 
 /**
@@ -62,6 +121,12 @@ typedef EditorWorldHit = {
 	final solid:Bool;
 }
 
+/** Entry and exit distances for one ray through the finite world box. */
+private typedef EditorRayInterval = {
+	final near:Float;
+	final far:Float;
+}
+
 final CAMERA_SPEED = 8.0;
 final WHEEL_DISTANCE = 2.0;
 final MAX_FRAME_SECONDS = 0.1;
@@ -81,13 +146,143 @@ function projectWorld(world:ScenarioWorld):Null<EditorWorldProjection> {
 	final cells = decodeWorld(world);
 	if (cells == null)
 		return null;
+	final columns:Array<EditorTerrainColumn> = [];
+	final surfaceTops:Array<Int> = [];
+	final surfacePaletteCodes:Array<Int> = [];
+	for (z in 0...world.size.depth)
+		for (x in 0...world.size.width) {
+			var topY = -1;
+			var paletteCode = 0;
+			for (y in 0...world.size.height) {
+				final code = cells[(z * world.size.height + y) * world.size.width + x];
+				if (code != 0) {
+					topY = y;
+					paletteCode = code;
+				}
+			}
+			if (topY >= 0)
+				columns.push({
+					x: x,
+					z: z,
+					topY: topY,
+					paletteCode: paletteCode
+				});
+			surfaceTops.push(topY);
+			surfacePaletteCodes.push(paletteCode);
+		}
+	final surfacePatches = projectSurfacePatches(world.size.width, world.size.depth, surfaceTops, surfacePaletteCodes);
 	return {
 		width: world.size.width,
 		height: world.size.height,
 		depth: world.size.depth,
-		cells: cells
+		cells: cells,
+		columns: columns,
+		surfaceTops: surfaceTops,
+		surfacePatches: surfacePatches
 	};
 }
+
+/** Merge adjacent equal top cells so the overview submits little geometry. */
+private function projectSurfacePatches(width:Int, depth:Int, tops:Array<Int>, paletteCodes:Array<Int>):Array<EditorTerrainPatch> {
+	final used:Array<Bool> = [];
+	for (_ in 0...width * depth)
+		used.push(false);
+	final patches:Array<EditorTerrainPatch> = [];
+	for (z in 0...depth)
+		for (x in 0...width) {
+			final index = z * width + x;
+			final topY = tops[index];
+			if (topY < 0 || used[index])
+				continue;
+			final paletteCode = paletteCodes[index];
+			var patchWidth = 1;
+			while (x + patchWidth < width) {
+				final candidate = z * width + x + patchWidth;
+				if (used[candidate] || tops[candidate] != topY || paletteCodes[candidate] != paletteCode)
+					break;
+				patchWidth++;
+			}
+			var patchDepth = 1;
+			var canExtend = true;
+			while (z + patchDepth < depth && canExtend) {
+				for (offset in 0...patchWidth) {
+					final candidate = (z + patchDepth) * width + x + offset;
+					if (used[candidate] || tops[candidate] != topY || paletteCodes[candidate] != paletteCode) {
+						canExtend = false;
+						break;
+					}
+				}
+				if (canExtend)
+					patchDepth++;
+			}
+			for (usedZ in z...z + patchDepth)
+				for (usedX in x...x + patchWidth)
+					used[usedZ * width + usedX] = true;
+			patches.push({
+				x: x,
+				z: z,
+				width: patchWidth,
+				depth: patchDepth,
+				topY: topY,
+				paletteCode: paletteCode
+			});
+		}
+	return patches;
+}
+
+/** Return one surface height, or `-1` outside the finite x/z footprint. */
+function surfaceTopAt(projection:EditorWorldProjection, x:Int, z:Int):Int {
+	if (x < 0 || z < 0 || x >= projection.width || z >= projection.depth)
+		return -1;
+	return projection.surfaceTops[z * projection.width + x];
+}
+
+/**
+ * Project every admitted object placement in deterministic authored order.
+ *
+ * The result keeps stable IDs and closed placement roles. It does not resolve
+ * content profiles or invent campaign behavior, so the same projection works
+ * for a blank map, a mod, or a shipped Adventure level.
+ */
+function projectObjects(objects:Array<ScenarioObject>):Array<EditorObjectGizmo> {
+	final projected:Array<EditorObjectGizmo> = [];
+	for (object in objects)
+		projected.push(switch object.placement {
+			case PlayerSpawn(transform): pointGizmo(object.id, PlayerSpawnGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case Checkpoint(transform): pointGizmo(object.id, CheckpointGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case Item(_, _, transform): pointGizmo(object.id, ItemGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case Entity(_, transform): pointGizmo(object.id, EntityGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case Npc(_, _, transform): pointGizmo(object.id, NpcGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case Prefab(_, transform): pointGizmo(object.id, PrefabGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case TriggerZone(bounds):
+				{
+					id: object.id,
+					kind: TriggerZoneGizmo,
+					x: bounds.origin.x + bounds.size.width * 0.5,
+					y: bounds.origin.y + bounds.size.height * 0.5,
+					z: bounds.origin.z + bounds.size.depth * 0.5,
+					width: bounds.size.width,
+					height: bounds.size.height,
+					depth: bounds.size.depth
+				};
+			case StatefulObject(_, _, transform):
+				pointGizmo(object.id, StatefulObjectGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+		});
+	return projected;
+}
+
+/** Make one standard point marker without claiming collision or art bounds. */
+private inline function pointGizmo(id:ScenarioId, kind:EditorObjectGizmoKind, xMilli:Int, yMilli:Int, zMilli:Int):EditorObjectGizmo
+	return {
+		id: id,
+		kind: kind,
+		x: xMilli / 1000.0,
+		y: yMilli / 1000.0 + 0.5,
+		z: zMilli / 1000.0,
+		width: 0.7,
+		height: 1.0,
+		depth: 0.7
+	};
 
 /** Return one palette code, or `-1` when the coordinate is outside the draft. */
 function paletteCodeAtWorld(projection:EditorWorldProjection, x:Int, y:Int, z:Int):Int {
@@ -179,31 +374,57 @@ function cameraTarget(state:EditorCameraState):EditorWorldVector {
 /**
  * Pick the nearest visible solid voxel, or an empty cell on one edit layer.
  *
- * Solid unit boxes take priority because they are what the author sees in
- * front. If the ray misses every solid, intersection with the selected layer's
- * floor allows painting an empty world. Equal-distance solids keep canonical
- * z/y/x traversal order. Invalid directions, layers, bounds, or distances
- * return `null` without inventing a coordinate.
+ * Solid cells take priority because they are what the author sees in front.
+ * The search enters the finite world box once, then visits only cells crossed
+ * by the ray. It does not scan unrelated map volume. If the ray misses every
+ * solid, intersection with the selected layer's floor allows painting an
+ * empty world. Invalid input returns `null` without inventing a coordinate.
  */
 function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, direction:EditorWorldVector, layerY:Int,
 		maximumDistance:Float):Null<EditorWorldHit> {
 	if (layerY < 0 || layerY >= projection.height || maximumDistance <= 0.0)
 		return null;
-	var nearestDistance = maximumDistance + 1.0;
-	var nearest:Null<VoxelPoint> = null;
-	for (z in 0...projection.depth)
-		for (y in 0...projection.height)
-			for (x in 0...projection.width) {
-				if (paletteCodeAtWorld(projection, x, y, z) == 0)
-					continue;
-				final distance = rayBoxDistance(origin, direction, x, y, z, maximumDistance);
-				if (distance >= 0.0 && distance < nearestDistance) {
-					nearestDistance = distance;
-					nearest = {x: x, y: y, z: z};
-				}
+	final interval = rayVolumeInterval(projection, origin, direction, maximumDistance);
+	if (interval != null) {
+		var distance = interval.near < 0.0 ? 0.0 : interval.near;
+		final sampleDistance = distance + RAY_EPSILON;
+		var x = Std.int(clamp(origin.x + direction.x * sampleDistance, 0.0, projection.width - RAY_EPSILON));
+		var y = Std.int(clamp(origin.y + direction.y * sampleDistance, 0.0, projection.height - RAY_EPSILON));
+		var z = Std.int(clamp(origin.z + direction.z * sampleDistance, 0.0, projection.depth - RAY_EPSILON));
+		final stepX = direction.x > RAY_EPSILON ? 1 : (direction.x < -RAY_EPSILON ? -1 : 0);
+		final stepY = direction.y > RAY_EPSILON ? 1 : (direction.y < -RAY_EPSILON ? -1 : 0);
+		final stepZ = direction.z > RAY_EPSILON ? 1 : (direction.z < -RAY_EPSILON ? -1 : 0);
+		final unreachable = maximumDistance + projection.width + projection.height + projection.depth + 1.0;
+		final deltaX = stepX == 0 ? unreachable : absolute(1.0 / direction.x);
+		final deltaY = stepY == 0 ? unreachable : absolute(1.0 / direction.y);
+		final deltaZ = stepZ == 0 ? unreachable : absolute(1.0 / direction.z);
+		var nextX = stepX == 0 ? unreachable : ((stepX > 0 ? x + 1.0 : x) - origin.x) / direction.x;
+		var nextY = stepY == 0 ? unreachable : ((stepY > 0 ? y + 1.0 : y) - origin.y) / direction.y;
+		var nextZ = stepZ == 0 ? unreachable : ((stepZ > 0 ? z + 1.0 : z) - origin.z) / direction.z;
+		while (x >= 0 && y >= 0 && z >= 0 && x < projection.width && y < projection.height && z < projection.depth && distance <= interval.far
+			&& distance <= maximumDistance) {
+			if (paletteCodeAtWorld(projection, x, y, z) != 0)
+				return {point: {x: x, y: y, z: z}, distance: distance, solid: true};
+			var next = nextX;
+			if (nextY < next)
+				next = nextY;
+			if (nextZ < next)
+				next = nextZ;
+			distance = next;
+			if (absolute(nextX - next) < RAY_EPSILON) {
+				x += stepX;
+				nextX += deltaX;
 			}
-	if (nearest != null)
-		return {point: nearest, distance: nearestDistance, solid: true};
+			if (absolute(nextY - next) < RAY_EPSILON) {
+				y += stepY;
+				nextY += deltaY;
+			}
+			if (absolute(nextZ - next) < RAY_EPSILON) {
+				z += stepZ;
+				nextZ += deltaZ;
+			}
+		}
+	}
 
 	if (absolute(direction.y) < RAY_EPSILON)
 		return null;
@@ -222,21 +443,24 @@ function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, d
 }
 
 /**
- * Return the first ray distance inside one unit voxel, or `-1` on a miss.
+ * Return the ray interval inside the complete finite world, or `null` on a miss.
  *
- * This is the three-axis slab test written out directly so picking allocates no
- * temporary arrays or per-axis records while it scans a cached finite volume.
+ * This three-axis slab test allocates one result for a successful pick. It is
+ * separate from grid traversal so parallel axes fail before any cell loop.
  */
-function rayBoxDistance(origin:EditorWorldVector, direction:EditorWorldVector, x:Int, y:Int, z:Int, maximumDistance:Float):Float {
+private function rayVolumeInterval(projection:EditorWorldProjection, origin:EditorWorldVector, direction:EditorWorldVector,
+		maximumDistance:Float):Null<EditorRayInterval> {
+	if (absolute(direction.x) < RAY_EPSILON && absolute(direction.y) < RAY_EPSILON && absolute(direction.z) < RAY_EPSILON)
+		return null;
 	var near = 0.0;
 	var far = maximumDistance;
 
 	if (absolute(direction.x) < RAY_EPSILON) {
-		if (origin.x < x || origin.x > x + 1.0)
-			return -1.0;
+		if (origin.x < 0.0 || origin.x > projection.width)
+			return null;
 	} else {
-		var first = (x - origin.x) / direction.x;
-		var second = (x + 1.0 - origin.x) / direction.x;
+		var first = -origin.x / direction.x;
+		var second = (projection.width - origin.x) / direction.x;
 		if (first > second) {
 			final swap = first;
 			first = second;
@@ -247,15 +471,15 @@ function rayBoxDistance(origin:EditorWorldVector, direction:EditorWorldVector, x
 		if (second < far)
 			far = second;
 		if (near > far)
-			return -1.0;
+			return null;
 	}
 
 	if (absolute(direction.y) < RAY_EPSILON) {
-		if (origin.y < y || origin.y > y + 1.0)
-			return -1.0;
+		if (origin.y < 0.0 || origin.y > projection.height)
+			return null;
 	} else {
-		var first = (y - origin.y) / direction.y;
-		var second = (y + 1.0 - origin.y) / direction.y;
+		var first = -origin.y / direction.y;
+		var second = (projection.height - origin.y) / direction.y;
 		if (first > second) {
 			final swap = first;
 			first = second;
@@ -266,15 +490,15 @@ function rayBoxDistance(origin:EditorWorldVector, direction:EditorWorldVector, x
 		if (second < far)
 			far = second;
 		if (near > far)
-			return -1.0;
+			return null;
 	}
 
 	if (absolute(direction.z) < RAY_EPSILON) {
-		if (origin.z < z || origin.z > z + 1.0)
-			return -1.0;
+		if (origin.z < 0.0 || origin.z > projection.depth)
+			return null;
 	} else {
-		var first = (z - origin.z) / direction.z;
-		var second = (z + 1.0 - origin.z) / direction.z;
+		var first = -origin.z / direction.z;
+		var second = (projection.depth - origin.z) / direction.z;
 		if (first > second) {
 			final swap = first;
 			first = second;
@@ -285,9 +509,9 @@ function rayBoxDistance(origin:EditorWorldVector, direction:EditorWorldVector, x
 		if (second < far)
 			far = second;
 		if (near > far)
-			return -1.0;
+			return null;
 	}
-	return far < 0.0 || near > maximumDistance ? -1.0 : (near < 0.0 ? 0.0 : near);
+	return far < 0.0 || near > maximumDistance ? null : {near: near, far: far};
 }
 
 inline function absolute(value:Float):Float

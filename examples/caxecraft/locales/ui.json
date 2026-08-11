@@ -144,6 +144,14 @@
       }
     },
     {
+      "id": "editor_scene",
+      "symbol": "EditorScene",
+      "text": {
+        "en": "OBJECTS / RULES",
+        "es-MX": "OBJETOS / REGLAS"
+      }
+    },
+    {
       "id": "editor_stop_test",
       "symbol": "EditorStopTest",
       "text": {

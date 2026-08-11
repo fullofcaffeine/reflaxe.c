@@ -111,7 +111,6 @@ import caxecraft.input.NavigationInput.NavigationSample;
 import caxecraft.app.RaylibNavigationInput.samplePrimaryGamepad;
 #if caxecraft_pilot
 import caxecraft.app.PilotTelemetry.drawPilotTelemetry;
-import caxecraft.editor.EditorViewport.EditorTool;
 import raylib.Rlgl;
 #end
 import caxecraft.pilot.GameInputFrame;
@@ -290,8 +289,8 @@ final class CaxecraftApp {
 		final runtimeContent = activeRuntimeContent.generation();
 		final contentRegistry = runtimeContent.registry();
 		final uiCatalog = runtimeContent.catalog();
-		final editorScreen = new CaxecraftEditorScreen(contentRegistry, uiCatalog);
 		final loadedCandidate = runtimeContent.level();
+		final editorScreen = new CaxecraftEditorScreen(contentRegistry, uiCatalog, loadedCandidate.sourceBytes());
 		final activeLevel = switch ActivePlayableLevel.create(loadedCandidate) {
 			case PlayableLevelCreated(value): value;
 			case PlayableLevelCreationRejected(_):
@@ -1002,10 +1001,8 @@ final class CaxecraftApp {
 					wheel: 0.0
 				}, 0.05))
 					rejectedEdits++;
-				if (editorScreen.applyPilotTool(EditorTool.PaintTool, {x: 2, y: 0, z: 2})) {
+				if (editorScreen.applyPilotPaintFirstAir()) {
 					placedBlocks++;
-					if (!editorScreen.applyPilotTool(EditorTool.SelectTool, {x: 2, y: 0, z: 2}))
-						rejectedEdits++;
 				} else
 					rejectedEdits++;
 			}

@@ -1386,18 +1386,17 @@ def validate_presented_screenshot(
 
 
 def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
-    """Prove the native editor drew its controls and first real 3D world.
+    """Prove the native editor drew its controls and active 3D world.
 
     This is a structural framebuffer check, not a pixel golden. It admits small
     driver and font-rendering differences while still rejecting a blank frame,
     a gameplay frame, a flat placeholder canvas, or an editor missing one of
-    its main working regions. The pilot paints and selects one real voxel. Broad
-    flat-color counts therefore prove that the perspective view contains sky,
-    ground, the solid voxel, and its selection outline without prescribing
-    exact camera pixels. The focused sidebar subregion proves the first owned
-    text box is presented. The exact yellow focus-ring color proves the
-    device-neutral focus selected by the pilot reached the native toolbar;
-    exact edit semantics remain owned by faster tests.
+    its main working regions. The pilot paints and selects one real air cell.
+    Broad color counts prove that the perspective view contains sky, authored
+    terrain, and its selection outline without prescribing map geometry. The
+    focused sidebar subregion proves the scene controls are presented. The
+    exact yellow focus-ring color proves that device-neutral focus reached the
+    native toolbar; exact edit semantics remain owned by faster tests.
     """
     width, height, pixels = decode_rgba_png(path, "editor")
     logical_width, logical_height = 1280, 720
@@ -1445,8 +1444,6 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     ]
     canvas_colors = {
         "sky": ((126, 190, 201), 50_000),
-        "ground": ((26, 43, 50), 15_000),
-        "painted-voxel": ((83, 145, 92), 100),
         "selection-outline": ((255, 132, 47), 20),
     }
     for label, (expected, minimum) in canvas_colors.items():
@@ -1461,6 +1458,26 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             failures.append(
                 f"3d-{label}=pixels:{matching},minimum:{minimum * scale * scale}"
             )
+    terrain_colors = {
+        (132, 157, 167),
+        (108, 164, 103),
+        (180, 153, 102),
+        (102, 159, 174),
+        (172, 174, 187),
+        (176, 119, 91),
+    }
+    terrain_pixels = 0
+    for row in range(104 * scale, 650 * scale):
+        row_at = row * width * 4
+        for column in range(32 * scale, 1018 * scale):
+            at = row_at + column * 4
+            if tuple(pixels[at : at + 3]) in terrain_colors:
+                terrain_pixels += 1
+    minimum_terrain_pixels = 5_000 * scale * scale
+    if terrain_pixels < minimum_terrain_pixels:
+        failures.append(
+            f"3d-authored-terrain=pixels:{terrain_pixels},minimum:{minimum_terrain_pixels}"
+        )
     focus_pixels = 0
     for row in range(52 * scale, 94 * scale):
         row_at = row * width * 4
@@ -3096,9 +3113,15 @@ def run_pilot_sample(
         if stale.exists():
             stale.unlink()
     # A runtime-content journey can cross a real level-publication boundary and
-    # still remain bounded. Keep short engine pilots on the tighter limit while
-    # allowing the representative Adventure route to finish on the software GPU.
-    timeout_seconds = 25 if pilot_metadata(pilot).execution == "runtime-content" else 15
+    # still remain bounded. The editor captures two detailed full-map frames;
+    # Raylib's headless software renderer needs about 32 seconds for that proof
+    # on the reference Mac. Keep unrelated short engine pilots at 15 seconds.
+    if pilot == "editor-shell":
+        timeout_seconds = 40
+    elif pilot_metadata(pilot).execution == "runtime-content":
+        timeout_seconds = 25
+    else:
+        timeout_seconds = 15
     process = run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)
     observations: list[dict[str, object]] = []
     observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="

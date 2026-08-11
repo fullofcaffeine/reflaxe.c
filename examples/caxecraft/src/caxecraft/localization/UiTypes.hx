@@ -50,4 +50,7 @@ enum abstract UiMessage(Int) {
 	var PauseTitle = 32;
 	var PlaceBlocked = 33;
 	var TitleFallback = 34;
+
+	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
+	var EditorScene = 35;
 }

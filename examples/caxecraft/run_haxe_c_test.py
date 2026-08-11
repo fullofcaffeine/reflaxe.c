@@ -218,11 +218,11 @@ EVAL_CASES = {
         case_id="editor",
         probes=(
             EvalProbe(
-                "editor.hxml",
-                "caxemap-editor: 23 command round trips, 50 protocol checks, "
-                "19 focus checks, 18 navigation checks, 12 2D checks, 16 3D "
-                "checks, 1890 canonical bytes; bounded history/test-play/recovery; "
-                "trace=150575006\n",
+				"editor.hxml",
+				"caxemap-editor: 23 command round trips, 50 protocol checks, "
+				"21 focus checks, 18 navigation checks, 12 2D checks, 16 3D "
+				"checks, 13 active-level checks, 1890 canonical bytes; bounded "
+				"history/test-play/recovery; trace=150577423\n",
             ),
         ),
         source_audits=(

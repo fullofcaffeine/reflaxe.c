@@ -1,19 +1,23 @@
 # Caxecraft editor semantics
 
 Status: the renderer-independent command, history, validation, and test-play
-layer is implemented under `haxe_c-xge.19.5`. The first native Raylib/Raygui
-slice now presents the complete finite draft in a clipped perspective viewport,
-with a fly camera and typed voxel picking. The editor core also provides
-revision-checked mutations, bounded atomic command batches, and copy-owned
-observations for visual and future automation clients. Its World Name field now
-commits literal titles through that same typed command/history boundary. It
-also has one device-neutral focus order: Tab and Shift-Tab move through every
-current control, Enter or Space activates the focused control, and a
-high-contrast ring shows where the next activation will go. It still edits
-layer zero only. A local JSON Lines process can now open, inspect, edit,
-validate, and save one verified package level. Localized message-title editing,
-the MCP adapter, multi-layer controls, object gizmos, and the fuller
-child-friendly authoring experience remain separate work.
+layer is implemented under `haxe_c-xge.19.5`. The native Raylib/Raygui screen
+now opens the same CAXEMAP bytes as the active game generation. It shows the
+map's visible height surface, all authored object placements, and the CaxeFlow
+rule count. It also lists each object's stable ID and draws a colored 3D gizmo
+for each closed placement role.
+
+The editor core provides revision-checked changes, bounded command groups, and
+copy-owned observations. Its World Name field commits literal titles through
+the same command and history boundary. Tab and Shift-Tab move through one
+device-neutral focus order. Enter or Space activates the focused control. A
+high-contrast ring shows the next target.
+
+The native screen edits one voxel layer. Its Test Play button runs the
+disposable CaxeFlow model, not the complete game engine. Native source save,
+object transforms, visual CaxeFlow editing, cutscene editing, and layer tools
+remain separate work. A local JSON Lines process can open, inspect, edit,
+validate, and save one verified package level.
 
 ## What this layer owns
 
@@ -163,18 +167,26 @@ cached read-only voxel volume
 A **projection** means a read-only shape prepared for presentation.
 `EditorWorldViewport.projectWorld` decodes the complete finite draft into one
 volume ordered as `(z * height + y) * width + x`.
-`CaxecraftEditorScreen` caches that projection. A normal displayed frame reads
-the cache; it does not serialize the CAXEMAP draft or allocate a replacement
-volume. New World, an accepted edit, undo, or redo rebuilds the cache from the
-session's new draft.
+`CaxecraftEditorScreen` caches that projection. The cache also contains a
+compact height surface for the native overview. Equal height and material cells
+merge into rectangular patches. This keeps a full authored map responsive in
+the headless renderer. Exact voxel cells remain available for picking and
+edits. The overview does not show hidden caves because layer inspection is not
+implemented.
+
+A normal displayed frame reads the cache. It does not serialize the CAXEMAP
+draft or allocate a replacement volume. New World, an accepted edit, undo, or
+redo rebuilds the cache from the session's new draft.
 
 Raylib turns one screen pixel into a **ray**: a starting point and direction in
-the 3D world. `EditorWorldViewport.pickWorld` tests that ray against visible
-solid voxel boxes and chooses the nearest hit. If no solid is hit, it intersects
-the floor of the current editable layer so a creator can paint an empty cell.
-The result is a typed `VoxelPoint`; the selected tool then creates the same
-`EditorCommand` used by tests and history. Invalid picks and rejected commands
-leave both the draft and its presentation cache unchanged.
+the 3D world. `EditorWorldViewport.pickWorld` enters the finite map once. It
+then visits only the voxel cells crossed by that ray. Map size no longer
+controls hover-picking cost.
+
+The picker returns the nearest solid cell. If it finds no solid cell, it checks
+the floor of the current edit layer. This path lets a creator paint an empty
+cell. The selected tool converts the typed `VoxelPoint` into the same
+`EditorCommand` that history uses. An invalid pick changes nothing.
 
 The current controls are:
 
@@ -230,10 +242,11 @@ top-down layer projection and pixel-edge mapping. It remains tested as the
 foundation for a later optional planning view or minimap, but the shipped
 native canvas no longer uses it as the primary editor.
 
-The built-in blank world is 12 by 1 by 12 cells. Caxecraft supplies its Air and
-Grass content IDs at the application composition edge; the reusable editor
-factory receives those typed values and does not know game-specific content
-names.
+Opening the editor starts from a copy of the active runtime generation. The
+copy prevents an editor change from changing the running game without a
+validated publication step. The New World button creates a separate 12 by 1 by
+12 draft. Caxecraft supplies its Air and default-editor block IDs at the
+application edge. The reusable editor factory does not know campaign names.
 
 ## Draft versus playable scenario
 
@@ -376,13 +389,17 @@ python3 examples/caxecraft/play.py \
   --allow-network
 ```
 
-That pilot compiles the application through haxe.c, confirms one literal title,
-moves the production camera, and submits typed Paint and Select gestures
-through `CaxecraftEditorScreen` and `EditorSession`. The rejected-edit counter
-must stay zero, while the terrain counter observes exactly one paint. Its
-framebuffer check requires the real toolbar and sidebar plus broad 3D evidence:
-sky, a perspective ground plane, one solid voxel, and its distinct selection
-outline. It repeats semantic execution, captures the review frame, and exits
-within the bounded timeout. It proves this first perspective viewport and title
-slice, not native map-file save, localized-title editing, multi-layer controls,
-controller navigation, or the complete planned visual event/cutscene editor.
+That pilot compiles the application through haxe.c. It enters the editor from
+the title screen and opens the active level bytes. It changes one literal
+title, moves the production camera, and paints the first available air cell.
+It then selects that cell through `CaxecraftEditorScreen` and `EditorSession`.
+
+The framebuffer check requires the toolbar, sidebar, scene list, authored
+terrain colors, sky, and selection outline. The pilot repeats the journey and
+requires identical semantic reports and screenshots. The headless software
+renderer has a 40-second process limit for each detailed editor frame.
+
+The pilot proves active-level presentation, one real terrain change, the object
+list, scene gizmos, the rule count, and the title path. It does not prove native
+source save, object transforms, localized-title editing, layer tools, visual
+CaxeFlow editing, cutscenes, or complete game-engine Test Play.

@@ -33,10 +33,13 @@ import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
 import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
+import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
+import caxecraft.editor.EditorWorldViewport.projectObjects;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
+import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.input.NavigationInput.NavigationRepeater;
@@ -104,6 +107,7 @@ final class EditorProbe {
 		final navigationChecks = checkNavigationInput();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
+		final activeLevelChecks = checkActiveLevelProjection();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, SetTitle(Literal("Ivvy's workshop")), DocumentMetadata);
@@ -171,8 +175,74 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (activeLevelChecks * 131) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+	}
+
+	/**
+	 * Prove that validated map bytes and every CAXEMAP object role remain visible.
+	 *
+	 * The expected values are authored independently from the projection code.
+	 * They protect the generic editor seam without naming a shipped campaign.
+	 */
+	static function checkActiveLevelProjection():Int {
+		final source = ScenarioWriter.write(baseScenario());
+		final opened = switch EditorSession.openBytes(source, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(error): throw 'editor did not open validated CAXEMAP bytes: $error';
+		};
+		require(opened.draftSnapshot().id.text() == "editor.qa", "byte-open changed the authored map identity");
+		source.set(0, 0);
+		require(opened.canonicalDraft().get(0) == "C".code, "byte-open retained a mutable caller-owned source alias");
+
+		final objects = projectObjects([
+			{id: id("gizmo.spawn"), tags: [], placement: PlayerSpawn(transform(500, 0, 500))},
+			{id: id("gizmo.checkpoint"), tags: [], placement: Checkpoint(transform(1500, 0, 500))},
+			{id: id("gizmo.item"), tags: [], placement: Item(content("caxecraft:item"), 2, transform(2500, 0, 500))},
+			{id: id("gizmo.entity"), tags: [], placement: Entity(content("caxecraft:entity"), transform(3500, 0, 500))},
+			{id: id("gizmo.npc"), tags: [], placement: Npc(NPC, DIALOGUE, transform(500, 0, 1500))},
+			{id: id("gizmo.prefab"), tags: [], placement: Prefab(PREFAB, transform(1500, 0, 1500))},
+			{
+				id: id("gizmo.trigger"),
+				tags: [],
+				placement: TriggerZone({origin: {x: 2, y: 1, z: 1}, size: {width: 3, height: 2, depth: 4}})
+			},
+			{
+				id: id("gizmo.stateful"),
+				tags: [],
+				placement: StatefulObject(content("caxecraft:door"), content("caxecraft:closed"), transform(5500, 0, 500))
+			}
+		]);
+		final kinds = [
+			EditorObjectGizmoKind.PlayerSpawnGizmo,
+			EditorObjectGizmoKind.CheckpointGizmo,
+			EditorObjectGizmoKind.ItemGizmo,
+			EditorObjectGizmoKind.EntityGizmo,
+			EditorObjectGizmoKind.NpcGizmo,
+			EditorObjectGizmoKind.PrefabGizmo,
+			EditorObjectGizmoKind.TriggerZoneGizmo,
+			EditorObjectGizmoKind.StatefulObjectGizmo
+		];
+		require(objects.length == kinds.length, "object projection omitted an admitted placement role");
+		for (index in 0...kinds.length) {
+			require(objects[index].kind == kinds[index], 'object projection changed role $index');
+			require(objects[index].id.text() == [
+				"gizmo.spawn",
+				"gizmo.checkpoint",
+				"gizmo.item",
+				"gizmo.entity",
+				"gizmo.npc",
+				"gizmo.prefab",
+				"gizmo.trigger",
+				"gizmo.stateful"
+			][index], 'object projection changed identity $index');
+		}
+		require(close(objects[0].x, 0.5) && close(objects[0].y, 0.5) && close(objects[0].z, 0.5),
+			"point-object projection changed authored thousandth-block coordinates");
+		require(close(objects[6].x, 3.5) && close(objects[6].y, 2.0) && close(objects[6].z, 3.0) && close(objects[6].width, 3.0)
+			&& close(objects[6].height, 2.0) && close(objects[6].depth, 4.0),
+			"trigger projection changed its exact half-open authored bounds");
+		return 13;
 	}
 
 	static function checkActionPalette():Void {
@@ -224,11 +294,13 @@ final class EditorProbe {
 			EditorFocusTarget.ToolList,
 			EditorFocusTarget.AdvancedTools,
 			EditorFocusTarget.WorldName,
+			EditorFocusTarget.SceneObjects,
 			EditorFocusTarget.Back,
 			EditorFocusTarget.NewWorld
 		];
 		final backward:Array<EditorFocusTarget> = [
 			EditorFocusTarget.Back,
+			EditorFocusTarget.SceneObjects,
 			EditorFocusTarget.WorldName,
 			EditorFocusTarget.AdvancedTools,
 			EditorFocusTarget.ToolList,
@@ -768,6 +840,17 @@ final class EditorProbe {
 		final projection = projectWorld(session.draftSnapshot().world);
 		require(projection != null && projection.width == 4 && projection.height == 2 && projection.depth == 3 && projection.cells.length == 24,
 			"3D viewport projection lost finite volume dimensions");
+		require(projection.columns.length == 2 && projection.columns[0].x == 1 && projection.columns[0].z == 1 && projection.columns[0].topY == 1
+			&& projection.columns[1].x == 3 && projection.columns[1].z == 2 && projection.columns[1].topY == 0,
+			"3D viewport surface overview lost canonical columns or top heights");
+		require(projection.surfacePatches.length == 2
+			&& projection.surfacePatches[0].x == 1
+			&& projection.surfacePatches[0].z == 1
+			&& projection.surfacePatches[0].width == 1
+			&& projection.surfacePatches[0].depth == 1
+			&& surfaceTopAt(projection, 1, 1) == 1
+			&& surfaceTopAt(projection, 0, 0) == -1,
+			"3D viewport surface patches changed authored height or empty columns");
 		require(paletteCodeAtWorld(projection, 1, 0, 1) == 1
 			&& paletteCodeAtWorld(projection, 1, 1, 1) == 1
 			&& paletteCodeAtWorld(projection, 0, 0, 0) == 0

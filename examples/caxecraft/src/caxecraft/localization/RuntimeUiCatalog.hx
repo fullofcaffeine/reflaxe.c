@@ -182,6 +182,7 @@ final class RuntimeUiCatalog {
 			"editor_new_world",
 			"editor_ready",
 			"editor_redo",
+			"editor_scene",
 			"editor_stop_test",
 			"editor_test",
 			"editor_testing",
@@ -222,6 +223,7 @@ final class RuntimeUiCatalog {
 			"EditorNewWorld",
 			"EditorReady",
 			"EditorRedo",
+			"EditorScene",
 			"EditorStopTest",
 			"EditorTest",
 			"EditorTesting",
@@ -304,24 +306,25 @@ final class RuntimeUiCatalog {
 			case EditorNewWorld: 14;
 			case EditorReady: 15;
 			case EditorRedo: 16;
-			case EditorStopTest: 17;
-			case EditorTest: 18;
-			case EditorTesting: 19;
-			case EditorTitle: 20;
-			case EditorToolList: 21;
-			case EditorUndo: 22;
-			case EditorValid: 23;
-			case EditorValidate: 24;
-			case HealthFull: 25;
-			case MenuAdventure: 26;
-			case MenuCreative: 27;
-			case MenuEditor: 28;
-			case MenuInstructions: 29;
-			case NoBlockInReach: 30;
-			case PauseHelp: 31;
-			case PauseTitle: 32;
-			case PlaceBlocked: 33;
-			case TitleFallback: 34;
+			case EditorScene: 17;
+			case EditorStopTest: 18;
+			case EditorTest: 19;
+			case EditorTesting: 20;
+			case EditorTitle: 21;
+			case EditorToolList: 22;
+			case EditorUndo: 23;
+			case EditorValid: 24;
+			case EditorValidate: 25;
+			case HealthFull: 26;
+			case MenuAdventure: 27;
+			case MenuCreative: 28;
+			case MenuEditor: 29;
+			case MenuInstructions: 30;
+			case NoBlockInReach: 31;
+			case PauseHelp: 32;
+			case PauseTitle: 33;
+			case PlaceBlocked: 34;
+			case TitleFallback: 35;
 			case _: -1;
 		};
 	}

@@ -17,12 +17,15 @@ import caxecraft.editor.EditorViewport.commandFor as commandForTool;
 import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
 import caxecraft.editor.EditorWorldViewport.EditorCameraState;
+import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
+import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
+import caxecraft.editor.EditorWorldViewport.projectObjects;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.input.NavigationInput.NavigationCommand;
@@ -35,6 +38,7 @@ import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
+import haxe.io.Bytes;
 import raygui.GuiListViewState;
 import raygui.GuiResult;
 import raygui.GuiTextBoxState;
@@ -47,6 +51,7 @@ import raylib.KeyboardKey;
 import raylib.MouseButton;
 import raylib.Raylib;
 import raylib.Rectangle;
+import raylib.Rlgl;
 import raylib.Vector3;
 
 /** What the application should do after handling one editor frame. */
@@ -68,15 +73,15 @@ private enum EditorNotice {
  * This stateful class owns one mutable draft/session and small presentation
  * state. Raygui remains immediate-mode: every frame redraws controls, while
  * `EditorSession` continues to own validation, undo/redo, and disposable test
- * play. A cached `EditorWorldProjection` reads the complete finite terrain
- * volume after a successful edit; steady frames draw and pick that cache
- * instead of serializing the draft or maintaining a second editable world.
+ * play. The screen opens a copy of the active level bytes. A cached
+ * `EditorWorldProjection` stores its exact terrain, compact surface overview,
+ * object gizmos, and content-logic count. Steady frames read that cache instead
+ * of serializing the draft or maintaining a second editable world.
  *
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
  * composition edge; the reusable editor package knows neither. The first 3D
- * slice edits layer zero while the cache and camera already describe a volume.
- * Native save/load, layer controls, object gizmos, and cinematic tools remain
- * planned separately.
+ * slice edits one layer. Native source save, object transforms, layer controls,
+ * real-engine Test Play, flow authoring, and cinematic tools remain separate.
  */
 final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
@@ -84,11 +89,15 @@ final class CaxecraftEditorScreen {
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
 	var projection:Null<EditorWorldProjection>;
+	var objectGizmos:Array<EditorObjectGizmo>;
+	var objectLabels:String;
+	var flowRuleCount:Int;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
 	var focusedControl:EditorFocusTarget;
 	final advancedTools:GuiToggleState;
 	final toolList:GuiListViewState;
+	var objectList:GuiListViewState;
 
 	/**
 	 * Owns the temporary native editing bytes for the authored scenario title.
@@ -100,18 +109,25 @@ final class CaxecraftEditorScreen {
 	 */
 	final worldName:Null<GuiTextBoxState>;
 
-	/** Start an editor whose mechanics and labels come from one runtime generation. */
-	public function new(contentRegistry:RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog) {
+	/** Start with the same copy-owned CAXEMAP bytes as the active game generation. */
+	public function new(contentRegistry:RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog, activeLevelSource:Bytes) {
 		this.contentRegistry = contentRegistry;
 		this.uiCatalog = uiCatalog;
-		session = openNewWorld();
-		notice = Ready;
+		session = switch EditorSession.openBytes(activeLevelSource, contentRegistry) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(_): null;
+		};
+		notice = session == null ? Invalid : Ready;
 		projection = null;
+		objectGizmos = [];
+		objectLabels = "";
+		flowRuleCount = 0;
 		camera = null;
 		selection = null;
 		focusedControl = initialFocus();
 		advancedTools = new GuiToggleState(false);
 		toolList = new GuiListViewState();
+		objectList = new GuiListViewState();
 		worldName = GuiTextBoxState.create(64);
 		refreshProjection(true);
 	}
@@ -166,8 +182,16 @@ final class CaxecraftEditorScreen {
 		final sidebarWidth = 230;
 		Raygui.PanelString(Rectangle.fromFloat(32.0, viewportTop, width - sidebarWidth - 80.0, height - viewportTop - 70.0),
 			uiCatalog.text(locale, UiMessage.EditorCanvasHelp));
-		Raygui.PanelString(Rectangle.fromFloat(width - sidebarWidth - 32.0, viewportTop, sidebarWidth, height - viewportTop - 70.0),
-			uiCatalog.text(locale, UiMessage.EditorReady));
+		final selectedObjectIndex = objectList.activeIndex();
+		final selectedObjectId = selectedObjectIndex >= 0
+			&& selectedObjectIndex < objectGizmos.length ? objectGizmos[selectedObjectIndex].id.text() : "";
+		final sceneSummary = uiCatalog.text(locale, UiMessage.EditorScene)
+			+ "  "
+			+ objectGizmos.length
+			+ " / "
+			+ flowRuleCount
+			+ (selectedObjectId.length == 0 ? "" : "  //  " + selectedObjectId);
+		Raygui.PanelString(Rectangle.fromFloat(width - sidebarWidth - 32.0, viewportTop, sidebarWidth, height - viewportTop - 70.0), sceneSummary);
 		final toolLeft = width - sidebarWidth - 16;
 		final toolWidth = sidebarWidth - 32;
 		final toolListResult = toolList.drawString(Rectangle.fromFloat(toolLeft, viewportTop + 44.0, toolWidth, 116.0),
@@ -191,6 +215,15 @@ final class CaxecraftEditorScreen {
 					commitWorldName(name.text());
 			}
 			drawFocusRing(EditorFocusTarget.WorldName, toolLeft, Std.int(viewportTop + 242.0), toolWidth, 32);
+		}
+		if (height >= 620) {
+			final objectListHeight = height - viewportTop - 352.0;
+			final objectListResult = objectList.drawString(Rectangle.fromFloat(toolLeft, viewportTop + 282.0, toolWidth, objectListHeight), objectLabels);
+			if (objectListResult.has(GuiResult.Pressed))
+				focusedControl = EditorFocusTarget.SceneObjects;
+			drawFocusRing(EditorFocusTarget.SceneObjects, toolLeft, Std.int(viewportTop + 282.0), toolWidth, Std.int(objectListHeight));
+		} else {
+			drawFocusRing(EditorFocusTarget.SceneObjects, width - sidebarWidth - 32, Std.int(viewportTop), sidebarWidth, Std.int(height - viewportTop - 70.0));
 		}
 		drawWorldViewport(48, 144, width - sidebarWidth - 112, height - 230);
 
@@ -309,6 +342,8 @@ final class CaxecraftEditorScreen {
 				final name = worldName;
 				if (name != null)
 					name.setEditing(true);
+			case SceneObjects:
+				objectList.moveSelection(objectGizmos.length, 1);
 			case Back:
 				return ReturnToTitle;
 		}
@@ -471,21 +506,80 @@ final class CaxecraftEditorScreen {
 			Raylib.DrawLine3D(Vector3.fromFloat(x, 0.002, 0.0), Vector3.fromFloat(x, 0.002, current.depth), Color.rgba(55, 79, 85));
 		for (z in 0...current.depth + 1)
 			Raylib.DrawLine3D(Vector3.fromFloat(0.0, 0.002, z), Vector3.fromFloat(current.width, 0.002, z), Color.rgba(55, 79, 85));
-		for (z in 0...current.depth)
-			for (y in 0...current.height)
-				for (x in 0...current.width) {
-					final code = paletteCodeAtWorld(current, x, y, z);
-					if (code != 0)
-						Raylib.DrawCube(Vector3.fromFloat(x + 0.5, y + 0.5, z + 0.5), c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0),
-							c.Float32.fromFloat(1.0), code == 1 ? Color.rgba(83, 145, 92) : Color.rgba(91, 107, 117));
-					if (selectedCell(x, y, z))
-						drawCellOutline(x, y, z, code != 0, CaxecraftPalette.selection(), 1.05);
-				}
+		drawTerrainOverview(current);
+		final selected = selection;
+		if (selected != null)
+			for (z in selected.origin.z...selected.origin.z + selected.size.depth)
+				for (y in selected.origin.y...selected.origin.y + selected.size.height)
+					for (x in selected.origin.x...selected.origin.x + selected.size.width)
+						drawCellOutline(x, y, z, paletteCodeAtWorld(current, x, y, z) != 0, CaxecraftPalette.selection(), 1.05);
+		final selectedObject = objectList.activeIndex();
+		for (index in 0...objectGizmos.length) {
+			final gizmo = objectGizmos[index];
+			final color = index == selectedObject ? CaxecraftPalette.selection() : gizmoColor(gizmo.kind);
+			Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width), c.Float32.fromFloat(gizmo.height),
+				c.Float32.fromFloat(gizmo.depth), color);
+			if (index == selectedObject)
+				Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width + 0.10),
+					c.Float32.fromFloat(gizmo.height + 0.10), c.Float32.fromFloat(gizmo.depth + 0.10), color);
+		}
 		if (hover != null && !selectedCell(hover.point.x, hover.point.y, hover.point.z))
 			drawCellOutline(hover.point.x, hover.point.y, hover.point.z, hover.solid, Color.rgba(109, 223, 232), 1.08);
 		Raylib.EndMode3D();
 		Raylib.EndScissorMode();
 	}
+
+	/**
+	 * Draw the map's visible height surface in one Raylib batch.
+	 *
+	 * The exact voxel cache still owns picking and edits. This compact shell
+	 * omits hidden caves so a large authored map remains responsive while the
+	 * editor does not yet have layer inspection.
+	 */
+	static function drawTerrainOverview(world:EditorWorldProjection):Void {
+		Rlgl.BeginSolidQuads();
+		Rlgl.TexCoord(0.5, 0.5);
+		for (patch in world.surfacePatches) {
+			final top = patch.topY + 1.0;
+			Rlgl.Color(terrainOverviewColor(patch.paletteCode));
+			Rlgl.Normal(0.0, 1.0, 0.0);
+			overviewVertex(patch.x, top, patch.z);
+			overviewVertex(patch.x, top, patch.z + patch.depth);
+			overviewVertex(patch.x + patch.width, top, patch.z + patch.depth);
+			overviewVertex(patch.x + patch.width, top, patch.z);
+		}
+		Rlgl.EndQuads();
+	}
+
+	/** Submit one vertex after the current batch has selected its color. */
+	static inline function overviewVertex(x:Float, y:Float, z:Float):Void
+		Rlgl.Vertex(x, y, z);
+
+	/** Give palette codes stable editor colors without knowing pack-owned IDs. */
+	static function terrainOverviewColor(paletteCode:Int):Color {
+		final family = paletteCode % 6;
+		return switch family {
+			case 0: Color.rgba(132, 157, 167);
+			case 1: Color.rgba(108, 164, 103);
+			case 2: Color.rgba(180, 153, 102);
+			case 3: Color.rgba(102, 159, 174);
+			case 4: Color.rgba(172, 174, 187);
+			case _: Color.rgba(176, 119, 91);
+		};
+	}
+
+	/** Give each closed object role one stable high-contrast editor color. */
+	static function gizmoColor(kind:EditorObjectGizmoKind):Color
+		return switch kind {
+			case PlayerSpawnGizmo: Color.rgba(79, 224, 235);
+			case CheckpointGizmo: Color.rgba(255, 214, 92);
+			case ItemGizmo: Color.rgba(255, 244, 178);
+			case EntityGizmo: Color.rgba(232, 83, 79);
+			case NpcGizmo: Color.rgba(102, 224, 133);
+			case PrefabGizmo: Color.rgba(194, 126, 72);
+			case TriggerZoneGizmo: Color.rgba(210, 105, 230);
+			case StatefulObjectGizmo: Color.rgba(255, 145, 55);
+		};
 
 	/** Draw one visible solid box or a shallow empty-cell cursor. */
 	static function drawCellOutline(x:Int, y:Int, z:Int, solid:Bool, color:Color, scale:Float):Void {
@@ -563,6 +657,9 @@ final class CaxecraftEditorScreen {
 		final current = session;
 		if (current == null) {
 			projection = null;
+			objectGizmos = [];
+			objectLabels = "";
+			flowRuleCount = 0;
 			camera = null;
 			selection = null;
 			notice = Invalid;
@@ -572,6 +669,14 @@ final class CaxecraftEditorScreen {
 		syncWorldName(draft.title);
 		final previous = projection;
 		projection = projectWorld(draft.world);
+		objectGizmos = projectObjects(draft.objects);
+		flowRuleCount = draft.flow.rules.length;
+		final labels:Array<String> = [];
+		for (gizmo in objectGizmos)
+			labels.push(gizmo.id.text());
+		objectLabels = labels.join(";");
+		if (objectList.activeIndex() < 0 || objectList.activeIndex() >= objectGizmos.length)
+			objectList = new GuiListViewState();
 		selection = current.selectedBounds();
 		final next = projection;
 		if (next == null) {
@@ -628,6 +733,21 @@ final class CaxecraftEditorScreen {
 	 */
 	public function applyPilotTool(tool:EditorTool, point:VoxelPoint):Bool
 		return applyToolAt(tool, point);
+
+	/** Paint and select the first authored air cell through production commands. */
+	public function applyPilotPaintFirstAir():Bool {
+		final current = projection;
+		if (current == null)
+			return false;
+		for (z in 0...current.depth)
+			for (y in 0...current.height)
+				for (x in 0...current.width)
+					if (paletteCodeAtWorld(current, x, y, z) == 0) {
+						final point:VoxelPoint = {x: x, y: y, z: z};
+						return applyToolAt(EditorTool.PaintTool, point) && applyToolAt(EditorTool.SelectTool, point);
+					}
+		return false;
+	}
 
 	/**
 	 * Move the production camera from deterministic pilot input.
