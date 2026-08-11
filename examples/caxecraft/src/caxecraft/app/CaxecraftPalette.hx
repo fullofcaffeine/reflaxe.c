@@ -21,6 +21,14 @@ final class CaxecraftPalette {
 	public static inline function selection():Color
 		return Color.rgba(255, 132, 47);
 
+	/** Opaque slate frame used by grounded interactive 3D controls. */
+	public static inline function mechanismFrame():Color
+		return Color.rgba(43, 55, 66);
+
+	/** Bright cyan core that makes a 3D world control discoverable. */
+	public static inline function mechanismCore():Color
+		return Color.rgba(62, 206, 212);
+
 	/** High-contrast keyboard/controller focus ring for editor controls. */
 	public static inline function editorFocus():Color
 		return Color.rgba(255, 216, 92);

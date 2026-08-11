@@ -2,9 +2,10 @@ package caxecraft.app;
 
 #if c
 import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
+import caxecraft.app.StatefulObjectVisual.StatefulObjectVisualKind;
+import caxecraft.app.StatefulObjectVisual.statefulObjectVisual;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.domain.GameSession;
-import raylib.Camera3D;
 import raylib.Raylib;
 import raylib.Texture2D;
 import raylib.Vector3;
@@ -18,9 +19,9 @@ import raylib.Vector3;
 	object, rule, or picture without adding campaign names to the game engine.
 **/
 /** Draw all active stateful objects using their current content-owned visual. */
-function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSession, level:PlayableLevelView, camera:Camera3D, entityTexture:Texture2D,
-		entityTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool,
-		terrainTexture:Texture2D, terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Void {
+function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSession, level:PlayableLevelView, entityTexture:Texture2D, entityTextureReady:Bool,
+		itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool, terrainTexture:Texture2D,
+		terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Void {
 	for (index in 0...level.statefulObjectCount()) {
 		final authoredId = level.statefulObjectIdAt(index);
 		if (!session.statefulObjectIsActive(authoredId))
@@ -33,18 +34,57 @@ function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSessio
 			continue;
 		final transform = level.statefulObjectTransformAt(index);
 		final bounds = level.statefulObjectBoundsAt(index);
-		final width = bounds.widthMilli / 1000.0;
-		final height = bounds.heightMilli / 1000.0;
-		final depth = bounds.depthMilli / 1000.0;
-		final position = Vector3.fromFloat(transform.xMilli / 1000.0, transform.yMilli / 1000.0 + height * 0.5, transform.zMilli / 1000.0);
-		final boxVisual = width > 1.2 || height > 1.2 || depth > 1.2;
-		final drawn = boxVisual ? drawBoxPresentation(resolved.asset, resolved.cellIndex, position, width, height, depth, entityTexture, entityTextureReady,
-			itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady,
-			runtimeTextures) : drawPresentation(camera, resolved.asset, resolved.cellIndex, position, entityTexture, entityTextureReady, itemTexture,
-				itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures);
-		if (!drawn)
-			Raylib.DrawCube(position, c.Float32.fromFloat(width), c.Float32.fromFloat(height), c.Float32.fromFloat(depth), CaxecraftPalette.selection());
+		final visual = statefulObjectVisual(bounds.widthMilli, bounds.heightMilli, bounds.depthMilli, transform.yawDegrees);
+		final width = visual.widthMilli / 1000.0;
+		final height = visual.heightMilli / 1000.0;
+		final depth = visual.depthMilli / 1000.0;
+		switch visual.kind {
+			case MechanismVisual:
+				drawMechanismPresentation(resolved.asset, resolved.cellIndex, transform.xMilli / 1000.0, transform.yMilli / 1000.0, transform.zMilli / 1000.0,
+					width, height, depth, entityTexture, entityTextureReady, itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady,
+					terrainTexture, terrainTextureReady, runtimeTextures);
+			case StructureVisual:
+				final position = Vector3.fromFloat(transform.xMilli / 1000.0, transform.yMilli / 1000.0 + height * 0.5, transform.zMilli / 1000.0);
+				final drawn = drawBoxPresentation(resolved.asset, resolved.cellIndex, position, width, height, depth, entityTexture, entityTextureReady,
+					itemTexture, itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures);
+				if (!drawn)
+					Raylib.DrawCube(position, c.Float32.fromFloat(width), c.Float32.fromFloat(height), c.Float32.fromFloat(depth),
+						CaxecraftPalette.selection());
+		}
 	}
+}
+
+/**
+	Draw one small interactive object as a grounded 3D control pedestal.
+
+	The base, cap, and status crystal establish depth from every camera angle.
+	The content-owned atlas cell covers the central body, so CaxeFlow state still
+	selects the visible identity without a campaign-specific renderer branch.
+**/
+private function drawMechanismPresentation(asset:String, cellIndex:Int, x:Float, groundY:Float, z:Float, width:Float, height:Float, depth:Float,
+		entityTexture:Texture2D, entityTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D,
+		adventureItemTextureReady:Bool, terrainTexture:Texture2D, terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Void {
+	final baseHeight = height * 0.16;
+	final bodyHeight = height * 0.54;
+	final capHeight = height * 0.12;
+	final baseWidth = width * 0.84;
+	final baseDepth = depth * 0.84;
+	final bodyWidth = width * 0.60;
+	final bodyDepth = depth * 0.60;
+	Raylib.DrawCube(Vector3.fromFloat(x, groundY + baseHeight * 0.5, z), c.Float32.fromFloat(baseWidth), c.Float32.fromFloat(baseHeight),
+		c.Float32.fromFloat(baseDepth), CaxecraftPalette.mechanismFrame());
+	final bodyPosition = Vector3.fromFloat(x, groundY + baseHeight + bodyHeight * 0.5, z);
+	final bodyDrawn = drawBoxPresentation(asset, cellIndex, bodyPosition, bodyWidth, bodyHeight, bodyDepth, entityTexture, entityTextureReady, itemTexture,
+		itemTextureReady, adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures);
+	if (!bodyDrawn)
+		Raylib.DrawCube(bodyPosition, c.Float32.fromFloat(bodyWidth), c.Float32.fromFloat(bodyHeight), c.Float32.fromFloat(bodyDepth),
+			CaxecraftPalette.selection());
+	final capY = groundY + baseHeight + bodyHeight + capHeight * 0.5;
+	Raylib.DrawCube(Vector3.fromFloat(x, capY, z), c.Float32.fromFloat(width * 0.72), c.Float32.fromFloat(capHeight), c.Float32.fromFloat(depth * 0.72),
+		CaxecraftPalette.mechanismFrame());
+	final coreHeight = height * 0.18;
+	Raylib.DrawCube(Vector3.fromFloat(x, groundY + baseHeight + bodyHeight + capHeight + coreHeight * 0.5, z), c.Float32.fromFloat(width * 0.18),
+		c.Float32.fromFloat(coreHeight), c.Float32.fromFloat(depth * 0.18), CaxecraftPalette.mechanismCore());
 }
 
 /** Select one loaded atlas and cover a structure with its authored cell. */
@@ -60,28 +100,5 @@ private function drawBoxPresentation(asset:String, cellIndex:Int, position:Vecto
 	if (asset == "terrain" && terrainTextureReady)
 		return CaxecraftAtlas.drawWorldBox(terrainTexture, cellIndex, position, width, height, depth);
 	return runtimeTextures.drawBox(asset, cellIndex, position, width, height, depth);
-}
-
-/** Select one loaded world atlas and report whether a picture was drawn. */
-private function drawPresentation(camera:Camera3D, asset:String, cellIndex:Int, position:Vector3, entityTexture:Texture2D, entityTextureReady:Bool,
-		itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool, terrainTexture:Texture2D,
-		terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog):Bool {
-	if (asset == "entities" && entityTextureReady) {
-		CaxecraftAtlas.drawEntitySprite(camera, entityTexture, cellIndex, position, 0.82, 1.16);
-		return true;
-	}
-	if (asset == "items" && itemTextureReady) {
-		CaxecraftAtlas.drawWorldSprite(camera, itemTexture, cellIndex, position, 0.82, 1.16);
-		return true;
-	}
-	if (asset == "adventure-items" && adventureItemTextureReady) {
-		CaxecraftAtlas.drawWorldSprite(camera, adventureItemTexture, cellIndex, position, 0.82, 1.16);
-		return true;
-	}
-	if (asset == "terrain" && terrainTextureReady) {
-		CaxecraftAtlas.drawWorldSprite(camera, terrainTexture, cellIndex, position, 0.82, 1.16);
-		return true;
-	}
-	return runtimeTextures.drawSprite(camera, asset, cellIndex, position, 0.82, 1.16);
 }
 #end

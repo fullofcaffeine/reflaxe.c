@@ -13,6 +13,8 @@ import caxecraft.app.MotionInterpolation.advance;
 import caxecraft.app.MotionInterpolation.reset;
 import caxecraft.app.MotionInterpolation.sample;
 import caxecraft.app.MotionInterpolation.start;
+import caxecraft.app.StatefulObjectVisual.StatefulObjectVisualKind;
+import caxecraft.app.StatefulObjectVisual.statefulObjectVisual;
 import caxecraft.domain.CharacterBody;
 
 /**
@@ -87,6 +89,27 @@ function selfCheck():Int {
 		return 15;
 	if (interactionPrompt(InteractionTargetKind.MechanismInteractionTarget) != InteractionPrompt.UseInteractionPrompt)
 		return 16;
+	final mechanism = statefulObjectVisual(1000, 1000, 1000, 270);
+	if (mechanism.kind != StatefulObjectVisualKind.MechanismVisual || mechanism.widthMilli != 1000 || mechanism.depthMilli != 1000)
+		return 17;
+	final gateNorth = statefulObjectVisual(7000, 3000, 500, 0);
+	if (gateNorth.kind != StatefulObjectVisualKind.StructureVisual
+		|| gateNorth.widthMilli != 7000
+		|| gateNorth.heightMilli != 3000
+		|| gateNorth.depthMilli != 500)
+		return 18;
+	final gateEast = statefulObjectVisual(7000, 3000, 500, 90);
+	if (gateEast.kind != StatefulObjectVisualKind.StructureVisual
+		|| gateEast.widthMilli != 500
+		|| gateEast.heightMilli != 3000
+		|| gateEast.depthMilli != 7000)
+		return 19;
+	final gateWest = statefulObjectVisual(7000, 3000, 500, 270);
+	if (gateWest.widthMilli != 500 || gateWest.depthMilli != 7000)
+		return 20;
+	final gateSouth = statefulObjectVisual(7000, 3000, 500, 180);
+	if (gateSouth.widthMilli != 7000 || gateSouth.depthMilli != 500)
+		return 21;
 	return 0;
 }
 
