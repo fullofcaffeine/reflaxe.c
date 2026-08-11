@@ -15,6 +15,7 @@ import caxecraft.domain.Character.isValid as isValidCharacter;
 import caxecraft.domain.Character.reviveAt as reviveCharacterAt;
 import caxecraft.domain.Character.stepWithCollisions as advanceCharacterState;
 import caxecraft.domain.Character.withVitals as withCharacterVitals;
+import caxecraft.domain.CharacterPhysics.collisionBox as characterCollisionBox;
 import caxecraft.domain.PlayerAgent.bind as bindPlayerAgent;
 import caxecraft.domain.WaterCellCodec.isSolidCode as isSolidStorageCode;
 import caxecraft.gameplay.AuthoredItemSlots;
@@ -241,6 +242,9 @@ final class GameSession {
 
 	/** Solid boxes rebuilt from the authoritative CaxeFlow state after each tick. */
 	var activeStatefulCollision:Array<DynamicCollisionBox> = [];
+
+	/** Stateful solids plus stationary actors that the local player cannot enter. */
+	var activeLocalPlayerCollision:Array<DynamicCollisionBox> = [];
 
 	/** Semantic events waiting for the next successfully committed fixed tick. */
 	var pendingFlowEvents:Array<FlowEvent> = [];
@@ -1206,7 +1210,11 @@ final class GameSession {
 				resolved: false
 			};
 		}
-		final result = advanceCharacterState(readCells, activeStatefulCollision, original, intent, damagePolicy);
+		final local = original.id.storageCode() == localPlayer.characterId.storageCode();
+		if (local)
+			refreshLocalPlayerCollision();
+		final collision = local ? activeLocalPlayerCollision : activeStatefulCollision;
+		final result = advanceCharacterState(readCells, collision, original, intent, damagePolicy);
 		final resolved = entities.replace(original.id, result.character);
 		return {
 			character: resolved ? result.character : original,
@@ -1220,53 +1228,86 @@ final class GameSession {
 	function refreshStatefulCollision():Void {
 		activeStatefulCollision.resize(0);
 		final executor = flowExecutor;
-		if (executor == null)
-			return;
-		for (objectIndex in 0...statefulObjectIds.length) {
-			final objectId = statefulObjectIds[objectIndex];
-			if (!executor.objectActive(objectId))
-				continue;
-			final currentState = executor.objectState(objectId);
-			if (currentState == null)
-				continue;
-			final start = statefulObjectStateStarts[objectIndex];
-			final end = start + statefulObjectStateCounts[objectIndex];
-			var stateIndex = start;
-			var solid = false;
-			while (stateIndex < end) {
-				if (statefulObjectCollisionStates[stateIndex] == currentState) {
-					solid = statefulObjectCollisionSolid[stateIndex] != 0;
-					stateIndex = end;
-				} else
-					stateIndex++;
+		if (executor != null) {
+			for (objectIndex in 0...statefulObjectIds.length) {
+				final objectId = statefulObjectIds[objectIndex];
+				if (!executor.objectActive(objectId))
+					continue;
+				final currentState = executor.objectState(objectId);
+				if (currentState == null)
+					continue;
+				final start = statefulObjectStateStarts[objectIndex];
+				final end = start + statefulObjectStateCounts[objectIndex];
+				var stateIndex = start;
+				var solid = false;
+				while (stateIndex < end) {
+					if (statefulObjectCollisionStates[stateIndex] == currentState) {
+						solid = statefulObjectCollisionSolid[stateIndex] != 0;
+						stateIndex = end;
+					} else
+						stateIndex++;
+				}
+				if (!solid)
+					continue;
+				final positionOffset = objectIndex * 3;
+				final boundsOffset = objectIndex * 4;
+				var widthMilli = statefulObjectBoundsMilli[boundsOffset];
+				final heightMilli = statefulObjectBoundsMilli[boundsOffset + 1];
+				var depthMilli = statefulObjectBoundsMilli[boundsOffset + 2];
+				final yaw = statefulObjectBoundsMilli[boundsOffset + 3];
+				if (yaw == 90 || yaw == 270) {
+					final swap = widthMilli;
+					widthMilli = depthMilli;
+					depthMilli = swap;
+				}
+				final centerX = statefulObjectPositionsMilli[positionOffset] / 1000.0;
+				final minimumY = statefulObjectPositionsMilli[positionOffset + 1] / 1000.0;
+				final centerZ = statefulObjectPositionsMilli[positionOffset + 2] / 1000.0;
+				final halfWidth = widthMilli / 2000.0;
+				final halfDepth = depthMilli / 2000.0;
+				activeStatefulCollision.push({
+					minimumX: centerX - halfWidth,
+					maximumX: centerX + halfWidth,
+					minimumY: minimumY,
+					maximumY: minimumY + heightMilli / 1000.0,
+					minimumZ: centerZ - halfDepth,
+					maximumZ: centerZ + halfDepth
+				});
 			}
-			if (!solid)
-				continue;
-			final positionOffset = objectIndex * 3;
-			final boundsOffset = objectIndex * 4;
-			var widthMilli = statefulObjectBoundsMilli[boundsOffset];
-			final heightMilli = statefulObjectBoundsMilli[boundsOffset + 1];
-			var depthMilli = statefulObjectBoundsMilli[boundsOffset + 2];
-			final yaw = statefulObjectBoundsMilli[boundsOffset + 3];
-			if (yaw == 90 || yaw == 270) {
-				final swap = widthMilli;
-				widthMilli = depthMilli;
-				depthMilli = swap;
-			}
-			final centerX = statefulObjectPositionsMilli[positionOffset] / 1000.0;
-			final minimumY = statefulObjectPositionsMilli[positionOffset + 1] / 1000.0;
-			final centerZ = statefulObjectPositionsMilli[positionOffset + 2] / 1000.0;
-			final halfWidth = widthMilli / 2000.0;
-			final halfDepth = depthMilli / 2000.0;
-			activeStatefulCollision.push({
-				minimumX: centerX - halfWidth,
-				maximumX: centerX + halfWidth,
-				minimumY: minimumY,
-				maximumY: minimumY + heightMilli / 1000.0,
-				minimumZ: centerZ - halfDepth,
-				maximumZ: centerZ + halfDepth
-			});
 		}
+	}
+
+	/**
+		Rebuild the local player's complete non-terrain collision set.
+
+		Stateful objects already own their authored solid/passable behavior. A
+		stationary dialogue actor adds its character body plus a small conversation
+		margin, so the camera cannot enter or crop its billboard at the nearest legal
+		position. Moving hostiles remain governed by combat and controller rules
+		instead of becoming invisible walls.
+	**/
+	function refreshLocalPlayerCollision():Void {
+		activeLocalPlayerCollision.resize(0);
+		for (box in activeStatefulCollision)
+			activeLocalPlayerCollision.push(box);
+		for (controller in actorControllers)
+			switch controller.profile {
+				case StationaryDialogue(_):
+					final actor = entities.read(controller.characterId);
+					if (isValidCharacter(actor)) {
+						final occupied = characterCollisionBox(actor.body);
+						final personalSpace = 0.6;
+						activeLocalPlayerCollision.push({
+							minimumX: occupied.minimumX - personalSpace,
+							maximumX: occupied.maximumX + personalSpace,
+							minimumY: occupied.minimumY,
+							maximumY: occupied.maximumY,
+							minimumZ: occupied.minimumZ - personalSpace,
+							maximumZ: occupied.maximumZ + personalSpace
+						});
+					}
+				case WanderChaseMelee(_) | TelegraphedCharge(_):
+			}
 	}
 
 	/**

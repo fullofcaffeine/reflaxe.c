@@ -501,7 +501,7 @@
       "states": [
         {
           "id": "caxecraft:entered",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
@@ -510,7 +510,7 @@
         },
         {
           "id": "caxecraft:waiting",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
@@ -527,7 +527,7 @@
       "states": [
         {
           "id": "caxecraft:entered",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
@@ -536,7 +536,7 @@
         },
         {
           "id": "caxecraft:waiting",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
@@ -579,7 +579,7 @@
       "states": [
         {
           "id": "caxecraft:entered",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
@@ -588,7 +588,7 @@
         },
         {
           "id": "caxecraft:waiting",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
@@ -605,7 +605,7 @@
       "states": [
         {
           "id": "caxecraft:entered",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
@@ -614,7 +614,7 @@
         },
         {
           "id": "caxecraft:waiting",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
@@ -631,7 +631,7 @@
       "states": [
         {
           "id": "caxecraft:entered",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
@@ -640,7 +640,7 @@
         },
         {
           "id": "caxecraft:waiting",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
@@ -657,7 +657,7 @@
       "states": [
         {
           "id": "caxecraft:entered",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
@@ -666,7 +666,7 @@
         },
         {
           "id": "caxecraft:waiting",
-          "collision": "passable",
+          "collision": "solid",
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",

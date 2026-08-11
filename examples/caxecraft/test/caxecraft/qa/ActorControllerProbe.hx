@@ -55,9 +55,12 @@ function selfCheck():Int {
 	}
 
 	final ordered = new GameSession();
+	for (x in 7...12)
+		if (!ordered.replaceTerrainDuringLoad(caxecraft.domain.World.coord(x, 4, 10), Stone))
+			return 43;
 	final first = character(firstId, 9.0, 10.0, 6);
 	final second = character(secondId, 10.0, 10.0, 6);
-	if (!bindLocal(ordered, localId, 8.0, 10.0) || !ordered.replaceAuthoredActors([first, second], [
+	if (!bindLocal(ordered, localId, 7.5, 10.0) || !ordered.replaceAuthoredActors([first, second], [
 		{characterId: firstId, profile: stationary},
 		{characterId: secondId, profile: stationary}
 	]))
@@ -80,6 +83,24 @@ function selfCheck():Int {
 		return 6;
 	if (!near(ordered.readCharacter(firstId).body.x, first.body.x) || !near(ordered.readCharacter(secondId).body.z, second.body.z))
 		return 7;
+	for (_ in 0...8) {
+		final approach = ordered.tick({
+			intent: {
+				moveX: 1.0,
+				moveZ: 0.0,
+				jump: false,
+				descend: false
+			},
+			damagePolicy: CharacterDamagePolicy.Invulnerable,
+			waterUpdateBudget: 0
+		});
+		if (!approach.committed)
+			return 37;
+	}
+	if (ordered.readLocalPlayer().body.x > 7.71)
+		return 38;
+	if (!ordered.actorInteractionAvailable(firstId))
+		return 39;
 
 	final chasing = new GameSession();
 	final chaser = character(firstId, 12.0, 10.0, 3);

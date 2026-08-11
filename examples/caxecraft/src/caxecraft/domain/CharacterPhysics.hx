@@ -86,6 +86,18 @@ function input(moveX:Float, moveZ:Float, jump:Bool):StepInput {
 	};
 }
 
+/** Return the exact world-space box occupied by one character body. */
+function collisionBox(state:CharacterBody):DynamicCollisionBox {
+	return {
+		minimumX: state.x - HALF_WIDTH,
+		maximumX: state.x + HALF_WIDTH,
+		minimumY: state.y,
+		maximumY: state.y + HEIGHT,
+		minimumZ: state.z - HALF_WIDTH,
+		maximumZ: state.z + HALF_WIDTH
+	};
+}
+
 /** True when placing one unit block at `coord` cannot overlap the body. */
 function canPlaceAt(state:CharacterBody, coord:BlockCoord):Bool {
 	final bodyMinimumX = state.x - HALF_WIDTH;
