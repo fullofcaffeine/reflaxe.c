@@ -654,7 +654,7 @@ final class CaxecraftApp {
 					locale = uiCatalog.nextLocale(locale);
 				final campaignMouse = Raylib.GetMousePosition();
 				final campaignChoice = CampaignMenu.selectionAt(campaignMouse.x.toFloat(), campaignMouse.y.toFloat(), Raylib.GetScreenWidth(),
-					Raylib.GetScreenHeight(), campaign == null ? 0 : campaign.levelCount());
+					Raylib.GetScreenHeight(), campaign == null ? 0 : campaign.levelCount(), selectedCampaignLevelIndex);
 				if (Raylib.IsMouseButtonPressed(MouseButton.Left))
 					switch campaignChoice {
 						case NoCampaignMenuHit:
