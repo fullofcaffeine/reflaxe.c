@@ -2,6 +2,7 @@ package caxecraft.domain;
 
 import caxecraft.domain.Aquatics.observe as observeAquatics;
 import caxecraft.domain.ActorControllerDecision.ActorControllerDecision;
+import caxecraft.domain.ActorControllerScheduler.acceptsMeleeDamage as controllerAcceptsMeleeDamage;
 import caxecraft.domain.ActorControllerScheduler.interactionAvailable as controllerInteractionAvailable;
 import caxecraft.domain.ActorControllerScheduler.planActorController;
 import caxecraft.domain.ActorControllerScheduler.startActorController;
@@ -706,6 +707,15 @@ final class GameSession {
 				resolved: false
 			};
 		final replacement = applyCharacterDamage(original, amount);
+		final newlyDefeated = !characterVitalsDefeated(original.vitals) && characterVitalsDefeated(replacement.vitals);
+		final defeatedAuthoredId = newlyDefeated ? authoredEnemyId(id) : null;
+		if (defeatedAuthoredId != null && pendingFlowEvents.length >= ScenarioLimits.MAX_EVENTS_PER_TICK)
+			return {
+				character: original,
+				damageApplied: 0,
+				defeated: false,
+				resolved: false
+			};
 		final resolved = entities.replace(id, replacement);
 		if (!resolved)
 			return {
@@ -714,12 +724,36 @@ final class GameSession {
 				defeated: false,
 				resolved: false
 			};
+		if (defeatedAuthoredId != null)
+			pendingFlowEvents.push(FlowEvent.EntityDefeated(defeatedAuthoredId));
 		return {
 			character: replacement,
 			damageApplied: original.vitals.health - replacement.vitals.health,
-			defeated: !characterVitalsDefeated(original.vitals) && characterVitalsDefeated(replacement.vitals),
+			defeated: newlyDefeated,
 			resolved: true
 		};
+	}
+
+	/** True when one living actor's content-selected phase admits a melee hit. */
+	public function characterAcceptsMeleeDamage(id:EntityId):Bool {
+		final character = readCharacter(id);
+		for (state in actorControllers)
+			if (state.characterId == id)
+				return controllerAcceptsMeleeDamage(state, character);
+		return false;
+	}
+
+	/** Resolve a hostile runtime identity back to its authored CAXEMAP identity. */
+	function authoredEnemyId(id:EntityId):Null<ScenarioId> {
+		if (flowExecutor == null)
+			return null;
+		for (index in 0...actorControllers.length)
+			if (actorControllers[index].characterId == id)
+				return switch actorControllers[index].profile {
+					case StationaryDialogue(_): null;
+					case WanderChaseMelee(_) | TelegraphedCharge(_): authoredActorIds[index];
+				};
+		return null;
 	}
 
 	/**

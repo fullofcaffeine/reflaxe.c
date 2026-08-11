@@ -28,6 +28,7 @@ function startActorController(binding:ActorControllerBinding, character:Characte
 	final phase = switch binding.profile {
 		case StationaryDialogue(_): Stationary;
 		case WanderChaseMelee(_): Resting;
+		case TelegraphedCharge(_): Resting;
 	};
 	return makeState(binding.characterId, binding.profile, character.body.x, character.body.z, phase, 0, false);
 }
@@ -51,6 +52,9 @@ function planActorController(state:ActorControllerState, character:Character, lo
 		case WanderChaseMelee(profile):
 			if (state.phase == Stationary) ControllerPlanRejected(ProfileStateMismatch); else planWanderChaseMelee(state, character, localPlayer, tickNumber,
 				profile);
+		case TelegraphedCharge(profile):
+			if (state.phase == Stationary || state.phase == Wandering || state.phase == Chasing || state.phase == Returning || state.phase == Windup
+				|| state.phase == Recovering) ControllerPlanRejected(ProfileStateMismatch); else planTelegraphedCharge(state, character, localPlayer, profile);
 	};
 }
 
@@ -73,6 +77,19 @@ function interactionAvailable(state:ActorControllerState, character:Character, l
 			&& insideRadius(character.body.x, character.body.z, localPlayer.body.x, localPlayer.body.z, interactionRadiusMilli);
 		case WanderChaseMelee(_):
 			false;
+		case TelegraphedCharge(_):
+			false;
+	};
+}
+
+/** True when the selected controller currently admits an ordinary melee hit. */
+function acceptsMeleeDamage(state:ActorControllerState, character:Character):Bool {
+	if (!isValidCharacter(character) || state.characterId != character.id || characterIsDefeated(character.vitals))
+		return false;
+	return switch state.profile {
+		case StationaryDialogue(_): false;
+		case WanderChaseMelee(_): state.phase != Stationary && state.phase != Defeated;
+		case TelegraphedCharge(_): state.phase == Stunned;
 	};
 }
 
@@ -150,6 +167,53 @@ private function planWanderChaseMelee(state:ActorControllerState, character:Char
 		jump: false,
 		descend: false
 	}, NoControllerEvent);
+}
+
+/** Advance one announced charge, sweep, and vulnerable counterattack cycle. */
+private function planTelegraphedCharge(state:ActorControllerState, character:Character, localPlayer:Character,
+		profile:WanderChaseMeleeProfile):ActorControllerDecision {
+	if (characterIsDefeated(character.vitals)) {
+		final event = state.dropPublished ? NoControllerEvent : DropRequested(character.id, profile.drop);
+		return ControllerPlanned(withPhase(state, Defeated, 0, true), stillIntent(), event);
+	}
+	if (state.phase == Defeated || state.dropPublished)
+		return ControllerPlanRejected(ProfileStateMismatch);
+
+	final playerDistanceSquared = distanceSquaredMilli(character.body.x, character.body.z, localPlayer.body.x, localPlayer.body.z);
+	if (state.phase == Roaring) {
+		if (state.phaseTicks > 1)
+			return ControllerPlanned(withPhase(state, Roaring, state.phaseTicks - 1, false), stillIntent(), NoControllerEvent);
+		return ControllerPlanned(withPhase(state, Charging, 0, false), stillIntent(), NoControllerEvent);
+	}
+	if (state.phase == Charging) {
+		if (playerDistanceSquared <= squared(profile.strikeRadiusMilli))
+			return ControllerPlanned(withPhase(state, TailSweep, profile.windupTicks, false), stillIntent(), NoControllerEvent);
+		final dx = localPlayer.body.x - character.body.x;
+		final dz = localPlayer.body.z - character.body.z;
+		final amount = profile.stepMilli / CHARACTER_STEP_MILLI;
+		return ControllerPlanned(withPhase(state, Charging, 0, false), {
+			moveX: absolute(dx) >= absolute(dz) ? boundedDirection(dx) * amount : 0.0,
+			moveZ: absolute(dx) >= absolute(dz) ? 0.0 : boundedDirection(dz) * amount,
+			jump: false,
+			descend: false
+		}, NoControllerEvent);
+	}
+	if (state.phase == TailSweep) {
+		if (state.phaseTicks > 1)
+			return ControllerPlanned(withPhase(state, TailSweep, state.phaseTicks - 1, false), stillIntent(), NoControllerEvent);
+		final event = playerDistanceSquared <= squared(profile.attackRadiusMilli) ? LocalPlayerAttack(character.id) : NoControllerEvent;
+		return ControllerPlanned(withPhase(state, Stunned, profile.recoveryTicks, false), stillIntent(), event);
+	}
+	if (state.phase == Stunned) {
+		if (state.phaseTicks > 1)
+			return ControllerPlanned(withPhase(state, Stunned, state.phaseTicks - 1, false), stillIntent(), NoControllerEvent);
+		return ControllerPlanned(withPhase(state, Roaring, profile.windupTicks, false), stillIntent(), NoControllerEvent);
+	}
+	if (state.phase != Resting)
+		return ControllerPlanRejected(ProfileStateMismatch);
+	if (playerDistanceSquared <= squared(profile.noticeRadiusMilli))
+		return ControllerPlanned(withPhase(state, Roaring, profile.windupTicks, false), stillIntent(), NoControllerEvent);
+	return ControllerPlanned(withPhase(state, Resting, 0, false), stillIntent(), NoControllerEvent);
 }
 
 /** Construct one immutable controller snapshot with stable binding and home. */

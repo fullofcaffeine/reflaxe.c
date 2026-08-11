@@ -26,6 +26,7 @@ enum abstract GameplayMessage(Int) {
 	var RecoveryEmpty = 13;
 	var ReturnPrompt = 14;
 	var EnemyHitWarning = 15;
+	var EnemyVulnerable = 16;
 }
 
 /** Return the locale-independent CAXEMAP key for one gameplay notice. */
@@ -46,5 +47,6 @@ function gameplayMessageId(message:GameplayMessage):MessageId {
 		case RecoveryEmpty: "recovery_empty";
 		case ReturnPrompt: "return_prompt";
 		case EnemyHitWarning: "enemy_hit_warning";
+		case EnemyVulnerable: "enemy_vulnerable";
 	});
 }

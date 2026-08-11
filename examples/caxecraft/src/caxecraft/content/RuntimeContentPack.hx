@@ -20,6 +20,7 @@ import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaReader;
 import caxecraft.content.RuntimeAssetInventory.RuntimeAssetFacts;
 import caxecraft.domain.ActorControllerProfile;
+import caxecraft.domain.ActorControllerProfile.WanderChaseMeleeProfile;
 import caxecraft.domain.AquaticProfile;
 import caxecraft.domain.Aquatics.profile as createAquaticProfile;
 import caxecraft.scenario.ContentId;
@@ -340,20 +341,22 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	/** Resolve an enemy or report a known NPC as the wrong authored kind. */
 	public function resolveEnemy(id:ContentId):ActorContentResolution {
 		final enemy = findEnemy(id.text());
-		if (enemy != null)
+		if (enemy != null) {
+			final profile:WanderChaseMeleeProfile = {
+				noticeRadiusMilli: enemy.noticeRadiusMilli,
+				strikeRadiusMilli: enemy.strikeRadiusMilli,
+				attackRadiusMilli: enemy.attackRadiusMilli,
+				windupTicks: enemy.windupTicks,
+				recoveryTicks: enemy.recoveryTicks,
+				stepMilli: enemy.stepMilli,
+				drop: new ContentId(enemy.drop.id)
+			};
 			return ActorContentResolved({
 				maximumHealth: enemy.maximumHealth,
 				aquaticProfile: defaultAquaticProfile(),
-				controller: WanderChaseMelee({
-					noticeRadiusMilli: enemy.noticeRadiusMilli,
-					strikeRadiusMilli: enemy.strikeRadiusMilli,
-					attackRadiusMilli: enemy.attackRadiusMilli,
-					windupTicks: enemy.windupTicks,
-					recoveryTicks: enemy.recoveryTicks,
-					stepMilli: enemy.stepMilli,
-					drop: new ContentId(enemy.drop.id)
-				})
+				controller: enemy.behaviorProfile == "telegraphed-charge" ? TelegraphedCharge(profile) : WanderChaseMelee(profile)
 			});
+		}
 		return findNpc(id.text()) != null ? WrongActorContentKind(NpcContent) : UnknownActorContent;
 	}
 
@@ -928,7 +931,8 @@ final class RuntimeContentPack {
 				return null;
 			final idNode = reader.field(fields, "id");
 			final id = readContentId(reader, idNode, path + ".id");
-			final behavior = readClosed(reader, reader.field(fields, "behaviorProfile"), path + ".behaviorProfile", ["wander-chase-melee"]);
+			final behavior = readClosed(reader, reader.field(fields, "behaviorProfile"), path + ".behaviorProfile",
+				["telegraphed-charge", "wander-chase-melee"]);
 			final health = reader.integer(reader.field(fields, "maxHealth"), path + ".maxHealth", 1, 10000);
 			final notice = reader.integer(reader.field(fields, "noticeRadiusMilli"), path + ".noticeRadiusMilli", 250, 64000);
 			final strike = reader.integer(reader.field(fields, "strikeRadiusMilli"), path + ".strikeRadiusMilli", 250, 64000);
@@ -946,7 +950,7 @@ final class RuntimeContentPack {
 				reader.reject(values[index], SchemaInvalidInvariant(path + ".attackRadiusMilli"));
 				return null;
 			}
-			result.push(new RuntimeEnemyDefinition(id, idNode.line, idNode.column, health, notice, strike, attack, windup, recovery, step,
+			result.push(new RuntimeEnemyDefinition(id, idNode.line, idNode.column, behavior, health, notice, strike, attack, windup, recovery, step,
 				new RuntimeReference(drop, dropNode.line, dropNode.column), presentation));
 		}
 		return validateEnemyOrder(reader, "enemies", result) ? result : null;
@@ -1676,6 +1680,9 @@ private final class RuntimeNpcDefinition extends RuntimeLocatedId {
 
 /** Immutable wander/chase/melee enemy mechanics and presentation. */
 private final class RuntimeEnemyDefinition extends RuntimeLocatedId {
+	/** Closed reusable controller recipe selected by this content definition. */
+	public final behaviorProfile:String;
+
 	/** Initial and maximum health for the spawned enemy. */
 	public final maximumHealth:Int;
 
@@ -1704,9 +1711,10 @@ private final class RuntimeEnemyDefinition extends RuntimeLocatedId {
 	public final presentation:RuntimePresentation;
 
 	/** Construct one fully validated enemy definition. */
-	public function new(id:String, line:Int, column:Int, maximumHealth:Int, noticeRadiusMilli:Int, strikeRadiusMilli:Int, attackRadiusMilli:Int,
-			windupTicks:Int, recoveryTicks:Int, stepMilli:Int, drop:RuntimeReference, presentation:RuntimePresentation) {
+	public function new(id:String, line:Int, column:Int, behaviorProfile:String, maximumHealth:Int, noticeRadiusMilli:Int, strikeRadiusMilli:Int,
+			attackRadiusMilli:Int, windupTicks:Int, recoveryTicks:Int, stepMilli:Int, drop:RuntimeReference, presentation:RuntimePresentation) {
 		super(id, line, column);
+		this.behaviorProfile = behaviorProfile;
 		this.maximumHealth = maximumHealth;
 		this.noticeRadiusMilli = noticeRadiusMilli;
 		this.strikeRadiusMilli = strikeRadiusMilli;

@@ -141,6 +141,14 @@ function selfCheck():Int {
 		return 102;
 	final flowSession = presentationCandidate.generation().session();
 	final flowActors = presentationCandidate.generation().actorBindings();
+	var guideEntity = EntityId.invalid();
+	var enemyEntity = EntityId.invalid();
+	for (binding in flowActors) {
+		if (binding.contentId.text() == "caxecraft:nia")
+			guideEntity = binding.entityId;
+		else if (binding.contentId.text() == "caxecraft:mossling")
+			enemyEntity = binding.entityId;
+	}
 	final initialFlowTick = flowSession.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
 		damagePolicy: CharacterDamagePolicy.Invulnerable,
@@ -154,7 +162,10 @@ function selfCheck():Int {
 		|| initialFlowTick.flow.activeObjective == null
 		|| initialFlowTick.flow.activeObjective.text() != "objective.marker")
 		return 111;
-	if (flowActors.length != 1 || !flowSession.interactWithActor(flowActors[0].entityId))
+	if (flowActors.length != 2
+		|| !guideEntity.isValid()
+		|| !enemyEntity.isValid()
+		|| !flowSession.interactWithActor(guideEntity))
 		return 106;
 	final flowTick = flowSession.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
@@ -301,6 +312,22 @@ function selfCheck():Int {
 		|| equipmentTick.flow.activeObjective == null
 		|| equipmentTick.flow.activeObjective.text() != "objective.equipped")
 		return 118;
+	if (!flowSession.damageCharacter(enemyEntity, 1).resolved
+		|| !flowSession.damageCharacter(enemyEntity, 1).resolved
+		|| !flowSession.damageCharacter(enemyEntity, 1).defeated)
+		return 126;
+	final defeatTick = flowSession.tick({
+		intent: aquaticInput(0.0, 0.0, false, false),
+		damagePolicy: CharacterDamagePolicy.Invulnerable,
+		waterUpdateBudget: 0
+	});
+	if (!defeatTick.committed
+		|| defeatTick.flow == null
+		|| defeatTick.flow.firedRules.length != 1
+		|| defeatTick.flow.firedRules[0].text() != "rule.fixture-defeat"
+		|| defeatTick.flow.activeObjective == null
+		|| defeatTick.flow.activeObjective.text() != "objective.defeated")
+		return 127;
 	final logicalPath = "scenarios/first-playable/map.caxemap";
 	final checkedIn = switch store.read(logicalPath) {
 		case PackageBytesRead(value): value;
@@ -520,6 +547,13 @@ function digestActorMechanics(candidate:caxecraft.content.RuntimeLevelLoader.Run
 			case StationaryDialogue(radius):
 				CaxecraftTrace.mix(digest, radius);
 			case WanderChaseMelee(profile):
+				var controller = CaxecraftTrace.mix(digest, profile.noticeRadiusMilli);
+				controller = CaxecraftTrace.mix(controller, profile.strikeRadiusMilli);
+				controller = CaxecraftTrace.mix(controller, profile.attackRadiusMilli);
+				controller = CaxecraftTrace.mix(controller, profile.windupTicks);
+				controller = CaxecraftTrace.mix(controller, profile.recoveryTicks);
+				CaxecraftTrace.mix(controller, profile.stepMilli);
+			case TelegraphedCharge(profile):
 				var controller = CaxecraftTrace.mix(digest, profile.noticeRadiusMilli);
 				controller = CaxecraftTrace.mix(controller, profile.strikeRadiusMilli);
 				controller = CaxecraftTrace.mix(controller, profile.attackRadiusMilli);

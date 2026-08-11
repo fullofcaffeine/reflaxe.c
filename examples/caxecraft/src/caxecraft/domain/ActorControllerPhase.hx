@@ -30,6 +30,18 @@ enum ActorControllerPhase {
 	/** Hold position until another melee wind-up may begin. */
 	Recovering;
 
+	/** Hold position while a large attack announces the coming charge. */
+	Roaring;
+
+	/** Move toward the player after the warning has completed. */
+	Charging;
+
+	/** Hold position while the close-range sweep remains avoidable. */
+	TailSweep;
+
+	/** Hold position and accept counterattacks before the next cycle. */
+	Stunned;
+
 	/** Stop movement and remember that any one-shot drop was requested. */
 	Defeated;
 }

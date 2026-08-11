@@ -343,10 +343,13 @@ CASES = {
             "status",
             "alloc",
             "array",
+            "object",
+            "gc",
             "string-literal",
             "string-scalar",
             "string",
         ),
+        runs_generated_main=True,
         split_source_checks=(
             GeneratedSourceCheck(
                 path="src/modules/caxecraft/content/ActorMechanicsValidation.c",

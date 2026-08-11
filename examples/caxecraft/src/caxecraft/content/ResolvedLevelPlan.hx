@@ -1004,6 +1004,16 @@ final class ResolvedLevelPlan {
 					stepMilli: profile.stepMilli,
 					drop: profile.drop
 				});
+			case TelegraphedCharge(profile):
+				TelegraphedCharge({
+					noticeRadiusMilli: profile.noticeRadiusMilli,
+					strikeRadiusMilli: profile.strikeRadiusMilli,
+					attackRadiusMilli: profile.attackRadiusMilli,
+					windupTicks: profile.windupTicks,
+					recoveryTicks: profile.recoveryTicks,
+					stepMilli: profile.stepMilli,
+					drop: profile.drop
+				});
 		};
 
 	static function copyRole(value:CharacterSpawnRole):CharacterSpawnRole
@@ -1057,6 +1067,15 @@ final class ResolvedLevelPlan {
 				hashInt(hashInt(hash, 1), radius);
 			case WanderChaseMelee(profile):
 				var result = hashInt(hash, 2);
+				result = hashInt(result, profile.noticeRadiusMilli);
+				result = hashInt(result, profile.strikeRadiusMilli);
+				result = hashInt(result, profile.attackRadiusMilli);
+				result = hashInt(result, profile.windupTicks);
+				result = hashInt(result, profile.recoveryTicks);
+				result = hashInt(result, profile.stepMilli);
+				hashText(result, profile.drop.text());
+			case TelegraphedCharge(profile):
+				var result = hashInt(hash, 3);
 				result = hashInt(result, profile.noticeRadiusMilli);
 				result = hashInt(result, profile.strikeRadiusMilli);
 				result = hashInt(result, profile.attackRadiusMilli);

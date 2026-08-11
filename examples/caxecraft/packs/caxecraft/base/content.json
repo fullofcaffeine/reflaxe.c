@@ -349,6 +349,22 @@
   ],
   "enemies": [
     {
+      "id": "caxecraft:browser",
+      "behaviorProfile": "telegraphed-charge",
+      "maxHealth": 6,
+      "noticeRadiusMilli": 16000,
+      "strikeRadiusMilli": 4200,
+      "attackRadiusMilli": 2800,
+      "windupTicks": 20,
+      "recoveryTicks": 48,
+      "stepMilli": 150,
+      "drop": "caxecraft:browser-rations",
+      "presentation": {
+        "asset": "adventure-characters",
+        "cell": "browser-front"
+      }
+    },
+    {
       "id": "caxecraft:ember-wisp",
       "behaviorProfile": "wander-chase-melee",
       "maxHealth": 2,
@@ -382,6 +398,16 @@
     }
   ],
   "drops": [
+    {
+      "id": "caxecraft:browser-rations",
+      "item": "caxecraft:berries",
+      "quantity": 4,
+      "pickupRadiusMilli": 1800,
+      "presentation": {
+        "asset": "items",
+        "cell": "berries"
+      }
+    },
     {
       "id": "caxecraft:ember-wisp-lantern",
       "item": "caxecraft:lantern",

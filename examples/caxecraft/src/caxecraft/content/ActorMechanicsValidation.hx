@@ -28,7 +28,7 @@ function isValidActorMechanics(profile:ActorMechanicsProfile):Bool {
 		return false;
 	return switch profile.controller {
 		case StationaryDialogue(radius): radius >= 250 && radius <= 32000;
-		case WanderChaseMelee(controller):
+		case WanderChaseMelee(controller) | TelegraphedCharge(controller):
 			controller.noticeRadiusMilli >= 250
 			&& controller.noticeRadiusMilli <= 64000
 			&& controller.strikeRadiusMilli >= controller.attackRadiusMilli

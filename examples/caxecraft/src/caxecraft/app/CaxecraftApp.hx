@@ -1193,7 +1193,7 @@ final class CaxecraftApp {
 					if (swordQueued) {
 						final swordDecision = decideSwordCombat(swordCombat, inventory, character.vitals, enemyActor, character.body.x, character.body.z,
 							lookX, lookZ);
-						if (swordDecision == SwordCombatDecision.Hit) {
+						if (swordDecision == SwordCombatDecision.Hit && session.characterAcceptsMeleeDamage(enemyActorId)) {
 							final damage = session.damageCharacter(enemyActorId, 1);
 							if (!damage.resolved)
 								quit = true;
@@ -1883,14 +1883,32 @@ final class CaxecraftApp {
 			}
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
-			if (!drawActorPresentation(camera, enemyAsset, enemyCell, Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.48, enemy.body.z), 1.05, 0.96,
+			final largeEncounter = enemyPhase == ActorControllerPhase.Roaring
+				|| enemyPhase == ActorControllerPhase.Charging
+				|| enemyPhase == ActorControllerPhase.TailSweep
+				|| enemyPhase == ActorControllerPhase.Stunned;
+			final phaseCell = switch enemyPhase {
+				case Roaring: enemyCell + 4;
+				case Charging: enemyCell + 5;
+				case TailSweep: enemyCell + 6;
+				case Stunned: enemyCell + 7;
+				case _: enemyCell;
+			};
+			final spriteWidth = largeEncounter ? 3.15 : 1.05;
+			final spriteHeight = largeEncounter ? 2.88 : 0.96;
+			final spriteY = largeEncounter ? enemy.body.y + 1.44 : enemy.body.y + 0.48;
+			if (!drawActorPresentation(camera, enemyAsset, phaseCell, Vector3.fromFloat(enemy.body.x, spriteY, enemy.body.z), spriteWidth, spriteHeight,
 				entityTexture, entityTextureReady, runtimeTextures)) {
-				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.30, enemy.body.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),
-					c.Float32.fromFloat(0.70), CaxecraftPalette.damage());
+				final fallbackWidth = largeEncounter ? 1.8 : 0.70;
+				final fallbackHeight = largeEncounter ? 1.8 : 0.54;
+				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + fallbackHeight * 0.5, enemy.body.z), c.Float32.fromFloat(fallbackWidth),
+					c.Float32.fromFloat(fallbackHeight), c.Float32.fromFloat(fallbackWidth), CaxecraftPalette.damage());
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 0.66, enemy.body.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
 					c.Float32.fromFloat(0.50), CaxecraftPalette.selection());
 			}
-			if (enemyPhase == ActorControllerPhase.Windup)
+			if (enemyPhase == ActorControllerPhase.Windup
+				|| enemyPhase == ActorControllerPhase.Roaring
+				|| enemyPhase == ActorControllerPhase.TailSweep)
 				Raylib.DrawCube(Vector3.fromFloat(enemy.body.x, enemy.body.y + 1.02, enemy.body.z), c.Float32.fromFloat(0.20), c.Float32.fromFloat(0.20),
 					c.Float32.fromFloat(0.20), CaxecraftPalette.damage());
 		}
@@ -1999,10 +2017,14 @@ final class CaxecraftApp {
 			drawScenarioText(presentation, locale, prompt, centerX - 110, centerY + 74, 18, text);
 		}
 		if (!characterIsDefeated(enemy.vitals)) {
-			if (enemyPhase == ActorControllerPhase.Windup)
+			if (enemyPhase == ActorControllerPhase.Windup || enemyPhase == ActorControllerPhase.Roaring)
 				drawScenarioText(presentation, locale, GameplayMessage.EnemyWindup, width - 300, 28, 16, CaxecraftPalette.damage());
-			else if (enemyPhase == ActorControllerPhase.Chasing)
+			else if (enemyPhase == ActorControllerPhase.Chasing || enemyPhase == ActorControllerPhase.Charging)
 				drawScenarioText(presentation, locale, GameplayMessage.EnemyAlert, width - 180, 28, 16, CaxecraftPalette.selection());
+			else if (enemyPhase == ActorControllerPhase.TailSweep)
+				drawScenarioText(presentation, locale, GameplayMessage.EnemyHitWarning, width - 330, 28, 16, CaxecraftPalette.damage());
+			else if (enemyPhase == ActorControllerPhase.Stunned)
+				drawScenarioText(presentation, locale, GameplayMessage.EnemyVulnerable, width - 300, 28, 16, CaxecraftPalette.selection());
 		}
 		if (strikeHit)
 			drawScenarioText(presentation, locale, GameplayMessage.AttackHit, centerX - 70, centerY - 54, 18, CaxecraftPalette.selection());

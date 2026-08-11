@@ -16,9 +16,19 @@ enum ActorControllerProfile {
 
 	/** Wander, pursue, and perform a timed melee attack using bounded pack data. */
 	WanderChaseMelee(profile:WanderChaseMeleeProfile);
+
+	/** Announce, charge, sweep, and expose a short counterattack window. */
+	TelegraphedCharge(profile:WanderChaseMeleeProfile);
 }
 
-/** Validated parameters for the reusable wander/chase/melee controller. */
+/**
+	Validated distances, timing, movement, and drop for a hostile controller.
+
+	The ordinary profile uses windup and recovery around each melee strike. The
+	telegraphed-charge profile uses the same fields for roar/sweep time and the
+	vulnerable stun. One record keeps shared content units and generated-C storage
+	identical while the enum choice retains the different behavior.
+**/
 typedef WanderChaseMeleeProfile = {
 	final noticeRadiusMilli:Int;
 	final strikeRadiusMilli:Int;

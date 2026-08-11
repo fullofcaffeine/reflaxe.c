@@ -256,7 +256,7 @@ function validNia(plan:CharacterSpawnPlan, expected:ScenarioTransform):Bool {
 	};
 	final correctController = switch plan.controller {
 		case StationaryDialogue(radius): radius == 3500;
-		case WanderChaseMelee(_): false;
+		case WanderChaseMelee(_) | TelegraphedCharge(_): false;
 	};
 	return correctRole && correctController;
 }
@@ -283,7 +283,7 @@ function validMossling(plan:CharacterSpawnPlan, expected:ScenarioTransform):Bool
 			&& profile.recoveryTicks == 12
 			&& profile.stepMilli == 80
 			&& profile.drop.text() == "caxecraft:mossling-berries";
-		case StationaryDialogue(_): false;
+		case StationaryDialogue(_) | TelegraphedCharge(_): false;
 	};
 	return correctRole && correctController;
 }

@@ -4,8 +4,10 @@ import caxecraft.domain.ActorControllerDecision.ActorControllerPlanError;
 import caxecraft.domain.ActorControllerDecision.ActorControllerDecision;
 import caxecraft.domain.ActorControllerEvent;
 import caxecraft.domain.ActorControllerEvent.*;
+import caxecraft.domain.ActorControllerPhase;
 import caxecraft.domain.ActorControllerPhase.*;
 import caxecraft.domain.ActorControllerProfile;
+import caxecraft.domain.ActorControllerScheduler.acceptsMeleeDamage;
 import caxecraft.domain.ActorControllerScheduler.planActorController;
 import caxecraft.domain.ActorControllerScheduler.startActorController;
 import caxecraft.domain.ActorControllerState;
@@ -227,6 +229,42 @@ function selfCheck():Int {
 	}, CharacterDamagePolicy.Invulnerable);
 	if (rejectedStep.resolved || unbound.receiveLocalPlayerAttack().resolved)
 		return 28;
+
+	final boss = bossProfile();
+	final bossCharacter = character(firstId, 12.0, 10.0, 6);
+	final nearbyPlayer = character(localId, 7.0, 10.0, 6);
+	final bossStart = startActorController({characterId: firstId, profile: boss}, bossCharacter);
+	final roar = switch planActorController(bossStart, bossCharacter, nearbyPlayer, 0) {
+		case ControllerPlanned(next, _, NoControllerEvent) if (next.phase == Roaring && next.phaseTicks == 8): next;
+		case _: return 29;
+	};
+	final charge = switch planActorController(withControllerPhase(roar, Roaring, 1), bossCharacter, nearbyPlayer, 1) {
+		case ControllerPlanned(next, _, NoControllerEvent) if (next.phase == Charging): next;
+		case _: return 30;
+	};
+	switch planActorController(charge, bossCharacter, nearbyPlayer, 2) {
+		case ControllerPlanned(next, intent, NoControllerEvent) if (next.phase == Charging && intent.moveX < 0.0):
+		case _:
+			return 31;
+	}
+	final closeBoss = character(firstId, 10.0, 10.0, 6);
+	final sweep = switch planActorController(charge, closeBoss, nearbyPlayer, 3) {
+		case ControllerPlanned(next, _, NoControllerEvent) if (next.phase == TailSweep && next.phaseTicks == 8): next;
+		case _: return 32;
+	};
+	if (acceptsMeleeDamage(sweep, closeBoss))
+		return 33;
+	final stunned = switch planActorController(withControllerPhase(sweep, TailSweep, 1), character(firstId, 9.0, 10.0, 6), nearbyPlayer, 4) {
+		case ControllerPlanned(next, _, LocalPlayerAttack(source)) if (source == firstId && next.phase == Stunned && next.phaseTicks == 12): next;
+		case _: return 34;
+	};
+	if (!acceptsMeleeDamage(stunned, character(firstId, 9.0, 10.0, 6)))
+		return 35;
+	switch planActorController(withControllerPhase(stunned, Stunned, 1), closeBoss, nearbyPlayer, 5) {
+		case ControllerPlanned(next, _, NoControllerEvent) if (next.phase == Roaring && next.phaseTicks == 8):
+		case _:
+			return 36;
+	}
 	return 0;
 }
 
@@ -255,6 +293,30 @@ private function hostileProfile():ActorControllerProfile
 		stepMilli: 80,
 		drop: new ContentId("caxecraft:mossling-berries")
 	});
+
+/** Use a synthetic profile to prove the reusable boss cycle without story IDs. */
+private function bossProfile():ActorControllerProfile
+	return TelegraphedCharge({
+		noticeRadiusMilli: 16000,
+		strikeRadiusMilli: 4200,
+		attackRadiusMilli: 2800,
+		windupTicks: 8,
+		recoveryTicks: 12,
+		stepMilli: 150,
+		drop: new ContentId("caxecraft:test-drop")
+	});
+
+/** Copy one immutable controller snapshot while selecting a probe phase. */
+private function withControllerPhase(state:ActorControllerState, phase:ActorControllerPhase, ticks:Int):ActorControllerState
+	return {
+		characterId: state.characterId,
+		profile: state.profile,
+		homeX: state.homeX,
+		homeZ: state.homeZ,
+		phase: phase,
+		phaseTicks: ticks,
+		dropPublished: state.dropPublished
+	};
 
 /** Read a stationary interaction ID while returning an invalid sentinel otherwise. */
 private function interactionId(event:ActorControllerEvent):EntityId

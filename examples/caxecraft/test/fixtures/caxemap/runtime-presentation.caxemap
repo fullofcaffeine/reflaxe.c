@@ -28,6 +28,10 @@ chunk world.base 0 0 0 32 16 32
   run 1 32
   run 0 16352
 end chunk
+object enemy.fixture
+  tag enemy
+  placement entity caxecraft:mossling 6500 1000 6500 0
+end object
 object guide.nia
   tag friend
   placement npc caxecraft:nia dialogue.guide 2500 1000 1500 270
@@ -70,6 +74,9 @@ end objective
 objective objective.equipped hidden title literal "Equipment reached authored rules"
   body literal "A committed aquatic-equipment pickup selected this objective."
 end objective
+objective objective.defeated hidden title literal "Defeat reached authored rules"
+  body literal "A committed enemy defeat selected this objective."
+end objective
 variable fixture.zone-entered map flag false
 variable fixture.zone-left map flag false
 rule rule.fixture-advance priority 10 once
@@ -95,6 +102,12 @@ rule rule.fixture-equip priority 10 once
   if (always)
   do objective objective.collected complete
   do objective objective.equipped active
+end rule
+rule rule.fixture-defeat priority 10 once
+  when entity-defeated enemy.fixture
+  if (always)
+  do objective objective.equipped complete
+  do objective objective.defeated active
 end rule
 rule rule.fixture-zone-enter priority 20 repeat
   when enter-zone zone.fixture-start
