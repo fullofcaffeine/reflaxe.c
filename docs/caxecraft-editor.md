@@ -10,8 +10,9 @@ commits literal titles through that same typed command/history boundary. It
 also has one device-neutral focus order: Tab and Shift-Tab move through every
 current control, Enter or Space activates the focused control, and a
 high-contrast ring shows where the next activation will go. It still edits
-layer zero only. Native map-file persistence, localized message-title editing,
-JSONL/MCP adapters, multi-layer controls, object gizmos, and the fuller
+layer zero only. A local JSON Lines process can now open, inspect, edit,
+validate, and save one verified package level. Localized message-title editing,
+the MCP adapter, multi-layer controls, object gizmos, and the fuller
 child-friendly authoring experience remain separate work.
 
 ## What this layer owns
@@ -48,9 +49,13 @@ frame.
 
 ## One command boundary for humans and automation
 
-The visual editor and a future agent must not have different rules for changing
-a map. Both use `EditorSession.mutate`, which combines an operation with the
-draft revision its caller inspected:
+The visual editor primarily serves human and child creators. It must make
+terrain, objects, triggers, flow links, cutscenes, and transitions visible and
+selectable. Agents can edit the canonical Caxe files directly.
+
+The visual editor and an optional automation client must not have different
+rules for changing a map. Both use `EditorSession.mutate`, which combines an
+operation with the draft revision its caller inspected:
 
 ```text
 query state -> revision 12
@@ -103,16 +108,37 @@ automation adapter to compare two complete maps. Whole-document recovery says
 would be misleading. The native 3D screen sends voxel edits, undo, and redo
 through this revision-aware path.
 
-This is the implemented in-process semantic boundary, not a claim that remote
-automation already ships. A planned local JSON Lines adapter will validate
-bounded external requests into these closed Haxe types. It must use the general
-`haxe.Json` and hosted input/file capabilities owned by `haxe_c-0bx` and
-`haxe_c-fwg`; a Caxecraft-only JSON parser or direct libc input shim would be a
-compiler-shaped workaround, not the intended architecture. A later optional
-MCP adapter may translate discoverable tools into the same operations. Neither
-adapter will receive a private mutation path, arbitrary code execution, or
-unrestricted filesystem and network access. Issue `haxe_c-xge.19.6.3` owns
-those later adapters and the broader authoring surface.
+The local JSON Lines adapter now uses this implemented boundary. It opens one
+verified package level and returns one JSON response for each input line. It
+supports state, terrain-surface, and single-column queries. It also supports
+bounded paint, erase, undo, redo, validation, save, and quit commands.
+
+The save command uses the same content-refresh planner as normal content work.
+It validates the complete draft before it replaces the map and its receipts as
+one group. A stale revision or invalid draft leaves all package files unchanged.
+
+Run this command from the repository root:
+
+```sh
+npm run caxecraft:editor -- \
+  --level scenarios/first-adventure/frostmere.caxemap
+```
+
+The process first writes a `ready` response. Then send one request per line:
+
+```json
+{"schemaVersion":1,"requestId":1,"command":"column","x":54,"z":23}
+{"schemaVersion":1,"requestId":2,"command":"erase","baseRevision":0,"points":[{"x":54,"y":5,"z":23}]}
+{"schemaVersion":1,"requestId":3,"command":"validate"}
+{"schemaVersion":1,"requestId":4,"command":"save","baseRevision":1}
+{"schemaVersion":1,"requestId":5,"command":"quit"}
+```
+
+This process is local and uses standard input and standard output. It opens no
+network port. A later MCP adapter can translate tools into the same protocol.
+It must not add a private mutation path or unrestricted host access. Issue
+`haxe_c-xge.19.6.3` owns the broader visual authoring surface. The adapter is a
+lower-priority convenience because direct file editing remains supported.
 
 ## First 3D visual viewport
 

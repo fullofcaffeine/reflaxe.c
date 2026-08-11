@@ -2,14 +2,12 @@ package caxecraft.tools;
 
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
 import caxecraft.content.ContentPackageRefresh.ContentRefreshError;
-import caxecraft.content.ContentPackageRefresh.ContentRefreshFile;
 import caxecraft.content.ContentPackageRefresh.ContentRefreshPlan;
 import caxecraft.content.ContentPackageRefresh.ContentRefreshResult;
 import caxecraft.content.ContentPackageRefresh.planContentPackageRefresh;
+import caxecraft.content.ContentRefreshPublisher.ContentRefreshPublication;
+import caxecraft.content.ContentRefreshPublisher.publishContentRefresh;
 import caxecraft.content.ContentPackageStore;
-import haxe.io.Path;
-import sys.FileSystem;
-import sys.io.File;
 
 /**
  * Checks or refreshes Caxecraft package metadata after a content edit.
@@ -78,7 +76,16 @@ final class ContentRefreshMain {
 			Sys.stderr().writeString("content-refresh: package metadata needs a refresh\n");
 			return 1;
 		}
-		return publish(root, plan) ? 0 : 2;
+		return switch publishContentRefresh(root, plan) {
+			case RefreshPublishRejected(detail):
+				Sys.stderr().writeString('content-refresh: no changes published: $detail\n');
+				2;
+			case RefreshPublished(changed, warnings):
+				for (warning in warnings)
+					Sys.stderr().writeString('content-refresh: updated content, but could not remove backup $warning\n');
+				Sys.println('content-refresh: updated $changed files without rebuilding Caxecraft');
+				0;
+		};
 	}
 
 	/** Show each changed path and its old and new byte counts. */
@@ -87,83 +94,6 @@ final class ContentRefreshMain {
 			final file = plan.fileAt(index);
 			if (file.changed())
 				Sys.println('content-refresh: ${file.logicalPath}: ${file.previous.length} -> ${file.next.length} bytes');
-		}
-	}
-
-	/** Publish all changed files or restore every original after an error. */
-	static function publish(root:String, plan:ContentRefreshPlan):Bool {
-		final changed:Array<ContentRefreshFile> = [];
-		for (index in 0...plan.fileCount())
-			if (plan.fileAt(index).changed())
-				changed.push(plan.fileAt(index));
-		final suffix = '.caxecraft-refresh-${Date.now().getTime()}';
-		var staged = 0;
-		var backedUp = 0;
-		var published = 0;
-		try {
-			for (file in changed) {
-				final target = Path.join([root, file.logicalPath]);
-				if (File.getBytes(target).compare(file.previous) != 0)
-					throw new haxe.Exception('source changed while planning: ${file.logicalPath}');
-				final temporary = target + suffix + ".new";
-				final backup = target + suffix + ".old";
-				if (FileSystem.exists(temporary) || FileSystem.exists(backup))
-					throw new haxe.Exception('stale refresh file blocks publication: ${file.logicalPath}');
-				File.saveBytes(temporary, file.next);
-				if (File.getBytes(temporary).compare(file.next) != 0)
-					throw new haxe.Exception('staged bytes changed after write: ${file.logicalPath}');
-				staged++;
-			}
-			for (file in changed) {
-				final target = Path.join([root, file.logicalPath]);
-				FileSystem.rename(target, target + suffix + ".old");
-				backedUp++;
-			}
-			for (file in changed) {
-				final target = Path.join([root, file.logicalPath]);
-				FileSystem.rename(target + suffix + ".new", target);
-				published++;
-			}
-		} catch (error:haxe.Exception) {
-			rollback(root, changed, suffix, staged, backedUp, published);
-			Sys.stderr().writeString('content-refresh: no changes published: ${error.message}\n');
-			return false;
-		}
-		for (file in changed) {
-			final backup = Path.join([root, file.logicalPath]) + suffix + ".old";
-			try {
-				FileSystem.deleteFile(backup);
-			} catch (error:haxe.Exception) {
-				Sys.stderr().writeString('content-refresh: updated content, but could not remove backup $backup: ${error.message}\n');
-			}
-		}
-		Sys.println('content-refresh: updated ${changed.length} files without rebuilding Caxecraft');
-		return true;
-	}
-
-	/** Restore originals and remove every staged file after a publication error. */
-	static function rollback(root:String, files:Array<ContentRefreshFile>, suffix:String, staged:Int, backedUp:Int, published:Int):Void {
-		var index = published - 1;
-		while (index >= 0) {
-			final target = Path.join([root, files[index].logicalPath]);
-			if (FileSystem.exists(target))
-				FileSystem.deleteFile(target);
-			index--;
-		}
-		index = backedUp - 1;
-		while (index >= 0) {
-			final target = Path.join([root, files[index].logicalPath]);
-			final backup = target + suffix + ".old";
-			if (FileSystem.exists(backup))
-				FileSystem.rename(backup, target);
-			index--;
-		}
-		index = 0;
-		while (index < staged) {
-			final temporary = Path.join([root, files[index].logicalPath]) + suffix + ".new";
-			if (FileSystem.exists(temporary))
-				FileSystem.deleteFile(temporary);
-			index++;
 		}
 	}
 

@@ -1079,6 +1079,20 @@ Native persistence and the remaining visual editor work continue as ordered
 `haxe_c-xge.19.*` slices. The readable
 [CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.
 
+Agents and text tools can now open a real package level through the same
+revisioned editor model. The process reads one JSON request per line. It can
+inspect terrain, apply bounded voxel edits, validate, undo, redo, and save the
+map with its campaign and package receipts:
+
+```sh
+npm run caxecraft:editor -- \
+  --level scenarios/first-adventure/frostmere.caxemap
+```
+
+See [the editor semantics guide](../../docs/caxecraft-editor.md) for the JSON
+commands and save rules. This local process opens no network port. The planned
+MCP adapter will call the same Haxe boundary after the local protocol is stable.
+
 To compile only the C project through the direct recovery path:
 
 ```sh

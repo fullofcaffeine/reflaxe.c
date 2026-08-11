@@ -82,6 +82,7 @@
     "caxecraft:content:validate": "npm run caxecraft:content:check && python3 examples/caxecraft/play.py --content-feedback --validate-only",
     "caxecraft:content:refresh": "haxe --cwd examples/caxecraft -cp src --run caxecraft.tools.ContentRefreshMain",
     "caxecraft:content:check": "haxe --cwd examples/caxecraft -cp src --run caxecraft.tools.ContentRefreshMain --check",
+    "caxecraft:editor": "haxe --cwd examples/caxecraft -cp src --run caxecraft.tools.EditorSessionMain",
     "benchmark:caxecraft-renderer": "python3 examples/caxecraft/benchmark_renderer.py",
     "test:stdlib-ledger": "python3 test/stdlib_ledger/run.py",
     "test:hxc-ir": "python3 test/hxc_ir/run.py",

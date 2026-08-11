@@ -264,6 +264,25 @@ performance, packaging, and developer experience together.
   frame for the immediate proof and create a Beads owner for the missing
   reloadable Piloscript capability; do not hard-code the campaign into the
   engine as a shortcut.
+
+  After the reusable engine can support the active content slice, prioritize
+  live agent play over more content assertions or editor automation. Keep one
+  Caxecraft process open, drive the ordinary player controls through runtime
+  Piloscript batches, and return player-visible JSON state plus a real rendered
+  frame after each batch. Use this loop to explore the campaign, notice
+  confusion, judge pacing, find broken interactions, and improve reloadable
+  content without a rebuild. Keep hidden triggers, future story facts, and
+  engine internals out of the normal observation. Expose bounded debug facts
+  only when a diagnosed problem requires them. Piloscript is an interactive
+  player interface first and a small content-regression format second; do not
+  turn exploratory play into a large permanent assertion suite.
+
+  The visual editor primarily serves human and child creators. It must show
+  levels, objects, trigger volumes, CaxeFlow links, cutscene markers, and
+  transitions over the canonical reloadable content. Agents can edit the same
+  documented files directly, then use validation and live play to assess the
+  result. Editor automation and MCP remain optional conveniences. Do not place
+  either one ahead of a blocked or weak player-experience loop.
 - Use Minecraft and Luanti as practical reference points when Caxecraft needs
   a proven voxel-game dynamic, mechanic, or creator workflow. This is especially
   useful for movement, jumping and swimming, buoyancy and fluids, block reach,
