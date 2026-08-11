@@ -6,7 +6,8 @@ and bounded automatic exit are implemented under `haxe_c-xge.31`. Linux CI
 runs the title proof on a virtual desktop and the movement/edit proof through
 Raylib's pinned in-memory software renderer. Both preserve the report plus a
 review image. Runtime Piloscript checkpoints also emit versioned JSON world
-observations. A live command connection remains later work.
+observations. A pilot-only live session can now exchange bounded action batches
+and observations with one running game process.
 
 ## What the pilot does
 
@@ -497,10 +498,44 @@ Each checkpoint JSON object names its matching framebuffer capture. The JSON
 explains what the game knows. The image remains the authority for appearance,
 layout, animation, and other visual results.
 
-This checkpoint path is not live control. The process still reads one complete
-Piloscript before play and exits at its bounded final frame. Bead
-`haxe_c-xge.19.8.1.1` owns the persistent request and response session. Its
-transport can change without changing the versioned observation meaning.
+The ordinary checkpoint path still reads one complete Piloscript and exits at
+its bounded final frame. The live path uses the same parser and action
+vocabulary:
+
+```sh
+npm run caxecraft:play -- \
+  --agent-session \
+  --raylib-configuration memory-software
+```
+
+The command prints one initial `CAXECRAFT_AGENT_RESPONSE` line. Then it accepts
+one JSON envelope per standard-input line:
+
+```json
+{"piloscript":"PILOSCRIPT 1\nname agent-session-1\nframes 3\naction 0 interact\nend\n"}
+```
+
+The host copies the Piloscript bytes into one confined staged request file. The
+running Haxe game checks this file at 20 Hz. It accepts a changed batch only
+after the normal parser validates its size, name, actions, frames, and optional
+inspection radius.
+
+This request file is a private transitional carrier. It exists because typed
+Haxe standard input is not available in the current compiler slice. Bead
+`haxe_c-8al` owns that stream support. Bead `haxe_c-xge.19.8.1.1` must replace
+the request file with inherited standard input when the stream support lands.
+The JSON observation schema and Piloscript meaning do not depend on this
+carrier.
+
+Add `inspect-radius 0` through `inspect-radius 6` to a request for a smaller or
+larger surface map. The radius remains bounded and never requests the complete
+world. Use `action 0 quit` in the final batch to close the game through its
+normal input path.
+
+Add `--agent-record-dir <empty-directory>` to preserve each accepted batch.
+The host writes the exact validated bytes as numbered `.piloscript` files. Each
+file remains independently reloadable and reviewable. The host does not merge,
+rewrite, or interpret its actions.
 
 ## Why the native path has one compile-time condition
 
@@ -529,17 +564,16 @@ builds contain no pilot behavior.
 ## Why named scripts come before live IPC
 
 Inter-process communication (IPC) means a runner sends commands while the game
-is running and receives observations back. That will be useful when an agent
-needs to decide its next action from the latest state. It is deliberately not
-the first authority:
+is running and receives observations back. The live session now provides this
+loop. The named scripts remain the first authority:
 
 - the action vocabulary and ordering are closed and typed;
 - no JSON parser, socket, port, queue, or timing race can obscure an input bug;
 - the complete input is known before launch and is easy to reproduce; and
 - CI can establish deterministic semantics before transport is introduced.
 
-A later live adapter should translate validated versioned messages into this
-same intent vocabulary. It must not become a second game implementation.
+The live adapter translates validated messages into this same intent
+vocabulary. It does not implement gameplay or interpret campaign content.
 
 The pilot is not the cutscene system either. A cutscene is shipped CaxeFlow
 content that sequences authorized world/presentation actions and defines its

@@ -1,0 +1,5 @@
+PILOSCRIPT 1
+name agent-session-0
+frames 2
+action 0 idle
+end

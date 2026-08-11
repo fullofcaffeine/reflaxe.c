@@ -90,9 +90,8 @@ function agentNearby(session:GameSession, level:PlayableLevelView, player:Charac
 	return nearby;
 }
 
-/** Build a clipped seven-by-seven surface map around the player. */
-function agentTerrain(world:WorldView, playerCellX:Int, playerCellZ:Int):Array<AgentTerrainColumn> {
-	final radius = 3;
+/** Build one clipped surface map with the parser-validated radius. */
+function agentTerrain(world:WorldView, playerCellX:Int, playerCellZ:Int, radius:Int):Array<AgentTerrainColumn> {
 	final terrain:Array<AgentTerrainColumn> = [];
 	var z = playerCellZ - radius;
 	while (z <= playerCellZ + radius) {

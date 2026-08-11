@@ -116,6 +116,15 @@ final class RuntimePilotScriptProbe {
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 4\nhold 1 3 forward\nend\n", 4, "held final frame");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 5\nhold 1 3 forward\naction 2 idle\nend\n", 5, "overlapping action");
 		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\nexpect 1 object-state missing-pair\nend\n", 4, "object-state pair");
+		expectRejected("PILOSCRIPT 1\nname bad\nframes 3\ninspect-radius 7\nend\n", 4, "inspect radius");
+		final explicitQuit = switch RuntimePilotScript.read(Bytes.ofString("PILOSCRIPT 1\nname live-session\nframes 2\ninspect-radius 5\naction 0 quit\nend\n"),
+			"live-session.piloscript") {
+			case RuntimePilotReady(value): value;
+			case RuntimePilotRejected(diagnostic):
+				throw 'explicit quit was rejected at ${diagnostic.line}: ${diagnostic.message}';
+		};
+		require(explicitQuit.actionAt(0) == PilotAction.Quit, "the explicit live-session quit action changed");
+		require(explicitQuit.inspectionRadius() == 5, "the bounded live-session inspection radius changed");
 		return 0;
 	}
 

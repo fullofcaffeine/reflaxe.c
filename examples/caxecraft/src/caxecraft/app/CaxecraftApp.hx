@@ -115,6 +115,7 @@ import raylib.Rlgl;
 #end
 import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.PilotScript;
+import caxecraft.pilot.PilotScript.PilotAction;
 import caxecraft.pilot.PilotScript.PilotScriptName;
 #if caxecraft_pilot_runtime
 import caxecraft.app.AgentWorldProjection.agentInventory;
@@ -125,6 +126,7 @@ import caxecraft.pilot.AgentWorldObservation.renderAgentWorldObservation;
 import caxecraft.pilot.RuntimePilotScript;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotReadResult;
 import caxecraft.pilot.RuntimePilotScript.RuntimePilotRunResult;
+import haxe.io.Bytes;
 #end
 import raylib.Camera3D;
 import raylib.CameraProjection;
@@ -251,7 +253,7 @@ final class CaxecraftApp {
 		#if caxecraft_pilot_runtime
 		// The launcher stages the selected content journey at one generic package
 		// path. Haxe owns parsing and semantics; the host never interprets records.
-		final runtimePilot = switch contentStore.read("pilots/active.piloscript") {
+		var runtimePilot = switch contentStore.read("pilots/active.piloscript") {
 			case PackageBytesRejected(_):
 				Sys.println("caxecraft: runtime Piloscript read failed: pilots/active.piloscript");
 				return;
@@ -263,7 +265,12 @@ final class CaxecraftApp {
 					case RuntimePilotReady(script): script;
 				}
 		};
-		final pilotInputHash = runtimePilot.inputHash();
+		var pilotInputHash = runtimePilot.inputHash();
+		final agentSession = StringTools.startsWith(runtimePilot.stableName(), "agent-session-");
+		var runtimePilotFrame = 0;
+		var agentWaiting = false;
+		var lastAgentRequestBytesHash = 0;
+		var agentObservationSequence = 0;
 		#elseif caxecraft_pilot
 		final pilotInputHash = PilotScript.inputHash(pilotName);
 		#end
@@ -531,9 +538,32 @@ final class CaxecraftApp {
 				frameSeconds = MAX_FRAME_SECONDS;
 			#if caxecraft_pilot
 			#if caxecraft_pilot_runtime
+			if (agentSession && agentWaiting && frameCount % 6 == 0)
+				switch contentStore.read("pilots/active.piloscript") {
+					case PackageBytesRejected(_):
+					case PackageBytesRead(content):
+						final requestBytesHash = agentRequestBytesHash(content.bytes);
+						if (requestBytesHash != lastAgentRequestBytesHash) {
+							lastAgentRequestBytesHash = requestBytesHash;
+							switch RuntimePilotScript.read(content.bytes, content.provenance.logicalPath.text()) {
+								case RuntimePilotRejected(diagnostic):
+									Sys.println('CAXECRAFT_AGENT_ERROR=request rejected at line ${diagnostic.line}: ${diagnostic.message}');
+								case RuntimePilotReady(request):
+									if (!StringTools.startsWith(request.stableName(),
+										"agent-session-")) Sys.println("CAXECRAFT_AGENT_ERROR=request name must start with agent-session-"); else
+										if (request.inputHash() != pilotInputHash) {
+										runtimePilot = request;
+										pilotInputHash = request.inputHash();
+										runtimePilotFrame = 0;
+										agentWaiting = false;
+									}
+							}
+						}
+				};
 			final requestedWindowWidth = 0;
 			final requestedWindowHeight = 0;
-			final pilotAction = runtimePilot.actionAt(frameCount);
+			final activeRuntimePilotFrame = agentSession ? runtimePilotFrame : frameCount;
+			final pilotAction = agentWaiting ? PilotAction.Idle : runtimePilot.actionAt(activeRuntimePilotFrame);
 			#else
 			final requestedWindowWidth = PilotScript.requestedWindowWidth(pilotName, frameCount);
 			// Keep both conditional results stable before the native call. haxe_c-af1
@@ -875,7 +905,7 @@ final class CaxecraftApp {
 				observedStatefulObjectIds.push(authoredId.text());
 				observedStatefulObjectStates.push(state == null ? "missing" : state.text());
 			}
-			switch runtimePilot.observe(frameCount, {
+			switch runtimePilot.observe(activeRuntimePilotFrame, {
 				screen: observedScreen,
 				mode: observedMode,
 				level: observedLevel,
@@ -1446,7 +1476,7 @@ final class CaxecraftApp {
 			}
 			#if caxecraft_pilot
 			#if caxecraft_pilot_runtime
-			final pilotComplete = runtimePilot.complete(frameCount);
+			final pilotComplete = agentSession ? false : runtimePilot.complete(frameCount);
 			#else
 			final pilotComplete = PilotScript.complete(pilotName, frameCount);
 			#end
@@ -1482,8 +1512,11 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
 				capturePilotFrame = true;
 			#if caxecraft_pilot_runtime
-			final runtimeCheckpoint = runtimePilot.checkpointAt(frameCount);
+			final runtimeCheckpoint = runtimePilot.checkpointAt(activeRuntimePilotFrame);
+			final agentResponseReady = agentSession && !agentWaiting && runtimePilot.complete(activeRuntimePilotFrame + 1);
 			if (runtimeCheckpoint != null && runtimePilotFrameAccepted)
+				capturePilotFrame = true;
+			if (agentResponseReady && runtimePilotFrameAccepted)
 				capturePilotFrame = true;
 			#end
 			// Submit this frame before reading it. `EndDrawing()` would otherwise
@@ -1519,9 +1552,11 @@ final class CaxecraftApp {
 			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
 			#if caxecraft_pilot_runtime
-			if (runtimeCheckpoint != null && runtimePilotFrameAccepted) {
-				final observationScreenshot = runtimeCheckpointScreenshot(runtimeCheckpoint.label);
-				if (runtimeCheckpoint.label == "title-selection")
+			if ((runtimeCheckpoint != null || agentResponseReady) && runtimePilotFrameAccepted) {
+				final observationScreenshot = agentResponseReady ? "caxecraft-agent-session.png" : runtimeCheckpointScreenshot(runtimeCheckpoint.label);
+				if (agentResponseReady)
+					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-agent-session.png");
+				else if (runtimeCheckpoint.label == "title-selection")
 					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-title-selection.png");
 				else if (runtimeCheckpoint.label == "campaign-selection")
 					reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-runtime-campaign-selection.png");
@@ -1551,7 +1586,7 @@ final class CaxecraftApp {
 				final playerCellY = Std.int(character.body.y);
 				final playerCellZ = Std.int(character.body.z);
 				Sys.println("CAXECRAFT_AGENT_OBSERVATION=" + renderAgentWorldObservation({
-					sequence: frameCount + 1,
+					sequence: agentResponseReady ? agentObservationSequence + 1 : frameCount + 1,
 					frame: frameCount,
 					tick: completedTicks,
 					screen: observedScreen,
@@ -1581,11 +1616,18 @@ final class CaxecraftApp {
 					inventory: agentInventory(inventory),
 					target: agentTarget(hit, session.worldView()),
 					nearby: agentNearby(session, levelView, character),
-					terrainRadius: 3,
-					terrain: agentTerrain(session.worldView(), playerCellX, playerCellZ),
+					terrainRadius: runtimePilot.inspectionRadius(),
+					terrain: agentTerrain(session.worldView(), playerCellX, playerCellZ, runtimePilot.inspectionRadius()),
 					events: recentEvents,
 					screenshot: reviewScreenshotObserved ? observationScreenshot : "none"
 				}));
+			}
+			if (agentSession && !agentWaiting) {
+				if (agentResponseReady) {
+					agentObservationSequence++;
+					agentWaiting = true;
+				}
+				runtimePilotFrame++;
 			}
 			#end
 			if (pilotComplete)
@@ -1651,6 +1693,14 @@ final class CaxecraftApp {
 	#if caxecraft_pilot
 
 	#if caxecraft_pilot_runtime
+	/** Fingerprint one request so one malformed file reports only once. */
+	static function agentRequestBytesHash(bytes:Bytes):Int {
+		var hash = -2128831035;
+		for (index in 0...bytes.length)
+			hash = (hash ^ bytes.get(index)) * 16777619;
+		return hash;
+	}
+
 	/** Select the fixed review image that belongs to one admitted checkpoint. */
 	static function runtimeCheckpointScreenshot(label:String):String {
 		if (label == "title-selection")

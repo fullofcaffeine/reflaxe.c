@@ -10,6 +10,7 @@ import json
 import os
 import platform
 import re
+import selectors
 import shutil
 import statistics
 import struct
@@ -3184,6 +3185,140 @@ def run_pilot_sample(
     return report, width, height, screenshot_hash, supporting_hashes
 
 
+def publish_agent_request(path: Path, source: str) -> bytes:
+    """Atomically replace one confined request without interpreting Piloscript."""
+
+    payload = source.encode("utf-8")
+    if not payload or len(payload) > 64 * 1024:
+        raise PlayFailure("an agent Piloscript request must contain 1 through 65536 UTF-8 bytes")
+    if path.is_symlink() or not path.is_file():
+        raise PlayFailure(f"the staged agent request is missing or unsafe: {path}")
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".agent-request-", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(payload)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+    return payload
+
+
+def read_agent_response(
+    process: subprocess.Popen[str],
+    selector: selectors.BaseSelector,
+    *,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    """Wait for one flushed Haxe response while retaining a bounded host timeout."""
+
+    observation_prefix = "CAXECRAFT_AGENT_OBSERVATION="
+    error_prefix = "CAXECRAFT_AGENT_ERROR="
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise PlayFailure("the live Caxecraft agent request timed out")
+        events = selector.select(remaining)
+        if not events:
+            raise PlayFailure("the live Caxecraft agent request timed out")
+        if process.stdout is None:
+            raise PlayFailure("the live Caxecraft process lost its output pipe")
+        line = process.stdout.readline()
+        if line == "":
+            status = process.poll()
+            raise PlayFailure(f"the live Caxecraft process exited before its response (status {status})")
+        text = line.rstrip("\r\n")
+        if text.startswith(error_prefix):
+            return {"schemaVersion": 1, "type": "error", "message": text[len(error_prefix) :]}
+        if not text.startswith(observation_prefix):
+            continue
+        try:
+            observation = json.loads(text[len(observation_prefix) :])
+        except json.JSONDecodeError as error:
+            raise PlayFailure(f"the live Caxecraft process emitted invalid observation JSON: {error}") from error
+        if not isinstance(observation, dict) or observation.get("schemaVersion") != 1:
+            raise PlayFailure("the live Caxecraft process emitted an unknown observation schema")
+        return observation
+
+
+def run_agent_session(executable: Path, record_directory: Path | None) -> int:
+    """Keep one game process alive while stdin supplies bounded Piloscript batches."""
+
+    active_request = executable.parent / "content/pilots/active.piloscript"
+    if record_directory is not None:
+        record_directory = record_directory.resolve()
+        if record_directory.exists():
+            if record_directory.is_symlink() or not record_directory.is_dir() or any(record_directory.iterdir()):
+                raise PlayFailure("--agent-record-dir must name a missing or empty real directory")
+        else:
+            record_directory.mkdir(parents=True)
+    process = subprocess.Popen(
+        [str(executable)],
+        cwd=executable.parent,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="strict",
+        bufsize=1,
+    )
+    selector = selectors.DefaultSelector()
+    if process.stdout is None:
+        process.terminate()
+        raise PlayFailure("the live Caxecraft process did not expose standard output")
+    selector.register(process.stdout, selectors.EVENT_READ)
+    last_payload = active_request.read_bytes()
+    recorded_requests = 0
+    try:
+        initial = read_agent_response(process, selector, timeout_seconds=15.0)
+        print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(initial, ensure_ascii=False, separators=(",", ":")), flush=True)
+        for input_line in sys.stdin:
+            if not input_line.strip():
+                continue
+            try:
+                envelope = json.loads(input_line)
+            except json.JSONDecodeError as error:
+                response = {"schemaVersion": 1, "type": "error", "message": f"invalid request envelope JSON: {error}"}
+                print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, separators=(",", ":")), flush=True)
+                continue
+            if not isinstance(envelope, dict) or set(envelope) != {"piloscript"} or not isinstance(envelope["piloscript"], str):
+                response = {"schemaVersion": 1, "type": "error", "message": "request must contain one string field named piloscript"}
+                print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, separators=(",", ":")), flush=True)
+                continue
+            payload = envelope["piloscript"].encode("utf-8")
+            if payload == last_payload:
+                response = {"schemaVersion": 1, "type": "error", "message": "request bytes must differ from the previous batch"}
+                print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, separators=(",", ":")), flush=True)
+                continue
+            last_payload = publish_agent_request(active_request, envelope["piloscript"])
+            response = read_agent_response(process, selector, timeout_seconds=15.0)
+            print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
+            if record_directory is not None and response.get("type") != "error":
+                recorded_requests += 1
+                recording = record_directory / f"request-{recorded_requests:04d}.piloscript"
+                with recording.open("xb") as output:
+                    output.write(last_payload)
+            try:
+                return process.wait(timeout=0.25)
+            except subprocess.TimeoutExpired:
+                pass
+        return 0
+    finally:
+        selector.close()
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=3)
+
+
 def run_content_feedback(
     args: argparse.Namespace,
     *,
@@ -3315,6 +3450,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
     parser.add_argument(
+        "--agent-session",
+        action="store_true",
+        help="keep one pilot-only game process alive and exchange Piloscript batches for JSON observations",
+    )
+    parser.add_argument(
+        "--agent-record-dir",
+        type=Path,
+        help="with --agent-session, preserve each accepted action batch as a reloadable Piloscript file",
+    )
+    parser.add_argument(
         "--piloscript",
         default="pilots/active.piloscript",
         help=(
@@ -3429,6 +3574,12 @@ def main(argv: list[str]) -> int:
             raise PlayFailure("--native-jobs must be between 1 and 32")
         if args.validate_only and not args.content_feedback:
             raise PlayFailure("--validate-only is available only with --content-feedback")
+        if args.agent_session and (args.content_feedback or args.smoke or args.pilot is not None):
+            raise PlayFailure("--agent-session cannot be combined with content-feedback, smoke, or another pilot")
+        if args.agent_session:
+            args.piloscript = "pilots/agent-session.piloscript"
+        elif args.agent_record_dir is not None:
+            raise PlayFailure("--agent-record-dir requires --agent-session")
         if args.content_feedback and args.validate_only and args.pilot is not None:
             raise PlayFailure("--validate-only selects the shortest launch pilot and cannot be combined with --pilot")
         if args.content_feedback and (
@@ -3457,13 +3608,15 @@ def main(argv: list[str]) -> int:
         selected_pilot = (
             "launch-smoke"
             if args.smoke or (args.content_feedback and args.validate_only)
+            else "adventure-journey"
+            if args.agent_session
             else args.pilot
         )
         if args.piloscript != "pilots/active.piloscript" and selected_pilot != "adventure-journey":
             raise PlayFailure("--piloscript requires --pilot adventure-journey")
         if args.smoke and args.pilot is not None:
             raise PlayFailure("--smoke is the launch-smoke pilot alias and cannot be combined with --pilot")
-        if (args.smoke or args.pilot is not None) and (args.check_snapshots or args.compile_only or args.build_only):
+        if (args.smoke or args.pilot is not None or args.agent_session) and (args.check_snapshots or args.compile_only or args.build_only):
             raise PlayFailure("a running smoke/pilot cannot be combined with a non-running mode")
         if args.sanitizers and args.compile_only:
             raise PlayFailure("--sanitizers requires a native build and cannot be combined with --compile-only")
@@ -3756,6 +3909,9 @@ def main(argv: list[str]) -> int:
             print(f"caxecraft: published unchanged-build state at {output_root / PLAY_BUILD_STATE}")
         if args.build_only and selected_pilot is None:
             return 0
+        if args.agent_session:
+            print("caxecraft: live agent session ready; send one JSON envelope per line", flush=True)
+            return run_agent_session(executable, args.agent_record_dir)
         if selected_pilot is not None:
             reports: list[dict[str, object]] = []
             screenshot_hashes: list[str] = []

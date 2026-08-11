@@ -191,16 +191,18 @@ final class RuntimePilotScript {
 	final actions:Array<PilotAction>;
 	final checkpoints:Array<Null<PilotCheckpoint>>;
 	final expectations:Array<RuntimePilotExpectation>;
+	final inspectRadius:Int;
 	final hash:Int;
 
 	/** Construct only after the parser validates every record. */
 	private function new(source:String, name:String, actions:Array<PilotAction>, checkpoints:Array<Null<PilotCheckpoint>>,
-			expectations:Array<RuntimePilotExpectation>, hash:Int) {
+			expectations:Array<RuntimePilotExpectation>, inspectRadius:Int, hash:Int) {
 		this.source = source;
 		this.name = name;
 		this.actions = actions;
 		this.checkpoints = checkpoints;
 		this.expectations = expectations;
+		this.inspectRadius = inspectRadius;
 		this.hash = hash;
 	}
 
@@ -226,6 +228,8 @@ final class RuntimePilotScript {
 		var actionOwned:Array<Bool> = [];
 		var checkpoints:Array<Null<PilotCheckpoint>> = [];
 		var expectations:Array<RuntimePilotExpectation> = [];
+		var inspectRadius = 3;
+		var inspectRadiusDeclared = false;
 		var ended = false;
 		var lineIndex = 0;
 		while (lineIndex < lines.length) {
@@ -271,6 +275,16 @@ final class RuntimePilotScript {
 
 			if (words.length == 1 && words[0] == "end") {
 				ended = true;
+				continue;
+			}
+			if (words.length == 2 && words[0] == "inspect-radius") {
+				if (inspectRadiusDeclared)
+					return rejected(source, lineNumber, "duplicate inspect-radius record");
+				final requestedRadius = nonNegativeInteger(words[1], 6);
+				if (requestedRadius < 0)
+					return rejected(source, lineNumber, "inspect radius must be from 0 through 6");
+				inspectRadius = requestedRadius;
+				inspectRadiusDeclared = true;
 				continue;
 			}
 			if (words.length < 3)
@@ -351,8 +365,8 @@ final class RuntimePilotScript {
 		if (!ended)
 			return rejected(source, lines.length, "Piloscript requires a final end record");
 		actions[actions.length - 1] = PilotAction.Quit;
-		return RuntimePilotReady(new RuntimePilotScript(source, stableName, actions, checkpoints, expectations,
-			computeHash(stableName, actions, checkpoints, expectations)));
+		return RuntimePilotReady(new RuntimePilotScript(source, stableName, actions, checkpoints, expectations, inspectRadius,
+			computeHash(stableName, actions, checkpoints, expectations, inspectRadius)));
 	}
 
 	/** Stable script identity supplied by the runtime source. */
@@ -366,6 +380,10 @@ final class RuntimePilotScript {
 	/** Deterministic non-security fingerprint of all executable script facts. */
 	public inline function inputHash():Int
 		return hash;
+
+	/** Radius of the bounded surface map requested for each observation. */
+	public inline function inspectionRadius():Int
+		return inspectRadius;
 
 	/** Return the authored action, or permanent quit at and after the limit. */
 	public function actionAt(frame:Int):PilotAction
@@ -557,6 +575,8 @@ final class RuntimePilotScript {
 			return KnownRuntimePilotAction(PilotAction.MenuNext);
 		if (value == "menu-confirm")
 			return KnownRuntimePilotAction(PilotAction.MenuConfirm);
+		if (value == "quit")
+			return KnownRuntimePilotAction(PilotAction.Quit);
 		return UnknownRuntimePilotAction;
 	}
 
@@ -713,8 +733,8 @@ final class RuntimePilotScript {
 
 	/** Hash the accepted model, not whitespace or comments. */
 	static function computeHash(name:String, actions:Array<PilotAction>, checkpoints:Array<Null<PilotCheckpoint>>,
-			expectations:Array<RuntimePilotExpectation>):Int {
-		var hash = hashText(-2128831035, name);
+			expectations:Array<RuntimePilotExpectation>, inspectRadius:Int):Int {
+		var hash = mix(hashText(-2128831035, name), inspectRadius);
 		var frame = 0;
 		while (frame < actions.length) {
 			hash = mix(hash, actions[frame]);
