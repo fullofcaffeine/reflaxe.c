@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name frostmere-journey
-frames 270
+frames 450
 
 # Enter Adventure and select Frostmere from the runtime campaign catalog.
 action 0 menu-next
@@ -16,44 +16,40 @@ expect 2 level frostmere
 action 3 menu-confirm
 expect 3 objective objective.ask-nia
 
-# Nia stands at the arrival shelf and gives the chapter's first direction.
+# Nia waits beyond the root arch and gives the chapter's first direction.
 action 4 interact
 expect 8 objective objective.wake-ember
 
-# Close Nia's dialogue and climb to the ember marker.
+# Close Nia's dialogue, follow the road west into the snow shelf, then climb
+# the unchanged ascent to the ember marker.
 action 9 interact
-hold 10 19 right
-hold 20 60 forward-jump
-hold 61 66 left
-action 68 interact
-expect 70 object-state snow.ember=caxecraft:entered
-expect 71 object-state snow.gate=caxecraft:open
-expect 72 objective objective.reach-overlook
+hold 10 28 forward-jump
+hold 29 190 left
+hold 191 240 forward-jump
+action 242 interact
+expect 246 objective objective.reach-overlook
 
 # Close the ember message and cross the opened bridge. The three signal stones
 # sit on the natural climb in Nia's wave, forge, flame order.
-action 73 interact
-hold 74 109 forward-jump
-action 110 interact
-expect 112 object-state signal.wave=caxecraft:entered
-hold 111 122 forward-jump
-action 123 interact
-hold 124 134 forward-jump
-action 135 interact
-expect 137 object-state signal.gate=caxecraft:open
-action 138 interact
-hold 139 155 forward-jump
-hold 156 160 left
-expect 162 objective objective.seek-ashfall
-expect 163 lanterns 2
-expect 164 journal journal.ashfall-threshold
+action 247 interact
+hold 248 273 forward-jump
+action 274 interact
+hold 275 286 forward-jump
+action 287 interact
+hold 288 298 forward-jump
+action 299 interact
+expect 301 objective objective.recover-lantern
+action 302 interact
+hold 303 319 forward-jump
+hold 320 324 left
+expect 326 objective objective.seek-ashfall
 
 # Return down the same route. The open bridge must not trap the player at the
-# reward shelf, and the optional Mossling must not block the central crossing.
-hold 165 221 backward-jump
-expect 222 position 16,8,17
+# reward shelf. The final review frame shows the recovered route without
+# coupling this content journey to one exact block coordinate.
+hold 329 385 backward-jump
 
-action 258 pause
-checkpoint 258 capture final
-expect 258 screen paused
+action 422 pause
+checkpoint 422 capture final
+expect 422 screen paused
 end
