@@ -19,7 +19,7 @@ locale en
   message forge_early "THE BRIDGE FORGE NEEDS BOTH SUPPORTS: OPEN THE RIVER SLUICE AND LOCK THE ROOT BRACE."
   message forge_ready "BOTH SUPPORTS HOLD. THE HAXEFORGE SHAPES A SAFE SPAN TO THE BEACON."
   message guide_talk "E  TALK"
-  message nia_welcome "NIA: BROWSER BROKE THE ASHFALL SPAN. OPEN THE EAST RIVER SLUICE AND LOCK THE WEST ROOT BRACE. THEN USE THE BRIDGE FORGE AND LIGHT ITS BEACON."
+  message nia_welcome "NIA: BROWSER BROKE THE SPAN. LOCK THE WEST ROOT BRACE AND OPEN THE EAST SLUICE."
   message object_use "E  USE"
   message objective_anchors_body "OPEN THE RIVER SLUICE ON THE EAST SUPPORT AND LOCK THE ROOT BRACE ON THE WEST. EITHER MAY COME FIRST."
   message objective_anchors_title "REPAIR THE TWO BRIDGE SUPPORTS"
@@ -54,7 +54,7 @@ locale es-mx
   message forge_early "LA FORJA DEL PUENTE NECESITA DOS SOPORTES: ABRE LA COMPUERTA DEL RIO Y FIJA EL REFUERZO DE RAIZ."
   message forge_ready "LOS DOS SOPORTES RESISTEN. LA HAXEFORGE FORMA UN TRAMO SEGURO HASTA EL FARO."
   message guide_talk "E  HABLAR"
-  message nia_welcome "NIA: BROWSER ROMPIO EL TRAMO DE ASHFALL. ABRE LA COMPUERTA DEL RIO AL ESTE Y FIJA EL REFUERZO DE RAIZ AL OESTE. LUEGO USA LA FORJA DEL PUENTE Y ENCIENDE SU FARO."
+  message nia_welcome "NIA: BROWSER ROMPIO EL PUENTE. FIJA EL REFUERZO OESTE Y ABRE LA COMPUERTA ESTE."
   message object_use "E  USAR"
   message objective_anchors_body "ABRE LA COMPUERTA DEL RIO EN EL SOPORTE ESTE Y FIJA EL REFUERZO DE RAIZ AL OESTE. PUEDES EMPEZAR POR CUALQUIERA."
   message objective_anchors_title "REPARA LOS DOS SOPORTES DEL PUENTE"
@@ -457,11 +457,11 @@ end chunk
 fluid ash.cooling-pool caxecraft:water volume 21 6 22 4 1 3
 object ash.bridge-beacon
   tag mechanism
-  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 16500 5000 13500 0
+  placement stateful caxecraft:gate-relay caxecraft:waiting 16500 5000 13500 0
 end object
 object ash.bridge-forge
   tag mechanism
-  placement stateful caxecraft:vault-glyph-moon caxecraft:waiting 16500 5000 17500 0
+  placement stateful caxecraft:gate-relay caxecraft:waiting 16500 5000 17500 0
 end object
 object ash.bridge-gate
   tag mechanism
@@ -473,7 +473,7 @@ object ash.castle-gate
 end object
 object ash.river-sluice
   tag mechanism
-  placement stateful caxecraft:vault-glyph-river caxecraft:waiting 24500 6000 21500 270
+  placement stateful caxecraft:gate-winch caxecraft:waiting 24500 6000 21500 270
 end object
 object ash.roadworker-cache
   tag secret
@@ -481,7 +481,7 @@ object ash.roadworker-cache
 end object
 object ash.root-brace
   tag mechanism
-  placement stateful caxecraft:vault-glyph-leaf caxecraft:waiting 7500 6000 21500 90
+  placement stateful caxecraft:gate-winch caxecraft:waiting 7500 6000 21500 90
 end object
 object enemy.ash-mossling
   tag enemy
@@ -489,7 +489,7 @@ object enemy.ash-mossling
 end object
 object guide.nia
   tag friend
-  placement npc caxecraft:nia dialogue.nia.ashfall 16500 5000 26500 180
+  placement npc caxecraft:nia dialogue.nia.ashfall 15000 5000 26500 180
 end object
 object item.castle-bread
   tag reward
