@@ -17,9 +17,10 @@ private extern class RaylibRuntimeText {
 /**
  * Zero-cost semantic facade for the reviewed raylib core slice.
  *
- * Names stay aligned with raylib's C cheatsheet. Every method below is inline:
- * it forwards to the same `raylib.raw.Raylib` function, allocates nothing,
- * selects no `hxrt` feature, creates no ownership, and adds no failure path.
+ * Names stay aligned with raylib's C cheatsheet. Most methods below are inline
+ * zero-cost forwards to `raylib.raw.Raylib`. `DrawTextString` is the deliberate
+ * exception: it copies arbitrary Haxe text into terminated storage before C
+ * observes it. Static text can use `DrawText` without that allocation.
  * Window, input, and drawing calls remain main/render-thread operations.
  * `c.CString` parameters accept embedded-NUL-free static literals and closed
  * selections composed only from those literals. Resource, pointer, callback,
@@ -226,14 +227,20 @@ class Raylib {
 		raylib.raw.Raylib.DrawText(text, c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(fontSize), color);
 
 	/**
-	 * Draw runtime-owned Haxe text through one checked, non-retaining C call.
+	 * Draw arbitrary Haxe text through one checked, non-retaining C call.
 	 *
-	 * Use `DrawText` for static literals. This variant keeps `text` alive until
-	 * raylib returns and fails before C runs when the String contains an embedded
-	 * NUL or does not expose a trailing NUL at the end of its current view.
+	 * Use `DrawText` for static literals. A Haxe substring can end before its
+	 * owner's NUL terminator, so it is not always safe to lend directly as a C
+	 * string. `StringBuf` makes one terminated managed copy. The call-scoped
+	 * `CStringRef` then validates it and keeps it alive until raylib returns.
+	 * Embedded NUL still fails before C observes truncated text.
 	 */
-	public static inline function DrawTextString(text:String, x:Int, y:Int, fontSize:Int, color:Color):Void
-		RaylibRuntimeText.drawText(c.CStringRef.to(text), c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(fontSize), color);
+	public static inline function DrawTextString(text:String, x:Int, y:Int, fontSize:Int, color:Color):Void {
+		final buffer = new StringBuf();
+		buffer.add(text);
+		final terminated = buffer.toString();
+		RaylibRuntimeText.drawText(c.CStringRef.to(terminated), c.IntConvert.exact(x), c.IntConvert.exact(y), c.IntConvert.exact(fontSize), color);
+	}
 
 	public static inline function DrawFPS(x:Int, y:Int):Void
 		raylib.raw.Raylib.DrawFPS(c.IntConvert.exact(x), c.IntConvert.exact(y));

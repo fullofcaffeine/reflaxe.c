@@ -21,6 +21,7 @@ bool fixture_text_matches(const char *text, int32_t case_id) {
   static const uint8_t ascii[] = {'H', 'a', 'x', 'e', 0u};
   static const uint8_t unicode[] = {'A', 0xC3u, 0xA9u, 0xF0u, 0x9Fu, 0x98u, 0x80u, 0u};
   static const uint8_t suffix[] = {0xC3u, 0xA9u, 0xF0u, 0x9Fu, 0x98u, 0x80u, 0u};
+  static const uint8_t prefix[] = {'A', 0xC3u, 0xA9u, 0u};
   switch (case_id) {
     case 0:
       return bytes_equal(text, empty, sizeof(empty) - 1u);
@@ -30,6 +31,8 @@ bool fixture_text_matches(const char *text, int32_t case_id) {
       return bytes_equal(text, unicode, sizeof(unicode) - 1u);
     case 3:
       return bytes_equal(text, suffix, sizeof(suffix) - 1u);
+    case 4:
+      return bytes_equal(text, prefix, sizeof(prefix) - 1u);
     default:
       return false;
   }
