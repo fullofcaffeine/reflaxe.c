@@ -10,6 +10,7 @@ locale en
   message objective.body "Cross the test bridge."
   message objective.title "Reach the test marker"
   message scenario.title "Runtime presentation probe"
+  message speaker.guide "Test Guide"
 end locale
 locale es-mx
   message adventure_tagline "Una aventura creada en tiempo de ejecucion"
@@ -18,6 +19,7 @@ locale es-mx
   message objective.body "Cruza el puente de prueba."
   message objective.title "Llega al marcador de prueba"
   message scenario.title "Prueba de presentacion en ejecucion"
+  message speaker.guide "Guia de prueba"
 end locale
 title message scenario.title
 mode adventure
@@ -56,6 +58,7 @@ object player.start
   tag player
   placement player-spawn 1500 1000 1500 0
 end object
+speaker guide.nia name message speaker.guide
 dialogue dialogue.guide
   line speaker guide.nia literal "Synthetic engine fixture"
 end dialogue

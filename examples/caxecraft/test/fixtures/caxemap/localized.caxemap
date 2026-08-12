@@ -8,12 +8,14 @@ locale en
   message objective.meet-ivvy.body "Walk to Ivvy near the meadow."
   message objective.meet-ivvy.title "Meet Ivvy"
   message scenario.tutorial.title "First map tutorial"
+  message speaker.ivvy.name "Ivvy"
 end locale
 locale es-mx
   message dialogue.ivvy.hello "¿Lista para construir?"
   message objective.meet-ivvy.body "Camina hacia Ivvy cerca del prado."
   message objective.meet-ivvy.title "Conoce a Ivvy"
   message scenario.tutorial.title "Tutorial del primer mapa"
+  message speaker.ivvy.name "Ivvy"
 end locale
 title message scenario.tutorial.title
 mode creative
@@ -38,6 +40,7 @@ object player.start
   tag player
   placement player-spawn 1500 1000 1500 0
 end object
+speaker guide.ivvy name message speaker.ivvy.name
 dialogue dialogue.ivvy.hello
   line speaker guide.ivvy message dialogue.ivvy.hello
 end dialogue

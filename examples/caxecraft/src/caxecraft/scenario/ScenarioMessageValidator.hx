@@ -80,6 +80,8 @@ final class ScenarioMessageValidator {
 
 	function validateReferences(available:Null<Map<String, Bool>>):Void {
 		validateText(context.scenario.title, available);
+		for (speakerName in context.scenario.story.speakerNames)
+			validateText(speakerName.name, available);
 		for (dialogue in context.scenario.story.dialogues)
 			for (line in dialogue.lines)
 				validateText(line.text, available);

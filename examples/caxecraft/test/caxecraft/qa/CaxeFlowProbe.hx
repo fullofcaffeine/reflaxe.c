@@ -465,6 +465,7 @@ final class CaxeFlowProbe {
 				{id: ZONE, tags: [], placement: TriggerZone(bounds)}
 			],
 			story: {
+				speakerNames: [],
 				dialogues: [{id: DIALOGUE, lines: [{speaker: IVVY, text: ScenarioText.Literal("Ready!")}]}],
 				journal: [
 					{id: JOURNAL, title: ScenarioText.Literal("Bridge"), body: ScenarioText.Literal("Lower it.")}

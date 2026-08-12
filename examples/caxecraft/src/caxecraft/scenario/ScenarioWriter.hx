@@ -93,6 +93,10 @@ final class ScenarioWriter {
 			lines.push('  placement ${placement(object.placement)}');
 			lines.push("end object");
 		}
+		final speakerNames = scenario.story.speakerNames.copy();
+		speakerNames.sort((left, right) -> compareUtf8(left.speaker.text(), right.speaker.text()));
+		for (speakerName in speakerNames)
+			lines.push('speaker ${speakerName.speaker.text()} name ${text(speakerName.name)}');
 
 		final dialogues = scenario.story.dialogues.copy();
 		dialogues.sort((left, right) -> compareUtf8(left.id.text(), right.id.text()));

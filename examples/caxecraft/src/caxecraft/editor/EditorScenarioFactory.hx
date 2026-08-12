@@ -72,6 +72,7 @@ function createBlank(mapId:ScenarioId, assetPack:LogicalPath, title:ScenarioText
 			}
 		],
 		story: {
+			speakerNames: [],
 			dialogues: [],
 			journal: [],
 			objectives: [],

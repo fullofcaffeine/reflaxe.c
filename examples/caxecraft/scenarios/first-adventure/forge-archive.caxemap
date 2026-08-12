@@ -27,6 +27,7 @@ locale en
   message objective_door_body "CROSS THE OPEN INNER ARCHIVE AND FIND BROWSER'S SEALED DOOR."
   message objective_door_title "REACH BROWSER'S DOOR"
   message scenario_title "Caxecraft: Forge Archive"
+  message speaker_ceesh_name "Ceesh"
   message west_ready "THE INDEX LINE ANSWERS. CEESH KEEPS THE ARCHIVE MAP STABLE."
 end locale
 locale es-mx
@@ -53,6 +54,7 @@ locale es-mx
   message objective_door_body "CRUZA EL ARCHIVO ABIERTO Y ENCUENTRA LA PUERTA SELLADA DE BROWSER."
   message objective_door_title "LLEGA A LA PUERTA DE BROWSER"
   message scenario_title "Caxecraft: Archivo de la Forja"
+  message speaker_ceesh_name "Ceesh"
   message west_ready "LA LINEA DEL INDICE RESPONDE. CEESH MANTIENE ESTABLE EL MAPA DEL ARCHIVO."
 end locale
 title message scenario_title
@@ -1809,6 +1811,7 @@ object zone.browser-threshold
   tag destination
   placement trigger-zone 28 4 2 9 8 7
 end object
+speaker guide.ceesh name message speaker_ceesh_name
 dialogue dialogue.archive-cache
   line speaker guide.ceesh message archive_cache_body
 end dialogue

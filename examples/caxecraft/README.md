@@ -591,6 +591,12 @@ feedback live in
 Moss's dialogue and the Western Falls prose live in its own CaxeMap. Named item
 definitions remain in the active content pack.
 
+Each named NPC can also have a reloadable `speaker <object-id> name <text>`
+record. The HUD resolves this text from the active map and locale. An older map
+can omit the record. In that case, the HUD derives a readable fallback from the
+object ID. The speaker ID also selects the NPC portrait, so names and portraits
+cannot use unrelated campaign lookup tables in compiled Haxe.
+
 That distinction matters: moving or sharing a scenario must also move the text
 that gives its characters and objectives meaning. A `.caxemap` refers to those
 strings by stable message ID, while saves and gameplay state remain independent

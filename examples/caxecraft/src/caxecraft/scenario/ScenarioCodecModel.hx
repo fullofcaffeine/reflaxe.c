@@ -46,6 +46,7 @@ enum ScenarioSourceSubject {
 	Fluid(id:ScenarioId);
 	Object(id:ScenarioId);
 	ObjectTag(objectId:ScenarioId, tag:ScenarioTag);
+	Speaker(id:ScenarioId);
 	Dialogue(id:ScenarioId);
 	Journal(id:ScenarioId);
 	Objective(id:ScenarioId);

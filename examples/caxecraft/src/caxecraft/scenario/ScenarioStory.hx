@@ -1,11 +1,20 @@
 package caxecraft.scenario;
 
-/** Dialogue, journal, objective, and route records for one scenario. */
+/** Player-facing names, dialogue, journal, objective, and route records for one scenario. */
 typedef ScenarioStory = {
+	/** Localized display names keyed by the same NPC identity used by dialogue. */
+	final speakerNames:Array<ScenarioSpeakerName>;
+
 	final dialogues:Array<ScenarioDialogue>;
 	final journal:Array<ScenarioJournalEntry>;
 	final objectives:Array<ScenarioObjective>;
 	final routes:Array<ScenarioRoute>;
+}
+
+/** A reloadable player-facing name for one authored NPC identity. */
+typedef ScenarioSpeakerName = {
+	final speaker:ScenarioId;
+	final name:ScenarioText;
 }
 
 typedef ScenarioDialogue = {

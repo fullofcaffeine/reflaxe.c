@@ -32,6 +32,7 @@ final class ScenarioValidationContext {
 	final fluidIds:Map<String, Bool> = [];
 	final zoneIds:Map<String, Bool> = [];
 	final entityIds:Map<String, Bool> = [];
+	final npcIds:Map<String, Bool> = [];
 	final checkpointIds:Map<String, Bool> = [];
 	final dialogueIds:Map<String, Bool> = [];
 	final journalIds:Map<String, Bool> = [];
@@ -69,6 +70,8 @@ final class ScenarioValidationContext {
 					checkpointIds.set(object.id.text(), true);
 				case Entity(_, _):
 					entityIds.set(object.id.text(), true);
+				case Npc(_, _, _):
+					npcIds.set(object.id.text(), true);
 				case TriggerZone(_):
 					zoneIds.set(object.id.text(), true);
 				case _:
@@ -119,6 +122,10 @@ final class ScenarioValidationContext {
 
 	public inline function hasEntity(id:ScenarioId):Bool
 		return entityIds.exists(id.text());
+
+	/** True only when the identity owns an authored NPC placement. */
+	public inline function hasNpc(id:ScenarioId):Bool
+		return npcIds.exists(id.text());
 
 	public inline function hasCheckpoint(id:ScenarioId):Bool
 		return checkpointIds.exists(id.text());
@@ -285,6 +292,13 @@ final class ScenarioValidationContext {
 				case _: null;
 			}
 			return candidate != null && candidate.text() == id.text();
+		});
+
+	/** Return the source record that authored one speaker display name. */
+	public function coordinateForSpeaker(id:ScenarioId):ScenarioCoordinate
+		return lastCoordinateMatching(subject -> switch subject {
+			case Speaker(candidate): candidate.text() == id.text();
+			case _: false;
 		});
 
 	function unique(target:Map<String, Bool>, id:ScenarioId, source:ScenarioIdentitySource):Void {

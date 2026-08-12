@@ -12,6 +12,7 @@ import caxecraft.scenario.ScenarioStory.ScenarioDialogueLine;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioStory.ScenarioRoute;
+import caxecraft.scenario.ScenarioStory.ScenarioSpeakerName;
 
 /** Reads player-facing dialogue, journal, objective, and route records. */
 // Used only by the CAXEMAP parser. Game and editor code should call
@@ -22,6 +23,21 @@ final class ScenarioStoryReader {
 
 	public function new(cursor:ScenarioRecordCursor)
 		this.cursor = cursor;
+
+	/** Read one localized name attached to an authored NPC identity. */
+	public function readSpeakerName():ScenarioReadResult<ScenarioSpeakerName> {
+		final record = cursor.current();
+		if (record.tokens.length < 5 || !ScenarioTokenGrammar.isBare(record.tokens[2], "name"))
+			return cursor.failAt(record, InvalidToken);
+		final speaker = ScenarioTokenGrammar.scenarioId(record.tokens[1]);
+		final name = ScenarioTokenGrammar.text(record, 3);
+		if (speaker == null || name == null || name.next != record.tokens.length)
+			return cursor.failAt(record, InvalidToken);
+		cursor.locate(Speaker(speaker), record);
+		locateText(name.value, record);
+		cursor.advance();
+		return ReadOk({speaker: speaker, name: name.value});
+	}
 
 	/** Read one complete locale block and retain authored message identities. */
 	public function readLocale():ScenarioReadResult<ScenarioLocaleCatalog> {

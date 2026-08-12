@@ -32,6 +32,8 @@ locale en
   message recovery_empty "NO BERRIES LEFT"
   message recovery_used "BERRIES: +1 HEART"
   message scenario_title "Caxecraft: Evergrove to Western Falls"
+  message speaker_fallskeeper_name "Fallskeeper"
+  message speaker_moss_name "Moss"
   message survey_note_body "CEESH MAPPED TWO SAFE DESCENTS: THE ROOT BRIDGE AND THE LOWER STREAMBANK. THEY REJOIN AT THE FALLSKEEPER'S SHRINE."
   message survey_note_found "CEESH'S SURVEY: THE ROOT BRIDGE AND STREAMBANK REJOIN BY THE FALLSKEEPER."
   message survey_note_title "CEESH'S RIVER SURVEY"
@@ -68,6 +70,8 @@ locale es-mx
   message recovery_empty "NO QUEDAN BAYAS"
   message recovery_used "BAYAS: +1 CORAZON"
   message scenario_title "Caxecraft: Evergrove a Cataratas del Oeste"
+  message speaker_fallskeeper_name "Guardian de las Cataratas"
+  message speaker_moss_name "Moss"
   message survey_note_body "CEESH TRAZO DOS DESCENSOS SEGUROS: EL PUENTE DE RAICES Y LA ORILLA BAJA. SE UNEN EN EL SANTUARIO DEL GUARDIAN."
   message survey_note_found "MAPA DE CEESH: EL PUENTE DE RAICES Y LA ORILLA SE UNEN JUNTO AL GUARDIAN."
   message survey_note_title "MAPA DEL RIO DE CEESH"
@@ -2025,6 +2029,8 @@ object zone.western-overlook
   tag landmark
   placement trigger-zone 24 0 16 7 16 16
 end object
+speaker guide.fallskeeper name message speaker_fallskeeper_name
+speaker guide.moss name message speaker_moss_name
 dialogue dialogue.fallskeeper.marks
   line speaker guide.fallskeeper message fallskeeper_welcome
 end dialogue

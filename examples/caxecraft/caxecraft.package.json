@@ -98,7 +98,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 3878,
-      "sha256": "fc99d1128dd9babfa6b2b55d9a65917a890321b8896b2bc3f840ff4bf91d2c2f"
+      "sha256": "6a56155b46845e0404f8ff7160078cbfad309ba2e9982474a5a1535772adbea9"
     },
     {
       "kind": "localization",
@@ -116,61 +116,61 @@
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "3da002344fcefa57f8a7835397c9d78dae663587de17624e852b511756fd3589"
+      "sha256": "e0c934c67e9b6da889a23d15e32b9a1190f00739089346817711f9d457d5a847"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/ashfall.caxemap",
-      "byteLength": 15887,
-      "sha256": "7dfcbbe96d89044e84fd51811279f4074aa2e532769aa587a5cfc9a30efa10bd"
+      "byteLength": 16001,
+      "sha256": "117496741c7d3a2d1145f1d187b179b08d821f7ad79f4dd58e9bda98e77ba11f"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/browser-chamber.caxemap",
-      "byteLength": 13596,
-      "sha256": "ed2316833b6a56266b984dfc0c0e161902461824f0516db82ed0f41a588b0672"
+      "byteLength": 13722,
+      "sha256": "4b3e3d542cbacf1f0cd744fc9db59365333c12a624b545844e44e662aa8dda72"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/castle-courtyard.caxemap",
-      "byteLength": 18345,
-      "sha256": "6dd715129747a4ecd02e5d9b169a411a21b1ce98d2d41683f58eb51d577bc54f"
+      "byteLength": 18471,
+      "sha256": "b27432e81d638a21af9303d652625b2bf6f044e34f4f9273e98f93b2e971633a"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/castle-underworks.caxemap",
-      "byteLength": 25463,
-      "sha256": "cd80cfe684f1c98de5e582161108dc26d55f3b824bc49672376f4e4ea7fe1101"
+      "byteLength": 25589,
+      "sha256": "5a6ba3cca13268a1902b3355c53228c01ab2e14559620a93353f75eb4c509880"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/flooded-ruins.caxemap",
-      "byteLength": 26525,
-      "sha256": "a063896bd3f0cb4bd94b348ea13b17e6cb7cfc9e23748a0e23c1b3634a59cfb8"
+      "byteLength": 26701,
+      "sha256": "fbc651a3c5936346039b9e701e986c45546092f9b7dd996ef9ee289a46978b26"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/forge-archive.caxemap",
-      "byteLength": 26818,
-      "sha256": "babf484e8c6c877d2668c7016df442ca573f766d2685d4fd6a57883c7bbb2adc"
+      "byteLength": 26944,
+      "sha256": "f12df668fb0f9197e679e2c73ad7fdc9c7b03a05b713aab93280cbd2adf2fe76"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/frostmere.caxemap",
-      "byteLength": 30229,
-      "sha256": "7a95ada5ad699c2bc0b4528e385513b80b952f38fdf9decaf3dd27d54fd37fc5"
+      "byteLength": 30343,
+      "sha256": "8e034406fddf035dd6245205d6139608f91739f965037db5420870a4b7b4743c"
     },
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 34448,
-      "sha256": "2317ebe1cf6985c87f40dd69e2589cfa739b423575499e230070a0fedeeb6ab6"
+      "byteLength": 34744,
+      "sha256": "8b1d4e76d302381e7a7518ab3cd20ef7d186ad49372239a940bf934eca3c8f0f"
     },
     {
       "kind": "level",
       "path": "scenarios/first-playable/map.caxemap",
-      "byteLength": 15368,
-      "sha256": "80a13cf5539dd6e8dbc75e168b0be5a545b229200d62504cca207216717d2b53"
+      "byteLength": 15482,
+      "sha256": "33abae1ed5ca1caaf5edf7917e01fd8e4c8beb5ac0ea246fa2c4fa215b5fc5a9"
     }
   ],
   "dependencies": []

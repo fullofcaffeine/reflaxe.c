@@ -1510,6 +1510,7 @@ final class CaxecraftApp {
 					conversation: conversation,
 					activeDialogue: activeDialogue,
 					conversationSpeaker: conversationSpeaker,
+					conversationSpeakerName: levelView.presentation().speakerName(conversationSpeaker, scenarioLocale(locale)),
 					conversationPortraitAsset: levelView.dialogueActorPresentationAsset(conversationSpeaker),
 					conversationPortraitCell: levelView.dialogueActorPresentationCell(conversationSpeaker),
 					interactionPrompt: availableInteractionPrompt,
@@ -2152,7 +2153,10 @@ final class CaxecraftApp {
 		if (view.conversationSpeaker == null)
 			Raylib.DrawTextString("STORY", textX, panelY + 18, 20, CaxecraftPalette.selection());
 		else
-			Raylib.DrawTextString(conversationSpeakerLabel(view.conversationSpeaker), textX, panelY + 18, 20, CaxecraftPalette.selection());
+			Raylib.DrawTextString(view.conversationSpeakerName.length == 0 ? conversationSpeakerLabel(view.conversationSpeaker) : view.conversationSpeakerName,
+				textX,
+				panelY
+				+ 18, 20, CaxecraftPalette.selection());
 		final source = view.presentation.dialogueLine(activeDialogue, conversation.lineIndex, scenarioLocale(locale));
 		final visibleCount = conversation.visibleCharacters < source.length ? conversation.visibleCharacters : source.length;
 		drawWrappedText(source.substring(0, visibleCount), textX, panelY + 52, 18, panelWidth < 780 ? 44 : 70, 25, 3, color);

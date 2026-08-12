@@ -28,6 +28,7 @@ locale en
   message player_fallen "HAXIRIO HAS FALLEN"
   message return_prompt "E  RETURN TO THE CHAMBER"
   message scenario_title "Caxecraft: Browser's Last Stand"
+  message speaker_ceesh_name "Ceesh"
   message victory_body "THE ARCHIVE BREATHES AGAIN. ITS CROWN DOOR STAYS OPEN FOR EVERY CREATOR."
   message victory_title "THE ARCHIVE, RESTORED"
   message west_ready "CEESH: WEST RELAY LOCKED. PRIME THE EAST LINE AND I WILL OPEN THE GATE."
@@ -57,6 +58,7 @@ locale es-mx
   message player_fallen "HAXIRIO HA CAIDO"
   message return_prompt "E  VOLVER A LA CAMARA"
   message scenario_title "Caxecraft: La ultima batalla de Browser"
+  message speaker_ceesh_name "Ceesh"
   message victory_body "EL ARCHIVO RESPIRA OTRA VEZ. SU PUERTA QUEDA ABIERTA PARA CADA CREADOR."
   message victory_title "EL ARCHIVO, RESTAURADO"
   message west_ready "CEESH: RELEVADOR OESTE FIJO. ACTIVA LA LINEA ESTE Y ABRIRE LA PUERTA."
@@ -559,6 +561,7 @@ object zone.victory
   tag destination
   placement trigger-zone 10 4 1 12 6 3
 end object
+speaker guide.ceesh name message speaker_ceesh_name
 dialogue dialogue.browser-defeated
   line speaker guide.ceesh message browser_defeated
 end dialogue

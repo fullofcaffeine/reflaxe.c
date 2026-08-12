@@ -28,6 +28,7 @@ import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogueLine;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
+import caxecraft.scenario.ScenarioStory.ScenarioSpeakerName;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
@@ -161,6 +162,7 @@ typedef RuntimeLevelAuthoredTrace = {
 final class RuntimeLevelPresentation {
 	final messages:ScenarioMessages;
 	final title:ScenarioText;
+	final speakerNames:Array<ScenarioSpeakerName>;
 	final dialogues:Array<ScenarioDialogue>;
 	final journal:Array<ScenarioJournalEntry>;
 	final objectives:Array<ScenarioObjective>;
@@ -170,6 +172,9 @@ final class RuntimeLevelPresentation {
 	private function new(scenario:Scenario) {
 		messages = scenario.messages;
 		title = scenario.title;
+		speakerNames = [];
+		for (speakerName in scenario.story.speakerNames)
+			speakerNames.push({speaker: speakerName.speaker, name: speakerName.name});
 		dialogues = [];
 		for (dialogue in scenario.story.dialogues) {
 			final lines:Array<ScenarioDialogueLine> = [];
@@ -261,6 +266,16 @@ final class RuntimeLevelPresentation {
 			if (dialogue.id.text() == id.text())
 				return lineIndex < dialogue.lines.length ? dialogue.lines[lineIndex].speaker : null;
 		return null;
+	}
+
+	/** Resolve one NPC's authored display name, or empty text for an older map. */
+	public function speakerName(speaker:Null<ScenarioId>, locale:LocaleId):String {
+		if (speaker == null)
+			return "";
+		for (entry in speakerNames)
+			if (entry.speaker.text() == speaker.text())
+				return resolve(entry.name, locale);
+		return "";
 	}
 
 	/** Resolve one unlocked journal title by stable authored identity. */

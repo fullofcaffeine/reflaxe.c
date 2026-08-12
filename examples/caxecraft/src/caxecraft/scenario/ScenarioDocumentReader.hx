@@ -16,6 +16,7 @@ import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioStory.ScenarioRoute;
+import caxecraft.scenario.ScenarioStory.ScenarioSpeakerName;
 import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
 import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 import caxecraft.scenario.ScenarioWorld.VoxelChunk;
@@ -70,6 +71,7 @@ final class ScenarioDocumentReader {
 		final chunks:Array<VoxelChunk> = [];
 		final fluids:Array<ScenarioFluid> = [];
 		final objects:Array<ScenarioObject> = [];
+		final speakerNames:Array<ScenarioSpeakerName> = [];
 		final dialogues:Array<ScenarioDialogue> = [];
 		final journal:Array<ScenarioJournalEntry> = [];
 		final objectives:Array<ScenarioObjective> = [];
@@ -185,6 +187,11 @@ final class ScenarioDocumentReader {
 						case ReadError(diagnostics): return ReadError(diagnostics);
 						case ReadOk(object): objects.push(object);
 					}
+				case "speaker":
+					switch storyReader.readSpeakerName() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(speakerName): speakerNames.push(speakerName);
+					}
 				case "dialogue":
 					switch storyReader.readDialogue() {
 						case ReadError(diagnostics): return ReadError(diagnostics);
@@ -273,6 +280,7 @@ final class ScenarioDocumentReader {
 				},
 				objects: objects,
 				story: {
+					speakerNames: speakerNames,
 					dialogues: dialogues,
 					journal: journal,
 					objectives: objectives,

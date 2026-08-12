@@ -25,6 +25,7 @@ locale en
   message recovery_used "BERRIES: +1 HEART"
   message return_prompt "E  RETURN TO THE MEADOW"
   message scenario_title "Caxecraft: Evergrove Prologue"
+  message speaker_nia_name "Nia"
 end locale
 locale es-mx
   message adventure_progress "PREGUNTA A NIA POR EL CAMINO DEL OESTE"
@@ -48,6 +49,7 @@ locale es-mx
   message recovery_used "BAYAS: +1 CORAZON"
   message return_prompt "E  VOLVER AL PRADO"
   message scenario_title "Caxecraft: Prologo de la Arboleda Eterna"
+  message speaker_nia_name "Nia"
 end locale
 title message scenario_title
 mode adventure
@@ -1126,6 +1128,7 @@ object zone.evergrove-west-road
   tag destination
   placement trigger-zone 3 0 16 3 16 8
 end object
+speaker guide.nia name message speaker_nia_name
 dialogue dialogue.nia.welcome
   line speaker guide.nia message guide_welcome
 end dialogue

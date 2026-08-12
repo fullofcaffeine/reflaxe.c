@@ -250,7 +250,7 @@ EVAL_CASES = {
             EvalProbe("scenario-model.hxml", "scenario-model: -1725217016\n"),
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 14612 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15482 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -277,7 +277,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 14612 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15482 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),

@@ -107,13 +107,14 @@ The remaining top-level records appear in this canonical order:
 7. chunks sorted by origin `z`, then `y`, then `x`, then ID;
 8. fluids sorted by ID;
 9. objects sorted by ID;
-10. dialogues, journal entries, objectives, and routes, each sorted by ID;
-11. variables sorted by scope (`map`, `player`, `quest`, then `local` by owning
+10. speaker names sorted by speaker object ID;
+11. dialogues, journal entries, objectives, and routes, each sorted by ID;
+12. variables sorted by scope (`map`, `player`, `quest`, then `local` by owning
    sequence ID) and then variable ID;
-12. sequences sorted by ID;
-13. rules sorted by ID;
-14. optional extension blocks sorted by feature content ID then record ID; and
-15. `end-map`.
+13. sequences sorted by ID;
+14. rules sorted by ID;
+15. optional extension blocks sorted by feature content ID then record ID; and
+16. `end-map`.
 
 Ordering that carries meaning is never sorted: voxel runs, object tags,
 dialogue lines, route objectives, predicate children, sequence parameters,
@@ -237,11 +238,14 @@ overlaps or locations disallowed by the registered placement kind.
 ## Story records
 
 Text is either `message <message-id>` or `literal "<user text>"`. Built-in
-English/Spanish content uses message IDs. `narrator` means that no world object
-is speaking. A world object uses the separate `speaker <object-id>` form, so an
-object whose ID is literally `narrator` remains unambiguous.
+English and Spanish content uses message IDs. A speaker-name record gives one
+NPC a player-facing name. The record uses the same object ID as dialogue lines.
+An old map can omit the record. The game then shows a readable name from the
+object ID.
 
 ```text
+speaker <speaker-object-id> name <text>
+
 dialogue <id>
   line narrator message <message-id>
   line speaker <speaker-object-id> literal "<user text>"
@@ -260,8 +264,13 @@ route <id> title <text>
 end route
 ```
 
+`narrator` means that no world object is speaking. A dialogue speaker uses the
+explicit `line speaker <object-id>` form. Thus, an object can use `narrator` as
+its ID without ambiguity.
+
 Dialogue line and route objective order is semantic. All referenced speakers,
-dialogues, and objectives must exist. The reader still accepts the early
+dialogues, and objectives must exist. A speaker-name record must refer to an
+NPC object, and one NPC can have one name record. The reader accepts the early
 `line <speaker-object-id> <text>` spelling and the canonical writer makes it
 explicit as `line speaker <speaker-object-id> <text>`. Version 1 admits at most
 1,024 dialogues, 128 lines per dialogue, 512 objectives, and 64 routes.

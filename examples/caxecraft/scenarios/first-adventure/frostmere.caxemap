@@ -42,6 +42,7 @@ locale en
   message scenario_title "Caxecraft: Frostmere"
   message signals_reset "THE SIGNALS FALL QUIET. BEGIN AGAIN: WAVE, FORGE, FLAME."
   message signals_solved "THE THREE SIGNALS HARMONIZE. THE ASHFALL GATE OPENS."
+  message speaker_nia_name "Nia"
 end locale
 locale es-mx
   message adventure_progress "LLEGA AL FARO DE ASHFALL"
@@ -82,6 +83,7 @@ locale es-mx
   message scenario_title "Caxecraft: Frostmere"
   message signals_reset "LAS SENALES CALLAN. EMPIEZA DE NUEVO: OLA, FORJA, LLAMA."
   message signals_solved "LAS TRES SENALES ARMONIZAN. LA PUERTA DE ASHFALL SE ABRE."
+  message speaker_nia_name "Nia"
 end locale
 title message scenario_title
 mode adventure
@@ -1841,6 +1843,7 @@ object snow.winch
   tag mechanism
   placement stateful caxecraft:gate-winch caxecraft:waiting 16500 6000 18500 0
 end object
+speaker guide.nia name message speaker_nia_name
 dialogue dialogue.courier-overlook
   line narrator message road_marker_found
 end dialogue

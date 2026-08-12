@@ -515,6 +515,7 @@ private function copy(scenario:Scenario, messages:ScenarioMessages, title:Scenar
 		world: world,
 		objects: objects,
 		story: {
+			speakerNames: scenario.story.speakerNames.copy(),
 			dialogues: dialogues,
 			journal: scenario.story.journal.copy(),
 			objectives: objectives,

@@ -23,6 +23,7 @@ locale en
   message objective_isolate_body "TAKE THE SAFE COOLANT GALLERY OR THE FASTER ASH VENT. ACTIVATE ONE CONTROL."
   message objective_isolate_title "ISOLATE BROWSER'S SABOTAGE"
   message scenario_title "Caxecraft: Castle Underworks"
+  message speaker_ceesh_name "Ceesh"
   message vent_ready "THE ASH VENT SLAMS SHUT. BROWSER LOSES HIS FEED, AND THE ARCHIVE PASSAGE OPENS."
 end locale
 locale es-mx
@@ -45,6 +46,7 @@ locale es-mx
   message objective_isolate_body "USA LA GALERIA SEGURA O EL RESPIRADERO RAPIDO. ACTIVA UN CONTROL."
   message objective_isolate_title "AISLA EL SABOTAJE DE BROWSER"
   message scenario_title "Caxecraft: Tuneles del Castillo"
+  message speaker_ceesh_name "Ceesh"
   message vent_ready "EL RESPIRADERO SE CIERRA. BROWSER PIERDE SU CONEXION Y EL PASO AL ARCHIVO SE ABRE."
 end locale
 title message scenario_title
@@ -1846,6 +1848,7 @@ object zone.archive-antechamber
   tag destination
   placement trigger-zone 55 4 10 7 8 13
 end object
+speaker guide.ceesh name message speaker_ceesh_name
 dialogue dialogue.archive-reached
   line speaker guide.ceesh message archive_body
 end dialogue

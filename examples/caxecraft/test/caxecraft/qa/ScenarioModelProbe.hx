@@ -240,6 +240,7 @@ final class ScenarioModelProbe {
 		};
 		final route:ScenarioRoute = {id: objectId, title: ScenarioText.Literal("Route"), objectives: [objectId]};
 		final story:ScenarioStory = {
+			speakerNames: [],
 			dialogues: [dialogue],
 			journal: [journal],
 			objectives: [objective],
@@ -624,6 +625,7 @@ final class ScenarioModelProbe {
 			case Fluid(_): 29;
 			case Object(_): 10;
 			case ObjectTag(_, _): 11;
+			case Speaker(_): 30;
 			case Dialogue(_): 12;
 			case Journal(_): 13;
 			case Objective(_): 14;

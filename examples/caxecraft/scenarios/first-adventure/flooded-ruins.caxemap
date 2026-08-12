@@ -26,6 +26,7 @@ locale en
   message objective_lock_body "TAKE THE SAFE NORTH ARCADE OR THE FASTER SOUTH CHANNEL. ACTIVATE THE CYAN TIDE LOCK."
   message objective_lock_title "RELEASE THE TIDE LOCK"
   message scenario_title "Caxecraft: Flooded Ruins"
+  message speaker_fallskeeper_name "Fallskeeper"
   message tide_lock_body "THE LOCK ANSWERS TIDEWEAVE. THE CASTLE SLUICE OPENS."
   message tideweave_station "FALLSKEEPER: TAKE TIDEWEAVE. YOU WILL NEED IT BELOW."
 end locale
@@ -52,6 +53,7 @@ locale es-mx
   message objective_lock_body "USA LA ARQUERIA NORTE SEGURA O EL CANAL SUR RAPIDO. ACTIVA EL CIERRE DE MAREA CIAN."
   message objective_lock_title "ABRE EL CIERRE DE MAREA"
   message scenario_title "Caxecraft: Ruinas Inundadas"
+  message speaker_fallskeeper_name "Guardian de las Cataratas"
   message tide_lock_body "EL CIERRE RESPONDE A TIDEWEAVE. LA COMPUERTA SE ABRE."
   message tideweave_station "GUARDIAN: TOMA TIDEWEAVE. LO NECESITARAS ABAJO."
 end locale
@@ -1762,6 +1764,7 @@ object zone.nave-arrival
   tag landmark
   placement trigger-zone 8 2 12 5 7 9
 end object
+speaker guide.fallskeeper name message speaker_fallskeeper_name
 dialogue dialogue.air-pocket
   line narrator message air_pocket_body
 end dialogue

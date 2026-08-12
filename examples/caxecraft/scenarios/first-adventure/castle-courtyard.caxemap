@@ -32,6 +32,7 @@ locale en
   message objective_underworks_body "PASS THROUGH THE OPEN INNER GATE AND ENTER CEESH'S MAINTENANCE BYPASS."
   message objective_underworks_title "ENTER THE CASTLE UNDERWORKS"
   message scenario_title "Caxecraft: Castle Courtyard"
+  message speaker_ceesh_name "Ceesh"
   message west_ready "THE WEST COUNTERWEIGHT DROPS. SET THE EAST RELAY."
 end locale
 locale es-mx
@@ -63,6 +64,7 @@ locale es-mx
   message objective_underworks_body "CRUZA LA REJA INTERIOR Y ENTRA AL DESVIO DE MANTENIMIENTO DE CEESH."
   message objective_underworks_title "ENTRA A LOS TUNELES DEL CASTILLO"
   message scenario_title "Caxecraft: Patio del Castillo"
+  message speaker_ceesh_name "Ceesh"
   message west_ready "EL CONTRAPESO OESTE CAE. ACTIVA EL RELE ESTE."
 end locale
 title message scenario_title
@@ -915,6 +917,7 @@ object zone.underworks-entry
   tag destination
   placement trigger-zone 14 4 2 5 8 5
 end object
+speaker guide.ceesh name message speaker_ceesh_name
 dialogue dialogue.ceesh-note
   line speaker guide.ceesh message ceesh_note
 end dialogue

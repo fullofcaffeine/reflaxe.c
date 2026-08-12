@@ -18,6 +18,15 @@ final class ScenarioStoryValidator {
 		this.context = context;
 
 	public function validate():Void {
+		final namedSpeakers:Map<String, Bool> = [];
+		for (speakerName in context.scenario.story.speakerNames) {
+			final coordinate = context.coordinateForSpeaker(speakerName.speaker);
+			if (namedSpeakers.exists(speakerName.speaker.text()))
+				context.addAtCoordinate(DuplicateId(speakerName.speaker), coordinate);
+			namedSpeakers.set(speakerName.speaker.text(), true);
+			if (!context.hasNpc(speakerName.speaker))
+				context.addAtCoordinate(UnresolvedReference(speakerName.speaker), coordinate);
+		}
 		for (dialogue in context.scenario.story.dialogues) {
 			final coordinate = context.coordinateForIdentity(dialogue.id, DialogueIdentity);
 			if (dialogue.lines.length > ScenarioLimits.MAX_DIALOGUE_LINES)

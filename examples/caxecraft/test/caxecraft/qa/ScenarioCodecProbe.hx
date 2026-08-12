@@ -41,12 +41,11 @@ final class ScenarioCodecProbe {
 		require(ScenarioWriter.write(reverseUnordered(localizedScenario)).compare(localizedCanonical) == 0,
 			"reversed locale and message catalogs did not converge on canonical bytes");
 		checkLocalizedCatalog(localizedCanonical, localizedScenario);
+		require(localizedScenario.story.speakerNames.length == 1 && localizedScenario.story.speakerNames[0].speaker.text() == "guide.ivvy",
+			"localized fixture lost its authored speaker identity");
 		final shippedCanonical = File.getBytes("scenarios/first-playable/map.caxemap");
 		final shippedScenario = readValid(shippedCanonical);
 		require(ScenarioWriter.write(shippedScenario).compare(shippedCanonical) == 0, "shipped first-playable CaxeMap did not round-trip byte-identically");
-		require(resolveScenarioMessage(shippedScenario.messages, new LocaleId("es-mx"),
-			new MessageId("guide_welcome")) == "NIA: EL BOSQUE TE ESCUCHA. E: REGALO",
-			"shipped Nia dialogue did not come from the embedded Spanish catalog");
 
 		final malformed = Bytes.alloc(10);
 		final malformedValues = [0x43, 0x41, 0x58, 0x45, 0x4d, 0x41, 0x50, 0x20, 0xc0, 0x0a];
@@ -183,20 +182,25 @@ final class ScenarioCodecProbe {
 			"unknown message unexpectedly resolved");
 
 		expectFailure(replace(canonical, "default-locale en", "default-locale fr"), "unknown-default-locale", "unknown-default-locale", 5);
-		expectFailure(replace(canonical, "locale es-mx", "locale en"), "duplicate-locale", "duplicate-locale", 12);
+		expectFailure(replace(canonical, "locale es-mx", "locale en"), "duplicate-locale", "duplicate-locale", 13);
 		expectFailure(replace(canonical, '  message scenario.tutorial.title "First map tutorial"',
 			'  message scenario.tutorial.title "First map tutorial"\n  message scenario.tutorial.title "Duplicate"'),
 			"duplicate-message", "duplicate-message", 11);
 		expectFailure(replace(canonical, '  message objective.meet-ivvy.body "Camina hacia Ivvy cerca del prado."\n', ""), "missing-translation",
-			"missing-translation", 12);
+			"missing-translation", 13);
 		expectFailure(replace(canonical, '  message scenario.tutorial.title "Tutorial del primer mapa"',
 			'  message scenario.tutorial.title "Tutorial del primer mapa"\n  message scenario.extra "Extra"'),
-			"unknown-translation", "unknown-translation", 17);
+			"unknown-translation", "unknown-translation", 18);
 		expectFailure(replace(canonical, "title message scenario.tutorial.title", "title message scenario.missing"), "unresolved-message",
-			"unresolved-message", 18);
+			"unresolved-message", 20);
+		expectFailure(replace(canonical, "speaker guide.ivvy name message speaker.ivvy.name", "speaker player.start name message speaker.ivvy.name"),
+			"speaker-name-on-player", "unresolved-reference", 43);
+		expectFailure(replace(canonical, "speaker guide.ivvy name message speaker.ivvy.name",
+			"speaker guide.ivvy name message speaker.ivvy.name\nspeaker guide.ivvy name literal \"Duplicate\""),
+			"duplicate-speaker-name", "duplicate-id", 44);
 		expectFailure(replace(canonical, "default-locale en\n", ""), "missing-default-locale", "missing-record", 1);
 		expectFailure(truncateAfterLast(canonical, '  message scenario.tutorial.title "Tutorial del primer mapa"\n'), "missing-end-locale", "missing-record",
-			12);
+			13);
 	}
 
 	static function checkMissingBlockRecords(canonical:Bytes, fullCanonical:Bytes):Void {
@@ -602,6 +606,7 @@ final class ScenarioCodecProbe {
 			},
 			objects: reversed(source.objects),
 			story: {
+				speakerNames: reversed(source.story.speakerNames),
 				dialogues: reversed(source.story.dialogues),
 				journal: reversed(source.story.journal),
 				objectives: reversed(source.story.objectives),

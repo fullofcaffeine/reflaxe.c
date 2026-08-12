@@ -66,6 +66,9 @@ typedef HudView = {
 	/** Authored speaker identity for the current line, or null for narration. */
 	final conversationSpeaker:Null<ScenarioId>;
 
+	/** Localized authored name, or empty text when an older pack omits one. */
+	final conversationSpeakerName:String;
+
 	/** Reloadable atlas selected by the current speaker's NPC profile. */
 	final conversationPortraitAsset:String;
 
