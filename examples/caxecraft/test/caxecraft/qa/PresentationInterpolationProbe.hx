@@ -9,6 +9,9 @@ import caxecraft.app.AtlasLayout.entityAtlasColumn;
 import caxecraft.app.AtlasLayout.entityAtlasColumns;
 import caxecraft.app.AtlasLayout.entityAtlasRow;
 import caxecraft.app.AtlasLayout.entityAtlasRows;
+import caxecraft.app.ConversationFlow.ConversationAdvance;
+import caxecraft.app.ConversationFlow.advanceConversation;
+import caxecraft.app.ConversationFlow.beginConversation;
 import caxecraft.app.MotionInterpolation.advance;
 import caxecraft.app.MotionInterpolation.reset;
 import caxecraft.app.MotionInterpolation.sample;
@@ -110,6 +113,35 @@ function selfCheck():Int {
 	final gateSouth = statefulObjectVisual(7000, 3000, 500, 180);
 	if (gateSouth.widthMilli != 7000 || gateSouth.depthMilli != 500)
 		return 21;
+
+	var conversation = beginConversation();
+	conversation = switch advanceConversation(conversation, 12, 2, 25, false, false) {
+		case ConversationContinues(next): next;
+		case ConversationCloses: return 22;
+	};
+	if (conversation.lineIndex != 0 || conversation.visibleCharacters != 1)
+		return 23;
+	conversation = switch advanceConversation(conversation, 12, 2, 0, true, false) {
+		case ConversationContinues(next): next;
+		case ConversationCloses: return 24;
+	};
+	if (conversation.visibleCharacters != 12)
+		return 25;
+	conversation = switch advanceConversation(conversation, 12, 2, 0, true, false) {
+		case ConversationContinues(next): next;
+		case ConversationCloses: return 26;
+	};
+	if (conversation.lineIndex != 1 || conversation.visibleCharacters != 0)
+		return 27;
+	conversation = switch advanceConversation(conversation, 8, 2, 300, false, true) {
+		case ConversationContinues(next): next;
+		case ConversationCloses: return 28;
+	};
+	switch advanceConversation(conversation, 8, 2, 300, false, true) {
+		case ConversationContinues(_):
+			return 29;
+		case ConversationCloses:
+	};
 	return 0;
 }
 

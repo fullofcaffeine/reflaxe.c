@@ -468,7 +468,7 @@ def check_hud_presentation_boundary() -> None:
     resources = HUD_RESOURCES.read_text(encoding="utf-8")
     for required in (
         "final hudView:HudView = {",
-        "drawHud(hudView, hudResources, contentRegistry, uiCatalog);",
+        "drawHud(hudView, hudResources, runtimeTextures, contentRegistry, uiCatalog);",
         "static function drawHud(view:HudView, resources:HudResources,",
     ):
         if required not in app:

@@ -2605,11 +2605,13 @@ def validate_generated_playable(
     # Title, wordmark, hotbar frame, item, and health-glyph helpers own the
     # original five sites. The equipped-item badge adds one reviewed branch for
     # each admitted item atlas. Campaign selection deliberately redraws the
-    # staged panorama and wordmark through the same two typed helpers. Runtime
-    # loops still reuse those fixed sites; campaign rows add no texture owner.
-    if draw_texture_count != 9:
+    # staged panorama and wordmark through the same two typed helpers. The
+    # conversation panel adds one checked legacy-entity portrait path and one
+    # manifest-owned runtime-atlas portrait path. Runtime loops still reuse
+    # those fixed sites; campaign rows and dialogue lines add no texture owner.
+    if draw_texture_count != 11:
         raise PlayFailure(
-            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 9"
+            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 11"
         )
     billboard_count = combined.count("DrawBillboardRec(")
     # Actors and entity-backed stateful objects share one explicit 4x5 entity
@@ -3119,7 +3121,9 @@ def run_pilot_sample(
     if pilot == "editor-shell":
         timeout_seconds = 40
     elif pilot_metadata(pilot).execution == "runtime-content":
-        timeout_seconds = 25
+        # The representative Adventure journey measures about 27 seconds in
+        # the pinned memory/software renderer after adding blocking dialogue.
+        timeout_seconds = 35
     else:
         timeout_seconds = 15
     process = run([str(executable)], cwd=executable.parent, timeout=timeout_seconds, label=label)

@@ -57,6 +57,15 @@ final class CaxecraftAtlas {
 			entityAtlasRows(), position, width, height, CaxecraftPalette.textureTint());
 	}
 
+	/** Draw one checked entity cell in screen space for a conversation portrait. */
+	public static function drawEntityPortrait(texture:Texture2D, cellIndex:Int, x:Int, y:Int, width:Int, height:Int):Bool {
+		if (!entityAtlasCellIsValid(cellIndex))
+			return false;
+		CaxecraftTextures.drawAtlasCell(texture, entityAtlasColumn(cellIndex), entityAtlasRow(cellIndex), entityAtlasColumns(), entityAtlasRows(), x, y,
+			width, height, CaxecraftPalette.textureTint());
+		return true;
+	}
+
 	/**
 	 * Cover an authored box with one atlas picture instead of a debug color.
 	 *

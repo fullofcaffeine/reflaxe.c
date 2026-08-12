@@ -221,6 +221,24 @@ final class PlayableLevelView {
 	public inline function dialogueActorPresentationCellAt(index:Int):Int
 		return dialogueActors[index].presentationCellIndex;
 
+	/** Find the atlas selected for one authored dialogue speaker, or empty text when absent. */
+	public function dialogueActorPresentationAsset(id:Null<ScenarioId>):String {
+		if (id != null)
+			for (actor in dialogueActors)
+				if (actor.authoredId.text() == id.text())
+					return actor.presentationAsset;
+		return "";
+	}
+
+	/** Find the atlas cell selected for one authored speaker, or -1 when absent. */
+	public function dialogueActorPresentationCell(id:Null<ScenarioId>):Int {
+		if (id != null)
+			for (actor in dialogueActors)
+				if (actor.authoredId.text() == id.text())
+					return actor.presentationCellIndex;
+		return -1;
+	}
+
 	/** Validated entity-atlas cell selected by the enemy actor content. */
 	public inline function enemyActorPresentationCell():Int
 		return enemyCell;

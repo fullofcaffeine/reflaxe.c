@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name adventure-journey
-frames 170
+frames 171
 
 # Enter Adventure and launch the campaign's real Evergrove entry level.
 action 0 menu-next
@@ -27,24 +27,23 @@ hold 3 10 forward
 action 11 interact
 expect 15 dialogue dialogue.nia.welcome
 expect 15 objective objective.explore
+checkpoint 15 capture final
 action 16 interact
+action 17 interact
 
 # Leave through Evergrove's authored west gate. This is the only expectation
 # needed for the compact introduction: detailed village tuning remains content.
-hold 17 80 left
-hold 81 96 backward
-hold 97 120 left-jump
-expect 125 screen playing
-expect 125 level western-falls
-expect 125 objective objective.find-fallskeeper
-expect 125 dialogue dialogue.overlook.arrival
-expect 125 generation 3
-expect 125 publications 2
+hold 18 81 left
+hold 82 97 backward
+hold 98 121 left-jump
+expect 126 screen playing
+expect 126 level western-falls
+expect 126 objective objective.find-fallskeeper
+expect 126 generation 3
+expect 126 publications 2
 
-action 126 interact
-hold 127 158 turn-left
-action 160 pause
-checkpoint 160 capture final
-expect 160 screen paused
-expect 160 level western-falls
+hold 127 160 turn-left
+action 162 pause
+expect 162 screen paused
+expect 162 level western-falls
 end

@@ -100,6 +100,16 @@ final class RuntimeTextureAtlasCatalog {
 		return true;
 	}
 
+	/** Draw one authored atlas cell in screen space for portraits and other UI previews. */
+	public function drawCell(asset:String, cellIndex:Int, x:Int, y:Int, width:Int, height:Int):Bool {
+		final atlas = find(asset);
+		if (atlas == null || cellIndex < 0 || cellIndex >= atlas.columns * atlas.rows)
+			return false;
+		CaxecraftTextures.drawAtlasCell(atlas.texture, cellIndex % atlas.columns, Std.int(cellIndex / atlas.columns), atlas.columns, atlas.rows, x, y, width,
+			height, CaxecraftPalette.textureTint());
+		return true;
+	}
+
 	/** Release every valid GPU texture exactly once before the graphics device closes. */
 	public function unload():Void
 		unloadLoaded(atlases);

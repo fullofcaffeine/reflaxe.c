@@ -245,6 +245,24 @@ final class RuntimeLevelPresentation {
 		return "";
 	}
 
+	/** Return the validated line count for one dialogue, or zero when unknown. */
+	public function dialogueLineCount(id:ScenarioId):Int {
+		for (dialogue in dialogues)
+			if (dialogue.id.text() == id.text())
+				return dialogue.lines.length;
+		return 0;
+	}
+
+	/** Return one line's authored speaker identity, or null for narration or a missing line. */
+	public function dialogueSpeaker(id:ScenarioId, lineIndex:Int):Null<ScenarioId> {
+		if (lineIndex < 0)
+			return null;
+		for (dialogue in dialogues)
+			if (dialogue.id.text() == id.text())
+				return lineIndex < dialogue.lines.length ? dialogue.lines[lineIndex].speaker : null;
+		return null;
+	}
+
 	/** Resolve one unlocked journal title by stable authored identity. */
 	public function journalTitle(id:ScenarioId, locale:LocaleId):String {
 		for (entry in journal)

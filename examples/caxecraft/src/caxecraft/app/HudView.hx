@@ -11,6 +11,7 @@ import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.app.InteractionPrompt.InteractionPrompt;
+import caxecraft.app.ConversationFlow.ConversationState;
 
 /**
 	Read-only facts needed to draw one Caxecraft heads-up display (HUD) frame.
@@ -56,8 +57,20 @@ typedef HudView = {
 	/** Immutable bounded inventory snapshot. */
 	final inventory:InventoryState;
 
-	/** Authored dialogue currently presented, or null while the talk prompt is shown. */
+	/** Generic line and reveal cursor for the blocking conversation panel. */
+	final conversation:Null<ConversationState>;
+
+	/** Stable reloadable dialogue identity paired with the generic cursor. */
 	final activeDialogue:Null<ScenarioId>;
+
+	/** Authored speaker identity for the current line, or null for narration. */
+	final conversationSpeaker:Null<ScenarioId>;
+
+	/** Reloadable atlas selected by the current speaker's NPC profile. */
+	final conversationPortraitAsset:String;
+
+	/** Reloadable atlas cell selected by the current speaker's NPC profile. */
+	final conversationPortraitCell:Int;
 
 	/** Player-facing meaning of the nearest available authored interaction. */
 	final interactionPrompt:InteractionPrompt;

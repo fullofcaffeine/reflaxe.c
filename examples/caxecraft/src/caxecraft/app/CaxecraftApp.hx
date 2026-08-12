@@ -54,6 +54,10 @@ import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
 import caxecraft.app.InteractionPrompt.InteractionPrompt;
 import caxecraft.app.InteractionPrompt.InteractionTargetKind;
 import caxecraft.app.InteractionPrompt.interactionPrompt;
+import caxecraft.app.ConversationFlow.ConversationAdvance;
+import caxecraft.app.ConversationFlow.ConversationState;
+import caxecraft.app.ConversationFlow.advanceConversation;
+import caxecraft.app.ConversationFlow.beginConversation;
 import caxecraft.domain.CharacterDamagePolicy;
 import caxecraft.domain.Character;
 import caxecraft.domain.ActorControllerEvent;
@@ -366,16 +370,18 @@ final class CaxecraftApp {
 		final itemTextureReady = CaxecraftTextures.isValid(itemTexture);
 		final adventureItemTexture:Texture2D = CaxecraftTextures.loadAdventureItemAtlas();
 		final adventureItemTextureReady = CaxecraftTextures.isValid(adventureItemTexture);
+		final entityTexture:Texture2D = CaxecraftTextures.loadEntityAtlas();
+		final entityTextureReady = CaxecraftTextures.isValid(entityTexture);
 		final hudResources:HudResources = {
 			hudTexture: hudTexture,
 			hudTextureReady: hudTextureReady,
 			itemTexture: itemTexture,
 			itemTextureReady: itemTextureReady,
 			adventureItemTexture: adventureItemTexture,
-			adventureItemTextureReady: adventureItemTextureReady
+			adventureItemTextureReady: adventureItemTextureReady,
+			entityTexture: entityTexture,
+			entityTextureReady: entityTextureReady
 		};
-		final entityTexture:Texture2D = CaxecraftTextures.loadEntityAtlas();
-		final entityTextureReady = CaxecraftTextures.isValid(entityTexture);
 		final terrainTexture:Texture2D = CaxecraftTextures.loadTerrainAtlas();
 		final terrainTextureReady = CaxecraftTextures.isValid(terrainTexture);
 		final adventureTerrainTexture:Texture2D = CaxecraftTextures.loadAdventureTerrainAtlas();
@@ -411,6 +417,7 @@ final class CaxecraftApp {
 		// exercise the same typed inventory transitions as a real player.
 		inventory = PilotScript.initialInventory(pilotName);
 		#end
+		var conversation:Null<ConversationState> = null;
 		var activeDialogue:Null<ScenarioId> = null;
 		var latestJournalId:Null<ScenarioId> = null;
 		var currentObjectiveId = initialLevel.initialObjectiveId();
@@ -754,6 +761,7 @@ final class CaxecraftApp {
 									quit = true;
 								} else {
 									character = initialView.localPlayer;
+									conversation = null;
 									activeDialogue = null;
 									latestJournalId = null;
 									currentObjectiveId = levelView.initialObjectiveId();
@@ -814,7 +822,23 @@ final class CaxecraftApp {
 				inventory = Inventory.select(inventory, hotbarSelection);
 			if (hotbarCycle != 0)
 				inventory = Inventory.cycle(inventory, hotbarCycle);
-			if (screenIsPlaying(screen) && interactPressed) {
+			var conversationOwnedInput = false;
+			final openConversation = conversation;
+			if (screenIsPlaying(screen) && openConversation != null && activeDialogue != null) {
+				conversationOwnedInput = true;
+				final line = levelView.presentation().dialogueLine(activeDialogue, openConversation.lineIndex, scenarioLocale(locale));
+				final lineCount = levelView.presentation().dialogueLineCount(activeDialogue);
+				switch advanceConversation(openConversation, line.length, lineCount, Std.int(frameSeconds * 1000.0), interactPressed, riseHeld) {
+					case ConversationContinues(next):
+						conversation = next;
+					case ConversationCloses:
+						conversation = null;
+						activeDialogue = null;
+				}
+				accumulator = 0.0;
+				jumpQueued = false;
+				swordQueued = false;
+			} else if (screenIsPlaying(screen) && interactPressed) {
 				if (characterIsDefeated(character.vitals)) {
 					final revival = session.reviveLocalPlayerAt(spawnPlayer(session.worldView(), spawnTransform));
 					character = revival.character;
@@ -829,8 +853,6 @@ final class CaxecraftApp {
 						accumulator = 0.0;
 						resetMotionThisFrame = true;
 					}
-				} else if (activeDialogue != null) {
-					activeDialogue = null;
 				} else {
 					switch nearestAvailableInteraction(session, levelView) {
 						case NoAvailableInteraction:
@@ -1008,7 +1030,7 @@ final class CaxecraftApp {
 					rejectedEdits++;
 			}
 			#end
-			if (captured) {
+			if (captured && !conversationOwnedInput) {
 				var yawDelta = lookYaw;
 				if (yawDelta > 0.25)
 					yawDelta = 0.25;
@@ -1030,6 +1052,7 @@ final class CaxecraftApp {
 			}
 
 			if (captured
+				&& !conversationOwnedInput
 				&& !recapturedThisFrame
 				&& primaryPressed
 				&& selectedMode == GameMode.Adventure
@@ -1039,7 +1062,7 @@ final class CaxecraftApp {
 			// observation. Hold the world while it decides what to do next, just as
 			// the pause menu holds the world for a human player. Otherwise breath,
 			// enemies, and content logic continue while no input can be supplied.
-			if (!paused #if caxecraft_pilot_runtime && !(agentSession && agentWaiting) #end)
+			if (!paused && !conversationOwnedInput #if caxecraft_pilot_runtime && !(agentSession && agentWaiting) #end)
 				accumulator += frameSeconds;
 			#if caxecraft_render_benchmark
 			final updateStarted = Raylib.GetTime();
@@ -1047,7 +1070,7 @@ final class CaxecraftApp {
 			// Inner fixed-step loop: a slow rendered frame may need several gameplay
 			// ticks, while a fast frame may need none. Every tick receives the same
 			// documented duration, so game rules never depend on frame rate.
-			while (!screenPausesSimulation(screen) && accumulator >= FIXED_SECONDS) {
+			while (!screenPausesSimulation(screen) && conversation == null && accumulator >= FIXED_SECONDS) {
 				// Water owns a bounded amount of work per game tick. A large leak
 				// therefore continues over later ticks without freezing a frame.
 				var moveX = moveForward * lookX - moveRight * lookZ;
@@ -1075,6 +1098,7 @@ final class CaxecraftApp {
 							switch event {
 								case FlowPresentationEvent.DialogueRequested(id):
 									activeDialogue = id;
+									conversation = beginConversation();
 								case FlowPresentationEvent.JournalAdded(id):
 									latestJournalId = id;
 								case FlowPresentationEvent.CampaignExitRequested(exit):
@@ -1192,7 +1216,11 @@ final class CaxecraftApp {
 					if (!dialogueActorsAreValid(session, levelView, actorPhases) || !enemyPhase.valid || !enemyActor.id.isValid())
 						quit = true;
 					swordCombat = stepSwordCombat(swordCombat);
-					if (swordQueued) {
+					// A blocking conversation can begin during this same fixed tick,
+					// after a device press already queued a strike. The engine cancels
+					// that unsafe overlap; reloadable content still owns when and which
+					// dialogue begins.
+					if (swordQueued && conversation == null) {
 						final swordDecision = decideSwordCombat(swordCombat, inventory, character.vitals, enemyActor, character.body.x, character.body.z,
 							lookX, lookZ);
 						if (swordDecision == SwordCombatDecision.Hit && session.characterAcceptsMeleeDamage(enemyActorId)) {
@@ -1222,7 +1250,7 @@ final class CaxecraftApp {
 			final selectionEyeY = character.body.y + 1.62;
 			final selectionEyeZ = character.body.z;
 			final hit = VoxelRaycast.trace(session.worldView(), selectionEyeX, selectionEyeY, selectionEyeZ, lookX, lookY, lookZ, PICK_DISTANCE);
-			if (screenCapturesPointer(screen) && !recapturedThisFrame && primaryPressed) {
+			if (screenCapturesPointer(screen) && conversation == null && !conversationOwnedInput && !recapturedThisFrame && primaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
 					if (selectedMode == GameMode.Adventure) {
 						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword)
@@ -1262,7 +1290,7 @@ final class CaxecraftApp {
 					}
 				}
 			}
-			if (screenCapturesPointer(screen) && secondaryPressed) {
+			if (screenCapturesPointer(screen) && conversation == null && !conversationOwnedInput && secondaryPressed) {
 				if (!characterIsDefeated(character.vitals)) {
 					final recovery = session.useSelectedRecovery(inventory);
 					character = recovery.character;
@@ -1443,6 +1471,8 @@ final class CaxecraftApp {
 					final overlayAlpha = Std.int(105.0 * cameraWaterBlend);
 					Raylib.DrawRectangle(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight(), CaxecraftPalette.underwaterOverlay(overlayAlpha));
 				}
+				final conversationSpeaker = conversation == null
+					|| activeDialogue == null ? null : levelView.presentation().dialogueSpeaker(activeDialogue, conversation.lineIndex);
 				final hudView:HudView = {
 					metrics: {
 						visibleBlocks: totalVisible,
@@ -1477,7 +1507,11 @@ final class CaxecraftApp {
 					mode: selectedMode,
 					locale: locale,
 					inventory: inventory,
+					conversation: conversation,
 					activeDialogue: activeDialogue,
+					conversationSpeaker: conversationSpeaker,
+					conversationPortraitAsset: levelView.dialogueActorPresentationAsset(conversationSpeaker),
+					conversationPortraitCell: levelView.dialogueActorPresentationCell(conversationSpeaker),
 					interactionPrompt: availableInteractionPrompt,
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase,
@@ -1487,7 +1521,7 @@ final class CaxecraftApp {
 					journalBody: latestJournalId == null ? "" : levelView.presentation().journalBody(latestJournalId, scenarioLocale(locale)),
 					presentation: levelView.presentation()
 				};
-				drawHud(hudView, hudResources, contentRegistry, uiCatalog);
+				drawHud(hudView, hudResources, runtimeTextures, contentRegistry, uiCatalog);
 			}
 			#if caxecraft_pilot
 			#if caxecraft_pilot_runtime
@@ -1498,7 +1532,7 @@ final class CaxecraftApp {
 			#if caxecraft_render_benchmark
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
-					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, activeDialogue != null,
+					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, conversation != null,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds,
@@ -1507,7 +1541,7 @@ final class CaxecraftApp {
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
-					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, activeDialogue != null,
+					placedBlocks, rejectedEdits, visibleBlocks, terrainDrawCalls, character.vitals.health, inventory.selected, conversation != null,
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(),
@@ -1937,8 +1971,8 @@ final class CaxecraftApp {
 	}
 
 	/** Draw one immutable post-simulation HUD snapshot using borrowed textures. */
-	static function drawHud(view:HudView, resources:HudResources, contentRegistry:caxecraft.content.RuntimeContentPack.RuntimeContentRegistry,
-			uiCatalog:RuntimeUiCatalog):Void {
+	static function drawHud(view:HudView, resources:HudResources, runtimeTextures:RuntimeTextureAtlasCatalog,
+			contentRegistry:caxecraft.content.RuntimeContentPack.RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog):Void {
 		final visible = view.metrics.visibleBlocks;
 		final drawCalls = view.metrics.drawCalls;
 		final frames = view.metrics.renderedFrames;
@@ -1950,7 +1984,7 @@ final class CaxecraftApp {
 		final mode = view.mode;
 		final locale = view.locale;
 		final inventory = view.inventory;
-		final activeDialogue = view.activeDialogue;
+		final conversation = view.conversation;
 		final availableInteractionPrompt = view.interactionPrompt;
 		final enemy = view.enemy;
 		final enemyPhase = view.enemyPhase;
@@ -2010,9 +2044,8 @@ final class CaxecraftApp {
 		drawUiText(uiCatalog, locale, UiMessage.Controls, 20, height - 22, 14, text);
 		if (mode == GameMode.Adventure && view.objectiveTitle.length > 0)
 			Raylib.DrawTextString(view.objectiveTitle, 32, 110, 14, CaxecraftPalette.selection());
-		if (!paused && activeDialogue != null) {
-			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
-			Raylib.DrawTextString(presentation.dialogueLine(activeDialogue, 0, scenarioLocale(locale)), centerX - 225, centerY + 74, 16, text);
+		if (!paused && conversation != null) {
+			drawConversation(view, resources, runtimeTextures, locale, width, height, text);
 		} else if (!paused && availableInteractionPrompt != InteractionPrompt.NoInteractionPrompt) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
 			final prompt = switch availableInteractionPrompt {
@@ -2085,6 +2118,68 @@ final class CaxecraftApp {
 		} else if (!hit.hit) {
 			drawUiText(uiCatalog, locale, UiMessage.NoBlockInReach, centerX - 105, centerY + 26, 14, text);
 		}
+	}
+
+	/** Draw the blocking conversation as a responsive lower-screen panel. */
+	static function drawConversation(view:HudView, resources:HudResources, runtimeTextures:RuntimeTextureAtlasCatalog, locale:LocaleCursor, width:Int,
+			height:Int, color:Color):Void {
+		final conversation = view.conversation;
+		final activeDialogue = view.activeDialogue;
+		if (conversation == null || activeDialogue == null)
+			return;
+		final margin = width < 900 ? 18 : 48;
+		final panelWidth = width - margin * 2;
+		final panelHeight = height < 600 ? 148 : 184;
+		final panelX = margin;
+		final panelY = height - panelHeight - 34;
+		Raylib.DrawRectangle(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.selection());
+
+		final portraitSize = panelHeight - 34;
+		var portraitDrawn = false;
+		if (view.conversationPortraitAsset == "entities" && resources.entityTextureReady)
+			portraitDrawn = CaxecraftAtlas.drawEntityPortrait(resources.entityTexture, view.conversationPortraitCell, panelX + 16, panelY + 16, portraitSize,
+				portraitSize);
+		else
+			portraitDrawn = runtimeTextures.drawCell(view.conversationPortraitAsset, view.conversationPortraitCell, panelX + 16, panelY + 16, portraitSize,
+				portraitSize);
+		if (!portraitDrawn) {
+			Raylib.DrawRectangle(panelX + 16, panelY + 16, portraitSize, portraitSize, CaxecraftPalette.sky());
+			Raylib.DrawRectangleLines(panelX + 16, panelY + 16, portraitSize, portraitSize, CaxecraftPalette.hudText());
+		}
+
+		final textX = panelX + portraitSize + 36;
+		if (view.conversationSpeaker == null)
+			Raylib.DrawTextString("STORY", textX, panelY + 18, 20, CaxecraftPalette.selection());
+		else
+			Raylib.DrawTextString(conversationSpeakerLabel(view.conversationSpeaker), textX, panelY + 18, 20, CaxecraftPalette.selection());
+		final source = view.presentation.dialogueLine(activeDialogue, conversation.lineIndex, scenarioLocale(locale));
+		final visibleCount = conversation.visibleCharacters < source.length ? conversation.visibleCharacters : source.length;
+		drawWrappedText(source.substring(0, visibleCount), textX, panelY + 52, 18, panelWidth < 780 ? 44 : 70, 25, 3, color);
+		final lineCount = view.presentation.dialogueLineCount(activeDialogue);
+		HudDigits.drawNumber(conversation.lineIndex + 1, panelX + panelWidth - 76, panelY + 17, 1, color);
+		Raylib.DrawTextString("/", panelX + panelWidth - 52, panelY + 18, 14, color);
+		HudDigits.drawNumber(lineCount, panelX + panelWidth - 34, panelY + 17, 1, color);
+		if (locale == LocaleCursor.Locale1)
+			Raylib.DrawTextString("E: COMPLETAR / SEGUIR   MANTEN ESPACIO: OMITIR", textX, panelY + panelHeight - 30, 14, color);
+		else
+			Raylib.DrawTextString("E: COMPLETE / CONTINUE   HOLD SPACE: SKIP", textX, panelY + panelHeight - 30, 14, color);
+	}
+
+	/** Turn one authored speaker ID into a readable fallback without campaign mappings. */
+	static function conversationSpeakerLabel(id:ScenarioId):String {
+		final source = id.text();
+		final separator = source.lastIndexOf(".");
+		final stem = separator >= 0 && separator + 1 < source.length ? source.substring(separator + 1) : source;
+		final output = new StringBuf();
+		for (index in 0...stem.length) {
+			final code = stem.charCodeAt(index);
+			if (code == 45)
+				output.addChar(32);
+			else
+				output.addChar(code >= 97 && code <= 122 ? code - 32 : code);
+		}
+		return output.toString();
 	}
 
 	/**

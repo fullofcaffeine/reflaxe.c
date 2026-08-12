@@ -30,5 +30,11 @@ typedef HudResources = {
 
 	/** True when the adventure-item atlas handle is valid for drawing. */
 	final adventureItemTextureReady:Bool;
+
+	/** Loaded legacy entity atlas used for conversation portraits. */
+	final entityTexture:Texture2D;
+
+	/** True when the entity atlas handle is valid for drawing. */
+	final entityTextureReady:Bool;
 }
 #end
