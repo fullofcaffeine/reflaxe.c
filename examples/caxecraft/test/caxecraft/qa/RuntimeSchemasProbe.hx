@@ -12,6 +12,8 @@ import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
+import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
+import caxecraft.gameplay.ItemKind;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
 import caxecraft.localization.UiTypes.LocaleCursor;
@@ -80,6 +82,7 @@ function selfCheck():Int {
 	final sand = new ContentId("caxecraft:sand");
 	final sandBlock = new ContentId("caxecraft:sand-block");
 	final sandBlockCode = registry.itemStorageCode(sandBlock);
+	final breadCode = registry.itemStorageCode(new ContentId("caxecraft:bread"));
 	final sandPresentation = registry.itemPresentation(sandBlockCode);
 	if (tracePack != 132089
 		|| registry.packId() != "caxecraft:base"
@@ -94,6 +97,8 @@ function selfCheck():Int {
 		|| registry.itemUseProfile(sandBlockCode) != RuntimeItemUseProfile.PlaceBlock
 		|| registry.itemPlacementBlockStorageCode(sandBlockCode) != 5
 		|| registry.maximumItemQuantity(sandBlock) != 64
+		|| breadCode < 0
+		|| inventoryKindForRuntimeItem(registry, breadCode) != ItemKind.Bread
 		|| sandPresentation == null
 		|| sandPresentation.asset != "items"
 		|| sandPresentation.cell != "sand-block"
@@ -140,7 +145,7 @@ function selfCheck():Int {
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
 		return 8;
 	final completeProof = completeUiLookupProof(catalog);
-	if (completeProof != 42396) {
+	if (completeProof != 42144) {
 		traceUi = completeProof;
 		return 9;
 	}

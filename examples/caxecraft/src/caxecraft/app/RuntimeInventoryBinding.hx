@@ -15,8 +15,9 @@ import caxecraft.gameplay.ItemKind;
 /**
 	Return the inventory kind for one runtime item, or null for direct equipment.
 
-	A placeable block uses its validated terrain code. `NoItemUse` stays absent
-	because that broad profile does not identify one hotbar kind by itself.
+	A placeable block uses its validated terrain code. A no-use item needs its
+	validated base-pack identity because its action profile cannot identify a
+	hotbar kind.
 **/
 function inventoryKindForRuntimeItem(registry:RuntimeContentRegistry, storageCode:Int):Null<ItemKind> {
 	return switch registry.itemUseProfile(storageCode) {
@@ -32,6 +33,11 @@ function inventoryKindForRuntimeItem(registry:RuntimeContentRegistry, storageCod
 				case Sand: ItemKind.SandBlock;
 				case Air | Bedrock | Wood | Leaves | Snow | Ash: null;
 			};
-		case EquipAquatic | NoItemUse: null;
+		case NoItemUse:
+			switch registry.itemIdForStorageCode(storageCode) {
+				case "caxecraft:bread": ItemKind.Bread;
+				case _: null;
+			};
+		case EquipAquatic: null;
 	};
 }

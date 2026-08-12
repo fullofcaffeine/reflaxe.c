@@ -38,9 +38,9 @@ object guide.nia
   tag friend
   placement npc caxecraft:nia dialogue.guide 2500 1000 3500 270
 end object
-object item.fixture-lantern
+object item.fixture-bread
   tag reward
-  placement item caxecraft:lantern 1 1500 1000 1500 0
+  placement item caxecraft:bread 2 1500 1000 1500 0
 end object
 object item.fixture-tideweave
   tag equipment
@@ -95,7 +95,7 @@ rule rule.fixture-glyph priority 10 repeat
   do set-object-state object.glyph-control caxecraft:idle
 end rule
 rule rule.fixture-collect priority 10 repeat
-  when collect-item caxecraft:lantern
+  when collect-item caxecraft:bread
   if (always)
   do objective objective.next complete
   do objective objective.collected active

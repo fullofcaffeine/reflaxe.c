@@ -273,8 +273,8 @@ function selfCheck():Int {
 	}
 	if (leaveRuleCount != 1)
 		return 125;
-	final collected = flowSession.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Lantern, 1);
-	if (!collected.resolved || collected.collected != 1 || collected.inventory.lantern != 1)
+	final collected = flowSession.collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Bread, 2);
+	if (!collected.resolved || collected.collected != 2 || collected.inventory.bread != 2 || flowSession.authoredItemIsActive(0))
 		return 112;
 	final collectionTick = flowSession.tick({
 		intent: aquaticInput(0.0, 0.0, false, false),
@@ -290,8 +290,8 @@ function selfCheck():Int {
 		return 113;
 	if (!flowSession.activateAuthoredItemDuringLoad(0))
 		return 114;
-	final fullInventory = Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, Inventory.MAX_STACK);
-	final rejectedCollection = flowSession.collectAuthoredInventoryItem(0, fullInventory, ItemKind.Lantern, 1);
+	final fullInventory = Inventory.make(0, 0, 0, 0, 0, 0, 0, Inventory.MAX_STACK, 0);
+	final rejectedCollection = flowSession.collectAuthoredInventoryItem(0, fullInventory, ItemKind.Bread, 2);
 	if (!rejectedCollection.resolved || rejectedCollection.collected != 0 || !flowSession.authoredItemIsActive(0))
 		return 115;
 	final rejectedCollectionTick = flowSession.tick({
