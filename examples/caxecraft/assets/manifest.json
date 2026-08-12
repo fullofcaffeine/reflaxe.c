@@ -25,6 +25,7 @@
       "castle-gate",
       "castle-mechanisms",
       "entities",
+      "field-note-model",
       "forge-relay-model",
       "gate-winch-model",
       "terrain"
@@ -125,6 +126,15 @@
         "Duke Nukem 3D voxel replacements were reviewed only for the proven flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
       ],
       "processing": "examples/caxecraft/tools/ForgeRelayVox.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
+    },
+    "field-note-model": {
+      "mode": "repository-haxe-vox-builder",
+      "artifactIds": [],
+      "promptSummary": "Original 32-cubed field note with a grounded cream parchment roll, shaded end rings, teal travel binding, loose ribbon tails, and a copper wax seal.",
+      "referenceInputs": [
+        "The existing Caxecraft field-note atlas cell supplied the prop identity and original teal, copper, and cream art direction. No external game asset was copied."
+      ],
+      "processing": "examples/caxecraft/tools/ForgeRelayVox.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared prop palette."
     },
     "gate-winch-model": {
       "mode": "repository-haxe-vox-builder",
@@ -419,6 +429,17 @@
           "fallskeeper-back"
         ]
       }
+    },
+    {
+      "id": "field-note-model",
+      "path": "models/field-note.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "e1eb70ab6d0c76f2d3d4696b6c8a8041a4a5603abc8bcc0c2cb4431ec9b113f6",
+      "generationRecord": "field-note-model",
+      "rights": "caxecraft-original"
     },
     {
       "id": "forge-relay-model",

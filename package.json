@@ -40,6 +40,8 @@
     "test:string-output": "python3 test/string_output/run.py",
     "test:hello": "python3 examples/hello/run.py",
     "test:caxecraft-assets": "python3 examples/caxecraft/check_assets.py",
+    "caxecraft:voxels:refresh": "haxe -cp examples/caxecraft/tools --run ForgeRelayVox examples/caxecraft/assets/models/forge-relay.vox examples/caxecraft/assets/models/gate-winch.vox examples/caxecraft/assets/models/field-note.vox",
+    "caxecraft:voxels:check": "haxe -cp examples/caxecraft/tools --run ForgeRelayVox examples/caxecraft/assets/models/forge-relay.vox examples/caxecraft/assets/models/gate-winch.vox examples/caxecraft/assets/models/field-note.vox --check",
     "test:caxecraft-content-json": "python3 examples/caxecraft/run_haxe_c_test.py content-json",
     "test:caxecraft-runtime-schemas": "python3 examples/caxecraft/run_haxe_c_test.py runtime-schemas",
     "test:caxecraft-runtime-content-generation": "python3 examples/caxecraft/run_haxe_c_test.py runtime-content-generation",

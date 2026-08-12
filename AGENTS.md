@@ -475,8 +475,12 @@ performance, packaging, and developer experience together.
   PRD/ADR; and ask the maintainer for an explicit decision. When the decision is
   unusually broad, irreversible, or uncertain, prepare that evidence as a
   focused deep-research brief for GPT-5.6 Pro rather than improvising a new
-  architecture. Oracle may clarify and plan before implementation or review a
-  critical result, but size or generic extra confidence alone is insufficient.
+  architecture. Oracle may clarify and plan before implementation. It may also
+  review an important code change, major refactor, compiler or runtime change,
+  security-sensitive boundary, critical game-engine change, or consequential
+  game-design plan. Give a review request the exact diff, evidence, known risks,
+  and open questions. Use Oracle when an independent deep review can change the
+  decision or expose a material defect; do not add it to routine content edits.
   Invoke the globally installed `$oracle-review` skill and let its caf-oracle
   facade own the ledger, agent provenance, checked evidence, browser dispatch,
   recovery, response capture, disposition, and archive. Do not maintain a

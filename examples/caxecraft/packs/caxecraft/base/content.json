@@ -471,7 +471,7 @@
       "id": "caxecraft:ceesh-field-note",
       "interaction": "activate",
       "interactionRadiusMilli": 2500,
-      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "bounds": { "widthMilli": 850, "heightMilli": 420, "depthMilli": 600 },
       "states": [
         {
           "id": "caxecraft:entered",
@@ -479,7 +479,11 @@
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
-            "cell": "ceesh-note-read"
+            "cell": "ceesh-note-read",
+            "model": {
+              "path": "assets/models/field-note.vox",
+              "cellsPerAxis": 32
+            }
           }
         },
         {
@@ -488,7 +492,11 @@
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
-            "cell": "ceesh-note-waiting"
+            "cell": "ceesh-note-waiting",
+            "model": {
+              "path": "assets/models/field-note.vox",
+              "cellsPerAxis": 32
+            }
           }
         }
       ]

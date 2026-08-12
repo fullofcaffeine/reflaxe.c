@@ -34,6 +34,7 @@ REQUIRED_ASSET_IDS = frozenset(
         "caxecraft-wordmark",
         "cutscene-editor",
         "entities",
+        "field-note-model",
         "forge-relay-model",
         "gate-winch-model",
         "hud",
@@ -50,6 +51,7 @@ REQUIRED_GENERATION_RECORD_IDS = frozenset(
         "adventure-terrain",
         "cutscene-editor",
         "entities",
+        "field-note-model",
         "forge-relay-model",
         "gate-winch-model",
         "hud",
@@ -79,6 +81,13 @@ ENTITIES_EDIT_REFERENCE = (
 FORGE_RELAY_REFERENCE = (
     "Duke Nukem 3D voxel replacements were reviewed only for the proven "
     "flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
+)
+FIELD_NOTE_REFERENCE = (
+    "The existing Caxecraft field-note atlas cell supplied the prop identity and original "
+    "teal, copper, and cream art direction. No external game asset was copied."
+)
+DETERMINISTIC_VOX_RECORD_IDS = frozenset(
+    {"field-note-model", "forge-relay-model", "gate-winch-model"}
 )
 EXPECTED_GRID_CELLS = {
     "adventure-characters": (
@@ -382,7 +391,7 @@ def validate_generation_records(records: dict[str, Any]) -> None:
         prompt = record.get("promptSummary")
         if not isinstance(prompt, str) or not prompt:
             fail(f"generationRecords.{record_id}.promptSummary must be non-empty")
-        if record_id in ("forge-relay-model", "gate-winch-model"):
+        if record_id in DETERMINISTIC_VOX_RECORD_IDS:
             if artifact_ids or record.get("mode") != "repository-haxe-vox-builder":
                 fail(f"{record_id} must retain its deterministic Haxe source")
         elif not artifact_ids or not str(record.get("mode")).startswith("openai-built-in-imagegen"):
@@ -397,6 +406,8 @@ def validate_generation_records(records: dict[str, Any]) -> None:
             expected_references = [ENTITIES_EDIT_REFERENCE]
         elif record_id in ("forge-relay-model", "gate-winch-model"):
             expected_references = [FORGE_RELAY_REFERENCE]
+        elif record_id == "field-note-model":
+            expected_references = [FIELD_NOTE_REFERENCE]
         elif record_id in REQUIRED_GENERATION_RECORD_IDS:
             expected_references = []
         else:

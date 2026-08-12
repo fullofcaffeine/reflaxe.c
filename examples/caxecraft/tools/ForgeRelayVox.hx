@@ -2,10 +2,11 @@ package;
 
 import haxe.io.Bytes;
 import haxe.io.BytesOutput;
+import sys.FileSystem;
 import sys.io.File;
 
 /**
- * Builds Caxecraft's first two castle mechanisms in MagicaVoxel format.
+ * Builds Caxecraft's first small world props in MagicaVoxel format.
  *
  * The checked-in `.vox` file is the game asset. This small source file keeps
  * its shape and palette reviewable without adding a second modeling format.
@@ -13,11 +14,12 @@ import sys.io.File;
 class ForgeRelayVox {
 	static inline final SIZE = 32;
 
-	/** Build the relay and winch at the two requested output paths. */
+	/** Build the relay, winch, and field note at the requested output paths. */
 	static function main():Void {
 		final arguments = Sys.args();
-		if (arguments.length != 2) {
-			Sys.println("usage: haxe --run ForgeRelayVox <relay.vox> <winch.vox>");
+		final checkOnly = arguments.length == 4 && arguments[3] == "--check";
+		if (arguments.length != 3 && !checkOnly) {
+			Sys.println("usage: haxe --run ForgeRelayVox <relay.vox> <winch.vox> <field-note.vox> [--check]");
 			Sys.exit(2);
 		}
 		final relay:Array<Voxel> = [];
@@ -25,16 +27,104 @@ class ForgeRelayVox {
 		addCabinet(relay);
 		addControlFace(relay);
 		addCrystal(relay);
-		File.saveBytes(arguments[0], encode(relay));
+		writeOrCheck(arguments[0], encode(relay, false), checkOnly);
 
 		final winch:Array<Voxel> = [];
 		addWinchBase(winch);
 		addWinchSupports(winch);
 		addWinchDrum(winch);
 		addWinchChainAndCrank(winch);
-		File.saveBytes(arguments[1], encode(winch));
+		writeOrCheck(arguments[1], encode(winch, false), checkOnly);
+
+		final fieldNote:Array<Voxel> = [];
+		addFieldNoteRoll(fieldNote);
+		addFieldNoteBinding(fieldNote);
+		writeOrCheck(arguments[2], encode(fieldNote, true), checkOnly);
 		Sys.println('forge-relay.vox: ${relay.length} voxels');
 		Sys.println('gate-winch.vox: ${winch.length} voxels');
+		Sys.println('field-note.vox: ${fieldNote.length} voxels');
+	}
+
+	/** Write one model, or prove that its checked-in bytes match this source. */
+	static function writeOrCheck(path:String, expected:Bytes, checkOnly:Bool):Void {
+		if (!checkOnly) {
+			File.saveBytes(path, expected);
+			return;
+		}
+		if (!FileSystem.exists(path)) {
+			Sys.println('missing generated voxel model: $path');
+			Sys.exit(1);
+		}
+		final actual = File.getBytes(path);
+		if (actual.compare(expected) != 0) {
+			Sys.println('stale generated voxel model: $path');
+			Sys.exit(1);
+		}
+	}
+
+	/** Add a grounded parchment roll with shaded paper and visible end rings. */
+	static function addFieldNoteRoll(voxels:Array<Voxel>):Void {
+		for (x in 4...28)
+			for (y in 8...24)
+				for (z in 2...15) {
+					final dy = y - 15;
+					final dz = z - 8;
+					if (dy * dy + dz * dz <= 42) {
+						var color = z >= 11 ? 18 : 17;
+						if (y <= 10 || z <= 3)
+							color = 16;
+						else if ((x + y + z) % 17 == 0)
+							color = 19;
+						put(voxels, x, y, z, color);
+					}
+				}
+
+		for (x in [3, 4, 27, 28])
+			for (y in 7...25)
+				for (z in 1...16) {
+					final dy = y - 15;
+					final dz = z - 8;
+					final radiusSquared = dy * dy + dz * dz;
+					if (radiusSquared <= 56) {
+						var color = radiusSquared >= 42 ? 16 : 17;
+						if (radiusSquared <= 6 || (radiusSquared >= 18 && radiusSquared <= 25))
+							color = 19;
+						else if (z >= 10 && radiusSquared < 42)
+							color = 18;
+						put(voxels, x, y, z, color);
+					}
+				}
+	}
+
+	/** Add the teal travel binding, two loose tails, and a copper wax seal. */
+	static function addFieldNoteBinding(voxels:Array<Voxel>):Void {
+		for (x in 14...18)
+			for (y in 8...24)
+				for (z in 2...15) {
+					final dy = y - 15;
+					final dz = z - 8;
+					if (dy * dy + dz * dz >= 33 && dy * dy + dz * dz <= 48)
+						put(voxels, x, y, z, z >= 10 ? 10 : 9);
+				}
+
+		for (step in 0...8) {
+			put(voxels, 14, 7 - step, 3, step % 3 == 0 ? 8 : 9);
+			put(voxels, 15, 7 - step, 3, 9);
+			put(voxels, 17, 7 - step, 3, step % 3 == 1 ? 8 : 10);
+			put(voxels, 18, 7 - step, 3, 9);
+		}
+
+		for (x in 13...20)
+			for (y in 5...9)
+				for (z in 3...10) {
+					final dx = x - 16;
+					final dy = y - 6;
+					final dz = z - 6;
+					if (dx * dx + 2 * dy * dy + dz * dz <= 12)
+						put(voxels, x, y, z, z >= 7 ? 7 : 6);
+				}
+		put(voxels, 16, 4, 6, 5);
+		put(voxels, 16, 4, 7, 7);
 	}
 
 	/** Add the low timber platform and four iron-shod feet of the winch. */
@@ -252,11 +342,11 @@ class ForgeRelayVox {
 	}
 
 	/** Encode one MagicaVoxel 150 scene with a custom Caxecraft palette. */
-	static function encode(voxels:Array<Voxel>):Bytes {
+	static function encode(voxels:Array<Voxel>, includeParchmentColors:Bool):Bytes {
 		final children = new BytesOutput();
 		writeChunk(children, "SIZE", sizeChunk(), Bytes.alloc(0));
 		writeChunk(children, "XYZI", voxelChunk(voxels), Bytes.alloc(0));
-		writeChunk(children, "RGBA", paletteChunk(), Bytes.alloc(0));
+		writeChunk(children, "RGBA", paletteChunk(includeParchmentColors), Bytes.alloc(0));
 		final output = new BytesOutput();
 		output.writeString("VOX ");
 		output.writeInt32(150);
@@ -286,12 +376,18 @@ class ForgeRelayVox {
 		return output.getBytes();
 	}
 
-	/** Encode the shared mechanism colors, then fill unused palette slots. */
-	static function paletteChunk():Bytes {
-		final colors = [
+	/** Encode the shared prop colors, then fill unused palette slots. */
+	static function paletteChunk(includeParchmentColors:Bool):Bytes {
+		final colors:Array<Int> = [
 			0x11171bff, 0x202a2fff, 0x303b40ff, 0x4a585dff, 0x59331fff, 0x8d512fff, 0xc17a43ff, 0x064d53ff, 0x08777aff, 0x16aaa7ff, 0x82e6deff, 0xc99d57ff,
 			0x3b261aff, 0x65442cff, 0x8b633dff
 		];
+		if (includeParchmentColors) {
+			colors.push(0x9b7849ff);
+			colors.push(0xd8b878ff);
+			colors.push(0xffe4a3ff);
+			colors.push(0x6c5033ff);
+		}
 		final output = new BytesOutput();
 		for (index in 0...255)
 			writeColor(output, index < colors.length ? colors[index] : 0x00000000);

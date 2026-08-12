@@ -73,8 +73,8 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 23494,
-      "sha256": "3ce7a6f4880a57da20f807b945abdaa37c7993211f4c77d978428b01594b4fae"
+      "byteLength": 24522,
+      "sha256": "7e52178765ee88ec8ae6b042621e393113639d0b1690483a28e76054bcddae4b"
     },
     {
       "kind": "asset",
@@ -109,14 +109,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 18402,
-      "sha256": "c189e3185a38a3b26427ab6281fbb25a5befdd458ac7b5ae7b35f17df1c6d3f7"
+      "byteLength": 18649,
+      "sha256": "6d26e13e07a8edbbf3207dffc912e92ea7f5dbee5fe80d6a61100a9d9846d7bb"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "06cc5ac1f73eb832dba98552e90350f009454f904192b8856a0b9201757a99c6"
+      "sha256": "58893d30506bd81d9a0e289b8b1dee45ad72674548eed88e0d469504f5418995"
     },
     {
       "kind": "level",
