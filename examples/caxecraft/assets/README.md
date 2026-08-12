@@ -2,23 +2,23 @@
 
 This directory contains the first original Caxecraft visual-design pack. The
 native game now packages and loads the title panorama, wordmark, HUD atlas,
-base and Adventure item atlases, entity atlas, and base and Adventure terrain
-atlases as exact primary PNG bytes. Three atlases remain design inputs: their
+base and Adventure item atlases, entity atlas, base and Adventure terrain
+atlases, and the forge-relay and gate-winch voxel models. Three atlases remain design inputs: their
 presence is not evidence that Adventure characters, Ivvy, or cutscene-editor
 icons are used by the native game yet. The
 complete scope is described by the
 [game design document](../../../docs/caxecraft-game-design.md) and
 [domain design](../../../docs/caxecraft-domain.md).
 
-`manifest.json` is the machine-readable authority for every PNG byte, size,
-alpha expectation, atlas grid, semantic cell name, generation record, and
+`manifest.json` is the machine-readable authority for every asset byte, size,
+atlas grid, semantic cell name, source record, and
 rights record. Validate it offline with:
 
 ```bash
 python3 examples/caxecraft/check_assets.py
 ```
 
-The Caxecraft originals were produced with the built-in OpenAI image-generation
+The raster originals were produced with the built-in OpenAI image-generation
 workflow and selected through human review. The checked-in PNGs are explicitly
 classified as primary design-source inputs, licensed under the repository's
 `GPL-3.0-only` license; their interactive creation history is provenance, not a
@@ -27,8 +27,20 @@ Any future resize, packing, compression, conversion, or runtime-ready derivative
 must have deterministic source-to-byte regeneration. `haxe_c-xge.15` still owns
 those derived-asset tools, runtime sampling/lifetime decisions, visual goldens,
 Git/LFS growth policy, and human review before these assets can be called
-shipped art. The eight runtime files need no regeneration recipe because
+shipped art. The primary runtime files need no regeneration recipe because
 packaging copies the hash-verified primary bytes without changing them.
+
+`models/forge-relay.vox` and `models/gate-winch.vox` are original true-voxel
+props in the MagicaVoxel 150 format. They replace the old stack of textured
+boxes for the two castle controls. Regenerate both with:
+
+```bash
+haxe --cwd examples/caxecraft/tools --run ForgeRelayVox ../assets/models/forge-relay.vox ../assets/models/gate-winch.vox
+```
+
+The Haxe builder owns both 32-cubed shapes and their shared palette. The game
+scales each volume to the bounds in reloadable content. It keeps the atlas
+image as a fallback.
 
 The pack deliberately contains no official Haxe logo binary. The Haxe branding
 page makes marks downloadable and governs visual use, but the reviewed page did

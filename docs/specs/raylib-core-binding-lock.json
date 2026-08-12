@@ -34,6 +34,11 @@
         },
         "size": 4
       },
+      "Model": {
+        "alignment": 8,
+        "offsets": {},
+        "size": 136
+      },
       "Ray": {
         "alignment": 4,
         "offsets": {
@@ -93,7 +98,7 @@
     },
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "46de16440fb0d1d5ff97fd167e579219c339441a0cb134692e0bd58b5b319774",
+  "declarationSha256": "c3e3dc3b84f9d6b3cfdb2cfab2e367a5d6239547df5fbb3ae40fb880e31ed74f",
   "declarations": {
     "aliases": [
       {
@@ -1547,6 +1552,65 @@
         "sourceLine": 1564
       },
       {
+        "name": "DrawModelEx",
+        "parameters": [
+          {
+            "name": "model",
+            "type": {
+              "cType": "Model",
+              "canonicalCType": "struct Model",
+              "haxeType": "raylib.raw.Model"
+            }
+          },
+          {
+            "name": "position",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "rotationAxis",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "rotationAngle",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "scale",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "tint",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1599
+      },
+      {
         "name": "DrawPixel",
         "parameters": [
           {
@@ -2329,6 +2393,25 @@
         "sourceLine": 1201
       },
       {
+        "name": "IsModelValid",
+        "parameters": [
+          {
+            "name": "model",
+            "type": {
+              "cType": "Model",
+              "canonicalCType": "struct Model",
+              "haxeType": "raylib.raw.Model"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1593
+      },
+      {
         "name": "IsMouseButtonDown",
         "parameters": [
           {
@@ -2433,6 +2516,25 @@
           "haxeType": "Bool"
         },
         "sourceLine": 995
+      },
+      {
+        "name": "LoadModel",
+        "parameters": [
+          {
+            "name": "fileName",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "Model",
+          "canonicalCType": "Model",
+          "haxeType": "raylib.raw.Model"
+        },
+        "sourceLine": 1591
       },
       {
         "name": "LoadTexture",
@@ -2603,6 +2705,25 @@
         "sourceLine": 1112
       },
       {
+        "name": "UnloadModel",
+        "parameters": [
+          {
+            "name": "model",
+            "type": {
+              "cType": "Model",
+              "canonicalCType": "struct Model",
+              "haxeType": "raylib.raw.Model"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1594
+      },
+      {
         "name": "UnloadTexture",
         "parameters": [
           {
@@ -2662,6 +2783,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "BoundingBox",
         "sourceLine": 457
       },
@@ -2724,6 +2846,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "Camera3D",
         "sourceLine": 325
       },
@@ -2776,8 +2899,20 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "Color",
         "sourceLine": 246
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 8,
+          "offsets": {},
+          "size": 136
+        },
+        "fields": [],
+        "headerComplete": true,
+        "name": "Model",
+        "sourceLine": 416
       },
       {
         "canonicalAbi": {
@@ -2808,6 +2943,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "Ray",
         "sourceLine": 443
       },
@@ -2860,6 +2996,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "RayCollision",
         "sourceLine": 449
       },
@@ -2912,6 +3049,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "Rectangle",
         "sourceLine": 254
       },
@@ -2974,6 +3112,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "Texture",
         "sourceLine": 271
       },
@@ -3006,6 +3145,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "Vector2",
         "sourceLine": 214
       },
@@ -3048,6 +3188,7 @@
             }
           }
         ],
+        "headerComplete": false,
         "name": "Vector3",
         "sourceLine": 220
       }
@@ -3086,6 +3227,7 @@
     "src/raylib/raw/GamepadAxis.hx",
     "src/raylib/raw/GamepadButton.hx",
     "src/raylib/raw/KeyboardKey.hx",
+    "src/raylib/raw/Model.hx",
     "src/raylib/raw/MouseButton.hx",
     "src/raylib/raw/Ray.hx",
     "src/raylib/raw/RayCollision.hx",
@@ -3098,18 +3240,18 @@
     "src/raylib/raw/Vector3.hx"
   ],
   "generator": {
-    "algorithm": "hxc-raylib-clang-core-v2",
+    "algorithm": "hxc-raylib-clang-core-v3",
     "path": "scripts/raylib/core_binding.py"
   },
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "selection": {
     "counts": {
       "aliases": 2,
       "enumConstants": 167,
       "enums": 7,
-      "functions": 67,
+      "functions": 71,
       "omittedFamilies": 6,
-      "records": 9
+      "records": 10
     },
     "coverageState": "coherent-caxecraft-core",
     "omissions": [
@@ -3131,7 +3273,7 @@
       {
         "family": "remaining-resource-owning-apis",
         "owner": "haxe_c-xge.10",
-        "reason": "The selected raw Texture2D load/draw/unload family now has an explicit owner contract; images, fonts, models, shaders, audio, file buffers, and semantic owned-resource helpers still need their own paired lifetime and cleanup proof."
+        "reason": "The selected raw Texture2D and Model load/draw/unload families have explicit owner contracts; images, fonts, shaders, audio, file buffers, and semantic owned-resource helpers still need their own paired lifetime and cleanup proof."
       },
       {
         "family": "compound-literal-color-macros",
@@ -3159,9 +3301,22 @@
         "thread": "Load, validation, drawing, and unload run on the main render thread while the Raylib window and graphics device remain alive.",
         "unload": "UnloadTexture",
         "validate": "IsTextureValid"
+      },
+      {
+        "borrow": [
+          "DrawModelEx"
+        ],
+        "failure": "LoadModel may return an invalid value; callers check IsModelValid before drawing and do not unload a value that never became valid.",
+        "load": "LoadModel",
+        "ownership": "A successful load creates one caller-owned model and its mesh resources; copying the value aliases those resources and never creates another owner.",
+        "resource": "Model",
+        "semanticStatus": "raw-only-until-explicit-cleanup-edges",
+        "thread": "Load, validation, drawing, and unload run on the main render thread while the Raylib window and graphics device remain alive.",
+        "unload": "UnloadModel",
+        "validate": "IsModelValid"
       }
     ],
-    "sha256": "1bec7ee358ab28908fd9479b11c2489b3c313ecefd31a1194b28941927945c74"
+    "sha256": "1f9d85342b052321af386c4dca27fdf28fc0492e86b492fdfdf050d9f9d12326"
   },
   "upstream": {
     "apiVersion": 600,

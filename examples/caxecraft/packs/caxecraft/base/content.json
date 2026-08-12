@@ -505,7 +505,11 @@
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
-            "cell": "gate-relay-active"
+            "cell": "gate-relay-active",
+            "model": {
+              "path": "assets/models/forge-relay.vox",
+              "cellsPerAxis": 32
+            }
           }
         },
         {
@@ -514,7 +518,11 @@
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
-            "cell": "gate-relay-waiting"
+            "cell": "gate-relay-waiting",
+            "model": {
+              "path": "assets/models/forge-relay.vox",
+              "cellsPerAxis": 32
+            }
           }
         }
       ]
@@ -531,7 +539,11 @@
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
-            "cell": "gate-winch-engaged"
+            "cell": "gate-winch-engaged",
+            "model": {
+              "path": "assets/models/gate-winch.vox",
+              "cellsPerAxis": 32
+            }
           }
         },
         {
@@ -540,7 +552,11 @@
           "render": "visible",
           "presentation": {
             "asset": "castle-mechanisms",
-            "cell": "gate-winch-waiting"
+            "cell": "gate-winch-waiting",
+            "model": {
+              "path": "assets/models/gate-winch.vox",
+              "cellsPerAxis": 32
+            }
           }
         }
       ]

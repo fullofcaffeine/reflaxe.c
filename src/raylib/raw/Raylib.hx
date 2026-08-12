@@ -66,6 +66,11 @@ extern class Raylib {
 
 	public static function DrawLine3D(startPos:Vector3, endPos:Vector3, color:Color):Void;
 
+	/**
+	 * Borrows `Model` only while this call executes.
+	 */
+	public static function DrawModelEx(model:Model, position:Vector3, rotationAxis:Vector3, rotationAngle:c.Float32, scale:Vector3, tint:Color):Void;
+
 	public static function DrawPixel(posX:c.Int32, posY:c.Int32, color:Color):Void;
 
 	public static function DrawRectangle(posX:c.Int32, posY:c.Int32, width:c.Int32, height:c.Int32, color:Color):Void;
@@ -135,6 +140,11 @@ extern class Raylib {
 
 	public static function IsKeyReleased(key:c.Int32):Bool;
 
+	/**
+	 * Borrows `Model` for this call and does not change ownership.
+	 */
+	public static function IsModelValid(model:Model):Bool;
+
 	public static function IsMouseButtonDown(button:c.Int32):Bool;
 
 	public static function IsMouseButtonPressed(button:c.Int32):Bool;
@@ -151,6 +161,13 @@ extern class Raylib {
 	public static function IsWindowReady():Bool;
 
 	public static function IsWindowResized():Bool;
+
+	/**
+	 * Returns one caller-owned `Model` when valid.
+	 * LoadModel may return an invalid value; callers check IsModelValid before drawing and do not unload a value that never became valid.
+	 * Call `UnloadModel` exactly once before closing the graphics device.
+	 */
+	public static function LoadModel(fileName:c.CStringRef):Model;
 
 	/**
 	 * Returns one caller-owned `Texture2D` when valid.
@@ -172,6 +189,12 @@ extern class Raylib {
 	public static function SetWindowSize(width:c.Int32, height:c.Int32):Void;
 
 	public static function TakeScreenshot(fileName:c.CString):Void;
+
+	/**
+	 * Releases the one native resource owned by `Model`.
+	 * Treat every copied value as an alias; do not use or unload any alias afterward.
+	 */
+	public static function UnloadModel(model:Model):Void;
 
 	/**
 	 * Releases the one native resource owned by `Texture2D`.

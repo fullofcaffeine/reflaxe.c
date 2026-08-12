@@ -1,15 +1,19 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "records": [
     "BoundingBox",
     "Camera3D",
     "Color",
+    "Model",
     "Ray",
     "RayCollision",
     "Rectangle",
     "Texture",
     "Vector2",
     "Vector3"
+  ],
+  "headerCompleteRecords": [
+    "Model"
   ],
   "aliases": {
     "Camera": "Camera3D",
@@ -42,6 +46,7 @@
     "DrawGrid",
     "DrawLine",
     "DrawLine3D",
+    "DrawModelEx",
     "DrawPixel",
     "DrawRectangle",
     "DrawRectangleLines",
@@ -75,6 +80,7 @@
     "IsKeyDown",
     "IsKeyPressed",
     "IsKeyReleased",
+    "IsModelValid",
     "IsMouseButtonDown",
     "IsMouseButtonPressed",
     "IsMouseButtonReleased",
@@ -82,6 +88,7 @@
     "IsWindowFocused",
     "IsWindowReady",
     "IsWindowResized",
+    "LoadModel",
     "LoadTexture",
     "SetConfigFlags",
     "SetExitKey",
@@ -90,6 +97,7 @@
     "SetWindowMinSize",
     "SetWindowSize",
     "TakeScreenshot",
+    "UnloadModel",
     "UnloadTexture",
     "WindowShouldClose"
   ],
@@ -106,6 +114,19 @@
       "ownership": "A successful load creates one caller-owned GPU resource; copying the value aliases that same resource and never creates another owner.",
       "thread": "Load, validation, drawing, and unload run on the main render thread while the Raylib window and graphics device remain alive.",
       "failure": "LoadTexture may return an invalid value; callers check IsTextureValid before drawing and do not unload a value that never became valid.",
+      "semanticStatus": "raw-only-until-explicit-cleanup-edges"
+    },
+    {
+      "resource": "Model",
+      "load": "LoadModel",
+      "validate": "IsModelValid",
+      "borrow": [
+        "DrawModelEx"
+      ],
+      "unload": "UnloadModel",
+      "ownership": "A successful load creates one caller-owned model and its mesh resources; copying the value aliases those resources and never creates another owner.",
+      "thread": "Load, validation, drawing, and unload run on the main render thread while the Raylib window and graphics device remain alive.",
+      "failure": "LoadModel may return an invalid value; callers check IsModelValid before drawing and do not unload a value that never became valid.",
       "semanticStatus": "raw-only-until-explicit-cleanup-edges"
     }
   ],
@@ -144,6 +165,11 @@
           "g": 1,
           "r": 0
         }
+      },
+      "Model": {
+        "size": 136,
+        "alignment": 8,
+        "offsets": {}
       },
       "Ray": {
         "size": 24,
@@ -221,7 +247,7 @@
     },
     {
       "family": "remaining-resource-owning-apis",
-      "reason": "The selected raw Texture2D load/draw/unload family now has an explicit owner contract; images, fonts, models, shaders, audio, file buffers, and semantic owned-resource helpers still need their own paired lifetime and cleanup proof.",
+      "reason": "The selected raw Texture2D and Model load/draw/unload families have explicit owner contracts; images, fonts, shaders, audio, file buffers, and semantic owned-resource helpers still need their own paired lifetime and cleanup proof.",
       "owner": "haxe_c-xge.10"
     },
     {

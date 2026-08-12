@@ -40,7 +40,7 @@ class RaylibCoreBindingTests(unittest.TestCase):
         first = render_files(lock)
         second = render_files(lock)
         self.assertEqual(first, second)
-        self.assertEqual(len(first), 19)
+        self.assertEqual(len(first), 20)
         check_rendered(RAW_ROOT, first)
 
     def test_raw_layer_has_no_unsafe_or_target_foreign_shortcut(self) -> None:
@@ -83,24 +83,50 @@ class RaylibCoreBindingTests(unittest.TestCase):
             rendered,
         )
 
-    def test_texture_resource_contract_keeps_ownership_visible(self) -> None:
+    def test_resource_contracts_keep_ownership_visible(self) -> None:
         lock = load_lock()
         contracts = lock["selection"]["resourceContracts"]
-        self.assertEqual(len(contracts), 1)
-        contract = contracts[0]
-        self.assertEqual(contract["resource"], "Texture2D")
-        self.assertEqual(contract["load"], "LoadTexture")
-        self.assertEqual(contract["validate"], "IsTextureValid")
-        self.assertEqual(contract["borrow"], ["DrawBillboardRec", "DrawTexturePro"])
-        self.assertEqual(contract["unload"], "UnloadTexture")
+        self.assertEqual(len(contracts), 2)
+        texture = contracts[0]
+        self.assertEqual(texture["resource"], "Texture2D")
+        self.assertEqual(texture["load"], "LoadTexture")
+        self.assertEqual(texture["validate"], "IsTextureValid")
+        self.assertEqual(texture["borrow"], ["DrawBillboardRec", "DrawTexturePro"])
+        self.assertEqual(texture["unload"], "UnloadTexture")
         self.assertEqual(
-            contract["semanticStatus"],
+            texture["semanticStatus"],
             "raw-only-until-explicit-cleanup-edges",
         )
+        model = contracts[1]
+        self.assertEqual(model["resource"], "Model")
+        self.assertEqual(model["load"], "LoadModel")
+        self.assertEqual(model["validate"], "IsModelValid")
+        self.assertEqual(model["borrow"], ["DrawModelEx"])
+        self.assertEqual(model["unload"], "UnloadModel")
         rendered = render_files(lock)["Raylib.hx"]
         self.assertIn("Returns one caller-owned `Texture2D`", rendered)
         self.assertIn("Call `UnloadTexture` exactly once", rendered)
         self.assertIn("Treat every copied value as an alias", rendered)
+        self.assertIn("Returns one caller-owned `Model`", rendered)
+        self.assertIn("Call `UnloadModel` exactly once", rendered)
+
+    def test_model_is_header_complete_without_exposing_pointer_fields(self) -> None:
+        lock = load_lock()
+        model = next(
+            record
+            for record in lock["declarations"]["records"]
+            if record["name"] == "Model"
+        )
+        self.assertTrue(model["headerComplete"])
+        self.assertEqual(model["fields"], [])
+        self.assertEqual(model["canonicalAbi"], {
+            "size": 136,
+            "alignment": 8,
+            "offsets": {},
+        })
+        rendered = render_files(lock)["Model.hx"]
+        self.assertIn("extern class Model {}", rendered)
+        self.assertNotIn("c.Ptr", rendered)
 
     def test_lock_rejects_stale_selection_hash(self) -> None:
         lock = copy.deepcopy(load_lock())

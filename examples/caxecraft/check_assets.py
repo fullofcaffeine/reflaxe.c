@@ -20,6 +20,7 @@ CASE = Path(__file__).resolve().parent
 ASSET_ROOT = CASE / "assets"
 RUNTIME_CONTENT = CASE / "packs/caxecraft/base/content.json"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+VOX_SIGNATURE = b"VOX "
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 ARTIFACT_ID_RE = re.compile(
@@ -33,6 +34,8 @@ REQUIRED_ASSET_IDS = frozenset(
         "caxecraft-wordmark",
         "cutscene-editor",
         "entities",
+        "forge-relay-model",
+        "gate-winch-model",
         "hud",
         "items",
         "ivvy",
@@ -47,6 +50,8 @@ REQUIRED_GENERATION_RECORD_IDS = frozenset(
         "adventure-terrain",
         "cutscene-editor",
         "entities",
+        "forge-relay-model",
+        "gate-winch-model",
         "hud",
         "items",
         "ivvy",
@@ -70,6 +75,10 @@ ITEMS_EDIT_REFERENCE = (
 ENTITIES_EDIT_REFERENCE = (
     "The checked-in 4x4 entity atlas was a visual-style and scale reference for the new "
     "Fallskeeper row; its existing sixteen cells were not edit targets."
+)
+FORGE_RELAY_REFERENCE = (
+    "Duke Nukem 3D voxel replacements were reviewed only for the proven "
+    "flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
 )
 EXPECTED_GRID_CELLS = {
     "adventure-characters": (
@@ -139,6 +148,14 @@ class PngInfo:
     width: int
     height: int
     alpha: bool
+
+
+@dataclass(frozen=True)
+class VoxInfo:
+    width: int
+    height: int
+    depth: int
+    voxel_count: int
 
 
 def fail(message: str) -> None:
@@ -283,6 +300,48 @@ def png_info(path: Path, asset_root: Path) -> PngInfo:
     return PngInfo(width, height, color_type in (4, 6) or has_transparency_chunk)
 
 
+def vox_info(path: Path, asset_root: Path) -> VoxInfo:
+    """Read the bounded MagicaVoxel facts that the runtime model contract uses."""
+    payload = path.read_bytes()
+    rendered = path.relative_to(asset_root).as_posix()
+    if len(payload) < 20 or payload[:4] != VOX_SIGNATURE:
+        fail(f"asset is not a MagicaVoxel file: {rendered}")
+    version = struct.unpack_from("<I", payload, 4)[0]
+    if version not in (150, 200) or payload[8:12] != b"MAIN":
+        fail(f"unsupported MagicaVoxel header: {rendered}")
+    main_size, child_size = struct.unpack_from("<II", payload, 12)
+    offset = 20 + main_size
+    if offset + child_size != len(payload):
+        fail(f"MagicaVoxel MAIN byte count is wrong: {rendered}")
+    end = len(payload)
+    dimensions: tuple[int, int, int] | None = None
+    voxel_count: int | None = None
+    while offset < end:
+        if offset + 12 > end:
+            fail(f"truncated MagicaVoxel chunk: {rendered}")
+        chunk = payload[offset : offset + 4]
+        content_size, children_size = struct.unpack_from("<II", payload, offset + 4)
+        content_start = offset + 12
+        content_end = content_start + content_size
+        next_offset = content_end + children_size
+        if next_offset > end:
+            fail(f"truncated MagicaVoxel data: {rendered}")
+        if chunk == b"SIZE":
+            if content_size != 12 or dimensions is not None:
+                fail(f"invalid MagicaVoxel SIZE chunk: {rendered}")
+            dimensions = struct.unpack_from("<III", payload, content_start)
+        elif chunk == b"XYZI":
+            if content_size < 4 or voxel_count is not None:
+                fail(f"invalid MagicaVoxel XYZI chunk: {rendered}")
+            voxel_count = struct.unpack_from("<I", payload, content_start)[0]
+            if content_size != 4 + voxel_count * 4:
+                fail(f"MagicaVoxel voxel count is wrong: {rendered}")
+        offset = next_offset
+    if dimensions is None or voxel_count is None or voxel_count == 0:
+        fail(f"MagicaVoxel model is incomplete: {rendered}")
+    return VoxInfo(dimensions[0], dimensions[2], dimensions[1], voxel_count)
+
+
 def minimal_dimension_exif(width: int, height: int) -> bytes:
     """Exact big-endian TIFF payload produced by the reviewed pack normalizer."""
     return bytes.fromhex(
@@ -323,9 +382,10 @@ def validate_generation_records(records: dict[str, Any]) -> None:
         prompt = record.get("promptSummary")
         if not isinstance(prompt, str) or not prompt:
             fail(f"generationRecords.{record_id}.promptSummary must be non-empty")
-        if not artifact_ids or not str(record.get("mode")).startswith(
-            "openai-built-in-imagegen"
-        ):
+        if record_id in ("forge-relay-model", "gate-winch-model"):
+            if artifact_ids or record.get("mode") != "repository-haxe-vox-builder":
+                fail(f"{record_id} must retain its deterministic Haxe source")
+        elif not artifact_ids or not str(record.get("mode")).startswith("openai-built-in-imagegen"):
             fail(f"generated art record {record_id} lost its generation identity")
         if record_id == "ivvy":
             expected_references = [IVVY_PRIVATE_REFERENCE]
@@ -335,6 +395,8 @@ def validate_generation_records(records: dict[str, Any]) -> None:
             expected_references = [ITEMS_EDIT_REFERENCE]
         elif record_id == "entities":
             expected_references = [ENTITIES_EDIT_REFERENCE]
+        elif record_id in ("forge-relay-model", "gate-winch-model"):
+            expected_references = [FORGE_RELAY_REFERENCE]
         elif record_id in REQUIRED_GENERATION_RECORD_IDS:
             expected_references = []
         else:
@@ -393,7 +455,8 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
         fail("runtimeIntegration.packagedPrimaryAssets contains a duplicate ID")
     required_runtime_ids = {
         "caxecraft-wordmark", "title-panorama", "hud", "items",
-        "adventure-characters", "adventure-items", "adventure-terrain", "entities", "terrain",
+        "adventure-characters", "adventure-items", "adventure-terrain", "entities",
+        "forge-relay-model", "gate-winch-model", "terrain",
     }
     if not required_runtime_ids.issubset(packaged_ids):
         missing = ", ".join(sorted(required_runtime_ids - set(packaged_ids)))
@@ -432,8 +495,8 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
 
         relative = require_safe_path(asset.get("path"), f"{label}.path")
         rendered_path = relative.as_posix()
-        if relative.suffix != ".png" or rendered_path in paths:
-            fail(f"asset path is duplicate or not PNG: {rendered_path}")
+        if relative.suffix not in (".png", ".vox") or rendered_path in paths:
+            fail(f"asset path is duplicate or unsupported: {rendered_path}")
         paths.add(rendered_path)
         path = asset_root.joinpath(*relative.parts)
         try:
@@ -448,17 +511,25 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
             fail(f"{label}.sha256 must be a lowercase SHA-256 digest")
         if sha256(path) != expected_hash:
             fail(f"asset hash mismatch: {rendered_path}")
-        info = png_info(path, asset_root)
         width = require_positive_int(asset.get("width"), f"{label}.width")
         height = require_positive_int(asset.get("height"), f"{label}.height")
-        alpha = asset.get("alpha")
-        if not isinstance(alpha, bool):
-            fail(f"{label}.alpha must be boolean")
-        if (info.width, info.height, info.alpha) != (width, height, alpha):
-            fail(
-                f"asset PNG metadata mismatch for {rendered_path}: "
-                f"manifest={(width, height, alpha)!r}, bytes={info!r}"
-            )
+        if relative.suffix == ".vox":
+            if asset.get("kind") != "voxel-model" or "alpha" in asset:
+                fail(f"voxel asset has the wrong record shape: {rendered_path}")
+            depth = require_positive_int(asset.get("depth"), f"{label}.depth")
+            info = vox_info(path, asset_root)
+            if (info.width, info.height, info.depth) != (width, height, depth):
+                fail(f"asset VOX dimensions mismatch for {rendered_path}")
+        else:
+            info = png_info(path, asset_root)
+            alpha = asset.get("alpha")
+            if not isinstance(alpha, bool):
+                fail(f"{label}.alpha must be boolean")
+            if (info.width, info.height, info.alpha) != (width, height, alpha):
+                fail(
+                    f"asset PNG metadata mismatch for {rendered_path}: "
+                    f"manifest={(width, height, alpha)!r}, bytes={info!r}"
+                )
 
         generation_record = require_id(asset.get("generationRecord"), f"{label}.generationRecord")
         if generation_record not in records:
@@ -627,7 +698,7 @@ def main() -> int:
         return 1
     print(
         "caxecraft-assets: OK: "
-        f"{count} exact offline primary-source PNGs, {runtime_count} runtime atlas bindings, semantic atlas grids, complete file inventory, "
+        f"{count} exact offline primary-source assets, {runtime_count} runtime atlas bindings, semantic atlas grids, complete file inventory, "
         "minimal metadata, repository-scoped privacy records, and negative mutations passed"
     )
     return 0

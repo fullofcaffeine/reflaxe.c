@@ -17,7 +17,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": 2
+      "const": 3
     },
     "generator": {
       "type": "object",
@@ -31,7 +31,7 @@
           "const": "scripts/raylib/core_binding.py"
         },
         "algorithm": {
-          "const": "hxc-raylib-clang-core-v2"
+          "const": "hxc-raylib-clang-core-v3"
         }
       }
     },
@@ -288,7 +288,6 @@
         },
         "offsets": {
           "type": "object",
-          "minProperties": 1,
           "propertyNames": {
             "$ref": "#/$defs/name"
           },
@@ -359,6 +358,7 @@
       "required": [
         "name",
         "sourceLine",
+        "headerComplete",
         "fields",
         "canonicalAbi"
       ],
@@ -369,9 +369,11 @@
         "sourceLine": {
           "$ref": "#/$defs/line"
         },
+        "headerComplete": {
+          "type": "boolean"
+        },
         "fields": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/field"
           }

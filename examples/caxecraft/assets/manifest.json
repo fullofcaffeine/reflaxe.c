@@ -25,6 +25,8 @@
       "castle-gate",
       "castle-mechanisms",
       "entities",
+      "forge-relay-model",
+      "gate-winch-model",
       "terrain"
     ],
     "designOnlyAssets": [
@@ -32,8 +34,8 @@
       "ivvy"
     ],
     "pathPolicy": "Exact manifest paths below the executable assets directory; no host or source-checkout path is embedded.",
-    "lifetimePolicy": "Each valid LoadTexture result has one explicit owner and one UnloadTexture call before CloseWindow; copied Texture2D values are non-owning aliases.",
-    "derivation": "The eleven packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
+    "lifetimePolicy": "Each valid texture or model has one explicit owner and one matching unload call before CloseWindow; copied native values are non-owning aliases.",
+    "derivation": "The packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or runtime format conversion occurs."
   },
   "rights": {
     "caxecraft-original": {
@@ -114,6 +116,24 @@
         "The checked-in 4x4 entity atlas was a visual-style and scale reference for the new Fallskeeper row; its existing sixteen cells were not edit targets."
       ],
       "processing": "Generated the four-view Fallskeeper row with the built-in tool, removed its flat magenta key with the installed soft-matte/despill helper, normalized each view into one 256x256 cell, and appended the row. The original sixteen decoded cells remain unchanged."
+    },
+    "forge-relay-model": {
+      "mode": "repository-haxe-vox-builder",
+      "artifactIds": [],
+      "promptSummary": "Original 32-cubed forge relay with one grounded charcoal cabinet, copper braces and control face, and a teal crystal core.",
+      "referenceInputs": [
+        "Duke Nukem 3D voxel replacements were reviewed only for the proven flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
+      ],
+      "processing": "examples/caxecraft/tools/ForgeRelayVox.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
+    },
+    "gate-winch-model": {
+      "mode": "repository-haxe-vox-builder",
+      "artifactIds": [],
+      "promptSummary": "Original 32-cubed gate winch with a timber frame, iron-shod base, faceted drum, copper chain, and side crank.",
+      "referenceInputs": [
+        "Duke Nukem 3D voxel replacements were reviewed only for the proven flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
+      ],
+      "processing": "examples/caxecraft/tools/ForgeRelayVox.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
     },
     "hud": {
       "mode": "openai-built-in-imagegen",
@@ -399,6 +419,28 @@
           "fallskeeper-back"
         ]
       }
+    },
+    {
+      "id": "forge-relay-model",
+      "path": "models/forge-relay.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "2a16ed80f4ad08643dd068e4204827538c568435ed7bf44c431ee4c1c8d4bde9",
+      "generationRecord": "forge-relay-model",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "gate-winch-model",
+      "path": "models/gate-winch.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "0ea8ea70672edf650a063d34993ebda6fe12aec6ec67c897d30a4156537ed583",
+      "generationRecord": "gate-winch-model",
+      "rights": "caxecraft-original"
     },
     {
       "id": "hud",

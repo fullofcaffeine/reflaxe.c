@@ -18,8 +18,8 @@ import haxe.io.Bytes;
  * The package manifest owns transport: it lists every file that must travel.
  * The asset manifest independently owns which visual IDs ship at runtime and
  * the path and digest for each ID. This module joins those two authored views
- * before export, so omitting or substituting a PNG cannot produce a plausible
- * complete package.
+ * before export. An omitted or substituted atlas or voxel model cannot produce
+ * a plausible complete package.
  */
 /** Exact cross-manifest reason a package is not a complete asset closure. */
 enum ContentPackageAssetClosureError {
@@ -242,17 +242,20 @@ private function assetFields(reader:RuntimeSchemaReader, node:ContentJsonNode, p
 			found;
 		case _: false;
 	};
-	final names = [
-		"id",
-		"path",
-		"kind",
-		"width",
-		"height",
-		"alpha",
-		"sha256",
-		"generationRecord",
-		"rights"
-	];
+	final hasDepth = switch node.value {
+		case JsonObject(fields):
+			var found = false;
+			for (field in fields)
+				if (field.name == "depth")
+					found = true;
+			found;
+		case _: false;
+	};
+	final names = ["id", "path", "kind", "width", "height", "sha256", "generationRecord", "rights"];
+	if (hasDepth)
+		names.push("depth");
+	else
+		names.push("alpha");
 	if (hasGrid)
 		names.push("grid");
 	return reader.object(node, path, names);

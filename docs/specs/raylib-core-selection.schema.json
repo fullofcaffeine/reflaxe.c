@@ -7,6 +7,7 @@
   "required": [
     "schemaVersion",
     "records",
+    "headerCompleteRecords",
     "aliases",
     "enums",
     "functions",
@@ -16,9 +17,12 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": 2
+      "const": 3
     },
     "records": {
+      "$ref": "#/$defs/names"
+    },
+    "headerCompleteRecords": {
       "$ref": "#/$defs/names"
     },
     "aliases": {
@@ -138,7 +142,6 @@
         },
         "offsets": {
           "type": "object",
-          "minProperties": 1,
           "propertyNames": {
             "$ref": "#/$defs/name"
           },

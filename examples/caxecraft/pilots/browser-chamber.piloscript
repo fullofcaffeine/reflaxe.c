@@ -12,8 +12,9 @@ action 4 menu-next
 action 6 menu-next
 action 8 menu-next
 action 10 menu-next
-checkpoint 11 capture level-selection
-action 12 menu-confirm
+action 12 menu-next
+checkpoint 13 capture level-selection
+action 14 menu-confirm
 expect 20 screen playing
 expect 20 mode adventure
 expect 20 level browser-chamber

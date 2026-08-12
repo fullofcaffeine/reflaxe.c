@@ -73,8 +73,20 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 21492,
-      "sha256": "2bf7de18c0ca343f9e1728d4630f44a12e70a7881e512ddde2a02f163ef0e3ec"
+      "byteLength": 23494,
+      "sha256": "3ce7a6f4880a57da20f807b945abdaa37c7993211f4c77d978428b01594b4fae"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/forge-relay.vox",
+      "byteLength": 36252,
+      "sha256": "2a16ed80f4ad08643dd068e4204827538c568435ed7bf44c431ee4c1c8d4bde9"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/gate-winch.vox",
+      "byteLength": 36648,
+      "sha256": "0ea8ea70672edf650a063d34993ebda6fe12aec6ec67c897d30a4156537ed583"
     },
     {
       "kind": "asset",
@@ -97,14 +109,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 17900,
-      "sha256": "018b4f7349ff7579417532ed2ffaa5723338c8729503fe01761752daaf0c347e"
+      "byteLength": 18402,
+      "sha256": "c189e3185a38a3b26427ab6281fbb25a5befdd458ac7b5ae7b35f17df1c6d3f7"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "acab208e892851e0a3bce591e93bf49370ff73825690359a4343e655808b06e7"
+      "sha256": "413d1e4074b68acce3e09b0e13f3a80dc6c6b0fa25110bd31d3fec8a0b61dfc0"
     },
     {
       "kind": "level",

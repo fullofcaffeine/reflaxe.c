@@ -4,6 +4,8 @@ import caxecraft.content.ActorContentResolver.ActorContentKind;
 import caxecraft.content.ActorContentResolver.ActorContentResolution;
 import caxecraft.content.ContentJson.ContentJsonField;
 import caxecraft.content.ContentJson.ContentJsonNode;
+import caxecraft.content.ContentJson.ContentJsonValue;
+import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
 import caxecraft.content.LevelContentResolver.ItemStorageCode;
@@ -66,12 +68,25 @@ final class RuntimePresentation {
 	/** Reviewed zero-based cell index used by the native renderer. */
 	public final cellIndex:Int;
 
+	/** Optional true-voxel model that can replace the atlas fallback. */
+	public final model:RuntimeModelPresentation;
+
 	/** Construct one presentation after the reviewed inventory resolved it. */
-	public function new(asset:String, cell:String, cellIndex:Int) {
+	public function new(asset:String, cell:String, cellIndex:Int, model:RuntimeModelPresentation) {
 		this.asset = asset;
 		this.cell = cell;
 		this.cellIndex = cellIndex;
+		this.model = model;
 	}
+}
+
+/** Closed model choice for a presentation that always keeps an atlas fallback. */
+enum RuntimeModelPresentation {
+	/** Draw the existing atlas presentation. */
+	NoRuntimeModel;
+
+	/** Load one package-relative cubic MagicaVoxel model at its authored resolution. */
+	RuntimeVoxelModel(path:String, cellsPerAxis:Int);
 }
 
 /**
@@ -1058,7 +1073,19 @@ final class RuntimeContentPack {
 
 	/** Resolve one presentation against independently reviewed manifest facts. */
 	static function readPresentation(reader:RuntimeSchemaReader, node:ContentJsonNode, path:String, assets:RuntimeAssetInventory):Null<RuntimePresentation> {
-		final fields = reader.object(node, path, ["asset", "cell"]);
+		final hasModel = switch node.value {
+			case JsonObject(values):
+				var found = false;
+				for (field in values)
+					if (field.name == "model")
+						found = true;
+				found;
+			case _: false;
+		};
+		final expected = ["asset", "cell"];
+		if (hasModel)
+			expected.push("model");
+		final fields = reader.object(node, path, expected);
 		if (fields == null)
 			return null;
 		final assetNode = reader.field(fields, "asset");
@@ -1076,7 +1103,29 @@ final class RuntimeContentPack {
 			reader.reject(cellNode, SchemaUnknownAssetCell(path + ".cell", asset, cell));
 			return null;
 		}
-		return new RuntimePresentation(asset, cell, index);
+		var model = NoRuntimeModel;
+		if (hasModel) {
+			final modelNode = reader.field(fields, "model");
+			final modelPathPrefix = path + ".model";
+			final modelFields = reader.object(modelNode, modelPathPrefix, ["path", "cellsPerAxis"]);
+			if (modelFields == null)
+				return null;
+			final modelPathNode = reader.field(modelFields, "path");
+			final modelPath = reader.string(modelPathNode, modelPathPrefix + ".path", 128);
+			final cellsPerAxis = reader.integer(reader.field(modelFields, "cellsPerAxis"), modelPathPrefix + ".cellsPerAxis", 1, 128);
+			if (modelPath == null || cellsPerAxis == null)
+				return null;
+			final pathAccepted = switch ContentPackagePath.parse(modelPath) {
+				case PathAccepted(_): true;
+				case PathRejected(_): false;
+			};
+			if (!pathAccepted || !StringTools.startsWith(modelPath, "assets/") || !StringTools.endsWith(modelPath, ".vox")) {
+				reader.reject(modelPathNode, SchemaInvalidLogicalPath(modelPathPrefix + ".path"));
+				return null;
+			}
+			model = RuntimeVoxelModel(modelPath, cellsPerAxis);
+		}
+		return new RuntimePresentation(asset, cell, index, model);
 	}
 
 	/** Resolve one actor visual through the same validated asset inventory as other world presentation. */

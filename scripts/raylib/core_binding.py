@@ -38,7 +38,9 @@ INCLUDE_PLACEHOLDER = "${RAYLIB_INCLUDE}"
 # Raylib reads this path only while LoadTexture executes. Keep the generated
 # source contract call-bounded so runtime-authored asset paths do not need to be
 # misrepresented as static C literals.
-CALL_SCOPED_CSTRING_PARAMETERS = frozenset({("LoadTexture", "fileName")})
+CALL_SCOPED_CSTRING_PARAMETERS = frozenset(
+    {("LoadModel", "fileName"), ("LoadTexture", "fileName")}
+)
 
 
 class BindingFailure(RuntimeError):
@@ -142,6 +144,7 @@ def validate_selection(selection: Mapping[str, object]) -> None:
         (
             "schemaVersion",
             "records",
+            "headerCompleteRecords",
             "aliases",
             "enums",
             "functions",
@@ -151,9 +154,18 @@ def validate_selection(selection: Mapping[str, object]) -> None:
         ),
         "raylib core selection",
     )
-    if selection.get("schemaVersion") != 2:
-        raise BindingFailure("raylib core selection schemaVersion must be 2")
+    if selection.get("schemaVersion") != 3:
+        raise BindingFailure("raylib core selection schemaVersion must be 3")
     records = require_names(selection.get("records"), "selection.records")
+    header_complete_records = require_names(
+        selection.get("headerCompleteRecords"), "selection.headerCompleteRecords"
+    )
+    unknown_header_complete = set(header_complete_records) - set(records)
+    if unknown_header_complete:
+        raise BindingFailure(
+            "selection.headerCompleteRecords names unselected records: "
+            f"{sorted(unknown_header_complete)!r}"
+        )
     enums = require_names(selection.get("enums"), "selection.enums")
     functions = require_names(selection.get("functions"), "selection.functions")
 
@@ -243,7 +255,12 @@ def validate_selection(selection: Mapping[str, object]) -> None:
             if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
                 raise BindingFailure(f"layout {name}.{key} must be a positive integer")
         offsets = require_mapping(layout.get("offsets"), f"layout {name}.offsets")
-        if not offsets:
+        header_complete = name in header_complete_records
+        if header_complete and offsets:
+            raise BindingFailure(
+                f"header-complete layout {name}.offsets must stay hidden"
+            )
+        if not header_complete and not offsets:
             raise BindingFailure(f"layout {name}.offsets must not be empty")
         for field, offset in offsets.items():
             if not isinstance(field, str) or not isinstance(offset, int) or offset < 0:
@@ -451,18 +468,27 @@ def extract_records(
         "canonicalAbi.records",
     )
     records: list[dict[str, object]] = []
+    header_complete_records = set(
+        require_names(
+            selection.get("headerCompleteRecords"),
+            "selection.headerCompleteRecords",
+        )
+    )
     for name in require_names(selection.get("records"), "selection.records"):
         node = require_selected_node(nodes, name, "record")
         raw_fields = node.get("inner")
         if not isinstance(raw_fields, list):
             raise BindingFailure(f"record {name} omitted its fields")
         fields: list[dict[str, object]] = []
+        header_complete = name in header_complete_records
         for raw in raw_fields:
             if not isinstance(raw, dict) or raw.get("kind") != "FieldDecl":
                 continue
             field_name = raw.get("name")
             if not isinstance(field_name, str) or not field_name:
                 raise BindingFailure(f"record {name} contains an unnamed field")
+            if header_complete:
+                continue
             fields.append(
                 {
                     "name": field_name,
@@ -470,7 +496,7 @@ def extract_records(
                     "type": type_fact(raw.get("type"), f"record {name}.{field_name}"),
                 }
             )
-        if not fields:
+        if not fields and not header_complete:
             raise BindingFailure(f"selected record {name} has no fields")
         layout = require_mapping(layouts.get(name), f"canonical layout {name}")
         offsets = require_mapping(layout.get("offsets"), f"canonical layout {name}.offsets")
@@ -482,6 +508,7 @@ def extract_records(
             {
                 "name": name,
                 "sourceLine": source_line(node, f"record {name}"),
+                "headerComplete": header_complete,
                 "fields": fields,
                 "canonicalAbi": layout,
             }
@@ -698,10 +725,10 @@ def extract_lock(
         )
     ]
     lock: dict[str, object] = {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "generator": {
             "path": GENERATOR_PATH,
-            "algorithm": "hxc-raylib-clang-core-v2",
+            "algorithm": "hxc-raylib-clang-core-v3",
         },
         "upstream": {
             "name": "raylib",
@@ -787,12 +814,12 @@ def validate_lock(
         ),
         "raylib core binding lock",
     )
-    if lock.get("schemaVersion") != 2:
-        raise BindingFailure("raylib core binding lock schemaVersion must be 2")
+    if lock.get("schemaVersion") != 3:
+        raise BindingFailure("raylib core binding lock schemaVersion must be 3")
     generator = require_mapping(lock.get("generator"), "lock.generator")
     if generator != {
         "path": GENERATOR_PATH,
-        "algorithm": "hxc-raylib-clang-core-v2",
+        "algorithm": "hxc-raylib-clang-core-v3",
     }:
         raise BindingFailure("raylib core binding generator identity drifted")
     upstream = require_mapping(lock.get("upstream"), "lock.upstream")
@@ -877,6 +904,14 @@ def validate_lock(
         fields = record.get("fields")
         if not isinstance(fields, list):
             raise BindingFailure(f"record {name} fields are malformed")
+        header_complete = name in set(
+            require_names(
+                selected.get("headerCompleteRecords"),
+                "selection.headerCompleteRecords",
+            )
+        )
+        if record.get("headerComplete") is not header_complete:
+            raise BindingFailure(f"record {name} header-complete policy drifted")
         field_names = declaration_names(fields, f"record {name}.fields")
         offsets = require_mapping(
             require_mapping(layouts.get(name), f"layout {name}").get("offsets"),
@@ -956,13 +991,23 @@ def render_record(record: Mapping[str, object]) -> str:
     if not isinstance(name, str):
         raise BindingFailure("record render omitted name")
     lines = generated_preamble("struct", name, record.get("sourceLine"))
+    header_complete = record.get("headerComplete") is True
     lines.extend(
         [
             "@:c.layout(c.Layout.Struct)",
             '@:c.include("raylib.h", c.IncludeKind.System)',
-            f"extern class {name} {{",
         ]
     )
+    if header_complete:
+        lines.extend(
+            [
+                "/** The included header owns this value's complete field layout. */",
+                f"extern class {name} {{}}",
+                "",
+            ]
+        )
+        return "\n".join(lines)
+    lines.append(f"extern class {name} {{")
     fields = record.get("fields")
     if not isinstance(fields, list):
         raise BindingFailure(f"record {name} omitted fields during render")

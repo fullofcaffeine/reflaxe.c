@@ -402,6 +402,7 @@ final class CaxecraftApp {
 			return;
 		}
 		final runtimeTextures:RuntimeTextureAtlasCatalog = loadedRuntimeTextures;
+		final runtimeModels = new RuntimeVoxelModelCatalog();
 		var cameraWaterBlend = 0.0;
 		var inventory:InventoryState = Inventory.starter();
 		#if caxecraft_pilot
@@ -1428,7 +1429,7 @@ final class CaxecraftApp {
 				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
 					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				drawStatefulObjects(contentRegistry, session, levelView, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
-					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures);
+					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)
@@ -1651,6 +1652,7 @@ final class CaxecraftApp {
 		}
 
 		Raylib.EnableCursor();
+		runtimeModels.unload();
 		runtimeTextures.unload();
 		if (adventureTerrainTextureReady)
 			CaxecraftTextures.unload(adventureTerrainTexture);

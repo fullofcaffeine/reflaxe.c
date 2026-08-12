@@ -634,8 +634,8 @@ a ZIP does not change the CaxeMap, campaign, pack, localization, or asset
 formats, and editing staged content does not recompile the game.
 
 The first Haxe exporter now creates one canonical stored ZIP for the admitted
-first-adventure package. It includes `caxecraft.package.json`, seven
-semantic/inventory payloads, and all eight PNGs selected by
+first-adventure package. It includes `caxecraft.package.json`, all semantic
+payloads, and every runtime asset selected by
 `assets/manifest.json`. Export checks exact lengths and SHA-256 receipts and
 cross-checks the package's asset entries against that independent asset
 selection before writing an archive. Standard ZIP tooling and an isolated
@@ -958,9 +958,8 @@ The first original design art pack is checked in and validated independently:
 npm run test:caxecraft-assets
 ```
 
-That command proves exact offline primary-source PNG bytes, dimensions, alpha
-contracts, semantic atlas-cell order, a complete no-sidecar file inventory,
-minimal PNG metadata, and repository-scoped generation/privacy records. The
+That command proves exact offline asset bytes and dimensions. It also proves
+atlas-cell order, VOX structure, the complete file inventory, and source records. The
 domain runner invokes the same validator before compiling.
 The playable currently packages the panorama, wordmark, HUD, base/Adventure
 item, entity, and base/Adventure terrain atlases as exact verified primary
