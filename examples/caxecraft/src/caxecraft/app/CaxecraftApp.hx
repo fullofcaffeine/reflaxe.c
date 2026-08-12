@@ -1426,10 +1426,13 @@ final class CaxecraftApp {
 				totalRebuiltTerrainChunks = renderCounters.totalRebuiltChunks;
 				terrainCacheValid = renderCounters.cacheValid;
 				#end
-				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
-					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
+				// Draw solid authored props before transparent billboards. A sprite can
+				// then be hidden by a wall without its transparent rectangle reserving
+				// depth that a later prop needs.
 				drawStatefulObjects(contentRegistry, session, levelView, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels);
+				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
+					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady);
 				if (hit.hit)

@@ -51,6 +51,25 @@ final class Rlgl {
 	}
 
 	/**
+	 * Begin one transparent draw while keeping solid-world depth testing active.
+	 *
+	 * Flush before changing the depth-write state. Raylib batches draw commands,
+	 * so changing the state without this boundary could apply it to geometry that
+	 * was submitted earlier. The matching `EndTransparentDraw` flushes the
+	 * transparent command before it restores depth writes.
+	 */
+	public static inline function BeginTransparentDraw():Void {
+		RawRlgl.rlDrawRenderBatchActive();
+		RawRlgl.rlDisableDepthMask();
+	}
+
+	/** Finish one transparent draw and restore depth writes for solid geometry. */
+	public static inline function EndTransparentDraw():Void {
+		RawRlgl.rlDrawRenderBatchActive();
+		RawRlgl.rlEnableDepthMask();
+	}
+
+	/**
 	 * Begin sorted transparent geometry without changing depth testing.
 	 *
 	 * The caller must submit far-to-near geometry and call
@@ -58,16 +77,14 @@ final class Rlgl {
 	 * water face cannot prevent a later water face from blending into the frame.
 	 */
 	public static inline function BeginTransparentQuads(texture:Texture2D):Void {
-		RawRlgl.rlDrawRenderBatchActive();
-		RawRlgl.rlDisableDepthMask();
+		BeginTransparentDraw();
 		BeginQuads(texture);
 	}
 
 	/** Finish and flush transparent geometry before restoring depth writes. */
 	public static inline function EndTransparentQuads():Void {
 		EndQuads();
-		RawRlgl.rlDrawRenderBatchActive();
-		RawRlgl.rlEnableDepthMask();
+		EndTransparentDraw();
 	}
 
 	public static inline function Normal(x:Float, y:Float, z:Float):Void

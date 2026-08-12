@@ -4,6 +4,7 @@ package caxecraft.app;
 import raylib.Color;
 import raylib.Camera3D;
 import raylib.Rectangle;
+import raylib.Rlgl;
 import raylib.Texture2D;
 import raylib.Vector2;
 import raylib.Vector3;
@@ -94,13 +95,23 @@ final class CaxecraftTextures {
 			Rectangle.fromFloat(x + 0.0, y + 0.0, width + 0.0, height + 0.0), Vector2.fromFloat(0.0, 0.0), c.Float32.fromFloat(0.0), tint);
 	}
 
-	/** Draw one atlas cell as a camera-facing world sprite. */
+	/**
+	 * Draw one atlas cell as a camera-facing transparent world sprite.
+	 *
+	 * Solid terrain and props still reject hidden sprite pixels through the depth
+	 * test. The sprite does not write depth because Raylib's default shader blends
+	 * transparent pixels instead of discarding them. Letting those invisible
+	 * pixels write depth would make the complete rectangular billboard hide later
+	 * world draws.
+	 */
 	public static inline function drawAtlasBillboard(camera:Camera3D, texture:Texture2D, column:Int, row:Int, columns:Int, rows:Int, position:Vector3,
 			width:Float, height:Float, tint:Color):Void {
 		final sourceWidth = texture.width / columns;
 		final sourceHeight = texture.height / rows;
+		Rlgl.BeginTransparentDraw();
 		RawRaylib.DrawBillboardRec(camera, texture, Rectangle.fromFloat(column * sourceWidth, row * sourceHeight, sourceWidth, sourceHeight), position,
 			Vector2.fromFloat(width, height), tint);
+		Rlgl.EndTransparentDraw();
 	}
 
 	public static inline function unload(texture:Texture2D):Void

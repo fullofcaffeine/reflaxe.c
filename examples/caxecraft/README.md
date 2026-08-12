@@ -79,9 +79,10 @@ continuous submersion, wading/floating/submerged states, swimming forces,
 buoyancy, breath, drowning requests, and generic equipment capabilities. Both
 focused lanes pass Eval/native parity and sanitizer checks. Evergrove's stream
 is two blocks deep with a persistent surface source and a sand bed. Holding
-Space supplies upward swim intent across fixed ticks; rising into a clear
-one-block shore performs one collision-checked swim step instead of trapping
-the player at the waterline. Sand is a normal finite Adventure block item, so
+Space supplies upward swim intent across fixed ticks, and Left Shift supplies
+downward swim intent. Rising into a clear one-block shore performs one
+collision-checked swim step instead of trapping the player at the waterline.
+Sand is a normal finite Adventure block item, so
 mining a bank is lossless when inventory has room and leaves the world unchanged
 when its stack is full. Underwater mining still requires an equipped capability.
 Western Falls is the second runtime-loaded campaign region. Its 64 by 16 by 32
