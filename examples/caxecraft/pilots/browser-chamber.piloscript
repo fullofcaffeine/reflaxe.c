@@ -22,38 +22,44 @@ expect 20 objective objective.join-ceesh
 action 22 interact
 action 27 interact
 expect 30 objective objective.prepare-arena
+action 32 interact
 
 # Prime the two forge relays and enter the chamber. The journey protects the
 # route's milestones; free play owns timing, visual feel, and combat tuning.
-hold 31 46 forward
-hold 47 84 left
-action 86 interact
-action 91 interact
-hold 92 167 right
-action 169 interact
-action 174 interact
-expect 180 objective objective.confront-browser
-expect 180 object-state arena.entry-gate=caxecraft:open
-hold 181 218 left
-hold 219 260 forward
-hold 268 275 right
-hold 276 283 left
-hold 300 306 forward
-action 307 select-sword
-action 308 strike
-action 314 strike
-action 320 strike
-action 326 strike
-action 332 strike
-action 338 strike
-expect 354 objective objective.return-to-ceesh
-expect 354 object-state arena.exit-gate=caxecraft:open
-action 355 interact
-hold 356 424 forward
-hold 425 444 left
-expect 448 objective none
-expect 448 dialogue dialogue.victory
-expect 448 journal journal.victory
-hold 449 495 turn-right
+hold 34 72 left
+hold 73 86 forward
+action 88 interact
+action 93 interact
+action 98 interact
+hold 100 113 backward
+hold 115 194 right
+hold 195 202 forward
+action 204 interact
+action 209 interact
+action 214 interact
+expect 216 objective objective.confront-browser
+expect 216 object-state arena.entry-gate=caxecraft:open
+hold 217 254 left
+hold 255 296 forward
+hold 304 311 right
+hold 312 319 left
+hold 331 347 forward
+action 348 select-sword
+action 349 strike
+action 355 strike
+action 361 strike
+action 367 strike
+action 373 strike
+action 379 strike
+action 385 strike
+expect 395 objective objective.return-to-ceesh
+expect 395 object-state arena.exit-gate=caxecraft:open
+action 396 interact
+action 401 interact
+hold 402 470 forward
+hold 471 490 left
+expect 494 objective none
+expect 494 dialogue dialogue.victory
+expect 494 journal journal.victory
 checkpoint 497 capture final
 end
