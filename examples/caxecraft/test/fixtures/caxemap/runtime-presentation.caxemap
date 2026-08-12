@@ -36,7 +36,7 @@ object enemy.fixture
 end object
 object guide.nia
   tag friend
-  placement npc caxecraft:nia dialogue.guide 2500 1000 1500 270
+  placement npc caxecraft:nia dialogue.guide 2500 1000 3500 270
 end object
 object item.fixture-lantern
   tag reward
