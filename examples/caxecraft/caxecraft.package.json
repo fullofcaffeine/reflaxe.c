@@ -98,7 +98,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 3878,
-      "sha256": "0053abc57304cac935baff54f136312f9a742c727ffb8d9ed6cd1e65d00959ec"
+      "sha256": "6f354faf954ddc9b74e87fd36f76b1079dcd89c2ec47527d5816960c690a1365"
     },
     {
       "kind": "localization",
@@ -127,8 +127,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/browser-chamber.caxemap",
-      "byteLength": 13722,
-      "sha256": "4b3e3d542cbacf1f0cd744fc9db59365333c12a624b545844e44e662aa8dda72"
+      "byteLength": 14929,
+      "sha256": "03bed7c2f8b038fc1a017298005a84775e05a156615c6ffc3a9f8fc47b956e84"
     },
     {
       "kind": "level",

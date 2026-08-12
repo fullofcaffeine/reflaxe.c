@@ -73,10 +73,26 @@ palette 8 caxecraft:ash
 palette 9 caxecraft:stone
 chunk chamber.whole 0 0 0 32 16 32
   run 1 32
-  run 9 256
+  run 9 139
+  run 5 10
+  run 9 21
+  run 5 1
+  run 0 10
+  run 5 1
+  run 9 20
+  run 5 1
+  run 0 10
+  run 5 1
+  run 9 20
+  run 5 1
+  run 0 10
+  run 5 1
+  run 9 10
   run 0 224
   run 1 32
-  run 9 129
+  run 9 106
+  run 5 12
+  run 9 11
   run 0 30
   run 9 2
   run 0 30
@@ -100,7 +116,9 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 129
+  run 9 106
+  run 5 12
+  run 9 11
   run 0 30
   run 9 2
   run 0 30
@@ -111,308 +129,372 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 140
+  run 9 138
+  run 5 2
   run 0 8
-  run 9 24
+  run 5 2
+  run 9 20
+  run 5 2
   run 0 8
-  run 9 24
+  run 5 2
+  run 9 20
+  run 5 2
   run 0 8
-  run 9 24
+  run 5 2
+  run 9 20
+  run 5 12
+  run 9 10
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 2
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 2
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 2
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 129
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 2
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 2
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 2
+  run 0 1
+  run 5 4
+  run 0 20
+  run 5 4
+  run 0 1
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 1
+  run 9 4
+  run 0 20
+  run 9 4
+  run 0 1
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 102
+  run 8 8
+  run 9 4
+  run 8 8
+  run 9 7
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 2
+  run 0 30
+  run 9 1
+  run 0 224
+  run 1 32
+  run 9 138
+  run 5 2
   run 0 8
-  run 9 12
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 3
-  run 5 1
-  run 0 20
-  run 5 1
-  run 9 3
-  run 0 1
-  run 9 2
-  run 0 4
-  run 5 1
-  run 0 20
-  run 5 1
-  run 0 4
-  run 9 2
-  run 0 4
-  run 5 1
-  run 0 20
-  run 5 1
-  run 0 4
-  run 9 2
-  run 0 4
-  run 5 1
-  run 0 20
-  run 5 1
-  run 0 4
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 103
-  run 8 18
-  run 9 8
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 103
-  run 8 18
-  run 9 8
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 3
-  run 5 1
-  run 0 20
-  run 5 1
-  run 9 3
-  run 0 1
-  run 9 2
-  run 0 4
-  run 5 1
-  run 0 20
-  run 5 1
-  run 0 4
-  run 9 2
-  run 0 4
-  run 5 1
-  run 0 20
-  run 5 1
-  run 0 4
-  run 9 2
-  run 0 4
-  run 5 1
-  run 0 20
-  run 5 1
-  run 0 4
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 1
-  run 9 4
-  run 0 20
-  run 9 4
-  run 0 1
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 129
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 2
-  run 0 30
-  run 9 1
-  run 0 224
-  run 1 32
-  run 9 140
+  run 5 2
+  run 9 20
+  run 5 2
   run 0 8
-  run 9 24
+  run 5 2
+  run 9 20
+  run 5 2
   run 0 8
-  run 9 24
-  run 0 8
-  run 9 24
-  run 0 8
-  run 9 12
+  run 5 2
+  run 9 20
+  run 5 12
+  run 9 10
   run 0 224
   run 1 32
-  run 9 129
+  run 9 100
+  run 5 9
+  run 9 6
+  run 5 9
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -423,11 +505,15 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 103
+  run 9 100
   run 5 1
-  run 9 16
+  run 8 5
+  run 5 3
+  run 9 6
+  run 5 3
+  run 8 5
   run 5 1
-  run 9 8
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -438,11 +524,19 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 103
+  run 9 100
   run 5 1
-  run 9 16
+  run 8 1
+  run 5 3
+  run 8 1
+  run 5 3
+  run 9 6
+  run 5 3
+  run 8 1
+  run 5 3
+  run 8 1
   run 5 1
-  run 9 8
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -453,11 +547,19 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 103
+  run 9 100
   run 5 1
-  run 9 16
+  run 8 1
+  run 5 3
+  run 8 1
+  run 5 3
+  run 9 6
+  run 5 3
+  run 8 1
+  run 5 3
+  run 8 1
   run 5 1
-  run 9 8
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -468,11 +570,19 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 103
+  run 9 100
   run 5 1
-  run 9 16
+  run 8 1
+  run 5 3
+  run 8 1
+  run 5 3
+  run 9 6
+  run 5 3
+  run 8 1
+  run 5 3
+  run 8 1
   run 5 1
-  run 9 8
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -483,11 +593,15 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 103
+  run 9 100
   run 5 1
-  run 9 16
+  run 8 5
+  run 5 3
+  run 9 6
+  run 5 3
+  run 8 5
   run 5 1
-  run 9 8
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -498,11 +612,11 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 103
-  run 5 1
-  run 9 16
-  run 5 1
-  run 9 8
+  run 9 100
+  run 5 9
+  run 9 6
+  run 5 9
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -513,7 +627,11 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 129
+  run 9 100
+  run 5 9
+  run 9 6
+  run 5 9
+  run 9 5
   run 0 30
   run 9 2
   run 0 30
@@ -524,7 +642,9 @@ chunk chamber.whole 0 0 0 32 16 32
   run 9 1
   run 0 224
   run 1 32
-  run 9 256
+  run 9 228
+  run 5 24
+  run 9 4
   run 0 224
 end chunk
 fluid chamber.coolant caxecraft:water volume 2 5 26 3 1 2
