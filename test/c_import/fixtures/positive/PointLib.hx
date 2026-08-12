@@ -93,6 +93,18 @@ extern class PointLib {
 	@:c.name("pointlib_float_point_make")
 	public static function makeFloatPoint(x:c.Float32, y:c.Float32):FloatPoint;
 
+	/** Construct one header-complete value without exposing its private fields. */
+	@:c.name("pointlib_hidden_point_make")
+	public static function makeHiddenPoint(x:Coord, y:Coord):HiddenPoint;
+
+	/** Borrow and return one copied header-complete value. */
+	@:c.name("pointlib_hidden_point_identity")
+	public static function hiddenPointIdentity(point:HiddenPoint):HiddenPoint;
+
+	/** Inspect one header-complete value inside its owning C library. */
+	@:c.name("pointlib_hidden_point_verify")
+	public static function verifyHiddenPoint(point:HiddenPoint):Bool;
+
 	@:c.name("pointlib_float_point_scale")
 	public static function scaleFloatPoint(point:FloatPoint, scale:c.Float32):FloatPoint;
 

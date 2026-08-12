@@ -78,6 +78,19 @@ pointlib_float_point pointlib_float_point_make(float x, float y) {
   return result;
 }
 
+pointlib_hidden_point pointlib_hidden_point_make(pointlib_coord x, pointlib_coord y) {
+  const pointlib_hidden_point result = {x, y};
+  return result;
+}
+
+pointlib_hidden_point pointlib_hidden_point_identity(pointlib_hidden_point point) {
+  return point;
+}
+
+bool pointlib_hidden_point_verify(pointlib_hidden_point point) {
+  return point.x == POINTLIB_COORD_FIVE && point.y == POINTLIB_COORD_SEVEN;
+}
+
 pointlib_float_point pointlib_float_point_scale(pointlib_float_point point, float scale) {
   point.x *= scale;
   point.y *= scale;

@@ -21,6 +21,7 @@
         "Axis",
         "Coord",
         "FloatPoint",
+        "HiddenPoint",
         "Point",
         "PointAlias",
         "PointLib"

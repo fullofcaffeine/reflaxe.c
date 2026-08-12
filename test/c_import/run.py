@@ -35,6 +35,11 @@ PRODUCTION_FILES = {
     "src/program.c",
 }
 NEGATIVE_CASES = {
+    "field_hidden_nonextern": (
+        "HXC3000",
+        "Main.hx:4",
+        "A header-owned struct must be declared as an extern class.",
+    ),
     "callback_return": (
         "HXC3000",
         "CallbackApi.hx:4",
@@ -113,6 +118,7 @@ REQUIRED_COVERAGE = frozenset(
         "float32-conversions",
         "generated-haxe-program",
         "header-owned-structs",
+        "header-complete-field-hidden-struct",
         "imported-enum-equality",
         "imported-struct-record-field",
         "imported-struct-construction",
@@ -326,6 +332,13 @@ def validate_positive(project: RenderedProject) -> None:
         raise CImportFailure(
             "closed Haxe record lost its exact imported by-value struct field"
         )
+    if (
+        "struct hxc_HiddenPointResources {\n"
+        "  struct pointlib_hidden_point hxc_point;\n"
+        "  bool hxc_ready;\n"
+        "};"
+    ) not in header:
+        raise CImportFailure("closed Haxe storage lost its header-complete value")
     for spelling in (
         "#include <float.h>",
         "#include <limits.h>",
@@ -355,12 +368,16 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_point_component(",
         "pointlib_point_verify(",
         "pointlib_float_point_make(",
+        "pointlib_hidden_point_make(",
+        "pointlib_hidden_point_identity(",
+        "pointlib_hidden_point_verify(",
         "pointlib_float_point_scale(",
         "pointlib_float_point_dot(",
         "pointlib_float32_verify(",
         "pointlib_inline_float32_verify(",
         "struct pointlib_point",
         "struct pointlib_float_point",
+        "struct pointlib_hidden_point",
         "pointlib_coord",
         "pointlib_point_alias",
         "pointlib_axis",
@@ -478,6 +495,7 @@ def validate_positive(project: RenderedProject) -> None:
                 "Axis",
                 "Coord",
                 "FloatPoint",
+                "HiddenPoint",
                 "Point",
                 "PointAlias",
                 "PointLib",
@@ -534,6 +552,10 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_point_verify",
         "pointlib_float_point",
         "pointlib_float_point_make",
+        "pointlib_hidden_point",
+        "pointlib_hidden_point_make",
+        "pointlib_hidden_point_identity",
+        "pointlib_hidden_point_verify",
         "pointlib_float_point_scale",
         "pointlib_float_point_dot",
         "pointlib_float32_verify",
@@ -694,6 +716,7 @@ def check_native(
                 "float32-conversions",
                 "generated-haxe-program",
                 "header-owned-structs",
+                "header-complete-field-hidden-struct",
                 "imported-enum-equality",
                 "imported-struct-record-field",
                 "imported-struct-construction",

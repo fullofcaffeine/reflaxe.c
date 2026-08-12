@@ -4,12 +4,27 @@ typedef PointResources = {
 	final ready:Bool;
 }
 
+/** Ordinary Haxe storage can retain a header-complete value by copy. */
+typedef HiddenPointResources = {
+	final point:HiddenPoint;
+	final ready:Bool;
+}
+
 /** Owns one copied header-defined value for an ordinary Haxe object lifetime. */
 class PointOwner {
 	public final point:Point;
 
 	/** Store the caller's by-value point without retaining any borrowed address. */
 	public function new(point:Point)
+		this.point = point;
+}
+
+/** Owns one copied value while its C fields stay private to pointlib. */
+class HiddenPointOwner {
+	public final point:HiddenPoint;
+
+	/** Store the value without learning or copying its C field definitions. */
+	public function new(point:HiddenPoint)
 		this.point = point;
 }
 
@@ -59,6 +74,10 @@ class Main {
 	static function pointResources(point:Point):PointResources
 		return {point: point, ready: true};
 
+	/** Put a header-complete value inside an ordinary Haxe record. */
+	static function hiddenPointResources(point:HiddenPoint):HiddenPointResources
+		return {point: point, ready: true};
+
 	/**
 	 * Select one header-owned struct by value.
 	 *
@@ -90,6 +109,9 @@ class Main {
 		PointLib.translateInPlace(c.Ref.to(inPlace), PointLib.one, PointLib.five);
 		var resources = pointResources(localPoint(PointLib.seven, true));
 		var owner = new PointOwner(resources.point);
+		var hiddenResources = hiddenPointResources(PointLib.makeHiddenPoint(PointLib.five, PointLib.seven));
+		var hiddenOwner = new HiddenPointOwner(hiddenResources.point);
+		var hiddenPoint = PointLib.hiddenPointIdentity(hiddenOwner.point);
 		var right = selectPoint(false, left, owner.point);
 		final zeroed:Point = c.StructInit.zero();
 		left.x = PointLib.one;
@@ -115,6 +137,8 @@ class Main {
 		var locale = 0;
 		while (!flipped
 			|| !resources.ready
+			|| !hiddenResources.ready
+			|| !PointLib.verifyHiddenPoint(hiddenPoint)
 			|| !PointLib.verifyVariadicFixedPrefix(PointLib.one)
 			|| !axisIsY
 			|| !axisIsNotX

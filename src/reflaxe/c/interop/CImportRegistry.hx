@@ -514,9 +514,10 @@ class CImportRegistry {
 
 	function prepareStructFields(prepared:CPreparedImportType, contract:TypedCDeclaration, declaration:TypedAstDeclaration):Void {
 		final fields = contract.fields.filter(field -> field.kind == "field");
-		if (fields.length == 0)
-			abiFailure(rawPosition(declaration), declaration.sourcePath, 'imported struct `${prepared.haxePath}`',
-				"A by-value struct must expose at least one field.");
+		// An empty field list hides a complete struct that the required C header
+		// owns. The imported type remains usable by value, but Haxe cannot inspect
+		// or initialize its fields. The native compiler rejects an incomplete or
+		// mismatched header type when it compiles the generated declaration.
 		for (index in 0...fields.length) {
 			final contractField = fields[index];
 			if (contractField.bitWidth != null || contractField.align != null)

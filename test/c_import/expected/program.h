@@ -54,9 +54,20 @@ static inline int32_t hxc_i32_add_wrapping(int32_t hxc_l_left, int32_t hxc_l_rig
 
 struct hxc_PointOwner;
 
+struct hxc_HiddenPointOwner;
+
+struct hxc_HiddenPointResources {
+  struct pointlib_hidden_point hxc_point;
+  bool hxc_ready;
+};
+
 struct hxc_PointResources {
   struct pointlib_point hxc_point;
   bool hxc_ready;
+};
+
+struct hxc_HiddenPointOwner {
+  struct pointlib_hidden_point hxc_point;
 };
 
 struct hxc_PointOwner {
@@ -65,6 +76,8 @@ struct hxc_PointOwner {
 
 extern int32_t hxc_InlineFloat32Probe_sideEffectCount;
 
+void hxc_compiler_constructor_HiddenPointOwner(struct hxc_HiddenPointOwner *hxc_l_self, struct pointlib_hidden_point hxc_l_point);
+
 void hxc_compiler_constructor_PointOwner(struct hxc_PointOwner *hxc_l_self, struct pointlib_point hxc_l_point);
 
 float hxc_InlineFloat32Probe_narrowWithoutInlining(double hxc_l_value);
@@ -72,6 +85,8 @@ float hxc_InlineFloat32Probe_narrowWithoutInlining(double hxc_l_value);
 int32_t hxc_InlineFloat32Probe_nextInteger(void);
 
 bool hxc_InlineFloat32Probe_run(void);
+
+struct hxc_HiddenPointResources hxc_Main_hiddenPointResources(struct pointlib_hidden_point hxc_l_point);
 
 struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_l_y, bool hxc_l_useY);
 

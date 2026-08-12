@@ -28,6 +28,11 @@ typedef struct pointlib_float_point {
   float y;
 } pointlib_float_point;
 
+typedef struct pointlib_hidden_point {
+  pointlib_coord x;
+  pointlib_coord y;
+} pointlib_hidden_point;
+
 #define POINTLIB_COORD_ZERO INT32_C(0)
 #define POINTLIB_COORD_ONE INT32_C(1)
 #define POINTLIB_COORD_TWO INT32_C(2)
@@ -48,6 +53,9 @@ pointlib_axis pointlib_axis_identity(pointlib_axis axis);
 pointlib_coord pointlib_point_component(pointlib_point point, pointlib_axis axis);
 bool pointlib_point_verify(pointlib_point left, pointlib_point right, int64_t dot, pointlib_coord component, pointlib_axis axis, const char *label);
 pointlib_float_point pointlib_float_point_make(float x, float y);
+pointlib_hidden_point pointlib_hidden_point_make(pointlib_coord x, pointlib_coord y);
+pointlib_hidden_point pointlib_hidden_point_identity(pointlib_hidden_point point);
+bool pointlib_hidden_point_verify(pointlib_hidden_point point);
 pointlib_float_point pointlib_float_point_scale(pointlib_float_point point, float scale);
 float pointlib_float_point_dot(pointlib_float_point left, pointlib_float_point right);
 bool pointlib_float32_verify(pointlib_float_point point, float dot, double widened, float tie, float subnormal,

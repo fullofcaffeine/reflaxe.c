@@ -36,13 +36,13 @@
       "ub-safe-primitive-operations"
     ],
     "reachability": {
-      "typeInstances": 7,
-      "functions": 13,
-      "blocks": 46,
-      "modules": 7,
+      "typeInstances": 10,
+      "functions": 15,
+      "blocks": 52,
+      "modules": 8,
       "runtimeIntents": 0,
-      "instructions": 261,
-      "cleanupActions": 2
+      "instructions": 292,
+      "cleanupActions": 4
     },
     "programLocalHelpers": [
       "hxc.f64.divide.zero-safe",
