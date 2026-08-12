@@ -90,51 +90,87 @@ chunk archive.west 0 0 0 32 16 32
   run 0 99
   run 9 26
   run 8 3
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 167
-  run 1 32
-  run 0 99
-  run 9 26
-  run 8 3
-  run 0 24
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
   run 0 167
   run 1 32
   run 0 99
   run 9 26
   run 8 3
-  run 0 24
+  run 0 3
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 167
+  run 1 32
+  run 0 99
+  run 9 26
+  run 8 3
+  run 0 3
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 1
   run 5 7
   run 0 160
@@ -142,51 +178,87 @@ chunk archive.west 0 0 0 32 16 32
   run 0 99
   run 9 26
   run 8 3
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 167
-  run 1 32
-  run 0 99
-  run 9 26
-  run 8 3
-  run 0 24
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
   run 0 167
   run 1 32
   run 0 99
   run 9 26
   run 8 3
-  run 0 24
+  run 0 3
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 167
+  run 1 32
+  run 0 99
+  run 9 26
+  run 8 3
+  run 0 3
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 1
   run 5 7
   run 0 160
@@ -194,51 +266,87 @@ chunk archive.west 0 0 0 32 16 32
   run 0 99
   run 9 26
   run 8 3
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
   run 9 1
   run 0 167
   run 1 32
   run 0 99
   run 9 24
   run 8 5
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
   run 9 1
   run 0 167
   run 1 32
   run 0 99
   run 9 27
   run 5 2
-  run 0 24
+  run 0 3
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 3
-  run 0 29
+  run 0 8
+  run 9 1
+  run 0 20
   run 9 1
   run 5 7
   run 0 160
@@ -338,8 +446,7 @@ chunk archive.west 0 0 0 32 16 32
   run 0 31
   run 9 1
   run 5 20
-  run 9 1
-  run 0 167
+  run 0 168
   run 1 32
   run 0 99
   run 9 17
@@ -382,9 +489,7 @@ chunk archive.west 0 0 0 32 16 32
   run 9 1
   run 0 31
   run 9 1
-  run 0 20
-  run 9 1
-  run 0 167
+  run 0 188
   run 1 32
   run 0 99
   run 9 18
@@ -413,8 +518,7 @@ chunk archive.west 0 0 0 32 16 32
   run 9 2
   run 0 7
   run 9 1
-  run 0 20
-  run 9 1
+  run 0 21
   run 5 7
   run 0 160
   run 1 32
@@ -443,9 +547,7 @@ chunk archive.west 0 0 0 32 16 32
   run 9 2
   run 0 7
   run 9 1
-  run 0 20
-  run 9 1
-  run 0 167
+  run 0 188
   run 1 32
   run 0 99
   run 9 27
@@ -464,57 +566,52 @@ chunk archive.west 0 0 0 32 16 32
   run 5 2
   run 0 3
   run 5 2
+  run 0 16
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 188
+  run 1 32
+  run 0 99
+  run 9 27
+  run 5 2
+  run 0 3
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 167
+  run 1 32
+  run 0 99
+  run 9 27
+  run 5 2
+  run 0 3
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
   run 0 5
-  run 9 1
-  run 0 10
-  run 9 1
-  run 0 20
-  run 9 1
-  run 0 10
-  run 9 1
-  run 0 20
-  run 9 1
-  run 0 167
-  run 1 32
-  run 0 99
-  run 9 27
-  run 5 2
-  run 0 3
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 20
-  run 9 1
-  run 0 10
-  run 9 1
-  run 0 20
-  run 9 1
-  run 0 10
-  run 9 1
-  run 0 20
-  run 9 1
-  run 0 167
-  run 1 32
-  run 0 99
-  run 9 27
-  run 5 2
-  run 0 3
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 5 20
+  run 5 15
   run 9 1
   run 0 167
   run 1 32
@@ -795,7 +892,8 @@ chunk archive.west 0 0 0 32 16 32
   run 9 1
   run 0 10
   run 9 1
-  run 5 20
+  run 0 5
+  run 5 15
   run 9 1
   run 0 167
   run 1 32
@@ -803,29 +901,37 @@ chunk archive.west 0 0 0 32 16 32
   run 9 27
   run 5 2
   run 0 3
-  run 9 25
+  run 9 1
+  run 0 5
+  run 9 15
+  run 0 11
+  run 9 1
+  run 0 5
+  run 9 15
+  run 0 11
+  run 9 1
+  run 0 5
+  run 9 15
+  run 0 11
+  run 9 1
+  run 0 5
+  run 9 15
+  run 0 11
+  run 9 1
+  run 0 5
+  run 9 15
+  run 0 11
+  run 9 1
+  run 0 5
+  run 9 15
+  run 0 7
   run 5 1
-  run 0 6
-  run 9 25
-  run 5 1
-  run 0 6
-  run 9 25
-  run 5 1
-  run 0 6
-  run 9 25
-  run 5 1
-  run 0 6
-  run 9 25
-  run 5 1
-  run 0 6
-  run 9 25
-  run 5 4
   run 0 160
   run 1 32
   run 0 99
   run 9 27
   run 5 2
-  run 0 24
+  run 0 3
   run 9 1
   run 0 31
   run 9 1
@@ -837,94 +943,109 @@ chunk archive.west 0 0 0 32 16 32
   run 9 1
   run 0 31
   run 9 1
-  run 0 167
+  run 0 188
   run 1 32
   run 0 99
   run 9 27
   run 5 2
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 1
-  run 9 2
-  run 0 28
+  run 0 31
   run 9 1
-  run 0 1
-  run 9 2
-  run 0 28
+  run 0 31
   run 9 1
-  run 0 1
-  run 9 2
-  run 0 28
+  run 0 31
   run 9 1
-  run 0 1
-  run 9 2
-  run 0 28
+  run 0 31
   run 9 1
-  run 0 1
-  run 9 2
-  run 0 28
+  run 0 31
   run 9 1
-  run 0 167
+  run 0 188
   run 1 32
   run 0 99
   run 9 27
   run 5 2
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 1
+  run 0 22
   run 9 2
-  run 0 28
+  run 0 7
   run 9 1
-  run 0 1
+  run 0 22
   run 9 2
-  run 0 28
+  run 0 7
   run 9 1
-  run 0 1
+  run 0 22
   run 9 2
-  run 0 28
+  run 0 7
   run 9 1
-  run 0 1
+  run 0 22
   run 9 2
-  run 0 28
+  run 0 7
   run 9 1
-  run 0 1
+  run 0 22
   run 9 2
-  run 0 28
+  run 0 7
   run 9 1
+  run 0 21
   run 5 7
   run 0 160
   run 1 32
   run 0 99
   run 9 27
   run 5 2
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
   run 9 1
   run 0 167
   run 1 32
   run 0 99
   run 9 27
   run 5 2
-  run 0 24
+  run 0 3
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
   run 9 1
-  run 0 31
+  run 0 10
   run 9 1
-  run 0 31
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
+  run 9 1
+  run 0 10
+  run 9 1
+  run 0 20
   run 9 1
   run 0 167
   run 1 32
@@ -969,69 +1090,117 @@ chunk archive.east 32 0 0 32 16 32
   run 9 25
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 8 4
   run 9 25
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 8 4
   run 9 25
   run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 23
+  run 0 19
+  run 9 1
+  run 0 3
   run 5 8
   run 9 1
-  run 0 183
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 8 4
   run 9 25
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 8 4
@@ -1040,87 +1209,147 @@ chunk archive.east 32 0 0 32 16 32
   run 9 22
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 8 4
   run 9 25
   run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 23
+  run 0 19
+  run 9 1
+  run 0 3
   run 5 8
   run 9 1
-  run 0 183
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 8 4
   run 9 25
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 8 4
   run 9 25
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 5 3
   run 9 26
   run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 29
+  run 0 19
+  run 9 1
+  run 0 9
   run 9 3
-  run 0 23
+  run 0 19
+  run 9 1
+  run 0 3
   run 5 8
   run 9 1
-  run 0 183
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 9 29
@@ -1190,8 +1419,7 @@ chunk archive.east 32 0 0 32 16 32
   run 9 1
   run 0 31
   run 9 1
-  run 0 11
-  run 9 1
+  run 0 12
   run 5 19
   run 9 1
   run 0 163
@@ -1235,9 +1463,7 @@ chunk archive.east 32 0 0 32 16 32
   run 9 1
   run 0 31
   run 9 1
-  run 0 11
-  run 9 1
-  run 0 19
+  run 0 31
   run 9 1
   run 0 163
   run 1 32
@@ -1268,8 +1494,7 @@ chunk archive.east 32 0 0 32 16 32
   run 9 1
   run 0 3
   run 5 8
-  run 9 1
-  run 0 19
+  run 0 20
   run 9 1
   run 0 163
   run 1 32
@@ -1298,9 +1523,7 @@ chunk archive.east 32 0 0 32 16 32
   run 9 2
   run 0 20
   run 9 1
-  run 0 11
-  run 9 1
-  run 0 19
+  run 0 31
   run 9 1
   run 0 163
   run 1 32
@@ -1321,17 +1544,11 @@ chunk archive.east 32 0 0 32 16 32
   run 9 1
   run 0 31
   run 9 1
-  run 0 11
+  run 0 31
   run 9 1
-  run 0 19
+  run 0 31
   run 9 1
-  run 0 11
-  run 9 1
-  run 0 19
-  run 9 1
-  run 0 11
-  run 9 1
-  run 0 19
+  run 0 31
   run 9 1
   run 0 163
   run 1 32
@@ -1372,9 +1589,7 @@ chunk archive.east 32 0 0 32 16 32
   run 8 1
   run 9 4
   run 8 1
-  run 9 4
-  run 8 1
-  run 9 3
+  run 9 8
   run 8 1
   run 9 2
   run 0 31
@@ -1389,7 +1604,9 @@ chunk archive.east 32 0 0 32 16 32
   run 9 1
   run 0 11
   run 9 1
-  run 5 19
+  run 5 12
+  run 0 5
+  run 5 2
   run 9 1
   run 0 163
   run 1 32
@@ -1634,31 +1851,104 @@ chunk archive.east 32 0 0 32 16 32
   run 9 1
   run 0 11
   run 9 1
-  run 5 19
+  run 5 12
+  run 0 5
+  run 5 2
   run 9 1
   run 0 163
   run 1 32
   run 0 96
   run 5 3
   run 9 26
-  run 0 7
-  run 5 1
-  run 9 24
-  run 0 7
-  run 5 1
-  run 9 24
-  run 0 7
-  run 5 1
-  run 9 24
-  run 0 7
-  run 5 1
-  run 9 24
-  run 0 7
-  run 5 1
-  run 9 24
+  run 0 12
+  run 9 12
+  run 0 5
+  run 9 3
+  run 0 12
+  run 9 12
+  run 0 5
+  run 9 3
+  run 0 12
+  run 9 12
+  run 0 5
+  run 9 3
+  run 0 12
+  run 9 12
+  run 0 5
+  run 9 3
+  run 0 12
+  run 9 12
+  run 0 5
+  run 9 3
   run 0 3
-  run 5 5
-  run 9 24
+  run 5 2
+  run 0 7
+  run 9 12
+  run 0 5
+  run 9 3
+  run 0 163
+  run 1 32
+  run 0 96
+  run 5 3
+  run 9 26
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 163
+  run 1 32
+  run 0 96
+  run 5 3
+  run 9 26
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 31
+  run 9 1
+  run 0 163
+  run 1 32
+  run 0 96
+  run 5 3
+  run 9 26
+  run 0 9
+  run 9 2
+  run 0 20
+  run 9 1
+  run 0 9
+  run 9 2
+  run 0 20
+  run 9 1
+  run 0 9
+  run 9 2
+  run 0 20
+  run 9 1
+  run 0 9
+  run 9 2
+  run 0 20
+  run 9 1
+  run 0 9
+  run 9 2
+  run 0 20
+  run 9 1
+  run 0 3
+  run 5 8
+  run 0 20
+  run 9 1
   run 0 163
   run 1 32
   run 0 96
@@ -1666,86 +1956,58 @@ chunk archive.east 32 0 0 32 16 32
   run 9 26
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
-  run 1 32
-  run 0 96
-  run 5 3
-  run 9 26
-  run 0 9
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 183
-  run 1 32
-  run 0 96
-  run 5 3
-  run 9 26
-  run 0 9
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 29
-  run 9 3
-  run 0 23
-  run 5 8
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 96
   run 5 3
   run 9 26
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 31
-  run 9 1
-  run 0 183
-  run 1 32
-  run 0 96
-  run 5 3
-  run 9 26
   run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 31
+  run 0 11
   run 9 1
-  run 0 31
+  run 0 19
   run 9 1
-  run 0 183
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 11
+  run 9 1
+  run 0 19
+  run 9 1
+  run 0 163
   run 1 32
   run 0 128
   run 9 9
@@ -1770,7 +2032,7 @@ end object
 object archive.ceesh-line
   tag collaboration
   tag mechanism
-  placement stateful caxecraft:gate-relay caxecraft:waiting 34500 5000 26500 0
+  placement stateful caxecraft:gate-relay caxecraft:waiting 37500 5000 26500 0
 end object
 object archive.central-haxeforge
   tag mechanism
@@ -1795,7 +2057,7 @@ end object
 object guide.ceesh
   tag friend
   tag engineer
-  placement npc caxecraft:ceesh dialogue.ceesh.archive 31500 5000 26500 0
+  placement npc caxecraft:ceesh dialogue.ceesh.archive 34500 5000 26500 0
 end object
 object item.archive-cache
   tag discovery

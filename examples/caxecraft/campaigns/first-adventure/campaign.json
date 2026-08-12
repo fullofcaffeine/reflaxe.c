@@ -43,8 +43,8 @@
     {
       "id": "forge-archive",
       "path": "scenarios/first-adventure/forge-archive.caxemap",
-      "byteLength": 26944,
-      "sha256": "f12df668fb0f9197e679e2c73ad7fdc9c7b03a05b713aab93280cbd2adf2fe76"
+      "byteLength": 29656,
+      "sha256": "543c06b3d527a8c63c2b54ee379ab40e76d546eeb6e4ce12d5437ac85555265f"
     },
     {
       "id": "frostmere",

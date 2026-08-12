@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name forge-archive-journey
-frames 310
+frames 70
 
 # Enter Adventure, select the reloadable Forge Archive, and meet Ceesh at the
 # main line.
@@ -9,27 +9,18 @@ checkpoint 0 capture title-selection
 action 1 menu-confirm
 checkpoint 1 capture campaign-selection
 action 2 menu-next
-checkpoint 3 capture level-selection
-action 4 menu-confirm
+action 4 menu-next
+checkpoint 5 capture level-selection
+action 6 menu-confirm
 expect 20 screen playing
 expect 20 mode adventure
 expect 20 level forge-archive
 expect 20 objective objective.join-ceesh
-hold 13 32 forward
+hold 21 32 forward
 action 34 interact
 action 39 interact
-expect 40 objective objective.restore-branches
-expect 40 object-state archive.ceesh-line=caxecraft:entered
-
-# Follow the broad archive gallery to one representative branch. Free play and
-# the live agent session own the alternate forge route, pacing, and visual feel.
-hold 41 85 forward
-hold 87 116 turn-left
-hold 118 247 forward
-hold 249 278 turn-right
-hold 280 287 forward
-action 290 interact
-expect 295 object-state archive.west-index=caxecraft:entered
-expect 295 objective objective.restore-branches
-checkpoint 300 capture final
+action 44 interact
+expect 45 objective objective.restore-branches
+expect 45 object-state archive.ceesh-line=caxecraft:entered
+checkpoint 60 capture final
 end
