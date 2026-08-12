@@ -1,6 +1,6 @@
 PILOSCRIPT 1
 name castle-underworks-journey
-frames 272
+frames 480
 
 # Enter Adventure and choose Castle Underworks from reloadable campaign data.
 action 0 menu-next
@@ -13,28 +13,38 @@ action 6 menu-next
 action 8 menu-next
 action 10 menu-next
 action 12 menu-next
-checkpoint 13 capture level-selection
-expect 13 level castle-underworks
-action 14 menu-confirm
-expect 22 screen playing
-expect 22 mode adventure
-expect 22 level castle-underworks
-expect 22 objective objective.isolate-wing
+action 14 menu-next
+action 16 menu-next
+checkpoint 17 capture level-selection
+expect 17 level castle-underworks
+action 20 menu-confirm
+expect 32 screen playing
+expect 32 mode adventure
+expect 32 level castle-underworks
+expect 32 objective objective.isolate-wing
 
-# Hear Ceesh's plan, then take the safer coolant gallery around the sabotaged
-# lift. The ash-vent alternative remains a free-play choice, not a duplicate
-# permanent journey.
-hold 15 34 forward
-action 36 interact
-action 41 interact
-hold 42 71 turn-left
-hold 72 112 forward
-hold 114 143 turn-right
-hold 144 247 forward
-action 249 interact
-expect 252 objective objective.reach-archive
-expect 252 object-state underworks.coolant-relay=caxecraft:entered
-expect 253 object-state underworks.archive-gate=caxecraft:open
-action 254 interact
-checkpoint 257 capture final
+# Follow the visible blue coolant channel around the broken lift machinery.
+# This is one representative route; the parallel ash-marked route remains for
+# free play instead of becoming a second permanent content test.
+hold 33 94 forward
+hold 96 123 turn-left
+hold 125 166 forward
+hold 168 195 turn-right
+hold 197 263 forward
+action 266 interact
+expect 270 object-state underworks.coolant-relay=caxecraft:entered
+expect 271 object-state underworks.archive-gate=caxecraft:open
+expect 271 objective objective.reach-archive
+action 272 interact
+action 274 interact
+
+# Turn onto the rejoined service walk and cross the opened archive gate. The
+# campaign transition loads Forge Archive at runtime.
+hold 276 282 turn-right
+hold 284 452 forward
+expect 460 level forge-archive
+expect 460 objective objective.join-ceesh
+action 470 pause
+checkpoint 470 capture final
+expect 470 screen paused
 end
