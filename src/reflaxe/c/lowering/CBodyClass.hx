@@ -513,6 +513,20 @@ class CBodyClassRegistry {
 						}
 						continue;
 					}
+					// A collector-managed Array or another traced value cannot remain
+					// reachable only through automatic C storage. The collector does not
+					// scan the native stack conservatively, so give the containing Haxe
+					// object an exact descriptor and root. This is deliberately
+					// conservative: a later escape analysis may recover stack storage by
+					// publishing each traced field as an exact root for the full object
+					// lifetime.
+					if (field.type.interfaceValue() == null && containsManagedReference(field.type, [])) {
+						if (!value.managedByCollector) {
+							value.managedByCollector = true;
+							changed = true;
+						}
+						continue;
+					}
 					final interfaceValue = field.type.interfaceValue();
 					if (interfaceValue == null)
 						continue;

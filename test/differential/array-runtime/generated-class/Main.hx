@@ -14,10 +14,11 @@ final class Main {
 		copied.push(first);
 		final found = findNode(nodes, 20);
 		final missing = findNode(nodes, 99);
+		final stackOwner = new StackArrayOwner(first, second);
 		// Cross both the Array growth boundary and the collector's deterministic
 		// one-mebibyte pressure threshold. The final assertions then prove that a
-		// collection traced the live Array slots and the first<->second cycle rather
-		// than merely surviving until process teardown.
+		// collection traced the live Array slots, the first<->second cycle, and the
+		// Array retained by the otherwise stack-eligible owner.
 		for (index in 0...40000)
 			nodes.push(new ManagedNode(index));
 
@@ -25,6 +26,7 @@ final class Main {
 		alias.add(5);
 		first.connect(second);
 		second.connect(first);
+		final stackFound = stackOwner.find(20);
 		final originalFirstLinks = first.links;
 		final replacementFirstLinks = [second];
 		first.replaceLinks(replacementFirstLinks);
@@ -34,7 +36,8 @@ final class Main {
 		while (nodes.length != 40003 || copied.length != 4 || copied[0] != second || copied[3] != first || nodes[0].value != 15 || nodes[1] != first
 			|| nodes[2] != null || first.value != 15 || originalFirstLinks.length != 1 || originalFirstLinks[0] != second
 			|| replacementFirstLinks.length != 2 || first.linkCount() != 2 || second.linkCount() != 1 || first.sampleCount() != 1 || absent != null
-			|| present == null || present.length != 1 || present[0] != first || found != second || missing != null) {}
+			|| present == null || present.length != 1 || present[0] != first || found != second || missing != null || stackOwner.count() != 2
+			|| stackFound != second) {}
 	}
 
 	/** Return one matching class reference directly from an Array iteration. */
@@ -55,5 +58,29 @@ final class Main {
 		if (!present)
 			return null;
 		return [node];
+	}
+}
+
+/**
+	A nonescaping stack-backed object whose traced Array field spans another call.
+
+	The owner itself needs no stable heap identity. Its Array still remains a live
+	Haxe field until the owner leaves scope, including while another function
+	allocates enough collector objects to trigger a mark-and-sweep pass.
+**/
+private final class StackArrayOwner {
+	final nodes:Array<ManagedNode>;
+
+	public function new(first:ManagedNode, second:ManagedNode)
+		nodes = [first, second];
+
+	public function count():Int
+		return nodes.length;
+
+	public function find(wanted:Int):Null<ManagedNode> {
+		for (node in nodes)
+			if (node.value == wanted)
+				return node;
+		return null;
 	}
 }
