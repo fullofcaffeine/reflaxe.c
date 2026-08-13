@@ -2005,7 +2005,7 @@ object guide.fallskeeper
 end object
 object guide.moss
   tag friend
-  placement npc caxecraft:moss dialogue.moss.falls 17500 8000 25500 180
+  placement npc caxecraft:moss dialogue.moss.falls 20500 7000 25500 180
 end object
 object item.grotto-lantern
   tag reward
