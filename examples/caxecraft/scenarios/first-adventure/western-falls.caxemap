@@ -741,8 +741,8 @@ chunk region.western-falls 0 0 0 32 16 32
   run 0 8
   run 9 4
   run 0 15
-  run 4 5
-  run 0 8
+  run 4 4
+  run 0 9
   run 9 4
   run 0 55
   run 5 2
