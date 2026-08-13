@@ -11,6 +11,11 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioCloudLayer;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioEnvironmentProfile;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioRgb;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioSun;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
@@ -66,6 +71,7 @@ final class ScenarioDocumentReader {
 		final locales:Array<ScenarioLocaleCatalog> = [];
 		var title:Null<ScenarioText> = null;
 		var mode:Null<ScenarioMode> = null;
+		var environment:Null<ScenarioEnvironment> = null;
 		var worldSize:Null<VoxelSize> = null;
 		final palette:Array<BlockPaletteEntry> = [];
 		final chunks:Array<VoxelChunk> = [];
@@ -154,6 +160,13 @@ final class ScenarioDocumentReader {
 						return cursor.failToken(record.tokens[1], InvalidToken);
 					cursor.locate(Mode, record);
 					cursor.advance();
+				case "environment":
+					if (environment != null)
+						return cursor.failAt(record, InvalidToken);
+					switch readEnvironment() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(value): environment = value;
+					}
 				case "world":
 					if (!ScenarioTokenGrammar.hasTokenCount(record, 4) || worldSize != null)
 						return cursor.failAt(record, InvalidToken);
@@ -272,6 +285,7 @@ final class ScenarioDocumentReader {
 				}),
 				title: title,
 				mode: mode,
+				environment: environment,
 				world: {
 					size: worldSize,
 					palette: palette,
@@ -292,6 +306,126 @@ final class ScenarioDocumentReader {
 			recordCoordinates: cursor.recordCoordinates(),
 			sourceLocations: cursor.sourceLocations()
 		});
+	}
+
+	/** Read one optional, explicitly bounded visual environment block. */
+	function readEnvironment():ScenarioReadResult<ScenarioEnvironment> {
+		final header = cursor.current();
+		if (!ScenarioTokenGrammar.hasTokenCount(header, 2) || ScenarioTokenGrammar.bareText(header.tokens[1]) != "voxel-horizon")
+			return cursor.failAt(header, InvalidToken);
+		cursor.locate(Environment, header);
+		cursor.advance();
+		var sky:Null<ScenarioRgb> = null;
+		var sun:Null<ScenarioSun> = null;
+		var sunDeclared = false;
+		var clouds:Null<ScenarioCloudLayer> = null;
+		final edges:Array<ScenarioHorizonEdge> = [];
+		var edgesDeclared = false;
+		var continueWater:Null<Bool> = null;
+		while (cursor.hasRecord() && !ScenarioTokenGrammar.isEnd(cursor.current(), "environment")) {
+			final record = cursor.current();
+			if (record.indent != 2)
+				return cursor.failAt(record, UnexpectedRecord(ScenarioTokenGrammar.firstText(record)));
+			switch ScenarioTokenGrammar.firstText(record) {
+				case "sky":
+					if (sky != null || !ScenarioTokenGrammar.hasTokenCount(record, 4))
+						return cursor.failAt(record, InvalidToken);
+					final red = ScenarioTokenGrammar.integer(record.tokens[1]);
+					final green = ScenarioTokenGrammar.integer(record.tokens[2]);
+					final blue = ScenarioTokenGrammar.integer(record.tokens[3]);
+					if (red == null || green == null || blue == null || !isColor(red) || !isColor(green) || !isColor(blue))
+						return cursor.failAt(record, IntegerOutOfRange);
+					sky = {red: red, green: green, blue: blue};
+				case "sun":
+					if (sunDeclared)
+						return cursor.failAt(record, InvalidToken);
+					sunDeclared = true;
+					if (ScenarioTokenGrammar.hasTokenCount(record, 2) && ScenarioTokenGrammar.bareText(record.tokens[1]) == "none")
+						sun = null;
+					else {
+						if (!ScenarioTokenGrammar.hasTokenCount(record, 5))
+							return cursor.failAt(record, InvalidToken);
+						final x = ScenarioTokenGrammar.integer(record.tokens[1]);
+						final y = ScenarioTokenGrammar.integer(record.tokens[2]);
+						final z = ScenarioTokenGrammar.integer(record.tokens[3]);
+						final radius = ScenarioTokenGrammar.integer(record.tokens[4]);
+						if (x == null || y == null || z == null || radius == null || y <= 0 || radius < 250 || radius > 10000)
+							return cursor.failAt(record, IntegerOutOfRange);
+						sun = {
+							x: x,
+							y: y,
+							z: z,
+							radiusMilli: radius
+						};
+					}
+				case "clouds":
+					if (clouds != null || !ScenarioTokenGrammar.hasTokenCount(record, 4))
+						return cursor.failAt(record, InvalidToken);
+					final count = ScenarioTokenGrammar.integer(record.tokens[1]);
+					final speed = ScenarioTokenGrammar.integer(record.tokens[2]);
+					final seed = ScenarioTokenGrammar.integer(record.tokens[3]);
+					if (count == null || speed == null || seed == null || count < 0 || count > 12 || speed < 0 || speed > 5000)
+						return cursor.failAt(record, IntegerOutOfRange);
+					clouds = {count: count, speedMilli: speed, seed: seed};
+				case "edges":
+					if (edgesDeclared || record.tokens.length < 2 || record.tokens.length > 5)
+						return cursor.failAt(record, InvalidToken);
+					edgesDeclared = true;
+					if (record.tokens.length == 2 && ScenarioTokenGrammar.bareText(record.tokens[1]) == "none") {
+						// An authored sky can deliberately omit every terrain horizon.
+					} else
+						for (index in 1...record.tokens.length) {
+							final edge:Null<ScenarioHorizonEdge> = switch ScenarioTokenGrammar.bareText(record.tokens[index]) {
+								case "north": North;
+								case "south": South;
+								case "east": East;
+								case "west": West;
+								case _: null;
+							};
+							if (edge == null || containsEdge(edges, edge))
+								return cursor.failAt(record, InvalidToken);
+							edges.push(edge);
+						}
+				case "continue-water":
+					if (continueWater != null || !ScenarioTokenGrammar.hasTokenCount(record, 2))
+						return cursor.failAt(record, InvalidToken);
+					continueWater = switch ScenarioTokenGrammar.bareText(record.tokens[1]) {
+						case "true": true;
+						case "false": false;
+						case _: null;
+					};
+					if (continueWater == null)
+						return cursor.failAt(record, InvalidToken);
+				case other:
+					return cursor.failAt(record, UnexpectedRecord(other));
+			}
+			cursor.advance();
+		}
+		if (!cursor.hasRecord() || !ScenarioTokenGrammar.isEnd(cursor.current(), "environment"))
+			return cursor.failAt(header, MissingRecord(EndEnvironmentRecord));
+		cursor.advance();
+		if (sky == null || !sunDeclared || clouds == null || !edgesDeclared || continueWater == null)
+			return cursor.failAt(header, InvalidToken);
+		return ReadOk({
+			profile: ScenarioEnvironmentProfile.VoxelHorizon,
+			sky: sky,
+			sun: sun,
+			clouds: clouds,
+			edges: edges,
+			continueWater: continueWater
+		});
+	}
+
+	/** True when one parsed channel fits an eight-bit color component. */
+	inline function isColor(value:Null<Int>):Bool
+		return value != null && value >= 0 && value <= 255;
+
+	/** Reject duplicate edge names while preserving authored order. */
+	function containsEdge(edges:Array<ScenarioHorizonEdge>, candidate:ScenarioHorizonEdge):Bool {
+		for (edge in edges)
+			if (edge == candidate)
+				return true;
+		return false;
 	}
 
 	function readExtension():ScenarioReadResult<ScenarioExtension> {

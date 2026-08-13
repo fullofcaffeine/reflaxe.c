@@ -53,6 +53,13 @@ locale es-mx
 end locale
 title message scenario_title
 mode adventure
+environment voxel-horizon
+  sky 126 190 201
+  sun 54 31 -76 3400
+  clouds 4 600 817
+  edges north south east west
+  continue-water true
+end environment
 world 32 16 32
 palette 0 caxecraft:air
 palette 1 caxecraft:bedrock

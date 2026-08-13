@@ -40,6 +40,7 @@ enum ScenarioSourceSubject {
 	MessageReference(id:MessageId);
 	Title;
 	Mode;
+	Environment;
 	World;
 	Palette(code:Int);
 	Chunk(id:ScenarioId);

@@ -53,6 +53,7 @@ enum ScenarioExpectedRecord {
 	DefaultLocaleRecord;
 	TitleRecord;
 	ModeRecord;
+	EndEnvironmentRecord;
 	WorldRecord;
 	EndChunkRecord;
 	EndObjectRecord;

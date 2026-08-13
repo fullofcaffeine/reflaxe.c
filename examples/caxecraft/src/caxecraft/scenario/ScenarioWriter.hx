@@ -11,6 +11,8 @@ import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionId;
 import caxecraft.scenario.Scenario.ScenarioMode;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioEnvironmentProfile;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
@@ -57,6 +59,21 @@ final class ScenarioWriter {
 		}
 		lines.push('title ${text(scenario.title)}');
 		lines.push('mode ${mode(scenario.mode)}');
+		if (scenario.environment != null) {
+			final environment = scenario.environment;
+			lines.push('environment ${environmentProfile(environment.profile)}');
+			lines.push('  sky ${environment.sky.red} ${environment.sky.green} ${environment.sky.blue}');
+			if (environment.sun == null)
+				lines.push("  sun none");
+			else
+				lines.push('  sun ${environment.sun.x} ${environment.sun.y} ${environment.sun.z} ${environment.sun.radiusMilli}');
+			lines.push('  clouds ${environment.clouds.count} ${environment.clouds.speedMilli} ${environment.clouds.seed}');
+			final edges = environment.edges.copy();
+			edges.sort((left, right) -> environmentEdgeOrder(left) - environmentEdgeOrder(right));
+			lines.push(edges.length == 0 ? "  edges none" : '  edges ${[for (edge in edges) environmentEdge(edge)].join(" ")}');
+			lines.push('  continue-water ${environment.continueWater ? "true" : "false"}');
+			lines.push("end environment");
+		}
 		lines.push('world ${scenario.world.size.width} ${scenario.world.size.height} ${scenario.world.size.depth}');
 
 		final palette = scenario.world.palette.copy();
@@ -171,6 +188,33 @@ final class ScenarioWriter {
 		}
 		lines.push("end-map");
 		return Bytes.ofString(lines.join("\n") + "\n");
+	}
+
+	/** Canonical token for one admitted environment renderer. */
+	static function environmentProfile(value:ScenarioEnvironmentProfile):String {
+		return switch value {
+			case VoxelHorizon: "voxel-horizon";
+		};
+	}
+
+	/** Canonical compass token for one enabled horizon edge. */
+	static function environmentEdge(value:ScenarioHorizonEdge):String {
+		return switch value {
+			case North: "north";
+			case South: "south";
+			case East: "east";
+			case West: "west";
+		};
+	}
+
+	/** Stable compass order keeps equivalent editor drafts byte-identical. */
+	static function environmentEdgeOrder(value:ScenarioHorizonEdge):Int {
+		return switch value {
+			case North: 0;
+			case South: 1;
+			case East: 2;
+			case West: 3;
+		};
 	}
 
 	static function placement(value:ObjectPlacement):String {

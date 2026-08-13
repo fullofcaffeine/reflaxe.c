@@ -16,6 +16,10 @@ typedef Scenario = {
 	final messages:ScenarioMessages;
 	final title:ScenarioText;
 	final mode:ScenarioMode;
+
+	/** Optional level-authored sky and distant presentation. */
+	final ?environment:ScenarioEnvironment;
+
 	final world:ScenarioWorld;
 	final objects:Array<ScenarioObject>;
 	final story:ScenarioStory;

@@ -186,12 +186,17 @@ function squareDistance(x:Int, z:Int, playerX:Int, playerZ:Int):Int {
 
 /** Emit one already-discovered face with its atlas cell and distance tint. */
 function emitFace(kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, halfPixel:Float, distance:Int):Void {
+	emitTintedFace(kind, face, x, y, z, halfPixel, faceTint(face, distance));
+}
+
+/** Emit one terrain face with a caller-selected atmospheric tint. */
+function emitTintedFace(kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, halfPixel:Float, tint:Color):Void {
 	final tile = TerrainAtlas.tile(kind, face);
 	final u0 = TerrainAtlas.uMin(tile, halfPixel);
 	final u1 = TerrainAtlas.uMax(tile, halfPixel);
 	final v0 = TerrainAtlas.vMin(tile, halfPixel);
 	final v1 = TerrainAtlas.vMax(tile, halfPixel);
-	Rlgl.Color(faceTint(face, distance));
+	Rlgl.Color(tint);
 	switch (face) {
 		case Top:
 			Rlgl.Normal(0.0, 1.0, 0.0);

@@ -14,9 +14,14 @@ import caxecraft.app.TerrainChunkLayout.chunkFor;
 import caxecraft.app.TerrainChunkLayout.packFace;
 import caxecraft.app.TerrainChunkLayout.unpackFace;
 import caxecraft.app.TerrainChunkLayout.unpackKind;
+import caxecraft.app.DistantHorizon.HorizonEdge;
+import caxecraft.app.DistantHorizon.boundaryColumn;
+import caxecraft.app.DistantHorizon.ridgeHeight;
 import caxecraft.domain.BlockKind;
+import caxecraft.domain.WaterCellCodec.sourceCode;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
+import caxecraft.domain.WorldStorage.writeCode;
 import caxecraft.domain.WorldView;
 #if c
 import c.CArray;
@@ -162,6 +167,22 @@ function selfCheck():Int {
 	preparation = cache.prepare(view);
 	if (!preparation.valid || cache.chunkFaceCount(16) != FACES_PER_CHUNK || preparation.faces != FACES_PER_CHUNK)
 		return 15;
+
+	// A distant horizon is presentation only, but its first layer must continue
+	// the actual authored boundary. This north-edge stream fixture protects that
+	// generic ownership without naming a campaign or freezing screen pixels.
+	clear(cells);
+	World.replace(cells, World.coord(36, 0, 0), BlockKind.Bedrock);
+	World.replace(cells, World.coord(36, 1, 0), BlockKind.Dirt);
+	World.replace(cells, World.coord(36, 2, 0), BlockKind.Grass);
+	writeCode(cells, World.indexOf(World.coord(36, 3, 0)), sourceCode());
+	final streamEdge = boundaryColumn(view, World.WIDTH, HorizonEdge.North, 36);
+	if (streamEdge.surfaceY != 2 || streamEdge.material != BlockKind.Grass || streamEdge.waterTop != 4.0)
+		return 16;
+	if (ridgeHeight(streamEdge, 0, 36) != streamEdge.surfaceY
+		|| ridgeHeight(streamEdge, 1, 36) <= streamEdge.surfaceY
+		|| ridgeHeight(streamEdge, 2, 36) <= ridgeHeight(streamEdge, 1, 36))
+		return 17;
 	return 0;
 }
 

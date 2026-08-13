@@ -75,6 +75,7 @@ import caxecraft.scenario.ScenarioValidator;
 import caxecraft.scenario.ScenarioWriter;
 import caxecraft.scenario.ScenarioWorld.ScenarioFluidPlacement;
 import haxe.io.Bytes;
+import sys.io.File;
 
 /** Complete public-command acceptance proof for renderer-independent editing. */
 final class EditorProbe {
@@ -108,6 +109,7 @@ final class EditorProbe {
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
 		final activeLevelChecks = checkActiveLevelProjection();
+		checkEnvironmentTextRoundTrip();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, SetTitle(Literal("Ivvy's workshop")), DocumentMetadata);
@@ -177,6 +179,18 @@ final class EditorProbe {
 		final finalBytes = expectValid(session, "final recovered scenario");
 		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (activeLevelChecks * 131) ^ session.historyEntries();
 		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+	}
+
+	/** Preserve an optional environment through the editor's text-byte boundary. */
+	static function checkEnvironmentTextRoundTrip():Void {
+		final source = File.getBytes("test/fixtures/caxemap/environment.caxemap");
+		final opened = switch EditorSession.openBytes(source, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(error): throw 'editor rejected the environment fixture: $error';
+		};
+		final environment = opened.draftSnapshot().environment;
+		require(environment != null && environment.edges.length == 0 && environment.sun == null, "editor text import lost the optional environment choices");
+		require(opened.canonicalDraft().compare(source) == 0, "editor text round-trip changed the environment bytes");
 	}
 
 	/**
@@ -1307,6 +1321,7 @@ final class EditorProbe {
 			messages: source.messages,
 			title: source.title,
 			mode: source.mode,
+			environment: source.environment,
 			world: source.world,
 			objects: source.objects,
 			story: source.story,

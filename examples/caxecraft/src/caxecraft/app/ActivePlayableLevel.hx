@@ -161,6 +161,62 @@ final class PlayableLevelView {
 	public inline function scenarioTitle(locale:LocaleId):String
 		return levelPresentation.scenarioTitle(locale);
 
+	/** Width of this exact authored map for boundary-derived presentation. */
+	public inline function authoredWorldWidth():Int
+		return levelPresentation.authoredWorldWidth();
+
+	/** Whether this active level declared visual environment presentation. */
+	public inline function hasAuthoredEnvironment():Bool
+		return levelPresentation.hasAuthoredEnvironment();
+
+	/** Authored sky red channel. */
+	public inline function environmentSkyRed():Int
+		return levelPresentation.environmentSkyRed();
+
+	/** Authored sky green channel. */
+	public inline function environmentSkyGreen():Int
+		return levelPresentation.environmentSkyGreen();
+
+	/** Authored sky blue channel. */
+	public inline function environmentSkyBlue():Int
+		return levelPresentation.environmentSkyBlue();
+
+	/** Whether this active environment includes a sun. */
+	public inline function environmentHasSun():Bool
+		return levelPresentation.environmentHasSun();
+
+	/** Authored sun X direction. */
+	public inline function environmentSunX():Int
+		return levelPresentation.environmentSunX();
+
+	/** Authored sun Y direction. */
+	public inline function environmentSunY():Int
+		return levelPresentation.environmentSunY();
+
+	/** Authored sun Z direction. */
+	public inline function environmentSunZ():Int
+		return levelPresentation.environmentSunZ();
+
+	/** Authored apparent sun radius. */
+	public inline function environmentSunRadiusMilli():Int
+		return levelPresentation.environmentSunRadiusMilli();
+
+	/** Authored procedural cloud count. */
+	public inline function environmentCloudCount():Int
+		return levelPresentation.environmentCloudCount();
+
+	/** Authored procedural cloud speed. */
+	public inline function environmentCloudSpeedMilli():Int
+		return levelPresentation.environmentCloudSpeedMilli();
+
+	/** Authored procedural cloud seed. */
+	public inline function environmentCloudSeed():Int
+		return levelPresentation.environmentCloudSeed();
+
+	/** Compact horizon edge and water-continuation settings. */
+	public inline function environmentHorizonMask():Int
+		return levelPresentation.environmentHorizonMask();
+
 	/** Resolve this level's authored Adventure summary for the menu screens. */
 	public inline function adventureTagline(locale:LocaleId):String
 		return levelPresentation.adventureTagline(locale);

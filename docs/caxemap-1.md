@@ -102,7 +102,7 @@ The remaining top-level records appear in this canonical order:
 3. `map` and `asset-pack` exactly once;
 4. when localized message IDs are used, one `default-locale` followed by locale
    blocks sorted by locale ID and messages sorted by message ID;
-5. `title`, `mode`, and `world` exactly once;
+5. `title` and `mode` exactly once, then an optional `environment`, then `world` exactly once;
 6. palette entries sorted by numeric code;
 7. chunks sorted by origin `z`, then `y`, then `x`, then ID;
 8. fluids sorted by ID;
@@ -160,6 +160,39 @@ external logical-path dependencies. The current native playable temporarily
 derives closed Haxe enum names from message IDs at build time (for example,
 `nia_welcome` becomes `NiaWelcome`) so raylib receives static C string literals;
 that bridge does not create a second content source.
+
+### Optional visual environment
+
+A level can add a visual backdrop between `mode` and `world`. If the level
+omits this block, the game uses the plain fallback sky.
+
+```text
+environment voxel-horizon
+  sky 126 190 201
+  sun 54 31 -76 3400
+  clouds 4 600 817
+  edges north south east west
+  continue-water true
+end environment
+```
+
+The `voxel-horizon` profile continues selected map edges as distant textured
+terrain. This terrain is visual only. It does not add collision, editable
+blocks, fluid simulation, objects, triggers, or rules.
+
+The records have these meanings:
+
+- `sky` gives red, green, and blue channels from 0 through 255.
+- `sun` gives a player-relative world direction and a radius in thousandths of
+  a block. Use `sun none` to omit the sun.
+- `clouds` gives a count, speed, and stable seed. A count of zero omits clouds.
+- `edges` selects the map boundaries that receive distant terrain. Use
+  `edges none` to keep only the authored sky, sun, or clouds.
+- `continue-water` visually continues water that touches a selected boundary.
+
+The renderer derives terrain material and starting height from each selected
+edge. Therefore, a river can continue into the distance without a second map.
+The level author still controls which edges use this effect.
 
 World dimensions are positive and no larger than 128 by 64
 by 128; their checked product is at most 1,048,576 cells. Palette codes are

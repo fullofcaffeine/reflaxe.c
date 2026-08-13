@@ -255,6 +255,7 @@ final class ScenarioModelProbe {
 			messages: NoMessageCatalog,
 			title: ScenarioText.Message(new MessageId("sample.title")),
 			mode: ScenarioMode.Creative,
+			environment: null,
 			world: world,
 			objects: objects,
 			story: story,
@@ -613,6 +614,7 @@ final class ScenarioModelProbe {
 			case Feature(_): 2;
 			case MapIdentity(_): 3;
 			case AssetPack: 4;
+			case Environment: 31;
 			case DefaultLocale: 25;
 			case Locale(_): 26;
 			case LocaleMessage(_, _): 27;
@@ -704,6 +706,7 @@ final class ScenarioModelProbe {
 		return switch value {
 			case FormatHeader: 1;
 			case EndMapRecord: 2;
+			case EndEnvironmentRecord: 29;
 			case MapRecord: 3;
 			case AssetPackRecord: 4;
 			case DefaultLocaleRecord: 27;

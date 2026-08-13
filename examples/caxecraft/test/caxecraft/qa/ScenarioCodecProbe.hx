@@ -35,6 +35,14 @@ final class ScenarioCodecProbe {
 		final fullCanonical = File.getBytes("test/fixtures/caxemap/codec-full.caxemap");
 		final fullScenario = readValid(fullCanonical);
 		require(ScenarioWriter.write(fullScenario).compare(fullCanonical) == 0, "full grammar fixture did not round-trip byte-identically");
+		final environmentCanonical = File.getBytes("test/fixtures/caxemap/environment.caxemap");
+		final environmentScenario = readValid(environmentCanonical);
+		require(ScenarioWriter.write(environmentScenario).compare(environmentCanonical) == 0, "environment fixture did not round-trip byte-identically");
+		require(environmentScenario.environment != null
+			&& environmentScenario.environment.edges.length == 0
+			&& environmentScenario.environment.sun == null,
+			"environment fixture lost its explicit presentation opt-outs");
+		require(scenario.environment == null, "minimal fixture gained an environment that it did not author");
 		final localizedCanonical = File.getBytes("test/fixtures/caxemap/localized.caxemap");
 		final localizedScenario = readValid(localizedCanonical);
 		require(ScenarioWriter.write(localizedScenario).compare(localizedCanonical) == 0, "localized fixture did not round-trip byte-identically");
@@ -598,6 +606,7 @@ final class ScenarioCodecProbe {
 			messages: messages,
 			title: source.title,
 			mode: source.mode,
+			environment: source.environment,
 			world: {
 				size: source.world.size,
 				palette: reversed(source.world.palette),

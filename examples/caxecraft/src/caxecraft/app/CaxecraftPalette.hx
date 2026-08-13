@@ -12,6 +12,14 @@ final class CaxecraftPalette {
 	public static inline function fog():Color
 		return Color.rgba(207, 226, 216);
 
+	/** Water that carries an authored boundary stream into the near distance. */
+	public static inline function horizonWaterNear():Color
+		return Color.rgba(75, 166, 183, 215);
+
+	/** Mist-softened water before its continuation meets the sky. */
+	public static inline function horizonWaterFar():Color
+		return Color.rgba(127, 187, 194, 180);
+
 	public static inline function sunGlow():Color
 		return Color.rgba(255, 226, 136, 88);
 

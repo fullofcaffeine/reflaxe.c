@@ -450,6 +450,7 @@ final class CaxeFlowProbe {
 			messages: NoMessageCatalog,
 			title: ScenarioText.Literal("CaxeFlow probe"),
 			mode: ScenarioMode.Adventure,
+			environment: null,
 			world: {
 				size: {width: 2, height: 2, depth: 2},
 				palette: [{code: 0, blockType: AIR}],

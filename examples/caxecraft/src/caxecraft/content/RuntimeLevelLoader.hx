@@ -19,6 +19,8 @@ import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
+import caxecraft.scenario.ScenarioEnvironment;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
@@ -162,6 +164,20 @@ typedef RuntimeLevelAuthoredTrace = {
 final class RuntimeLevelPresentation {
 	final messages:ScenarioMessages;
 	final title:ScenarioText;
+	final worldWidth:Int;
+	final environmentAuthored:Bool;
+	final environmentSkyRedValue:Int;
+	final environmentSkyGreenValue:Int;
+	final environmentSkyBlueValue:Int;
+	final environmentHasSunValue:Bool;
+	final environmentSunXValue:Int;
+	final environmentSunYValue:Int;
+	final environmentSunZValue:Int;
+	final environmentSunRadiusMilliValue:Int;
+	final environmentCloudCountValue:Int;
+	final environmentCloudSpeedMilliValue:Int;
+	final environmentCloudSeedValue:Int;
+	final environmentHorizonMaskValue:Int;
 	final speakerNames:Array<ScenarioSpeakerName>;
 	final dialogues:Array<ScenarioDialogue>;
 	final journal:Array<ScenarioJournalEntry>;
@@ -172,6 +188,37 @@ final class RuntimeLevelPresentation {
 	private function new(scenario:Scenario) {
 		messages = scenario.messages;
 		title = scenario.title;
+		worldWidth = scenario.world.size.width;
+		environmentAuthored = scenario.environment != null;
+		environmentSkyRedValue = scenario.environment == null ? 126 : scenario.environment.sky.red;
+		environmentSkyGreenValue = scenario.environment == null ? 190 : scenario.environment.sky.green;
+		environmentSkyBlueValue = scenario.environment == null ? 201 : scenario.environment.sky.blue;
+		environmentHasSunValue = scenario.environment != null && scenario.environment.sun != null;
+		environmentSunXValue = scenario.environment == null || scenario.environment.sun == null ? 0 : scenario.environment.sun.x;
+		environmentSunYValue = scenario.environment == null || scenario.environment.sun == null ? 0 : scenario.environment.sun.y;
+		environmentSunZValue = scenario.environment == null || scenario.environment.sun == null ? 0 : scenario.environment.sun.z;
+		environmentSunRadiusMilliValue = scenario.environment == null
+			|| scenario.environment.sun == null ? 0 : scenario.environment.sun.radiusMilli;
+		environmentCloudCountValue = scenario.environment == null ? 0 : scenario.environment.clouds.count;
+		environmentCloudSpeedMilliValue = scenario.environment == null ? 0 : scenario.environment.clouds.speedMilli;
+		environmentCloudSeedValue = scenario.environment == null ? 0 : scenario.environment.clouds.seed;
+		var horizonMask = 0;
+		if (scenario.environment != null) {
+			for (edge in scenario.environment.edges)
+				switch edge {
+					case North:
+						horizonMask |= 1;
+					case South:
+						horizonMask |= 2;
+					case East:
+						horizonMask |= 4;
+					case West:
+						horizonMask |= 8;
+				}
+			if (scenario.environment.continueWater)
+				horizonMask |= 16;
+		}
+		environmentHorizonMaskValue = horizonMask;
 		speakerNames = [];
 		for (speakerName in scenario.story.speakerNames)
 			speakerNames.push({speaker: speakerName.speaker, name: speakerName.name});
@@ -203,6 +250,62 @@ final class RuntimeLevelPresentation {
 	/** Resolve the map title in the requested locale, using its declared fallback. */
 	public inline function scenarioTitle(locale:LocaleId):String
 		return resolve(title, locale);
+
+	/** Width of the authored world before fixed native storage padding. */
+	public inline function authoredWorldWidth():Int
+		return worldWidth;
+
+	/** Whether this exact level declared visual environment presentation. */
+	public inline function hasAuthoredEnvironment():Bool
+		return environmentAuthored;
+
+	/** Authored red channel, meaningful only when an environment is present. */
+	public inline function environmentSkyRed():Int
+		return environmentSkyRedValue;
+
+	/** Authored green channel, meaningful only when an environment is present. */
+	public inline function environmentSkyGreen():Int
+		return environmentSkyGreenValue;
+
+	/** Authored blue channel, meaningful only when an environment is present. */
+	public inline function environmentSkyBlue():Int
+		return environmentSkyBlueValue;
+
+	/** Whether the authored environment includes a sun. */
+	public inline function environmentHasSun():Bool
+		return environmentHasSunValue;
+
+	/** Authored player-relative sun X direction. */
+	public inline function environmentSunX():Int
+		return environmentSunXValue;
+
+	/** Authored player-relative sun Y direction. */
+	public inline function environmentSunY():Int
+		return environmentSunYValue;
+
+	/** Authored player-relative sun Z direction. */
+	public inline function environmentSunZ():Int
+		return environmentSunZValue;
+
+	/** Authored apparent sun radius in thousandths of a world unit. */
+	public inline function environmentSunRadiusMilli():Int
+		return environmentSunRadiusMilliValue;
+
+	/** Authored number of deterministic clouds. */
+	public inline function environmentCloudCount():Int
+		return environmentCloudCountValue;
+
+	/** Authored cloud speed in thousandths of a world unit per second. */
+	public inline function environmentCloudSpeedMilli():Int
+		return environmentCloudSpeedMilliValue;
+
+	/** Authored deterministic cloud seed. */
+	public inline function environmentCloudSeed():Int
+		return environmentCloudSeedValue;
+
+	/** Compact horizon edge and water-continuation settings. */
+	public inline function environmentHorizonMask():Int
+		return environmentHorizonMaskValue;
 
 	/**
 	 * Resolve one stable message ID from this map's validated runtime catalog.

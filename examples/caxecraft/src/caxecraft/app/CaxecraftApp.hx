@@ -187,6 +187,8 @@ final class CaxecraftApp {
 	/** Persistent terrain faces rebuilt only after successful world edits. */
 	final terrainRenderer:TerrainRenderer = new TerrainRenderer();
 
+	final distantHorizonRenderer:DistantHorizon.DistantHorizonRenderer = new DistantHorizon.DistantHorizonRenderer();
+
 	/** Persistent transparent-face storage reused by each water frame. */
 	final waterRenderer:WaterRenderer = new WaterRenderer();
 
@@ -1427,9 +1429,18 @@ final class CaxecraftApp {
 				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
 					screen = closeEditor(screen);
 			} else {
-				Raylib.ClearBackground(CaxecraftPalette.sky());
+				final hasEnvironment = levelView.hasAuthoredEnvironment();
+				Raylib.ClearBackground(hasEnvironment ? Color.rgbaClamped(levelView.environmentSkyRed(), levelView.environmentSkyGreen(),
+					levelView.environmentSkyBlue()) : CaxecraftPalette.sky());
 				Raylib.BeginMode3D(camera);
-				drawWorldSun();
+				if (hasEnvironment) {
+					drawWorldSunAndClouds(levelView.environmentHasSun(), levelView.environmentSunX(), levelView.environmentSunY(),
+						levelView.environmentSunZ(), levelView.environmentSunRadiusMilli(), levelView.environmentCloudCount(),
+						levelView.environmentCloudSpeedMilli(), levelView.environmentCloudSeed(), eyeX, eyeY, eyeZ, completedTicks * FIXED_SECONDS);
+					distantHorizonRenderer.configure(levelView.authoredWorldWidth(), levelView.environmentHorizonMask());
+					distantHorizonRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, adventureTerrainTexture,
+						adventureTerrainTextureReady, levelView.waterPresentationCell());
+				}
 				#if caxecraft_render_benchmark
 				final terrainStarted = Raylib.GetTime();
 				#end
@@ -1718,10 +1729,56 @@ final class CaxecraftApp {
 		world-space sphere now obeys the same camera transform as terrain. Its
 		north-east position also matches the brighter terrain faces.
 	**/
-	static function drawWorldSun():Void {
-		final center = Vector3.fromFloat(52.0, 18.0, -38.0);
-		Raylib.DrawSphere(center, c.Float32.fromFloat(3.4), CaxecraftPalette.sunCore());
-		Raylib.DrawSphere(center, c.Float32.fromFloat(4.8), CaxecraftPalette.sunGlow());
+	static function drawWorldSunAndClouds(hasSun:Bool, sunX:Int, sunY:Int, sunZ:Int, sunRadiusMilli:Int, cloudCount:Int, cloudSpeedMilli:Int, cloudSeed:Int,
+			eyeX:Float, eyeY:Float, eyeZ:Float, simulationSeconds:Float):Void {
+		// A celestial body has a stable direction, not a nearby map coordinate. It
+		// follows player translation but never mouse rotation, so walking across a
+		// finite level cannot leave the sun behind or make it stick to the viewport.
+		if (hasSun) {
+			final center = Vector3.fromFloat(eyeX + sunX, eyeY + sunY, eyeZ + sunZ);
+			final radius = sunRadiusMilli / 1000.0;
+			Raylib.DrawSphere(center, c.Float32.fromFloat(radius), CaxecraftPalette.sunCore());
+			Raylib.DrawSphere(center, c.Float32.fromFloat(radius * 1.4), CaxecraftPalette.sunGlow());
+		}
+		final cloudSpeed = cloudSpeedMilli / 1000.0;
+		var index = 0;
+		while (index < cloudCount) {
+			final noise = positiveEnvironmentNoise(cloudSeed, index);
+			final along = noise % 101 - 50.0;
+			final distance = 48.0 + Std.int(noise / 101) % 25;
+			final baseX = switch index % 4 {
+				case 0 | 2: along;
+				case 1: distance;
+				case _: -distance;
+			};
+			final baseZ = switch index % 4 {
+				case 0: -distance;
+				case 1 | 3: along;
+				case _: distance;
+			};
+			drawCloud(eyeX, eyeY, eyeZ, simulationSeconds, baseX, baseZ, cloudSpeed, noise % 3);
+			index++;
+		}
+	}
+
+	/** Stable authored cloud variation that never reads the wall clock. */
+	static inline function positiveEnvironmentNoise(seed:Int, index:Int):Int
+		return (seed * 1103515245 + index * 12345 + 1013904223) & 0x7fffffff;
+
+	/** Draw one deterministic moving cloud from a few soft block volumes. */
+	static function drawCloud(eyeX:Float, eyeY:Float, eyeZ:Float, simulationSeconds:Float, baseX:Float, baseZ:Float, speed:Float, variant:Int):Void {
+		var relativeX = baseX + simulationSeconds * speed;
+		while (relativeX > 72.0)
+			relativeX -= 144.0;
+		final x = eyeX + relativeX;
+		final y = eyeY + 20.0 + variant * 2.2;
+		final z = eyeZ + baseZ;
+		final bright = Color.rgba(239, 246, 238, 225);
+		final shade = Color.rgba(199, 219, 216, 205);
+		Raylib.DrawCube(Vector3.fromFloat(x, y, z), c.Float32.fromFloat(12.0), c.Float32.fromFloat(2.2), c.Float32.fromFloat(5.0), bright);
+		Raylib.DrawCube(Vector3.fromFloat(x - 4.0, y + 1.3, z), c.Float32.fromFloat(5.0), c.Float32.fromFloat(2.0), c.Float32.fromFloat(4.0), bright);
+		Raylib.DrawCube(Vector3.fromFloat(x + 3.5, y + 1.0, z + 0.4), c.Float32.fromFloat(6.0), c.Float32.fromFloat(2.5), c.Float32.fromFloat(4.5), bright);
+		Raylib.DrawCube(Vector3.fromFloat(x, y - 1.2, z), c.Float32.fromFloat(10.0), c.Float32.fromFloat(0.7), c.Float32.fromFloat(4.2), shade);
 	}
 
 	/** Turn one closed campaign-load failure into a path-and-stage console hint. */

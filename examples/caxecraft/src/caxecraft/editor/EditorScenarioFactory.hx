@@ -46,6 +46,7 @@ function createBlank(mapId:ScenarioId, assetPack:LogicalPath, title:ScenarioText
 		messages: messageCatalog == null ? NoMessageCatalog : messageCatalog,
 		title: title,
 		mode: mode,
+		environment: null,
 		world: {
 			size: size,
 			palette: palette,

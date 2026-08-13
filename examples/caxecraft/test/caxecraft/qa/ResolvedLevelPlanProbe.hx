@@ -312,6 +312,7 @@ function withWorldWidth(source:Scenario, width:Int):Scenario {
 		messages: source.messages,
 		title: source.title,
 		mode: source.mode,
+		environment: source.environment,
 		world: {
 			size: {width: width, height: source.world.size.height, depth: source.world.size.depth},
 			palette: source.world.palette.copy(),
@@ -367,6 +368,7 @@ function withStatefulObject(source:Scenario, state:ContentId, yawDegrees:Int = 9
 		messages: source.messages,
 		title: source.title,
 		mode: source.mode,
+		environment: source.environment,
 		world: source.world,
 		objects: objects,
 		story: source.story,
@@ -402,6 +404,7 @@ function withInterleavedFluidIds(source:Scenario):Scenario {
 		messages: source.messages,
 		title: source.title,
 		mode: source.mode,
+		environment: source.environment,
 		world: {
 			size: source.world.size,
 			palette: source.world.palette.copy(),
@@ -450,6 +453,7 @@ function withTooManyItems(source:Scenario):Scenario {
 		messages: source.messages,
 		title: source.title,
 		mode: source.mode,
+		environment: source.environment,
 		world: source.world,
 		objects: objects,
 		story: source.story,

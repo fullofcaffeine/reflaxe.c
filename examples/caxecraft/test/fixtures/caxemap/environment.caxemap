@@ -1,0 +1,31 @@
+CAXEMAP 1
+feature required caxecraft:core
+map environment.sample
+asset-pack packs/caxecraft/base
+title literal "Optional environment"
+mode adventure
+environment voxel-horizon
+  sky 96 148 171
+  sun none
+  clouds 2 500 73
+  edges none
+  continue-water false
+end environment
+world 4 4 4
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+chunk world.base 0 0 0 4 4 4
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+end chunk
+object player.start
+  tag player
+  placement player-spawn 1500 1000 1500 0
+end object
+end-map

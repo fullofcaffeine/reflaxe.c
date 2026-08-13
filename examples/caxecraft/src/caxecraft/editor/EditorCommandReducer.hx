@@ -512,6 +512,7 @@ private function copy(scenario:Scenario, messages:ScenarioMessages, title:Scenar
 		messages: messages,
 		title: title,
 		mode: scenario.mode,
+		environment: scenario.environment,
 		world: world,
 		objects: objects,
 		story: {
