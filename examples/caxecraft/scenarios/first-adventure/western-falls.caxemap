@@ -639,7 +639,8 @@ chunk region.western-falls 0 0 0 32 16 32
   run 4 1
   run 3 3
   run 2 5
-  run 3 8
+  run 3 7
+  run 4 1
   run 9 4
   run 4 1
   run 5 10
@@ -686,7 +687,9 @@ chunk region.western-falls 0 0 0 32 16 32
   run 3 3
   run 2 5
   run 4 3
-  run 3 5
+  run 3 3
+  run 4 1
+  run 3 1
   run 9 4
   run 4 1
   run 0 10
@@ -731,7 +734,9 @@ chunk region.western-falls 0 0 0 32 16 32
   run 3 3
   run 9 4
   run 4 1
-  run 3 8
+  run 3 6
+  run 4 1
+  run 3 1
   run 0 4
   run 4 6
   run 9 1
@@ -785,7 +790,9 @@ chunk region.western-falls 0 0 0 32 16 32
   run 9 8
   run 3 1
   run 4 3
-  run 3 5
+  run 3 3
+  run 4 1
+  run 3 1
   run 0 10
   run 9 1
   run 0 4
@@ -818,20 +825,23 @@ chunk region.western-falls 0 0 0 32 16 32
   run 3 2
   run 0 4
   run 9 8
-  run 3 9
+  run 3 1
+  run 4 7
+  run 3 1
   run 0 15
   run 2 1
   run 9 4
   run 2 2
-  run 3 2
+  run 4 2
   run 0 19
   run 9 3
   run 0 1
   run 2 2
   run 9 3
-  run 3 2
+  run 4 2
   run 0 21
-  run 3 9
+  run 3 7
+  run 4 2
   run 0 268
   run 1 32
   run 9 32
@@ -847,12 +857,14 @@ chunk region.western-falls 0 0 0 32 16 32
   run 3 10
   run 0 14
   run 2 8
-  run 0 21
+  run 4 2
+  run 0 19
   run 9 3
-  run 2 8
+  run 2 6
+  run 4 2
   run 0 21
-  run 3 11
-  run 0 266
+  run 3 9
+  run 0 268
   run 1 32
   run 9 32
   run 2 11
@@ -1479,8 +1491,8 @@ chunk region.evergrove 32 0 0 32 16 32
   run 2 29
   run 0 3
   run 2 25
-  run 3 3
-  run 4 1
+  run 3 1
+  run 4 3
   run 0 3
   run 4 1
   run 3 7
@@ -1492,9 +1504,7 @@ chunk region.evergrove 32 0 0 32 16 32
   run 3 1
   run 2 1
   run 3 3
-  run 0 1
-  run 6 2
-  run 0 20
+  run 0 23
   run 5 1
   run 0 2
   run 5 1
@@ -1523,8 +1533,8 @@ chunk region.evergrove 32 0 0 32 16 32
   run 2 29
   run 0 3
   run 2 25
-  run 3 3
-  run 4 1
+  run 3 2
+  run 4 2
   run 0 3
   run 4 1
   run 3 7
@@ -1547,7 +1557,9 @@ chunk region.evergrove 32 0 0 32 16 32
   run 2 29
   run 0 3
   run 2 25
-  run 3 3
+  run 3 1
+  run 4 1
+  run 3 1
   run 4 1
   run 0 3
   run 4 1
@@ -1569,7 +1581,8 @@ chunk region.evergrove 32 0 0 32 16 32
   run 2 29
   run 0 3
   run 2 25
-  run 3 3
+  run 4 1
+  run 3 2
   run 5 5
   run 3 2
   run 4 11
@@ -2034,7 +2047,7 @@ object zone.frostmere-road
 end object
 object zone.western-overlook
   tag landmark
-  placement trigger-zone 24 0 16 7 16 16
+  placement trigger-zone 23 0 23 4 16 7
 end object
 speaker guide.fallskeeper name message speaker_fallskeeper_name
 speaker guide.moss name message speaker_moss_name
