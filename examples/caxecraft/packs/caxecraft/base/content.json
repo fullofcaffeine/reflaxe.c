@@ -599,7 +599,7 @@
       "id": "caxecraft:vault-glyph-flame",
       "interaction": "activate",
       "interactionRadiusMilli": 2500,
-      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "bounds": { "widthMilli": 1200, "heightMilli": 1400, "depthMilli": 650 },
       "states": [
         {
           "id": "caxecraft:entered",
@@ -607,7 +607,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "checkpoint"
+            "cell": "glyph-ember",
+            "model": {
+              "path": "assets/models/vault-glyph-flame.vox",
+              "cellsPerAxis": 32
+            }
           }
         },
         {
@@ -616,7 +620,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "glyph-ember"
+            "cell": "glyph-ember",
+            "model": {
+              "path": "assets/models/vault-glyph-flame.vox",
+              "cellsPerAxis": 32
+            }
           }
         }
       ]
@@ -625,7 +633,7 @@
       "id": "caxecraft:vault-glyph-leaf",
       "interaction": "activate",
       "interactionRadiusMilli": 2500,
-      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "bounds": { "widthMilli": 1200, "heightMilli": 1400, "depthMilli": 650 },
       "states": [
         {
           "id": "caxecraft:entered",
@@ -633,7 +641,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "checkpoint"
+            "cell": "glyph-leaf",
+            "model": {
+              "path": "assets/models/vault-glyph-leaf.vox",
+              "cellsPerAxis": 32
+            }
           }
         },
         {
@@ -642,7 +654,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "glyph-leaf"
+            "cell": "glyph-leaf",
+            "model": {
+              "path": "assets/models/vault-glyph-leaf.vox",
+              "cellsPerAxis": 32
+            }
           }
         }
       ]
@@ -651,7 +667,7 @@
       "id": "caxecraft:vault-glyph-moon",
       "interaction": "activate",
       "interactionRadiusMilli": 2500,
-      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "bounds": { "widthMilli": 1200, "heightMilli": 1400, "depthMilli": 650 },
       "states": [
         {
           "id": "caxecraft:entered",
@@ -659,7 +675,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "checkpoint"
+            "cell": "glyph-forge",
+            "model": {
+              "path": "assets/models/vault-glyph-moon.vox",
+              "cellsPerAxis": 32
+            }
           }
         },
         {
@@ -668,7 +688,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "glyph-forge"
+            "cell": "glyph-forge",
+            "model": {
+              "path": "assets/models/vault-glyph-moon.vox",
+              "cellsPerAxis": 32
+            }
           }
         }
       ]
@@ -677,7 +701,7 @@
       "id": "caxecraft:vault-glyph-river",
       "interaction": "activate",
       "interactionRadiusMilli": 2500,
-      "bounds": { "widthMilli": 1000, "heightMilli": 1000, "depthMilli": 1000 },
+      "bounds": { "widthMilli": 1200, "heightMilli": 1400, "depthMilli": 650 },
       "states": [
         {
           "id": "caxecraft:entered",
@@ -685,7 +709,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "checkpoint"
+            "cell": "glyph-wave",
+            "model": {
+              "path": "assets/models/vault-glyph-river.vox",
+              "cellsPerAxis": 32
+            }
           }
         },
         {
@@ -694,7 +722,11 @@
           "render": "visible",
           "presentation": {
             "asset": "adventure-items",
-            "cell": "glyph-wave"
+            "cell": "glyph-wave",
+            "model": {
+              "path": "assets/models/vault-glyph-river.vox",
+              "cellsPerAxis": 32
+            }
           }
         }
       ]

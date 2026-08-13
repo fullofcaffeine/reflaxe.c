@@ -37,6 +37,10 @@ REQUIRED_ASSET_IDS = frozenset(
         "field-note-model",
         "forge-relay-model",
         "gate-winch-model",
+        "vault-glyph-flame-model",
+        "vault-glyph-leaf-model",
+        "vault-glyph-moon-model",
+        "vault-glyph-river-model",
         "hud",
         "items",
         "ivvy",
@@ -54,6 +58,7 @@ REQUIRED_GENERATION_RECORD_IDS = frozenset(
         "field-note-model",
         "forge-relay-model",
         "gate-winch-model",
+        "vault-glyph-models",
         "hud",
         "items",
         "ivvy",
@@ -87,7 +92,7 @@ FIELD_NOTE_REFERENCE = (
     "teal, copper, and cream art direction. No external game asset was copied."
 )
 DETERMINISTIC_VOX_RECORD_IDS = frozenset(
-    {"field-note-model", "forge-relay-model", "gate-winch-model"}
+    {"field-note-model", "forge-relay-model", "gate-winch-model", "vault-glyph-models"}
 )
 EXPECTED_GRID_CELLS = {
     "adventure-characters": (
@@ -408,6 +413,12 @@ def validate_generation_records(records: dict[str, Any]) -> None:
             expected_references = [FORGE_RELAY_REFERENCE]
         elif record_id == "field-note-model":
             expected_references = [FIELD_NOTE_REFERENCE]
+        elif record_id == "vault-glyph-models":
+            expected_references = [
+                "The existing Caxecraft route-glyph atlas cells supplied only the four semantic "
+                "identities and teal, copper, cream, and orange palette direction; their flat pixel "
+                "shapes were not extruded."
+            ]
         elif record_id in REQUIRED_GENERATION_RECORD_IDS:
             expected_references = []
         else:
@@ -468,6 +479,8 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
         "caxecraft-wordmark", "title-panorama", "hud", "items",
         "adventure-characters", "adventure-items", "adventure-terrain", "entities",
         "forge-relay-model", "gate-winch-model", "terrain",
+        "vault-glyph-flame-model", "vault-glyph-leaf-model",
+        "vault-glyph-moon-model", "vault-glyph-river-model",
     }
     if not required_runtime_ids.issubset(packaged_ids):
         missing = ", ".join(sorted(required_runtime_ids - set(packaged_ids)))

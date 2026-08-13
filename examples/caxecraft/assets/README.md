@@ -3,7 +3,7 @@
 This directory contains the first original Caxecraft visual-design pack. The
 native game now packages and loads the title panorama, wordmark, HUD atlas,
 base and Adventure item atlases, entity atlas, base and Adventure terrain
-atlases, and three voxel world props. Three atlases remain design inputs: their
+atlases, and seven voxel world props. Three atlases remain design inputs: their
 presence is not evidence that Adventure characters, Ivvy, or cutscene-editor
 icons are used by the native game yet. The
 complete scope is described by the
@@ -32,11 +32,11 @@ packaging copies the hash-verified primary bytes without changing them.
 
 ## Voxel world props
 
-`models/forge-relay.vox`, `models/gate-winch.vox`, and
-`models/field-note.vox` are original voxel props. The `.vox` files use the
-MagicaVoxel 150 format. Raylib reads this standard format directly.
+The files below `models/` are original voxel props. They include the forge
+relay, gate winch, field note, and four route-glyph stones. The `.vox` files
+use the MagicaVoxel 150 format. Raylib reads this standard format directly.
 
-The Haxe source in `tools/ForgeRelayVox.hx` is the editable authority. It
+The Haxe source in `tools/CaxecraftVoxels.hx` is the editable authority. It
 defines each colored cell in a 32×32×32 volume. The `.vox` files are generated
 game assets. They do not contain hidden LLM state.
 
@@ -48,7 +48,7 @@ The workflow has two separate parts:
 An LLM can help with the first part, but it is not required. The second part is
 fully deterministic and does not use a network connection or image model.
 
-Regenerate all three files with:
+Regenerate all files with:
 
 ```bash
 npm run caxecraft:voxels:refresh

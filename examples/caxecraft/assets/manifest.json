@@ -28,6 +28,10 @@
       "field-note-model",
       "forge-relay-model",
       "gate-winch-model",
+      "vault-glyph-flame-model",
+      "vault-glyph-leaf-model",
+      "vault-glyph-moon-model",
+      "vault-glyph-river-model",
       "terrain"
     ],
     "designOnlyAssets": [
@@ -125,7 +129,7 @@
       "referenceInputs": [
         "Duke Nukem 3D voxel replacements were reviewed only for the proven flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
       ],
-      "processing": "examples/caxecraft/tools/ForgeRelayVox.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
     },
     "field-note-model": {
       "mode": "repository-haxe-vox-builder",
@@ -134,7 +138,7 @@
       "referenceInputs": [
         "The existing Caxecraft field-note atlas cell supplied the prop identity and original teal, copper, and cream art direction. No external game asset was copied."
       ],
-      "processing": "examples/caxecraft/tools/ForgeRelayVox.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared prop palette."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared prop palette."
     },
     "gate-winch-model": {
       "mode": "repository-haxe-vox-builder",
@@ -143,7 +147,16 @@
       "referenceInputs": [
         "Duke Nukem 3D voxel replacements were reviewed only for the proven flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
       ],
-      "processing": "examples/caxecraft/tools/ForgeRelayVox.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
+    },
+    "vault-glyph-models": {
+      "mode": "repository-haxe-vox-builder",
+      "artifactIds": [],
+      "promptSummary": "Four original 32-cubed vault rune stones with a grounded carved volume, recessed face, copper trim, and distinct raised river, leaf, moon, or flame mark.",
+      "referenceInputs": [
+        "The existing Caxecraft route-glyph atlas cells supplied only the four semantic identities and teal, copper, cream, and orange palette direction; their flat pixel shapes were not extruded."
+      ],
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes all four checked-in MagicaVoxel 150 files deterministically from reviewed volumes and the shared prop palette."
     },
     "hud": {
       "mode": "openai-built-in-imagegen",
@@ -461,6 +474,50 @@
       "depth": 32,
       "sha256": "0ea8ea70672edf650a063d34993ebda6fe12aec6ec67c897d30a4156537ed583",
       "generationRecord": "gate-winch-model",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-flame-model",
+      "path": "models/vault-glyph-flame.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "af5904e2c58ea601b3a42bbe5595f22b8bbaa0d334f259e771e40c5a4e21b281",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-leaf-model",
+      "path": "models/vault-glyph-leaf.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "4f32128bf8637bf455f8dba84357d2f86d6ea660ff8e5f8c0bb61c639003e7ea",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-moon-model",
+      "path": "models/vault-glyph-moon.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "87990d6605f1bb1b90b76014b13e6d42aafa0001161ac8ad8b4e253a61763589",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-river-model",
+      "path": "models/vault-glyph-river.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "01963b30b0746880bdc32e869fef04a31543f5660de25d5ae5dee352c3a825cb",
+      "generationRecord": "vault-glyph-models",
       "rights": "caxecraft-original"
     },
     {

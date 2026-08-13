@@ -6,43 +6,145 @@ import sys.FileSystem;
 import sys.io.File;
 
 /**
- * Builds Caxecraft's first small world props in MagicaVoxel format.
+ * Builds Caxecraft's small world props in MagicaVoxel format.
  *
  * The checked-in `.vox` file is the game asset. This small source file keeps
  * its shape and palette reviewable without adding a second modeling format.
  */
-class ForgeRelayVox {
+class CaxecraftVoxels {
 	static inline final SIZE = 32;
 
-	/** Build the relay, winch, and field note at the requested output paths. */
+	/** Build every reviewed prop in one requested asset directory. */
 	static function main():Void {
 		final arguments = Sys.args();
-		final checkOnly = arguments.length == 4 && arguments[3] == "--check";
-		if (arguments.length != 3 && !checkOnly) {
-			Sys.println("usage: haxe --run ForgeRelayVox <relay.vox> <winch.vox> <field-note.vox> [--check]");
+		final checkOnly = arguments.length == 2 && arguments[1] == "--check";
+		if (arguments.length != 1 && !checkOnly) {
+			Sys.println("usage: haxe --run CaxecraftVoxels <model-directory> [--check]");
 			Sys.exit(2);
 		}
+		final modelDirectory = arguments[0];
 		final relay:Array<Voxel> = [];
 		addBase(relay);
 		addCabinet(relay);
 		addControlFace(relay);
 		addCrystal(relay);
-		writeOrCheck(arguments[0], encode(relay, false), checkOnly);
+		writeOrCheck('$modelDirectory/forge-relay.vox', encode(relay, false), checkOnly);
 
 		final winch:Array<Voxel> = [];
 		addWinchBase(winch);
 		addWinchSupports(winch);
 		addWinchDrum(winch);
 		addWinchChainAndCrank(winch);
-		writeOrCheck(arguments[1], encode(winch, false), checkOnly);
+		writeOrCheck('$modelDirectory/gate-winch.vox', encode(winch, false), checkOnly);
 
 		final fieldNote:Array<Voxel> = [];
 		addFieldNoteRoll(fieldNote);
 		addFieldNoteBinding(fieldNote);
-		writeOrCheck(arguments[2], encode(fieldNote, true), checkOnly);
+		writeOrCheck('$modelDirectory/field-note.vox', encode(fieldNote, true), checkOnly);
+
+		final glyphs = [River, Leaf, Moon, Flame];
+		final glyphNames = ["river", "leaf", "moon", "flame"];
+		for (index in 0...glyphs.length) {
+			final glyph:Array<Voxel> = [];
+			addRuneStone(glyph, glyphs[index]);
+			writeOrCheck('$modelDirectory/vault-glyph-${glyphNames[index]}.vox', encode(glyph, false), checkOnly);
+			Sys.println('vault-glyph-${glyphNames[index]}.vox: ${glyph.length} voxels');
+		}
 		Sys.println('forge-relay.vox: ${relay.length} voxels');
 		Sys.println('gate-winch.vox: ${winch.length} voxels');
 		Sys.println('field-note.vox: ${fieldNote.length} voxels');
+	}
+
+	/** Add one grounded carved stone whose raised mark stays readable from play height. */
+	static function addRuneStone(voxels:Array<Voxel>, glyph:RuneGlyph):Void {
+		for (z in 0...4)
+			fillChamferedLayer(voxels, 4 - z, 27 + z, 5 - z, 26 + z, z, 5, z == 0 ? 2 : 3);
+		for (z in 4...8)
+			fillChamferedLayer(voxels, 6, 25, 7, 24, z, 4, z == 7 ? 4 : 3);
+		for (z in 8...27)
+			fillChamferedLayer(voxels, 7, 24, 9, 22, z, 4, z % 5 == 0 ? 4 : 2);
+		for (z in 27...30)
+			fillChamferedLayer(voxels, 6, 25, 8, 23, z, 5, z == 28 ? 4 : 3);
+
+		// A recessed front panel prevents the mark from reading as a pasted card.
+		fill(voxels, 9, 22, 7, 8, 11, 24, 1);
+		for (x in 9...23) {
+			put(voxels, x, 6, 10, x == 9 || x == 22 ? 5 : 6);
+			put(voxels, x, 6, 25, x == 9 || x == 22 ? 5 : 7);
+		}
+		for (z in 11...25) {
+			put(voxels, 9, 6, z, 6);
+			put(voxels, 22, 6, z, 5);
+		}
+
+		switch glyph {
+			case River:
+				addRiverRune(voxels);
+			case Leaf:
+				addLeafRune(voxels);
+			case Moon:
+				addMoonRune(voxels);
+			case Flame:
+				addFlameRune(voxels);
+		}
+	}
+
+	/** Raise three flowing bands, with highlights that distinguish the river rune. */
+	static function addRiverRune(voxels:Array<Voxel>):Void {
+		for (row in 0...3)
+			for (step in 0...12) {
+				final x = 10 + step;
+				final z = 13 + row * 4 + (step % 4 < 2 ? 1 : 0);
+				put(voxels, x, 5, z, step % 5 == 0 ? 11 : 9);
+				put(voxels, x, 4, z, step % 3 == 0 ? 11 : 10);
+			}
+	}
+
+	/** Raise a broad leaf and central stem instead of tracing a flat sprite edge. */
+	static function addLeafRune(voxels:Array<Voxel>):Void {
+		for (z in 12...24) {
+			final distance = absolute(z - 18);
+			final radius = 5 - Std.int(distance / 2);
+			for (x in 16 - radius...17 + radius)
+				if (absolute(x - 16) + distance <= 8)
+					put(voxels, x, x == 16 ? 4 : 5, z, x <= 16 ? 8 : 10);
+		}
+		for (z in 11...20) {
+			put(voxels, 16, 3, z, 11);
+			if (z < 17)
+				put(voxels, 17, 4, z, 9);
+		}
+	}
+
+	/** Raise a thick crescent with a cut inner arc that remains visible at distance. */
+	static function addMoonRune(voxels:Array<Voxel>):Void {
+		for (x in 10...22)
+			for (z in 12...24) {
+				final dx = x - 16;
+				final dz = z - 18;
+				final outer = dx * dx + dz * dz;
+				final innerDx = x - 18;
+				final inner = innerDx * innerDx + dz * dz;
+				if (outer <= 36 && (inner >= 20 || x <= 14))
+					put(voxels, x, x <= 13 ? 5 : 4, z, x <= 14 ? 12 : 11);
+			}
+	}
+
+	/** Raise a compact three-tongued flame with copper shade and cream core. */
+	static function addFlameRune(voxels:Array<Voxel>):Void {
+		for (z in 11...24) {
+			final halfWidth = z < 16 ? 5 : (z < 20 ? 3 : 1);
+			final center = z > 19 ? 15 : 16;
+			for (x in center - halfWidth...center + halfWidth + 1) {
+				final edge = x == center - halfWidth || x == center + halfWidth;
+				put(voxels, x, edge ? 5 : 4, z, edge ? 5 : (z < 16 ? 7 : 6));
+			}
+		}
+		for (z in 12...17)
+			for (x in 15...18)
+				put(voxels, x, 3, z, 12);
+		for (z in 17...22)
+			put(voxels, 20, 4, z, z == 21 ? 7 : 6);
 	}
 
 	/** Write one model, or prove that its checked-in bytes match this source. */
@@ -419,4 +521,12 @@ private typedef Voxel = {
 	final y:Int;
 	final z:Int;
 	var color:Int;
+}
+
+/** Closed set of marks used by the shared rune-stone shape. */
+private enum RuneGlyph {
+	River;
+	Leaf;
+	Moon;
+	Flame;
 }

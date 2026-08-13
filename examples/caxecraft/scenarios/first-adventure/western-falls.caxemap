@@ -2007,19 +2007,19 @@ object vault.gate
 end object
 object vault.glyph-flame
   tag vault-control
-  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 5000 3000 21000 0
+  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 12000 3000 21500 0
 end object
 object vault.glyph-leaf
   tag vault-control
-  placement stateful caxecraft:vault-glyph-leaf caxecraft:waiting 5000 3000 21000 0
+  placement stateful caxecraft:vault-glyph-leaf caxecraft:waiting 9000 3000 21500 0
 end object
 object vault.glyph-moon
   tag vault-control
-  placement stateful caxecraft:vault-glyph-moon caxecraft:waiting 5000 3000 21000 0
+  placement stateful caxecraft:vault-glyph-moon caxecraft:waiting 10500 3000 21500 0
 end object
 object vault.glyph-river
   tag vault-control
-  placement stateful caxecraft:vault-glyph-river caxecraft:waiting 5000 3000 21000 0
+  placement stateful caxecraft:vault-glyph-river caxecraft:waiting 7500 3000 21500 0
 end object
 object zone.frostmere-road
   tag destination
@@ -2078,9 +2078,6 @@ rule rule.fallskeeper-reveals-the-marks priority 110 once
   do journal journal.fallskeeper-lead
   do objective objective.find-fallskeeper complete
   do objective objective.find-tideweave active
-  do despawn vault.glyph-flame
-  do despawn vault.glyph-leaf
-  do despawn vault.glyph-moon
 end rule
 rule rule.flame-accepts-fourth-mark priority 110 repeat
   when interact vault.glyph-flame
@@ -2094,10 +2091,6 @@ rule rule.flame-resets-wrong-code priority 120 repeat
   when interact vault.glyph-flame
   if (not (counter quest.vault-progress equal 3))
   do set-counter quest.vault-progress 0
-  do despawn vault.glyph-flame
-  do despawn vault.glyph-leaf
-  do despawn vault.glyph-moon
-  do spawn vault.glyph-river
   do set-object-state vault.glyph-flame caxecraft:waiting
   do set-object-state vault.glyph-leaf caxecraft:waiting
   do set-object-state vault.glyph-moon caxecraft:waiting
@@ -2127,17 +2120,11 @@ rule rule.leaf-accepts-second-mark priority 110 repeat
   if (counter quest.vault-progress equal 1)
   do set-object-state vault.glyph-leaf caxecraft:entered
   do set-counter quest.vault-progress 2
-  do despawn vault.glyph-leaf
-  do spawn vault.glyph-moon
 end rule
 rule rule.leaf-resets-wrong-code priority 120 repeat
   when interact vault.glyph-leaf
   if (not (counter quest.vault-progress equal 1))
   do set-counter quest.vault-progress 0
-  do despawn vault.glyph-flame
-  do despawn vault.glyph-leaf
-  do despawn vault.glyph-moon
-  do spawn vault.glyph-river
   do set-object-state vault.glyph-flame caxecraft:waiting
   do set-object-state vault.glyph-leaf caxecraft:waiting
   do set-object-state vault.glyph-moon caxecraft:waiting
@@ -2149,17 +2136,11 @@ rule rule.moon-accepts-third-mark priority 110 repeat
   if (counter quest.vault-progress equal 2)
   do set-object-state vault.glyph-moon caxecraft:entered
   do set-counter quest.vault-progress 3
-  do despawn vault.glyph-moon
-  do spawn vault.glyph-flame
 end rule
 rule rule.moon-resets-wrong-code priority 120 repeat
   when interact vault.glyph-moon
   if (not (counter quest.vault-progress equal 2))
   do set-counter quest.vault-progress 0
-  do despawn vault.glyph-flame
-  do despawn vault.glyph-leaf
-  do despawn vault.glyph-moon
-  do spawn vault.glyph-river
   do set-object-state vault.glyph-flame caxecraft:waiting
   do set-object-state vault.glyph-leaf caxecraft:waiting
   do set-object-state vault.glyph-moon caxecraft:waiting
@@ -2181,17 +2162,11 @@ rule rule.river-accepts-first-mark priority 110 repeat
   if (counter quest.vault-progress equal 0)
   do set-object-state vault.glyph-river caxecraft:entered
   do set-counter quest.vault-progress 1
-  do despawn vault.glyph-river
-  do spawn vault.glyph-leaf
 end rule
 rule rule.river-resets-and-starts-code priority 120 repeat
   when interact vault.glyph-river
   if (not (counter quest.vault-progress equal 0))
   do set-counter quest.vault-progress 0
-  do despawn vault.glyph-flame
-  do despawn vault.glyph-leaf
-  do despawn vault.glyph-moon
-  do spawn vault.glyph-river
   do set-object-state vault.glyph-flame caxecraft:waiting
   do set-object-state vault.glyph-leaf caxecraft:waiting
   do set-object-state vault.glyph-moon caxecraft:waiting
