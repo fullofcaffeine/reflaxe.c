@@ -481,7 +481,11 @@
             "asset": "castle-mechanisms",
             "cell": "ceesh-note-read",
             "model": {
-              "path": "assets/models/field-note.vox",
+        "frames": [
+        { "path": "assets/models/field-note.vox", "durationTicks": 3 },
+        { "path": "assets/models/field-note-opening.vox", "durationTicks": 3 },
+        { "path": "assets/models/field-note-open.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }
@@ -494,7 +498,11 @@
             "asset": "castle-mechanisms",
             "cell": "ceesh-note-waiting",
             "model": {
-              "path": "assets/models/field-note.vox",
+        "frames": [
+        { "path": "assets/models/field-note-open.vox", "durationTicks": 3 },
+        { "path": "assets/models/field-note-opening.vox", "durationTicks": 3 },
+        { "path": "assets/models/field-note.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }
@@ -515,9 +523,12 @@
             "asset": "castle-mechanisms",
             "cell": "gate-relay-active",
             "model": {
-              "path": "assets/models/forge-relay.vox",
-              "cellsPerAxis": 32,
-              "motion": "pulse"
+        "frames": [
+        { "path": "assets/models/forge-relay.vox", "durationTicks": 3 },
+        { "path": "assets/models/forge-relay-switching.vox", "durationTicks": 3 },
+        { "path": "assets/models/forge-relay-active.vox", "durationTicks": 1 }
+        ],
+        "cellsPerAxis": 32
             }
           }
         },
@@ -529,7 +540,11 @@
             "asset": "castle-mechanisms",
             "cell": "gate-relay-waiting",
             "model": {
-              "path": "assets/models/forge-relay.vox",
+        "frames": [
+        { "path": "assets/models/forge-relay-active.vox", "durationTicks": 3 },
+        { "path": "assets/models/forge-relay-switching.vox", "durationTicks": 3 },
+        { "path": "assets/models/forge-relay.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }
@@ -550,9 +565,12 @@
             "asset": "castle-mechanisms",
             "cell": "gate-winch-engaged",
             "model": {
-              "path": "assets/models/gate-winch.vox",
-              "cellsPerAxis": 32,
-              "motion": "pulse"
+        "frames": [
+        { "path": "assets/models/gate-winch.vox", "durationTicks": 3 },
+        { "path": "assets/models/gate-winch-turning.vox", "durationTicks": 3 },
+        { "path": "assets/models/gate-winch-active.vox", "durationTicks": 1 }
+        ],
+        "cellsPerAxis": 32
             }
           }
         },
@@ -564,7 +582,11 @@
             "asset": "castle-mechanisms",
             "cell": "gate-winch-waiting",
             "model": {
-              "path": "assets/models/gate-winch.vox",
+        "frames": [
+        { "path": "assets/models/gate-winch-active.vox", "durationTicks": 3 },
+        { "path": "assets/models/gate-winch-turning.vox", "durationTicks": 3 },
+        { "path": "assets/models/gate-winch.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }
@@ -611,9 +633,12 @@
             "asset": "adventure-items",
             "cell": "glyph-ember",
             "model": {
-              "path": "assets/models/vault-glyph-flame-active.vox",
-              "cellsPerAxis": 32,
-              "motion": "pulse"
+        "frames": [
+        { "path": "assets/models/vault-glyph-flame.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-flame-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-flame-active.vox", "durationTicks": 1 }
+        ],
+        "cellsPerAxis": 32
             }
           }
         },
@@ -625,7 +650,11 @@
             "asset": "adventure-items",
             "cell": "glyph-ember",
             "model": {
-              "path": "assets/models/vault-glyph-flame.vox",
+        "frames": [
+        { "path": "assets/models/vault-glyph-flame-active.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-flame-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-flame.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }
@@ -646,9 +675,12 @@
             "asset": "adventure-items",
             "cell": "glyph-leaf",
             "model": {
-              "path": "assets/models/vault-glyph-leaf-active.vox",
-              "cellsPerAxis": 32,
-              "motion": "pulse"
+        "frames": [
+        { "path": "assets/models/vault-glyph-leaf.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-leaf-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-leaf-active.vox", "durationTicks": 1 }
+        ],
+        "cellsPerAxis": 32
             }
           }
         },
@@ -660,7 +692,11 @@
             "asset": "adventure-items",
             "cell": "glyph-leaf",
             "model": {
-              "path": "assets/models/vault-glyph-leaf.vox",
+        "frames": [
+        { "path": "assets/models/vault-glyph-leaf-active.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-leaf-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-leaf.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }
@@ -681,9 +717,12 @@
             "asset": "adventure-items",
             "cell": "glyph-forge",
             "model": {
-              "path": "assets/models/vault-glyph-moon-active.vox",
-              "cellsPerAxis": 32,
-              "motion": "pulse"
+        "frames": [
+        { "path": "assets/models/vault-glyph-moon.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-moon-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-moon-active.vox", "durationTicks": 1 }
+        ],
+        "cellsPerAxis": 32
             }
           }
         },
@@ -695,7 +734,11 @@
             "asset": "adventure-items",
             "cell": "glyph-forge",
             "model": {
-              "path": "assets/models/vault-glyph-moon.vox",
+        "frames": [
+        { "path": "assets/models/vault-glyph-moon-active.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-moon-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-moon.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }
@@ -716,9 +759,12 @@
             "asset": "adventure-items",
             "cell": "glyph-wave",
             "model": {
-              "path": "assets/models/vault-glyph-river-active.vox",
-              "cellsPerAxis": 32,
-              "motion": "pulse"
+        "frames": [
+        { "path": "assets/models/vault-glyph-river.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-river-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-river-active.vox", "durationTicks": 1 }
+        ],
+        "cellsPerAxis": 32
             }
           }
         },
@@ -730,7 +776,11 @@
             "asset": "adventure-items",
             "cell": "glyph-wave",
             "model": {
-              "path": "assets/models/vault-glyph-river.vox",
+        "frames": [
+        { "path": "assets/models/vault-glyph-river-active.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-river-lighting.vox", "durationTicks": 3 },
+        { "path": "assets/models/vault-glyph-river.vox", "durationTicks": 1 }
+        ],
               "cellsPerAxis": 32
             }
           }

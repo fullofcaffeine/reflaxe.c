@@ -51,6 +51,7 @@ import caxecraft.app.MotionInterpolation.start as startMotion;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
+import caxecraft.app.VoxelFrameAnimation.VoxelFrameAnimationPlayer;
 import caxecraft.app.InteractionPrompt.InteractionPrompt;
 import caxecraft.app.InteractionPrompt.InteractionTargetKind;
 import caxecraft.app.InteractionPrompt.interactionPrompt;
@@ -411,6 +412,7 @@ final class CaxecraftApp {
 		}
 		final runtimeTextures:RuntimeTextureAtlasCatalog = loadedRuntimeTextures;
 		final runtimeModels = new RuntimeVoxelModelCatalog();
+		final modelAnimations = new VoxelFrameAnimationPlayer();
 		var cameraWaterBlend = 0.0;
 		var inventory:InventoryState = Inventory.starter();
 		#if caxecraft_pilot
@@ -1469,7 +1471,8 @@ final class CaxecraftApp {
 				// then be hidden by a wall without its transparent rectangle reserving
 				// depth that a later prop needs.
 				drawStatefulObjects(contentRegistry, session, levelView, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
-					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels, completedTicks);
+					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels, modelAnimations,
+					activeLevel.generationId().value(), completedTicks);
 				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
 					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,

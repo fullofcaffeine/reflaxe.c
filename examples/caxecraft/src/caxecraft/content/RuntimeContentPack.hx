@@ -85,17 +85,48 @@ enum RuntimeModelPresentation {
 	/** Draw the existing atlas presentation. */
 	NoRuntimeModel;
 
-	/** Load one package-relative MagicaVoxel model with content-selected motion. */
-	RuntimeVoxelModel(path:String, cellsPerAxis:Int, motion:RuntimeModelMotion);
+	/** Load one package-relative MagicaVoxel model and hold it still. */
+	RuntimeVoxelModel(path:String, cellsPerAxis:Int);
+
+	/** Play one content-authored keyframe clip, then hold its final model. */
+	RuntimeVoxelAnimation(clip:RuntimeVoxelClip);
 }
 
-/** Closed presentation-only motion choices for a voxel model. */
-enum RuntimeModelMotion {
-	/** Keep the model fixed at its authored transform. */
-	StaticModel;
+/**
+	Immutable frame animation admitted from reloadable content.
 
-	/** Gently lift and settle the model to show an active interaction state. */
-	PulseModel;
+	Complete voxel models are deliberate here: the current props change their
+	silhouette and pose, but do not need a skeleton or a hierarchy of rigid parts.
+	The private arrays prevent rendering code from changing validated content.
+**/
+final class RuntimeVoxelClip {
+	final paths:Array<String>;
+	final durations:Array<Int>;
+	final resolution:Int;
+
+	/** Retain one validated clip without exposing its mutable source arrays. */
+	@:allow(caxecraft.content.RuntimeContentPack)
+	private function new(framePaths:Array<String>, frameDurations:Array<Int>, cellsPerAxis:Int) {
+		paths = framePaths.copy();
+		durations = frameDurations.copy();
+		resolution = cellsPerAxis;
+	}
+
+	/** Number of complete voxel models in this one-shot clip. */
+	public inline function frameCount():Int
+		return paths.length;
+
+	/** Package-relative model path for one validated frame. */
+	public inline function pathAt(index:Int):String
+		return paths[index];
+
+	/** Positive number of committed simulation ticks assigned to one frame. */
+	public inline function durationAt(index:Int):Int
+		return durations[index];
+
+	/** Shared cubic authoring resolution for every frame in this clip. */
+	public inline function cellsPerAxis():Int
+		return resolution;
 }
 
 /**
@@ -1116,44 +1147,68 @@ final class RuntimeContentPack {
 		if (hasModel) {
 			final modelNode = reader.field(fields, "model");
 			final modelPathPrefix = path + ".model";
-			final hasMotion = switch modelNode.value {
+			final hasFrames = switch modelNode.value {
 				case JsonObject(values):
 					var found = false;
 					for (field in values)
-						if (field.name == "motion")
+						if (field.name == "frames")
 							found = true;
 					found;
 				case _: false;
 			};
-			final modelFieldNames = ["path", "cellsPerAxis"];
-			if (hasMotion)
-				modelFieldNames.push("motion");
+			final modelFieldNames = hasFrames ? ["frames", "cellsPerAxis"] : ["path", "cellsPerAxis"];
 			final modelFields = reader.object(modelNode, modelPathPrefix, modelFieldNames);
 			if (modelFields == null)
 				return null;
-			final modelPathNode = reader.field(modelFields, "path");
-			final modelPath = reader.string(modelPathNode, modelPathPrefix + ".path", 128);
 			final cellsPerAxis = reader.integer(reader.field(modelFields, "cellsPerAxis"), modelPathPrefix + ".cellsPerAxis", 1, 128);
-			if (modelPath == null || cellsPerAxis == null)
+			if (cellsPerAxis == null)
 				return null;
-			final pathAccepted = switch ContentPackagePath.parse(modelPath) {
-				case PathAccepted(_): true;
-				case PathRejected(_): false;
-			};
-			if (!pathAccepted || !StringTools.startsWith(modelPath, "assets/") || !StringTools.endsWith(modelPath, ".vox")) {
-				reader.reject(modelPathNode, SchemaInvalidLogicalPath(modelPathPrefix + ".path"));
-				return null;
-			}
-			var motion = StaticModel;
-			if (hasMotion) {
-				final motionText = readClosed(reader, reader.field(modelFields, "motion"), modelPathPrefix + ".motion", ["static", "pulse"]);
-				if (motionText == null)
+			if (hasFrames) {
+				final frameNodes = reader.array(reader.field(modelFields, "frames"), modelPathPrefix + ".frames", 2, 16);
+				if (frameNodes == null)
 					return null;
-				motion = motionText == "pulse" ? PulseModel : StaticModel;
+				final framePaths:Array<String> = [];
+				final frameDurations:Array<Int> = [];
+				for (index in 0...frameNodes.length) {
+					final framePathPrefix = modelPathPrefix + ".frames[" + index + "]";
+					final frameFields = reader.object(frameNodes[index], framePathPrefix, ["path", "durationTicks"]);
+					if (frameFields == null)
+						return null;
+					final framePathNode = reader.field(frameFields, "path");
+					final framePath = reader.string(framePathNode, framePathPrefix + ".path", 128);
+					final duration = reader.integer(reader.field(frameFields, "durationTicks"), framePathPrefix + ".durationTicks", 1, 200);
+					if (framePath == null || duration == null)
+						return null;
+					if (!validVoxelModelPath(framePath)) {
+						reader.reject(framePathNode, SchemaInvalidLogicalPath(framePathPrefix + ".path"));
+						return null;
+					}
+					framePaths.push(framePath);
+					frameDurations.push(duration);
+				}
+				model = RuntimeVoxelAnimation(new RuntimeVoxelClip(framePaths, frameDurations, cellsPerAxis));
+			} else {
+				final modelPathNode = reader.field(modelFields, "path");
+				final modelPath = reader.string(modelPathNode, modelPathPrefix + ".path", 128);
+				if (modelPath == null)
+					return null;
+				if (!validVoxelModelPath(modelPath)) {
+					reader.reject(modelPathNode, SchemaInvalidLogicalPath(modelPathPrefix + ".path"));
+					return null;
+				}
+				model = RuntimeVoxelModel(modelPath, cellsPerAxis);
 			}
-			model = RuntimeVoxelModel(modelPath, cellsPerAxis, motion);
 		}
 		return new RuntimePresentation(asset, cell, index, model);
+	}
+
+	/** True only for one canonical package-relative MagicaVoxel asset path. */
+	static function validVoxelModelPath(path:String):Bool {
+		final accepted = switch ContentPackagePath.parse(path) {
+			case PathAccepted(_): true;
+			case PathRejected(_): false;
+		};
+		return accepted && StringTools.startsWith(path, "assets/") && StringTools.endsWith(path, ".vox");
 	}
 
 	/** Resolve one actor visual through the same validated asset inventory as other world presentation. */

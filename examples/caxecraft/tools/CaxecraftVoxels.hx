@@ -23,24 +23,36 @@ class CaxecraftVoxels {
 			Sys.exit(2);
 		}
 		final modelDirectory = arguments[0];
-		final relay:Array<Voxel> = [];
-		addBase(relay);
-		addCabinet(relay);
-		addControlFace(relay);
-		addCrystal(relay);
-		writeOrCheck('$modelDirectory/forge-relay.vox', encode(relay, false), checkOnly);
+		final relayNames = ["forge-relay", "forge-relay-switching", "forge-relay-active"];
+		for (pose in 0...relayNames.length) {
+			final relay:Array<Voxel> = [];
+			addBase(relay);
+			addCabinet(relay);
+			addControlFace(relay);
+			addRelayLever(relay, pose);
+			addCrystal(relay, pose);
+			writeOrCheck('$modelDirectory/${relayNames[pose]}.vox', encode(relay, false), checkOnly);
+			Sys.println('${relayNames[pose]}.vox: ${relay.length} voxels');
+		}
 
-		final winch:Array<Voxel> = [];
-		addWinchBase(winch);
-		addWinchSupports(winch);
-		addWinchDrum(winch);
-		addWinchChainAndCrank(winch);
-		writeOrCheck('$modelDirectory/gate-winch.vox', encode(winch, false), checkOnly);
+		final winchNames = ["gate-winch", "gate-winch-turning", "gate-winch-active"];
+		for (pose in 0...winchNames.length) {
+			final winch:Array<Voxel> = [];
+			addWinchBase(winch);
+			addWinchSupports(winch);
+			addWinchDrum(winch, pose);
+			addWinchChainAndCrank(winch, pose);
+			writeOrCheck('$modelDirectory/${winchNames[pose]}.vox', encode(winch, false), checkOnly);
+			Sys.println('${winchNames[pose]}.vox: ${winch.length} voxels');
+		}
 
-		final fieldNote:Array<Voxel> = [];
-		addFieldNoteRoll(fieldNote);
-		addFieldNoteBinding(fieldNote);
-		writeOrCheck('$modelDirectory/field-note.vox', encode(fieldNote, true), checkOnly);
+		final noteNames = ["field-note", "field-note-opening", "field-note-open"];
+		for (pose in 0...noteNames.length) {
+			final fieldNote:Array<Voxel> = [];
+			addFieldNotePose(fieldNote, pose);
+			writeOrCheck('$modelDirectory/${noteNames[pose]}.vox', encode(fieldNote, true), checkOnly);
+			Sys.println('${noteNames[pose]}.vox: ${fieldNote.length} voxels');
+		}
 
 		final glyphs = [River, Leaf, Moon, Flame];
 		final glyphNames = ["river", "leaf", "moon", "flame"];
@@ -53,11 +65,13 @@ class CaxecraftVoxels {
 			addRuneStone(enteredGlyph, glyphs[index]);
 			addEnteredRuneLight(enteredGlyph);
 			writeOrCheck('$modelDirectory/vault-glyph-${glyphNames[index]}-active.vox', encode(enteredGlyph, false), checkOnly);
-			Sys.println('vault-glyph-${glyphNames[index]}.vox: ${waitingGlyph.length} waiting, ${enteredGlyph.length} active voxels');
+
+			final lightingGlyph:Array<Voxel> = [];
+			addRuneStone(lightingGlyph, glyphs[index]);
+			addEnteringRuneLight(lightingGlyph);
+			writeOrCheck('$modelDirectory/vault-glyph-${glyphNames[index]}-lighting.vox', encode(lightingGlyph, false), checkOnly);
+			Sys.println('vault-glyph-${glyphNames[index]}.vox: ${waitingGlyph.length} waiting, ${lightingGlyph.length} lighting, ${enteredGlyph.length} active voxels');
 		}
-		Sys.println('forge-relay.vox: ${relay.length} voxels');
-		Sys.println('gate-winch.vox: ${winch.length} voxels');
-		Sys.println('field-note.vox: ${fieldNote.length} voxels');
 	}
 
 	/** Add one grounded carved stone whose raised mark stays readable from play height. */
@@ -112,6 +126,16 @@ class CaxecraftVoxels {
 		}
 		for (x in 12...20)
 			put(voxels, x, 5, 28, x == 15 || x == 16 ? 12 : 11);
+	}
+
+	/** Add a partial light sweep used between the carved and fully lit poses. */
+	static function addEnteringRuneLight(voxels:Array<Voxel>):Void {
+		for (x in 9...17) {
+			put(voxels, x, 5, 10, x % 4 == 0 ? 12 : 11);
+			put(voxels, x, 5, 25, x % 4 == 0 ? 12 : 11);
+		}
+		for (z in 11...19)
+			put(voxels, 9, 5, z, z % 4 == 0 ? 12 : 11);
 	}
 
 	/** Raise three flowing bands, with highlights that distinguish the river rune. */
@@ -254,6 +278,35 @@ class CaxecraftVoxels {
 		put(voxels, 16, 4, 7, 7);
 	}
 
+	/** Build closed, opening, or fully open poses for the readable field note. */
+	static function addFieldNotePose(voxels:Array<Voxel>, pose:Int):Void {
+		if (pose == 0) {
+			addFieldNoteRoll(voxels);
+			addFieldNoteBinding(voxels);
+			return;
+		}
+
+		final maximumY = pose == 1 ? 18 : 26;
+		for (x in 5...28)
+			for (y in 5...maximumY)
+				for (z in 2...5) {
+					var color = z == 4 ? 17 : 16;
+					if ((x + y) % 13 == 0)
+						color = 18;
+					put(voxels, x, y, z, color);
+				}
+		for (x in 4...29)
+			for (z in 2...7) {
+				put(voxels, x, 4, z, z >= 5 ? 18 : 16);
+				put(voxels, x, maximumY, z, z >= 5 ? 18 : 16);
+			}
+		for (x in 14...18)
+			for (y in 5...maximumY)
+				put(voxels, x, y, 5, pose == 1 ? 9 : 10);
+		for (point in [{x: 8, y: 10}, {x: 23, y: 10}, {x: 8, y: maximumY - 5}, {x: 23, y: maximumY - 5}])
+			put(voxels, point.x, point.y, 5, 19);
+	}
+
 	/** Add the low timber platform and four iron-shod feet of the winch. */
 	static function addWinchBase(voxels:Array<Voxel>):Void {
 		fillChamferedLayer(voxels, 2, 29, 5, 27, 0, 3, 2);
@@ -283,14 +336,14 @@ class CaxecraftVoxels {
 	}
 
 	/** Add the large faceted timber drum and its two iron retaining bands. */
-	static function addWinchDrum(voxels:Array<Voxel>):Void {
+	static function addWinchDrum(voxels:Array<Voxel>, pose:Int):Void {
 		for (x in 8...24)
 			for (y in 7...24)
 				for (z in 8...25) {
 					final dy = y - 15;
 					final dz = z - 16;
 					if (dy * dy + dz * dz <= 64) {
-						var color = (y + z) % 4 == 0 ? 14 : 13;
+						var color = (y + z + pose * 2) % 4 == 0 ? 14 : 13;
 						if (x == 10 || x == 11 || x == 20 || x == 21)
 							color = 3;
 						put(voxels, x, y, z, color);
@@ -300,9 +353,9 @@ class CaxecraftVoxels {
 	}
 
 	/** Add a hanging copper chain and a side crank with a wooden grip. */
-	static function addWinchChainAndCrank(voxels:Array<Voxel>):Void {
+	static function addWinchChainAndCrank(voxels:Array<Voxel>, pose:Int):Void {
 		for (z in 3...23) {
-			final sway = (z % 6 < 3) ? 0 : 1;
+			final sway = ((z + pose * 2) % 6 < 3) ? 0 : 1;
 			for (x in [14 + sway, 17 - sway]) {
 				put(voxels, x, 5, z, z % 4 < 2 ? 6 : 7);
 				if (z % 4 == 0)
@@ -312,11 +365,18 @@ class CaxecraftVoxels {
 
 		fill(voxels, 28, 31, 13, 18, 14, 19, 5);
 		for (step in 0...8) {
-			put(voxels, 30, 13 - step, 14 - step, step % 3 == 0 ? 7 : 6);
-			put(voxels, 31, 13 - step, 14 - step, 6);
+			final handleY = pose == 0 ? 13 - step : pose == 1 ? 10 : 7 + step;
+			final handleZ = pose == 1 ? 10 - step : 14 - step;
+			put(voxels, 30, handleY, handleZ, step % 3 == 0 ? 7 : 6);
+			put(voxels, 31, handleY, handleZ, 6);
 		}
-		fill(voxels, 28, 31, 3, 8, 5, 8, 13);
-		fill(voxels, 29, 31, 2, 9, 6, 7, 14);
+		final gripY = pose == 0 ? 3 : pose == 1 ? 8 : 14;
+		final gripZ = pose == 1 ? 2 : 5;
+		fill(voxels, 28, 31, gripY, gripY + 5, gripZ, gripZ + 3, 13);
+		fill(voxels, 29, 31, gripY - 1, gripY + 6, gripZ + 1, gripZ + 2, 14);
+		if (pose == 2)
+			for (point in [{x: 6, y: 8, z: 25}, {x: 25, y: 8, z: 25}, {x: 15, y: 6, z: 24}])
+				put(voxels, point.x, point.y, point.z, 11);
 	}
 
 	/** Add the broad, beveled foot that makes the relay read as one object. */
@@ -384,8 +444,22 @@ class CaxecraftVoxels {
 		put(voxels, 14, 2, 14, 11);
 	}
 
+	/** Add a three-pose copper lever whose silhouette clearly shows activation. */
+	static function addRelayLever(voxels:Array<Voxel>, pose:Int):Void {
+		fill(voxels, 13, 18, 1, 3, 11, 15, 3);
+		for (step in 0...9) {
+			final x = pose == 1 ? 12 + step : pose == 0 ? 16 - Std.int(step / 3) : 16 + Std.int(step / 3);
+			final z = pose == 1 ? 15 + Std.int(step / 2) : pose == 0 ? 15 + step : 15 - step;
+			put(voxels, x, 0, z, step < 6 ? 6 : 7);
+			put(voxels, x, 1, z, step < 6 ? 6 : 7);
+		}
+		final tipZ = pose == 1 ? 19 : pose == 0 ? 23 : 7;
+		final tipX = pose == 1 ? 20 : pose == 0 ? 14 : 18;
+		fill(voxels, tipX - 1, tipX + 1, 0, 2, tipZ - 1, tipZ + 1, pose == 2 ? 11 : 7);
+	}
+
 	/** Add the octagonal socket, four prongs, and a finely faceted crystal. */
-	static function addCrystal(voxels:Array<Voxel>):Void {
+	static function addCrystal(voxels:Array<Voxel>, pose:Int):Void {
 		for (z in 21...24)
 			fillChamferedLayer(voxels, 10, 21, 10, 21, z, 3, z == 22 ? 7 : 6);
 		for (point in [{x: 10, y: 10}, {x: 21, y: 10}, {x: 10, y: 21}, {x: 21, y: 21}]) {
@@ -393,15 +467,23 @@ class CaxecraftVoxels {
 			put(voxels, point.x + (point.x < 15 ? 1 : -1), point.y + (point.y < 15 ? 1 : -1), 25, 7);
 		}
 
-		addCrystalLayer(voxels, 23, 3);
-		addCrystalLayer(voxels, 24, 5);
-		addCrystalLayer(voxels, 25, 7);
-		addCrystalLayer(voxels, 26, 8);
-		addCrystalLayer(voxels, 27, 8);
-		addCrystalLayer(voxels, 28, 7);
-		addCrystalLayer(voxels, 29, 5);
-		addCrystalLayer(voxels, 30, 3);
-		addCrystalLayer(voxels, 31, 1);
+		addCrystalLayer(voxels, 23, 3, pose);
+		addCrystalLayer(voxels, 24, 5, pose);
+		addCrystalLayer(voxels, 25, 7, pose);
+		addCrystalLayer(voxels, 26, 8, pose);
+		addCrystalLayer(voxels, 27, 8, pose);
+		addCrystalLayer(voxels, 28, 7, pose);
+		addCrystalLayer(voxels, 29, 5, pose);
+		addCrystalLayer(voxels, 30, 3, pose);
+		addCrystalLayer(voxels, 31, 1, pose);
+		if (pose == 2)
+			for (point in [
+				{x: 6, y: 15, z: 27},
+				{x: 25, y: 15, z: 27},
+				{x: 15, y: 6, z: 27},
+				{x: 15, y: 25, z: 27}
+			])
+				put(voxels, point.x, point.y, point.z, 11);
 	}
 
 	/** Fill one rectangular layer while cutting its four square corners. */
@@ -427,15 +509,15 @@ class CaxecraftVoxels {
 	}
 
 	/** Add one centered crystal layer with baked side and highlight colors. */
-	static function addCrystalLayer(voxels:Array<Voxel>, z:Int, radius:Int):Void {
+	static function addCrystalLayer(voxels:Array<Voxel>, z:Int, radius:Int, pose:Int):Void {
 		for (x in 7...25)
 			for (y in 7...25)
 				if (absolute(2 * x - 31) + absolute(2 * y - 31) <= radius * 2) {
-					var layerColor = z >= 29 ? 10 : 9;
-					if (x <= 13)
-						layerColor = 8;
+					var layerColor = pose == 0 ? 8 : pose == 1 ? 9 : 10;
+					if (x <= 13 && pose < 2)
+						layerColor = pose == 0 ? 8 : 9;
 					else if (y <= 12 || (x + y + z) % 11 == 0)
-						layerColor = 11;
+						layerColor = pose == 2 ? 11 : 10;
 					put(voxels, x, y, z, layerColor);
 				}
 	}

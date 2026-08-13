@@ -10,11 +10,11 @@ import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
-import caxecraft.content.RuntimeContentPack.RuntimeModelMotion;
 import caxecraft.content.RuntimeContentPack.RuntimeModelPresentation;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
+import caxecraft.app.VoxelFrameAnimation.VoxelFrameAnimationPlayer;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
@@ -217,6 +217,10 @@ function readRequired(store:ContentPackageStore, logicalPath:String):Null<Loaded
 
 /** Exercise one representative mutation for every distinct pack family. */
 function negativeChecks():Int {
+	// This owner has the same function-lifetime shape as the application renderer.
+	// Individual assertions below reuse it; they do not construct conditional
+	// owners whose cleanup belongs to the separate haxe_c-71g capability.
+	final animations = new VoxelFrameAnimationPlayer();
 	final version = expectPackRejection(locatedUnsupportedVersionPack(), UnsupportedVersion);
 	if (version == null)
 		return 10;
@@ -243,7 +247,31 @@ function negativeChecks():Int {
 				|| registry.statefulObjectVisible(objectId, idle))
 				return 45;
 			switch [activePresentation.model, idlePresentation.model] {
-				case [RuntimeVoxelModel("assets/models/active.vox", 32, PulseModel), RuntimeVoxelModel("assets/models/idle.vox", 32, StaticModel)]:
+				case [RuntimeVoxelAnimation(clip), RuntimeVoxelModel("assets/models/idle.vox", 32)]:
+					if (clip.frameCount() != 3
+						|| clip.pathAt(0) != "assets/models/idle.vox"
+						|| clip.pathAt(1) != "assets/models/moving.vox"
+						|| clip.pathAt(2) != "assets/models/active.vox"
+						|| clip.durationAt(0) != 3
+						|| clip.durationAt(1) != 2
+						|| clip.durationAt(2) != 1
+						|| clip.cellsPerAxis() != 32)
+						return 55;
+					final initial = animations.sample("control", "idle", 1, 20, idlePresentation.model);
+					final activated = animations.sample("control", "active", 1, 21, activePresentation.model);
+					final moving = animations.sample("control", "active", 1, 24, activePresentation.model);
+					final held = animations.sample("control", "active", 1, 40, activePresentation.model);
+					final reloaded = animations.sample("control", "active", 2, 41, activePresentation.model);
+					if (initial == null
+						|| initial.path != "assets/models/idle.vox"
+						|| activated == null
+						|| activated.path != "assets/models/idle.vox"
+						|| moving == null
+						|| moving.path != "assets/models/moving.vox"
+						|| held == null
+						|| held.path != "assets/models/active.vox"
+						|| reloaded == null
+						|| reloaded.path != "assets/models/active.vox") return 57;
 				case _:
 					return 55;
 			}
@@ -275,7 +303,7 @@ function negativeChecks():Int {
 		return 50;
 	if (!rejectsPack(replaceOnce(minimal, '"render":"hidden"', '"render":"sometimes"'), InvalidClosedValue))
 		return 51;
-	if (!rejectsPack(replaceOnce(minimal, '"motion":"pulse"', '"motion":"shake"'), InvalidClosedValue))
+	if (!rejectsPack(replaceOnce(minimal, '"durationTicks":2', '"durationTicks":0'), InvalidInteger))
 		return 56;
 	if (!rejectsPack(replaceOnce(minimal, '"interaction":"activate"', '"interaction":"none"'), InvalidInvariant))
 		return 54;
@@ -369,7 +397,8 @@ function minimalPack():String
 		+ '"statefulObjects":[{"id":"caxecraft:glyph-control","interaction":"activate","interactionRadiusMilli":2500,'
 		+ '"bounds":{"widthMilli":1000,"heightMilli":1000,"depthMilli":1000},'
 		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf",'
-		+ '"model":{"path":"assets/models/active.vox","cellsPerAxis":32,"motion":"pulse"}}},'
+		+ '"model":{"frames":[{"path":"assets/models/idle.vox","durationTicks":3},{"path":"assets/models/moving.vox","durationTicks":2},'
+		+ '{"path":"assets/models/active.vox","durationTicks":1}],"cellsPerAxis":32}}},'
 		+ '{"id":"caxecraft:idle","collision":"passable","render":"hidden","presentation":{"asset":"adventure-items","cell":"glyph-wave",'
 		+ '"model":{"path":"assets/models/idle.vox","cellsPerAxis":32}}}]}],'
 		+ '"states":["caxecraft:active","caxecraft:idle"],"signals":[]}';

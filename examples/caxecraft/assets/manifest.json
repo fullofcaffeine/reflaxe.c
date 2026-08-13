@@ -26,11 +26,25 @@
       "castle-mechanisms",
       "entities",
       "field-note-model",
+      "field-note-opening-model",
+      "field-note-open-model",
       "forge-relay-model",
+      "forge-relay-switching-model",
+      "forge-relay-active-model",
       "gate-winch-model",
+      "gate-winch-turning-model",
+      "gate-winch-active-model",
+      "vault-glyph-flame-active-model",
+      "vault-glyph-flame-lighting-model",
       "vault-glyph-flame-model",
+      "vault-glyph-leaf-active-model",
+      "vault-glyph-leaf-lighting-model",
       "vault-glyph-leaf-model",
+      "vault-glyph-moon-active-model",
+      "vault-glyph-moon-lighting-model",
       "vault-glyph-moon-model",
+      "vault-glyph-river-active-model",
+      "vault-glyph-river-lighting-model",
       "vault-glyph-river-model",
       "terrain"
     ],
@@ -125,38 +139,38 @@
     "forge-relay-model": {
       "mode": "repository-haxe-vox-builder",
       "artifactIds": [],
-      "promptSummary": "Original 32-cubed forge relay with one grounded charcoal cabinet, copper braces and control face, and a teal crystal core.",
+      "promptSummary": "Original 32-cubed forge relay with one grounded charcoal cabinet, copper braces and control face, a three-pose lever, and a teal crystal that brightens when engaged.",
       "referenceInputs": [
         "Duke Nukem 3D voxel replacements were reviewed only for the proven flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
       ],
-      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx deterministically writes three MagicaVoxel 150 keyframes: idle, switching, and active. The active pose holds the lever down and uses a brighter crystal palette."
     },
     "field-note-model": {
       "mode": "repository-haxe-vox-builder",
       "artifactIds": [],
-      "promptSummary": "Original 32-cubed field note with a grounded cream parchment roll, shaded end rings, teal travel binding, loose ribbon tails, and a copper wax seal.",
+      "promptSummary": "Original 32-cubed field note with closed, opening, and fully open poses, cream parchment, teal binding, and a copper wax seal.",
       "referenceInputs": [
         "The existing Caxecraft field-note atlas cell supplied the prop identity and original teal, copper, and cream art direction. No external game asset was copied."
       ],
-      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared prop palette."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx deterministically writes three MagicaVoxel 150 keyframes: rolled, opening, and open."
     },
     "gate-winch-model": {
       "mode": "repository-haxe-vox-builder",
       "artifactIds": [],
-      "promptSummary": "Original 32-cubed gate winch with a timber frame, iron-shod base, faceted drum, copper chain, and side crank.",
+      "promptSummary": "Original 32-cubed gate winch with a timber frame, iron-shod base, faceted drum, copper chain, and three crank positions.",
       "referenceInputs": [
         "Duke Nukem 3D voxel replacements were reviewed only for the proven flat-sprite-to-volume technique; no model, palette, source code, or game asset was copied."
       ],
-      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the checked-in MagicaVoxel 150 bytes deterministically from the reviewed voxel shape and shared mechanism palette."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx deterministically writes three MagicaVoxel 150 keyframes: idle, turning, and active. The drum, chain, crank, and active indicator change between poses."
     },
     "vault-glyph-models": {
       "mode": "repository-haxe-vox-builder",
       "artifactIds": [],
-      "promptSummary": "Four original 32-cubed vault rune stones with a grounded carved volume, recessed face, copper trim, distinct raised marks, and brighter active-state variants.",
+      "promptSummary": "Four original 32-cubed vault rune stones with a grounded carved volume, recessed face, copper trim, distinct raised marks, and three-stage illumination.",
       "referenceInputs": [
         "The existing Caxecraft route-glyph atlas cells supplied only the four semantic identities and teal, copper, cream, and orange palette direction; their flat pixel shapes were not extruded."
       ],
-      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the four waiting and four active MagicaVoxel 150 files deterministically. Active variants add a bright inset frame and crown so generic object-state changes have immediate visual feedback."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx deterministically writes waiting, lighting, and active MagicaVoxel 150 keyframes for all four glyphs. The inset light sweeps across the intermediate pose and remains bright in the active pose."
     },
     "hud": {
       "mode": "openai-built-in-imagegen",
@@ -455,14 +469,69 @@
       "rights": "caxecraft-original"
     },
     {
+      "id": "field-note-open-model",
+      "path": "models/field-note-open.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "a04ba3aa5fc75e2dc6fac94dd8ceb351543709b1185bdad76d1c539d6a65c257",
+      "generationRecord": "field-note-model",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "field-note-opening-model",
+      "path": "models/field-note-opening.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "ea88b0fc2d3f0e6a8d576d28cd79f3e8e4827a58a32bf52f06b44129a28d8a0b",
+      "generationRecord": "field-note-model",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "forge-relay-active-model",
+      "path": "models/forge-relay-active.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "6ea5e8cae700d11022a0c56d541dbe10a4cb3fedfc5b7726743bafbeb47b67b8",
+      "generationRecord": "forge-relay-model",
+      "rights": "caxecraft-original"
+    },
+    {
       "id": "forge-relay-model",
       "path": "models/forge-relay.vox",
       "kind": "voxel-model",
       "width": 32,
       "height": 32,
       "depth": 32,
-      "sha256": "2a16ed80f4ad08643dd068e4204827538c568435ed7bf44c431ee4c1c8d4bde9",
+      "sha256": "c09f5204dabd674ee0a4d2ee554cf6934ff3a63250b9abd091b1b2e5d776c0d1",
       "generationRecord": "forge-relay-model",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "forge-relay-switching-model",
+      "path": "models/forge-relay-switching.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "b2c9a7f7eae1a2946f20ceac4705ca259bb222f6c821b3833f60f9dff6585220",
+      "generationRecord": "forge-relay-model",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "gate-winch-active-model",
+      "path": "models/gate-winch-active.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "05e42bbf1d47c46ad49dde2fcff4439c778833b1219fbfdc620c5e79aa8b8902",
+      "generationRecord": "gate-winch-model",
       "rights": "caxecraft-original"
     },
     {
@@ -473,6 +542,17 @@
       "height": 32,
       "depth": 32,
       "sha256": "0ea8ea70672edf650a063d34993ebda6fe12aec6ec67c897d30a4156537ed583",
+      "generationRecord": "gate-winch-model",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "gate-winch-turning-model",
+      "path": "models/gate-winch-turning.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "0102a9097dd666cf49f1d49e381edd14559e4b2d0b163f17c3aa5c61fcb698cb",
       "generationRecord": "gate-winch-model",
       "rights": "caxecraft-original"
     },
@@ -499,6 +579,17 @@
       "rights": "caxecraft-original"
     },
     {
+      "id": "vault-glyph-flame-lighting-model",
+      "path": "models/vault-glyph-flame-lighting.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "e5bda1d020265bb006f1bda02a55cd34e9371574d7bee505ea5d92e7d7588f81",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
       "id": "vault-glyph-leaf-active-model",
       "path": "models/vault-glyph-leaf-active.vox",
       "kind": "voxel-model",
@@ -517,6 +608,17 @@
       "height": 32,
       "depth": 32,
       "sha256": "4f32128bf8637bf455f8dba84357d2f86d6ea660ff8e5f8c0bb61c639003e7ea",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-leaf-lighting-model",
+      "path": "models/vault-glyph-leaf-lighting.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "a57c7c7c4248e6ebd22dec8c8c6d7b23f1b6aeb04af1a35f1f8cae57045d1bae",
       "generationRecord": "vault-glyph-models",
       "rights": "caxecraft-original"
     },
@@ -543,6 +645,17 @@
       "rights": "caxecraft-original"
     },
     {
+      "id": "vault-glyph-moon-lighting-model",
+      "path": "models/vault-glyph-moon-lighting.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "2c5c6be1b13ae279502959373a049480095710a457da11ceeca4fc9bf2e63e69",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
       "id": "vault-glyph-river-active-model",
       "path": "models/vault-glyph-river-active.vox",
       "kind": "voxel-model",
@@ -561,6 +674,17 @@
       "height": 32,
       "depth": 32,
       "sha256": "01963b30b0746880bdc32e869fef04a31543f5660de25d5ae5dee352c3a825cb",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-river-lighting-model",
+      "path": "models/vault-glyph-river-lighting.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "b27685db579ef9cc3f701a46d02a0089cc5213684190aeeb3bc6dda066f219e4",
       "generationRecord": "vault-glyph-models",
       "rights": "caxecraft-original"
     },

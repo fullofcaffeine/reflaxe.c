@@ -3,7 +3,8 @@
 This directory contains the first original Caxecraft visual-design pack. The
 native game now packages and loads the title panorama, wordmark, HUD atlas,
 base and Adventure item atlases, entity atlas, base and Adventure terrain
-atlases, and seven voxel world props. Three atlases remain design inputs: their
+atlases, and seven voxel world props. The props use 21 model files for their
+idle, transition, and active frames. Three atlases remain design inputs: their
 presence is not evidence that Adventure characters, Ivvy, or cutscene-editor
 icons are used by the native game yet. The
 complete scope is described by the
@@ -73,9 +74,8 @@ Use these steps for a new prop:
 3. Keep important colors in one reviewed palette.
 4. Put the model path and world bounds in reloadable content.
 5. For an interactive prop, give each meaningful state a visibly different
-   model or presentation. The active state can also select `motion: pulse` in
-   the content pack. A successful action must be clear before text explains
-   it, and a reset must restore the still idle presentation.
+   animation clip. Show a physical action, a clear light or color change, and
+   a final pose that remains visible. A reset clip must restore the idle pose.
 6. Keep a 2D atlas cell for the HUD or a bounded load-error fallback.
 7. Review the result from a real gameplay camera before publication.
 
@@ -83,11 +83,39 @@ Do not extrude every sprite pixel into a cube. That process usually creates a
 flat slab with noisy edges. Treat the sprite as a reference, then author a real
 volume with a useful side and back silhouette.
 
-Current `.vox` support draws static models. It does not animate them. A future
-animation system can use named clips made from voxel frames, rigid voxel parts,
-or a documented skeleton. That system must keep timing and clip selection in
-reloadable content. It must also define interpolation, bounds, collisions, and
-resource ownership before Caxecraft uses it for characters or enemies.
+### Voxel frame animation
+
+Reloadable content can define a one-shot clip as a list of complete `.vox`
+models. Each frame also gives its duration in committed simulation ticks.
+
+```json
+"model": {
+  "frames": [
+    { "path": "assets/models/forge-relay.vox", "durationTicks": 3 },
+    { "path": "assets/models/forge-relay-switching.vox", "durationTicks": 3 },
+    { "path": "assets/models/forge-relay-active.vox", "durationTicks": 1 }
+  ],
+  "cellsPerAxis": 32
+}
+```
+
+The generic animation player starts a clip when it observes an object-state
+change. It advances the frames with the fixed game clock and holds the final
+frame. A pause therefore stops the animation. A display-frame rate change does
+not change its speed.
+
+The first observation of a loaded level shows the final frame for its current
+state. This rule prevents every active switch from replaying when a player
+enters a level. A new state change starts the selected clip from its first
+frame.
+
+Content owns the frame paths, order, and durations. The engine owns playback
+and model resources. CaxeFlow owns the object state and collision, so a visual
+frame never delays or changes gameplay.
+
+Use complete models for short prop actions. They give each frame a clear and
+reviewable shape. A future character system can add rigid parts or a skeleton
+when a real animated character needs that extra structure.
 
 The pack deliberately contains no official Haxe logo binary. The Haxe branding
 page makes marks downloadable and governs visual use, but the reviewed page did

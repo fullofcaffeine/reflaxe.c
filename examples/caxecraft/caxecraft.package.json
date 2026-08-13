@@ -73,14 +73,56 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 28324,
-      "sha256": "a64ad88eb195f46dee2adb8ee8741df81ef7a6ed590ad6114eb658b6559123f0"
+      "byteLength": 32519,
+      "sha256": "a04f45bc15e1e160ef67864de4993ecb58e83ea1c69689590e9e7121c2cd62cb"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/field-note-open.vox",
+      "byteLength": 8244,
+      "sha256": "a04ba3aa5fc75e2dc6fac94dd8ceb351543709b1185bdad76d1c539d6a65c257"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/field-note-opening.vox",
+      "byteLength": 5908,
+      "sha256": "ea88b0fc2d3f0e6a8d576d28cd79f3e8e4827a58a32bf52f06b44129a28d8a0b"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/field-note.vox",
+      "byteLength": 16720,
+      "sha256": "e1eb70ab6d0c76f2d3d4696b6c8a8041a4a5603abc8bcc0c2cb4431ec9b113f6"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/forge-relay-active.vox",
+      "byteLength": 36692,
+      "sha256": "6ea5e8cae700d11022a0c56d541dbe10a4cb3fedfc5b7726743bafbeb47b67b8"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/forge-relay-switching.vox",
+      "byteLength": 36692,
+      "sha256": "b2c9a7f7eae1a2946f20ceac4705ca259bb222f6c821b3833f60f9dff6585220"
     },
     {
       "kind": "asset",
       "path": "assets/models/forge-relay.vox",
-      "byteLength": 36252,
-      "sha256": "2a16ed80f4ad08643dd068e4204827538c568435ed7bf44c431ee4c1c8d4bde9"
+      "byteLength": 36692,
+      "sha256": "c09f5204dabd674ee0a4d2ee554cf6934ff3a63250b9abd091b1b2e5d776c0d1"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/gate-winch-active.vox",
+      "byteLength": 36676,
+      "sha256": "05e42bbf1d47c46ad49dde2fcff4439c778833b1219fbfdc620c5e79aa8b8902"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/gate-winch-turning.vox",
+      "byteLength": 36576,
+      "sha256": "0102a9097dd666cf49f1d49e381edd14559e4b2d0b163f17c3aa5c61fcb698cb"
     },
     {
       "kind": "asset",
@@ -96,6 +138,12 @@
     },
     {
       "kind": "asset",
+      "path": "assets/models/vault-glyph-flame-lighting.vox",
+      "byteLength": 37716,
+      "sha256": "e5bda1d020265bb006f1bda02a55cd34e9371574d7bee505ea5d92e7d7588f81"
+    },
+    {
+      "kind": "asset",
       "path": "assets/models/vault-glyph-flame.vox",
       "byteLength": 37620,
       "sha256": "af5904e2c58ea601b3a42bbe5595f22b8bbaa0d334f259e771e40c5a4e21b281"
@@ -105,6 +153,12 @@
       "path": "assets/models/vault-glyph-leaf-active.vox",
       "byteLength": 37884,
       "sha256": "f7382a63d183e7722b7e8b403c847d67bf55b00e4f4ecfc9da16205322ae8dc6"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/vault-glyph-leaf-lighting.vox",
+      "byteLength": 37724,
+      "sha256": "a57c7c7c4248e6ebd22dec8c8c6d7b23f1b6aeb04af1a35f1f8cae57045d1bae"
     },
     {
       "kind": "asset",
@@ -120,6 +174,12 @@
     },
     {
       "kind": "asset",
+      "path": "assets/models/vault-glyph-moon-lighting.vox",
+      "byteLength": 37480,
+      "sha256": "2c5c6be1b13ae279502959373a049480095710a457da11ceeca4fc9bf2e63e69"
+    },
+    {
+      "kind": "asset",
       "path": "assets/models/vault-glyph-moon.vox",
       "byteLength": 37384,
       "sha256": "87990d6605f1bb1b90b76014b13e6d42aafa0001161ac8ad8b4e253a61763589"
@@ -129,6 +189,12 @@
       "path": "assets/models/vault-glyph-river-active.vox",
       "byteLength": 37704,
       "sha256": "a9f14d79b513bdc1980ba56070175aba1b20118249facb1d6a02e1c0d359ed6a"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/vault-glyph-river-lighting.vox",
+      "byteLength": 37544,
+      "sha256": "b27685db579ef9cc3f701a46d02a0089cc5213684190aeeb3bc6dda066f219e4"
     },
     {
       "kind": "asset",
@@ -157,14 +223,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 19925,
-      "sha256": "8ae25cd5ffcf4207bdfbaf3897400afa5676c0178b5fe74cdcaed2fa2d3829be"
+      "byteLength": 22677,
+      "sha256": "7a4d7f8a2379de29de09a3124495c26a138405ee89d24ebd102678aa292d1f73"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "7705197889d81664516c78dd26173dd2c89cbaf01ed2c94d980d8302ac84a315"
+      "sha256": "1e510f8f24785964b84918a01bd749b010633b0212f849f58ee650598efe2920"
     },
     {
       "kind": "level",
