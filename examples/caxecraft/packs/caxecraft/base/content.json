@@ -516,7 +516,8 @@
             "cell": "gate-relay-active",
             "model": {
               "path": "assets/models/forge-relay.vox",
-              "cellsPerAxis": 32
+              "cellsPerAxis": 32,
+              "motion": "pulse"
             }
           }
         },
@@ -550,7 +551,8 @@
             "cell": "gate-winch-engaged",
             "model": {
               "path": "assets/models/gate-winch.vox",
-              "cellsPerAxis": 32
+              "cellsPerAxis": 32,
+              "motion": "pulse"
             }
           }
         },
@@ -609,8 +611,9 @@
             "asset": "adventure-items",
             "cell": "glyph-ember",
             "model": {
-              "path": "assets/models/vault-glyph-flame.vox",
-              "cellsPerAxis": 32
+              "path": "assets/models/vault-glyph-flame-active.vox",
+              "cellsPerAxis": 32,
+              "motion": "pulse"
             }
           }
         },
@@ -643,8 +646,9 @@
             "asset": "adventure-items",
             "cell": "glyph-leaf",
             "model": {
-              "path": "assets/models/vault-glyph-leaf.vox",
-              "cellsPerAxis": 32
+              "path": "assets/models/vault-glyph-leaf-active.vox",
+              "cellsPerAxis": 32,
+              "motion": "pulse"
             }
           }
         },
@@ -677,8 +681,9 @@
             "asset": "adventure-items",
             "cell": "glyph-forge",
             "model": {
-              "path": "assets/models/vault-glyph-moon.vox",
-              "cellsPerAxis": 32
+              "path": "assets/models/vault-glyph-moon-active.vox",
+              "cellsPerAxis": 32,
+              "motion": "pulse"
             }
           }
         },
@@ -711,8 +716,9 @@
             "asset": "adventure-items",
             "cell": "glyph-wave",
             "model": {
-              "path": "assets/models/vault-glyph-river.vox",
-              "cellsPerAxis": 32
+              "path": "assets/models/vault-glyph-river-active.vox",
+              "cellsPerAxis": 32,
+              "motion": "pulse"
             }
           }
         },

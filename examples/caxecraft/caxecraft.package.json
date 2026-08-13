@@ -73,8 +73,8 @@
     {
       "kind": "asset-manifest",
       "path": "assets/manifest.json",
-      "byteLength": 26773,
-      "sha256": "707ac924ab84fc97f91ccc712b08ab35ff211b9cf188c3a463cbfb7c7f0613f6"
+      "byteLength": 28324,
+      "sha256": "a64ad88eb195f46dee2adb8ee8741df81ef7a6ed590ad6114eb658b6559123f0"
     },
     {
       "kind": "asset",
@@ -90,9 +90,21 @@
     },
     {
       "kind": "asset",
+      "path": "assets/models/vault-glyph-flame-active.vox",
+      "byteLength": 37876,
+      "sha256": "1c89b94adc001e04343af27bf7894e4ccebd2a89fa7e40b4269f5439c5a11452"
+    },
+    {
+      "kind": "asset",
       "path": "assets/models/vault-glyph-flame.vox",
       "byteLength": 37620,
       "sha256": "af5904e2c58ea601b3a42bbe5595f22b8bbaa0d334f259e771e40c5a4e21b281"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/vault-glyph-leaf-active.vox",
+      "byteLength": 37884,
+      "sha256": "f7382a63d183e7722b7e8b403c847d67bf55b00e4f4ecfc9da16205322ae8dc6"
     },
     {
       "kind": "asset",
@@ -102,9 +114,21 @@
     },
     {
       "kind": "asset",
+      "path": "assets/models/vault-glyph-moon-active.vox",
+      "byteLength": 37640,
+      "sha256": "2f8bdd7f9766f98d17c0e6f56ac4d7cdfaab181fa8a3cbae0657e9e89459afb7"
+    },
+    {
+      "kind": "asset",
       "path": "assets/models/vault-glyph-moon.vox",
       "byteLength": 37384,
       "sha256": "87990d6605f1bb1b90b76014b13e6d42aafa0001161ac8ad8b4e253a61763589"
+    },
+    {
+      "kind": "asset",
+      "path": "assets/models/vault-glyph-river-active.vox",
+      "byteLength": 37704,
+      "sha256": "a9f14d79b513bdc1980ba56070175aba1b20118249facb1d6a02e1c0d359ed6a"
     },
     {
       "kind": "asset",
@@ -122,7 +146,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 3878,
-      "sha256": "f806ee641d01d88edd95a12b394e6acf3c0b65ec19c6bfe72c5efbb7cfffc276"
+      "sha256": "ace9504233d79b3573abf5d82be71a4b832e7ad1be79475ce7e2a02216b78800"
     },
     {
       "kind": "localization",
@@ -133,14 +157,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 19699,
-      "sha256": "e5d01f399534bf2966ffe902730618ffbe4ce558e5d4f8540bed77cefe7889f6"
+      "byteLength": 19925,
+      "sha256": "8ae25cd5ffcf4207bdfbaf3897400afa5676c0178b5fe74cdcaed2fa2d3829be"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "c74bee38ed2e54966d96dfd80a0bea257222ecd4c34fefa53c3f3f7b9cb9a115"
+      "sha256": "7705197889d81664516c78dd26173dd2c89cbaf01ed2c94d980d8302ac84a315"
     },
     {
       "kind": "level",
@@ -187,8 +211,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 37141,
-      "sha256": "1a67ec578f6482dc2540d8442560d25bad42401697ef91da6758d287c2d752f0"
+      "byteLength": 37103,
+      "sha256": "8e36d232cd8255145582e9c39f5ff389d2f22251c1faab05b9a71a772abbf51f"
     },
     {
       "kind": "level",

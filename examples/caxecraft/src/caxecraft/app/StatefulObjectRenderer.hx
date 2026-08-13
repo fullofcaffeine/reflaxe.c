@@ -4,6 +4,7 @@ package caxecraft.app;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
 import caxecraft.app.StatefulObjectVisual.StatefulObjectVisualKind;
 import caxecraft.app.StatefulObjectVisual.statefulObjectVisual;
+import caxecraft.app.VoxelModelMotion.voxelModelLiftMilli;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.RuntimeContentPack.RuntimeModelPresentation;
 import caxecraft.domain.GameSession;
@@ -22,7 +23,7 @@ import raylib.Vector3;
 /** Draw all active stateful objects using their current content-owned visual. */
 function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSession, level:PlayableLevelView, entityTexture:Texture2D, entityTextureReady:Bool,
 		itemTexture:Texture2D, itemTextureReady:Bool, adventureItemTexture:Texture2D, adventureItemTextureReady:Bool, terrainTexture:Texture2D,
-		terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog, runtimeModels:RuntimeVoxelModelCatalog):Void {
+		terrainTextureReady:Bool, runtimeTextures:RuntimeTextureAtlasCatalog, runtimeModels:RuntimeVoxelModelCatalog, completedTicks:Int):Void {
 	for (index in 0...level.statefulObjectCount()) {
 		final authoredId = level.statefulObjectIdAt(index);
 		if (!session.statefulObjectIsActive(authoredId))
@@ -37,8 +38,9 @@ function drawStatefulObjects(registry:RuntimeContentRegistry, session:GameSessio
 		final bounds = level.statefulObjectBoundsAt(index);
 		final modelDrawn = switch resolved.model {
 			case NoRuntimeModel: false;
-			case RuntimeVoxelModel(path, cellsPerAxis):
-				runtimeModels.draw(path, transform.xMilli / 1000.0, transform.yMilli / 1000.0, transform.zMilli / 1000.0, bounds.widthMilli / 1000.0,
+			case RuntimeVoxelModel(path, cellsPerAxis, motion):
+				final lift = voxelModelLiftMilli(motion, completedTicks) / 1000.0;
+				runtimeModels.draw(path, transform.xMilli / 1000.0, transform.yMilli / 1000.0 + lift, transform.zMilli / 1000.0, bounds.widthMilli / 1000.0,
 					bounds.heightMilli / 1000.0, bounds.depthMilli / 1000.0, transform.yawDegrees, cellsPerAxis);
 		};
 		if (modelDrawn)

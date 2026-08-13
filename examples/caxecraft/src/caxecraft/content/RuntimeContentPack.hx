@@ -85,8 +85,17 @@ enum RuntimeModelPresentation {
 	/** Draw the existing atlas presentation. */
 	NoRuntimeModel;
 
-	/** Load one package-relative cubic MagicaVoxel model at its authored resolution. */
-	RuntimeVoxelModel(path:String, cellsPerAxis:Int);
+	/** Load one package-relative MagicaVoxel model with content-selected motion. */
+	RuntimeVoxelModel(path:String, cellsPerAxis:Int, motion:RuntimeModelMotion);
+}
+
+/** Closed presentation-only motion choices for a voxel model. */
+enum RuntimeModelMotion {
+	/** Keep the model fixed at its authored transform. */
+	StaticModel;
+
+	/** Gently lift and settle the model to show an active interaction state. */
+	PulseModel;
 }
 
 /**
@@ -1107,7 +1116,19 @@ final class RuntimeContentPack {
 		if (hasModel) {
 			final modelNode = reader.field(fields, "model");
 			final modelPathPrefix = path + ".model";
-			final modelFields = reader.object(modelNode, modelPathPrefix, ["path", "cellsPerAxis"]);
+			final hasMotion = switch modelNode.value {
+				case JsonObject(values):
+					var found = false;
+					for (field in values)
+						if (field.name == "motion")
+							found = true;
+					found;
+				case _: false;
+			};
+			final modelFieldNames = ["path", "cellsPerAxis"];
+			if (hasMotion)
+				modelFieldNames.push("motion");
+			final modelFields = reader.object(modelNode, modelPathPrefix, modelFieldNames);
 			if (modelFields == null)
 				return null;
 			final modelPathNode = reader.field(modelFields, "path");
@@ -1123,7 +1144,14 @@ final class RuntimeContentPack {
 				reader.reject(modelPathNode, SchemaInvalidLogicalPath(modelPathPrefix + ".path"));
 				return null;
 			}
-			model = RuntimeVoxelModel(modelPath, cellsPerAxis);
+			var motion = StaticModel;
+			if (hasMotion) {
+				final motionText = readClosed(reader, reader.field(modelFields, "motion"), modelPathPrefix + ".motion", ["static", "pulse"]);
+				if (motionText == null)
+					return null;
+				motion = motionText == "pulse" ? PulseModel : StaticModel;
+			}
+			model = RuntimeVoxelModel(modelPath, cellsPerAxis, motion);
 		}
 		return new RuntimePresentation(asset, cell, index, model);
 	}

@@ -152,11 +152,11 @@
     "vault-glyph-models": {
       "mode": "repository-haxe-vox-builder",
       "artifactIds": [],
-      "promptSummary": "Four original 32-cubed vault rune stones with a grounded carved volume, recessed face, copper trim, and distinct raised river, leaf, moon, or flame mark.",
+      "promptSummary": "Four original 32-cubed vault rune stones with a grounded carved volume, recessed face, copper trim, distinct raised marks, and brighter active-state variants.",
       "referenceInputs": [
         "The existing Caxecraft route-glyph atlas cells supplied only the four semantic identities and teal, copper, cream, and orange palette direction; their flat pixel shapes were not extruded."
       ],
-      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes all four checked-in MagicaVoxel 150 files deterministically from reviewed volumes and the shared prop palette."
+      "processing": "examples/caxecraft/tools/CaxecraftVoxels.hx writes the four waiting and four active MagicaVoxel 150 files deterministically. Active variants add a bright inset frame and crown so generic object-state changes have immediate visual feedback."
     },
     "hud": {
       "mode": "openai-built-in-imagegen",
@@ -477,6 +477,17 @@
       "rights": "caxecraft-original"
     },
     {
+      "id": "vault-glyph-flame-active-model",
+      "path": "models/vault-glyph-flame-active.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "1c89b94adc001e04343af27bf7894e4ccebd2a89fa7e40b4269f5439c5a11452",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
       "id": "vault-glyph-flame-model",
       "path": "models/vault-glyph-flame.vox",
       "kind": "voxel-model",
@@ -484,6 +495,17 @@
       "height": 32,
       "depth": 32,
       "sha256": "af5904e2c58ea601b3a42bbe5595f22b8bbaa0d334f259e771e40c5a4e21b281",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-leaf-active-model",
+      "path": "models/vault-glyph-leaf-active.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "f7382a63d183e7722b7e8b403c847d67bf55b00e4f4ecfc9da16205322ae8dc6",
       "generationRecord": "vault-glyph-models",
       "rights": "caxecraft-original"
     },
@@ -499,6 +521,17 @@
       "rights": "caxecraft-original"
     },
     {
+      "id": "vault-glyph-moon-active-model",
+      "path": "models/vault-glyph-moon-active.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "2f8bdd7f9766f98d17c0e6f56ac4d7cdfaab181fa8a3cbae0657e9e89459afb7",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
       "id": "vault-glyph-moon-model",
       "path": "models/vault-glyph-moon.vox",
       "kind": "voxel-model",
@@ -506,6 +539,17 @@
       "height": 32,
       "depth": 32,
       "sha256": "87990d6605f1bb1b90b76014b13e6d42aafa0001161ac8ad8b4e253a61763589",
+      "generationRecord": "vault-glyph-models",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "vault-glyph-river-active-model",
+      "path": "models/vault-glyph-river-active.vox",
+      "kind": "voxel-model",
+      "width": 32,
+      "height": 32,
+      "depth": 32,
+      "sha256": "a9f14d79b513bdc1980ba56070175aba1b20118249facb1d6a02e1c0d359ed6a",
       "generationRecord": "vault-glyph-models",
       "rights": "caxecraft-original"
     },

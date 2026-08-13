@@ -5,7 +5,7 @@ asset-pack packs/caxecraft/base
 default-locale en
 locale en
   message adventure_progress "OPEN THE TIDEWEAVE VAULT"
-  message adventure_tagline "DESCEND FROM THE FALLSKEEPER TO THE STREAM. ENTER RIVER, LEAF, MOON, FLAME AT THE SEALED WAY."
+  message adventure_tagline "DESCEND TO THE ROOT BRIDGE. CROSS IT IN ORDER: RIVER, LEAF, MOON, FLAME."
   message attack_hit "COPPER STRIKE"
   message berry_stack_full "BERRIES FULL: USE ONE FIRST"
   message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
@@ -15,7 +15,7 @@ locale en
   message enemy_windup "MOSSLING WINDUP: DODGE"
   message fallskeeper_first "BROWSER'S RAIDERS BROKE THE OLD ROAD, BUT THEY NEVER FOUND CEESH'S TIDEWEAVE VAULT."
   message fallskeeper_marks "THE FOUR MARKS ARE ITS KEY: RIVER, LEAF, MOON, THEN FLAME. A WRONG MARK SILENCES THEM ALL."
-  message fallskeeper_task "TURN BACK DOWN THE GRASS LEDGES, THEN FOLLOW THE STREAM TO THE STONE SHRINE."
+  message fallskeeper_task "TURN BACK DOWN THE GRASS LEDGES. THE RIVER MARK STARTS THE ROOT BRIDGE BELOW."
   message flooded_route_body "THE TIDE RELAY OPENS THE SUBMERGED RUINS. THE WEST ROAD REMAINS OPEN TOWARD FROSTMERE."
   message flooded_route_title "TWO WAYS TO THE CASTLE"
   message grotto_complete "THE LANTERN REVEALS TWO ROADS. CLIMB WEST TO FROSTMERE, OR WAKE THE TIDE RELAY FOR THE SUNKEN ROAD."
@@ -51,7 +51,7 @@ locale en
 end locale
 locale es-mx
   message adventure_progress "ABRE LA BOVEDA DE TIDEWEAVE"
-  message adventure_tagline "BAJA DESDE EL GUARDIAN HASTA EL RIO. ACTIVA RIO, HOJA, LUNA Y LLAMA EN EL PASO SELLADO."
+  message adventure_tagline "BAJA AL PUENTE DE RAICES. CRUZALO EN ORDEN: RIO, HOJA, LUNA Y LLAMA."
   message attack_hit "GOLPE DE COBRE"
   message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
   message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
@@ -61,7 +61,7 @@ locale es-mx
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
   message fallskeeper_first "LOS SAQUEADORES DE BROWSER ROMPIERON EL CAMINO, PERO NO HALLARON LA BOVEDA TIDEWEAVE DE CEESH."
   message fallskeeper_marks "LAS CUATRO MARCAS SON LA LLAVE: RIO, HOJA, LUNA Y DESPUES LLAMA. UN ERROR LAS APAGA."
-  message fallskeeper_task "VUELVE POR LOS ESCALONES DE PASTO Y SIGUE EL RIO HASTA EL SANTUARIO DE PIEDRA."
+  message fallskeeper_task "VUELVE POR LOS ESCALONES DE PASTO. LA MARCA DEL RIO INICIA EL PUENTE DE RAICES."
   message flooded_route_body "EL RELE DE MAREA ABRE LAS RUINAS SUMERGIDAS. EL CAMINO OESTE SIGUE ABIERTO HACIA FROSTMERE."
   message flooded_route_title "DOS CAMINOS AL CASTILLO"
   message grotto_complete "LA LINTERNA REVELA DOS CAMINOS. SUBE AL OESTE HACIA FROSTMERE O ACTIVA EL RELE PARA TOMAR LA RUTA SUMERGIDA."
@@ -2081,19 +2081,19 @@ object vault.gate
 end object
 object vault.glyph-flame
   tag vault-control
-  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 12000 3000 21500 0
+  placement stateful caxecraft:vault-glyph-flame caxecraft:waiting 5000 6000 22500 0
 end object
 object vault.glyph-leaf
   tag vault-control
-  placement stateful caxecraft:vault-glyph-leaf caxecraft:waiting 9000 3000 21500 0
+  placement stateful caxecraft:vault-glyph-leaf caxecraft:waiting 11000 6000 22500 0
 end object
 object vault.glyph-moon
   tag vault-control
-  placement stateful caxecraft:vault-glyph-moon caxecraft:waiting 10500 3000 21500 0
+  placement stateful caxecraft:vault-glyph-moon caxecraft:waiting 8000 6000 22500 0
 end object
 object vault.glyph-river
   tag vault-control
-  placement stateful caxecraft:vault-glyph-river caxecraft:waiting 7500 3000 21500 0
+  placement stateful caxecraft:vault-glyph-river caxecraft:waiting 14000 6000 22500 0
 end object
 object zone.frostmere-road
   tag destination

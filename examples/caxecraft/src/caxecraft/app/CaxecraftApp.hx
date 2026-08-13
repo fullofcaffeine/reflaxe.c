@@ -1469,7 +1469,7 @@ final class CaxecraftApp {
 				// then be hidden by a wall without its transparent rectangle reserving
 				// depth that a later prop needs.
 				drawStatefulObjects(contentRegistry, session, levelView, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
-					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels);
+					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels, completedTicks);
 				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
 					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,

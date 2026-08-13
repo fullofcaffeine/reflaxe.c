@@ -45,10 +45,15 @@ class CaxecraftVoxels {
 		final glyphs = [River, Leaf, Moon, Flame];
 		final glyphNames = ["river", "leaf", "moon", "flame"];
 		for (index in 0...glyphs.length) {
-			final glyph:Array<Voxel> = [];
-			addRuneStone(glyph, glyphs[index]);
-			writeOrCheck('$modelDirectory/vault-glyph-${glyphNames[index]}.vox', encode(glyph, false), checkOnly);
-			Sys.println('vault-glyph-${glyphNames[index]}.vox: ${glyph.length} voxels');
+			final waitingGlyph:Array<Voxel> = [];
+			addRuneStone(waitingGlyph, glyphs[index]);
+			writeOrCheck('$modelDirectory/vault-glyph-${glyphNames[index]}.vox', encode(waitingGlyph, false), checkOnly);
+
+			final enteredGlyph:Array<Voxel> = [];
+			addRuneStone(enteredGlyph, glyphs[index]);
+			addEnteredRuneLight(enteredGlyph);
+			writeOrCheck('$modelDirectory/vault-glyph-${glyphNames[index]}-active.vox', encode(enteredGlyph, false), checkOnly);
+			Sys.println('vault-glyph-${glyphNames[index]}.vox: ${waitingGlyph.length} waiting, ${enteredGlyph.length} active voxels');
 		}
 		Sys.println('forge-relay.vox: ${relay.length} voxels');
 		Sys.println('gate-winch.vox: ${winch.length} voxels');
@@ -87,6 +92,26 @@ class CaxecraftVoxels {
 			case Flame:
 				addFlameRune(voxels);
 		}
+	}
+
+	/**
+	 * Add a bright inset frame that confirms a rune-stone interaction.
+	 *
+	 * Puzzle rules select this model through the generic object-state profile.
+	 * They can therefore light one control or reset a group without renderer or
+	 * campaign-specific code.
+	 */
+	static function addEnteredRuneLight(voxels:Array<Voxel>):Void {
+		for (x in 9...23) {
+			put(voxels, x, 5, 10, x % 4 == 0 ? 12 : 11);
+			put(voxels, x, 5, 25, x % 4 == 0 ? 12 : 11);
+		}
+		for (z in 11...25) {
+			put(voxels, 9, 5, z, z % 4 == 0 ? 12 : 11);
+			put(voxels, 22, 5, z, z % 4 == 0 ? 12 : 11);
+		}
+		for (x in 12...20)
+			put(voxels, x, 5, 28, x == 15 || x == 16 ? 12 : 11);
 	}
 
 	/** Raise three flowing bands, with highlights that distinguish the river rune. */

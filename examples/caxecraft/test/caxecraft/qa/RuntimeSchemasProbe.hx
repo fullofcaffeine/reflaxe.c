@@ -10,6 +10,8 @@ import caxecraft.content.LevelContentResolver.StatefulObjectContentResolution;
 import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
+import caxecraft.content.RuntimeContentPack.RuntimeModelMotion;
+import caxecraft.content.RuntimeContentPack.RuntimeModelPresentation;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
@@ -240,6 +242,11 @@ function negativeChecks():Int {
 				|| !registry.statefulObjectVisible(objectId, active)
 				|| registry.statefulObjectVisible(objectId, idle))
 				return 45;
+			switch [activePresentation.model, idlePresentation.model] {
+				case [RuntimeVoxelModel("assets/models/active.vox", 32, PulseModel), RuntimeVoxelModel("assets/models/idle.vox", 32, StaticModel)]:
+				case _:
+					return 55;
+			}
 			switch registry.resolveStatefulObject(objectId, active) {
 				case StatefulObjectContentResolved(_, bounds, states, _, _):
 					if (bounds.widthMilli != 1000
@@ -268,6 +275,8 @@ function negativeChecks():Int {
 		return 50;
 	if (!rejectsPack(replaceOnce(minimal, '"render":"hidden"', '"render":"sometimes"'), InvalidClosedValue))
 		return 51;
+	if (!rejectsPack(replaceOnce(minimal, '"motion":"pulse"', '"motion":"shake"'), InvalidClosedValue))
+		return 56;
 	if (!rejectsPack(replaceOnce(minimal, '"interaction":"activate"', '"interaction":"none"'), InvalidInvariant))
 		return 54;
 	if (!rejectsPack(replaceOnce(minimal, '"id":"entities"', '"id":"adventure-items"'), DuplicateId))
@@ -359,8 +368,10 @@ function minimalPack():String
 		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],"prefabs":[],'
 		+ '"statefulObjects":[{"id":"caxecraft:glyph-control","interaction":"activate","interactionRadiusMilli":2500,'
 		+ '"bounds":{"widthMilli":1000,"heightMilli":1000,"depthMilli":1000},'
-		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf"}},'
-		+ '{"id":"caxecraft:idle","collision":"passable","render":"hidden","presentation":{"asset":"adventure-items","cell":"glyph-wave"}}]}],'
+		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf",'
+		+ '"model":{"path":"assets/models/active.vox","cellsPerAxis":32,"motion":"pulse"}}},'
+		+ '{"id":"caxecraft:idle","collision":"passable","render":"hidden","presentation":{"asset":"adventure-items","cell":"glyph-wave",'
+		+ '"model":{"path":"assets/models/idle.vox","cellsPerAxis":32}}}]}],'
 		+ '"states":["caxecraft:active","caxecraft:idle"],"signals":[]}';
 
 /**

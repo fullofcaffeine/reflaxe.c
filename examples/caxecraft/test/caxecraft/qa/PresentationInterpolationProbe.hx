@@ -18,6 +18,8 @@ import caxecraft.app.MotionInterpolation.sample;
 import caxecraft.app.MotionInterpolation.start;
 import caxecraft.app.StatefulObjectVisual.StatefulObjectVisualKind;
 import caxecraft.app.StatefulObjectVisual.statefulObjectVisual;
+import caxecraft.app.VoxelModelMotion.voxelModelLiftMilli;
+import caxecraft.content.RuntimeContentPack.RuntimeModelMotion;
 import caxecraft.domain.CharacterBody;
 
 /**
@@ -113,6 +115,13 @@ function selfCheck():Int {
 	final gateSouth = statefulObjectVisual(7000, 3000, 500, 180);
 	if (gateSouth.widthMilli != 7000 || gateSouth.depthMilli != 500)
 		return 21;
+	if (voxelModelLiftMilli(StaticModel, 5) != 0
+		|| voxelModelLiftMilli(PulseModel, 0) != 0
+		|| voxelModelLiftMilli(PulseModel, 5) != 60
+		|| voxelModelLiftMilli(PulseModel, 10) != 120
+		|| voxelModelLiftMilli(PulseModel, 15) != 60
+		|| voxelModelLiftMilli(PulseModel, 20) != 0)
+		return 30;
 
 	var conversation = beginConversation();
 	conversation = switch advanceConversation(conversation, 12, 2, 25, false, false) {

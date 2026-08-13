@@ -33,7 +33,8 @@ packaging copies the hash-verified primary bytes without changing them.
 ## Voxel world props
 
 The files below `models/` are original voxel props. They include the forge
-relay, gate winch, field note, and four route-glyph stones. The `.vox` files
+relay, gate winch, field note, and four route-glyph stones with illuminated
+interaction states. The `.vox` files
 use the MagicaVoxel 150 format. Raylib reads this standard format directly.
 
 The Haxe source in `tools/CaxecraftVoxels.hx` is the editable authority. It
@@ -71,8 +72,12 @@ Use these steps for a new prop:
 2. Use broad voxel forms before small surface details.
 3. Keep important colors in one reviewed palette.
 4. Put the model path and world bounds in reloadable content.
-5. Keep a 2D atlas cell for the HUD or a bounded load-error fallback.
-6. Review the result from a real gameplay camera before publication.
+5. For an interactive prop, give each meaningful state a visibly different
+   model or presentation. The active state can also select `motion: pulse` in
+   the content pack. A successful action must be clear before text explains
+   it, and a reset must restore the still idle presentation.
+6. Keep a 2D atlas cell for the HUD or a bounded load-error fallback.
+7. Review the result from a real gameplay camera before publication.
 
 Do not extrude every sprite pixel into a cube. That process usually creates a
 flat slab with noisy edges. Treat the sprite as a reference, then author a real
