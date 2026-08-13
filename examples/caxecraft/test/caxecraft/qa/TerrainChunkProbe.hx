@@ -15,7 +15,9 @@ import caxecraft.app.TerrainChunkLayout.packFace;
 import caxecraft.app.TerrainChunkLayout.unpackFace;
 import caxecraft.app.TerrainChunkLayout.unpackKind;
 import caxecraft.app.DistantHorizon.HorizonEdge;
+import caxecraft.app.DistantHorizon.HorizonCorner;
 import caxecraft.app.DistantHorizon.boundaryColumn;
+import caxecraft.app.DistantHorizon.cornerEnabled;
 import caxecraft.app.DistantHorizon.ridgeHeight;
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.WaterCellCodec.sourceCode;
@@ -183,6 +185,14 @@ function selfCheck():Int {
 		|| ridgeHeight(streamEdge, 1, 36) <= streamEdge.surfaceY
 		|| ridgeHeight(streamEdge, 2, 36) <= ridgeHeight(streamEdge, 1, 36))
 		return 17;
+	// Two selected edges must own their shared corner. The corner surface meets
+	// each straight apron at the same height, so a diagonal camera cannot see sky
+	// between otherwise continuous terrain. Disabling either edge opts out.
+	if (!cornerEnabled(1 | 8, HorizonCorner.NorthWest)
+		|| !cornerEnabled(2 | 4, HorizonCorner.SouthEast)
+		|| cornerEnabled(1, HorizonCorner.NorthWest)
+		|| cornerEnabled(8, HorizonCorner.NorthWest))
+		return 18;
 	return 0;
 }
 

@@ -32,6 +32,14 @@ enum HorizonEdge {
 	West;
 }
 
+/** One diagonal region shared by two independently enabled horizon edges. */
+enum HorizonCorner {
+	NorthWest;
+	NorthEast;
+	SouthWest;
+	SouthEast;
+}
+
 /** One authored edge sample used to continue land and water into the distance. */
 typedef HorizonColumn = {
 	/** Highest authored solid block, or `-1` for an empty boundary column. */
@@ -100,6 +108,34 @@ function ridgeHeight(column:HorizonColumn, layer:Int, sample:Int):Int {
 		extra = 6 + positiveNoise(sample, 43) % 7;
 	final result = base + extra;
 	return result < World.HEIGHT ? result : World.HEIGHT - 1;
+}
+
+/**
+	Return whether both edges needed by one diagonal corner are enabled.
+
+	A creator can omit either edge to keep that direction open. The renderer must
+	not infer a corner from terrain alone because the environment block owns which
+	directions receive distant scenery.
+**/
+function cornerEnabled(horizonMask:Int, corner:HorizonCorner):Bool {
+	return switch corner {
+		case NorthWest: horizonMask & 1 != 0 && horizonMask & 8 != 0;
+		case NorthEast: horizonMask & 1 != 0 && horizonMask & 4 != 0;
+		case SouthWest: horizonMask & 2 != 0 && horizonMask & 8 != 0;
+		case SouthEast: horizonMask & 2 != 0 && horizonMask & 4 != 0;
+	};
+}
+
+/** Interpolate the same three ridge anchors used by a straight edge apron. */
+function horizonApronHeight(column:HorizonColumn, sample:Int, distance:Int):Int {
+	final near = ridgeHeight(column, 0, sample);
+	final middle = ridgeHeight(column, 1, sample);
+	final far = ridgeHeight(column, 2, sample);
+	if (distance <= 8)
+		return near;
+	if (distance <= 26)
+		return near + Std.int((middle - near) * (distance - 8) / 18);
+	return middle + Std.int((far - middle) * (distance - 26) / 28);
 }
 
 /** Stable small integer variation; it is presentation and not world generation. */
@@ -224,7 +260,32 @@ final class DistantHorizonRenderer {
 			drawEdge(cells, authoredWidth, HorizonEdge.East, sheet, halfPixel);
 		if (west)
 			drawEdge(cells, authoredWidth, HorizonEdge.West, sheet, halfPixel);
+		final horizonMask = (north ? 1 : 0) | (south ? 2 : 0) | (east ? 4 : 0) | (west ? 8 : 0);
+		if (cornerEnabled(horizonMask, HorizonCorner.NorthWest))
+			drawCorner(cells, authoredWidth, HorizonCorner.NorthWest, sheet, halfPixel);
+		if (cornerEnabled(horizonMask, HorizonCorner.NorthEast))
+			drawCorner(cells, authoredWidth, HorizonCorner.NorthEast, sheet, halfPixel);
+		if (cornerEnabled(horizonMask, HorizonCorner.SouthWest))
+			drawCorner(cells, authoredWidth, HorizonCorner.SouthWest, sheet, halfPixel);
+		if (cornerEnabled(horizonMask, HorizonCorner.SouthEast))
+			drawCorner(cells, authoredWidth, HorizonCorner.SouthEast, sheet, halfPixel);
 		Rlgl.EndQuads();
+	}
+
+	/** Fill one diagonal gap with repeated terrain tiles from the shared corner. */
+	function drawCorner(cells:WorldView, authoredWidth:Int, corner:HorizonCorner, sheet:TerrainSheet, halfPixel:Float):Void {
+		final edge = switch corner {
+			case NorthWest | NorthEast: HorizonEdge.North;
+			case SouthWest | SouthEast: HorizonEdge.South;
+		};
+		final offset = switch corner {
+			case NorthWest | SouthWest: 0;
+			case NorthEast | SouthEast: authoredWidth - 1;
+		};
+		final column = boundaryColumn(cells, authoredWidth, edge, offset);
+		if (column.surfaceY < 0 || TerrainAtlas.sheet(column.material) != sheet)
+			return;
+		emitCornerTop(column.material, authoredWidth, corner, column.surfaceY, halfPixel);
 	}
 
 	/**
@@ -260,8 +321,8 @@ final class DistantHorizonRenderer {
 		var startDistance = 1;
 		while (startDistance <= 54) {
 			final endDistance = apronSegmentEnd(startDistance);
-			final previousHeight = apronHeight(previous, offset - 1, endDistance);
-			final currentHeight = apronHeight(current, offset, endDistance);
+			final previousHeight = horizonApronHeight(previous, offset - 1, endDistance);
+			final currentHeight = horizonApronHeight(current, offset, endDistance);
 			if (currentHeight > previousHeight && TerrainAtlas.sheet(current.material) == sheet)
 				emitLateralStrip(current.material, edge, authoredWidth, offset, startDistance, endDistance, previousHeight + 1, currentHeight + 1, halfPixel,
 					endDistance <= 12 ? nearTint() : (endDistance <= 34 ? middleTint() : farTint()), true);
@@ -278,7 +339,7 @@ final class DistantHorizonRenderer {
 		var startDistance = 1;
 		while (startDistance <= 54) {
 			final endDistance = apronSegmentEnd(startDistance);
-			final height = apronHeight(column, offset, endDistance);
+			final height = horizonApronHeight(column, offset, endDistance);
 			final tint = endDistance <= 12 ? nearTint() : (endDistance <= 34 ? middleTint() : farTint());
 			drawApronSegment(edge, authoredWidth, offset, height, previousHeight, startDistance, endDistance, tint, column.material, halfPixel);
 			previousHeight = height;
@@ -303,18 +364,6 @@ final class DistantHorizonRenderer {
 		if (startDistance <= 38)
 			return startDistance + 7;
 		return 54;
-	}
-
-	/** Interpolate the three deterministic ridge anchors without a visible gap. */
-	function apronHeight(column:HorizonColumn, sample:Int, distance:Int):Int {
-		final near = ridgeHeight(column, 0, sample);
-		final middle = ridgeHeight(column, 1, sample);
-		final far = ridgeHeight(column, 2, sample);
-		if (distance <= 8)
-			return near;
-		if (distance <= 26)
-			return near + Std.int((middle - near) * (distance - 8) / 18);
-		return middle + Std.int((far - middle) * (distance - 26) / 28);
 	}
 
 	/** Draw one connected top strip and the inward-facing riser of an uphill step. */
@@ -375,6 +424,54 @@ final class DistantHorizonRenderer {
 		waterVertex(u0, v1, x, y + 1, z + depth);
 		waterVertex(u1, v1, x + width, y + 1, z + depth);
 		waterVertex(u1, v0, x + width, y + 1, z);
+	}
+
+	/**
+		Submit small repeated patches outside both edges of an authored corner.
+
+		One texture stretched across the full corner looks like a smooth coloured
+		sheet. Two-block patches keep the voxel texture legible while adding only a
+		bounded number of presentation quads.
+	**/
+	function emitCornerTop(material:BlockKind, authoredWidth:Int, corner:HorizonCorner, y:Int, halfPixel:Float):Void {
+		final tile = TerrainAtlas.tile(material, VoxelFace.Top);
+		final u0 = TerrainAtlas.uMin(tile, halfPixel);
+		final u1 = TerrainAtlas.uMax(tile, halfPixel);
+		final v0 = TerrainAtlas.vMin(tile, halfPixel);
+		final v1 = TerrainAtlas.vMax(tile, halfPixel);
+		final x0 = switch corner {
+			case NorthWest | SouthWest: -54;
+			case NorthEast | SouthEast: authoredWidth;
+		};
+		final x1 = switch corner {
+			case NorthWest | SouthWest: 0;
+			case NorthEast | SouthEast: authoredWidth + 54;
+		};
+		final z0 = switch corner {
+			case NorthWest | NorthEast: -54;
+			case SouthWest | SouthEast: World.DEPTH;
+		};
+		final z1 = switch corner {
+			case NorthWest | NorthEast: 0;
+			case SouthWest | SouthEast: World.DEPTH + 54;
+		};
+		var x = x0;
+		while (x < x1) {
+			var z = z0;
+			while (z < z1) {
+				final distanceX = x < 0 ? -x : x - authoredWidth + 2;
+				final distanceZ = z < 0 ? -z : z - World.DEPTH + 2;
+				final distance = distanceX > distanceZ ? distanceX : distanceZ;
+				Rlgl.Color(distance <= 12 ? nearTint() : (distance <= 34 ? middleTint() : farTint()));
+				Rlgl.Normal(0.0, 1.0, 0.0);
+				waterVertex(u0, v0, x, y + 1, z);
+				waterVertex(u0, v1, x, y + 1, z + 2);
+				waterVertex(u1, v1, x + 2, y + 1, z + 2);
+				waterVertex(u1, v0, x + 2, y + 1, z);
+				z += 2;
+			}
+			x += 2;
+		}
 	}
 }
 
