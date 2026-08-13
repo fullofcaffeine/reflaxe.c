@@ -98,7 +98,7 @@
       "kind": "campaign",
       "path": "campaigns/first-adventure/campaign.json",
       "byteLength": 3878,
-      "sha256": "6f354faf954ddc9b74e87fd36f76b1079dcd89c2ec47527d5816960c690a1365"
+      "sha256": "406704c2aa45746162853ecdf7acf5e8127c1e353fc11573d8a988aeb63637a2"
     },
     {
       "kind": "localization",
@@ -133,8 +133,8 @@
     {
       "kind": "level",
       "path": "scenarios/first-adventure/castle-courtyard.caxemap",
-      "byteLength": 18471,
-      "sha256": "b27432e81d638a21af9303d652625b2bf6f044e34f4f9273e98f93b2e971633a"
+      "byteLength": 16651,
+      "sha256": "d964b8827ccb731a68cbed5523a1742d64c507c18fe72269c25b5dcc925272ad"
     },
     {
       "kind": "level",

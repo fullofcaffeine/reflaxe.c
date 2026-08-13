@@ -113,129 +113,79 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 6
   run 0 18
   run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 3
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 19
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 161
+  run 0 321
   run 1 32
   run 9 143
   run 0 3
-  run 9 29
+  run 9 21
+  run 0 7
+  run 9 1
   run 0 3
-  run 9 29
-  run 0 3
-  run 9 29
-  run 0 3
+  run 9 1
+  run 0 6
   run 9 14
-  run 0 1
-  run 9 6
-  run 0 18
-  run 9 6
+  run 0 7
+  run 9 1
+  run 0 3
+  run 9 1
+  run 0 6
+  run 9 14
+  run 0 7
+  run 9 1
+  run 0 3
+  run 9 1
+  run 0 6
+  run 9 7
   run 0 2
+  run 9 5
+  run 0 18
+  run 9 5
+  run 0 17
   run 9 1
   run 0 1
   run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
+  run 0 13
   run 9 1
   run 0 160
   run 1 32
   run 9 143
   run 0 3
-  run 9 29
+  run 9 21
+  run 0 7
+  run 9 1
   run 0 3
-  run 9 29
-  run 0 3
-  run 9 29
-  run 0 3
+  run 9 1
+  run 0 6
   run 9 14
+  run 0 7
+  run 9 1
+  run 0 3
+  run 9 1
+  run 0 6
+  run 9 8
   run 0 1
-  run 9 6
+  run 9 5
+  run 0 7
+  run 9 1
+  run 0 3
+  run 9 1
+  run 0 6
+  run 9 5
+  run 0 1
+  run 9 1
+  run 0 2
+  run 9 5
   run 0 18
-  run 9 6
-  run 0 1
+  run 9 5
+  run 0 2
+  run 9 1
+  run 0 13
   run 9 1
   run 0 1
   run 9 1
   run 0 1
   run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 161
+  run 0 173
   run 1 32
   run 9 143
   run 0 3
@@ -243,44 +193,30 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 3
   run 9 29
   run 0 3
-  run 9 29
+  run 9 22
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 2
   run 0 3
-  run 9 14
+  run 9 2
   run 0 1
-  run 9 6
-  run 0 18
-  run 9 6
+  run 9 1
+  run 0 1
+  run 9 1
+  run 0 1
+  run 9 7
   run 0 2
+  run 9 5
+  run 0 18
+  run 9 5
+  run 0 17
   run 9 1
   run 0 1
   run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
+  run 0 13
   run 9 1
   run 0 160
   run 1 32
@@ -293,6 +229,29 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 6
   run 0 2
   run 9 6
+  run 5 7
+  run 0 5
+  run 5 6
+  run 9 6
+  run 0 2
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 3
+  run 9 5
+  run 0 18
+  run 9 5
+  run 0 4
+  run 9 5
+  run 0 18
+  run 9 5
+  run 0 194
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 6
   run 0 18
   run 9 6
   run 0 2
@@ -308,55 +267,27 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 18
   run 9 6
   run 0 3
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 19
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 161
+  run 9 5
+  run 0 18
+  run 9 5
+  run 0 194
   run 1 32
   run 9 110
   run 5 5
   run 9 13
   run 0 1
-  run 9 6
-  run 0 18
-  run 9 6
+  run 9 2
+  run 0 26
+  run 9 2
   run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
+  run 9 2
+  run 0 26
+  run 9 2
   run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 19
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 162
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 257
   run 1 32
   run 9 110
   run 5 5
@@ -374,39 +305,10 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 26
   run 9 2
   run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 35
   run 9 1
-  run 0 27
+  run 0 28
   run 9 1
-  run 0 161
-  run 1 32
-  run 9 110
-  run 5 5
-  run 9 13
-  run 0 1
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 34
-  run 9 1
-  run 0 27
-  run 9 1
-  run 0 162
+  run 0 225
   run 1 32
   run 9 110
   run 5 5
@@ -425,15 +327,7 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 2
   run 0 26
   run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 35
-  run 9 1
-  run 0 27
-  run 9 1
-  run 0 161
+  run 0 257
   run 1 32
   run 9 110
   run 5 5
@@ -453,14 +347,29 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 26
   run 9 2
   run 0 2
+  run 9 1
+  run 0 28
+  run 9 1
+  run 0 225
+  run 1 32
+  run 9 110
+  run 5 5
+  run 9 13
+  run 0 1
+  run 9 2
+  run 0 1
+  run 9 1
+  run 0 24
+  run 9 2
+  run 0 2
   run 9 2
   run 0 26
   run 9 2
-  run 0 34
-  run 9 1
-  run 0 27
-  run 9 1
-  run 0 162
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 257
   run 1 32
   run 9 110
   run 5 5
@@ -480,41 +389,10 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 26
   run 9 2
   run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 35
   run 9 1
-  run 0 27
+  run 0 28
   run 9 1
-  run 0 161
-  run 1 32
-  run 9 110
-  run 5 5
-  run 9 13
-  run 0 1
-  run 9 2
-  run 0 1
-  run 9 1
-  run 0 24
-  run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 34
-  run 9 1
-  run 0 27
-  run 9 1
-  run 0 162
+  run 0 225
   run 1 32
   run 9 110
   run 5 5
@@ -533,15 +411,7 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 2
   run 0 26
   run 9 2
-  run 0 2
-  run 9 2
-  run 0 26
-  run 9 2
-  run 0 35
-  run 9 1
-  run 0 27
-  run 9 1
-  run 0 161
+  run 0 257
   run 1 32
   run 9 102
   run 5 21
@@ -559,14 +429,27 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 26
   run 9 2
   run 0 2
+  run 9 1
+  run 0 28
+  run 9 1
+  run 0 225
+  run 1 32
+  run 9 103
+  run 5 18
+  run 9 7
+  run 0 1
+  run 9 6
+  run 0 18
+  run 9 6
+  run 0 2
   run 9 2
   run 0 26
   run 9 2
-  run 0 34
-  run 9 1
-  run 0 27
-  run 9 1
-  run 0 162
+  run 0 2
+  run 9 2
+  run 0 26
+  run 9 2
+  run 0 257
   run 1 32
   run 9 103
   run 5 18
@@ -576,71 +459,34 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 18
   run 9 6
   run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
+  run 9 2
+  run 0 7
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 6
+  run 9 2
   run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 3
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 19
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 161
-  run 1 32
-  run 9 103
-  run 5 18
-  run 9 7
-  run 0 1
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
+  run 9 2
+  run 0 7
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 6
+  run 9 2
   run 0 2
   run 9 1
-  run 0 1
+  run 0 8
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 7
   run 9 1
-  run 0 1
-  run 9 1
-  run 0 19
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 162
+  run 0 11
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 201
   run 1 32
   run 9 110
   run 5 5
@@ -650,34 +496,30 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 18
   run 9 6
   run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 3
   run 9 1
-  run 0 1
+  run 5 11
   run 9 1
-  run 0 1
+  run 0 5
   run 9 1
+  run 5 10
+  run 9 1
+  run 0 2
+  run 9 2
+  run 0 7
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 6
+  run 9 2
+  run 0 11
+  run 9 4
+  run 0 5
+  run 9 4
   run 0 19
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 161
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 201
   run 1 32
   run 9 109
   run 8 1
@@ -685,19 +527,11 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 8 1
   run 9 25
   run 0 7
-  run 9 25
-  run 0 7
-  run 9 25
-  run 0 7
-  run 9 25
-  run 0 7
-  run 9 12
-  run 0 1
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 1
+  run 9 26
+  run 0 5
+  run 9 27
+  run 0 5
+  run 9 16
   run 0 1
   run 9 1
   run 0 1
@@ -705,13 +539,9 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 1
   run 9 1
   run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 9
-  run 9 1
-  run 0 1
-  run 9 1
+  run 9 4
+  run 0 5
+  run 9 4
   run 0 1
   run 9 1
   run 0 1
@@ -719,6 +549,12 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 0 1
   run 9 1
   run 0 1
+  run 9 2
+  run 0 10
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 40
   run 9 1
   run 0 160
   run 1 32
@@ -728,44 +564,34 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 8 1
   run 9 25
   run 0 7
-  run 9 25
-  run 0 7
-  run 9 25
-  run 0 7
-  run 9 25
-  run 0 7
-  run 9 12
+  run 9 13
+  run 0 2
+  run 5 7
+  run 9 4
+  run 0 5
+  run 9 4
+  run 5 7
   run 0 1
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 1
+  run 9 2
+  run 0 9
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 8
+  run 9 2
+  run 0 9
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 8
   run 9 1
-  run 0 1
+  run 0 10
+  run 9 4
+  run 0 5
+  run 9 4
+  run 0 9
   run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 7
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 1
-  run 9 1
-  run 0 161
+  run 0 191
   run 1 32
   run 9 96
   run 8 1
@@ -781,35 +607,31 @@ chunk world.castle-shaped 0 0 0 32 16 32
   run 9 1
   run 0 5
   run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
-  run 9 6
-  run 0 18
-  run 9 6
-  run 0 2
+  run 0 4
+  run 9 7
+  run 0 13
+  run 9 7
+  run 0 5
+  run 9 7
+  run 0 13
+  run 9 7
+  run 0 5
   run 9 1
   run 0 1
   run 9 1
   run 0 1
   run 9 1
-  run 0 19
+  run 0 1
+  run 9 1
+  run 0 13
   run 9 1
   run 0 1
   run 9 1
   run 0 1
   run 9 1
-  run 0 162
+  run 0 1
+  run 9 1
+  run 0 226
   run 1 32
   run 9 96
   run 8 5
