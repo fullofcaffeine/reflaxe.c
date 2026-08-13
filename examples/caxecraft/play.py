@@ -3327,7 +3327,10 @@ def run_agent_session(
     last_payload = active_request.read_bytes()
     recorded_requests = 0
     try:
-        initial = read_agent_response(process, selector, timeout_seconds=15.0)
+        # The first observation includes native window, renderer, texture, and
+        # voxel-model setup. Keep later action batches strict, but allow this
+        # one-time startup to complete on a representative developer machine.
+        initial = read_agent_response(process, selector, timeout_seconds=30.0)
         prepare_agent_session_screenshot(executable, initial, raylib_configuration)
         print("CAXECRAFT_AGENT_RESPONSE=" + json.dumps(initial, ensure_ascii=False, separators=(",", ":")), flush=True)
         for input_line in sys.stdin:
