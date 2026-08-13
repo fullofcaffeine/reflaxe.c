@@ -1959,7 +1959,7 @@ fluid water.flooded-grotto-source caxecraft:water source 12 5 25
 fluid water.waterfall-source caxecraft:water source 8 10 17
 object enemy.mossling
   tag enemy
-  placement entity caxecraft:mossling 19500 7000 21500 225
+  placement entity caxecraft:mossling 50500 5000 25500 180
 end object
 object guide.fallskeeper
   tag friend
