@@ -13,12 +13,16 @@ locale en
   message enemy_dropped_items "MOSSLING DROPPED BERRIES"
   message enemy_hit_warning "TELEGRAPHED HIT: DODGE THE NEXT"
   message enemy_windup "MOSSLING WINDUP: DODGE"
-  message fallskeeper_welcome "FALLSKEEPER: TIDEWEAVE WAITS IN THE VAULT BELOW. WAKE ITS MARKS: RIVER, ROOT, MOON, FLAME."
+  message fallskeeper_first "BROWSER'S RAIDERS BROKE THE OLD ROAD, BUT THEY NEVER FOUND CEESH'S TIDEWEAVE VAULT."
+  message fallskeeper_marks "THE FOUR MARKS ARE ITS KEY: RIVER, ROOT, MOON, THEN FLAME. A WRONG MARK SILENCES THEM ALL."
+  message fallskeeper_task "OPEN THE VAULT BELOW US. TIDEWEAVE WILL LET YOU CROSS THE FLOODED GROTTO SAFELY."
   message flooded_route_body "THE TIDE RELAY OPENS THE SUBMERGED RUINS. THE WEST ROAD REMAINS OPEN TOWARD FROSTMERE."
   message flooded_route_title "TWO WAYS TO THE CASTLE"
   message grotto_complete "THE LANTERN REVEALS TWO ROADS. CLIMB WEST TO FROSTMERE, OR WAKE THE TIDE RELAY FOR THE SUNKEN ROAD."
+  message guide_first "THE FALLSKEEPER IS WAITING BEYOND THE SHRINE. FOLLOW THE STONE STEPS WEST."
+  message guide_route "THE LOWER STREAMBANK IS SAFER, BUT A MOSSLING GUARDS CEESH'S SUPPLIES."
   message guide_talk "E  TALK"
-  message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
+  message guide_warning "IF YOU FALL INTO THE POOL, SWIM UP WITH SPACE. SHIFT DIVES WHEN YOU ARE READY."
   message journal_fallskeeper_body "TIDEWEAVE IS SEALED IN THE VAULT BELOW THE SHRINE. WAKE ITS MARKS IN ORDER: RIVER, ROOT, MOON, FLAME."
   message journal_fallskeeper_title "THE FALLSKEEPER'S FOUR MARKS"
   message object_use "E  USE"
@@ -54,12 +58,16 @@ locale es-mx
   message enemy_dropped_items "EL MUSGUITO SOLTO BAYAS"
   message enemy_hit_warning "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
   message enemy_windup "MUSGUITO CARGANDO: ESQUIVA"
-  message fallskeeper_welcome "GUARDIAN: TIDEWEAVE ESPERA EN LA BOVEDA. ACTIVA SUS MARCAS: RIO, RAIZ, LUNA, LLAMA."
+  message fallskeeper_first "LOS SAQUEADORES DE BROWSER ROMPIERON EL CAMINO, PERO NO HALLARON LA BOVEDA TIDEWEAVE DE CEESH."
+  message fallskeeper_marks "LAS CUATRO MARCAS SON LA LLAVE: RIO, RAIZ, LUNA Y DESPUES LLAMA. UN ERROR LAS APAGA."
+  message fallskeeper_task "ABRE LA BOVEDA. TIDEWEAVE TE PERMITIRA CRUZAR LA GRUTA INUNDADA CON SEGURIDAD."
   message flooded_route_body "EL RELE DE MAREA ABRE LAS RUINAS SUMERGIDAS. EL CAMINO OESTE SIGUE ABIERTO HACIA FROSTMERE."
   message flooded_route_title "DOS CAMINOS AL CASTILLO"
   message grotto_complete "LA LINTERNA REVELA DOS CAMINOS. SUBE AL OESTE HACIA FROSTMERE O ACTIVA EL RELE PARA TOMAR LA RUTA SUMERGIDA."
+  message guide_first "EL GUARDIAN ESPERA MAS ALLA DEL SANTUARIO. SIGUE LOS ESCALONES DE PIEDRA AL OESTE."
+  message guide_route "LA ORILLA BAJA ES MAS SEGURA, PERO UN MUSGUITO PROTEGE LOS VIVERES DE CEESH."
   message guide_talk "E  HABLAR"
-  message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
+  message guide_warning "SI CAES EN EL ESTANQUE, SUBE CON ESPACIO. USA MAYUSCULAS PARA BUCEAR CUANDO ESTES LISTO."
   message journal_fallskeeper_body "TIDEWEAVE ESTA EN LA BOVEDA BAJO EL SANTUARIO. ACTIVA SUS MARCAS EN ORDEN: RIO, RAIZ, LUNA, LLAMA."
   message journal_fallskeeper_title "LAS CUATRO MARCAS DEL GUARDIAN"
   message object_use "E  USAR"
@@ -2096,7 +2104,9 @@ end object
 speaker guide.fallskeeper name message speaker_fallskeeper_name
 speaker guide.moss name message speaker_moss_name
 dialogue dialogue.fallskeeper.marks
-  line speaker guide.fallskeeper message fallskeeper_welcome
+  line speaker guide.fallskeeper message fallskeeper_first
+  line speaker guide.fallskeeper message fallskeeper_marks
+  line speaker guide.fallskeeper message fallskeeper_task
 end dialogue
 dialogue dialogue.flooded-route
   line narrator message tide_gate_ready
@@ -2105,7 +2115,9 @@ dialogue dialogue.grotto.complete
   line narrator message grotto_complete
 end dialogue
 dialogue dialogue.moss.falls
-  line speaker guide.moss message guide_welcome
+  line speaker guide.moss message guide_first
+  line speaker guide.moss message guide_route
+  line speaker guide.moss message guide_warning
 end dialogue
 dialogue dialogue.overlook.arrival
   line narrator message overlook_arrival
