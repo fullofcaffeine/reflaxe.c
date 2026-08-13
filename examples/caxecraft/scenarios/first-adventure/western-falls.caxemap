@@ -16,6 +16,7 @@ locale en
   message fallskeeper_welcome "FALLSKEEPER: TIDEWEAVE WAITS IN THE VAULT BELOW. WAKE ITS MARKS: RIVER, ROOT, MOON, FLAME."
   message flooded_route_body "THE TIDE RELAY OPENS THE SUBMERGED RUINS. THE WEST ROAD REMAINS OPEN TOWARD FROSTMERE."
   message flooded_route_title "TWO WAYS TO THE CASTLE"
+  message grotto_complete "THE LANTERN REVEALS TWO ROADS. CLIMB WEST TO FROSTMERE, OR WAKE THE TIDE RELAY FOR THE SUNKEN ROAD."
   message guide_talk "E  TALK"
   message guide_welcome "MOSS: THE FALLSKEEPER LEFT FOUR MARKS BY THE SEALED WAY"
   message journal_fallskeeper_body "TIDEWEAVE IS SEALED IN THE VAULT BELOW THE SHRINE. WAKE ITS MARKS IN ORDER: RIVER, ROOT, MOON, FLAME."
@@ -25,6 +26,8 @@ locale en
   message objective_fallskeeper_title "ASK THE FALLSKEEPER FOR THE FOUR MARKS"
   message objective_grotto_body "TIDEWEAVE MAKES THE FLOODED PASSAGE SAFE. RECOVER ITS LANTERN."
   message objective_grotto_title "CROSS THE FLOODED GROTTO"
+  message objective_route_body "TAKE THE WEST ROAD TO FROSTMERE, OR USE THE TIDE RELAY TO ENTER THE FLOODED RUINS."
+  message objective_route_title "CHOOSE A ROAD TO THE CASTLE"
   message overlook_arrival "CEESH MARKED THIS ROOTWAY BEFORE BROWSER TOOK THE ARCHIVE. RIDGE ABOVE; SUPPLIES BY THE STREAM."
   message pickup_many "+2 BERRIES"
   message pickup_one "+1 BERRY"
@@ -54,6 +57,7 @@ locale es-mx
   message fallskeeper_welcome "GUARDIAN: TIDEWEAVE ESPERA EN LA BOVEDA. ACTIVA SUS MARCAS: RIO, RAIZ, LUNA, LLAMA."
   message flooded_route_body "EL RELE DE MAREA ABRE LAS RUINAS SUMERGIDAS. EL CAMINO OESTE SIGUE ABIERTO HACIA FROSTMERE."
   message flooded_route_title "DOS CAMINOS AL CASTILLO"
+  message grotto_complete "LA LINTERNA REVELA DOS CAMINOS. SUBE AL OESTE HACIA FROSTMERE O ACTIVA EL RELE PARA TOMAR LA RUTA SUMERGIDA."
   message guide_talk "E  HABLAR"
   message guide_welcome "MOSS: EL GUARDIAN DE LAS CATARATAS DEJO CUATRO MARCAS"
   message journal_fallskeeper_body "TIDEWEAVE ESTA EN LA BOVEDA BAJO EL SANTUARIO. ACTIVA SUS MARCAS EN ORDEN: RIO, RAIZ, LUNA, LLAMA."
@@ -63,6 +67,8 @@ locale es-mx
   message objective_fallskeeper_title "PIDE AL GUARDIAN LAS CUATRO MARCAS"
   message objective_grotto_body "TIDEWEAVE HACE SEGURO EL PASO INUNDADO. RECUPERA SU LINTERNA."
   message objective_grotto_title "CRUZA LA GRUTA INUNDADA"
+  message objective_route_body "TOMA EL CAMINO OESTE A FROSTMERE O USA EL RELE PARA ENTRAR EN LAS RUINAS INUNDADAS."
+  message objective_route_title "ELIGE UN CAMINO AL CASTILLO"
   message overlook_arrival "CEESH MARCO ESTE SENDERO DE RAICES ANTES DE QUE BROWSER TOMARA EL ARCHIVO. CRESTA ARRIBA; VIVERES JUNTO AL RIO."
   message pickup_many "+2 BAYAS"
   message pickup_one "+1 BAYA"
@@ -2069,6 +2075,9 @@ end dialogue
 dialogue dialogue.flooded-route
   line narrator message tide_gate_ready
 end dialogue
+dialogue dialogue.grotto.complete
+  line narrator message grotto_complete
+end dialogue
 dialogue dialogue.moss.falls
   line speaker guide.moss message guide_welcome
 end dialogue
@@ -2093,6 +2102,9 @@ end journal
 journal journal.flooded-route title message flooded_route_title
   body message flooded_route_body
 end journal
+objective objective.choose-castle-road hidden title message objective_route_title
+  body message objective_route_body
+end objective
 objective objective.explore-grotto hidden title message objective_grotto_title
   body message objective_grotto_body
 end objective
@@ -2146,6 +2158,9 @@ rule rule.lantern-completes-the-grotto priority 80 once
   when collect-item caxecraft:lantern
   if (objective objective.explore-grotto active)
   do objective objective.explore-grotto complete
+  do objective objective.choose-castle-road active
+  do dialogue dialogue.grotto.complete
+  do journal journal.flooded-route
 end rule
 rule rule.leaf-accepts-second-mark priority 110 repeat
   when interact vault.glyph-leaf
