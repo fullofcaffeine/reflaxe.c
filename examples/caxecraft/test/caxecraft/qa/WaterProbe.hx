@@ -1,6 +1,7 @@
 package caxecraft.qa;
 
 import caxecraft.app.WaterSurfaceGeometry.cornerHeight as waterCornerHeight;
+import caxecraft.app.WaterSurfaceGeometry.sideAlpha as waterSideAlpha;
 import caxecraft.app.WaterSurfaceGeometry.sideIsExposed as waterSideIsExposed;
 import caxecraft.app.WaterSurfaceGeometry.surfaceTop as waterSurfaceTop;
 import caxecraft.app.WaterRenderOrder.compareDepth as compareWaterDepth;
@@ -211,6 +212,14 @@ final class WaterProbe {
 			|| compareWaterDepth(nearDepth, 10, nearDepth, 20) >= 0
 			|| compareWaterDepth(nearDepth, 20, nearDepth, 10) <= 0)
 			return 55;
+		// A falling curtain overlaps scenery across several vertical cells. It
+		// must remain lighter than a supported pool wall without freezing an art
+		// tuning value into this engine contract.
+		final sourceAlpha = waterSideAlpha(Source);
+		final supportedAlpha = waterSideAlpha(Flowing(WaterLevel.One, false));
+		final fallingAlpha = waterSideAlpha(Flowing(WaterLevel.Full, true));
+		if (sourceAlpha != supportedAlpha || fallingAlpha <= 0 || fallingAlpha >= supportedAlpha || waterSideAlpha(Empty) != 0)
+			return 56;
 		return 0;
 	}
 

@@ -2,11 +2,13 @@ package caxecraft.app;
 
 #if c
 import caxecraft.domain.WaterCellCodec.stateInView as waterStateAt;
+import caxecraft.domain.WaterCellState;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldView;
 import caxecraft.app.WaterSurfaceGeometry.isOpenTop;
 import caxecraft.app.WaterSurfaceGeometry.isWater;
 import caxecraft.app.WaterSurfaceGeometry.sideIsExposed;
+import caxecraft.app.WaterSurfaceGeometry.sideAlpha;
 import caxecraft.app.WaterSurfaceGeometry.surfaceCorners;
 import caxecraft.app.WaterSurfaceGeometry.WaterSurfaceCorners;
 import caxecraft.app.WaterRenderOrder.compareDepth;
@@ -28,6 +30,7 @@ private typedef WaterRenderFace = {
 	final y:Int;
 	final z:Int;
 	final corners:WaterSurfaceCorners;
+	final alpha:Int;
 	final depth:Float;
 	final stableKey:Int;
 }
@@ -89,19 +92,19 @@ final class WaterRenderer {
 							// interior water needs neither geometry nor those extra reads.
 							final corners = surfaceCorners(cells, x, y, z);
 							if (topOpen) {
-								faces.push(makeFace(0, x, y, z, corners, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(0, x, y, z, corners, state, eyeX, eyeY, eyeZ));
 							}
 							if (northOpen) {
-								faces.push(makeFace(1, x, y, z, corners, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(1, x, y, z, corners, state, eyeX, eyeY, eyeZ));
 							}
 							if (southOpen) {
-								faces.push(makeFace(2, x, y, z, corners, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(2, x, y, z, corners, state, eyeX, eyeY, eyeZ));
 							}
 							if (eastOpen) {
-								faces.push(makeFace(3, x, y, z, corners, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(3, x, y, z, corners, state, eyeX, eyeY, eyeZ));
 							}
 							if (westOpen) {
-								faces.push(makeFace(4, x, y, z, corners, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(4, x, y, z, corners, state, eyeX, eyeY, eyeZ));
 							}
 							visible++;
 						}
@@ -127,7 +130,8 @@ final class WaterRenderer {
 }
 
 /** Create one sortable face without changing the authoritative water state. */
-private function makeFace(kind:Int, x:Int, y:Int, z:Int, corners:WaterSurfaceCorners, eyeX:Float, eyeY:Float, eyeZ:Float):WaterRenderFace {
+private function makeFace(kind:Int, x:Int, y:Int, z:Int, corners:WaterSurfaceCorners, state:WaterCellState, eyeX:Float, eyeY:Float,
+		eyeZ:Float):WaterRenderFace {
 	var centerX = x + 0.5;
 	var centerY = y + 0.5;
 	var centerZ = z + 0.5;
@@ -154,6 +158,7 @@ private function makeFace(kind:Int, x:Int, y:Int, z:Int, corners:WaterSurfaceCor
 		y: y,
 		z: z,
 		corners: corners,
+		alpha: kind == 0 ? 145 : sideAlpha(state),
 		depth: faceDepthSquared(eyeX, eyeY, eyeZ, centerX, centerY, centerZ),
 		stableKey: (World.indexOf(World.coord(x, y, z)) * 5) + kind
 	};
@@ -169,13 +174,13 @@ private function emitFace(face:WaterRenderFace, u0:Float, u1:Float, v0:Float, v1
 		case 0:
 			emitTop(face.x, face.z, face.corners, u0, u1, v0, v1);
 		case 1:
-			emitNorth(face.x, face.y, face.corners.northWest, face.corners.northEast, face.z, u0, u1, v0, v1);
+			emitNorth(face.x, face.y, face.corners.northWest, face.corners.northEast, face.z, face.alpha, u0, u1, v0, v1);
 		case 2:
-			emitSouth(face.x, face.y, face.corners.southWest, face.corners.southEast, face.z, u0, u1, v0, v1);
+			emitSouth(face.x, face.y, face.corners.southWest, face.corners.southEast, face.z, face.alpha, u0, u1, v0, v1);
 		case 3:
-			emitEast(face.x, face.y, face.corners.northEast, face.corners.southEast, face.z, u0, u1, v0, v1);
+			emitEast(face.x, face.y, face.corners.northEast, face.corners.southEast, face.z, face.alpha, u0, u1, v0, v1);
 		case 4:
-			emitWest(face.x, face.y, face.corners.northWest, face.corners.southWest, face.z, u0, u1, v0, v1);
+			emitWest(face.x, face.y, face.corners.northWest, face.corners.southWest, face.z, face.alpha, u0, u1, v0, v1);
 		case _:
 	}
 }
@@ -184,9 +189,9 @@ private function emitFace(face:WaterRenderFace, u0:Float, u1:Float, v0:Float, v1
 private inline function topTint():Color
 	return Color.rgba(175, 235, 255, 145);
 
-/** Let a falling sheet reveal terrain and paths through its overlapping faces. */
-private inline function sideTint():Color
-	return Color.rgba(180, 235, 255, 120);
+/** Tint one side with opacity selected from its exact source or flow state. */
+private inline function sideTint(alpha:Int):Color
+	return Color.rgbaClamped(180, 235, 255, alpha);
 
 private function emitTop(x:Float, z:Float, corners:WaterSurfaceCorners, u0:Float, u1:Float, v0:Float, v1:Float):Void {
 	Rlgl.Color(topTint());
@@ -197,8 +202,8 @@ private function emitTop(x:Float, z:Float, corners:WaterSurfaceCorners, u0:Float
 	vertex(u1, v0, x + 1.0, corners.northEast, z);
 }
 
-private function emitNorth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
-	Rlgl.Color(sideTint());
+private function emitNorth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(0.0, 0.0, -1.0);
 	vertex(u0, v1, x, bottom, z);
 	vertex(u0, v0, x, topWest, z);
@@ -206,8 +211,8 @@ private function emitNorth(x:Float, bottom:Float, topWest:Float, topEast:Float, 
 	vertex(u1, v1, x + 1.0, bottom, z);
 }
 
-private function emitSouth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
-	Rlgl.Color(sideTint());
+private function emitSouth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(0.0, 0.0, 1.0);
 	vertex(u0, v1, x, bottom, z + 1.0);
 	vertex(u1, v1, x + 1.0, bottom, z + 1.0);
@@ -215,8 +220,8 @@ private function emitSouth(x:Float, bottom:Float, topWest:Float, topEast:Float, 
 	vertex(u0, v0, x, topWest, z + 1.0);
 }
 
-private function emitEast(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
-	Rlgl.Color(sideTint());
+private function emitEast(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(1.0, 0.0, 0.0);
 	vertex(u0, v1, x + 1.0, bottom, z);
 	vertex(u0, v0, x + 1.0, topNorth, z);
@@ -224,8 +229,8 @@ private function emitEast(x:Float, bottom:Float, topNorth:Float, topSouth:Float,
 	vertex(u1, v1, x + 1.0, bottom, z + 1.0);
 }
 
-private function emitWest(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, u0:Float, u1:Float, v0:Float, v1:Float):Void {
-	Rlgl.Color(sideTint());
+private function emitWest(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(-1.0, 0.0, 0.0);
 	vertex(u0, v1, x, bottom, z);
 	vertex(u1, v1, x, bottom, z + 1.0);

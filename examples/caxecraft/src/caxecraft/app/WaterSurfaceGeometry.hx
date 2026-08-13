@@ -102,6 +102,21 @@ function sideIsExposed(state:WaterCellState):Bool {
 	};
 }
 
+/**
+	Return the opacity for one outer water wall.
+
+	A vertical waterfall stacks several transparent cells over the same distant
+	scenery. Lower opacity keeps that curtain readable as water without hiding the
+	path behind it. Supported pool walls remain denser near the player.
+**/
+function sideAlpha(state:WaterCellState):Int {
+	return switch state {
+		case Source | Flowing(_, false): 112;
+		case Flowing(_, true): 68;
+		case Empty | Blocked | InvalidStorage(_): 0;
+	};
+}
+
 /** Preserve the exact source/flow distinction while asking only about presence. */
 function isWater(state:WaterCellState):Bool {
 	return switch state {
