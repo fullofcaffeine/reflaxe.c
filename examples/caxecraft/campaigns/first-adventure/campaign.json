@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "campaignId": "caxecraft:first-adventure",
   "campaignVersion": 1,
   "entryLevel": "evergrove",
@@ -55,8 +55,8 @@
     {
       "id": "western-falls",
       "path": "scenarios/first-adventure/western-falls.caxemap",
-      "byteLength": 37103,
-      "sha256": "07009c3d438a56f17a6d6b0cee48a2fb95ff08820c28f0f4903da700d52d3b13"
+      "byteLength": 37197,
+      "sha256": "2181833c19b50963f2f6f304b5120dff22c583d3fd69a40d2df3ff713804845d"
     }
   ],
   "transitions": [
@@ -65,6 +65,8 @@
       "sourceLevel": "ashfall",
       "destinationLevel": "castle-courtyard",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": true
     },
     {
@@ -72,6 +74,8 @@
       "sourceLevel": "castle-underworks",
       "destinationLevel": "forge-archive",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": true
     },
     {
@@ -79,13 +83,17 @@
       "sourceLevel": "castle-courtyard",
       "destinationLevel": "castle-underworks",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": true
     },
     {
       "exit": "evergrove-west",
       "sourceLevel": "evergrove",
       "destinationLevel": "western-falls",
-      "destinationEntrance": "default",
+      "destinationEntrance": "zone.evergrove-entry",
+      "handoff": "seamless",
+      "sourceAnchor": "zone.evergrove-west-road",
       "required": true
     },
     {
@@ -93,6 +101,8 @@
       "sourceLevel": "flooded-ruins",
       "destinationLevel": "castle-courtyard",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": false
     },
     {
@@ -100,6 +110,8 @@
       "sourceLevel": "forge-archive",
       "destinationLevel": "browser-chamber",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": true
     },
     {
@@ -107,6 +119,8 @@
       "sourceLevel": "frostmere",
       "destinationLevel": "ashfall",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": true
     },
     {
@@ -114,6 +128,8 @@
       "sourceLevel": "western-falls",
       "destinationLevel": "flooded-ruins",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": false
     },
     {
@@ -121,6 +137,8 @@
       "sourceLevel": "western-falls",
       "destinationLevel": "frostmere",
       "destinationEntrance": "default",
+      "handoff": "loading",
+      "sourceAnchor": "default",
       "required": true
     }
   ]

@@ -79,6 +79,15 @@ abstract CampaignEntranceId(String) {
 		return new CampaignEntranceId(value);
 }
 
+/** Closed presentation policy for one checked level handoff. */
+enum CampaignTransitionHandoff {
+	/** Show the ordinary responsive loading card before publication. */
+	LoadingScreen;
+
+	/** Stage one destination and align it with this source trigger zone. */
+	SeamlessPortal(sourceAnchor:ScenarioId);
+}
+
 /** One exact map source admitted by the campaign manifest. */
 final class CampaignLevel {
 	/** Manifest-local level identity. */
@@ -122,8 +131,11 @@ final class CampaignTransition {
 	/** Independently loadable level selected after the exit. */
 	public final destinationLevel:CampaignLevelId;
 
-	/** Destination spawn contract; the first slice admits `default`. */
+	/** Destination spawn contract: `default` or a named seamless doorway. */
 	public final destinationEntrance:CampaignEntranceId;
+
+	/** Content-selected visual handoff; it does not change graph semantics. */
+	public final handoff:CampaignTransitionHandoff;
 
 	/** Whether campaign completion requires this directed edge. */
 	public final required:Bool;
@@ -137,11 +149,12 @@ final class CampaignTransition {
 	/** Retain one fully resolved immutable transition record. */
 	@:allow(caxecraft.content.CampaignManifestDecoder)
 	private function new(exit:CampaignExitId, sourceLevel:CampaignLevelId, destinationLevel:CampaignLevelId, destinationEntrance:CampaignEntranceId,
-			required:Bool, line:Int, column:Int) {
+			handoff:CampaignTransitionHandoff, required:Bool, line:Int, column:Int) {
 		this.exit = exit;
 		this.sourceLevel = sourceLevel;
 		this.destinationLevel = destinationLevel;
 		this.destinationEntrance = destinationEntrance;
+		this.handoff = handoff;
 		this.required = required;
 		sourceLine = line;
 		sourceColumn = column;
@@ -269,7 +282,7 @@ function decodeCampaignManifest(input:Bytes):CampaignManifestReadResult
  */
 function writeCampaignManifest(manifest:CampaignManifest, updates:Array<ContentReceipt>):Bytes {
 	final output = new StringBuf();
-	output.add('{\n  "schemaVersion": 1,\n  "campaignId": ');
+	output.add('{\n  "schemaVersion": 2,\n  "campaignId": ');
 	appendJsonString(output, manifest.id.text());
 	output.add(',\n  "campaignVersion": ${manifest.version},\n  "entryLevel": ');
 	appendJsonString(output, manifest.entryLevelId().text());
@@ -298,6 +311,18 @@ function writeCampaignManifest(manifest:CampaignManifest, updates:Array<ContentR
 		appendJsonString(output, transition.destinationLevel.text());
 		output.add(',\n      "destinationEntrance": ');
 		appendJsonString(output, transition.destinationEntrance.text());
+		final handoffText = switch transition.handoff {
+			case LoadingScreen: "loading";
+			case SeamlessPortal(_): "seamless";
+		};
+		final sourceAnchor = switch transition.handoff {
+			case LoadingScreen: "default";
+			case SeamlessPortal(anchor): anchor.text();
+		};
+		output.add(',\n      "handoff": ');
+		appendJsonString(output, handoffText);
+		output.add(',\n      "sourceAnchor": ');
+		appendJsonString(output, sourceAnchor);
 		output.add(',\n      "required": ${transition.required ? "true" : "false"}');
 		output.add(index + 1 == manifest.transitionCount() ? '\n    }\n' : '\n    },\n');
 	}
@@ -339,7 +364,7 @@ private final class CampaignManifestDecoder {
 			return rejected(reader);
 
 		final schemaNode = reader.field(fields, "schemaVersion");
-		final schemaVersion = reader.integer(schemaNode, "schemaVersion", 1, 1);
+		final schemaVersion = reader.integer(schemaNode, "schemaVersion", 2, 2);
 		if (schemaVersion == null)
 			return rejected(reader);
 		final campaignNode = reader.field(fields, "campaignId");
@@ -482,7 +507,15 @@ private final class CampaignManifestDecoder {
 		final transitions:Array<CampaignTransition> = [];
 		for (index in 0...values.length) {
 			final path = "transitions[" + index + "]";
-			final fields = reader.object(values[index], path, ["exit", "sourceLevel", "destinationLevel", "destinationEntrance", "required"]);
+			final fields = reader.object(values[index], path, [
+				"exit",
+				"sourceLevel",
+				"destinationLevel",
+				"destinationEntrance",
+				"handoff",
+				"sourceAnchor",
+				"required"
+			]);
 			if (fields == null)
 				return null;
 			final exitNode = reader.field(fields, "exit");
@@ -493,13 +526,29 @@ private final class CampaignManifestDecoder {
 			final destination = readKey(reader, destinationNode, path + ".destinationLevel");
 			final entranceNode = reader.field(fields, "destinationEntrance");
 			final entrance = readKey(reader, entranceNode, path + ".destinationEntrance");
+			final handoffNode = reader.field(fields, "handoff");
+			final handoffText = reader.string(handoffNode, path + ".handoff", 16);
+			final sourceAnchorNode = reader.field(fields, "sourceAnchor");
+			final sourceAnchor = readKey(reader, sourceAnchorNode, path + ".sourceAnchor");
 			final required = reader.boolean(reader.field(fields, "required"), path + ".required");
-			if (exit == null || source == null || destination == null || entrance == null || required == null)
+			if (exit == null || source == null || destination == null || entrance == null || handoffText == null || sourceAnchor == null || required == null)
 				return null;
-			if (entrance != "default") {
-				reader.reject(entranceNode, SchemaInvalidClosedValue(path + ".destinationEntrance", entrance));
+			final handoff = if (handoffText == "loading") {
+				if (sourceAnchor != "default" || entrance != "default") {
+					reader.reject(sourceAnchorNode, SchemaInvalidInvariant(path + ".loadingHandoff"));
+					return null;
+				}
+				CampaignTransitionHandoff.LoadingScreen;
+			} else if (handoffText == "seamless") {
+				if (sourceAnchor == "default" || entrance == "default") {
+					reader.reject(sourceAnchorNode, SchemaInvalidInvariant(path + ".seamlessHandoff"));
+					return null;
+				}
+				CampaignTransitionHandoff.SeamlessPortal(new ScenarioId(sourceAnchor));
+			} else {
+				reader.reject(handoffNode, SchemaInvalidClosedValue(path + ".handoff", handoffText));
 				return null;
-			}
+			};
 			if (levelIndex(levels, source) < 0) {
 				reader.reject(sourceNode, SchemaUnresolvedReference(path + ".sourceLevel", source, "campaign level"));
 				return null;
@@ -518,7 +567,7 @@ private final class CampaignManifestDecoder {
 				return null;
 			}
 			transitions.push(new CampaignTransition(CampaignExitId.admitted(exit), CampaignLevelId.admitted(source), CampaignLevelId.admitted(destination),
-				CampaignEntranceId.admitted(entrance), required, exitNode.line, exitNode.column));
+				CampaignEntranceId.admitted(entrance), handoff, required, exitNode.line, exitNode.column));
 		}
 		return transitions;
 	}

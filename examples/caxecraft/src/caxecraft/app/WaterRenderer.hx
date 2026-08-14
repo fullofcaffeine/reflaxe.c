@@ -63,6 +63,12 @@ final class WaterRenderer {
 		another. The exact discrete state remains in `GameSession`.
 	**/
 	public function draw(cells:WorldView, texture:Texture2D, textureReady:Bool, presentationCell:Int, eyeX:Float, eyeY:Float, eyeZ:Float):WaterRenderCounters {
+		return drawTranslated(cells, texture, textureReady, presentationCell, eyeX, eyeY, eyeZ, 0.0, 0.0, 0.0);
+	}
+
+	/** Draw one inactive destination's water at its checked portal translation. */
+	public function drawTranslated(cells:WorldView, texture:Texture2D, textureReady:Bool, presentationCell:Int, eyeX:Float, eyeY:Float, eyeZ:Float,
+			offsetX:Float, offsetY:Float, offsetZ:Float):WaterRenderCounters {
 		if (!textureReady || presentationCell < 0)
 			return {visible: 0, drawCalls: 0};
 		faces.resize(0);
@@ -92,19 +98,19 @@ final class WaterRenderer {
 							// interior water needs neither geometry nor those extra reads.
 							final corners = surfaceCorners(cells, x, y, z);
 							if (topOpen) {
-								faces.push(makeFace(0, x, y, z, corners, state, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(0, x, y, z, corners, state, eyeX, eyeY, eyeZ, offsetX, offsetY, offsetZ));
 							}
 							if (northOpen) {
-								faces.push(makeFace(1, x, y, z, corners, state, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(1, x, y, z, corners, state, eyeX, eyeY, eyeZ, offsetX, offsetY, offsetZ));
 							}
 							if (southOpen) {
-								faces.push(makeFace(2, x, y, z, corners, state, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(2, x, y, z, corners, state, eyeX, eyeY, eyeZ, offsetX, offsetY, offsetZ));
 							}
 							if (eastOpen) {
-								faces.push(makeFace(3, x, y, z, corners, state, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(3, x, y, z, corners, state, eyeX, eyeY, eyeZ, offsetX, offsetY, offsetZ));
 							}
 							if (westOpen) {
-								faces.push(makeFace(4, x, y, z, corners, state, eyeX, eyeY, eyeZ));
+								faces.push(makeFace(4, x, y, z, corners, state, eyeX, eyeY, eyeZ, offsetX, offsetY, offsetZ));
 							}
 							visible++;
 						}
@@ -119,7 +125,7 @@ final class WaterRenderer {
 		if (faces.length > 0) {
 			Rlgl.BeginTransparentQuads(texture);
 			for (face in faces)
-				emitFace(face, u0, u1, v0, v1);
+				emitFace(face, u0, u1, v0, v1, offsetX, offsetY, offsetZ);
 			Rlgl.EndTransparentQuads();
 		}
 		var drawCalls = 0;
@@ -130,8 +136,8 @@ final class WaterRenderer {
 }
 
 /** Create one sortable face without changing the authoritative water state. */
-private function makeFace(kind:Int, x:Int, y:Int, z:Int, corners:WaterSurfaceCorners, state:WaterCellState, eyeX:Float, eyeY:Float,
-		eyeZ:Float):WaterRenderFace {
+private function makeFace(kind:Int, x:Int, y:Int, z:Int, corners:WaterSurfaceCorners, state:WaterCellState, eyeX:Float, eyeY:Float, eyeZ:Float, offsetX:Float,
+		offsetY:Float, offsetZ:Float):WaterRenderFace {
 	var centerX = x + 0.5;
 	var centerY = y + 0.5;
 	var centerZ = z + 0.5;
@@ -159,7 +165,7 @@ private function makeFace(kind:Int, x:Int, y:Int, z:Int, corners:WaterSurfaceCor
 		z: z,
 		corners: corners,
 		alpha: kind == 0 ? 145 : sideAlpha(state),
-		depth: faceDepthSquared(eyeX, eyeY, eyeZ, centerX, centerY, centerZ),
+		depth: faceDepthSquared(eyeX, eyeY, eyeZ, centerX + offsetX, centerY + offsetY, centerZ + offsetZ),
 		stableKey: (World.indexOf(World.coord(x, y, z)) * 5) + kind
 	};
 }
@@ -169,18 +175,18 @@ private function compareFaces(left:WaterRenderFace, right:WaterRenderFace):Int
 	return compareDepth(left.depth, left.stableKey, right.depth, right.stableKey);
 
 /** Submit one previously sorted face to the open transparent quad batch. */
-private function emitFace(face:WaterRenderFace, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitFace(face:WaterRenderFace, u0:Float, u1:Float, v0:Float, v1:Float, offsetX:Float, offsetY:Float, offsetZ:Float):Void {
 	switch face.kind {
 		case 0:
-			emitTop(face.x, face.z, face.corners, u0, u1, v0, v1);
+			emitTop(face.x, face.z, face.corners, u0, u1, v0, v1, offsetX, offsetY, offsetZ);
 		case 1:
-			emitNorth(face.x, face.y, face.corners.northWest, face.corners.northEast, face.z, face.alpha, u0, u1, v0, v1);
+			emitNorth(face.x, face.y, face.corners.northWest, face.corners.northEast, face.z, face.alpha, u0, u1, v0, v1, offsetX, offsetY, offsetZ);
 		case 2:
-			emitSouth(face.x, face.y, face.corners.southWest, face.corners.southEast, face.z, face.alpha, u0, u1, v0, v1);
+			emitSouth(face.x, face.y, face.corners.southWest, face.corners.southEast, face.z, face.alpha, u0, u1, v0, v1, offsetX, offsetY, offsetZ);
 		case 3:
-			emitEast(face.x, face.y, face.corners.northEast, face.corners.southEast, face.z, face.alpha, u0, u1, v0, v1);
+			emitEast(face.x, face.y, face.corners.northEast, face.corners.southEast, face.z, face.alpha, u0, u1, v0, v1, offsetX, offsetY, offsetZ);
 		case 4:
-			emitWest(face.x, face.y, face.corners.northWest, face.corners.southWest, face.z, face.alpha, u0, u1, v0, v1);
+			emitWest(face.x, face.y, face.corners.northWest, face.corners.southWest, face.z, face.alpha, u0, u1, v0, v1, offsetX, offsetY, offsetZ);
 		case _:
 	}
 }
@@ -193,49 +199,54 @@ private inline function topTint():Color
 private inline function sideTint(alpha:Int):Color
 	return Color.rgbaClamped(180, 235, 255, alpha);
 
-private function emitTop(x:Float, z:Float, corners:WaterSurfaceCorners, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitTop(x:Float, z:Float, corners:WaterSurfaceCorners, u0:Float, u1:Float, v0:Float, v1:Float, offsetX:Float, offsetY:Float,
+		offsetZ:Float):Void {
 	Rlgl.Color(topTint());
 	Rlgl.Normal(0.0, 1.0, 0.0);
-	vertex(u0, v0, x, corners.northWest, z);
-	vertex(u0, v1, x, corners.southWest, z + 1.0);
-	vertex(u1, v1, x + 1.0, corners.southEast, z + 1.0);
-	vertex(u1, v0, x + 1.0, corners.northEast, z);
+	vertex(u0, v0, x + offsetX, corners.northWest + offsetY, z + offsetZ);
+	vertex(u0, v1, x + offsetX, corners.southWest + offsetY, z + 1.0 + offsetZ);
+	vertex(u1, v1, x + 1.0 + offsetX, corners.southEast + offsetY, z + 1.0 + offsetZ);
+	vertex(u1, v0, x + 1.0 + offsetX, corners.northEast + offsetY, z + offsetZ);
 }
 
-private function emitNorth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitNorth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float, offsetX:Float,
+		offsetY:Float, offsetZ:Float):Void {
 	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(0.0, 0.0, -1.0);
-	vertex(u0, v1, x, bottom, z);
-	vertex(u0, v0, x, topWest, z);
-	vertex(u1, v0, x + 1.0, topEast, z);
-	vertex(u1, v1, x + 1.0, bottom, z);
+	vertex(u0, v1, x + offsetX, bottom + offsetY, z + offsetZ);
+	vertex(u0, v0, x + offsetX, topWest + offsetY, z + offsetZ);
+	vertex(u1, v0, x + 1.0 + offsetX, topEast + offsetY, z + offsetZ);
+	vertex(u1, v1, x + 1.0 + offsetX, bottom + offsetY, z + offsetZ);
 }
 
-private function emitSouth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitSouth(x:Float, bottom:Float, topWest:Float, topEast:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float, offsetX:Float,
+		offsetY:Float, offsetZ:Float):Void {
 	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(0.0, 0.0, 1.0);
-	vertex(u0, v1, x, bottom, z + 1.0);
-	vertex(u1, v1, x + 1.0, bottom, z + 1.0);
-	vertex(u1, v0, x + 1.0, topEast, z + 1.0);
-	vertex(u0, v0, x, topWest, z + 1.0);
+	vertex(u0, v1, x + offsetX, bottom + offsetY, z + 1.0 + offsetZ);
+	vertex(u1, v1, x + 1.0 + offsetX, bottom + offsetY, z + 1.0 + offsetZ);
+	vertex(u1, v0, x + 1.0 + offsetX, topEast + offsetY, z + 1.0 + offsetZ);
+	vertex(u0, v0, x + offsetX, topWest + offsetY, z + 1.0 + offsetZ);
 }
 
-private function emitEast(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitEast(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float, offsetX:Float,
+		offsetY:Float, offsetZ:Float):Void {
 	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(1.0, 0.0, 0.0);
-	vertex(u0, v1, x + 1.0, bottom, z);
-	vertex(u0, v0, x + 1.0, topNorth, z);
-	vertex(u1, v0, x + 1.0, topSouth, z + 1.0);
-	vertex(u1, v1, x + 1.0, bottom, z + 1.0);
+	vertex(u0, v1, x + 1.0 + offsetX, bottom + offsetY, z + offsetZ);
+	vertex(u0, v0, x + 1.0 + offsetX, topNorth + offsetY, z + offsetZ);
+	vertex(u1, v0, x + 1.0 + offsetX, topSouth + offsetY, z + 1.0 + offsetZ);
+	vertex(u1, v1, x + 1.0 + offsetX, bottom + offsetY, z + 1.0 + offsetZ);
 }
 
-private function emitWest(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float):Void {
+private function emitWest(x:Float, bottom:Float, topNorth:Float, topSouth:Float, z:Float, alpha:Int, u0:Float, u1:Float, v0:Float, v1:Float, offsetX:Float,
+		offsetY:Float, offsetZ:Float):Void {
 	Rlgl.Color(sideTint(alpha));
 	Rlgl.Normal(-1.0, 0.0, 0.0);
-	vertex(u0, v1, x, bottom, z);
-	vertex(u1, v1, x, bottom, z + 1.0);
-	vertex(u1, v0, x, topSouth, z + 1.0);
-	vertex(u0, v0, x, topNorth, z);
+	vertex(u0, v1, x + offsetX, bottom + offsetY, z + offsetZ);
+	vertex(u1, v1, x + offsetX, bottom + offsetY, z + 1.0 + offsetZ);
+	vertex(u1, v0, x + offsetX, topSouth + offsetY, z + 1.0 + offsetZ);
+	vertex(u0, v0, x + offsetX, topNorth + offsetY, z + offsetZ);
 }
 
 /** Submit one atlas vertex through the reviewed binary32 Rlgl facade. */

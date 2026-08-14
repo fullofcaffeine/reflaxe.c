@@ -268,6 +268,18 @@ half-open: the origin is included and origin plus size is excluded. Validation
 resolves every content ID through the compile-time registry and rejects
 overlaps or locations disallowed by the registered placement kind.
 
+A campaign can also use a trigger zone as a level doorway. Campaign manifest
+schema 2 names the source zone with `sourceAnchor`. It names the destination
+zone with `destinationEntrance`. Both zones must be near opposite map edges.
+The runtime can then show the staged destination behind the source doorway.
+The trigger zone still owns the level exit through an ordinary CaxeFlow rule.
+
+Use `handoff: "seamless"` only for this checked doorway form. Use
+`handoff: "loading"` with both anchors set to `default` for the loading screen.
+If portal preparation fails, the game keeps the source active and uses the
+loading screen. CAXEMAP stays a one-level format; the campaign manifest owns
+connections between levels.
+
 ## Story records
 
 Text is either `message <message-id>` or `literal "<user text>"`. Built-in

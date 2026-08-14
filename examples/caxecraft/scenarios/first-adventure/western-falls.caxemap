@@ -2068,7 +2068,7 @@ object landmark.ceesh-survey
 end object
 object player.start
   tag player
-  placement player-spawn 35500 5000 18500 270
+  placement player-spawn 62500 5000 20000 270
 end object
 object route.flooded-ruins-relay
   tag destination
@@ -2094,6 +2094,10 @@ end object
 object vault.glyph-river
   tag vault-control
   placement stateful caxecraft:vault-glyph-river caxecraft:waiting 14000 6000 22500 0
+end object
+object zone.evergrove-entry
+  tag entrance
+  placement trigger-zone 61 0 16 3 16 8
 end object
 object zone.frostmere-road
   tag destination

@@ -273,11 +273,13 @@ keyboard, or controller, skipped immediately, and replayed later.
 
 The reference campaign begins in a compact village level. The village gives
 Haxirio a home, introduces Ivvy and friendly characters, and teaches the first
-interactions without pretending to be the full world. Leaving through its
-declared gate shows a branded loading screen and enters the definitive broad
-outdoor level. Later separate levels are admitted only when independent
-loading, reset, or presentation genuinely helps, such as a castle interior,
-boss arena, or self-contained challenge.
+interactions without pretending to be the full world. The west gate shows the
+next outdoor level through a checked doorway. Crossing that doorway publishes
+the level that the player could already see.
+
+Other level gates can use a branded loading screen. Use a separate level only
+when independent loading, reset, or presentation helps. Good examples include
+a castle interior, boss arena, challenge map, or different minigame.
 
 A loading screen is a real transition state, not a frozen rendered frame. It
 names the destination, keeps the application responsive, allows a safe quit,
@@ -287,6 +289,12 @@ the same asset and localization rules as the rest of the interface. The loader
 validates the destination, stages resources, releases the previous level at
 the declared ownership boundary, and installs the new level only after the
 complete candidate is valid.
+
+A seamless doorway uses the same safe loader before the player reaches it.
+Content names an anchor in each level. The engine checks both anchors and shows
+one inactive destination. If this check fails, the game uses the loading
+screen. Content chooses the transition style; the game loop does not know a
+campaign route.
 
 Haxirio is a young explorer who uses the Haxeforge. Princess Ceesh is a capable
 engineer-princess. Haxirio first showed her how Haxe and Caxe can produce

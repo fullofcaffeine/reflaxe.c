@@ -581,19 +581,28 @@ live hot-reload during one running process or arbitrary third-party package
 compatibility. The editor, game, command-line tools, and agents continue to
 read and write CAXEMAP rather than a serialized engine plan.
 
-The first live campaign transition adds one application-facing owner without
-widening the package or map owners. `ActivePlayableLevel` derives the temporary
-fixed-HUD actor slots, item placements, spawn, water presentation cell, and
-source path from one `RuntimeLevelCandidate` before publication. At a frame
-boundary it delegates the generation change to `ActiveContent`, then exposes the
-matching immutable view; the single-threaded loop invokes no callback between
-those assignments. A rejected source, stale receipt, invalid runtime candidate,
-or old generation therefore leaves every old view active. On success the loop
-reacquires the session, resets interpolation and level-local feedback, and
-invalidates all derived terrain chunks before drawing Western Falls. The base
-pack and UI catalog remain the original coherent runtime-content generation.
-This proves one linear forward transition, not branching, return travel,
-persistence, arbitrary campaigns, or live hot reload inside a running process.
+Live campaign transitions have one application-facing owner. They do not widen
+the package or map owners. `ActivePlayableLevel` prepares a complete inactive
+level before it can publish that level. A rejected source, stale receipt, or
+invalid candidate leaves the old level active.
+
+Campaign manifest schema 2 selects one of two presentation paths. A `loading`
+edge shows the loading screen before publication. A `seamless` edge names one
+trigger-zone anchor in each level. `CampaignPortal` checks that both anchors
+are near opposite map edges. It then computes one draw translation.
+
+Near the doorway, the loop draws the inactive terrain and water behind it.
+It does not draw the second level across the whole source map. The inactive
+session does not simulate and cannot change active game state.
+When the player enters the source zone, the loop publishes that same staged
+level at the next frame boundary. It then resets interpolation and local
+feedback. If preload or alignment fails, the normal loading path remains
+available.
+
+The first admitted portal connects Evergrove to Western Falls. Other current
+campaign edges still use loading screens. This does not prove arbitrary world
+streaming, overlapping simulation, return travel, persistence, or live content
+reload in one running process.
 
 The first actor-composition stage is now executable. `ActorCompositionPlanner`
 reads the already validated CaxeMap objects in authored order, selects only

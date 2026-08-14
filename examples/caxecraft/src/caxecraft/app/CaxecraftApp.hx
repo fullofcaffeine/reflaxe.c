@@ -5,7 +5,12 @@ import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.ActiveRuntimeContent;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelPublicationResult;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelStageResult;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
+import caxecraft.app.ActivePlayableLevel.StagedPlayableLevel;
+import caxecraft.app.CampaignPortal.CampaignPortalPreloadResult;
+import caxecraft.app.CampaignPortal.PreparedCampaignPortal;
+import caxecraft.app.CampaignPortal.preloadCampaignPortal as preloadPortal;
 import caxecraft.content.CampaignManifest.CampaignLevel;
 import caxecraft.content.CampaignManifest.CampaignManifest;
 import caxecraft.content.CampaignRuntime.CampaignLevelLoadError;
@@ -188,10 +193,16 @@ final class CaxecraftApp {
 	/** Persistent terrain faces rebuilt only after successful world edits. */
 	final terrainRenderer:TerrainRenderer = new TerrainRenderer();
 
+	/** Separate cache for the one inactive destination shown through a portal. */
+	final portalTerrainRenderer:TerrainRenderer = new TerrainRenderer();
+
 	final distantHorizonRenderer:DistantHorizon.DistantHorizonRenderer = new DistantHorizon.DistantHorizonRenderer();
 
 	/** Persistent transparent-face storage reused by each water frame. */
 	final waterRenderer:WaterRenderer = new WaterRenderer();
+
+	/** Separate transparent buffer for the inactive portal destination. */
+	final portalWaterRenderer:WaterRenderer = new WaterRenderer();
 
 	/** Held-direction clock shared by real controller input and native pilots. */
 	final editorNavigation:NavigationRepeater;
@@ -307,6 +318,7 @@ final class CaxecraftApp {
 		var campaign:Null<CampaignManifest> = null;
 		var campaignLevel:Null<CampaignLevel> = null;
 		var pendingCampaignLevel:Null<CampaignLevel> = null;
+		var pendingCampaignPortal:Null<PreparedCampaignPortal> = null;
 		var pendingCampaignLabel = "";
 		var loadingFramePresented = false;
 		switch loadCampaignManifest(contentStore, "campaigns/first-adventure/campaign.json") {
@@ -445,6 +457,31 @@ final class CaxecraftApp {
 		if (!initialPresentation.valid)
 			return;
 		var motionHistory = startMotion(initialPresentation.localPlayer.body);
+		var preparedPortal:Null<PreparedCampaignPortal> = null;
+		final initialCampaign = campaign;
+		final initialCampaignLevel = campaignLevel;
+		if (initialCampaign != null && initialCampaignLevel != null) {
+			final portalPlayer:LevelPlayerOptions = {
+				entityId: initialPresentation.localPlayer.id,
+				initialHealth: initialPresentation.localPlayer.vitals.health,
+				aquaticProfile: initialPresentation.localPlayer.aquaticProfile
+			};
+			switch preloadPortal({
+				store: contentStore,
+				campaign: initialCampaign,
+				sourceLevel: initialCampaignLevel,
+				sourceView: initialLevel,
+				nextGeneration: ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1),
+				playerOptions: portalPlayer
+			}, contentRegistry, contentRegistry) {
+				case CampaignPortalNotDeclared:
+				case CampaignPortalReady(portal):
+					preparedPortal = portal;
+					Sys.println("caxecraft: campaign-portal=" + portal.destination().id.text());
+				case CampaignPortalPreloadRejected(_):
+					Sys.println("caxecraft: campaign portal rejected; ordinary loading remains available");
+			}
+		}
 		var jumpQueued = false;
 		var swordQueued = false;
 		var selectedMode:GameMode = GameMode.Creative;
@@ -630,6 +667,8 @@ final class CaxecraftApp {
 			final descendHeld = frameInput.descendHeld;
 			#end
 			var requestedCampaignLevel:Null<CampaignLevel> = null;
+			final requestedCampaignPortal = pendingCampaignPortal;
+			pendingCampaignPortal = null;
 			if (loadingAtFrameStart && loadingFramePresented)
 				requestedCampaignLevel = pendingCampaignLevel;
 			var requestedFromCampaignMenu = false;
@@ -735,7 +774,9 @@ final class CaxecraftApp {
 			// Authored exits and the developer level picker enter through the same
 			// checked loader. The new map replaces live state only after its package
 			// receipt, schema, content references, and playable bindings all succeed.
-			final destination = requestedCampaignLevel;
+			var destination = requestedCampaignLevel;
+			if (requestedCampaignPortal != null)
+				destination = requestedCampaignPortal.destination();
 			if (destination != null) {
 				final playerOptions:LevelPlayerOptions = {
 					entityId: character.id,
@@ -743,70 +784,115 @@ final class CaxecraftApp {
 					aquaticProfile: character.aquaticProfile
 				};
 				final nextGeneration = ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1);
-				switch loadCampaignLevel(contentStore, destination, nextGeneration, contentRegistry, contentRegistry, playerOptions) {
-					case CampaignLevelRejected(error):
-						Sys.println("caxecraft: campaign level rejected: " + campaignLevelLoadFailure(error));
-					case CampaignLevelReady(candidate):
-						switch activeLevel.publish(candidate) {
-							case PlayableLevelPublicationRejected(_):
-								Sys.println("caxecraft: campaign level could not replace the active level");
-							case PlayableLevelPublished(_, selected):
-								campaignLevel = destination;
-								levelLabel = destination.id.text();
-								final selectedCampaign = campaign;
-								if (selectedCampaign != null)
-									for (index in 0...selectedCampaign.levelCount())
-										if (selectedCampaign.levelAt(index).id.text() == destination.id.text())
-											selectedCampaignLevelIndex = index;
-								levelView = activeLevel.level();
-								session = activeLevel.session();
-								initialView = session.view();
-								if (!initialView.valid) {
+				var stagedDestination:Null<StagedPlayableLevel> = null;
+				if (requestedCampaignPortal != null)
+					stagedDestination = requestedCampaignPortal.staged();
+				if (stagedDestination == null)
+					switch loadCampaignLevel(contentStore, destination, nextGeneration, contentRegistry, contentRegistry, playerOptions) {
+						case CampaignLevelRejected(error):
+							Sys.println("caxecraft: campaign level rejected: " + campaignLevelLoadFailure(error));
+						case CampaignLevelReady(candidate):
+							switch ActivePlayableLevel.stage(candidate) {
+								case PlayableLevelStageRejected(_):
+									Sys.println("caxecraft: campaign level lacks required playable bindings");
+								case PlayableLevelStaged(staged):
+									stagedDestination = staged;
+							}
+					};
+				final readyDestination = stagedDestination;
+				var destinationPublished = false;
+				if (readyDestination != null)
+					switch activeLevel.publishStaged(readyDestination) {
+						case PlayableLevelPublicationRejected(_):
+							Sys.println("caxecraft: campaign level could not replace the active level");
+						case PlayableLevelPublished(_, selected):
+							destinationPublished = true;
+							campaignLevel = destination;
+							levelLabel = destination.id.text();
+							final selectedCampaign = campaign;
+							if (selectedCampaign != null)
+								for (index in 0...selectedCampaign.levelCount())
+									if (selectedCampaign.levelAt(index).id.text() == destination.id.text())
+										selectedCampaignLevelIndex = index;
+							levelView = activeLevel.level();
+							session = activeLevel.session();
+							initialView = session.view();
+							if (!initialView.valid) {
+								quit = true;
+							} else {
+								character = initialView.localPlayer;
+								conversation = null;
+								activeDialogue = null;
+								latestJournalId = null;
+								currentObjectiveId = levelView.initialObjectiveId();
+								availableInteractionPrompt = promptForAvailableInteraction(nearestAvailableInteraction(session, levelView));
+								enemyActor = session.readCharacter(levelView.enemyActorId());
+								final phases = session.actorControllerStateSnapshots();
+								enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
+								if (!dialogueActorsAreValid(session, levelView, phases) || !enemyActor.id.isValid() || !enemyPhase.valid)
 									quit = true;
-								} else {
-									character = initialView.localPlayer;
-									conversation = null;
-									activeDialogue = null;
-									latestJournalId = null;
-									currentObjectiveId = levelView.initialObjectiveId();
-									availableInteractionPrompt = promptForAvailableInteraction(nearestAvailableInteraction(session, levelView));
-									enemyActor = session.readCharacter(levelView.enemyActorId());
-									final phases = session.actorControllerStateSnapshots();
-									enemyPhase = observeActorPhase(phases, levelView.enemyActorId(), ActorControllerPhase.Resting);
-									if (!dialogueActorsAreValid(session, levelView, phases)
-										|| !enemyActor.id.isValid()
-										|| !enemyPhase.valid)
-										quit = true;
-									swordCombat = startSwordCombat();
-									berryDrop = emptyBerryDrop();
-									cameraWaterBlend = 0.0;
-									final publishedHeading = headingForSpawn(levelView.spawnTransform());
-									lookX = publishedHeading.x;
-									lookY = publishedHeading.y;
-									lookZ = publishedHeading.z;
-									accumulator = 0.0;
-									motionHistory = resetMotion(character.body);
-									jumpQueued = false;
-									swordQueued = false;
-									placementBlockedFrames = 0;
-									strikeHitFrames = 0;
-									enemyDefeatedFrames = 0;
-									enemyAttackFrames = 0;
-									pickupFrames = 0;
-									inventoryFullFrames = 0;
-									inventoryFullReason = InventoryFullReason.None;
-									recoveryFeedbackFrames = 0;
-									aquaticEquipmentFrames = 0;
-									terrainRenderer.invalidateAll();
-									resetMotionThisFrame = true;
-									if (requestedFromCampaignMenu) {
-										screen = startSelectedCampaign(screen);
-										recapturedThisFrame = true;
-										Raylib.DisableCursor();
+								swordCombat = startSwordCombat();
+								berryDrop = emptyBerryDrop();
+								cameraWaterBlend = 0.0;
+								final publishedHeading = headingForSpawn(levelView.spawnTransform());
+								lookX = publishedHeading.x;
+								lookY = publishedHeading.y;
+								lookZ = publishedHeading.z;
+								accumulator = 0.0;
+								motionHistory = resetMotion(character.body);
+								jumpQueued = false;
+								swordQueued = false;
+								placementBlockedFrames = 0;
+								strikeHitFrames = 0;
+								enemyDefeatedFrames = 0;
+								enemyAttackFrames = 0;
+								pickupFrames = 0;
+								inventoryFullFrames = 0;
+								inventoryFullReason = InventoryFullReason.None;
+								recoveryFeedbackFrames = 0;
+								aquaticEquipmentFrames = 0;
+								terrainRenderer.invalidateAll();
+								preparedPortal = null;
+								portalTerrainRenderer.invalidateAll();
+								final nextCampaign = campaign;
+								final nextCampaignLevel = campaignLevel;
+								if (nextCampaign != null && nextCampaignLevel != null) {
+									final nextPortalPlayer:LevelPlayerOptions = {
+										entityId: character.id,
+										initialHealth: character.vitals.health,
+										aquaticProfile: character.aquaticProfile
+									};
+									switch preloadPortal({
+										store: contentStore,
+										campaign: nextCampaign,
+										sourceLevel: nextCampaignLevel,
+										sourceView: levelView,
+										nextGeneration: ContentGenerationId.fromSequence(activeLevel.generationId().value() + 1),
+										playerOptions: nextPortalPlayer
+									}, contentRegistry, contentRegistry) {
+										case CampaignPortalNotDeclared:
+										case CampaignPortalReady(portal):
+											preparedPortal = portal;
+											Sys.println("caxecraft: campaign-portal=" + portal.destination().id.text());
+										case CampaignPortalPreloadRejected(_):
+											Sys.println("caxecraft: campaign portal rejected; ordinary loading remains available");
 									}
-									Sys.println("caxecraft: campaign-level=" + levelLabel + " generation=" + Std.string(selected.value()));
 								}
-						}
+								resetMotionThisFrame = true;
+								if (requestedFromCampaignMenu) {
+									screen = startSelectedCampaign(screen);
+									recapturedThisFrame = true;
+									Raylib.DisableCursor();
+								}
+								Sys.println("caxecraft: campaign-level=" + levelLabel + " generation=" + Std.string(selected.value()));
+							}
+					}
+				if (requestedCampaignPortal != null && !destinationPublished) {
+					pendingCampaignLevel = destination;
+					pendingCampaignLabel = destination.id.text();
+					loadingFramePresented = false;
+					screen = beginLoading(screen);
+					Raylib.EnableCursor();
 				}
 				if (requestedFromAuthoredExit) {
 					pendingCampaignLevel = null;
@@ -1121,13 +1207,19 @@ final class CaxecraftApp {
 											if (nextLevel == null) {
 												Sys.println("caxecraft: campaign destination disappeared after manifest validation");
 											} else {
-												pendingCampaignLevel = nextLevel;
-												pendingCampaignLabel = nextLevel.id.text();
-												loadingFramePresented = false;
-												screen = beginLoading(screen);
+												final portal = preparedPortal;
+												if (portal != null && portal.matches(transition)) {
+													pendingCampaignPortal = portal;
+													preparedPortal = null;
+												} else {
+													pendingCampaignLevel = nextLevel;
+													pendingCampaignLabel = nextLevel.id.text();
+													loadingFramePresented = false;
+													screen = beginLoading(screen);
+													Raylib.EnableCursor();
+												}
 												accumulator = 0.0;
 												jumpQueued = false;
-												Raylib.EnableCursor();
 											}
 										}
 									}
@@ -1435,17 +1527,25 @@ final class CaxecraftApp {
 				Raylib.ClearBackground(hasEnvironment ? Color.rgbaClamped(levelView.environmentSkyRed(), levelView.environmentSkyGreen(),
 					levelView.environmentSkyBlue()) : CaxecraftPalette.sky());
 				Raylib.BeginMode3D(camera);
+				final portal = preparedPortal;
+				final portalVisible = portal != null && portal.visibleFrom(renderPosition.x, renderPosition.z);
 				if (hasEnvironment) {
 					drawWorldSunAndClouds(levelView.environmentHasSun(), levelView.environmentSunX(), levelView.environmentSunY(),
 						levelView.environmentSunZ(), levelView.environmentSunRadiusMilli(), levelView.environmentCloudCount(),
 						levelView.environmentCloudSpeedMilli(), levelView.environmentCloudSeed(), eyeX, eyeY, eyeZ, completedTicks * FIXED_SECONDS);
-					distantHorizonRenderer.configure(levelView.authoredWorldWidth(), levelView.environmentHorizonMask());
+					final horizonMask = !portalVisible ? levelView.environmentHorizonMask() : levelView.environmentHorizonMask() & ~portal.sourceHorizonEdgeMask();
+					distantHorizonRenderer.configure(levelView.authoredWorldWidth(), horizonMask);
 					distantHorizonRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, adventureTerrainTexture,
 						adventureTerrainTextureReady, levelView.waterPresentationCell());
 				}
 				#if caxecraft_render_benchmark
 				final terrainStarted = Raylib.GetTime();
 				#end
+				if (portalVisible) {
+					final preview = portal.staged();
+					portalTerrainRenderer.drawTranslated(preview.session().worldView(), terrainTexture, terrainTextureReady, adventureTerrainTexture,
+						adventureTerrainTextureReady, renderPosition.x, renderPosition.z, portal.offsetX(), portal.offsetY(), portal.offsetZ());
+				}
 				final renderCounters = terrainRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, adventureTerrainTexture,
 					adventureTerrainTextureReady, renderPosition.x, renderPosition.z);
 				#if caxecraft_render_benchmark
@@ -1455,6 +1555,11 @@ final class CaxecraftApp {
 					measuredTerrainFrames++;
 				}
 				#end
+				if (portalVisible) {
+					final preview = portal.staged();
+					portalWaterRenderer.drawTranslated(preview.session().worldView(), terrainTexture, terrainTextureReady,
+						preview.level().waterPresentationCell(), eyeX, eyeY, eyeZ, portal.offsetX(), portal.offsetY(), portal.offsetZ());
+				}
 				final waterCounters = waterRenderer.draw(session.worldView(), terrainTexture, terrainTextureReady, levelView.waterPresentationCell(), eyeX,
 					eyeY, eyeZ);
 				final totalVisible = renderCounters.visible + waterCounters.visible;

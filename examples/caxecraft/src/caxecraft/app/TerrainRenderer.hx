@@ -94,8 +94,14 @@ final class TerrainRenderer {
 	/** Rebuild dirty chunks and submit at most one batch per ready opaque atlas. */
 	public function draw(cells:WorldView, baseTexture:Texture2D, baseReady:Bool, adventureTexture:Texture2D, adventureReady:Bool, playerX:Float,
 			playerZ:Float):TerrainRenderCounters {
+		return drawTranslated(cells, baseTexture, baseReady, adventureTexture, adventureReady, playerX, playerZ, 0.0, 0.0, 0.0);
+	}
+
+	/** Draw one inactive portal destination at a checked source-world translation. */
+	public function drawTranslated(cells:WorldView, baseTexture:Texture2D, baseReady:Bool, adventureTexture:Texture2D, adventureReady:Bool, playerX:Float,
+			playerZ:Float, offsetX:Float, offsetY:Float, offsetZ:Float):TerrainRenderCounters {
 		#if caxecraft_renderer_baseline
-		return drawImmediate(cells, baseTexture, baseReady, adventureTexture, adventureReady, playerX, playerZ);
+		return drawImmediate(cells, baseTexture, baseReady, adventureTexture, adventureReady, playerX, playerZ, offsetX, offsetY, offsetZ);
 		#else
 		#if caxecraft_render_benchmark
 		final preparationStarted = Raylib.GetTime();
@@ -120,10 +126,10 @@ final class TerrainRenderer {
 				cacheValid: false
 			};
 		}
-		final playerCellX = Std.int(playerX);
-		final playerCellZ = Std.int(playerZ);
-		final base = drawSheet(baseTexture, baseReady, TerrainSheet.Base, playerCellX, playerCellZ);
-		final adventure = drawSheet(adventureTexture, adventureReady, TerrainSheet.Adventure, playerCellX, playerCellZ);
+		final playerCellX = Std.int(playerX - offsetX);
+		final playerCellZ = Std.int(playerZ - offsetZ);
+		final base = drawSheet(baseTexture, baseReady, TerrainSheet.Base, playerCellX, playerCellZ, offsetX, offsetY, offsetZ);
+		final adventure = drawSheet(adventureTexture, adventureReady, TerrainSheet.Adventure, playerCellX, playerCellZ, offsetX, offsetY, offsetZ);
 		return {
 			visible: base.visible + adventure.visible,
 			faces: base.faces + adventure.faces,
@@ -140,7 +146,8 @@ final class TerrainRenderer {
 
 	#if !caxecraft_renderer_baseline
 	/** Replay cached faces through one coherent texture owner. */
-	function drawSheet(texture:Texture2D, textureReady:Bool, sheet:TerrainSheet, playerCellX:Int, playerCellZ:Int):TerrainSheetCounters {
+	function drawSheet(texture:Texture2D, textureReady:Bool, sheet:TerrainSheet, playerCellX:Int, playerCellZ:Int, offsetX:Float, offsetY:Float,
+			offsetZ:Float):TerrainSheetCounters {
 		if (!textureReady)
 			return {visible: 0, faces: 0, drawCalls: 0};
 
@@ -160,7 +167,7 @@ final class TerrainRenderer {
 					final x = cache.xAt(index);
 					final y = cache.yAt(index);
 					final z = cache.zAt(index);
-					emitFace(kind, unpackFace(packed), x, y, z, halfPixel, squareDistance(x, z, playerCellX, playerCellZ));
+					emitTranslatedFace(kind, unpackFace(packed), x, y, z, halfPixel, squareDistance(x, z, playerCellX, playerCellZ), offsetX, offsetY, offsetZ);
 					faces++;
 				}
 				offset++;
@@ -189,8 +196,20 @@ function emitFace(kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, halfPixel
 	emitTintedFace(kind, face, x, y, z, halfPixel, faceTint(face, distance));
 }
 
+/** Emit one terrain face after translating its destination-local position. */
+function emitTranslatedFace(kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, halfPixel:Float, distance:Int, offsetX:Float, offsetY:Float,
+		offsetZ:Float):Void {
+	emitTintedFaceAt(kind, face, x, y, z, halfPixel, faceTint(face, distance), offsetX, offsetY, offsetZ);
+}
+
 /** Emit one terrain face with a caller-selected atmospheric tint. */
 function emitTintedFace(kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, halfPixel:Float, tint:Color):Void {
+	emitTintedFaceAt(kind, face, x, y, z, halfPixel, tint, 0.0, 0.0, 0.0);
+}
+
+/** Emit one tinted terrain face at a caller-owned visual translation. */
+private function emitTintedFaceAt(kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, halfPixel:Float, tint:Color, offsetX:Float, offsetY:Float,
+		offsetZ:Float):Void {
 	final tile = TerrainAtlas.tile(kind, face);
 	final u0 = TerrainAtlas.uMin(tile, halfPixel);
 	final u1 = TerrainAtlas.uMax(tile, halfPixel);
@@ -200,40 +219,40 @@ function emitTintedFace(kind:BlockKind, face:VoxelFace, x:Int, y:Int, z:Int, hal
 	switch (face) {
 		case Top:
 			Rlgl.Normal(0.0, 1.0, 0.0);
-			vertex(u0, v0, x, y + 1, z);
-			vertex(u0, v1, x, y + 1, z + 1);
-			vertex(u1, v1, x + 1, y + 1, z + 1);
-			vertex(u1, v0, x + 1, y + 1, z);
+			vertex(u0, v0, x + offsetX, y + 1 + offsetY, z + offsetZ);
+			vertex(u0, v1, x + offsetX, y + 1 + offsetY, z + 1 + offsetZ);
+			vertex(u1, v1, x + 1 + offsetX, y + 1 + offsetY, z + 1 + offsetZ);
+			vertex(u1, v0, x + 1 + offsetX, y + 1 + offsetY, z + offsetZ);
 		case Bottom:
 			Rlgl.Normal(0.0, -1.0, 0.0);
-			vertex(u0, v0, x, y, z);
-			vertex(u1, v0, x + 1, y, z);
-			vertex(u1, v1, x + 1, y, z + 1);
-			vertex(u0, v1, x, y, z + 1);
+			vertex(u0, v0, x + offsetX, y + offsetY, z + offsetZ);
+			vertex(u1, v0, x + 1 + offsetX, y + offsetY, z + offsetZ);
+			vertex(u1, v1, x + 1 + offsetX, y + offsetY, z + 1 + offsetZ);
+			vertex(u0, v1, x + offsetX, y + offsetY, z + 1 + offsetZ);
 		case North:
 			Rlgl.Normal(0.0, 0.0, -1.0);
-			vertex(u0, v1, x, y, z);
-			vertex(u0, v0, x, y + 1, z);
-			vertex(u1, v0, x + 1, y + 1, z);
-			vertex(u1, v1, x + 1, y, z);
+			vertex(u0, v1, x + offsetX, y + offsetY, z + offsetZ);
+			vertex(u0, v0, x + offsetX, y + 1 + offsetY, z + offsetZ);
+			vertex(u1, v0, x + 1 + offsetX, y + 1 + offsetY, z + offsetZ);
+			vertex(u1, v1, x + 1 + offsetX, y + offsetY, z + offsetZ);
 		case South:
 			Rlgl.Normal(0.0, 0.0, 1.0);
-			vertex(u0, v1, x, y, z + 1);
-			vertex(u1, v1, x + 1, y, z + 1);
-			vertex(u1, v0, x + 1, y + 1, z + 1);
-			vertex(u0, v0, x, y + 1, z + 1);
+			vertex(u0, v1, x + offsetX, y + offsetY, z + 1 + offsetZ);
+			vertex(u1, v1, x + 1 + offsetX, y + offsetY, z + 1 + offsetZ);
+			vertex(u1, v0, x + 1 + offsetX, y + 1 + offsetY, z + 1 + offsetZ);
+			vertex(u0, v0, x + offsetX, y + 1 + offsetY, z + 1 + offsetZ);
 		case East:
 			Rlgl.Normal(1.0, 0.0, 0.0);
-			vertex(u0, v1, x + 1, y, z);
-			vertex(u0, v0, x + 1, y + 1, z);
-			vertex(u1, v0, x + 1, y + 1, z + 1);
-			vertex(u1, v1, x + 1, y, z + 1);
+			vertex(u0, v1, x + 1 + offsetX, y + offsetY, z + offsetZ);
+			vertex(u0, v0, x + 1 + offsetX, y + 1 + offsetY, z + offsetZ);
+			vertex(u1, v0, x + 1 + offsetX, y + 1 + offsetY, z + 1 + offsetZ);
+			vertex(u1, v1, x + 1 + offsetX, y + offsetY, z + 1 + offsetZ);
 		case West:
 			Rlgl.Normal(-1.0, 0.0, 0.0);
-			vertex(u0, v1, x, y, z);
-			vertex(u1, v1, x, y, z + 1);
-			vertex(u1, v0, x, y + 1, z + 1);
-			vertex(u0, v0, x, y + 1, z);
+			vertex(u0, v1, x + offsetX, y + offsetY, z + offsetZ);
+			vertex(u1, v1, x + offsetX, y + offsetY, z + 1 + offsetZ);
+			vertex(u1, v0, x + offsetX, y + 1 + offsetY, z + 1 + offsetZ);
+			vertex(u0, v0, x + offsetX, y + 1 + offsetY, z + offsetZ);
 	}
 }
 

@@ -3,10 +3,15 @@ package caxecraft.qa;
 import caxecraft.app.ActivePlayableLevel;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelCreationResult;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelPublicationResult;
+import caxecraft.app.ActivePlayableLevel.PlayableLevelStageResult;
 import caxecraft.app.ActivePlayableLevel.PlayableLevelView;
 import caxecraft.app.ActivePlayableLevel.collectDialogueActorsForTesting;
+import caxecraft.app.CampaignPortal.CampaignPortalPreparationError;
+import caxecraft.app.CampaignPortal.CampaignPortalPreparationResult;
+import caxecraft.app.CampaignPortal.prepareCampaignPortal;
 import caxecraft.content.ActorCompositionPlanner.CharacterSpawnRole;
 import caxecraft.content.CampaignManifest.CampaignManifestReadResult;
+import caxecraft.content.CampaignManifest.CampaignTransitionHandoff;
 import caxecraft.content.CampaignManifest.decodeCampaignManifest;
 import caxecraft.content.CampaignRuntime.CampaignLevelLoadResult;
 import caxecraft.content.CampaignRuntime.CampaignPackageLoadResult;
@@ -36,9 +41,9 @@ import haxe.io.Bytes;
  *   then follow its sole required transition; the manifest receipt and real
  *   package bytes are the oracle. Decorative coordinates and authored counts
  *   deliberately remain free to change.
- * - Given a manually authored minimal campaign document, mutate unknown fields,
- *   duplicate IDs/paths, references, paths, and cycles; the closed schema
- *   contract and one-based source coordinate are the oracle.
+ * - Given a manually authored minimal campaign document, mutate its fields,
+ *   IDs, paths, references, handoff values, anchors, and cycles. The closed
+ *   schema contract and one-based source coordinate are the oracle.
  * - Given a valid manifest naming an absent destination, load while generation
  *   one is active; package-store `EntryMissing` and unchanged publication
  *   counters are the oracle.
@@ -204,7 +209,39 @@ function selfCheck():Int {
 	final authored = second.authoredTrace();
 	if (receipt.logicalPath != destination.logicalPath || receipt.byteLength != destination.byteLength)
 		return 16;
-	switch active.publish(second) {
+	final staged = switch ActivePlayableLevel.stage(second) {
+		case PlayableLevelStaged(value): value;
+		case PlayableLevelStageRejected(_): return 125;
+	};
+	switch forward.handoff {
+		case SeamlessPortal(_):
+		case LoadingScreen:
+			return 126;
+	}
+	final portal = switch prepareCampaignPortal(forward, destination, initialView, staged) {
+		case CampaignPortalPrepared(value): value;
+		case CampaignPortalRejected(_): return 128;
+	};
+	if (portal.destination().id.text() != destination.id.text() || portal.sourceHorizonEdgeMask() != 8)
+		return 127;
+	var loadingTransition = null;
+	for (index in 0...manifest.transitionCount()) {
+		final candidate = manifest.transitionAt(index);
+		switch candidate.handoff {
+			case LoadingScreen:
+				if (loadingTransition == null)
+					loadingTransition = candidate;
+			case SeamlessPortal(_):
+		}
+	}
+	if (loadingTransition == null)
+		return 129;
+	switch prepareCampaignPortal(loadingTransition, destination, initialView, staged) {
+		case CampaignPortalRejected(PortalNotRequested):
+		case _:
+			return 130;
+	}
+	switch active.publishStaged(staged) {
 		case PlayableLevelPublished(retired, selected) if (retired.value() == 1 && selected.value() == 2):
 		case _:
 			return 17;
@@ -301,11 +338,13 @@ function viewMatchesDialogueBindings(view:PlayableLevelView, bindings:Array<Load
 
 /** Provide a tiny independent schema oracle unrelated to shipped campaign art. */
 function schemaFixture():String
-	return '{"schemaVersion":1,"campaignId":"caxecraft:schema-probe","campaignVersion":1,"entryLevel":"a",'
+	return '{"schemaVersion":2,"campaignId":"caxecraft:schema-probe","campaignVersion":1,"entryLevel":"a",'
 		+ '"levels":[{"id":"a","path":"scenarios/a.caxemap","byteLength":1,"sha256":"0000000000000000000000000000000000000000000000000000000000000000"},'
 		+ '{"id":"b","path":"scenarios/b.caxemap","byteLength":1,"sha256":"1111111111111111111111111111111111111111111111111111111111111111"}],'
-		+ '"transitions":[{"exit":"a-b","sourceLevel":"a","destinationLevel":"b","destinationEntrance":"default","required":true},'
-		+ '{"exit":"b-a","sourceLevel":"b","destinationLevel":"a","destinationEntrance":"default","required":false}]}';
+		+
+		'"transitions":[{"exit":"a-b","sourceLevel":"a","destinationLevel":"b","destinationEntrance":"default","handoff":"loading","sourceAnchor":"default","required":true},'
+		+
+		'{"exit":"b-a","sourceLevel":"b","destinationLevel":"a","destinationEntrance":"default","handoff":"loading","sourceAnchor":"default","required":false}]}';
 
 /** Challenge every campaign-only schema relationship with a reviewed mutation. */
 function verifySchemaRejections(source:String):Bool {
@@ -334,7 +373,17 @@ function verifySchemaRejections(source:String):Bool {
 	if (!rejects(duplicateExit, 8))
 		return false;
 	final requiredCycle = replaceOnce(source, '"required":false', '"required":true');
-	return rejects(requiredCycle, 9);
+	if (!rejects(requiredCycle, 9))
+		return false;
+	final firstTransition = '"exit":"a-b"';
+	final unknownHandoff = replaceObjectField(source, firstTransition, '"handoff":"loading"', '"handoff":"unknown"');
+	if (!rejects(unknownHandoff, 10))
+		return false;
+	final loadingWithNamedAnchor = replaceObjectField(source, firstTransition, '"sourceAnchor":"default"', '"sourceAnchor":"door.a"');
+	if (!rejects(loadingWithNamedAnchor, 11))
+		return false;
+	final seamlessWithDefaultAnchors = replaceObjectField(source, firstTransition, '"handoff":"loading"', '"handoff":"seamless"');
+	return rejects(seamlessWithDefaultAnchors, 12);
 }
 
 /** Match one located closed diagnostic without accepting a neighboring error. */
@@ -361,6 +410,9 @@ function rejects(source:String, expected:Int):Bool {
 					case [7, SchemaInvalidLogicalPath("levels[1].path")]: true;
 					case [8, SchemaDuplicateId("transitions", "a-b")]: true;
 					case [9, SchemaRequiredTransitionCycle(_)]: true;
+					case [10, SchemaInvalidClosedValue("transitions[0].handoff", "unknown")]: true;
+					case [11, SchemaInvalidInvariant("transitions[0].loadingHandoff")]: true;
+					case [12, SchemaInvalidInvariant("transitions[0].seamlessHandoff")]: true;
 					case _: false;
 				}
 			}

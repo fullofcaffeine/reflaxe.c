@@ -97,6 +97,15 @@ enum PlayableLevelCreationResult {
 	PlayableLevelCreationRejected(error:PlayableLevelPreparationError);
 }
 
+/** A complete inactive app view, or the exact preflight that rejected it. */
+enum PlayableLevelStageResult {
+	/** The level can be previewed and later published without more preparation. */
+	PlayableLevelStaged(stage:StagedPlayableLevel);
+
+	/** No inactive app view escaped. */
+	PlayableLevelStageRejected(error:PlayableLevelPreparationError);
+}
+
 /** Why a candidate did not replace the level visible to the game loop. */
 enum PlayableLevelPublicationError {
 	/** App-facing bindings could not be prepared, so publication was not attempted. */
@@ -346,8 +355,38 @@ final class PlayableLevelView {
 
 	/** Generation handed only to the owner that controls publication. */
 	@:allow(caxecraft.app.ActivePlayableLevel)
+	@:allow(caxecraft.app.StagedPlayableLevel)
 	private inline function generation():LoadedContentGeneration
 		return loadedGeneration;
+}
+
+/**
+	Keeps one prepared destination inactive until the frame loop publishes it.
+
+	A seamless portal may draw this level's read-only session, but it cannot step
+	the session or select the generation. `ActivePlayableLevel` remains the only
+	publication owner.
+**/
+final class StagedPlayableLevel {
+	final stagedView:PlayableLevelView;
+
+	/** Construct only from the same complete preflight used by normal publication. */
+	@:allow(caxecraft.app.ActivePlayableLevel)
+	private function new(view:PlayableLevelView)
+		stagedView = view;
+
+	/** Borrow the inactive session for a read-only preview. */
+	public inline function session():GameSession
+		return stagedView.generation().session();
+
+	/** Borrow presentation facts paired with the inactive session. */
+	public inline function level():PlayableLevelView
+		return stagedView;
+
+	/** Hand the complete generation only to the active publication owner. */
+	@:allow(caxecraft.app.ActivePlayableLevel)
+	private inline function generation():LoadedContentGeneration
+		return stagedView.generation();
 }
 
 /**
@@ -374,6 +413,14 @@ final class ActivePlayableLevel {
 		return switch prepare(initial) {
 			case PlayableLevelPrepared(view): PlayableLevelCreated(new ActivePlayableLevel(view));
 			case PlayableLevelNotPrepared(error): PlayableLevelCreationRejected(error);
+		};
+	}
+
+	/** Prepare one inactive destination without changing the current level. */
+	public static function stage(candidate:RuntimeLevelCandidate):PlayableLevelStageResult {
+		return switch prepare(candidate) {
+			case PlayableLevelPrepared(view): PlayableLevelStaged(new StagedPlayableLevel(view));
+			case PlayableLevelNotPrepared(error): PlayableLevelStageRejected(error);
 		};
 	}
 
@@ -406,16 +453,21 @@ final class ActivePlayableLevel {
 		the non-failing app-view assignment.
 	**/
 	public function publish(candidate:RuntimeLevelCandidate):PlayableLevelPublicationResult {
-		final prepared = switch prepare(candidate) {
-			case PlayableLevelPrepared(view): view;
-			case PlayableLevelNotPrepared(error): return PlayableLevelPublicationRejected(PlayableLevelCandidateRejected(error));
+		final staged = switch stage(candidate) {
+			case PlayableLevelStaged(value): value;
+			case PlayableLevelStageRejected(error): return PlayableLevelPublicationRejected(PlayableLevelCandidateRejected(error));
 		};
-		return switch content.publish(prepared.generation()) {
+		return publishStaged(staged);
+	}
+
+	/** Select one already-prepared destination in one non-callback frame operation. */
+	public function publishStaged(staged:StagedPlayableLevel):PlayableLevelPublicationResult {
+		return switch content.publish(staged.generation()) {
 			case ContentPublicationRejected(error):
 				PlayableLevelPublicationRejected(PlayableLevelGenerationRejected(error));
 			case ContentPublished(retired, selected):
 				final result = PlayableLevelPublished(retired, selected);
-				activeView = prepared;
+				activeView = staged.level();
 				result;
 		};
 	}

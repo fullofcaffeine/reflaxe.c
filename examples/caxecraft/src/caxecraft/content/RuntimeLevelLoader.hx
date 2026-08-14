@@ -16,6 +16,7 @@ import caxecraft.domain.EntityId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic;
@@ -144,21 +145,33 @@ typedef RuntimeLevelAuthoredTrace = {
 	final flowDigest:Int;
 }
 
+/** One copy-owned trigger box retained for content-selected presentation. */
+private typedef RuntimeTriggerZone = {
+	final id:ScenarioId;
+	final bounds:VoxelBounds;
+}
+
+/** Copy nested voxel records so the parsed scenario keeps no shared authority. */
+private function copyVoxelBounds(bounds:VoxelBounds):VoxelBounds {
+	return {
+		origin: {x: bounds.origin.x, y: bounds.origin.y, z: bounds.origin.z},
+		size: {width: bounds.size.width, height: bounds.size.height, depth: bounds.size.depth}
+	};
+}
+
 /**
  * Keeps player-visible story text from one validated map.
  *
  * Runtime loading used to retain only counts and identity digests for story
- * data. That was enough to prove parsing, but the game then had to draw text
- * from the entry map's compile-time catalog after travelling elsewhere. This
- * value instead keeps the validated message catalog, dialogue, journal, and
- * objective references beside the unpublished generation.
- * `ActivePlayableLevel` can therefore replace the world and its matching words
- * in one publication.
+ * data. That was enough to prove parsing. However, the game then drew text
+ * from the entry map's compile-time catalog after travel.
  *
- * The loader owns the parsed scenario exclusively and never exposes its
- * mutable Arrays, so retaining that private catalog does not share mutation
- * authority with the editor or caller. A later live objective-state owner can
- * supersede the explicitly bounded “initial active objective” selection.
+ * This value keeps the validated messages, dialogue, journal, objectives, and
+ * trigger zones beside the unpublished generation. `ActivePlayableLevel` can
+ * replace the world and its matching presentation in one publication.
+ *
+ * The loader owns the parsed scenario and does not expose its mutable Arrays.
+ * Thus, the editor and caller do not share mutation authority with this value.
  */
 @:allow(caxecraft.content.RuntimeLevelLoader)
 final class RuntimeLevelPresentation {
@@ -183,6 +196,7 @@ final class RuntimeLevelPresentation {
 	final journal:Array<ScenarioJournalEntry>;
 	final objectives:Array<ScenarioObjective>;
 	final startingObjective:Null<ScenarioId>;
+	final triggerZones:Array<RuntimeTriggerZone>;
 
 	/** Retain presentation facts only after the complete scenario validates. */
 	private function new(scenario:Scenario) {
@@ -245,6 +259,13 @@ final class RuntimeLevelPresentation {
 				selected = objective.id;
 		}
 		startingObjective = selected;
+		triggerZones = [];
+		for (object in scenario.objects)
+			switch object.placement {
+				case TriggerZone(bounds):
+					triggerZones.push({id: object.id, bounds: copyVoxelBounds(bounds)});
+				case _:
+			}
 	}
 
 	/** Resolve the map title in the requested locale, using its declared fallback. */
@@ -306,6 +327,14 @@ final class RuntimeLevelPresentation {
 	/** Compact horizon edge and water-continuation settings. */
 	public inline function environmentHorizonMask():Int
 		return environmentHorizonMaskValue;
+
+	/** Copy one named trigger box for a visual level handoff. */
+	public function triggerZoneBounds(id:ScenarioId):Null<VoxelBounds> {
+		for (zone in triggerZones)
+			if (zone.id.text() == id.text())
+				return copyVoxelBounds(zone.bounds);
+		return null;
+	}
 
 	/**
 	 * Resolve one stable message ID from this map's validated runtime catalog.
