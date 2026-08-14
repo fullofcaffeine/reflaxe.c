@@ -667,6 +667,9 @@ typedef HxcIRFunction = {
 	**/
 	final ?borrowedInterfaceParameterIds:Array<String>;
 
+	/** Direct-record parameters whose interface fields remain caller-owned. */
+	final ?borrowedAggregateParameterIds:Array<String>;
+
 	/** Automatic pointer locals that only rename caller- or parent-owned class storage. */
 	final borrowedClassLocalIds:Array<String>;
 
@@ -679,6 +682,9 @@ typedef HxcIRFunction = {
 		functions always supply it, including an empty list.
 	**/
 	final ?borrowedInterfaceLocalIds:Array<String>;
+
+	/** Automatic direct-record locals whose interface fields remain caller-owned. */
+	final ?borrowedAggregateLocalIds:Array<String>;
 
 	/**
 		Exact managed parameters and instruction results kept alive until return.

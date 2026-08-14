@@ -2296,8 +2296,10 @@ private class EnumConstructorAdapterRegistry {
 			parameters: prepared.parameters.map(parameter -> parameter.ir),
 			borrowedClassParameterIds: [],
 			borrowedInterfaceParameterIds: [],
+			borrowedAggregateParameterIds: [],
 			borrowedClassLocalIds: [],
 			borrowedInterfaceLocalIds: [],
+			borrowedAggregateLocalIds: [],
 			managedRoots: [],
 			locals: locals,
 			returnType: prepared.returnMapping.irType,
@@ -2732,8 +2734,13 @@ private class FunctionLiteralRegistry {
 			borrowedInterfaceParameterIds: prepared.parameters.filter(parameter -> parameter.borrowedReference
 				&& parameter.mapping.interfaceValue() != null)
 				.map(parameter -> parameter.ir.id),
+			borrowedAggregateParameterIds: prepared.parameters.filter(parameter -> parameter.borrowedReference
+				&& parameter.mapping.aggregateValue() != null
+				&& parameter.mapping.containsInterfaceReference())
+				.map(parameter -> parameter.ir.id),
 			borrowedClassLocalIds: [],
 			borrowedInterfaceLocalIds: [],
+			borrowedAggregateLocalIds: [],
 			managedRoots: [],
 			locals: [],
 			returnType: prepared.returnMapping.irType,
@@ -2981,7 +2988,7 @@ private class FunctionPreparer {
 			final enumArgument = mapping.enumValue();
 			final parameterId = 'parameter.$index';
 			final source = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
-			final callBoundedReference = mapping.classValue() != null || mapping.interfaceValue() != null;
+			final callBoundedReference = mapping.classValue() != null || mapping.containsInterfaceReference();
 			parameters.push({
 				compilerId: argument.v.id,
 				ir: {id: parameterId, type: mapping.irType, source: source},
@@ -3793,6 +3800,8 @@ private class FunctionBuilder {
 
 	/** Automatic interface-pair locals whose concrete object remains caller-owned. */
 	final borrowedInterfaceLocalIds:Map<String, Bool> = [];
+
+	final borrowedAggregateLocalIds:Map<String, Bool> = [];
 
 	/** Class pointers and interface pairs whose referenced object remains borrowed. */
 	final borrowedReferenceValueIds:Map<String, Bool> = [];
@@ -4660,6 +4669,8 @@ private class FunctionBuilder {
 		borrowedClassLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final borrowedInterfaceLocals = [for (localId in borrowedInterfaceLocalIds.keys()) localId];
 		borrowedInterfaceLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
+		final borrowedAggregateLocals = [for (localId in borrowedAggregateLocalIds.keys()) localId];
+		borrowedAggregateLocals.sort((left, right) -> left < right ? -1 : left > right ? 1 : 0);
 		final ir:HxcIRFunction = {
 			id: prepared.irId,
 			displayName: '${input.declarationPath}.${input.displayName}',
@@ -4671,8 +4682,13 @@ private class FunctionBuilder {
 			borrowedInterfaceParameterIds: prepared.parameters.filter(parameter -> parameter.borrowedReference
 				&& parameter.mapping.interfaceValue() != null)
 				.map(parameter -> parameter.ir.id),
+			borrowedAggregateParameterIds: prepared.parameters.filter(parameter -> parameter.borrowedReference
+				&& parameter.mapping.aggregateValue() != null
+				&& parameter.mapping.containsInterfaceReference())
+				.map(parameter -> parameter.ir.id),
 			borrowedClassLocalIds: borrowedClassLocals,
 			borrowedInterfaceLocalIds: borrowedInterfaceLocals,
+			borrowedAggregateLocalIds: borrowedAggregateLocals,
 			managedRoots: [],
 			locals: locals,
 			returnType: prepared.returnMapping.irType,
@@ -5952,7 +5968,11 @@ private class FunctionBuilder {
 			case expression:
 				coerce(lowerValue(expression, localMapping), localMapping, expression.pos, 'TVar(${variable.name}:initializer)');
 		};
-		if (value != null && !stackReferenceAlias)
+		final borrowedInterfaceRecordAlias = value != null
+			&& borrowedReferenceValueIds.exists(value.id)
+			&& localMapping.aggregateValue() != null
+			&& localMapping.containsInterfaceReference();
+		if (value != null && !stackReferenceAlias && !borrowedInterfaceRecordAlias)
 			rejectOwnedClassBorrow(value, position, 'TVar(${variable.name}:owned-class-borrow-escape)');
 		final borrowedStackAlias = value != null && stackReferenceAlias && borrowedReferenceValueIds.exists(value.id);
 		locals.push({
@@ -6130,13 +6150,12 @@ private class FunctionBuilder {
 				mapping: localMapping,
 				managedEnum: managedFlowCarrierEnum
 			});
-		if (borrowedStackAlias) {
+		if (borrowedStackAlias || borrowedInterfaceRecordAlias) {
 			// Haxe introduces locals such as `_this = parent.child` while inlining.
-			// The pointer local is a stable non-owning name, not a second object: it
-			// can therefore be reloaded inside a later short-circuit block without
-			// losing the parent's lifetime. Keep the borrow fact beside the local so
-			// every reload retains escape checks, and reject reassignment in
-			// `lowerPlace` below.
+			// A source record that contains an interface also stores only a borrowed
+			// object/table pair. These locals can be reloaded during the same function,
+			// but they cannot be reassigned, returned, or passed without a matching
+			// call-bounded contract.
 			markBorrowedReferenceLocal(localId, localMapping);
 		}
 		if (stackReferenceAlias)
@@ -7672,6 +7691,7 @@ private class FunctionBuilder {
 			return unsupported(expression, "TObjectDecl(non-aggregate-type)");
 		}
 		final valuesByName:Map<String, StagedFlowValue> = [];
+		var borrowsInterface = false;
 		for (index => field in fields) {
 			if (valuesByName.exists(field.name)) {
 				return unsupported(field.expr, 'TObjectDecl(duplicate-field:${field.name})');
@@ -7689,7 +7709,11 @@ private class FunctionBuilder {
 				the stack object dies. Reject that capture at construction, where the
 				compiler still has the exact borrow fact.
 			 */
-			rejectOwnedClassBorrow(value, field.expr.pos, 'TObjectDecl(field:${field.name}:stack-class-reference-capture)');
+			if (borrowedReferenceValueIds.exists(value.id) && expectedField.type.containsInterfaceReference()) {
+				borrowsInterface = true;
+			} else {
+				rejectOwnedClassBorrow(value, field.expr.pos, 'TObjectDecl(field:${field.name}:stack-class-reference-capture)');
+			}
 			final ownedValue = captureManagedValue(value, expectedField.type, field.expr.pos, 'record-field-${field.name}');
 			valuesByName.set(field.name, stageFlowValue(ownedValue, field.expr, laterAggregateFieldCreatesFlow(fields, index), 'record-field-${field.name}'));
 		}
@@ -7704,6 +7728,8 @@ private class FunctionBuilder {
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOConstructAggregate(aggregate.instanceId, namedValues), sourceSpan(expression.pos), "construct-record");
 		registerValueTemporary(result.id, "record-result");
+		if (borrowsInterface)
+			borrowedReferenceValueIds.set(result.id, true);
 		if (aggregate.managedLifetime)
 			freshManagedAggregateValueIds.set(result.id, true);
 		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
@@ -7835,6 +7861,8 @@ private class FunctionBuilder {
 			final result:HxcIRResult = {id: nextValueId(), type: field.type.irType};
 			appendInstruction(result, IRIOProject(unwrappedResult.id, fieldName), source, "optional-record-field-project");
 			registerValueTemporary(result.id, "optional-record-field-project");
+			if (borrowedReferenceValueIds.exists(nullable.id) && field.type.containsInterfaceReference())
+				borrowedReferenceValueIds.set(result.id, true);
 			return {id: result.id, type: result.type, mapping: field.type};
 		}
 		final addressableBase = aggregateReadPlace(receiver);
@@ -7855,6 +7883,8 @@ private class FunctionBuilder {
 		final result:HxcIRResult = {id: nextValueId(), type: field.type.irType};
 		appendInstruction(result, IRIOProject(receiverValue.id, fieldName), source, "record-field-project");
 		registerValueTemporary(result.id, "record-field-project");
+		if (borrowedReferenceValueIds.exists(receiverValue.id) && field.type.containsInterfaceReference())
+			borrowedReferenceValueIds.set(result.id, true);
 		return {id: result.id, type: result.type, mapping: field.type};
 	}
 
@@ -14051,12 +14081,18 @@ private class FunctionBuilder {
 			borrowedClassLocalIds.set(localId, true);
 			return;
 		}
+		if (mapping.aggregateValue() != null && mapping.containsInterfaceReference()) {
+			borrowedAggregateLocalIds.set(localId, true);
+			return;
+		}
 		throw new CBodyEmissionError('borrowed reference local `$localId` has neither a class-pointer nor interface-pair representation');
 	}
 
 	/** True when a local only renames a class or interface object owned elsewhere. */
 	function isBorrowedReferenceLocal(localId:String):Bool
-		return borrowedClassLocalIds.exists(localId) || borrowedInterfaceLocalIds.exists(localId);
+		return borrowedClassLocalIds.exists(localId)
+			|| borrowedInterfaceLocalIds.exists(localId)
+			|| borrowedAggregateLocalIds.exists(localId);
 
 	/**
 	 * Save a completed value before a later expression introduces control flow.

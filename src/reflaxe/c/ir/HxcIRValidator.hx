@@ -509,6 +509,44 @@ private class HxcIRValidationState {
 		};
 	}
 
+	/** Require a direct record that contains at least one interface-value field. */
+	function requireBorrowedAggregateInstance(instanceId:String, path:String, source:HxcSourceSpan):Null<HxcIRTypeInstance> {
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		if (instance == null || instance.representation != IRRDirect || declaration == null) {
+			add(path, 'borrowed interface record refers to unknown direct instance `$instanceId`', source);
+			return null;
+		}
+		return switch declaration.kind {
+			case IRTKAggregate(fields) if (Lambda.exists(fields, field -> typeContainsInterfaceReference(field.type))): instance;
+			case _:
+				add(path, 'borrowed interface record `$instanceId` has no interface field', source);
+				null;
+		};
+	}
+
+	/** Follow direct record fields to find the nominal interface pair they borrow. */
+	function typeContainsInterfaceReference(type:HxcIRTypeRef, ?visited:Map<String, Bool>):Bool {
+		return switch type {
+			case IRTInstance(instanceId) if (isDirectInterfaceReference(instanceId)): true;
+			case IRTInstance(instanceId):
+				final seen = visited == null ? new Map<String, Bool>() : visited;
+				if (seen.exists(instanceId)) {
+					false;
+				} else {
+					seen.set(instanceId, true);
+					final instance = typeInstances.get(instanceId);
+					final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+					switch declaration == null ? null : declaration.kind {
+						case IRTKAggregate(fields): Lambda.exists(fields, field -> typeContainsInterfaceReference(field.type, seen));
+						case _: false;
+					}
+				}
+			case IRTNullable(payload, _): typeContainsInterfaceReference(payload, visited);
+			case _: false;
+		};
+	}
+
 	function requireDispatchLayoutRoot(instanceId:String, path:String, source:HxcSourceSpan):Null<HxcIRDispatchLayoutKind> {
 		final instance = typeInstances.get(instanceId);
 		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
@@ -885,6 +923,26 @@ private class HxcIRValidationState {
 				}
 			}
 		}
+		final borrowedAggregateParameterIds = fn.borrowedAggregateParameterIds == null ? [] : fn.borrowedAggregateParameterIds;
+		for (index => parameterId in borrowedAggregateParameterIds) {
+			final borrowPath = '$path.borrowedAggregateParameter:$index';
+			validateStableId(parameterId, borrowPath, fn.source);
+			if (borrowedIds.exists(parameterId)) {
+				add(borrowPath, 'duplicate borrowed reference parameter `$parameterId`', fn.source);
+				continue;
+			}
+			borrowedIds.set(parameterId, true);
+			final parameter = parametersById.get(parameterId);
+			if (parameter == null) {
+				add(borrowPath, 'borrowed interface-record parameter `$parameterId` is not a function parameter', fn.source);
+			} else
+				switch parameter.type {
+					case IRTInstance(instanceId):
+						requireBorrowedAggregateInstance(instanceId, '$borrowPath.type', parameter.source);
+					case _:
+						add(borrowPath, 'borrowed interface-record parameter `$parameterId` must be a direct record', parameter.source);
+				}
+		}
 		for (local in sorted(fn.locals, item -> item.id)) {
 			final localPath = '$path.local:${local.id}';
 			validateStableId(local.id, '$localPath.id', local.source);
@@ -958,6 +1016,34 @@ private class HxcIRValidationState {
 			}
 			if (local.initialState != IRISUninitialized)
 				add(borrowPath, 'borrowed interface local `$localId` must begin uninitialized', local.source);
+		}
+		final borrowedAggregateLocalIds = fn.borrowedAggregateLocalIds == null ? [] : fn.borrowedAggregateLocalIds;
+		for (index => localId in borrowedAggregateLocalIds) {
+			final borrowPath = '$path.borrowedAggregateLocal:$index';
+			validateStableId(localId, borrowPath, fn.source);
+			if (borrowedLocalIds.exists(localId)) {
+				add(borrowPath, 'duplicate borrowed reference local `$localId`', fn.source);
+				continue;
+			}
+			borrowedLocalIds.set(localId, true);
+			final local = locals.get(localId);
+			if (local == null) {
+				add(borrowPath, 'borrowed interface-record local `$localId` is not a function local', fn.source);
+				continue;
+			}
+			switch local.type {
+				case IRTInstance(instanceId):
+					requireBorrowedAggregateInstance(instanceId, '$borrowPath.type', local.source);
+				case _:
+					add(borrowPath, 'borrowed interface-record local `$localId` must be a direct record', local.source);
+			}
+			switch local.storage {
+				case IRLSAutomatic:
+				case IRLSStatic | IRLSFrame | IRLSRegion(_):
+					add(borrowPath, 'borrowed interface-record local `$localId` must use automatic function storage', local.source);
+			}
+			if (local.initialState != IRISUninitialized)
+				add(borrowPath, 'borrowed interface-record local `$localId` must begin uninitialized', local.source);
 		}
 
 		final blocks:Map<String, HxcIRBlock> = [];
@@ -1757,6 +1843,9 @@ private class HxcIRValidationState {
 		final borrowedInterfaceParameterIds = fn.borrowedInterfaceParameterIds == null ? [] : fn.borrowedInterfaceParameterIds;
 		for (parameterId in borrowedInterfaceParameterIds)
 			borrowedReferenceValues.set(parameterId, true);
+		final borrowedAggregateParameterIds = fn.borrowedAggregateParameterIds == null ? [] : fn.borrowedAggregateParameterIds;
+		for (parameterId in borrowedAggregateParameterIds)
+			borrowedReferenceValues.set(parameterId, true);
 		for (parameter in block.parameters) {
 			available.set(parameter.id, parameter.type);
 		}
@@ -1946,9 +2035,20 @@ private class HxcIRValidationState {
 				rejectValue(valueId, "an initializer");
 			case IRIOInitializeFixedArray(_, values, _, _):
 				rejectValues(values, "fixed-array initializer value");
-			case IRIOConstructAggregate(_, fields):
+			case IRIOConstructAggregate(instanceId, fields):
 				for (field in fields)
-					rejectValue(field.valueId, 'aggregate field `${field.name}`');
+					if (borrowed.exists(field.valueId)) {
+						final instance = typeInstances.get(instanceId);
+						final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+						final fieldType = switch declaration == null ? null : declaration.kind {
+							case IRTKAggregate(declared):
+								final match = Lambda.find(declared, candidate -> candidate.name == field.name);
+								match == null ? null : match.type;
+							case _: null;
+						};
+						if (fieldType == null || !typeContainsInterfaceReference(fieldType))
+							rejectValue(field.valueId, 'aggregate field `${field.name}`');
+					}
 			case IRIOZeroAggregate(_):
 			case IRIOConstructInterface(_, _, _) | IRIOUpcastInterface(_, _, _, _):
 				// The wrapper retains the same borrow. A later store, return, or
@@ -2009,7 +2109,10 @@ private class HxcIRValidationState {
 			return false;
 		final parameterId = target.parameters[argumentIndex].id;
 		final borrowedInterfaces = target.borrowedInterfaceParameterIds == null ? [] : target.borrowedInterfaceParameterIds;
-		return target.borrowedClassParameterIds.indexOf(parameterId) != -1 || borrowedInterfaces.indexOf(parameterId) != -1;
+		final borrowedAggregates = target.borrowedAggregateParameterIds == null ? [] : target.borrowedAggregateParameterIds;
+		return target.borrowedClassParameterIds.indexOf(parameterId) != -1
+			|| borrowedInterfaces.indexOf(parameterId) != -1
+			|| borrowedAggregates.indexOf(parameterId) != -1;
 	}
 
 	function borrowedDispatchReceivers(dispatch:HxcIRCallDispatch):Array<String> {
@@ -2041,6 +2144,8 @@ private class HxcIRValidationState {
 				borrowed.exists(objectValueId);
 			case IRIOUpcastInterface(valueId, _, _, _):
 				borrowed.exists(valueId);
+			case IRIOConstructAggregate(_, fields): isBorrowedReferenceCarrier(result.type) && Lambda.exists(fields, field -> borrowed.exists(field.valueId));
+			case IRIOProject(valueId, _): isBorrowedReferenceCarrier(result.type) && borrowed.exists(valueId);
 			case IRIOCall(call): isBorrowedReferenceCarrier(result.type) && !isCollectorManagedClassReference(result.type) && switch call.dispatch {
 					case IRCDDirect(functionId): StringTools.startsWith(functionId,
 							"method.") && call.arguments.length > 0 && borrowed.exists(call.arguments[0]);
@@ -2148,8 +2253,7 @@ private class HxcIRValidationState {
 		return switch type {
 			case IRTPointer(IRTInstance(instanceId), _):
 				isClassInstance(instanceId);
-			case IRTInstance(instanceId):
-				isDirectInterfaceReference(instanceId);
+			case IRTInstance(instanceId): isDirectInterfaceReference(instanceId) || typeContainsInterfaceReference(type);
 			case _:
 				false;
 		};

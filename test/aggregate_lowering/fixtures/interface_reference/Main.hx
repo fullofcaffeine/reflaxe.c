@@ -18,26 +18,21 @@ final class ValueSource implements ValueView {
 		return value;
 }
 
-/**
- * The first class-reference record slice deliberately excludes interfaces.
- *
- * An interface is a value pair containing an object and dispatch table, not the
- * single class pointer admitted by the new record-field representation.
- */
+/** Groups one call-bounded interface pair without taking object ownership. */
 typedef InterfaceRecord = {
 	final view:ValueView;
 }
 
-/** Attempts the unsupported interface-record shape. */
+/** Executes the interface-record contract through a real generated dispatch. */
 final class Main {
-	/** Keep the record visible at a function boundary so lowering must plan it. */
-	static function group(view:ValueView):InterfaceRecord
-		return {view: view};
+	/** Read the borrowed interface before this synchronous call returns. */
+	static function read(record:InterfaceRecord):Int
+		return record.view.read();
 
-	/** A correct compiler rejects the record type before generating C. */
+	/** Keep running if record construction, projection, or dispatch drifts. */
 	static function main():Void {
 		final source = new ValueSource(42);
-		final record = group(source);
-		while (record.view.read() != 42) {}
+		final record:InterfaceRecord = {view: source};
+		while (read(record) != 42) {}
 	}
 }

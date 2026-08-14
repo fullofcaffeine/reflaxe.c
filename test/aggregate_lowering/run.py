@@ -1341,13 +1341,137 @@ def check_class_reference_records(*, requested_toolchain: str) -> None:
         )
 
 
+def check_interface_reference_records(*, requested_toolchain: str) -> None:
+    """Prove a call-bounded interface pair can cross one direct record."""
+    fixture = FIXTURES / "interface_reference"
+    oracle = subprocess.run(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise AggregateLoweringFailure(
+            "interface-reference record Eval oracle failed\n"
+            f"stdout:\n{oracle.stdout}\nstderr:\n{oracle.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="hxc-interface-reference-record-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        hxcir = reported_hxcir(
+            custom_target(fixture, output, main="Main", hxcir_report=True),
+            "interface-reference record compile",
+        )
+        for marker in (
+            'name="InterfaceRecord" kind=aggregate',
+            'parameter "parameter.0" type=instance("instance.closed-record.',
+            'ownership=borrowed-interface-record storage=automatic state=uninitialized',
+            'construct-interface interface="instance.interface.',
+            'construct-aggregate instance="instance.closed-record.',
+            'project value="parameter.0" field="view"',
+            'dispatch=interface(type="instance.interface.',
+        ):
+            if marker not in hxcir:
+                raise AggregateLoweringFailure(
+                    f"interface-reference record HxcIR omitted {marker!r}"
+                )
+
+        header = (output / "include/hxc/program.h").read_text(encoding="utf-8")
+        source = (output / "src/program.c").read_text(encoding="utf-8")
+        value_definition = header.find("_ValueView_value {")
+        record_definition = header.find("struct hxc_InterfaceRecord {")
+        if (
+            value_definition == -1
+            or record_definition == -1
+            or value_definition >= record_definition
+            or "struct hxc_compiler_interface_dispatch_ValueView_value hxc_view;"
+            not in header
+            or "(struct hxc_InterfaceRecord){ .hxc_view =" not in source
+            or ".hxc_view.table->" not in source
+            or ".hxc_view.object" not in source
+        ):
+            raise AggregateLoweringFailure(
+                "interface-reference record lost its complete pair-before-record C layout or real dispatch"
+            )
+        if any(marker in (header + source).lower() for marker in ("hxrt_", "retain", "release")):
+            raise AggregateLoweringFailure(
+                "call-bounded interface record unexpectedly acquired runtime or lifecycle work"
+            )
+
+        sources = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.c"))
+        )
+        headers = tuple(
+            path.relative_to(output).as_posix()
+            for path in sorted(output.rglob("*.h"))
+        )
+        base = CFixtureProject(
+            "interface-reference-record",
+            sources,
+            headers,
+            ("include",),
+            "",
+            (
+                "borrowed-interface-record",
+                "generated-executable",
+                "real-interface-dispatch",
+                "runtime-free",
+            ),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"interface-reference-record-{optimization[1:].lower()}",
+                projects=(base,),
+                fixture_root=output,
+                build_root=root / "native" / optimization[1:].lower(),
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(base.coverage))
+
+        sanitized = CFixtureProject(
+            "interface-reference-record-sanitized",
+            base.sources,
+            base.headers,
+            base.include_directories,
+            base.expected_stdout,
+            (*base.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="interface-reference-record-sanitized",
+            projects=(sanitized,),
+            fixture_root=output,
+            build_root=root / "sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report, required_coverage=frozenset(sanitized.coverage)
+        )
+
+
 def check_negative_cases() -> None:
     cases = {
         "mutation": "TField(value:anonymous-field-mutation-requires-identity-preserving-alias-analysis)",
         "identity_equality": "TBinop(OpEq:left-type):closed-record-not-admitted-in-primitive-operation",
         "dynamic": "TFunction(argument:record):the dynamic source semantic type cannot stand in for a primitive",
         "void_field": "TFunction(return-type).field:value:Void-not-an-object-type",
-        "interface_reference": "interface-reference-record-field-not-admitted",
+        "interface_reference_escape": "TReturn(owned-class-borrow-escape)",
     }
     with tempfile.TemporaryDirectory(prefix="hxc-aggregate-negative-") as temporary:
         root = Path(temporary)
@@ -1729,6 +1853,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_production(requested_toolchain=args.toolchain)
         check_managed_optional(requested_toolchain=args.toolchain)
         check_class_reference_records(requested_toolchain=args.toolchain)
+        check_interface_reference_records(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         AggregateLoweringFailure,
@@ -1745,7 +1870,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         "bounded payload-enum records in cold/server split/package/unity builds, explicit "
         "address/copy IR, strict C11 and C++17 layout agreement, runtime-free production "
         "artifacts, managed optional Eval/native/sanitizer parity, and fail-closed "
-        "identity/layout edges plus managed class-reference record roots passed"
+        "identity/layout edges, managed class-reference record roots, and borrowed "
+        "interface-record dispatch passed"
     )
     return 0
 

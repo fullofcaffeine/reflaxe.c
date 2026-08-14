@@ -507,6 +507,33 @@ class CBodyValueType {
 	}
 
 	/**
+		Report whether this value contains a nominal interface pair.
+
+		A direct record can borrow an interface for one proven synchronous call,
+		but it cannot silently turn the object pointer inside that pair into an
+		owned reference. Keeping this fact on the prepared value lets function
+		planning apply the existing borrow analysis to the complete record.
+	**/
+	public function containsInterfaceReference():Bool {
+		return switch kind {
+			case CBVKInterface(_): true;
+			case CBVKAggregate(value):
+				var found = false;
+				for (field in value.fields)
+					if (field.type.containsInterfaceReference()) {
+						found = true;
+						break;
+					}
+				found;
+			case CBVKOptional(value): value.payload.containsInterfaceReference();
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKManagedString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) |
+				CBVKEnum(_) | CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKArray(_) | CBVKIntMap(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKFunction(_, _) |
+				CBVKClosureCapturePointer(_) | CBVKNativeRef(_) | CBVKCStringRef | CBVKCStringBufferRef | CBVKClosureContext | CBVKStackClosure(_, _, _):
+				false;
+		};
+	}
+
+	/**
 		Whether this value's selected C carrier already represents absence exactly.
 
 		A nullable class reference, an ordinary Haxe `Array<T>`, and an ordinary
@@ -1428,8 +1455,18 @@ class CBodyAggregateRegistry {
 						aggregate's HxcIR type paths.
 					 */
 					'haxe-class-reference(${canonicalPart(value.instanceId)}${canonicalPart(nullable ? "nullable" : "non-null")})';
-				case CBVKInterface(_):
-					return rejected(fail, position, '$node:interface-reference-record-field-not-admitted');
+				case CBVKInterface(value):
+					/*
+						An interface reference is a direct value containing the concrete
+						object pointer and its nominal dispatch-table pointer. Preserve the
+						interface instance identity in the record shape so unrelated
+						interfaces cannot share one C field layout.
+
+						The record does not acquire ownership of the object. The existing
+						interface escape checks still require the concrete owner to outlive
+						the call-bounded interface value.
+					 */
+					'haxe-interface-reference(${canonicalPart(value.instanceId)})';
 				case _:
 					return rejected(fail, position, '$node:unexpected-exact-nominal-record-field:${exactNominal.cSpelling}');
 			};

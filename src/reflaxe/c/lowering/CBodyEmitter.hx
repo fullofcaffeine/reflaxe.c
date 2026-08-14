@@ -3130,26 +3130,43 @@ class CBodyEmitter {
 			if (fields.length == 0)
 				fail('virtual layout `${layout.id}` has no reachable slots');
 			result.push(DStruct(layout.cTag, fields, []));
-			if (layout.cValueTag != null) {
-				final objectMember = requireInterfaceObjectMember(layout);
-				final tableMember = requireInterfaceTableMember(layout);
-				result.push(DStruct(layout.cValueTag, [
-					{
-						type: new CType(TVoid),
-						declarator: DPointer(DName(objectMember), []),
-						bitWidth: null,
-						alignments: [],
-						attributes: []
-					},
-					{
-						type: new CType(TStruct(layout.cTag), [QConst]),
-						declarator: DPointer(DName(tableMember), []),
-						bitWidth: null,
-						alignments: [],
-						attributes: []
-					}
-				], []));
-			}
+		}
+		return result;
+	}
+
+	/**
+		Define interface values before records that embed them by value.
+
+		The pair needs only a forward declaration of its method table. The complete
+		table stays later because its function-pointer signatures can themselves
+		use generated records by value.
+	**/
+	public function interfaceValueDefinitions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		final ids = [for (id in virtualLayouts.keys()) id];
+		ids.sort(compareUtf8);
+		for (id in ids) {
+			final layout = requireVirtualLayout(id);
+			if (layout.cValueTag == null)
+				continue;
+			final objectMember = requireInterfaceObjectMember(layout);
+			final tableMember = requireInterfaceTableMember(layout);
+			result.push(DStruct(layout.cValueTag, [
+				{
+					type: new CType(TVoid),
+					declarator: DPointer(DName(objectMember), []),
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				},
+				{
+					type: new CType(TStruct(layout.cTag), [QConst]),
+					declarator: DPointer(DName(tableMember), []),
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				}
+			], []));
 		}
 		return result;
 	}

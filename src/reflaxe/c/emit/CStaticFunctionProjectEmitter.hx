@@ -128,6 +128,7 @@ private class CStaticFunctionSemanticPlan {
 	public final commonEnumTypes:Array<CTypeSemanticPlan>;
 	public final enumTypes:Array<CTypeSemanticPlan>;
 	public final virtualForwards:Array<CDecl>;
+	public final interfaceValueDefinitions:Array<CDecl>;
 	public final classForwards:Array<CDecl>;
 	public final classTypes:Array<CTypeSemanticPlan>;
 	public final virtualDefinitions:Array<CDecl>;
@@ -142,10 +143,10 @@ private class CStaticFunctionSemanticPlan {
 
 	public function new(common:CTranslationUnit, aggregateForwards:Array<CDecl>, aggregateTypes:Array<CTypeSemanticPlan>, optionalForwards:Array<CDecl>,
 			optionalTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>, commonEnumTypes:Array<CTypeSemanticPlan>, enumTypes:Array<CTypeSemanticPlan>,
-			virtualForwards:Array<CDecl>, classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>, virtualDefinitions:Array<CDecl>,
-			virtualObjectDeclarations:Array<CDecl>, moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>, supportGlobalSplit:Int,
-			globalDeclarations:Array<CModuleDeclaration>, globalDefinitions:Array<CModuleDeclaration>, functions:Array<CFunctionSemanticPlan>,
-			entry:Array<CDecl>) {
+			virtualForwards:Array<CDecl>, interfaceValueDefinitions:Array<CDecl>, classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>,
+			virtualDefinitions:Array<CDecl>, virtualObjectDeclarations:Array<CDecl>, moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>,
+			supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>, globalDefinitions:Array<CModuleDeclaration>,
+			functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
 		this.common = common;
 		this.aggregateForwards = aggregateForwards.copy();
 		this.aggregateTypes = aggregateTypes.copy();
@@ -155,6 +156,7 @@ private class CStaticFunctionSemanticPlan {
 		this.commonEnumTypes = commonEnumTypes.copy();
 		this.enumTypes = enumTypes.copy();
 		this.virtualForwards = virtualForwards.copy();
+		this.interfaceValueDefinitions = interfaceValueDefinitions.copy();
 		this.classForwards = classForwards.copy();
 		this.classTypes = classTypes.copy();
 		this.virtualDefinitions = virtualDefinitions.copy();
@@ -328,6 +330,7 @@ class CStaticFunctionProjectEmitter {
 		final commonEnumTypes = allEnumTypes.filter(plan -> !bodyEmitter.typeInstanceIsForwardDeclarable(plan.instanceId));
 		final enumTypes = allEnumTypes.filter(plan -> bodyEmitter.typeInstanceIsForwardDeclarable(plan.instanceId));
 		final virtualForwards = bodyEmitter.virtualTableForwardDeclarations();
+		final interfaceValueDefinitions = bodyEmitter.interfaceValueDefinitions();
 		final classForwards = bodyEmitter.classForwardDeclarations();
 		final classTypes = classTypePlans(lowered, bodyEmitter);
 		final virtualDefinitions = bodyEmitter.virtualTableDefinitions();
@@ -451,8 +454,8 @@ class CStaticFunctionProjectEmitter {
 			attributes: []
 		}));
 		final semantic = new CStaticFunctionSemanticPlan(headerUnit, aggregateForwards, aggregateTypes, optionalForwards, optionalTypes, enumForwards,
-			commonEnumTypes, enumTypes, virtualForwards, classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations, moduleDependencies,
-			support, supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
+			commonEnumTypes, enumTypes, virtualForwards, interfaceValueDefinitions, classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations,
+			moduleDependencies, support, supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
 		return switch layout.layout {
 			case Unity: assignUnity(semantic, layout, headerGuards);
 			case Split: assignSplit(semantic, layout, headerGuards);
@@ -613,11 +616,12 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(headerUnit, semantic.enumForwards);
 		appendDeclarations(headerUnit, semantic.optionalForwards);
 		appendDeclarations(headerUnit, semantic.virtualForwards);
+		appendDeclarations(headerUnit, semantic.interfaceValueDefinitions);
 		appendDeclarations(headerUnit, semantic.classForwards);
 		appendTypeDeclarations(headerUnit, semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.commonEnumTypes).concat(semantic.enumTypes));
-		// A class may contain an interface pair by value, so the pair must be
-		// complete before class definitions in unity output too. Split/package
-		// layouts establish the same ordering in their shared private type header.
+		// Records and classes may contain an interface pair by value. Its compact
+		// value definition is complete above, while the method table remains here
+		// because its signatures can depend on generated records.
 		appendDeclarations(headerUnit, semantic.virtualDefinitions);
 		appendTypeDeclarations(headerUnit, semantic.classTypes);
 		appendDeclarations(headerUnit, semantic.virtualObjectDeclarations);
@@ -674,10 +678,11 @@ class CStaticFunctionProjectEmitter {
 		// module cycle when one Haxe module declares both an enum and a record that
 		// depends (indirectly) on a record in another module.
 		appendTypeDeclarations(typesUnit, semantic.commonEnumTypes);
-		// Interface values are stored by value in ordinary class fields. Their
+		// Interface values are stored by value in records and ordinary class fields. Their
 		// two-pointer struct must therefore be complete before a module header can
 		// define its owning class. Table layouts use only forward-declared object
 		// pointers, so the shared private type header is the earliest valid home.
+		appendDeclarations(typesUnit, semantic.interfaceValueDefinitions);
 		appendDeclarations(typesUnit, semantic.virtualDefinitions);
 		appendDeclarations(typesUnit, semantic.virtualObjectDeclarations);
 		headers.push({
@@ -787,6 +792,7 @@ class CStaticFunctionProjectEmitter {
 		appendDeclarations(typesUnit, semantic.virtualForwards);
 		appendDeclarations(typesUnit, semantic.classForwards);
 		appendTypeDeclarations(typesUnit, semantic.commonEnumTypes);
+		appendDeclarations(typesUnit, semantic.interfaceValueDefinitions);
 		appendDeclarations(typesUnit, semantic.virtualDefinitions);
 		appendDeclarations(typesUnit, semantic.virtualObjectDeclarations);
 		headers.push({
