@@ -206,9 +206,14 @@ final class PilotProbe {
 		final first = PilotScript.sample(name, 0);
 		require(first.moveForward == 0.0 && first.moveRight == 0.0 && !first.primaryPressed && !first.secondaryPressed,
 			"editor-shell script must remain idle while the native editor draws");
-		final screenshot = PilotScript.checkpoint(name, 2);
-		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "editor-shell.frame",
-			"editor-shell screenshot checkpoint changed");
+		require(PilotScript.sample(name, 2).hotbarCycle == 1
+			&& PilotScript.sample(name, 3).pausePressed
+			&& PilotScript.sample(name, 5).hotbarCycle == 1
+			&& PilotScript.sample(name, 6).pausePressed,
+			"editor-shell script must mutate and stop two disposable runs");
+		final screenshot = PilotScript.checkpoint(name, 7);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "editor-shell.return",
+			"editor-shell return screenshot checkpoint changed");
 		return 1;
 	}
 

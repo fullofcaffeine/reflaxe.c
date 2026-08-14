@@ -23,6 +23,7 @@ enum AppScreen {
 	Paused;
 	Loading;
 	Editor;
+	EditorTestPlay;
 }
 
 /** Choose the first valid screen without depending on a windowing library. */
@@ -41,6 +42,7 @@ function showsTitle(screen:AppScreen):Bool {
 		case Paused: false;
 		case Loading: false;
 		case Editor: false;
+		case EditorTestPlay: false;
 	};
 }
 
@@ -48,7 +50,7 @@ function showsTitle(screen:AppScreen):Bool {
 function showsCampaignSelection(screen:AppScreen):Bool {
 	return switch screen {
 		case CampaignSelect: true;
-		case Title | Playing | Paused | Loading | Editor: false;
+		case Title | Playing | Paused | Loading | Editor | EditorTestPlay: false;
 	};
 }
 
@@ -56,7 +58,7 @@ function showsCampaignSelection(screen:AppScreen):Bool {
 function showsLoading(screen:AppScreen):Bool {
 	return switch screen {
 		case Loading: true;
-		case Title | CampaignSelect | Playing | Paused | Editor: false;
+		case Title | CampaignSelect | Playing | Paused | Editor | EditorTestPlay: false;
 	};
 }
 
@@ -69,6 +71,7 @@ function showsEditor(screen:AppScreen):Bool {
 		case Paused: false;
 		case Loading: false;
 		case Editor: true;
+		case EditorTestPlay: false;
 	};
 }
 
@@ -81,6 +84,7 @@ function isPlaying(screen:AppScreen):Bool {
 		case Paused: false;
 		case Loading: false;
 		case Editor: false;
+		case EditorTestPlay: true;
 	};
 }
 
@@ -93,6 +97,7 @@ function capturesPointer(screen:AppScreen):Bool {
 		case Paused: false;
 		case Loading: false;
 		case Editor: false;
+		case EditorTestPlay: true;
 	};
 }
 
@@ -105,8 +110,17 @@ function pausesSimulation(screen:AppScreen):Bool {
 		case Paused: true;
 		case Loading: true;
 		case Editor: true;
+		case EditorTestPlay: false;
 	};
 }
+
+/** Admit authored campaign exits only from the normal playing owner. */
+function acceptsCampaignExit(screen:AppScreen):Bool
+	return screen == Playing;
+
+/** Stop native editor Test Play before effects after Escape or focus loss. */
+function stopsEditorTestPlay(screen:AppScreen, focused:Bool, pausePressed:Bool):Bool
+	return screen == EditorTestPlay && (!focused || pausePressed);
 
 /** Start play from the title; repeated or misplaced requests change nothing. */
 function startPlaying(screen:AppScreen):AppScreen {
@@ -117,6 +131,7 @@ function startPlaying(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -129,6 +144,7 @@ function openCampaignSelection(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -141,6 +157,7 @@ function startSelectedCampaign(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -153,6 +170,7 @@ function closeCampaignSelection(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -165,6 +183,7 @@ function loseFocus(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -177,6 +196,7 @@ function togglePause(screen:AppScreen):AppScreen {
 		case Paused: Playing;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -189,6 +209,7 @@ function recapture(screen:AppScreen):AppScreen {
 		case Paused: Playing;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -201,6 +222,7 @@ function beginLoading(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -213,6 +235,7 @@ function finishLoading(screen:AppScreen):AppScreen {
 		case Playing: Playing;
 		case Paused: Paused;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -225,6 +248,7 @@ function openEditor(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Editor;
+		case EditorTestPlay: EditorTestPlay;
 	};
 }
 
@@ -237,5 +261,32 @@ function closeEditor(screen:AppScreen):AppScreen {
 		case Paused: Paused;
 		case Loading: Loading;
 		case Editor: Title;
+		case EditorTestPlay: EditorTestPlay;
+	};
+}
+
+/** Start real-engine Test Play only from the editor workspace. */
+function beginEditorTestPlay(screen:AppScreen):AppScreen {
+	return switch screen {
+		case Editor: EditorTestPlay;
+		case Title: Title;
+		case CampaignSelect: CampaignSelect;
+		case Playing: Playing;
+		case Paused: Paused;
+		case Loading: Loading;
+		case EditorTestPlay: EditorTestPlay;
+	};
+}
+
+/** Stop Test Play and restore the editor workspace that started it. */
+function finishEditorTestPlay(screen:AppScreen):AppScreen {
+	return switch screen {
+		case EditorTestPlay: Editor;
+		case Title: Title;
+		case CampaignSelect: CampaignSelect;
+		case Playing: Playing;
+		case Paused: Paused;
+		case Loading: Loading;
+		case Editor: Editor;
 	};
 }

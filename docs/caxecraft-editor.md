@@ -13,11 +13,13 @@ the same command and history boundary. Tab and Shift-Tab move through one
 device-neutral focus order. Enter or Space activates the focused control. A
 high-contrast ring shows the next target.
 
-The native screen edits one voxel layer. Its Test Play button runs the
-disposable CaxeFlow model, not the complete game engine. Native source save,
-object transforms, visual CaxeFlow editing, cutscene editing, and layer tools
-remain separate work. A local JSON Lines process can open, inspect, edit,
-validate, and save one verified package level.
+The native screen edits one voxel layer. Its Test Play button starts a fresh
+ordinary game level from the editor's in-memory CAXEMAP bytes. The editor keeps
+the draft, camera, selection, tools, panels, history, and recovery state.
+
+Native source save, object transforms, visual CaxeFlow editing, cutscene
+editing, and layer tools remain separate work. A local JSON Lines process can
+open, inspect, edit, validate, and save one verified package level.
 
 ## What this layer owns
 
@@ -29,7 +31,8 @@ operations:
 ```text
 Scenario -> EditorSession -> closed EditorCommand -> updated draft
                          \-> validate -> last playable snapshot
-                         \-> test play -> disposable CaxeFlow simulation
+                         \-> local test -> disposable CaxeFlow simulation
+                         \-> native Test Play bytes -> ordinary game runtime
 ```
 
 An `EditorCommand` is a closed Haxe enum. Closed means the possible edit kinds
@@ -308,11 +311,18 @@ optimization must not trade correctness for an unmeasured speedup.
 
 ## Reversible test play
 
-`enterTestPlay()` validates the current draft, deep-copies the resulting
-scenario, and constructs a new `CaxeFlowExecutor`. Rules can then change
-objectives, inventory, variables, objects, and scheduled work inside that
-disposable simulation. `leaveTestPlay()` drops it. Entering test play again
-starts from the authored values, not from the prior simulation.
+The editor core keeps a small renderer-independent CaxeFlow test. The
+`enterTestPlay()` function deep-copies a valid scenario and creates a new
+`CaxeFlowExecutor`. The `leaveTestPlay()` function removes this local test.
+
+The native button uses a separate ordinary-engine path. First, the editor
+returns copy-owned canonical bytes without changing `lastPlayable`. Then the
+application uses the normal parser, resolver, `GameSession`, and presentation
+checks. The application locks editing only after all these checks pass.
+
+Escape or focus loss removes the disposable runtime before another game tick.
+The application then restores the exact normal play state and returns to the
+same editor object. A second start creates a new runtime generation.
 
 There is intentionally no “keep whatever happened while playing” operation in
 this version. Importing selected play changes later would need its own closed
@@ -397,9 +407,14 @@ It then selects that cell through `CaxecraftEditorScreen` and `EditorSession`.
 The framebuffer check requires the toolbar, sidebar, scene list, authored
 terrain colors, sky, and selection outline. The pilot repeats the journey and
 requires identical semantic reports and screenshots. The headless software
-renderer has a 40-second process limit for each detailed editor frame.
+renderer has a 90-second process limit for this complete editor and game
+journey.
 
-The pilot proves active-level presentation, one real terrain change, the object
-list, scene gizmos, the rule count, and the title path. It does not prove native
-source save, object transforms, localized-title editing, layer tools, visual
-CaxeFlow editing, cutscenes, or complete game-engine Test Play.
+The pilot proves active-level presentation, one terrain change, the object
+list, scene gizmos, the rule count, and the title path. It starts and stops two
+ordinary-engine Test Play runs in one process. Each run completes a fixed game
+tick and uses a new disposable generation.
+
+The final report also proves that the normal generation and publication count
+did not change. It does not prove native source save, object transforms,
+localized-title editing, layer tools, visual CaxeFlow editing, or cutscenes.

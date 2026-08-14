@@ -35,6 +35,15 @@ import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioValidator;
 import haxe.io.Bytes;
 
+/** One mutually exclusive way in which the editor draft is locked for play. */
+private enum EditorSessionPlayState {
+	/** The renderer-independent editor core owns a disposable CaxeFlow run. */
+	LocalCaxeFlowTest(test:EditorTestPlay);
+
+	/** The native application owns a disposable ordinary-engine run. */
+	ExternalRuntimeTest;
+}
+
 /**
 	Renderer-independent editing, validation, history, and test-play state.
 
@@ -49,7 +58,7 @@ final class EditorSession {
 	var draft:Scenario;
 	var selection:Null<VoxelBounds>;
 	var lastPlayable:Null<Scenario>;
-	var activeTestPlay:Null<EditorTestPlay>;
+	var playState:Null<EditorSessionPlayState>;
 	var currentRevision:Int;
 
 	function new(image:EditorScenarioImage, registry:ScenarioContentRegistry, settings:EditorSettings) {
@@ -59,7 +68,7 @@ final class EditorSession {
 		this.draft = image.parsed.candidate;
 		this.selection = null;
 		this.lastPlayable = validatedScenario(image);
-		this.activeTestPlay = null;
+		this.playState = null;
 		this.currentRevision = 0;
 	}
 
@@ -102,7 +111,7 @@ final class EditorSession {
 		use `mutate` instead so a revision check can reject stale work.
 	**/
 	public function apply(command:EditorCommand):EditorEditResult {
-		if (activeTestPlay != null)
+		if (playState != null)
 			return EditRejected(NotEditing);
 		return switch captureScenario(draft) {
 			case ImageRejected(error): EditRejected(error);
@@ -147,7 +156,7 @@ final class EditorSession {
 					redoDepth: history.redoDepth(),
 					historyEntries: history.entryCount(),
 					historyBytes: history.byteCount(),
-					editing: activeTestPlay == null
+					editing: playState == null
 				});
 			case InspectDraft:
 				DraftObserved(currentRevision, draftSnapshot());
@@ -193,7 +202,7 @@ final class EditorSession {
 		exactly as they were before the call.
 	**/
 	function applyBatch(commands:Array<EditorCommand>):EditorMutationResult {
-		if (activeTestPlay != null)
+		if (playState != null)
 			return MutationRejected(NotEditing, currentRevision);
 		if (commands.length == 0)
 			return MutationRejected(EmptyTransaction, currentRevision);
@@ -295,7 +304,7 @@ final class EditorSession {
 		not exclusively own this in-process session.
 	**/
 	public function undo():EditorHistoryResult {
-		if (activeTestPlay != null)
+		if (playState != null)
 			return HistoryRejected(NotEditing);
 		if (currentRevision == 2147483647)
 			return HistoryRejected(RevisionExhausted);
@@ -321,7 +330,7 @@ final class EditorSession {
 		revision. Revision-aware callers should request it through `mutate`.
 	**/
 	public function redo():EditorHistoryResult {
-		if (activeTestPlay != null)
+		if (playState != null)
 			return HistoryRejected(NotEditing);
 		if (currentRevision == 2147483647)
 			return HistoryRejected(RevisionExhausted);
@@ -356,7 +365,7 @@ final class EditorSession {
 
 	/** Start a disposable simulation only when the current draft validates. */
 	public function enterTestPlay():EditorTestPlayResult {
-		if (activeTestPlay != null)
+		if (playState != null)
 			return TestPlayBlocked(NotEditing);
 		return switch validate() {
 			case ValidationFailed(diagnostics): TestPlayRejected(diagnostics);
@@ -367,7 +376,7 @@ final class EditorSession {
 					if (snapshot == null)
 						TestPlayBlocked(NoPlayableScenario);
 					else {
-						activeTestPlay = new EditorTestPlay(snapshot);
+						playState = LocalCaxeFlowTest(new EditorTestPlay(snapshot));
 						TestPlayStarted;
 					}
 				}
@@ -376,14 +385,58 @@ final class EditorSession {
 
 	/** Discard every test-play mutation and return to the untouched draft. */
 	public function leaveTestPlay():Bool {
-		if (activeTestPlay == null)
+		return switch playState {
+			case LocalCaxeFlowTest(_):
+				playState = null;
+				true;
+			case ExternalRuntimeTest | null:
+				false;
+		};
+	}
+
+	/** Borrow the local CaxeFlow run without exposing the external runtime lock. */
+	public function testPlay():Null<EditorTestPlay> {
+		return switch playState {
+			case LocalCaxeFlowTest(test): test;
+			case ExternalRuntimeTest | null: null;
+		};
+	}
+
+	/**
+	 * Validate copy-owned bytes for ordinary-engine Test Play without side effects.
+	 *
+	 * A later runtime rejection must leave history and `lastPlayable` unchanged.
+	 * The application acquires the lock only after the complete runtime accepts
+	 * these bytes.
+	 */
+	public function prepareExternalTestPlay():EditorValidationResult {
+		if (playState != null)
+			return ValidationBlocked(NotEditing);
+		return switch inspectValidation() {
+			case DraftPlayable(canonical): ValidationPassed(canonical);
+			case DraftInvalid(diagnostics): ValidationFailed(diagnostics);
+			case DraftUnreadable(error): ValidationBlocked(error);
+		};
+	}
+
+	/** Lock editing after the application has created the ordinary-engine run. */
+	public function beginExternalTestPlay():Bool {
+		if (playState != null)
 			return false;
-		activeTestPlay = null;
+		playState = ExternalRuntimeTest;
 		return true;
 	}
 
-	public inline function testPlay():Null<EditorTestPlay>
-		return activeTestPlay;
+	/** Release only the external runtime lock; local editor tests keep ownership. */
+	public function finishExternalTestPlay():Bool {
+		return switch playState {
+			case ExternalRuntimeTest:
+				playState = null;
+				true;
+			case LocalCaxeFlowTest(_) | null:
+				false;
+		};
+	}
 
 	public function draftSnapshot():Scenario {
 		final snapshot = cloneScenario(draft);

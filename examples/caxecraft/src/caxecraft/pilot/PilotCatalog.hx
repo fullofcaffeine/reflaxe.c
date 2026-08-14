@@ -98,7 +98,8 @@ function pilotScriptCode(script:PilotScriptName):Int {
 /** Return the exact compiled length of one engine-regression script. */
 function pilotFrameLimit(script:PilotScriptName):Int {
 	return switch script {
-		case LaunchSmoke | RecoveryUse | EditorShell: 4;
+		case LaunchSmoke | RecoveryUse: 4;
+		case EditorShell: 9;
 		case MoveJumpEdit: 14;
 		case PauseRecapture | FullInventoryMining: 7;
 		case CombatDrop: 40;

@@ -305,8 +305,8 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 10
-PILOT_TELEMETRY_WORDS = 42
+PILOT_TELEMETRY_VERSION = 11
+PILOT_TELEMETRY_WORDS = 48
 PILOT_TELEMETRY_COLORS = tuple(
     (
         8 + nibble * 16,
@@ -1230,8 +1230,26 @@ def build_pilot_report(
                 "editor-shell pilot did not commit exactly one typed paint gesture "
                 f"(removed={signed[22]}, placed={signed[23]}, rejected={signed[24]})"
             )
+        if (
+            signed[42] <= 0
+            or signed[43] != signed[42] + 1
+            or signed[44] != signed[43]
+            or signed[45] != 2
+            or signed[46] != 2
+            or signed[47] < 2
+            or signed[28] != 0
+        ):
+            raise PlayFailure(
+                "editor-shell pilot did not prove two fresh ordinary-engine runs "
+                f"(firstGeneration={signed[42]}, lastGeneration={signed[43]}, "
+                f"renderedGeneration={signed[44]}, starts={signed[45]}, "
+                f"stops={signed[46]}, fixedTicks={signed[47]}, "
+                f"restoredHotbar={signed[28]})"
+            )
     elif editor_visible:
         raise PlayFailure(f"pilot {pilot!r} unexpectedly finished on the editor screen")
+    elif any(signed[index] != 0 for index in range(42, 48)):
+        raise PlayFailure("non-editor pilot unexpectedly reported editor Test Play lifecycle state")
     if pilot == "aquatic-gear" and not (
         aquatic_gear_equipped and submersion_observed and water_exit_observed and sand_mined_observed
     ):
@@ -1330,6 +1348,14 @@ def build_pilot_report(
         "content": {
             "generation": signed[40],
             "publications": signed[41],
+        },
+        "editorTestPlay": {
+            "firstGeneration": signed[42],
+            "lastGeneration": signed[43],
+            "renderedGeneration": signed[44],
+            "starts": signed[45],
+            "stops": signed[46],
+            "fixedTicks": signed[47],
         },
         "termination": {"reason": "script-complete", "exitCode": 0},
         "native": {
@@ -3101,25 +3127,24 @@ def run_pilot_sample(
     """
 
     screenshot = executable.parent / pilot_metadata(pilot).screenshot
-    supporting_screenshots = (
-        (
+    if pilot == "adventure-journey":
+        supporting_screenshots = (
             executable.parent / "caxecraft-pilot-runtime-title-selection.png",
             executable.parent / "caxecraft-pilot-runtime-campaign-selection.png",
             executable.parent / "caxecraft-pilot-runtime-level-selection.png",
         )
-        if pilot == "adventure-journey"
-        else ()
-    )
+    elif pilot == "editor-shell":
+        supporting_screenshots = (executable.parent / "caxecraft-pilot-editor-play.png",)
+    else:
+        supporting_screenshots = ()
     state_screenshot = executable.parent / "caxecraft-pilot-state.png"
     for stale in (screenshot, state_screenshot, *supporting_screenshots):
         if stale.exists():
             stale.unlink()
-    # A runtime-content journey can cross a real level-publication boundary and
-    # still remain bounded. The editor captures two detailed full-map frames;
-    # Raylib's headless software renderer needs about 32 seconds for that proof
-    # on the reference Mac. Keep unrelated short engine pilots at 15 seconds.
+    # The editor pilot draws both the editor and the real game. The reference
+    # Mac can need more time for these full-map frames than for a short probe.
     if pilot == "editor-shell":
-        timeout_seconds = 40
+        timeout_seconds = 90
     elif pilot_metadata(pilot).execution == "runtime-content":
         # The representative Adventure journey measures about 27 seconds in
         # the pinned memory/software renderer after adding blocking dialogue.
@@ -3145,7 +3170,10 @@ def run_pilot_sample(
         previous_sequence = sequence
         observations.append(observation)
     if not state_screenshot.is_file():
-        raise PlayFailure(f"{label} did not reach its Haxe-owned semantic checkpoint")
+        raise PlayFailure(
+            f"{label} did not reach its Haxe-owned semantic checkpoint "
+            f"(exit={process.returncode}, stdout={process.stdout[-2000:]!r})"
+        )
     if raylib_configuration == "memory-software":
         normalize_memory_software_capture(state_screenshot)
     report = build_pilot_report(
@@ -3174,6 +3202,16 @@ def run_pilot_sample(
             validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
         elif supporting_screenshot.name == "caxecraft-pilot-runtime-level-selection.png":
             validate_campaign_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-play.png":
+            # The current editor camera draft can start under dense authored
+            # foliage. Terrain, HUD, textures, and semantic state prove the
+            # ordinary game frame without requiring a broad view of the sun.
+            validate_presented_screenshot(
+                supporting_screenshot,
+                platform_name=platform_name,
+                expected_entities=False,
+                expected_open_sky=False,
+            )
         else:
             validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
         supporting_hashes[supporting_screenshot.name] = hashlib.sha256(

@@ -92,6 +92,7 @@ function selfCheck():Int {
 		|| registry.blockCount() != 10
 		|| registry.itemCount() != 10
 		|| registry.blockStorageCode(new ContentId("caxecraft:grass")) != 1
+		|| registry.defaultEditorBlockId().text() != "caxecraft:dirt"
 		|| registry.blockStorageCode(sand) != 5
 		|| !registry.blockIsCollectable(sand)
 		|| registry.blockDropItemStorageCode(sand) != sandBlockCode

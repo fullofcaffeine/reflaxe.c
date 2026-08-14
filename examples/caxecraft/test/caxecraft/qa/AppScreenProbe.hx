@@ -1,9 +1,12 @@
 package caxecraft.qa;
 
 import caxecraft.app.AppScreen;
+import caxecraft.app.AppScreen.acceptsCampaignExit;
 import caxecraft.app.AppScreen.beginLoading;
+import caxecraft.app.AppScreen.beginEditorTestPlay;
 import caxecraft.app.AppScreen.capturesPointer;
 import caxecraft.app.AppScreen.finishLoading;
+import caxecraft.app.AppScreen.finishEditorTestPlay;
 import caxecraft.app.AppScreen.initialScreen;
 import caxecraft.app.AppScreen.isPlaying;
 import caxecraft.app.AppScreen.loseFocus;
@@ -12,6 +15,7 @@ import caxecraft.app.AppScreen.openCampaignSelection;
 import caxecraft.app.AppScreen.openEditor;
 import caxecraft.app.AppScreen.showsCampaignSelection;
 import caxecraft.app.AppScreen.startSelectedCampaign;
+import caxecraft.app.AppScreen.stopsEditorTestPlay;
 import caxecraft.app.AppScreen.pausesSimulation;
 import caxecraft.app.AppScreen.recapture;
 import caxecraft.app.AppScreen.closeEditor;
@@ -108,6 +112,29 @@ function selfCheck():Int {
 		return 22;
 	if (finishLoading(loading) != AppScreen.Playing || finishLoading(title) != AppScreen.Title)
 		return 23;
+	final editorTestPlay = beginEditorTestPlay(editor);
+	if (editorTestPlay != AppScreen.EditorTestPlay
+		|| showsEditor(editorTestPlay)
+		|| !isPlaying(editorTestPlay)
+		|| pausesSimulation(editorTestPlay)
+		|| !capturesPointer(editorTestPlay))
+		return 24;
+	if (finishEditorTestPlay(editorTestPlay) != AppScreen.Editor
+		|| beginEditorTestPlay(title) != AppScreen.Title
+		|| finishEditorTestPlay(playing) != AppScreen.Playing
+		|| loseFocus(editorTestPlay) != AppScreen.EditorTestPlay
+		|| togglePause(editorTestPlay) != AppScreen.EditorTestPlay)
+		return 25;
+	if (!acceptsCampaignExit(AppScreen.Playing)
+		|| acceptsCampaignExit(editorTestPlay)
+		|| acceptsCampaignExit(AppScreen.Loading)
+		|| acceptsCampaignExit(AppScreen.CampaignSelect))
+		return 26;
+	if (!stopsEditorTestPlay(editorTestPlay, false, false)
+		|| !stopsEditorTestPlay(editorTestPlay, true, true)
+		|| stopsEditorTestPlay(editorTestPlay, true, false)
+		|| stopsEditorTestPlay(AppScreen.Playing, false, true))
+		return 27;
 	final east = headingForSpawn({
 		xMilli: 5500,
 		yMilli: 5000,
@@ -115,7 +142,7 @@ function selfCheck():Int {
 		yawDegrees: 90
 	});
 	if (east.x < 0.999 || east.x > 1.001 || east.y != -0.18 || east.z < -0.001 || east.z > 0.001)
-		return 24;
+		return 28;
 	final north = headingForSpawn({
 		xMilli: 0,
 		yMilli: 0,
@@ -123,7 +150,7 @@ function selfCheck():Int {
 		yawDegrees: 0
 	});
 	if (north.x < -0.001 || north.x > 0.001 || north.z < -1.001 || north.z > -0.999)
-		return 25;
+		return 29;
 	final west = headingForSpawn({
 		xMilli: 0,
 		yMilli: 0,
@@ -131,7 +158,7 @@ function selfCheck():Int {
 		yawDegrees: 270
 	});
 	if (west.x < -1.001 || west.x > -0.999 || west.z < -0.001 || west.z > 0.001)
-		return 26;
+		return 30;
 	final south = headingForSpawn({
 		xMilli: 0,
 		yMilli: 0,
@@ -139,6 +166,6 @@ function selfCheck():Int {
 		yawDegrees: 180
 	});
 	if (south.x < -0.001 || south.x > 0.001 || south.z < 0.999 || south.z > 1.001)
-		return 27;
+		return 31;
 	return 0;
 }

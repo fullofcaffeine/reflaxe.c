@@ -1,5 +1,8 @@
 package caxecraft.qa;
 
+import caxecraft.app.EditorTestPlayRuntime;
+import caxecraft.app.EditorTestPlayRuntime.EditorTestPlayError;
+import caxecraft.app.EditorTestPlayRuntime.EditorTestPlayStartResult;
 import caxecraft.content.ActiveContent;
 import caxecraft.content.ActiveContent.ContentPublicationResult;
 import caxecraft.content.ContentPackageModel.ContentPackageOpenResult;
@@ -353,6 +356,54 @@ function selfCheck():Int {
 	final embeddedFacts = embedded.authoredTrace();
 	if (!expectedResolvedLevel(embedded))
 		return 6;
+	final editorTestPlay = new EditorTestPlayRuntime(registry, registry, 101);
+	switch editorTestPlay.start({
+		canonical: Bytes.ofString("CAXEMAP 1\nend-map\n"),
+		playerOptions: options
+	}) {
+		case EditorTestPlayRejected(_):
+		case EditorTestPlayStarted:
+			return 128;
+	};
+	if (editorTestPlay.level() != null || editorTestPlay.stop())
+		return 129;
+	final editorTestPlayBytes = presentationCandidate.sourceBytes();
+	final semanticallyValidButUnpresentable = withoutFluidRecord(editorTestPlayBytes);
+	switch editorTestPlay.start({canonical: semanticallyValidButUnpresentable, playerOptions: options}) {
+		case EditorTestPlayRejected(EditorTestPlayPresentationRejected(_)):
+		case EditorTestPlayRejected(_) | EditorTestPlayStarted:
+			return 138;
+	};
+	if (editorTestPlay.level() != null || editorTestPlay.stop())
+		return 139;
+	switch editorTestPlay.start({canonical: editorTestPlayBytes, playerOptions: options}) {
+		case EditorTestPlayStarted:
+		case EditorTestPlayRejected(_):
+			return 130;
+	};
+	final firstEditorRun = editorTestPlay.level();
+	if (firstEditorRun == null || firstEditorRun.generationId().value() != 101)
+		return 131;
+	final editorRunItemsBefore = firstEditorRun.semanticTrace().activeItems;
+	final editorRunPickup = firstEditorRun.session().collectAuthoredInventoryItem(0, Inventory.make(0, 0, 0, 0, 0, 0, 0, 0, 0), ItemKind.Bread, 2);
+	if (!editorRunPickup.resolved
+		|| editorRunPickup.collected != 2
+		|| firstEditorRun.semanticTrace().activeItems != editorRunItemsBefore - 1)
+		return 132;
+	if (!editorTestPlay.stop() || editorTestPlay.level() != null)
+		return 133;
+	switch editorTestPlay.start({canonical: editorTestPlayBytes, playerOptions: options}) {
+		case EditorTestPlayStarted:
+		case EditorTestPlayRejected(_):
+			return 134;
+	};
+	final secondEditorRun = editorTestPlay.level();
+	if (secondEditorRun == null
+		|| secondEditorRun.generationId().value() != 102
+		|| secondEditorRun.semanticTrace().activeItems != editorRunItemsBefore)
+		return 135;
+	if (!editorTestPlay.stop())
+		return 136;
 
 	final active = new ActiveContent(embedded.generation());
 	final embeddedTrace = active.semanticTrace();
@@ -418,6 +469,32 @@ function selfCheck():Int {
 	traceActorMechanics = digestActorMechanics(nativeCandidate);
 	traceAuthority = authorityCode(nativeReceipt.authority);
 	return traceByteLength == checkedIn.bytes.length && traceAuthority == 2 ? 0 : 18;
+}
+
+/** Remove the one reviewed fluid record without adding string conversion to C. */
+function withoutFluidRecord(source:Bytes):Bytes {
+	var recordStart = -1;
+	var recordEnd = -1;
+	var index = 0;
+	var atLineStart = true;
+	while (index < source.length && recordStart < 0) {
+		if (atLineStart && index + 6 <= source.length && source.get(index) == 102 && source.get(index + 1) == 108 && source.get(index + 2) == 117
+			&& source.get(index + 3) == 105 && source.get(index + 4) == 100 && source.get(index + 5) == 32) {
+			recordStart = index;
+			while (index < source.length && source.get(index) != 10)
+				index++;
+			recordEnd = index < source.length ? index + 1 : index;
+		} else {
+			atLineStart = source.get(index) == 10;
+			index++;
+		}
+	}
+	if (recordStart < 0 || recordEnd <= recordStart)
+		return source.sub(0, source.length);
+	final result = Bytes.alloc(source.length - (recordEnd - recordStart));
+	result.blit(0, source, 0, recordStart);
+	result.blit(recordStart, source, recordEnd, source.length - recordEnd);
+	return result;
 }
 
 /**

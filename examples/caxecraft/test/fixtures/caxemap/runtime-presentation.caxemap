@@ -30,6 +30,7 @@ chunk world.base 0 0 0 32 16 32
   run 1 32
   run 0 16352
 end chunk
+fluid water.fixture caxecraft:water volume 30 1 30 1 1 1
 object enemy.fixture
   tag enemy
   placement entity caxecraft:mossling 6500 1000 6500 0

@@ -9,11 +9,11 @@ import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
-import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
+import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
 import caxecraft.editor.EditorWorldViewport.EditorCameraState;
@@ -28,6 +28,7 @@ import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
+import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
@@ -58,6 +59,7 @@ import raylib.Vector3;
 enum EditorScreenAction {
 	StayInEditor;
 	ReturnToTitle;
+	StartTestPlay(canonical:Bytes);
 }
 
 private enum EditorNotice {
@@ -72,8 +74,9 @@ private enum EditorNotice {
  *
  * This stateful class owns one mutable draft/session and small presentation
  * state. Raygui remains immediate-mode: every frame redraws controls, while
- * `EditorSession` continues to own validation, undo/redo, and disposable test
- * play. The screen opens a copy of the active level bytes. A cached
+ * `EditorSession` continues to own validation, undo/redo, and the editing
+ * lock. The application owns the disposable ordinary-engine runtime. The
+ * screen opens a copy of the active level bytes. A cached
  * `EditorWorldProjection` stores its exact terrain, compact surface overview,
  * object gizmos, and content-logic count. Steady frames read that cache instead
  * of serializing the draft or maintaining a second editable world.
@@ -81,7 +84,9 @@ private enum EditorNotice {
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
  * composition edge; the reusable editor package knows neither. The first 3D
  * slice edits one layer. Native source save, object transforms, layer controls,
- * real-engine Test Play, flow authoring, and cinematic tools remain separate.
+ * flow authoring, and cinematic tools remain separate. Test Play uses a
+ * disposable ordinary game runtime while this class keeps the exact editor
+ * workspace alive.
  */
 final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
@@ -145,8 +150,11 @@ final class CaxecraftEditorScreen {
 		final keyboardNavigation = readKeyboardNavigation();
 		final navigation = externalNavigation != NavigationCommand.None ? externalNavigation : keyboardNavigation;
 		final navigationAction = applyNavigation(navigation);
-		if (navigationAction == ReturnToTitle)
-			return ReturnToTitle;
+		switch navigationAction {
+			case StayInEditor:
+			case ReturnToTitle | StartTestPlay(_):
+				return navigationAction;
+		}
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
 		if (Raygui.WindowBoxString(outer, uiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
@@ -175,8 +183,14 @@ final class CaxecraftEditorScreen {
 		buttonLeft += buttonWidth + buttonGap;
 		final testing = session != null && session.testPlay() != null;
 		final testLabel = testing ? UiMessage.EditorStopTest : UiMessage.EditorTest;
-		if (focusedButton(EditorFocusTarget.TestPlay, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, testLabel)))
-			toggleTestPlay();
+		if (focusedButton(EditorFocusTarget.TestPlay, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, testLabel))) {
+			final testAction = requestTestPlay();
+			switch testAction {
+				case StayInEditor:
+				case ReturnToTitle | StartTestPlay(_):
+					return testAction;
+			}
+		}
 
 		final viewportTop = 104.0;
 		final sidebarWidth = 230;
@@ -333,7 +347,7 @@ final class CaxecraftEditorScreen {
 			case Validate:
 				validate();
 			case TestPlay:
-				toggleTestPlay();
+				return requestTestPlay();
 			case ToolList:
 				toolList.moveSelection(4, 1);
 			case AdvancedTools:
@@ -391,20 +405,45 @@ final class CaxecraftEditorScreen {
 		};
 	}
 
-	function toggleTestPlay():Void {
-		if (session == null) {
+	/**
+	 * Give side-effect-free validated draft bytes to the application.
+	 *
+	 * The editor keeps its session, camera, selection, tools, panels, and history.
+	 * The application creates a separate game runtime from the returned bytes and
+	 * acquires the editing lock only after that stronger runtime accepts them.
+	 */
+	function requestTestPlay():EditorScreenAction {
+		final current = session;
+		if (current == null) {
 			notice = Invalid;
-			return;
+			return StayInEditor;
 		}
-		if (session.testPlay() != null) {
-			session.leaveTestPlay();
-			notice = Valid;
-			return;
-		}
-		notice = switch session.enterTestPlay() {
-			case TestPlayStarted: Testing;
-			case TestPlayRejected(_) | TestPlayBlocked(_): Invalid;
+		return switch current.prepareExternalTestPlay() {
+			case ValidationPassed(canonical):
+				notice = Testing;
+				StartTestPlay(canonical);
+			case ValidationFailed(_) | ValidationBlocked(_):
+				notice = Invalid;
+				StayInEditor;
 		};
+	}
+
+	/** Lock the workspace after the complete ordinary-engine runtime accepts it. */
+	public function beginTestPlay():Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		final started = current.beginExternalTestPlay();
+		notice = started ? Testing : Invalid;
+		return started;
+	}
+
+	/** Unlock the same workspace after the disposable game runtime stops. */
+	public function finishTestPlay(started:Bool):Void {
+		final current = session;
+		if (current != null)
+			current.finishExternalTestPlay();
+		notice = started ? Valid : Invalid;
 	}
 
 	/**
@@ -625,7 +664,24 @@ final class CaxecraftEditorScreen {
 			notice = Invalid;
 			return false;
 		}
-		final command = commandForTool(tool, point, 1, current.selectedBounds());
+		var paletteCode = 0;
+		var needsPalette = false;
+		switch tool {
+			case PaintTool:
+				needsPalette = true;
+			case FillTool:
+				needsPalette = true;
+			case SelectTool:
+			case EraseTool:
+		}
+		if (needsPalette) {
+			paletteCode = paletteCodeForBlock(current.draftSnapshot().world, contentRegistry.defaultEditorBlockId());
+			if (paletteCode < 0) {
+				notice = Invalid;
+				return false;
+			}
+		}
+		final command = commandForTool(tool, point, paletteCode, current.selectedBounds());
 		return switch command {
 			case ToolCommandRejected(_):
 				notice = Invalid;
@@ -734,18 +790,19 @@ final class CaxecraftEditorScreen {
 	public function applyPilotTool(tool:EditorTool, point:VoxelPoint):Bool
 		return applyToolAt(tool, point);
 
-	/** Paint and select the first authored air cell through production commands. */
+	/** Paint and select the first visible air cell above authored terrain. */
 	public function applyPilotPaintFirstAir():Bool {
 		final current = projection;
 		if (current == null)
 			return false;
 		for (z in 0...current.depth)
-			for (y in 0...current.height)
-				for (x in 0...current.width)
-					if (paletteCodeAtWorld(current, x, y, z) == 0) {
-						final point:VoxelPoint = {x: x, y: y, z: z};
-						return applyToolAt(EditorTool.PaintTool, point) && applyToolAt(EditorTool.SelectTool, point);
-					}
+			for (x in 0...current.width) {
+				final y = surfaceTopAt(current, x, z) + 1;
+				if (y >= 0 && y < current.height && paletteCodeAtWorld(current, x, y, z) == 0) {
+					final point:VoxelPoint = {x: x, y: y, z: z};
+					return applyToolAt(EditorTool.PaintTool, point) && applyToolAt(EditorTool.SelectTool, point);
+				}
+			}
 		return false;
 	}
 

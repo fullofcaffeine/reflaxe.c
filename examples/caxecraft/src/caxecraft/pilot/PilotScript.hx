@@ -146,7 +146,7 @@ final class PilotScript {
 		if (name == SmoothMotion)
 			return frameNumber == 8 ? ForwardJump : Forward;
 		if (name == EditorShell)
-			return Idle;
+			return frameNumber == 3 || frameNumber == 6 ? Pause : frameNumber == 2 || frameNumber == 5 ? SelectNext : Idle;
 		if (name == CampaignTravel)
 			return frameNumber == 0 ? Travel : Idle;
 		return fullInventoryMiningAction(frameNumber);
@@ -248,7 +248,7 @@ final class PilotScript {
 			case SmoothMotion:
 				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
 			case EditorShell:
-				frameNumber == 2 ? new PilotCheckpoint("editor-shell.frame", CaptureScreenshot) : null;
+				frameNumber == 7 ? new PilotCheckpoint("editor-shell.return", CaptureScreenshot) : null;
 			case CampaignTravel:
 				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot) : null;
 			case _: null;

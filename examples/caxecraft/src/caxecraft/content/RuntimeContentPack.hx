@@ -206,13 +206,17 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		return new ContentId(airBlock);
 
 	/**
-	 * Return the first admitted non-air block for a new editor brush.
+	 * Return a useful admitted block for a new editor brush.
 	 *
 	 * The current schema does not yet name a preferred editor brush. Choosing
-	 * the first canonical non-air definition keeps that bounded policy outside
-	 * generated source while allowing a future schema field to replace it.
+	 * the first canonical collectable block avoids surprising creators with an
+	 * immutable material. A pack without one falls back to its first non-air
+	 * block. A future schema field can replace this bounded policy.
 	 */
 	public function defaultEditorBlockId():ContentId {
+		for (block in blocks)
+			if (block.id != airBlock && block.collectable)
+				return new ContentId(block.id);
 		for (block in blocks)
 			if (block.id != airBlock)
 				return new ContentId(block.id);

@@ -63,8 +63,8 @@ enum RuntimeLevelSource {
 	/**
 	 * Already-owned bytes with an explicit diagnostic origin.
 	 *
-	 * The caller retains the input `Bytes`, but this synchronous load neither
-	 * stores nor exposes them after parsing.
+	 * The loader copies the input `Bytes` into the successful candidate. The
+	 * candidate can later return another copy for editor reopening.
 	 */
 	InMemoryBytes(bytes:Bytes, rootLabel:String, logicalPath:String);
 

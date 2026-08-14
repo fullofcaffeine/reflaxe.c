@@ -45,7 +45,9 @@ function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames
 		interpolationObserved:Bool, reviewScreenshotObserved:Bool, submersionObserved:Bool, waterExitObserved:Bool, sandMinedObserved:Bool,
 		flowRuleObserved:Bool, objectiveChangeObserved:Bool, visibleTerrainFaces:Int, rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int,
 		terrainCacheValid:Bool, measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int, measuredUpdateMicroseconds:Int,
-		measuredPreparationMicroseconds:Int, contentGeneration:Int, contentPublications:Int):Void {
+		measuredPreparationMicroseconds:Int, contentGeneration:Int, contentPublications:Int, firstEditorTestPlayGeneration:Int,
+		lastEditorTestPlayGeneration:Int, renderedEditorTestPlayGeneration:Int, editorTestPlayStarts:Int, editorTestPlayStops:Int,
+		editorTestPlayTicks:Int):Void {
 	var flags = 0;
 	if (onTitle)
 		flags |= 1;
@@ -74,8 +76,8 @@ function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames
 
 	var word = 0;
 	word = drawWord(word, 0x43585054); // "CXPT": Caxecraft pilot telemetry.
-	word = drawWord(word, 10); // Protocol version.
-	word = drawWord(word, 42); // Number of words in this closed version.
+	word = drawWord(word, 11); // Protocol version.
+	word = drawWord(word, 48); // Number of words in this closed version.
 	word = drawWord(word, PilotScript.scriptCode(name));
 	word = drawWord(word, inputHash);
 	word = drawWord(word, completedFrames);
@@ -114,7 +116,13 @@ function drawPilotTelemetry(name:PilotScriptName, inputHash:Int, completedFrames
 	word = drawWord(word, measuredUpdateMicroseconds);
 	word = drawWord(word, measuredPreparationMicroseconds);
 	word = drawWord(word, contentGeneration);
-	drawWord(word, contentPublications);
+	word = drawWord(word, contentPublications);
+	word = drawWord(word, firstEditorTestPlayGeneration);
+	word = drawWord(word, lastEditorTestPlayGeneration);
+	word = drawWord(word, renderedEditorTestPlayGeneration);
+	word = drawWord(word, editorTestPlayStarts);
+	word = drawWord(word, editorTestPlayStops);
+	drawWord(word, editorTestPlayTicks);
 }
 
 /** Draw eight high-to-low hexadecimal digits and return the next word slot. */

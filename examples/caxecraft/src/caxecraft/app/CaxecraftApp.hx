@@ -26,10 +26,13 @@ import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
 import caxecraft.app.AppScreen;
+import caxecraft.app.AppScreen.acceptsCampaignExit;
 import caxecraft.app.AppScreen.beginLoading;
 import caxecraft.app.AppScreen.capturesPointer as screenCapturesPointer;
 import caxecraft.app.AppScreen.closeCampaignSelection;
 import caxecraft.app.AppScreen.closeEditor;
+import caxecraft.app.AppScreen.beginEditorTestPlay;
+import caxecraft.app.AppScreen.finishEditorTestPlay;
 import caxecraft.app.AppScreen.initialScreen;
 import caxecraft.app.AppScreen.finishLoading;
 import caxecraft.app.AppScreen.isPlaying as screenIsPlaying;
@@ -42,6 +45,7 @@ import caxecraft.app.AppScreen.showsLoading as screenShowsLoading;
 import caxecraft.app.AppScreen.showsCampaignSelection as screenShowsCampaignSelection;
 import caxecraft.app.AppScreen.showsTitle as screenShowsTitle;
 import caxecraft.app.AppScreen.startSelectedCampaign;
+import caxecraft.app.AppScreen.stopsEditorTestPlay;
 import caxecraft.app.AppScreen.togglePause;
 import caxecraft.app.TitleMenuFlow.TitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.allowsCampaignTravel;
@@ -49,10 +53,12 @@ import caxecraft.app.TitleMenuFlow.applyTitleMenuCommand;
 import caxecraft.app.TitleMenuFlow.titleMenuState;
 import caxecraft.app.CampaignMenu.CampaignMenuHit;
 import caxecraft.app.CaxecraftEditorScreen.EditorScreenAction;
+import caxecraft.app.EditorTestPlayRuntime.EditorTestPlayStartResult;
 import caxecraft.app.MotionInterpolation.advance as advanceMotion;
 import caxecraft.app.MotionInterpolation.reset as resetMotion;
 import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
+import caxecraft.app.MotionInterpolation.MotionHistory;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
@@ -152,6 +158,55 @@ import raylib.Vector3;
 private typedef ActorPhaseObservation = {
 	final valid:Bool;
 	final phase:ActorControllerPhase;
+}
+
+/** Exact ordinary application state held aside during one editor Test Play run. */
+private typedef EditorTestPlayShellSnapshot = {
+	final inventory:InventoryState;
+	final conversation:Null<ConversationState>;
+	final activeDialogue:Null<ScenarioId>;
+	final latestJournalId:Null<ScenarioId>;
+	final currentObjectiveId:Null<ScenarioId>;
+	final availableInteractionPrompt:InteractionPrompt;
+	final enemyActor:Character;
+	final enemyPhase:ActorPhaseObservation;
+	final swordCombat:SwordCombatState;
+	final berryDrop:BerryDropState;
+	final cameraWaterBlend:Float;
+	final lookX:Float;
+	final lookY:Float;
+	final lookZ:Float;
+	final accumulator:Float;
+	final motionHistory:MotionHistory;
+	final jumpQueued:Bool;
+	final swordQueued:Bool;
+	final placementBlockedFrames:Int;
+	final strikeHitFrames:Int;
+	final enemyDefeatedFrames:Int;
+	final enemyAttackFrames:Int;
+	final pickupFrames:Int;
+	final pickupAmount:Int;
+	final inventoryFullFrames:Int;
+	final inventoryFullReason:InventoryFullReason;
+	final recoveryFeedback:RecoveryDecision;
+	final recoveryFeedbackFrames:Int;
+	final aquaticEquipmentCode:Int;
+	final aquaticEquipmentFrames:Int;
+	final campaignLevel:Null<CampaignLevel>;
+	final pendingCampaignLevel:Null<CampaignLevel>;
+	final pendingCampaignPortal:Null<PreparedCampaignPortal>;
+	final pendingCampaignLabel:String;
+	final loadingFramePresented:Bool;
+	final levelLabel:String;
+	final selectedCampaignLevelIndex:Int;
+	final preparedPortal:Null<PreparedCampaignPortal>;
+}
+
+/** One bound disposable owner and the exact ordinary state it must restore. */
+private typedef ActiveEditorTestPlayRun = {
+	final runtime:EditorTestPlayRuntime;
+	final snapshot:EditorTestPlayShellSnapshot;
+	final generationId:Int;
 }
 
 /** One nearest semantic interaction selected without campaign-specific IDs. */
@@ -315,6 +370,8 @@ final class CaxecraftApp {
 				Sys.println("caxecraft: initial level lacks required playable bindings");
 				return;
 		};
+		var nextEditorTestPlayGeneration = activeLevel.generationId().value() + 1000000;
+		var activeEditorTestPlay:Null<ActiveEditorTestPlayRun> = null;
 		var campaign:Null<CampaignManifest> = null;
 		var campaignLevel:Null<CampaignLevel> = null;
 		var pendingCampaignLevel:Null<CampaignLevel> = null;
@@ -535,6 +592,12 @@ final class CaxecraftApp {
 		var removedBlocks = 0;
 		var placedBlocks = 0;
 		var rejectedEdits = 0;
+		var editorTestPlayStarts = 0;
+		var editorTestPlayStops = 0;
+		var editorTestPlayTicks = 0;
+		var firstEditorTestPlayGeneration = 0;
+		var lastEditorTestPlayGeneration = 0;
+		var renderedEditorTestPlayGeneration = 0;
 		var interpolationObserved = false;
 		var submersionObserved = false;
 		var waterExitObserved = false;
@@ -558,12 +621,42 @@ final class CaxecraftApp {
 		// Its frequency may follow VSync, window load, or GPU speed without changing
 		// the duration of a gameplay tick.
 		while (!quit && !Raylib.WindowShouldClose()) {
+			// The screen and disposable owner form one lifecycle. A split must never
+			// fall through to the normal level under Test Play controls.
+			if (screen == AppScreen.EditorTestPlay) {
+				final run = activeEditorTestPlay;
+				if (run == null || run.runtime.level() == null) {
+					Sys.println("caxecraft: editor Test Play lost its disposable runtime");
+					if (run != null)
+						run.runtime.stop();
+					activeEditorTestPlay = null;
+					editorScreen.finishTestPlay(false);
+					quit = true;
+					break;
+				}
+			} else if (activeEditorTestPlay != null) {
+				Sys.println("caxecraft: editor Test Play runtime escaped its screen");
+				activeEditorTestPlay.runtime.stop();
+				activeEditorTestPlay = null;
+				editorScreen.finishTestPlay(false);
+				quit = true;
+				break;
+			}
 			final loadingAtFrameStart = screenShowsLoading(screen);
 			// Work on one immutable view for this frame. Every owned player change
 			// below enters through a semantic GameSession operation; presentation
 			// never receives the mutable session or its entity store.
-			var levelView = activeLevel.level();
-			var session = activeLevel.session();
+			var frameLevelOwner = activeLevel;
+			if (screen == AppScreen.EditorTestPlay) {
+				final run = activeEditorTestPlay;
+				if (run != null) {
+					final testLevel = run.runtime.level();
+					if (testLevel != null)
+						frameLevelOwner = testLevel;
+				}
+			}
+			var levelView = frameLevelOwner.level();
+			var session = frameLevelOwner.session();
 			var initialView = session.view();
 			if (!initialView.valid)
 				quit = true;
@@ -666,9 +759,77 @@ final class CaxecraftApp {
 			final menuConfirmPressed = frameInput.menuConfirmPressed;
 			final descendHeld = frameInput.descendHeld;
 			#end
+			// Escape and focus loss are a stop barrier. Dispose the test owner and
+			// restore the exact ordinary shell before any campaign, tick, or input
+			// effect from this sample can run.
+			if (stopsEditorTestPlay(screen, focused, pausePressed)) {
+				final run = activeEditorTestPlay;
+				if (run == null) {
+					Sys.println("caxecraft: editor Test Play stop had no active run");
+					quit = true;
+				} else {
+					#if caxecraft_pilot
+					final testLevel = run.runtime.level();
+					if (testLevel != null)
+						editorTestPlayTicks += testLevel.session().view().completedTicks;
+					editorTestPlayStops++;
+					#end
+					run.runtime.stop();
+					activeEditorTestPlay = null;
+					editorScreen.finishTestPlay(true);
+					screen = finishEditorTestPlay(screen);
+					final saved = run.snapshot;
+					inventory = saved.inventory;
+					conversation = saved.conversation;
+					activeDialogue = saved.activeDialogue;
+					latestJournalId = saved.latestJournalId;
+					currentObjectiveId = saved.currentObjectiveId;
+					availableInteractionPrompt = saved.availableInteractionPrompt;
+					enemyActor = saved.enemyActor;
+					enemyPhase = saved.enemyPhase;
+					swordCombat = saved.swordCombat;
+					berryDrop = saved.berryDrop;
+					cameraWaterBlend = saved.cameraWaterBlend;
+					lookX = saved.lookX;
+					lookY = saved.lookY;
+					lookZ = saved.lookZ;
+					accumulator = saved.accumulator;
+					motionHistory = saved.motionHistory;
+					jumpQueued = saved.jumpQueued;
+					swordQueued = saved.swordQueued;
+					placementBlockedFrames = saved.placementBlockedFrames;
+					strikeHitFrames = saved.strikeHitFrames;
+					enemyDefeatedFrames = saved.enemyDefeatedFrames;
+					enemyAttackFrames = saved.enemyAttackFrames;
+					pickupFrames = saved.pickupFrames;
+					pickupAmount = saved.pickupAmount;
+					inventoryFullFrames = saved.inventoryFullFrames;
+					inventoryFullReason = saved.inventoryFullReason;
+					recoveryFeedback = saved.recoveryFeedback;
+					recoveryFeedbackFrames = saved.recoveryFeedbackFrames;
+					aquaticEquipmentCode = saved.aquaticEquipmentCode;
+					aquaticEquipmentFrames = saved.aquaticEquipmentFrames;
+					campaignLevel = saved.campaignLevel;
+					pendingCampaignLevel = saved.pendingCampaignLevel;
+					pendingCampaignPortal = saved.pendingCampaignPortal;
+					pendingCampaignLabel = saved.pendingCampaignLabel;
+					loadingFramePresented = saved.loadingFramePresented;
+					levelLabel = saved.levelLabel;
+					selectedCampaignLevelIndex = saved.selectedCampaignLevelIndex;
+					preparedPortal = saved.preparedPortal;
+					terrainRenderer.invalidateAll();
+					editorNavigation.release();
+					Raylib.EnableCursor();
+				}
+				frameCount++;
+				continue;
+			}
 			var requestedCampaignLevel:Null<CampaignLevel> = null;
-			final requestedCampaignPortal = pendingCampaignPortal;
-			pendingCampaignPortal = null;
+			var requestedCampaignPortal:Null<PreparedCampaignPortal> = null;
+			if (screen == AppScreen.Playing) {
+				requestedCampaignPortal = pendingCampaignPortal;
+				pendingCampaignPortal = null;
+			}
 			if (loadingAtFrameStart && loadingFramePresented)
 				requestedCampaignLevel = pendingCampaignLevel;
 			var requestedFromCampaignMenu = false;
@@ -956,7 +1117,7 @@ final class CaxecraftApp {
 				}
 			}
 
-			if (!focused && screenIsPlaying(screen)) {
+			if (!focused && screenIsPlaying(screen) && screen != AppScreen.EditorTestPlay) {
 				screen = pauseAfterFocusLoss(screen);
 				jumpQueued = false;
 				accumulator = 0.0;
@@ -967,6 +1128,7 @@ final class CaxecraftApp {
 				&& !screenShowsCampaignSelection(screen)
 				&& !screenShowsLoading(screen)
 				&& !screenShowsEditor(screen)
+				&& screen != AppScreen.EditorTestPlay
 				&& focused
 				&& pausePressed) {
 				screen = togglePause(screen);
@@ -1054,6 +1216,7 @@ final class CaxecraftApp {
 			}
 			#end
 			var editorNavigationCommand = NavigationCommand.None;
+			var editorActionForFrame = EditorScreenAction.StayInEditor;
 			#if !caxecraft_pilot
 			if (onEditor)
 				editorNavigationCommand = editorNavigation.advance(samplePrimaryGamepad(), frameSeconds);
@@ -1068,41 +1231,9 @@ final class CaxecraftApp {
 			// cell also gives the framebuffer oracle a specific 3D outline.
 			// One held controller direction moves immediately, repeats after the
 			// production delay, then repeats at the production interval. The
-			// resulting three moves land on Validate before the south face button
+			// four held moves land on Test Play before the south face button
 			// confirms it through the same device-neutral screen handler.
 			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
-				final heldDown:NavigationSample = {
-					connected: true,
-					up: false,
-					right: false,
-					down: true,
-					left: false,
-					confirmPressed: false,
-					cancelPressed: false,
-					horizontal: 0.0,
-					vertical: 0.0
-				};
-				editorScreen.applyNavigation(editorNavigation.advance(heldDown, 0.0));
-				editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS));
-				editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS));
-				final confirm:NavigationSample = {
-					connected: true,
-					up: false,
-					right: false,
-					down: false,
-					left: false,
-					confirmPressed: true,
-					cancelPressed: false,
-					horizontal: 0.0,
-					vertical: 0.0
-				};
-				if (editorScreen.applyNavigation(editorNavigation.advance(confirm, 0.0)) != EditorScreenAction.StayInEditor)
-					rejectedEdits++;
-				// Observe cancel through the same handler without changing the
-				// application's screen here; the pilot must keep the editor visible
-				// long enough to capture its focus ring.
-				if (editorScreen.applyNavigation(NavigationCommand.Cancel) != EditorScreenAction.ReturnToTitle)
-					rejectedEdits++;
 				if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
 					rejectedEdits++;
 				if (!editorScreen.applyPilotCamera({
@@ -1118,6 +1249,63 @@ final class CaxecraftApp {
 					placedBlocks++;
 				} else
 					rejectedEdits++;
+				final heldDown:NavigationSample = {
+					connected: true,
+					up: false,
+					right: false,
+					down: true,
+					left: false,
+					confirmPressed: false,
+					cancelPressed: false,
+					horizontal: 0.0,
+					vertical: 0.0
+				};
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, 0.0)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEdits++;
+				}
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEdits++;
+				}
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEdits++;
+				}
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEdits++;
+				}
+				final confirm:NavigationSample = {
+					connected: true,
+					up: false,
+					right: false,
+					down: false,
+					left: false,
+					confirmPressed: true,
+					cancelPressed: false,
+					horizontal: 0.0,
+					vertical: 0.0
+				};
+				editorNavigationCommand = editorNavigation.advance(confirm, 0.0);
+			}
+			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 4) {
+				final confirmAgain:NavigationSample = {
+					connected: true,
+					up: false,
+					right: false,
+					down: false,
+					left: false,
+					confirmPressed: true,
+					cancelPressed: false,
+					horizontal: 0.0,
+					vertical: 0.0
+				};
+				editorNavigationCommand = editorNavigation.advance(confirmAgain, 0.0);
 			}
 			#end
 			if (captured && !conversationOwnedInput) {
@@ -1192,34 +1380,36 @@ final class CaxecraftApp {
 								case FlowPresentationEvent.JournalAdded(id):
 									latestJournalId = id;
 								case FlowPresentationEvent.CampaignExitRequested(exit):
-									final selectedCampaign = campaign;
-									final sourceLevel = campaignLevel;
-									if (selectedMode != GameMode.Adventure || !screenIsPlaying(screen)) {
+									if (selectedMode != GameMode.Adventure || !acceptsCampaignExit(screen)) {
 										Sys.println("caxecraft: ignored campaign exit outside active Adventure play: " + exit.text());
-									} else if (selectedCampaign == null || sourceLevel == null) {
-										Sys.println("caxecraft: ignored campaign exit without an active campaign: " + exit.text());
 									} else {
-										final transition = selectedCampaign.transitionForRequest(sourceLevel.id, exit);
-										if (transition == null) {
-											Sys.println('caxecraft: ignored unknown campaign exit ${exit.text()} from ${sourceLevel.id.text()}');
+										final selectedCampaign = campaign;
+										final sourceLevel = campaignLevel;
+										if (selectedCampaign == null || sourceLevel == null) {
+											Sys.println("caxecraft: ignored campaign exit without an active campaign: " + exit.text());
 										} else {
-											final nextLevel = selectedCampaign.level(transition.destinationLevel);
-											if (nextLevel == null) {
-												Sys.println("caxecraft: campaign destination disappeared after manifest validation");
+											final transition = selectedCampaign.transitionForRequest(sourceLevel.id, exit);
+											if (transition == null) {
+												Sys.println('caxecraft: ignored unknown campaign exit ${exit.text()} from ${sourceLevel.id.text()}');
 											} else {
-												final portal = preparedPortal;
-												if (portal != null && portal.matches(transition)) {
-													pendingCampaignPortal = portal;
-													preparedPortal = null;
+												final nextLevel = selectedCampaign.level(transition.destinationLevel);
+												if (nextLevel == null) {
+													Sys.println("caxecraft: campaign destination disappeared after manifest validation");
 												} else {
-													pendingCampaignLevel = nextLevel;
-													pendingCampaignLabel = nextLevel.id.text();
-													loadingFramePresented = false;
-													screen = beginLoading(screen);
-													Raylib.EnableCursor();
+													final portal = preparedPortal;
+													if (portal != null && portal.matches(transition)) {
+														pendingCampaignPortal = portal;
+														preparedPortal = null;
+													} else {
+														pendingCampaignLevel = nextLevel;
+														pendingCampaignLabel = nextLevel.id.text();
+														loadingFramePresented = false;
+														screen = beginLoading(screen);
+														Raylib.EnableCursor();
+													}
+													accumulator = 0.0;
+													jumpQueued = false;
 												}
-												accumulator = 0.0;
-												jumpQueued = false;
 											}
 										}
 									}
@@ -1520,14 +1710,19 @@ final class CaxecraftApp {
 			} else if (onLoading) {
 				drawCampaignLoading(pendingCampaignLabel, locale, uiCatalog);
 			} else if (onEditor) {
-				if (editorScreen.draw(locale, editorNavigationCommand) == EditorScreenAction.ReturnToTitle)
-					screen = closeEditor(screen);
+				editorActionForFrame = editorScreen.draw(locale, editorNavigationCommand);
 			} else {
+				#if caxecraft_pilot
+				if (screen == AppScreen.EditorTestPlay)
+					renderedEditorTestPlayGeneration = frameLevelOwner.generationId().value();
+				#end
 				final hasEnvironment = levelView.hasAuthoredEnvironment();
 				Raylib.ClearBackground(hasEnvironment ? Color.rgbaClamped(levelView.environmentSkyRed(), levelView.environmentSkyGreen(),
 					levelView.environmentSkyBlue()) : CaxecraftPalette.sky());
 				Raylib.BeginMode3D(camera);
-				final portal = preparedPortal;
+				var portal = preparedPortal;
+				if (screen == AppScreen.EditorTestPlay)
+					portal = null;
 				final portalVisible = portal != null && portal.visibleFrom(renderPosition.x, renderPosition.z);
 				if (hasEnvironment) {
 					drawWorldSunAndClouds(levelView.environmentHasSun(), levelView.environmentSunX(), levelView.environmentSunY(),
@@ -1577,7 +1772,7 @@ final class CaxecraftApp {
 				// depth that a later prop needs.
 				drawStatefulObjects(contentRegistry, session, levelView, entityTexture, entityTextureReady, itemTexture, itemTextureReady,
 					adventureItemTexture, adventureItemTextureReady, terrainTexture, terrainTextureReady, runtimeTextures, runtimeModels, modelAnimations,
-					activeLevel.generationId().value(), completedTicks);
+					frameLevelOwner.generationId().value(), completedTicks);
 				drawActors(camera, entityTexture, entityTextureReady, runtimeTextures, dialogueActors, levelView, enemyActor,
 					levelView.enemyActorPresentationAsset(), levelView.enemyActorPresentationCell(), enemyPhase.phase, berryDrop);
 				AuthoredItemRenderer.drawWorldItems(contentRegistry, camera, session.authoredItemsView(), levelView, itemTexture, itemTextureReady,
@@ -1657,7 +1852,8 @@ final class CaxecraftApp {
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds,
 					measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds, activeLevel.generationId().value(),
-					activeLevel.publicationCount());
+					activeLevel.publicationCount(), firstEditorTestPlayGeneration, lastEditorTestPlayGeneration, renderedEditorTestPlayGeneration,
+					editorTestPlayStarts, editorTestPlayStops, editorTestPlayTicks);
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
@@ -1665,7 +1861,8 @@ final class CaxecraftApp {
 					!characterIsDefeated(enemyActor.vitals), onTitle, onEditor, paused, captured, aquaticEquipmentCode >= 0, interpolationObserved,
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(),
-					activeLevel.publicationCount());
+					activeLevel.publicationCount(), firstEditorTestPlayGeneration, lastEditorTestPlayGeneration, renderedEditorTestPlayGeneration,
+					editorTestPlayStarts, editorTestPlayStops, editorTestPlayTicks);
 			#end
 			var capturePilotFrame = pilotComplete;
 			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
@@ -1677,7 +1874,7 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				|| (pilotName == PilotScriptName.EditorShell && frameCount == 2)
+				|| (pilotName == PilotScriptName.EditorShell && frameCount == 5)
 				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
 				capturePilotFrame = true;
 			#if caxecraft_pilot_runtime
@@ -1716,7 +1913,9 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-aquatic-gear.png");
 			if (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-smooth-motion.png");
-			if (pilotName == PilotScriptName.EditorShell && frameCount == 2)
+			if (pilotName == PilotScriptName.EditorShell && frameCount == 5)
+				capturePilotScreenshot("caxecraft-pilot-editor-play.png");
+			if (pilotName == PilotScriptName.EditorShell && frameCount == 7)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-editor.png");
 			if (pilotName == PilotScriptName.CampaignTravel && frameCount == 3)
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-campaign-travel.png");
@@ -1803,11 +2002,147 @@ final class CaxecraftApp {
 				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end
 			Raylib.EndDrawing();
+			switch editorActionForFrame {
+				case StayInEditor:
+				case ReturnToTitle:
+					screen = closeEditor(screen);
+				case StartTestPlay(canonical):
+					final ordinaryPlayer = activeLevel.session().view().localPlayer;
+					final proposedRuntime = new EditorTestPlayRuntime(contentRegistry, contentRegistry, nextEditorTestPlayGeneration);
+					switch proposedRuntime.start({
+						canonical: canonical,
+						playerOptions: {
+							entityId: ordinaryPlayer.id,
+							initialHealth: ordinaryPlayer.vitals.health,
+							aquaticProfile: ordinaryPlayer.aquaticProfile
+						}
+					}) {
+						case EditorTestPlayRejected(_):
+							proposedRuntime.stop();
+							editorScreen.finishTestPlay(false);
+						case EditorTestPlayStarted:
+							final testOwner = proposedRuntime.level();
+							if (testOwner == null) {
+								editorScreen.finishTestPlay(false);
+							} else {
+								final testLevel = testOwner.level();
+								final testSession = testOwner.session();
+								final testView = testSession.view();
+								final testPhases = testSession.actorControllerStateSnapshots();
+								final testEnemy = testSession.readCharacter(testLevel.enemyActorId());
+								final testEnemyPhase = observeActorPhase(testPhases, testLevel.enemyActorId(), ActorControllerPhase.Resting);
+								if (!testView.valid
+									|| !testEnemy.id.isValid()
+									|| !testEnemyPhase.valid
+									|| !dialogueActorsAreValid(testSession, testLevel, testPhases)) {
+									proposedRuntime.stop();
+									editorScreen.finishTestPlay(false);
+								} else if (!editorScreen.beginTestPlay()) {
+									proposedRuntime.stop();
+									editorScreen.finishTestPlay(false);
+								} else {
+									final snapshot:EditorTestPlayShellSnapshot = {
+										inventory: inventory,
+										conversation: conversation,
+										activeDialogue: activeDialogue,
+										latestJournalId: latestJournalId,
+										currentObjectiveId: currentObjectiveId,
+										availableInteractionPrompt: availableInteractionPrompt,
+										enemyActor: enemyActor,
+										enemyPhase: enemyPhase,
+										swordCombat: swordCombat,
+										berryDrop: berryDrop,
+										cameraWaterBlend: cameraWaterBlend,
+										lookX: lookX,
+										lookY: lookY,
+										lookZ: lookZ,
+										accumulator: accumulator,
+										motionHistory: motionHistory,
+										jumpQueued: jumpQueued,
+										swordQueued: swordQueued,
+										placementBlockedFrames: placementBlockedFrames,
+										strikeHitFrames: strikeHitFrames,
+										enemyDefeatedFrames: enemyDefeatedFrames,
+										enemyAttackFrames: enemyAttackFrames,
+										pickupFrames: pickupFrames,
+										pickupAmount: pickupAmount,
+										inventoryFullFrames: inventoryFullFrames,
+										inventoryFullReason: inventoryFullReason,
+										recoveryFeedback: recoveryFeedback,
+										recoveryFeedbackFrames: recoveryFeedbackFrames,
+										aquaticEquipmentCode: aquaticEquipmentCode,
+										aquaticEquipmentFrames: aquaticEquipmentFrames,
+										campaignLevel: campaignLevel,
+										pendingCampaignLevel: pendingCampaignLevel,
+										pendingCampaignPortal: pendingCampaignPortal,
+										pendingCampaignLabel: pendingCampaignLabel,
+										loadingFramePresented: loadingFramePresented,
+										levelLabel: levelLabel,
+										selectedCampaignLevelIndex: selectedCampaignLevelIndex,
+										preparedPortal: preparedPortal
+									};
+									activeEditorTestPlay = {
+										runtime: proposedRuntime,
+										snapshot: snapshot,
+										generationId: testOwner.generationId().value()
+									};
+									nextEditorTestPlayGeneration++;
+									#if caxecraft_pilot
+									editorTestPlayStarts++;
+									lastEditorTestPlayGeneration = testOwner.generationId().value();
+									if (firstEditorTestPlayGeneration == 0)
+										firstEditorTestPlayGeneration = lastEditorTestPlayGeneration;
+									#end
+									inventory = Inventory.starter();
+									conversation = null;
+									activeDialogue = null;
+									latestJournalId = null;
+									currentObjectiveId = testLevel.initialObjectiveId();
+									availableInteractionPrompt = promptForAvailableInteraction(nearestAvailableInteraction(testSession, testLevel));
+									enemyActor = testEnemy;
+									enemyPhase = testEnemyPhase;
+									swordCombat = startSwordCombat();
+									berryDrop = emptyBerryDrop();
+									cameraWaterBlend = 0.0;
+									final testHeading = headingForSpawn(testLevel.spawnTransform());
+									lookX = testHeading.x;
+									lookY = testHeading.y;
+									lookZ = testHeading.z;
+									accumulator = 0.0;
+									motionHistory = resetMotion(testView.localPlayer.body);
+									jumpQueued = false;
+									swordQueued = false;
+									placementBlockedFrames = 0;
+									strikeHitFrames = 0;
+									enemyDefeatedFrames = 0;
+									enemyAttackFrames = 0;
+									pickupFrames = 0;
+									pickupAmount = 0;
+									inventoryFullFrames = 0;
+									inventoryFullReason = InventoryFullReason.None;
+									recoveryFeedback = RecoveryDecision.NotRecoveryItem;
+									recoveryFeedbackFrames = 0;
+									aquaticEquipmentCode = -1;
+									aquaticEquipmentFrames = 0;
+									terrainRenderer.invalidateAll();
+									editorNavigation.release();
+									screen = beginEditorTestPlay(screen);
+									Raylib.DisableCursor();
+								}
+							}
+					}
+			}
 			if (onLoading)
 				loadingFramePresented = true;
 			frameCount++;
 		}
 
+		final unfinishedEditorTestPlay = activeEditorTestPlay;
+		if (unfinishedEditorTestPlay != null) {
+			unfinishedEditorTestPlay.runtime.stop();
+			activeEditorTestPlay = null;
+			editorScreen.finishTestPlay(false);
+		}
 		Raylib.EnableCursor();
 		runtimeModels.unload();
 		runtimeTextures.unload();

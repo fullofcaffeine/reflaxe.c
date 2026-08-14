@@ -3,6 +3,7 @@ package caxecraft.editor;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
+import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioWorld;
@@ -131,6 +132,21 @@ function paletteCodeAt(projection:EditorViewportProjection, x:Int, z:Int):Int {
 	if (x < 0 || z < 0 || x >= projection.width || z >= projection.depth)
 		return -1;
 	return projection.cells[z * projection.width + x];
+}
+
+/**
+	Find the draft-local palette code for one semantic block type.
+
+	Palette codes are compact numbers chosen by each map. They are not global
+	block IDs, so an editor brush must resolve its block for the current draft.
+	The function returns `-1` when the map does not admit that block.
+**/
+function paletteCodeForBlock(world:ScenarioWorld, blockType:ContentId):Int {
+	final expected = blockType.text();
+	for (entry in world.palette)
+		if (entry.blockType.text() == expected)
+			return entry.code;
+	return -1;
 }
 
 /** Convert raygui's zero-based list selection into the closed editor tool type. */

@@ -29,6 +29,7 @@ import caxecraft.editor.EditorViewport.EditorToolCommandResult;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
 import caxecraft.editor.EditorViewport.layout as layoutViewport;
 import caxecraft.editor.EditorViewport.paletteCodeAt;
+import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
 import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.toolFromIndex;
@@ -174,6 +175,7 @@ final class EditorProbe {
 		checkHistoryStateChanges();
 		checkSnapshotFidelity();
 		checkTestPlayLocksEditing();
+		checkExternalTestPlayAtomicity();
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
@@ -780,11 +782,12 @@ final class EditorProbe {
 	static function checkViewport():Int {
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "viewport world size");
-		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "viewport palette");
-		expectApplied(session.apply(PaintVoxel({x: 3, y: 1, z: 2}, 1)), Voxel, "viewport upper-layer paint");
+		expectApplied(session.apply(SetPaletteEntry(7, STONE)), Voxel, "viewport palette");
+		require(paletteCodeForBlock(session.draftSnapshot().world, STONE) == 7, "viewport brush assumed a global palette code");
+		expectApplied(session.apply(PaintVoxel({x: 3, y: 1, z: 2}, 7)), Voxel, "viewport upper-layer paint");
 		final upper = projectViewport(session.draftSnapshot().world, 1);
 		require(upper != null && upper.width == 4 && upper.depth == 3 && upper.cells.length == 12, "viewport projection lost its exact layer dimensions");
-		require(paletteCodeAt(upper, 3, 2) == 1 && paletteCodeAt(upper, 0, 0) == 0 && paletteCodeAt(upper, 4, 0) == -1,
+		require(paletteCodeAt(upper, 3, 2) == 7 && paletteCodeAt(upper, 0, 0) == 0 && paletteCodeAt(upper, 4, 0) == -1,
 			"viewport projection lost painted, air, or out-of-range cell semantics");
 		require(projectViewport(session.draftSnapshot().world, 2) == null, "viewport admitted a layer outside the world");
 
@@ -834,7 +837,7 @@ final class EditorProbe {
 			case _:
 				throw "fill tool did not reuse the current typed selection";
 		}
-		return 12;
+		return 13;
 	}
 
 	/**
@@ -1123,6 +1126,48 @@ final class EditorProbe {
 					throw "history changed while test play was active";
 			}
 		require(session.leaveTestPlay(), "editing lock test play did not close");
+	}
+
+	static function checkExternalTestPlayAtomicity():Void {
+		final session = open(defaultEditorSettings());
+		final lastPlayableBefore = session.lastPlayableSnapshot();
+		require(lastPlayableBefore != null, "external Test Play fixture has no recovery snapshot");
+		final lastPlayableBytes = ScenarioWriter.write(lastPlayableBefore);
+		expectApplied(session.apply(SetTitle(Literal("External runtime candidate"))), DocumentMetadata, "external Test Play draft edit");
+		final canonicalBefore = session.canonicalDraft();
+		final revisionBefore = session.revision();
+		final historyEntriesBefore = session.historyEntries();
+		final historyBytesBefore = session.historyBytes();
+		final undoBefore = session.undoDepth();
+		final redoBefore = session.redoDepth();
+		final prepared = switch session.prepareExternalTestPlay() {
+			case ValidationPassed(canonical): canonical;
+			case ValidationFailed(_) | ValidationBlocked(_): throw "valid external Test Play candidate was rejected";
+		};
+		require(prepared.compare(canonicalBefore) == 0, "external Test Play preparation changed canonical bytes");
+		final lastPlayableAfterPrepare = session.lastPlayableSnapshot();
+		require(lastPlayableAfterPrepare != null && ScenarioWriter.write(lastPlayableAfterPrepare).compare(lastPlayableBytes) == 0,
+			"side-effect-free external preparation replaced lastPlayable");
+		require(session.revision() == revisionBefore
+			&& session.historyEntries() == historyEntriesBefore
+			&& session.historyBytes() == historyBytesBefore
+			&& session.undoDepth() == undoBefore
+			&& session.redoDepth() == redoBefore,
+			"rejected external runtime start would change editor recovery state");
+		require(session.beginExternalTestPlay(), "accepted external runtime could not lock editing");
+		expectRejected(session.apply(SetPaletteEntry(1, STONE)), error -> switch error {
+			case NotEditing: true;
+			case _: false;
+		}, "edit during external Test Play");
+		require(session.finishExternalTestPlay(), "external Test Play lock did not close");
+		require(!session.finishExternalTestPlay(), "external Test Play lock closed twice");
+		require(session.canonicalDraft().compare(canonicalBefore) == 0
+			&& session.revision() == revisionBefore
+			&& session.historyEntries() == historyEntriesBefore
+			&& session.historyBytes() == historyBytesBefore
+			&& session.undoDepth() == undoBefore
+			&& session.redoDepth() == redoBefore,
+			"external Test Play changed the editor workspace");
 	}
 
 	static function checkImmediateRejections(session:EditorSession):Void {

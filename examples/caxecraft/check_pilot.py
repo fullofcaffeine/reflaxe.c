@@ -505,7 +505,7 @@ def check_outer_application_boundary() -> None:
         "final activeRuntimeContent = new ActiveRuntimeContent(completeCandidate);",
         "final runtimeContent = activeRuntimeContent.generation();",
         "final activeLevel = switch ActivePlayableLevel.create(loadedCandidate)",
-        "var session = activeLevel.session();",
+        "var session = frameLevelOwner.session();",
         "public function run():Void",
         "Raylib.InitWindow(",
         "while (!quit && !Raylib.WindowShouldClose())",
