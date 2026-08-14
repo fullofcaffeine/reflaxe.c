@@ -12,7 +12,7 @@
       "symbol": "AquaticGearEquipped",
       "text": {
         "en": "AQUATIC GEAR EQUIPPED",
-        "es-MX": "EQUIPO ACUATICO ACTIVADO"
+        "es-MX": "EQUIPO ACUÁTICO ACTIVADO"
       }
     },
     {
@@ -132,7 +132,7 @@
       "symbol": "EditorReady",
       "text": {
         "en": "READY — EDITS USE THE REAL CAXEMAP SESSION",
-        "es-MX": "LISTO — LOS CAMBIOS USAN LA SESION CAXEMAP REAL"
+        "es-MX": "LISTO — LOS CAMBIOS USAN LA SESIÓN CAXEMAP REAL"
       }
     },
     {
@@ -204,7 +204,7 @@
       "symbol": "EditorValid",
       "text": {
         "en": "VALID CAXEMAP — READY TO TEST",
-        "es-MX": "CAXEMAP VALIDO — LISTO PARA PROBAR"
+        "es-MX": "CAXEMAP VÁLIDO — LISTO PARA PROBAR"
       }
     },
     {
@@ -251,8 +251,8 @@
       "id": "menu_instructions",
       "symbol": "MenuInstructions",
       "text": {
-        "en": "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL",
-        "es-MX": "FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH"
+        "en": "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPAÑOL",
+        "es-MX": "FLECHAS / RATÓN PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH"
       }
     },
     {
@@ -260,7 +260,7 @@
       "symbol": "NoBlockInReach",
       "text": {
         "en": "NO BLOCK IN REACH",
-        "es-MX": "NINGUN BLOQUE AL ALCANCE"
+        "es-MX": "NINGÚN BLOQUE AL ALCANCE"
       }
     },
     {
