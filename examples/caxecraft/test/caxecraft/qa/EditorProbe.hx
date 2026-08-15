@@ -198,12 +198,12 @@ final class EditorProbe {
 	/** Prove that a creator gesture becomes one collision-free reloadable object. */
 	static function checkCheckpointPlacement():Void {
 		final existing:Array<ScenarioObject> = [
-			{id: id("editor.checkpoint.1"), tags: [], placement: Checkpoint(transform(500, 0, 500))},
-			{id: id("editor.checkpoint.2"), tags: [], placement: Checkpoint(transform(1500, 0, 500))}
+			{id: id("editor.checkpoint.n1"), tags: [], placement: Checkpoint(transform(500, 0, 500))},
+			{id: id("editor.checkpoint.n2"), tags: [], placement: Checkpoint(transform(1500, 0, 500))}
 		];
 		switch checkpointCommand({x: 2, y: 1, z: 3}, existing) {
 			case PutObject(object):
-				require(object.id.text() == "editor.checkpoint.3", "checkpoint placement reused an authored object ID");
+				require(object.id.text() == "editor.checkpoint.n3", "checkpoint placement reused an authored object ID");
 				switch object.placement {
 					case Checkpoint(position):
 						require(position.xMilli == 2500 && position.yMilli == 1000 && position.zMilli == 3500 && position.yawDegrees == 0,
@@ -213,6 +213,9 @@ final class EditorProbe {
 			case _:
 				throw "checkpoint placement did not use the normal object command";
 		}
+
+		final session = open(defaultEditorSettings());
+		roundTrip(session, checkpointCommand({x: 0, y: 0, z: 0}, session.draftSnapshot().objects), Placement);
 	}
 
 	/** Prove one selected object becomes a distinct canonical copy with the same payload. */

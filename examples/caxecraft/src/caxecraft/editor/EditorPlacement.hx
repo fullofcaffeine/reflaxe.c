@@ -15,7 +15,7 @@ import caxecraft.scenario.ScenarioObject;
 /**
 	Create one checkpoint command at the center of a snapped world cell.
 
-	The first unused `editor.checkpoint.N` identity is deterministic for the
+	The first unused `editor.checkpoint.nN` identity is deterministic for the
 	current draft. The returned command still passes through `EditorSession`,
 	which owns validation, canonical bytes, history, undo, and redo.
 **/
@@ -35,9 +35,9 @@ function checkpointCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edit
 /** Find the first positive editor checkpoint number not used by any object. */
 private function nextCheckpointId(objects:Array<ScenarioObject>):ScenarioId {
 	var number = 1;
-	while (hasObjectId(objects, 'editor.checkpoint.$number'))
+	while (hasObjectId(objects, 'editor.checkpoint.n$number'))
 		number++;
-	return new ScenarioId('editor.checkpoint.$number');
+	return new ScenarioId('editor.checkpoint.n$number');
 }
 
 /** Compare stable IDs without depending on object order or placement role. */
