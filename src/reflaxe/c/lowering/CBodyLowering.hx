@@ -12924,6 +12924,7 @@ private class FunctionBuilder {
 			returnMapping = slot.returnType;
 			dispatchKind = IRCDVirtual(slot.input.id, receiver.id);
 		}
+		final checkedReceiverId = receiver.id;
 		if (isNullableClassReference(receiver.type)) {
 			appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
 				sourceSpan(access.receiver.pos), "instance-call-null-check");
@@ -12963,6 +12964,13 @@ private class FunctionBuilder {
 		}
 		receiver = restoreStagedLoweredValue(stagedReceiver, "instance-call-receiver-load");
 		final explicitArguments = restoreCallArguments(stagedArguments, "instance-call-argument");
+		// Keep the early check above so a null receiver aborts before argument side
+		// effects. If argument control flow reloads that receiver under a new HxcIR
+		// identity, check the restored value too so the call has a local proof.
+		if (isNullableClassReference(receiver.type) && receiver.id != checkedReceiverId) {
+			appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+				sourceSpan(access.receiver.pos), "instance-call-restored-null-check");
+		}
 		dispatchKind = switch dispatchKind {
 			case IRCDVirtual(slotId, _): IRCDVirtual(slotId, receiver.id);
 			case IRCDInterface(interfaceTypeId, slotId, _): IRCDInterface(interfaceTypeId, slotId, receiver.id);

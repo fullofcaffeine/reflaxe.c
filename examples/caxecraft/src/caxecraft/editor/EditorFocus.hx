@@ -26,6 +26,7 @@ enum abstract EditorFocusTarget(Int) {
 	var WorldList = 12;
 	var KeepEditing = 13;
 	var LeaveWithoutSaving = 14;
+	var CatalogObjectTool = 15;
 }
 
 /**
@@ -66,7 +67,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case SelectTool: GroundTool;
 				case GroundTool: EraseTool;
 				case EraseTool: CheckpointTool;
-				case CheckpointTool: MoreDetails;
+				case CheckpointTool: CatalogObjectTool;
+				case CatalogObjectTool: MoreDetails;
 				case MoreDetails: WorldList;
 				case WorldList: Back;
 				case KeepEditing: LeaveWithoutSaving;
@@ -85,7 +87,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case GroundTool: SelectTool;
 				case EraseTool: GroundTool;
 				case CheckpointTool: EraseTool;
-				case MoreDetails: CheckpointTool;
+				case CatalogObjectTool: CheckpointTool;
+				case MoreDetails: CatalogObjectTool;
 				case WorldList: MoreDetails;
 				case KeepEditing: LeaveWithoutSaving;
 				case LeaveWithoutSaving: KeepEditing;

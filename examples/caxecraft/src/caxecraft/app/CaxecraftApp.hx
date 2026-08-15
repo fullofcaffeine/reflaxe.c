@@ -1317,7 +1317,7 @@ final class CaxecraftApp {
 				};
 				editorNavigationCommand = editorNavigation.advance(confirmAgain, 0.0);
 			}
-			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7 && !editorScreen.applyPilotSelectFirstObject())
+			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7 && !editorScreen.applyPilotCatalogObject())
 				rejectedEdits++;
 			#end
 			if (captured && !conversationOwnedInput) {

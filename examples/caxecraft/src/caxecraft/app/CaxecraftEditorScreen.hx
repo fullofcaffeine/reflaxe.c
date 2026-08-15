@@ -2,6 +2,7 @@ package caxecraft.app;
 
 #if c
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
@@ -319,6 +320,10 @@ final class CaxecraftEditorScreen {
 			Color.rgba(218, 103, 78));
 		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, left + 42 + cardWidth * 3, cardTop, cardWidth, 68,
 			UiMessage.EditorCheckpoint, Color.rgba(76, 209, 198));
+		final recipe = contentRegistry.editorObjectAt(0);
+		if (recipe != null)
+			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, left + 52 + cardWidth * 4, cardTop, cardWidth, 68,
+				locale == Locale0 ? recipe.labelEn : recipe.labelEsMx, Color.rgba(226, 151, 72));
 
 		final disclosureWidth = 150.0;
 		final disclosureLeft = left + width - Std.int(disclosureWidth) - 12;
@@ -345,6 +350,11 @@ final class CaxecraftEditorScreen {
 	/** Draw one large tool card with a non-text color mark and selected border. */
 	function drawToolCard(locale:LocaleCursor, focus:EditorFocusTarget, tool:EditorTool, left:Int, top:Int, width:Int, height:Int, message:UiMessage,
 			color:Color):Void {
+		drawToolCardText(focus, tool, left, top, width, height, uiCatalog.text(locale, message), color);
+	}
+
+	/** Draw one pack-labeled tool card without moving content names into the UI catalog. */
+	function drawToolCardText(focus:EditorFocusTarget, tool:EditorTool, left:Int, top:Int, width:Int, height:Int, text:String, color:Color):Void {
 		final pressed = Raygui.ButtonString(Rectangle.fromFloat(left, top, width, height), "").has(GuiResult.Pressed);
 		if (pressed) {
 			focusedControl = focus;
@@ -352,7 +362,7 @@ final class CaxecraftEditorScreen {
 		}
 		Raylib.DrawRectangle(left + 12, top + 14, 36, 36, color);
 		Raylib.DrawRectangleLines(left + 12, top + 14, 36, 36, CaxecraftPalette.hudText());
-		Raylib.DrawTextString(uiCatalog.text(locale, message), left + 58, top + 23, 17, CaxecraftPalette.hudText());
+		Raylib.DrawTextString(text, left + 58, top + 23, 17, CaxecraftPalette.hudText());
 		drawFocusRing(focus, left, top, width, height);
 		drawActiveControl(activeTool == tool, left, top, width, height);
 	}
@@ -560,6 +570,8 @@ final class CaxecraftEditorScreen {
 				setActiveTool(EditorTool.EraseTool);
 			case CheckpointTool:
 				setActiveTool(EditorTool.CheckpointTool);
+			case CatalogObjectTool:
+				setActiveTool(EditorTool.CatalogObjectTool);
 			case MoreDetails:
 				detailsOpen = !detailsOpen;
 			case WorldList:
@@ -937,7 +949,7 @@ final class CaxecraftEditorScreen {
 				final above = top + 1;
 				if (above >= 0 && above < world.height)
 					y = above;
-			case CheckpointTool:
+			case CheckpointTool | CatalogObjectTool:
 				final above = top + 1;
 				if (above >= 0 && above < world.height)
 					y = above;
@@ -981,7 +993,8 @@ final class CaxecraftEditorScreen {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects) {
+		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects,
+			activeRecipeFor(activeTool)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(command):
@@ -991,6 +1004,10 @@ final class CaxecraftEditorScreen {
 				}
 		};
 	}
+
+	/** Return the pack-selected recipe only for its matching creation tool. */
+	function activeRecipeFor(tool:EditorTool):Null<EditorObjectRecipe>
+		return tool == CatalogObjectTool ? contentRegistry.editorObjectAt(0) : null;
 
 	/** Drop the last ghost when a view, tool, or draft transition changes meaning. */
 	function invalidatePreview():Void {
@@ -1220,7 +1237,7 @@ final class CaxecraftEditorScreen {
 				needsPalette = true;
 			case SelectTool:
 			case EraseTool:
-			case CheckpointTool:
+			case CheckpointTool | CatalogObjectTool:
 		}
 		if (needsPalette) {
 			paletteCode = paletteCodeForBlock(current.draftSnapshot().world, contentRegistry.defaultEditorBlockId());
@@ -1229,7 +1246,7 @@ final class CaxecraftEditorScreen {
 				return false;
 			}
 		}
-		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects);
+		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects, activeRecipeFor(tool));
 		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;
@@ -1251,6 +1268,10 @@ final class CaxecraftEditorScreen {
 					case MutationApplied(_, _, _, _, _):
 						notice = Ready;
 						refreshProjection();
+						switch value {
+							case PutObject(object): selectObject(object.id);
+							case _:
+						}
 						true;
 					case MutationUnchanged(_, _):
 						invalidatePreview();
@@ -1368,6 +1389,28 @@ final class CaxecraftEditorScreen {
 					return applyToolAt(EditorTool.PaintTool, point) && applyToolAt(EditorTool.SelectTool, point);
 				}
 			}
+		return false;
+	}
+
+	/** Place the pack's first catalog recipe on a visible authored surface. */
+	public function applyPilotCatalogObject():Bool {
+		final current = projection;
+		if (current == null || contentRegistry.editorObjectAt(0) == null)
+			return false;
+		var z = current.depth - 1;
+		while (z >= 0) {
+			var x = current.width - 1;
+			while (x >= 0) {
+				final y = surfaceTopAt(current, x, z) + 1;
+				if (y >= 0 && y < current.height) {
+					final point:VoxelPoint = {x: x, y: y, z: z};
+					if (applyToolAt(EditorTool.CatalogObjectTool, point))
+						return true;
+				}
+				x--;
+			}
+			z--;
+		}
 		return false;
 	}
 

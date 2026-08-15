@@ -6,6 +6,8 @@ import caxecraft.content.ContentJson.ContentJsonField;
 import caxecraft.content.ContentJson.ContentJsonNode;
 import caxecraft.content.ContentJson.ContentJsonValue;
 import caxecraft.content.ContentPackagePath.ContentPackagePathResult;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ItemContentResolution;
 import caxecraft.content.LevelContentResolver.ItemStorageCode;
@@ -153,6 +155,7 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	final enemies:Array<RuntimeEnemyDefinition>;
 	final drops:Array<RuntimeDropDefinition>;
 	final effects:Array<RuntimeEffectDefinition>;
+	final editorObjects:Array<RuntimeEditorObjectDefinition>;
 	final statefulObjects:Array<RuntimeStatefulObjectDefinition>;
 	final states:Array<RuntimeLocatedId>;
 
@@ -161,7 +164,7 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 			features:Array<RuntimeLocatedId>, blocks:Array<RuntimeBlockDefinition>, fluids:Array<RuntimeFluidDefinition>,
 			aquaticProfiles:Array<RuntimeAquaticDefinition>, items:Array<RuntimeItemDefinition>, npcs:Array<RuntimeNpcDefinition>,
 			enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>, effects:Array<RuntimeEffectDefinition>,
-			statefulObjects:Array<RuntimeStatefulObjectDefinition>, states:Array<RuntimeLocatedId>) {
+			editorObjects:Array<RuntimeEditorObjectDefinition>, statefulObjects:Array<RuntimeStatefulObjectDefinition>, states:Array<RuntimeLocatedId>) {
 		this.packIdValue = packId;
 		this.packVersionValue = packVersion;
 		this.logicalPathValue = logicalPath;
@@ -177,6 +180,7 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 		this.enemies = enemies;
 		this.drops = drops;
 		this.effects = effects;
+		this.editorObjects = editorObjects.copy();
 		this.statefulObjects = statefulObjects;
 		this.states = states;
 	}
@@ -226,6 +230,19 @@ final class RuntimeContentRegistry implements ScenarioContentRegistry implements
 	/** Number of admitted item definitions and valid item storage codes. */
 	public inline function itemCount():Int
 		return items.length;
+
+	/** Number of pack-owned object recipes shown by creator tools. */
+	public inline function editorObjectCount():Int
+		return editorObjects.length;
+
+	/** Return one immutable creator recipe, or null for an invalid index. */
+	public function editorObjectAt(index:Int):Null<EditorObjectRecipe> {
+		if (index < 0 || index >= editorObjects.length)
+			return null;
+		final entry = editorObjects[index];
+		return new EditorObjectRecipe(entry.id, entry.labelEn, entry.labelEsMx,
+			EditorStatefulObject(new ContentId(entry.objectType.id), new ContentId(entry.initialState.id)));
+	}
 
 	/** Number of admitted fluid definitions. */
 	public inline function fluidCount():Int
@@ -603,6 +620,7 @@ final class RuntimeContentPack {
 			"enemies",
 			"drops",
 			"effects",
+			"editorObjects",
 			"prefabs",
 			"statefulObjects",
 			"states",
@@ -672,6 +690,9 @@ final class RuntimeContentPack {
 		final effects = readEffects(reader, reader.field(fields, "effects"));
 		if (effects == null)
 			return rejected(reader);
+		final editorObjects = readEditorObjects(reader, reader.field(fields, "editorObjects"));
+		if (editorObjects == null)
+			return rejected(reader);
 		final states = readIdArray(reader, reader.field(fields, "states"), "states", 0, 128);
 		if (states == null)
 			return rejected(reader);
@@ -697,10 +718,50 @@ final class RuntimeContentPack {
 		final airReference = new RuntimeReference(air, airNode.line, airNode.column);
 		final defaultAquaticReference = new RuntimeReference(defaultAquatic, defaultAquaticNode.line, defaultAquaticNode.column);
 		if (!validatePack(reader, airReference, defaultAquaticReference, features, blocks, fluids, aquaticProfiles, items, npcs, enemies, drops, effects,
-			statefulObjects, states))
+			editorObjects, statefulObjects, states))
 			return rejected(reader);
 		return RuntimeContentPackReady(new RuntimeContentRegistry(packId, packVersion, logicalPath, manifestId, air, defaultAquatic, features, blocks, fluids,
-			aquaticProfiles, items, npcs, enemies, drops, effects, statefulObjects, states));
+			aquaticProfiles, items, npcs, enemies, drops, effects, editorObjects, statefulObjects, states));
+	}
+
+	/** Parse ordered, bilingual object recipes without granting gameplay authority. */
+	static function readEditorObjects(reader:RuntimeSchemaReader, node:ContentJsonNode):Null<Array<RuntimeEditorObjectDefinition>> {
+		final values = reader.array(node, "editorObjects", 0, 64);
+		if (values == null)
+			return null;
+		final result:Array<RuntimeEditorObjectDefinition> = [];
+		for (index in 0...values.length) {
+			final path = 'editorObjects[$index]';
+			final fields = reader.object(values[index], path, ["id", "kind", "label", "objectType", "initialState"]);
+			if (fields == null)
+				return null;
+			final idNode = reader.field(fields, "id");
+			final id = reader.string(idNode, path + ".id", 64);
+			final kind = readClosed(reader, reader.field(fields, "kind"), path + ".kind", ["stateful-object"]);
+			final labelFields = reader.object(reader.field(fields, "label"), path + ".label", ["en", "es-MX"]);
+			if (labelFields == null)
+				return null;
+			final labelEn = reader.string(reader.field(labelFields, "en"), path + ".label.en", 64);
+			final labelEsMx = reader.string(reader.field(labelFields, "es-MX"), path + ".label.es-MX", 64);
+			final objectNode = reader.field(fields, "objectType");
+			final objectType = readContentId(reader, objectNode, path + ".objectType");
+			final stateNode = reader.field(fields, "initialState");
+			final initialState = readContentId(reader, stateNode, path + ".initialState");
+			if (id == null
+				|| !RuntimeSchemaReader.validProfile(id)
+				|| kind == null
+				|| labelEn == null
+				|| labelEsMx == null
+				|| objectType == null
+				|| initialState == null) {
+				if (id != null && !RuntimeSchemaReader.validProfile(id))
+					reader.reject(idNode, SchemaInvalidString(path + ".id"));
+				return null;
+			}
+			result.push(new RuntimeEditorObjectDefinition(id, idNode.line, idNode.column, labelEn, labelEsMx,
+				new RuntimeReference(objectType, objectNode.line, objectNode.column), new RuntimeReference(initialState, stateNode.line, stateNode.column)));
+		}
+		return validateEditorObjectOrder(reader, "editorObjects", result) ? result : null;
 	}
 
 	/** Decode the ordered atlas cells that presentation records can name. */
@@ -1346,6 +1407,14 @@ final class RuntimeContentPack {
 		return true;
 	}
 
+	/** Validate authoring recipe IDs in deterministic shelf order. */
+	static function validateEditorObjectOrder(reader:RuntimeSchemaReader, path:String, values:Array<RuntimeEditorObjectDefinition>):Bool {
+		for (index in 1...values.length)
+			if (!validatePair(reader, path, values[index - 1], values[index]))
+				return false;
+		return true;
+	}
+
 	/** Validate stateful-object IDs in canonical order. */
 	static function validateStatefulObjectOrder(reader:RuntimeSchemaReader, path:String, values:Array<RuntimeStatefulObjectDefinition>):Bool {
 		for (index in 1...values.length)
@@ -1367,7 +1436,7 @@ final class RuntimeContentPack {
 			features:Array<RuntimeLocatedId>, blocks:Array<RuntimeBlockDefinition>, fluids:Array<RuntimeFluidDefinition>,
 			aquatic:Array<RuntimeAquaticDefinition>, items:Array<RuntimeItemDefinition>, npcs:Array<RuntimeNpcDefinition>,
 			enemies:Array<RuntimeEnemyDefinition>, drops:Array<RuntimeDropDefinition>, effects:Array<RuntimeEffectDefinition>,
-			statefulObjects:Array<RuntimeStatefulObjectDefinition>, states:Array<RuntimeLocatedId>):Bool {
+			editorObjects:Array<RuntimeEditorObjectDefinition>, statefulObjects:Array<RuntimeStatefulObjectDefinition>, states:Array<RuntimeLocatedId>):Bool {
 		final kinds:Array<RuntimeKindId> = [];
 		for (entry in features)
 			if (!addKind(reader, kinds, entry, "feature"))
@@ -1469,6 +1538,24 @@ final class RuntimeContentPack {
 				if (kindOf(kinds, state.id) != "state"
 					&& !rejectReference(reader, state.reference(), "statefulObject.states", "state", kinds))
 					return false;
+		for (entry in editorObjects) {
+			final object = findStatefulObjectDefinition(statefulObjects, entry.objectType.id);
+			if (object == null) {
+				if (!rejectReference(reader, entry.objectType, "editorObjects.objectType", "stateful object", kinds))
+					return false;
+			} else {
+				var ownsState = false;
+				for (state in object.states)
+					if (state.id == entry.initialState.id)
+						ownsState = true;
+				if (!ownsState) {
+					if (kindOf(kinds, entry.initialState.id) != "state")
+						return rejectReference(reader, entry.initialState, "editorObjects.initialState", "state", kinds);
+					reader.rejectAt(entry.initialState.line, entry.initialState.column, SchemaInvalidInvariant("editorObjects.initialState"));
+					return false;
+				}
+			}
+		}
 		return true;
 	}
 
@@ -1504,6 +1591,14 @@ final class RuntimeContentPack {
 
 	/** Find one item definition while validating drop stack bounds. */
 	static function findItemDefinition(values:Array<RuntimeItemDefinition>, id:String):Null<RuntimeItemDefinition> {
+		for (value in values)
+			if (value.id == id)
+				return value;
+		return null;
+	}
+
+	/** Find one stateful profile while validating creator recipes. */
+	static function findStatefulObjectDefinition(values:Array<RuntimeStatefulObjectDefinition>, id:String):Null<RuntimeStatefulObjectDefinition> {
 		for (value in values)
 			if (value.id == id)
 				return value;
@@ -1580,6 +1675,30 @@ private final class RuntimeKindId {
 	public function new(id:String, kind:String) {
 		this.id = id;
 		this.kind = kind;
+	}
+}
+
+/** One validated reloadable recipe retained behind the public immutable view. */
+private final class RuntimeEditorObjectDefinition extends RuntimeLocatedId {
+	/** Child-readable English shelf label. */
+	public final labelEn:String;
+
+	/** Child-readable Mexican Spanish shelf label. */
+	public final labelEsMx:String;
+
+	/** Stateful profile referenced by this first admitted recipe kind. */
+	public final objectType:RuntimeReference;
+
+	/** Compatible state selected when the creator places the object. */
+	public final initialState:RuntimeReference;
+
+	/** Retain one fully located recipe for later cross-reference checks. */
+	public function new(id:String, line:Int, column:Int, labelEn:String, labelEsMx:String, objectType:RuntimeReference, initialState:RuntimeReference) {
+		super(id, line, column);
+		this.labelEn = labelEn;
+		this.labelEsMx = labelEsMx;
+		this.objectType = objectType;
+		this.initialState = initialState;
 	}
 }
 

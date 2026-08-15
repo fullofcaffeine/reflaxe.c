@@ -245,6 +245,7 @@ DIRECT_RECEIVER_NATIVE_COVERAGE = frozenset(
         "constructor-direct-receiver-managed-cleanup",
         "constructor-direct-receiver-nested-argument",
         "constructor-direct-receiver-argument-flow-staging",
+        "constructor-direct-receiver-restored-null-guard",
         "constructor-direct-receiver-result-transfer",
     }
 )
@@ -964,25 +965,42 @@ def validate_direct_receiver_project(output: Path) -> None:
     nested_start = source.find(
         "struct hxc_array_ref *hxc_Main_parseNestedConditional("
     )
+    this_string_start = source.find("int32_t hxc_Main_parseThisStringConditional(")
     values_start = source.find("struct hxc_array_ref *hxc_Main_valuesFrom(")
-    if min(parse_start, conditional_start, fresh_start, nested_start, values_start) < 0:
+    chosen_label_start = source.find("int32_t hxc_NumberReader_readChosenLabel(")
+    read_offset_start = source.find(
+        "struct hxc_array_ref *hxc_NumberReader_readOffset("
+    )
+    if min(
+        parse_start,
+        conditional_start,
+        fresh_start,
+        nested_start,
+        this_string_start,
+        values_start,
+        chosen_label_start,
+        read_offset_start,
+    ) < 0:
         raise ConstructorLoweringFailure(
-            "direct-receiver fixture omitted its plain, conditional, nested, or argument-producing path"
+            "direct-receiver fixture omitted a receiver, conditional, or restored-guard path"
         )
     parse_body = source[parse_start:conditional_start]
     conditional_body = source[conditional_start:fresh_start]
     fresh_body = source[fresh_start:nested_start]
-    nested_body = source[nested_start:values_start]
+    nested_body = source[nested_start:this_string_start]
+    this_string_body = source[this_string_start:values_start]
+    chosen_label_body = source[chosen_label_start:read_offset_start]
     if (
-        source.count("struct hxc_NumberReader hxc_l_tmp_object_storage_") != 4
-        or source.count(" = { 0 };") < 4
-        or source.count("hxc_compiler_constructor_NumberReader(") < 4
+        source.count("struct hxc_NumberReader hxc_l_tmp_object_storage_") != 5
+        or source.count(" = { 0 };") < 5
+        or source.count("hxc_compiler_constructor_NumberReader(") < 5
         or source.count("hxc_NumberReader_read(") < 3
         or source.count("hxc_NumberReader_readOffset(") < 2
         or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in parse_body
         or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in conditional_body
         or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in fresh_body
         or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in nested_body
+        or "hxc_array_ref_release(hxc_l_tmp_object_storage_" not in this_string_body
         or "instance_call_receiver_" not in conditional_body
         or "instance_call_receiver_load_result_" not in conditional_body
         or "instance_call_argument_0_" not in conditional_body
@@ -1000,10 +1018,23 @@ def validate_direct_receiver_project(output: Path) -> None:
         >= nested_body.find("conditional_result_")
         or nested_body.find("hxc_NumberReader_readOffset(")
         <= nested_body.find("array_get_result_")
+        or chosen_label_body.find("instance_call_receiver_")
+        >= chosen_label_body.find("conditional_result_")
+        or chosen_label_body.find("instance_call_receiver_load_result_")
+        <= chosen_label_body.find("conditional_load_result_")
+        or chosen_label_body.find(
+            "if (hxc_l_tmp_instance_call_receiver_load_result_"
+        )
+        <= chosen_label_body.find("instance_call_receiver_load_result_")
+        or chosen_label_body.find("hxc_NumberReader_labelScore(")
+        <= chosen_label_body.find(
+            "if (hxc_l_tmp_instance_call_receiver_load_result_"
+        )
         or "hxc_array_ref_retain(" in parse_body
         or "hxc_array_ref_retain(" in conditional_body
         or "hxc_array_ref_retain(" in fresh_body
         or "hxc_array_ref_retain(" in nested_body
+        or "hxc_array_ref_retain(" in this_string_body
         or "struct hxc_NumberReader" not in headers
     ):
         raise ConstructorLoweringFailure(
@@ -1011,9 +1042,20 @@ def validate_direct_receiver_project(output: Path) -> None:
         )
     plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
     if (
-        plan.get("features") != ["runtime-base", "status", "alloc", "array"]
+        plan.get("features")
+        != [
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "string-scalar",
+        ]
         or "bounded-stack-construction" not in plan.get("directDecisions", [])
         or "managed-haxe-arrays" not in plan.get("directDecisions", [])
+        or "direct-utf8-string-literals" not in plan.get("directDecisions", [])
+        or "allocation-free-unicode-scalar-strings"
+        not in plan.get("directDecisions", [])
         or "gc" in plan.get("features", [])
     ):
         raise ConstructorLoweringFailure(

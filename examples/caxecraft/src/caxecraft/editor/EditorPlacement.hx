@@ -1,6 +1,9 @@
 package caxecraft.editor;
 
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorTypes.EditorCommand;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
@@ -30,6 +33,33 @@ function checkpointCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edit
 			yawDegrees: 0
 		})
 	});
+}
+
+/** Create one pack-defined object through the same canonical placement path. */
+function objectRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>):EditorCommand {
+	final id = nextRecipeId(recipe.id, objects);
+	final transform:ScenarioTransform = {
+		xMilli: point.x * 1000 + 500,
+		yMilli: point.y * 1000,
+		zMilli: point.z * 1000 + 500,
+		yawDegrees: 0
+	};
+	return PutObject({
+		id: id,
+		tags: [],
+		placement: switch recipe.kind {
+			case EditorStatefulObject(objectType, initialState): StatefulObject(objectType, initialState, transform);
+		}
+	});
+}
+
+/** Find the first valid source-derived identity absent from the draft. */
+private function nextRecipeId(recipeId:String, objects:Array<ScenarioObject>):ScenarioId {
+	final prefix = 'editor.$recipeId.n';
+	var number = 1;
+	while (hasObjectId(objects, prefix + number))
+		number++;
+	return new ScenarioId(prefix + number);
 }
 
 /** Find the first positive editor checkpoint number not used by any object. */

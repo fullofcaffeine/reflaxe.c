@@ -29,6 +29,14 @@ final class NumberReader {
 	 */
 	public function readOffset(first:Int, second:Int):Array<Int>
 		return [values[0] + first + second];
+
+	/** Return a score from a managed String argument after the receiver. */
+	public function labelScore(prefix:Int, label:String):Int
+		return values[0] + prefix + label.length;
+
+	/** Stage `this` and one scalar before joining a managed String branch. */
+	public function readChosenLabel(chooseShort:Bool):Int
+		return labelScore(1, chooseShort ? "aa" : "long");
 }
 
 /** Executes the direct-receiver shape and checks its observable result. */
@@ -71,6 +79,10 @@ final class Main {
 	static function parseNestedConditional(values:Array<Int>, chooseFirst:Bool):Array<Int>
 		return new NumberReader(values).readOffset(values[chooseFirst ? 0 : 1], 0);
 
+	/** Exercises receiver staging across a managed String conditional. */
+	static function parseThisStringConditional(values:Array<Int>, chooseShort:Bool):Int
+		return new NumberReader(values).readChosenLabel(chooseShort);
+
 	static function main():Void {
 		final input = [41, 7];
 		final result = parse(input);
@@ -78,7 +90,8 @@ final class Main {
 		final conditional = parseConditional(input, true);
 		final nestedConditionalFirst = parseNestedConditional(input, true);
 		final nestedConditionalSecond = parseNestedConditional(input, false);
+		final thisStringConditional = parseThisStringConditional(input, true);
 		while (result.length != 1 || result[0] != 42 || input[0] != 41 || nested.length != 1 || nested[0] != 10 || conditional.length != 1
-			|| conditional[0] != 44 || nestedConditionalFirst[0] != 82 || nestedConditionalSecond[0] != 48) {}
+			|| conditional[0] != 44 || nestedConditionalFirst[0] != 82 || nestedConditionalSecond[0] != 48 || thisStringConditional != 44) {}
 	}
 }

@@ -10,6 +10,9 @@ import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
+import caxecraft.editor.EditorPlacement.objectRecipeCommand;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
@@ -120,6 +123,7 @@ final class EditorProbe {
 		checkEnvironmentTextRoundTrip();
 		checkObjectMovement();
 		checkCheckpointPlacement();
+		checkCatalogObjectPlacement();
 		checkObjectDuplication();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
@@ -216,6 +220,31 @@ final class EditorProbe {
 
 		final session = open(defaultEditorSettings());
 		roundTrip(session, checkpointCommand({x: 0, y: 0, z: 0}, session.draftSnapshot().objects), Placement);
+	}
+
+	/** Prove one reloadable recipe crosses the canonical editor history boundary. */
+	static function checkCatalogObjectPlacement():Void {
+		final recipe = new EditorObjectRecipe("mechanism", "MECHANISM", "MECANISMO",
+			EditorStatefulObject(new ContentId("caxecraft:mechanism"), new ContentId("caxecraft:idle")));
+		final session = open(defaultEditorSettings());
+		final command = objectRecipeCommand(recipe, {x: 1, y: 0, z: 2}, session.draftSnapshot().objects);
+		switch command {
+			case PutObject(object):
+				require(object.id.text() == "editor.mechanism.n1", "catalog placement chose the wrong independent identity");
+				switch object.placement {
+					case StatefulObject(objectType, initialState, position):
+						require(objectType.text() == "caxecraft:mechanism"
+							&& initialState.text() == "caxecraft:idle"
+							&& position.xMilli == 1500
+							&& position.yMilli == 0
+							&& position.zMilli == 2500,
+							"catalog placement changed the independently authored payload");
+					case _: throw "catalog placement changed the recipe kind";
+				}
+			case _:
+				throw "catalog placement did not use the canonical object command";
+		}
+		roundTrip(session, command, Placement);
 	}
 
 	/** Prove one selected object becomes a distinct canonical copy with the same payload. */
@@ -487,6 +516,7 @@ final class EditorProbe {
 			EditorFocusTarget.GroundTool,
 			EditorFocusTarget.EraseTool,
 			EditorFocusTarget.CheckpointTool,
+			EditorFocusTarget.CatalogObjectTool,
 			EditorFocusTarget.MoreDetails,
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.Back
@@ -494,6 +524,7 @@ final class EditorProbe {
 		final backward:Array<EditorFocusTarget> = [
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.MoreDetails,
+			EditorFocusTarget.CatalogObjectTool,
 			EditorFocusTarget.CheckpointTool,
 			EditorFocusTarget.EraseTool,
 			EditorFocusTarget.GroundTool,
@@ -1031,12 +1062,18 @@ final class EditorProbe {
 		require(viewportPointAt(upper, grid, 335, 199) == null
 			&& viewportPointAt(upper, grid, 94, 20) == null, "viewport admitted an excluded grid edge");
 
-		require(toolFromIndex(0) == SelectTool && toolFromIndex(1) == PaintTool && toolFromIndex(2) == EraseTool && toolFromIndex(3) == FillTool
-			&& toolFromIndex(4) == CheckpointTool && toolFromIndex(-1) == null && toolFromIndex(5) == null,
+		require(toolFromIndex(0) == SelectTool
+			&& toolFromIndex(1) == PaintTool
+			&& toolFromIndex(2) == EraseTool
+			&& toolFromIndex(3) == FillTool
+			&& toolFromIndex(4) == CheckpointTool
+			&& toolFromIndex(5) == CatalogObjectTool
+			&& toolFromIndex(-1) == null
+			&& toolFromIndex(6) == null,
 			"raygui tool indices drifted from the closed editor tool type");
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
-		switch commandForTool(SelectTool, point, 1, null, []) {
+		switch commandForTool(SelectTool, point, 1, null, [], null) {
 			case ToolSelectionReady(bounds):
 				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
 					&& bounds.size.depth == 1,
@@ -1044,25 +1081,25 @@ final class EditorProbe {
 			case _:
 				throw "select tool did not produce workspace bounds";
 		}
-		switch commandForTool(PaintTool, point, 1, null, []) {
+		switch commandForTool(PaintTool, point, 1, null, [], null) {
 			case ToolCommandReady(PaintVoxel(actual, 1)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "paint tool changed the pointed voxel");
 			case _:
 				throw "paint tool did not produce a PaintVoxel command";
 		}
-		switch commandForTool(EraseTool, point, 1, null, []) {
+		switch commandForTool(EraseTool, point, 1, null, [], null) {
 			case ToolCommandReady(EraseVoxel(actual)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "erase tool changed the pointed voxel");
 			case _:
 				throw "erase tool did not produce an EraseVoxel command";
 		}
-		switch commandForTool(FillTool, point, 1, null, []) {
+		switch commandForTool(FillTool, point, 1, null, [], null) {
 			case ToolCommandRejected(NoSelection):
 			case _:
 				throw "fill tool did not reject a missing selection exactly";
 		}
 		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
-		switch commandForTool(FillTool, point, 1, selected, []) {
+		switch commandForTool(FillTool, point, 1, selected, [], null) {
 			case ToolCommandReady(FillBounds(bounds, 1)):
 				require(bounds.origin.x == 1 && bounds.origin.z == 1 && bounds.size.width == 2 && bounds.size.depth == 2,
 					"fill tool changed its explicit workspace bounds");

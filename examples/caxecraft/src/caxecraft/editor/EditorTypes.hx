@@ -195,6 +195,9 @@ enum EditorSetting {
 
 /** Exact reasons an edit can be refused before it changes the draft. */
 enum EditorError {
+	/** A pack-driven placement tool had no validated selected recipe. */
+	MissingEditorObjectRecipe;
+
 	InvalidSetting(setting:EditorSetting, minimum:Int, maximum:Int);
 	UnsupportedFormatVersion(actual:Int, supported:Int);
 	SnapshotRejected(diagnostics:Array<ScenarioDiagnostic>);

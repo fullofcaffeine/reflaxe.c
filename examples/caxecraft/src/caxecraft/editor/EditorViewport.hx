@@ -2,7 +2,9 @@ package caxecraft.editor;
 
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorError;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
+import caxecraft.editor.EditorPlacement.objectRecipeCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
@@ -26,6 +28,7 @@ enum EditorTool {
 	EraseTool;
 	FillTool;
 	CheckpointTool;
+	CatalogObjectTool;
 }
 
 /**
@@ -161,6 +164,7 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 		case 2: EraseTool;
 		case 3: FillTool;
 		case 4: CheckpointTool;
+		case 5: CatalogObjectTool;
 		case _: null;
 	};
 }
@@ -173,7 +177,8 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 	Checkpoint placement reads existing IDs and creates one reloadable object.
 	The UI never mutates a projection directly.
 **/
-function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>):EditorToolCommandResult {
+function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>,
+		recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
 			ToolSelectionReady({
@@ -188,5 +193,7 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(selection, paletteCode));
 		case CheckpointTool:
 			ToolCommandReady(checkpointCommand(point, objects));
+		case CatalogObjectTool:
+			recipe == null ? ToolCommandRejected(MissingEditorObjectRecipe) : ToolCommandReady(objectRecipeCommand(recipe, point, objects));
 	};
 }

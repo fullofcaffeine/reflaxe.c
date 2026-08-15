@@ -11,6 +11,7 @@ import caxecraft.content.RuntimeContentPack;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeItemUseProfile;
 import caxecraft.content.RuntimeContentPack.RuntimeModelPresentation;
+import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
@@ -79,6 +80,18 @@ function selfCheck():Int {
 		case RuntimeUiCatalogReady(value): value;
 		case RuntimeUiCatalogRejected(_): return 5;
 	};
+	final editorObject = registry.editorObjectAt(0);
+	if (registry.editorObjectCount() != 1
+		|| editorObject == null
+		|| editorObject.id != "forge-relay"
+		|| editorObject.labelEn != "FORGE RELAY"
+		|| editorObject.labelEsMx != "RELE DE FORJA")
+		return 58;
+	switch editorObject.kind {
+		case EditorStatefulObject(objectType, initialState):
+			if (objectType.text() != "caxecraft:gate-relay" || initialState.text() != "caxecraft:waiting")
+				return 58;
+	}
 
 	tracePack = registry.semanticProof();
 	final sand = new ContentId("caxecraft:sand");
@@ -366,6 +379,10 @@ function negativeChecks():Int {
 		return 38;
 	if (!rejectsPack(replaceOnce(minimal, '"prefabs":[]', '"prefabs":[null]'), UnsupportedReservedKind))
 		return 26;
+	if (!rejectsPack(replaceOnce(minimal, '"objectType":"caxecraft:glyph-control"', '"objectType":"caxecraft:missing"'), UnresolvedReference))
+		return 61;
+	if (!rejectsPack(replaceOnce(minimal, '"initialState":"caxecraft:idle"', '"initialState":"caxecraft:other"'), InvalidInvariant))
+		return 62;
 	return uiNegativeChecks(minimalUiCatalog());
 }
 
@@ -373,7 +390,7 @@ function negativeChecks():Int {
 function locatedUnsupportedVersionPack():String
 	return '{\n"schemaVersion":3,"logicalPath":null,"packId":null,"packVersion":null,"assetManifestId":null,"assetCells":null,"airBlock":null,'
 		+ '"defaultAquaticProfile":null,"features":null,"blocks":null,"fluids":null,"aquaticProfiles":null,"items":null,"npcs":null,"enemies":null,'
-		+ '"drops":null,"effects":null,"prefabs":null,"statefulObjects":null,"states":null,"signals":null}';
+		+ '"drops":null,"effects":null,"editorObjects":null,"prefabs":null,"statefulObjects":null,"states":null,"signals":null}';
 
 /**
  * Return one manually authored valid pack for fast negative sensitivity.
@@ -404,7 +421,9 @@ function minimalPack():String
 		+ '"strikeRadiusMilli":3000,"attackRadiusMilli":1400,"windupTicks":8,"recoveryTicks":12,"stepMilli":80,"drop":"caxecraft:drop",'
 		+ '"presentation":{"asset":"entities","cell":"mossling-front"}}],'
 		+ '"drops":[{"id":"caxecraft:drop","item":"caxecraft:item","quantity":1,"pickupRadiusMilli":1500,"presentation":{"asset":"items","cell":"berries"}}],'
-		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],"prefabs":[],'
+		+ '"effects":[{"id":"caxecraft:feedback","profile":"pickup-feedback"}],'
+		+ '"editorObjects":[{"id":"glyph-control","kind":"stateful-object","label":{"en":"GLYPH CONTROL","es-MX":"CONTROL DE GLIFO"},'
+		+ '"objectType":"caxecraft:glyph-control","initialState":"caxecraft:idle"}],"prefabs":[],'
 		+ '"statefulObjects":[{"id":"caxecraft:glyph-control","interaction":"activate","interactionRadiusMilli":2500,'
 		+ '"bounds":{"widthMilli":1000,"heightMilli":1000,"depthMilli":1000},'
 		+ '"states":[{"id":"caxecraft:active","collision":"solid","render":"visible","presentation":{"asset":"adventure-items","cell":"glyph-leaf",'
@@ -412,7 +431,7 @@ function minimalPack():String
 		+ '{"path":"assets/models/active.vox","durationTicks":1}],"cellsPerAxis":32}}},'
 		+ '{"id":"caxecraft:idle","collision":"passable","render":"hidden","presentation":{"asset":"adventure-items","cell":"glyph-wave",'
 		+ '"model":{"path":"assets/models/idle.vox","cellsPerAxis":32}}}]}],'
-		+ '"states":["caxecraft:active","caxecraft:idle"],"signals":[]}';
+		+ '"states":["caxecraft:active","caxecraft:idle","caxecraft:other"],"signals":[]}';
 
 /**
  * Return the first two correctly shaped typed messages for fast UI negatives.

@@ -223,14 +223,14 @@
     {
       "kind": "content-pack",
       "path": "packs/caxecraft/base/content.json",
-      "byteLength": 22677,
-      "sha256": "7a4d7f8a2379de29de09a3124495c26a138405ee89d24ebd102678aa292d1f73"
+      "byteLength": 22949,
+      "sha256": "58d45050c40c8dd618dff5cfa210fc945c9ee9a8501866dc03211d2813ec30c9"
     },
     {
       "kind": "runtime-content",
       "path": "packs/caxecraft/base/runtime-content.json",
       "byteLength": 899,
-      "sha256": "b43f8e52a60c9ce1efb817a6d8926c93d4e52b18798c1fdf70d5bd0571afc098"
+      "sha256": "37c5f36da43551783f56264e499781acd35c0dbeffd83b1dc8bf4e759e52ecfc"
     },
     {
       "kind": "level",

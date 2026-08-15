@@ -439,6 +439,18 @@
       "profile": "melee-feedback"
     }
   ],
+  "editorObjects": [
+    {
+      "id": "forge-relay",
+      "kind": "stateful-object",
+      "label": {
+        "en": "FORGE RELAY",
+        "es-MX": "RELE DE FORJA"
+      },
+      "objectType": "caxecraft:gate-relay",
+      "initialState": "caxecraft:waiting"
+    }
+  ],
   "prefabs": [],
   "statefulObjects": [
     {
