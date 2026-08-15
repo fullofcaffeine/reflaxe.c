@@ -53,4 +53,17 @@ enum abstract UiMessage(Int) {
 
 	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
 	var EditorScene = 35;
+
+	var EditorBuild = 36;
+	var EditorCoordinates = 37;
+	var EditorErase = 38;
+	var EditorGround = 39;
+	var EditorKeepEditing = 40;
+	var EditorLeaveWithoutSaving = 41;
+	var EditorMaterial = 42;
+	var EditorMoreDetails = 43;
+	var EditorPlan = 44;
+	var EditorSelect = 45;
+	var EditorUnsavedChanges = 46;
+	var EditorWorldList = 47;
 }

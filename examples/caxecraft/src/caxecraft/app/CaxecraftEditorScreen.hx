@@ -2,21 +2,26 @@ package caxecraft.app;
 
 #if c
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
-import caxecraft.editor.EditorScenarioFactory.createBlank as createBlankEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
+import caxecraft.editor.EditorTypes.EditorNodeRef;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
+import caxecraft.editor.EditorTypes.EditorPreviewResult;
 import caxecraft.editor.EditorTypes.EditorSelection;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
+import caxecraft.editor.EditorViewport.EditorViewportLayout;
+import caxecraft.editor.EditorViewport.EditorViewportProjection;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
+import caxecraft.editor.EditorViewport.layout as layoutPlan;
+import caxecraft.editor.EditorViewport.pointAt as pointAtPlan;
+import caxecraft.editor.EditorViewport.project as projectPlan;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
-import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
 import caxecraft.editor.EditorWorldViewport.EditorCameraState;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
@@ -35,17 +40,13 @@ import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
-import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
-import caxecraft.scenario.Scenario.ScenarioMode;
-import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
 import haxe.io.Bytes;
 import raygui.GuiListViewState;
 import raygui.GuiResult;
 import raygui.GuiTextBoxState;
-import raygui.GuiToggleState;
 import raygui.Raygui;
 import raylib.Camera3D;
 import raylib.CameraProjection;
@@ -71,6 +72,18 @@ private enum EditorNotice {
 	Testing;
 }
 
+/** One editable view over the same canonical editor draft. */
+private enum abstract EditorWorkspaceView(Int) {
+	var BuildView = 0;
+	var PlanView = 1;
+}
+
+/** The exact baseline exists only after the editor opens a valid document. */
+private enum EditorOpeningState {
+	NoOpenedEditor;
+	OpenedEditor(canonical:Bytes);
+}
+
 /**
  * Native visual editor over the real renderer-independent editor session.
  *
@@ -84,11 +97,12 @@ private enum EditorNotice {
  * of serializing the draft or maintaining a second editable world.
  *
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
- * composition edge; the reusable editor package knows neither. The first 3D
- * slice edits one layer. Native source save, object transforms, layer controls,
- * flow authoring, and cinematic tools remain separate. Test Play uses a
- * disposable ordinary game runtime while this class keeps the exact editor
- * workspace alive.
+ * composition edge; the reusable editor package knows neither. Build and Plan
+ * are two views over one draft, selection, active tool, and history. The first
+ * child-facing slice edits terrain only. Native source save, object transforms,
+ * layer controls, flow authoring, and cinematic tools remain separate. Test
+ * Play uses a disposable ordinary game runtime while this class keeps the
+ * exact editor workspace alive.
  */
 final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
@@ -96,14 +110,23 @@ final class CaxecraftEditorScreen {
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
 	var projection:Null<EditorWorldProjection>;
+	var planProjection:Null<EditorViewportProjection>;
 	var objectGizmos:Array<EditorObjectGizmo>;
 	var objectLabels:String;
 	var flowRuleCount:Int;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
 	var focusedControl:EditorFocusTarget;
-	final advancedTools:GuiToggleState;
-	final toolList:GuiListViewState;
+	var workspaceView:EditorWorkspaceView;
+	var activeTool:EditorTool;
+	var detailsOpen:Bool;
+	var worldListOpen:Bool;
+	var leavePromptOpen:Bool;
+	var openingState:EditorOpeningState;
+	var previewPoint:Null<VoxelPoint>;
+	var previewRevision:Int;
+	var previewTool:EditorTool;
+	var previewAllowed:Bool;
 	var objectList:GuiListViewState;
 
 	/**
@@ -126,14 +149,26 @@ final class CaxecraftEditorScreen {
 		};
 		notice = session == null ? Invalid : Ready;
 		projection = null;
+		planProjection = null;
 		objectGizmos = [];
 		objectLabels = "";
 		flowRuleCount = 0;
 		camera = null;
 		selection = null;
 		focusedControl = initialFocus();
-		advancedTools = new GuiToggleState(false);
-		toolList = new GuiListViewState();
+		workspaceView = BuildView;
+		activeTool = SelectTool;
+		detailsOpen = false;
+		worldListOpen = false;
+		leavePromptOpen = false;
+		openingState = NoOpenedEditor;
+		final openedSession = session;
+		if (openedSession != null)
+			openingState = OpenedEditor(openedSession.canonicalDraft());
+		previewPoint = null;
+		previewRevision = -1;
+		previewTool = SelectTool;
+		previewAllowed = false;
 		objectList = new GuiListViewState();
 		worldName = GuiTextBoxState.create(64);
 		refreshProjection(true);
@@ -161,31 +196,53 @@ final class CaxecraftEditorScreen {
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
 		if (Raygui.WindowBoxString(outer, uiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
 			focusedControl = EditorFocusTarget.Back;
-			return ReturnToTitle;
+			final leaveAction = requestLeave();
+			switch leaveAction {
+				case StayInEditor:
+				case ReturnToTitle | StartTestPlay(_):
+					return leaveAction;
+			}
 		}
 
-		final toolbarTop = 56.0;
-		final buttonWidth = 116.0;
-		final buttonGap = 10.0;
-		var buttonLeft = 32.0;
-		if (focusedButton(EditorFocusTarget.NewWorld, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorNewWorld))) {
-			session = openNewWorld();
-			notice = Ready;
-			refreshProjection(true);
+		final toolbarTop = 58.0;
+		if (focusedButtonSized(EditorFocusTarget.Back, 32.0, toolbarTop, 82.0, 38.0, uiCatalog.text(locale, UiMessage.EditorBack))) {
+			final leaveAction = requestLeave();
+			switch leaveAction {
+				case StayInEditor:
+				case ReturnToTitle | StartTestPlay(_):
+					return leaveAction;
+			}
 		}
-		buttonLeft += buttonWidth + buttonGap;
-		if (focusedButton(EditorFocusTarget.Undo, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorUndo)))
+		final name = worldName;
+		if (name != null) {
+			final nameLeft = 126.0;
+			final nameWidth = width >= 1180 ? 260.0 : 190.0;
+			final result = name.draw(Rectangle.fromFloat(nameLeft, toolbarTop, nameWidth, 38.0));
+			if (result.has(GuiResult.Pressed)) {
+				focusedControl = EditorFocusTarget.WorldName;
+				if (!name.isEditing())
+					commitWorldName(name.text());
+			}
+			drawFocusRing(EditorFocusTarget.WorldName, Std.int(nameLeft), Std.int(toolbarTop), Std.int(nameWidth), 38);
+		}
+
+		final historyLeft = width >= 1180 ? 402.0 : 328.0;
+		if (focusedButtonSized(EditorFocusTarget.Undo, historyLeft, toolbarTop, 88.0, 38.0, uiCatalog.text(locale, UiMessage.EditorUndo)))
 			undo();
-		buttonLeft += buttonWidth + buttonGap;
-		if (focusedButton(EditorFocusTarget.Redo, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorRedo)))
+		if (focusedButtonSized(EditorFocusTarget.Redo, historyLeft + 96.0, toolbarTop, 88.0, 38.0, uiCatalog.text(locale, UiMessage.EditorRedo)))
 			redo();
-		buttonLeft += buttonWidth + buttonGap;
-		if (focusedButton(EditorFocusTarget.Validate, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, UiMessage.EditorValidate)))
-			validate();
-		buttonLeft += buttonWidth + buttonGap;
-		final testing = session != null && session.testPlay() != null;
-		final testLabel = testing ? UiMessage.EditorStopTest : UiMessage.EditorTest;
-		if (focusedButton(EditorFocusTarget.TestPlay, buttonLeft, toolbarTop, buttonWidth, uiCatalog.text(locale, testLabel))) {
+
+		final viewLeft = Std.int(width * 0.5) - 104.0;
+		if (focusedButtonSized(EditorFocusTarget.Build, viewLeft, toolbarTop, 100.0, 38.0, uiCatalog.text(locale, UiMessage.EditorBuild)))
+			setWorkspaceView(BuildView);
+		if (focusedButtonSized(EditorFocusTarget.Plan, viewLeft + 108.0, toolbarTop, 100.0, 38.0, uiCatalog.text(locale, UiMessage.EditorPlan)))
+			setWorkspaceView(PlanView);
+		drawActiveControl(workspaceView == BuildView, Std.int(viewLeft), Std.int(toolbarTop), 100, 38);
+		drawActiveControl(workspaceView == PlanView, Std.int(viewLeft + 108.0), Std.int(toolbarTop), 100, 38);
+
+		final playWidth = 136.0;
+		final playLeft = width - playWidth - 32.0;
+		if (focusedButtonSized(EditorFocusTarget.Play, playLeft, toolbarTop - 2.0, playWidth, 42.0, uiCatalog.text(locale, UiMessage.EditorTest))) {
 			final testAction = requestTestPlay();
 			switch testAction {
 				case StayInEditor:
@@ -194,54 +251,77 @@ final class CaxecraftEditorScreen {
 			}
 		}
 
-		final viewportTop = 104.0;
-		final sidebarWidth = 230;
-		Raygui.PanelString(Rectangle.fromFloat(32.0, viewportTop, width - sidebarWidth - 80.0, height - viewportTop - 70.0),
-			uiCatalog.text(locale, UiMessage.EditorCanvasHelp));
-		final selectedObjectIndex = objectList.activeIndex();
-		final selectedObjectId = selectedObjectIndex >= 0
-			&& selectedObjectIndex < objectGizmos.length ? objectGizmos[selectedObjectIndex].id.text() : "";
-		final sceneSummary = uiCatalog.text(locale, UiMessage.EditorScene)
-			+ "  "
-			+ objectGizmos.length
-			+ " / "
-			+ flowRuleCount
-			+ (selectedObjectId.length == 0 ? "" : "  //  " + selectedObjectId);
-		Raygui.PanelString(Rectangle.fromFloat(width - sidebarWidth - 32.0, viewportTop, sidebarWidth, height - viewportTop - 70.0), sceneSummary);
-		final toolLeft = width - sidebarWidth - 16;
-		final toolWidth = sidebarWidth - 32;
-		final toolListResult = toolList.drawString(Rectangle.fromFloat(toolLeft, viewportTop + 44.0, toolWidth, 116.0),
-			uiCatalog.text(locale, UiMessage.EditorToolList));
-		if (toolListResult.has(GuiResult.Pressed))
-			focusedControl = EditorFocusTarget.ToolList;
-		drawFocusRing(EditorFocusTarget.ToolList, toolLeft, Std.int(viewportTop + 44.0), toolWidth, 116);
-		final toggleResult = Raygui.ToggleString(Rectangle.fromFloat(toolLeft, viewportTop + 172.0, toolWidth, 32.0),
-			uiCatalog.text(locale, UiMessage.EditorAdvanced), advancedTools);
-		if (toggleResult.has(GuiResult.Pressed))
-			focusedControl = EditorFocusTarget.AdvancedTools;
-		drawFocusRing(EditorFocusTarget.AdvancedTools, toolLeft, Std.int(viewportTop + 172.0), toolWidth, 32);
-		Raygui.LabelString(Rectangle.fromFloat(width - sidebarWidth - 16.0, viewportTop + 216.0, sidebarWidth - 32.0, 24.0),
-			uiCatalog.text(locale, UiMessage.EditorName));
-		final name = worldName;
-		if (name != null) {
-			final result = name.draw(Rectangle.fromFloat(toolLeft, viewportTop + 242.0, toolWidth, 32.0));
-			if (result.has(GuiResult.Pressed)) {
-				focusedControl = EditorFocusTarget.WorldName;
-				if (!name.isEditing())
-					commitWorldName(name.text());
-			}
-			drawFocusRing(EditorFocusTarget.WorldName, toolLeft, Std.int(viewportTop + 242.0), toolWidth, 32);
-		}
-		if (height >= 620) {
-			final objectListHeight = height - viewportTop - 352.0;
-			final objectListResult = objectList.drawString(Rectangle.fromFloat(toolLeft, viewportTop + 282.0, toolWidth, objectListHeight), objectLabels);
-			if (objectListResult.has(GuiResult.Pressed))
-				focusedControl = EditorFocusTarget.SceneObjects;
-			drawFocusRing(EditorFocusTarget.SceneObjects, toolLeft, Std.int(viewportTop + 282.0), toolWidth, Std.int(objectListHeight));
-		} else {
-			drawFocusRing(EditorFocusTarget.SceneObjects, width - sidebarWidth - 32, Std.int(viewportTop), sidebarWidth, Std.int(height - viewportTop - 70.0));
-		}
-		drawWorldViewport(48, 144, width - sidebarWidth - 112, height - 230);
+		final canvasTop = 116;
+		final shelfTop = height - 154;
+		final inspectorVisible = selection != null || worldListOpen;
+		final inspectorWidth = inspectorVisible && width >= 900 ? 250 : 0;
+		final canvasLeft = 32;
+		final canvasWidth = width - 64 - inspectorWidth - (inspectorWidth > 0 ? 12 : 0);
+		final canvasHeight = shelfTop - canvasTop - 12;
+		Raygui.PanelString(Rectangle.fromFloat(canvasLeft, canvasTop, canvasWidth, canvasHeight), uiCatalog.text(locale, UiMessage.EditorCanvasHelp));
+		final innerLeft = canvasLeft + 12;
+		final innerTop = canvasTop + 36;
+		final innerWidth = canvasWidth - 24;
+		final innerHeight = canvasHeight - 48;
+		if (workspaceView == BuildView)
+			drawWorldViewport(innerLeft, innerTop, innerWidth, innerHeight);
+		else
+			drawPlanViewport(innerLeft, innerTop, innerWidth, innerHeight);
+		if (inspectorWidth > 0)
+			drawInspector(locale, canvasLeft + canvasWidth + 12, canvasTop, inspectorWidth, canvasHeight);
+		drawCreationShelf(locale, 32, shelfTop, width - 64, 112);
+
+		if (leavePromptOpen)
+			return drawLeavePrompt(locale, width, height);
+		return StayInEditor;
+	}
+
+	/**
+	 * Draw one sized button, remember pointer focus, and paint keyboard focus.
+	 *
+	 * Raygui still owns hit testing for the immediate native control. This
+	 * screen owns semantic focus, so mouse and keyboard routes converge before
+	 * the existing editor action runs.
+	 */
+	function focusedButtonSized(target:EditorFocusTarget, x:Float, y:Float, width:Float, height:Float, text:String):Bool {
+		final pressed = Raygui.ButtonString(Rectangle.fromFloat(x, y, width, height), text).has(GuiResult.Pressed);
+		if (pressed)
+			focusedControl = target;
+		drawFocusRing(target, Std.int(x), Std.int(y), Std.int(width), Std.int(height));
+		return pressed;
+	}
+
+	/** Draw a clear second border around a selected view or creation card. */
+	static function drawActiveControl(active:Bool, x:Int, y:Int, width:Int, height:Int):Void {
+		if (!active)
+			return;
+		final color = CaxecraftPalette.selection();
+		Raylib.DrawRectangleLines(x + 2, y + 2, width - 4, height - 4, color);
+		Raylib.DrawRectangleLines(x + 3, y + 3, width - 6, height - 6, color);
+	}
+
+	/** Draw the three large terrain actions and small workspace disclosures. */
+	function drawCreationShelf(locale:LocaleCursor, left:Int, top:Int, width:Int, height:Int):Void {
+		Raygui.PanelString(Rectangle.fromFloat(left, top, width, height), "");
+		final cardTop = top + 12;
+		final cardWidth = width >= 940 ? 154 : 130;
+		drawToolCard(locale, EditorFocusTarget.SelectTool, EditorTool.SelectTool, left + 12, cardTop, cardWidth, 68, UiMessage.EditorSelect,
+			Color.rgba(84, 191, 205));
+		drawToolCard(locale, EditorFocusTarget.GroundTool, EditorTool.PaintTool, left + 22 + cardWidth, cardTop, cardWidth, 68, UiMessage.EditorGround,
+			Color.rgba(111, 174, 91));
+		drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, left + 32 + cardWidth * 2, cardTop, cardWidth, 68, UiMessage.EditorErase,
+			Color.rgba(218, 103, 78));
+
+		final disclosureWidth = 150.0;
+		final disclosureLeft = left + width - Std.int(disclosureWidth) - 12;
+		if (focusedButtonSized(EditorFocusTarget.WorldList, disclosureLeft, cardTop, disclosureWidth, 30.0, uiCatalog.text(locale, UiMessage.EditorWorldList)))
+			worldListOpen = !worldListOpen;
+		if (focusedButtonSized(EditorFocusTarget.MoreDetails, disclosureLeft, cardTop + 38.0, disclosureWidth, 30.0,
+			uiCatalog.text(locale, UiMessage.EditorMoreDetails))
+			&& selection != null)
+			detailsOpen = !detailsOpen;
+		drawActiveControl(worldListOpen, disclosureLeft, cardTop, Std.int(disclosureWidth), 30);
+		drawActiveControl(detailsOpen && selection != null, disclosureLeft, cardTop + 38, Std.int(disclosureWidth), 30);
 
 		final status = switch notice {
 			case Ready: UiMessage.EditorReady;
@@ -249,28 +329,82 @@ final class CaxecraftEditorScreen {
 			case Invalid: UiMessage.EditorInvalid;
 			case Testing: UiMessage.EditorTesting;
 		};
-		Raygui.StatusBarString(Rectangle.fromFloat(32.0, height - 54.0, width - 190.0, 28.0), uiCatalog.text(locale, status));
-		if (focusedButton(EditorFocusTarget.Back, width - 142.0, height - 54.0, 110.0, uiCatalog.text(locale, UiMessage.EditorBack)))
-			return ReturnToTitle;
-		return StayInEditor;
+		Raylib.DrawTextString(uiCatalog.text(locale, status), left + 12, top + height - 24, 14,
+			notice == Invalid ? Color.rgba(255, 154, 112) : CaxecraftPalette.hudText());
 	}
 
-	static inline function button(x:Float, y:Float, width:Float, text:String):Bool
-		return Raygui.ButtonString(Rectangle.fromFloat(x, y, width, 32.0), text).has(GuiResult.Pressed);
+	/** Draw one large tool card with a non-text color mark and selected border. */
+	function drawToolCard(locale:LocaleCursor, focus:EditorFocusTarget, tool:EditorTool, left:Int, top:Int, width:Int, height:Int, message:UiMessage,
+			color:Color):Void {
+		final pressed = Raygui.ButtonString(Rectangle.fromFloat(left, top, width, height), "").has(GuiResult.Pressed);
+		if (pressed) {
+			focusedControl = focus;
+			setActiveTool(tool);
+		}
+		Raylib.DrawRectangle(left + 12, top + 14, 36, 36, color);
+		Raylib.DrawRectangleLines(left + 12, top + 14, 36, 36, CaxecraftPalette.hudText());
+		Raylib.DrawTextString(uiCatalog.text(locale, message), left + 58, top + 23, 17, CaxecraftPalette.hudText());
+		drawFocusRing(focus, left, top, width, height);
+		drawActiveControl(activeTool == tool, left, top, width, height);
+	}
 
-	/**
-	 * Draw one button, remember pointer focus, and paint keyboard focus.
-	 *
-	 * Raygui still owns hit testing for the immediate native control. This
-	 * screen owns semantic focus, so mouse and keyboard routes converge before
-	 * the existing editor action runs.
-	 */
-	function focusedButton(target:EditorFocusTarget, x:Float, y:Float, width:Float, text:String):Bool {
-		final pressed = button(x, y, width, text);
-		if (pressed)
-			focusedControl = target;
-		drawFocusRing(target, Std.int(x), Std.int(y), Std.int(width), 32);
-		return pressed;
+	/** Show only the properties and authored records that help the current task. */
+	function drawInspector(locale:LocaleCursor, left:Int, top:Int, width:Int, height:Int):Void {
+		Raygui.PanelString(Rectangle.fromFloat(left, top, width, height), uiCatalog.text(locale, UiMessage.EditorMoreDetails));
+		var cursorTop = top + 42;
+		final selected = selection;
+		if (selected != null) {
+			final point = selected.origin;
+			Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorCoordinates), left + 14, cursorTop, 14, Color.rgba(126, 205, 209));
+			cursorTop += 22;
+			Raylib.DrawTextString('${point.x}, ${point.y}, ${point.z}', left + 14, cursorTop, 18, CaxecraftPalette.hudText());
+			cursorTop += 34;
+			final current = projection;
+			final paletteCode = current == null ? -1 : paletteCodeAtWorld(current, point.x, point.y, point.z);
+			Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorMaterial), left + 14, cursorTop, 14, Color.rgba(126, 205, 209));
+			cursorTop += 22;
+			Raylib.DrawTextString(paletteCode < 0 ? "-" : '$paletteCode', left + 14, cursorTop, 18, CaxecraftPalette.hudText());
+			cursorTop += 34;
+			if (detailsOpen) {
+				Raylib.DrawTextString('${selected.size.width} x ${selected.size.height} x ${selected.size.depth}', left + 14, cursorTop, 15,
+					CaxecraftPalette.hudText());
+				cursorTop += 28;
+				Raylib.DrawTextString('${objectGizmos.length} / $flowRuleCount', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
+				cursorTop += 34;
+			}
+		}
+		if (worldListOpen) {
+			Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorWorldList), left + 14, cursorTop, 15, CaxecraftPalette.selection());
+			cursorTop += 24;
+			final listHeight = height - (cursorTop - top) - 14;
+			if (listHeight > 40) {
+				final result = objectList.drawString(Rectangle.fromFloat(left + 12, cursorTop, width - 24, listHeight), objectLabels);
+				if (result.has(GuiResult.Pressed)) {
+					focusedControl = EditorFocusTarget.WorldList;
+					selectObjectFromWorldList();
+				}
+			}
+		}
+	}
+
+	/** Draw a modal leave decision because this editor does not yet claim Save. */
+	function drawLeavePrompt(locale:LocaleCursor, width:Int, height:Int):EditorScreenAction {
+		Raylib.DrawRectangle(0, 0, width, height, Color.rgba(4, 10, 14, 210));
+		final panelWidth = width >= 700 ? 560 : width - 80;
+		final panelHeight = 176;
+		final left = Std.int((width - panelWidth) / 2);
+		final top = Std.int((height - panelHeight) / 2);
+		Raygui.PanelString(Rectangle.fromFloat(left, top, panelWidth, panelHeight), uiCatalog.text(locale, UiMessage.EditorTitle));
+		Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorUnsavedChanges), left + 28, top + 52, 20, CaxecraftPalette.hudText());
+		if (focusedButtonSized(EditorFocusTarget.KeepEditing, left + 28, top + 106, 196.0, 40.0, uiCatalog.text(locale, UiMessage.EditorKeepEditing))) {
+			leavePromptOpen = false;
+			focusedControl = EditorFocusTarget.Back;
+			return StayInEditor;
+		}
+		if (focusedButtonSized(EditorFocusTarget.LeaveWithoutSaving, left + panelWidth - 264, top + 106, 236.0, 40.0,
+			uiCatalog.text(locale, UiMessage.EditorLeaveWithoutSaving)))
+			return ReturnToTitle;
+		return StayInEditor;
 	}
 
 	/**
@@ -305,6 +439,19 @@ final class CaxecraftEditorScreen {
 	 * Keyboard, controller, and pilot commands all enter this one handler.
 	 */
 	public function applyNavigation(command:NavigationCommand):EditorScreenAction {
+		if (leavePromptOpen) {
+			switch command {
+				case Up | Left | Right | Down:
+					focusedControl = focusedControl == EditorFocusTarget.KeepEditing ? EditorFocusTarget.LeaveWithoutSaving : EditorFocusTarget.KeepEditing;
+				case Confirm:
+					return activateFocusedControl();
+				case Cancel:
+					leavePromptOpen = false;
+					focusedControl = EditorFocusTarget.Back;
+				case None:
+			}
+			return StayInEditor;
+		}
 		switch command {
 			case Up | Left:
 				focusedControl = moveFocus(focusedControl, Backward);
@@ -313,7 +460,7 @@ final class CaxecraftEditorScreen {
 			case Confirm:
 				return activateFocusedControl();
 			case Cancel:
-				return ReturnToTitle;
+				return cancelEditorAction();
 			case None:
 		}
 		return StayInEditor;
@@ -338,32 +485,103 @@ final class CaxecraftEditorScreen {
 	 */
 	function activateFocusedControl():EditorScreenAction {
 		switch focusedControl {
-			case NewWorld:
-				session = openNewWorld();
-				notice = Ready;
-				refreshProjection(true);
-			case Undo:
-				undo();
-			case Redo:
-				redo();
-			case Validate:
-				validate();
-			case TestPlay:
-				return requestTestPlay();
-			case ToolList:
-				toolList.moveSelection(4, 1);
-			case AdvancedTools:
-				advancedTools.active = !advancedTools.active;
+			case Back:
+				return requestLeave();
 			case WorldName:
 				final name = worldName;
 				if (name != null)
 					name.setEditing(true);
-			case SceneObjects:
-				objectList.moveSelection(objectGizmos.length, 1);
-			case Back:
+			case Undo:
+				undo();
+			case Redo:
+				redo();
+			case Build:
+				setWorkspaceView(BuildView);
+			case Plan:
+				setWorkspaceView(PlanView);
+			case Play:
+				return requestTestPlay();
+			case SelectTool:
+				setActiveTool(EditorTool.SelectTool);
+			case GroundTool:
+				setActiveTool(EditorTool.PaintTool);
+			case EraseTool:
+				setActiveTool(EditorTool.EraseTool);
+			case MoreDetails:
+				detailsOpen = !detailsOpen;
+			case WorldList:
+				worldListOpen = !worldListOpen;
+			case KeepEditing:
+				leavePromptOpen = false;
+				focusedControl = EditorFocusTarget.Back;
+			case LeaveWithoutSaving:
 				return ReturnToTitle;
 		}
 		return StayInEditor;
+	}
+
+	/** Close the nearest presentation layer before offering to leave the draft. */
+	function cancelEditorAction():EditorScreenAction {
+		if (activeTool != EditorTool.SelectTool) {
+			setActiveTool(EditorTool.SelectTool);
+			return StayInEditor;
+		}
+		if (detailsOpen) {
+			detailsOpen = false;
+			return StayInEditor;
+		}
+		if (worldListOpen) {
+			worldListOpen = false;
+			return StayInEditor;
+		}
+		return requestLeave();
+	}
+
+	/** Change views without touching document bytes, history, or selection. */
+	function setWorkspaceView(view:EditorWorkspaceView):Void {
+		workspaceView = view;
+		invalidatePreview();
+	}
+
+	/** Choose one creation card while preserving the current semantic selection. */
+	function setActiveTool(tool:EditorTool):Void {
+		activeTool = tool;
+		invalidatePreview();
+	}
+
+	/** Leave immediately only when the in-memory draft still equals its opening bytes. */
+	function requestLeave():EditorScreenAction {
+		if (!isDirty())
+			return ReturnToTitle;
+		leavePromptOpen = true;
+		focusedControl = EditorFocusTarget.KeepEditing;
+		return StayInEditor;
+	}
+
+	/** Compare canonical bytes only when the user requests a destructive transition. */
+	function isDirty():Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		return switch openingState {
+			case NoOpenedEditor: false;
+			case OpenedEditor(opened): current.canonicalDraft().compare(opened) != 0;
+		};
+	}
+
+	/** Select a World List object through the same stable workspace identity. */
+	function selectObjectFromWorldList():Void {
+		final current = session;
+		final index = objectList.activeIndex();
+		if (current == null || index < 0 || index >= objectGizmos.length)
+			return;
+		switch current.select({baseRevision: current.revision(), selection: NodeSelection(ObjectNode(objectGizmos[index].id))}) {
+			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
+				selection = current.selectedBounds();
+				notice = Ready;
+			case SelectionRejected(_, _):
+				notice = Invalid;
+		}
 	}
 
 	function undo():Void {
@@ -394,17 +612,6 @@ final class CaxecraftEditorScreen {
 			case MutationRejected(_, _):
 				notice = Invalid;
 		}
-	}
-
-	function validate():Void {
-		if (session == null) {
-			notice = Invalid;
-			return;
-		}
-		notice = switch session.validate() {
-			case ValidationPassed(_): Valid;
-			case ValidationFailed(_) | ValidationBlocked(_): Invalid;
-		};
 	}
 
 	/**
@@ -478,6 +685,147 @@ final class CaxecraftEditorScreen {
 		return accepted;
 	}
 
+	/** Draw a top-down surface plan over the same draft used by Build. */
+	function drawPlanViewport(left:Int, top:Int, width:Int, height:Int):Void {
+		var currentPlan = planProjection;
+		var currentWorld = projection;
+		if (currentPlan == null || currentWorld == null || width <= 0 || height <= 0)
+			return;
+		var grid = layoutPlan(left, top, width, height, currentPlan);
+		if (grid == null)
+			return;
+
+		final mouse = Raylib.GetMousePosition();
+		final mouseX = Std.int(mouse.x.toFloat());
+		final mouseY = Std.int(mouse.y.toFloat());
+		final basePoint = pointAtPlan(currentPlan, grid, mouseX, mouseY);
+		var hover = basePoint == null ? null : planToolPoint(currentWorld, basePoint.x, basePoint.z);
+		if (hover == null)
+			invalidatePreview();
+		else {
+			updatePreview(hover);
+			if (Raylib.IsMouseButtonPressed(MouseButton.Left)) {
+				final hoverX = hover.x;
+				final hoverZ = hover.z;
+				applyToolAt(activeTool, hover);
+				currentPlan = planProjection;
+				currentWorld = projection;
+				if (currentPlan == null || currentWorld == null)
+					return;
+				grid = layoutPlan(left, top, width, height, currentPlan);
+				if (grid == null)
+					return;
+				hover = planToolPoint(currentWorld, hoverX, hoverZ);
+				if (hover != null)
+					updatePreview(hover);
+			}
+		}
+
+		Raylib.DrawRectangle(left, top, width, height, Color.rgba(18, 34, 42));
+		for (z in 0...currentPlan.depth)
+			for (x in 0...currentPlan.width) {
+				final surfaceY = surfaceTopAt(currentWorld, x, z);
+				final paletteCode = surfaceY < 0 ? 0 : paletteCodeAtWorld(currentWorld, x, surfaceY, z);
+				final cellLeft = grid.left + x * grid.cellSize;
+				final cellTop = grid.top + z * grid.cellSize;
+				final color = surfaceY < 0 ? Color.rgba(25, 48, 56) : terrainOverviewColor(paletteCode);
+				Raylib.DrawRectangle(cellLeft + 1, cellTop + 1, grid.cellSize - 2, grid.cellSize - 2, color);
+				Raylib.DrawRectangleLines(cellLeft, cellTop, grid.cellSize, grid.cellSize, Color.rgba(48, 78, 84));
+				if (selectedPlanCell(x, z)) {
+					Raylib.DrawRectangleLines(cellLeft + 1, cellTop + 1, grid.cellSize - 2, grid.cellSize - 2, CaxecraftPalette.selection());
+					Raylib.DrawRectangleLines(cellLeft + 2, cellTop + 2, grid.cellSize - 4, grid.cellSize - 4, CaxecraftPalette.selection());
+				}
+			}
+		for (gizmo in objectGizmos) {
+			final x = Std.int(gizmo.x);
+			final z = Std.int(gizmo.z);
+			if (x >= 0 && z >= 0 && x < currentPlan.width && z < currentPlan.depth) {
+				final markerSize = grid.cellSize > 10 ? 8 : 4;
+				final markerLeft = grid.left + x * grid.cellSize + Std.int((grid.cellSize - markerSize) / 2);
+				final markerTop = grid.top + z * grid.cellSize + Std.int((grid.cellSize - markerSize) / 2);
+				Raylib.DrawRectangle(markerLeft, markerTop, markerSize, markerSize, gizmoColor(gizmo.kind));
+			}
+		}
+		if (hover != null) {
+			final hoverLeft = grid.left + hover.x * grid.cellSize;
+			final hoverTop = grid.top + hover.z * grid.cellSize;
+			final color = previewAllowed ? Color.rgba(92, 240, 186) : Color.rgba(255, 104, 82);
+			Raylib.DrawRectangleLines(hoverLeft + 1, hoverTop + 1, grid.cellSize - 2, grid.cellSize - 2, color);
+			Raylib.DrawRectangleLines(hoverLeft + 2, hoverTop + 2, grid.cellSize - 4, grid.cellSize - 4, color);
+			if (!previewAllowed) {
+				Raylib.DrawLine(hoverLeft + 3, hoverTop + 3, hoverLeft + grid.cellSize - 3, hoverTop + grid.cellSize - 3, color);
+				Raylib.DrawLine(hoverLeft + grid.cellSize - 3, hoverTop + 3, hoverLeft + 3, hoverTop + grid.cellSize - 3, color);
+			}
+		}
+	}
+
+	/** Choose the top visible cell or the first air cell for one Plan gesture. */
+	function planToolPoint(world:EditorWorldProjection, x:Int, z:Int):Null<VoxelPoint> {
+		final top = surfaceTopAt(world, x, z);
+		var y = top < 0 ? 0 : top;
+		switch activeTool {
+			case PaintTool:
+				final above = top + 1;
+				if (above >= 0 && above < world.height)
+					y = above;
+			case SelectTool | EraseTool | FillTool:
+		}
+		return y < 0 || y >= world.height ? null : {x: x, y: y, z: z};
+	}
+
+	/** True when the current semantic voxel target covers one Plan column. */
+	function selectedPlanCell(x:Int, z:Int):Bool {
+		final current = selection;
+		if (current == null)
+			return false;
+		return x >= current.origin.x
+			&& z >= current.origin.z
+			&& x < current.origin.x + current.size.width
+			&& z < current.origin.z + current.size.depth;
+	}
+
+	/** Recompute a reducer-backed ghost only after its snapped input changes. */
+	function updatePreview(point:VoxelPoint):Void {
+		final current = session;
+		if (current == null) {
+			invalidatePreview();
+			return;
+		}
+		if (previewPoint != null
+			&& previewPoint.x == point.x
+			&& previewPoint.y == point.y
+			&& previewPoint.z == point.z
+			&& previewRevision == current.revision()
+			&& previewTool == activeTool)
+			return;
+		previewPoint = {x: point.x, y: point.y, z: point.z};
+		previewRevision = current.revision();
+		previewTool = activeTool;
+		var paletteCode = 0;
+		if (activeTool == PaintTool || activeTool == FillTool)
+			paletteCode = paletteCodeForBlock(current.draftSnapshot().world, contentRegistry.defaultEditorBlockId());
+		if (paletteCode < 0) {
+			previewAllowed = false;
+			return;
+		}
+		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds()) {
+			case ToolCommandRejected(_): false;
+			case ToolSelectionReady(_): true;
+			case ToolCommandReady(command):
+				switch current.preview({baseRevision: current.revision(), commands: [command]}) {
+					case PreviewAccepted(_, _, _) | PreviewUnchanged(_, _): true;
+					case PreviewRejected(_, _): false;
+				}
+		};
+	}
+
+	/** Drop the last ghost when a view, tool, or draft transition changes meaning. */
+	function invalidatePreview():Void {
+		previewPoint = null;
+		previewRevision = -1;
+		previewAllowed = false;
+	}
+
 	/**
 	 * Draw and operate the cached draft through a clipped perspective viewport.
 	 *
@@ -527,15 +875,16 @@ final class CaxecraftEditorScreen {
 				z: direction.z.toFloat()
 			}, 0, 512.0);
 		}
+		if (hover == null)
+			invalidatePreview();
+		else
+			updatePreview(hover.point);
 		if (hover != null && Raylib.IsMouseButtonPressed(MouseButton.Left)) {
-			final tool = toolFromIndex(toolList.activeIndex());
-			if (tool == null)
-				notice = Invalid;
-			else
-				applyToolAt(tool, hover.point);
+			applyToolAt(activeTool, hover.point);
 			current = projection;
 			if (current == null)
 				return;
+			updatePreview(hover.point);
 		}
 
 		Raylib.DrawRectangle(left, top, width, height, CaxecraftPalette.sky());
@@ -564,8 +913,17 @@ final class CaxecraftEditorScreen {
 				Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width + 0.10),
 					c.Float32.fromFloat(gizmo.height + 0.10), c.Float32.fromFloat(gizmo.depth + 0.10), color);
 		}
-		if (hover != null && !selectedCell(hover.point.x, hover.point.y, hover.point.z))
-			drawCellOutline(hover.point.x, hover.point.y, hover.point.z, hover.solid, Color.rgba(109, 223, 232), 1.08);
+		if (hover != null && !selectedCell(hover.point.x, hover.point.y, hover.point.z)) {
+			final previewColor = previewAllowed ? Color.rgba(92, 240, 186) : Color.rgba(255, 104, 82);
+			drawCellOutline(hover.point.x, hover.point.y, hover.point.z, hover.solid, previewColor, 1.08);
+			if (!previewAllowed) {
+				final markerY = hover.solid ? hover.point.y + 1.02 : hover.point.y + 0.08;
+				Raylib.DrawLine3D(Vector3.fromFloat(hover.point.x + 0.1, markerY, hover.point.z + 0.1),
+					Vector3.fromFloat(hover.point.x + 0.9, markerY, hover.point.z + 0.9), previewColor);
+				Raylib.DrawLine3D(Vector3.fromFloat(hover.point.x + 0.9, markerY, hover.point.z + 0.1),
+					Vector3.fromFloat(hover.point.x + 0.1, markerY, hover.point.z + 0.9), previewColor);
+			}
+		}
 		Raylib.EndMode3D();
 		Raylib.EndScissorMode();
 	}
@@ -692,6 +1050,8 @@ final class CaxecraftEditorScreen {
 				switch current.select({baseRevision: current.revision(), selection: VoxelSelection(bounds)}) {
 					case SelectionApplied(_, _) | SelectionUnchanged(_, _):
 						selection = current.selectedBounds();
+						detailsOpen = false;
+						invalidatePreview();
 						notice = Ready;
 						true;
 					case SelectionRejected(_, _):
@@ -705,6 +1065,7 @@ final class CaxecraftEditorScreen {
 						refreshProjection();
 						true;
 					case MutationUnchanged(_, _):
+						invalidatePreview();
 						notice = Ready;
 						true;
 					case MutationRejected(_, _):
@@ -725,11 +1086,13 @@ final class CaxecraftEditorScreen {
 		final current = session;
 		if (current == null) {
 			projection = null;
+			planProjection = null;
 			objectGizmos = [];
 			objectLabels = "";
 			flowRuleCount = 0;
 			camera = null;
 			selection = null;
+			invalidatePreview();
 			notice = Invalid;
 			return;
 		}
@@ -737,6 +1100,7 @@ final class CaxecraftEditorScreen {
 		syncWorldName(draft.title);
 		final previous = projection;
 		projection = projectWorld(draft.world);
+		planProjection = projectPlan(draft.world, 0);
 		objectGizmos = projectObjects(draft.objects);
 		flowRuleCount = draft.flow.rules.length;
 		final labels:Array<String> = [];
@@ -746,6 +1110,7 @@ final class CaxecraftEditorScreen {
 		if (objectList.activeIndex() < 0 || objectList.activeIndex() >= objectGizmos.length)
 			objectList = new GuiListViewState();
 		selection = current.selectedBounds();
+		invalidatePreview();
 		final next = projection;
 		if (next == null) {
 			camera = null;
@@ -834,19 +1199,5 @@ final class CaxecraftEditorScreen {
 		return true;
 	}
 	#end
-
-	/** Create the built-in blank draft without teaching the generic editor a pack ID. */
-	function openNewWorld():Null<EditorSession> {
-		final draft = createBlankEditorScenario(new ScenarioId("editor.new-world"), new LogicalPath(contentRegistry.logicalPath()),
-			ScenarioText.Literal("Untitled world"), ScenarioMode.Creative, contentRegistry.airBlockId(), new ScenarioId("player.spawn"), {
-				width: 12,
-				height: 1,
-				depth: 12
-			}, [{code: 1, blockType: contentRegistry.defaultEditorBlockId()}]);
-		return switch EditorSession.open(draft, contentRegistry) {
-			case EditorOpened(value): value;
-			case EditorOpenRejected(_): null;
-		};
-	}
 }
 #end

@@ -176,21 +176,33 @@ final class RuntimeUiCatalog {
 			"debug_visible",
 			"editor_advanced",
 			"editor_back",
+			"editor_build",
 			"editor_canvas_help",
+			"editor_coordinates",
+			"editor_erase",
+			"editor_ground",
 			"editor_invalid",
+			"editor_keep_editing",
+			"editor_leave_without_saving",
+			"editor_material",
+			"editor_more_details",
 			"editor_name",
 			"editor_new_world",
+			"editor_plan",
 			"editor_ready",
 			"editor_redo",
 			"editor_scene",
+			"editor_select",
 			"editor_stop_test",
 			"editor_test",
 			"editor_testing",
 			"editor_title",
 			"editor_tool_list",
 			"editor_undo",
+			"editor_unsaved_changes",
 			"editor_valid",
 			"editor_validate",
+			"editor_world_list",
 			"health_full",
 			"menu_adventure",
 			"menu_creative",
@@ -217,21 +229,33 @@ final class RuntimeUiCatalog {
 			"DebugVisible",
 			"EditorAdvanced",
 			"EditorBack",
+			"EditorBuild",
 			"EditorCanvasHelp",
+			"EditorCoordinates",
+			"EditorErase",
+			"EditorGround",
 			"EditorInvalid",
+			"EditorKeepEditing",
+			"EditorLeaveWithoutSaving",
+			"EditorMaterial",
+			"EditorMoreDetails",
 			"EditorName",
 			"EditorNewWorld",
+			"EditorPlan",
 			"EditorReady",
 			"EditorRedo",
 			"EditorScene",
+			"EditorSelect",
 			"EditorStopTest",
 			"EditorTest",
 			"EditorTesting",
 			"EditorTitle",
 			"EditorToolList",
 			"EditorUndo",
+			"EditorUnsavedChanges",
 			"EditorValid",
 			"EditorValidate",
+			"EditorWorldList",
 			"HealthFull",
 			"MenuAdventure",
 			"MenuCreative",
@@ -300,31 +324,43 @@ final class RuntimeUiCatalog {
 			case DebugVisible: 8;
 			case EditorAdvanced: 9;
 			case EditorBack: 10;
-			case EditorCanvasHelp: 11;
-			case EditorInvalid: 12;
-			case EditorName: 13;
-			case EditorNewWorld: 14;
-			case EditorReady: 15;
-			case EditorRedo: 16;
-			case EditorScene: 17;
-			case EditorStopTest: 18;
-			case EditorTest: 19;
-			case EditorTesting: 20;
-			case EditorTitle: 21;
-			case EditorToolList: 22;
-			case EditorUndo: 23;
-			case EditorValid: 24;
-			case EditorValidate: 25;
-			case HealthFull: 26;
-			case MenuAdventure: 27;
-			case MenuCreative: 28;
-			case MenuEditor: 29;
-			case MenuInstructions: 30;
-			case NoBlockInReach: 31;
-			case PauseHelp: 32;
-			case PauseTitle: 33;
-			case PlaceBlocked: 34;
-			case TitleFallback: 35;
+			case EditorBuild: 11;
+			case EditorCanvasHelp: 12;
+			case EditorCoordinates: 13;
+			case EditorErase: 14;
+			case EditorGround: 15;
+			case EditorInvalid: 16;
+			case EditorKeepEditing: 17;
+			case EditorLeaveWithoutSaving: 18;
+			case EditorMaterial: 19;
+			case EditorMoreDetails: 20;
+			case EditorName: 21;
+			case EditorNewWorld: 22;
+			case EditorPlan: 23;
+			case EditorReady: 24;
+			case EditorRedo: 25;
+			case EditorScene: 26;
+			case EditorSelect: 27;
+			case EditorStopTest: 28;
+			case EditorTest: 29;
+			case EditorTesting: 30;
+			case EditorTitle: 31;
+			case EditorToolList: 32;
+			case EditorUndo: 33;
+			case EditorUnsavedChanges: 34;
+			case EditorValid: 35;
+			case EditorValidate: 36;
+			case EditorWorldList: 37;
+			case HealthFull: 38;
+			case MenuAdventure: 39;
+			case MenuCreative: 40;
+			case MenuEditor: 41;
+			case MenuInstructions: 42;
+			case NoBlockInReach: 43;
+			case PauseHelp: 44;
+			case PauseTitle: 45;
+			case PlaceBlocked: 46;
+			case TitleFallback: 47;
 			case _: -1;
 		};
 	}

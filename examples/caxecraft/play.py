@@ -1452,7 +1452,7 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     toolbar = region_evidence(32, 52, 672, 94)
     canvas = region_evidence(32, 104, 1018, 650)
     sidebar = region_evidence(1018, 104, 1248, 650)
-    text_entry = region_evidence(1030, 320, 1234, 385)
+    world_name = region_evidence(126, 58, 386, 96)
     status = region_evidence(32, 660, 1248, 700)
     minimum_changed = (
         2_000 * scale * scale,
@@ -1461,8 +1461,8 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
         8_000 * scale * scale,
         2_000 * scale * scale,
     )
-    evidence = (toolbar, canvas, sidebar, text_entry, status)
-    labels = ("toolbar", "canvas", "sidebar", "text-entry", "status")
+    evidence = (toolbar, canvas, sidebar, world_name, status)
+    labels = ("toolbar", "canvas", "sidebar", "world-name", "status")
     failures = [
         f"{label}=changed:{changed},colors:{colors}"
         for label, (changed, colors), threshold in zip(labels, evidence, minimum_changed)
@@ -1505,16 +1505,19 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             f"3d-authored-terrain=pixels:{terrain_pixels},minimum:{minimum_terrain_pixels}"
         )
     focus_pixels = 0
-    for row in range(52 * scale, 94 * scale):
+    # The child-first shell keeps the primary action at the far right. Check
+    # the complete toolbar so layout changes do not turn this into a stale
+    # coordinate test while still proving that keyboard focus is visible.
+    for row in range(48 * scale, 102 * scale):
         row_at = row * width * 4
-        for column in range(32 * scale, 672 * scale):
+        for column in range(32 * scale, 1248 * scale):
             at = row_at + column * 4
             if tuple(pixels[at : at + 3]) == (255, 216, 92):
                 focus_pixels += 1
     minimum_focus_pixels = 150 * scale * scale
     if focus_pixels < minimum_focus_pixels:
         failures.append(
-            f"toolbar-focus-ring=pixels:{focus_pixels},minimum:{minimum_focus_pixels}"
+            f"primary-action-focus-ring=pixels:{focus_pixels},minimum:{minimum_focus_pixels}"
         )
     if failures:
         raise PlayFailure(

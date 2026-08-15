@@ -220,9 +220,9 @@ EVAL_CASES = {
             EvalProbe(
 				"editor.hxml",
 				"caxemap-editor: 20 command round trips, 50 protocol checks, "
-				"21 focus checks, 18 navigation checks, 13 2D checks, 16 3D "
+				"29 focus checks, 18 navigation checks, 13 2D checks, 16 3D "
 				"checks, 13 active-level checks, 1890 canonical bytes; bounded "
-				"history/test-play/recovery; trace=150647042\n",
+				"history/test-play/recovery; trace=150663674\n",
             ),
         ),
         source_audits=(
@@ -818,6 +818,10 @@ CASES = {
         haxe_defines=("caxecraft_posix_hosted",),
         native_defines=("_POSIX_C_SOURCE=200809L", "_DARWIN_C_SOURCE=1"),
         native_runs_from_case_root=True,
+        # This correctness probe verifies the complete authored package in an
+        # unoptimized native build. Its timeout is a hang boundary, not a game
+        # load-time budget; the interactive editor journey measures usability.
+        native_timeout_seconds=60,
     ),
     "campaign-runtime": HaxeCTestCase(
         case_id="campaign-runtime",

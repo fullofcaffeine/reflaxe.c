@@ -307,32 +307,36 @@ final class EditorProbe {
 	 */
 	static function checkFocusNavigation():Int {
 		final forward:Array<EditorFocusTarget> = [
+			EditorFocusTarget.WorldName,
 			EditorFocusTarget.Undo,
 			EditorFocusTarget.Redo,
-			EditorFocusTarget.Validate,
-			EditorFocusTarget.TestPlay,
-			EditorFocusTarget.ToolList,
-			EditorFocusTarget.AdvancedTools,
-			EditorFocusTarget.WorldName,
-			EditorFocusTarget.SceneObjects,
-			EditorFocusTarget.Back,
-			EditorFocusTarget.NewWorld
+			EditorFocusTarget.Build,
+			EditorFocusTarget.Plan,
+			EditorFocusTarget.Play,
+			EditorFocusTarget.SelectTool,
+			EditorFocusTarget.GroundTool,
+			EditorFocusTarget.EraseTool,
+			EditorFocusTarget.MoreDetails,
+			EditorFocusTarget.WorldList,
+			EditorFocusTarget.Back
 		];
 		final backward:Array<EditorFocusTarget> = [
-			EditorFocusTarget.Back,
-			EditorFocusTarget.SceneObjects,
-			EditorFocusTarget.WorldName,
-			EditorFocusTarget.AdvancedTools,
-			EditorFocusTarget.ToolList,
-			EditorFocusTarget.TestPlay,
-			EditorFocusTarget.Validate,
+			EditorFocusTarget.WorldList,
+			EditorFocusTarget.MoreDetails,
+			EditorFocusTarget.EraseTool,
+			EditorFocusTarget.GroundTool,
+			EditorFocusTarget.SelectTool,
+			EditorFocusTarget.Play,
+			EditorFocusTarget.Plan,
+			EditorFocusTarget.Build,
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Undo,
-			EditorFocusTarget.NewWorld
+			EditorFocusTarget.WorldName,
+			EditorFocusTarget.Back
 		];
 		var checks = 1;
 		var focus = initialFocus();
-		require(focus == EditorFocusTarget.NewWorld, "editor focus did not start on the first toolbar action");
+		require(focus == EditorFocusTarget.Back, "editor focus did not start on the visible Back action");
 		for (expected in forward) {
 			focus = moveFocus(focus, EditorFocusMove.Forward);
 			require(focus == expected, "forward editor focus order drifted");
@@ -343,6 +347,15 @@ final class EditorProbe {
 			require(focus == expected, "backward editor focus order drifted");
 			checks++;
 		}
+		require(moveFocus(EditorFocusTarget.KeepEditing, EditorFocusMove.Forward) == EditorFocusTarget.LeaveWithoutSaving,
+			"leave prompt did not reach its destructive choice");
+		require(moveFocus(EditorFocusTarget.LeaveWithoutSaving, EditorFocusMove.Forward) == EditorFocusTarget.KeepEditing,
+			"leave prompt did not wrap to its safe choice");
+		require(moveFocus(EditorFocusTarget.KeepEditing, EditorFocusMove.Backward) == EditorFocusTarget.LeaveWithoutSaving,
+			"reverse leave-prompt focus did not reach its destructive choice");
+		require(moveFocus(EditorFocusTarget.LeaveWithoutSaving, EditorFocusMove.Backward) == EditorFocusTarget.KeepEditing,
+			"reverse leave-prompt focus did not wrap to its safe choice");
+		checks += 4;
 		return checks;
 	}
 

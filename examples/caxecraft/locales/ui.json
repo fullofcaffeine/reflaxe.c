@@ -96,11 +96,43 @@
       }
     },
     {
+      "id": "editor_build",
+      "symbol": "EditorBuild",
+      "text": {
+        "en": "BUILD",
+        "es-MX": "CONSTRUIR"
+      }
+    },
+    {
       "id": "editor_canvas_help",
       "symbol": "EditorCanvasHelp",
       "text": {
-        "en": "3D WORLD — LMB TOOL · RMB LOOK · WASD/QE FLY · WHEEL · F FOCUS",
-        "es-MX": "MUNDO 3D — CLIC IZQ USAR · CLIC DER MIRAR · WASD/QE VOLAR · RUEDA · F ENFOCAR"
+        "en": "CLICK THE WORLD TO USE YOUR TOOL · RMB LOOK · WASD/QE FLY · F FOCUS",
+        "es-MX": "HAZ CLIC EN EL MUNDO PARA USAR TU HERRAMIENTA · CLIC DER MIRAR · WASD/QE VOLAR · F ENFOCAR"
+      }
+    },
+    {
+      "id": "editor_coordinates",
+      "symbol": "EditorCoordinates",
+      "text": {
+        "en": "POSITION",
+        "es-MX": "POSICIÓN"
+      }
+    },
+    {
+      "id": "editor_erase",
+      "symbol": "EditorErase",
+      "text": {
+        "en": "ERASE",
+        "es-MX": "BORRAR"
+      }
+    },
+    {
+      "id": "editor_ground",
+      "symbol": "EditorGround",
+      "text": {
+        "en": "GROUND",
+        "es-MX": "TERRENO"
       }
     },
     {
@@ -109,6 +141,38 @@
       "text": {
         "en": "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY",
         "es-MX": "CORRIGE EL BORRADOR ANTES DE PROBARLO"
+      }
+    },
+    {
+      "id": "editor_keep_editing",
+      "symbol": "EditorKeepEditing",
+      "text": {
+        "en": "KEEP EDITING",
+        "es-MX": "SEGUIR EDITANDO"
+      }
+    },
+    {
+      "id": "editor_leave_without_saving",
+      "symbol": "EditorLeaveWithoutSaving",
+      "text": {
+        "en": "LEAVE WITHOUT SAVING",
+        "es-MX": "SALIR SIN GUARDAR"
+      }
+    },
+    {
+      "id": "editor_material",
+      "symbol": "EditorMaterial",
+      "text": {
+        "en": "MATERIAL",
+        "es-MX": "MATERIAL"
+      }
+    },
+    {
+      "id": "editor_more_details",
+      "symbol": "EditorMoreDetails",
+      "text": {
+        "en": "MORE DETAILS",
+        "es-MX": "MÁS DETALLES"
       }
     },
     {
@@ -125,6 +189,14 @@
       "text": {
         "en": "NEW WORLD",
         "es-MX": "MUNDO NUEVO"
+      }
+    },
+    {
+      "id": "editor_plan",
+      "symbol": "EditorPlan",
+      "text": {
+        "en": "PLAN",
+        "es-MX": "PLANO"
       }
     },
     {
@@ -149,6 +221,14 @@
       "text": {
         "en": "OBJECTS / RULES",
         "es-MX": "OBJETOS / REGLAS"
+      }
+    },
+    {
+      "id": "editor_select",
+      "symbol": "EditorSelect",
+      "text": {
+        "en": "SELECT",
+        "es-MX": "SELECCIONAR"
       }
     },
     {
@@ -200,6 +280,14 @@
       }
     },
     {
+      "id": "editor_unsaved_changes",
+      "symbol": "EditorUnsavedChanges",
+      "text": {
+        "en": "YOU HAVE UNSAVED CHANGES.",
+        "es-MX": "HAY CAMBIOS SIN GUARDAR."
+      }
+    },
+    {
       "id": "editor_valid",
       "symbol": "EditorValid",
       "text": {
@@ -213,6 +301,14 @@
       "text": {
         "en": "VALIDATE",
         "es-MX": "VALIDAR"
+      }
+    },
+    {
+      "id": "editor_world_list",
+      "symbol": "EditorWorldList",
+      "text": {
+        "en": "WORLD LIST",
+        "es-MX": "LISTA DEL MUNDO"
       }
     },
     {

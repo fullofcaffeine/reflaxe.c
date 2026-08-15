@@ -11,16 +11,20 @@ package caxecraft.editor;
 	order without inventing another editor-navigation model.
 **/
 enum abstract EditorFocusTarget(Int) {
-	var NewWorld = 0;
-	var Undo = 1;
-	var Redo = 2;
-	var Validate = 3;
-	var TestPlay = 4;
-	var ToolList = 5;
-	var AdvancedTools = 6;
-	var WorldName = 7;
-	var SceneObjects = 8;
-	var Back = 9;
+	var Back = 0;
+	var WorldName = 1;
+	var Undo = 2;
+	var Redo = 3;
+	var Build = 4;
+	var Plan = 5;
+	var Play = 6;
+	var SelectTool = 7;
+	var GroundTool = 8;
+	var EraseTool = 9;
+	var MoreDetails = 10;
+	var WorldList = 11;
+	var KeepEditing = 12;
+	var LeaveWithoutSaving = 13;
 }
 
 /**
@@ -36,9 +40,9 @@ enum abstract EditorFocusMove(Int) {
 	var Backward = 1;
 }
 
-/** Start keyboard or controller navigation at the first toolbar action. */
+/** Start keyboard or controller navigation at the visible Back action. */
 function initialFocus():EditorFocusTarget
-	return NewWorld;
+	return Back;
 
 /**
 	Move exactly once through the editor controls, wrapping at either end.
@@ -51,29 +55,37 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 	return switch direction {
 		case Forward:
 			switch current {
-				case NewWorld: Undo;
+				case Back: WorldName;
+				case WorldName: Undo;
 				case Undo: Redo;
-				case Redo: Validate;
-				case Validate: TestPlay;
-				case TestPlay: ToolList;
-				case ToolList: AdvancedTools;
-				case AdvancedTools: WorldName;
-				case WorldName: SceneObjects;
-				case SceneObjects: Back;
-				case Back: NewWorld;
+				case Redo: Build;
+				case Build: Plan;
+				case Plan: Play;
+				case Play: SelectTool;
+				case SelectTool: GroundTool;
+				case GroundTool: EraseTool;
+				case EraseTool: MoreDetails;
+				case MoreDetails: WorldList;
+				case WorldList: Back;
+				case KeepEditing: LeaveWithoutSaving;
+				case LeaveWithoutSaving: KeepEditing;
 			}
 		case Backward:
 			switch current {
-				case NewWorld: Back;
-				case Undo: NewWorld;
+				case Back: WorldList;
+				case WorldName: Back;
+				case Undo: WorldName;
 				case Redo: Undo;
-				case Validate: Redo;
-				case TestPlay: Validate;
-				case ToolList: TestPlay;
-				case AdvancedTools: ToolList;
-				case WorldName: AdvancedTools;
-				case SceneObjects: WorldName;
-				case Back: SceneObjects;
+				case Build: Redo;
+				case Plan: Build;
+				case Play: Plan;
+				case SelectTool: Play;
+				case GroundTool: SelectTool;
+				case EraseTool: GroundTool;
+				case MoreDetails: EraseTool;
+				case WorldList: MoreDetails;
+				case KeepEditing: LeaveWithoutSaving;
+				case LeaveWithoutSaving: KeepEditing;
 			}
 	};
 }

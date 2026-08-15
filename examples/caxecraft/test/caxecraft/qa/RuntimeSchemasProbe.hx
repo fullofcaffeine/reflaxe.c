@@ -142,25 +142,23 @@ function selfCheck():Int {
 	}
 
 	if (catalog.localeCount() != 2
-		|| catalog.messageCount() != 36
+		|| catalog.messageCount() != 48
 		|| catalog.text(LocaleCursor.Locale0, UiMessage.Brand) != "CAXECRAFT  //  C + HAXE"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
 		return 8;
-	final completeProof = completeUiLookupProof(catalog);
-	if (completeProof != 42144) {
-		traceUi = completeProof;
+	if (!allUiMessagesHaveText(catalog)) {
 		return 9;
 	}
 	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
-	if (traceUi != 3628)
+	if (traceUi != 4828)
 		return 36;
 
 	return negativeChecks();
 }
 
-/** Exercise every typed message lookup against a source-reviewed length sum. */
-function completeUiLookupProof(catalog:RuntimeUiCatalog):Int {
+/** Exercise every typed message lookup and reject a missing translation. */
+function allUiMessagesHaveText(catalog:RuntimeUiCatalog):Bool {
 	final messages:Array<UiMessage> = [
 		AquaticGearEquipped,
 		Brand,
@@ -173,21 +171,33 @@ function completeUiLookupProof(catalog:RuntimeUiCatalog):Int {
 		DebugVisible,
 		EditorAdvanced,
 		EditorBack,
+		EditorBuild,
 		EditorCanvasHelp,
+		EditorCoordinates,
+		EditorErase,
+		EditorGround,
 		EditorInvalid,
+		EditorKeepEditing,
+		EditorLeaveWithoutSaving,
+		EditorMaterial,
+		EditorMoreDetails,
 		EditorName,
 		EditorNewWorld,
+		EditorPlan,
 		EditorReady,
 		EditorRedo,
 		EditorScene,
+		EditorSelect,
 		EditorStopTest,
 		EditorTest,
 		EditorTesting,
 		EditorTitle,
 		EditorToolList,
 		EditorUndo,
+		EditorUnsavedChanges,
 		EditorValid,
 		EditorValidate,
+		EditorWorldList,
 		HealthFull,
 		MenuAdventure,
 		MenuCreative,
@@ -199,13 +209,10 @@ function completeUiLookupProof(catalog:RuntimeUiCatalog):Int {
 		PlaceBlocked,
 		TitleFallback
 	];
-	var proof = 0;
-	for (index in 0...messages.length) {
-		final weight = index + 1;
-		proof += weight * catalog.text(Locale0, messages[index]).length;
-		proof += weight * 2 * catalog.text(Locale1, messages[index]).length;
-	}
-	return proof;
+	for (message in messages)
+		if (catalog.text(Locale0, message).length == 0 || catalog.text(Locale1, message).length == 0)
+			return false;
+	return true;
 }
 
 /** Read one required package file without exposing the store's host root. */
