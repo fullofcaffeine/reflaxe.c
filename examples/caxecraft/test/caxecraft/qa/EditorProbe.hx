@@ -9,6 +9,7 @@ import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
 import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
+import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
@@ -119,6 +120,7 @@ final class EditorProbe {
 		checkEnvironmentTextRoundTrip();
 		checkObjectMovement();
 		checkCheckpointPlacement();
+		checkObjectDuplication();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, SetTitle(Literal("Ivvy's workshop")), DocumentMetadata);
@@ -211,6 +213,51 @@ final class EditorProbe {
 			case _:
 				throw "checkpoint placement did not use the normal object command";
 		}
+	}
+
+	/** Prove one selected object becomes a distinct canonical copy with the same payload. */
+	static function checkObjectDuplication():Void {
+		final sourceId = id("machine.source");
+		final source:ScenarioObject = {
+			id: sourceId,
+			tags: [new ScenarioTag("puzzle")],
+			placement: StatefulObject(content("caxecraft:machine"), content("caxecraft:ready"), transform(1500, 1000, 2500))
+		};
+		final duplicate = duplicateObject(sourceId, [
+			source,
+			{
+				id: id("machine.source.copy.n1"),
+				tags: [],
+				placement: Checkpoint(transform(500, 0, 500))
+			}
+		]);
+		require(duplicate != null && duplicate.id.text() == "machine.source.copy.n2", "object duplication reused an authored identity");
+		source.tags.push(new ScenarioTag("source-only"));
+		switch duplicate.command {
+			case PutObject(copy):
+				require(copy.id.text() == duplicate.id.text() && copy.tags.length == 1 && copy.tags[0].text() == "puzzle",
+					"object duplication lost identity or tags");
+				switch copy.placement {
+					case StatefulObject(objectType, initialState, position):
+						require(objectType.text() == "caxecraft:machine"
+							&& initialState.text() == "caxecraft:ready"
+							&& position.xMilli == 1500
+							&& position.yMilli == 1000
+							&& position.zMilli == 2500,
+							"object duplication changed the independently authored placement payload");
+					case _: throw "object duplication changed the placement role";
+				}
+			case _:
+				throw "object duplication did not use the canonical object command";
+		}
+
+		final session = open(defaultEditorSettings());
+		final checkpointId = id("duplicate.checkpoint");
+		expectApplied(session.apply(PutObject({id: checkpointId, tags: [], placement: Checkpoint(transform(500, 0, 500))})), Placement,
+			"prepare duplicate history");
+		final checkpointCopy = duplicateObject(checkpointId, session.draftSnapshot().objects);
+		require(checkpointCopy != null, "object duplication lost a selected checkpoint");
+		roundTrip(session, checkpointCopy.command, Placement);
 	}
 
 	/** Preserve an optional environment through the editor's text-byte boundary. */

@@ -6,6 +6,7 @@ import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
+import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
@@ -392,7 +393,11 @@ final class CaxecraftEditorScreen {
 			cursorTop += 34;
 			drawObjectMoveControls(left + 14, cursorTop, width - 28);
 			cursorTop += 34;
-			if (Raygui.ButtonString(Rectangle.fromFloat(left + 14, cursorTop, width - 28, 30), uiCatalog.text(locale, UiMessage.EditorDelete))
+			final actionWidth = Std.int((width - 32) / 2);
+			if (Raygui.ButtonString(Rectangle.fromFloat(left + 14, cursorTop, actionWidth, 30), uiCatalog.text(locale, UiMessage.EditorDuplicate))
+				.has(GuiResult.Pressed))
+				duplicateSelectedObject();
+			if (Raygui.ButtonString(Rectangle.fromFloat(left + 18 + actionWidth, cursorTop, actionWidth, 30), uiCatalog.text(locale, UiMessage.EditorDelete))
 				.has(GuiResult.Pressed))
 				deleteSelectedObject();
 			cursorTop += 38;
@@ -678,6 +683,32 @@ final class CaxecraftEditorScreen {
 				detailsOpen = false;
 				notice = Ready;
 				refreshProjection();
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
+				notice = Invalid;
+		}
+	}
+
+	/** Copy the shared object target through canonical history, then select the copy. */
+	function duplicateSelectedObject():Void {
+		final current = session;
+		if (current == null)
+			return;
+		final sourceId = switch current.selectionSnapshot() {
+			case NodeSelection(ObjectNode(value)): value;
+			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
+		};
+		final duplicate = duplicateObject(sourceId, current.draftSnapshot().objects);
+		if (duplicate == null) {
+			notice = Invalid;
+			return;
+		}
+		switch current.mutate({baseRevision: current.revision(), mutation: Apply(duplicate.command)}) {
+			case MutationApplied(_, _, _, _, _):
+				notice = Ready;
+				refreshProjection();
+				selectObject(duplicate.id);
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):

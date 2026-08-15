@@ -136,6 +136,14 @@
       }
     },
     {
+      "id": "editor_duplicate",
+      "symbol": "EditorDuplicate",
+      "text": {
+        "en": "DUPLICATE",
+        "es-MX": "DUPLICAR"
+      }
+    },
+    {
       "id": "editor_erase",
       "symbol": "EditorErase",
       "text": {
