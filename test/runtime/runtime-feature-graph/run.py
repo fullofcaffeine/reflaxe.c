@@ -183,6 +183,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "runtime-base",
         "status",
         "string",
+        "string-float",
         "string-literal",
         "string-map",
         "string-scalar",
@@ -234,6 +235,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array-join",
         "int-map",
         "string-map",
+        "string-float",
         "string-split",
         "bytes",
         "bytes-string",
@@ -255,6 +257,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array-join": ["array", "string"],
         "int-map": ["alloc"],
         "string-map": ["alloc", "string-literal"],
+        "string-float": ["string"],
         "string-split": ["array", "string"],
         "bytes": ["alloc", "string-literal"],
         "bytes-string": ["bytes", "string"],
@@ -275,6 +278,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "array-join": "compiler-selectable",
         "int-map": "compiler-selectable",
         "string-map": "compiler-selectable",
+        "string-float": "compiler-selectable",
         "string-split": "compiler-selectable",
         "bytes": "compiler-selectable",
         "bytes-string": "compiler-selectable",
@@ -516,6 +520,7 @@ def validate_plans(plans: dict[str, object]) -> None:
     array = record(plans.get("array"), "array plan")
     int_map = record(plans.get("intMap"), "IntMap plan")
     string_map = record(plans.get("stringMap"), "StringMap plan")
+    string_float = record(plans.get("stringFloat"), "Float String plan")
     string_split = record(plans.get("stringSplit"), "String split plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     bytes_string = record(plans.get("bytesString"), "Bytes-to-String plan")
@@ -539,6 +544,16 @@ def validate_plans(plans: dict[str, object]) -> None:
         "string-map",
     ]:
         raise RuntimeFeatureFailure("StringMap closure is incomplete or nondeterministic")
+    if string_float.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "string-scalar",
+        "string",
+        "string-float",
+    ]:
+        raise RuntimeFeatureFailure("Float String closure is incomplete or nondeterministic")
     if string_split.get("features") != [
         "runtime-base",
         "status",

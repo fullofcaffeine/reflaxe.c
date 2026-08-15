@@ -28,7 +28,8 @@ the compiler-used in-place sort entry point advances the marker to 0.12.0.
 Adding the ownership-transferring `pop` entry points advances it to 0.13.0, and
 the corresponding front-removing `shift` entry points advance the marker to
 0.14.0. The discarded one-element `splice` entry point advances the current
-marker to 0.15.0. Other intervening additions are recorded in their owning
+marker to 0.15.0. Hosted Float formatting later advanced the marker to 0.16.0.
+Other intervening additions are recorded in their owning
 runtime documents. The bounded `resize(0)` lowering reuses the existing
 `hxc_array_resize` entry point, so it does not add a new ABI symbol or advance
 that marker. These are internal compatibility markers, not a stable

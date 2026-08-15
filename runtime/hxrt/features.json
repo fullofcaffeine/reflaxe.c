@@ -736,7 +736,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "773e4abd4315361bb820277a3899dd766372cb6471d146c1900d3527f2bad64e",
+          "sourceSha256": "9df654b0fae47eefcd799187258e64df12c969a41d5d7f3654f0ea67de65f276",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -941,6 +941,55 @@
       "defines": [],
       "environments": [
         "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/string-runtime.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable Std.string(Float) whose spelling depends on a run-time value.",
+            "id": "from-float",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Correct shortest-enough round-trip text needs hosted decimal formatting and parsing. A separate feature keeps ordinary String programs freestanding-safe.",
+        "evidence": [
+          "test/differential/string-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known Float can become a direct compiler-owned String only when constant folding uses the same reviewed spelling oracle.",
+        "contract": "Formats one binary64 Haxe Float with the first 12-, 15-, or 18-digit decimal spelling that round-trips exactly, including Haxe's non-finite spellings.",
+        "programLocalAlternative": "Duplicating host formatting and locale normalization at each call site would multiply policy and failure handling."
+      },
+      "dependencies": [
+        "string"
+      ],
+      "id": "string-float",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_string_from_float64"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_float.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_float.h"
+        },
+        {
+          "sourceSha256": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/string_float.c",
+          "sourcePath": "runtime/hxrt/src/string_float.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Hosted Haxe-compatible Float formatting into an owned String.",
+      "defines": [],
+      "environments": [
         "hosted"
       ]
     },
@@ -1228,6 +1277,7 @@
     "runtime-base",
     "status",
     "string",
+    "string-float",
     "string-literal",
     "string-map",
     "string-scalar",
@@ -1277,7 +1327,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "e369b9773cb17ece45fb973936cd260d006852f5f5866d62837125f4819bc2b7",
+      "sourceSetSha256": "a472b49b3f952a8227b686a3d7f07bf0ca052ccdbb2aa63d1bac65f4e7f6b669",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

@@ -2944,6 +2944,8 @@ class CBodyEmitter {
 						addUnique(headers, "hxrt/string_scalar.h");
 					case IRIOCall({dispatch: IRCDRuntime("string-split", "split")}):
 						addUnique(headers, "hxrt/string_split.h");
+					case IRIOCall({dispatch: IRCDRuntime("string-float", "from-float")}):
+						addUnique(headers, "hxrt/string_float.h");
 					case IRIOCall({dispatch: IRCDRuntime("array-join", "join")}):
 						addUnique(headers, "hxrt/array_join.h");
 					case IRIOCall({dispatch: IRCDRuntime("bytes-string", "get-string-utf8")}):
@@ -5301,7 +5303,7 @@ class CBodyEmitter {
 			case IRCDRuntime("bytes", _):
 				emitManagedBytesCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
-			case IRCDRuntime("string", _):
+			case IRCDRuntime("string", _) | IRCDRuntime("string-float", _):
 				emitManagedStringCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
 				return false;
 			case IRCDRuntime("string-split", "split"):
@@ -6204,6 +6206,7 @@ class CBodyEmitter {
 			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
 		final operation = switch call.dispatch {
 			case IRCDRuntime("string", value): value;
+			case IRCDRuntime("string-float", value): value;
 			case _: return fail('managed String emitter received a non-String call in `${fn.id}`');
 		};
 		final result = requireResult(instruction, fn.id);
@@ -6238,6 +6241,7 @@ class CBodyEmitter {
 		final runtimeName = switch operation {
 			case "from-scalar": CBRNStringFromScalar;
 			case "from-int": CBRNStringFromInt;
+			case "from-float": CBRNStringFromFloat;
 			case "concat": CBRNStringConcat;
 			case _: return fail('managed String call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
 		};

@@ -12,6 +12,8 @@ final class Main {
 
 	static var intEvaluations:Int = 0;
 
+	static var floatEvaluations:Int = 0;
+
 	/** Return one observable Boolean while recording that its source ran once. */
 	static function observedBool(value:Bool):Bool {
 		boolEvaluations += 1;
@@ -24,9 +26,23 @@ final class Main {
 		return value;
 	}
 
+	/** Return one observable Float while recording that its source ran once. */
+	static function observedFloat(value:Float):Float {
+		floatEvaluations += 1;
+		return value;
+	}
+
 	/** Keep an Int parameter and converted String return visible across a call. */
 	static function renderInt(value:Int):String
 		return Std.string(value);
+
+	/** Keep a Float parameter and converted String return visible across a call. */
+	static function renderFloat(value:Float):String
+		return Std.string(value);
+
+	/** Produce non-finite Float inputs without coupling this fixture to Math fields. */
+	static function divideFloat(left:Float, right:Float):Float
+		return left / right;
 
 	/** Keep a Boolean parameter and converted String return visible across a call. */
 	static function renderBool(value:Bool):String
@@ -134,6 +150,31 @@ final class Main {
 		final interpolated = 'value=${observedInt(-42)}';
 		final selected = observedInt(7) > 0 ? renderInt(19) : renderInt(20);
 		return direct == "0" && positive == "2147483647" && negative == "-2147483648" && interpolated == "value=-42" && selected == "19" && intEvaluations == 3;
+	}
+
+	/**
+		Exercise Haxe Eval's reviewed binary64 spelling contract.
+
+		The values force each precision tier and preserve signed zero and Haxe's
+		non-finite names. The observed call also proves one source evaluation.
+	**/
+	static function floatStringContractHolds():Bool {
+		floatEvaluations = 0;
+		final direct = Std.string(observedFloat(1.5));
+		final interpolated = 'value=${observedFloat(0.00001)}';
+		return direct == "1.5"
+			&& interpolated == "value=1e-05"
+			&& renderFloat(0.0) == "0"
+			&& renderFloat(-0.0) == "-0"
+			&& renderFloat(1.0) == "1"
+			&& renderFloat(0.0000001) == "1e-07"
+			&& renderFloat(1000000000000000.0) == "1e+15"
+			&& renderFloat(100000000000000000000.0) == "1e+20"
+			&& renderFloat(1.2345678901234567) == "1.23456789012345669"
+			&& renderFloat(divideFloat(1.0, 0.0)) == "infinity"
+			&& renderFloat(divideFloat(-1.0, 0.0)) == "neg_infinity"
+			&& renderFloat(divideFloat(0.0, 0.0)) == "nan"
+			&& floatEvaluations == 2;
 	}
 
 	/** Keep direct `String.fromCharCode` observable across a normal Haxe call. */
@@ -390,6 +431,7 @@ final class Main {
 		return built == "Aé😀"
 			&& boolStringContractHolds()
 			&& intStringContractHolds()
+			&& floatStringContractHolds()
 			&& stringIdentityContractHolds()
 			&& conditionalViewContractHolds()
 			&& conditionalCompoundContractHolds()

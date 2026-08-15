@@ -1257,7 +1257,7 @@
       "notes": "The admitted specialization is an exact managed Array<String> with one explicit String separator. It evaluates the receiver and separator once, preserves embedded NUL and valid UTF-8 bytes, and builds one fresh managed String in linear time. Other element representations and an omitted separator remain fail-closed until their formatting and ownership rules have focused evidence."
     },
     {
-      "id": "std-string-bool-int-partial",
+      "id": "std-string-typed-primitives-partial",
       "selector": {
         "module": "Std",
         "type": "Std",
@@ -1269,7 +1269,8 @@
       "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "string-literal",
-        "string"
+        "string",
+        "string-float"
       ],
       "profiles": [
         "portable",
@@ -1286,13 +1287,13 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/string-runtime/FloatStringOracle.hx",
         "test/differential/string-runtime/generated/Main.hx",
-        "test/differential/string-runtime/negative/Main.hx",
         "test/differential/string-runtime/run.py",
         "test/string_output/fixtures/positive/Main.hx",
         "test/string_output/run.py"
       ],
-      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. The public Dynamic signature does not broaden this evidence: every other source family remains fail-closed until its own representation and formatting rules are proven."
+      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. In a hosted environment, a typed Float evaluates once and uses the first 12-, 15-, or 18-digit spelling that round-trips exactly, including Haxe's non-finite names. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. The public Dynamic signature does not broaden this evidence: object, enum, and other source families remain fail-closed until their representation and formatting rules are proven."
     },
     {
       "id": "bytes-type-partial",
@@ -7763,7 +7764,8 @@
       "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "string-literal",
-        "string"
+        "string",
+        "string-float"
       ],
       "profiles": [
         "portable",
@@ -7780,14 +7782,14 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [
+        "test/differential/string-runtime/FloatStringOracle.hx",
         "test/differential/string-runtime/generated/Main.hx",
-        "test/differential/string-runtime/negative/Main.hx",
         "test/differential/string-runtime/run.py",
         "test/string_output/fixtures/positive/Main.hx",
         "test/string_output/run.py"
       ],
-      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. The public Dynamic signature does not broaden this evidence: every other source family remains fail-closed until its own representation and formatting rules are proven.",
-      "ruleId": "std-string-bool-int-partial"
+      "notes": "When the typed argument is Bool, ordinary Std.string evaluates it once and selects the immutable Haxe spelling `true` or `false` without boxing, allocation, reflection, or a generic Dynamic helper. A typed Int evaluates once and uses a locale-independent managed decimal formatter with exact INT_MIN/INT_MAX behavior; interpolation consumes the same conversion. In a hosted environment, a typed Float evaluates once and uses the first 12-, 15-, or 18-digit spelling that round-trips exactly, including Haxe's non-finite names. A value already typed as String evaluates once and returns the same static or managed carrier: it emits no conversion call or allocation and preserves the existing ownership fact for the surrounding read, store, container, or return. The public Dynamic signature does not broaden this evidence: object, enum, and other source families remain fail-closed until their representation and formatting rules are proven.",
+      "ruleId": "std-string-typed-primitives-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:cc7e4ab3022c4281bdb71e021c3f6f6c50a931a4303bfe528b49081d5a914535",

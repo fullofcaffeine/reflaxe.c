@@ -42,6 +42,19 @@ SOURCES = (
 )
 EXPECTED_TRACE = "1,128512,3,1,2,😀\n"
 EXPECTED_GENERATED_STDOUT = "string-owned: OK\n"
+EXPECTED_FLOAT_ORACLE = """zero=0
+negative-zero=-0
+one=1
+fraction=1.5
+small-fixed=1e-05
+small-exponent=1e-07
+large-fixed=1e+15
+large-exponent=1e+20
+precision=1.23456789012345669
+positive-infinity=infinity
+negative-infinity=neg_infinity
+nan=nan
+"""
 LAYOUTS = ("split", "package", "unity")
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 EXPECTED_GENERATED_FEATURES = [
@@ -53,6 +66,7 @@ EXPECTED_GENERATED_FEATURES = [
     "io",
     "string-scalar",
     "string",
+    "string-float",
     "string-split",
 ]
 EXPECTED_GENERATED_ARTIFACTS = [
@@ -63,6 +77,7 @@ EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/include/hxrt/status.h",
     "runtime/include/hxrt/string.h",
     "runtime/include/hxrt/string_decode.h",
+    "runtime/include/hxrt/string_float.h",
     "runtime/include/hxrt/string_literal.h",
     "runtime/include/hxrt/string_scalar.h",
     "runtime/include/hxrt/string_split.h",
@@ -70,6 +85,7 @@ EXPECTED_GENERATED_ARTIFACTS = [
     "runtime/src/array.c",
     "runtime/src/io.c",
     "runtime/src/string.c",
+    "runtime/src/string_float.c",
     "runtime/src/string_scalar.c",
     "runtime/src/string_split.c",
 ]
@@ -216,6 +232,27 @@ def run_oracle() -> str:
             f"first={outputs[0]!r} second={outputs[1]!r}"
         )
     return outputs[0]
+
+
+def run_float_oracle() -> None:
+    """Pin Float spelling to an independently executed Haxe Eval program."""
+    observations: list[tuple[int, str, str]] = []
+    for _ in range(2):
+        result = subprocess.run(
+            [development_tool("haxe"), "-cp", str(CASE), "--run", "FloatStringOracle"],
+            cwd=ROOT,
+            env=haxe_environment(),
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        observations.append((result.returncode, result.stdout, result.stderr))
+    expected = (0, EXPECTED_FLOAT_ORACLE, "")
+    if observations != [expected, expected]:
+        raise StringRuntimeFailure(
+            f"Haxe Float string oracle drifted: {observations!r}"
+        )
 
 
 def compile_native_fixture(
@@ -625,6 +662,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     """Check semantic intent, exact runtime closure, and recognizable C calls."""
     for operation in (
         'runtime(feature="string",operation="from-scalar")',
+        'runtime(feature="string-float",operation="from-float")',
         'runtime(feature="string",operation="concat")',
         'runtime(feature="string-scalar",operation="char-at")',
         'runtime(feature="string-scalar",operation="char-code-at")',
@@ -680,6 +718,17 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         raise StringRuntimeFailure(
             f"managed String roots lost typed provenance: {sorted(operations)!r}"
         )
+    float_operations = {
+        reason.get("operationId")
+        for reason in plan.get("rootReasons", [])
+        if isinstance(reason, dict)
+        and reason.get("featureId") == "string-float"
+        and reason.get("kind") == "runtime-operation"
+    }
+    if float_operations != {"from-float"}:
+        raise StringRuntimeFailure(
+            f"Float String roots drifted: {sorted(float_operations)!r}"
+        )
     scalar_operations = {
         reason.get("operationId")
         for reason in plan.get("rootReasons", [])
@@ -713,7 +762,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     stdlib = json.loads(
         (output / "hxc.stdlib-report.json").read_text(encoding="utf-8")
     )
-    expected_modules = ["Array", "String", "Sys", "string"]
+    expected_modules = ["Array", "String", "Sys", "string", "string-float"]
     expected_capabilities = [
         "char-at",
         "char-code-at",
@@ -721,6 +770,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
         "concat",
         "copy",
         "create-literal",
+        "from-float",
         "from-int",
         "from-scalar",
         "get-checked",
@@ -752,6 +802,7 @@ def validate_generated_project(output: Path, hxcir: str) -> None:
     for required in (
         "hxc_string_from_scalar(",
         "hxc_string_from_int32(",
+        "hxc_string_from_float64(",
         "hxc_string_concat_ref(",
         "hxc_string_retain(",
         "hxc_string_release(",
@@ -948,23 +999,6 @@ def plausible_output_exists(output: Path) -> bool:
 
 
 def validate_generated_failures(root: Path) -> None:
-    unsupported_output = root / "unsupported-std-string-source"
-    unsupported = compile_haxe(NEGATIVE, unsupported_output)
-    expected = "TCall(Std.string:source-not-yet-admitted:double)"
-    if (
-        unsupported.returncode == 0
-        or "HXC1001:" not in unsupported.stderr
-        or expected not in unsupported.stderr
-    ):
-        raise StringRuntimeFailure(
-            "unsupported Std.string source did not fail at its intrinsic owner: "
-            f"{unsupported.stderr!r}"
-        )
-    if plausible_output_exists(unsupported_output):
-        raise StringRuntimeFailure(
-            "unsupported Std.string source left plausible generated output"
-        )
-
     expected_cstring_failures = {
         "cstring_ref_escape": ("HXC1001", "TCall(c.CStringRef.to:requires-direct-import-argument)"),
         "cstring_ref_wrong_owner": ("Int should be String", "For function argument 'text'"),
@@ -1252,6 +1286,7 @@ def main(argv: Iterable[str] = ()) -> int:
         toolchains = selected_toolchains(args.toolchain)
         run_native(toolchains, expected_trace)
         if not args.native_only:
+            run_float_oracle()
             run_generated_eval()
             with tempfile.TemporaryDirectory(
                 prefix="reflaxe-c-generated-string-runtime-"

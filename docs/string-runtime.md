@@ -256,7 +256,7 @@ aborting on any non-OK status.
 
 The typed compiler tree retains the concrete source type even though Haxe
 declares `Std.string` with a `Dynamic` parameter. haxe.c currently uses that
-fact for three bounded cases:
+fact for four bounded cases:
 
 - `Bool` evaluates once and selects the immutable `"true"` or `"false"` view.
   It needs no allocation, boxing, reflection, or generic conversion runtime.
@@ -264,6 +264,9 @@ fact for three bounded cases:
   32-bit decimal formatter. The formatter is independent of the host locale,
   emits no leading plus sign or zeroes, and handles `-2147483648` without
   performing the undefined C operation of negating that value directly.
+- `Float` evaluates once and selects the hosted `string-float` feature. The
+  formatter emits the first exact round-trip spelling at 12, 15, or 18
+  significant digits. It also emits `infinity`, `neg_infinity`, and `nan`.
 - `String` evaluates once and returns the same String value. This is an identity
   conversion: the text is already in the requested form, so the compiler emits
   no formatting call and allocates no replacement buffer. The surrounding
@@ -273,16 +276,33 @@ fact for three bounded cases:
   or copying it again.
 
 String interpolation uses the same typed conversions before managed
-concatenation, so it does not maintain a second formatting policy. Integer
-formatting allocates only because its bytes depend on the run-time value; the
-result then follows the existing String owner, failure, and cleanup plan.
+concatenation, so it does not maintain a second formatting policy. Number
+formatting allocates only when its bytes depend on the run-time value. The
+result then uses the existing String owner, failure, and cleanup plan.
 A fresh String used only by a read operation, such as
 `Std.string(makeText()).length`, receives one short-lived compiler-owned local:
 the read borrows that local's bytes, then normal or failure cleanup releases the
 original owner exactly once. Existing borrowed or static Strings do not acquire
-that temporary. Floating-point, object, enum, and genuinely `Dynamic` inputs
-still fail at the `Std.string` boundary until their separate formatting and
-representation contracts are implemented.
+that temporary. Object, enum, and genuinely `Dynamic` inputs still fail at the
+`Std.string` boundary. Their formatting and representation contracts are not
+implemented.
+
+<!-- hxrt-feature:string-float -->
+### Float formatting
+
+The `string-float` feature is separate from the general `string` feature.
+It uses the hosted C formatter and parser to produce exact binary64 text.
+The runtime changes the locale decimal separator to a dot before publication.
+Thus, the same Float produces the same Haxe text in each host locale.
+
+The formatter follows Haxe Eval's `Numeric.float_repres` algorithm. It first
+tries 12 significant digits. Then it tries 15 digits and 18 digits if needed.
+It accepts the first text that parses to the original binary64 value.
+The independent `FloatStringOracle.hx` fixture records the expected text.
+
+Freestanding programs do not select `string-float`. Their C environment does
+not provide the required decimal formatter or parser. Ordinary String and Int
+formatting remain available in the freestanding `string` feature.
 
 `Bytes.ofString(value)` may also consume an admitted String literal, parameter,
 local, alias, or fresh expression. The Bytes operation copies the
@@ -300,7 +320,7 @@ stable hashing, builder failure atomicity, allocator identity, borrowed/owned
 CString lifetime, reference counts, and exact allocations. Its ordinary-Haxe
 fixture compares Eval with generated C for `String.fromCharCode`, `split`,
 upstream `StringBuf.addChar`, `Std.string(Bool)`, `Std.string(Int)`,
-`Std.string(String)` across static, borrowed, viewed, fresh, stored, returned,
+`Std.string(Float)`, and `Std.string(String)` across static, borrowed, viewed, fresh, stored, returned,
 and directly consumed values, integer interpolation, signed boundaries, single
 evaluation, concatenation, aliases, branches, records, enums, arrays,
 reassignment, nullable values, calls, returns, borrowed scalar slices, and

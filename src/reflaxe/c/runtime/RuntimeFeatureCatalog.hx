@@ -33,6 +33,7 @@ class RuntimeFeatureCatalog {
 		final stringLiteral = RuntimeFeatureId.parse("string-literal");
 		final stringScalar = RuntimeFeatureId.parse("string-scalar");
 		final string = RuntimeFeatureId.parse("string");
+		final stringFloat = RuntimeFeatureId.parse("string-float");
 		final stringSplit = RuntimeFeatureId.parse("string-split");
 		final arrayJoin = RuntimeFeatureId.parse("array-join");
 		final io = RuntimeFeatureId.parse("io");
@@ -421,6 +422,21 @@ class RuntimeFeatureCatalog {
 						"test/differential/string-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(stringFloat, "Hosted Haxe-compatible Float formatting into an owned String.", CompilerSelectable, true,
+				[CEnvironment.Hosted], [string], [header("string_float.h"), source("string_float.c")], ["hxc_string_from_float64"], [], [],
+				documentation("Formats one binary64 Haxe Float with the first 12-, 15-, or 18-digit decimal spelling that round-trips exactly, including Haxe's non-finite spellings.",
+					[
+						new RuntimeFeatureSelectionRoot("from-float", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable Std.string(Float) whose spelling depends on a run-time value.")
+					],
+					"A compiler-known Float can become a direct compiler-owned String only when constant folding uses the same reviewed spelling oracle.",
+					"Duplicating host formatting and locale normalization at each call site would multiply policy and failure handling.",
+					"Correct shortest-enough round-trip text needs hosted decimal formatting and parsing. A separate feature keeps ordinary String programs freestanding-safe.",
+					"docs/string-runtime.md",
+					[
+						"test/differential/string-runtime/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
 			new RuntimeFeatureDefinition(stringSplit, "Unicode-scalar String splitting into an element-specialized managed Array<String>.",
 				CompilerSelectable, true, environments, [array, string], [header("string_split.h"), source("string_split.c")], ["hxc_string_split"], [], [],
 				documentation("Composes immutable String slices with the compiler-generated Array<String> lifecycle callbacks.", [
@@ -511,7 +527,7 @@ class RuntimeFeatureCatalog {
 			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
 			case "array.h": "bf8775c44da8ab2c851cdb2e675d14320423f1a90b8fc4b13055e73e92445eed";
 			case "array_join.h": "5829a159dab0bd3446b5bc418c2ee32ad2902c0fec6bcc04f82efeb66c294fea";
-			case "base.h": "773e4abd4315361bb820277a3899dd766372cb6471d146c1900d3527f2bad64e";
+			case "base.h": "9df654b0fae47eefcd799187258e64df12c969a41d5d7f3654f0ea67de65f276";
 			case "bytes.h": "3f2dc89578ee5381e98051c5b3d06dcb6859e0cce10535edaba9c9bf5b38f31d";
 			case "bytes_string.h": "9d944e38a748696628076b0c5fd56339668e48953a220d51c8da1630fbdf9c40";
 			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
@@ -522,6 +538,7 @@ class RuntimeFeatureCatalog {
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
 			case "string.h": "0ed1be29fb80b5bbbc2248874d214cc7126da20e6139d02711516c1b131480ca";
 			case "string_decode.h": "aa93ea7f132aff625adfdcc7498532b139f621196deab4c0e9ecb5de2934fd48";
+			case "string_float.h": "8747a86c3cabae9bf54a4125305f043d6c70d7c97bc9f6f90174ba6185e3ecc1";
 			case "string_literal.h": "ac6b5ad9fa13004c62e3b33b9b28a935bfb8a22287cd4595ce6e6eb81490e283";
 			case "string_map.h": "26d94aa3cdfca1ae6edb678c575ed466bf32b7d6ccc635e55a706ec393c5db54";
 			case "string_scalar.h": "7dfac11f06f3a544dbe3177ac0e60cdb7bac4bcd0c3fbc6d20f2f6bea7a41352";
@@ -544,6 +561,7 @@ class RuntimeFeatureCatalog {
 			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "8313e359e18df7d5995faab32dd2e29cccd75ccd2338e475218549870d882736";
+			case "string_float.c": "60e5189e7f7304ccbc1f69136b7393e4eea35760cde590853ebced414bf39267";
 			case "string_map.c": "6db2d30dd800c52131e18d74449995f15c170cc2c99be2596fd22b40506a0b04";
 			case "string_scalar.c": "1df11e7045ccdd0c64503478477425ca3a55b71e9ac7f18e1cd623d9f17581b3";
 			case "string_split.c": "799fc917a450169e4babd86748e879fe7222b4abfef293880c47891e671f9d1b";

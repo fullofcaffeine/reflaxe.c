@@ -77,6 +77,7 @@ class RuntimeFeatureGraphGolden {
 		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
 		final intMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.int-map", "int-map")], []));
 		final stringMap = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-map", "string-map")], []));
+		final stringFloat = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-float", "string-float")], []));
 		final stringSplit = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.string-split", "string-split")], []));
 		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
 		final bytesString = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes-string", "bytes-string")], []));
@@ -156,6 +157,7 @@ class RuntimeFeatureGraphGolden {
 			array: array,
 			intMap: intMap,
 			stringMap: stringMap,
+			stringFloat: stringFloat,
 			stringSplit: stringSplit,
 			bytes: bytes,
 			bytesString: bytesString,
@@ -190,6 +192,9 @@ class RuntimeFeatureGraphGolden {
 					]))),
 				compilerNativeSeed: compilerNativeSeedFailure(),
 				reservedFeature: expectFailure(() -> planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.reflection", "reflection")], []))),
+				freestandingFloatString: expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture,
+					CProfile.Portable, CEnvironment.Freestanding, CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off",
+					[reason("fixture.freestanding-string-float", "string-float")], [], ["direct-c-considered"]))),
 				environment: expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture, CProfile.Portable,
 					CEnvironment.Wasi, CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [reason("fixture.wasi", "alloc")], [],
 					["direct-c-fixture"]))),

@@ -53,7 +53,7 @@ Thirty-three rows are `partial`: statically typed `String` values passed to
 `haxe.io.Bytes` entries, eight bounded `String` entries, four bounded
 `StringBuf` entries, bounded `Array.copy`, `Array.shift`, `Array.sort`,
 `Array.splice`, literal `Array.resize(0)`, and `Array<String>.join` entries, and
-one `Std.string` entry covering only typed `Bool`, `Int`, and String identity.
+one `Std.string` entry covering typed `Bool`, `Int`, hosted `Float`, and String identity.
 The other 2,277 rows are `planned`. A partial row means only its named operation
 shapes have executable evidence; it does not claim the entire type or
 neighboring overloads. This deliberately preserves the current narrow compiler

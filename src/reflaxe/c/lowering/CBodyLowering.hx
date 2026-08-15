@@ -13308,7 +13308,8 @@ private class FunctionBuilder {
 		The public Haxe signature accepts `Dynamic`, but the typed call still
 		retains the concrete source type. haxe.c uses that fact to select a narrow
 		typed operation: `Bool` chooses one of two immutable spellings, `Int`
-		formats through the checked String runtime, and an input already typed as
+		formats through the checked String runtime, `Float` uses the hosted
+		round-trip formatter, and an input already typed as
 		`String` is returned unchanged. The String identity case emits no HxcIR
 		conversion and allocates no new text; keeping the same value ID also keeps
 		its existing borrowed-or-fresh ownership fact available to the surrounding
@@ -13351,6 +13352,22 @@ private class FunctionBuilder {
 				freshManagedStringValueIds.set(result.id, true);
 				freshManagedStringValueRoles.set(result.id, role);
 				runtimeRequirements.push(new CBodyRuntimeRequirement("string", "from-int", "ordinary Haxe Std.string(Int)", source, expression.pos));
+				{id: result.id, type: result.type, mapping: resultMapping};
+			case IRTFloat(64):
+				if (resultMapping.irType != IRTManagedString)
+					unsupported(expression, 'TCall(Std.string:Float-result-requires-managed-String-plan)');
+				final argument = coerce(lowerValue(expression, argumentMapping), argumentMapping, expression.pos, '$role:argument');
+				final result:HxcIRResult = {id: nextValueId(), type: IRTManagedString};
+				appendInstruction(result, IRIOCall({
+					dispatch: IRCDRuntime("string-float", "from-float"),
+					arguments: [argument.id],
+					returnType: IRTManagedString,
+					failure: managedArrayFailure()
+				}), source, "std-string-float");
+				registerValueTemporary(result.id, "std-string-float-result");
+				freshManagedStringValueIds.set(result.id, true);
+				freshManagedStringValueRoles.set(result.id, role);
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string-float", "from-float", "ordinary Haxe Std.string(Float)", source, expression.pos));
 				{id: result.id, type: result.type, mapping: resultMapping};
 			case _:
 				unsupported(expression, 'TCall(Std.string:source-not-yet-admitted:${argumentMapping.cSpelling})');

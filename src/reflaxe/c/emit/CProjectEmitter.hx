@@ -826,6 +826,7 @@ class CProjectEmitter {
 					case "borrow-cstring" | "cleanup-release" | "concat" | "from-int" | "from-scalar" | "retain": true;
 					case _: false;
 				}) || (reason.kind == "runtime-representation" && reason.operationId == "type-carrier")):
+				case "string-float" if (reason.kind == "runtime-operation" && reason.operationId == "from-float"):
 				case "string-split" if (reason.kind == "runtime-operation" && reason.operationId == "split"):
 				case "array-join" if (reason.kind == "runtime-operation" && reason.operationId == "join"):
 				case "bytes-string" if (reason.kind == "runtime-operation" && reason.operationId == "get-string-utf8"):

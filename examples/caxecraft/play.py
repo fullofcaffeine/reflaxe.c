@@ -184,6 +184,7 @@ EXPECTED_PLAY_RUNTIME_FEATURES = (
     "gc",
     "int-map",
     "io",
+    "string-float",
     "string-map",
     "string-split",
 )
@@ -2198,7 +2199,8 @@ def validate_compiled_haxe(
         or not selected_well_formed
     ):
         raise PlayFailure(
-            "generated Caxecraft runtime plan lost its reviewed ordinary-Haxe feature closure"
+            "generated Caxecraft runtime plan lost its reviewed ordinary-Haxe feature closure: "
+            f"features={runtime_plan.get('features')!r} selected={selected_ids!r}"
         )
     runtime_artifacts = runtime_plan.get("artifacts")
     if (

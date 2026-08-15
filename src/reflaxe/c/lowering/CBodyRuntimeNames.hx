@@ -23,6 +23,7 @@ enum CBodyRuntimeName {
 	CBRNStringRelease;
 	CBRNStringFromScalar;
 	CBRNStringFromInt;
+	CBRNStringFromFloat;
 	CBRNStringConcat;
 	CBRNBorrowedCStringType;
 	CBRNBorrowedCStringInitializer;
@@ -116,6 +117,7 @@ class CBodyRuntimeNames {
 			case CBRNStringRelease: "hxc_string_release";
 			case CBRNStringFromScalar: "hxc_string_from_scalar";
 			case CBRNStringFromInt: "hxc_string_from_int32";
+			case CBRNStringFromFloat: "hxc_string_from_float64";
 			case CBRNStringConcat: "hxc_string_concat_ref";
 			case CBRNBorrowedCStringType: "hxc_borrowed_cstring";
 			case CBRNBorrowedCStringInitializer: "HXC_BORROWED_CSTRING_INITIALIZER";

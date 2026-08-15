@@ -245,7 +245,7 @@ strategy is selected, as required by
 
 ### ABI and versioning
 
-The runtime ABI is internal and versioned, currently 0.15.0. Generated
+The runtime ABI is internal and versioned, currently 0.16.0. Generated
 runtime-using C emits a structural C11 `_Static_assert` for the required major.
 Minor and patch changes within the same major are compatible by current policy;
 a major mismatch fails native compilation. Runtime-free output contains no
@@ -535,6 +535,17 @@ The String-to-String case reuses its input carrier and existing ownership plan;
 it is a compiler identity operation, not an `hxrt` call. See
 [string runtime](string-runtime.md) and
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
+
+<!-- hxrt-feature:string-float -->
+### `string-float`
+
+Compiler-selectable hosted formatting for `Std.string(Float)` and Float
+interpolation. The `from-float` HxcIR root selects this feature. It depends on
+`string` for allocation and ownership. It uses 12, 15, or 18 significant
+digits and accepts the first text that parses to the original binary64 value.
+It also changes the locale decimal separator to a dot. Freestanding programs
+reject this feature because they do not provide the required formatter and
+parser. See [string runtime](string-runtime.md#float-formatting).
 
 <!-- hxrt-feature:string-split -->
 ### `string-split`

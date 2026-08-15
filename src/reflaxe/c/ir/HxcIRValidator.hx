@@ -3215,6 +3215,8 @@ private class HxcIRValidationState {
 					validateBytesStringCall(call, argumentTypes, path, source);
 				} else if (featureId == "string") {
 					validateManagedStringCall(call, argumentTypes, path, source);
+				} else if (featureId == "string-float") {
+					validateManagedStringFloatCall(call, argumentTypes, path, source);
 				} else if (featureId == "string-scalar") {
 					validateStringScalarCall(call, argumentTypes, path, source);
 					final requiresReceiverProof = switch operationId {
@@ -3716,6 +3718,20 @@ private class HxcIRValidationState {
 				add(path, 'string runtime call names unsupported operation `$operationId`', source);
 		}
 		validateCleanupFreeStatusAbort(call.failure, path, source, "managed String operation");
+	}
+
+	/** Validate the hosted Float-to-String operation before C symbol selection. */
+	function validateManagedStringFloatCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("string-float", value): value;
+			case _: return;
+		};
+		final argument = argumentTypes.length == 1 ? argumentTypes[0] : null;
+		if (operationId != "from-float")
+			add(path, 'string-float runtime call names unsupported operation `$operationId`', source);
+		if (argument == null || typeKey(argument) != typeKey(IRTFloat(64)) || call.returnType != IRTManagedString)
+			add(path, "Std.string(Float) requires one Haxe Float and returns a managed String", source);
+		validateCleanupFreeStatusAbort(call.failure, path, source, "hosted Float String operation");
 	}
 
 	/**
