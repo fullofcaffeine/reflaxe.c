@@ -180,6 +180,7 @@ final class RuntimeUiCatalog {
 			"editor_canvas_help",
 			"editor_checkpoint",
 			"editor_coordinates",
+			"editor_delete",
 			"editor_erase",
 			"editor_ground",
 			"editor_invalid",
@@ -234,6 +235,7 @@ final class RuntimeUiCatalog {
 			"EditorCanvasHelp",
 			"EditorCheckpoint",
 			"EditorCoordinates",
+			"EditorDelete",
 			"EditorErase",
 			"EditorGround",
 			"EditorInvalid",
@@ -330,40 +332,41 @@ final class RuntimeUiCatalog {
 			case EditorCanvasHelp: 12;
 			case EditorCheckpoint: 13;
 			case EditorCoordinates: 14;
-			case EditorErase: 15;
-			case EditorGround: 16;
-			case EditorInvalid: 17;
-			case EditorKeepEditing: 18;
-			case EditorLeaveWithoutSaving: 19;
-			case EditorMaterial: 20;
-			case EditorMoreDetails: 21;
-			case EditorName: 22;
-			case EditorNewWorld: 23;
-			case EditorPlan: 24;
-			case EditorReady: 25;
-			case EditorRedo: 26;
-			case EditorScene: 27;
-			case EditorSelect: 28;
-			case EditorStopTest: 29;
-			case EditorTest: 30;
-			case EditorTesting: 31;
-			case EditorTitle: 32;
-			case EditorToolList: 33;
-			case EditorUndo: 34;
-			case EditorUnsavedChanges: 35;
-			case EditorValid: 36;
-			case EditorValidate: 37;
-			case EditorWorldList: 38;
-			case HealthFull: 39;
-			case MenuAdventure: 40;
-			case MenuCreative: 41;
-			case MenuEditor: 42;
-			case MenuInstructions: 43;
-			case NoBlockInReach: 44;
-			case PauseHelp: 45;
-			case PauseTitle: 46;
-			case PlaceBlocked: 47;
-			case TitleFallback: 48;
+			case EditorDelete: 15;
+			case EditorErase: 16;
+			case EditorGround: 17;
+			case EditorInvalid: 18;
+			case EditorKeepEditing: 19;
+			case EditorLeaveWithoutSaving: 20;
+			case EditorMaterial: 21;
+			case EditorMoreDetails: 22;
+			case EditorName: 23;
+			case EditorNewWorld: 24;
+			case EditorPlan: 25;
+			case EditorReady: 26;
+			case EditorRedo: 27;
+			case EditorScene: 28;
+			case EditorSelect: 29;
+			case EditorStopTest: 30;
+			case EditorTest: 31;
+			case EditorTesting: 32;
+			case EditorTitle: 33;
+			case EditorToolList: 34;
+			case EditorUndo: 35;
+			case EditorUnsavedChanges: 36;
+			case EditorValid: 37;
+			case EditorValidate: 38;
+			case EditorWorldList: 39;
+			case HealthFull: 40;
+			case MenuAdventure: 41;
+			case MenuCreative: 42;
+			case MenuEditor: 43;
+			case MenuInstructions: 44;
+			case NoBlockInReach: 45;
+			case PauseHelp: 46;
+			case PauseTitle: 47;
+			case PlaceBlocked: 48;
+			case TitleFallback: 49;
 			case _: -1;
 		};
 	}

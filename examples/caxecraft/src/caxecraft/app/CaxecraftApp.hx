@@ -1317,6 +1317,8 @@ final class CaxecraftApp {
 				};
 				editorNavigationCommand = editorNavigation.advance(confirmAgain, 0.0);
 			}
+			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7 && !editorScreen.applyPilotSelectFirstObject())
+				rejectedEdits++;
 			#end
 			if (captured && !conversationOwnedInput) {
 				var yawDelta = lookYaw;

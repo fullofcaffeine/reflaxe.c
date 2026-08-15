@@ -194,6 +194,9 @@ final class CaxecraftEditorScreen {
 			case ReturnToTitle | StartTestPlay(_):
 				return navigationAction;
 		}
+		final editedName = worldName;
+		if (!leavePromptOpen && (editedName == null || !editedName.isEditing()) && Raylib.IsKeyPressed(KeyboardKey.Backspace))
+			deleteSelectedObject();
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
 		if (Raygui.WindowBoxString(outer, uiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
@@ -389,6 +392,10 @@ final class CaxecraftEditorScreen {
 			cursorTop += 34;
 			drawObjectMoveControls(left + 14, cursorTop, width - 28);
 			cursorTop += 34;
+			if (Raygui.ButtonString(Rectangle.fromFloat(left + 14, cursorTop, width - 28, 30), uiCatalog.text(locale, UiMessage.EditorDelete))
+				.has(GuiResult.Pressed))
+				deleteSelectedObject();
+			cursorTop += 38;
 			if (detailsOpen) {
 				Raylib.DrawTextString('${gizmo.width} x ${gizmo.height} x ${gizmo.depth}', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
 				cursorTop += 28;
@@ -646,6 +653,29 @@ final class CaxecraftEditorScreen {
 		};
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(MoveObjectBy(id, delta))}) {
 			case MutationApplied(_, _, _, _, _):
+				notice = Ready;
+				refreshProjection();
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
+				notice = Invalid;
+		}
+	}
+
+	/** Delete the shared object target through canonical history and clear stale UI state. */
+	function deleteSelectedObject():Void {
+		final current = session;
+		if (current == null)
+			return;
+		final id = switch current.selectionSnapshot() {
+			case NodeSelection(ObjectNode(value)): value;
+			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
+		};
+		switch current.mutate({baseRevision: current.revision(), mutation: Apply(RemoveObject(id))}) {
+			case MutationApplied(_, _, _, _, _):
+				selection = current.selectedBounds();
+				objectList = new GuiListViewState(-1);
+				detailsOpen = false;
 				notice = Ready;
 				refreshProjection();
 			case MutationUnchanged(_, _):
@@ -1308,6 +1338,14 @@ final class CaxecraftEditorScreen {
 				}
 			}
 		return false;
+	}
+
+	/** Select the first authored object so a rendered review can inspect its real controls. */
+	public function applyPilotSelectFirstObject():Bool {
+		if (objectGizmos.length == 0)
+			return false;
+		selectObject(objectGizmos[0].id);
+		return selectedObjectIndex() == 0;
 	}
 
 	/**
