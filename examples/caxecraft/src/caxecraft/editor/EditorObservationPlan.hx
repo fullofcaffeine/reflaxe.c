@@ -21,8 +21,7 @@ function changesFor(command:EditorCommand):Array<EditorChangeId> {
 		case SetTitle(_): [ChangedTitle];
 		case ResizeWorld(_): [ChangedWorldShape];
 		case SetPaletteEntry(code, _): [ChangedPalette(code)];
-		case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillSelection(_): [ChangedTerrain];
-		case Select(_) | ClearSelection: [ChangedSelection];
+		case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _): [ChangedTerrain];
 		case PutFluid(fluid): [ChangedFluid(fluid.id)];
 		case RemoveFluid(id): [ChangedFluid(id)];
 		case StampPrefab(id, _, _, _): [ChangedObject(id)];
@@ -140,7 +139,9 @@ private function addSection(target:Array<EditorTreeNode>, parent:EditorNodeRef, 
 private inline function node(ref:EditorNodeRef, parent:Null<EditorNodeRef>, childCount:Int):EditorTreeNode
 	return {ref: ref, parent: parent, childCount: childCount};
 
-private function sameNodeRef(left:EditorNodeRef, right:EditorNodeRef):Bool {
+/** Compare typed tree identities without flattening them into display text. */
+@:noCompletion
+function sameNodeRef(left:EditorNodeRef, right:EditorNodeRef):Bool {
 	return switch left {
 		case ScenarioNode(id): switch right {
 				case ScenarioNode(other): id.text() == other.text();
@@ -234,11 +235,6 @@ private function sameChange(left:EditorChangeId, right:EditorChangeId):Bool {
 		case ChangedPalette(code):
 			switch right {
 				case ChangedPalette(other): code == other;
-				case _: false;
-			}
-		case ChangedSelection:
-			switch right {
-				case ChangedSelection: true;
 				case _: false;
 			}
 		case ChangedFluid(id):

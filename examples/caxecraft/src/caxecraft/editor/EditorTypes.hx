@@ -49,9 +49,7 @@ enum EditorCommand {
 	EraseVoxel(point:VoxelPoint);
 	PaintVoxels(points:Array<VoxelPoint>, paletteCode:Int);
 	EraseVoxels(points:Array<VoxelPoint>);
-	Select(bounds:VoxelBounds);
-	ClearSelection;
-	FillSelection(paletteCode:Int);
+	FillBounds(bounds:VoxelBounds, paletteCode:Int);
 	PutFluid(fluid:ScenarioFluid);
 	RemoveFluid(id:ScenarioId);
 	StampPrefab(id:ScenarioId, prefabType:ContentId, tags:Array<ScenarioTag>, transform:ScenarioTransform);
@@ -76,7 +74,6 @@ enum EditorCommandFamily {
 	DocumentMetadata;
 	WorldShape;
 	Voxel;
-	Selection;
 	Fluid;
 	Prefab;
 	Placement;
@@ -103,7 +100,6 @@ enum EditorChangeId {
 	ChangedWorldShape;
 	ChangedTerrain;
 	ChangedPalette(code:Int);
-	ChangedSelection;
 	ChangedFluid(id:ScenarioId);
 	ChangedObject(id:ScenarioId);
 	ChangedDialogue(id:ScenarioId);
@@ -161,6 +157,20 @@ enum EditorNodeRef {
 }
 
 /**
+	One semantic target shared by every editor view.
+
+	Selection is workspace state. Looking at a voxel or authored node does not
+	change CAXEMAP bytes, consume undo history, or advance the document revision.
+	Build, Plan, the World List, and later diagnostic links all use this same
+	typed value instead of keeping unrelated widget indices.
+**/
+enum EditorSelection {
+	NoEditorSelection;
+	VoxelSelection(bounds:VoxelBounds);
+	NodeSelection(ref:EditorNodeRef);
+}
+
+/**
 	One copy-owned row in the deterministic campaign-tree projection.
 
 	`childCount` lets a compact UI draw disclosure controls without rescanning
@@ -204,6 +214,7 @@ enum EditorError {
 	MissingRule(id:ScenarioId);
 	MissingLocale(id:LocaleId);
 	MissingMessage(locale:LocaleId, message:MessageId);
+	MissingEditorNode(ref:EditorNodeRef);
 	CannotRemoveDefaultLocale(id:LocaleId);
 	HistoryEntryTooLarge(bytes:Int, maximum:Int);
 
@@ -253,6 +264,42 @@ enum EditorMutation {
 typedef EditorMutationRequest = {
 	final baseRevision:Int;
 	final mutation:EditorMutation;
+}
+
+/** A workspace selection paired with the document revision that exposed it. */
+typedef EditorSelectionRequest = {
+	final baseRevision:Int;
+	final selection:EditorSelection;
+}
+
+/**
+	Result of one workspace selection request.
+
+	Applied and unchanged results keep the document revision as-is. Rejections
+	leave both the previous selection and the authored draft untouched.
+**/
+enum EditorSelectionResult {
+	SelectionApplied(selection:EditorSelection, revision:Int);
+	SelectionUnchanged(selection:EditorSelection, revision:Int);
+	SelectionRejected(error:EditorError, revision:Int);
+}
+
+/** A bounded edit preview paired with the exact document revision it observed. */
+typedef EditorPreviewRequest = {
+	final baseRevision:Int;
+	final commands:Array<EditorCommand>;
+}
+
+/**
+	Side-effect-free result of reducing one command list against a draft copy.
+
+	A preview uses the same reducer as commit. It never changes canonical bytes,
+	selection, history, revision, recovery state, or Test Play state.
+**/
+enum EditorPreviewResult {
+	PreviewAccepted(families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>, revision:Int);
+	PreviewUnchanged(families:Array<EditorCommandFamily>, revision:Int);
+	PreviewRejected(error:EditorError, revision:Int);
 }
 
 /**
@@ -305,7 +352,7 @@ enum EditorValidationObservation {
 **/
 typedef EditorStateObservation = {
 	final revision:Int;
-	final selection:Null<VoxelBounds>;
+	final selection:EditorSelection;
 	final undoDepth:Int;
 	final redoDepth:Int;
 	final historyEntries:Int;

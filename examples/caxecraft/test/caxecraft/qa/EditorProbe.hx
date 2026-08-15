@@ -20,6 +20,9 @@ import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
 import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
+import caxecraft.editor.EditorTypes.EditorPreviewResult;
+import caxecraft.editor.EditorTypes.EditorSelection;
+import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
@@ -130,10 +133,11 @@ final class EditorProbe {
 		commandChecks += roundTrip(session, EraseVoxel({x: 1, y: 0, z: 1}), Voxel);
 		commandChecks += roundTrip(session, PaintVoxels([{x: 2, y: 0, z: 1}, {x: 2, y: 0, z: 2}], 1), Voxel);
 		commandChecks += roundTrip(session, EraseVoxels([{x: 2, y: 0, z: 1}, {x: 2, y: 0, z: 2}]), Voxel);
-		commandChecks += roundTrip(session, Select({origin: {x: 0, y: 0, z: 0}, size: {width: 2, height: 1, depth: 2}}), Selection);
-		commandChecks += roundTrip(session, FillSelection(1), Voxel);
-		commandChecks += roundTrip(session, ClearSelection, Selection);
-		commandChecks += roundTrip(session, Select({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}}), Selection);
+		final fillBounds:VoxelBounds = {origin: {x: 0, y: 0, z: 0}, size: {width: 2, height: 1, depth: 2}};
+		expectSelection(session, VoxelSelection(fillBounds), "select fill bounds");
+		commandChecks += roundTrip(session, FillBounds(fillBounds, 1), Voxel);
+		expectSelection(session, NoEditorSelection, "clear workspace selection");
+		expectSelection(session, VoxelSelection({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}}), "select one voxel");
 		commandChecks += roundTrip(session, StampPrefab(id("prefab.house"), PREFAB, [new ScenarioTag("landmark")], transform(2500, 0, 2500)), Prefab);
 		commandChecks += roundTrip(session, SetDefaultLocale(ES_MX), Localization);
 		commandChecks += roundTrip(session, PutMessage(EN, message(TITLE_MESSAGE, "Editor QA map, revised")), Localization);
@@ -454,25 +458,60 @@ final class EditorProbe {
 			&& session.undoDepth() == 1, "stale editor request changed draft or history");
 
 		final selection:VoxelBounds = {origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}};
+		final beforeSelectionBytes = session.canonicalDraft();
+		final beforeSelectionUndo = session.undoDepth();
+		switch session.select({baseRevision: 1, selection: VoxelSelection(selection)}) {
+			case SelectionApplied(VoxelSelection(_), 1):
+			case _:
+				throw "workspace selection did not apply at the observed revision";
+		}
+		require(session.revision() == 1
+			&& session.undoDepth() == beforeSelectionUndo
+			&& session.canonicalDraft().compare(beforeSelectionBytes) == 0,
+			"workspace selection changed document bytes, revision, or history");
+
+		final batchCommands = [SetPaletteEntry(1, STONE), PaintVoxel({x: 0, y: 0, z: 0}, 1)];
+		switch session.preview({baseRevision: 1, commands: batchCommands}) {
+			case PreviewAccepted(families, changes, 1):
+				require(families.length == 2 && families[0] == Voxel && families[1] == Voxel, "preview lost its ordered command families");
+				require(changes.length == 2 && isPaletteChange(changes[0], 1) && isTerrainChange(changes[1]), "preview lost its semantic change identities");
+			case _:
+				throw "valid editor preview was not accepted";
+		}
+		require(session.revision() == 1
+			&& session.undoDepth() == beforeSelectionUndo
+			&& session.canonicalDraft().compare(beforeSelectionBytes) == 0,
+			"preview changed live editor state");
 		switch session.mutate({
 			baseRevision: 1,
-			mutation: ApplyBatch([SetPaletteEntry(1, STONE), PaintVoxel({x: 0, y: 0, z: 0}, 1), Select(selection)])
+			mutation: ApplyBatch(batchCommands)
 		}) {
 			case MutationApplied(families, changes, 2, 2, 0):
-				require(families.length == 3 && families[0] == Voxel && families[1] == Voxel && families[2] == Selection,
-					"atomic mutation lost its ordered command families");
-				require(changes.length == 3 && isPaletteChange(changes[0], 1) && isTerrainChange(changes[1]) && isSelectionChange(changes[2]),
+				require(families.length == 2 && families[0] == Voxel && families[1] == Voxel, "atomic mutation lost its ordered command families");
+				require(changes.length == 2 && isPaletteChange(changes[0], 1) && isTerrainChange(changes[1]),
 					"atomic mutation did not deduplicate changed semantic identities in command order");
 			case _:
 				throw "atomic editor mutation did not commit as one revision";
 		}
 		final afterBatch = session.canonicalDraft();
-		require(session.historyEntries() == 2, "three-command transaction created more than one history entry");
-		switch session.mutate({baseRevision: 2, mutation: Apply(Select(selection))}) {
-			case MutationUnchanged(families, 2):
-				require(families.length == 1 && families[0] == Selection, "unchanged mutation lost its family");
+		require(session.historyEntries() == 2, "two-command transaction created more than one history entry");
+		switch session.select({baseRevision: 2, selection: VoxelSelection(selection)}) {
+			case SelectionUnchanged(VoxelSelection(_), 2):
 			case _:
-				throw "unchanged editor mutation advanced the revision";
+				throw "unchanged workspace selection did not preserve the revision";
+		}
+		final movedSelection:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 1, height: 1, depth: 1}};
+		expectSelection(session, VoxelSelection(movedSelection), "move workspace selection after edit");
+		final selectionBeforeHistory = selectionKey(session);
+		switch session.select({baseRevision: 1, selection: NoEditorSelection}) {
+			case SelectionRejected(RevisionConflict(2, 1), 2):
+			case _:
+				throw "stale workspace selection did not fail closed";
+		}
+		switch session.preview({baseRevision: 2, commands: [PaintVoxel({x: 99, y: 0, z: 0}, 1)]}) {
+			case PreviewRejected(PointOutsideWorld(_), 2):
+			case _:
+				throw "invalid editor preview returned the wrong rejection";
 		}
 
 		final rollbackBytes = session.canonicalDraft();
@@ -501,7 +540,7 @@ final class EditorProbe {
 		}
 		final oversized:Array<EditorCommand> = [];
 		for (_ in 0...defaultEditorSettings().transactionCommands + 1)
-			oversized.push(ClearSelection);
+			oversized.push(EraseVoxel({x: 0, y: 0, z: 0}));
 		switch session.mutate({baseRevision: 2, mutation: ApplyBatch(oversized)}) {
 			case MutationRejected(TransactionTooLarge(129, 128), 2):
 			case _:
@@ -511,19 +550,21 @@ final class EditorProbe {
 		switch session.mutate({baseRevision: 2, mutation: Undo}) {
 			case MutationApplied(families, changes, 3, 1, 1):
 				require(families.length == 1 && families[0] == Transaction, "transaction undo lost its history family");
-				require(changes.length == 3, "transaction undo lost the stored changed identities");
+				require(changes.length == 2, "transaction undo lost the stored changed identities");
 			case _:
 				throw "transaction undo did not advance one revision";
 		}
 		require(session.canonicalDraft().compare(afterResize) == 0, "transaction undo restored a partial batch");
+		require(selectionKey(session) == selectionBeforeHistory, "document undo rewound workspace selection");
 		switch session.mutate({baseRevision: 3, mutation: Redo}) {
 			case MutationApplied(families, changes, 4, 2, 0):
 				require(families.length == 1 && families[0] == Transaction, "transaction redo lost its history family");
-				require(changes.length == 3, "transaction redo lost the stored changed identities");
+				require(changes.length == 2, "transaction redo lost the stored changed identities");
 			case _:
 				throw "transaction redo did not advance one revision";
 		}
 		require(session.canonicalDraft().compare(afterBatch) == 0, "transaction redo did not restore the complete batch");
+		require(selectionKey(session) == selectionBeforeHistory, "document redo rewound workspace selection");
 
 		final observedBytes = switch session.query(InspectCanonicalDraft) {
 			case CanonicalDraftObserved(4, value): value;
@@ -587,17 +628,26 @@ final class EditorProbe {
 			case _:
 				throw "object property query lost its revision";
 		}
+		expectSelection(session, NodeSelection(ObjectNode(objectId)), "select authored object by stable identity");
 		switch session.query(InspectNode(ObjectNode(id("missing.tree-object")))) {
 			case NodeObserved(5, null):
 			case _:
 				throw "missing object property query did not return an explicit empty result";
 		}
+		expectSelectionRejected(session.select({
+			baseRevision: session.revision(),
+			selection: NodeSelection(ObjectNode(id("missing.tree-object")))
+		}), error -> switch error {
+			case MissingEditorNode(ObjectNode(_)): true;
+			case _: false;
+		}, "select missing authored object");
 		switch session.mutate({baseRevision: 5, mutation: Apply(RemoveObject(objectId))}) {
 			case MutationApplied(_, changes, 6, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "object deletion lost its stable identity");
 			case _:
 				throw "object deletion did not commit";
 		}
+		require(selectionKey(session) == "none", "deleting a selected object left a stale workspace target");
 		switch session.mutate({baseRevision: 6, mutation: Undo}) {
 			case MutationApplied(_, changes, 7, _, _):
 				require(changes.length == 1 && isObjectChange(changes[0], objectId), "deletion undo lost its stored object identity");
@@ -608,6 +658,7 @@ final class EditorProbe {
 			case TreeObserved(7, nodes): nodes;
 			case _: throw "tree after deletion undo lost its revision";
 		}, objectId), "undo did not restore the authored object to the campaign tree");
+		require(selectionKey(session) == "none", "document undo resurrected workspace selection from history");
 		final invalid = open(defaultEditorSettings());
 		expectApplied(invalid.apply(RemoveMessage(EN, OBJECTIVE_BODY_MESSAGE)), Localization, "prepare invalid validation observation");
 		final diagnostics = switch invalid.query(InspectValidation) {
@@ -760,12 +811,6 @@ final class EditorProbe {
 			case _: false;
 		};
 
-	static function isSelectionChange(value:EditorChangeId):Bool
-		return switch value {
-			case ChangedSelection: true;
-			case _: false;
-		};
-
 	static function isObjectChange(value:EditorChangeId, id:ScenarioId):Bool
 		return switch value {
 			case ChangedObject(actual): actual.text() == id.text();
@@ -807,12 +852,12 @@ final class EditorProbe {
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
 		switch commandForTool(SelectTool, point, 1, null) {
-			case ToolCommandReady(Select(bounds)):
+			case ToolSelectionReady(bounds):
 				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
 					&& bounds.size.depth == 1,
 					"select tool did not create one exact voxel selection");
 			case _:
-				throw "select tool did not produce a Select command";
+				throw "select tool did not produce workspace bounds";
 		}
 		switch commandForTool(PaintTool, point, 1, null) {
 			case ToolCommandReady(PaintVoxel(actual, 1)):
@@ -833,9 +878,11 @@ final class EditorProbe {
 		}
 		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
 		switch commandForTool(FillTool, point, 1, selected) {
-			case ToolCommandReady(FillSelection(1)):
+			case ToolCommandReady(FillBounds(bounds, 1)):
+				require(bounds.origin.x == 1 && bounds.origin.z == 1 && bounds.size.width == 2 && bounds.size.depth == 2,
+					"fill tool changed its explicit workspace bounds");
 			case _:
-				throw "fill tool did not reuse the current typed selection";
+				throw "fill tool did not carry explicit typed bounds";
 		}
 		return 13;
 	}
@@ -1012,13 +1059,14 @@ final class EditorProbe {
 		};
 		final session = open(settings);
 		expectApplied(session.apply(ResizeWorld({width: 3, height: 1, depth: 3})), WorldShape, "bounded resize");
-		for (x in 0...3)
-			for (z in 0...2)
-				expectApplied(session.apply(Select({origin: {x: x, y: 0, z: z}, size: {width: 1, height: 1, depth: 1}})), Selection,
-					"bounded selection history");
+		for (index in 0...6)
+			expectApplied(session.apply(SetTitle(Literal('History $index'))), DocumentMetadata, "bounded document history");
 		require(session.historyEntries() == 3 && session.undoDepth() == 3, "history did not evict to its exact entry bound");
 		require(session.historyBytes() <= settings.historyBytes, "history exceeded its byte bound");
-		expectRejected(session.apply(Select({origin: {x: 0, y: 0, z: 0}, size: {width: 3, height: 1, depth: 2}})), error -> switch error {
+		expectSelectionRejected(session.select({
+			baseRevision: session.revision(),
+			selection: VoxelSelection({origin: {x: 0, y: 0, z: 0}, size: {width: 3, height: 1, depth: 2}})
+		}), error -> switch error {
 			case SelectionTooLarge(6, 4): true;
 			case _: false;
 		}, "oversized selection");
@@ -1203,10 +1251,13 @@ final class EditorProbe {
 			case MissingFluid(_): true;
 			case _: false;
 		}, "remove unknown fluid");
-		expectRejected(session.apply(Select({
-			origin: {x: 1, y: 0, z: 0},
-			size: {width: 2147483647, height: 1, depth: 1}
-		})), error -> switch error {
+		expectSelectionRejected(session.select({
+			baseRevision: session.revision(),
+			selection: VoxelSelection({
+				origin: {x: 1, y: 0, z: 0},
+				size: {width: 2147483647, height: 1, depth: 1}
+			})
+		}), error -> switch error {
 			case BoundsOutsideWorld(_): true;
 			case _: false;
 		}, "overflow-shaped selection");
@@ -1218,7 +1269,7 @@ final class EditorProbe {
 		expectApplied(session.apply(command), family, "apply command");
 		final after = session.canonicalDraft();
 		final afterSelection = selectionKey(session);
-		require(before.compare(after) != 0 || beforeSelection != afterSelection, "accepted command made no observable change");
+		require(before.compare(after) != 0, "accepted content command changed no authored bytes");
 		expectHistory(session.undo(), family, "undo command");
 		require(session.canonicalDraft().compare(before) == 0
 			&& selectionKey(session) == beforeSelection, "undo did not restore exact prior state");
@@ -1289,6 +1340,34 @@ final class EditorProbe {
 		}
 	}
 
+	/** Prove that one workspace target changes no authored document state. */
+	static function expectSelection(session:EditorSession, selection:EditorSelection, label:String):Void {
+		final beforeBytes = session.canonicalDraft();
+		final beforeRevision = session.revision();
+		final beforeUndo = session.undoDepth();
+		final beforeRedo = session.redoDepth();
+		switch session.select({baseRevision: beforeRevision, selection: selection}) {
+			case SelectionApplied(_, actualRevision) | SelectionUnchanged(_, actualRevision):
+				require(actualRevision == beforeRevision, '$label changed the document revision');
+			case SelectionRejected(error, _):
+				throw '$label was rejected: $error';
+		}
+		require(session.canonicalDraft().compare(beforeBytes) == 0
+			&& session.revision() == beforeRevision
+			&& session.undoDepth() == beforeUndo
+			&& session.redoDepth() == beforeRedo,
+			'$label changed canonical bytes or history');
+	}
+
+	static function expectSelectionRejected(result:EditorSelectionResult, matches:EditorError->Bool, label:String):Void {
+		switch result {
+			case SelectionRejected(error, _):
+				require(matches(error), '$label returned the wrong error: $error');
+			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
+				throw '$label unexpectedly changed workspace selection';
+		}
+	}
+
 	static function requireTestStarted(result:EditorTestPlayResult, label:String):Void {
 		switch result {
 			case TestPlayStarted:
@@ -1321,8 +1400,13 @@ final class EditorProbe {
 	}
 
 	static function selectionKey(session:EditorSession):String {
-		final value = session.selectedBounds();
-		return value == null ? "none" : '${value.origin.x},${value.origin.y},${value.origin.z}:${value.size.width},${value.size.height},${value.size.depth}';
+		return switch session.selectionSnapshot() {
+			case NoEditorSelection: "none";
+			case VoxelSelection(value):
+				'voxel:${value.origin.x},${value.origin.y},${value.origin.z}:${value.size.width},${value.size.height},${value.size.depth}';
+			case NodeSelection(ObjectNode(id)): 'object:${id.text()}';
+			case NodeSelection(_): "node";
+		};
 	}
 
 	static function open(settings:EditorSettings):EditorSession {

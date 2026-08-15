@@ -55,6 +55,7 @@ typedef EditorViewportLayout = {
 
 /** Either a closed editor command or the exact reason the tool cannot run. */
 enum EditorToolCommandResult {
+	ToolSelectionReady(bounds:VoxelBounds);
 	ToolCommandReady(command:EditorCommand);
 	ToolCommandRejected(error:EditorError);
 }
@@ -163,24 +164,23 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 /**
 	Translate one tool gesture into the existing `EditorSession` command language.
 
-	Select chooses exactly one visible voxel. Paint and erase affect the pointed
-	voxel. Fill reuses the current rectangular selection and therefore reports
-	`NoSelection` until the author selects something. The UI never mutates a
-	projection directly; every successful result still passes through
-	`EditorSession.apply`, history, and validation.
+	Select returns workspace bounds instead of an authored command. Paint and
+	erase affect the pointed voxel. Fill carries the current bounds explicitly,
+	so the content edit does not depend on a temporary cursor owned by one view.
+	The UI never mutates a projection directly.
 **/
 function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
-			ToolCommandReady(Select({
+			ToolSelectionReady({
 				origin: point,
 				size: {width: 1, height: 1, depth: 1}
-			}));
+			});
 		case PaintTool:
 			ToolCommandReady(PaintVoxel(point, paletteCode));
 		case EraseTool:
 			ToolCommandReady(EraseVoxel(point));
 		case FillTool:
-			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillSelection(paletteCode));
+			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(selection, paletteCode));
 	};
 }

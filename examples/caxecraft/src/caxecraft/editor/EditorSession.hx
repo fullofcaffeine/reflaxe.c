@@ -7,6 +7,7 @@ import caxecraft.editor.EditorObservationPlan.buildTree;
 import caxecraft.editor.EditorObservationPlan.changesFor;
 import caxecraft.editor.EditorObservationPlan.findNode;
 import caxecraft.editor.EditorObservationPlan.mergeChanges;
+import caxecraft.editor.EditorObservationPlan.sameNodeRef;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPolicy.validate as validateEditorSettings;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
@@ -23,7 +24,12 @@ import caxecraft.editor.EditorTypes.EditorMutationRequest;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorObservation;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
+import caxecraft.editor.EditorTypes.EditorPreviewRequest;
+import caxecraft.editor.EditorTypes.EditorPreviewResult;
 import caxecraft.editor.EditorTypes.EditorQuery;
+import caxecraft.editor.EditorTypes.EditorSelection;
+import caxecraft.editor.EditorTypes.EditorSelectionRequest;
+import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
@@ -33,6 +39,8 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioValidator;
+import caxecraft.editor.EditorWorldGrid.containsBounds as containsWorldBounds;
+import caxecraft.editor.EditorWorldGrid.volume as voxelVolume;
 import haxe.io.Bytes;
 
 /** One mutually exclusive way in which the editor draft is locked for play. */
@@ -42,6 +50,18 @@ private enum EditorSessionPlayState {
 
 	/** The native application owns a disposable ordinary-engine run. */
 	ExternalRuntimeTest;
+}
+
+/** One isolated reducer pass before a preview or transaction publishes state. */
+private enum EditorStageResult {
+	StageReady(after:EditorScenarioImage, families:Array<EditorCommandFamily>, changes:Array<EditorChangeId>);
+	StageRejected(error:EditorError);
+}
+
+/** Validation result for a workspace target against the current draft. */
+private enum EditorSelectionValidation {
+	WorkspaceSelectionReady(selection:EditorSelection);
+	WorkspaceSelectionRejected(error:EditorError);
 }
 
 /**
@@ -56,7 +76,7 @@ final class EditorSession {
 	final settings:EditorSettings;
 	final history:EditorHistory;
 	var draft:Scenario;
-	var selection:Null<VoxelBounds>;
+	var selection:EditorSelection;
 	var lastPlayable:Null<Scenario>;
 	var playState:Null<EditorSessionPlayState>;
 	var currentRevision:Int;
@@ -66,7 +86,7 @@ final class EditorSession {
 		this.settings = settings;
 		this.history = new EditorHistory(settings);
 		this.draft = image.parsed.candidate;
-		this.selection = null;
+		this.selection = NoEditorSelection;
 		this.lastPlayable = validatedScenario(image);
 		this.playState = null;
 		this.currentRevision = 0;
@@ -140,6 +160,54 @@ final class EditorSession {
 	}
 
 	/**
+		Change the shared workspace target without changing authored content.
+
+		The request carries the document revision that exposed the target. A stale
+		view therefore cannot select an object or voxel that a newer edit removed.
+		Success changes no canonical bytes, revision, or undo/redo entry.
+	**/
+	public function select(request:EditorSelectionRequest):EditorSelectionResult {
+		if (request.baseRevision != currentRevision)
+			return SelectionRejected(RevisionConflict(currentRevision, request.baseRevision), currentRevision);
+		if (playState != null)
+			return SelectionRejected(NotEditing, currentRevision);
+		return switch validateSelection(request.selection) {
+			case WorkspaceSelectionRejected(error): SelectionRejected(error, currentRevision);
+			case WorkspaceSelectionReady(next):
+				if (selectionsEqual(selection, next)) SelectionUnchanged(copySelection(selection), currentRevision); else {
+					selection = copySelection(next);
+					SelectionApplied(copySelection(selection), currentRevision);
+				}
+		};
+	}
+
+	/**
+		Reduce a bounded command list against an isolated draft copy.
+
+		The result uses the same reducer, canonical snapshot, revision, limits, and
+		history budget as commit. It never publishes the staged draft or changes
+		workspace state, which lets a renderer show an honest placement ghost.
+	**/
+	public function preview(request:EditorPreviewRequest):EditorPreviewResult {
+		if (request.baseRevision != currentRevision)
+			return PreviewRejected(RevisionConflict(currentRevision, request.baseRevision), currentRevision);
+		if (playState != null)
+			return PreviewRejected(NotEditing, currentRevision);
+		if (request.commands.length == 0)
+			return PreviewRejected(EmptyTransaction, currentRevision);
+		if (request.commands.length > settings.transactionCommands)
+			return PreviewRejected(TransactionTooLarge(request.commands.length, settings.transactionCommands), currentRevision);
+		return switch captureScenario(draft) {
+			case ImageRejected(error): PreviewRejected(error, currentRevision);
+			case ImageReady(before):
+				switch stageCommands(before, request.commands) {
+					case StageRejected(error): PreviewRejected(error, currentRevision);
+					case StageReady(after, families, changes): previewStaged(before, after, families, changes);
+				}
+		};
+	}
+
+	/**
 		Return a copy-owned answer tagged with the revision it describes.
 
 		The query is synchronous: the revision and copied value come from the
@@ -210,54 +278,65 @@ final class EditorSession {
 			return MutationRejected(TransactionTooLarge(commands.length, settings.transactionCommands), currentRevision);
 		return switch captureScenario(draft) {
 			case ImageRejected(error): MutationRejected(error, currentRevision);
-			case ImageReady(before): stageBatch(before, commands);
+			case ImageReady(before):
+				switch stageCommands(before, commands) {
+					case StageRejected(error): MutationRejected(error, currentRevision);
+					case StageReady(after, families, changes):
+						switch accept(before, after, Transaction, changes) {
+							case EditApplied(_, committedChanges, undoDepth, redoDepth):
+								MutationApplied(families.copy(), committedChanges, currentRevision, undoDepth, redoDepth);
+							case EditUnchanged(_): MutationUnchanged(families.copy(), currentRevision);
+							case EditRejected(error): MutationRejected(error, currentRevision);
+						}
+				}
 		}
 	}
 
-	function stageBatch(before:EditorScenarioImage, commands:Array<EditorCommand>):EditorMutationResult {
+	/** Reduce commands on copy-owned images without publishing any staged value. */
+	function stageCommands(before:EditorScenarioImage, commands:Array<EditorCommand>):EditorStageResult {
 		var staged = before;
-		var stagedSelection = copySelection(selection);
 		final families:Array<EditorCommandFamily> = [];
 		final changes:Array<EditorChangeId> = [];
 		for (command in commands) {
 			switch command {
 				case RestoreLastPlayable:
 					if (lastPlayable == null)
-						return MutationRejected(NoPlayableScenario, currentRevision);
+						return StageRejected(NoPlayableScenario);
 					switch captureScenario(lastPlayable) {
-						case ImageRejected(error):
-							return MutationRejected(error, currentRevision);
+						case ImageRejected(error): return StageRejected(error);
 						case ImageReady(image):
 							staged = image;
-							stagedSelection = null;
 							families.push(Recovery);
 							mergeChanges(changes, [ChangedDocument]);
 					}
 				case _:
-					switch reduceCommand(staged.parsed.candidate, stagedSelection, command, settings) {
-						case ReductionRejected(error):
-							return MutationRejected(error, currentRevision);
+					switch reduceCommand(staged.parsed.candidate, command, settings) {
+						case ReductionRejected(error): return StageRejected(error);
 						case ReductionReady(reduction):
 							switch captureScenario(reduction.scenario) {
-								case ImageRejected(error):
-									return MutationRejected(error, currentRevision);
+								case ImageRejected(error): return StageRejected(error);
 								case ImageReady(image):
 									staged = image;
-									stagedSelection = copySelection(reduction.selection);
 									families.push(reduction.family);
 									mergeChanges(changes, changesFor(command));
 							}
 					}
 			}
 		}
-		return switch accept(before, selection, staged, stagedSelection, Transaction, changes) {
-			case EditApplied(_, committedChanges, undoDepth, redoDepth):
-				MutationApplied(families.copy(), committedChanges, currentRevision, undoDepth, redoDepth);
-			case EditUnchanged(_):
-				MutationUnchanged(families.copy(), currentRevision);
-			case EditRejected(error):
-				MutationRejected(error, currentRevision);
-		}
+		return StageReady(staged, families.copy(), changes.copy());
+	}
+
+	/** Match the commit gate without recording or publishing the candidate. */
+	function previewStaged(before:EditorScenarioImage, after:EditorScenarioImage, families:Array<EditorCommandFamily>,
+			changes:Array<EditorChangeId>):EditorPreviewResult {
+		if (before.bytes.compare(after.bytes) == 0)
+			return PreviewUnchanged(families.copy(), currentRevision);
+		if (currentRevision == 2147483647)
+			return PreviewRejected(RevisionExhausted, currentRevision);
+		final byteCost = before.bytes.length + after.bytes.length;
+		if (!history.canRecord(byteCost))
+			return PreviewRejected(HistoryEntryTooLarge(byteCost, settings.historyBytes), currentRevision);
+		return PreviewAccepted(families.copy(), changes.copy(), currentRevision);
 	}
 
 	function mutationFromEdit(result:EditorEditResult):EditorMutationResult {
@@ -286,12 +365,13 @@ final class EditorSession {
 				return restorePlayable(before);
 			case _:
 		}
-		return switch reduceCommand(before.parsed.candidate, selection, command, settings) {
+		return switch reduceCommand(before.parsed.candidate, command, settings) {
 			case ReductionRejected(error): EditRejected(error);
 			case ReductionReady(reduction):
 				switch captureScenario(reduction.scenario) {
 					case ImageRejected(error): EditRejected(error);
-					case ImageReady(after): accept(before, selection, after, reduction.selection, reduction.family, changesFor(command));
+					case ImageReady(after):
+						accept(before, after, reduction.family, changesFor(command));
 				}
 		}
 	}
@@ -317,7 +397,7 @@ final class EditorSession {
 				HistoryRejected(error);
 			case ImageReady(image):
 				draft = image.parsed.candidate;
-				selection = copySelection(entry.beforeSelection);
+				selection = selectionForScenario(selection, draft);
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
 		}
@@ -343,7 +423,7 @@ final class EditorSession {
 				HistoryRejected(error);
 			case ImageReady(image):
 				draft = image.parsed.candidate;
-				selection = copySelection(entry.afterSelection);
+				selection = selectionForScenario(selection, draft);
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
 		}
@@ -460,8 +540,17 @@ final class EditorSession {
 		}
 	}
 
-	public function selectedBounds():Null<VoxelBounds>
+	/** Return a copy of the workspace target shared by every editor view. */
+	public function selectionSnapshot():EditorSelection
 		return copySelection(selection);
+
+	/** Return selected voxel bounds for spatial views, or null for another target. */
+	public function selectedBounds():Null<VoxelBounds> {
+		return switch selection {
+			case VoxelSelection(bounds): copyBounds(bounds);
+			case NoEditorSelection | NodeSelection(_): null;
+		};
+	}
 
 	public inline function undoDepth():Int
 		return history.undoDepth();
@@ -480,13 +569,12 @@ final class EditorSession {
 			return EditRejected(NoPlayableScenario);
 		return switch captureScenario(lastPlayable) {
 			case ImageRejected(error): EditRejected(error);
-			case ImageReady(after): accept(before, selection, after, null, Recovery, [ChangedDocument]);
+			case ImageReady(after): accept(before, after, Recovery, [ChangedDocument]);
 		}
 	}
 
-	function accept(before:EditorScenarioImage, beforeSelection:Null<VoxelBounds>, after:EditorScenarioImage, afterSelection:Null<VoxelBounds>,
-			family:EditorCommandFamily, changes:Array<EditorChangeId>):EditorEditResult {
-		if (before.bytes.compare(after.bytes) == 0 && selectionsEqual(beforeSelection, afterSelection))
+	function accept(before:EditorScenarioImage, after:EditorScenarioImage, family:EditorCommandFamily, changes:Array<EditorChangeId>):EditorEditResult {
+		if (before.bytes.compare(after.bytes) == 0)
 			return EditUnchanged(family);
 		if (currentRevision == 2147483647)
 			return EditRejected(RevisionExhausted);
@@ -497,14 +585,12 @@ final class EditorSession {
 			family: family,
 			changes: changes.copy(),
 			before: before.bytes.sub(0, before.bytes.length),
-			beforeSelection: copySelection(beforeSelection),
 			after: after.bytes.sub(0, after.bytes.length),
-			afterSelection: copySelection(afterSelection),
 			byteCost: byteCost
 		};
 		history.record(entry);
 		draft = after.parsed.candidate;
-		selection = copySelection(afterSelection);
+		selection = selectionForScenario(selection, draft);
 		advanceRevision();
 		return EditApplied(family, changes.copy(), history.undoDepth(), history.redoDepth());
 	}
@@ -536,23 +622,71 @@ final class EditorSession {
 		}
 	}
 
-	static function copySelection(value:Null<VoxelBounds>):Null<VoxelBounds> {
-		if (value == null)
-			return null;
+	function validateSelection(value:EditorSelection):EditorSelectionValidation {
+		return switch value {
+			case NoEditorSelection: WorkspaceSelectionReady(NoEditorSelection);
+			case VoxelSelection(bounds):
+				if (!containsWorldBounds(draft.world.size, bounds)) WorkspaceSelectionRejected(BoundsOutsideWorld(bounds)); else {
+					final cells = voxelVolume(bounds.size);
+					if (cells > settings.selectionCells)
+						WorkspaceSelectionRejected(SelectionTooLarge(cells, settings.selectionCells));
+					else
+						WorkspaceSelectionReady(VoxelSelection(copyBounds(bounds)));
+				}
+			case NodeSelection(ref):
+				if (findNode(draft, ref) == null) WorkspaceSelectionRejected(MissingEditorNode(ref)); else WorkspaceSelectionReady(NodeSelection(ref));
+		};
+	}
+
+	/** Keep a workspace target only while the changed draft still contains it. */
+	function selectionForScenario(value:EditorSelection, scenario:Scenario):EditorSelection {
+		return switch value {
+			case NoEditorSelection: NoEditorSelection;
+			case VoxelSelection(bounds): containsWorldBounds(scenario.world.size, bounds) ? VoxelSelection(copyBounds(bounds)) : NoEditorSelection;
+			case NodeSelection(ref): findNode(scenario, ref) == null ? NoEditorSelection : NodeSelection(ref);
+		};
+	}
+
+	static function copySelection(value:EditorSelection):EditorSelection {
+		return switch value {
+			case NoEditorSelection: NoEditorSelection;
+			case VoxelSelection(bounds): VoxelSelection(copyBounds(bounds));
+			case NodeSelection(ref): NodeSelection(ref);
+		};
+	}
+
+	static function copyBounds(value:VoxelBounds):VoxelBounds {
 		return {
 			origin: {x: value.origin.x, y: value.origin.y, z: value.origin.z},
 			size: {width: value.size.width, height: value.size.height, depth: value.size.depth}
 		};
 	}
 
-	static function selectionsEqual(left:Null<VoxelBounds>, right:Null<VoxelBounds>):Bool {
-		if (left == null || right == null)
-			return left == null && right == null;
+	static function selectionsEqual(left:EditorSelection, right:EditorSelection):Bool {
+		return switch left {
+			case NoEditorSelection:
+				switch right {
+					case NoEditorSelection: true;
+					case VoxelSelection(_) | NodeSelection(_): false;
+				}
+			case VoxelSelection(bounds):
+				switch right {
+					case VoxelSelection(other): boundsEqual(bounds, other);
+					case NoEditorSelection | NodeSelection(_): false;
+				}
+			case NodeSelection(ref):
+				switch right {
+					case NodeSelection(other): sameNodeRef(ref, other);
+					case NoEditorSelection | VoxelSelection(_): false;
+				}
+		};
+	}
+
+	static function boundsEqual(left:VoxelBounds, right:VoxelBounds):Bool
 		return left.origin.x == right.origin.x
 			&& left.origin.y == right.origin.y
 			&& left.origin.z == right.origin.z
 			&& left.size.width == right.size.width
 			&& left.size.height == right.size.height
 			&& left.size.depth == right.size.depth;
-	}
 }

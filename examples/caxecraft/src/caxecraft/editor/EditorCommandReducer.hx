@@ -5,11 +5,9 @@ import caxecraft.editor.EditorTypes.EditorCommandFamily;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
-import caxecraft.editor.EditorWorldGrid.containsBounds as containsWorldBounds;
 import caxecraft.editor.EditorWorldGrid.fill as fillWorld;
 import caxecraft.editor.EditorWorldGrid.paintMany as paintWorld;
 import caxecraft.editor.EditorWorldGrid.resize as resizeWorld;
-import caxecraft.editor.EditorWorldGrid.volume as voxelVolume;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
@@ -34,7 +32,6 @@ import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 @:noCompletion
 typedef EditorReduction = {
 	final scenario:Scenario;
-	final selection:Null<VoxelBounds>;
 	final family:EditorCommandFamily;
 }
 
@@ -61,65 +58,59 @@ enum EditorReductionResult {
 	access check or runtime behavior for it.
 **/
 @:noCompletion
-function apply(scenario:Scenario, selection:Null<VoxelBounds>, command:EditorCommand, settings:EditorSettings):EditorReductionResult {
+function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings):EditorReductionResult {
 	return switch command {
 		case SetTitle(title):
-			setTitle(scenario, selection, title);
+			setTitle(scenario, title);
 		case ResizeWorld(size):
 			switch resizeWorld(scenario.world, size) {
 				case WorldRejected(error): ReductionRejected(error);
-				case WorldReady(world):
-					final nextSelection = selection != null && containsWorldBounds(size, selection) ? selection : null;
-					ready(withWorld(scenario, world), nextSelection, WorldShape);
+				case WorldReady(world): ready(withWorld(scenario, world), WorldShape);
 			}
 		case SetPaletteEntry(code, blockType):
-			setPaletteEntry(scenario, selection, code, blockType);
+			setPaletteEntry(scenario, code, blockType);
 		case PaintVoxel(point, paletteCode):
-			paint(scenario, selection, [point], paletteCode, settings.selectionCells);
+			paint(scenario, [point], paletteCode, settings.selectionCells);
 		case EraseVoxel(point):
-			paint(scenario, selection, [point], 0, settings.selectionCells);
+			paint(scenario, [point], 0, settings.selectionCells);
 		case PaintVoxels(points, paletteCode):
-			paint(scenario, selection, points, paletteCode, settings.selectionCells);
+			paint(scenario, points, paletteCode, settings.selectionCells);
 		case EraseVoxels(points):
-			paint(scenario, selection, points, 0, settings.selectionCells);
-		case Select(bounds):
-			select(scenario, bounds, settings.selectionCells);
-		case ClearSelection:
-			ready(scenario, null, Selection);
-		case FillSelection(paletteCode):
-			fillSelection(scenario, selection, paletteCode);
+			paint(scenario, points, 0, settings.selectionCells);
+		case FillBounds(bounds, paletteCode):
+			fillBounds(scenario, bounds, paletteCode);
 		case PutFluid(fluid):
-			ready(withFluids(scenario, putFluid(scenario.world.fluids, fluid)), selection, Fluid);
+			ready(withFluids(scenario, putFluid(scenario.world.fluids, fluid)), Fluid);
 		case RemoveFluid(id):
-			removeWorldFluid(scenario, selection, id);
+			removeWorldFluid(scenario, id);
 		case StampPrefab(id, prefabType, tags, transform):
-			stampPrefab(scenario, selection, id, prefabType, tags, transform);
+			stampPrefab(scenario, id, prefabType, tags, transform);
 		case PutObject(object):
-			ready(withObjects(scenario, putObject(scenario.objects, object)), selection, Placement);
+			ready(withObjects(scenario, putObject(scenario.objects, object)), Placement);
 		case RemoveObject(id):
-			removePlacedObject(scenario, selection, id);
+			removePlacedObject(scenario, id);
 		case PutDialogue(dialogue):
-			ready(withDialogues(scenario, putDialogue(scenario.story.dialogues, dialogue)), selection, Dialogue);
+			ready(withDialogues(scenario, putDialogue(scenario.story.dialogues, dialogue)), Dialogue);
 		case RemoveDialogue(id):
-			removeStoryDialogue(scenario, selection, id);
+			removeStoryDialogue(scenario, id);
 		case PutObjective(objective):
-			ready(withObjectives(scenario, putObjective(scenario.story.objectives, objective)), selection, Objective);
+			ready(withObjectives(scenario, putObjective(scenario.story.objectives, objective)), Objective);
 		case RemoveObjective(id):
-			removeStoryObjective(scenario, selection, id);
+			removeStoryObjective(scenario, id);
 		case PutRule(rule):
-			ready(withRules(scenario, putRule(scenario.flow.rules, rule)), selection, Rule);
+			ready(withRules(scenario, putRule(scenario.flow.rules, rule)), Rule);
 		case RemoveRule(id):
-			removeFlowRule(scenario, selection, id);
+			removeFlowRule(scenario, id);
 		case SetDefaultLocale(locale):
-			setDefaultLocale(scenario, selection, locale);
+			setDefaultLocale(scenario, locale);
 		case PutLocale(locale):
-			ready(withMessages(scenario, putLocale(scenario.messages, locale)), selection, Localization);
+			ready(withMessages(scenario, putLocale(scenario.messages, locale)), Localization);
 		case RemoveLocale(locale):
-			removeLocale(scenario, selection, locale);
+			removeLocale(scenario, locale);
 		case PutMessage(locale, message):
-			putMessage(scenario, selection, locale, message);
+			putMessage(scenario, locale, message);
 		case RemoveMessage(locale, message):
-			removeMessage(scenario, selection, locale, message);
+			removeMessage(scenario, locale, message);
 		case RestoreLastPlayable:
 			ReductionRejected(NoPlayableScenario);
 	}
@@ -133,7 +124,7 @@ function apply(scenario:Scenario, selection:Null<VoxelBounds>, command:EditorCom
 	Message-backed titles keep their typed message identity and are validated by
 	the ordinary scenario validator when the draft is prepared for play.
 **/
-private function setTitle(scenario:Scenario, selection:Null<VoxelBounds>, title:ScenarioText):EditorReductionResult {
+private function setTitle(scenario:Scenario, title:ScenarioText):EditorReductionResult {
 	switch title {
 		case Literal(text):
 			if (text.length == 0)
@@ -142,20 +133,20 @@ private function setTitle(scenario:Scenario, selection:Null<VoxelBounds>, title:
 	}
 	return ready(copy(scenario, scenario.messages, title, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives,
 		scenario.flow.rules),
-		selection, DocumentMetadata);
+		DocumentMetadata);
 }
 
-private function setDefaultLocale(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId):EditorReductionResult {
+private function setDefaultLocale(scenario:Scenario, locale:LocaleId):EditorReductionResult {
 	return switch scenario.messages {
 		case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
 		case EmbeddedMessageCatalog(catalog):
 			if (!hasLocale(catalog.locales,
 				locale)) ReductionRejected(MissingLocale(locale)); else ready(withMessages(scenario,
-				EmbeddedMessageCatalog({defaultLocale: locale, locales: copyLocales(catalog.locales)})), selection, Localization);
+				EmbeddedMessageCatalog({defaultLocale: locale, locales: copyLocales(catalog.locales)})), Localization);
 	};
 }
 
-private function removeLocale(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId):EditorReductionResult {
+private function removeLocale(scenario:Scenario, locale:LocaleId):EditorReductionResult {
 	return switch scenario.messages {
 		case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
 		case EmbeddedMessageCatalog(catalog):
@@ -170,12 +161,12 @@ private function removeLocale(scenario:Scenario, selection:Null<VoxelBounds>, lo
 					defaultLocale: catalog.defaultLocale,
 					locales: locales
 				});
-				ready(withMessages(scenario, messages), selection, Localization);
+				ready(withMessages(scenario, messages), Localization);
 			}
 	};
 }
 
-private function putMessage(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId, message:ScenarioMessage):EditorReductionResult {
+private function putMessage(scenario:Scenario, locale:LocaleId, message:ScenarioMessage):EditorReductionResult {
 	return switch scenario.messages {
 		case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
 		case EmbeddedMessageCatalog(catalog):
@@ -186,12 +177,12 @@ private function putMessage(scenario:Scenario, selection:Null<VoxelBounds>, loca
 						locales.push({id: value.id, messages: putMessageValue(value.messages, message)});
 					else
 						locales.push(copyLocale(value));
-				ready(withMessages(scenario, EmbeddedMessageCatalog({defaultLocale: catalog.defaultLocale, locales: locales})), selection, Localization);
+				ready(withMessages(scenario, EmbeddedMessageCatalog({defaultLocale: catalog.defaultLocale, locales: locales})), Localization);
 			}
 	};
 }
 
-private function removeMessage(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId, message:MessageId):EditorReductionResult {
+private function removeMessage(scenario:Scenario, locale:LocaleId, message:MessageId):EditorReductionResult {
 	return switch scenario.messages {
 		case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
 		case EmbeddedMessageCatalog(catalog):
@@ -210,12 +201,12 @@ private function removeMessage(scenario:Scenario, selection:Null<VoxelBounds>, l
 						});
 					else
 						locales.push(copyLocale(value));
-				ready(withMessages(scenario, EmbeddedMessageCatalog({defaultLocale: catalog.defaultLocale, locales: locales})), selection, Localization);
+				ready(withMessages(scenario, EmbeddedMessageCatalog({defaultLocale: catalog.defaultLocale, locales: locales})), Localization);
 			}
 	};
 }
 
-private function setPaletteEntry(scenario:Scenario, selection:Null<VoxelBounds>, code:Int, blockType:ContentId):EditorReductionResult {
+private function setPaletteEntry(scenario:Scenario, code:Int, blockType:ContentId):EditorReductionResult {
 	if (code < 0 || code > 255)
 		return ReductionRejected(InvalidPaletteCode(code));
 	return ready(withWorld(scenario, {
@@ -223,81 +214,70 @@ private function setPaletteEntry(scenario:Scenario, selection:Null<VoxelBounds>,
 		palette: putPalette(scenario.world.palette, {code: code, blockType: blockType}),
 		chunks: scenario.world.chunks.copy(),
 		fluids: scenario.world.fluids.copy()
-	}), selection, Voxel);
+	}), Voxel);
 }
 
-private function select(scenario:Scenario, bounds:VoxelBounds, maximumCells:Int):EditorReductionResult {
-	if (!containsWorldBounds(scenario.world.size, bounds))
-		return ReductionRejected(BoundsOutsideWorld(bounds));
-	final cells = voxelVolume(bounds.size);
-	if (cells > maximumCells)
-		return ReductionRejected(SelectionTooLarge(cells, maximumCells));
-	return ready(scenario, bounds, Selection);
-}
-
-private function fillSelection(scenario:Scenario, selection:Null<VoxelBounds>, paletteCode:Int):EditorReductionResult {
-	if (selection == null)
-		return ReductionRejected(NoSelection);
+private function fillBounds(scenario:Scenario, bounds:VoxelBounds, paletteCode:Int):EditorReductionResult {
 	if (!hasPaletteCode(scenario, paletteCode))
 		return ReductionRejected(UnknownPaletteCode(paletteCode));
-	return switch fillWorld(scenario.world, selection, paletteCode) {
+	return switch fillWorld(scenario.world, bounds, paletteCode) {
 		case WorldRejected(error): ReductionRejected(error);
-		case WorldReady(world): ready(withWorld(scenario, world), selection, Voxel);
+		case WorldReady(world): ready(withWorld(scenario, world), Voxel);
 	}
 }
 
-private function stampPrefab(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId, prefabType:ContentId, tags:Array<ScenarioTag>,
+private function stampPrefab(scenario:Scenario, id:ScenarioId, prefabType:ContentId, tags:Array<ScenarioTag>,
 		transform:ScenarioTransform):EditorReductionResult {
 	if (hasObject(scenario, id))
 		return ReductionRejected(DuplicateObject(id));
 	final objects = scenario.objects.copy();
 	objects.push({id: id, tags: tags.copy(), placement: Prefab(prefabType, transform)});
-	return ready(withObjects(scenario, objects), selection, Prefab);
+	return ready(withObjects(scenario, objects), Prefab);
 }
 
-private function removePlacedObject(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId):EditorReductionResult {
+private function removePlacedObject(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasObject(scenario, id))
 		return ReductionRejected(MissingObject(id));
-	return ready(withObjects(scenario, removeObject(scenario.objects, id)), selection, Placement);
+	return ready(withObjects(scenario, removeObject(scenario.objects, id)), Placement);
 }
 
-private function removeWorldFluid(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId):EditorReductionResult {
+private function removeWorldFluid(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasFluid(scenario, id))
 		return ReductionRejected(MissingFluid(id));
-	return ready(withFluids(scenario, removeFluid(scenario.world.fluids, id)), selection, Fluid);
+	return ready(withFluids(scenario, removeFluid(scenario.world.fluids, id)), Fluid);
 }
 
-private function removeStoryDialogue(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId):EditorReductionResult {
+private function removeStoryDialogue(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasDialogue(scenario, id))
 		return ReductionRejected(MissingDialogue(id));
-	return ready(withDialogues(scenario, removeDialogue(scenario.story.dialogues, id)), selection, Dialogue);
+	return ready(withDialogues(scenario, removeDialogue(scenario.story.dialogues, id)), Dialogue);
 }
 
-private function removeStoryObjective(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId):EditorReductionResult {
+private function removeStoryObjective(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasObjective(scenario, id))
 		return ReductionRejected(MissingObjective(id));
-	return ready(withObjectives(scenario, removeObjective(scenario.story.objectives, id)), selection, Objective);
+	return ready(withObjectives(scenario, removeObjective(scenario.story.objectives, id)), Objective);
 }
 
-private function removeFlowRule(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId):EditorReductionResult {
+private function removeFlowRule(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasRule(scenario, id))
 		return ReductionRejected(MissingRule(id));
-	return ready(withRules(scenario, removeRule(scenario.flow.rules, id)), selection, Rule);
+	return ready(withRules(scenario, removeRule(scenario.flow.rules, id)), Rule);
 }
 
-private function paint(scenario:Scenario, selection:Null<VoxelBounds>, points:Array<VoxelPoint>, paletteCode:Int, maximumCells:Int):EditorReductionResult {
+private function paint(scenario:Scenario, points:Array<VoxelPoint>, paletteCode:Int, maximumCells:Int):EditorReductionResult {
 	if (points.length > maximumCells)
 		return ReductionRejected(VoxelEditTooLarge(points.length, maximumCells));
 	if (!hasPaletteCode(scenario, paletteCode))
 		return ReductionRejected(UnknownPaletteCode(paletteCode));
 	return switch paintWorld(scenario.world, points, paletteCode) {
 		case WorldRejected(error): ReductionRejected(error);
-		case WorldReady(world): ready(withWorld(scenario, world), selection, Voxel);
+		case WorldReady(world): ready(withWorld(scenario, world), Voxel);
 	}
 }
 
-private function ready(scenario:Scenario, selection:Null<VoxelBounds>, family:EditorCommandFamily):EditorReductionResult
-	return ReductionReady({scenario: scenario, selection: selection, family: family});
+private function ready(scenario:Scenario, family:EditorCommandFamily):EditorReductionResult
+	return ReductionReady({scenario: scenario, family: family});
 
 private function hasPaletteCode(scenario:Scenario, code:Int):Bool {
 	for (entry in scenario.world.palette)

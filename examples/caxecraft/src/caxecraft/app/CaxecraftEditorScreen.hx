@@ -9,6 +9,8 @@ import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
+import caxecraft.editor.EditorTypes.EditorSelection;
+import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
@@ -681,11 +683,21 @@ final class CaxecraftEditorScreen {
 				return false;
 			}
 		}
-		final command = commandForTool(tool, point, paletteCode, current.selectedBounds());
-		return switch command {
+		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds());
+		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;
 				false;
+			case ToolSelectionReady(bounds):
+				switch current.select({baseRevision: current.revision(), selection: VoxelSelection(bounds)}) {
+					case SelectionApplied(_, _) | SelectionUnchanged(_, _):
+						selection = current.selectedBounds();
+						notice = Ready;
+						true;
+					case SelectionRejected(_, _):
+						notice = Invalid;
+						false;
+				}
 			case ToolCommandReady(value):
 				switch current.mutate({baseRevision: current.revision(), mutation: Apply(value)}) {
 					case MutationApplied(_, _, _, _, _):
