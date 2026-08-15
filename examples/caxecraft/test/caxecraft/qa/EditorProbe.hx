@@ -67,6 +67,7 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
@@ -115,6 +116,7 @@ final class EditorProbe {
 		final worldViewportChecks = checkWorldViewport();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
+		checkObjectMovement();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, SetTitle(Literal("Ivvy's workshop")), DocumentMetadata);
@@ -149,6 +151,7 @@ final class EditorProbe {
 			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
 		}), Dialogue);
 		commandChecks += roundTrip(session, PutObject({id: CHECKPOINT, tags: [], placement: Checkpoint(transform(1500, 0, 1500))}), Placement);
+		commandChecks += roundTrip(session, MoveObjectBy(CHECKPOINT, {x: 1, y: 0, z: 0}), Placement);
 		commandChecks += roundTrip(session, PutObject({
 			id: ZONE,
 			tags: [new ScenarioTag("finish")],
@@ -198,6 +201,100 @@ final class EditorProbe {
 		final environment = opened.draftSnapshot().environment;
 		require(environment != null && environment.edges.length == 0 && environment.sun == null, "editor text import lost the optional environment choices");
 		require(opened.canonicalDraft().compare(source) == 0, "editor text round-trip changed the environment bytes");
+	}
+
+	/** Prove every admitted placement role moves through one shared command. */
+	static function checkObjectMovement():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare object movement world");
+		expectApplied(session.apply(PutDialogue({
+			id: DIALOGUE,
+			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
+		})), Dialogue, "prepare moving NPC dialogue");
+		final objects:Array<ScenarioObject> = [
+			{id: id("move.checkpoint"), tags: [], placement: Checkpoint(transform(500, 500, 500))},
+			{id: id("move.item"), tags: [], placement: Item(content("caxecraft:item"), 2, transform(500, 500, 500))},
+			{id: id("move.entity"), tags: [], placement: Entity(content("caxecraft:entity"), transform(500, 500, 500))},
+			{id: id("move.npc"), tags: [], placement: Npc(NPC, DIALOGUE, transform(500, 500, 500))},
+			{id: id("move.prefab"), tags: [], placement: Prefab(PREFAB, transform(500, 500, 500))},
+			{id: id("move.trigger"), tags: [], placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 2, height: 2, depth: 2}})},
+			{
+				id: id("move.stateful"),
+				tags: [],
+				placement: StatefulObject(content("caxecraft:mechanism"), content("caxecraft:idle"), transform(500, 500, 500))
+			}
+		];
+		for (object in objects)
+			expectApplied(session.apply(PutObject(object)), Placement, 'prepare ${object.id.text()}');
+		final ids:Array<ScenarioId> = [PLAYER];
+		for (object in objects)
+			ids.push(object.id);
+		for (objectId in ids) {
+			roundTrip(session, MoveObjectBy(objectId, {x: 1, y: 0, z: 0}), Placement);
+			final moved = projectObjects(session.draftSnapshot().objects);
+			var found = false;
+			for (gizmo in moved)
+				if (gizmo.id.text() == objectId.text()) {
+					found = true;
+					require(gizmo.x >= 1.0, 'object move did not update ${objectId.text()}');
+				}
+			require(found, 'object move lost ${objectId.text()}');
+		}
+		requireMovedObjectPayloads(session.draftSnapshot());
+
+		final beforeRejected = session.canonicalDraft();
+		final beforeRevision = session.revision();
+		final beforeUndo = session.undoDepth();
+		expectRejected(session.apply(MoveObjectBy(PLAYER, {x: -2, y: 0, z: 0})), error -> switch error {
+			case ObjectMoveOutsideWorld(id, delta): id.text() == PLAYER.text() && delta.x == -2;
+			case _: false;
+		}, "out-of-world object move");
+		expectRejected(session.apply(MoveObjectBy(id("move.missing"), {x: 1, y: 0, z: 0})), error -> switch error {
+			case MissingObject(id): id.text() == "move.missing";
+			case _: false;
+		}, "missing object move");
+		require(session.canonicalDraft().compare(beforeRejected) == 0
+			&& session.revision() == beforeRevision
+			&& session.undoDepth() == beforeUndo,
+			"rejected object movement changed bytes, revision, or history");
+	}
+
+	/** Check that movement changed only placement coordinates. */
+	static function requireMovedObjectPayloads(scenario:Scenario):Void {
+		var payloadChecks = 0;
+		for (object in scenario.objects)
+			switch object.id.text() {
+				case "move.item":
+					switch object.placement {
+						case Item(itemType, 2, _): require(itemType.text() == "caxecraft:item", "object move changed item type");
+						case _: throw "object move changed item placement role or quantity";
+					}
+					payloadChecks++;
+				case "move.npc":
+					switch object.placement {
+						case Npc(npcType, dialogue, _):
+							require(npcType.text() == NPC.text() && dialogue.text() == DIALOGUE.text(), "object move changed NPC links");
+						case _: throw "object move changed NPC placement role";
+					}
+					payloadChecks++;
+				case "move.trigger":
+					switch object.placement {
+						case TriggerZone(bounds): require(bounds.size.width == 2 && bounds.size.height == 2 && bounds.size.depth == 2,
+								"object move changed trigger size");
+						case _: throw "object move changed trigger placement role";
+					}
+					payloadChecks++;
+				case "move.stateful":
+					switch object.placement {
+						case StatefulObject(objectType, initialState, _):
+							require(objectType.text() == "caxecraft:mechanism" && initialState.text() == "caxecraft:idle",
+								"object move changed stateful-object payload");
+						case _: throw "object move changed stateful-object placement role";
+					}
+					payloadChecks++;
+				case _:
+			}
+		require(payloadChecks == 4, "object movement payload proof did not inspect every representative record");
 	}
 
 	/**
@@ -1563,13 +1660,13 @@ private final class Registry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:water";
 
 	public function hasItem(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:item";
 
 	public function itemStorageCode(id:ContentId):Int
 		return -1;
 
 	public function hasEntity(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:entity";
 
 	public function hasNpc(id:ContentId):Bool
 		return id.text() == "caxecraft:ivvy";
@@ -1578,10 +1675,10 @@ private final class Registry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:small-house";
 
 	public function hasStatefulObject(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:mechanism";
 
 	public function hasState(id:ContentId):Bool
-		return false;
+		return id.text() == "caxecraft:idle";
 
 	public function hasEffect(id:ContentId):Bool
 		return false;

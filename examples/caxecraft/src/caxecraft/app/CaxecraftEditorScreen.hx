@@ -385,6 +385,8 @@ final class CaxecraftEditorScreen {
 			cursorTop += 22;
 			Raylib.DrawTextString('${Std.int(gizmo.x)}, ${Std.int(gizmo.y)}, ${Std.int(gizmo.z)}', left + 14, cursorTop, 18, CaxecraftPalette.hudText());
 			cursorTop += 34;
+			drawObjectMoveControls(left + 14, cursorTop, width - 28);
+			cursorTop += 34;
 			if (detailsOpen) {
 				Raylib.DrawTextString('${gizmo.width} x ${gizmo.height} x ${gizmo.depth}', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
 				cursorTop += 28;
@@ -402,6 +404,24 @@ final class CaxecraftEditorScreen {
 				}
 			}
 		}
+	}
+
+	/** Draw six compact axis controls for the selected authored object. */
+	function drawObjectMoveControls(left:Int, top:Int, width:Int):Void {
+		final gap = 4;
+		final buttonWidth = Std.int((width - gap * 5) / 6);
+		moveObjectButton("X-", left, top, buttonWidth, {x: -1, y: 0, z: 0});
+		moveObjectButton("X+", left + buttonWidth + gap, top, buttonWidth, {x: 1, y: 0, z: 0});
+		moveObjectButton("Y-", left + (buttonWidth + gap) * 2, top, buttonWidth, {x: 0, y: -1, z: 0});
+		moveObjectButton("Y+", left + (buttonWidth + gap) * 3, top, buttonWidth, {x: 0, y: 1, z: 0});
+		moveObjectButton("Z-", left + (buttonWidth + gap) * 4, top, buttonWidth, {x: 0, y: 0, z: -1});
+		moveObjectButton("Z+", left + (buttonWidth + gap) * 5, top, buttonWidth, {x: 0, y: 0, z: 1});
+	}
+
+	/** Submit one axis button without keeping widget-local movement state. */
+	function moveObjectButton(label:String, left:Int, top:Int, width:Int, delta:VoxelPoint):Void {
+		if (Raygui.ButtonString(Rectangle.fromFloat(left, top, width, 26), label).has(GuiResult.Pressed))
+			moveSelectedObject(delta);
 	}
 
 	/** Draw a modal leave decision because this editor does not yet claim Save. */
@@ -606,6 +626,27 @@ final class CaxecraftEditorScreen {
 				objectList = new GuiListViewState(index);
 				notice = Ready;
 			case SelectionRejected(_, _):
+				notice = Invalid;
+		}
+	}
+
+	/** Move the shared object target through the same revisioned history path. */
+	function moveSelectedObject(delta:VoxelPoint):Void {
+		final current = session;
+		if (current == null)
+			return;
+		final selected = current.selectionSnapshot();
+		final id = switch selected {
+			case NodeSelection(ObjectNode(value)): value;
+			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
+		};
+		switch current.mutate({baseRevision: current.revision(), mutation: Apply(MoveObjectBy(id, delta))}) {
+			case MutationApplied(_, _, _, _, _):
+				notice = Ready;
+				refreshProjection();
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
 				notice = Invalid;
 		}
 	}

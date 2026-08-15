@@ -54,6 +54,10 @@ enum EditorCommand {
 	RemoveFluid(id:ScenarioId);
 	StampPrefab(id:ScenarioId, prefabType:ContentId, tags:Array<ScenarioTag>, transform:ScenarioTransform);
 	PutObject(object:ScenarioObject);
+
+	/** Move one existing placement by whole voxel cells without changing its identity or role. */
+	MoveObjectBy(id:ScenarioId, delta:VoxelPoint);
+
 	RemoveObject(id:ScenarioId);
 	PutDialogue(dialogue:ScenarioDialogue);
 	RemoveDialogue(id:ScenarioId);
@@ -209,6 +213,10 @@ enum EditorError {
 	MissingFluid(id:ScenarioId);
 	DuplicateObject(id:ScenarioId);
 	MissingObject(id:ScenarioId);
+
+	/** The requested whole-voxel move would place some or all of the object outside the finite world. */
+	ObjectMoveOutsideWorld(id:ScenarioId, delta:VoxelPoint);
+
 	MissingDialogue(id:ScenarioId);
 	MissingObjective(id:ScenarioId);
 	MissingRule(id:ScenarioId);

@@ -16,8 +16,10 @@ import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioTag;
@@ -87,6 +89,8 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 			stampPrefab(scenario, id, prefabType, tags, transform);
 		case PutObject(object):
 			ready(withObjects(scenario, putObject(scenario.objects, object)), Placement);
+		case MoveObjectBy(id, delta):
+			moveObjectBy(scenario, id, delta);
 		case RemoveObject(id):
 			removePlacedObject(scenario, id);
 		case PutDialogue(dialogue):
@@ -241,6 +245,71 @@ private function removePlacedObject(scenario:Scenario, id:ScenarioId):EditorRedu
 	return ready(withObjects(scenario, removeObject(scenario.objects, id)), Placement);
 }
 
+/** Move one object while preserving every placement-specific payload field. */
+private function moveObjectBy(scenario:Scenario, id:ScenarioId, delta:VoxelPoint):EditorReductionResult {
+	final existing = findObject(scenario.objects, id);
+	if (existing == null)
+		return ReductionRejected(MissingObject(id));
+	final placement = movePlacement(existing.placement, scenario.world.size, delta);
+	if (placement == null)
+		return ReductionRejected(ObjectMoveOutsideWorld(id, delta));
+	return ready(withObjects(scenario, putObject(scenario.objects, {
+		id: existing.id,
+		tags: existing.tags.copy(),
+		placement: placement
+	})), Placement);
+}
+
+/** Translate each closed CAXEMAP placement role by the same voxel delta. */
+private function movePlacement(placement:ObjectPlacement, worldSize:VoxelSize, delta:VoxelPoint):Null<ObjectPlacement> {
+	return switch placement {
+		case PlayerSpawn(transform): movedTransform(transform, worldSize, delta, PlayerSpawn);
+		case Checkpoint(transform): movedTransform(transform, worldSize, delta, Checkpoint);
+		case Item(itemType, quantity, transform): movedTransform(transform, worldSize, delta, value -> Item(itemType, quantity, value));
+		case Entity(entityType, transform): movedTransform(transform, worldSize, delta, value -> Entity(entityType, value));
+		case Npc(npcType, dialogue, transform): movedTransform(transform, worldSize, delta, value -> Npc(npcType, dialogue, value));
+		case Prefab(prefabType, transform): movedTransform(transform, worldSize, delta, value -> Prefab(prefabType, value));
+		case TriggerZone(bounds):
+			if (!canMoveBounds(bounds, worldSize, delta)) null; else TriggerZone({
+				origin: {x: bounds.origin.x + delta.x, y: bounds.origin.y + delta.y, z: bounds.origin.z + delta.z},
+				size: bounds.size
+			});
+		case StatefulObject(objectType, initialState, transform):
+			movedTransform(transform, worldSize, delta, value -> StatefulObject(objectType, initialState, value));
+	};
+}
+
+/** Move a millimeter transform only after a cell-space check makes arithmetic safe. */
+private function movedTransform(transform:ScenarioTransform, worldSize:VoxelSize, delta:VoxelPoint,
+		make:ScenarioTransform->ObjectPlacement):Null<ObjectPlacement> {
+	final x = Std.int(transform.xMilli / 1000);
+	final y = Std.int(transform.yMilli / 1000);
+	final z = Std.int(transform.zMilli / 1000);
+	if (!canMoveCoordinate(x, worldSize.width, delta.x)
+		|| !canMoveCoordinate(y, worldSize.height, delta.y)
+		|| !canMoveCoordinate(z, worldSize.depth, delta.z))
+		return null;
+	return make({
+		xMilli: transform.xMilli + delta.x * 1000,
+		yMilli: transform.yMilli + delta.y * 1000,
+		zMilli: transform.zMilli + delta.z * 1000,
+		yawDegrees: transform.yawDegrees
+	});
+}
+
+/** Test a coordinate before adding a possibly hostile delta. */
+private inline function canMoveCoordinate(current:Int, limit:Int, delta:Int):Bool
+	return delta >= -current && delta < limit - current;
+
+/** Keep the complete half-open trigger box inside the finite world. */
+private inline function canMoveBounds(bounds:VoxelBounds, worldSize:VoxelSize, delta:VoxelPoint):Bool
+	return delta.x >= -bounds.origin.x
+		&& delta.x <= worldSize.width - bounds.size.width - bounds.origin.x
+		&& delta.y >= -bounds.origin.y
+		&& delta.y <= worldSize.height - bounds.size.height - bounds.origin.y
+		&& delta.z >= -bounds.origin.z
+		&& delta.z <= worldSize.depth - bounds.size.depth - bounds.origin.z;
+
 private function removeWorldFluid(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasFluid(scenario, id))
 		return ReductionRejected(MissingFluid(id));
@@ -291,6 +360,14 @@ private function hasObject(scenario:Scenario, id:ScenarioId):Bool {
 		if (same(value.id, id))
 			return true;
 	return false;
+}
+
+/** Return the canonical object record for one stable identity. */
+private function findObject(values:Array<ScenarioObject>, id:ScenarioId):Null<ScenarioObject> {
+	for (value in values)
+		if (same(value.id, id))
+			return value;
+	return null;
 }
 
 private function hasFluid(scenario:Scenario, id:ScenarioId):Bool {
