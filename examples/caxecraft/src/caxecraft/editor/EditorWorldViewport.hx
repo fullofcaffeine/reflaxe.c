@@ -81,6 +81,12 @@ typedef EditorObjectGizmo = {
 	final depth:Float;
 }
 
+/** The nearest stable authored object reached by one bounded world ray. */
+typedef EditorObjectHit = {
+	final id:ScenarioId;
+	final distance:Float;
+}
+
 /**
  * The editor camera's position and unit-like forward direction.
  *
@@ -269,6 +275,64 @@ function projectObjects(objects:Array<ScenarioObject>):Array<EditorObjectGizmo> 
 				pointGizmo(object.id, StatefulObjectGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
 		});
 	return projected;
+}
+
+/**
+ * Select the nearest authored object box reached by a bounded world ray.
+ *
+ * Raylib and future adapters supply the same origin and direction values. This
+ * function owns semantic hit ordering: nearer objects win, and canonical
+ * authored order wins an exact overlap. A miss returns `null` without changing
+ * editor selection.
+ */
+function pickObject(gizmos:Array<EditorObjectGizmo>, origin:EditorWorldVector, direction:EditorWorldVector, maximumDistance:Float):Null<EditorObjectHit> {
+	if (maximumDistance < 0.0)
+		return null;
+	var nearest:Null<EditorObjectHit> = null;
+	var nearestDistance = maximumDistance + 1.0;
+	for (gizmo in gizmos) {
+		final distance = rayBoxDistance(gizmo, origin, direction, maximumDistance);
+		if (distance != null && distance < nearestDistance) {
+			nearestDistance = distance;
+			nearest = {id: gizmo.id, distance: distance};
+		}
+	}
+	return nearest;
+}
+
+/** Clip one ray against a gizmo's axis-aligned selection box. */
+private function rayBoxDistance(gizmo:EditorObjectGizmo, origin:EditorWorldVector, direction:EditorWorldVector, maximumDistance:Float):Null<Float> {
+	var interval:EditorRayInterval = {near: 0.0, far: maximumDistance};
+	interval = switch clipRayAxis(origin.x, direction.x, gizmo.x - gizmo.width * 0.5, gizmo.x + gizmo.width * 0.5, interval) {
+		case null: return null;
+		case value: value;
+	};
+	interval = switch clipRayAxis(origin.y, direction.y, gizmo.y - gizmo.height * 0.5, gizmo.y + gizmo.height * 0.5, interval) {
+		case null: return null;
+		case value: value;
+	};
+	interval = switch clipRayAxis(origin.z, direction.z, gizmo.z - gizmo.depth * 0.5, gizmo.z + gizmo.depth * 0.5, interval) {
+		case null: return null;
+		case value: value;
+	};
+	return interval.near;
+}
+
+/** Narrow one ray interval along an axis, including parallel rays inside it. */
+private function clipRayAxis(origin:Float, direction:Float, minimum:Float, maximum:Float, interval:EditorRayInterval):Null<EditorRayInterval> {
+	final magnitude = direction < 0.0 ? -direction : direction;
+	if (magnitude < 0.000001)
+		return origin < minimum || origin > maximum ? null : interval;
+	var first = (minimum - origin) / direction;
+	var second = (maximum - origin) / direction;
+	if (first > second) {
+		final swap = first;
+		first = second;
+		second = swap;
+	}
+	final near = first > interval.near ? first : interval.near;
+	final far = second < interval.far ? second : interval.far;
+	return near > far ? null : {near: near, far: far};
 }
 
 /** Make one standard point marker without claiming collision or art bounds. */

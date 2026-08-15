@@ -40,6 +40,7 @@ import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
+import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
@@ -986,7 +987,47 @@ final class EditorProbe {
 		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 1.0, y: 0.0, z: 0.0}, 0, 16.0) == null,
 			"3D picking invented a floor point for a parallel ray");
 		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 2, 16.0) == null, "3D picking admitted an unavailable edit layer");
-		return 16;
+
+		final objectGizmos = [
+			{
+				id: id("object.near"),
+				kind: EditorObjectGizmoKind.CheckpointGizmo,
+				x: 1.5,
+				y: 1.0,
+				z: 1.5,
+				width: 1.0,
+				height: 2.0,
+				depth: 1.0
+			},
+			{
+				id: id("object.far"),
+				kind: EditorObjectGizmoKind.NpcGizmo,
+				x: 1.5,
+				y: 1.0,
+				z: 3.5,
+				width: 1.0,
+				height: 2.0,
+				depth: 1.0
+			},
+			{
+				id: id("object.overlap"),
+				kind: EditorObjectGizmoKind.ItemGizmo,
+				x: 1.5,
+				y: 1.0,
+				z: 1.5,
+				width: 1.0,
+				height: 2.0,
+				depth: 1.0
+			}
+		];
+		final objectHit = pickObject(objectGizmos, {x: 1.5, y: 1.0, z: -2.0}, {x: 0.0, y: 0.0, z: 1.0}, 16.0);
+		require(objectHit != null && objectHit.id.text() == "object.near" && close(objectHit.distance, 3.0),
+			"3D object picking did not choose the nearest authored object with a stable tie");
+		require(pickObject(objectGizmos, {x: 5.0, y: 1.0, z: -2.0}, {x: 0.0, y: 0.0, z: 1.0}, 16.0) == null,
+			"3D object picking admitted a parallel ray outside every object");
+		require(pickObject(objectGizmos, {x: 1.5, y: 1.0, z: -2.0}, {x: 0.0, y: 0.0, z: 1.0}, 2.0) == null,
+			"3D object picking ignored the bounded ray distance");
+		return 19;
 	}
 
 	static inline function close(actual:Float, expected:Float):Bool

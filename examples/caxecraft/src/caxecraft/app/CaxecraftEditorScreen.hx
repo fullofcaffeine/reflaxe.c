@@ -31,6 +31,7 @@ import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
+import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
@@ -42,6 +43,7 @@ import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
 import haxe.io.Bytes;
 import raygui.GuiListViewState;
@@ -169,7 +171,7 @@ final class CaxecraftEditorScreen {
 		previewRevision = -1;
 		previewTool = SelectTool;
 		previewAllowed = false;
-		objectList = new GuiListViewState();
+		objectList = new GuiListViewState(-1);
 		worldName = GuiTextBoxState.create(64);
 		refreshProjection(true);
 	}
@@ -253,7 +255,7 @@ final class CaxecraftEditorScreen {
 
 		final canvasTop = 116;
 		final shelfTop = height - 154;
-		final inspectorVisible = selection != null || worldListOpen;
+		final inspectorVisible = selection != null || selectedObjectIndex() >= 0 || worldListOpen;
 		final inspectorWidth = inspectorVisible && width >= 900 ? 250 : 0;
 		final canvasLeft = 32;
 		final canvasWidth = width - 64 - inspectorWidth - (inspectorWidth > 0 ? 12 : 0);
@@ -318,10 +320,11 @@ final class CaxecraftEditorScreen {
 			worldListOpen = !worldListOpen;
 		if (focusedButtonSized(EditorFocusTarget.MoreDetails, disclosureLeft, cardTop + 38.0, disclosureWidth, 30.0,
 			uiCatalog.text(locale, UiMessage.EditorMoreDetails))
-			&& selection != null)
+			&& (selection != null || selectedObjectIndex() >= 0))
 			detailsOpen = !detailsOpen;
 		drawActiveControl(worldListOpen, disclosureLeft, cardTop, Std.int(disclosureWidth), 30);
-		drawActiveControl(detailsOpen && selection != null, disclosureLeft, cardTop + 38, Std.int(disclosureWidth), 30);
+		drawActiveControl(detailsOpen
+			&& (selection != null || selectedObjectIndex() >= 0), disclosureLeft, cardTop + 38, Std.int(disclosureWidth), 30);
 
 		final status = switch notice {
 			case Ready: UiMessage.EditorReady;
@@ -371,6 +374,20 @@ final class CaxecraftEditorScreen {
 				cursorTop += 28;
 				Raylib.DrawTextString('${objectGizmos.length} / $flowRuleCount', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
 				cursorTop += 34;
+			}
+		}
+		final objectIndex = selectedObjectIndex();
+		if (objectIndex >= 0) {
+			final gizmo = objectGizmos[objectIndex];
+			Raylib.DrawTextString(gizmo.id.text(), left + 14, cursorTop, 16, CaxecraftPalette.selection());
+			cursorTop += 28;
+			Raylib.DrawTextString(uiCatalog.text(locale, UiMessage.EditorCoordinates), left + 14, cursorTop, 14, Color.rgba(126, 205, 209));
+			cursorTop += 22;
+			Raylib.DrawTextString('${Std.int(gizmo.x)}, ${Std.int(gizmo.y)}, ${Std.int(gizmo.z)}', left + 14, cursorTop, 18, CaxecraftPalette.hudText());
+			cursorTop += 34;
+			if (detailsOpen) {
+				Raylib.DrawTextString('${gizmo.width} x ${gizmo.height} x ${gizmo.depth}', left + 14, cursorTop, 15, CaxecraftPalette.hudText());
+				cursorTop += 28;
 			}
 		}
 		if (worldListOpen) {
@@ -571,17 +588,46 @@ final class CaxecraftEditorScreen {
 
 	/** Select a World List object through the same stable workspace identity. */
 	function selectObjectFromWorldList():Void {
-		final current = session;
 		final index = objectList.activeIndex();
-		if (current == null || index < 0 || index >= objectGizmos.length)
+		if (index < 0 || index >= objectGizmos.length)
 			return;
-		switch current.select({baseRevision: current.revision(), selection: NodeSelection(ObjectNode(objectGizmos[index].id))}) {
+		selectObject(objectGizmos[index].id);
+	}
+
+	/** Select one authored object through the shared semantic workspace target. */
+	function selectObject(id:ScenarioId):Void {
+		final current = session;
+		final index = objectIndex(id);
+		if (current == null || index < 0)
+			return;
+		switch current.select({baseRevision: current.revision(), selection: NodeSelection(ObjectNode(id))}) {
 			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
 				selection = current.selectedBounds();
+				objectList = new GuiListViewState(index);
 				notice = Ready;
 			case SelectionRejected(_, _):
 				notice = Invalid;
 		}
+	}
+
+	/** Return the shared selected object's projection index, or `-1`. */
+	function selectedObjectIndex():Int {
+		final current = session;
+		if (current == null)
+			return -1;
+		return switch current.selectionSnapshot() {
+			case NodeSelection(ObjectNode(id)): objectIndex(id);
+			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): -1;
+		};
+	}
+
+	/** Resolve one stable object identity without trusting a widget index. */
+	function objectIndex(id:ScenarioId):Int {
+		final expected = id.text();
+		for (index in 0...objectGizmos.length)
+			if (objectGizmos[index].id.text() == expected)
+				return index;
+		return -1;
 	}
 
 	function undo():Void {
@@ -707,7 +753,11 @@ final class CaxecraftEditorScreen {
 			if (Raylib.IsMouseButtonPressed(MouseButton.Left)) {
 				final hoverX = hover.x;
 				final hoverZ = hover.z;
-				applyToolAt(activeTool, hover);
+				final objectIndex = activeTool == SelectTool ? objectIndexAtPlan(hoverX, hoverZ) : -1;
+				if (objectIndex >= 0)
+					selectObject(objectGizmos[objectIndex].id);
+				else
+					applyToolAt(activeTool, hover);
 				currentPlan = planProjection;
 				currentWorld = projection;
 				if (currentPlan == null || currentWorld == null)
@@ -736,14 +786,17 @@ final class CaxecraftEditorScreen {
 					Raylib.DrawRectangleLines(cellLeft + 2, cellTop + 2, grid.cellSize - 4, grid.cellSize - 4, CaxecraftPalette.selection());
 				}
 			}
-		for (gizmo in objectGizmos) {
+		final selectedObject = selectedObjectIndex();
+		for (index in 0...objectGizmos.length) {
+			final gizmo = objectGizmos[index];
 			final x = Std.int(gizmo.x);
 			final z = Std.int(gizmo.z);
 			if (x >= 0 && z >= 0 && x < currentPlan.width && z < currentPlan.depth) {
 				final markerSize = grid.cellSize > 10 ? 8 : 4;
 				final markerLeft = grid.left + x * grid.cellSize + Std.int((grid.cellSize - markerSize) / 2);
 				final markerTop = grid.top + z * grid.cellSize + Std.int((grid.cellSize - markerSize) / 2);
-				Raylib.DrawRectangle(markerLeft, markerTop, markerSize, markerSize, gizmoColor(gizmo.kind));
+				Raylib.DrawRectangle(markerLeft, markerTop, markerSize, markerSize,
+					index == selectedObject ? CaxecraftPalette.selection() : gizmoColor(gizmo.kind));
 			}
 		}
 		if (hover != null) {
@@ -757,6 +810,16 @@ final class CaxecraftEditorScreen {
 				Raylib.DrawLine(hoverLeft + grid.cellSize - 3, hoverTop + 3, hoverLeft + 3, hoverTop + grid.cellSize - 3, color);
 			}
 		}
+	}
+
+	/** Prefer the first canonical object marker in one Plan cell. */
+	function objectIndexAtPlan(x:Int, z:Int):Int {
+		for (index in 0...objectGizmos.length) {
+			final gizmo = objectGizmos[index];
+			if (Std.int(gizmo.x) == x && Std.int(gizmo.z) == z)
+				return index;
+		}
+		return -1;
 	}
 
 	/** Choose the top visible cell or the first air cell for one Plan gesture. */
@@ -865,6 +928,7 @@ final class CaxecraftEditorScreen {
 		final nativeCamera = Camera3D.make(Vector3.fromFloat(currentCamera.x, currentCamera.y, currentCamera.z),
 			Vector3.fromFloat(target.x, target.y, target.z), Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(52.0), CameraProjection.Perspective);
 		var hover:Null<EditorWorldHit> = null;
+		var hoveredObject = -1;
 		if (inside) {
 			final ray = Raylib.GetScreenToWorldRay(mouse, nativeCamera);
 			final origin = ray.position;
@@ -874,17 +938,30 @@ final class CaxecraftEditorScreen {
 				y: direction.y.toFloat(),
 				z: direction.z.toFloat()
 			}, 0, 512.0);
+			if (activeTool == SelectTool) {
+				final objectHit = pickObject(objectGizmos, {x: origin.x.toFloat(), y: origin.y.toFloat(), z: origin.z.toFloat()}, {
+					x: direction.x.toFloat(),
+					y: direction.y.toFloat(),
+					z: direction.z.toFloat()
+				}, 512.0);
+				if (objectHit != null && (hover == null || objectHit.distance <= hover.distance))
+					hoveredObject = objectIndex(objectHit.id);
+			}
 		}
-		if (hover == null)
+		if (hover == null || hoveredObject >= 0)
 			invalidatePreview();
 		else
 			updatePreview(hover.point);
-		if (hover != null && Raylib.IsMouseButtonPressed(MouseButton.Left)) {
-			applyToolAt(activeTool, hover.point);
+		if ((hover != null || hoveredObject >= 0) && Raylib.IsMouseButtonPressed(MouseButton.Left)) {
+			if (hoveredObject >= 0)
+				selectObject(objectGizmos[hoveredObject].id);
+			else if (hover != null)
+				applyToolAt(activeTool, hover.point);
 			current = projection;
 			if (current == null)
 				return;
-			updatePreview(hover.point);
+			if (hoveredObject < 0 && hover != null)
+				updatePreview(hover.point);
 		}
 
 		Raylib.DrawRectangle(left, top, width, height, CaxecraftPalette.sky());
@@ -903,17 +980,17 @@ final class CaxecraftEditorScreen {
 				for (y in selected.origin.y...selected.origin.y + selected.size.height)
 					for (x in selected.origin.x...selected.origin.x + selected.size.width)
 						drawCellOutline(x, y, z, paletteCodeAtWorld(current, x, y, z) != 0, CaxecraftPalette.selection(), 1.05);
-		final selectedObject = objectList.activeIndex();
+		final selectedObject = selectedObjectIndex();
 		for (index in 0...objectGizmos.length) {
 			final gizmo = objectGizmos[index];
-			final color = index == selectedObject ? CaxecraftPalette.selection() : gizmoColor(gizmo.kind);
+			final color = index == selectedObject || index == hoveredObject ? CaxecraftPalette.selection() : gizmoColor(gizmo.kind);
 			Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width), c.Float32.fromFloat(gizmo.height),
 				c.Float32.fromFloat(gizmo.depth), color);
-			if (index == selectedObject)
+			if (index == selectedObject || index == hoveredObject)
 				Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width + 0.10),
 					c.Float32.fromFloat(gizmo.height + 0.10), c.Float32.fromFloat(gizmo.depth + 0.10), color);
 		}
-		if (hover != null && !selectedCell(hover.point.x, hover.point.y, hover.point.z)) {
+		if (hover != null && hoveredObject < 0 && !selectedCell(hover.point.x, hover.point.y, hover.point.z)) {
 			final previewColor = previewAllowed ? Color.rgba(92, 240, 186) : Color.rgba(255, 104, 82);
 			drawCellOutline(hover.point.x, hover.point.y, hover.point.z, hover.solid, previewColor, 1.08);
 			if (!previewAllowed) {
@@ -1108,7 +1185,7 @@ final class CaxecraftEditorScreen {
 			labels.push(gizmo.id.text());
 		objectLabels = labels.join(";");
 		if (objectList.activeIndex() < 0 || objectList.activeIndex() >= objectGizmos.length)
-			objectList = new GuiListViewState();
+			objectList = new GuiListViewState(-1);
 		selection = current.selectedBounds();
 		invalidatePreview();
 		final next = projection;
