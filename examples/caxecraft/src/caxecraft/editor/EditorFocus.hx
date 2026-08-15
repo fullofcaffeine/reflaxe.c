@@ -21,10 +21,11 @@ enum abstract EditorFocusTarget(Int) {
 	var SelectTool = 7;
 	var GroundTool = 8;
 	var EraseTool = 9;
-	var MoreDetails = 10;
-	var WorldList = 11;
-	var KeepEditing = 12;
-	var LeaveWithoutSaving = 13;
+	var CheckpointTool = 10;
+	var MoreDetails = 11;
+	var WorldList = 12;
+	var KeepEditing = 13;
+	var LeaveWithoutSaving = 14;
 }
 
 /**
@@ -64,7 +65,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case Play: SelectTool;
 				case SelectTool: GroundTool;
 				case GroundTool: EraseTool;
-				case EraseTool: MoreDetails;
+				case EraseTool: CheckpointTool;
+				case CheckpointTool: MoreDetails;
 				case MoreDetails: WorldList;
 				case WorldList: Back;
 				case KeepEditing: LeaveWithoutSaving;
@@ -82,7 +84,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case SelectTool: Play;
 				case GroundTool: SelectTool;
 				case EraseTool: GroundTool;
-				case MoreDetails: EraseTool;
+				case CheckpointTool: EraseTool;
+				case MoreDetails: CheckpointTool;
 				case WorldList: MoreDetails;
 				case KeepEditing: LeaveWithoutSaving;
 				case LeaveWithoutSaving: KeepEditing;

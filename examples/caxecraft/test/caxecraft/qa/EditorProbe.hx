@@ -8,6 +8,7 @@ import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
 import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
+import caxecraft.editor.EditorPlacement.checkpointCommand;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
@@ -117,6 +118,7 @@ final class EditorProbe {
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
 		checkObjectMovement();
+		checkCheckpointPlacement();
 		final session = open(defaultEditorSettings());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, SetTitle(Literal("Ivvy's workshop")), DocumentMetadata);
@@ -189,6 +191,26 @@ final class EditorProbe {
 		final finalBytes = expectValid(session, "final recovered scenario");
 		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (activeLevelChecks * 131) ^ session.historyEntries();
 		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+	}
+
+	/** Prove that a creator gesture becomes one collision-free reloadable object. */
+	static function checkCheckpointPlacement():Void {
+		final existing:Array<ScenarioObject> = [
+			{id: id("editor.checkpoint.1"), tags: [], placement: Checkpoint(transform(500, 0, 500))},
+			{id: id("editor.checkpoint.2"), tags: [], placement: Checkpoint(transform(1500, 0, 500))}
+		];
+		switch checkpointCommand({x: 2, y: 1, z: 3}, existing) {
+			case PutObject(object):
+				require(object.id.text() == "editor.checkpoint.3", "checkpoint placement reused an authored object ID");
+				switch object.placement {
+					case Checkpoint(position):
+						require(position.xMilli == 2500 && position.yMilli == 1000 && position.zMilli == 3500 && position.yawDegrees == 0,
+							"checkpoint placement changed the independently authored snapped transform");
+					case _: throw "checkpoint placement emitted the wrong CAXEMAP role";
+				}
+			case _:
+				throw "checkpoint placement did not use the normal object command";
+		}
 	}
 
 	/** Preserve an optional environment through the editor's text-byte boundary. */
@@ -414,6 +436,7 @@ final class EditorProbe {
 			EditorFocusTarget.SelectTool,
 			EditorFocusTarget.GroundTool,
 			EditorFocusTarget.EraseTool,
+			EditorFocusTarget.CheckpointTool,
 			EditorFocusTarget.MoreDetails,
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.Back
@@ -421,6 +444,7 @@ final class EditorProbe {
 		final backward:Array<EditorFocusTarget> = [
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.MoreDetails,
+			EditorFocusTarget.CheckpointTool,
 			EditorFocusTarget.EraseTool,
 			EditorFocusTarget.GroundTool,
 			EditorFocusTarget.SelectTool,
@@ -958,11 +982,11 @@ final class EditorProbe {
 			&& viewportPointAt(upper, grid, 94, 20) == null, "viewport admitted an excluded grid edge");
 
 		require(toolFromIndex(0) == SelectTool && toolFromIndex(1) == PaintTool && toolFromIndex(2) == EraseTool && toolFromIndex(3) == FillTool
-			&& toolFromIndex(-1) == null && toolFromIndex(4) == null,
+			&& toolFromIndex(4) == CheckpointTool && toolFromIndex(-1) == null && toolFromIndex(5) == null,
 			"raygui tool indices drifted from the closed editor tool type");
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
-		switch commandForTool(SelectTool, point, 1, null) {
+		switch commandForTool(SelectTool, point, 1, null, []) {
 			case ToolSelectionReady(bounds):
 				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
 					&& bounds.size.depth == 1,
@@ -970,25 +994,25 @@ final class EditorProbe {
 			case _:
 				throw "select tool did not produce workspace bounds";
 		}
-		switch commandForTool(PaintTool, point, 1, null) {
+		switch commandForTool(PaintTool, point, 1, null, []) {
 			case ToolCommandReady(PaintVoxel(actual, 1)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "paint tool changed the pointed voxel");
 			case _:
 				throw "paint tool did not produce a PaintVoxel command";
 		}
-		switch commandForTool(EraseTool, point, 1, null) {
+		switch commandForTool(EraseTool, point, 1, null, []) {
 			case ToolCommandReady(EraseVoxel(actual)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "erase tool changed the pointed voxel");
 			case _:
 				throw "erase tool did not produce an EraseVoxel command";
 		}
-		switch commandForTool(FillTool, point, 1, null) {
+		switch commandForTool(FillTool, point, 1, null, []) {
 			case ToolCommandRejected(NoSelection):
 			case _:
 				throw "fill tool did not reject a missing selection exactly";
 		}
 		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
-		switch commandForTool(FillTool, point, 1, selected) {
+		switch commandForTool(FillTool, point, 1, selected, []) {
 			case ToolCommandReady(FillBounds(bounds, 1)):
 				require(bounds.origin.x == 1 && bounds.origin.z == 1 && bounds.size.width == 2 && bounds.size.depth == 2,
 					"fill tool changed its explicit workspace bounds");

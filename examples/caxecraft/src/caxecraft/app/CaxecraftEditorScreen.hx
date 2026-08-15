@@ -302,7 +302,7 @@ final class CaxecraftEditorScreen {
 		Raylib.DrawRectangleLines(x + 3, y + 3, width - 6, height - 6, color);
 	}
 
-	/** Draw the three large terrain actions and small workspace disclosures. */
+	/** Draw the large creation actions and small workspace disclosures. */
 	function drawCreationShelf(locale:LocaleCursor, left:Int, top:Int, width:Int, height:Int):Void {
 		Raygui.PanelString(Rectangle.fromFloat(left, top, width, height), "");
 		final cardTop = top + 12;
@@ -313,6 +313,8 @@ final class CaxecraftEditorScreen {
 			Color.rgba(111, 174, 91));
 		drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, left + 32 + cardWidth * 2, cardTop, cardWidth, 68, UiMessage.EditorErase,
 			Color.rgba(218, 103, 78));
+		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, left + 42 + cardWidth * 3, cardTop, cardWidth, 68,
+			UiMessage.EditorCheckpoint, Color.rgba(76, 209, 198));
 
 		final disclosureWidth = 150.0;
 		final disclosureLeft = left + width - Std.int(disclosureWidth) - 12;
@@ -544,6 +546,8 @@ final class CaxecraftEditorScreen {
 				setActiveTool(EditorTool.PaintTool);
 			case EraseTool:
 				setActiveTool(EditorTool.EraseTool);
+			case CheckpointTool:
+				setActiveTool(EditorTool.CheckpointTool);
 			case MoreDetails:
 				detailsOpen = !detailsOpen;
 			case WorldList:
@@ -872,6 +876,10 @@ final class CaxecraftEditorScreen {
 				final above = top + 1;
 				if (above >= 0 && above < world.height)
 					y = above;
+			case CheckpointTool:
+				final above = top + 1;
+				if (above >= 0 && above < world.height)
+					y = above;
 			case SelectTool | EraseTool | FillTool:
 		}
 		return y < 0 || y >= world.height ? null : {x: x, y: y, z: z};
@@ -912,7 +920,7 @@ final class CaxecraftEditorScreen {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds()) {
+		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(command):
@@ -1151,6 +1159,7 @@ final class CaxecraftEditorScreen {
 				needsPalette = true;
 			case SelectTool:
 			case EraseTool:
+			case CheckpointTool:
 		}
 		if (needsPalette) {
 			paletteCode = paletteCodeForBlock(current.draftSnapshot().world, contentRegistry.defaultEditorBlockId());
@@ -1159,7 +1168,7 @@ final class CaxecraftEditorScreen {
 				return false;
 			}
 		}
-		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds());
+		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects);
 		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;

@@ -112,6 +112,14 @@
       }
     },
     {
+      "id": "editor_checkpoint",
+      "symbol": "EditorCheckpoint",
+      "text": {
+        "en": "CHECKPOINT",
+        "es-MX": "PUNTO DE CONTROL"
+      }
+    },
+    {
       "id": "editor_coordinates",
       "symbol": "EditorCoordinates",
       "text": {

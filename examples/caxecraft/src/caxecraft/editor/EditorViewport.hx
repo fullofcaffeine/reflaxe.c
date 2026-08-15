@@ -2,11 +2,13 @@ package caxecraft.editor;
 
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorError;
+import caxecraft.editor.EditorPlacement.checkpointCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioWorld;
+import caxecraft.scenario.ScenarioObject;
 
 /**
 	Projects editor terrain into a small, renderer-independent top-down view.
@@ -23,6 +25,7 @@ enum EditorTool {
 	PaintTool;
 	EraseTool;
 	FillTool;
+	CheckpointTool;
 }
 
 /**
@@ -157,6 +160,7 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 		case 1: PaintTool;
 		case 2: EraseTool;
 		case 3: FillTool;
+		case 4: CheckpointTool;
 		case _: null;
 	};
 }
@@ -165,11 +169,11 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 	Translate one tool gesture into the existing `EditorSession` command language.
 
 	Select returns workspace bounds instead of an authored command. Paint and
-	erase affect the pointed voxel. Fill carries the current bounds explicitly,
-	so the content edit does not depend on a temporary cursor owned by one view.
+	erase affect the pointed voxel. Fill carries the current bounds explicitly.
+	Checkpoint placement reads existing IDs and creates one reloadable object.
 	The UI never mutates a projection directly.
 **/
-function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>):EditorToolCommandResult {
+function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
 			ToolSelectionReady({
@@ -182,5 +186,7 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 			ToolCommandReady(EraseVoxel(point));
 		case FillTool:
 			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(selection, paletteCode));
+		case CheckpointTool:
+			ToolCommandReady(checkpointCommand(point, objects));
 	};
 }
