@@ -13,6 +13,7 @@ import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
@@ -64,6 +65,8 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 	return switch command {
 		case SetTitle(title):
 			setTitle(scenario, title);
+		case SetEnvironment(environment):
+			ready(withEnvironment(scenario, environment), DocumentMetadata);
 		case ResizeWorld(size):
 			switch resizeWorld(scenario.world, size) {
 				case WorldRejected(error): ReductionRejected(error);
@@ -118,6 +121,26 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 		case RestoreLastPlayable:
 			ReductionRejected(NoPlayableScenario);
 	}
+}
+
+/** Replace the optional presentation value while retaining the complete scenario. */
+private function withEnvironment(scenario:Scenario, environment:Null<ScenarioEnvironment>):Scenario {
+	return {
+		formatVersion: scenario.formatVersion,
+		requiredFeatures: scenario.requiredFeatures.copy(),
+		optionalFeatures: scenario.optionalFeatures.copy(),
+		id: scenario.id,
+		assetPack: scenario.assetPack,
+		messages: scenario.messages,
+		title: scenario.title,
+		mode: scenario.mode,
+		environment: environment,
+		world: scenario.world,
+		objects: scenario.objects,
+		story: scenario.story,
+		flow: scenario.flow,
+		extensions: scenario.extensions.copy()
+	};
 }
 
 /**

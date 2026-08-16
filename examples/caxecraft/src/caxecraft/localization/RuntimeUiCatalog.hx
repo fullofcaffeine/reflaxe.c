@@ -182,6 +182,21 @@ final class RuntimeUiCatalog {
 			"editor_coordinates",
 			"editor_delete",
 			"editor_duplicate",
+			"editor_environment",
+			"editor_environment_clouds",
+			"editor_environment_done",
+			"editor_environment_east",
+			"editor_environment_enabled",
+			"editor_environment_north",
+			"editor_environment_off",
+			"editor_environment_on",
+			"editor_environment_radius",
+			"editor_environment_seed",
+			"editor_environment_sky",
+			"editor_environment_south",
+			"editor_environment_sun",
+			"editor_environment_water",
+			"editor_environment_west",
 			"editor_erase",
 			"editor_ground",
 			"editor_invalid",
@@ -238,6 +253,21 @@ final class RuntimeUiCatalog {
 			"EditorCoordinates",
 			"EditorDelete",
 			"EditorDuplicate",
+			"EditorEnvironment",
+			"EditorEnvironmentClouds",
+			"EditorEnvironmentDone",
+			"EditorEnvironmentEast",
+			"EditorEnvironmentEnabled",
+			"EditorEnvironmentNorth",
+			"EditorEnvironmentOff",
+			"EditorEnvironmentOn",
+			"EditorEnvironmentRadius",
+			"EditorEnvironmentSeed",
+			"EditorEnvironmentSky",
+			"EditorEnvironmentSouth",
+			"EditorEnvironmentSun",
+			"EditorEnvironmentWater",
+			"EditorEnvironmentWest",
 			"EditorErase",
 			"EditorGround",
 			"EditorInvalid",
@@ -336,40 +366,55 @@ final class RuntimeUiCatalog {
 			case EditorCoordinates: 14;
 			case EditorDelete: 15;
 			case EditorDuplicate: 16;
-			case EditorErase: 17;
-			case EditorGround: 18;
-			case EditorInvalid: 19;
-			case EditorKeepEditing: 20;
-			case EditorLeaveWithoutSaving: 21;
-			case EditorMaterial: 22;
-			case EditorMoreDetails: 23;
-			case EditorName: 24;
-			case EditorNewWorld: 25;
-			case EditorPlan: 26;
-			case EditorReady: 27;
-			case EditorRedo: 28;
-			case EditorScene: 29;
-			case EditorSelect: 30;
-			case EditorStopTest: 31;
-			case EditorTest: 32;
-			case EditorTesting: 33;
-			case EditorTitle: 34;
-			case EditorToolList: 35;
-			case EditorUndo: 36;
-			case EditorUnsavedChanges: 37;
-			case EditorValid: 38;
-			case EditorValidate: 39;
-			case EditorWorldList: 40;
-			case HealthFull: 41;
-			case MenuAdventure: 42;
-			case MenuCreative: 43;
-			case MenuEditor: 44;
-			case MenuInstructions: 45;
-			case NoBlockInReach: 46;
-			case PauseHelp: 47;
-			case PauseTitle: 48;
-			case PlaceBlocked: 49;
-			case TitleFallback: 50;
+			case EditorEnvironment: 17;
+			case EditorEnvironmentClouds: 18;
+			case EditorEnvironmentDone: 19;
+			case EditorEnvironmentEast: 20;
+			case EditorEnvironmentEnabled: 21;
+			case EditorEnvironmentNorth: 22;
+			case EditorEnvironmentOff: 23;
+			case EditorEnvironmentOn: 24;
+			case EditorEnvironmentRadius: 25;
+			case EditorEnvironmentSeed: 26;
+			case EditorEnvironmentSky: 27;
+			case EditorEnvironmentSouth: 28;
+			case EditorEnvironmentSun: 29;
+			case EditorEnvironmentWater: 30;
+			case EditorEnvironmentWest: 31;
+			case EditorErase: 32;
+			case EditorGround: 33;
+			case EditorInvalid: 34;
+			case EditorKeepEditing: 35;
+			case EditorLeaveWithoutSaving: 36;
+			case EditorMaterial: 37;
+			case EditorMoreDetails: 38;
+			case EditorName: 39;
+			case EditorNewWorld: 40;
+			case EditorPlan: 41;
+			case EditorReady: 42;
+			case EditorRedo: 43;
+			case EditorScene: 44;
+			case EditorSelect: 45;
+			case EditorStopTest: 46;
+			case EditorTest: 47;
+			case EditorTesting: 48;
+			case EditorTitle: 49;
+			case EditorToolList: 50;
+			case EditorUndo: 51;
+			case EditorUnsavedChanges: 52;
+			case EditorValid: 53;
+			case EditorValidate: 54;
+			case EditorWorldList: 55;
+			case HealthFull: 56;
+			case MenuAdventure: 57;
+			case MenuCreative: 58;
+			case MenuEditor: 59;
+			case MenuInstructions: 60;
+			case NoBlockInReach: 61;
+			case PauseHelp: 62;
+			case PauseTitle: 63;
+			case PlaceBlocked: 64;
+			case TitleFallback: 65;
 			case _: -1;
 		};
 	}

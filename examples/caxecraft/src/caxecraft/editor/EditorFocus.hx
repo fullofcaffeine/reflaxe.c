@@ -27,6 +27,7 @@ enum abstract EditorFocusTarget(Int) {
 	var KeepEditing = 13;
 	var LeaveWithoutSaving = 14;
 	var CatalogObjectTool = 15;
+	var Environment = 16;
 }
 
 /**
@@ -62,7 +63,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case Undo: Redo;
 				case Redo: Build;
 				case Build: Plan;
-				case Plan: Play;
+				case Plan: Environment;
+				case Environment: Play;
 				case Play: SelectTool;
 				case SelectTool: GroundTool;
 				case GroundTool: EraseTool;
@@ -82,7 +84,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case Redo: Undo;
 				case Build: Redo;
 				case Plan: Build;
-				case Play: Plan;
+				case Play: Environment;
+				case Environment: Plan;
 				case SelectTool: Play;
 				case GroundTool: SelectTool;
 				case EraseTool: GroundTool;

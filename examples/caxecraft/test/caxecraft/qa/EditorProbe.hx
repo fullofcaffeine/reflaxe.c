@@ -5,6 +5,11 @@ import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
+import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
+import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
+import caxecraft.editor.EditorEnvironment.editEnvironment;
+import caxecraft.editor.EditorEnvironment.firstEnvironmentControl;
+import caxecraft.editor.EditorEnvironment.moveEnvironmentControl;
 import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
 import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
@@ -73,6 +78,7 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioMessages;
@@ -303,6 +309,92 @@ final class EditorProbe {
 		final environment = opened.draftSnapshot().environment;
 		require(environment != null && environment.edges.length == 0 && environment.sun == null, "editor text import lost the optional environment choices");
 		require(opened.canonicalDraft().compare(source) == 0, "editor text round-trip changed the environment bytes");
+
+		var focus = firstEnvironmentControl();
+		for (_ in 0...17)
+			focus = moveEnvironmentControl(focus, EditorEnvironmentDirection.Increase);
+		require(focus == EditorEnvironmentControl.Done
+			&& moveEnvironmentControl(focus, EditorEnvironmentDirection.Increase) == EditorEnvironmentControl.Enabled
+			&& moveEnvironmentControl(EditorEnvironmentControl.Enabled, EditorEnvironmentDirection.Decrease) == EditorEnvironmentControl.Done,
+			"environment controls did not remain reachable in both directions");
+
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SkyRed, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SkyGreen, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SkyBlue, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunEnabled, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunX, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunY, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunZ, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SunRadius, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.CloudCount, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.CloudSpeed, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.CloudSeed, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.NorthEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SouthEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.EastEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.WestEdge, EditorEnvironmentDirection.Increase);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.SouthEdge, EditorEnvironmentDirection.Decrease);
+		applyEnvironmentEdit(opened, EditorEnvironmentControl.ContinueWater, EditorEnvironmentDirection.Increase);
+		final edited = opened.draftSnapshot().environment;
+		require(edited != null
+			&& edited.sky.red == 97
+			&& edited.sky.green == 147
+			&& edited.sky.blue == 172
+			&& edited.sun != null
+			&& edited.sun.x == -299
+			&& edited.sun.y == 701
+			&& edited.sun.z == 249
+			&& edited.sun.radiusMilli == 301
+			&& edited.clouds.count == 3
+			&& edited.clouds.speedMilli == 499
+			&& edited.clouds.seed == 74
+			&& hasEnvironmentEdge(edited.edges, North)
+			&& !hasEnvironmentEdge(edited.edges, South)
+			&& hasEnvironmentEdge(edited.edges, East)
+			&& hasEnvironmentEdge(edited.edges, West)
+			&& edited.continueWater,
+			"environment controls changed the wrong field or lost an authored neighbor");
+		final editedBytes = opened.canonicalDraft();
+		final reopened = switch EditorSession.openBytes(editedBytes, new Registry(), defaultEditorSettings()) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(error): throw 'editor rejected its environment save: $error';
+		};
+		require(reopened.canonicalDraft().compare(editedBytes) == 0, "environment save and reload changed canonical bytes");
+		final playable = open(defaultEditorSettings());
+		expectApplied(playable.apply(SetEnvironment(edited)), DocumentMetadata, "prepare environment Test Play");
+		final playableBytes = playable.canonicalDraft();
+		requireTestStarted(playable.enterTestPlay(), "environment test play");
+		require(playable.leaveTestPlay()
+			&& playable.canonicalDraft().compare(playableBytes) == 0, "environment Test Play changed the editor draft");
+
+		expectApplied(opened.apply(SetEnvironment(null)), DocumentMetadata, "remove environment");
+		require(opened.draftSnapshot().environment == null, "environment None choice did not restore fallback sky");
+		switch opened.mutate({baseRevision: opened.revision(), mutation: Undo}) {
+			case MutationApplied(_, _, _, _, _):
+			case other:
+				throw 'undo environment removal failed: $other';
+		}
+		require(opened.canonicalDraft().compare(editedBytes) == 0, "undo did not restore exact environment bytes");
+		switch opened.mutate({baseRevision: opened.revision(), mutation: Redo}) {
+			case MutationApplied(_, _, _, _, _):
+			case other:
+				throw 'redo environment removal failed: $other';
+		}
+		require(opened.draftSnapshot().environment == null, "redo did not remove the environment");
+	}
+
+	/** Submit one field-preserving environment value through normal history. */
+	static function applyEnvironmentEdit(session:EditorSession, control:EditorEnvironmentControl, direction:EditorEnvironmentDirection):Void {
+		final environment = editEnvironment(session.draftSnapshot().environment, control, direction);
+		expectApplied(session.apply(SetEnvironment(environment)), DocumentMetadata, 'edit environment control $control');
+	}
+
+	/** True when one closed horizon edge is present. */
+	static function hasEnvironmentEdge(edges:Array<ScenarioHorizonEdge>, expected:ScenarioHorizonEdge):Bool {
+		for (edge in edges)
+			if (edge == expected)
+				return true;
+		return false;
 	}
 
 	/** Prove every admitted placement role moves through one shared command. */
@@ -512,6 +604,7 @@ final class EditorProbe {
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Plan,
+			EditorFocusTarget.Environment,
 			EditorFocusTarget.Play,
 			EditorFocusTarget.SelectTool,
 			EditorFocusTarget.GroundTool,
@@ -531,6 +624,7 @@ final class EditorProbe {
 			EditorFocusTarget.GroundTool,
 			EditorFocusTarget.SelectTool,
 			EditorFocusTarget.Play,
+			EditorFocusTarget.Environment,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Redo,

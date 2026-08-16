@@ -75,4 +75,20 @@ enum abstract UiMessage(Int) {
 
 	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
 	var EditorDuplicate = 50;
+
+	var EditorEnvironment = 51;
+	var EditorEnvironmentClouds = 52;
+	var EditorEnvironmentDone = 53;
+	var EditorEnvironmentEast = 54;
+	var EditorEnvironmentEnabled = 55;
+	var EditorEnvironmentNorth = 56;
+	var EditorEnvironmentOff = 57;
+	var EditorEnvironmentOn = 58;
+	var EditorEnvironmentRadius = 59;
+	var EditorEnvironmentSeed = 60;
+	var EditorEnvironmentSky = 61;
+	var EditorEnvironmentSouth = 62;
+	var EditorEnvironmentSun = 63;
+	var EditorEnvironmentWater = 64;
+	var EditorEnvironmentWest = 65;
 }

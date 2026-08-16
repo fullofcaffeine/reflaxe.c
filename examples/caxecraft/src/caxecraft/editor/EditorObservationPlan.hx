@@ -19,6 +19,7 @@ import caxecraft.scenario.Scenario;
 function changesFor(command:EditorCommand):Array<EditorChangeId> {
 	return switch command {
 		case SetTitle(_): [ChangedTitle];
+		case SetEnvironment(_): [ChangedDocument];
 		case ResizeWorld(_): [ChangedWorldShape];
 		case SetPaletteEntry(code, _): [ChangedPalette(code)];
 		case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _): [ChangedTerrain];

@@ -11,6 +11,7 @@ import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
@@ -42,6 +43,9 @@ enum EditorCommand {
 		reference instead of flattening both forms into display text.
 	**/
 	SetTitle(title:ScenarioText);
+
+	/** Replace the optional visual environment with one complete typed value. */
+	SetEnvironment(environment:Null<ScenarioEnvironment>);
 
 	ResizeWorld(size:VoxelSize);
 	SetPaletteEntry(code:Int, blockType:ContentId);

@@ -211,7 +211,7 @@ final class PilotProbe {
 			&& PilotScript.sample(name, 5).hotbarCycle == 1
 			&& PilotScript.sample(name, 6).pausePressed,
 			"editor-shell script must mutate and stop two disposable runs");
-		final screenshot = PilotScript.checkpoint(name, 7);
+		final screenshot = PilotScript.checkpoint(name, 8);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "editor-shell.return",
 			"editor-shell return screenshot checkpoint changed");
 		return 1;

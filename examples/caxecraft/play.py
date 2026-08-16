@@ -1528,6 +1528,47 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     return width, height
 
 
+def validate_editor_environment_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Prove the native editor presented its complete modal over the workspace.
+
+    Exact environment changes are owned by the renderer-independent editor
+    probe. This broad framebuffer check proves that the native route presents
+    a substantial, varied two-column panel and a visible device focus ring.
+    """
+    width, height, pixels = decode_rgba_png(path, "editor environment")
+    logical_width, logical_height = 1280, 720
+    expected_dimensions = {(logical_width, logical_height)}
+    if platform_name == "macos":
+        expected_dimensions.add((logical_width * 2, logical_height * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            "Caxecraft editor environment screenshot must match its logical "
+            f"1280x720 window at an admitted pixel scale, found {width}x{height}"
+        )
+    scale = width // logical_width
+    panel_changed = 0
+    panel_colors: set[int] = set()
+    focus_pixels = 0
+    for row in range(100 * scale, 660 * scale):
+        row_at = row * width * 4
+        for column in range(230 * scale, 1050 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            panel_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if abs(red - 12) + abs(green - 28) + abs(blue - 36) > 24:
+                panel_changed += 1
+            if (red, green, blue) == (255, 132, 47):
+                focus_pixels += 1
+    minimum_changed = 80_000 * scale * scale
+    minimum_focus = 100 * scale * scale
+    if panel_changed < minimum_changed or len(panel_colors) < 8 or focus_pixels < minimum_focus:
+        raise PlayFailure(
+            "Caxecraft editor environment panel is blank, incomplete, or missing focus "
+            f"(changed:{panel_changed}, colors:{len(panel_colors)}, focus:{focus_pixels})"
+        )
+    return width, height
+
+
 def host_platform() -> str:
     value = PLATFORM_NAMES.get(platform.system())
     if value is None:
@@ -3139,7 +3180,10 @@ def run_pilot_sample(
             executable.parent / "caxecraft-pilot-runtime-level-selection.png",
         )
     elif pilot == "editor-shell":
-        supporting_screenshots = (executable.parent / "caxecraft-pilot-editor-play.png",)
+        supporting_screenshots = (
+            executable.parent / "caxecraft-pilot-editor-play.png",
+            executable.parent / "caxecraft-pilot-editor-environment.png",
+        )
     else:
         supporting_screenshots = ()
     state_screenshot = executable.parent / "caxecraft-pilot-state.png"
@@ -3217,6 +3261,8 @@ def run_pilot_sample(
                 expected_entities=False,
                 expected_open_sky=False,
             )
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-environment.png":
+            validate_editor_environment_screenshot(supporting_screenshot, platform_name=platform_name)
         else:
             validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
         supporting_hashes[supporting_screenshot.name] = hashlib.sha256(

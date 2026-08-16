@@ -248,7 +248,7 @@ final class PilotScript {
 			case SmoothMotion:
 				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
 			case EditorShell:
-				frameNumber == 7 ? new PilotCheckpoint("editor-shell.return", CaptureScreenshot) : null;
+				frameNumber == 8 ? new PilotCheckpoint("editor-shell.return", CaptureScreenshot) : null;
 			case CampaignTravel:
 				frameNumber == 3 ? new PilotCheckpoint("campaign-travel.frame", CaptureScreenshot) : null;
 			case _: null;

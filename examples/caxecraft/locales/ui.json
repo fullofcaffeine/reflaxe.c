@@ -144,6 +144,126 @@
       }
     },
     {
+      "id": "editor_environment",
+      "symbol": "EditorEnvironment",
+      "text": {
+        "en": "ENVIRONMENT",
+        "es-MX": "AMBIENTE"
+      }
+    },
+    {
+      "id": "editor_environment_clouds",
+      "symbol": "EditorEnvironmentClouds",
+      "text": {
+        "en": "CLOUDS",
+        "es-MX": "NUBES"
+      }
+    },
+    {
+      "id": "editor_environment_done",
+      "symbol": "EditorEnvironmentDone",
+      "text": {
+        "en": "DONE",
+        "es-MX": "LISTO"
+      }
+    },
+    {
+      "id": "editor_environment_east",
+      "symbol": "EditorEnvironmentEast",
+      "text": {
+        "en": "EAST EDGE",
+        "es-MX": "BORDE ESTE"
+      }
+    },
+    {
+      "id": "editor_environment_enabled",
+      "symbol": "EditorEnvironmentEnabled",
+      "text": {
+        "en": "CUSTOM SKY",
+        "es-MX": "CIELO PROPIO"
+      }
+    },
+    {
+      "id": "editor_environment_north",
+      "symbol": "EditorEnvironmentNorth",
+      "text": {
+        "en": "NORTH EDGE",
+        "es-MX": "BORDE NORTE"
+      }
+    },
+    {
+      "id": "editor_environment_off",
+      "symbol": "EditorEnvironmentOff",
+      "text": {
+        "en": "OFF",
+        "es-MX": "NO"
+      }
+    },
+    {
+      "id": "editor_environment_on",
+      "symbol": "EditorEnvironmentOn",
+      "text": {
+        "en": "ON",
+        "es-MX": "SÍ"
+      }
+    },
+    {
+      "id": "editor_environment_radius",
+      "symbol": "EditorEnvironmentRadius",
+      "text": {
+        "en": "SIZE",
+        "es-MX": "TAMAÑO"
+      }
+    },
+    {
+      "id": "editor_environment_seed",
+      "symbol": "EditorEnvironmentSeed",
+      "text": {
+        "en": "PATTERN",
+        "es-MX": "PATRÓN"
+      }
+    },
+    {
+      "id": "editor_environment_sky",
+      "symbol": "EditorEnvironmentSky",
+      "text": {
+        "en": "SKY",
+        "es-MX": "CIELO"
+      }
+    },
+    {
+      "id": "editor_environment_south",
+      "symbol": "EditorEnvironmentSouth",
+      "text": {
+        "en": "SOUTH EDGE",
+        "es-MX": "BORDE SUR"
+      }
+    },
+    {
+      "id": "editor_environment_sun",
+      "symbol": "EditorEnvironmentSun",
+      "text": {
+        "en": "SUN",
+        "es-MX": "SOL"
+      }
+    },
+    {
+      "id": "editor_environment_water",
+      "symbol": "EditorEnvironmentWater",
+      "text": {
+        "en": "CONTINUE WATER",
+        "es-MX": "CONTINUAR AGUA"
+      }
+    },
+    {
+      "id": "editor_environment_west",
+      "symbol": "EditorEnvironmentWest",
+      "text": {
+        "en": "WEST EDGE",
+        "es-MX": "BORDE OESTE"
+      }
+    },
+    {
       "id": "editor_erase",
       "symbol": "EditorErase",
       "text": {

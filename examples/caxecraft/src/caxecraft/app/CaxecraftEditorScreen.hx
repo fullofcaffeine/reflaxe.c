@@ -4,6 +4,11 @@ package caxecraft.app;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
+import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
+import caxecraft.editor.EditorEnvironment.editEnvironment;
+import caxecraft.editor.EditorEnvironment.firstEnvironmentControl;
+import caxecraft.editor.EditorEnvironment.moveEnvironmentControl;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
@@ -45,6 +50,8 @@ import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioEnvironment;
+import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
 import haxe.io.Bytes;
@@ -125,6 +132,9 @@ final class CaxecraftEditorScreen {
 	var activeTool:EditorTool;
 	var detailsOpen:Bool;
 	var worldListOpen:Bool;
+	var environmentPanelOpen:Bool;
+	var environmentControl:EditorEnvironmentControl;
+	var environment:Null<ScenarioEnvironment>;
 	var leavePromptOpen:Bool;
 	var openingState:EditorOpeningState;
 	var previewPoint:Null<VoxelPoint>;
@@ -164,6 +174,9 @@ final class CaxecraftEditorScreen {
 		activeTool = SelectTool;
 		detailsOpen = false;
 		worldListOpen = false;
+		environmentPanelOpen = false;
+		environmentControl = firstEnvironmentControl();
+		environment = null;
 		leavePromptOpen = false;
 		openingState = NoOpenedEditor;
 		final openedSession = session;
@@ -200,6 +213,10 @@ final class CaxecraftEditorScreen {
 		if (!leavePromptOpen && (editedName == null || !editedName.isEditing()) && Raylib.IsKeyPressed(KeyboardKey.Backspace))
 			deleteSelectedObject();
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
+		if (environmentPanelOpen) {
+			drawEnvironmentPanel(locale, width, height);
+			return StayInEditor;
+		}
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
 		if (Raygui.WindowBoxString(outer, uiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
 			focusedControl = EditorFocusTarget.Back;
@@ -249,6 +266,11 @@ final class CaxecraftEditorScreen {
 
 		final playWidth = 136.0;
 		final playLeft = width - playWidth - 32.0;
+		final environmentWidth = 116.0;
+		final environmentLeft = playLeft - environmentWidth - 12.0;
+		if (focusedButtonSized(EditorFocusTarget.Environment, environmentLeft, toolbarTop, environmentWidth, 38.0,
+			uiCatalog.text(locale, UiMessage.EditorEnvironment)))
+			openEnvironmentPanel();
 		if (focusedButtonSized(EditorFocusTarget.Play, playLeft, toolbarTop - 2.0, playWidth, 42.0, uiCatalog.text(locale, UiMessage.EditorTest))) {
 			final testAction = requestTestPlay();
 			switch testAction {
@@ -278,6 +300,10 @@ final class CaxecraftEditorScreen {
 			drawInspector(locale, canvasLeft + canvasWidth + 12, canvasTop, inspectorWidth, canvasHeight);
 		drawCreationShelf(locale, 32, shelfTop, width - 64, 112);
 
+		if (environmentPanelOpen) {
+			drawEnvironmentPanel(locale, width, height);
+			return StayInEditor;
+		}
 		if (leavePromptOpen)
 			return drawLeavePrompt(locale, width, height);
 		return StayInEditor;
@@ -430,6 +456,158 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
+	/** Draw every admitted environment field in one visible two-column modal. */
+	function drawEnvironmentPanel(locale:LocaleCursor, width:Int, height:Int):Void {
+		Raylib.DrawRectangle(0, 0, width, height, Color.rgba(4, 10, 14, 230));
+		final panelWidth = width >= 900 ? 820 : width - 48;
+		final panelHeight = height >= 640 ? 560 : height - 48;
+		final left = Std.int((width - panelWidth) / 2);
+		final top = Std.int((height - panelHeight) / 2);
+		Raygui.PanelString(Rectangle.fromFloat(left, top, panelWidth, panelHeight), uiCatalog.text(locale, UiMessage.EditorEnvironment));
+		final current = environment;
+		if (current != null) {
+			Raylib.DrawRectangle(left + panelWidth - 58, top + 14, 28, 20, Color.rgbaClamped(current.sky.red, current.sky.green, current.sky.blue));
+			Raylib.DrawRectangleLines(left + panelWidth - 58, top + 14, 28, 20, CaxecraftPalette.hudText());
+		}
+		final columnGap = 24;
+		final columnWidth = Std.int((panelWidth - 48 - columnGap) / 2);
+		for (index in 0...18) {
+			final control = environmentControlAt(index);
+			final column = index < 9 ? 0 : 1;
+			final row = index < 9 ? index : index - 9;
+			final rowLeft = left + 24 + column * (columnWidth + columnGap);
+			final rowTop = top + 54 + row * 50;
+			if (control == EditorEnvironmentControl.Done) {
+				if (Raygui.ButtonString(Rectangle.fromFloat(rowLeft, rowTop + 4, columnWidth, 36), uiCatalog.text(locale, UiMessage.EditorEnvironmentDone))
+					.has(GuiResult.Pressed)) {
+					environmentControl = control;
+					closeEnvironmentPanel();
+				}
+				drawEnvironmentFocusRing(control, rowLeft, rowTop + 4, columnWidth, 36);
+			} else
+				drawEnvironmentRow(locale, control, rowLeft, rowTop, columnWidth);
+		}
+	}
+
+	/** Draw one label, current value, and pointer decrement/increment actions. */
+	function drawEnvironmentRow(locale:LocaleCursor, control:EditorEnvironmentControl, left:Int, top:Int, width:Int):Void {
+		Raylib.DrawTextString(environmentControlLabel(locale, control), left + 4, top + 4, 14, CaxecraftPalette.hudText());
+		final buttonWidth = 32;
+		final valueWidth = 72;
+		final decreaseLeft = left + width - buttonWidth * 2 - valueWidth - 8;
+		if (Raygui.ButtonString(Rectangle.fromFloat(decreaseLeft, top, buttonWidth, 34), "-").has(GuiResult.Pressed)) {
+			environmentControl = control;
+			applyEnvironmentControl(control, EditorEnvironmentDirection.Decrease);
+		}
+		Raylib.DrawTextString(environmentControlValue(locale, control), decreaseLeft + buttonWidth + 6, top + 8, 15, CaxecraftPalette.selection());
+		if (Raygui.ButtonString(Rectangle.fromFloat(left + width - buttonWidth, top, buttonWidth, 34), "+").has(GuiResult.Pressed)) {
+			environmentControl = control;
+			applyEnvironmentControl(control, EditorEnvironmentDirection.Increase);
+		}
+		drawEnvironmentFocusRing(control, left, top, width, 34);
+	}
+
+	/** Draw modal focus independently from the controls behind the overlay. */
+	function drawEnvironmentFocusRing(control:EditorEnvironmentControl, left:Int, top:Int, width:Int, height:Int):Void {
+		if (environmentControl != control)
+			return;
+		final color = CaxecraftPalette.editorFocus();
+		Raylib.DrawRectangleLines(left - 2, top - 2, width + 4, height + 4, color);
+		Raylib.DrawRectangleLines(left - 3, top - 3, width + 6, height + 6, color);
+	}
+
+	/** Localized label for one closed environment field. */
+	function environmentControlLabel(locale:LocaleCursor, control:EditorEnvironmentControl):String {
+		final sky = uiCatalog.text(locale, UiMessage.EditorEnvironmentSky);
+		final sun = uiCatalog.text(locale, UiMessage.EditorEnvironmentSun);
+		final clouds = uiCatalog.text(locale, UiMessage.EditorEnvironmentClouds);
+		return switch control {
+			case Enabled: uiCatalog.text(locale, UiMessage.EditorEnvironmentEnabled);
+			case SkyRed: '$sky R';
+			case SkyGreen: '$sky G';
+			case SkyBlue: '$sky B';
+			case SunEnabled: sun;
+			case SunX: '$sun X';
+			case SunY: '$sun Y';
+			case SunZ: '$sun Z';
+			case SunRadius: '$sun ${uiCatalog.text(locale, UiMessage.EditorEnvironmentRadius)}';
+			case CloudCount: '$clouds #';
+			case CloudSpeed: '$clouds >>';
+			case CloudSeed: '$clouds ${uiCatalog.text(locale, UiMessage.EditorEnvironmentSeed)}';
+			case NorthEdge: uiCatalog.text(locale, UiMessage.EditorEnvironmentNorth);
+			case SouthEdge: uiCatalog.text(locale, UiMessage.EditorEnvironmentSouth);
+			case EastEdge: uiCatalog.text(locale, UiMessage.EditorEnvironmentEast);
+			case WestEdge: uiCatalog.text(locale, UiMessage.EditorEnvironmentWest);
+			case ContinueWater: uiCatalog.text(locale, UiMessage.EditorEnvironmentWater);
+			case Done: uiCatalog.text(locale, UiMessage.EditorEnvironmentDone);
+		};
+	}
+
+	/** Current authored value shown beside one environment field. */
+	function environmentControlValue(locale:LocaleCursor, control:EditorEnvironmentControl):String {
+		final current = environment;
+		if (control == EditorEnvironmentControl.Enabled)
+			return onOff(locale, current != null);
+		if (current == null)
+			return "-";
+		return switch control {
+			case Enabled: onOff(locale, true);
+			case SkyRed: '${current.sky.red}';
+			case SkyGreen: '${current.sky.green}';
+			case SkyBlue: '${current.sky.blue}';
+			case SunEnabled: onOff(locale, current.sun != null);
+			case SunX: current.sun == null ? "-" : '${current.sun.x}';
+			case SunY: current.sun == null ? "-" : '${current.sun.y}';
+			case SunZ: current.sun == null ? "-" : '${current.sun.z}';
+			case SunRadius: current.sun == null ? "-" : '${current.sun.radiusMilli}';
+			case CloudCount: '${current.clouds.count}';
+			case CloudSpeed: '${current.clouds.speedMilli}';
+			case CloudSeed: '${current.clouds.seed}';
+			case NorthEdge: onOff(locale, hasEnvironmentEdge(current.edges, North));
+			case SouthEdge: onOff(locale, hasEnvironmentEdge(current.edges, South));
+			case EastEdge: onOff(locale, hasEnvironmentEdge(current.edges, East));
+			case WestEdge: onOff(locale, hasEnvironmentEdge(current.edges, West));
+			case ContinueWater: onOff(locale, current.continueWater);
+			case Done: "";
+		};
+	}
+
+	/** Localized Boolean value shared by environment toggles. */
+	function onOff(locale:LocaleCursor, enabled:Bool):String
+		return uiCatalog.text(locale, enabled ? UiMessage.EditorEnvironmentOn : UiMessage.EditorEnvironmentOff);
+
+	/** True when the current environment includes one closed finite-world edge. */
+	static function hasEnvironmentEdge(edges:Array<ScenarioHorizonEdge>, expected:ScenarioHorizonEdge):Bool {
+		for (edge in edges)
+			if (edge == expected)
+				return true;
+		return false;
+	}
+
+	/** Map each visible row without converting an unchecked integer to an enum. */
+	static function environmentControlAt(index:Int):EditorEnvironmentControl {
+		return switch index {
+			case 0: Enabled;
+			case 1: SkyRed;
+			case 2: SkyGreen;
+			case 3: SkyBlue;
+			case 4: SunEnabled;
+			case 5: SunX;
+			case 6: SunY;
+			case 7: SunZ;
+			case 8: SunRadius;
+			case 9: CloudCount;
+			case 10: CloudSpeed;
+			case 11: CloudSeed;
+			case 12: NorthEdge;
+			case 13: SouthEdge;
+			case 14: EastEdge;
+			case 15: WestEdge;
+			case 16: ContinueWater;
+			case _: Done;
+		};
+	}
+
 	/** Draw six compact axis controls for the selected authored object. */
 	function drawObjectMoveControls(left:Int, top:Int, width:Int):Void {
 		final gap = 4;
@@ -480,6 +658,16 @@ final class CaxecraftEditorScreen {
 		final name = worldName;
 		if (name != null && name.isEditing())
 			return NavigationCommand.None;
+		if (environmentPanelOpen) {
+			if (Raylib.IsKeyPressed(KeyboardKey.Up))
+				return NavigationCommand.Up;
+			if (Raylib.IsKeyPressed(KeyboardKey.Down))
+				return NavigationCommand.Down;
+			if (Raylib.IsKeyPressed(KeyboardKey.Left))
+				return NavigationCommand.Left;
+			if (Raylib.IsKeyPressed(KeyboardKey.Right))
+				return NavigationCommand.Right;
+		}
 		if (Raylib.IsKeyPressed(KeyboardKey.Tab)) {
 			final backward = Raylib.IsKeyDown(KeyboardKey.LeftShift) || Raylib.IsKeyDown(KeyboardKey.RightShift);
 			return backward ? NavigationCommand.Up : NavigationCommand.Down;
@@ -500,6 +688,27 @@ final class CaxecraftEditorScreen {
 	 * Keyboard, controller, and pilot commands all enter this one handler.
 	 */
 	public function applyNavigation(command:NavigationCommand):EditorScreenAction {
+		if (environmentPanelOpen) {
+			switch command {
+				case Up:
+					environmentControl = moveEnvironmentControl(environmentControl, EditorEnvironmentDirection.Decrease);
+				case Down:
+					environmentControl = moveEnvironmentControl(environmentControl, EditorEnvironmentDirection.Increase);
+				case Left:
+					applyEnvironmentControl(environmentControl, EditorEnvironmentDirection.Decrease);
+				case Right:
+					applyEnvironmentControl(environmentControl, EditorEnvironmentDirection.Increase);
+				case Confirm:
+					if (environmentControl == EditorEnvironmentControl.Done)
+						closeEnvironmentPanel();
+					else
+						applyEnvironmentControl(environmentControl, EditorEnvironmentDirection.Increase);
+				case Cancel:
+					closeEnvironmentPanel();
+				case None:
+			}
+			return StayInEditor;
+		}
 		if (leavePromptOpen) {
 			switch command {
 				case Up | Left | Right | Down:
@@ -560,6 +769,8 @@ final class CaxecraftEditorScreen {
 				setWorkspaceView(BuildView);
 			case Plan:
 				setWorkspaceView(PlanView);
+			case Environment:
+				openEnvironmentPanel();
 			case Play:
 				return requestTestPlay();
 			case SelectTool:
@@ -587,6 +798,10 @@ final class CaxecraftEditorScreen {
 
 	/** Close the nearest presentation layer before offering to leave the draft. */
 	function cancelEditorAction():EditorScreenAction {
+		if (environmentPanelOpen) {
+			closeEnvironmentPanel();
+			return StayInEditor;
+		}
 		if (activeTool != EditorTool.SelectTool) {
 			setActiveTool(EditorTool.SelectTool);
 			return StayInEditor;
@@ -606,6 +821,37 @@ final class CaxecraftEditorScreen {
 	function setWorkspaceView(view:EditorWorkspaceView):Void {
 		workspaceView = view;
 		invalidatePreview();
+	}
+
+	/** Open the environment modal at its explicit enabled control. */
+	function openEnvironmentPanel():Void {
+		environmentPanelOpen = true;
+		environmentControl = firstEnvironmentControl();
+	}
+
+	/** Close the modal and return semantic focus to its visible toolbar button. */
+	function closeEnvironmentPanel():Void {
+		environmentPanelOpen = false;
+		focusedControl = EditorFocusTarget.Environment;
+	}
+
+	/** Submit one field-preserving environment edit through normal history. */
+	function applyEnvironmentControl(control:EditorEnvironmentControl, direction:EditorEnvironmentDirection):Void {
+		if (control == EditorEnvironmentControl.Done)
+			return;
+		final current = session;
+		if (current == null)
+			return;
+		final replacement = editEnvironment(environment, control, direction);
+		switch current.mutate({baseRevision: current.revision(), mutation: Apply(SetEnvironment(replacement))}) {
+			case MutationApplied(_, _, _, _, _):
+				notice = Ready;
+				refreshProjection();
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
+				notice = Invalid;
+		}
 	}
 
 	/** Choose one creation card while preserving the current semantic selection. */
@@ -1299,6 +1545,7 @@ final class CaxecraftEditorScreen {
 			objectGizmos = [];
 			objectLabels = "";
 			flowRuleCount = 0;
+			environment = null;
 			camera = null;
 			selection = null;
 			invalidatePreview();
@@ -1307,6 +1554,7 @@ final class CaxecraftEditorScreen {
 		}
 		final draft = current.draftSnapshot();
 		syncWorldName(draft.title);
+		environment = draft.environment;
 		final previous = projection;
 		projection = projectWorld(draft.world);
 		planProjection = switch projection {
