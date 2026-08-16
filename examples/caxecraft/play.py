@@ -3651,8 +3651,24 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def stop_owned_server_after_failure(owner: OwnedHaxeServer | None) -> bool:
+    """Stop one exact worktree-owned server without hiding the original error."""
+
+    if owner is None:
+        return False
+    try:
+        return owner.stop()
+    except (OSError, HaxeServerFailure) as error:
+        print(
+            f"caxecraft: WARNING: could not stop the owned Haxe server: {error}",
+            file=sys.stderr,
+        )
+        return False
+
+
 def main(argv: list[str]) -> int:
     variant_lock: VariantLock | None = None
+    server_owner: OwnedHaxeServer | None = None
     try:
         args = parse_args(argv)
         if args.cold:
@@ -3858,7 +3874,6 @@ def main(argv: list[str]) -> int:
             print(f"caxecraft: reusing validated {args.layout} C project at {generated}")
         else:
             server_lease: HaxeServerLease | None = None
-            server_owner: OwnedHaxeServer | None = None
             if args.haxe_server != "off":
                 installation = pinned_haxe_installation()
                 verify_pinned_haxe(installation)
@@ -4099,6 +4114,11 @@ def main(argv: list[str]) -> int:
             return 0
         print("caxecraft: launching; press Q to quit")
         return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
+    except KeyboardInterrupt:
+        stopped = stop_owned_server_after_failure(server_owner)
+        suffix = "; stopped the owned Haxe server" if stopped else ""
+        print(f"caxecraft: interrupted{suffix}", file=sys.stderr)
+        return 130
     except (
         OSError,
         UnicodeError,
@@ -4109,6 +4129,7 @@ def main(argv: list[str]) -> int:
         provision.ProvisionFailure,
         PlayFailure,
     ) as error:
+        stop_owned_server_after_failure(server_owner)
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1
     finally:

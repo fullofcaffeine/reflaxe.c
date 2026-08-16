@@ -92,6 +92,31 @@ function project(world:ScenarioWorld, layerY:Int):Null<EditorViewportProjection>
 }
 
 /**
+	Build one plan layer from cells that the 3D editor already decoded.
+
+	The screen prepares both views after an accepted edit. Reusing the complete
+	cell array avoids decoding every world chunk twice during that interaction.
+	The function checks the array length and layer before it reads any cell, then
+	returns the same compact layout as `project`.
+**/
+function projectFromCells(world:ScenarioWorld, worldCells:Array<Int>, layerY:Int):Null<EditorViewportProjection> {
+	if (layerY < 0 || layerY >= world.size.height)
+		return null;
+	if (worldCells.length != world.size.width * world.size.height * world.size.depth)
+		return null;
+	final cells:Array<Int> = [];
+	for (z in 0...world.size.depth)
+		for (x in 0...world.size.width)
+			cells.push(worldCells[(z * world.size.height + layerY) * world.size.width + x]);
+	return {
+		width: world.size.width,
+		depth: world.size.depth,
+		layerY: layerY,
+		cells: cells
+	};
+}
+
+/**
 	Fit the largest centered square-cell grid inside a pixel rectangle.
 
 	A container too small to give every voxel at least one pixel returns `null`.

@@ -22,7 +22,7 @@ import caxecraft.editor.EditorViewport.EditorToolCommandResult;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
 import caxecraft.editor.EditorViewport.layout as layoutPlan;
 import caxecraft.editor.EditorViewport.pointAt as pointAtPlan;
-import caxecraft.editor.EditorViewport.project as projectPlan;
+import caxecraft.editor.EditorViewport.projectFromCells;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
 import caxecraft.editor.EditorWorldViewport.EditorCameraState;
@@ -1309,7 +1309,10 @@ final class CaxecraftEditorScreen {
 		syncWorldName(draft.title);
 		final previous = projection;
 		projection = projectWorld(draft.world);
-		planProjection = projectPlan(draft.world, 0);
+		planProjection = switch projection {
+			case null: null;
+			case value: projectFromCells(draft.world, value.cells, 0);
+		};
 		objectGizmos = projectObjects(draft.objects);
 		flowRuleCount = draft.flow.rules.length;
 		final labels:Array<String> = [];

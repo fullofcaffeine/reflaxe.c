@@ -40,6 +40,7 @@ import caxecraft.editor.EditorViewport.paletteCodeAt;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
 import caxecraft.editor.EditorViewport.project as projectViewport;
+import caxecraft.editor.EditorViewport.projectFromCells;
 import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
@@ -1048,6 +1049,11 @@ final class EditorProbe {
 		expectApplied(session.apply(PaintVoxel({x: 3, y: 1, z: 2}, 7)), Voxel, "viewport upper-layer paint");
 		final upper = projectViewport(session.draftSnapshot().world, 1);
 		require(upper != null && upper.width == 4 && upper.depth == 3 && upper.cells.length == 12, "viewport projection lost its exact layer dimensions");
+		final volume = projectWorld(session.draftSnapshot().world);
+		final reused = volume == null ? null : projectFromCells(session.draftSnapshot().world, volume.cells, 1);
+		require(reused != null
+			&& reused.cells.join(",") == upper.cells.join(","), "viewport projection changed when it reused the decoded 3D cells");
+		require(projectFromCells(session.draftSnapshot().world, [0], 1) == null, "viewport projection admitted a malformed decoded cell array");
 		require(paletteCodeAt(upper, 3, 2) == 7 && paletteCodeAt(upper, 0, 0) == 0 && paletteCodeAt(upper, 4, 0) == -1,
 			"viewport projection lost painted, air, or out-of-range cell semantics");
 		require(projectViewport(session.draftSnapshot().world, 2) == null, "viewport admitted a layer outside the world");
