@@ -31,6 +31,7 @@ import caxecraft.editor.EditorViewport.projectFromCells;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
 import caxecraft.editor.EditorWorldViewport.EditorCameraState;
+import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
@@ -110,7 +111,10 @@ private enum EditorOpeningState {
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
  * composition edge; the reusable editor package knows neither. Build and Plan
  * are two views over one draft, selection, active tool, and history. The first
- * child-facing slice edits terrain only. Native source save, object transforms,
+ * child-facing slice edits terrain and offers bounded object transforms.
+ * Creators can move transform-backed objects by whole cells and rotate them in
+ * quarter turns. Trigger volumes have bounds but no facing direction, so the
+ * inspector does not show rotation controls for them. Native source save,
  * layer controls, flow authoring, and cinematic tools remain separate. Test
  * Play uses a disposable ordinary game runtime while this class keeps the
  * exact editor workspace alive.
@@ -429,6 +433,12 @@ final class CaxecraftEditorScreen {
 			cursorTop += 34;
 			drawObjectMoveControls(left + 14, cursorTop, width - 28);
 			cursorTop += 34;
+			switch gizmo.facing {
+				case ObjectYaw(yawDegrees):
+					drawObjectRotationControls(left + 14, cursorTop, width - 28, yawDegrees);
+					cursorTop += 34;
+				case NoObjectFacing:
+			}
 			final actionWidth = Std.int((width - 32) / 2);
 			if (Raygui.ButtonString(Rectangle.fromFloat(left + 14, cursorTop, actionWidth, 30), uiCatalog.text(locale, UiMessage.EditorDuplicate))
 				.has(GuiResult.Pressed))
@@ -624,6 +634,18 @@ final class CaxecraftEditorScreen {
 	function moveObjectButton(label:String, left:Int, top:Int, width:Int, delta:VoxelPoint):Void {
 		if (Raygui.ButtonString(Rectangle.fromFloat(left, top, width, 26), label).has(GuiResult.Pressed))
 			moveSelectedObject(delta);
+	}
+
+	/** Show the current facing direction between two quarter-turn actions. */
+	function drawObjectRotationControls(left:Int, top:Int, width:Int, yawDegrees:Int):Void {
+		final gap = 4;
+		final valueWidth = 70;
+		final buttonWidth = Std.int((width - valueWidth - gap * 2) / 2);
+		if (Raygui.ButtonString(Rectangle.fromFloat(left, top, buttonWidth, 26), "-90").has(GuiResult.Pressed))
+			rotateSelectedObject(-90);
+		Raylib.DrawTextString('${yawDegrees} deg', left + buttonWidth + gap + 8, top + 6, 14, CaxecraftPalette.selection());
+		if (Raygui.ButtonString(Rectangle.fromFloat(left + buttonWidth + gap * 2 + valueWidth, top, buttonWidth, 26), "+90").has(GuiResult.Pressed))
+			rotateSelectedObject(90);
 	}
 
 	/** Draw a modal leave decision because this editor does not yet claim Save. */
@@ -915,6 +937,26 @@ final class CaxecraftEditorScreen {
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(MoveObjectBy(id, delta))}) {
+			case MutationApplied(_, _, _, _, _):
+				notice = Ready;
+				refreshProjection();
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
+				notice = Invalid;
+		}
+	}
+
+	/** Rotate the selected transform-backed object through revisioned history. */
+	function rotateSelectedObject(degrees:Int):Void {
+		final current = session;
+		if (current == null)
+			return;
+		final id = switch current.selectionSnapshot() {
+			case NodeSelection(ObjectNode(value)): value;
+			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
+		};
+		switch current.mutate({baseRevision: current.revision(), mutation: Apply(RotateObjectBy(id, degrees))}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
 				refreshProjection();

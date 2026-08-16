@@ -62,6 +62,9 @@ enum EditorCommand {
 	/** Move one existing placement by whole voxel cells without changing its identity or role. */
 	MoveObjectBy(id:ScenarioId, delta:VoxelPoint);
 
+	/** Rotate one transform-backed placement without changing its position, identity, or role. */
+	RotateObjectBy(id:ScenarioId, degrees:Int);
+
 	RemoveObject(id:ScenarioId);
 	PutDialogue(dialogue:ScenarioDialogue);
 	RemoveDialogue(id:ScenarioId);
@@ -223,6 +226,9 @@ enum EditorError {
 
 	/** The requested whole-voxel move would place some or all of the object outside the finite world. */
 	ObjectMoveOutsideWorld(id:ScenarioId, delta:VoxelPoint);
+
+	/** The selected placement has bounds but no authored facing direction. */
+	ObjectCannotRotate(id:ScenarioId);
 
 	MissingDialogue(id:ScenarioId);
 	MissingObjective(id:ScenarioId);

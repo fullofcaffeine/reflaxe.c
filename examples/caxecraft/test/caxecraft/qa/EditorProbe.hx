@@ -48,6 +48,7 @@ import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.projectFromCells;
 import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
+import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
@@ -129,6 +130,7 @@ final class EditorProbe {
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
 		checkObjectMovement();
+		checkObjectRotation();
 		checkCheckpointPlacement();
 		checkCatalogObjectPlacement();
 		checkObjectDuplication();
@@ -167,6 +169,7 @@ final class EditorProbe {
 		}), Dialogue);
 		commandChecks += roundTrip(session, PutObject({id: CHECKPOINT, tags: [], placement: Checkpoint(transform(1500, 0, 1500))}), Placement);
 		commandChecks += roundTrip(session, MoveObjectBy(CHECKPOINT, {x: 1, y: 0, z: 0}), Placement);
+		commandChecks += roundTrip(session, RotateObjectBy(CHECKPOINT, 90), Placement);
 		commandChecks += roundTrip(session, PutObject({
 			id: ZONE,
 			tags: [new ScenarioTag("finish")],
@@ -490,6 +493,120 @@ final class EditorProbe {
 			}
 		require(payloadChecks == 4, "object movement payload proof did not inspect every representative record");
 	}
+
+	/** Prove every directional placement rotates while bounds-only volumes fail closed. */
+	static function checkObjectRotation():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(PutDialogue({
+			id: DIALOGUE,
+			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
+		})), Dialogue, "prepare rotating NPC dialogue");
+		final objects:Array<ScenarioObject> = [
+			{id: id("rotate.checkpoint"), tags: [], placement: Checkpoint(transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.item"), tags: [], placement: Item(content("caxecraft:item"), 2, transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.entity"), tags: [], placement: Entity(content("caxecraft:entity"), transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.npc"), tags: [], placement: Npc(NPC, DIALOGUE, transformYaw(500, 500, 500, 350))},
+			{id: id("rotate.prefab"), tags: [], placement: Prefab(PREFAB, transformYaw(500, 500, 500, 350))},
+			{
+				id: id("rotate.stateful"),
+				tags: [],
+				placement: StatefulObject(content("caxecraft:mechanism"), content("caxecraft:idle"), transformYaw(500, 500, 500, 350))
+			}
+		];
+		for (object in objects)
+			expectApplied(session.apply(PutObject(object)), Placement, 'prepare ${object.id.text()}');
+		final ids:Array<ScenarioId> = [PLAYER];
+		for (object in objects)
+			ids.push(object.id);
+		for (objectId in ids) {
+			roundTrip(session, RotateObjectBy(objectId, 370), Placement);
+			expectApplied(session.apply(RotateObjectBy(objectId, -10)), Placement, 'normalize negative yaw for ${objectId.text()}');
+		}
+		var rotated = 0;
+		for (object in session.draftSnapshot().objects)
+			for (objectId in ids)
+				if (object.id.text() == objectId.text()) {
+					switch objectFacing(object) {
+						case ObjectYaw(yaw):
+							require(yaw == (objectId.text() == PLAYER.text() ? 0 : 350), 'object rotation lost normalized yaw for ${objectId.text()}');
+						case NoObjectFacing:
+							throw 'object rotation lost facing for ${objectId.text()}';
+					}
+					rotated++;
+				}
+		require(rotated == ids.length, "object rotation lost a transform-backed placement");
+		requireRotatedObjectPayloads(session.draftSnapshot());
+
+		final triggerId = id("rotate.trigger");
+		expectApplied(session.apply(PutObject({
+			id: triggerId,
+			tags: [new ScenarioTag("volume")],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 2, height: 1, depth: 2}})
+		})), Placement, "prepare non-rotatable trigger");
+		final beforeRejected = session.canonicalDraft();
+		final beforeRevision = session.revision();
+		final beforeUndo = session.undoDepth();
+		expectRejected(session.apply(RotateObjectBy(triggerId, 90)), error -> switch error {
+			case ObjectCannotRotate(id): id.text() == triggerId.text();
+			case _: false;
+		}, "bounds-only trigger rotation");
+		expectRejected(session.apply(RotateObjectBy(id("rotate.missing"), 90)), error -> switch error {
+			case MissingObject(id): id.text() == "rotate.missing";
+			case _: false;
+		}, "missing object rotation");
+		require(session.canonicalDraft().compare(beforeRejected) == 0
+			&& session.revision() == beforeRevision
+			&& session.undoDepth() == beforeUndo,
+			"rejected object rotation changed bytes, revision, or history");
+	}
+
+	/** Return the same closed facing model used by the visible editor marker. */
+	static function objectFacing(object:ScenarioObject):EditorObjectFacing {
+		return switch object.placement {
+			case PlayerSpawn(transform) | Checkpoint(transform) | Item(_, _, transform) | Entity(_, transform) | Npc(_, _, transform) | Prefab(_, transform) |
+				StatefulObject(_, _, transform): ObjectYaw(transform.yawDegrees);
+			case TriggerZone(_): NoObjectFacing;
+		};
+	}
+
+	/** Check that rotation changed neither role data nor authored position. */
+	static function requireRotatedObjectPayloads(scenario:Scenario):Void {
+		var payloadChecks = 0;
+		for (object in scenario.objects)
+			switch object.id.text() {
+				case "rotate.item":
+					switch object.placement {
+						case Item(itemType, 2, transform):
+							require(itemType.text() == "caxecraft:item" && unchangedRotatedPosition(transform), "rotation changed item payload or position");
+						case _: throw "rotation changed item role or quantity";
+					}
+					payloadChecks++;
+				case "rotate.npc":
+					switch object.placement {
+						case Npc(npcType, dialogue, transform):
+							require(npcType.text() == NPC.text() && dialogue.text() == DIALOGUE.text() && unchangedRotatedPosition(transform),
+								"rotation changed NPC links or position");
+						case _: throw "rotation changed NPC role";
+					}
+					payloadChecks++;
+				case "rotate.stateful":
+					switch object.placement {
+						case StatefulObject(objectType, initialState, transform):
+							require(objectType.text() == "caxecraft:mechanism"
+								&& initialState.text() == "caxecraft:idle"
+								&& unchangedRotatedPosition(transform),
+								"rotation changed stateful-object payload or position");
+						case _: throw "rotation changed stateful-object role";
+					}
+					payloadChecks++;
+				case _:
+			}
+		require(payloadChecks == 3, "rotation payload checks did not inspect every linked role");
+	}
+
+	/** True when rotation preserved all three authored position coordinates. */
+	static inline function unchangedRotatedPosition(transform:caxecraft.scenario.ScenarioGeometry.ScenarioTransform):Bool
+		return transform.xMilli == 500 && transform.yMilli == 500 && transform.zMilli == 500;
 
 	/**
 	 * Prove that validated map bytes and every CAXEMAP object role remain visible.
@@ -1305,7 +1422,8 @@ final class EditorProbe {
 				z: 1.5,
 				width: 1.0,
 				height: 2.0,
-				depth: 1.0
+				depth: 1.0,
+				facing: ObjectYaw(0)
 			},
 			{
 				id: id("object.far"),
@@ -1315,7 +1433,8 @@ final class EditorProbe {
 				z: 3.5,
 				width: 1.0,
 				height: 2.0,
-				depth: 1.0
+				depth: 1.0,
+				facing: ObjectYaw(90)
 			},
 			{
 				id: id("object.overlap"),
@@ -1325,7 +1444,8 @@ final class EditorProbe {
 				z: 1.5,
 				width: 1.0,
 				height: 2.0,
-				depth: 1.0
+				depth: 1.0,
+				facing: ObjectYaw(180)
 			}
 		];
 		final objectHit = pickObject(objectGizmos, {x: 1.5, y: 1.0, z: -2.0}, {x: 0.0, y: 0.0, z: 1.0}, 16.0);
@@ -1821,11 +1941,14 @@ final class EditorProbe {
 		};
 
 	static inline function transform(x:Int, y:Int, z:Int):caxecraft.scenario.ScenarioGeometry.ScenarioTransform
+		return transformYaw(x, y, z, 0);
+
+	static inline function transformYaw(x:Int, y:Int, z:Int, yawDegrees:Int):caxecraft.scenario.ScenarioGeometry.ScenarioTransform
 		return {
 			xMilli: x,
 			yMilli: y,
 			zMilli: z,
-			yawDegrees: 0
+			yawDegrees: yawDegrees
 		};
 
 	static function hash(bytes:Bytes):Int {

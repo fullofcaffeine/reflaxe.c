@@ -94,6 +94,8 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 			ready(withObjects(scenario, putObject(scenario.objects, object)), Placement);
 		case MoveObjectBy(id, delta):
 			moveObjectBy(scenario, id, delta);
+		case RotateObjectBy(id, degrees):
+			rotateObjectBy(scenario, id, degrees);
 		case RemoveObject(id):
 			removePlacedObject(scenario, id);
 		case PutDialogue(dialogue):
@@ -281,6 +283,50 @@ private function moveObjectBy(scenario:Scenario, id:ScenarioId, delta:VoxelPoint
 		tags: existing.tags.copy(),
 		placement: placement
 	})), Placement);
+}
+
+/** Rotate one directional placement while preserving every role-specific payload field. */
+private function rotateObjectBy(scenario:Scenario, id:ScenarioId, degrees:Int):EditorReductionResult {
+	final existing = findObject(scenario.objects, id);
+	if (existing == null)
+		return ReductionRejected(MissingObject(id));
+	final placement = rotatePlacement(existing.placement, degrees);
+	if (placement == null)
+		return ReductionRejected(ObjectCannotRotate(id));
+	return ready(withObjects(scenario, putObject(scenario.objects, {
+		id: existing.id,
+		tags: existing.tags.copy(),
+		placement: placement
+	})), Placement);
+}
+
+/** Apply yaw only to placements that store an authored transform. */
+private function rotatePlacement(placement:ObjectPlacement, degrees:Int):Null<ObjectPlacement> {
+	return switch placement {
+		case PlayerSpawn(transform): PlayerSpawn(rotatedTransform(transform, degrees));
+		case Checkpoint(transform): Checkpoint(rotatedTransform(transform, degrees));
+		case Item(itemType, quantity, transform): Item(itemType, quantity, rotatedTransform(transform, degrees));
+		case Entity(entityType, transform): Entity(entityType, rotatedTransform(transform, degrees));
+		case Npc(npcType, dialogue, transform): Npc(npcType, dialogue, rotatedTransform(transform, degrees));
+		case Prefab(prefabType, transform): Prefab(prefabType, rotatedTransform(transform, degrees));
+		case TriggerZone(_): null;
+		case StatefulObject(objectType, initialState, transform): StatefulObject(objectType, initialState, rotatedTransform(transform, degrees));
+	};
+}
+
+/** Normalize an arbitrary signed request before adding it to validated yaw. */
+private function rotatedTransform(transform:ScenarioTransform, degrees:Int):ScenarioTransform {
+	var yaw = transform.yawDegrees + degrees % 360;
+	if (yaw < 0)
+		yaw += 360;
+	if (yaw >= 360)
+		yaw -= 360;
+	return {
+		xMilli: transform.xMilli,
+		yMilli: transform.yMilli,
+		zMilli: transform.zMilli,
+		yawDegrees: yaw
+	};
 }
 
 /** Translate each closed CAXEMAP placement role by the same voxel delta. */

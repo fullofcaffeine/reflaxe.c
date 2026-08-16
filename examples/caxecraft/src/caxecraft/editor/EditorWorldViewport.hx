@@ -2,6 +2,7 @@ package caxecraft.editor;
 
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioWorld;
@@ -63,6 +64,15 @@ enum EditorObjectGizmoKind {
 	StatefulObjectGizmo;
 }
 
+/** State whether an editor marker owns a facing direction and its validated yaw. */
+enum EditorObjectFacing {
+	/** Bounded trigger volumes do not face a direction. */
+	NoObjectFacing;
+
+	/** Transform-backed placements face this many degrees clockwise from north. */
+	ObjectYaw(degrees:Int);
+}
+
 /**
  * Read-only box used to show one stable CAXEMAP object in a 3D editor.
  *
@@ -79,6 +89,7 @@ typedef EditorObjectGizmo = {
 	final width:Float;
 	final height:Float;
 	final depth:Float;
+	final facing:EditorObjectFacing;
 }
 
 /** The nearest stable authored object reached by one bounded world ray. */
@@ -254,12 +265,12 @@ function projectObjects(objects:Array<ScenarioObject>):Array<EditorObjectGizmo> 
 	final projected:Array<EditorObjectGizmo> = [];
 	for (object in objects)
 		projected.push(switch object.placement {
-			case PlayerSpawn(transform): pointGizmo(object.id, PlayerSpawnGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Checkpoint(transform): pointGizmo(object.id, CheckpointGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Item(_, _, transform): pointGizmo(object.id, ItemGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Entity(_, transform): pointGizmo(object.id, EntityGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Npc(_, _, transform): pointGizmo(object.id, NpcGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
-			case Prefab(_, transform): pointGizmo(object.id, PrefabGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+			case PlayerSpawn(transform): pointGizmo(object.id, PlayerSpawnGizmo, transform);
+			case Checkpoint(transform): pointGizmo(object.id, CheckpointGizmo, transform);
+			case Item(_, _, transform): pointGizmo(object.id, ItemGizmo, transform);
+			case Entity(_, transform): pointGizmo(object.id, EntityGizmo, transform);
+			case Npc(_, _, transform): pointGizmo(object.id, NpcGizmo, transform);
+			case Prefab(_, transform): pointGizmo(object.id, PrefabGizmo, transform);
 			case TriggerZone(bounds):
 				{
 					id: object.id,
@@ -269,10 +280,11 @@ function projectObjects(objects:Array<ScenarioObject>):Array<EditorObjectGizmo> 
 					z: bounds.origin.z + bounds.size.depth * 0.5,
 					width: bounds.size.width,
 					height: bounds.size.height,
-					depth: bounds.size.depth
+					depth: bounds.size.depth,
+					facing: NoObjectFacing
 				};
 			case StatefulObject(_, _, transform):
-				pointGizmo(object.id, StatefulObjectGizmo, transform.xMilli, transform.yMilli, transform.zMilli);
+				pointGizmo(object.id, StatefulObjectGizmo, transform);
 		});
 	return projected;
 }
@@ -336,16 +348,17 @@ private function clipRayAxis(origin:Float, direction:Float, minimum:Float, maxim
 }
 
 /** Make one standard point marker without claiming collision or art bounds. */
-private inline function pointGizmo(id:ScenarioId, kind:EditorObjectGizmoKind, xMilli:Int, yMilli:Int, zMilli:Int):EditorObjectGizmo
+private inline function pointGizmo(id:ScenarioId, kind:EditorObjectGizmoKind, transform:ScenarioTransform):EditorObjectGizmo
 	return {
 		id: id,
 		kind: kind,
-		x: xMilli / 1000.0,
-		y: yMilli / 1000.0 + 0.5,
-		z: zMilli / 1000.0,
+		x: transform.xMilli / 1000.0,
+		y: transform.yMilli / 1000.0 + 0.5,
+		z: transform.zMilli / 1000.0,
 		width: 0.7,
 		height: 1.0,
-		depth: 0.7
+		depth: 0.7,
+		facing: ObjectYaw(transform.yawDegrees)
 	};
 
 /** Return one palette code, or `-1` when the coordinate is outside the draft. */
