@@ -215,6 +215,15 @@ private typedef ActiveEditorTestPlayRun = {
 	final generationId:Int;
 }
 
+#if caxecraft_pilot
+/** One editor-pilot frame result applied to the owning application counters. */
+private typedef EditorPilotFrameResult = {
+	final navigationCommand:NavigationCommand;
+	final placedBlockCount:Int;
+	final rejectedEditCount:Int;
+}
+#end
+
 /** One nearest semantic interaction selected without campaign-specific IDs. */
 private enum AvailableInteractionTarget {
 	/** No authored interaction is currently valid. */
@@ -277,6 +286,116 @@ final class CaxecraftApp {
 	public function new() {
 		editorNavigation = new NavigationRepeater();
 	}
+
+	#if caxecraft_pilot
+	/**
+	 * Drive one deterministic editor-pilot frame through production editor APIs.
+	 *
+	 * Keeping this input script outside `run` prevents test-only branches from
+	 * enlarging the application lifetime graph. The helper returns counter deltas
+	 * so the application remains the only owner of telemetry state.
+	 */
+	function applyEditorPilotFrame(pilotName:PilotScriptName, onEditor:Bool, frameCount:Int, editorScreen:CaxecraftEditorScreen):EditorPilotFrameResult {
+		var navigationCommand = NavigationCommand.None;
+		var placedBlockCount = 0;
+		var rejectedEditCount = 0;
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
+			if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
+				rejectedEditCount++;
+			if (!editorScreen.applyPilotLayer(1))
+				rejectedEditCount++;
+			if (!editorScreen.applyPilotCamera({
+				forward: 0.5,
+				right: -0.25,
+				vertical: 0.1,
+				yaw: 0.08,
+				pitch: 0.02,
+				wheel: 0.0
+			}, 0.05))
+				rejectedEditCount++;
+			if (editorScreen.applyPilotPaintFirstAir())
+				placedBlockCount++;
+			else
+				rejectedEditCount++;
+			final heldDown:NavigationSample = {
+				connected: true,
+				up: false,
+				right: false,
+				down: true,
+				left: false,
+				confirmPressed: false,
+				cancelPressed: false,
+				horizontal: 0.0,
+				vertical: 0.0
+			};
+			for (step in 0...10) {
+				final elapsed = if (step == 0) 0.0 else if (step == 1) NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS else
+					NavigationRepeater.REPEAT_INTERVAL_SECONDS;
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, elapsed)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEditCount++;
+				}
+			}
+			final confirm:NavigationSample = {
+				connected: true,
+				up: false,
+				right: false,
+				down: false,
+				left: false,
+				confirmPressed: true,
+				cancelPressed: false,
+				horizontal: 0.0,
+				vertical: 0.0
+			};
+			navigationCommand = editorNavigation.advance(confirm, 0.0);
+		}
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 4) {
+			final confirmAgain:NavigationSample = {
+				connected: true,
+				up: false,
+				right: false,
+				down: false,
+				left: false,
+				confirmPressed: true,
+				cancelPressed: false,
+				horizontal: 0.0,
+				vertical: 0.0
+			};
+			navigationCommand = editorNavigation.advance(confirmAgain, 0.0);
+		}
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7) {
+			if (!editorScreen.applyPilotCatalogObject())
+				rejectedEditCount++;
+			final environmentCommands = [
+				NavigationCommand.Left,
+				NavigationCommand.Confirm,
+				NavigationCommand.Down,
+				NavigationCommand.Right
+			];
+			for (command in environmentCommands)
+				switch editorScreen.applyNavigation(command) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEditCount++;
+				}
+		}
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8) {
+			switch editorScreen.applyNavigation(NavigationCommand.Cancel) {
+				case StayInEditor:
+				case ReturnToTitle | StartTestPlay(_):
+					rejectedEditCount++;
+			}
+			if (!editorScreen.applyPilotSave())
+				rejectedEditCount++;
+		}
+		return {
+			navigationCommand: navigationCommand,
+			placedBlockCount: placedBlockCount,
+			rejectedEditCount: rejectedEditCount
+		};
+	}
+	#end
 
 	/**
 	 * Run one complete native application lifetime.
@@ -1258,137 +1377,10 @@ final class CaxecraftApp {
 			// production delay, then repeats at the production interval. The
 			// ten held moves land on Play before the south face button
 			// confirms it through the same device-neutral screen handler.
-			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
-				if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
-					rejectedEdits++;
-				if (!editorScreen.applyPilotLayer(1))
-					rejectedEdits++;
-				if (!editorScreen.applyPilotCamera({
-					forward: 0.5,
-					right: -0.25,
-					vertical: 0.1,
-					yaw: 0.08,
-					pitch: 0.02,
-					wheel: 0.0
-				}, 0.05))
-					rejectedEdits++;
-				if (editorScreen.applyPilotPaintFirstAir()) {
-					placedBlocks++;
-				} else
-					rejectedEdits++;
-				final heldDown:NavigationSample = {
-					connected: true,
-					up: false,
-					right: false,
-					down: true,
-					left: false,
-					confirmPressed: false,
-					cancelPressed: false,
-					horizontal: 0.0,
-					vertical: 0.0
-				};
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, 0.0)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				final confirm:NavigationSample = {
-					connected: true,
-					up: false,
-					right: false,
-					down: false,
-					left: false,
-					confirmPressed: true,
-					cancelPressed: false,
-					horizontal: 0.0,
-					vertical: 0.0
-				};
-				editorNavigationCommand = editorNavigation.advance(confirm, 0.0);
-			}
-			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 4) {
-				final confirmAgain:NavigationSample = {
-					connected: true,
-					up: false,
-					right: false,
-					down: false,
-					left: false,
-					confirmPressed: true,
-					cancelPressed: false,
-					horizontal: 0.0,
-					vertical: 0.0
-				};
-				editorNavigationCommand = editorNavigation.advance(confirmAgain, 0.0);
-			}
-			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7) {
-				if (!editorScreen.applyPilotCatalogObject())
-					rejectedEdits++;
-				final environmentCommands = [
-					NavigationCommand.Left,
-					NavigationCommand.Confirm,
-					NavigationCommand.Down,
-					NavigationCommand.Right
-				];
-				for (command in environmentCommands)
-					switch editorScreen.applyNavigation(command) {
-						case StayInEditor:
-						case ReturnToTitle | StartTestPlay(_):
-							rejectedEdits++;
-					}
-			}
-			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8) {
-				switch editorScreen.applyNavigation(NavigationCommand.Cancel) {
-					case StayInEditor:
-					case ReturnToTitle | StartTestPlay(_):
-						rejectedEdits++;
-				}
-				if (!editorScreen.applyPilotSave())
-					rejectedEdits++;
-			}
+			final editorPilotFrame = applyEditorPilotFrame(pilotName, onEditor, frameCount, editorScreen);
+			editorNavigationCommand = editorPilotFrame.navigationCommand;
+			placedBlocks += editorPilotFrame.placedBlockCount;
+			rejectedEdits += editorPilotFrame.rejectedEditCount;
 			#end
 			if (captured && !conversationOwnedInput) {
 				var yawDelta = lookYaw;

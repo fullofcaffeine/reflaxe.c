@@ -194,13 +194,24 @@ private class CBodyNaturalLoop {
 
 /** One natural-loop completion rule waiting for its remaining exits. */
 private class CBodyCompletionLoopRule {
-	public final nodes:Array<String>;
+	public final nodes:Array<Int>;
 	public var remaining:Int;
 	public var resolved:Bool = false;
 
-	public function new(nodes:Array<String>, remaining:Int) {
+	public function new(nodes:Array<Int>, remaining:Int) {
 		this.nodes = nodes;
 		this.remaining = remaining;
+	}
+}
+
+/** Immutable block and exit indices for one natural-loop completion rule. */
+private class CBodyCompletionLoopTemplate {
+	public final nodes:Array<Int>;
+	public final exits:Array<Int>;
+
+	public function new(nodes:Array<Int>, exits:Array<Int>) {
+		this.nodes = nodes;
+		this.exits = exits;
 	}
 }
 
@@ -1406,10 +1417,24 @@ private class CBodyControlFlowAnalysis {
 	public final blockOrder:Map<String, Int> = [];
 
 	final successorsByBlock:Map<String, Array<String>> = [];
+	final successorIndicesByBlock:Array<Array<Int>> = [];
+	final predecessorIndicesByBlock:Array<Array<Int>> = [];
+	final completionLoopTemplates:Array<CBodyCompletionLoopTemplate> = [];
 	// These facts belong only to this immutable function analysis. The separate
 	// map records null results too, so "no post-dominator" is computed once.
 	final immediatePostDominatorByBlock:Map<String, String> = [];
 	final immediatePostDominatorComputed:Map<String, Bool> = [];
+	// Normal-join candidates are checked one at a time. Reusing dense scratch
+	// storage keeps block-indexed lookup cheap without allocating three full
+	// arrays for every candidate. The proof asks only whether each arm start
+	// completes, so this request-local state never escapes the analysis.
+	final completionResultByIndex:Array<Bool> = [];
+	final completionRemainingByIndex:Array<Int> = [];
+	final completionQueuedByIndex:Array<Bool> = [];
+	final completionAllowedByIndex:Array<Bool> = [];
+	final completionEscapeByIndex:Array<Bool> = [];
+	final completionContinuationByIndex:Array<Bool> = [];
+	final completionReady:Array<Int> = [];
 
 	public final orderedReachable:Array<String> = [];
 	public final reachable:Map<String, Bool> = [];
@@ -1448,11 +1473,18 @@ private class CBodyControlFlowAnalysis {
 			blocks.set(block.id, block);
 			blockOrder.set(block.id, index);
 			predecessors.set(block.id, []);
+			completionResultByIndex.push(false);
+			completionRemainingByIndex.push(-1);
+			completionQueuedByIndex.push(false);
+			completionAllowedByIndex.push(false);
+			completionEscapeByIndex.push(false);
+			completionContinuationByIndex.push(false);
 		}
 		for (block in fn.blocks)
 			successorsByBlock.set(block.id, collectSuccessors(block));
 		computeReachability();
 		computePredecessors();
+		computeIndexedEdges();
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(indexingTimer);
 		final dominatorTimer = CPhaseTiming.startDetail(CDTBodyControlFlowDominators, fn.id);
@@ -1468,6 +1500,7 @@ private class CBodyControlFlowAnalysis {
 		final loopAnalysisTimer = CPhaseTiming.startDetail(CDTBodyControlFlowLoopAnalysis, fn.id);
 		#end
 		computeNaturalLoops();
+		computeCompletionLoopTemplates();
 		computeIrreducibleEntries();
 		#if (macro || reflaxe_runtime)
 		CPhaseTiming.stopDetail(loopAnalysisTimer);
@@ -1705,6 +1738,11 @@ private class CBodyControlFlowAnalysis {
 					maximum = distance;
 				total += distance;
 			}
+			// The final proof requires at least one normally continuing arm to
+			// reach the candidate. Rejecting an absent candidate here avoids a
+			// completion fixed point that can only return false.
+			if (reachCount == 0)
+				continue;
 			candidates.push({
 				blockId: candidate,
 				abrupt: isAbruptTerminal(requireBlock(candidate)),
@@ -1774,6 +1812,14 @@ private class CBodyControlFlowAnalysis {
 		normalJoinCandidateProofs++;
 		if (!allowed.exists(candidate) || escapeTargets.exists(candidate))
 			return false;
+		var hasContinuingPath = false;
+		for (distance in distances)
+			if (distance.exists(candidate)) {
+				hasContinuingPath = true;
+				break;
+			}
+		if (!hasContinuingPath)
+			return false;
 		if (isLinearEscapePrefix(candidate, allowed, escapeTargets)) {
 			final abrupt = abruptCompletion == null ? abruptCompletionSet(allowed) : abruptCompletion();
 			for (index => distance in distances)
@@ -1789,114 +1835,110 @@ private class CBodyControlFlowAnalysis {
 					return false;
 		}
 		final continuation = forwardReachable(candidate, allowed, escapeTargets);
-		final completing = completionSet(candidate, allowed, escapeTargets, continuation);
-		var hasContinuingPath = false;
-		for (index => start in starts) {
-			if (distances[index].exists(candidate))
-				hasContinuingPath = true;
-			if (!escapeTargets.exists(start) && !completing.exists(start))
-				return false;
-		}
+		if (!completionIncludesStarts(candidate, starts, allowed, escapeTargets, continuation))
+			return false;
 		final disjoint = prefixesAreDisjoint(candidate, starts, allowed, escapeTargets, unavailable, continuation);
-		return hasContinuingPath && disjoint;
+		return disjoint;
 	}
 
-	function completionSet(candidate:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>, continuation:Map<String, Bool>):Map<String, Bool> {
+	function completionIncludesStarts(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
+			continuation:Map<String, Bool>):Bool {
 		completionSetSearches++;
-		final result:Map<String, Bool> = [];
-		result.set(candidate, true);
+		final blockCount = orderedReachable.length;
+		final resultByIndex = completionResultByIndex;
+		final remainingByIndex = completionRemainingByIndex;
+		final queuedByIndex = completionQueuedByIndex;
+		final allowedByIndex = completionAllowedByIndex;
+		final escapeByIndex = completionEscapeByIndex;
+		final continuationByIndex = completionContinuationByIndex;
+		final ready = completionReady;
+		ready.resize(0);
+		for (index in 0...blockCount) {
+			final blockId = orderedReachable[index];
+			resultByIndex[index] = false;
+			remainingByIndex[index] = -1;
+			queuedByIndex[index] = false;
+			allowedByIndex[index] = allowed.exists(blockId);
+			escapeByIndex[index] = escapeTargets.exists(blockId);
+			continuationByIndex[index] = continuation.exists(blockId);
+		}
+		final candidateIndex = requireInt(blockOrder, candidate);
+		resultByIndex[candidateIndex] = true;
 		// A loop's continue/header target starts a later iteration. Do not walk
 		// through it while deciding which abrupt paths belong to this iteration;
 		// otherwise a later iteration can make the current return arm look like
 		// part of the candidate's continuation and hide the real local join.
-		for (blockId in orderedReachable)
-			if (allowed.exists(blockId) && !continuation.exists(blockId) && isAbruptTerminal(requireBlock(blockId)))
-				result.set(blockId, true);
+		for (index => blockId in orderedReachable)
+			if (allowedByIndex[index] && !continuationByIndex[index] && isAbruptTerminal(requireBlock(blockId)))
+				resultByIndex[index] = true;
 
 		/*
-			The old fixed point rescanned every reachable block until no new block
-			completed. A long function with a backward source order could therefore
-			visit the same 339 blocks thousands of times for one candidate. Instead,
-			count each rule's unresolved successors once. When one successor becomes
-			complete, only its direct predecessor rules and loop-exit rules wake up.
-			This computes the same least fixed point without depending on source
-			order.
+			Each candidate scans every reachable block. Dense arrays store the
+			request-local completion flags and successor counts by stable block index.
+			This avoids thousands of temporary string-map entries for a large function.
+			The reverse worklist still computes the same least fixed point: when one
+			successor completes, only its predecessor rules and loop-exit rules wake.
 		 */
-		final remainingByBlock:Map<String, Int> = [];
-		final ready:Array<String> = [];
-		final queued:Map<String, Bool> = [];
-		for (blockId in orderedReachable) {
+		for (blockIndex => blockId in orderedReachable) {
 			completionSetInitialBlockScans++;
-			if (!allowed.exists(blockId) || result.exists(blockId))
+			if (!allowedByIndex[blockIndex] || resultByIndex[blockIndex])
 				continue;
-			final outgoing = successors(blockId);
+			final outgoing = successorIndicesByBlock[blockIndex];
 			if (outgoing.length == 0)
 				continue;
 			var remaining = 0;
-			for (target in outgoing)
-				if (!escapeTargets.exists(target) && target != candidate && (!allowed.exists(target) || !result.exists(target)))
+			for (targetIndex in outgoing)
+				if (!escapeByIndex[targetIndex]
+					&& targetIndex != candidateIndex
+					&& (!allowedByIndex[targetIndex] || !resultByIndex[targetIndex]))
 					remaining++;
-			remainingByBlock.set(blockId, remaining);
+			remainingByIndex[blockIndex] = remaining;
 			if (remaining == 0) {
-				ready.push(blockId);
-				queued.set(blockId, true);
+				ready.push(blockIndex);
+				queuedByIndex[blockIndex] = true;
 			}
 		}
 
-		final loopRulesByExit:Map<String, Array<CBodyCompletionLoopRule>> = [];
+		final loopRulesByExit:Map<Int, Array<CBodyCompletionLoopRule>> = [];
 		final immediatelyReadyLoops:Array<CBodyCompletionLoopRule> = [];
-		for (headerId in orderedReachable) {
-			final loop = loopsByHeader.get(headerId);
-			if (loop == null)
+		for (template in completionLoopTemplates) {
+			if (template.exits.length == 0)
 				continue;
 			var admitted = true;
-			final nodes = [for (blockId in loop.nodes.keys()) blockId];
-			nodes.sort(compareBlockIds);
-			for (blockId in nodes)
-				if (!allowed.exists(blockId)) {
+			for (blockIndex in template.nodes)
+				if (!allowedByIndex[blockIndex]) {
 					admitted = false;
 					break;
 				}
 			if (!admitted)
 				continue;
-			final unresolvedExits:Map<String, Bool> = [];
-			var hasExit = false;
-			for (blockId in nodes)
-				for (target in successors(blockId)) {
-					if (loop.nodes.exists(target))
-						continue;
-					hasExit = true;
-					if (!escapeTargets.exists(target) && target != candidate && !result.exists(target))
-						unresolvedExits.set(target, true);
-				}
-			if (!hasExit)
-				continue;
 			var unresolvedExitCount = 0;
-			for (_ in unresolvedExits.keys())
-				unresolvedExitCount++;
-			final rule = new CBodyCompletionLoopRule(nodes, unresolvedExitCount);
+			for (targetIndex in template.exits)
+				if (!escapeByIndex[targetIndex] && targetIndex != candidateIndex && !resultByIndex[targetIndex])
+					unresolvedExitCount++;
+			final rule = new CBodyCompletionLoopRule(template.nodes, unresolvedExitCount);
 			if (rule.remaining == 0) {
 				immediatelyReadyLoops.push(rule);
 			} else {
-				for (target in unresolvedExits.keys()) {
-					if (!allowed.exists(target))
+				for (targetIndex in template.exits) {
+					if (escapeByIndex[targetIndex] || targetIndex == candidateIndex || resultByIndex[targetIndex] || !allowedByIndex[targetIndex])
 						continue;
-					var rules = loopRulesByExit.get(target);
+					var rules = loopRulesByExit.get(targetIndex);
 					if (rules == null) {
 						rules = [];
-						loopRulesByExit.set(target, rules);
+						loopRulesByExit.set(targetIndex, rules);
 					}
 					rules.push(rule);
 				}
 			}
 		}
 
-		function markComplete(blockId:String):Void {
-			if (!result.exists(blockId)) {
-				result.set(blockId, true);
-				if (!queued.exists(blockId)) {
-					ready.push(blockId);
-					queued.set(blockId, true);
+		function markComplete(blockIndex:Int):Void {
+			if (!resultByIndex[blockIndex]) {
+				resultByIndex[blockIndex] = true;
+				if (!queuedByIndex[blockIndex]) {
+					ready.push(blockIndex);
+					queuedByIndex[blockIndex] = true;
 				}
 			}
 		}
@@ -1904,27 +1946,27 @@ private class CBodyControlFlowAnalysis {
 			if (rule.resolved || rule.remaining != 0)
 				return;
 			rule.resolved = true;
-			for (blockId in rule.nodes)
-				markComplete(blockId);
+			for (blockIndex in rule.nodes)
+				markComplete(blockIndex);
 		}
 		for (rule in immediatelyReadyLoops)
 			resolveLoop(rule);
 		var readyIndex = 0;
 		while (readyIndex < ready.length) {
 			completionSetWorklistDequeues++;
-			final completedId = ready[readyIndex++];
-			if (!result.exists(completedId))
-				result.set(completedId, true);
-			for (predecessorId in requirePredecessors(completedId)) {
-				final remaining = remainingByBlock.get(predecessorId);
-				if (remaining == null || remaining <= 0 || result.exists(predecessorId))
+			final completedIndex = ready[readyIndex++];
+			if (!resultByIndex[completedIndex])
+				resultByIndex[completedIndex] = true;
+			for (predecessorIndex in predecessorIndicesByBlock[completedIndex]) {
+				final remaining = remainingByIndex[predecessorIndex];
+				if (remaining < 0 || remaining == 0 || resultByIndex[predecessorIndex])
 					continue;
 				final next = remaining - 1;
-				remainingByBlock.set(predecessorId, next);
+				remainingByIndex[predecessorIndex] = next;
 				if (next == 0)
-					markComplete(predecessorId);
+					markComplete(predecessorIndex);
 			}
-			final loopRules = loopRulesByExit.get(completedId);
+			final loopRules = loopRulesByExit.get(completedIndex);
 			if (loopRules != null)
 				for (rule in loopRules) {
 					if (rule.resolved || rule.remaining <= 0)
@@ -1933,7 +1975,12 @@ private class CBodyControlFlowAnalysis {
 					resolveLoop(rule);
 				}
 		}
-		return result;
+		for (start in starts) {
+			final startIndex = requireInt(blockOrder, start);
+			if (!escapeByIndex[startIndex] && !resultByIndex[startIndex])
+				return false;
+		}
+		return true;
 	}
 
 	/**
@@ -2162,6 +2209,16 @@ private class CBodyControlFlowAnalysis {
 		}
 	}
 
+	function computeIndexedEdges():Void {
+		for (block in fn.blocks) {
+			successorIndicesByBlock.push([for (target in successors(block.id)) requireInt(blockOrder, target)]);
+			predecessorIndicesByBlock.push([
+				for (predecessor in requirePredecessors(block.id))
+					requireInt(blockOrder, predecessor)
+			]);
+		}
+	}
+
 	function requirePredecessors(blockId:String):Array<String> {
 		final values = predecessors.get(blockId);
 		if (values == null)
@@ -2283,6 +2340,25 @@ private class CBodyControlFlowAnalysis {
 					}
 				}
 			}
+		}
+	}
+
+	function computeCompletionLoopTemplates():Void {
+		for (headerId in orderedReachable) {
+			final loop = loopsByHeader.get(headerId);
+			if (loop == null)
+				continue;
+			final nodeIds = [for (blockId in loop.nodes.keys()) blockId];
+			nodeIds.sort(compareBlockIds);
+			final nodeIndices = [for (blockId in nodeIds) requireInt(blockOrder, blockId)];
+			final exitsByIndex:Map<Int, Bool> = [];
+			for (nodeIndex in nodeIndices)
+				for (targetIndex in successorIndicesByBlock[nodeIndex])
+					if (!loop.nodes.exists(fn.blocks[targetIndex].id))
+						exitsByIndex.set(targetIndex, true);
+			final exitIndices = [for (targetIndex in exitsByIndex.keys()) targetIndex];
+			exitIndices.sort((left, right) -> left - right);
+			completionLoopTemplates.push(new CBodyCompletionLoopTemplate(nodeIndices, exitIndices));
 		}
 	}
 
