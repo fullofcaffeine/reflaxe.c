@@ -3,6 +3,9 @@ package caxecraft.app;
 #if c
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
+import caxecraft.editor.EditorPackageSession;
+import caxecraft.editor.EditorPackageSession.EditorPackageSaveResult;
+import caxecraft.editor.EditorPackageSession.editorPackageErrorMessage;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
@@ -15,7 +18,6 @@ import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
-import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorPreviewResult;
 import caxecraft.editor.EditorTypes.EditorSelection;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
@@ -82,6 +84,8 @@ private enum EditorNotice {
 	Valid;
 	Invalid;
 	Testing;
+	Saved;
+	SaveFailed;
 }
 
 /** One editable view over the same canonical editor draft. */
@@ -91,11 +95,6 @@ private enum abstract EditorWorkspaceView(Int) {
 }
 
 /** The exact baseline exists only after the editor opens a valid document. */
-private enum EditorOpeningState {
-	NoOpenedEditor;
-	OpenedEditor(canonical:Bytes);
-}
-
 /**
  * Native visual editor over the real renderer-independent editor session.
  *
@@ -122,6 +121,7 @@ private enum EditorOpeningState {
 final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
 	final uiCatalog:RuntimeUiCatalog;
+	final editorPackage:EditorPackageSession;
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
 	var projection:Null<EditorWorldProjection>;
@@ -140,7 +140,6 @@ final class CaxecraftEditorScreen {
 	var environmentControl:EditorEnvironmentControl;
 	var environment:Null<ScenarioEnvironment>;
 	var leavePromptOpen:Bool;
-	var openingState:EditorOpeningState;
 	var previewPoint:Null<VoxelPoint>;
 	var previewRevision:Int;
 	var previewTool:EditorTool;
@@ -157,15 +156,13 @@ final class CaxecraftEditorScreen {
 	 */
 	final worldName:Null<GuiTextBoxState>;
 
-	/** Start with the same copy-owned CAXEMAP bytes as the active game generation. */
-	public function new(contentRegistry:RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog, activeLevelSource:Bytes) {
+	/** Start with the package-backed session opened from the active game generation. */
+	public function new(contentRegistry:RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog, editorPackage:EditorPackageSession) {
 		this.contentRegistry = contentRegistry;
 		this.uiCatalog = uiCatalog;
-		session = switch EditorSession.openBytes(activeLevelSource, contentRegistry) {
-			case EditorOpened(value): value;
-			case EditorOpenRejected(_): null;
-		};
-		notice = session == null ? Invalid : Ready;
+		this.editorPackage = editorPackage;
+		session = editorPackage.workspace();
+		notice = Ready;
 		projection = null;
 		planProjection = null;
 		objectGizmos = [];
@@ -182,10 +179,6 @@ final class CaxecraftEditorScreen {
 		environmentControl = firstEnvironmentControl();
 		environment = null;
 		leavePromptOpen = false;
-		openingState = NoOpenedEditor;
-		final openedSession = session;
-		if (openedSession != null)
-			openingState = OpenedEditor(openedSession.canonicalDraft());
 		previewPoint = null;
 		previewRevision = -1;
 		previewTool = SelectTool;
@@ -205,6 +198,8 @@ final class CaxecraftEditorScreen {
 	public function draw(locale:LocaleCursor, externalNavigation:NavigationCommand):EditorScreenAction {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
+		if (saveShortcutPressed())
+			requestSave();
 		final keyboardNavigation = readKeyboardNavigation();
 		final navigation = externalNavigation != NavigationCommand.None ? externalNavigation : keyboardNavigation;
 		final navigationAction = applyNavigation(navigation);
@@ -241,10 +236,13 @@ final class CaxecraftEditorScreen {
 					return leaveAction;
 			}
 		}
+		if (focusedButtonSized(EditorFocusTarget.Save, 122.0, toolbarTop, 72.0, 38.0, uiCatalog.text(locale, UiMessage.EditorSave)))
+			requestSave();
+		final historyLeft = width >= 1180 ? 402.0 : 328.0;
 		final name = worldName;
 		if (name != null) {
-			final nameLeft = 126.0;
-			final nameWidth = width >= 1180 ? 260.0 : 190.0;
+			final nameLeft = 206.0;
+			final nameWidth = historyLeft - nameLeft - 16.0;
 			final result = name.draw(Rectangle.fromFloat(nameLeft, toolbarTop, nameWidth, 38.0));
 			if (result.has(GuiResult.Pressed)) {
 				focusedControl = EditorFocusTarget.WorldName;
@@ -254,7 +252,6 @@ final class CaxecraftEditorScreen {
 			drawFocusRing(EditorFocusTarget.WorldName, Std.int(nameLeft), Std.int(toolbarTop), Std.int(nameWidth), 38);
 		}
 
-		final historyLeft = width >= 1180 ? 402.0 : 328.0;
 		if (focusedButtonSized(EditorFocusTarget.Undo, historyLeft, toolbarTop, 88.0, 38.0, uiCatalog.text(locale, UiMessage.EditorUndo)))
 			undo();
 		if (focusedButtonSized(EditorFocusTarget.Redo, historyLeft + 96.0, toolbarTop, 88.0, 38.0, uiCatalog.text(locale, UiMessage.EditorRedo)))
@@ -372,6 +369,8 @@ final class CaxecraftEditorScreen {
 			case Valid: UiMessage.EditorValid;
 			case Invalid: UiMessage.EditorInvalid;
 			case Testing: UiMessage.EditorTesting;
+			case Saved: UiMessage.EditorSaved;
+			case SaveFailed: UiMessage.EditorSaveFailed;
 		};
 		Raylib.DrawTextString(uiCatalog.text(locale, status), left + 12, top + height - 24, 14,
 			notice == Invalid ? Color.rgba(255, 154, 112) : CaxecraftPalette.hudText());
@@ -701,6 +700,16 @@ final class CaxecraftEditorScreen {
 		return NavigationCommand.None;
 	}
 
+	/** True for one platform save chord without consuming ordinary text input. */
+	function saveShortcutPressed():Bool {
+		if (!Raylib.IsKeyPressed(KeyboardKey.S))
+			return false;
+		return Raylib.IsKeyDown(KeyboardKey.LeftControl)
+			|| Raylib.IsKeyDown(KeyboardKey.RightControl)
+			|| Raylib.IsKeyDown(KeyboardKey.LeftSuper)
+			|| Raylib.IsKeyDown(KeyboardKey.RightSuper);
+	}
+
 	/**
 	 * Apply one navigation command to the editor's existing focus and actions.
 	 *
@@ -779,6 +788,8 @@ final class CaxecraftEditorScreen {
 		switch focusedControl {
 			case Back:
 				return requestLeave();
+			case Save:
+				requestSave();
 			case WorldName:
 				final name = worldName;
 				if (name != null)
@@ -816,6 +827,42 @@ final class CaxecraftEditorScreen {
 				return ReturnToTitle;
 		}
 		return StayInEditor;
+	}
+
+	/**
+	 * Publish the current draft and update the clean baseline after success.
+	 *
+	 * A save first commits the temporary title buffer. Package validation and
+	 * publication then run through `EditorPackageSession`. Rejection keeps the
+	 * draft, history, and previous clean baseline available for another attempt.
+	 */
+	function requestSave():Bool {
+		final current = session;
+		if (current == null) {
+			notice = SaveFailed;
+			return false;
+		}
+		final name = worldName;
+		if (name != null && name.isEditing()) {
+			name.setEditing(false);
+			if (!commitWorldName(name.text())) {
+				notice = SaveFailed;
+				return false;
+			}
+		}
+		return switch editorPackage.save(current.revision()) {
+			case EditorPackageSaved(_, _, warnings):
+				for (warning in warnings)
+					Sys.println('caxecraft: editor save cleanup warning: $warning');
+				leavePromptOpen = false;
+				focusedControl = EditorFocusTarget.Save;
+				notice = Saved;
+				true;
+			case EditorPackageSaveRejected(error):
+				Sys.println('caxecraft: editor save rejected: ${editorPackageErrorMessage(error)}');
+				notice = SaveFailed;
+				false;
+		};
 	}
 
 	/** Close the nearest presentation layer before offering to leave the draft. */
@@ -882,7 +929,7 @@ final class CaxecraftEditorScreen {
 		invalidatePreview();
 	}
 
-	/** Leave immediately only when the in-memory draft still equals its opening bytes. */
+	/** Leave immediately only when the package draft equals its last saved bytes. */
 	function requestLeave():EditorScreenAction {
 		if (!isDirty())
 			return ReturnToTitle;
@@ -891,16 +938,9 @@ final class CaxecraftEditorScreen {
 		return StayInEditor;
 	}
 
-	/** Compare canonical bytes only when the user requests a destructive transition. */
-	function isDirty():Bool {
-		final current = session;
-		if (current == null)
-			return false;
-		return switch openingState {
-			case NoOpenedEditor: false;
-			case OpenedEditor(opened): current.canonicalDraft().compare(opened) != 0;
-		};
-	}
+	/** Compare the current history-state identity with the last successful save. */
+	function isDirty():Bool
+		return editorPackage.hasUnsavedChanges();
 
 	/** Select a World List object through the same stable workspace identity. */
 	function selectObjectFromWorldList():Void {
@@ -1657,6 +1697,10 @@ final class CaxecraftEditorScreen {
 		name.setEditing(false);
 		return commitWorldName(name.text());
 	}
+
+	/** Publish pilot edits through the same package save action as the toolbar. */
+	public function applyPilotSave():Bool
+		return requestSave();
 
 	/**
 	 * Submit one deterministic pilot gesture through the production tool path.

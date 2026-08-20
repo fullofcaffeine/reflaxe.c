@@ -5,6 +5,7 @@ import caxecraft.content.CampaignManifest.decodeCampaignManifest;
 import caxecraft.content.CampaignManifest.writeCampaignManifest;
 import caxecraft.content.ContentPackageManifest.ContentPackageEntry;
 import caxecraft.content.ContentPackageManifest.ContentPackageEntryKind;
+import caxecraft.content.ContentPackageManifest.ContentPackageLoadError;
 import caxecraft.content.ContentPackageManifest.ContentPackageLoadResult;
 import caxecraft.content.ContentPackageManifest.ContentPackageManifestReadResult;
 import caxecraft.content.ContentPackageManifest.decodeContentPackageManifest;
@@ -19,6 +20,8 @@ import caxecraft.content.RuntimeContentDigest.runtimeSha256Hex;
 import caxecraft.content.RuntimeContentPack.RuntimeContentPackResult;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.RuntimeContentReceiptWriter.writeRuntimeContentReceipt;
+import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
+import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioParser;
@@ -100,6 +103,18 @@ enum ContentRefreshResult {
 	ContentRefreshRejected(error:ContentRefreshError);
 }
 
+/** Closed refresh intent; impossible nullable parameter pairs cannot enter planning. */
+private enum RefreshLevelSelection {
+	/** Canonicalize every campaign level from package bytes. */
+	RefreshEveryLevel;
+
+	/** Canonicalize one campaign level from package bytes. */
+	RefreshSelectedLevel(logicalPath:String);
+
+	/** Canonicalize one editor-owned draft instead of its current package bytes. */
+	RefreshReplacementLevel(logicalPath:String, replacement:Bytes);
+}
+
 /** Internal byte read that keeps source errors closed and located. */
 private enum RefreshReadResult {
 	RefreshBytesReady(bytes:Bytes);
@@ -134,22 +149,36 @@ private final class RefreshOverlaySource implements ContentPackageSource {
 		};
 }
 
+/** Compute a package refresh for one exact editor-owned level draft. */
+function planLevelContentPackageRefresh(source:ContentPackageSource, manifestPath:String, levelPath:String, replacement:Bytes):ContentRefreshResult
+	return planSelectedContentPackageRefresh(source, manifestPath, RefreshReplacementLevel(levelPath, replacement));
+
 /**
- * Compute one package refresh without filesystem write authority.
- *
- * Pass `levelPath` to refresh one map. Pass `null` to refresh every map in the
- * campaign. `replacement` lets the editor plan an unsaved map and requires an
- * exact `levelPath`.
- */
+	Compute one package refresh without filesystem write authority.
+
+	This compatibility entry point serves the command-line refresh adapter. New
+	callers should use a precise non-null operation such as
+	`planLevelContentPackageRefresh`; the closed internal selection prevents an
+	invalid nullable pair from entering package logic.
+**/
 function planContentPackageRefresh(source:ContentPackageSource, manifestPath:String, levelPath:Null<String>, replacement:Null<Bytes>):ContentRefreshResult {
 	if (replacement != null && levelPath == null)
 		return ContentRefreshRejected(ReplacementNeedsLevel);
+	if (levelPath == null)
+		return planSelectedContentPackageRefresh(source, manifestPath, RefreshEveryLevel);
+	if (replacement == null)
+		return planSelectedContentPackageRefresh(source, manifestPath, RefreshSelectedLevel(levelPath));
+	return planSelectedContentPackageRefresh(source, manifestPath, RefreshReplacementLevel(levelPath, replacement));
+}
+
+/** Plan one already-disambiguated refresh operation. */
+private function planSelectedContentPackageRefresh(source:ContentPackageSource, manifestPath:String, selection:RefreshLevelSelection):ContentRefreshResult {
 	final packageBytes = switch readRefreshBytes(source, manifestPath) {
 		case RefreshBytesRejected(error): return ContentRefreshRejected(error);
 		case RefreshBytesReady(bytes): bytes;
 	};
 	final packageManifest = switch decodeContentPackageManifest(packageBytes) {
-		case ContentPackageManifestRejected(diagnostic): return ContentRefreshRejected(PackageRejected(Std.string(diagnostic)));
+		case ContentPackageManifestRejected(diagnostic): return ContentRefreshRejected(PackageRejected(schemaDiagnosticText(diagnostic)));
 		case ContentPackageManifestReady(manifest): manifest;
 	};
 	final campaignEntry = soleEntry(packageManifest, CampaignManifest);
@@ -168,18 +197,22 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 		case RefreshBytesReady(bytes): bytes;
 	};
 	final campaign = switch decodeCampaignManifest(campaignBytes) {
-		case CampaignManifestRejected(diagnostic): return ContentRefreshRejected(CampaignRejected(campaignPath, Std.string(diagnostic)));
+		case CampaignManifestRejected(diagnostic): return ContentRefreshRejected(CampaignRejected(campaignPath, schemaDiagnosticText(diagnostic)));
 		case CampaignManifestReady(manifest): manifest;
 	};
-	if (levelPath != null && !campaignHasLevel(campaign, levelPath))
-		return ContentRefreshRejected(UnknownLevel(levelPath));
+	switch selection {
+		case RefreshEveryLevel:
+		case RefreshSelectedLevel(levelPath) | RefreshReplacementLevel(levelPath, _):
+			if (!campaignHasLevel(campaign, levelPath))
+				return ContentRefreshRejected(UnknownLevel(levelPath));
+	}
 
 	final contentBytes = switch readRefreshBytes(source, contentEntry.logicalPath.text()) {
 		case RefreshBytesRejected(error): return ContentRefreshRejected(error);
 		case RefreshBytesReady(bytes): bytes;
 	};
 	final registry = switch RuntimeContentPack.decode(contentBytes) {
-		case RuntimeContentPackRejected(diagnostic): return ContentRefreshRejected(ContentPackRejected(Std.string(diagnostic)));
+		case RuntimeContentPackRejected(diagnostic): return ContentRefreshRejected(ContentPackRejected(schemaDiagnosticText(diagnostic)));
 		case RuntimeContentPackReady(value): value;
 	};
 
@@ -187,13 +220,20 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 	final mapReceipts:Array<ContentReceipt> = [];
 	for (index in 0...campaign.levelCount()) {
 		final level = campaign.levelAt(index);
-		if (levelPath != null && level.logicalPath != levelPath)
+		final selected = switch selection {
+			case RefreshEveryLevel: true;
+			case RefreshSelectedLevel(levelPath) | RefreshReplacementLevel(levelPath, _): level.logicalPath == levelPath;
+		};
+		if (!selected)
 			continue;
 		final sourceBytes = switch readRefreshBytes(source, level.logicalPath) {
 			case RefreshBytesRejected(error): return ContentRefreshRejected(error);
 			case RefreshBytesReady(bytes): bytes;
 		};
-		final candidate = replacement != null ? replacement : sourceBytes;
+		final candidate = switch selection {
+			case RefreshReplacementLevel(levelPath, replacement) if (level.logicalPath == levelPath): replacement;
+			case _: sourceBytes;
+		};
 		final canonical = switch canonicalLevel(candidate, registry, level.logicalPath) {
 			case ContentRefreshRejected(error): return ContentRefreshRejected(error);
 			case ContentRefreshReady(plan): plan.fileAt(0).next;
@@ -214,9 +254,10 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 		case RefreshBytesReady(bytes): bytes;
 	};
 	final runtimeMapPath = "scenarios/first-playable/map.caxemap";
-	final runtimeMapBytes = plannedOrSource(files, source, runtimeMapPath);
-	if (runtimeMapBytes == null)
-		return ContentRefreshRejected(PackageGraphRejected('the runtime map is missing: $runtimeMapPath'));
+	final runtimeMapBytes = switch plannedOrSource(files, source, runtimeMapPath) {
+		case RefreshBytesRejected(_): return ContentRefreshRejected(PackageGraphRejected('the runtime map is missing: $runtimeMapPath'));
+		case RefreshBytesReady(bytes): bytes;
+	};
 	final uiBytes = switch readRefreshBytes(source, uiEntry.logicalPath.text()) {
 		case RefreshBytesRejected(error): return ContentRefreshRejected(error);
 		case RefreshBytesReady(bytes): bytes;
@@ -243,7 +284,7 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 	final overlay = new RefreshOverlaySource(source, files);
 	switch loadContentPackage(overlay, manifestPath) {
 		case ContentPackageRejected(error):
-			return ContentRefreshRejected(PackageGraphRejected(Std.string(error)));
+			return ContentRefreshRejected(PackageGraphRejected(packageLoadErrorText(error)));
 		case ContentPackageReady(_):
 	}
 	return ContentRefreshReady(new ContentRefreshPlan(files));
@@ -252,13 +293,13 @@ function planContentPackageRefresh(source:ContentPackageSource, manifestPath:Str
 /** Canonicalize one map through the same typed parser and content registry as play. */
 private function canonicalLevel(bytes:Bytes, registry:RuntimeContentRegistry, logicalPath:String):ContentRefreshResult {
 	final scenario = switch ScenarioLexer.read(bytes) {
-		case ReadError(diagnostics): return ContentRefreshRejected(LevelRejected(logicalPath, Std.string(diagnostics[0])));
+		case ReadError(diagnostics): return ContentRefreshRejected(LevelRejected(logicalPath, scenarioDiagnosticText(diagnostics[0])));
 		case ReadOk(records):
 			switch ScenarioParser.parse(records) {
-				case ReadError(diagnostics): return ContentRefreshRejected(LevelRejected(logicalPath, Std.string(diagnostics[0])));
+				case ReadError(diagnostics): return ContentRefreshRejected(LevelRejected(logicalPath, scenarioDiagnosticText(diagnostics[0])));
 				case ReadOk(parsed):
 					switch ScenarioValidator.validate(parsed, registry) {
-						case ReadError(diagnostics): return ContentRefreshRejected(LevelRejected(logicalPath, Std.string(diagnostics[0])));
+						case ReadError(diagnostics): return ContentRefreshRejected(LevelRejected(logicalPath, scenarioDiagnosticText(diagnostics[0])));
 						case ReadOk(value): value;
 					}
 			}
@@ -266,6 +307,24 @@ private function canonicalLevel(bytes:Bytes, registry:RuntimeContentRegistry, lo
 	final canonical = ScenarioWriter.write(scenario);
 	return ContentRefreshReady(new ContentRefreshPlan([new ContentRefreshFile(logicalPath, bytes, canonical)]));
 }
+
+/** Describe one typed JSON-schema rejection without generic record reflection. */
+private function schemaDiagnosticText(diagnostic:RuntimeSchemaDiagnostic):String
+	return 'schema rejected at line ${diagnostic.line}, column ${diagnostic.column}';
+
+/** Describe one typed CAXEMAP rejection at its creator-visible coordinate. */
+private function scenarioDiagnosticText(diagnostic:ScenarioDiagnostic):String
+	return 'scenario rejected at line ${diagnostic.coordinate.line}, column ${diagnostic.coordinate.column}';
+
+/** Keep package verification failures useful without target-dependent enum text. */
+private function packageLoadErrorText(error:ContentPackageLoadError):String
+	return switch error {
+		case ContentPackageManifestSourceRejected(_): "package manifest source rejected";
+		case ContentPackageManifestSchemaRejected(diagnostic): schemaDiagnosticText(diagnostic);
+		case ContentPackageEntrySourceRejected(path, _): 'package entry source rejected: $path';
+		case ContentPackageEntryLengthMismatch(path, expected, actual): 'package entry length changed: $path (expected $expected, found $actual)';
+		case ContentPackageEntryHashMismatch(path, _): 'package entry hash changed: $path';
+	};
 
 /** Read one source file into an independent owner. */
 private function readRefreshBytes(source:ContentPackageSource, logicalPath:String):RefreshReadResult
@@ -317,12 +376,9 @@ private function receipt(logicalPath:String, bytes:Bytes):ContentReceipt
 	return new ContentReceipt(logicalPath, bytes.length, runtimeSha256Hex(bytes));
 
 /** Return final planned bytes for one path, or read its unchanged source bytes. */
-private function plannedOrSource(files:Array<ContentRefreshFile>, source:ContentPackageSource, logicalPath:String):Null<Bytes> {
+private function plannedOrSource(files:Array<ContentRefreshFile>, source:ContentPackageSource, logicalPath:String):RefreshReadResult {
 	for (file in files)
 		if (file.logicalPath == logicalPath)
-			return file.next;
-	return switch readRefreshBytes(source, logicalPath) {
-		case RefreshBytesRejected(_): null;
-		case RefreshBytesReady(bytes): bytes;
-	};
+			return RefreshBytesReady(file.next);
+	return readRefreshBytes(source, logicalPath);
 }

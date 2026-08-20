@@ -402,15 +402,14 @@ class CBodyArrayRegistry {
 	static function aggregateLifecycle(aggregate:CPreparedBodyAggregate):Null<CBodyArrayElementLifecycle> {
 		if (aggregate.fields.length == 0)
 			return null;
-		var managed = false;
-		for (field in aggregate.fields) {
-			final nested = elementLifecycle(field.type);
-			if (nested == null)
+		for (field in aggregate.fields)
+			if (elementLifecycle(field.type) == null)
 				return null;
-			if (nested != CBAELTrivial)
-				managed = true;
-		}
-		return managed ? CBAELAggregate(aggregate) : CBAELTrivial;
+		// Collector references are traced by the Array descriptor and copy as
+		// ordinary pointers. Only the aggregate's proven reference-counted fields
+		// need element callbacks; emitting empty callbacks creates misleading work
+		// and unused strict-C locals.
+		return aggregate.managedLifetime ? CBAELAggregate(aggregate) : CBAELTrivial;
 	}
 
 	function lifecycleRequest(digest:String, operation:String, ordinal:Int):CSymbolRequest

@@ -360,6 +360,30 @@
       }
     },
     {
+      "id": "editor_save",
+      "symbol": "EditorSave",
+      "text": {
+        "en": "SAVE",
+        "es-MX": "GUARDAR"
+      }
+    },
+    {
+      "id": "editor_save_failed",
+      "symbol": "EditorSaveFailed",
+      "text": {
+        "en": "SAVE FAILED — YOUR DRAFT IS STILL OPEN",
+        "es-MX": "NO SE GUARDÓ — TU BORRADOR SIGUE ABIERTO"
+      }
+    },
+    {
+      "id": "editor_saved",
+      "symbol": "EditorSaved",
+      "text": {
+        "en": "SAVED — SAFE TO LEAVE",
+        "es-MX": "GUARDADO — PUEDES SALIR"
+      }
+    },
+    {
       "id": "editor_scene",
       "symbol": "EditorScene",
       "text": {

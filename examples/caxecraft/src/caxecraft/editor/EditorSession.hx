@@ -35,6 +35,7 @@ import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioCodecModel.ParsedScenario;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
@@ -75,21 +76,27 @@ final class EditorSession {
 	final registry:ScenarioContentRegistry;
 	final settings:EditorSettings;
 	final history:EditorHistory;
+	final initialSource:Bytes;
 	var draft:Scenario;
 	var selection:EditorSelection;
 	var lastPlayable:Null<Scenario>;
 	var playState:Null<EditorSessionPlayState>;
 	var currentRevision:Int;
+	var currentStateIdentity:Int;
+	var nextStateIdentity:Int;
 
-	function new(image:EditorScenarioImage, registry:ScenarioContentRegistry, settings:EditorSettings) {
+	function new(image:EditorScenarioImage, registry:ScenarioContentRegistry, settings:EditorSettings, validateInitial:Bool) {
 		this.registry = registry;
 		this.settings = settings;
 		this.history = new EditorHistory(settings);
+		this.initialSource = image.bytes.sub(0, image.bytes.length);
 		this.draft = image.parsed.candidate;
 		this.selection = NoEditorSelection;
-		this.lastPlayable = validatedScenario(image);
+		this.lastPlayable = validateInitial ? validatedScenario(image) : null;
 		this.playState = null;
 		this.currentRevision = 0;
+		this.currentStateIdentity = 0;
+		this.nextStateIdentity = 0;
 	}
 
 	/** Open even a semantically invalid draft so the editor can repair it. */
@@ -100,7 +107,7 @@ final class EditorSession {
 			return EditorOpenRejected(invalidSetting);
 		return switch captureScenario(initial) {
 			case ImageRejected(error): EditorOpenRejected(error);
-			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings));
+			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings, true));
 		}
 	}
 
@@ -118,9 +125,28 @@ final class EditorSession {
 			return EditorOpenRejected(invalidSetting);
 		return switch restoreScenario(source) {
 			case ImageRejected(error): EditorOpenRejected(error);
-			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings));
+			case ImageReady(image): EditorOpened(new EditorSession(image, registry, settings, true));
 		}
 	}
+
+	/**
+	 * Open one caller-owned parser result without decoding the same bytes again.
+	 *
+	 * The caller transfers the parsed candidate and must not retain or mutate its
+	 * arrays. This entry point does not assume semantic validity; Test Play still
+	 * runs the ordinary validator before it publishes a playable snapshot.
+	 */
+	public static function openParsed(source:Bytes, parsed:ParsedScenario, registry:ScenarioContentRegistry, ?requested:EditorSettings):EditorOpenResult {
+		final settings = requested == null ? defaultEditorSettings() : requested;
+		final invalidSetting = validateEditorSettings(settings);
+		if (invalidSetting != null)
+			return EditorOpenRejected(invalidSetting);
+		return EditorOpened(new EditorSession({bytes: source.sub(0, source.length), parsed: parsed}, registry, settings, false));
+	}
+
+	/** True when bytes are the exact source owner from which this session opened. */
+	public function matchesInitialSource(source:Bytes):Bool
+		return source.compare(initialSource) == 0;
 
 	/**
 		Apply one command against the session's current in-process draft.
@@ -262,6 +288,16 @@ final class EditorSession {
 		return currentRevision;
 
 	/**
+		Return the stable identity of the current canonical history state.
+
+		Undo and Redo restore the identity recorded with their bytes. A new edit
+		always receives a fresh identity, even after the redo branch is discarded.
+		Save owners can therefore test dirty state without serializing every frame.
+	**/
+	public inline function stateIdentity():Int
+		return currentStateIdentity;
+
+	/**
 		Stage a bounded command list and commit it as one reversible edit.
 
 		Each intermediate command still passes the ordinary reducer and canonical
@@ -398,6 +434,7 @@ final class EditorSession {
 			case ImageReady(image):
 				draft = image.parsed.candidate;
 				selection = selectionForScenario(selection, draft);
+				currentStateIdentity = entry.beforeStateIdentity;
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
 		}
@@ -424,6 +461,7 @@ final class EditorSession {
 			case ImageReady(image):
 				draft = image.parsed.candidate;
 				selection = selectionForScenario(selection, draft);
+				currentStateIdentity = entry.afterStateIdentity;
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
 		}
@@ -584,6 +622,8 @@ final class EditorSession {
 		final entry:EditorHistoryEntry = {
 			family: family,
 			changes: changes.copy(),
+			beforeStateIdentity: currentStateIdentity,
+			afterStateIdentity: nextStateIdentity + 1,
 			before: before.bytes.sub(0, before.bytes.length),
 			after: after.bytes.sub(0, after.bytes.length),
 			byteCost: byteCost
@@ -591,6 +631,8 @@ final class EditorSession {
 		history.record(entry);
 		draft = after.parsed.candidate;
 		selection = selectionForScenario(selection, draft);
+		nextStateIdentity++;
+		currentStateIdentity = nextStateIdentity;
 		advanceRevision();
 		return EditApplied(family, changes.copy(), history.undoDepth(), history.redoDepth());
 	}

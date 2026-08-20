@@ -204,6 +204,10 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         destination = self.root / "runtime-stage"
         destination.mkdir()
         stage_runtime_assets(destination)
+        self.assertEqual(
+            (destination / "assets/manifest.json").read_bytes(),
+            (CASE / "assets/manifest.json").read_bytes(),
+        )
         manifest = json.loads((CASE / "assets/manifest.json").read_text(encoding="utf-8"))
         report = json.loads(
             (destination / "assets/caxecraft-runtime-assets.json").read_text(
@@ -312,7 +316,11 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         )
         self.assertEqual(
             runtime_content_files(source_root),
-            ("scenarios/frostmere.caxemap", "pilots/active.piloscript"),
+            (
+                "caxecraft.package.json",
+                "scenarios/frostmere.caxemap",
+                "pilots/active.piloscript",
+            ),
         )
 
         rejected = (

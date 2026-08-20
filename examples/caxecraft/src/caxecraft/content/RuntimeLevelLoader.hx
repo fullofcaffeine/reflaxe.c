@@ -19,6 +19,7 @@ import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
+import caxecraft.scenario.ScenarioCodecModel.ParsedScenario;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
@@ -110,6 +111,24 @@ typedef RuntimeLevelReceipt = {
 
 	/** One for stable memory/package input, or two after a safe read retry. */
 	final readAttempts:Int;
+}
+
+/** One exact source and parser result transferred into a visual editor. */
+typedef RuntimeLevelEditableSource = {
+	/** Immutable input spelling retained for package attachment checks. */
+	final bytes:Bytes;
+
+	/** Sole mutable model owner transferred without another lexer/parser pass. */
+	final parsed:ParsedScenario;
+}
+
+/** Result of transferring a runtime candidate's sole editable model owner. */
+enum RuntimeLevelEditableSourceClaim {
+	/** Exact source bytes and their already parsed mutable model transferred. */
+	EditableSourceClaimed(source:RuntimeLevelEditableSource);
+
+	/** Another editor already owns this candidate's mutable model. */
+	EditableSourceAlreadyClaimed;
 }
 
 /**
@@ -469,14 +488,18 @@ final class RuntimeLevelCandidate {
 	final loadedGeneration:LoadedContentGeneration;
 	final sourceReceipt:RuntimeLevelReceipt;
 	final editableSource:Bytes;
+	final editableParsed:ParsedScenario;
+	var editableClaimed:Bool;
 	final authored:RuntimeLevelAuthoredTrace;
 	final presentationValue:RuntimeLevelPresentation;
 
 	private function new(generation:LoadedContentGeneration, receipt:RuntimeLevelReceipt, authoredTrace:RuntimeLevelAuthoredTrace,
-			presentation:RuntimeLevelPresentation, source:Bytes) {
+			presentation:RuntimeLevelPresentation, source:Bytes, parsed:ParsedScenario) {
 		loadedGeneration = generation;
 		sourceReceipt = receipt;
 		editableSource = source.sub(0, source.length);
+		editableParsed = parsed;
+		editableClaimed = false;
 		authored = authoredTrace;
 		presentationValue = presentation;
 	}
@@ -518,6 +541,20 @@ final class RuntimeLevelCandidate {
 	 */
 	public function sourceBytes():Bytes
 		return editableSource.sub(0, editableSource.length);
+
+	/**
+	 * Transfer the already parsed level into one editor session.
+	 *
+	 * The first call returns the sole parser-result owner and exact source bytes.
+	 * Later calls return `EditableSourceAlreadyClaimed`, preventing two editor
+	 * sessions from sharing the same mutable scenario arrays.
+	 */
+	public function claimEditableSource():RuntimeLevelEditableSourceClaim {
+		if (editableClaimed)
+			return EditableSourceAlreadyClaimed;
+		editableClaimed = true;
+		return EditableSourceClaimed({bytes: editableSource.sub(0, editableSource.length), parsed: editableParsed});
+	}
 
 	/** Player-visible facts validated from the same map as `generation()`. */
 	public inline function presentation():RuntimeLevelPresentation
@@ -598,10 +635,18 @@ function loadRuntimeLevelWithFault(source:RuntimeLevelSource, generationId:Conte
  * unrelated plan, presentation model, registry, or source receipt.
  */
 function rebuildRuntimeLevelForPublicationTesting(candidate:RuntimeLevelCandidate, generationId:ContentGenerationId):RuntimeLevelLoadResult {
+	final source = candidate.sourceBytes();
+	final parsed = switch ScenarioLexer.read(source) {
+		case ReadError(diagnostics): return RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics));
+		case ReadOk(records):
+			switch ScenarioParser.parse(records) {
+				case ReadError(diagnostics): return RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics));
+				case ReadOk(value): value;
+			}
+	};
 	return switch LoadedContentGeneration.build(generationId, candidate.generation().plan(), candidate.generation().presentation()) {
 		case ContentGenerationReady(generation):
-			RuntimeLevelReady(new RuntimeLevelCandidate(generation, candidate.receipt(), candidate.authoredTrace(), candidate.presentation(),
-				candidate.sourceBytes()));
+			RuntimeLevelReady(new RuntimeLevelCandidate(generation, candidate.receipt(), candidate.authoredTrace(), candidate.presentation(), source, parsed));
 		case ContentGenerationRejected(error):
 			RuntimeLevelRejected(RuntimeLevelGenerationRejected(error));
 	};
@@ -618,12 +663,12 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 		case RuntimeLevelInputReady(value): value;
 		case RuntimeLevelInputRejected(error): return RuntimeLevelRejected(RuntimeLevelSourceRejected(error));
 	};
-	final scenario = switch ScenarioLexer.read(input.bytes) {
+	final decoded = switch ScenarioLexer.read(input.bytes) {
 		case ReadOk(records):
 			switch ScenarioParser.parse(records) {
 				case ReadOk(parsed):
 					switch ScenarioValidator.validate(parsed, validationRegistry) {
-						case ReadOk(validated): validated;
+						case ReadOk(validated): {parsed: parsed, scenario: validated};
 						case ReadError(diagnostics): return RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics));
 					}
 				case ReadError(diagnostics):
@@ -632,6 +677,8 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 		case ReadError(diagnostics):
 			return RuntimeLevelRejected(RuntimeLevelScenarioRejected(diagnostics));
 	};
+	final parsed = decoded.parsed;
+	final scenario = decoded.scenario;
 	final resolved = switch ResolvedLevelPlan.resolve(scenario, resolutionRegistry, playerOptions) {
 		case LevelPlanResolved(plan, presentation): {plan: plan, presentation: presentation};
 		case LevelPlanRejected(error): return RuntimeLevelRejected(RuntimeLevelPlanRejected(error));
@@ -707,7 +754,8 @@ private function loadRuntimeLevelInternal(source:RuntimeLevelSource, generationI
 				byteLength: input.bytes.length,
 				inputHash: hashBytes(input.bytes),
 				readAttempts: input.readAttempts
-			}, authoredTrace(scenario), new RuntimeLevelPresentation(scenario), input.bytes));
+			}, authoredTrace(scenario), new RuntimeLevelPresentation(scenario),
+				input.bytes, parsed));
 		case ContentGenerationRejected(error):
 			RuntimeLevelRejected(RuntimeLevelGenerationRejected(error));
 	};

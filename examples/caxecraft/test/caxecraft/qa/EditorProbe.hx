@@ -716,6 +716,7 @@ final class EditorProbe {
 	 */
 	static function checkFocusNavigation():Int {
 		final forward:Array<EditorFocusTarget> = [
+			EditorFocusTarget.Save,
 			EditorFocusTarget.WorldName,
 			EditorFocusTarget.Undo,
 			EditorFocusTarget.Redo,
@@ -747,6 +748,7 @@ final class EditorProbe {
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Undo,
 			EditorFocusTarget.WorldName,
+			EditorFocusTarget.Save,
 			EditorFocusTarget.Back
 		];
 		var checks = 1;

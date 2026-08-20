@@ -28,6 +28,7 @@ enum abstract EditorFocusTarget(Int) {
 	var LeaveWithoutSaving = 14;
 	var CatalogObjectTool = 15;
 	var Environment = 16;
+	var Save = 17;
 }
 
 /**
@@ -58,7 +59,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 	return switch direction {
 		case Forward:
 			switch current {
-				case Back: WorldName;
+				case Back: Save;
+				case Save: WorldName;
 				case WorldName: Undo;
 				case Undo: Redo;
 				case Redo: Build;
@@ -79,7 +81,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 		case Backward:
 			switch current {
 				case Back: WorldList;
-				case WorldName: Back;
+				case Save: Back;
+				case WorldName: Save;
 				case Undo: WorldName;
 				case Redo: Undo;
 				case Build: Redo;

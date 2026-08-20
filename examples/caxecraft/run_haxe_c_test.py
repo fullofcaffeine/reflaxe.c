@@ -220,9 +220,14 @@ EVAL_CASES = {
             EvalProbe(
                 "editor.hxml",
                 "caxemap-editor: 22 command round trips, 50 protocol checks, "
-                "35 focus checks, 18 navigation checks, 13 2D checks, 19 3D "
+                "37 focus checks, 18 navigation checks, 13 2D checks, 19 3D "
                 "checks, 13 active-level checks, 1891 canonical bytes; bounded "
-                "history/test-play/recovery; trace=945979261\n",
+                "history/test-play/recovery; trace=945966955\n",
+            ),
+            EvalProbe(
+                "editor-package-session.hxml",
+                "editor-package-session: one shared session, rejected saves preserve "
+                "the draft, canonical save/reopen and clean undo/redo passed\n",
             ),
         ),
         source_audits=(
@@ -250,7 +255,7 @@ EVAL_CASES = {
             EvalProbe("scenario-model.hxml", "scenario-model: -1725217016\n"),
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 15634 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15610 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),
@@ -277,7 +282,7 @@ EVAL_CASES = {
         probes=(
             EvalProbe(
                 "scenario-codec.hxml",
-                "scenario-codec: 1192 + 4027 + 15634 bytes, staged round-trip and "
+                "scenario-codec: 1192 + 4027 + 15610 bytes, staged round-trip and "
                 "exact malformed-input audit\n",
             ),
         ),

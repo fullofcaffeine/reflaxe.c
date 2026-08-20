@@ -22,32 +22,34 @@ final class ScenarioLexer {
 		}
 	}
 
+	/**
+	 * Split the validated document once, then tokenize each short logical line.
+	 *
+	 * Haxe string indexes count Unicode scalar values. Repeatedly indexing the
+	 * complete document can therefore rescan UTF-8 from its beginning on native
+	 * targets. The standard split keeps that traversal linear while line-local
+	 * token columns retain the same scalar-based diagnostics.
+	 */
 	static function tokenize(text:String):ScenarioReadResult<Array<ScenarioLexRecord>> {
 		final records:Array<ScenarioLexRecord> = [];
-		var line = 1;
 		var record = 0;
-		var start = 0;
-		var index = 0;
-		while (index <= text.length) {
-			if (index == text.length || text.charCodeAt(index) == 10) {
-				var end = index;
-				if (end > start && text.charCodeAt(end - 1) == 13)
-					end--;
-				final result = tokenizeLine(text.substring(start, end), line, record + 1);
-				switch result {
-					case ReadError(diagnostics):
-						return ReadError(diagnostics);
-					case ReadOk(null):
-					case ReadOk(value):
-						record++;
-						if (record > ScenarioLimits.MAX_RECORDS)
-							return fail(line, 1, record, LimitExceeded(LogicalRecords, ScenarioLimits.MAX_RECORDS));
-						records.push(value);
-				}
-				line++;
-				start = index + 1;
+		final lines = text.split("\n");
+		for (lineIndex in 0...lines.length) {
+			final line = lineIndex + 1;
+			var lineText = lines[lineIndex];
+			if (StringTools.endsWith(lineText, "\r"))
+				lineText = lineText.substring(0, lineText.length - 1);
+			final result = tokenizeLine(lineText, line, record + 1);
+			switch result {
+				case ReadError(diagnostics):
+					return ReadError(diagnostics);
+				case ReadOk(null):
+				case ReadOk(value):
+					record++;
+					if (record > ScenarioLimits.MAX_RECORDS)
+						return fail(line, 1, record, LimitExceeded(LogicalRecords, ScenarioLimits.MAX_RECORDS));
+					records.push(value);
 			}
-			index++;
 		}
 		return ReadOk(records);
 	}

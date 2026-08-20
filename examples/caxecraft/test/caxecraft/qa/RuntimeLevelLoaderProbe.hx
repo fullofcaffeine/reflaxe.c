@@ -15,6 +15,7 @@ import caxecraft.content.LoadedContentGeneration.LoadedContentGenerationTrace;
 import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelAuthority;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelAuthoredTrace;
+import caxecraft.content.RuntimeLevelLoader.RuntimeLevelEditableSourceClaim;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelLoadResult;
 import caxecraft.content.RuntimeLevelLoader.RuntimeLevelSource;
 import caxecraft.content.RuntimeLevelLoader.loadRuntimeLevel;
@@ -367,7 +368,16 @@ function selfCheck():Int {
 	};
 	if (editorTestPlay.level() != null || editorTestPlay.stop())
 		return 129;
-	final editorTestPlayBytes = presentationCandidate.sourceBytes();
+	final editableSource = switch presentationCandidate.claimEditableSource() {
+		case EditableSourceClaimed(source): source;
+		case EditableSourceAlreadyClaimed: return 140;
+	};
+	switch presentationCandidate.claimEditableSource() {
+		case EditableSourceAlreadyClaimed:
+		case EditableSourceClaimed(_):
+			return 140;
+	}
+	final editorTestPlayBytes = editableSource.bytes;
 	final semanticallyValidButUnpresentable = withoutFluidRecord(editorTestPlayBytes);
 	switch editorTestPlay.start({canonical: semanticallyValidButUnpresentable, playerOptions: options}) {
 		case EditorTestPlayRejected(EditorTestPlayPresentationRejected(_)):

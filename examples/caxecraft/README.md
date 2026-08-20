@@ -1057,14 +1057,21 @@ top-down projection, and Select/Paint/Erase/Fill translation under C and a
 second installed locale (Spanish when available). The reusable editor package
 imports no Raylib or C target API.
 
-The title screen's Editor button now opens the first native Raylib/Raygui
-perspective viewport. A creator can fly with WASD/QE, look while holding the
-right mouse button, move with the wheel, focus the whole world with F, and
-left-click a visible voxel or empty floor cell. Every pointer gesture becomes
-the same typed `EditorCommand` used by history and tests. The screen caches a
-read-only complete-volume projection between accepted edits; it does not
-serialize the draft every frame or let rendering code write terrain. Its
-deterministic generated-C graphical proof is:
+The title screen's Editor button opens a native Raylib/Raygui perspective
+viewport. A creator can fly with WASD/QE, look while holding the right mouse
+button, move with the wheel, focus the whole world with F, and left-click a
+visible voxel or empty floor cell. Object and environment controls use the same
+typed `EditorCommand` boundary as terrain, history, and tests. The screen caches
+a read-only complete-volume projection between accepted edits. It also tracks
+the saved history state without serializing the complete draft every frame.
+
+Save and Ctrl/Cmd+S validate the draft and publish the map with its campaign,
+runtime-content, and outer-package receipts. The native app shares one
+package-backed editor session between visual edits, Test Play, and Save. It
+reads reviewed assets from the executable's asset root but grants publication
+authority only below the writable content root. A failed save preserves the
+draft and its dirty state for a retry. Its deterministic generated-C graphical
+proof is:
 
 ```sh
 python3 examples/caxecraft/play.py \
@@ -1073,16 +1080,17 @@ python3 examples/caxecraft/play.py \
   --allow-network
 ```
 
-The pilot moves the real editor camera, paints and selects one voxel, and
-requires a clipped perspective frame with sky, ground depth, solid volume, and
-a selection outline. This is the first truthful 3D editing slice, not a claim
-that native file save, multi-layer controls, controller navigation, object
-gizmos, or the complete child-friendly event/cutscene tools are available. Its
-design is explained in
+The pilot moves the real editor camera, paints and selects one voxel, saves the
+staged package, and requires a clipped perspective frame with sky, ground
+depth, solid volume, and a selection outline. It restores the source package
+before the repeat and requires the same saved bytes, receipts, semantic report,
+and frame. It also starts two fresh ordinary-engine Test Play runs. This proof
+does not claim that multi-layer controls or the complete child-friendly
+event/cutscene tools are available. Its design is explained in
 [the editor semantics guide](../../docs/caxecraft-editor.md).
 
-Native persistence and the remaining visual editor work continue as ordered
-`haxe_c-xge.19.*` slices. The readable
+The remaining visual editor work continues as ordered `haxe_c-xge.19.*`
+slices. The readable
 [CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.
 
 Agents and text tools can now open a real package level through the same

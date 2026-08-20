@@ -26,6 +26,7 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 PROVISION_DIR = ROOT / "scripts/raylib"
+CAXECRAFT_NATIVE_INCLUDE = CASE / "native/include"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(PROVISION_DIR))
@@ -193,6 +194,7 @@ RUNTIME_CONTENT_ENTRY_KINDS = frozenset(
 )
 RUNTIME_ASSET_ENTRY_KINDS = frozenset(("asset", "asset-manifest"))
 RUNTIME_GRID_ASSET_KINDS = frozenset(("icon-atlas", "sprite-atlas", "tile-atlas"))
+RUNTIME_PACKAGE_FILES = ("caxecraft.package.json",)
 RUNTIME_LAUNCHER_FILES = ("pilots/active.piloscript",)
 
 
@@ -491,7 +493,7 @@ def stage_runtime_assets(destination: Path) -> None:
 
     stage_root = destination / "assets"
     selected: list[dict[str, object]] = []
-    expected_files = {RUNTIME_ASSET_REPORT}
+    expected_files = {"manifest.json", RUNTIME_ASSET_REPORT}
     for asset_id in selected_ids:
         asset = by_id.get(asset_id)
         if asset is None:
@@ -570,6 +572,12 @@ def stage_runtime_assets(destination: Path) -> None:
         )
         shutil.copyfile(source_root.joinpath(*relative.parts), target)
 
+    prepare_stage_destination(
+        stage_root,
+        PurePosixPath("manifest.json"),
+        "Caxecraft asset manifest",
+    ).write_bytes((source_root / "manifest.json").read_bytes())
+
     report = {
         "schemaVersion": 1,
         "packId": manifest.get("packId"),
@@ -594,9 +602,10 @@ def stage_content_catalogs(
 ) -> None:
     """Publish the exact authored content tree consumed beside the executable.
 
-    Native play reads the staged CaxeMap after process startup. The base content
-    manifest and UI catalog use the same bounded ownership rule. Their current
-    bytes are runtime inputs and are deliberately absent from the compile key.
+    Native play reads the staged CaxeMap after process startup. The outer
+    package manifest, base content manifest, and UI catalog use the same bounded
+    ownership rule. Their current bytes are runtime inputs and are deliberately
+    absent from the compile key.
     """
 
     runtime_files = runtime_content_files(source_root)
@@ -663,8 +672,8 @@ def runtime_content_files(source_root: Path = CASE) -> tuple[str, ...]:
     if not isinstance(document, dict) or not isinstance(document.get("entries"), list):
         raise PlayFailure("Caxecraft package manifest entries must be an array")
 
-    selected: list[str] = []
-    seen: set[str] = set()
+    selected = list(RUNTIME_PACKAGE_FILES)
+    seen = set(RUNTIME_PACKAGE_FILES)
     for index, entry in enumerate(document["entries"]):
         if not isinstance(entry, dict):
             raise PlayFailure(f"Caxecraft package manifest entry {index} must be an object")
@@ -3088,11 +3097,13 @@ def compile_native(
         ],
         IncludeRoot("raylib-include", include_directory),
         IncludeRoot("raygui-include", raygui_include_directory),
+        IncludeRoot("caxecraft-native-include", CAXECRAFT_NATIVE_INCLUDE),
     ]
     dependency_roots = [
         DependencyRoot("generated-project", generated),
         DependencyRoot("raylib-include", include_directory),
         DependencyRoot("raygui-include", raygui_include_directory),
+        DependencyRoot("caxecraft-native-include", CAXECRAFT_NATIVE_INCLUDE),
     ]
     native_cache = NativeCache(
         cache_root,
@@ -4082,6 +4093,11 @@ def main(argv: list[str]) -> int:
             height = 0
             repetitions = 7 if args.benchmark_renderer else 2
             for repeat in range(repetitions):
+                # Native editor Save intentionally changes the staged package. Restore the
+                # reviewed source package before each repeat so determinism compares two
+                # independent creator journeys instead of replaying edits on prior output.
+                if selected_pilot == "editor-shell":
+                    stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
                 report, width, height, screenshot_hash, sample_supporting_hashes = run_pilot_sample(
                     executable=executable,
                     pilot=selected_pilot,

@@ -25,6 +25,12 @@ import caxecraft.content.LoadedContentGeneration.ContentGenerationId;
 import caxecraft.content.ResolvedLevelPlan.LevelPlayerOptions;
 import caxecraft.content.RuntimeContentGeneration.RuntimeContentLoadResult;
 import caxecraft.content.RuntimeContentGeneration.loadRuntimeContent;
+import caxecraft.content.RuntimeLevelLoader.RuntimeLevelEditableSourceClaim;
+import caxecraft.editor.EditorPackageSession;
+import caxecraft.editor.EditorPackageSession.EditorPackageOpenResult;
+import caxecraft.editor.EditorPackageSession.editorPackageErrorMessage;
+import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.app.AppScreen;
 import caxecraft.app.AppScreen.acceptsCampaignExit;
 import caxecraft.app.AppScreen.beginLoading;
@@ -363,7 +369,26 @@ final class CaxecraftApp {
 		final contentRegistry = runtimeContent.registry();
 		final uiCatalog = runtimeContent.catalog();
 		final loadedCandidate = runtimeContent.level();
-		final editorScreen = new CaxecraftEditorScreen(contentRegistry, uiCatalog, loadedCandidate.sourceBytes());
+		final editorSource = switch loadedCandidate.claimEditableSource() {
+			case EditableSourceClaimed(source): source;
+			case EditableSourceAlreadyClaimed:
+				Sys.println("caxecraft: active level editor source was already claimed");
+				return;
+		};
+		final editorSession = switch EditorSession.openParsed(editorSource.bytes, editorSource.parsed, contentRegistry) {
+			case EditorOpened(value): value;
+			case EditorOpenRejected(_):
+				Sys.println("caxecraft: active level rejected by editor");
+				return;
+		};
+		final editorPackage = switch EditorPackageSession.attach("content", ".", "caxecraft.package.json", loadedCandidate.receipt().logicalPath,
+			editorSession) {
+			case EditorPackageOpened(value): value;
+			case EditorPackageOpenRejected(error):
+				Sys.println('caxecraft: editor package rejected: ${editorPackageErrorMessage(error)}');
+				return;
+		};
+		final editorScreen = new CaxecraftEditorScreen(contentRegistry, uiCatalog, editorPackage);
 		final activeLevel = switch ActivePlayableLevel.create(loadedCandidate) {
 			case PlayableLevelCreated(value): value;
 			case PlayableLevelCreationRejected(_):
@@ -1231,7 +1256,7 @@ final class CaxecraftApp {
 			// cell also gives the framebuffer oracle a specific 3D outline.
 			// One held controller direction moves immediately, repeats after the
 			// production delay, then repeats at the production interval. The
-			// six held moves land on Play before the south face button
+			// eight held moves land on Play before the south face button
 			// confirms it through the same device-neutral screen handler.
 			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
 				if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
@@ -1266,6 +1291,11 @@ final class CaxecraftApp {
 						rejectedEdits++;
 				}
 				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEdits++;
+				}
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
 					case StayInEditor:
 					case ReturnToTitle | StartTestPlay(_):
 						rejectedEdits++;
@@ -1338,12 +1368,15 @@ final class CaxecraftApp {
 							rejectedEdits++;
 					}
 			}
-			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8)
+			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 8) {
 				switch editorScreen.applyNavigation(NavigationCommand.Cancel) {
 					case StayInEditor:
 					case ReturnToTitle | StartTestPlay(_):
 						rejectedEdits++;
 				}
+				if (!editorScreen.applyPilotSave())
+					rejectedEdits++;
+			}
 			#end
 			if (captured && !conversationOwnedInput) {
 				var yawDelta = lookYaw;

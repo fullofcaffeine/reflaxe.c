@@ -15,6 +15,13 @@ import haxe.io.Bytes;
 typedef EditorHistoryEntry = {
 	final family:EditorCommandFamily;
 	final changes:Array<EditorChangeId>;
+
+	/** Stable identity of the draft restored by Undo. */
+	final beforeStateIdentity:Int;
+
+	/** Stable identity of the draft restored by Redo. */
+	final afterStateIdentity:Int;
+
 	final before:Bytes;
 	final after:Bytes;
 	final byteCost:Int;

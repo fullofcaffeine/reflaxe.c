@@ -209,6 +209,9 @@ final class RuntimeUiCatalog {
 			"editor_plan",
 			"editor_ready",
 			"editor_redo",
+			"editor_save",
+			"editor_save_failed",
+			"editor_saved",
 			"editor_scene",
 			"editor_select",
 			"editor_stop_test",
@@ -280,6 +283,9 @@ final class RuntimeUiCatalog {
 			"EditorPlan",
 			"EditorReady",
 			"EditorRedo",
+			"EditorSave",
+			"EditorSaveFailed",
+			"EditorSaved",
 			"EditorScene",
 			"EditorSelect",
 			"EditorStopTest",
@@ -393,28 +399,31 @@ final class RuntimeUiCatalog {
 			case EditorPlan: 41;
 			case EditorReady: 42;
 			case EditorRedo: 43;
-			case EditorScene: 44;
-			case EditorSelect: 45;
-			case EditorStopTest: 46;
-			case EditorTest: 47;
-			case EditorTesting: 48;
-			case EditorTitle: 49;
-			case EditorToolList: 50;
-			case EditorUndo: 51;
-			case EditorUnsavedChanges: 52;
-			case EditorValid: 53;
-			case EditorValidate: 54;
-			case EditorWorldList: 55;
-			case HealthFull: 56;
-			case MenuAdventure: 57;
-			case MenuCreative: 58;
-			case MenuEditor: 59;
-			case MenuInstructions: 60;
-			case NoBlockInReach: 61;
-			case PauseHelp: 62;
-			case PauseTitle: 63;
-			case PlaceBlocked: 64;
-			case TitleFallback: 65;
+			case EditorSave: 44;
+			case EditorSaveFailed: 45;
+			case EditorSaved: 46;
+			case EditorScene: 47;
+			case EditorSelect: 48;
+			case EditorStopTest: 49;
+			case EditorTest: 50;
+			case EditorTesting: 51;
+			case EditorTitle: 52;
+			case EditorToolList: 53;
+			case EditorUndo: 54;
+			case EditorUnsavedChanges: 55;
+			case EditorValid: 56;
+			case EditorValidate: 57;
+			case EditorWorldList: 58;
+			case HealthFull: 59;
+			case MenuAdventure: 60;
+			case MenuCreative: 61;
+			case MenuEditor: 62;
+			case MenuInstructions: 63;
+			case NoBlockInReach: 64;
+			case PauseHelp: 65;
+			case PauseTitle: 66;
+			case PlaceBlocked: 67;
+			case TitleFallback: 68;
 			case _: -1;
 		};
 	}

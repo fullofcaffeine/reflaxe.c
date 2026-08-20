@@ -62,8 +62,10 @@ enum abstract KeyboardKey(Int) {
 	var LeftShift = 340;
 	var LeftControl = 341;
 	var LeftAlt = 342;
+	var LeftSuper = 343;
 	var RightShift = 344;
 	var RightControl = 345;
 	var RightAlt = 346;
+	var RightSuper = 347;
 }
 #end
