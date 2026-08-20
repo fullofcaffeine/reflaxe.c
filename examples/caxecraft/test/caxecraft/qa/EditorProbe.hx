@@ -5,6 +5,8 @@ import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
+import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
+import caxecraft.editor.EditorFlowProjection.projectZoneRules;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -135,6 +137,7 @@ final class EditorProbe {
 		final navigationChecks = checkNavigationInput();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
+		checkZoneRuleProjection();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
 		checkObjectMovement();
@@ -1637,6 +1640,56 @@ final class EditorProbe {
 			&& !gizmoIntersectsLayer(objectGizmos[0], 2),
 			"Plan object filtering lost exact vertical overlap");
 		return 21;
+	}
+
+	/** Prove that Plan logic links retain rule order and fail closed. */
+	static function checkZoneRuleProjection():Void {
+		final zone = id("zone.workshop");
+		final missing = id("zone.missing");
+		final bounds:VoxelBounds = {origin: {x: 1, y: 0, z: 2}, size: {width: 2, height: 3, depth: 4}};
+		final rules = [
+			{
+				id: id("rule.enter"),
+				priority: 0,
+				repeat: Once,
+				event: EnterZone(zone),
+				predicate: Always,
+				actions: []
+			},
+			{
+				id: id("rule.interact"),
+				priority: 1,
+				repeat: Once,
+				event: Interact(CHECKPOINT),
+				predicate: Always,
+				actions: []
+			},
+			{
+				id: id("rule.leave"),
+				priority: 2,
+				repeat: Repeat,
+				event: LeaveZone(missing),
+				predicate: Always,
+				actions: []
+			}
+		];
+		final links = projectZoneRules(rules, [{id: zone, tags: [], placement: TriggerZone(bounds)}]);
+		require(links.length == 2, "zone-rule projection included an unrelated event");
+		switch links[0] {
+			case ResolvedZoneRule(ruleId, zoneId, projected):
+				require(ruleId.text() == "rule.enter" && zoneId.text() == zone.text(), "resolved zone-rule projection lost stable IDs");
+				require(projected.origin.x == 1 && projected.origin.z == 2 && projected.size.width == 2 && projected.size.height == 3
+					&& projected.size.depth == 4,
+					"resolved zone-rule projection changed trigger bounds");
+			case _:
+				throw "valid zone-rule projection did not resolve";
+		}
+		switch links[1] {
+			case UnresolvedZoneRule(ruleId, zoneId):
+				require(ruleId.text() == "rule.leave" && zoneId.text() == missing.text(), "unresolved zone-rule projection lost stable IDs");
+			case _:
+				throw "missing zone-rule projection invented geometry";
+		}
 	}
 
 	static inline function close(actual:Float, expected:Float):Bool

@@ -15,6 +15,8 @@ import caxecraft.editor.EditorEnvironment.moveEnvironmentControl;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
+import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
+import caxecraft.editor.EditorFlowProjection.projectZoneRules;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
@@ -135,6 +137,7 @@ final class CaxecraftEditorScreen {
 	var objectGizmos:Array<EditorObjectGizmo>;
 	var objectLabels:String;
 	var flowRuleCount:Int;
+	var zoneRuleLinks:Array<EditorZoneRuleProjection>;
 	var camera:Null<EditorCameraState>;
 	var selection:Null<VoxelBounds>;
 	var focusedControl:EditorFocusTarget;
@@ -175,6 +178,7 @@ final class CaxecraftEditorScreen {
 		objectGizmos = [];
 		objectLabels = "";
 		flowRuleCount = 0;
+		zoneRuleLinks = [];
 		camera = null;
 		selection = null;
 		focusedControl = initialFocus();
@@ -1344,6 +1348,16 @@ final class CaxecraftEditorScreen {
 					index == selectedObject ? CaxecraftPalette.selection() : gizmoColor(gizmo.kind));
 			}
 		}
+		for (link in zoneRuleLinks)
+			switch link {
+				case ResolvedZoneRule(ruleId, _, bounds) if (boundsIntersectLayer(bounds, editLayerY)):
+					final cellLeft = grid.left + bounds.origin.x * grid.cellSize;
+					final cellTop = grid.top + bounds.origin.z * grid.cellSize;
+					Raylib.DrawRectangleLines(cellLeft + 2, cellTop + 2, bounds.size.width * grid.cellSize - 4, bounds.size.depth * grid.cellSize - 4,
+						Color.rgba(236, 114, 255));
+					Raylib.DrawTextString(ruleId.text(), cellLeft + 4, cellTop + 4, 10, Color.rgba(255, 210, 255));
+				case ResolvedZoneRule(_, _, _) | UnresolvedZoneRule(_, _):
+			}
 		if (hover != null) {
 			final hoverLeft = grid.left + hover.x * grid.cellSize;
 			final hoverTop = grid.top + hover.z * grid.cellSize;
@@ -1712,6 +1726,7 @@ final class CaxecraftEditorScreen {
 			objectGizmos = [];
 			objectLabels = "";
 			flowRuleCount = 0;
+			zoneRuleLinks = [];
 			environment = null;
 			camera = null;
 			selection = null;
@@ -1734,6 +1749,7 @@ final class CaxecraftEditorScreen {
 		};
 		objectGizmos = projectObjects(draft.objects);
 		flowRuleCount = draft.flow.rules.length;
+		zoneRuleLinks = projectZoneRules(draft.flow.rules, draft.objects);
 		final labels:Array<String> = [];
 		for (gizmo in objectGizmos)
 			labels.push(gizmo.id.text());
