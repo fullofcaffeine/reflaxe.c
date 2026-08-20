@@ -16,6 +16,7 @@ import caxecraft.editor.EditorPolicy.MAX_HISTORY_ENTRIES;
 import caxecraft.editor.EditorPolicy.MAX_TRANSACTION_COMMANDS;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
+import caxecraft.editor.EditorPlacement.checkpointTemplate;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorPlacement.objectRecipeCommand;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
@@ -240,9 +241,80 @@ final class EditorProbe {
 			case _:
 				throw "checkpoint placement did not use the normal object command";
 		}
+		final reservedRules = [
+			{
+				id: id("editor.rule.checkpoint.n3"),
+				priority: 0,
+				repeat: Repeat,
+				event: Interact(existing[0].id),
+				predicate: Always,
+				actions: [SetCheckpoint(existing[0].id)]
+			}
+		];
+		final allocated = checkpointTemplate({x: 2, y: 1, z: 3}, existing, reservedRules);
+		require(allocated.objectId.text() == "editor.checkpoint.n4", "checkpoint template reused a suffix reserved by a rule");
+		switch allocated.commands {
+			case [PutObject(object), PutRule(rule)]:
+				require(object.id.text() == allocated.objectId.text() && rule.id.text() == "editor.rule.checkpoint.n4",
+					"checkpoint template did not keep deterministic paired identities");
+				switch [rule.event, rule.actions] {
+					case [Interact(eventId), [SetCheckpoint(actionId)]]:
+						require(eventId.text() == allocated.objectId.text() && actionId.text() == allocated.objectId.text(),
+							"checkpoint template did not connect interaction to checkpoint state");
+					case _: throw "checkpoint template changed its playable CaxeFlow rule";
+				}
+			case _:
+				throw "checkpoint template did not emit object and rule commands";
+		}
 
 		final session = open(defaultEditorSettings());
 		roundTrip(session, checkpointCommand({x: 0, y: 0, z: 0}, session.draftSnapshot().objects), Placement);
+
+		final draft = session.draftSnapshot();
+		final template = checkpointTemplate({x: 0, y: 0, z: 0}, draft.objects, draft.flow.rules);
+		require(template.commands.length == 2, "checkpoint template did not keep object and behavior in one batch");
+		final beforeBytes = session.canonicalDraft();
+		final beforeHistory = session.historyEntries();
+		switch session.preview({baseRevision: session.revision(), commands: template.commands}) {
+			case PreviewAccepted(families, _, _):
+				require(families.length == 2 && families[0] == Placement && families[1] == Rule, "checkpoint template preview changed command ownership");
+			case other:
+				throw 'checkpoint template preview failed: $other';
+		}
+		require(session.canonicalDraft().compare(beforeBytes) == 0 && session.historyEntries() == beforeHistory,
+			"checkpoint template preview changed the live draft");
+		final missingObject = id("editor.missing.checkpoint-template");
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch([template.commands[0], RemoveObject(missingObject)])}) {
+			case MutationRejected(MissingObject(id), _):
+				require(id.text() == missingObject.text(), "checkpoint template partial failure reported the wrong object");
+			case other:
+				throw 'checkpoint template partial failure was not atomic: $other';
+		}
+		require(session.canonicalDraft().compare(beforeBytes) == 0 && session.historyEntries() == beforeHistory,
+			"checkpoint template partial failure changed bytes or history");
+		switch session.mutate({baseRevision: session.revision(), mutation: ApplyBatch(template.commands)}) {
+			case MutationApplied(families, _, _, undoDepth, redoDepth):
+				require(families.length == 2 && families[0] == Placement && families[1] == Rule && undoDepth == beforeHistory + 1 && redoDepth == 0,
+					"checkpoint template did not commit as one reversible transaction");
+			case other:
+				throw 'checkpoint template commit failed: $other';
+		}
+		final committed = expectValid(session, "playable checkpoint template");
+		requireTestStarted(session.enterTestPlay(), "playable checkpoint template");
+		final test = session.testPlay();
+		require(test != null, "checkpoint template Test Play did not start");
+		test.runTick({events: [Interact(template.objectId)], positions: []});
+		final activeCheckpoint = test.checkpoint();
+		require(activeCheckpoint != null && activeCheckpoint.text() == template.objectId.text(),
+			"checkpoint template interaction did not change Test Play checkpoint state");
+		require(session.leaveTestPlay(), "checkpoint template Test Play did not return to editing");
+		require(session.canonicalDraft().compare(committed) == 0, "checkpoint template Test Play changed canonical bytes");
+		switch session.mutate({baseRevision: session.revision(), mutation: Undo}) {
+			case MutationApplied(_, _, _, _, _):
+			case other:
+				throw 'checkpoint template undo failed: $other';
+		}
+		require(session.canonicalDraft().compare(beforeBytes) == 0, "checkpoint template undo left a partial object or rule");
 	}
 
 	/** Prove one visual gesture creates exact one-cell trigger bounds. */
@@ -1455,7 +1527,7 @@ final class EditorProbe {
 			"raygui tool indices drifted from the closed editor tool type");
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
-		switch commandForTool(SelectTool, point, 1, null, [], null) {
+		switch commandForTool(SelectTool, point, 1, null, [], [], null) {
 			case ToolSelectionReady(bounds):
 				require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 1 && bounds.size.width == 1 && bounds.size.height == 1
 					&& bounds.size.depth == 1,
@@ -1463,32 +1535,39 @@ final class EditorProbe {
 			case _:
 				throw "select tool did not produce workspace bounds";
 		}
-		switch commandForTool(PaintTool, point, 1, null, [], null) {
+		switch commandForTool(PaintTool, point, 1, null, [], [], null) {
 			case ToolCommandReady(PaintVoxel(actual, 1)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "paint tool changed the pointed voxel");
 			case _:
 				throw "paint tool did not produce a PaintVoxel command";
 		}
-		switch commandForTool(EraseTool, point, 1, null, [], null) {
+		switch commandForTool(EraseTool, point, 1, null, [], [], null) {
 			case ToolCommandReady(EraseVoxel(actual)):
 				require(actual.x == point.x && actual.y == point.y && actual.z == point.z, "erase tool changed the pointed voxel");
 			case _:
 				throw "erase tool did not produce an EraseVoxel command";
 		}
-		switch commandForTool(FillTool, point, 1, null, [], null) {
+		switch commandForTool(FillTool, point, 1, null, [], [], null) {
 			case ToolCommandRejected(NoSelection):
 			case _:
 				throw "fill tool did not reject a missing selection exactly";
 		}
 		final selected:VoxelBounds = {origin: {x: 1, y: 0, z: 1}, size: {width: 2, height: 1, depth: 2}};
-		switch commandForTool(FillTool, point, 1, selected, [], null) {
+		switch commandForTool(FillTool, point, 1, selected, [], [], null) {
 			case ToolCommandReady(FillBounds(bounds, 1)):
 				require(bounds.origin.x == 1 && bounds.origin.z == 1 && bounds.size.width == 2 && bounds.size.depth == 2,
 					"fill tool changed its explicit workspace bounds");
 			case _:
 				throw "fill tool did not carry explicit typed bounds";
 		}
-		switch commandForTool(TriggerZoneTool, point, 1, null, [], null) {
+		switch commandForTool(CheckpointTool, point, 1, null, [], [], null) {
+			case ToolBatchReady(commands, selectedObject):
+				require(commands.length == 2 && selectedObject.text() == "editor.checkpoint.n1",
+					"checkpoint tool did not produce one selectable atomic template");
+			case _:
+				throw "checkpoint tool did not produce a canonical command batch";
+		}
+		switch commandForTool(TriggerZoneTool, point, 1, null, [], [], null) {
 			case ToolCommandReady(PutObject(object)):
 				require(object.id.text() == "editor.trigger.n1", "trigger tool changed its deterministic object ID");
 				switch object.placement {

@@ -3,10 +3,17 @@ package caxecraft.editor;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorTypes.EditorCommand;
+import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioObject;
+
+/** One atomic checkpoint template and the object that the editor selects. */
+typedef EditorCheckpointTemplate = {
+	final objectId:ScenarioId;
+	final commands:Array<EditorCommand>;
+}
 
 /**
 	Builds reloadable CAXEMAP objects from simple creator gestures.
@@ -33,6 +40,41 @@ function checkpointCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edit
 			yawDegrees: 0
 		})
 	});
+}
+
+/**
+	Create a checkpoint marker and its playable interaction as one command list.
+
+	The object and rule share one numeric suffix. The allocator skips a suffix if
+	either identity already exists, so applying both commands cannot replace an
+	authored record. `EditorSession` validates and commits the list atomically.
+**/
+function checkpointTemplate(point:VoxelPoint, objects:Array<ScenarioObject>, rules:Array<FlowRule>):EditorCheckpointTemplate {
+	final number = nextCheckpointTemplateNumber(objects, rules);
+	final objectId = new ScenarioId('editor.checkpoint.n$number');
+	return {
+		objectId: objectId,
+		commands: [
+			PutObject({
+				id: objectId,
+				tags: [],
+				placement: Checkpoint({
+					xMilli: point.x * 1000 + 500,
+					yMilli: point.y * 1000,
+					zMilli: point.z * 1000 + 500,
+					yawDegrees: 0
+				})
+			}),
+			PutRule({
+				id: new ScenarioId('editor.rule.checkpoint.n$number'),
+				priority: 0,
+				repeat: Repeat,
+				event: Interact(objectId),
+				predicate: Always,
+				actions: [SetCheckpoint(objectId)]
+			})
+		]
+	};
 }
 
 /** Create one one-cell trigger at the selected voxel through normal history. */
@@ -82,6 +124,14 @@ private function nextCheckpointId(objects:Array<ScenarioObject>):ScenarioId {
 	return new ScenarioId('editor.checkpoint.n$number');
 }
 
+/** Find one suffix that is free in both the object and rule namespaces. */
+private function nextCheckpointTemplateNumber(objects:Array<ScenarioObject>, rules:Array<FlowRule>):Int {
+	var number = 1;
+	while (hasObjectId(objects, 'editor.checkpoint.n$number') || hasRuleId(rules, 'editor.rule.checkpoint.n$number'))
+		number++;
+	return number;
+}
+
 /** Find the first positive editor trigger number not used by any object. */
 private function nextTriggerId(objects:Array<ScenarioObject>):ScenarioId {
 	var number = 1;
@@ -94,6 +144,14 @@ private function nextTriggerId(objects:Array<ScenarioObject>):ScenarioId {
 private function hasObjectId(objects:Array<ScenarioObject>, expected:String):Bool {
 	for (object in objects)
 		if (object.id.text() == expected)
+			return true;
+	return false;
+}
+
+/** Compare stable rule IDs without depending on canonical rule order. */
+private function hasRuleId(rules:Array<FlowRule>, expected:String):Bool {
+	for (rule in rules)
+		if (rule.id.text() == expected)
 			return true;
 	return false;
 }

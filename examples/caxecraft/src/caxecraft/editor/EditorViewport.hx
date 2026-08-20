@@ -3,7 +3,7 @@ package caxecraft.editor;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
-import caxecraft.editor.EditorPlacement.checkpointCommand;
+import caxecraft.editor.EditorPlacement.checkpointTemplate;
 import caxecraft.editor.EditorPlacement.objectRecipeCommand;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
@@ -13,6 +13,8 @@ import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioWorld;
 import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.CaxeFlow.FlowRule;
 
 /**
 	Projects editor terrain into a small, renderer-independent top-down view.
@@ -66,6 +68,10 @@ typedef EditorViewportLayout = {
 enum EditorToolCommandResult {
 	ToolSelectionReady(bounds:VoxelBounds);
 	ToolCommandReady(command:EditorCommand);
+
+	/** Several commands that must preview and commit as one edit. */
+	ToolBatchReady(commands:Array<EditorCommand>, selectedObject:ScenarioId);
+
 	ToolCommandRejected(error:EditorError);
 }
 
@@ -238,10 +244,10 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 
 	Select returns workspace bounds instead of an authored command. Paint and
 	erase affect the pointed voxel. Fill carries the current bounds explicitly.
-	Object tools read existing IDs and create one reloadable record. The UI never
-	mutates a projection directly.
+	Object tools read existing IDs and create one reloadable record or one atomic
+	template. The UI never mutates a projection directly.
 **/
-function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>,
+function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>, rules:Array<FlowRule>,
 		recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
@@ -256,7 +262,8 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 		case FillTool:
 			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(selection, paletteCode));
 		case CheckpointTool:
-			ToolCommandReady(checkpointCommand(point, objects));
+			final template = checkpointTemplate(point, objects, rules);
+			ToolBatchReady(template.commands, template.objectId);
 		case CatalogObjectTool:
 			recipe == null ? ToolCommandRejected(MissingEditorObjectRecipe) : ToolCommandReady(objectRecipeCommand(recipe, point, objects));
 		case TriggerZoneTool:

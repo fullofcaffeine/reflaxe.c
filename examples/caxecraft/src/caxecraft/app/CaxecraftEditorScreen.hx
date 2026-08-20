@@ -1417,12 +1417,18 @@ final class CaxecraftEditorScreen {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects,
+		final draft = current.draftSnapshot();
+		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules,
 			activeRecipeFor(activeTool)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(command):
 				switch current.preview({baseRevision: current.revision(), commands: [command]}) {
+					case PreviewAccepted(_, _, _) | PreviewUnchanged(_, _): true;
+					case PreviewRejected(_, _): false;
+				}
+			case ToolBatchReady(commands, _):
+				switch current.preview({baseRevision: current.revision(), commands: commands}) {
 					case PreviewAccepted(_, _, _) | PreviewUnchanged(_, _): true;
 					case PreviewRejected(_, _): false;
 				}
@@ -1672,7 +1678,8 @@ final class CaxecraftEditorScreen {
 				return false;
 			}
 		}
-		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), current.draftSnapshot().objects, activeRecipeFor(tool));
+		final draft = current.draftSnapshot();
+		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules, activeRecipeFor(tool));
 		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;
@@ -1701,6 +1708,20 @@ final class CaxecraftEditorScreen {
 						true;
 					case MutationUnchanged(_, _):
 						invalidatePreview();
+						notice = Ready;
+						true;
+					case MutationRejected(_, _):
+						notice = Invalid;
+						false;
+				}
+			case ToolBatchReady(commands, selectedObject):
+				switch current.mutate({baseRevision: current.revision(), mutation: ApplyBatch(commands)}) {
+					case MutationApplied(_, _, _, _, _):
+						notice = Ready;
+						refreshProjection();
+						selectObject(selectedObject);
+						true;
+					case MutationUnchanged(_, _):
 						notice = Ready;
 						true;
 					case MutationRejected(_, _):
