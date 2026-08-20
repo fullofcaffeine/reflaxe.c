@@ -289,6 +289,13 @@ function projectObjects(objects:Array<ScenarioObject>):Array<EditorObjectGizmo> 
 	return projected;
 }
 
+/** True when one object selection box crosses the displayed voxel layer. */
+function gizmoIntersectsLayer(gizmo:EditorObjectGizmo, layerY:Int):Bool {
+	final minimum = gizmo.y - gizmo.height * 0.5;
+	final maximum = gizmo.y + gizmo.height * 0.5;
+	return maximum > layerY && minimum < layerY + 1;
+}
+
 /**
  * Select the nearest authored object box reached by a bounded world ray.
  *

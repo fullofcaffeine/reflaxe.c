@@ -155,7 +155,7 @@ function selfCheck():Int {
 	}
 
 	if (catalog.localeCount() != 2
-		|| catalog.messageCount() != 69
+		|| catalog.messageCount() != 70
 		|| catalog.text(LocaleCursor.Locale0, UiMessage.Brand) != "CAXECRAFT  //  C + HAXE"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
@@ -164,7 +164,7 @@ function selfCheck():Int {
 		return 9;
 	}
 	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
-	if (traceUi != 6928)
+	if (traceUi != 7028)
 		return 36;
 
 	return negativeChecks();
@@ -209,6 +209,7 @@ function allUiMessagesHaveText(catalog:RuntimeUiCatalog):Bool {
 		EditorGround,
 		EditorInvalid,
 		EditorKeepEditing,
+		EditorLayer,
 		EditorLeaveWithoutSaving,
 		EditorMaterial,
 		EditorMoreDetails,

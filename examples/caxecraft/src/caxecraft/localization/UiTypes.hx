@@ -97,4 +97,7 @@ enum abstract UiMessage(Int) {
 
 	var EditorSaveFailed = 67;
 	var EditorSaved = 68;
+
+	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
+	var EditorLayer = 69;
 }

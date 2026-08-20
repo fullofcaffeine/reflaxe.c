@@ -6,6 +6,7 @@ import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
 import caxecraft.editor.EditorPlacement.objectRecipeCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
+import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
@@ -115,6 +116,41 @@ function projectFromCells(world:ScenarioWorld, worldCells:Array<Int>, layerY:Int
 		cells: cells
 	};
 }
+
+/**
+	Build one horizontal layer from the complete cached 3D projection.
+
+	The native layer controls call this function without serializing or decoding
+	the CAXEMAP draft again. The returned cells remain a compact read-only copy,
+	so changing the selected layer cannot mutate terrain or editor history.
+**/
+function projectFromWorld(world:EditorWorldProjection, layerY:Int):Null<EditorViewportProjection> {
+	if (layerY < 0 || layerY >= world.height)
+		return null;
+	if (world.cells.length != world.width * world.height * world.depth)
+		return null;
+	final cells:Array<Int> = [];
+	for (z in 0...world.depth)
+		for (x in 0...world.width)
+			cells.push(world.cells[(z * world.height + layerY) * world.width + x]);
+	return {
+		width: world.width,
+		depth: world.depth,
+		layerY: layerY,
+		cells: cells
+	};
+}
+
+/** Clamp one presentation-only layer to a finite world height. */
+function clampLayer(layerY:Int, worldHeight:Int):Int {
+	if (worldHeight <= 0 || layerY < 0)
+		return 0;
+	return layerY < worldHeight ? layerY : worldHeight - 1;
+}
+
+/** True when one semantic voxel selection crosses the displayed layer. */
+function boundsIntersectLayer(bounds:VoxelBounds, layerY:Int):Bool
+	return layerY >= bounds.origin.y && layerY < bounds.origin.y + bounds.size.height;
 
 /**
 	Fit the largest centered square-cell grid inside a pixel rectangle.

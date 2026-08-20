@@ -296,6 +296,14 @@
       }
     },
     {
+      "id": "editor_layer",
+      "symbol": "EditorLayer",
+      "text": {
+        "en": "LAYER",
+        "es-MX": "CAPA"
+      }
+    },
+    {
       "id": "editor_leave_without_saving",
       "symbol": "EditorLeaveWithoutSaving",
       "text": {

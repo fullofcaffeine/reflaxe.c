@@ -2,10 +2,12 @@
 
 Status: the renderer-independent command, history, validation, save, and
 test-play layer is implemented under `haxe_c-xge.19.5` and
-`haxe_c-xge.19.6.3.10`. The native Raylib/Raygui screen opens the same CAXEMAP
-bytes as the active game generation. It shows the map's visible height surface,
-all authored object placements, and the CaxeFlow rule count. It also lists each
-object's stable ID and draws a colored 3D gizmo for each closed placement role.
+`haxe_c-xge.19.6.3.12`. The native Raylib/Raygui screen opens the same CAXEMAP
+bytes as the active game generation. Build shows the map's visible height
+surface and a grid at the selected layer. Plan shows the exact cells and
+objects that cross that layer. The screen also shows the CaxeFlow rule count,
+lists each object's stable ID, and draws a colored 3D gizmo for each closed
+placement role.
 
 The editor core provides revision-checked changes, bounded command groups, and
 copy-owned observations. Its World Name field commits literal titles through
@@ -13,19 +15,21 @@ the same command and history boundary. Tab and Shift-Tab move through one
 device-neutral focus order. Enter or Space activates the focused control. A
 high-contrast ring shows the next target.
 
-The native screen edits one voxel layer. It moves and rotates selected objects
-and edits the world environment through typed commands. Its Test Play button
-starts a fresh ordinary game level from the editor's in-memory CAXEMAP bytes.
-The editor keeps the draft, camera, selection, tools, panels, history, and
-recovery state.
+The native screen can select and edit each horizontal voxel layer. The minus
+and plus controls change only presentation state; they do not create history,
+mark the package dirty, or alter Test Play. It moves and rotates selected
+objects and edits the world environment through typed commands. Its Test Play
+button starts a fresh ordinary game level from the editor's in-memory CAXEMAP
+bytes. The editor keeps the draft, camera, selection, tools, panels, history,
+and recovery state.
 
 Save and Ctrl/Cmd+S validate the draft, replace its package level, and update
 the campaign, runtime-content, and outer-package receipts as one planned
 operation. The native editor uses one package-backed `EditorSession`; Save and
 the visual controls cannot drift into separate drafts. A failed publication
 keeps the draft, history, and previous clean-state marker so the creator can
-retry. Visual CaxeFlow editing, cutscene editing, and layer tools remain
-separate work. A local JSON Lines process can also open, inspect, edit,
+retry. Visual CaxeFlow editing and cutscene editing remain separate work. A
+local JSON Lines process can also open, inspect, edit,
 validate, and save one verified package level.
 
 ## What this layer owns
@@ -181,8 +185,9 @@ volume ordered as `(z * height + y) * width + x`.
 compact height surface for the native overview. Equal height and material cells
 merge into rectangular patches. This keeps a full authored map responsive in
 the headless renderer. Exact voxel cells remain available for picking and
-edits. The overview does not show hidden caves because layer inspection is not
-implemented.
+edits. Build keeps the compact surface for context and draws the selected edit
+grid at its real height. Plan reads one exact horizontal slice from the cached
+volume, so a creator can inspect and edit cells hidden below that surface.
 
 A normal displayed frame reads the cache. It does not serialize the CAXEMAP
 draft or allocate a replacement volume. New World, an accepted edit, undo, or
@@ -214,7 +219,9 @@ The current controls are:
 - hold the right mouse button and move the pointer to look;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
 - use the wheel to move along the view direction;
-- press F to restore the deterministic whole-world view; and
+- press F to restore the deterministic whole-world view;
+- use the minus and plus layer controls to move the Build grid and Plan slice;
+  and
 - left-click to apply the selected tool.
 
 The focus order is target-neutral: it names editor actions, not Raylib key
@@ -254,10 +261,10 @@ they are not saved in CAXEMAP, do not participate in undo, and cannot mutate
 terrain. Raylib's scissor region clips all 3D drawing to the canvas, so even a
 nearby voxel cannot cover the toolbar, sidebar, or status bar.
 
-The older renderer-independent `EditorViewport` module still owns exact
-top-down layer projection and pixel-edge mapping. It remains tested as the
-foundation for a later optional planning view or minimap, but the shipped
-native canvas no longer uses it as the primary editor.
+The renderer-independent `EditorViewport` module owns exact top-down layer
+projection and pixel-edge mapping. The shipped Plan view uses it directly.
+Layer changes copy one compact slice from the cached volume instead of parsing
+or serializing CAXEMAP again.
 
 Opening the editor starts from a copy of the active runtime generation. The
 copy prevents an editor change from changing the running game without a
@@ -415,8 +422,8 @@ python3 examples/caxecraft/play.py \
 
 That pilot compiles the application through haxe.c. It enters the editor from
 the title screen and opens the active level bytes. It changes one literal
-title, moves the production camera, paints the first available air cell, and
-saves the resulting package. It then selects that cell through
+title, selects layer 2, moves the production camera, paints the first available
+air cell, and saves the resulting package. It then selects that cell through
 `CaxecraftEditorScreen` and `EditorSession`.
 
 The framebuffer check requires the toolbar, sidebar, scene list, authored
@@ -425,14 +432,14 @@ requires identical semantic reports and screenshots. The headless software
 renderer has a 90-second process limit for this complete editor and game
 journey.
 
-The pilot proves active-level presentation, one terrain change, the object
-list, scene gizmos, the rule count, the title path, and native package Save. It
-checks the changed map and refreshed receipts and rejects leftover staging or
-backup files. The runner restores the source package before each repeat, so
-both runs must publish the same bytes. It also starts and stops two
-ordinary-engine Test Play runs in one process. Each run completes a fixed game
-tick and uses a new disposable generation.
+The pilot proves active-level presentation, a revision-neutral layer change,
+one terrain change, the object list, scene gizmos, the rule count, the title
+path, and native package Save. It checks the changed map and refreshed receipts
+and rejects leftover staging or backup files. The runner restores the source
+package before each repeat, so both runs must publish the same bytes. It also
+starts and stops two ordinary-engine Test Play runs in one process. Each run
+completes a fixed game tick and uses a new disposable generation.
 
 The final report also proves that the normal generation and publication count
-did not change. It does not prove layer tools, visual CaxeFlow editing,
-cutscenes, or crash-durable filesystem publication.
+did not change. It does not prove visual CaxeFlow editing, cutscenes, or
+crash-durable filesystem publication.

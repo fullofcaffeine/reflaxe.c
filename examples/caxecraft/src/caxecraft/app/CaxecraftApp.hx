@@ -1256,10 +1256,12 @@ final class CaxecraftApp {
 			// cell also gives the framebuffer oracle a specific 3D outline.
 			// One held controller direction moves immediately, repeats after the
 			// production delay, then repeats at the production interval. The
-			// eight held moves land on Play before the south face button
+			// ten held moves land on Play before the south face button
 			// confirms it through the same device-neutral screen handler.
 			if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
 				if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
+					rejectedEdits++;
+				if (!editorScreen.applyPilotLayer(1))
 					rejectedEdits++;
 				if (!editorScreen.applyPilotCamera({
 					forward: 0.5,
@@ -1291,6 +1293,16 @@ final class CaxecraftApp {
 						rejectedEdits++;
 				}
 				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEdits++;
+				}
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
+					case StayInEditor:
+					case ReturnToTitle | StartTestPlay(_):
+						rejectedEdits++;
+				}
+				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, NavigationRepeater.REPEAT_INTERVAL_SECONDS)) {
 					case StayInEditor:
 					case ReturnToTitle | StartTestPlay(_):
 						rejectedEdits++;

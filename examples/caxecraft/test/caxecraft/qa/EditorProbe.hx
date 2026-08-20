@@ -40,17 +40,22 @@ import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
+import caxecraft.editor.EditorViewport.boundsIntersectLayer;
+import caxecraft.editor.EditorViewport.clampLayer;
 import caxecraft.editor.EditorViewport.layout as layoutViewport;
 import caxecraft.editor.EditorViewport.paletteCodeAt;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
 import caxecraft.editor.EditorViewport.project as projectViewport;
 import caxecraft.editor.EditorViewport.projectFromCells;
+import caxecraft.editor.EditorViewport.projectFromWorld;
 import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
+import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
+import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
@@ -722,6 +727,8 @@ final class EditorProbe {
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Plan,
+			EditorFocusTarget.PreviousLayer,
+			EditorFocusTarget.NextLayer,
 			EditorFocusTarget.Environment,
 			EditorFocusTarget.Play,
 			EditorFocusTarget.SelectTool,
@@ -743,6 +750,8 @@ final class EditorProbe {
 			EditorFocusTarget.SelectTool,
 			EditorFocusTarget.Play,
 			EditorFocusTarget.Environment,
+			EditorFocusTarget.NextLayer,
+			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Redo,
@@ -1263,10 +1272,23 @@ final class EditorProbe {
 		final upper = projectViewport(session.draftSnapshot().world, 1);
 		require(upper != null && upper.width == 4 && upper.depth == 3 && upper.cells.length == 12, "viewport projection lost its exact layer dimensions");
 		final volume = projectWorld(session.draftSnapshot().world);
-		final reused = volume == null ? null : projectFromCells(session.draftSnapshot().world, volume.cells, 1);
+		final reused = volume == null ? null : projectFromWorld(volume, 1);
 		require(reused != null
 			&& reused.cells.join(",") == upper.cells.join(","), "viewport projection changed when it reused the decoded 3D cells");
+		final lower = volume == null ? null : projectFromWorld(volume, 0);
+		require(lower != null && lower.layerY == 0 && paletteCodeAt(lower, 3, 2) == 0, "selected-layer projection reused the wrong horizontal cells");
+		require(volume != null && projectFromWorld(volume, 2) == null, "selected-layer projection admitted a layer outside the cached world");
 		require(projectFromCells(session.draftSnapshot().world, [0], 1) == null, "viewport projection admitted a malformed decoded cell array");
+		require(clampLayer(-1, 2) == 0
+			&& clampLayer(0, 2) == 0
+			&& clampLayer(1, 2) == 1
+			&& clampLayer(2, 2) == 1
+			&& clampLayer(9, 0) == 0,
+			"selected-layer bounds did not clamp to the finite world");
+		require(boundsIntersectLayer({origin: {x: 0, y: 1, z: 0}, size: {width: 1, height: 2, depth: 1}}, 1)
+			&& boundsIntersectLayer({origin: {x: 0, y: 1, z: 0}, size: {width: 1, height: 2, depth: 1}}, 2)
+			&& !boundsIntersectLayer({origin: {x: 0, y: 1, z: 0}, size: {width: 1, height: 2, depth: 1}}, 0),
+			"selected-layer bounds used column overlap instead of vertical overlap");
 		require(paletteCodeAt(upper, 3, 2) == 7 && paletteCodeAt(upper, 0, 0) == 0 && paletteCodeAt(upper, 4, 0) == -1,
 			"viewport projection lost painted, air, or out-of-range cell semantics");
 		require(projectViewport(session.draftSnapshot().world, 2) == null, "viewport admitted a layer outside the world");
@@ -1325,7 +1347,7 @@ final class EditorProbe {
 			case _:
 				throw "fill tool did not carry explicit typed bounds";
 		}
-		return 13;
+		return 17;
 	}
 
 	/**
@@ -1409,13 +1431,16 @@ final class EditorProbe {
 		require(emptyFloor != null && !emptyFloor.solid && emptyFloor.point.x == 0 && emptyFloor.point.y == 0 && emptyFloor.point.z == 0
 			&& close(emptyFloor.distance, 4.0),
 			"3D picking did not preserve an editable empty-floor cell");
+		final upperEmpty = pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 1, 16.0);
+		require(upperEmpty != null && !upperEmpty.solid && upperEmpty.point.y == 1 && close(upperEmpty.distance, 3.0),
+			"3D picking did not use the selected empty-cell layer");
 		require(pickWorld(projection, {x: -1.0, y: 2.0, z: -1.0}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0) == null,
 			"3D picking admitted a floor point outside the draft");
 		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 1.0, y: 0.0, z: 0.0}, 0, 16.0) == null,
 			"3D picking invented a floor point for a parallel ray");
 		require(pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 2, 16.0) == null, "3D picking admitted an unavailable edit layer");
 
-		final objectGizmos = [
+		final objectGizmos:Array<EditorObjectGizmo> = [
 			{
 				id: id("object.near"),
 				kind: EditorObjectGizmoKind.CheckpointGizmo,
@@ -1457,7 +1482,11 @@ final class EditorProbe {
 			"3D object picking admitted a parallel ray outside every object");
 		require(pickObject(objectGizmos, {x: 1.5, y: 1.0, z: -2.0}, {x: 0.0, y: 0.0, z: 1.0}, 2.0) == null,
 			"3D object picking ignored the bounded ray distance");
-		return 19;
+		require(gizmoIntersectsLayer(objectGizmos[0], 0)
+			&& gizmoIntersectsLayer(objectGizmos[0], 1)
+			&& !gizmoIntersectsLayer(objectGizmos[0], 2),
+			"Plan object filtering lost exact vertical overlap");
+		return 21;
 	}
 
 	static inline function close(actual:Float, expected:Float):Bool

@@ -26,11 +26,14 @@ import caxecraft.editor.EditorViewport.EditorViewportLayout;
 import caxecraft.editor.EditorViewport.EditorViewportProjection;
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorViewport.EditorToolCommandResult;
+import caxecraft.editor.EditorViewport.boundsIntersectLayer;
+import caxecraft.editor.EditorViewport.clampLayer;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
 import caxecraft.editor.EditorViewport.layout as layoutPlan;
+import caxecraft.editor.EditorViewport.paletteCodeAt as paletteCodeAtPlan;
 import caxecraft.editor.EditorViewport.pointAt as pointAtPlan;
-import caxecraft.editor.EditorViewport.projectFromCells;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
+import caxecraft.editor.EditorViewport.projectFromWorld;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
 import caxecraft.editor.EditorWorldViewport.EditorCameraState;
 import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
@@ -40,6 +43,7 @@ import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
+import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
@@ -113,10 +117,10 @@ private enum abstract EditorWorkspaceView(Int) {
  * child-facing slice edits terrain and offers bounded object transforms.
  * Creators can move transform-backed objects by whole cells and rotate them in
  * quarter turns. Trigger volumes have bounds but no facing direction, so the
- * inspector does not show rotation controls for them. Native source save,
- * layer controls, flow authoring, and cinematic tools remain separate. Test
- * Play uses a disposable ordinary game runtime while this class keeps the
- * exact editor workspace alive.
+ * inspector does not show rotation controls for them. Native source save and
+ * bounded horizontal layer controls are available; flow authoring and
+ * cinematic tools remain separate. Test Play uses a disposable ordinary game
+ * runtime while this class keeps the exact editor workspace alive.
  */
 final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
@@ -133,6 +137,7 @@ final class CaxecraftEditorScreen {
 	var selection:Null<VoxelBounds>;
 	var focusedControl:EditorFocusTarget;
 	var workspaceView:EditorWorkspaceView;
+	var editLayerY:Int;
 	var activeTool:EditorTool;
 	var detailsOpen:Bool;
 	var worldListOpen:Bool;
@@ -172,6 +177,7 @@ final class CaxecraftEditorScreen {
 		selection = null;
 		focusedControl = initialFocus();
 		workspaceView = BuildView;
+		editLayerY = 0;
 		activeTool = SelectTool;
 		detailsOpen = false;
 		worldListOpen = false;
@@ -289,6 +295,7 @@ final class CaxecraftEditorScreen {
 		final canvasWidth = width - 64 - inspectorWidth - (inspectorWidth > 0 ? 12 : 0);
 		final canvasHeight = shelfTop - canvasTop - 12;
 		Raygui.PanelString(Rectangle.fromFloat(canvasLeft, canvasTop, canvasWidth, canvasHeight), uiCatalog.text(locale, UiMessage.EditorCanvasHelp));
+		drawLayerControls(locale, canvasLeft + canvasWidth - 190, canvasTop + 4);
 		final innerLeft = canvasLeft + 12;
 		final innerTop = canvasTop + 36;
 		final innerWidth = canvasWidth - 24;
@@ -323,6 +330,20 @@ final class CaxecraftEditorScreen {
 			focusedControl = target;
 		drawFocusRing(target, Std.int(x), Std.int(y), Std.int(width), Std.int(height));
 		return pressed;
+	}
+
+	/** Draw bounded layer controls in the canvas title bar. */
+	function drawLayerControls(locale:LocaleCursor, left:Int, top:Int):Void {
+		if (focusedButtonSized(EditorFocusTarget.PreviousLayer, left, top, 34.0, 28.0, "-"))
+			selectEditLayer(editLayerY - 1);
+		final height = switch projection {
+			case null: 0;
+			case value: value.height;
+		};
+		final label = '${uiCatalog.text(locale, UiMessage.EditorLayer)} ${editLayerY + 1} / $height';
+		Raylib.DrawTextString(label, left + 42, top + 7, 14, CaxecraftPalette.hudText());
+		if (focusedButtonSized(EditorFocusTarget.NextLayer, left + 154, top, 34.0, 28.0, "+"))
+			selectEditLayer(editLayerY + 1);
 	}
 
 	/** Draw a clear second border around a selected view or creation card. */
@@ -802,6 +823,10 @@ final class CaxecraftEditorScreen {
 				setWorkspaceView(BuildView);
 			case Plan:
 				setWorkspaceView(PlanView);
+			case PreviousLayer:
+				selectEditLayer(editLayerY - 1);
+			case NextLayer:
+				selectEditLayer(editLayerY + 1);
 			case Environment:
 				openEnvironmentPanel();
 			case Play:
@@ -890,6 +915,29 @@ final class CaxecraftEditorScreen {
 	function setWorkspaceView(view:EditorWorkspaceView):Void {
 		workspaceView = view;
 		invalidatePreview();
+	}
+
+	/**
+	 * Select one finite presentation layer without changing the draft.
+	 *
+	 * The complete world projection already owns every decoded cell. A layer
+	 * change copies only one compact horizontal slice and leaves revision,
+	 * history, dirty state, Save, and Test Play untouched.
+	 */
+	function selectEditLayer(requested:Int):Bool {
+		final world = projection;
+		if (world == null)
+			return false;
+		final selected = clampLayer(requested, world.height);
+		if (selected == editLayerY)
+			return false;
+		final plan = projectFromWorld(world, selected);
+		if (plan == null)
+			return false;
+		editLayerY = selected;
+		planProjection = plan;
+		invalidatePreview();
+		return true;
 	}
 
 	/** Open the environment modal at its explicit enabled control. */
@@ -1177,11 +1225,10 @@ final class CaxecraftEditorScreen {
 		return accepted;
 	}
 
-	/** Draw a top-down surface plan over the same draft used by Build. */
+	/** Draw and edit the exact selected layer over the same draft used by Build. */
 	function drawPlanViewport(left:Int, top:Int, width:Int, height:Int):Void {
 		var currentPlan = planProjection;
-		var currentWorld = projection;
-		if (currentPlan == null || currentWorld == null || width <= 0 || height <= 0)
+		if (currentPlan == null || width <= 0 || height <= 0)
 			return;
 		var grid = layoutPlan(left, top, width, height, currentPlan);
 		if (grid == null)
@@ -1190,8 +1237,7 @@ final class CaxecraftEditorScreen {
 		final mouse = Raylib.GetMousePosition();
 		final mouseX = Std.int(mouse.x.toFloat());
 		final mouseY = Std.int(mouse.y.toFloat());
-		final basePoint = pointAtPlan(currentPlan, grid, mouseX, mouseY);
-		var hover = basePoint == null ? null : planToolPoint(currentWorld, basePoint.x, basePoint.z);
+		var hover = pointAtPlan(currentPlan, grid, mouseX, mouseY);
 		if (hover == null)
 			invalidatePreview();
 		else {
@@ -1205,13 +1251,12 @@ final class CaxecraftEditorScreen {
 				else
 					applyToolAt(activeTool, hover);
 				currentPlan = planProjection;
-				currentWorld = projection;
-				if (currentPlan == null || currentWorld == null)
+				if (currentPlan == null)
 					return;
 				grid = layoutPlan(left, top, width, height, currentPlan);
 				if (grid == null)
 					return;
-				hover = planToolPoint(currentWorld, hoverX, hoverZ);
+				hover = {x: hoverX, y: currentPlan.layerY, z: hoverZ};
 				if (hover != null)
 					updatePreview(hover);
 			}
@@ -1220,11 +1265,10 @@ final class CaxecraftEditorScreen {
 		Raylib.DrawRectangle(left, top, width, height, Color.rgba(18, 34, 42));
 		for (z in 0...currentPlan.depth)
 			for (x in 0...currentPlan.width) {
-				final surfaceY = surfaceTopAt(currentWorld, x, z);
-				final paletteCode = surfaceY < 0 ? 0 : paletteCodeAtWorld(currentWorld, x, surfaceY, z);
+				final paletteCode = paletteCodeAtPlan(currentPlan, x, z);
 				final cellLeft = grid.left + x * grid.cellSize;
 				final cellTop = grid.top + z * grid.cellSize;
-				final color = surfaceY < 0 ? Color.rgba(25, 48, 56) : terrainOverviewColor(paletteCode);
+				final color = paletteCode == 0 ? Color.rgba(25, 48, 56) : terrainOverviewColor(paletteCode);
 				Raylib.DrawRectangle(cellLeft + 1, cellTop + 1, grid.cellSize - 2, grid.cellSize - 2, color);
 				Raylib.DrawRectangleLines(cellLeft, cellTop, grid.cellSize, grid.cellSize, Color.rgba(48, 78, 84));
 				if (selectedPlanCell(x, z)) {
@@ -1235,6 +1279,8 @@ final class CaxecraftEditorScreen {
 		final selectedObject = selectedObjectIndex();
 		for (index in 0...objectGizmos.length) {
 			final gizmo = objectGizmos[index];
+			if (!gizmoIntersectsLayer(gizmo, editLayerY))
+				continue;
 			final x = Std.int(gizmo.x);
 			final z = Std.int(gizmo.z);
 			if (x >= 0 && z >= 0 && x < currentPlan.width && z < currentPlan.depth) {
@@ -1262,28 +1308,10 @@ final class CaxecraftEditorScreen {
 	function objectIndexAtPlan(x:Int, z:Int):Int {
 		for (index in 0...objectGizmos.length) {
 			final gizmo = objectGizmos[index];
-			if (Std.int(gizmo.x) == x && Std.int(gizmo.z) == z)
+			if (gizmoIntersectsLayer(gizmo, editLayerY) && Std.int(gizmo.x) == x && Std.int(gizmo.z) == z)
 				return index;
 		}
 		return -1;
-	}
-
-	/** Choose the top visible cell or the first air cell for one Plan gesture. */
-	function planToolPoint(world:EditorWorldProjection, x:Int, z:Int):Null<VoxelPoint> {
-		final top = surfaceTopAt(world, x, z);
-		var y = top < 0 ? 0 : top;
-		switch activeTool {
-			case PaintTool:
-				final above = top + 1;
-				if (above >= 0 && above < world.height)
-					y = above;
-			case CheckpointTool | CatalogObjectTool:
-				final above = top + 1;
-				if (above >= 0 && above < world.height)
-					y = above;
-			case SelectTool | EraseTool | FillTool:
-		}
-		return y < 0 || y >= world.height ? null : {x: x, y: y, z: z};
 	}
 
 	/** True when the current semantic voxel target covers one Plan column. */
@@ -1291,7 +1319,8 @@ final class CaxecraftEditorScreen {
 		final current = selection;
 		if (current == null)
 			return false;
-		return x >= current.origin.x
+		return boundsIntersectLayer(current, editLayerY)
+			&& x >= current.origin.x
 			&& z >= current.origin.z
 			&& x < current.origin.x + current.size.width
 			&& z < current.origin.z + current.size.depth;
@@ -1392,7 +1421,7 @@ final class CaxecraftEditorScreen {
 				x: direction.x.toFloat(),
 				y: direction.y.toFloat(),
 				z: direction.z.toFloat()
-			}, 0, 512.0);
+			}, editLayerY, 512.0);
 			if (activeTool == SelectTool) {
 				final objectHit = pickObject(objectGizmos, {x: origin.x.toFloat(), y: origin.y.toFloat(), z: origin.z.toFloat()}, {
 					x: direction.x.toFloat(),
@@ -1424,10 +1453,11 @@ final class CaxecraftEditorScreen {
 		Raylib.BeginMode3D(nativeCamera);
 		Raylib.DrawCube(Vector3.fromFloat(current.width * 0.5, -0.04, current.depth * 0.5), c.Float32.fromFloat(current.width), c.Float32.fromFloat(0.08),
 			c.Float32.fromFloat(current.depth), Color.rgba(26, 43, 50));
+		final layerGridY = editLayerY + 0.002;
 		for (x in 0...current.width + 1)
-			Raylib.DrawLine3D(Vector3.fromFloat(x, 0.002, 0.0), Vector3.fromFloat(x, 0.002, current.depth), Color.rgba(55, 79, 85));
+			Raylib.DrawLine3D(Vector3.fromFloat(x, layerGridY, 0.0), Vector3.fromFloat(x, layerGridY, current.depth), Color.rgba(78, 137, 143));
 		for (z in 0...current.depth + 1)
-			Raylib.DrawLine3D(Vector3.fromFloat(0.0, 0.002, z), Vector3.fromFloat(current.width, 0.002, z), Color.rgba(55, 79, 85));
+			Raylib.DrawLine3D(Vector3.fromFloat(0.0, layerGridY, z), Vector3.fromFloat(current.width, layerGridY, z), Color.rgba(78, 137, 143));
 		drawTerrainOverview(current);
 		final selected = selection;
 		if (selected != null)
@@ -1461,11 +1491,12 @@ final class CaxecraftEditorScreen {
 	}
 
 	/**
-	 * Draw the map's visible height surface in one Raylib batch.
+	 * Draw the map's visible height surface behind the selected edit grid.
 	 *
 	 * The exact voxel cache still owns picking and edits. This compact shell
-	 * omits hidden caves so a large authored map remains responsive while the
-	 * editor does not yet have layer inspection.
+	 * omits hidden caves so a large authored map remains responsive. The
+	 * selected horizontal grid and exact Plan view expose hidden layers without
+	 * multiplying the overview geometry.
 	 */
 	static function drawTerrainOverview(world:EditorWorldProjection):Void {
 		Rlgl.BeginSolidQuads();
@@ -1624,6 +1655,7 @@ final class CaxecraftEditorScreen {
 		if (current == null) {
 			projection = null;
 			planProjection = null;
+			editLayerY = 0;
 			objectGizmos = [];
 			objectLabels = "";
 			flowRuleCount = 0;
@@ -1640,8 +1672,12 @@ final class CaxecraftEditorScreen {
 		final previous = projection;
 		projection = projectWorld(draft.world);
 		planProjection = switch projection {
-			case null: null;
-			case value: projectFromCells(draft.world, value.cells, 0);
+			case null:
+				editLayerY = 0;
+				null;
+			case value:
+				editLayerY = clampLayer(editLayerY, value.height);
+				projectFromWorld(value, editLayerY);
 		};
 		objectGizmos = projectObjects(draft.objects);
 		flowRuleCount = draft.flow.rules.length;
@@ -1701,6 +1737,37 @@ final class CaxecraftEditorScreen {
 	/** Publish pilot edits through the same package save action as the toolbar. */
 	public function applyPilotSave():Bool
 		return requestSave();
+
+	/**
+	 * Select a layer and prove that this presentation action changed no draft state.
+	 *
+	 * The native pilot uses this narrow seam instead of synthesizing a mouse
+	 * click. It still runs the production layer-selection path and checks the
+	 * complete document and history observations on both sides.
+	 */
+	public function applyPilotLayer(layerY:Int):Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		final beforeRevision = current.revision();
+		final beforeIdentity = current.stateIdentity();
+		final beforeCanonical = current.canonicalDraft();
+		final beforeUndoDepth = current.undoDepth();
+		final beforeRedoDepth = current.redoDepth();
+		final beforeHistoryEntries = current.historyEntries();
+		final beforeHistoryBytes = current.historyBytes();
+		final beforeDirty = isDirty();
+		return selectEditLayer(layerY)
+			&& editLayerY == layerY
+			&& current.revision() == beforeRevision
+			&& current.stateIdentity() == beforeIdentity
+			&& current.canonicalDraft().compare(beforeCanonical) == 0
+			&& current.undoDepth() == beforeUndoDepth
+			&& current.redoDepth() == beforeRedoDepth
+			&& current.historyEntries() == beforeHistoryEntries
+			&& current.historyBytes() == beforeHistoryBytes
+			&& isDirty() == beforeDirty;
+	}
 
 	/**
 	 * Submit one deterministic pilot gesture through the production tool path.

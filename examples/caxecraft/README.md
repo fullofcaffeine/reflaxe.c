@@ -1080,13 +1080,14 @@ python3 examples/caxecraft/play.py \
   --allow-network
 ```
 
-The pilot moves the real editor camera, paints and selects one voxel, saves the
+The pilot selects the second edit layer without changing history or dirty
+state, moves the real editor camera, paints and selects one voxel, saves the
 staged package, and requires a clipped perspective frame with sky, ground
 depth, solid volume, and a selection outline. It restores the source package
 before the repeat and requires the same saved bytes, receipts, semantic report,
 and frame. It also starts two fresh ordinary-engine Test Play runs. This proof
-does not claim that multi-layer controls or the complete child-friendly
-event/cutscene tools are available. Its design is explained in
+does not claim that the complete child-friendly event/cutscene tools are
+available. Its design is explained in
 [the editor semantics guide](../../docs/caxecraft-editor.md).
 
 The remaining visual editor work continues as ordered `haxe_c-xge.19.*`
