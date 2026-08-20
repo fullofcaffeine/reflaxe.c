@@ -49,6 +49,7 @@ PROFILE_WORKLOADS = (
     "runtime-free",
     "runtime-content-generation",
     "playable",
+    "editor-shell",
 )
 PROFILE_TRANSPORTS = ("both", "cold", "warm")
 PHASES = (
@@ -2269,7 +2270,7 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             "--custom-target",
             f"c={output}",
         ]
-    elif workload == "playable":
+    elif workload in ("playable", "editor-shell"):
         platform_name = {
             "darwin": "macos",
             "linux": "linux",
@@ -2286,13 +2287,30 @@ def workload_arguments(output: Path, workload: str) -> tuple[str, ...]:
             "-D",
             f"raylib_platform_{platform_name}",
             "-D",
-            "raylib_configuration_desktop",
-            "-D",
-            "reflaxe_c_phase_timing",
-            "--times",
-            "--custom-target",
-            f"c={output}",
+            (
+                "raylib_configuration_desktop"
+                if workload == "playable"
+                else "raylib_configuration_memory"
+            ),
         ]
+        if workload == "editor-shell":
+            arguments.extend(["-D", "hxc_runtime_report=summary"])
+            if platform_name in ("macos", "linux"):
+                arguments.extend(["-D", "caxecraft_posix_hosted"])
+            if platform_name == "macos":
+                arguments.extend(["-D", "caxecraft_posix_darwin"])
+            arguments.extend(
+                ["-D", "caxecraft_pilot", "-D", "caxecraft_pilot_editor_shell"]
+            )
+        arguments.extend(
+            [
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ]
+        )
     else:
         raise CompilerProfileFailure(f"unknown compiler workload {workload!r}")
     return resolve_haxe_arguments(arguments, locale="C")
@@ -2444,7 +2462,9 @@ def profile(
                     "full" if workload == "runtime-free" else "summary"
                 ),
                 "runtimeReportDetail": (
-                    "summary" if workload == "playable" else "full"
+                    "summary"
+                    if workload in ("playable", "editor-shell")
+                    else "full"
                 ),
                 "normalArtifactCount": len(baseline),
                 "normalArtifactSha256": artifact_digest(baseline),

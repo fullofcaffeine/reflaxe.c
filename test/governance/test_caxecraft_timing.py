@@ -634,6 +634,75 @@ class CaxecraftTimingTests(unittest.TestCase):
             lock["haxe"]["sourceRevision"],
         )
 
+    def test_compiler_profile_can_match_the_editor_shell_request(self) -> None:
+        profiler = load_module(
+            "caxecraft_editor_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        output = Path("generated-editor-profile")
+
+        with (
+            mock.patch.object(profiler.sys, "platform", "darwin"),
+            mock.patch.object(
+                profiler,
+                "resolve_haxe_arguments",
+                side_effect=lambda arguments, *, locale: tuple(arguments),
+            ),
+        ):
+            arguments = profiler.workload_arguments(output, "editor-shell")
+
+        self.assertEqual(
+            arguments,
+            (
+                "play.hxml",
+                "-D",
+                "hxc_runtime_diagnostics=off",
+                "-D",
+                "raylib_platform_macos",
+                "-D",
+                "raylib_configuration_memory",
+                "-D",
+                "hxc_runtime_report=summary",
+                "-D",
+                "caxecraft_posix_hosted",
+                "-D",
+                "caxecraft_posix_darwin",
+                "-D",
+                "caxecraft_pilot",
+                "-D",
+                "caxecraft_pilot_editor_shell",
+                "-D",
+                "reflaxe_c_phase_timing",
+                "--times",
+                "--custom-target",
+                f"c={output}",
+            ),
+        )
+
+        play = load_module(
+            "caxecraft_editor_play_arguments_subject",
+            ROOT / "examples/caxecraft/play.py",
+        )
+        with (
+            mock.patch.object(play, "run") as run_process,
+            mock.patch.object(play, "validate_compiled_haxe", return_value={}),
+            mock.patch.object(play, "validate_content_platform_output"),
+        ):
+            play.compile_haxe(
+                output,
+                layout="split",
+                platform_name="macos",
+                raylib_configuration="memory-software",
+                pilot="editor-shell",
+            )
+
+        play_arguments = tuple(run_process.call_args.args[0][3:])
+        profiled_play_arguments = list(arguments)
+        timing_define = profiled_play_arguments.index("reflaxe_c_phase_timing")
+        del profiled_play_arguments[timing_define - 1 : timing_define + 1]
+        profiled_play_arguments.remove("--times")
+        self.assertEqual(tuple(profiled_play_arguments), play_arguments)
+
     def test_pinned_haxe_resolution_uses_the_haxerc_version(self) -> None:
         caxecraft = load_module(
             "caxecraft_pin_subject", ROOT / "examples/caxecraft/run.py"

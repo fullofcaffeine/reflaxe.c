@@ -1185,6 +1185,19 @@ compilation, native linking, Raylib, and game execution. Native compile/run
 timing belongs to the separate Caxecraft differential lane, so a slow target
 compiler pass is not confused with native-toolchain work.
 
+The editor-shell workload matches the Haxe request from the graphical editor
+pilot. It selects the memory renderer, hosted package reader, concise runtime
+report, and compiled editor pilot. Use one cold diagnostic before changing a
+compiler timeout or optimizing compiler code:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport cold --workload editor-shell
+```
+
+The report labels a sample as contended when other work can distort its elapsed
+time. Do not use a contended sample as a performance baseline.
+
 The first full-playable structured profile found one avoidable control-flow
 cost. A *dominator* is a block that every route from the function entry must
 pass through before reaching another block. Null-check coalescing and HxcIR

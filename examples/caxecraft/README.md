@@ -875,6 +875,18 @@ Raylib, or launching the game. The Caxecraft native differential lanes exercise
 those later steps separately; keeping the boundaries separate tells us whether
 a delay belongs to Haxe-to-C generation or the native toolchain.
 
+To profile the exact Haxe request used by the graphical editor pilot, run:
+
+```sh
+python3 examples/caxecraft/profile_compiler.py \
+  --runs 1 --transport cold --workload editor-shell
+```
+
+This workload selects the memory renderer, hosted package reader, concise
+runtime report, and compiled editor pilot. Use its phase report to locate the
+delay before changing a compiler timeout or optimizing compiler code. Do not
+use a sample marked `contended` as a performance baseline.
+
 To inspect one realistic source edit instead of repeated unchanged builds, run:
 
 ```sh
