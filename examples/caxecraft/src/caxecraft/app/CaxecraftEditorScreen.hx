@@ -57,6 +57,7 @@ import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioId;
@@ -114,11 +115,11 @@ private enum abstract EditorWorkspaceView(Int) {
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
  * composition edge; the reusable editor package knows neither. Build and Plan
  * are two views over one draft, selection, active tool, and history. The first
- * child-facing slice edits terrain and offers bounded object transforms.
- * Creators can move transform-backed objects by whole cells and rotate them in
- * quarter turns. Trigger volumes have bounds but no facing direction, so the
- * inspector does not show rotation controls for them. Native source save and
- * bounded horizontal layer controls are available; flow authoring and
+ * child-facing slice edits terrain and offers bounded object changes.
+ * Creators can move objects by whole cells and rotate transform-backed objects
+ * in quarter turns. They can also resize trigger volumes by one cell on each
+ * axis. The reducer rejects a size that leaves the finite world. Native source
+ * save and bounded horizontal layer controls are available. Flow authoring and
  * cinematic tools remain separate. Test Play uses a disposable ordinary game
  * runtime while this class keeps the exact editor workspace alive.
  */
@@ -459,6 +460,14 @@ final class CaxecraftEditorScreen {
 					cursorTop += 34;
 				case NoObjectFacing:
 			}
+			if (gizmo.kind == TriggerZoneGizmo) {
+				drawTriggerResizeControls(left + 14, cursorTop, width - 28, {
+					width: Std.int(gizmo.width),
+					height: Std.int(gizmo.height),
+					depth: Std.int(gizmo.depth)
+				});
+				cursorTop += 34;
+			}
 			final actionWidth = Std.int((width - 32) / 2);
 			if (Raygui.ButtonString(Rectangle.fromFloat(left + 14, cursorTop, actionWidth, 30), uiCatalog.text(locale, UiMessage.EditorDuplicate))
 				.has(GuiResult.Pressed))
@@ -666,6 +675,24 @@ final class CaxecraftEditorScreen {
 		Raylib.DrawTextString('${yawDegrees} deg', left + buttonWidth + gap + 8, top + 6, 14, CaxecraftPalette.selection());
 		if (Raygui.ButtonString(Rectangle.fromFloat(left + buttonWidth + gap * 2 + valueWidth, top, buttonWidth, 26), "+90").has(GuiResult.Pressed))
 			rotateSelectedObject(90);
+	}
+
+	/** Draw exact width, height, and depth actions only for a trigger volume. */
+	function drawTriggerResizeControls(left:Int, top:Int, width:Int, size:VoxelSize):Void {
+		final gap = 4;
+		final buttonWidth = Std.int((width - gap * 5) / 6);
+		resizeTriggerButton("W-", left, top, buttonWidth, {width: size.width - 1, height: size.height, depth: size.depth});
+		resizeTriggerButton("W+", left + buttonWidth + gap, top, buttonWidth, {width: size.width + 1, height: size.height, depth: size.depth});
+		resizeTriggerButton("H-", left + (buttonWidth + gap) * 2, top, buttonWidth, {width: size.width, height: size.height - 1, depth: size.depth});
+		resizeTriggerButton("H+", left + (buttonWidth + gap) * 3, top, buttonWidth, {width: size.width, height: size.height + 1, depth: size.depth});
+		resizeTriggerButton("D-", left + (buttonWidth + gap) * 4, top, buttonWidth, {width: size.width, height: size.height, depth: size.depth - 1});
+		resizeTriggerButton("D+", left + (buttonWidth + gap) * 5, top, buttonWidth, {width: size.width, height: size.height, depth: size.depth + 1});
+	}
+
+	/** Submit one exact trigger size without keeping widget-local object state. */
+	function resizeTriggerButton(label:String, left:Int, top:Int, width:Int, target:VoxelSize):Void {
+		if (Raygui.ButtonString(Rectangle.fromFloat(left, top, width, 26), label).has(GuiResult.Pressed))
+			resizeSelectedTrigger(target);
 	}
 
 	/** Draw a modal leave decision because this editor does not yet claim Save. */
@@ -1045,6 +1072,26 @@ final class CaxecraftEditorScreen {
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(RotateObjectBy(id, degrees))}) {
+			case MutationApplied(_, _, _, _, _):
+				notice = Ready;
+				refreshProjection();
+			case MutationUnchanged(_, _):
+				notice = Ready;
+			case MutationRejected(_, _):
+				notice = Invalid;
+		}
+	}
+
+	/** Resize the selected trigger through the same revisioned history path. */
+	function resizeSelectedTrigger(size:VoxelSize):Void {
+		final current = session;
+		if (current == null)
+			return;
+		final id = switch current.selectionSnapshot() {
+			case NodeSelection(ObjectNode(value)): value;
+			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
+		};
+		switch current.mutate({baseRevision: current.revision(), mutation: Apply(ResizeTriggerTo(id, size))}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
 				refreshProjection();

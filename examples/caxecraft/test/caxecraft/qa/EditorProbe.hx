@@ -83,6 +83,7 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioObject;
@@ -136,6 +137,7 @@ final class EditorProbe {
 		checkEnvironmentTextRoundTrip();
 		checkObjectMovement();
 		checkObjectRotation();
+		checkTriggerResize();
 		checkCheckpointPlacement();
 		checkCatalogObjectPlacement();
 		checkObjectDuplication();
@@ -563,6 +565,101 @@ final class EditorProbe {
 			&& session.revision() == beforeRevision
 			&& session.undoDepth() == beforeUndo,
 			"rejected object rotation changed bytes, revision, or history");
+	}
+
+	/** Prove trigger resizing preserves identity and rejects every unsafe shape. */
+	static function checkTriggerResize():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare trigger resize world");
+		final triggerId = id("resize.trigger");
+		expectApplied(session.apply(PutObject({
+			id: triggerId,
+			tags: [new ScenarioTag("volume")],
+			placement: TriggerZone({origin: {x: 1, y: 1, z: 1}, size: {width: 1, height: 1, depth: 1}})
+		})), Placement, "prepare resizable trigger");
+		switch session.select({baseRevision: session.revision(), selection: NodeSelection(ObjectNode(triggerId))}) {
+			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
+			case other:
+				throw 'could not select trigger before resize: $other';
+		}
+
+		final beforeResize = session.canonicalDraft();
+		final beforeSelection = selectionKey(session);
+		switch session.mutate({baseRevision: session.revision(), mutation: Apply(ResizeTriggerTo(triggerId, {width: 2, height: 2, depth: 2}))}) {
+			case MutationApplied(families, changes, _, _, _):
+				require(families.length == 1 && families[0] == Placement, "trigger resize reported the wrong command family");
+				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize lost its changed-object identity");
+			case other:
+				throw 'trigger resize did not commit exactly once: $other';
+		}
+		final afterResize = session.canonicalDraft();
+		require(beforeResize.compare(afterResize) != 0, "trigger resize changed no authored bytes");
+		switch session.mutate({baseRevision: session.revision(), mutation: Undo}) {
+			case MutationApplied(_, changes, _, _, _):
+				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize undo lost its changed-object identity");
+			case other:
+				throw 'trigger resize undo failed: $other';
+		}
+		require(session.canonicalDraft().compare(beforeResize) == 0 && selectionKey(session) == beforeSelection,
+			"trigger resize undo did not restore the exact prior state");
+		switch session.mutate({baseRevision: session.revision(), mutation: Redo}) {
+			case MutationApplied(_, changes, _, _, _):
+				require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger resize redo lost its changed-object identity");
+			case other:
+				throw 'trigger resize redo failed: $other';
+		}
+		require(session.canonicalDraft().compare(afterResize) == 0 && selectionKey(session) == beforeSelection,
+			"trigger resize redo did not restore the exact command state");
+		require(expectValid(session, "resized trigger").compare(afterResize) == 0, "trigger resize changed canonical save bytes during validation");
+		requireTestStarted(session.enterTestPlay(), "resized trigger Test Play");
+		require(session.leaveTestPlay(), "resized trigger Test Play did not return to editing");
+		require(session.canonicalDraft().compare(afterResize) == 0, "resized trigger Test Play changed the editor draft");
+		var found = false;
+		for (object in session.draftSnapshot().objects)
+			if (object.id.text() == triggerId.text()) {
+				found = true;
+				require(object.tags.length == 1 && object.tags[0].text() == "volume", "trigger resize changed tags");
+				switch object.placement {
+					case TriggerZone(bounds):
+						require(bounds.origin.x == 1 && bounds.origin.y == 1 && bounds.origin.z == 1, "trigger resize changed origin");
+						require(bounds.size.width == 2 && bounds.size.height == 2 && bounds.size.depth == 2, "trigger resize lost target size");
+					case _:
+						throw "trigger resize changed placement role";
+				}
+			}
+		require(found, "trigger resize lost stable object identity");
+
+		final beforeRejected = session.canonicalDraft();
+		final beforeRevision = session.revision();
+		final beforeUndo = session.undoDepth();
+		expectRejected(session.apply(ResizeTriggerTo(PLAYER, {width: 1, height: 1, depth: 1})), error -> switch error {
+			case ObjectCannotResize(id): id.text() == PLAYER.text();
+			case _: false;
+		}, "transform-backed trigger resize");
+		expectRejected(session.apply(ResizeTriggerTo(id("resize.missing"), {width: 1, height: 1, depth: 1})), error -> switch error {
+			case MissingObject(id): id.text() == "resize.missing";
+			case _: false;
+		}, "missing trigger resize");
+		final invalidSize:VoxelSize = {width: 0, height: 1, depth: 1};
+		expectRejected(session.apply(ResizeTriggerTo(triggerId, invalidSize)), error -> switch error {
+			case InvalidTriggerSize(id, size): id.text() == triggerId.text() && size.width == 0;
+			case _: false;
+		}, "non-positive trigger resize");
+		final outsideSize:VoxelSize = {width: 4, height: 2, depth: 2};
+		expectRejected(session.apply(ResizeTriggerTo(triggerId, outsideSize)), error -> switch error {
+			case ObjectResizeOutsideWorld(id, size): id.text() == triggerId.text() && size.width == 4;
+			case _: false;
+		}, "out-of-world trigger resize");
+		require(session.canonicalDraft().compare(beforeRejected) == 0
+			&& session.revision() == beforeRevision
+			&& session.undoDepth() == beforeUndo,
+			"rejected trigger resize changed bytes, revision, or history");
+		switch session.selectionSnapshot() {
+			case NodeSelection(ObjectNode(id)):
+				require(id.text() == triggerId.text(), "trigger resize changed shared selection");
+			case _:
+				throw "trigger resize cleared shared selection";
+		}
 	}
 
 	/** Return the same closed facing model used by the visible editor marker. */

@@ -27,7 +27,7 @@ function changesFor(command:EditorCommand):Array<EditorChangeId> {
 		case RemoveFluid(id): [ChangedFluid(id)];
 		case StampPrefab(id, _, _, _): [ChangedObject(id)];
 		case PutObject(object): [ChangedObject(object.id)];
-		case MoveObjectBy(id, _) | RotateObjectBy(id, _): [ChangedObject(id)];
+		case MoveObjectBy(id, _) | RotateObjectBy(id, _) | ResizeTriggerTo(id, _): [ChangedObject(id)];
 		case RemoveObject(id): [ChangedObject(id)];
 		case PutDialogue(dialogue): [ChangedDialogue(dialogue.id)];
 		case RemoveDialogue(id): [ChangedDialogue(id)];

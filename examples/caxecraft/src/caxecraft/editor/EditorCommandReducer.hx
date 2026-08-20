@@ -96,6 +96,8 @@ function apply(scenario:Scenario, command:EditorCommand, settings:EditorSettings
 			moveObjectBy(scenario, id, delta);
 		case RotateObjectBy(id, degrees):
 			rotateObjectBy(scenario, id, degrees);
+		case ResizeTriggerTo(id, size):
+			resizeTriggerTo(scenario, id, size);
 		case RemoveObject(id):
 			removePlacedObject(scenario, id);
 		case PutDialogue(dialogue):
@@ -300,6 +302,26 @@ private function rotateObjectBy(scenario:Scenario, id:ScenarioId, degrees:Int):E
 	})), Placement);
 }
 
+/** Resize one bounded trigger while preserving its origin, identity, tags, and role. */
+private function resizeTriggerTo(scenario:Scenario, id:ScenarioId, size:VoxelSize):EditorReductionResult {
+	final existing = findObject(scenario.objects, id);
+	if (existing == null)
+		return ReductionRejected(MissingObject(id));
+	final bounds = switch existing.placement {
+		case TriggerZone(value): value;
+		case _: return ReductionRejected(ObjectCannotResize(id));
+	};
+	if (size.width <= 0 || size.height <= 0 || size.depth <= 0)
+		return ReductionRejected(InvalidTriggerSize(id, size));
+	if (!canResizeBounds(bounds, scenario.world.size, size))
+		return ReductionRejected(ObjectResizeOutsideWorld(id, size));
+	return ready(withObjects(scenario, putObject(scenario.objects, {
+		id: existing.id,
+		tags: existing.tags.copy(),
+		placement: TriggerZone({origin: bounds.origin, size: size})
+	})), Placement);
+}
+
 /** Apply yaw only to placements that store an authored transform. */
 private function rotatePlacement(placement:ObjectPlacement, degrees:Int):Null<ObjectPlacement> {
 	return switch placement {
@@ -378,6 +400,15 @@ private inline function canMoveBounds(bounds:VoxelBounds, worldSize:VoxelSize, d
 		&& delta.y <= worldSize.height - bounds.size.height - bounds.origin.y
 		&& delta.z >= -bounds.origin.z
 		&& delta.z <= worldSize.depth - bounds.size.depth - bounds.origin.z;
+
+/** Compare remaining axis capacity before addition so hostile sizes cannot overflow. */
+private inline function canResizeBounds(bounds:VoxelBounds, worldSize:VoxelSize, size:VoxelSize):Bool
+	return bounds.origin.x >= 0
+		&& bounds.origin.y >= 0
+		&& bounds.origin.z >= 0
+		&& size.width <= worldSize.width - bounds.origin.x
+		&& size.height <= worldSize.height - bounds.origin.y
+		&& size.depth <= worldSize.depth - bounds.origin.z;
 
 private function removeWorldFluid(scenario:Scenario, id:ScenarioId):EditorReductionResult {
 	if (!hasFluid(scenario, id))

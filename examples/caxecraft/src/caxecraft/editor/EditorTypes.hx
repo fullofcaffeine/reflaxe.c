@@ -65,6 +65,9 @@ enum EditorCommand {
 	/** Rotate one transform-backed placement without changing its position, identity, or role. */
 	RotateObjectBy(id:ScenarioId, degrees:Int);
 
+	/** Resize one trigger volume to an exact positive voxel size without changing its origin or identity. */
+	ResizeTriggerTo(id:ScenarioId, size:VoxelSize);
+
 	RemoveObject(id:ScenarioId);
 	PutDialogue(dialogue:ScenarioDialogue);
 	RemoveDialogue(id:ScenarioId);
@@ -229,6 +232,15 @@ enum EditorError {
 
 	/** The selected placement has bounds but no authored facing direction. */
 	ObjectCannotRotate(id:ScenarioId);
+
+	/** The selected placement stores a transform rather than trigger bounds. */
+	ObjectCannotResize(id:ScenarioId);
+
+	/** A trigger volume must span at least one voxel on every axis. */
+	InvalidTriggerSize(id:ScenarioId, size:VoxelSize);
+
+	/** The exact requested size would extend the trigger beyond the finite world. */
+	ObjectResizeOutsideWorld(id:ScenarioId, size:VoxelSize);
 
 	MissingDialogue(id:ScenarioId);
 	MissingObjective(id:ScenarioId);
