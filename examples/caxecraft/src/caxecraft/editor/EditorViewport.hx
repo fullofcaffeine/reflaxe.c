@@ -5,6 +5,7 @@ import caxecraft.editor.EditorTypes.EditorError;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
 import caxecraft.editor.EditorPlacement.objectRecipeCommand;
+import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorWorldGrid.decode as decodeWorld;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.scenario.ContentId;
@@ -22,7 +23,7 @@ import caxecraft.scenario.ScenarioObject;
 	back to voxel coordinates, so Eval tests and the native Raylib screen agree
 	on cell boundaries without either side imitating the other.
 **/
-/** The four block tools exposed by the first visual editor slice. */
+/** The closed terrain and object tools exposed by the visual editor. */
 enum EditorTool {
 	SelectTool;
 	PaintTool;
@@ -30,6 +31,7 @@ enum EditorTool {
 	FillTool;
 	CheckpointTool;
 	CatalogObjectTool;
+	TriggerZoneTool;
 }
 
 /**
@@ -226,6 +228,7 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 		case 3: FillTool;
 		case 4: CheckpointTool;
 		case 5: CatalogObjectTool;
+		case 6: TriggerZoneTool;
 		case _: null;
 	};
 }
@@ -235,8 +238,8 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 
 	Select returns workspace bounds instead of an authored command. Paint and
 	erase affect the pointed voxel. Fill carries the current bounds explicitly.
-	Checkpoint placement reads existing IDs and creates one reloadable object.
-	The UI never mutates a projection directly.
+	Object tools read existing IDs and create one reloadable record. The UI never
+	mutates a projection directly.
 **/
 function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>,
 		recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
@@ -256,5 +259,7 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 			ToolCommandReady(checkpointCommand(point, objects));
 		case CatalogObjectTool:
 			recipe == null ? ToolCommandRejected(MissingEditorObjectRecipe) : ToolCommandReady(objectRecipeCommand(recipe, point, objects));
+		case TriggerZoneTool:
+			ToolCommandReady(triggerZoneCommand(point, objects));
 	};
 }

@@ -31,6 +31,7 @@ enum abstract EditorFocusTarget(Int) {
 	var Save = 17;
 	var PreviousLayer = 18;
 	var NextLayer = 19;
+	var TriggerZoneTool = 20;
 }
 
 /**
@@ -76,7 +77,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case GroundTool: EraseTool;
 				case EraseTool: CheckpointTool;
 				case CheckpointTool: CatalogObjectTool;
-				case CatalogObjectTool: MoreDetails;
+				case CatalogObjectTool: TriggerZoneTool;
+				case TriggerZoneTool: MoreDetails;
 				case MoreDetails: WorldList;
 				case WorldList: Back;
 				case KeepEditing: LeaveWithoutSaving;
@@ -100,7 +102,8 @@ function moveFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorF
 				case EraseTool: GroundTool;
 				case CheckpointTool: EraseTool;
 				case CatalogObjectTool: CheckpointTool;
-				case MoreDetails: CatalogObjectTool;
+				case MoreDetails: TriggerZoneTool;
+				case TriggerZoneTool: CatalogObjectTool;
 				case WorldList: MoreDetails;
 				case KeepEditing: LeaveWithoutSaving;
 				case LeaveWithoutSaving: KeepEditing;

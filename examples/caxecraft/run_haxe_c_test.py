@@ -220,9 +220,9 @@ EVAL_CASES = {
             EvalProbe(
                 "editor.hxml",
                 "caxemap-editor: 22 command round trips, 50 protocol checks, "
-                "41 focus checks, 18 navigation checks, 17 2D checks, 21 3D "
+                "43 focus checks, 18 navigation checks, 20 2D checks, 21 3D "
                 "checks, 13 active-level checks, 1891 canonical bytes; bounded "
-                "history/test-play/recovery; trace=946071821\n",
+                "history/test-play/recovery; trace=946055448\n",
             ),
             EvalProbe(
                 "editor-package-session.hxml",

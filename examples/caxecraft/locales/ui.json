@@ -448,6 +448,14 @@
       }
     },
     {
+      "id": "editor_trigger",
+      "symbol": "EditorTrigger",
+      "text": {
+        "en": "TRIGGER",
+        "es-MX": "ACTIVADOR"
+      }
+    },
+    {
       "id": "editor_undo",
       "symbol": "EditorUndo",
       "text": {

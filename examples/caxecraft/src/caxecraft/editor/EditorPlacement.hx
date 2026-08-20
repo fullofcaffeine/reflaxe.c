@@ -35,6 +35,18 @@ function checkpointCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edit
 	});
 }
 
+/** Create one one-cell trigger at the selected voxel through normal history. */
+function triggerZoneCommand(point:VoxelPoint, objects:Array<ScenarioObject>):EditorCommand {
+	return PutObject({
+		id: nextTriggerId(objects),
+		tags: [],
+		placement: TriggerZone({
+			origin: {x: point.x, y: point.y, z: point.z},
+			size: {width: 1, height: 1, depth: 1}
+		})
+	});
+}
+
 /** Create one pack-defined object through the same canonical placement path. */
 function objectRecipeCommand(recipe:EditorObjectRecipe, point:VoxelPoint, objects:Array<ScenarioObject>):EditorCommand {
 	final id = nextRecipeId(recipe.id, objects);
@@ -68,6 +80,14 @@ private function nextCheckpointId(objects:Array<ScenarioObject>):ScenarioId {
 	while (hasObjectId(objects, 'editor.checkpoint.n$number'))
 		number++;
 	return new ScenarioId('editor.checkpoint.n$number');
+}
+
+/** Find the first positive editor trigger number not used by any object. */
+private function nextTriggerId(objects:Array<ScenarioObject>):ScenarioId {
+	var number = 1;
+	while (hasObjectId(objects, 'editor.trigger.n$number'))
+		number++;
+	return new ScenarioId('editor.trigger.n$number');
 }
 
 /** Compare stable IDs without depending on object order or placement role. */

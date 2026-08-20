@@ -100,4 +100,7 @@ enum abstract UiMessage(Int) {
 
 	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
 	var EditorLayer = 69;
+
+	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
+	var EditorTrigger = 70;
 }

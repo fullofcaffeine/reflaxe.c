@@ -115,13 +115,14 @@ private enum abstract EditorWorkspaceView(Int) {
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
  * composition edge; the reusable editor package knows neither. Build and Plan
  * are two views over one draft, selection, active tool, and history. The first
- * child-facing slice edits terrain and offers bounded object changes.
- * Creators can move objects by whole cells and rotate transform-backed objects
- * in quarter turns. They can also resize trigger volumes by one cell on each
- * axis. The reducer rejects a size that leaves the finite world. Native source
- * save and bounded horizontal layer controls are available. Flow authoring and
- * cinematic tools remain separate. Test Play uses a disposable ordinary game
- * runtime while this class keeps the exact editor workspace alive.
+ * child-facing slice edits terrain and creates checkpoints, pack objects, and
+ * one-cell trigger volumes. Creators can move objects by whole cells and rotate
+ * transform-backed objects in quarter turns. They can also resize trigger
+ * volumes by one cell on each axis. The reducer rejects a size that leaves the
+ * finite world. Native source save and bounded horizontal layer controls are
+ * available. Flow authoring and cinematic tools remain separate. Test Play
+ * uses a disposable ordinary game runtime while this class keeps the exact
+ * editor workspace alive.
  */
 final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
@@ -360,22 +361,25 @@ final class CaxecraftEditorScreen {
 	function drawCreationShelf(locale:LocaleCursor, left:Int, top:Int, width:Int, height:Int):Void {
 		Raygui.PanelString(Rectangle.fromFloat(left, top, width, height), "");
 		final cardTop = top + 12;
-		final cardWidth = width >= 940 ? 154 : 130;
+		final disclosureWidth = 150.0;
+		final disclosureLeft = left + width - Std.int(disclosureWidth) - 12;
+		final cardGap = 10;
+		final cardWidth = Std.int((disclosureLeft - 10 - (left + 12) - cardGap * 5) / 6);
 		drawToolCard(locale, EditorFocusTarget.SelectTool, EditorTool.SelectTool, left + 12, cardTop, cardWidth, 68, UiMessage.EditorSelect,
 			Color.rgba(84, 191, 205));
-		drawToolCard(locale, EditorFocusTarget.GroundTool, EditorTool.PaintTool, left + 22 + cardWidth, cardTop, cardWidth, 68, UiMessage.EditorGround,
-			Color.rgba(111, 174, 91));
-		drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, left + 32 + cardWidth * 2, cardTop, cardWidth, 68, UiMessage.EditorErase,
-			Color.rgba(218, 103, 78));
-		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, left + 42 + cardWidth * 3, cardTop, cardWidth, 68,
+		drawToolCard(locale, EditorFocusTarget.GroundTool, EditorTool.PaintTool, left + 12 + (cardWidth + cardGap), cardTop, cardWidth, 68,
+			UiMessage.EditorGround, Color.rgba(111, 174, 91));
+		drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, left + 12 + (cardWidth + cardGap) * 2, cardTop, cardWidth, 68,
+			UiMessage.EditorErase, Color.rgba(218, 103, 78));
+		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, left + 12 + (cardWidth + cardGap) * 3, cardTop, cardWidth, 68,
 			UiMessage.EditorCheckpoint, Color.rgba(76, 209, 198));
 		final recipe = contentRegistry.editorObjectAt(0);
 		if (recipe != null)
-			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, left + 52 + cardWidth * 4, cardTop, cardWidth, 68,
+			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, left + 12 + (cardWidth + cardGap) * 4, cardTop, cardWidth, 68,
 				locale == Locale0 ? recipe.labelEn : recipe.labelEsMx, Color.rgba(226, 151, 72));
+		drawToolCard(locale, EditorFocusTarget.TriggerZoneTool, EditorTool.TriggerZoneTool, left + 12 + (cardWidth + cardGap) * 5, cardTop, cardWidth, 68,
+			UiMessage.EditorTrigger, Color.rgba(210, 105, 230));
 
-		final disclosureWidth = 150.0;
-		final disclosureLeft = left + width - Std.int(disclosureWidth) - 12;
 		if (focusedButtonSized(EditorFocusTarget.WorldList, disclosureLeft, cardTop, disclosureWidth, 30.0, uiCatalog.text(locale, UiMessage.EditorWorldList)))
 			worldListOpen = !worldListOpen;
 		if (focusedButtonSized(EditorFocusTarget.MoreDetails, disclosureLeft, cardTop + 38.0, disclosureWidth, 30.0,
@@ -868,6 +872,8 @@ final class CaxecraftEditorScreen {
 				setActiveTool(EditorTool.CheckpointTool);
 			case CatalogObjectTool:
 				setActiveTool(EditorTool.CatalogObjectTool);
+			case TriggerZoneTool:
+				setActiveTool(EditorTool.TriggerZoneTool);
 			case MoreDetails:
 				detailsOpen = !detailsOpen;
 			case WorldList:
@@ -1643,7 +1649,7 @@ final class CaxecraftEditorScreen {
 				needsPalette = true;
 			case SelectTool:
 			case EraseTool:
-			case CheckpointTool | CatalogObjectTool:
+			case CheckpointTool | CatalogObjectTool | TriggerZoneTool:
 		}
 		if (needsPalette) {
 			paletteCode = paletteCodeForBlock(current.draftSnapshot().world, contentRegistry.defaultEditorBlockId());

@@ -228,6 +228,7 @@ function allUiMessagesHaveText(catalog:RuntimeUiCatalog):Bool {
 		EditorTesting,
 		EditorTitle,
 		EditorToolList,
+		EditorTrigger,
 		EditorUndo,
 		EditorUnsavedChanges,
 		EditorValid,

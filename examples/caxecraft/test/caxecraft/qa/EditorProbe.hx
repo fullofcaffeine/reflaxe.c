@@ -16,6 +16,8 @@ import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPlacement.checkpointCommand;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorPlacement.objectRecipeCommand;
+import caxecraft.editor.EditorPlacement.triggerZoneCommand;
+import caxecraft.editor.EditorObservationPlan.changesFor;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
@@ -139,6 +141,7 @@ final class EditorProbe {
 		checkObjectRotation();
 		checkTriggerResize();
 		checkCheckpointPlacement();
+		checkTriggerPlacement();
 		checkCatalogObjectPlacement();
 		checkObjectDuplication();
 		final session = open(defaultEditorSettings());
@@ -237,6 +240,41 @@ final class EditorProbe {
 
 		final session = open(defaultEditorSettings());
 		roundTrip(session, checkpointCommand({x: 0, y: 0, z: 0}, session.draftSnapshot().objects), Placement);
+	}
+
+	/** Prove one visual gesture creates exact one-cell trigger bounds. */
+	static function checkTriggerPlacement():Void {
+		final existing:Array<ScenarioObject> = [
+			{id: id("editor.trigger.n1"), tags: [], placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})},
+			{id: id("editor.trigger.n3"), tags: [], placement: TriggerZone({origin: {x: 2, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})}
+		];
+		final command = triggerZoneCommand({x: 2, y: 1, z: 3}, existing);
+		final triggerId = id("editor.trigger.n2");
+		switch command {
+			case PutObject(object):
+				require(object.id.text() == triggerId.text(), "trigger placement did not fill the first available ID gap");
+				require(object.tags.length == 0, "trigger placement invented campaign-specific tags");
+				switch object.placement {
+					case TriggerZone(bounds):
+						require(bounds.origin.x == 2 && bounds.origin.y == 1 && bounds.origin.z == 3, "trigger placement changed the selected voxel");
+						require(bounds.size.width == 1 && bounds.size.height == 1 && bounds.size.depth == 1,
+							"trigger placement did not create one-cell bounds");
+					case _: throw "trigger placement emitted the wrong CAXEMAP role";
+				}
+			case _:
+				throw "trigger placement did not use the normal object command";
+		}
+		final changes = changesFor(command);
+		require(changes.length == 1 && isObjectChange(changes[0], triggerId), "trigger placement lost its changed-object identity");
+
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 3, depth: 4})), WorldShape, "prepare trigger placement world");
+		roundTrip(session, triggerZoneCommand({x: 2, y: 1, z: 3}, session.draftSnapshot().objects), Placement);
+		final canonical = expectValid(session, "placed trigger");
+		require(canonical.compare(session.canonicalDraft()) == 0, "trigger placement changed canonical save bytes during validation");
+		requireTestStarted(session.enterTestPlay(), "placed trigger Test Play");
+		require(session.leaveTestPlay(), "placed trigger Test Play did not return to editing");
+		require(session.canonicalDraft().compare(canonical) == 0, "placed trigger Test Play changed the editor draft");
 	}
 
 	/** Prove one reloadable recipe crosses the canonical editor history boundary. */
@@ -833,6 +871,7 @@ final class EditorProbe {
 			EditorFocusTarget.EraseTool,
 			EditorFocusTarget.CheckpointTool,
 			EditorFocusTarget.CatalogObjectTool,
+			EditorFocusTarget.TriggerZoneTool,
 			EditorFocusTarget.MoreDetails,
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.Back
@@ -840,6 +879,7 @@ final class EditorProbe {
 		final backward:Array<EditorFocusTarget> = [
 			EditorFocusTarget.WorldList,
 			EditorFocusTarget.MoreDetails,
+			EditorFocusTarget.TriggerZoneTool,
 			EditorFocusTarget.CatalogObjectTool,
 			EditorFocusTarget.CheckpointTool,
 			EditorFocusTarget.EraseTool,
@@ -1406,8 +1446,9 @@ final class EditorProbe {
 			&& toolFromIndex(3) == FillTool
 			&& toolFromIndex(4) == CheckpointTool
 			&& toolFromIndex(5) == CatalogObjectTool
+			&& toolFromIndex(6) == TriggerZoneTool
 			&& toolFromIndex(-1) == null
-			&& toolFromIndex(6) == null,
+			&& toolFromIndex(7) == null,
 			"raygui tool indices drifted from the closed editor tool type");
 
 		final point:VoxelPoint = {x: 2, y: 1, z: 1};
@@ -1444,7 +1485,19 @@ final class EditorProbe {
 			case _:
 				throw "fill tool did not carry explicit typed bounds";
 		}
-		return 17;
+		switch commandForTool(TriggerZoneTool, point, 1, null, [], null) {
+			case ToolCommandReady(PutObject(object)):
+				require(object.id.text() == "editor.trigger.n1", "trigger tool changed its deterministic object ID");
+				switch object.placement {
+					case TriggerZone(bounds):
+						require(bounds.origin.x == point.x && bounds.origin.y == point.y && bounds.origin.z == point.z,
+							"trigger tool changed the selected layer or cell");
+					case _: throw "trigger tool changed its placement role";
+				}
+			case _:
+				throw "trigger tool did not produce one canonical object command";
+		}
+		return 20;
 	}
 
 	/**
