@@ -123,8 +123,8 @@
       "id": "editor_canvas_help",
       "symbol": "EditorCanvasHelp",
       "text": {
-        "en": "CLICK WORLD TO LOOK · 1-6 TOOLS · LMB USE · ESC RELEASE · WASD/QE FLY",
-        "es-MX": "CLIC EN EL MUNDO PARA MIRAR · 1-6 HERRAMIENTAS · CLIC IZQ USAR · ESC LIBERAR · WASD/QE VOLAR"
+        "en": "CLICK WORLD TO LOOK · 1-6 TOOLS · LMB REMOVE/USE · RMB PLACE · ESC RELEASE · WASD/QE FLY",
+        "es-MX": "CLIC EN EL MUNDO PARA MIRAR · 1-6 HERRAMIENTAS · CLIC IZQ QUITAR/USAR · CLIC DER COLOCAR · ESC LIBERAR · WASD/QE VOLAR"
       }
     },
     {

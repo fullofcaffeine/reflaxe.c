@@ -4,8 +4,11 @@ package caxecraft.app;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForHotbarSlot;
+import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
 import caxecraft.editor.EditorPackageSession;
 import caxecraft.editor.EditorPackageSession.EditorPackageSaveResult;
 import caxecraft.editor.EditorPackageSession.editorPackageErrorMessage;
@@ -1362,7 +1365,7 @@ final class CaxecraftEditorScreen {
 		if (hover == null)
 			invalidatePreview();
 		else {
-			updatePreview(hover);
+			updatePreview(hover, activeTool);
 			if (Raylib.IsMouseButtonPressed(MouseButton.Left)) {
 				final hoverX = hover.x;
 				final hoverZ = hover.z;
@@ -1379,7 +1382,7 @@ final class CaxecraftEditorScreen {
 					return;
 				hover = {x: hoverX, y: currentPlan.layerY, z: hoverZ};
 				if (hover != null)
-					updatePreview(hover);
+					updatePreview(hover, activeTool);
 			}
 		}
 
@@ -1467,7 +1470,7 @@ final class CaxecraftEditorScreen {
 	 * The ghost can therefore look available immediately and still fail closed
 	 * if the authoritative commit rejects it.
 	 */
-	function updatePreview(point:VoxelPoint):Void {
+	function updatePreview(point:VoxelPoint, tool:EditorTool):Void {
 		final current = session;
 		final draft = presentationDraft;
 		if (current == null || draft == null) {
@@ -1479,20 +1482,19 @@ final class CaxecraftEditorScreen {
 			&& previewPoint.y == point.y
 			&& previewPoint.z == point.z
 			&& previewRevision == current.revision()
-			&& previewTool == activeTool)
+			&& previewTool == tool)
 			return;
 		previewPoint = {x: point.x, y: point.y, z: point.z};
 		previewRevision = current.revision();
-		previewTool = activeTool;
+		previewTool = tool;
 		var paletteCode = 0;
-		if (activeTool == PaintTool || activeTool == FillTool)
+		if (tool == PaintTool || tool == FillTool)
 			paletteCode = paletteCodeForBlock(draft.world, contentRegistry.defaultEditorBlockId());
 		if (paletteCode < 0) {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules,
-			activeRecipeFor(activeTool)) {
+		previewAllowed = switch commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules, activeRecipeFor(tool)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(_) | ToolBatchReady(_, _): true;
@@ -1517,9 +1519,10 @@ final class CaxecraftEditorScreen {
 	 * movement, volume lookup, ray picking, and command translation remain
 	 * renderer-independent. Build shows the ordinary terrain atlases when the
 	 * draft fits the gameplay world. A click gives Build the pointer. Mouse
-	 * movement then looks without a held button. WASD/QE flies, number keys select
-	 * the visible tool hotbar, and F restores the deterministic world focus.
-	 * Escape releases the pointer before the editor handles another cancel.
+	 * movement then looks without a held button. In terrain mode, the primary
+	 * button removes a solid and the secondary button places adjacent ground.
+	 * WASD/QE flies, number keys select the visible tool hotbar, and F focuses the
+	 * world. Escape releases the pointer before the editor handles another cancel.
 	 */
 	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, terrainTexture:Texture2D, terrainTextureReady:Bool,
 			adventureTerrainTexture:Texture2D, adventureTerrainTextureReady:Bool):Void {
@@ -1534,7 +1537,8 @@ final class CaxecraftEditorScreen {
 		final name = worldName;
 		final pointerAvailable = inside && Raylib.IsWindowFocused() && (name == null || !name.isEditing());
 		final leftPressed = Raylib.IsMouseButtonPressed(MouseButton.Left);
-		final capturePressed = buildPointerState == EditorBuildPointerState.Released && pointerAvailable && leftPressed;
+		final rightPressed = Raylib.IsMouseButtonPressed(MouseButton.Right);
+		final capturePressed = buildPointerState == EditorBuildPointerState.Released && pointerAvailable && (leftPressed || rightPressed);
 		if (capturePressed)
 			setBuildPointerState(nextPointerState(buildPointerState, true, true, true, false));
 		final cameraInputEnabled = buildPointerState == EditorBuildPointerState.Captured
@@ -1582,20 +1586,34 @@ final class CaxecraftEditorScreen {
 					hoveredObject = objectIndex(objectHit.id);
 			}
 		}
-		if (hover == null || hoveredObject >= 0)
+		final terrainMode = usesDirectTerrainControls(activeTool);
+		final previewTool = activeTool == PaintTool ? PaintTool : (terrainMode ? EraseTool : activeTool);
+		final previewPoint:Null<VoxelPoint> = if (hover == null) null else if (activeTool == PaintTool) hover.placement else hover.point;
+		if (previewPoint == null || hoveredObject >= 0)
 			invalidatePreview();
 		else
-			updatePreview(hover.point);
-		if (!capturePressed && aiming && (hover != null || hoveredObject >= 0) && leftPressed) {
-			if (hoveredObject >= 0)
-				selectObject(objectGizmos[hoveredObject].id);
-			else if (hover != null)
+			updatePreview(previewPoint, previewTool);
+		if (!capturePressed && aiming && hoveredObject >= 0 && leftPressed) {
+			selectObject(objectGizmos[hoveredObject].id);
+		} else if (!capturePressed && aiming && hoveredObject < 0 && terrainMode && hover != null && (leftPressed || rightPressed)) {
+			final edited = switch terrainAction(leftPressed, rightPressed, hover) {
+				case NoTerrainAction: false;
+				case RemoveTerrain(point): applyToolAt(EditorTool.EraseTool, point);
+				case PlaceTerrain(point): applyToolAt(EditorTool.PaintTool, point);
+			};
+			current = projection;
+			if (current == null)
+				return;
+			if (edited)
+				invalidatePreview();
+		} else if (!capturePressed && aiming && (hover != null || hoveredObject >= 0) && leftPressed) {
+			if (hover != null)
 				applyToolAt(activeTool, hover.point);
 			current = projection;
 			if (current == null)
 				return;
 			if (hoveredObject < 0 && hover != null)
-				updatePreview(hover.point);
+				updatePreview(hover.point, activeTool);
 		}
 
 		Raylib.DrawRectangle(left, top, width, height, CaxecraftPalette.sky());
@@ -1627,15 +1645,16 @@ final class CaxecraftEditorScreen {
 				Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width + 0.10),
 					c.Float32.fromFloat(gizmo.height + 0.10), c.Float32.fromFloat(gizmo.depth + 0.10), color);
 		}
-		if (hover != null && hoveredObject < 0 && !selectedCell(hover.point.x, hover.point.y, hover.point.z)) {
+		if (previewPoint != null && hoveredObject < 0 && !selectedCell(previewPoint.x, previewPoint.y, previewPoint.z)) {
 			final previewColor = previewAllowed ? Color.rgba(92, 240, 186) : Color.rgba(255, 104, 82);
-			drawCellOutline(hover.point.x, hover.point.y, hover.point.z, hover.solid, previewColor, 1.08);
+			final previewSolid = paletteCodeAtWorld(current, previewPoint.x, previewPoint.y, previewPoint.z) != 0;
+			drawCellOutline(previewPoint.x, previewPoint.y, previewPoint.z, previewSolid, previewColor, 1.08);
 			if (!previewAllowed) {
-				final markerY = hover.solid ? hover.point.y + 1.02 : hover.point.y + 0.08;
-				Raylib.DrawLine3D(Vector3.fromFloat(hover.point.x + 0.1, markerY, hover.point.z + 0.1),
-					Vector3.fromFloat(hover.point.x + 0.9, markerY, hover.point.z + 0.9), previewColor);
-				Raylib.DrawLine3D(Vector3.fromFloat(hover.point.x + 0.9, markerY, hover.point.z + 0.1),
-					Vector3.fromFloat(hover.point.x + 0.1, markerY, hover.point.z + 0.9), previewColor);
+				final markerY = previewSolid ? previewPoint.y + 1.02 : previewPoint.y + 0.08;
+				Raylib.DrawLine3D(Vector3.fromFloat(previewPoint.x + 0.1, markerY, previewPoint.z + 0.1),
+					Vector3.fromFloat(previewPoint.x + 0.9, markerY, previewPoint.z + 0.9), previewColor);
+				Raylib.DrawLine3D(Vector3.fromFloat(previewPoint.x + 0.9, markerY, previewPoint.z + 0.1),
+					Vector3.fromFloat(previewPoint.x + 0.1, markerY, previewPoint.z + 0.9), previewColor);
 			}
 		}
 		Raylib.EndMode3D();
@@ -1968,7 +1987,7 @@ final class CaxecraftEditorScreen {
 	public function applyPilotTool(tool:EditorTool, point:VoxelPoint):Bool
 		return applyToolAt(tool, point);
 
-	/** Paint and select the first visible air cell above authored terrain. */
+	/** Place through the direct secondary action, then select the new terrain. */
 	public function applyPilotPaintFirstAir():Bool {
 		final current = projection;
 		if (current == null)
@@ -1978,7 +1997,16 @@ final class CaxecraftEditorScreen {
 				final y = surfaceTopAt(current, x, z) + 1;
 				if (y >= 0 && y < current.height && paletteCodeAtWorld(current, x, y, z) == 0) {
 					final point:VoxelPoint = {x: x, y: y, z: z};
-					return applyToolAt(EditorTool.PaintTool, point) && applyToolAt(EditorTool.SelectTool, point);
+					final hit:EditorWorldHit = {
+						point: point,
+						placement: point,
+						distance: 0.0,
+						solid: false
+					};
+					return switch terrainAction(false, true, hit) {
+						case PlaceTerrain(target): applyToolAt(EditorTool.PaintTool, target) && applyToolAt(EditorTool.SelectTool, target);
+						case NoTerrainAction | RemoveTerrain(_): false;
+					};
 				}
 			}
 		return false;

@@ -131,9 +131,15 @@ typedef EditorWorldVector = {
 	final z:Float;
 }
 
-/** The nearest editable coordinate selected by a viewing ray. */
+/**
+ * The nearest editable coordinate selected by a viewing ray.
+ *
+ * `placement` is the last empty cell before a solid target. An empty-floor hit
+ * uses its own point. A solid at the first visited cell has no safe placement.
+ */
 typedef EditorWorldHit = {
 	final point:VoxelPoint;
+	final placement:Null<VoxelPoint>;
 	final distance:Float;
 	final solid:Bool;
 }
@@ -475,6 +481,10 @@ function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, d
 		var x = Std.int(clamp(origin.x + direction.x * sampleDistance, 0.0, projection.width - RAY_EPSILON));
 		var y = Std.int(clamp(origin.y + direction.y * sampleDistance, 0.0, projection.height - RAY_EPSILON));
 		var z = Std.int(clamp(origin.z + direction.z * sampleDistance, 0.0, projection.depth - RAY_EPSILON));
+		var hasPlacement = false;
+		var placementX = x;
+		var placementY = y;
+		var placementZ = z;
 		final stepX = direction.x > RAY_EPSILON ? 1 : (direction.x < -RAY_EPSILON ? -1 : 0);
 		final stepY = direction.y > RAY_EPSILON ? 1 : (direction.y < -RAY_EPSILON ? -1 : 0);
 		final stepZ = direction.z > RAY_EPSILON ? 1 : (direction.z < -RAY_EPSILON ? -1 : 0);
@@ -488,7 +498,16 @@ function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, d
 		while (x >= 0 && y >= 0 && z >= 0 && x < projection.width && y < projection.height && z < projection.depth && distance <= interval.far
 			&& distance <= maximumDistance) {
 			if (paletteCodeAtWorld(projection, x, y, z) != 0)
-				return {point: {x: x, y: y, z: z}, distance: distance, solid: true};
+				return {
+					point: {x: x, y: y, z: z},
+					placement: hasPlacement ? {x: placementX, y: placementY, z: placementZ} : null,
+					distance: distance,
+					solid: true
+				};
+			hasPlacement = true;
+			placementX = x;
+			placementY = y;
+			placementZ = z;
 			var next = nextX;
 			if (nextY < next)
 				next = nextY;
@@ -521,6 +540,7 @@ function pickWorld(projection:EditorWorldProjection, origin:EditorWorldVector, d
 		return null;
 	return {
 		point: {x: Std.int(floorX), y: layerY, z: Std.int(floorZ)},
+		placement: {x: Std.int(floorX), y: layerY, z: Std.int(floorZ)},
 		distance: floorDistance,
 		solid: false
 	};

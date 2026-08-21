@@ -1,20 +1,29 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorViewport.EditorTool;
+import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
+import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 
 /**
  * Owns the small device-neutral interaction policy for direct 3D editing.
  *
  * The native screen still translates Raylib events at the application edge.
- * These functions decide only when Build owns pointer look and which of its six
- * visible creation cards a number key selects. Keeping that policy here lets
- * the Eval probe protect Escape, focus loss, and Plan transitions without
- * imitating an operating-system mouse.
+ * These functions decide when Build owns pointer look, what the number keys
+ * select, and what a terrain mouse button does. The native screen converts the
+ * result into an ordinary editor command. This separation lets the Eval probe
+ * protect the input rules without imitating an operating-system mouse.
  */
 /** Whether the Build camera or the surrounding editor controls own the pointer. */
 enum abstract EditorBuildPointerState(Int) {
 	var Released = 0;
 	var Captured = 1;
+}
+
+/** One direct terrain action, or no action when the target is not safe. */
+enum EditorBuildTerrainAction {
+	NoTerrainAction;
+	RemoveTerrain(point:VoxelPoint);
+	PlaceTerrain(point:VoxelPoint);
 }
 
 /**
@@ -31,6 +40,31 @@ function nextPointerState(current:EditorBuildPointerState, buildActive:Bool, win
 	if (current == Released && capturePressed)
 		return Captured;
 	return current;
+}
+
+/**
+ * Convert the two terrain mouse buttons into one exact edit.
+ *
+ * The primary button removes the solid under the crosshair. The secondary
+ * button places ground in the empty cell before that solid. Primary wins if
+ * both buttons start in one frame. A missing target produces no edit.
+ */
+function terrainAction(primaryPressed:Bool, secondaryPressed:Bool, hit:Null<EditorWorldHit>):EditorBuildTerrainAction {
+	if (hit == null)
+		return NoTerrainAction;
+	if (primaryPressed && hit.solid)
+		return RemoveTerrain(hit.point);
+	if (secondaryPressed && hit.placement != null)
+		return PlaceTerrain(hit.placement);
+	return NoTerrainAction;
+}
+
+/** True when Build uses direct remove and place controls for the selected tool. */
+function usesDirectTerrainControls(tool:EditorTool):Bool {
+	return switch tool {
+		case SelectTool | PaintTool | EraseTool: true;
+		case FillTool | CheckpointTool | CatalogObjectTool | TriggerZoneTool: false;
+	};
 }
 
 /**

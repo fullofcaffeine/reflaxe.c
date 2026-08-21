@@ -2,8 +2,11 @@ package caxecraft.qa;
 
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForHotbarSlot;
+import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
 import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
@@ -65,6 +68,7 @@ import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
+import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
@@ -1177,6 +1181,84 @@ final class EditorProbe {
 		pointer = nextPointerState(EditorBuildPointerState.Captured, true, false, false, false);
 		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
 		checks++;
+		final solidHit:EditorWorldHit = {
+			point: {x: 3, y: 2, z: 1},
+			placement: {x: 3, y: 3, z: 1},
+			distance: 4.0,
+			solid: true
+		};
+		switch terrainAction(true, false, solidHit) {
+			case RemoveTerrain(point):
+				require(point.x == 3 && point.y == 2 && point.z == 1, "Build primary action did not remove the solid target");
+			case NoTerrainAction | PlaceTerrain(_):
+				require(false, "Build primary action did not resolve to terrain removal");
+		}
+		checks++;
+		switch terrainAction(false, true, solidHit) {
+			case PlaceTerrain(point):
+				require(point.x == 3 && point.y == 3 && point.z == 1, "Build secondary action did not use the adjacent empty cell");
+			case NoTerrainAction | RemoveTerrain(_):
+				require(false, "Build secondary action did not resolve to terrain placement");
+		}
+		checks++;
+		switch terrainAction(true, true, solidHit) {
+			case RemoveTerrain(_):
+			case NoTerrainAction | PlaceTerrain(_):
+				require(false, "Build did not give primary removal deterministic priority");
+		}
+		checks++;
+		final emptyHit:EditorWorldHit = {
+			point: {x: 2, y: 0, z: 2},
+			placement: {x: 2, y: 0, z: 2},
+			distance: 3.0,
+			solid: false
+		};
+		switch terrainAction(true, false, emptyHit) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build primary action tried to remove an empty cell");
+		}
+		checks++;
+		switch terrainAction(false, true, emptyHit) {
+			case PlaceTerrain(point):
+				require(point.x == 2 && point.y == 0 && point.z == 2, "Build could not place in an empty world");
+			case NoTerrainAction | RemoveTerrain(_):
+				require(false, "Build rejected the empty-floor placement target");
+		}
+		checks++;
+		final blockedHit:EditorWorldHit = {
+			point: {x: 0, y: 1, z: 0},
+			placement: null,
+			distance: 0.0,
+			solid: true
+		};
+		switch terrainAction(false, true, blockedHit) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build placed outside the finite world");
+		}
+		checks++;
+		switch terrainAction(false, false, solidHit) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build edited terrain without a mouse-button edge");
+		}
+		checks++;
+		switch terrainAction(true, true, null) {
+			case NoTerrainAction:
+			case RemoveTerrain(_) | PlaceTerrain(_):
+				require(false, "Build edited terrain without a world target");
+		}
+		checks++;
+		require(usesDirectTerrainControls(SelectTool)
+			&& usesDirectTerrainControls(PaintTool)
+			&& usesDirectTerrainControls(EraseTool)
+			&& !usesDirectTerrainControls(FillTool)
+			&& !usesDirectTerrainControls(CheckpointTool)
+			&& !usesDirectTerrainControls(CatalogObjectTool)
+			&& !usesDirectTerrainControls(TriggerZoneTool),
+			"Build direct terrain controls leaked into object or volume placement");
+		checks++;
 		require(toolForHotbarSlot(1) == SelectTool
 			&& toolForHotbarSlot(2) == PaintTool
 			&& toolForHotbarSlot(3) == EraseTool
@@ -1796,10 +1878,16 @@ final class EditorProbe {
 			"3D camera failed to clamp frame time, position, yaw, or pitch");
 
 		final stacked = pickWorld(projection, {x: 1.5, y: 4.0, z: 1.5}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0);
-		require(stacked != null && stacked.solid && stacked.point.x == 1 && stacked.point.y == 1 && stacked.point.z == 1 && close(stacked.distance, 2.0),
-			"3D picking did not choose the nearest visible solid");
+		require(stacked != null && stacked.solid && stacked.point.x == 1 && stacked.point.y == 1 && stacked.point.z == 1 && stacked.placement == null
+			&& close(stacked.distance, 2.0),
+			"3D picking did not reject placement outside the world above a solid");
+		final side = pickWorld(projection, {x: 0.25, y: 0.5, z: 1.5}, {x: 1.0, y: 0.0, z: 0.0}, 0, 16.0);
+		require(side != null && side.solid && side.point.x == 1 && side.point.y == 0 && side.point.z == 1 && side.placement != null
+			&& side.placement.x == 0 && side.placement.y == 0 && side.placement.z == 1,
+			"3D picking did not retain the adjacent empty cell before a solid");
 		final emptyFloor = pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0);
 		require(emptyFloor != null && !emptyFloor.solid && emptyFloor.point.x == 0 && emptyFloor.point.y == 0 && emptyFloor.point.z == 0
+			&& emptyFloor.placement != null && emptyFloor.placement.x == 0 && emptyFloor.placement.y == 0 && emptyFloor.placement.z == 0
 			&& close(emptyFloor.distance, 4.0),
 			"3D picking did not preserve an editable empty-floor cell");
 		final upperEmpty = pickWorld(projection, {x: 0.5, y: 4.0, z: 0.5}, {x: 0.0, y: -1.0, z: 0.0}, 1, 16.0);
