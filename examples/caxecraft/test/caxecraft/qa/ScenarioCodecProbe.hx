@@ -98,6 +98,7 @@ final class ScenarioCodecProbe {
 	}
 
 	static function checkTokenKinds(canonical:Bytes, fullCanonical:Bytes):Void {
+		expectFailureAt(Bytes.ofString('CAXEMAP 1\ntitle literal "¿"\tbad\n'), "unicode-scalar-column", "invalid-token", 2, 18, 2);
 		expectFailureAt(replace(canonical, "mode creative", '"mode" creative'), "quoted-record-name", "unexpected-record", 6, 1, 6);
 		expectFailureAt(replace(canonical, "mode creative", 'mode "creative"'), "quoted-mode", "invalid-token", 6, 6, 6);
 		expectFailureAt(replace(canonical, "(flag quest.met-ivvy false)", '(flag quest.met-ivvy "false")'), "quoted-boolean", "invalid-token", 45, 3, 45);
