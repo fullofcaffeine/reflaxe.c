@@ -35,7 +35,10 @@ function projectZoneRules(rules:Array<FlowRule>, objects:Array<ScenarioObject>):
 		if (bounds == null)
 			result.push(UnresolvedZoneRule(rule.id, zone));
 		else
-			result.push(ResolvedZoneRule(rule.id, zone, bounds));
+			result.push(ResolvedZoneRule(rule.id, zone, {
+				origin: {x: bounds.origin.x, y: bounds.origin.y, z: bounds.origin.z},
+				size: {width: bounds.size.width, height: bounds.size.height, depth: bounds.size.depth}
+			}));
 	}
 	return result;
 }

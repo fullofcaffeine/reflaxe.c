@@ -27,6 +27,7 @@ import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorPlacement.objectRecipeCommand;
 import caxecraft.editor.EditorPlacement.triggerZoneCommand;
 import caxecraft.editor.EditorObservationPlan.changesFor;
+import caxecraft.editor.EditorPresentation.EditorPresentationWorld;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
@@ -249,11 +250,9 @@ final class EditorProbe {
 		final sourceCells = [for (_ in 0...width * height * depth) 0];
 		final authoredStoneIndex = (7 * height + 5) * width + 31;
 		sourceCells[authoredStoneIndex] = 1;
-		final world:ScenarioWorld = {
+		final world:EditorPresentationWorld = {
 			size: {width: width, height: height, depth: depth},
-			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}],
-			chunks: [],
-			fluids: []
+			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}]
 		};
 		final projection:EditorWorldProjection = {
 			width: width,
@@ -281,11 +280,9 @@ final class EditorProbe {
 		final fullWidthCells = [for (_ in 0...64 * height * depth) 0];
 		final fullWidthStoneIndex = 63 + 64 * (15 + height * 31);
 		fullWidthCells[fullWidthStoneIndex] = 1;
-		final fullWidthWorld:ScenarioWorld = {
+		final fullWidthWorld:EditorPresentationWorld = {
 			size: {width: 64, height: height, depth: depth},
-			palette: world.palette,
-			chunks: [],
-			fluids: []
+			palette: world.palette
 		};
 		final fullWidthProjection:EditorWorldProjection = {
 			width: 64,
@@ -312,11 +309,9 @@ final class EditorProbe {
 			surfaceTops: [],
 			surfacePatches: []
 		};
-		final unsupportedWorld:ScenarioWorld = {
+		final unsupportedWorld:EditorPresentationWorld = {
 			size: {width: 12, height: 1, depth: 12},
-			palette: [{code: 0, blockType: AIR}],
-			chunks: [],
-			fluids: []
+			palette: [{code: 0, blockType: AIR}]
 		};
 		require(projectRuntimeTerrain(unsupportedWorld, unsupportedProjection, registry) == RuntimeTerrainUnavailable,
 			"a custom-size draft bypassed the editor overview fallback");
@@ -340,11 +335,9 @@ final class EditorProbe {
 		checks++;
 		require(runtimeCodeForPalette(world, 2, registry) == -1, "incremental terrain palette resolution admitted a missing code");
 		checks++;
-		final duplicatePaletteWorld:ScenarioWorld = {
+		final duplicatePaletteWorld:EditorPresentationWorld = {
 			size: world.size,
-			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}, {code: 1, blockType: AIR}],
-			chunks: [],
-			fluids: []
+			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}, {code: 1, blockType: AIR}]
 		};
 		require(runtimeCodeForPalette(duplicatePaletteWorld, 1, registry) == -1, "incremental terrain palette resolution admitted a duplicate code");
 		checks++;
@@ -416,17 +409,8 @@ final class EditorProbe {
 			case _:
 				throw "checkpoint placement did not use the normal object command";
 		}
-		final reservedRules = [
-			{
-				id: id("editor.rule.checkpoint.n3"),
-				priority: 0,
-				repeat: Repeat,
-				event: Interact(existing[0].id),
-				predicate: Always,
-				actions: [SetCheckpoint(existing[0].id)]
-			}
-		];
-		final allocated = checkpointTemplate({x: 2, y: 1, z: 3}, existing, reservedRules);
+		final reservedRuleIds = [id("editor.rule.checkpoint.n3")];
+		final allocated = checkpointTemplate({x: 2, y: 1, z: 3}, existing, reservedRuleIds);
 		require(allocated.objectId.text() == "editor.checkpoint.n4", "checkpoint template reused a suffix reserved by a rule");
 		switch allocated.commands {
 			case [PutObject(object), PutRule(rule)]:
@@ -446,7 +430,7 @@ final class EditorProbe {
 		roundTrip(session, checkpointCommand({x: 0, y: 0, z: 0}, session.draftSnapshot().objects), Placement);
 
 		final draft = session.draftSnapshot();
-		final template = checkpointTemplate({x: 0, y: 0, z: 0}, draft.objects, draft.flow.rules);
+		final template = checkpointTemplate({x: 0, y: 0, z: 0}, draft.objects, [for (rule in draft.flow.rules) rule.id]);
 		require(template.commands.length == 2, "checkpoint template did not keep object and behavior in one batch");
 		final beforeBytes = session.canonicalDraft();
 		final beforeHistory = session.historyEntries();
@@ -653,6 +637,28 @@ final class EditorProbe {
 			&& edited.continueWater,
 			"environment controls changed the wrong field or lost an authored neighbor");
 		final editedBytes = opened.canonicalDraft();
+		final observedPresentationEnvironment = switch opened.query(InspectPresentation) {
+			case PresentationObserved(_, value):
+				switch value.environment {
+					case null: throw "presentation query lost the edited environment";
+					case environment: environment;
+				}
+			case _: throw "presentation query lost the edited environment";
+		};
+		observedPresentationEnvironment.edges.resize(0);
+		final freshPresentationEnvironment = switch opened.query(InspectPresentation) {
+			case PresentationObserved(_, value):
+				switch value.environment {
+					case null: throw "second presentation query lost the edited environment";
+					case environment: environment;
+				}
+			case _: throw "second presentation query lost the edited environment";
+		};
+		require(hasEnvironmentEdge(freshPresentationEnvironment.edges, North)
+			&& hasEnvironmentEdge(freshPresentationEnvironment.edges, East)
+			&& hasEnvironmentEdge(freshPresentationEnvironment.edges, West)
+			&& opened.canonicalDraft().compare(editedBytes) == 0,
+			"mutating presentation environment edges changed the editor draft or the next view");
 		final reopened = switch EditorSession.openBytes(editedBytes, new Registry(), defaultEditorSettings()) {
 			case EditorOpened(value): value;
 			case EditorOpenRejected(error): throw 'editor rejected its environment save: $error';
@@ -1526,6 +1532,37 @@ final class EditorProbe {
 		};
 		require(objectCount > 0 && freshDraft.objects.length == objectCount, "mutating an observed scenario changed the editor draft");
 
+		final observedPresentation = switch session.query(InspectPresentation) {
+			case PresentationObserved(4, value): value;
+			case _: throw "presentation query lost its revision";
+		};
+		final presentationObjectCount = observedPresentation.objects.length;
+		final presentationPaletteCount = observedPresentation.world.palette.length;
+		final presentationRuleCount = observedPresentation.ruleIds.length;
+		final observedProjection = switch observedPresentation.projection {
+			case null: throw "presentation query lost the finite world";
+			case value: value;
+		};
+		require(observedProjection.cells.length > 0, "presentation query returned an empty finite world");
+		final firstCell = observedProjection.cells[0];
+		observedProjection.cells[0] = firstCell == 0 ? 1 : 0;
+		observedPresentation.world.palette.resize(0);
+		observedPresentation.objects[0].tags.push(new ScenarioTag("caller-owned"));
+		observedPresentation.objects.resize(0);
+		observedPresentation.ruleIds.resize(0);
+		final freshPresentation = switch session.query(InspectPresentation) {
+			case PresentationObserved(4, value): value;
+			case _: throw "second presentation query lost its revision";
+		};
+		require(freshPresentation.objects.length == presentationObjectCount
+			&& freshPresentation.world.palette.length == presentationPaletteCount
+			&& freshPresentation.ruleIds.length == presentationRuleCount
+			&& freshPresentation.objects[0].tags.length == 0
+			&& freshPresentation.projection != null
+			&& freshPresentation.projection.cells[0] == firstCell
+			&& session.canonicalDraft().compare(afterBatch) == 0,
+			"mutating a presentation observation changed the editor draft or the next view");
+
 		final tree = switch session.query(InspectTree) {
 			case TreeObserved(4, nodes): nodes;
 			case _: throw "campaign-tree query lost its revision";
@@ -1764,7 +1801,7 @@ final class EditorProbe {
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "viewport world size");
 		expectApplied(session.apply(SetPaletteEntry(7, STONE)), Voxel, "viewport palette");
-		require(paletteCodeForBlock(session.draftSnapshot().world, STONE) == 7, "viewport brush assumed a global palette code");
+		require(paletteCodeForBlock(session.draftSnapshot().world.palette, STONE) == 7, "viewport brush assumed a global palette code");
 		expectApplied(session.apply(PaintVoxel({x: 3, y: 1, z: 2}, 7)), Voxel, "viewport upper-layer paint");
 		final upper = projectViewport(session.draftSnapshot().world, 1);
 		require(upper != null && upper.width == 4 && upper.depth == 3 && upper.cells.length == 12, "viewport projection lost its exact layer dimensions");

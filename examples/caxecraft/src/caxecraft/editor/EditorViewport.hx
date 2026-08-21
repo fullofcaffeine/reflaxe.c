@@ -12,9 +12,9 @@ import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioWorld;
+import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
 import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioId;
-import caxecraft.scenario.CaxeFlow.FlowRule;
 
 /**
 	Projects editor terrain into a small, renderer-independent top-down view.
@@ -217,9 +217,9 @@ function paletteCodeAt(projection:EditorViewportProjection, x:Int, z:Int):Int {
 	block IDs, so an editor brush must resolve its block for the current draft.
 	The function returns `-1` when the map does not admit that block.
 **/
-function paletteCodeForBlock(world:ScenarioWorld, blockType:ContentId):Int {
+function paletteCodeForBlock(palette:Array<BlockPaletteEntry>, blockType:ContentId):Int {
 	final expected = blockType.text();
-	for (entry in world.palette)
+	for (entry in palette)
 		if (entry.blockType.text() == expected)
 			return entry.code;
 	return -1;
@@ -247,7 +247,7 @@ function toolFromIndex(index:Int):Null<EditorTool> {
 	Object tools read existing IDs and create one reloadable record or one atomic
 	template. The UI never mutates a projection directly.
 **/
-function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>, rules:Array<FlowRule>,
+function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selection:Null<VoxelBounds>, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>,
 		recipe:Null<EditorObjectRecipe>):EditorToolCommandResult {
 	return switch tool {
 		case SelectTool:
@@ -262,7 +262,7 @@ function commandFor(tool:EditorTool, point:VoxelPoint, paletteCode:Int, selectio
 		case FillTool:
 			if (selection == null) ToolCommandRejected(NoSelection); else ToolCommandReady(FillBounds(selection, paletteCode));
 		case CheckpointTool:
-			final template = checkpointTemplate(point, objects, rules);
+			final template = checkpointTemplate(point, objects, ruleIds);
 			ToolBatchReady(template.commands, template.objectId);
 		case CatalogObjectTool:
 			recipe == null ? ToolCommandRejected(MissingEditorObjectRecipe) : ToolCommandReady(objectRecipeCommand(recipe, point, objects));

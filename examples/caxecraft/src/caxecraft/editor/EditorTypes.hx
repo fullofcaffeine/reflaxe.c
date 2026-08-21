@@ -1,6 +1,7 @@
 package caxecraft.editor;
 
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LocaleId;
@@ -357,6 +358,9 @@ enum EditorQuery {
 	/** Read one deep copy of the current typed scenario draft. */
 	InspectDraft;
 
+	/** Read fresh values needed by a visual editor without parsing CAXEMAP again. */
+	InspectPresentation;
+
 	/** Read one copied deterministic CAXEMAP spelling of the current draft. */
 	InspectCanonicalDraft;
 
@@ -403,6 +407,7 @@ typedef EditorStateObservation = {
 enum EditorObservation {
 	StateObserved(state:EditorStateObservation);
 	DraftObserved(revision:Int, draft:Scenario);
+	PresentationObserved(revision:Int, presentation:EditorPresentationSnapshot);
 	CanonicalDraftObserved(revision:Int, canonical:Bytes);
 	TreeObserved(revision:Int, nodes:Array<EditorTreeNode>);
 	NodeObserved(revision:Int, node:Null<EditorTreeNode>);

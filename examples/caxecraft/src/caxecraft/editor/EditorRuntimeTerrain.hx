@@ -1,10 +1,10 @@
 package caxecraft.editor;
 
 import caxecraft.domain.World;
+import caxecraft.editor.EditorPresentation.EditorPresentationWorld;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioContentRegistry;
-import caxecraft.scenario.ScenarioWorld;
 
 /**
  * Converts an accepted editor view into the fixed terrain layout used by play.
@@ -31,7 +31,7 @@ enum EditorRuntimeTerrainResult {
  * disagree. The caller can retain its renderer-independent overview for that
  * case, which lets creators continue repairing a temporarily unplayable draft.
  */
-function projectRuntimeTerrain(world:ScenarioWorld, projection:EditorWorldProjection, registry:ScenarioContentRegistry):EditorRuntimeTerrainResult {
+function projectRuntimeTerrain(world:EditorPresentationWorld, projection:EditorWorldProjection, registry:ScenarioContentRegistry):EditorRuntimeTerrainResult {
 	final width = world.size.width;
 	final height = world.size.height;
 	final depth = world.size.depth;
@@ -84,7 +84,7 @@ function projectRuntimeTerrain(world:ScenarioWorld, projection:EditorWorldProjec
 	falls back to a complete projection instead of publishing a plausible but
 	incorrect cell.
 **/
-function runtimeCodeForPalette(world:ScenarioWorld, paletteCode:Int, registry:ScenarioContentRegistry):Int {
+function runtimeCodeForPalette(world:EditorPresentationWorld, paletteCode:Int, registry:ScenarioContentRegistry):Int {
 	var found = false;
 	var resolved = -1;
 	for (entry in world.palette)

@@ -1,0 +1,121 @@
+package caxecraft.editor;
+
+import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
+import caxecraft.editor.EditorFlowProjection.projectZoneRules;
+import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
+import caxecraft.editor.EditorWorldViewport.projectWorld;
+import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioEnvironment;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
+import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
+import caxecraft.scenario.ScenarioText;
+import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
+
+/**
+ * Builds the small, copy-owned view that the visual editor draws and inspects.
+ *
+ * `EditorSession` keeps the parsed draft private because its arrays also feed
+ * canonical history. This module reads that draft once and returns only fresh
+ * presentation values. The screen can retain or change these arrays without
+ * changing the draft, undo bytes, validation, or Test Play state.
+ */
+/** Terrain facts needed for drawing and palette-local editor tools. */
+typedef EditorPresentationWorld = {
+	final size:VoxelSize;
+	final palette:Array<BlockPaletteEntry>;
+}
+
+/** One revision-independent visual view of the current typed draft. */
+typedef EditorPresentationSnapshot = {
+	final title:ScenarioText;
+	final environment:Null<ScenarioEnvironment>;
+	final world:EditorPresentationWorld;
+	final projection:Null<EditorWorldProjection>;
+	final objects:Array<ScenarioObject>;
+	final ruleIds:Array<ScenarioId>;
+	final flowRuleCount:Int;
+	final zoneRuleLinks:Array<EditorZoneRuleProjection>;
+}
+
+/**
+ * Project one private session draft without writing or parsing CAXEMAP bytes.
+ *
+ * Every mutable array and nested record in the result has a separate owner.
+ * `projection` is `null` when chunk data cannot describe the declared world.
+ */
+function project(scenario:Scenario):EditorPresentationSnapshot {
+	return {
+		title: scenario.title,
+		environment: copyEnvironment(scenario.environment),
+		world: {
+			size: copySize(scenario.world.size),
+			palette: [
+				for (entry in scenario.world.palette)
+					{code: entry.code, blockType: entry.blockType}
+			]
+		},
+		projection: projectWorld(scenario.world),
+		objects: [for (object in scenario.objects) copyObject(object)],
+		ruleIds: [for (rule in scenario.flow.rules) rule.id],
+		flowRuleCount: scenario.flow.rules.length,
+		zoneRuleLinks: projectZoneRules(scenario.flow.rules, scenario.objects)
+	};
+}
+
+/** Copy optional sky data because its edge list is a mutable Haxe array. */
+private function copyEnvironment(value:Null<ScenarioEnvironment>):Null<ScenarioEnvironment> {
+	if (value == null)
+		return null;
+	return {
+		profile: value.profile,
+		sky: {red: value.sky.red, green: value.sky.green, blue: value.sky.blue},
+		sun: value.sun == null ? null : {
+			x: value.sun.x,
+			y: value.sun.y,
+			z: value.sun.z,
+			radiusMilli: value.sun.radiusMilli
+		},
+		clouds: {count: value.clouds.count, speedMilli: value.clouds.speedMilli, seed: value.clouds.seed},
+		edges: value.edges.copy(),
+		continueWater: value.continueWater
+	};
+}
+
+/** Copy one authored object and every record nested in its closed placement. */
+private function copyObject(value:ScenarioObject):ScenarioObject
+	return {id: value.id, tags: value.tags.copy(), placement: copyPlacement(value.placement)};
+
+/** Copy each placement role without changing its semantic links or values. */
+private function copyPlacement(value:ObjectPlacement):ObjectPlacement {
+	return switch value {
+		case PlayerSpawn(transform): PlayerSpawn(copyTransform(transform));
+		case Checkpoint(transform): Checkpoint(copyTransform(transform));
+		case Item(itemType, quantity, transform): Item(itemType, quantity, copyTransform(transform));
+		case Entity(entityType, transform): Entity(entityType, copyTransform(transform));
+		case Npc(npcType, dialogue, transform): Npc(npcType, dialogue, copyTransform(transform));
+		case Prefab(prefabType, transform): Prefab(prefabType, copyTransform(transform));
+		case TriggerZone(bounds): TriggerZone(copyBounds(bounds));
+		case StatefulObject(objectType, initialState, transform): StatefulObject(objectType, initialState, copyTransform(transform));
+	};
+}
+
+/** Copy one millimeter transform into a separate record. */
+private function copyTransform(value:ScenarioTransform):ScenarioTransform
+	return {
+		xMilli: value.xMilli,
+		yMilli: value.yMilli,
+		zMilli: value.zMilli,
+		yawDegrees: value.yawDegrees
+	};
+
+/** Copy both records inside one half-open voxel box. */
+private function copyBounds(value:VoxelBounds):VoxelBounds
+	return {origin: {x: value.origin.x, y: value.origin.y, z: value.origin.z}, size: copySize(value.size)};
+
+/** Copy positive or temporarily invalid dimensions without repairing them. */
+private function copySize(value:VoxelSize):VoxelSize
+	return {width: value.width, height: value.height, depth: value.depth};

@@ -361,9 +361,14 @@ transaction must still satisfy those existing limits.
 
 This full-snapshot strategy favors simple, trustworthy recovery for the first
 bounded editor. Later editor slices must measure real map sizes and gesture
-latency. If snapshots become the bottleneck, they may introduce typed
-command-specific inverse data while retaining bounded paint gestures, exact
-undo bytes, hard memory limits, and the same public commands. A later
+latency. The native screen does not request a complete scenario copy after an
+accepted edit. It asks `EditorSession` for fresh presentation values derived
+from the retained parsed draft. This avoids a second CAXEMAP parse while exact
+history continues to use canonical before-and-after bytes.
+
+If history snapshots become the next bottleneck, a later slice can introduce
+typed command-specific inverse data. It must retain bounded paint gestures,
+exact undo bytes, hard memory limits, and the same public commands. A later
 optimization must not trade correctness for an unmeasured speedup.
 
 ## Reversible test play

@@ -3,7 +3,6 @@ package caxecraft.editor;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorTypes.EditorCommand;
-import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioId;
@@ -18,7 +17,7 @@ typedef EditorCheckpointTemplate = {
 /**
 	Builds reloadable CAXEMAP objects from simple creator gestures.
 
-	The visual editor supplies a snapped voxel and the current authored objects.
+	The visual editor supplies a snapped voxel and current object or rule IDs.
 	This module owns stable editor IDs and exact scenario coordinates, so Plan,
 	Build, and future device adapters cannot create subtly different records.
 **/
@@ -49,8 +48,8 @@ function checkpointCommand(point:VoxelPoint, objects:Array<ScenarioObject>):Edit
 	either identity already exists, so applying both commands cannot replace an
 	authored record. `EditorSession` validates and commits the list atomically.
 **/
-function checkpointTemplate(point:VoxelPoint, objects:Array<ScenarioObject>, rules:Array<FlowRule>):EditorCheckpointTemplate {
-	final number = nextCheckpointTemplateNumber(objects, rules);
+function checkpointTemplate(point:VoxelPoint, objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>):EditorCheckpointTemplate {
+	final number = nextCheckpointTemplateNumber(objects, ruleIds);
 	final objectId = new ScenarioId('editor.checkpoint.n$number');
 	return {
 		objectId: objectId,
@@ -125,9 +124,9 @@ private function nextCheckpointId(objects:Array<ScenarioObject>):ScenarioId {
 }
 
 /** Find one suffix that is free in both the object and rule namespaces. */
-private function nextCheckpointTemplateNumber(objects:Array<ScenarioObject>, rules:Array<FlowRule>):Int {
+private function nextCheckpointTemplateNumber(objects:Array<ScenarioObject>, ruleIds:Array<ScenarioId>):Int {
 	var number = 1;
-	while (hasObjectId(objects, 'editor.checkpoint.n$number') || hasRuleId(rules, 'editor.rule.checkpoint.n$number'))
+	while (hasObjectId(objects, 'editor.checkpoint.n$number') || hasRuleId(ruleIds, 'editor.rule.checkpoint.n$number'))
 		number++;
 	return number;
 }
@@ -149,9 +148,9 @@ private function hasObjectId(objects:Array<ScenarioObject>, expected:String):Boo
 }
 
 /** Compare stable rule IDs without depending on canonical rule order. */
-private function hasRuleId(rules:Array<FlowRule>, expected:String):Bool {
-	for (rule in rules)
-		if (rule.id.text() == expected)
+private function hasRuleId(ruleIds:Array<ScenarioId>, expected:String):Bool {
+	for (id in ruleIds)
+		if (id.text() == expected)
 			return true;
 	return false;
 }

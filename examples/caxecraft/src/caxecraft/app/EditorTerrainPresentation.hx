@@ -11,10 +11,10 @@ import caxecraft.domain.WorldVolume;
 import caxecraft.editor.EditorRuntimeTerrain.EditorRuntimeTerrainResult;
 import caxecraft.editor.EditorRuntimeTerrain.projectRuntimeTerrain;
 import caxecraft.editor.EditorRuntimeTerrain.runtimeCodeForPalette;
+import caxecraft.editor.EditorPresentation.EditorPresentationWorld;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
-import caxecraft.scenario.ScenarioWorld;
 import raylib.Texture2D;
 
 /**
@@ -44,7 +44,7 @@ final class EditorTerrainPresentation {
 	 * Failure is an ordinary fallback state: incomplete or custom-size drafts
 	 * continue through the renderer-independent overview and remain repairable.
 	 */
-	public function refresh(world:ScenarioWorld, projection:EditorWorldProjection, registry:ScenarioContentRegistry):Void {
+	public function refresh(world:EditorPresentationWorld, projection:EditorWorldProjection, registry:ScenarioContentRegistry):Void {
 		switch projectRuntimeTerrain(world, projection, registry) {
 			case RuntimeTerrainReady(cells):
 				var writable:WorldCells = storage.span();
@@ -64,7 +64,7 @@ final class EditorTerrainPresentation {
 	 * the retained presentation was unavailable or incompatible, so the caller
 	 * must use `refresh` as a fail-closed fallback.
 	 */
-	public function refreshVoxel(world:ScenarioWorld, projection:EditorWorldProjection, registry:ScenarioContentRegistry, point:VoxelPoint):Int {
+	public function refreshVoxel(world:EditorPresentationWorld, projection:EditorWorldProjection, registry:ScenarioContentRegistry, point:VoxelPoint):Int {
 		final width = world.size.width;
 		final height = world.size.height;
 		final depth = world.size.depth;

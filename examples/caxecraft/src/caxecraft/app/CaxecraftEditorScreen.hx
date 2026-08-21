@@ -25,10 +25,12 @@ import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
-import caxecraft.editor.EditorFlowProjection.projectZoneRules;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
+import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
+import caxecraft.editor.EditorTypes.EditorObservation;
+import caxecraft.editor.EditorTypes.EditorQuery;
 import caxecraft.editor.EditorTypes.EditorSelection;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
@@ -58,14 +60,12 @@ import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
-import caxecraft.editor.EditorWorldViewport.projectWorld;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
 import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
-import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
@@ -146,7 +146,7 @@ final class CaxecraftEditorScreen {
 	final terrainPresentation:EditorTerrainPresentation;
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
-	var presentationDraft:Null<Scenario>;
+	var presentationDraft:Null<EditorPresentationSnapshot>;
 	var projection:Null<EditorWorldProjection>;
 	var planProjection:Null<EditorViewportProjection>;
 	var objectGizmos:Array<EditorObjectGizmo>;
@@ -1500,12 +1500,12 @@ final class CaxecraftEditorScreen {
 		previewTool = tool;
 		var paletteCode = 0;
 		if (tool == PaintTool || tool == FillTool)
-			paletteCode = paletteCodeForBlock(draft.world, contentRegistry.defaultEditorBlockId());
+			paletteCode = paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId());
 		if (paletteCode < 0) {
 			previewAllowed = false;
 			return;
 		}
-		previewAllowed = switch commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules, activeRecipeFor(tool)) {
+		previewAllowed = switch commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, activeRecipeFor(tool)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
 			case ToolCommandReady(_) | ToolBatchReady(_, _): true;
@@ -1793,13 +1793,13 @@ final class CaxecraftEditorScreen {
 			case CheckpointTool | CatalogObjectTool | TriggerZoneTool:
 		}
 		if (needsPalette) {
-			paletteCode = paletteCodeForBlock(draft.world, contentRegistry.defaultEditorBlockId());
+			paletteCode = paletteCodeForBlock(draft.world.palette, contentRegistry.defaultEditorBlockId());
 			if (paletteCode < 0) {
 				notice = Invalid;
 				return false;
 			}
 		}
-		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules, activeRecipeFor(tool));
+		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.ruleIds, activeRecipeFor(tool));
 		return switch toolResult {
 			case ToolCommandRejected(_):
 				notice = Invalid;
@@ -1854,9 +1854,10 @@ final class CaxecraftEditorScreen {
 	/**
 	 * Rebuild presentation state after a session transition.
 	 *
-	 * `draftSnapshot` performs a defensive CAXEMAP round trip, so this method is
-	 * intentionally called after New World, an accepted edit, undo, or redo—not
-	 * from every frame.
+	 * The presentation query copies only values that this screen can draw or use
+	 * for a command. It does not parse CAXEMAP or expose the session's mutable
+	 * draft arrays. This method runs after New World, an accepted edit, undo, or
+	 * redo, not from every frame.
 	 */
 	function refreshProjection(resetCamera:Bool = false, terrainRefresh:EditorTerrainRefreshRequest = RefreshAllTerrain):Void {
 		final current = session;
@@ -1877,12 +1878,15 @@ final class CaxecraftEditorScreen {
 			notice = Invalid;
 			return;
 		}
-		final draft = current.draftSnapshot();
+		final draft = switch current.query(InspectPresentation) {
+			case PresentationObserved(_, value): value;
+			case _: throw "editor returned the wrong presentation observation";
+		};
 		presentationDraft = draft;
 		syncWorldName(draft.title);
 		environment = draft.environment;
 		final previous = projection;
-		projection = projectWorld(draft.world);
+		projection = draft.projection;
 		final runtimeProjection = projection;
 		#if caxecraft_pilot
 		pilotTerrainPatchDirtyChunks = 0;
@@ -1917,8 +1921,8 @@ final class CaxecraftEditorScreen {
 				projectFromWorld(value, editLayerY);
 		};
 		objectGizmos = projectObjects(draft.objects);
-		flowRuleCount = draft.flow.rules.length;
-		zoneRuleLinks = projectZoneRules(draft.flow.rules, draft.objects);
+		flowRuleCount = draft.flowRuleCount;
+		zoneRuleLinks = draft.zoneRuleLinks;
 		final labels:Array<String> = [];
 		for (gizmo in objectGizmos)
 			labels.push(gizmo.id.text());

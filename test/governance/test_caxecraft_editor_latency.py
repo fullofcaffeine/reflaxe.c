@@ -21,6 +21,15 @@ EDITOR_SESSION = (
     / "editor"
     / "EditorSession.hx"
 )
+EDITOR_AUTOMATION = (
+    ROOT
+    / "examples"
+    / "caxecraft"
+    / "src"
+    / "caxecraft"
+    / "editor"
+    / "EditorAutomationProtocol.hx"
+)
 
 
 def section(source: str, start: str, end: str) -> str:
@@ -63,8 +72,20 @@ class CaxecraftEditorLatencyContract(unittest.TestCase):
 
         self.assertIn("terrainRefreshForCommand(value)", apply_tool)
         self.assertIn("terrainRefreshForBatch(commands)", apply_tool)
+        self.assertIn("InspectPresentation", refresh)
+        self.assertNotIn("draftSnapshot()", refresh)
         self.assertIn("terrainPresentation.refreshVoxel", refresh)
         self.assertIn("terrainPresentation.refresh(draft.world", refresh)
+
+    def test_spatial_queries_reuse_the_copy_owned_presentation(self) -> None:
+        source = EDITOR_AUTOMATION.read_text(encoding="utf-8")
+        surface = section(source, "private function encodeSurface", "private function encodeColumn")
+        column = section(source, "private function encodeColumn", "private function encodeMutation")
+
+        for query in (surface, column):
+            self.assertIn("InspectPresentation", query)
+            self.assertNotIn("InspectDraft", query)
+            self.assertNotIn("projectWorld", query)
 
 
 if __name__ == "__main__":

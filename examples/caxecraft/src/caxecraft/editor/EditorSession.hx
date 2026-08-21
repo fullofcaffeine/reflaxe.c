@@ -10,6 +10,7 @@ import caxecraft.editor.EditorObservationPlan.mergeChanges;
 import caxecraft.editor.EditorObservationPlan.sameNodeRef;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPolicy.validate as validateEditorSettings;
+import caxecraft.editor.EditorPresentation.project as projectPresentation;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImageResult;
 import caxecraft.editor.EditorScenarioSnapshot.capture as captureScenario;
@@ -74,7 +75,9 @@ private enum EditorSelectionValidation {
 	canonical image: owned bytes plus their parsed scenario. A preview or commit
 	reuses that image as its unchanged `before` value and creates one new image
 	for the proposed `after` value. This preserves isolation without writing and
-	parsing the current document again before every interaction.
+	parsing the current document again before every interaction. Visual queries
+	derive fresh presentation arrays from the retained parsed value, so an
+	accepted edit does not cause a second CAXEMAP parse on the drawing path.
 **/
 final class EditorSession {
 	final registry:ScenarioContentRegistry;
@@ -254,6 +257,8 @@ final class EditorSession {
 				});
 			case InspectDraft:
 				DraftObserved(currentRevision, draftSnapshot());
+			case InspectPresentation:
+				PresentationObserved(currentRevision, projectPresentation(draftImage.parsed.candidate));
 			case InspectCanonicalDraft:
 				CanonicalDraftObserved(currentRevision, canonicalDraft());
 			case InspectTree:
