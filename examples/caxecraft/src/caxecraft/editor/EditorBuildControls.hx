@@ -2,6 +2,9 @@ package caxecraft.editor;
 
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
+import caxecraft.editor.EditorFocus.EditorFocusMove;
+import caxecraft.editor.EditorFocus.EditorFocusTarget;
+import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 
 /**
@@ -9,9 +12,10 @@ import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
  *
  * The native screen still translates Raylib events at the application edge.
  * These functions decide when Build owns pointer look, what the number keys
- * select, and what a terrain mouse button does. The native screen converts the
- * result into an ordinary editor command. This separation lets the Eval probe
- * protect the input rules without imitating an operating-system mouse.
+ * select, which controls keyboard focus visits, and what a terrain mouse button
+ * does. The native screen converts the result into an ordinary editor command.
+ * This separation lets the Eval probe protect the input rules without
+ * imitating an operating-system mouse.
  */
 /** Whether the Build camera or the surrounding editor controls own the pointer. */
 enum abstract EditorBuildPointerState(Int) {
@@ -68,19 +72,33 @@ function usesDirectTerrainControls(tool:EditorTool):Bool {
 }
 
 /**
- * Map the six visible creation cards to direct Build hotbar slots.
+ * Map the five visible creation cards to direct Build hotbar slots.
  *
- * Fill remains an advanced selection action rather than an invisible seventh
- * slot. Values outside the visible range return `null` and change no tool.
+ * One terrain card owns both mouse buttons, so Build does not expose a separate
+ * Erase mode. Plan keeps the precise Paint and Erase cards. Fill remains an
+ * advanced selection action. Values outside the visible range return `null`.
  */
-function toolForHotbarSlot(slot:Int):Null<EditorTool> {
+function toolForBuildHotbarSlot(slot:Int):Null<EditorTool> {
 	return switch slot {
 		case 1: SelectTool;
 		case 2: PaintTool;
-		case 3: EraseTool;
-		case 4: CheckpointTool;
-		case 5: CatalogObjectTool;
-		case 6: TriggerZoneTool;
+		case 3: CheckpointTool;
+		case 4: CatalogObjectTool;
+		case 5: TriggerZoneTool;
 		case _: null;
 	};
+}
+
+/** Replace Plan's hidden Erase mode with Build's direct terrain mode. */
+function normalizeBuildTool(tool:EditorTool):EditorTool
+	return tool == EraseTool ? PaintTool : tool;
+
+/** Keep semantic focus on a control that the Build shelf shows. */
+function normalizeBuildFocus(focus:EditorFocusTarget):EditorFocusTarget
+	return focus == EraseTool ? GroundTool : focus;
+
+/** Move through the shared focus order and skip Plan's hidden Erase card. */
+function moveBuildFocus(current:EditorFocusTarget, direction:EditorFocusMove):EditorFocusTarget {
+	final next = moveFocus(current, direction);
+	return next == EraseTool ? moveFocus(next, direction) : next;
 }

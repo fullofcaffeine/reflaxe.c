@@ -3,9 +3,12 @@ package caxecraft.qa;
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
+import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
+import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
 import caxecraft.editor.EditorBuildControls.terrainAction;
-import caxecraft.editor.EditorBuildControls.toolForHotbarSlot;
+import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
 import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
@@ -1330,15 +1333,25 @@ final class EditorProbe {
 			&& !usesDirectTerrainControls(TriggerZoneTool),
 			"Build direct terrain controls leaked into object or volume placement");
 		checks++;
-		require(toolForHotbarSlot(1) == SelectTool
-			&& toolForHotbarSlot(2) == PaintTool
-			&& toolForHotbarSlot(3) == EraseTool
-			&& toolForHotbarSlot(4) == CheckpointTool
-			&& toolForHotbarSlot(5) == CatalogObjectTool
-			&& toolForHotbarSlot(6) == TriggerZoneTool
-			&& toolForHotbarSlot(0) == null
-			&& toolForHotbarSlot(7) == null,
-			"Build hotbar slots drifted from the six visible creation cards");
+		require(toolForBuildHotbarSlot(1) == SelectTool
+			&& toolForBuildHotbarSlot(2) == PaintTool
+			&& toolForBuildHotbarSlot(3) == CheckpointTool
+			&& toolForBuildHotbarSlot(4) == CatalogObjectTool
+			&& toolForBuildHotbarSlot(5) == TriggerZoneTool
+			&& toolForBuildHotbarSlot(0) == null
+			&& toolForBuildHotbarSlot(6) == null,
+			"Build hotbar slots drifted from the five visible creation cards");
+		checks++;
+		require(normalizeBuildTool(EraseTool) == PaintTool
+			&& normalizeBuildTool(SelectTool) == SelectTool, "Build retained Plan's hidden Erase mode");
+		checks++;
+		require(normalizeBuildFocus(EditorFocusTarget.EraseTool) == EditorFocusTarget.GroundTool
+			&& normalizeBuildFocus(EditorFocusTarget.CheckpointTool) == EditorFocusTarget.CheckpointTool,
+			"Build retained focus on Plan's hidden Erase card");
+		checks++;
+		require(moveBuildFocus(EditorFocusTarget.GroundTool, EditorFocusMove.Forward) == EditorFocusTarget.CheckpointTool
+			&& moveBuildFocus(EditorFocusTarget.CheckpointTool, EditorFocusMove.Backward) == EditorFocusTarget.GroundTool,
+			"Build focus navigation visited Plan's hidden Erase card");
 		checks++;
 		return checks;
 	}

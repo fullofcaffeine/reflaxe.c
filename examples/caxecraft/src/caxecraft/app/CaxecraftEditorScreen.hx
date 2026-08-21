@@ -6,8 +6,11 @@ import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.moveBuildFocus;
+import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
+import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
 import caxecraft.editor.EditorBuildControls.terrainAction;
-import caxecraft.editor.EditorBuildControls.toolForHotbarSlot;
+import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
 import caxecraft.editor.EditorPackageSession;
 import caxecraft.editor.EditorPackageSession.EditorPackageSaveResult;
@@ -399,21 +402,27 @@ final class CaxecraftEditorScreen {
 		final disclosureWidth = 150.0;
 		final disclosureLeft = left + width - Std.int(disclosureWidth) - 12;
 		final cardGap = 10;
-		final cardWidth = Std.int((disclosureLeft - 10 - (left + 12) - cardGap * 5) / 6);
+		final cardCount = workspaceView == BuildView ? 5 : 6;
+		final cardWidth = Std.int((disclosureLeft - 10 - (left + 12) - cardGap * (cardCount - 1)) / cardCount);
 		drawToolCard(locale, EditorFocusTarget.SelectTool, EditorTool.SelectTool, 1, left + 12, cardTop, cardWidth, 68, UiMessage.EditorSelect,
 			Color.rgba(84, 191, 205));
 		drawToolCard(locale, EditorFocusTarget.GroundTool, EditorTool.PaintTool, 2, left + 12 + (cardWidth + cardGap), cardTop, cardWidth, 68,
 			UiMessage.EditorGround, Color.rgba(111, 174, 91));
-		drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, 3, left + 12 + (cardWidth + cardGap) * 2, cardTop, cardWidth, 68,
-			UiMessage.EditorErase, Color.rgba(218, 103, 78));
-		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, 4, left + 12 + (cardWidth + cardGap) * 3, cardTop, cardWidth, 68,
-			UiMessage.EditorCheckpoint, Color.rgba(76, 209, 198));
+		if (workspaceView == PlanView)
+			drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, 3, left + 12 + (cardWidth + cardGap) * 2, cardTop, cardWidth, 68,
+				UiMessage.EditorErase, Color.rgba(218, 103, 78));
+		final checkpointSlot = workspaceView == BuildView ? 3 : 4;
+		final catalogSlot = checkpointSlot + 1;
+		final triggerSlot = catalogSlot + 1;
+		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, checkpointSlot,
+			left + 12 + (cardWidth + cardGap) * (checkpointSlot - 1), cardTop, cardWidth, 68, UiMessage.EditorCheckpoint, Color.rgba(76, 209, 198));
 		final recipe = contentRegistry.editorObjectAt(0);
 		if (recipe != null)
-			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, 5, left + 12 + (cardWidth + cardGap) * 4, cardTop, cardWidth,
-				68, locale == Locale0 ? recipe.labelEn : recipe.labelEsMx, Color.rgba(226, 151, 72));
-		drawToolCard(locale, EditorFocusTarget.TriggerZoneTool, EditorTool.TriggerZoneTool, 6, left + 12 + (cardWidth + cardGap) * 5, cardTop, cardWidth, 68,
-			UiMessage.EditorTrigger, Color.rgba(210, 105, 230));
+			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, catalogSlot,
+				left + 12 + (cardWidth + cardGap) * (catalogSlot - 1), cardTop, cardWidth, 68, locale == Locale0 ? recipe.labelEn : recipe.labelEsMx,
+				Color.rgba(226, 151, 72));
+		drawToolCard(locale, EditorFocusTarget.TriggerZoneTool, EditorTool.TriggerZoneTool, triggerSlot,
+			left + 12 + (cardWidth + cardGap) * (triggerSlot - 1), cardTop, cardWidth, 68, UiMessage.EditorTrigger, Color.rgba(210, 105, 230));
 
 		if (focusedButtonSized(EditorFocusTarget.WorldList, disclosureLeft, cardTop, disclosureWidth, 30.0, uiCatalog.text(locale, UiMessage.EditorWorldList)))
 			worldListOpen = !worldListOpen;
@@ -847,9 +856,9 @@ final class CaxecraftEditorScreen {
 		}
 		switch command {
 			case Up | Left:
-				focusedControl = moveFocus(focusedControl, Backward);
+				focusedControl = workspaceView == BuildView ? moveBuildFocus(focusedControl, Backward) : moveFocus(focusedControl, Backward);
 			case Right | Down:
-				focusedControl = moveFocus(focusedControl, Forward);
+				focusedControl = workspaceView == BuildView ? moveBuildFocus(focusedControl, Forward) : moveFocus(focusedControl, Forward);
 			case Confirm:
 				return activateFocusedControl();
 			case Cancel:
@@ -987,6 +996,10 @@ final class CaxecraftEditorScreen {
 	/** Change views without touching document bytes, history, or selection. */
 	function setWorkspaceView(view:EditorWorkspaceView):Void {
 		workspaceView = view;
+		if (view == BuildView) {
+			activeTool = normalizeBuildTool(activeTool);
+			focusedControl = normalizeBuildFocus(focusedControl);
+		}
 		setBuildPointerState(nextPointerState(buildPointerState, view == BuildView, Raylib.IsWindowFocused(), false, false));
 		invalidatePreview();
 	}
@@ -1069,7 +1082,7 @@ final class CaxecraftEditorScreen {
 			Raylib.EnableCursor();
 	}
 
-	/** Select one visible creation card from its direct Build number key. */
+	/** Select one of the five visible Build cards from its number key. */
 	function selectBuildHotbarTool():Void {
 		var slot = 0;
 		if (Raylib.IsKeyPressed(KeyboardKey.One))
@@ -1082,9 +1095,7 @@ final class CaxecraftEditorScreen {
 			slot = 4;
 		else if (Raylib.IsKeyPressed(KeyboardKey.Five))
 			slot = 5;
-		else if (Raylib.IsKeyPressed(KeyboardKey.Six))
-			slot = 6;
-		final tool = toolForHotbarSlot(slot);
+		final tool = toolForBuildHotbarSlot(slot);
 		if (tool != null)
 			setActiveTool(tool);
 	}

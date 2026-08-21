@@ -216,11 +216,15 @@ boundary.
 
 The interaction hierarchy puts direct in-world editing first. Creators can
 point at textured terrain, place or remove cells and objects, and see the result
-immediately. Plan is an advanced tool for hidden layers, trigger volumes, logic
-links, large selections, and fast navigation. It is not the default authoring
-experience. Issue `haxe_c-xge.19.6.3` owns the remaining work. This work must
-extend ordinary presentation beyond terrain and complete the familiar in-world
-interaction rules.
+immediately. Build has one Ground card because the two mouse buttons select the
+terrain operation. The left button removes terrain. The right button places
+terrain. Plan keeps separate Ground and Erase cards for precise work.
+
+Plan is an advanced tool for hidden layers, trigger volumes, logic links, large
+selections, and fast navigation. It is not the default authoring experience.
+Issue `haxe_c-xge.19.6.3` owns the remaining work. This work must extend ordinary
+presentation beyond terrain and complete the familiar in-world interaction
+rules.
 
 History assigns a small state identity to each accepted edit, undo, and redo.
 Save records that identity only after publication succeeds, so a normal frame
@@ -254,13 +258,15 @@ The current controls are:
 - click inside Build to capture the pointer, then move the mouse to look;
 - press Escape once to release the pointer; press it again to cancel the
   selected tool or leave through the normal editor flow;
-- press 1 through 6 to choose the six visible creation cards;
+- press 1 through 5 to choose the five visible Build cards;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
 - use the wheel to move along the view direction;
 - press F to restore the deterministic whole-world view;
 - use the minus and plus layer controls to move the Build grid and Plan slice;
   and
-- left-click at the crosshair to apply the selected tool.
+- left-click at the crosshair to remove terrain or use the selected object tool;
+  and
+- right-click at the crosshair to place terrain.
 
 Switching to Plan, opening the environment panel, starting Test Play, leaving
 the editor, or losing window focus also releases the pointer. Plan keeps its
