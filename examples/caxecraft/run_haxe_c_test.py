@@ -679,10 +679,11 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
         ),
         split_source_checks=(
             GeneratedSourceCheck(

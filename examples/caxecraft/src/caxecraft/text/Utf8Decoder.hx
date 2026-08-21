@@ -39,6 +39,8 @@ final class Utf8Decoder {
 	 *
 	 * `maximumBytes` is checked before allocation. A non-positive limit rejects
 	 * every non-empty input, which keeps the caller's configured bound explicit.
+	 * Valid non-NUL ASCII runs are copied together; multibyte input still takes
+	 * the scalar path that enforces canonical UTF-8 and exact error offsets.
 	 */
 	public static function decode(input:Bytes, maximumBytes:Int):Utf8DecodeResult {
 		if (input.length > maximumBytes)
@@ -48,13 +50,21 @@ final class Utf8Decoder {
 		final output = new StringBuf();
 		var offset = 0;
 		while (offset < input.length) {
+			final asciiStart = offset;
+			while (offset < input.length) {
+				final value = input.get(offset);
+				if (value == 0 || value > 0x7f)
+					break;
+				offset++;
+			}
+			if (offset > asciiStart)
+				output.add(input.getString(asciiStart, offset - asciiStart));
+			if (offset == input.length)
+				break;
 			final first = input.get(offset);
 			var scalar = 0;
 			var width = 0;
-			if (first <= 0x7f) {
-				scalar = first;
-				width = 1;
-			} else if (first >= 0xc2 && first <= 0xdf) {
+			if (first >= 0xc2 && first <= 0xdf) {
 				scalar = first & 0x1f;
 				width = 2;
 			} else if (first >= 0xe0 && first <= 0xef) {
@@ -75,7 +85,7 @@ final class Utf8Decoder {
 				scalar = (scalar << 6) | (continuation & 0x3f);
 			}
 			final overlong = (width == 2 && scalar < 0x80) || (width == 3 && scalar < 0x800) || (width == 4 && scalar < 0x10000);
-			if (overlong || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff) || scalar == 0)
+			if (overlong || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff))
 				return Utf8Rejected(offset);
 			output.addChar(scalar);
 			offset += width;
