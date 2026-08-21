@@ -235,7 +235,8 @@ final class EditorProbe {
 		checkHardBounds();
 		checkHistoryStateChanges();
 		checkSnapshotFidelity();
-		checkDeferredVoxelValidation();
+		checkPlacementInputIsolation();
+		checkDeferredPlacementValidation();
 		checkTestPlayLocksEditing();
 		checkExternalTestPlayAtomicity();
 		checkImmediateRejections(session);
@@ -2276,8 +2277,30 @@ final class EditorProbe {
 		require(speaker != null && speaker.text() == "narrator", "editor snapshot changed narrator-named speaker into narration");
 	}
 
-	/** Prove a deferred voxel snapshot reconstructs exact diagnostic coordinates. */
-	static function checkDeferredVoxelValidation():Void {
+	/** Prove a caller-owned mutable placement payload cannot mutate an accepted draft. */
+	static function checkPlacementInputIsolation():Void {
+		final session = open(defaultEditorSettings());
+		final tags = [new ScenarioTag("before")];
+		final objectId = id("placement.input-isolation");
+		expectApplied(session.apply(PutObject({
+			id: objectId,
+			tags: tags,
+			placement: Checkpoint(transform(1000, 0, 1000))
+		})), Placement, "place caller-owned object payload");
+		final accepted = session.canonicalDraft();
+
+		tags.push(new ScenarioTag("after"));
+		require(session.canonicalDraft().compare(accepted) == 0, "caller mutation changed accepted placement bytes");
+
+		var observed:Null<ScenarioObject> = null;
+		for (object in session.draftSnapshot().objects)
+			if (object.id.text() == objectId.text())
+				observed = object;
+		require(observed != null && observed.tags.length == 1, "caller tag mutation entered the accepted placement");
+	}
+
+	/** Prove a deferred placement snapshot reconstructs exact diagnostic coordinates. */
+	static function checkDeferredPlacementValidation():Void {
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 4, height: 1, depth: 1})), WorldShape, "resize deferred-validation world");
 		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "add deferred-validation palette entry");
@@ -2290,15 +2313,15 @@ final class EditorProbe {
 			predicate: Always,
 			actions: [SetCheckpoint(PLAYER)]
 		})), Rule, "add deferred-validation diagnostic");
-		expectApplied(session.apply(PaintVoxel({x: 1, y: 0, z: 0}, 1)), Voxel, "paint through deferred snapshot path");
+		expectApplied(session.apply(RotateObjectBy(PLAYER, 90)), Placement, "rotate through deferred snapshot path");
 
 		final observed = switch session.query(InspectValidation) {
 			case ValidationObserved(_, DraftInvalid(diagnostics)): diagnostics;
-			case _: throw "deferred voxel snapshot did not retain its semantic diagnostic";
+			case _: throw "deferred placement snapshot did not retain its semantic diagnostic";
 		};
 		final expected = validationDiagnostics(session.canonicalDraft());
 		require(sameDiagnosticCoordinates(observed, expected),
-			'deferred voxel validation did not reconstruct canonical source coordinates: observed=${diagnosticCoordinatesText(observed)} expected=${diagnosticCoordinatesText(expected)}');
+			'deferred placement validation did not reconstruct canonical source coordinates: observed=${diagnosticCoordinatesText(observed)} expected=${diagnosticCoordinatesText(expected)}');
 	}
 
 	/** Compare every semantic diagnostic location from the same canonical bytes. */

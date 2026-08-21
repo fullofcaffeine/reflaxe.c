@@ -373,12 +373,19 @@ grouped into one all-or-nothing edit. It does not raise the voxel gesture,
 selection, history-entry, or history-byte bounds: every command inside the
 transaction must still satisfy those existing limits.
 
-This full-snapshot strategy favors simple, trustworthy recovery for the first
-bounded editor. Later editor slices must measure real map sizes and gesture
-latency. The native screen does not request a complete scenario copy after an
-accepted edit. It asks `EditorSession` for fresh presentation values derived
-from the retained parsed draft. This avoids a second CAXEMAP parse while exact
-history continues to use canonical before-and-after bytes.
+The editor keeps exact canonical bytes after each accepted edit. Voxel and
+placement reducers also own all changed arrays and records. These reducers can
+defer the parse that restores source coordinates until validation, Save, or
+Test Play needs it. Other commands still use the complete write-and-parse path.
+
+This boundary reduced a repeated Frostmere object rotation from an 18.811 ms
+median to 2.144 ms on the same loaded development host. The diagnostic used 60
+accepted edits before and after the change. This result describes interaction
+latency on that host, not an uncontended compiler or game benchmark.
+
+The native screen does not request a complete scenario copy after an accepted
+edit. It asks `EditorSession` for fresh presentation values from the retained
+draft. Exact history continues to use canonical before-and-after bytes.
 
 If history snapshots become the next bottleneck, a later slice can introduce
 typed command-specific inverse data. It must retain bounded paint gestures,

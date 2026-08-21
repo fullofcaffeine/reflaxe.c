@@ -15,7 +15,7 @@ import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImageResult;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioParseState;
 import caxecraft.editor.EditorScenarioSnapshot.capture as captureScenario;
-import caxecraft.editor.EditorScenarioSnapshot.captureVoxelEdit;
+import caxecraft.editor.EditorScenarioSnapshot.captureReducerOwnedEdit;
 import caxecraft.editor.EditorScenarioSnapshot.restore as restoreScenario;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -461,14 +461,16 @@ final class EditorSession {
 	/**
 	 * Snapshot one reducer result with the narrowest safe ownership boundary.
 	 *
-	 * Voxel commands consume only scalar coordinates and rebuild the complete
-	 * world arrays, so they cannot retain mutable input from a caller. Other
-	 * command payloads keep the general codec round trip until their individual
-	 * ownership contracts prove that the parser can also be deferred.
+	 * Voxel commands rebuild complete world arrays. Placement commands rebuild
+	 * or deep-copy every placement record and tag array. Neither group can retain
+	 * mutable input from a caller. Other command payloads keep the general codec
+	 * round trip until their ownership contracts prove parser deferral is safe.
 	 */
 	function captureReduction(command:EditorCommand, scenario:Scenario):EditorScenarioImageResult {
 		return switch command {
-			case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _): captureVoxelEdit(scenario);
+			case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) | StampPrefab(_, _, _, _) | PutObject(_) |
+				MoveObjectBy(_, _) | RotateObjectBy(_, _) | ResizeTriggerTo(_, _) | RemoveObject(_):
+				captureReducerOwnedEdit(scenario);
 			case _: captureScenario(scenario);
 		}
 	}

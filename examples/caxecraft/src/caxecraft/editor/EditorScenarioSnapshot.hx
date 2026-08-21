@@ -30,7 +30,7 @@ enum EditorScenarioParseState {
 	/** The image came through the public reader and has exact parser metadata. */
 	ParsedScenarioImage(parsed:ParsedScenario);
 
-	/** A trusted voxel reducer wrote these bytes; validation must parse on demand. */
+	/** A trusted copy-owning reducer wrote these bytes; validation parses on demand. */
 	DeferredScenarioParse;
 }
 
@@ -46,9 +46,10 @@ enum EditorScenarioImageResult {
 
 	This avoids mutable array aliases between edit, history, and test play while
 	also ensuring every editor-produced draft remains representable by the public
-	file format. It performs no filesystem work. A separate voxel-only capture
-	writes canonical bytes but defers parsing because that reducer constructs all
-	changed arrays from scalar inputs and the session keeps the result private.
+	file format. It performs no filesystem work. A separate reducer-owned capture
+	writes canonical bytes but defers parsing when the reducer constructs or
+	deep-copies all changed arrays and records and the session keeps the result
+	private.
 
 	The codec round trip is a stateless operation over caller-owned values, so
 	module functions are clearer than a class containing only static methods.
@@ -69,17 +70,17 @@ function capture(scenario:Scenario):EditorScenarioImageResult {
 }
 
 /**
-	Capture canonical bytes after a reducer-owned voxel edit without parsing them.
+	Capture canonical bytes after a copy-owning reducer edit without parsing them.
 
-	Voxel reducers build a new world from scalar coordinates and palette codes;
-	they retain no caller-owned arrays or records. The remaining scenario values
-	come from the session's private image. This lets the session publish exact
-	canonical bytes and history immediately while deferring source-coordinate
-	reconstruction until validation needs it. Do not use this boundary for a
-	command that can retain caller-owned structured input.
+	Eligible reducers either build values from scalar input or deep-copy every
+	structured input that they retain. The remaining scenario values come from
+	the session's private image. This lets the session publish exact canonical
+	bytes and history immediately while deferring source-coordinate reconstruction
+	until validation needs it. Do not use this boundary for a command that can
+	retain caller-owned structured input.
 **/
 @:noCompletion
-function captureVoxelEdit(scenario:Scenario):EditorScenarioImageResult {
+function captureReducerOwnedEdit(scenario:Scenario):EditorScenarioImageResult {
 	if (scenario.formatVersion != ScenarioWriter.FORMAT_VERSION)
 		return ImageRejected(UnsupportedFormatVersion(scenario.formatVersion, ScenarioWriter.FORMAT_VERSION));
 	if (containsNestedChoice(scenario))

@@ -262,7 +262,7 @@ private function stampPrefab(scenario:Scenario, id:ScenarioId, prefabType:Conten
 	if (hasObject(scenario, id))
 		return ReductionRejected(DuplicateObject(id));
 	final objects = scenario.objects.copy();
-	objects.push({id: id, tags: tags.copy(), placement: Prefab(prefabType, transform)});
+	objects.push({id: id, tags: tags.copy(), placement: Prefab(prefabType, copyTransform(transform))});
 	return ready(withObjects(scenario, objects), Prefab);
 }
 
@@ -318,7 +318,7 @@ private function resizeTriggerTo(scenario:Scenario, id:ScenarioId, size:VoxelSiz
 	return ready(withObjects(scenario, putObject(scenario.objects, {
 		id: existing.id,
 		tags: existing.tags.copy(),
-		placement: TriggerZone({origin: bounds.origin, size: size})
+		placement: TriggerZone({origin: copyPoint(bounds.origin), size: copySize(size)})
 	})), Placement);
 }
 
@@ -363,7 +363,7 @@ private function movePlacement(placement:ObjectPlacement, worldSize:VoxelSize, d
 		case TriggerZone(bounds):
 			if (!canMoveBounds(bounds, worldSize, delta)) null; else TriggerZone({
 				origin: {x: bounds.origin.x + delta.x, y: bounds.origin.y + delta.y, z: bounds.origin.z + delta.z},
-				size: bounds.size
+				size: copySize(bounds.size)
 			});
 		case StatefulObject(objectType, initialState, transform):
 			movedTransform(transform, worldSize, delta, value -> StatefulObject(objectType, initialState, value));
@@ -519,14 +519,49 @@ private function putObject(values:Array<ScenarioObject>, replacement:ScenarioObj
 	for (value in values)
 		if (same(value.id, replacement.id)) {
 			if (!replaced)
-				result.push({id: replacement.id, tags: replacement.tags.copy(), placement: replacement.placement});
+				result.push(copyObject(replacement));
 			replaced = true;
 		} else
 			result.push(value);
 	if (!replaced)
-		result.push({id: replacement.id, tags: replacement.tags.copy(), placement: replacement.placement});
+		result.push(copyObject(replacement));
 	return result;
 }
+
+/** Copy one placement command payload so later caller mutation cannot enter the draft. */
+private function copyObject(value:ScenarioObject):ScenarioObject
+	return {id: value.id, tags: value.tags.copy(), placement: copyPlacement(value.placement)};
+
+/** Deep-copy every closed placement role while preserving its semantic payload. */
+private function copyPlacement(value:ObjectPlacement):ObjectPlacement {
+	return switch value {
+		case PlayerSpawn(transform): PlayerSpawn(copyTransform(transform));
+		case Checkpoint(transform): Checkpoint(copyTransform(transform));
+		case Item(itemType, quantity, transform): Item(itemType, quantity, copyTransform(transform));
+		case Entity(entityType, transform): Entity(entityType, copyTransform(transform));
+		case Npc(npcType, dialogue, transform): Npc(npcType, dialogue, copyTransform(transform));
+		case Prefab(prefabType, transform): Prefab(prefabType, copyTransform(transform));
+		case TriggerZone(bounds): TriggerZone({origin: copyPoint(bounds.origin), size: copySize(bounds.size)});
+		case StatefulObject(objectType, initialState, transform): StatefulObject(objectType, initialState, copyTransform(transform));
+	};
+}
+
+/** Copy one authored transform record at the editor ownership boundary. */
+private inline function copyTransform(value:ScenarioTransform):ScenarioTransform
+	return {
+		xMilli: value.xMilli,
+		yMilli: value.yMilli,
+		zMilli: value.zMilli,
+		yawDegrees: value.yawDegrees
+	};
+
+/** Copy one voxel coordinate record at the editor ownership boundary. */
+private inline function copyPoint(value:VoxelPoint):VoxelPoint
+	return {x: value.x, y: value.y, z: value.z};
+
+/** Copy one voxel extent record at the editor ownership boundary. */
+private inline function copySize(value:VoxelSize):VoxelSize
+	return {width: value.width, height: value.height, depth: value.depth};
 
 private function putFluid(values:Array<ScenarioFluid>, replacement:ScenarioFluid):Array<ScenarioFluid> {
 	final result = [for (value in values) if (!same(value.id, replacement.id)) value];
