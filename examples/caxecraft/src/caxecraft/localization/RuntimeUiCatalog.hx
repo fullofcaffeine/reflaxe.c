@@ -169,6 +169,8 @@ final class RuntimeUiCatalog {
 			"brand",
 			"capture_prompt",
 			"controls",
+			"conversation_help",
+			"conversation_narrator",
 			"debug_cells",
 			"debug_draws",
 			"debug_frame",
@@ -235,6 +237,8 @@ final class RuntimeUiCatalog {
 			"pause_help",
 			"pause_title",
 			"place_blocked",
+			"player_fallen",
+			"return_prompt",
 			"title_fallback"
 		];
 
@@ -245,6 +249,8 @@ final class RuntimeUiCatalog {
 			"Brand",
 			"CapturePrompt",
 			"Controls",
+			"ConversationHelp",
+			"ConversationNarrator",
 			"DebugCells",
 			"DebugDraws",
 			"DebugFrame",
@@ -311,6 +317,8 @@ final class RuntimeUiCatalog {
 			"PauseHelp",
 			"PauseTitle",
 			"PlaceBlocked",
+			"PlayerFallen",
+			"ReturnPrompt",
 			"TitleFallback"
 		];
 
@@ -363,73 +371,77 @@ final class RuntimeUiCatalog {
 			case Brand: 1;
 			case CapturePrompt: 2;
 			case Controls: 3;
-			case DebugCells: 4;
-			case DebugDraws: 5;
-			case DebugFrame: 6;
-			case DebugTick: 7;
-			case DebugVisible: 8;
-			case EditorAdvanced: 9;
-			case EditorBack: 10;
-			case EditorBuild: 11;
-			case EditorCanvasHelp: 12;
-			case EditorCheckpoint: 13;
-			case EditorCoordinates: 14;
-			case EditorDelete: 15;
-			case EditorDuplicate: 16;
-			case EditorEnvironment: 17;
-			case EditorEnvironmentClouds: 18;
-			case EditorEnvironmentDone: 19;
-			case EditorEnvironmentEast: 20;
-			case EditorEnvironmentEnabled: 21;
-			case EditorEnvironmentNorth: 22;
-			case EditorEnvironmentOff: 23;
-			case EditorEnvironmentOn: 24;
-			case EditorEnvironmentRadius: 25;
-			case EditorEnvironmentSeed: 26;
-			case EditorEnvironmentSky: 27;
-			case EditorEnvironmentSouth: 28;
-			case EditorEnvironmentSun: 29;
-			case EditorEnvironmentWater: 30;
-			case EditorEnvironmentWest: 31;
-			case EditorErase: 32;
-			case EditorGround: 33;
-			case EditorInvalid: 34;
-			case EditorKeepEditing: 35;
-			case EditorLayer: 36;
-			case EditorLeaveWithoutSaving: 37;
-			case EditorMaterial: 38;
-			case EditorMoreDetails: 39;
-			case EditorName: 40;
-			case EditorNewWorld: 41;
-			case EditorPlan: 42;
-			case EditorReady: 43;
-			case EditorRedo: 44;
-			case EditorSave: 45;
-			case EditorSaveFailed: 46;
-			case EditorSaved: 47;
-			case EditorScene: 48;
-			case EditorSelect: 49;
-			case EditorStopTest: 50;
-			case EditorTest: 51;
-			case EditorTesting: 52;
-			case EditorTitle: 53;
-			case EditorToolList: 54;
-			case EditorTrigger: 55;
-			case EditorUndo: 56;
-			case EditorUnsavedChanges: 57;
-			case EditorValid: 58;
-			case EditorValidate: 59;
-			case EditorWorldList: 60;
-			case HealthFull: 61;
-			case MenuAdventure: 62;
-			case MenuCreative: 63;
-			case MenuEditor: 64;
-			case MenuInstructions: 65;
-			case NoBlockInReach: 66;
-			case PauseHelp: 67;
-			case PauseTitle: 68;
-			case PlaceBlocked: 69;
-			case TitleFallback: 70;
+			case ConversationHelp: 4;
+			case ConversationNarrator: 5;
+			case DebugCells: 6;
+			case DebugDraws: 7;
+			case DebugFrame: 8;
+			case DebugTick: 9;
+			case DebugVisible: 10;
+			case EditorAdvanced: 11;
+			case EditorBack: 12;
+			case EditorBuild: 13;
+			case EditorCanvasHelp: 14;
+			case EditorCheckpoint: 15;
+			case EditorCoordinates: 16;
+			case EditorDelete: 17;
+			case EditorDuplicate: 18;
+			case EditorEnvironment: 19;
+			case EditorEnvironmentClouds: 20;
+			case EditorEnvironmentDone: 21;
+			case EditorEnvironmentEast: 22;
+			case EditorEnvironmentEnabled: 23;
+			case EditorEnvironmentNorth: 24;
+			case EditorEnvironmentOff: 25;
+			case EditorEnvironmentOn: 26;
+			case EditorEnvironmentRadius: 27;
+			case EditorEnvironmentSeed: 28;
+			case EditorEnvironmentSky: 29;
+			case EditorEnvironmentSouth: 30;
+			case EditorEnvironmentSun: 31;
+			case EditorEnvironmentWater: 32;
+			case EditorEnvironmentWest: 33;
+			case EditorErase: 34;
+			case EditorGround: 35;
+			case EditorInvalid: 36;
+			case EditorKeepEditing: 37;
+			case EditorLayer: 38;
+			case EditorLeaveWithoutSaving: 39;
+			case EditorMaterial: 40;
+			case EditorMoreDetails: 41;
+			case EditorName: 42;
+			case EditorNewWorld: 43;
+			case EditorPlan: 44;
+			case EditorReady: 45;
+			case EditorRedo: 46;
+			case EditorSave: 47;
+			case EditorSaveFailed: 48;
+			case EditorSaved: 49;
+			case EditorScene: 50;
+			case EditorSelect: 51;
+			case EditorStopTest: 52;
+			case EditorTest: 53;
+			case EditorTesting: 54;
+			case EditorTitle: 55;
+			case EditorToolList: 56;
+			case EditorTrigger: 57;
+			case EditorUndo: 58;
+			case EditorUnsavedChanges: 59;
+			case EditorValid: 60;
+			case EditorValidate: 61;
+			case EditorWorldList: 62;
+			case HealthFull: 63;
+			case MenuAdventure: 64;
+			case MenuCreative: 65;
+			case MenuEditor: 66;
+			case MenuInstructions: 67;
+			case NoBlockInReach: 68;
+			case PauseHelp: 69;
+			case PauseTitle: 70;
+			case PlaceBlocked: 71;
+			case PlayerFallen: 72;
+			case ReturnPrompt: 73;
+			case TitleFallback: 74;
 			case _: -1;
 		};
 	}

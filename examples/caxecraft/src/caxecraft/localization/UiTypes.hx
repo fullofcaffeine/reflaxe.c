@@ -103,4 +103,16 @@ enum abstract UiMessage(Int) {
 
 	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
 	var EditorTrigger = 70;
+
+	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
+	var ConversationHelp = 71;
+
+	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
+	var ConversationNarrator = 72;
+
+	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
+	var ReturnPrompt = 73;
+
+	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
+	var PlayerFallen = 74;
 }

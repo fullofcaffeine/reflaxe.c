@@ -35,8 +35,24 @@
       "id": "controls",
       "symbol": "Controls",
       "text": {
-        "en": "WASD MOVE  1-8 ITEMS  SPACE JUMP/RISE  SHIFT DIVE  E INTERACT  LMB MINE  RMB USE",
-        "es-MX": "WASD MOVER  1-8 OBJETOS  ESPACIO SALTAR/SUBIR  SHIFT BUCEAR  E INTERACTUAR  IZQ MINAR  DER USAR"
+        "en": "WASD MOVE  1-9 ITEMS  SPACE JUMP/RISE  SHIFT DIVE  E INTERACT  LMB MINE  RMB USE",
+        "es-MX": "WASD MOVER  1-9 OBJETOS  ESPACIO SALTAR/SUBIR  SHIFT BUCEAR  E INTERACTUAR  IZQ MINAR  DER USAR"
+      }
+    },
+    {
+      "id": "conversation_help",
+      "symbol": "ConversationHelp",
+      "text": {
+        "en": "E: COMPLETE / CONTINUE   HOLD SPACE: SKIP",
+        "es-MX": "E: COMPLETAR / SEGUIR   MANTÉN ESPACIO: OMITIR"
+      }
+    },
+    {
+      "id": "conversation_narrator",
+      "symbol": "ConversationNarrator",
+      "text": {
+        "en": "STORY",
+        "es-MX": "HISTORIA"
       }
     },
     {
@@ -565,6 +581,22 @@
       "text": {
         "en": "PLACE BLOCKED: PLAYER OR WORLD EDGE",
         "es-MX": "NO SE PUEDE COLOCAR: JUGADOR O BORDE"
+      }
+    },
+    {
+      "id": "player_fallen",
+      "symbol": "PlayerFallen",
+      "text": {
+        "en": "HAXIRIO FELL",
+        "es-MX": "HAXIRIO CAYÓ"
+      }
+    },
+    {
+      "id": "return_prompt",
+      "symbol": "ReturnPrompt",
+      "text": {
+        "en": "E  RETURN TO THE MEADOW",
+        "es-MX": "E  VOLVER AL PRADO"
       }
     },
     {

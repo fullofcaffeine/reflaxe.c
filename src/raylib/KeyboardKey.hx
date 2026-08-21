@@ -13,6 +13,7 @@ enum abstract KeyboardKey(Int) {
 	var Six = 54;
 	var Seven = 55;
 	var Eight = 56;
+	var Nine = 57;
 	var A = 65;
 	var B = 66;
 	var C = 67;

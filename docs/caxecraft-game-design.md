@@ -8,7 +8,7 @@ Status: accepted product and technical direction; implementation is staged.
 The deterministic domain, first original art pack, and first native Raylib
 feasibility slice exist today. That slice can move, collide, jump, select,
 remove, and place colored blocks; it now has the textured title, a typed
-eight-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
+nine-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
 input pilots. A small authored spawn meadow now introduces Nia through
 content-owned dialogue and berries, and renders Nia and one fixed-step Mossling from
 their reviewed original entity-atlas cells, with code-drawn fallbacks if the
@@ -414,7 +414,7 @@ and covered by C-versus-Eval traces.
 | --- | --- | --- |
 | Movement | first-person walk, step, jump, swim, collision, safe respawn | no vehicles, mounts, climbing system, or physics sandbox |
 | Building | pick, remove, place, selection preview, finite world bounds | no infinite terrain, automation machines, or multiplayer edits |
-| Inventory | eight-slot hotbar, bounded backpack, stackable blocks/items, clear full state | no large crafting tree or arbitrary item scripting |
+| Inventory | nine-slot hotbar, bounded backpack, stackable blocks/items, clear full state | no large crafting tree or arbitrary item scripting |
 | Tools | Haxeforge mining, combat, and interaction forms | no durability grind or dozens of weapon tiers |
 | Survival | health, bounded stamina/air where relevant, consumable recovery, checkpoints | no hunger treadmill unless playtesting proves it improves the short campaign |
 | Enemies | Mossling, Ember Wisp, biome-justified additions, Browser | no unbounded spawn ecology or general pathfinding engine |

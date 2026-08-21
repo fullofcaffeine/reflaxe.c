@@ -65,6 +65,17 @@ import caxecraft.app.MotionInterpolation.reset as resetMotion;
 import caxecraft.app.MotionInterpolation.sample as sampleMotion;
 import caxecraft.app.MotionInterpolation.start as startMotion;
 import caxecraft.app.MotionInterpolation.MotionHistory;
+import caxecraft.app.HudLayout.HudLayout;
+import caxecraft.app.HudLayout.HudBreathGlyph;
+import caxecraft.app.HudLayout.HudRectangle;
+import caxecraft.app.HudLayout.HudReplacementState;
+import caxecraft.app.HudLayout.hudLayout;
+import caxecraft.app.HudLayout.hudBreathGlyph;
+import caxecraft.app.HudLayout.hudModalLayout;
+import caxecraft.app.HudLayout.hudReplacementState;
+import caxecraft.app.HudLayout.hudWrappedCharacterLimit;
+import caxecraft.app.HudLayout.hudWrappedLineLimit;
+import caxecraft.app.HudLayout.hudWrappedTextFits;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.SpawnCameraHeading.headingForSpawn;
 import caxecraft.app.StatefulObjectRenderer.drawStatefulObjects;
@@ -627,6 +638,7 @@ final class CaxecraftApp {
 		final runtimeModels = new RuntimeVoxelModelCatalog();
 		final modelAnimations = new VoxelFrameAnimationPlayer();
 		var cameraWaterBlend = 0.0;
+		var debugHudVisible = false;
 		var inventory:InventoryState = Inventory.starter();
 		#if caxecraft_pilot
 		// Only the deterministic provider may replace the ordinary starter kit.
@@ -882,6 +894,10 @@ final class CaxecraftApp {
 			#else
 			final focused = Raylib.IsWindowFocused();
 			final frameInput:GameInputFrame = RaylibGameInput.sample(screenCapturesPointer(screen), screenPausesSimulation(screen));
+			#if caxecraft_devmode
+			if (RaylibGameInput.debugHudTogglePressed())
+				debugHudVisible = !debugHudVisible;
+			#end
 			// Project the direct record immediately. Only scalar values stay live
 			// through the loop, so generated C retains one obvious input sample.
 			final moveForward = frameInput.moveForward;
@@ -1274,6 +1290,7 @@ final class CaxecraftApp {
 				&& !screenShowsEditor(screen)
 				&& screen != AppScreen.EditorTestPlay
 				&& focused
+				&& !characterIsDefeated(character.vitals)
 				&& pausePressed) {
 				screen = togglePause(screen);
 				accumulator = 0.0;
@@ -1862,6 +1879,7 @@ final class CaxecraftApp {
 				final conversationSpeaker = conversation == null
 					|| activeDialogue == null ? null : levelView.presentation().dialogueSpeaker(activeDialogue, conversation.lineIndex);
 				final hudView:HudView = {
+					debugMetricsVisible: debugHudVisible,
 					metrics: {
 						visibleBlocks: totalVisible,
 						drawCalls: totalDrawCalls,
@@ -1904,7 +1922,7 @@ final class CaxecraftApp {
 					interactionPrompt: availableInteractionPrompt,
 					enemy: enemyActor,
 					enemyPhase: enemyPhase.phase,
-					levelLabel: levelLabel,
+					levelTitle: levelView.scenarioTitle(scenarioLocale(locale)),
 					objectiveTitle: levelView.objectiveTitle(currentObjectiveId, scenarioLocale(locale)),
 					journalTitle: latestJournalId == null ? "" : levelView.presentation().journalTitle(latestJournalId, scenarioLocale(locale)),
 					journalBody: latestJournalId == null ? "" : levelView.presentation().journalBody(latestJournalId, scenarioLocale(locale)),
@@ -2550,30 +2568,12 @@ final class CaxecraftApp {
 	/** Draw one immutable post-simulation HUD snapshot using borrowed textures. */
 	static function drawHud(view:HudView, resources:HudResources, runtimeTextures:RuntimeTextureAtlasCatalog,
 			contentRegistry:caxecraft.content.RuntimeContentPack.RuntimeContentRegistry, uiCatalog:RuntimeUiCatalog):Void {
-		final visible = view.metrics.visibleBlocks;
-		final drawCalls = view.metrics.drawCalls;
-		final frames = view.metrics.renderedFrames;
-		final updates = view.metrics.completedTicks;
 		final paused = view.paused;
-		final captured = view.pointerCaptured;
-		final placementBlocked = view.feedback.placementBlocked;
-		final hit = view.hit;
 		final mode = view.mode;
 		final locale = view.locale;
 		final inventory = view.inventory;
 		final conversation = view.conversation;
-		final availableInteractionPrompt = view.interactionPrompt;
-		final enemy = view.enemy;
-		final enemyPhase = view.enemyPhase;
 		final vitals = view.character.vitals;
-		final strikeHit = view.feedback.strikeHit;
-		final enemyDefeated = view.feedback.enemyDefeated;
-		final enemyAttacked = view.feedback.enemyAttacked;
-		final pickedUp = view.feedback.pickedUp;
-		final pickupAmount = view.feedback.pickupAmount;
-		final inventoryFullReason = view.feedback.inventoryFullReason;
-		final recoveryFeedback = view.feedback.recoveryDecision;
-		final recoveryVisible = view.feedback.recoveryVisible;
 		final hudTexture = resources.hudTexture;
 		final hudTextureReady = resources.hudTextureReady;
 		final itemTexture = resources.itemTexture;
@@ -2581,7 +2581,6 @@ final class CaxecraftApp {
 		final adventureItemTexture = resources.adventureItemTexture;
 		final adventureItemTextureReady = resources.adventureItemTextureReady;
 		final aquaticEquipmentCode = view.character.aquaticEquipmentCode;
-		final aquaticEquipmentVisible = view.character.aquaticEquipmentVisible;
 		final headSubmerged = view.character.headSubmerged;
 		final breathTicks = view.character.breathTicks;
 		final maximumBreathTicks = view.character.maximumBreathTicks;
@@ -2590,160 +2589,232 @@ final class CaxecraftApp {
 		final height = Raylib.GetScreenHeight();
 		final centerX = Std.int(width / 2);
 		final centerY = Std.int(height / 2);
+		final layout:HudLayout = hudLayout(width, height, Inventory.SLOT_COUNT);
 		final text = CaxecraftPalette.hudText();
-		Raylib.DrawLine(centerX - 8, centerY, centerX - 3, centerY, text);
-		Raylib.DrawLine(centerX + 3, centerY, centerX + 8, centerY, text);
-		Raylib.DrawLine(centerX, centerY - 8, centerX, centerY - 3, text);
-		Raylib.DrawLine(centerX, centerY + 3, centerX, centerY + 8, text);
-		Raylib.DrawRectangle(18, 18, 460, 108, CaxecraftPalette.hudPanel());
-		Raylib.DrawRectangleLines(18, 18, 460, 108, CaxecraftPalette.selection());
-		drawUiText(uiCatalog, locale, UiMessage.Brand, 32, 28, 20, text);
-		// This runtime identity makes a campaign handoff visible without baking a
-		// level name into the executable or the static localization catalog.
-		Raylib.DrawTextString(view.levelLabel, 250, 30, 16, CaxecraftPalette.selection());
-		drawUiText(uiCatalog, locale, UiMessage.DebugCells, 32, 58, 14, text);
-		HudDigits.drawNumber(World.VOLUME, 82, 59, 5, CaxecraftPalette.selection());
-		drawUiText(uiCatalog, locale, UiMessage.DebugVisible, 160, 58, 14, text);
-		HudDigits.drawNumber(visible, 230, 59, 5, CaxecraftPalette.selection());
-		drawUiText(uiCatalog, locale, UiMessage.DebugDraws, 326, 58, 14, text);
-		HudDigits.drawNumber(drawCalls, 382, 59, 5, CaxecraftPalette.selection());
-		drawUiText(uiCatalog, locale, UiMessage.DebugFrame, 32, 86, 12, text);
-		HudDigits.drawNumber(frames, 82, 85, 6, text);
-		drawUiText(uiCatalog, locale, UiMessage.DebugTick, 174, 86, 12, text);
-		HudDigits.drawNumber(updates, 216, 85, 6, text);
-		drawHotbar(inventory, hudTexture, hudTextureReady, itemTexture, itemTextureReady, width, height);
-		drawHealth(vitals, hudTexture, hudTextureReady, width);
-		if (aquaticEquipmentCode >= 0)
-			AuthoredItemRenderer.drawEquippedIcon(contentRegistry, aquaticEquipmentCode, itemTexture, itemTextureReady, adventureItemTexture,
-				adventureItemTextureReady, width - 226, 18, 42);
-		if (headSubmerged)
-			drawBreath(breathTicks, maximumBreathTicks, width, height);
-		drawUiText(uiCatalog, locale, UiMessage.Controls, 20, height - 22, 14, text);
-		if (mode == GameMode.Adventure && view.objectiveTitle.length > 0)
-			Raylib.DrawTextString(view.objectiveTitle, 32, 110, 14, CaxecraftPalette.selection());
-		if (!paused && conversation != null) {
-			drawConversation(view, resources, runtimeTextures, locale, width, height, text);
-		} else if (!paused && availableInteractionPrompt != InteractionPrompt.NoInteractionPrompt) {
-			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
-			final prompt = switch availableInteractionPrompt {
-				case TalkInteractionPrompt: GameplayMessage.GuideTalk;
-				case UseInteractionPrompt: GameplayMessage.ObjectUse;
-				case NoInteractionPrompt: GameplayMessage.GuideTalk;
-			};
-			drawScenarioText(presentation, locale, prompt, centerX - 110, centerY + 74, 18, text);
-		}
-		if (!characterIsDefeated(enemy.vitals)) {
-			if (enemyPhase == ActorControllerPhase.Windup || enemyPhase == ActorControllerPhase.Roaring)
-				drawScenarioText(presentation, locale, GameplayMessage.EnemyWindup, width - 300, 28, 16, CaxecraftPalette.damage());
-			else if (enemyPhase == ActorControllerPhase.Chasing || enemyPhase == ActorControllerPhase.Charging)
-				drawScenarioText(presentation, locale, GameplayMessage.EnemyAlert, width - 180, 28, 16, CaxecraftPalette.selection());
-			else if (enemyPhase == ActorControllerPhase.TailSweep)
-				drawScenarioText(presentation, locale, GameplayMessage.EnemyHitWarning, width - 330, 28, 16, CaxecraftPalette.damage());
-			else if (enemyPhase == ActorControllerPhase.Stunned)
-				drawScenarioText(presentation, locale, GameplayMessage.EnemyVulnerable, width - 300, 28, 16, CaxecraftPalette.selection());
-		}
-		if (strikeHit)
-			drawScenarioText(presentation, locale, GameplayMessage.AttackHit, centerX - 70, centerY - 54, 18, CaxecraftPalette.selection());
-		if (enemyDefeated)
-			drawScenarioText(presentation, locale, GameplayMessage.EnemyDroppedItems, width - 285, 54, 16, CaxecraftPalette.selection());
-		if (enemyAttacked)
-			drawScenarioText(presentation, locale, GameplayMessage.EnemyHitWarning, width - 330, 82, 16, CaxecraftPalette.damage());
-		if (pickedUp) {
-			final pickupMessage = pickupAmount == 1 ? GameplayMessage.PickupOne : GameplayMessage.PickupMany;
-			drawScenarioText(presentation, locale, pickupMessage, centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
-		}
-		if (inventoryFullReason == InventoryFullReason.BerryStack)
-			drawScenarioText(presentation, locale, GameplayMessage.BerryStackFull, centerX - 150, centerY + 48, 16, CaxecraftPalette.inventoryFull());
-		else if (inventoryFullReason == InventoryFullReason.BlockStack)
-			drawScenarioText(presentation, locale, GameplayMessage.BlockStackFull, centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
-		if (recoveryVisible) {
-			if (recoveryFeedback == RecoveryDecision.UseBerries)
-				drawScenarioText(presentation, locale, GameplayMessage.RecoveryUsed, centerX - 88, centerY + 24, 18, CaxecraftPalette.recovery());
-			else if (recoveryFeedback == RecoveryDecision.HealthAlreadyFull)
-				drawUiText(uiCatalog, locale, UiMessage.HealthFull, centerX - 96, centerY + 24, 18, CaxecraftPalette.selection());
-			else if (recoveryFeedback == RecoveryDecision.RecoveryStackEmpty)
-				drawScenarioText(presentation, locale, GameplayMessage.RecoveryEmpty, centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
-		}
-		if (aquaticEquipmentVisible)
-			drawUiText(uiCatalog, locale, UiMessage.AquaticGearEquipped, centerX - 128, centerY + 24, 18, CaxecraftPalette.selection());
-		if (vitals.safeTicks > 15)
-			Raylib.DrawRectangleLines(4, 4, width - 8, height - 8, CaxecraftPalette.damage());
-		if (characterIsDefeated(vitals)) {
-			Raylib.DrawRectangle(centerX - 250, centerY - 74, 500, 148, CaxecraftPalette.hudPanel());
-			Raylib.DrawRectangleLines(centerX - 250, centerY - 74, 500, 148, CaxecraftPalette.damage());
-			drawScenarioText(presentation, locale, GameplayMessage.PlayerFallen, centerX - 122, centerY - 42, 24, text);
-			drawScenarioText(presentation, locale, GameplayMessage.ReturnPrompt, centerX - 125, centerY + 10, 18, CaxecraftPalette.selection());
-		}
-		if (paused) {
-			final hasJournal = view.journalTitle.length > 0 || view.journalBody.length > 0;
-			final panelX = hasJournal ? centerX - 330 : centerX - 170;
-			final panelY = hasJournal ? centerY - 110 : centerY - 48;
-			final panelWidth = hasJournal ? 660 : 340;
-			final panelHeight = hasJournal ? 220 : 96;
-			Raylib.DrawRectangle(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.hudPanel());
-			Raylib.DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.selection());
-			drawUiText(uiCatalog, locale, UiMessage.PauseTitle, centerX - 48, panelY + 18, 24, text);
-			if (hasJournal) {
-				Raylib.DrawTextString(view.journalTitle, panelX + 30, panelY + 68, 18, CaxecraftPalette.selection());
-				drawWrappedText(view.journalBody, panelX + 30, panelY + 104, 16, 58, 22, 3, text);
-			}
-			drawUiText(uiCatalog, locale, UiMessage.PauseHelp, centerX - 160, panelY + panelHeight - 34, 16, text);
-		} else if (placementBlocked) {
-			drawUiText(uiCatalog, locale, UiMessage.PlaceBlocked, centerX - 170, centerY + 26, 14, CaxecraftPalette.selection());
-		} else if (!captured) {
-			drawUiText(uiCatalog, locale, UiMessage.CapturePrompt, centerX - 90, centerY + 26, 14, text);
-		} else if (!hit.hit) {
-			drawUiText(uiCatalog, locale, UiMessage.NoBlockInReach, centerX - 105, centerY + 26, 14, text);
+		switch hudReplacementState(characterIsDefeated(vitals), paused, conversation != null) {
+			case DefeatedHud:
+				drawDefeat(view, uiCatalog, width, height, text);
+			case PausedHud:
+				drawPause(view, uiCatalog, width, height, text);
+			case ConversationHud:
+				drawConversation(view, resources, runtimeTextures, uiCatalog, locale, width, height, text);
+			case NormalHud:
+				final targetAvailable = view.hit.hit || view.interactionPrompt != InteractionPrompt.NoInteractionPrompt;
+				drawCrosshair(layout, hudTexture, hudTextureReady, centerX, centerY, targetAvailable, text);
+				if (mode == GameMode.Adventure && view.objectiveTitle.length > 0)
+					drawObjective(layout, view.levelTitle, view.objectiveTitle, hudTexture, hudTextureReady, text);
+				drawHotbar(inventory, hudTexture, hudTextureReady, itemTexture, itemTextureReady, layout);
+				drawHealth(vitals, hudTexture, hudTextureReady, layout);
+				if (aquaticEquipmentCode >= 0)
+					AuthoredItemRenderer.drawEquippedIcon(contentRegistry, aquaticEquipmentCode, itemTexture, itemTextureReady, adventureItemTexture,
+						adventureItemTextureReady, layout.equipment.x, layout.equipment.y, layout.equipment.width);
+				if (headSubmerged)
+					drawBreath(breathTicks, maximumBreathTicks, layout, width);
+				drawEnemyAlert(view, layout, locale, text);
+				drawActionNotice(view, layout, uiCatalog, locale, text);
+				if (view.debugMetricsVisible)
+					drawDiagnostics(view, layout, uiCatalog, locale, text);
+				if (vitals.safeTicks > 15)
+					Raylib.DrawRectangleLines(4, 4, width - 8, height - 8, CaxecraftPalette.damage());
 		}
 	}
 
+	/** Draw the defeat panel as the highest-priority replacement state. */
+	static function drawDefeat(view:HudView, uiCatalog:RuntimeUiCatalog, width:Int, height:Int, color:Color):Void {
+		final panel = hudModalLayout(width, height, false).defeat;
+		Raylib.DrawRectangle(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.damage());
+		drawUiText(uiCatalog, view.locale, UiMessage.PlayerFallen, panel.x + 28, panel.y + 32, 24, color);
+		drawUiText(uiCatalog, view.locale, UiMessage.ReturnPrompt, panel.x + 28, panel.y + 84, 18, CaxecraftPalette.selection());
+	}
+
+	/** Draw pause or journal content as one replacement state. */
+	static function drawPause(view:HudView, uiCatalog:RuntimeUiCatalog, width:Int, height:Int, color:Color):Void {
+		final hasJournal = view.journalTitle.length > 0 || view.journalBody.length > 0;
+		final panel = hudModalLayout(width, height, hasJournal).pause;
+		Raylib.DrawRectangle(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.selection());
+		drawUiText(uiCatalog, view.locale, UiMessage.PauseTitle, panel.x + 30, panel.y + 18, 24, color);
+		if (hasJournal) {
+			Raylib.DrawTextString(view.journalTitle, panel.x + 30, panel.y + 68, 18, CaxecraftPalette.selection());
+			drawWrappedText(view.journalBody, panel.x + 30, panel.y + 104, 16, Std.int((panel.width - 60) / 8), 22, 3, color);
+		}
+		drawUiText(uiCatalog, view.locale, UiMessage.PauseHelp, panel.x + 30, panel.y + panel.height - 34, 16, color);
+	}
+
+	/** Draw the reviewed crosshair cell, or a line fallback when the atlas is unavailable. */
+	static function drawCrosshair(layout:HudLayout, hudTexture:Texture2D, hudTextureReady:Bool, centerX:Int, centerY:Int, targetAvailable:Bool,
+			color:Color):Void {
+		final size = layout.crosshairSize;
+		if (hudTextureReady)
+			CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.Crosshair, centerX - Std.int(size / 2), centerY - Std.int(size / 2), size);
+		else {
+			final arm = Std.int(size / 2);
+			Raylib.DrawLine(centerX - arm, centerY, centerX - 3, centerY, color);
+			Raylib.DrawLine(centerX + 3, centerY, centerX + arm, centerY, color);
+			Raylib.DrawLine(centerX, centerY - arm, centerX, centerY - 3, color);
+			Raylib.DrawLine(centerX, centerY + 3, centerX, centerY + arm, color);
+		}
+		if (targetAvailable) {
+			final ringSize = size + 6;
+			Raylib.DrawRectangleLines(centerX - Std.int(ringSize / 2), centerY - Std.int(ringSize / 2), ringSize, ringSize, CaxecraftPalette.selection());
+		}
+	}
+
+	/** Keep the current authored objective visible without covering the world target. */
+	static function drawObjective(layout:HudLayout, levelLabel:String, objectiveTitle:String, hudTexture:Texture2D, hudTextureReady:Bool, color:Color):Void {
+		final panel = layout.objective;
+		Raylib.DrawRectangle(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.selection());
+		if (hudTextureReady)
+			CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.QuestMarker, panel.x + 9, panel.y + 9, layout.compact ? 34 : 44);
+		Raylib.DrawTextString(levelLabel, panel.x + 56, panel.y + 8, layout.compact ? 12 : 14, CaxecraftPalette.selection());
+		drawWrappedText(objectiveTitle, panel.x + 56, panel.y + 27, layout.compact ? 13 : 14, layout.compact ? 31 : 42, 16, 2, color);
+	}
+
+	/** Show one urgent enemy state in the reserved upper notice region. */
+	static function drawEnemyAlert(view:HudView, layout:HudLayout, locale:LocaleCursor, color:Color):Void {
+		if (characterIsDefeated(view.enemy.vitals))
+			return;
+		var message = GameplayMessage.EnemyAlert;
+		var border = CaxecraftPalette.selection();
+		switch view.enemyPhase {
+			case Windup | Roaring:
+				message = GameplayMessage.EnemyWindup;
+				border = CaxecraftPalette.damage();
+			case Chasing | Charging:
+			case TailSweep:
+				message = GameplayMessage.EnemyHitWarning;
+				border = CaxecraftPalette.damage();
+			case Stunned:
+				message = GameplayMessage.EnemyVulnerable;
+			case Stationary | Resting | Wandering | Returning | Recovering | Defeated:
+				return;
+		}
+		final value = view.presentation.message(gameplayMessageId(message), scenarioLocale(locale));
+		if (value.length == 0)
+			return;
+		drawNoticePanel(layout.alert, value, layout.compact ? 13 : 15, color, border, layout.compact ? 34 : 40);
+	}
+
+	/** Select one short action or result so feedback never stacks over the target. */
+	static function drawActionNotice(view:HudView, layout:HudLayout, uiCatalog:RuntimeUiCatalog, locale:LocaleCursor, color:Color):Void {
+		var value = "";
+		var noticeColor = color;
+		final feedback = view.feedback;
+		if (!view.pointerCaptured)
+			value = uiCatalog.text(locale, UiMessage.CapturePrompt);
+		else if (feedback.enemyAttacked) {
+			value = view.presentation.message(gameplayMessageId(GameplayMessage.EnemyHitWarning), scenarioLocale(locale));
+			noticeColor = CaxecraftPalette.damage();
+		} else if (feedback.inventoryFullReason == InventoryFullReason.BerryStack) {
+			value = view.presentation.message(gameplayMessageId(GameplayMessage.BerryStackFull), scenarioLocale(locale));
+			noticeColor = CaxecraftPalette.inventoryFull();
+		} else if (feedback.inventoryFullReason == InventoryFullReason.BlockStack) {
+			value = view.presentation.message(gameplayMessageId(GameplayMessage.BlockStackFull), scenarioLocale(locale));
+			noticeColor = CaxecraftPalette.inventoryFull();
+		} else if (feedback.placementBlocked)
+			value = uiCatalog.text(locale, UiMessage.PlaceBlocked);
+		else if (feedback.enemyDefeated)
+			value = view.presentation.message(gameplayMessageId(GameplayMessage.EnemyDroppedItems), scenarioLocale(locale));
+		else if (feedback.strikeHit)
+			value = view.presentation.message(gameplayMessageId(GameplayMessage.AttackHit), scenarioLocale(locale));
+		else if (feedback.pickedUp)
+			value = view.presentation.message(gameplayMessageId(feedback.pickupAmount == 1 ? GameplayMessage.PickupOne : GameplayMessage.PickupMany),
+				scenarioLocale(locale));
+		else if (feedback.recoveryVisible) {
+			if (feedback.recoveryDecision == RecoveryDecision.UseBerries)
+				value = view.presentation.message(gameplayMessageId(GameplayMessage.RecoveryUsed), scenarioLocale(locale));
+			else if (feedback.recoveryDecision == RecoveryDecision.HealthAlreadyFull)
+				value = uiCatalog.text(locale, UiMessage.HealthFull);
+			else if (feedback.recoveryDecision == RecoveryDecision.RecoveryStackEmpty)
+				value = view.presentation.message(gameplayMessageId(GameplayMessage.RecoveryEmpty), scenarioLocale(locale));
+		} else if (view.character.aquaticEquipmentVisible)
+			value = uiCatalog.text(locale, UiMessage.AquaticGearEquipped);
+		else if (view.interactionPrompt != InteractionPrompt.NoInteractionPrompt) {
+			final message = view.interactionPrompt == InteractionPrompt.TalkInteractionPrompt ? GameplayMessage.GuideTalk : GameplayMessage.ObjectUse;
+			value = view.presentation.message(gameplayMessageId(message), scenarioLocale(locale));
+		}
+		if (value.length > 0)
+			drawNoticePanel(layout.action, value, layout.compact ? 13 : 15, noticeColor, CaxecraftPalette.selection(), layout.compact ? 31 : 38);
+	}
+
+	/** Draw developer-only counters after the player explicitly presses F3. */
+	static function drawDiagnostics(view:HudView, layout:HudLayout, uiCatalog:RuntimeUiCatalog, locale:LocaleCursor, color:Color):Void {
+		final panel = layout.diagnostics;
+		final metrics = view.metrics;
+		Raylib.DrawRectangle(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.selection());
+		drawUiText(uiCatalog, locale, UiMessage.DebugVisible, panel.x + 10, panel.y + 8, 12, color);
+		HudDigits.drawNumber(metrics.visibleBlocks, panel.x + 76, panel.y + 7, 5, CaxecraftPalette.selection());
+		drawUiText(uiCatalog, locale, UiMessage.DebugDraws, panel.x + 162, panel.y + 8, 12, color);
+		HudDigits.drawNumber(metrics.drawCalls, panel.x + 214, panel.y + 7, 5, CaxecraftPalette.selection());
+		drawUiText(uiCatalog, locale, UiMessage.DebugFrame, panel.x + 10, panel.y + 32, 12, color);
+		HudDigits.drawNumber(metrics.renderedFrames, panel.x + 62, panel.y + 31, 6, color);
+		drawUiText(uiCatalog, locale, UiMessage.DebugTick, panel.x + 164, panel.y + 32, 12, color);
+		HudDigits.drawNumber(metrics.completedTicks, panel.x + 206, panel.y + 31, 6, color);
+	}
+
+	/** Draw one compact notice with bounded wrapping inside its assigned region. */
+	static function drawNoticePanel(panel:HudRectangle, value:String, fontSize:Int, color:Color, border:Color, maximumCharacters:Int):Void {
+		Raylib.DrawRectangle(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panel.x, panel.y, panel.width, panel.height, border);
+		drawWrappedText(value, panel.x + 12, panel.y + 9, fontSize, maximumCharacters, fontSize + 2, 2, color);
+	}
+
 	/** Draw the blocking conversation as a responsive lower-screen panel. */
-	static function drawConversation(view:HudView, resources:HudResources, runtimeTextures:RuntimeTextureAtlasCatalog, locale:LocaleCursor, width:Int,
-			height:Int, color:Color):Void {
+	static function drawConversation(view:HudView, resources:HudResources, runtimeTextures:RuntimeTextureAtlasCatalog, uiCatalog:RuntimeUiCatalog,
+			locale:LocaleCursor, width:Int, height:Int, color:Color):Void {
 		final conversation = view.conversation;
 		final activeDialogue = view.activeDialogue;
 		if (conversation == null || activeDialogue == null)
 			return;
-		final margin = width < 900 ? 18 : 48;
-		final panelWidth = width - margin * 2;
-		final panelHeight = height < 600 ? 148 : 184;
-		final panelX = margin;
-		final panelY = height - panelHeight - 34;
-		Raylib.DrawRectangle(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.hudPanel());
-		Raylib.DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, CaxecraftPalette.selection());
+		final layout = hudModalLayout(width, height, false);
+		final panel = layout.conversation;
+		final portrait = layout.conversationPortrait;
+		final textArea = layout.conversationText;
+		final help = layout.conversationHelp;
+		Raylib.DrawRectangle(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.hudPanel());
+		Raylib.DrawRectangleLines(panel.x, panel.y, panel.width, panel.height, CaxecraftPalette.selection());
 
-		final portraitSize = panelHeight - 34;
 		var portraitDrawn = false;
 		if (view.conversationPortraitAsset == "entities" && resources.entityTextureReady)
-			portraitDrawn = CaxecraftAtlas.drawEntityPortrait(resources.entityTexture, view.conversationPortraitCell, panelX + 16, panelY + 16, portraitSize,
-				portraitSize);
+			portraitDrawn = CaxecraftAtlas.drawEntityPortrait(resources.entityTexture, view.conversationPortraitCell, portrait.x, portrait.y, portrait.width,
+				portrait.height);
 		else
-			portraitDrawn = runtimeTextures.drawCell(view.conversationPortraitAsset, view.conversationPortraitCell, panelX + 16, panelY + 16, portraitSize,
-				portraitSize);
+			portraitDrawn = runtimeTextures.drawCell(view.conversationPortraitAsset, view.conversationPortraitCell, portrait.x, portrait.y, portrait.width,
+				portrait.height);
 		if (!portraitDrawn) {
-			Raylib.DrawRectangle(panelX + 16, panelY + 16, portraitSize, portraitSize, CaxecraftPalette.sky());
-			Raylib.DrawRectangleLines(panelX + 16, panelY + 16, portraitSize, portraitSize, CaxecraftPalette.hudText());
+			Raylib.DrawRectangle(portrait.x, portrait.y, portrait.width, portrait.height, CaxecraftPalette.sky());
+			Raylib.DrawRectangleLines(portrait.x, portrait.y, portrait.width, portrait.height, CaxecraftPalette.hudText());
 		}
 
-		final textX = panelX + portraitSize + 36;
 		if (view.conversationSpeaker == null)
-			Raylib.DrawTextString("STORY", textX, panelY + 18, 20, CaxecraftPalette.selection());
+			drawUiText(uiCatalog, locale, UiMessage.ConversationNarrator, textArea.x, panel.y + 18, 20, CaxecraftPalette.selection());
 		else
 			Raylib.DrawTextString(view.conversationSpeakerName.length == 0 ? conversationSpeakerLabel(view.conversationSpeaker) : view.conversationSpeakerName,
-				textX,
-				panelY
+				textArea.x,
+				panel.y
 				+ 18, 20, CaxecraftPalette.selection());
 		final source = view.presentation.dialogueLine(activeDialogue, conversation.lineIndex, scenarioLocale(locale));
 		final visibleCount = conversation.visibleCharacters < source.length ? conversation.visibleCharacters : source.length;
-		drawWrappedText(source.substring(0, visibleCount), textX, panelY + 52, 18, panelWidth < 780 ? 44 : 70, 25, 3, color);
+		final visibleText = source.substring(0, visibleCount);
+		var bodySize = 18;
+		var lineHeight = 25;
+		var characterLimit = hudWrappedCharacterLimit(textArea, bodySize);
+		var lineLimit = hudWrappedLineLimit(textArea, lineHeight);
+		if (!hudWrappedTextFits(source, characterLimit < 70 ? characterLimit : 70, lineLimit)) {
+			bodySize = 16;
+			lineHeight = 22;
+			characterLimit = hudWrappedCharacterLimit(textArea, bodySize);
+			lineLimit = hudWrappedLineLimit(textArea, lineHeight);
+		}
+		drawWrappedText(visibleText, textArea.x, textArea.y, bodySize, characterLimit < 70 ? characterLimit : 70, lineHeight, lineLimit, color);
 		final lineCount = view.presentation.dialogueLineCount(activeDialogue);
-		HudDigits.drawNumber(conversation.lineIndex + 1, panelX + panelWidth - 76, panelY + 17, 1, color);
-		Raylib.DrawTextString("/", panelX + panelWidth - 52, panelY + 18, 14, color);
-		HudDigits.drawNumber(lineCount, panelX + panelWidth - 34, panelY + 17, 1, color);
-		if (locale == LocaleCursor.Locale1)
-			Raylib.DrawTextString("E: COMPLETAR / SEGUIR   MANTEN ESPACIO: OMITIR", textX, panelY + panelHeight - 30, 14, color);
-		else
-			Raylib.DrawTextString("E: COMPLETE / CONTINUE   HOLD SPACE: SKIP", textX, panelY + panelHeight - 30, 14, color);
+		HudDigits.drawNumber(conversation.lineIndex + 1, panel.x + panel.width - 76, panel.y + 17, 1, color);
+		Raylib.DrawTextString("/", panel.x + panel.width - 52, panel.y + 18, 14, color);
+		HudDigits.drawNumber(lineCount, panel.x + panel.width - 34, panel.y + 17, 1, color);
+		drawUiText(uiCatalog, locale, UiMessage.ConversationHelp, help.x, help.y, 14, color);
 	}
 
 	/** Turn one authored speaker ID into a readable fallback without campaign mappings. */
@@ -2807,7 +2878,7 @@ final class CaxecraftApp {
 		};
 
 	/** Draw ten bubbles from deterministic fixed-tick breath, with no text. */
-	static function drawBreath(breathTicks:Int, maximumBreathTicks:Int, width:Int, height:Int):Void {
+	static function drawBreath(breathTicks:Int, maximumBreathTicks:Int, layout:HudLayout, width:Int):Void {
 		final bubbleCount = 10;
 		var filled = 0;
 		if (maximumBreathTicks > 0)
@@ -2817,46 +2888,47 @@ final class CaxecraftApp {
 		if (filled > bubbleCount)
 			filled = bubbleCount;
 		final startX = Std.int((width - (bubbleCount * 18 - 4)) / 2);
-		final y = height - 128;
+		final y = layout.breath.y + 6;
 		var bubble = 0;
 		while (bubble < bubbleCount) {
-			if (bubble < filled)
-				Raylib.DrawCircle(startX + bubble * 18, y, c.Float32.fromFloat(6.0), CaxecraftPalette.breathFull());
-			else
-				Raylib.DrawCircle(startX + bubble * 18, y, c.Float32.fromFloat(6.0), CaxecraftPalette.breathEmpty());
+			switch hudBreathGlyph(bubble, filled) {
+				case FilledBreath:
+					Raylib.DrawCircle(startX + bubble * 18, y, c.Float32.fromFloat(6.0), CaxecraftPalette.breathFull());
+				case DepletedBreath:
+					Raylib.DrawRectangleLines(startX + bubble * 18 - 6, y - 6, 12, 12, CaxecraftPalette.breathEmpty());
+			}
 			bubble++;
 		}
 	}
 
 	/** Draw three whole/half/empty hearts from the reviewed HUD atlas. */
-	static function drawHealth(vitals:VitalsState, hudTexture:Texture2D, hudTextureReady:Bool, width:Int):Void {
+	static function drawHealth(vitals:VitalsState, hudTexture:Texture2D, hudTextureReady:Bool, layout:HudLayout):Void {
 		var heart = 0;
 		while (heart < 3) {
-			final x = width - 170 + heart * 50;
+			final x = layout.health.x + heart * (layout.heartSize + layout.heartGap);
 			final points = vitals.health - heart * 2;
 			if (hudTextureReady) {
 				if (points >= 2)
-					CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.HealthFull, x, 18, 42);
+					CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.HealthFull, x, layout.health.y, layout.heartSize);
 				else if (points == 1)
-					CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.HealthHalf, x, 18, 42);
+					CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.HealthHalf, x, layout.health.y, layout.heartSize);
 				else
-					CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.HealthEmpty, x, 18, 42);
+					CaxecraftAtlas.drawHudGlyph(hudTexture, HudGlyph.HealthEmpty, x, layout.health.y, layout.heartSize);
 			} else if (points > 0)
-				Raylib.DrawRectangle(x, 22, 34, 26, CaxecraftPalette.damage());
+				Raylib.DrawRectangle(x, layout.health.y + 4, layout.heartSize - 8, layout.heartSize - 12, CaxecraftPalette.damage());
 			else
-				Raylib.DrawRectangleLines(x, 22, 34, 26, CaxecraftPalette.hudText());
+				Raylib.DrawRectangleLines(x, layout.health.y + 4, layout.heartSize - 8, layout.heartSize - 12, CaxecraftPalette.hudText());
 			heart++;
 		}
 	}
 
 	/** Draw the bounded inventory directly from two reviewed 4x4 source atlases. */
-	static function drawHotbar(inventory:InventoryState, hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool, width:Int,
-			height:Int):Void {
-		final slotSize = 64;
-		final gap = 4;
-		final totalWidth = Inventory.SLOT_COUNT * slotSize + (Inventory.SLOT_COUNT - 1) * gap;
-		final startX = Std.int((width - totalWidth) / 2);
-		final y = height - 96;
+	static function drawHotbar(inventory:InventoryState, hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool,
+			layout:HudLayout):Void {
+		final slotSize = layout.slotSize;
+		final gap = layout.slotGap;
+		final startX = layout.hotbar.x;
+		final y = layout.hotbar.y;
 		var slot = 0;
 		while (slot < Inventory.SLOT_COUNT) {
 			final x = startX + slot * (slotSize + gap);
@@ -2871,7 +2943,7 @@ final class CaxecraftApp {
 			}
 			if (itemTextureReady)
 				CaxecraftAtlas.drawItem(itemTexture, Inventory.itemAt(slot), x + 6, y + 4, slotSize - 12);
-			HudDigits.drawNumber(Inventory.countAt(inventory, slot), x + 39, y + 44, 2, CaxecraftPalette.hudText());
+			HudDigits.drawNumber(Inventory.countAt(inventory, slot), x + slotSize - 25, y + slotSize - 20, 2, CaxecraftPalette.hudText());
 			slot++;
 		}
 	}

@@ -446,7 +446,7 @@ Use `WASD` to move, the mouse to look, Space to jump, and left click to use the
 selected item's primary action: remove a block normally or strike while the
 Copper Sword is selected. Right click uses the selected item's secondary
 action: it places a selected block or eats selected berries when health is not
-full. Number keys `1` through `8` or the
+full. Number keys `1` through `9` or the
 mouse wheel to select the hotbar, Escape to pause and read the latest unlocked
 journal clue, and `Q` to quit. Creative mode does not consume placed blocks; the current
 Adventure feasibility path has finite stacks and returns eligible mined blocks
@@ -454,6 +454,13 @@ to them. It checks room before removal, so a full matching stack leaves the
 block in the world and shows a capacity message. Losing focus pauses and releases the cursor; clicking the paused
 window captures it again without also mining. The window may be resized down
 to 800 by 450.
+
+The play interface keeps the world target clear. The objective stays at the
+upper left. Health and equipment stay at the upper right. One short action or
+result appears above the hotbar. A conversation, pause panel, or defeat panel
+replaces the normal play interface while it is active. Developer builds can
+show performance counters with `F3`. Normal builds and pilot captures hide
+these counters.
 
 Movement uses a deterministic 50 ms simulation tick, but the camera does not
 jump only twenty times per second. `MotionInterpolation` keeps the previous
@@ -568,7 +575,7 @@ smoke rejects that shape; ordinary resizing and the logical 1280 by 720 game
 remain available while high-DPI support is fixed separately.
 
 This is a finite playable feasibility slice with a textured title, typed
-eight-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
+nine-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
 bounded collect/consume/place rules. Nia provides the first authored friendly
 interaction, and nearby berries demonstrate content-owned pickups; one original Mossling provides bounded
 rest/wander/chase/return movement, a warned attack and recovery cycle, aimed
@@ -993,7 +1000,7 @@ The bounded inventory has its own sub-second renderer-independent proof:
 npm run test:caxecraft-inventory
 ```
 
-It covers the fixed eight-slot catalog, exact selection/wrap behavior, finite
+It covers the fixed nine-slot catalog, exact selection/wrap behavior, finite
 stack clamping, collect/consume, empty/full edges, and target-neutral source
 boundary under two locales. The native movement pilot then proves that the
 same inventory selection reaches the real textured hotbar. The gameplay probe

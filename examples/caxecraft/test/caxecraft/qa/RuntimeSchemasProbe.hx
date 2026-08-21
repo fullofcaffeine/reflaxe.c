@@ -160,7 +160,7 @@ function selfCheck():Int {
 	}
 
 	if (catalog.localeCount() != 2
-		|| catalog.messageCount() != 71
+		|| catalog.messageCount() != 75
 		|| catalog.text(LocaleCursor.Locale0, UiMessage.Brand) != "CAXECRAFT  //  C + HAXE"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
@@ -169,7 +169,7 @@ function selfCheck():Int {
 		return 9;
 	}
 	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
-	if (traceUi != 7128)
+	if (traceUi != 7528)
 		return 36;
 
 	return negativeChecks();
@@ -182,6 +182,8 @@ function allUiMessagesHaveText(catalog:RuntimeUiCatalog):Bool {
 		Brand,
 		CapturePrompt,
 		Controls,
+		ConversationHelp,
+		ConversationNarrator,
 		DebugCells,
 		DebugDraws,
 		DebugFrame,
@@ -248,6 +250,8 @@ function allUiMessagesHaveText(catalog:RuntimeUiCatalog):Bool {
 		PauseHelp,
 		PauseTitle,
 		PlaceBlocked,
+		PlayerFallen,
+		ReturnPrompt,
 		TitleFallback
 	];
 	for (message in messages)

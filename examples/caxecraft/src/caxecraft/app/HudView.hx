@@ -30,6 +30,9 @@ import caxecraft.app.ConversationFlow.ConversationState;
 	controller phase come from the authoritative generic session.
 **/
 typedef HudView = {
+	/** True only after a developer explicitly toggles performance metrics. */
+	final debugMetricsVisible:Bool;
+
 	/** Performance and deterministic-clock facts shown by the debug panel. */
 	final metrics:HudMetricsView;
 
@@ -84,8 +87,8 @@ typedef HudView = {
 	/** Read-only generic controller phase used for enemy prompt presentation. */
 	final enemyPhase:ActorControllerPhase;
 
-	/** Runtime-selected campaign level ID, or the standalone map path. */
-	final levelLabel:String;
+	/** Localized title from the currently published scenario. */
+	final levelTitle:String;
 
 	/** Localized initial objective selected from the same published level. */
 	final objectiveTitle:String;

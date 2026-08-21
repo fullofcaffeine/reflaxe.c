@@ -11,6 +11,12 @@ import raylib.Raylib;
 final class RaylibGameInput {
 	static inline final LOOK_SENSITIVITY:Float = 0.0025;
 
+	/** Toggle developer metrics without adding that command to release input. */
+	#if caxecraft_devmode
+	public static inline function debugHudTogglePressed():Bool
+		return Raylib.IsKeyPressed(KeyboardKey.F3);
+	#end
+
 	public static inline function sample(captured:Bool, paused:Bool):GameInputFrame {
 		var forward = 0.0;
 		var right = 0.0;
@@ -61,6 +67,8 @@ final class RaylibGameInput {
 			hotbarSelection = 6;
 		if (Raylib.IsKeyPressed(KeyboardKey.Eight))
 			hotbarSelection = 7;
+		if (Raylib.IsKeyPressed(KeyboardKey.Nine))
+			hotbarSelection = 8;
 		final wheel = Raylib.GetMouseWheelMove().toFloat();
 		var hotbarCycle = 0;
 		if (wheel > 0.0)

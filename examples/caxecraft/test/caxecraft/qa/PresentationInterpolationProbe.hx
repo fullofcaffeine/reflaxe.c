@@ -16,9 +16,20 @@ import caxecraft.app.MotionInterpolation.advance;
 import caxecraft.app.MotionInterpolation.reset;
 import caxecraft.app.MotionInterpolation.sample;
 import caxecraft.app.MotionInterpolation.start;
+import caxecraft.app.HudLayout.HudRectangle;
+import caxecraft.app.HudLayout.HudBreathGlyph;
+import caxecraft.app.HudLayout.HudReplacementState;
+import caxecraft.app.HudLayout.hudBreathGlyph;
+import caxecraft.app.HudLayout.hudLayout;
+import caxecraft.app.HudLayout.hudModalLayout;
+import caxecraft.app.HudLayout.hudRectanglesOverlap;
+import caxecraft.app.HudLayout.hudReplacementState;
+import caxecraft.app.HudLayout.hudWrappedCharacterLimit;
+import caxecraft.app.HudLayout.hudWrappedLineLimit;
 import caxecraft.app.StatefulObjectVisual.StatefulObjectVisualKind;
 import caxecraft.app.StatefulObjectVisual.statefulObjectVisual;
 import caxecraft.domain.CharacterBody;
+import caxecraft.gameplay.Inventory;
 
 /**
 	Cross-target specification for fixed-step presentation interpolation.
@@ -141,8 +152,119 @@ function selfCheck():Int {
 			return 29;
 		case ConversationCloses:
 	};
+	var failure = hudViewportFailure(800, 450, true);
+	if (failure != 0)
+		return 30 + failure;
+	failure = hudViewportFailure(899, 599, true);
+	if (failure != 0)
+		return 50 + failure;
+	failure = hudViewportFailure(900, 600, false);
+	if (failure != 0)
+		return 70 + failure;
+	failure = hudViewportFailure(999, 600, false);
+	if (failure != 0)
+		return 90 + failure;
+	failure = hudViewportFailure(1000, 600, false);
+	if (failure != 0)
+		return 110 + failure;
+	failure = hudViewportFailure(1155, 600, false);
+	if (failure != 0)
+		return 130 + failure;
+	failure = hudViewportFailure(1156, 600, false);
+	if (failure != 0)
+		return 150 + failure;
+	failure = hudViewportFailure(1280, 450, true);
+	if (failure != 0)
+		return 170 + failure;
+	failure = hudViewportFailure(1280, 720, false);
+	if (failure != 0)
+		return 190 + failure;
+	if (hudReplacementState(false, false, false) != HudReplacementState.NormalHud
+		|| hudReplacementState(false, false, true) != HudReplacementState.ConversationHud
+		|| hudReplacementState(false, true, true) != HudReplacementState.PausedHud
+		|| hudReplacementState(true, true, true) != HudReplacementState.DefeatedHud)
+		return 210;
+	final compactConversation = hudModalLayout(800, 450, false).conversationText;
+	final characterLimit = hudWrappedCharacterLimit(compactConversation, 18);
+	final lineLimit = hudWrappedLineLimit(compactConversation, 25);
+	if (characterLimit < 50 || lineLimit < 4)
+		return 211;
+	if (hudBreathGlyph(0, 1) != HudBreathGlyph.FilledBreath
+		|| hudBreathGlyph(1, 1) != HudBreathGlyph.DepletedBreath
+		|| hudBreathGlyph(-1, 1) != HudBreathGlyph.DepletedBreath)
+		return 212;
 	return 0;
 }
+
+/** Return zero, or the first broken fit or separation rule for one viewport. */
+function hudViewportFailure(width:Int, height:Int, compact:Bool):Int {
+	final layout = hudLayout(width, height, Inventory.SLOT_COUNT);
+	if (layout.compact != compact)
+		return 1;
+	final expectedHotbarWidth = layout.compact ? 456 : 608;
+	if (layout.hotbar.width != expectedHotbarWidth || layout.slotSize != (layout.compact ? 48 : 64))
+		return 2;
+	if (!rectangleFits(layout.objective, width, height)
+		|| !rectangleFits(layout.diagnostics, width, height)
+		|| !rectangleFits(layout.health, width, height)
+		|| !rectangleFits(layout.equipment, width, height)
+		|| !rectangleFits(layout.alert, width, height)
+		|| !rectangleFits(layout.action, width, height)
+		|| !rectangleFits(layout.breath, width, height)
+		|| !rectangleFits(layout.crosshair, width, height)
+		|| !rectangleFits(layout.hotbar, width, height))
+		return 3;
+	if (hudRectanglesOverlap(layout.objective, layout.health)
+		|| hudRectanglesOverlap(layout.objective, layout.equipment)
+		|| hudRectanglesOverlap(layout.objective, layout.alert)
+		|| hudRectanglesOverlap(layout.alert, layout.health)
+		|| hudRectanglesOverlap(layout.alert, layout.equipment))
+		return 4;
+	if (hudRectanglesOverlap(layout.diagnostics, layout.objective)
+		|| hudRectanglesOverlap(layout.diagnostics, layout.alert)
+		|| hudRectanglesOverlap(layout.diagnostics, layout.health)
+		|| hudRectanglesOverlap(layout.diagnostics, layout.equipment))
+		return 5;
+	if (hudRectanglesOverlap(layout.action, layout.hotbar)
+		|| hudRectanglesOverlap(layout.action, layout.breath)
+		|| hudRectanglesOverlap(layout.action, layout.crosshair)
+		|| hudRectanglesOverlap(layout.breath, layout.hotbar)
+		|| hudRectanglesOverlap(layout.breath, layout.crosshair)
+		|| hudRectanglesOverlap(layout.crosshair, layout.hotbar))
+		return 6;
+	final simpleModal = hudModalLayout(width, height, false);
+	final journalModal = hudModalLayout(width, height, true);
+	if (!rectangleFits(simpleModal.conversation, width, height)
+		|| !rectangleFits(simpleModal.pause, width, height)
+		|| !rectangleFits(simpleModal.defeat, width, height)
+		|| !rectangleFits(journalModal.pause, width, height))
+		return 7;
+	if (!rectangleContains(simpleModal.conversation, simpleModal.conversationPortrait)
+		|| !rectangleContains(simpleModal.conversation, simpleModal.conversationText)
+		|| !rectangleContains(simpleModal.conversation, simpleModal.conversationHelp))
+		return 8;
+	if (hudRectanglesOverlap(simpleModal.conversationText, simpleModal.conversationHelp))
+		return 9;
+	return 0;
+}
+
+/** True when one positive HUD region stays inside its declared viewport. */
+function rectangleFits(rectangle:HudRectangle, width:Int, height:Int):Bool
+	return rectangle.x >= 0
+		&& rectangle.y >= 0
+		&& rectangle.width > 0
+		&& rectangle.height > 0
+		&& rectangle.x + rectangle.width <= width
+		&& rectangle.y + rectangle.height <= height;
+
+/** True when one positive child rectangle stays inside its parent. */
+function rectangleContains(parent:HudRectangle, child:HudRectangle):Bool
+	return child.x >= parent.x
+		&& child.y >= parent.y
+		&& child.width > 0
+		&& child.height > 0
+		&& child.x + child.width <= parent.x + parent.width
+		&& child.y + child.height <= parent.y + parent.height;
 
 /** Build one committed-body-shaped fixture; non-position fields stay irrelevant. */
 function body(x:Float, y:Float, z:Float):CharacterBody
