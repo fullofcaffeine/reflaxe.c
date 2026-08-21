@@ -3,6 +3,9 @@ package caxecraft.app;
 #if c
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
+import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.toolForHotbarSlot;
 import caxecraft.editor.EditorPackageSession;
 import caxecraft.editor.EditorPackageSession.EditorPackageSaveResult;
 import caxecraft.editor.EditorPackageSession.editorPackageErrorMessage;
@@ -77,6 +80,7 @@ import raylib.MouseButton;
 import raylib.Raylib;
 import raylib.Rectangle;
 import raylib.Rlgl;
+import raylib.Vector2;
 import raylib.Vector3;
 
 /** What the application should do after handling one editor frame. */
@@ -143,6 +147,7 @@ final class CaxecraftEditorScreen {
 	var selection:Null<VoxelBounds>;
 	var focusedControl:EditorFocusTarget;
 	var workspaceView:EditorWorkspaceView;
+	var buildPointerState:EditorBuildPointerState;
 	var editLayerY:Int;
 	var activeTool:EditorTool;
 	var detailsOpen:Bool;
@@ -185,6 +190,7 @@ final class CaxecraftEditorScreen {
 		selection = null;
 		focusedControl = initialFocus();
 		workspaceView = BuildView;
+		buildPointerState = EditorBuildPointerState.Released;
 		editLayerY = 0;
 		activeTool = SelectTool;
 		detailsOpen = false;
@@ -212,6 +218,8 @@ final class CaxecraftEditorScreen {
 	public function draw(locale:LocaleCursor, externalNavigation:NavigationCommand):EditorScreenAction {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
+		if (!Raylib.IsWindowFocused())
+			setBuildPointerState(nextPointerState(buildPointerState, workspaceView == BuildView, false, false, false));
 		if (saveShortcutPressed())
 			requestSave();
 		final keyboardNavigation = readKeyboardNavigation();
@@ -371,19 +379,19 @@ final class CaxecraftEditorScreen {
 		final disclosureLeft = left + width - Std.int(disclosureWidth) - 12;
 		final cardGap = 10;
 		final cardWidth = Std.int((disclosureLeft - 10 - (left + 12) - cardGap * 5) / 6);
-		drawToolCard(locale, EditorFocusTarget.SelectTool, EditorTool.SelectTool, left + 12, cardTop, cardWidth, 68, UiMessage.EditorSelect,
+		drawToolCard(locale, EditorFocusTarget.SelectTool, EditorTool.SelectTool, 1, left + 12, cardTop, cardWidth, 68, UiMessage.EditorSelect,
 			Color.rgba(84, 191, 205));
-		drawToolCard(locale, EditorFocusTarget.GroundTool, EditorTool.PaintTool, left + 12 + (cardWidth + cardGap), cardTop, cardWidth, 68,
+		drawToolCard(locale, EditorFocusTarget.GroundTool, EditorTool.PaintTool, 2, left + 12 + (cardWidth + cardGap), cardTop, cardWidth, 68,
 			UiMessage.EditorGround, Color.rgba(111, 174, 91));
-		drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, left + 12 + (cardWidth + cardGap) * 2, cardTop, cardWidth, 68,
+		drawToolCard(locale, EditorFocusTarget.EraseTool, EditorTool.EraseTool, 3, left + 12 + (cardWidth + cardGap) * 2, cardTop, cardWidth, 68,
 			UiMessage.EditorErase, Color.rgba(218, 103, 78));
-		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, left + 12 + (cardWidth + cardGap) * 3, cardTop, cardWidth, 68,
+		drawToolCard(locale, EditorFocusTarget.CheckpointTool, EditorTool.CheckpointTool, 4, left + 12 + (cardWidth + cardGap) * 3, cardTop, cardWidth, 68,
 			UiMessage.EditorCheckpoint, Color.rgba(76, 209, 198));
 		final recipe = contentRegistry.editorObjectAt(0);
 		if (recipe != null)
-			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, left + 12 + (cardWidth + cardGap) * 4, cardTop, cardWidth, 68,
-				locale == Locale0 ? recipe.labelEn : recipe.labelEsMx, Color.rgba(226, 151, 72));
-		drawToolCard(locale, EditorFocusTarget.TriggerZoneTool, EditorTool.TriggerZoneTool, left + 12 + (cardWidth + cardGap) * 5, cardTop, cardWidth, 68,
+			drawToolCardText(EditorFocusTarget.CatalogObjectTool, EditorTool.CatalogObjectTool, 5, left + 12 + (cardWidth + cardGap) * 4, cardTop, cardWidth,
+				68, locale == Locale0 ? recipe.labelEn : recipe.labelEsMx, Color.rgba(226, 151, 72));
+		drawToolCard(locale, EditorFocusTarget.TriggerZoneTool, EditorTool.TriggerZoneTool, 6, left + 12 + (cardWidth + cardGap) * 5, cardTop, cardWidth, 68,
 			UiMessage.EditorTrigger, Color.rgba(210, 105, 230));
 
 		if (focusedButtonSized(EditorFocusTarget.WorldList, disclosureLeft, cardTop, disclosureWidth, 30.0, uiCatalog.text(locale, UiMessage.EditorWorldList)))
@@ -409,13 +417,13 @@ final class CaxecraftEditorScreen {
 	}
 
 	/** Draw one large tool card with a non-text color mark and selected border. */
-	function drawToolCard(locale:LocaleCursor, focus:EditorFocusTarget, tool:EditorTool, left:Int, top:Int, width:Int, height:Int, message:UiMessage,
-			color:Color):Void {
-		drawToolCardText(focus, tool, left, top, width, height, uiCatalog.text(locale, message), color);
+	function drawToolCard(locale:LocaleCursor, focus:EditorFocusTarget, tool:EditorTool, slot:Int, left:Int, top:Int, width:Int, height:Int,
+			message:UiMessage, color:Color):Void {
+		drawToolCardText(focus, tool, slot, left, top, width, height, uiCatalog.text(locale, message), color);
 	}
 
 	/** Draw one pack-labeled tool card without moving content names into the UI catalog. */
-	function drawToolCardText(focus:EditorFocusTarget, tool:EditorTool, left:Int, top:Int, width:Int, height:Int, text:String, color:Color):Void {
+	function drawToolCardText(focus:EditorFocusTarget, tool:EditorTool, slot:Int, left:Int, top:Int, width:Int, height:Int, text:String, color:Color):Void {
 		final pressed = Raygui.ButtonString(Rectangle.fromFloat(left, top, width, height), "").has(GuiResult.Pressed);
 		if (pressed) {
 			focusedControl = focus;
@@ -423,6 +431,7 @@ final class CaxecraftEditorScreen {
 		}
 		Raylib.DrawRectangle(left + 12, top + 14, 36, 36, color);
 		Raylib.DrawRectangleLines(left + 12, top + 14, 36, 36, CaxecraftPalette.hudText());
+		Raylib.DrawTextString(Std.string(slot), left + 25, top + 23, 18, Color.rgba(10, 24, 30));
 		Raylib.DrawTextString(text, left + 58, top + 23, 17, CaxecraftPalette.hudText());
 		drawFocusRing(focus, left, top, width, height);
 		drawActiveControl(activeTool == tool, left, top, width, height);
@@ -777,6 +786,10 @@ final class CaxecraftEditorScreen {
 	 * Keyboard, controller, and pilot commands all enter this one handler.
 	 */
 	public function applyNavigation(command:NavigationCommand):EditorScreenAction {
+		if (command == NavigationCommand.Cancel && buildPointerState == EditorBuildPointerState.Captured) {
+			setBuildPointerState(nextPointerState(buildPointerState, workspaceView == BuildView, true, false, true));
+			return StayInEditor;
+		}
 		if (environmentPanelOpen) {
 			switch command {
 				case Up:
@@ -953,6 +966,7 @@ final class CaxecraftEditorScreen {
 	/** Change views without touching document bytes, history, or selection. */
 	function setWorkspaceView(view:EditorWorkspaceView):Void {
 		workspaceView = view;
+		setBuildPointerState(nextPointerState(buildPointerState, view == BuildView, Raylib.IsWindowFocused(), false, false));
 		invalidatePreview();
 	}
 
@@ -981,6 +995,7 @@ final class CaxecraftEditorScreen {
 
 	/** Open the environment modal at its explicit enabled control. */
 	function openEnvironmentPanel():Void {
+		setBuildPointerState(EditorBuildPointerState.Released);
 		environmentPanelOpen = true;
 		environmentControl = firstEnvironmentControl();
 	}
@@ -1016,8 +1031,46 @@ final class CaxecraftEditorScreen {
 		invalidatePreview();
 	}
 
+	/**
+	 * Apply one pointer-ownership transition at the native window boundary.
+	 *
+	 * The renderer-independent policy decides the state. This method performs a
+	 * Raylib effect only when ownership changes, so steady Build frames do not
+	 * repeatedly alter the operating-system cursor.
+	 */
+	function setBuildPointerState(next:EditorBuildPointerState):Void {
+		if (next == buildPointerState)
+			return;
+		buildPointerState = next;
+		if (next == EditorBuildPointerState.Captured)
+			Raylib.DisableCursor();
+		else
+			Raylib.EnableCursor();
+	}
+
+	/** Select one visible creation card from its direct Build number key. */
+	function selectBuildHotbarTool():Void {
+		var slot = 0;
+		if (Raylib.IsKeyPressed(KeyboardKey.One))
+			slot = 1;
+		else if (Raylib.IsKeyPressed(KeyboardKey.Two))
+			slot = 2;
+		else if (Raylib.IsKeyPressed(KeyboardKey.Three))
+			slot = 3;
+		else if (Raylib.IsKeyPressed(KeyboardKey.Four))
+			slot = 4;
+		else if (Raylib.IsKeyPressed(KeyboardKey.Five))
+			slot = 5;
+		else if (Raylib.IsKeyPressed(KeyboardKey.Six))
+			slot = 6;
+		final tool = toolForHotbarSlot(slot);
+		if (tool != null)
+			setActiveTool(tool);
+	}
+
 	/** Leave immediately only when the package draft equals its last saved bytes. */
 	function requestLeave():EditorScreenAction {
+		setBuildPointerState(EditorBuildPointerState.Released);
 		if (!isDirty())
 			return ReturnToTitle;
 		leavePromptOpen = true;
@@ -1222,6 +1275,7 @@ final class CaxecraftEditorScreen {
 	 * acquires the editing lock only after that stronger runtime accepts them.
 	 */
 	function requestTestPlay():EditorScreenAction {
+		setBuildPointerState(EditorBuildPointerState.Released);
 		final current = session;
 		if (current == null) {
 			notice = Invalid;
@@ -1454,9 +1508,10 @@ final class CaxecraftEditorScreen {
 	 *
 	 * Raylib supplies device state, a screen ray, clipping, and drawing. Camera
 	 * movement, volume lookup, ray picking, and command translation remain
-	 * renderer-independent. The right mouse button looks around, WASD/QE flies,
-	 * the wheel moves along the view, and F restores the deterministic world
-	 * focus. Left click submits the selected tool through `applyToolAt`.
+	 * renderer-independent. A click gives Build the pointer; mouse movement then
+	 * looks without a held button, WASD/QE flies, number keys select the visible
+	 * tool hotbar, and F restores the deterministic world focus. Escape releases
+	 * the pointer before the surrounding editor handles another cancel.
 	 */
 	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int):Void {
 		var current = projection;
@@ -1468,18 +1523,26 @@ final class CaxecraftEditorScreen {
 		final mouseY = Std.int(mouse.y.toFloat());
 		final inside = mouseX >= left && mouseY >= top && mouseX < left + width && mouseY < top + height;
 		final name = worldName;
-		final cameraInputEnabled = inside && (name == null || !name.isEditing());
+		final pointerAvailable = inside && Raylib.IsWindowFocused() && (name == null || !name.isEditing());
+		final leftPressed = Raylib.IsMouseButtonPressed(MouseButton.Left);
+		final capturePressed = buildPointerState == EditorBuildPointerState.Released && pointerAvailable && leftPressed;
+		if (capturePressed)
+			setBuildPointerState(nextPointerState(buildPointerState, true, true, true, false));
+		final cameraInputEnabled = buildPointerState == EditorBuildPointerState.Captured
+			&& Raylib.IsWindowFocused()
+			&& (name == null || !name.isEditing());
+		if (cameraInputEnabled)
+			selectBuildHotbarTool();
 		if (cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.F))
 			currentCamera = focusCamera(current);
 		else if (cameraInputEnabled) {
 			final delta = Raylib.GetMouseDelta();
-			final looking = Raylib.IsMouseButtonDown(MouseButton.Right);
 			currentCamera = stepCamera(current, currentCamera, {
 				forward: axis(Raylib.IsKeyDown(KeyboardKey.W), Raylib.IsKeyDown(KeyboardKey.S)),
 				right: axis(Raylib.IsKeyDown(KeyboardKey.D), Raylib.IsKeyDown(KeyboardKey.A)),
 				vertical: axis(Raylib.IsKeyDown(KeyboardKey.E), Raylib.IsKeyDown(KeyboardKey.Q)),
-				yaw: looking ? -delta.x.toFloat() * 0.004 : 0.0,
-				pitch: looking ? -delta.y.toFloat() * 0.004 : 0.0,
+				yaw: capturePressed ? 0.0 : -delta.x.toFloat() * 0.004,
+				pitch: capturePressed ? 0.0 : -delta.y.toFloat() * 0.004,
 				wheel: Raylib.GetMouseWheelMove().toFloat()
 			}, Raylib.GetFrameTime().toFloat());
 		}
@@ -1489,8 +1552,10 @@ final class CaxecraftEditorScreen {
 			Vector3.fromFloat(target.x, target.y, target.z), Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(52.0), CameraProjection.Perspective);
 		var hover:Null<EditorWorldHit> = null;
 		var hoveredObject = -1;
-		if (inside) {
-			final ray = Raylib.GetScreenToWorldRay(mouse, nativeCamera);
+		final aiming = buildPointerState == EditorBuildPointerState.Captured;
+		if (inside || aiming) {
+			final pointer = aiming ? Vector2.fromFloat(left + width * 0.5, top + height * 0.5) : mouse;
+			final ray = Raylib.GetScreenToWorldRay(pointer, nativeCamera);
 			final origin = ray.position;
 			final direction = ray.direction;
 			hover = pickWorld(current, {x: origin.x.toFloat(), y: origin.y.toFloat(), z: origin.z.toFloat()}, {
@@ -1512,7 +1577,7 @@ final class CaxecraftEditorScreen {
 			invalidatePreview();
 		else
 			updatePreview(hover.point);
-		if ((hover != null || hoveredObject >= 0) && Raylib.IsMouseButtonPressed(MouseButton.Left)) {
+		if (!capturePressed && aiming && (hover != null || hoveredObject >= 0) && leftPressed) {
 			if (hoveredObject >= 0)
 				selectObject(objectGizmos[hoveredObject].id);
 			else if (hover != null)
@@ -1564,6 +1629,18 @@ final class CaxecraftEditorScreen {
 		}
 		Raylib.EndMode3D();
 		Raylib.EndScissorMode();
+		if (aiming)
+			drawBuildCrosshair(left + Std.int(width / 2), top + Std.int(height / 2));
+	}
+
+	/** Draw a compact high-contrast target at the captured Build ray origin. */
+	static function drawBuildCrosshair(centerX:Int, centerY:Int):Void {
+		final shadow = Color.rgba(8, 20, 24);
+		final light = CaxecraftPalette.hudText();
+		Raylib.DrawLine(centerX - 8, centerY, centerX + 8, centerY, shadow);
+		Raylib.DrawLine(centerX, centerY - 8, centerX, centerY + 8, shadow);
+		Raylib.DrawLine(centerX - 6, centerY, centerX + 6, centerY, light);
+		Raylib.DrawLine(centerX, centerY - 6, centerX, centerY + 6, light);
 	}
 
 	/**
@@ -1935,6 +2012,12 @@ final class CaxecraftEditorScreen {
 			return false;
 		camera = stepCamera(currentProjection, currentCamera, input, frameSeconds);
 		return true;
+	}
+
+	/** Capture Build through the production policy so the review frame shows direct aiming. */
+	public function applyPilotBuildCapture():Bool {
+		setBuildPointerState(nextPointerState(buildPointerState, true, true, true, false));
+		return buildPointerState == EditorBuildPointerState.Captured;
 	}
 	#end
 }

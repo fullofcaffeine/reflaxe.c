@@ -1,6 +1,9 @@
 package caxecraft.qa;
 
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
+import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.toolForHotbarSlot;
 import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.initialFocus;
@@ -136,6 +139,7 @@ final class EditorProbe {
 		final protocolChecks = checkRevisionedProtocol() + checkTitleProtocol();
 		final focusChecks = checkFocusNavigation();
 		final navigationChecks = checkNavigationInput();
+		final buildControlChecks = checkBuildControls();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
 		checkZoneRuleProjection();
@@ -219,8 +223,8 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (activeLevelChecks * 131) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (buildControlChecks * 521) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (activeLevelChecks * 131) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $buildControlChecks Build-control checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
 	}
 
 	/** Prove that a creator gesture becomes one collision-free reloadable object. */
@@ -1047,6 +1051,38 @@ final class EditorProbe {
 		checks++;
 		repeater.release();
 		require(repeater.advance(navigation(true, 0.0, 0.8), 0.0) == NavigationCommand.Down, "screen release did not clear the repeat clock");
+		checks++;
+		return checks;
+	}
+
+	/** Prove that direct Build capture and hotbar input stay finite and explicit. */
+	static function checkBuildControls():Int {
+		var checks = 0;
+		var pointer = EditorBuildPointerState.Released;
+		pointer = nextPointerState(pointer, true, true, true, false);
+		require(pointer == EditorBuildPointerState.Captured, "a focused Build click did not capture the pointer");
+		checks++;
+		pointer = nextPointerState(pointer, true, true, false, false);
+		require(pointer == EditorBuildPointerState.Captured, "steady Build input released the pointer");
+		checks++;
+		pointer = nextPointerState(pointer, true, true, false, true);
+		require(pointer == EditorBuildPointerState.Released, "cancel did not release Build before leaving the editor");
+		checks++;
+		pointer = nextPointerState(EditorBuildPointerState.Captured, false, true, false, false);
+		require(pointer == EditorBuildPointerState.Released, "Plan retained first-person pointer capture");
+		checks++;
+		pointer = nextPointerState(EditorBuildPointerState.Captured, true, false, false, false);
+		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
+		checks++;
+		require(toolForHotbarSlot(1) == SelectTool
+			&& toolForHotbarSlot(2) == PaintTool
+			&& toolForHotbarSlot(3) == EraseTool
+			&& toolForHotbarSlot(4) == CheckpointTool
+			&& toolForHotbarSlot(5) == CatalogObjectTool
+			&& toolForHotbarSlot(6) == TriggerZoneTool
+			&& toolForHotbarSlot(0) == null
+			&& toolForHotbarSlot(7) == null,
+			"Build hotbar slots drifted from the six visible creation cards");
 		checks++;
 		return checks;
 	}

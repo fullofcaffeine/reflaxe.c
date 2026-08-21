@@ -399,6 +399,8 @@ final class CaxecraftApp {
 			}
 			if (!editorScreen.applyPilotSave())
 				rejectedEditCount++;
+			if (!editorScreen.applyPilotBuildCapture())
+				rejectedEditCount++;
 		}
 		return {
 			navigationCommand: navigationCommand,

@@ -228,19 +228,34 @@ the floor of the current edit layer. This path lets a creator paint an empty
 cell. The selected tool converts the typed `VoxelPoint` into the same
 `EditorCommand` that history uses. An invalid pick changes nothing.
 
+Build now starts with the pointer released so the creator can use the toolbar.
+A click inside the 3D world captures the pointer and changes Build to direct
+first-person control. The first click only enters the world; it does not also
+apply a tool. A centered crosshair then owns the target ray. This removes the
+old need to hold the right mouse button while looking.
+
 The current controls are:
 
 - use Tab and Shift-Tab to move the visible focus ring through editor controls;
 - press Enter or Space to activate the focused control;
 - use a connected controller's D-pad or left stick to move the same ring;
 - press the south face button to activate or the east face button to return;
-- hold the right mouse button and move the pointer to look;
+- click inside Build to capture the pointer, then move the mouse to look;
+- press Escape once to release the pointer; press it again to cancel the
+  selected tool or leave through the normal editor flow;
+- press 1 through 6 to choose the six visible creation cards;
 - use W/S to move forward/back, A/D to strafe, and Q/E to move vertically;
 - use the wheel to move along the view direction;
 - press F to restore the deterministic whole-world view;
 - use the minus and plus layer controls to move the Build grid and Plan slice;
   and
-- left-click to apply the selected tool.
+- left-click at the crosshair to apply the selected tool.
+
+Switching to Plan, opening the environment panel, starting Test Play, leaving
+the editor, or losing window focus also releases the pointer. Plan keeps its
+free pointer because it is the precise overview for hidden layers, trigger
+volumes, logic links, and navigation. Build hotkeys change only the active
+tool. They do not change draft bytes or history until a click is accepted.
 
 The focus order is target-neutral: it names editor actions, not Raylib key
 codes, controller brands, or screen coordinates. Keyboard and controller

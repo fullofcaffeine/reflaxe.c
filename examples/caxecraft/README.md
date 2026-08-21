@@ -1076,20 +1076,25 @@ It creates a complete small map through public typed commands and proves exact
 undo/redo, bounded history and gestures, canonical in-memory reload,
 last-playable recovery, disposable test play, complete-volume projection,
 bounded fly-camera steps, solid and empty-space ray picking, the optional
-top-down projection, and Select/Paint/Erase/Fill translation under C and a
-second installed locale (Spanish when available). The reusable editor package
-imports no Raylib or C target API.
+top-down projection, direct Build capture/release rules, numbered tool slots,
+and Select/Paint/Erase/Fill translation under C and a second installed locale
+(Spanish when available). The reusable editor package imports no Raylib or C
+target API.
 
 The title screen's Editor button opens a native Raylib/Raygui perspective
-viewport. A creator can fly with WASD/QE, look while holding the right mouse
-button, move with the wheel, focus the whole world with F, and left-click a
-visible voxel or empty floor cell. Object and environment controls use the same
-typed `EditorCommand` boundary as terrain, history, and tests. The screen caches
-a read-only complete-volume projection between accepted edits. It also tracks
-the saved history state without serializing the complete draft every frame.
-Crossing into another hover cell translates the tool from that cached state.
-Only a click runs the complete revision, reducer, canonical-format, and history
-checks.
+viewport. A creator clicks the world once to enter direct Build control. Mouse
+movement then looks through a centered crosshair without a held button. WASD/QE
+flies, the wheel moves along the view, F focuses the whole world, and 1 through
+6 select the visible tool cards. Left click applies the selected tool. Escape
+releases the pointer before another cancel can leave the editor. Plan keeps a
+free pointer for precise layer and object work.
+
+Object and environment controls use the same typed `EditorCommand` boundary as
+terrain, history, and tests. The screen caches a read-only complete-volume
+projection between accepted edits. It also tracks the saved history state
+without serializing the complete draft every frame. Crossing into another
+target cell translates the tool from that cached state. Only a click runs the
+complete revision, reducer, canonical-format, and history checks.
 
 Save and Ctrl/Cmd+S validate the draft and publish the map with its campaign,
 runtime-content, and outer-package receipts. The native app shares one
