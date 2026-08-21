@@ -232,6 +232,8 @@ private typedef EditorPilotFrameResult = {
 	final navigationCommand:NavigationCommand;
 	final placedBlockCount:Int;
 	final rejectedEditCount:Int;
+	final terrainPatchDirtyChunks:Int;
+	final terrainPatchFallbackCount:Int;
 }
 #end
 
@@ -310,6 +312,8 @@ final class CaxecraftApp {
 		var navigationCommand = NavigationCommand.None;
 		var placedBlockCount = 0;
 		var rejectedEditCount = 0;
+		var terrainPatchDirtyChunks = 0;
+		var terrainPatchFallbackCount = 0;
 		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
 			if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
 				rejectedEditCount++;
@@ -324,9 +328,11 @@ final class CaxecraftApp {
 				wheel: 0.0
 			}, 0.05))
 				rejectedEditCount++;
-			if (editorScreen.applyPilotPaintFirstAir())
+			if (editorScreen.applyPilotPaintFirstAir()) {
 				placedBlockCount++;
-			else
+				terrainPatchDirtyChunks = editorScreen.pilotPatchDirtyChunks();
+				terrainPatchFallbackCount = editorScreen.pilotPatchFellBack() ? 1 : 0;
+			} else
 				rejectedEditCount++;
 			final heldDown:NavigationSample = {
 				connected: true,
@@ -405,7 +411,9 @@ final class CaxecraftApp {
 		return {
 			navigationCommand: navigationCommand,
 			placedBlockCount: placedBlockCount,
-			rejectedEditCount: rejectedEditCount
+			rejectedEditCount: rejectedEditCount,
+			terrainPatchDirtyChunks: terrainPatchDirtyChunks,
+			terrainPatchFallbackCount: terrainPatchFallbackCount
 		};
 	}
 	#end
@@ -750,6 +758,8 @@ final class CaxecraftApp {
 		var removedBlocks = 0;
 		var placedBlocks = 0;
 		var rejectedEdits = 0;
+		var editorTerrainPatchDirtyChunks = 0;
+		var editorTerrainPatchFallbacks = 0;
 		var editorTestPlayStarts = 0;
 		var editorTestPlayStops = 0;
 		var editorTestPlayTicks = 0;
@@ -1400,6 +1410,8 @@ final class CaxecraftApp {
 			editorNavigationCommand = editorPilotFrame.navigationCommand;
 			placedBlocks += editorPilotFrame.placedBlockCount;
 			rejectedEdits += editorPilotFrame.rejectedEditCount;
+			editorTerrainPatchDirtyChunks += editorPilotFrame.terrainPatchDirtyChunks;
+			editorTerrainPatchFallbacks += editorPilotFrame.terrainPatchFallbackCount;
 			#end
 			if (captured && !conversationOwnedInput) {
 				var yawDelta = lookYaw;
@@ -1948,7 +1960,7 @@ final class CaxecraftApp {
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, measuredTerrainMicroseconds,
 					measuredTerrainFrames, measuredUpdateMicroseconds, measuredPreparationMicroseconds, activeLevel.generationId().value(),
 					activeLevel.publicationCount(), firstEditorTestPlayGeneration, lastEditorTestPlayGeneration, renderedEditorTestPlayGeneration,
-					editorTestPlayStarts, editorTestPlayStops, editorTestPlayTicks);
+					editorTestPlayStarts, editorTestPlayStops, editorTestPlayTicks, editorTerrainPatchDirtyChunks, editorTerrainPatchFallbacks);
 			#else
 			if (pilotComplete)
 				drawPilotTelemetry(pilotName, pilotInputHash, frameCount + 1, completedTicks, character.body, session.worldView(), hit, removedBlocks,
@@ -1957,7 +1969,7 @@ final class CaxecraftApp {
 					reviewScreenshotObserved, submersionObserved, waterExitObserved, sandMinedObserved, flowRuleObserved, objectiveChangeObserved,
 					visibleTerrainFaces, rebuiltTerrainChunks, totalRebuiltTerrainChunks, terrainCacheValid, 0, 0, 0, 0, activeLevel.generationId().value(),
 					activeLevel.publicationCount(), firstEditorTestPlayGeneration, lastEditorTestPlayGeneration, renderedEditorTestPlayGeneration,
-					editorTestPlayStarts, editorTestPlayStops, editorTestPlayTicks);
+					editorTestPlayStarts, editorTestPlayStops, editorTestPlayTicks, editorTerrainPatchDirtyChunks, editorTerrainPatchFallbacks);
 			#end
 			var capturePilotFrame = pilotComplete;
 			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)

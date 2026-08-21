@@ -56,6 +56,16 @@ class CaxecraftEditorLatencyContract(unittest.TestCase):
         self.assertIn("draftImage.bytes.sub", canonical)
         self.assertNotIn("captureScenario", canonical)
 
+    def test_single_voxel_refresh_uses_the_incremental_renderer_path(self) -> None:
+        screen = EDITOR_SCREEN.read_text(encoding="utf-8")
+        apply_tool = section(screen, "function applyToolAt", "function refreshProjection")
+        refresh = section(screen, "function refreshProjection", "function syncWorldName")
+
+        self.assertIn("terrainRefreshForCommand(value)", apply_tool)
+        self.assertIn("terrainRefreshForBatch(commands)", apply_tool)
+        self.assertIn("terrainPresentation.refreshVoxel", refresh)
+        self.assertIn("terrainPresentation.refresh(draft.world", refresh)
+
 
 if __name__ == "__main__":
     unittest.main()

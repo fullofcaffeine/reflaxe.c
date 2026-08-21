@@ -2,6 +2,7 @@ package caxecraft.editor;
 
 import caxecraft.domain.World;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
+import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioWorld;
 
@@ -48,8 +49,8 @@ function projectRuntimeTerrain(world:ScenarioWorld, projection:EditorWorldProjec
 	for (entry in world.palette) {
 		if (entry.code < 0 || entry.code >= storageCodeByPalette.length || storageCodeByPalette[entry.code] >= 0)
 			return RuntimeTerrainUnavailable;
-		final storageCode = registry.blockStorageCode(entry.blockType);
-		if (storageCode < 0 || World.kindCode(World.kindFromCode(storageCode)) != storageCode)
+		final storageCode = runtimeCodeForBlock(entry.blockType, registry);
+		if (storageCode < 0)
 			return RuntimeTerrainUnavailable;
 		storageCodeByPalette[entry.code] = storageCode;
 		if (entry.code == 0 && storageCode == 0 && registry.isAirBlock(entry.blockType))
@@ -73,4 +74,33 @@ function projectRuntimeTerrain(world:ScenarioWorld, projection:EditorWorldProjec
 				runtimeCells[destinationIndex] = storageCode;
 			}
 	return RuntimeTerrainReady(runtimeCells);
+}
+
+/**
+	Resolve one palette-local code for an incremental presentation update.
+
+	A missing or duplicate palette code returns `-1`, as does a content mapping
+	that is not one of the fixed runtime block codes. The native editor then
+	falls back to a complete projection instead of publishing a plausible but
+	incorrect cell.
+**/
+function runtimeCodeForPalette(world:ScenarioWorld, paletteCode:Int, registry:ScenarioContentRegistry):Int {
+	var found = false;
+	var resolved = -1;
+	for (entry in world.palette)
+		if (entry.code == paletteCode) {
+			if (found)
+				return -1;
+			found = true;
+			resolved = runtimeCodeForBlock(entry.blockType, registry);
+			if (resolved < 0)
+				return -1;
+		}
+	return found ? resolved : -1;
+}
+
+/** Narrow one validated content block identity to the fixed runtime code set. */
+private function runtimeCodeForBlock(blockType:ContentId, registry:ScenarioContentRegistry):Int {
+	final storageCode = registry.blockStorageCode(blockType);
+	return storageCode >= 0 && World.kindCode(World.kindFromCode(storageCode)) == storageCode ? storageCode : -1;
 }

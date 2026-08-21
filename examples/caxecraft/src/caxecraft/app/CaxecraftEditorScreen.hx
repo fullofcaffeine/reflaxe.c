@@ -13,6 +13,9 @@ import caxecraft.editor.EditorPackageSession;
 import caxecraft.editor.EditorPackageSession.EditorPackageSaveResult;
 import caxecraft.editor.EditorPackageSession.editorPackageErrorMessage;
 import caxecraft.editor.EditorSession;
+import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
+import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
+import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -169,6 +172,14 @@ final class CaxecraftEditorScreen {
 	var previewAllowed:Bool;
 	var objectList:GuiListViewState;
 
+	#if caxecraft_pilot
+	/** Newly dirty terrain chunks from the most recent incremental editor refresh. */
+	var pilotTerrainPatchDirtyChunks:Int = 0;
+
+	/** True when the most recent requested voxel patch had to rebuild all terrain. */
+	var pilotTerrainPatchFellBack:Bool = false;
+	#end
+
 	/**
 	 * Owns the temporary native editing bytes for the authored scenario title.
 	 *
@@ -213,7 +224,7 @@ final class CaxecraftEditorScreen {
 		previewAllowed = false;
 		objectList = new GuiListViewState(-1);
 		worldName = GuiTextBoxState.create(64);
-		refreshProjection(true);
+		refreshProjection(true, RefreshAllTerrain);
 	}
 
 	/**
@@ -1027,7 +1038,7 @@ final class CaxecraftEditorScreen {
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(SetEnvironment(replacement))}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1129,7 +1140,7 @@ final class CaxecraftEditorScreen {
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(MoveObjectBy(id, delta))}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1149,7 +1160,7 @@ final class CaxecraftEditorScreen {
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(RotateObjectBy(id, degrees))}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1169,7 +1180,7 @@ final class CaxecraftEditorScreen {
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(ResizeTriggerTo(id, size))}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1192,7 +1203,7 @@ final class CaxecraftEditorScreen {
 				objectList = new GuiListViewState(-1);
 				detailsOpen = false;
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, KeepTerrain);
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1218,7 +1229,7 @@ final class CaxecraftEditorScreen {
 		switch current.mutate({baseRevision: current.revision(), mutation: Apply(duplicate.command)}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, KeepTerrain);
 				selectObject(duplicate.id);
 			case MutationUnchanged(_, _):
 				notice = Ready;
@@ -1345,7 +1356,7 @@ final class CaxecraftEditorScreen {
 				notice = Invalid;
 				false;
 		};
-		refreshProjection();
+		refreshProjection(false, KeepTerrain);
 		return accepted;
 	}
 
@@ -1809,7 +1820,7 @@ final class CaxecraftEditorScreen {
 				switch current.mutate({baseRevision: current.revision(), mutation: Apply(value)}) {
 					case MutationApplied(_, _, _, _, _):
 						notice = Ready;
-						refreshProjection();
+						refreshProjection(false, terrainRefreshForCommand(value));
 						switch value {
 							case PutObject(object): selectObject(object.id);
 							case _:
@@ -1827,7 +1838,7 @@ final class CaxecraftEditorScreen {
 				switch current.mutate({baseRevision: current.revision(), mutation: ApplyBatch(commands)}) {
 					case MutationApplied(_, _, _, _, _):
 						notice = Ready;
-						refreshProjection();
+						refreshProjection(false, terrainRefreshForBatch(commands));
 						selectObject(selectedObject);
 						true;
 					case MutationUnchanged(_, _):
@@ -1847,7 +1858,7 @@ final class CaxecraftEditorScreen {
 	 * intentionally called after New World, an accepted edit, undo, or redo—not
 	 * from every frame.
 	 */
-	function refreshProjection(resetCamera:Bool = false):Void {
+	function refreshProjection(resetCamera:Bool = false, terrainRefresh:EditorTerrainRefreshRequest = RefreshAllTerrain):Void {
 		final current = session;
 		if (current == null) {
 			terrainPresentation.clear();
@@ -1873,10 +1884,30 @@ final class CaxecraftEditorScreen {
 		final previous = projection;
 		projection = projectWorld(draft.world);
 		final runtimeProjection = projection;
+		#if caxecraft_pilot
+		pilotTerrainPatchDirtyChunks = 0;
+		pilotTerrainPatchFellBack = false;
+		#end
 		if (runtimeProjection == null)
 			terrainPresentation.clear();
 		else
-			terrainPresentation.refresh(draft.world, runtimeProjection, contentRegistry);
+			switch terrainRefresh {
+				case KeepTerrain:
+				case RefreshTerrainVoxel(point):
+					final dirtyChunks = terrainPresentation.refreshVoxel(draft.world, runtimeProjection, contentRegistry, point);
+					if (dirtyChunks < 0) {
+						terrainPresentation.refresh(draft.world, runtimeProjection, contentRegistry);
+						#if caxecraft_pilot
+						pilotTerrainPatchFellBack = true;
+						#end
+					} else {
+						#if caxecraft_pilot
+						pilotTerrainPatchDirtyChunks = dirtyChunks;
+						#end
+					}
+				case RefreshAllTerrain:
+					terrainPresentation.refresh(draft.world, runtimeProjection, contentRegistry);
+			}
 		planProjection = switch projection {
 			case null:
 				editLayerY = 0;
@@ -1986,6 +2017,14 @@ final class CaxecraftEditorScreen {
 	 */
 	public function applyPilotTool(tool:EditorTool, point:VoxelPoint):Bool
 		return applyToolAt(tool, point);
+
+	/** Return the exact chunk invalidation count from the last pilot voxel edit. */
+	public inline function pilotPatchDirtyChunks():Int
+		return pilotTerrainPatchDirtyChunks;
+
+	/** True when the last pilot voxel edit could not use the incremental path. */
+	public inline function pilotPatchFellBack():Bool
+		return pilotTerrainPatchFellBack;
 
 	/** Place through the direct secondary action, then select the new terrain. */
 	public function applyPilotPaintFirstAir():Bool {

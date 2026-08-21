@@ -309,8 +309,8 @@ MOSSLING_ENTITY_COLORS = {
     (147, 128, 100),
 }
 PILOT_TELEMETRY_MAGIC = 0x43585054
-PILOT_TELEMETRY_VERSION = 11
-PILOT_TELEMETRY_WORDS = 48
+PILOT_TELEMETRY_VERSION = 12
+PILOT_TELEMETRY_WORDS = 50
 PILOT_TELEMETRY_COLORS = tuple(
     (
         8 + nibble * 16,
@@ -1257,9 +1257,14 @@ def build_pilot_report(
                 f"stops={signed[46]}, fixedTicks={signed[47]}, "
                 f"restoredHotbar={signed[28]})"
             )
+        if not 1 <= signed[48] <= 3 or signed[49] != 0:
+            raise PlayFailure(
+                "editor-shell pilot rebuilt broad terrain after one voxel edit "
+                f"(dirtyChunks={signed[48]}, fullRefreshFallbacks={signed[49]})"
+            )
     elif editor_visible:
         raise PlayFailure(f"pilot {pilot!r} unexpectedly finished on the editor screen")
-    elif any(signed[index] != 0 for index in range(42, 48)):
+    elif any(signed[index] != 0 for index in range(42, 50)):
         raise PlayFailure("non-editor pilot unexpectedly reported editor Test Play lifecycle state")
     if pilot == "aquatic-gear" and not (
         aquatic_gear_equipped and submersion_observed and water_exit_observed and sand_mined_observed
@@ -1342,6 +1347,8 @@ def build_pilot_report(
             "rebuiltTerrainChunks": signed[33],
             "totalRebuiltTerrainChunks": signed[34],
             "terrainCacheValid": signed[35] == 1,
+            "editorTerrainPatchDirtyChunks": signed[48],
+            "editorTerrainPatchFallbacks": signed[49],
             "implementation": renderer,
         },
         "gameplay": {

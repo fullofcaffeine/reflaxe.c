@@ -32,6 +32,10 @@ import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
 import caxecraft.editor.EditorRuntimeTerrain.EditorRuntimeTerrainResult;
 import caxecraft.editor.EditorRuntimeTerrain.projectRuntimeTerrain;
+import caxecraft.editor.EditorRuntimeTerrain.runtimeCodeForPalette;
+import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
+import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
+import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -330,6 +334,66 @@ final class EditorProbe {
 		};
 		require(projectRuntimeTerrain(world, missingPaletteProjection, registry) == RuntimeTerrainUnavailable,
 			"a cell without a palette mapping became plausible runtime terrain");
+		checks++;
+		require(runtimeCodeForPalette(world, 0, registry) == 0 && runtimeCodeForPalette(world, 1, registry) == 3,
+			"incremental terrain palette resolution disagreed with the complete projection");
+		checks++;
+		require(runtimeCodeForPalette(world, 2, registry) == -1, "incremental terrain palette resolution admitted a missing code");
+		checks++;
+		final duplicatePaletteWorld:ScenarioWorld = {
+			size: world.size,
+			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}, {code: 1, blockType: AIR}],
+			chunks: [],
+			fluids: []
+		};
+		require(runtimeCodeForPalette(duplicatePaletteWorld, 1, registry) == -1, "incremental terrain palette resolution admitted a duplicate code");
+		checks++;
+		switch terrainRefreshForCommand(PaintVoxel({x: 4, y: 5, z: 6}, 1)) {
+			case RefreshTerrainVoxel(point):
+				require(point.x == 4 && point.y == 5 && point.z == 6, "paint lost its incremental terrain coordinate");
+			case KeepTerrain | RefreshAllTerrain:
+				throw "paint requested a broad terrain refresh";
+		}
+		checks++;
+		switch terrainRefreshForCommand(EraseVoxel({x: 7, y: 8, z: 9})) {
+			case RefreshTerrainVoxel(point):
+				require(point.x == 7 && point.y == 8 && point.z == 9, "erase lost its incremental terrain coordinate");
+			case KeepTerrain | RefreshAllTerrain:
+				throw "erase requested a broad terrain refresh";
+		}
+		checks++;
+		for (command in [
+			PaintVoxels([{x: 1, y: 0, z: 1}], 1),
+			EraseVoxels([{x: 1, y: 0, z: 1}]),
+			FillBounds({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}}, 1),
+			ResizeWorld({width: 64, height: 16, depth: 32}),
+			SetPaletteEntry(1, STONE),
+			RestoreLastPlayable
+		]) {
+			switch terrainRefreshForCommand(command) {
+				case RefreshAllTerrain:
+				case KeepTerrain | RefreshTerrainVoxel(_):
+					throw "a broad terrain change requested a narrow refresh";
+			}
+			checks++;
+		}
+		switch terrainRefreshForCommand(SetTitle(Literal("Presentation only"))) {
+			case KeepTerrain:
+			case RefreshTerrainVoxel(_) | RefreshAllTerrain:
+				throw "a title edit invalidated terrain";
+		}
+		checks++;
+		switch terrainRefreshForBatch([SetTitle(Literal("Metadata batch"))]) {
+			case KeepTerrain:
+			case RefreshTerrainVoxel(_) | RefreshAllTerrain:
+				throw "a metadata-only batch invalidated terrain";
+		}
+		checks++;
+		switch terrainRefreshForBatch([SetTitle(Literal("Mixed batch")), PaintVoxel({x: 1, y: 0, z: 1}, 1)]) {
+			case RefreshAllTerrain:
+			case KeepTerrain | RefreshTerrainVoxel(_):
+				throw "a terrain batch requested an incremental refresh";
+		}
 		checks++;
 		return checks;
 	}

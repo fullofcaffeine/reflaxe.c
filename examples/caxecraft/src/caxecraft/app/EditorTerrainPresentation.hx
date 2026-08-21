@@ -10,8 +10,10 @@ import caxecraft.domain.WorldView;
 import caxecraft.domain.WorldVolume;
 import caxecraft.editor.EditorRuntimeTerrain.EditorRuntimeTerrainResult;
 import caxecraft.editor.EditorRuntimeTerrain.projectRuntimeTerrain;
+import caxecraft.editor.EditorRuntimeTerrain.runtimeCodeForPalette;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.scenario.ScenarioContentRegistry;
+import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioWorld;
 import raylib.Texture2D;
 
@@ -53,6 +55,43 @@ final class EditorTerrainPresentation {
 			case RuntimeTerrainUnavailable:
 				clear();
 		}
+	}
+
+	/**
+	 * Patch one accepted voxel edit without replacing the complete terrain copy.
+	 *
+	 * The return value is the number of newly dirty renderer chunks. `-1` means
+	 * the retained presentation was unavailable or incompatible, so the caller
+	 * must use `refresh` as a fail-closed fallback.
+	 */
+	public function refreshVoxel(world:ScenarioWorld, projection:EditorWorldProjection, registry:ScenarioContentRegistry, point:VoxelPoint):Int {
+		final width = world.size.width;
+		final height = world.size.height;
+		final depth = world.size.depth;
+		if (!ready
+			|| !World.admitsAuthoredSize(width, height, depth)
+			|| projection.width != width
+			|| projection.height != height
+			|| projection.depth != depth
+			|| projection.cells.length != width * height * depth
+			|| point.x < 0
+			|| point.x >= width
+			|| point.y < 0
+			|| point.y >= height
+			|| point.z < 0
+			|| point.z >= depth)
+			return -1;
+		final sourceIndex = (point.z * height + point.y) * width + point.x;
+		final storageCode = runtimeCodeForPalette(world, projection.cells[sourceIndex], registry);
+		if (storageCode < 0)
+			return -1;
+		final coordinate = World.coord(point.x, point.y, point.z);
+		final destinationIndex = World.indexOf(coordinate);
+		if (destinationIndex < 0)
+			return -1;
+		var writable:WorldCells = storage.span();
+		WorldStorage.writeCode(writable, destinationIndex, storageCode);
+		return renderer.invalidate(coordinate);
 	}
 
 	/** Forget an unavailable or closed draft before another frame can draw it. */
