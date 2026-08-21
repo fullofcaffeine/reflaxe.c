@@ -25,6 +25,7 @@ from dev_build_state import (  # noqa: E402
     build_state,
     output_snapshot,
     request_snapshot,
+    validate_request_reuse,
     validate_reuse,
 )
 from play import (  # noqa: E402
@@ -117,6 +118,32 @@ class CaxecraftBuildStateTests(unittest.TestCase):
         decision = self.decision(self.request())
         self.assertFalse(decision.hit)
         self.assertEqual(decision.reason, "build input changed: repo/source/Main.hx")
+
+    def test_request_only_reuse_protects_build_only_publication(self) -> None:
+        exact = validate_request_reuse(
+            state_path=self.state_path,
+            current_request=self.request(),
+        )
+        self.assertTrue(exact.hit)
+
+        self.executable.unlink()
+        self.assertTrue(
+            validate_request_reuse(
+                state_path=self.state_path,
+                current_request=self.request(),
+            ).hit
+        )
+
+        (self.source / "Main.hx").write_text(
+            "class Main { static var changed = true; }\n",
+            encoding="utf-8",
+        )
+        changed = validate_request_reuse(
+            state_path=self.state_path,
+            current_request=self.request(),
+        )
+        self.assertFalse(changed.hit)
+        self.assertEqual(changed.reason, "build input changed: repo/source/Main.hx")
 
     def test_added_module_cannot_hide_behind_an_old_request(self) -> None:
         (self.source / "Added.hx").write_text("class Added {}\n", encoding="utf-8")

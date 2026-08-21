@@ -42,6 +42,7 @@ from dev_build_state import (  # noqa: E402
     output_snapshot,
     request_snapshot,
     sha256_file,
+    validate_request_reuse,
     validate_reuse,
 )
 from dev_haxe_server import (  # noqa: E402
@@ -3873,6 +3874,7 @@ def main(argv: list[str]) -> int:
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
         requested_snapshot: dict[str, object] | None = None
+        build_only_request_matches = False
         reusable_profile = not args.sanitizers
         if reusable_profile and not args.compile_only:
             snapshot_started = time.monotonic()
@@ -3926,6 +3928,17 @@ def main(argv: list[str]) -> int:
                     print(f"caxecraft: unchanged build miss: {miss_reason}")
         if args.build_only:
             generated = current_generation(output_root).generated
+            if requested_snapshot is not None:
+                request_decision = validate_request_reuse(
+                    state_path=output_root / PLAY_BUILD_STATE,
+                    current_request=requested_snapshot,
+                )
+                build_only_request_matches = request_decision.hit
+                if not request_decision.hit:
+                    print(
+                        "caxecraft: build-only will not publish reusable state: "
+                        + request_decision.reason
+                    )
             manifest = validate_compiled_haxe(
                 generated,
                 layout=args.layout,
@@ -4056,7 +4069,10 @@ def main(argv: list[str]) -> int:
         stage_runtime_assets(executable.parent)
         stage_content_catalogs(executable.parent, runtime_pilot=args.piloscript)
         print(f"caxecraft: built native executable at {executable}")
-        if requested_snapshot is not None:
+        can_publish_reusable_state = requested_snapshot is not None and (
+            not args.build_only or build_only_request_matches
+        )
+        if can_publish_reusable_state and requested_snapshot is not None:
             final_snapshot = play_request_snapshot(
                 args,
                 platform_name=platform_name,
@@ -4083,6 +4099,10 @@ def main(argv: list[str]) -> int:
             except BuildStateFailure as error:
                 raise PlayFailure(str(error)) from error
             print(f"caxecraft: published unchanged-build state at {output_root / PLAY_BUILD_STATE}")
+        elif requested_snapshot is not None and args.build_only:
+            print(
+                "caxecraft: build-only kept the prior reusable state because its build request did not match"
+            )
         if args.build_only and selected_pilot is None:
             return 0
         if args.agent_session:

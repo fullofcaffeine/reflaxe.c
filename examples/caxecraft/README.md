@@ -441,6 +441,10 @@ iteration cheap while failing closed on missing or malformed generated output.
 It cannot infer whether a Haxe source changed after the project was generated,
 so use `--compile-only` (or normal play) first whenever Haxe input, defines,
 compiler code, or content-generation inputs changed.
+It publishes a new unchanged-build receipt only when the prior receipt matches
+the current build request. On a mismatch, it keeps the prior receipt and names
+the changed input. The next ordinary launch then rebuilds instead of treating
+the stale generated project as current.
 
 Use `WASD` to move, the mouse to look, Space to jump, and left click to use the
 selected item's primary action: remove a block normally or strike while the

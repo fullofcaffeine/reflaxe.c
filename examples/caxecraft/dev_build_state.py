@@ -327,6 +327,71 @@ def _current_external_snapshot(stored: object) -> list[dict[str, object]]:
     return external_file_snapshot(files)
 
 
+def _validated_request(
+    *,
+    state_path: Path,
+    current_request: Mapping[str, object],
+) -> tuple[ReuseDecision, dict[str, object] | None]:
+    """Load one trusted state and compare only the request that produced it."""
+
+    state, load_error = load_state(state_path)
+    if state is None:
+        return ReuseDecision(False, load_error or "state file is unavailable"), None
+    if state.get("schemaVersion") != STATE_SCHEMA_VERSION or state.get("kind") != STATE_KIND:
+        return ReuseDecision(False, "state schema or kind is not supported"), None
+    if not _validate_state_digest(state):
+        return ReuseDecision(False, "state digest is invalid"), None
+
+    stored_request = state.get("request")
+    if not isinstance(stored_request, dict):
+        return ReuseDecision(False, "request snapshot is malformed"), None
+    difference = _first_mapping_difference(
+        stored_request.get("configuration"),
+        current_request.get("configuration"),
+        family="configuration",
+    )
+    if difference is not None:
+        return ReuseDecision(False, difference), None
+    difference = _first_mapping_difference(
+        stored_request.get("environment"),
+        current_request.get("environment"),
+        family="environment",
+    )
+    if difference is not None:
+        return ReuseDecision(False, difference), None
+    if stored_request.get("tools") != current_request.get("tools"):
+        return ReuseDecision(False, "native or launcher tool identity changed"), None
+    difference = _first_file_difference(
+        stored_request.get("files"),
+        current_request.get("files"),
+        family="build input",
+    )
+    if difference is not None:
+        return ReuseDecision(False, difference), None
+    if stored_request.get("sha256") != current_request.get("sha256"):
+        return ReuseDecision(False, "request digest changed"), None
+    return ReuseDecision(True, "build request matches the reusable state"), state
+
+
+def validate_request_reuse(
+    *,
+    state_path: Path,
+    current_request: Mapping[str, object],
+) -> ReuseDecision:
+    """Check whether reused generated C can represent the current build request.
+
+    Native output can be absent or stale because ``--build-only`` replaces it.
+    This check protects later full-state publication without treating that
+    expected native difference as evidence that the generated C is stale.
+    """
+
+    decision, _ = _validated_request(
+        state_path=state_path,
+        current_request=current_request,
+    )
+    return decision
+
+
 def validate_reuse(
     *,
     state_path: Path,
@@ -336,42 +401,12 @@ def validate_reuse(
 ) -> ReuseDecision:
     """Return a hit only after request, external input, and output parity."""
 
-    state, load_error = load_state(state_path)
-    if state is None:
-        return ReuseDecision(False, load_error or "state file is unavailable")
-    if state.get("schemaVersion") != STATE_SCHEMA_VERSION or state.get("kind") != STATE_KIND:
-        return ReuseDecision(False, "state schema or kind is not supported")
-    if not _validate_state_digest(state):
-        return ReuseDecision(False, "state digest is invalid")
-
-    stored_request = state.get("request")
-    if not isinstance(stored_request, dict):
-        return ReuseDecision(False, "request snapshot is malformed")
-    difference = _first_mapping_difference(
-        stored_request.get("configuration"),
-        current_request.get("configuration"),
-        family="configuration",
+    request_decision, state = _validated_request(
+        state_path=state_path,
+        current_request=current_request,
     )
-    if difference is not None:
-        return ReuseDecision(False, difference)
-    difference = _first_mapping_difference(
-        stored_request.get("environment"),
-        current_request.get("environment"),
-        family="environment",
-    )
-    if difference is not None:
-        return ReuseDecision(False, difference)
-    if stored_request.get("tools") != current_request.get("tools"):
-        return ReuseDecision(False, "native or launcher tool identity changed")
-    difference = _first_file_difference(
-        stored_request.get("files"),
-        current_request.get("files"),
-        family="build input",
-    )
-    if difference is not None:
-        return ReuseDecision(False, difference)
-    if stored_request.get("sha256") != current_request.get("sha256"):
-        return ReuseDecision(False, "request digest changed")
+    if not request_decision.hit or state is None:
+        return request_decision
 
     try:
         current_external = _current_external_snapshot(state.get("externalNativeFiles"))
