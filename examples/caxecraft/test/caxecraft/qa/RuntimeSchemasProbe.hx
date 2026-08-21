@@ -21,12 +21,17 @@ import caxecraft.content.RuntimeSchema.RuntimeSchemaDiagnostic;
 import caxecraft.content.RuntimeSchema.RuntimeSchemaErrorKind;
 import caxecraft.app.RuntimeInventoryBinding.inventoryKindForRuntimeItem;
 import caxecraft.app.VoxelFrameAnimation.VoxelFrameAnimationPlayer;
+import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
+import caxecraft.editor.EditorObjectPresentation.visualFor as editorObjectVisualFor;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.RuntimeUiCatalog.RuntimeUiCatalogResult;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
 import caxecraft.scenario.ContentId;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import haxe.io.Bytes;
 
 /**
@@ -144,6 +149,44 @@ function selfCheck():Int {
 		]:
 		case _:
 			return 39;
+	}
+	final markerId = new ScenarioId("editor.marker");
+	final transform:ScenarioTransform = {
+		xMilli: 1000,
+		yMilli: 0,
+		zMilli: 1000,
+		yawDegrees: 0
+	};
+	switch [
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Npc(new ContentId("caxecraft:nia"), markerId, transform)}),
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Item(new ContentId("caxecraft:sand-block"), 1, transform)}),
+		editorObjectVisualFor(registry, {
+			id: markerId,
+			tags: [],
+			placement: StatefulObject(new ContentId("caxecraft:vault-gate"), new ContentId("caxecraft:sealed"), transform)
+		})
+	] {
+		case [
+			ActorVisual("entities", 4),
+			ItemVisual("items", 14),
+			StatefulObjectVisual("terrain", 10)
+		]:
+		case _:
+			return 69;
+	}
+	switch [
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: PlayerSpawn(transform)}),
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Checkpoint(transform)}),
+		editorObjectVisualFor(registry, {
+			id: markerId,
+			tags: [],
+			placement: TriggerZone({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}})
+		}),
+		editorObjectVisualFor(registry, {id: markerId, tags: [], placement: Entity(new ContentId("caxecraft:missing"), transform)})
+	] {
+		case [PlayerSpawnVisual, CheckpointVisual, TriggerVolumeVisual, FallbackObjectVisual]:
+		case _:
+			return 70;
 	}
 	final gateId = new ContentId("caxecraft:vault-gate");
 	final gateOpen = new ContentId("caxecraft:open");

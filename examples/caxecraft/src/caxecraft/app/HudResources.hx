@@ -4,12 +4,12 @@ package caxecraft.app;
 import raylib.Texture2D;
 
 /**
-	Raylib resources borrowed while drawing one heads-up display frame.
+	Raylib resources borrowed while drawing one heads-up display or editor frame.
 
 	This record contains presentation handles, not gameplay state. The outer
-	application still owns loading and unloading each texture; `drawHud` may use
-	the handles only during the call and checks the matching readiness flag before
-	drawing. Keeping this C-only value separate is what lets `HudView` remain
+	application still owns loading and unloading each texture. Presentation code
+	may use the handles only during its call and checks the matching readiness flag
+	before drawing. Keeping this C-only value separate is what lets `HudView` remain
 	target-neutral and useful to future non-Raylib presentations.
 **/
 typedef HudResources = {

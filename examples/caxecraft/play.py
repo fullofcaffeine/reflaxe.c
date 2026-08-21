@@ -1530,6 +1530,38 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             f"pixels:{terrain_pixels},minimum:{minimum_terrain_pixels},"
             f"colorBuckets:{len(terrain_color_buckets)},minimumBuckets:{minimum_terrain_buckets}"
         )
+    # The deterministic editor pilot faces the shipped Nia and mossling
+    # placements. Their admitted atlas cells contribute compact red-dominant
+    # pixels in the road corridor. A wire-only renderer does not fill those
+    # sprites. Keep the region broad enough for admitted pixel-scale changes.
+    actor_pixels = 0
+    for row in range(500 * scale, 540 * scale):
+        row_at = row * width * 4
+        for column in range(660 * scale, 730 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            if red > 60 and red > green * 1.25 and red > blue * 1.2:
+                actor_pixels += 1
+    minimum_actor_pixels = 40 * scale * scale
+    if actor_pixels < minimum_actor_pixels:
+        failures.append(
+            f"3d-authored-object-art=pixels:{actor_pixels},minimum:{minimum_actor_pixels}"
+        )
+    # Trigger volumes stay precise wire overlays in Build. A broad magenta
+    # surface here means one volume obscures the world as opaque geometry.
+    opaque_volume_pixels = 0
+    for row in range(152 * scale, 541 * scale):
+        row_at = row * width * 4
+        for column in range(44 * scale, 974 * scale):
+            at = row_at + column * 4
+            red, green, blue = pixels[at : at + 3]
+            if red > 160 and blue > 180 and red > green * 1.3 and blue > green * 1.4:
+                opaque_volume_pixels += 1
+    maximum_volume_pixels = 2_000 * scale * scale
+    if opaque_volume_pixels > maximum_volume_pixels:
+        failures.append(
+            f"3d-opaque-trigger-volume=pixels:{opaque_volume_pixels},maximum:{maximum_volume_pixels}"
+        )
     focus_pixels = 0
     # The child-first shell keeps the primary action at the far right. Check
     # the complete toolbar so layout changes do not turn this into a stale

@@ -727,10 +727,11 @@ CASES = {
             "array",
             "string-literal",
             "bytes",
-            "object",
-            "gc",
             "string-scalar",
             "string",
+            "bytes-string",
+            "object",
+            "gc",
             "string-split",
         ),
         split_source_checks=(

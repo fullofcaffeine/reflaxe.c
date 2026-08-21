@@ -29,6 +29,9 @@ import caxecraft.editor.EditorFocus.initialFocus;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.editor.EditorFlowProjection.EditorZoneRuleProjection;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
+import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
+import caxecraft.editor.EditorObjectPresentation.visualFor as objectVisualFor;
+import caxecraft.editor.EditorObjectPresentation.visualUsesBillboard;
 import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
@@ -76,6 +79,8 @@ import caxecraft.scenario.ScenarioEnvironment;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
+import caxecraft.app.EditorObjectRenderer.drawEditorObject;
+import caxecraft.app.EditorObjectRenderer.EditorRenderResources;
 import haxe.io.Bytes;
 import raygui.GuiListViewState;
 import raygui.GuiResult;
@@ -89,7 +94,6 @@ import raylib.MouseButton;
 import raylib.Raylib;
 import raylib.Rectangle;
 import raylib.Rlgl;
-import raylib.Texture2D;
 import raylib.Vector2;
 import raylib.Vector3;
 
@@ -153,6 +157,7 @@ final class CaxecraftEditorScreen {
 	var projection:Null<EditorWorldProjection>;
 	var planProjection:Null<EditorViewportProjection>;
 	var objectGizmos:Array<EditorObjectGizmo>;
+	var objectVisuals:Array<EditorObjectVisual>;
 	var objectLabels:String;
 	var flowRuleCount:Int;
 	var zoneRuleLinks:Array<EditorZoneRuleProjection>;
@@ -205,6 +210,7 @@ final class CaxecraftEditorScreen {
 		projection = null;
 		planProjection = null;
 		objectGizmos = [];
+		objectVisuals = [];
 		objectLabels = "";
 		flowRuleCount = 0;
 		zoneRuleLinks = [];
@@ -237,8 +243,7 @@ final class CaxecraftEditorScreen {
 	 * command. This screen reads keyboard input into the same command set, then
 	 * routes both sources through `applyNavigation`.
 	 */
-	public function draw(locale:LocaleCursor, externalNavigation:NavigationCommand, terrainTexture:Texture2D, terrainTextureReady:Bool,
-			adventureTerrainTexture:Texture2D, adventureTerrainTextureReady:Bool):EditorScreenAction {
+	public function draw(locale:LocaleCursor, externalNavigation:NavigationCommand, resources:EditorRenderResources):EditorScreenAction {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (!Raylib.IsWindowFocused())
@@ -340,8 +345,7 @@ final class CaxecraftEditorScreen {
 		final innerWidth = canvasWidth - 24;
 		final innerHeight = canvasHeight - 48;
 		if (workspaceView == BuildView)
-			drawWorldViewport(innerLeft, innerTop, innerWidth, innerHeight, terrainTexture, terrainTextureReady, adventureTerrainTexture,
-				adventureTerrainTextureReady);
+			drawWorldViewport(innerLeft, innerTop, innerWidth, innerHeight, resources);
 		else
 			drawPlanViewport(innerLeft, innerTop, innerWidth, innerHeight);
 		if (inspectorWidth > 0)
@@ -1546,8 +1550,7 @@ final class CaxecraftEditorScreen {
 	 * WASD/QE flies, number keys select the visible tool hotbar, and F focuses the
 	 * world. Escape releases the pointer before the editor handles another cancel.
 	 */
-	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, terrainTexture:Texture2D, terrainTextureReady:Bool,
-			adventureTerrainTexture:Texture2D, adventureTerrainTextureReady:Bool):Void {
+	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, resources:EditorRenderResources):Void {
 		var current = projection;
 		var currentCamera = camera;
 		if (current == null || currentCamera == null || width <= 0 || height <= 0)
@@ -1648,8 +1651,8 @@ final class CaxecraftEditorScreen {
 			Raylib.DrawLine3D(Vector3.fromFloat(x, layerGridY, 0.0), Vector3.fromFloat(x, layerGridY, current.depth), Color.rgba(78, 137, 143));
 		for (z in 0...current.depth + 1)
 			Raylib.DrawLine3D(Vector3.fromFloat(0.0, layerGridY, z), Vector3.fromFloat(current.width, layerGridY, z), Color.rgba(78, 137, 143));
-		if (!terrainPresentation.draw(terrainTexture, terrainTextureReady, adventureTerrainTexture, adventureTerrainTextureReady, currentCamera.x,
-			currentCamera.z))
+		if (!terrainPresentation.draw(resources.terrainTexture, resources.terrainTextureReady, resources.adventureTerrainTexture,
+			resources.adventureTerrainTextureReady, currentCamera.x, currentCamera.z))
 			drawTerrainOverview(current);
 		final selected = selection;
 		if (selected != null)
@@ -1658,11 +1661,19 @@ final class CaxecraftEditorScreen {
 					for (x in selected.origin.x...selected.origin.x + selected.size.width)
 						drawCellOutline(x, y, z, paletteCodeAtWorld(current, x, y, z) != 0, CaxecraftPalette.selection(), 1.05);
 		final selectedObject = selectedObjectIndex();
+		for (index in 0...objectGizmos.length)
+			if (!visualUsesBillboard(objectVisuals[index]))
+				drawEditorObject(nativeCamera, objectVisuals[index], objectGizmos[index], resources);
+		for (index in 0...objectGizmos.length)
+			if (visualUsesBillboard(objectVisuals[index]))
+				drawEditorObject(nativeCamera, objectVisuals[index], objectGizmos[index], resources);
 		for (index in 0...objectGizmos.length) {
 			final gizmo = objectGizmos[index];
 			final color = index == selectedObject || index == hoveredObject ? CaxecraftPalette.selection() : gizmoColor(gizmo.kind);
-			Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width), c.Float32.fromFloat(gizmo.height),
-				c.Float32.fromFloat(gizmo.depth), color);
+			final triggerAuthoringVisible = gizmo.kind == TriggerZoneGizmo && activeTool == TriggerZoneTool;
+			if (triggerAuthoringVisible || index == selectedObject || index == hoveredObject)
+				Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width), c.Float32.fromFloat(gizmo.height),
+					c.Float32.fromFloat(gizmo.depth), color);
 			if (index == selectedObject || index == hoveredObject)
 				Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width + 0.10),
 					c.Float32.fromFloat(gizmo.height + 0.10), c.Float32.fromFloat(gizmo.depth + 0.10), color);
@@ -1879,6 +1890,7 @@ final class CaxecraftEditorScreen {
 			planProjection = null;
 			editLayerY = 0;
 			objectGizmos = [];
+			objectVisuals = [];
 			objectLabels = "";
 			flowRuleCount = 0;
 			zoneRuleLinks = [];
@@ -1932,6 +1944,7 @@ final class CaxecraftEditorScreen {
 				projectFromWorld(value, editLayerY);
 		};
 		objectGizmos = projectObjects(draft.objects);
+		objectVisuals = [for (object in draft.objects) objectVisualFor(contentRegistry, object)];
 		flowRuleCount = draft.flowRuleCount;
 		zoneRuleLinks = draft.zoneRuleLinks;
 		final labels:Array<String> = [];

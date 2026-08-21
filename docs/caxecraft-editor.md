@@ -7,7 +7,8 @@ bytes as the active game generation. Build shows the map's visible height
 surface with the terrain renderer and atlases from ordinary play. It also shows
 a grid at the selected layer. Plan shows the exact cells and objects that cross
 that layer. The screen shows the CaxeFlow rule count and each object's stable
-ID. It draws a colored 3D gizmo for each closed placement role.
+ID. Build uses validated pack art for NPCs, entities, items, and stateful
+objects. Player starts and checkpoints use clear editor markers.
 
 The editor core provides revision-checked changes, bounded command groups, and
 copy-owned observations. Its World Name field commits literal titles through
@@ -211,20 +212,25 @@ palette codes. They retain no caller-owned records. The session can therefore
 write canonical bytes and record history without parsing those bytes again on
 the click path. Validate, Save, and Test Play reconstruct exact source
 coordinates from the canonical bytes before they report diagnostics. Commands
-that can carry structured caller data keep the complete write-and-parse
+for placement deep-copy each retained record and tag array. These commands also
+defer the parse. Other structured commands keep the complete write-and-parse
 boundary.
 
 The interaction hierarchy puts direct in-world editing first. Creators can
 point at textured terrain, place or remove cells and objects, and see the result
-immediately. Build has one Ground card because the two mouse buttons select the
-terrain operation. The left button removes terrain. The right button places
-terrain. Plan keeps separate Ground and Erase cards for precise work.
+immediately. Authored NPCs, enemies, items, and mechanisms use the same
+validated atlas cells as ordinary play. Exact selection bounds appear when an
+object is selected or targeted.
+
+Build has one Ground card because the two mouse buttons select the terrain
+operation. The left button removes terrain. The right button places terrain.
+Plan keeps separate Ground and Erase cards for precise work.
 
 Plan is an advanced tool for hidden layers, trigger volumes, logic links, large
 selections, and fast navigation. It is not the default authoring experience.
-Issue `haxe_c-xge.19.6.3` owns the remaining work. This work must extend ordinary
-presentation beyond terrain and complete the familiar in-world interaction
-rules.
+Build shows trigger bounds when the trigger tool is active or the creator
+targets that trigger. Plan keeps these volumes visible for precise work. Issue
+`haxe_c-xge.19.6.3` owns the remaining navigation and authoring work.
 
 History assigns a small state identity to each accepted edit, undo, and redo.
 Save records that identity only after publication succeeds, so a normal frame

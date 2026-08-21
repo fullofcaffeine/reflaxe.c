@@ -1815,8 +1815,14 @@ final class CaxecraftApp {
 			} else if (onLoading) {
 				drawCampaignLoading(pendingCampaignLabel, locale, uiCatalog);
 			} else if (onEditor) {
-				editorActionForFrame = editorScreen.draw(locale, editorNavigationCommand, terrainTexture, terrainTextureReady, adventureTerrainTexture,
-					adventureTerrainTextureReady);
+				editorActionForFrame = editorScreen.draw(locale, editorNavigationCommand, {
+					shared: hudResources,
+					terrainTexture: terrainTexture,
+					terrainTextureReady: terrainTextureReady,
+					adventureTerrainTexture: adventureTerrainTexture,
+					adventureTerrainTextureReady: adventureTerrainTextureReady,
+					runtimeTextures: runtimeTextures
+				});
 			} else {
 				#if caxecraft_pilot
 				if (screen == AppScreen.EditorTestPlay)
