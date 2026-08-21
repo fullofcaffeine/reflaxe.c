@@ -4,10 +4,10 @@ Status: the renderer-independent command, history, validation, save, and
 test-play layer is implemented under `haxe_c-xge.19.5` and
 `haxe_c-xge.19.6.3.12`. The native Raylib/Raygui screen opens the same CAXEMAP
 bytes as the active game generation. Build shows the map's visible height
-surface and a grid at the selected layer. Plan shows the exact cells and
-objects that cross that layer. The screen also shows the CaxeFlow rule count,
-lists each object's stable ID, and draws a colored 3D gizmo for each closed
-placement role.
+surface with the terrain renderer and atlases from ordinary play. It also shows
+a grid at the selected layer. Plan shows the exact cells and objects that cross
+that layer. The screen shows the CaxeFlow rule count and each object's stable
+ID. It draws a colored 3D gizmo for each closed placement role.
 
 The editor core provides revision-checked changes, bounded command groups, and
 copy-owned observations. Its World Name field commits literal titles through
@@ -171,7 +171,8 @@ current CAXEMAP draft
     v
 cached read-only voxel volume
     |
-    +-- perspective drawing
+    +-- playable shape -> fixed-layout presentation copy -> TerrainRenderer
+    +-- custom shape -> compact surface fallback
     +-- camera ray -> visible voxel or empty floor cell
                          |
                          v
@@ -181,17 +182,20 @@ cached read-only voxel volume
 A **projection** means a read-only shape prepared for presentation.
 `EditorWorldViewport.projectWorld` decodes the complete finite draft into one
 volume ordered as `(z * height + y) * width + x`.
-`CaxecraftEditorScreen` caches that projection. The cache also contains a
-compact height surface for the native overview. Equal height and material cells
-merge into rectangular patches. This keeps a full authored map responsive in
-the headless renderer. Exact voxel cells remain available for picking and
-edits. Build keeps the compact surface for context and draws the selected edit
-grid at its real height. Plan reads one exact horizontal slice from the cached
-volume, so a creator can inspect and edit cells hidden below that surface.
+`CaxecraftEditorScreen` caches that projection. For a playable world shape, it
+also resolves palette codes into the fixed byte order used by gameplay. Build
+passes this read-only copy to the ordinary `TerrainRenderer`. This gives Build
+the same textured terrain while the CAXEMAP draft remains the only editable
+world.
 
-A normal displayed frame reads the cache. It does not serialize the CAXEMAP
+The projection also contains a compact height surface. This surface is a
+fallback for custom-size or incomplete drafts that gameplay cannot represent.
+Exact voxel cells remain available for picking and edits in both paths. Plan
+reads one exact horizontal slice, so a creator can inspect hidden cells.
+
+A normal displayed frame reads both caches. It does not serialize the CAXEMAP
 draft or allocate a replacement volume. New World, an accepted edit, undo, or
-redo rebuilds the cache from the session's new draft.
+redo rebuilds both caches from the session's new draft.
 
 Moving the pointer between cells also reads this cache. The screen translates
 the selected tool into a possible command, but it does not serialize the map or
@@ -202,14 +206,13 @@ format, and history budget before it changes the draft. If one of those checks
 rejects the command, the draft remains unchanged and the editor shows the
 invalid state.
 
-The intended interaction hierarchy is direct in-world editing first. Creators
-must be able to point at the playable world, place or remove terrain and
-objects, and see the result immediately. The Plan view is an advanced spatial
-tool for hidden layers, trigger volumes, logic links, large selections, and
-fast navigation. It is not the default authoring experience. The current Build
-view provides the first 3D editing slice. Issue `haxe_c-xge.19.6.3` owns the
-remaining work to use the ordinary playable presentation and interaction
-grammar throughout that primary view.
+The interaction hierarchy puts direct in-world editing first. Creators can
+point at textured terrain, place or remove cells and objects, and see the result
+immediately. Plan is an advanced tool for hidden layers, trigger volumes, logic
+links, large selections, and fast navigation. It is not the default authoring
+experience. Issue `haxe_c-xge.19.6.3` owns the remaining work. This work must
+extend ordinary presentation beyond terrain and complete the familiar in-world
+interaction rules.
 
 History assigns a small state identity to each accepted edit, undo, and redo.
 Save records that identity only after publication succeeds, so a normal frame
@@ -459,11 +462,11 @@ title, selects layer 2, moves the production camera, paints the first available
 air cell, and saves the resulting package. It then selects that cell through
 `CaxecraftEditorScreen` and `EditorSession`.
 
-The framebuffer check requires the toolbar, sidebar, scene list, authored
-terrain colors, sky, and selection outline. The pilot repeats the journey and
-requires identical semantic reports and screenshots. The headless software
-renderer has a 90-second process limit for this complete editor and game
-journey.
+The framebuffer check requires the toolbar, sidebar, scene list, textured
+terrain, sky, and selection outline. It requires enough terrain color variation
+to reject the former flat overview. The pilot repeats the journey and requires
+identical reports and screenshots. The headless software renderer has a
+90-second process limit for this complete editor and game journey.
 
 The pilot proves active-level presentation, a revision-neutral layer change,
 one terrain change, the object list, scene gizmos, the rule count, the title

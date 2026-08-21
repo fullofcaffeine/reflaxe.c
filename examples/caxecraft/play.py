@@ -1495,25 +1495,33 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             failures.append(
                 f"3d-{label}=pixels:{matching},minimum:{minimum * scale * scale}"
             )
-    terrain_colors = {
-        (132, 157, 167),
-        (108, 164, 103),
-        (180, 153, 102),
-        (102, 159, 174),
-        (172, 174, 187),
-        (176, 119, 91),
-    }
+    # Build now borrows the ordinary terrain atlases. Broad green/warm pixels
+    # prove that authored terrain is visible, while quantized color variety
+    # distinguishes textured faces from the former flat overview rectangles.
     terrain_pixels = 0
+    terrain_color_buckets: set[int] = set()
     for row in range(104 * scale, 650 * scale):
         row_at = row * width * 4
         for column in range(32 * scale, 1018 * scale):
             at = row_at + column * 4
-            if tuple(pixels[at : at + 3]) in terrain_colors:
+            red, green, blue = pixels[at : at + 3]
+            green_terrain = green > red * 0.9 and green > blue * 1.2 and green > 50
+            warm_terrain = red > 80 and green > 60 and red > blue * 1.4 and green > blue * 1.2
+            if green_terrain or warm_terrain:
                 terrain_pixels += 1
+                terrain_color_buckets.add(
+                    (red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4)
+                )
     minimum_terrain_pixels = 5_000 * scale * scale
-    if terrain_pixels < minimum_terrain_pixels:
+    minimum_terrain_buckets = 24
+    if (
+        terrain_pixels < minimum_terrain_pixels
+        or len(terrain_color_buckets) < minimum_terrain_buckets
+    ):
         failures.append(
-            f"3d-authored-terrain=pixels:{terrain_pixels},minimum:{minimum_terrain_pixels}"
+            "3d-atlas-terrain="
+            f"pixels:{terrain_pixels},minimum:{minimum_terrain_pixels},"
+            f"colorBuckets:{len(terrain_color_buckets)},minimumBuckets:{minimum_terrain_buckets}"
         )
     focus_pixels = 0
     # The child-first shell keeps the primary action at the far right. Check

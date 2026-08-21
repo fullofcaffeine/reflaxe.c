@@ -80,6 +80,7 @@ import raylib.MouseButton;
 import raylib.Raylib;
 import raylib.Rectangle;
 import raylib.Rlgl;
+import raylib.Texture2D;
 import raylib.Vector2;
 import raylib.Vector3;
 
@@ -114,9 +115,11 @@ private enum abstract EditorWorkspaceView(Int) {
  * `EditorSession` continues to own validation, undo/redo, and the editing
  * lock. The application owns the disposable ordinary-engine runtime. The
  * screen opens a copy of the active level bytes. A cached
- * `EditorWorldProjection` stores its exact terrain, compact surface overview,
- * object gizmos, and content-logic count. Steady frames read that cache instead
- * of serializing the draft or maintaining a second editable world.
+ * `EditorWorldProjection` stores exact terrain cells, object gizmos, and the
+ * content-logic count. For a playable world shape, Build gives a read-only copy
+ * to the ordinary `TerrainRenderer`. Custom-size drafts use a compact overview
+ * until they fit a shape that play accepts. Steady frames never serialize the
+ * draft or maintain a second editable world.
  *
  * The base-pack IDs and Raylib colors below belong at this Caxecraft
  * composition edge; the reusable editor package knows neither. Build and Plan
@@ -134,6 +137,7 @@ final class CaxecraftEditorScreen {
 	final contentRegistry:RuntimeContentRegistry;
 	final uiCatalog:RuntimeUiCatalog;
 	final editorPackage:EditorPackageSession;
+	final terrainPresentation:EditorTerrainPresentation;
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
 	var presentationDraft:Null<Scenario>;
@@ -177,6 +181,7 @@ final class CaxecraftEditorScreen {
 		this.contentRegistry = contentRegistry;
 		this.uiCatalog = uiCatalog;
 		this.editorPackage = editorPackage;
+		terrainPresentation = new EditorTerrainPresentation();
 		session = editorPackage.workspace();
 		notice = Ready;
 		presentationDraft = null;
@@ -215,7 +220,8 @@ final class CaxecraftEditorScreen {
 	 * command. This screen reads keyboard input into the same command set, then
 	 * routes both sources through `applyNavigation`.
 	 */
-	public function draw(locale:LocaleCursor, externalNavigation:NavigationCommand):EditorScreenAction {
+	public function draw(locale:LocaleCursor, externalNavigation:NavigationCommand, terrainTexture:Texture2D, terrainTextureReady:Bool,
+			adventureTerrainTexture:Texture2D, adventureTerrainTextureReady:Bool):EditorScreenAction {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		if (!Raylib.IsWindowFocused())
@@ -317,7 +323,8 @@ final class CaxecraftEditorScreen {
 		final innerWidth = canvasWidth - 24;
 		final innerHeight = canvasHeight - 48;
 		if (workspaceView == BuildView)
-			drawWorldViewport(innerLeft, innerTop, innerWidth, innerHeight);
+			drawWorldViewport(innerLeft, innerTop, innerWidth, innerHeight, terrainTexture, terrainTextureReady, adventureTerrainTexture,
+				adventureTerrainTextureReady);
 		else
 			drawPlanViewport(innerLeft, innerTop, innerWidth, innerHeight);
 		if (inspectorWidth > 0)
@@ -1508,12 +1515,14 @@ final class CaxecraftEditorScreen {
 	 *
 	 * Raylib supplies device state, a screen ray, clipping, and drawing. Camera
 	 * movement, volume lookup, ray picking, and command translation remain
-	 * renderer-independent. A click gives Build the pointer; mouse movement then
-	 * looks without a held button, WASD/QE flies, number keys select the visible
-	 * tool hotbar, and F restores the deterministic world focus. Escape releases
-	 * the pointer before the surrounding editor handles another cancel.
+	 * renderer-independent. Build shows the ordinary terrain atlases when the
+	 * draft fits the gameplay world. A click gives Build the pointer. Mouse
+	 * movement then looks without a held button. WASD/QE flies, number keys select
+	 * the visible tool hotbar, and F restores the deterministic world focus.
+	 * Escape releases the pointer before the editor handles another cancel.
 	 */
-	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int):Void {
+	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, terrainTexture:Texture2D, terrainTextureReady:Bool,
+			adventureTerrainTexture:Texture2D, adventureTerrainTextureReady:Bool):Void {
 		var current = projection;
 		var currentCamera = camera;
 		if (current == null || currentCamera == null || width <= 0 || height <= 0)
@@ -1599,7 +1608,9 @@ final class CaxecraftEditorScreen {
 			Raylib.DrawLine3D(Vector3.fromFloat(x, layerGridY, 0.0), Vector3.fromFloat(x, layerGridY, current.depth), Color.rgba(78, 137, 143));
 		for (z in 0...current.depth + 1)
 			Raylib.DrawLine3D(Vector3.fromFloat(0.0, layerGridY, z), Vector3.fromFloat(current.width, layerGridY, z), Color.rgba(78, 137, 143));
-		drawTerrainOverview(current);
+		if (!terrainPresentation.draw(terrainTexture, terrainTextureReady, adventureTerrainTexture, adventureTerrainTextureReady, currentCamera.x,
+			currentCamera.z))
+			drawTerrainOverview(current);
 		final selected = selection;
 		if (selected != null)
 			for (z in selected.origin.z...selected.origin.z + selected.size.depth)
@@ -1644,12 +1655,11 @@ final class CaxecraftEditorScreen {
 	}
 
 	/**
-	 * Draw the map's visible height surface behind the selected edit grid.
+	 * Draw a compact terrain fallback behind the selected edit grid.
 	 *
-	 * The exact voxel cache still owns picking and edits. This compact shell
-	 * omits hidden caves so a large authored map remains responsive. The
-	 * selected horizontal grid and exact Plan view expose hidden layers without
-	 * multiplying the overview geometry.
+	 * This path keeps incomplete and custom-size drafts editable when the gameplay
+	 * renderer cannot represent their shape. It omits hidden caves. The selected
+	 * grid and the exact Plan view still show hidden layers.
 	 */
 	static function drawTerrainOverview(world:EditorWorldProjection):Void {
 		Rlgl.BeginSolidQuads();
@@ -1821,6 +1831,7 @@ final class CaxecraftEditorScreen {
 	function refreshProjection(resetCamera:Bool = false):Void {
 		final current = session;
 		if (current == null) {
+			terrainPresentation.clear();
 			presentationDraft = null;
 			projection = null;
 			planProjection = null;
@@ -1842,6 +1853,11 @@ final class CaxecraftEditorScreen {
 		environment = draft.environment;
 		final previous = projection;
 		projection = projectWorld(draft.world);
+		final runtimeProjection = projection;
+		if (runtimeProjection == null)
+			terrainPresentation.clear();
+		else
+			terrainPresentation.refresh(draft.world, runtimeProjection, contentRegistry);
 		planProjection = switch projection {
 			case null:
 				editLayerY = 0;

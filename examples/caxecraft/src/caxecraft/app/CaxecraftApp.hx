@@ -1803,7 +1803,8 @@ final class CaxecraftApp {
 			} else if (onLoading) {
 				drawCampaignLoading(pendingCampaignLabel, locale, uiCatalog);
 			} else if (onEditor) {
-				editorActionForFrame = editorScreen.draw(locale, editorNavigationCommand);
+				editorActionForFrame = editorScreen.draw(locale, editorNavigationCommand, terrainTexture, terrainTextureReady, adventureTerrainTexture,
+					adventureTerrainTextureReady);
 			} else {
 				#if caxecraft_pilot
 				if (screen == AppScreen.EditorTestPlay)

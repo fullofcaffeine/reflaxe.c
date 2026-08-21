@@ -27,6 +27,8 @@ import caxecraft.editor.EditorObservationPlan.changesFor;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipeKind;
 import caxecraft.editor.EditorScenarioFactory.create as createEditorScenario;
+import caxecraft.editor.EditorRuntimeTerrain.EditorRuntimeTerrainResult;
+import caxecraft.editor.EditorRuntimeTerrain.projectRuntimeTerrain;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -62,6 +64,7 @@ import caxecraft.editor.EditorWorldViewport.cameraTarget;
 import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
+import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
@@ -95,6 +98,7 @@ import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioEnvironment.ScenarioHorizonEdge;
 import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioWorld;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
@@ -142,6 +146,7 @@ final class EditorProbe {
 		final buildControlChecks = checkBuildControls();
 		final viewportChecks = checkViewport();
 		final worldViewportChecks = checkWorldViewport();
+		final runtimeTerrainChecks = checkRuntimeTerrainProjection();
 		checkZoneRuleProjection();
 		final activeLevelChecks = checkActiveLevelProjection();
 		checkEnvironmentTextRoundTrip();
@@ -223,8 +228,106 @@ final class EditorProbe {
 		checkImmediateRejections(session);
 
 		final finalBytes = expectValid(session, "final recovered scenario");
-		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (buildControlChecks * 521) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (activeLevelChecks * 131) ^ session.historyEntries();
-		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $buildControlChecks Build-control checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ (protocolChecks * 8191) ^ (focusChecks * 2053) ^ (navigationChecks * 1031) ^ (buildControlChecks * 521) ^ (viewportChecks * 4099) ^ (worldViewportChecks * 257) ^ (runtimeTerrainChecks * 67) ^ (activeLevelChecks * 131) ^ session.historyEntries();
+		Sys.println('caxemap-editor: $commandChecks command round trips, $protocolChecks protocol checks, $focusChecks focus checks, $navigationChecks navigation checks, $buildControlChecks Build-control checks, $viewportChecks 2D checks, $worldViewportChecks 3D checks, $runtimeTerrainChecks runtime-terrain checks, $activeLevelChecks active-level checks, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+	}
+
+	/** Prove that a valid editor draft becomes the gameplay renderer's fixed layout. */
+	static function checkRuntimeTerrainProjection():Int {
+		final registry = new Registry();
+		final width = 32;
+		final height = 16;
+		final depth = 32;
+		final sourceCells = [for (_ in 0...width * height * depth) 0];
+		final authoredStoneIndex = (7 * height + 5) * width + 31;
+		sourceCells[authoredStoneIndex] = 1;
+		final world:ScenarioWorld = {
+			size: {width: width, height: height, depth: depth},
+			palette: [{code: 0, blockType: AIR}, {code: 1, blockType: STONE}],
+			chunks: [],
+			fluids: []
+		};
+		final projection:EditorWorldProjection = {
+			width: width,
+			height: height,
+			depth: depth,
+			cells: sourceCells,
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		var checks = 0;
+		switch projectRuntimeTerrain(world, projection, registry) {
+			case RuntimeTerrainReady(cells):
+				require(cells.length == 64 * 16 * 32, "runtime terrain did not fill the fixed gameplay volume");
+				checks++;
+				final runtimeStoneIndex = 31 + 64 * (5 + 16 * 7);
+				require(cells[runtimeStoneIndex] == 3, "runtime terrain changed palette resolution or cell order");
+				checks++;
+				final paddedIndex = 32 + 64 * (5 + 16 * 7);
+				require(cells[paddedIndex] == 0, "compact runtime terrain did not pad the unused half with air");
+				checks++;
+			case RuntimeTerrainUnavailable:
+				throw "an admitted editor world did not project for the gameplay renderer";
+		}
+		final fullWidthCells = [for (_ in 0...64 * height * depth) 0];
+		final fullWidthStoneIndex = 63 + 64 * (15 + height * 31);
+		fullWidthCells[fullWidthStoneIndex] = 1;
+		final fullWidthWorld:ScenarioWorld = {
+			size: {width: 64, height: height, depth: depth},
+			palette: world.palette,
+			chunks: [],
+			fluids: []
+		};
+		final fullWidthProjection:EditorWorldProjection = {
+			width: 64,
+			height: height,
+			depth: depth,
+			cells: fullWidthCells,
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		switch projectRuntimeTerrain(fullWidthWorld, fullWidthProjection, registry) {
+			case RuntimeTerrainReady(cells):
+				require(cells[fullWidthStoneIndex] == 3, "full-width runtime terrain lost its far boundary cell");
+				checks++;
+			case RuntimeTerrainUnavailable:
+				throw "the full gameplay world did not project for the ordinary terrain renderer";
+		}
+		final unsupportedProjection:EditorWorldProjection = {
+			width: 12,
+			height: 1,
+			depth: 12,
+			cells: [for (_ in 0...144) 0],
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		final unsupportedWorld:ScenarioWorld = {
+			size: {width: 12, height: 1, depth: 12},
+			palette: [{code: 0, blockType: AIR}],
+			chunks: [],
+			fluids: []
+		};
+		require(projectRuntimeTerrain(unsupportedWorld, unsupportedProjection, registry) == RuntimeTerrainUnavailable,
+			"a custom-size draft bypassed the editor overview fallback");
+		checks++;
+		final missingPaletteCells = sourceCells.copy();
+		missingPaletteCells[0] = 2;
+		final missingPaletteProjection:EditorWorldProjection = {
+			width: width,
+			height: height,
+			depth: depth,
+			cells: missingPaletteCells,
+			columns: [],
+			surfaceTops: [],
+			surfacePatches: []
+		};
+		require(projectRuntimeTerrain(world, missingPaletteProjection, registry) == RuntimeTerrainUnavailable,
+			"a cell without a palette mapping became plausible runtime terrain");
+		checks++;
+		return checks;
 	}
 
 	/** Prove that a creator gesture becomes one collision-free reloadable object. */
