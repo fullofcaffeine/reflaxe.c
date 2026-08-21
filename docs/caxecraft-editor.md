@@ -206,6 +206,14 @@ format, and history budget before it changes the draft. If one of those checks
 rejects the command, the draft remains unchanged and the editor shows the
 invalid state.
 
+Voxel edits rebuild their changed world arrays from scalar coordinates and
+palette codes. They retain no caller-owned records. The session can therefore
+write canonical bytes and record history without parsing those bytes again on
+the click path. Validate, Save, and Test Play reconstruct exact source
+coordinates from the canonical bytes before they report diagnostics. Commands
+that can carry structured caller data keep the complete write-and-parse
+boundary.
+
 The interaction hierarchy puts direct in-world editing first. Creators can
 point at textured terrain, place or remove cells and objects, and see the result
 immediately. Plan is an advanced tool for hidden layers, trigger volumes, logic

@@ -20,7 +20,18 @@ import haxe.io.Bytes;
 @:noCompletion
 typedef EditorScenarioImage = {
 	final bytes:Bytes;
-	final parsed:ParsedScenario;
+	final scenario:Scenario;
+	final parseState:EditorScenarioParseState;
+}
+
+/** Whether this image already owns exact source coordinates for its bytes. */
+@:noCompletion
+enum EditorScenarioParseState {
+	/** The image came through the public reader and has exact parser metadata. */
+	ParsedScenarioImage(parsed:ParsedScenario);
+
+	/** A trusted voxel reducer wrote these bytes; validation must parse on demand. */
+	DeferredScenarioParse;
 }
 
 /** Internal success/failure result for the same snapshot boundary. */
@@ -31,11 +42,13 @@ enum EditorScenarioImageResult {
 }
 
 /**
-	Copies editor state through the public CAXEMAP codec.
+	Copies general editor state through the public CAXEMAP codec.
 
 	This avoids mutable array aliases between edit, history, and test play while
 	also ensuring every editor-produced draft remains representable by the public
-	file format. It performs no filesystem work.
+	file format. It performs no filesystem work. A separate voxel-only capture
+	writes canonical bytes but defers parsing because that reducer constructs all
+	changed arrays from scalar inputs and the session keeps the result private.
 
 	The codec round trip is a stateless operation over caller-owned values, so
 	module functions are clearer than a class containing only static methods.
@@ -55,6 +68,29 @@ function capture(scenario:Scenario):EditorScenarioImageResult {
 	return restore(ScenarioWriter.write(scenario));
 }
 
+/**
+	Capture canonical bytes after a reducer-owned voxel edit without parsing them.
+
+	Voxel reducers build a new world from scalar coordinates and palette codes;
+	they retain no caller-owned arrays or records. The remaining scenario values
+	come from the session's private image. This lets the session publish exact
+	canonical bytes and history immediately while deferring source-coordinate
+	reconstruction until validation needs it. Do not use this boundary for a
+	command that can retain caller-owned structured input.
+**/
+@:noCompletion
+function captureVoxelEdit(scenario:Scenario):EditorScenarioImageResult {
+	if (scenario.formatVersion != ScenarioWriter.FORMAT_VERSION)
+		return ImageRejected(UnsupportedFormatVersion(scenario.formatVersion, ScenarioWriter.FORMAT_VERSION));
+	if (containsNestedChoice(scenario))
+		return ImageRejected(NestedChoiceIsNotRepresentable);
+	return ImageReady({
+		bytes: ScenarioWriter.write(scenario),
+		scenario: scenario,
+		parseState: DeferredScenarioParse
+	});
+}
+
 /** Restore an isolated editor image from canonical in-memory CAXEMAP bytes. */
 @:noCompletion
 function restore(bytes:Bytes):EditorScenarioImageResult {
@@ -63,7 +99,11 @@ function restore(bytes:Bytes):EditorScenarioImageResult {
 		case ReadOk(records):
 			switch ScenarioParser.parse(records) {
 				case ReadError(diagnostics): ImageRejected(SnapshotRejected(diagnostics));
-				case ReadOk(parsed): ImageReady({bytes: bytes.sub(0, bytes.length), parsed: parsed});
+				case ReadOk(parsed): ImageReady({
+						bytes: bytes.sub(0, bytes.length),
+						scenario: parsed.candidate,
+						parseState: ParsedScenarioImage(parsed)
+					});
 			}
 	}
 }

@@ -232,6 +232,7 @@ final class EditorProbe {
 		checkHardBounds();
 		checkHistoryStateChanges();
 		checkSnapshotFidelity();
+		checkDeferredVoxelValidation();
 		checkTestPlayLocksEditing();
 		checkExternalTestPlayAtomicity();
 		checkImmediateRejections(session);
@@ -2262,6 +2263,51 @@ final class EditorProbe {
 		require(speaker != null && speaker.text() == "narrator", "editor snapshot changed narrator-named speaker into narration");
 	}
 
+	/** Prove a deferred voxel snapshot reconstructs exact diagnostic coordinates. */
+	static function checkDeferredVoxelValidation():Void {
+		final session = open(defaultEditorSettings());
+		expectApplied(session.apply(ResizeWorld({width: 4, height: 1, depth: 1})), WorldShape, "resize deferred-validation world");
+		expectApplied(session.apply(SetPaletteEntry(1, STONE)), Voxel, "add deferred-validation palette entry");
+		final missing = id("missing.deferred-target");
+		expectApplied(session.apply(PutRule({
+			id: id("rule.deferred-validation"),
+			priority: 1,
+			repeat: Once,
+			event: Interact(missing),
+			predicate: Always,
+			actions: [SetCheckpoint(PLAYER)]
+		})), Rule, "add deferred-validation diagnostic");
+		expectApplied(session.apply(PaintVoxel({x: 1, y: 0, z: 0}, 1)), Voxel, "paint through deferred snapshot path");
+
+		final observed = switch session.query(InspectValidation) {
+			case ValidationObserved(_, DraftInvalid(diagnostics)): diagnostics;
+			case _: throw "deferred voxel snapshot did not retain its semantic diagnostic";
+		};
+		final expected = validationDiagnostics(session.canonicalDraft());
+		require(sameDiagnosticCoordinates(observed, expected),
+			'deferred voxel validation did not reconstruct canonical source coordinates: observed=${diagnosticCoordinatesText(observed)} expected=${diagnosticCoordinatesText(expected)}');
+	}
+
+	/** Compare every semantic diagnostic location from the same canonical bytes. */
+	static function sameDiagnosticCoordinates(left:Array<caxecraft.scenario.ScenarioDiagnostic>, right:Array<caxecraft.scenario.ScenarioDiagnostic>):Bool {
+		if (left.length == 0 || left.length != right.length)
+			return false;
+		for (index in 0...left.length) {
+			final actual = left[index].coordinate;
+			final expected = right[index].coordinate;
+			if (actual.line != expected.line || actual.column != expected.column || actual.record != expected.record)
+				return false;
+		}
+		return true;
+	}
+
+	/** Format diagnostic coordinates only when the exact comparison fails. */
+	static function diagnosticCoordinatesText(values:Array<caxecraft.scenario.ScenarioDiagnostic>):String
+		return [
+			for (value in values)
+				'${value.coordinate.line}:${value.coordinate.column}:${value.coordinate.record}'
+		].join(",");
+
 	static function checkHistoryStateChanges():Void {
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 2, height: 1, depth: 1})), WorldShape, "history accounting edit");
@@ -2416,6 +2462,22 @@ final class EditorProbe {
 			case ReadError(_): throw "editor bytes did not validate after reload";
 		};
 		require(ScenarioWriter.write(scenario).compare(bytes) == 0, "editor save/reload changed canonical bytes");
+	}
+
+	/** Read validation diagnostics directly from canonical bytes as an oracle. */
+	static function validationDiagnostics(bytes:Bytes):Array<caxecraft.scenario.ScenarioDiagnostic> {
+		final records = switch ScenarioLexer.read(bytes) {
+			case ReadOk(value): value;
+			case ReadError(_): throw "deferred-validation bytes did not lex";
+		};
+		final parsed = switch ScenarioParser.parse(records) {
+			case ReadOk(value): value;
+			case ReadError(_): throw "deferred-validation bytes did not parse";
+		};
+		return switch ScenarioValidator.validate(parsed, new Registry()) {
+			case ReadError(diagnostics): diagnostics;
+			case ReadOk(_): throw "deferred-validation oracle unexpectedly accepted the invalid rule";
+		}
 	}
 
 	static function expectValid(session:EditorSession, label:String):Bytes {

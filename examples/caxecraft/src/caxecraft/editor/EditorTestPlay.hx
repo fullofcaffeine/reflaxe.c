@@ -57,7 +57,7 @@ final class EditorTestPlay {
 
 	public function scenarioSnapshot():Scenario {
 		return switch captureScenario(scenario) {
-			case ImageReady(image): image.parsed.candidate;
+			case ImageReady(image): image.scenario;
 			case ImageRejected(_): throw "validated editor test-play snapshot became unreadable";
 		}
 	}

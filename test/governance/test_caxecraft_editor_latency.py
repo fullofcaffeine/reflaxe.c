@@ -77,6 +77,21 @@ class CaxecraftEditorLatencyContract(unittest.TestCase):
         self.assertIn("terrainPresentation.refreshVoxel", refresh)
         self.assertIn("terrainPresentation.refresh(draft.world", refresh)
 
+    def test_voxel_commit_defers_parser_metadata_until_validation(self) -> None:
+        source = EDITOR_SESSION.read_text(encoding="utf-8")
+        capture = section(source, "function captureReduction", "/**\n\t\tRestore the state")
+        validation = section(source, "function validateImage", "/** Convert the public validator")
+
+        self.assertIn("PaintVoxel(_, _)", capture)
+        self.assertIn("EraseVoxel(_)", capture)
+        self.assertIn("PaintVoxels(_, _)", capture)
+        self.assertIn("EraseVoxels(_)", capture)
+        self.assertIn("FillBounds(_, _)", capture)
+        self.assertIn("captureVoxelEdit(scenario)", capture)
+        self.assertIn("case _: captureScenario(scenario)", capture)
+        self.assertIn("case DeferredScenarioParse", validation)
+        self.assertIn("restoreScenario(image.bytes)", validation)
+
     def test_spatial_queries_reuse_the_copy_owned_presentation(self) -> None:
         source = EDITOR_AUTOMATION.read_text(encoding="utf-8")
         surface = section(source, "private function encodeSurface", "private function encodeColumn")

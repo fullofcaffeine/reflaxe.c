@@ -13,7 +13,9 @@ import caxecraft.editor.EditorPolicy.validate as validateEditorSettings;
 import caxecraft.editor.EditorPresentation.project as projectPresentation;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImageResult;
+import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioParseState;
 import caxecraft.editor.EditorScenarioSnapshot.capture as captureScenario;
+import caxecraft.editor.EditorScenarioSnapshot.captureVoxelEdit;
 import caxecraft.editor.EditorScenarioSnapshot.restore as restoreScenario;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -36,6 +38,7 @@ import caxecraft.editor.EditorTypes.EditorTestPlayResult;
 import caxecraft.editor.EditorTypes.EditorValidationObservation;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
 import caxecraft.scenario.Scenario;
+import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioCodecModel.ParsedScenario;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
@@ -66,18 +69,28 @@ private enum EditorSelectionValidation {
 	WorkspaceSelectionRejected(error:EditorError);
 }
 
+/** One exact semantic result after resolving deferred parser metadata. */
+private enum EditorImageValidation {
+	ImagePlayable(scenario:Scenario);
+	ImageInvalid(diagnostics:Array<ScenarioDiagnostic>);
+	ImageUnreadable(error:EditorError);
+}
+
 /**
 	Renderer-independent editing, validation, history, and test-play state.
 
 	The mutable draft is never exposed directly. Public scenario snapshots parse
 	a private copy of the canonical CAXEMAP bytes, so UI code cannot accidentally
 	change history or test play by holding an old array reference. The session retains the latest
-	canonical image: owned bytes plus their parsed scenario. A preview or commit
+	canonical image: owned bytes plus its private typed scenario. Opened and
+	restored images also retain exact parser coordinates. A preview or commit
 	reuses that image as its unchanged `before` value and creates one new image
-	for the proposed `after` value. This preserves isolation without writing and
-	parsing the current document again before every interaction. Visual queries
-	derive fresh presentation arrays from the retained parsed value, so an
-	accepted edit does not cause a second CAXEMAP parse on the drawing path.
+	for the proposed `after` value. Voxel reducers retain no caller-owned records,
+	so their image writes canonical bytes immediately and reconstructs parser
+	coordinates only when validation needs them. Other commands keep the complete
+	codec round trip. Visual queries derive fresh presentation arrays from the
+	retained typed value, so an accepted edit does not cause another CAXEMAP parse
+	on the drawing path.
 **/
 final class EditorSession {
 	final registry:ScenarioContentRegistry;
@@ -85,7 +98,7 @@ final class EditorSession {
 	final history:EditorHistory;
 	final initialSource:Bytes;
 
-	/** The one canonical byte buffer and parsed owner for the current history state. */
+	/** The canonical bytes, typed scenario, and available parser metadata. */
 	var draftImage:EditorScenarioImage;
 
 	var selection:EditorSelection;
@@ -151,7 +164,11 @@ final class EditorSession {
 		final invalidSetting = validateEditorSettings(settings);
 		if (invalidSetting != null)
 			return EditorOpenRejected(invalidSetting);
-		return EditorOpened(new EditorSession({bytes: source.sub(0, source.length), parsed: parsed}, registry, settings, false));
+		return EditorOpened(new EditorSession({
+			bytes: source.sub(0, source.length),
+			scenario: parsed.candidate,
+			parseState: ParsedScenarioImage(parsed)
+		}, registry, settings, false));
 	}
 
 	/** True when bytes are the exact source owner from which this session opened. */
@@ -258,13 +275,13 @@ final class EditorSession {
 			case InspectDraft:
 				DraftObserved(currentRevision, draftSnapshot());
 			case InspectPresentation:
-				PresentationObserved(currentRevision, projectPresentation(draftImage.parsed.candidate));
+				PresentationObserved(currentRevision, projectPresentation(draftImage.scenario));
 			case InspectCanonicalDraft:
 				CanonicalDraftObserved(currentRevision, canonicalDraft());
 			case InspectTree:
-				TreeObserved(currentRevision, buildTree(draftImage.parsed.candidate));
+				TreeObserved(currentRevision, buildTree(draftImage.scenario));
 			case InspectNode(ref):
-				NodeObserved(currentRevision, findNode(draftImage.parsed.candidate, ref));
+				NodeObserved(currentRevision, findNode(draftImage.scenario, ref));
 			case InspectValidation:
 				ValidationObserved(currentRevision, inspectValidation());
 		}
@@ -279,9 +296,40 @@ final class EditorSession {
 	**/
 	function inspectValidation():EditorValidationObservation {
 		final image = draftImage;
-		return switch ScenarioValidator.validate(image.parsed, registry) {
-			case ReadError(diagnostics): DraftInvalid(diagnostics.copy());
-			case ReadOk(_): DraftPlayable(image.bytes.sub(0, image.bytes.length));
+		return switch validateImage(image) {
+			case ImageInvalid(diagnostics): DraftInvalid(diagnostics.copy());
+			case ImagePlayable(_): DraftPlayable(image.bytes.sub(0, image.bytes.length));
+			case ImageUnreadable(error): DraftUnreadable(error);
+		}
+	}
+
+	/**
+	 * Resolve exact parser coordinates only when a semantic check needs them.
+	 *
+	 * Ordinary opened and restored images already own this metadata. A trusted
+	 * voxel edit owns canonical bytes and a private typed scenario, so its click
+	 * path can defer this full read until Validate, Save, or Test Play.
+	 */
+	function validateImage(image:EditorScenarioImage):EditorImageValidation {
+		return switch image.parseState {
+			case ParsedScenarioImage(parsed): validateParsedImage(parsed);
+			case DeferredScenarioParse:
+				switch restoreScenario(image.bytes) {
+					case ImageRejected(error): ImageUnreadable(error);
+					case ImageReady(restored):
+						switch restored.parseState {
+							case ParsedScenarioImage(parsed): validateParsedImage(parsed);
+							case DeferredScenarioParse: throw "restored editor bytes retained deferred parser metadata";
+						}
+				}
+		}
+	}
+
+	/** Convert the public validator result into the editor's exact three states. */
+	function validateParsedImage(parsed:ParsedScenario):EditorImageValidation {
+		return switch ScenarioValidator.validate(parsed, registry) {
+			case ReadError(diagnostics): ImageInvalid(diagnostics);
+			case ReadOk(scenario): ImagePlayable(scenario);
 		}
 	}
 
@@ -344,10 +392,10 @@ final class EditorSession {
 							mergeChanges(changes, [ChangedDocument]);
 					}
 				case _:
-					switch reduceCommand(staged.parsed.candidate, command, settings) {
+					switch reduceCommand(staged.scenario, command, settings) {
 						case ReductionRejected(error): return StageRejected(error);
 						case ReductionReady(reduction):
-							switch captureScenario(reduction.scenario) {
+							switch captureReduction(command, reduction.scenario) {
 								case ImageRejected(error): return StageRejected(error);
 								case ImageReady(image):
 									staged = image;
@@ -399,14 +447,29 @@ final class EditorSession {
 				return restorePlayable(before);
 			case _:
 		}
-		return switch reduceCommand(before.parsed.candidate, command, settings) {
+		return switch reduceCommand(before.scenario, command, settings) {
 			case ReductionRejected(error): EditRejected(error);
 			case ReductionReady(reduction):
-				switch captureScenario(reduction.scenario) {
+				switch captureReduction(command, reduction.scenario) {
 					case ImageRejected(error): EditRejected(error);
 					case ImageReady(after):
 						accept(before, after, reduction.family, changesFor(command));
 				}
+		}
+	}
+
+	/**
+	 * Snapshot one reducer result with the narrowest safe ownership boundary.
+	 *
+	 * Voxel commands consume only scalar coordinates and rebuild the complete
+	 * world arrays, so they cannot retain mutable input from a caller. Other
+	 * command payloads keep the general codec round trip until their individual
+	 * ownership contracts prove that the parser can also be deferred.
+	 */
+	function captureReduction(command:EditorCommand, scenario:Scenario):EditorScenarioImageResult {
+		return switch command {
+			case PaintVoxel(_, _) | EraseVoxel(_) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _): captureVoxelEdit(scenario);
+			case _: captureScenario(scenario);
 		}
 	}
 
@@ -431,7 +494,7 @@ final class EditorSession {
 				HistoryRejected(error);
 			case ImageReady(image):
 				draftImage = image;
-				selection = selectionForScenario(selection, draftImage.parsed.candidate);
+				selection = selectionForScenario(selection, draftImage.scenario);
 				currentStateIdentity = entry.beforeStateIdentity;
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
@@ -458,7 +521,7 @@ final class EditorSession {
 				HistoryRejected(error);
 			case ImageReady(image):
 				draftImage = image;
-				selection = selectionForScenario(selection, draftImage.parsed.candidate);
+				selection = selectionForScenario(selection, draftImage.scenario);
 				currentStateIdentity = entry.afterStateIdentity;
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
@@ -468,9 +531,10 @@ final class EditorSession {
 	/** Validate the draft and update the separate last-known-playable snapshot. */
 	public function validate():EditorValidationResult {
 		final image = draftImage;
-		return switch ScenarioValidator.validate(image.parsed, registry) {
-			case ReadError(diagnostics): ValidationFailed(diagnostics);
-			case ReadOk(scenario):
+		return switch validateImage(image) {
+			case ImageInvalid(diagnostics): ValidationFailed(diagnostics);
+			case ImageUnreadable(error): ValidationBlocked(error);
+			case ImagePlayable(scenario):
 				lastPlayable = cloneScenario(scenario);
 				ValidationPassed(image.bytes.sub(0, image.bytes.length));
 		}
@@ -553,7 +617,7 @@ final class EditorSession {
 
 	public function draftSnapshot():Scenario {
 		return switch restoreScenario(draftImage.bytes) {
-			case ImageReady(image): image.parsed.candidate;
+			case ImageReady(image): image.scenario;
 			case ImageRejected(_): throw "editor draft became unreadable";
 		}
 	}
@@ -622,7 +686,7 @@ final class EditorSession {
 		};
 		history.record(entry);
 		draftImage = after;
-		selection = selectionForScenario(selection, draftImage.parsed.candidate);
+		selection = selectionForScenario(selection, draftImage.scenario);
 		nextStateIdentity++;
 		currentStateIdentity = nextStateIdentity;
 		advanceRevision();
@@ -641,9 +705,9 @@ final class EditorSession {
 	}
 
 	function validatedScenario(image:EditorScenarioImage):Null<Scenario> {
-		return switch ScenarioValidator.validate(image.parsed, registry) {
-			case ReadError(_): null;
-			case ReadOk(scenario): cloneScenario(scenario);
+		return switch validateImage(image) {
+			case ImagePlayable(scenario): cloneScenario(scenario);
+			case ImageInvalid(_) | ImageUnreadable(_): null;
 		}
 	}
 
@@ -651,13 +715,13 @@ final class EditorSession {
 		if (scenario == null)
 			return null;
 		return switch captureScenario(scenario) {
-			case ImageReady(image): image.parsed.candidate;
+			case ImageReady(image): image.scenario;
 			case ImageRejected(_): null;
 		}
 	}
 
 	function validateSelection(value:EditorSelection):EditorSelectionValidation {
-		final draft = draftImage.parsed.candidate;
+		final draft = draftImage.scenario;
 		return switch value {
 			case NoEditorSelection: WorkspaceSelectionReady(NoEditorSelection);
 			case VoxelSelection(bounds):
