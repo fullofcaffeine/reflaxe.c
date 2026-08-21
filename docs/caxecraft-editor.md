@@ -193,6 +193,24 @@ A normal displayed frame reads the cache. It does not serialize the CAXEMAP
 draft or allocate a replacement volume. New World, an accepted edit, undo, or
 redo rebuilds the cache from the session's new draft.
 
+Moving the pointer between cells also reads this cache. The screen translates
+the selected tool into a possible command, but it does not serialize the map or
+run a complete transaction for each new hover cell. A green placement ghost
+means that the visible gesture has its required local inputs. The click remains
+authoritative: `EditorSession.mutate` checks the revision, reducer, canonical
+format, and history budget before it changes the draft. If one of those checks
+rejects the command, the draft remains unchanged and the editor shows the
+invalid state.
+
+The intended interaction hierarchy is direct in-world editing first. Creators
+must be able to point at the playable world, place or remove terrain and
+objects, and see the result immediately. The Plan view is an advanced spatial
+tool for hidden layers, trigger volumes, logic links, large selections, and
+fast navigation. It is not the default authoring experience. The current Build
+view provides the first 3D editing slice. Issue `haxe_c-xge.19.6.3` owns the
+remaining work to use the ordinary playable presentation and interaction
+grammar throughout that primary view.
+
 History assigns a small state identity to each accepted edit, undo, and redo.
 Save records that identity only after publication succeeds, so a normal frame
 does not serialize the draft to decide whether it is dirty. The CAXEMAP lexer

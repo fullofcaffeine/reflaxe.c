@@ -68,16 +68,23 @@ private enum EditorSelectionValidation {
 /**
 	Renderer-independent editing, validation, history, and test-play state.
 
-	The mutable draft is never exposed directly. Public snapshots are deep
-	CAXEMAP round trips, so UI code cannot accidentally change history or test
-	play by holding an old array reference.
+	The mutable draft is never exposed directly. Public scenario snapshots parse
+	a private copy of the canonical CAXEMAP bytes, so UI code cannot accidentally
+	change history or test play by holding an old array reference. The session retains the latest
+	canonical image: owned bytes plus their parsed scenario. A preview or commit
+	reuses that image as its unchanged `before` value and creates one new image
+	for the proposed `after` value. This preserves isolation without writing and
+	parsing the current document again before every interaction.
 **/
 final class EditorSession {
 	final registry:ScenarioContentRegistry;
 	final settings:EditorSettings;
 	final history:EditorHistory;
 	final initialSource:Bytes;
-	var draft:Scenario;
+
+	/** The one canonical byte buffer and parsed owner for the current history state. */
+	var draftImage:EditorScenarioImage;
+
 	var selection:EditorSelection;
 	var lastPlayable:Null<Scenario>;
 	var playState:Null<EditorSessionPlayState>;
@@ -90,7 +97,7 @@ final class EditorSession {
 		this.settings = settings;
 		this.history = new EditorHistory(settings);
 		this.initialSource = image.bytes.sub(0, image.bytes.length);
-		this.draft = image.parsed.candidate;
+		this.draftImage = image;
 		this.selection = NoEditorSelection;
 		this.lastPlayable = validateInitial ? validatedScenario(image) : null;
 		this.playState = null;
@@ -159,10 +166,7 @@ final class EditorSession {
 	public function apply(command:EditorCommand):EditorEditResult {
 		if (playState != null)
 			return EditRejected(NotEditing);
-		return switch captureScenario(draft) {
-			case ImageRejected(error): EditRejected(error);
-			case ImageReady(before): applyToImage(before, command);
-		}
+		return applyToImage(draftImage, command);
 	}
 
 	/**
@@ -223,13 +227,9 @@ final class EditorSession {
 			return PreviewRejected(EmptyTransaction, currentRevision);
 		if (request.commands.length > settings.transactionCommands)
 			return PreviewRejected(TransactionTooLarge(request.commands.length, settings.transactionCommands), currentRevision);
-		return switch captureScenario(draft) {
-			case ImageRejected(error): PreviewRejected(error, currentRevision);
-			case ImageReady(before):
-				switch stageCommands(before, request.commands) {
-					case StageRejected(error): PreviewRejected(error, currentRevision);
-					case StageReady(after, families, changes): previewStaged(before, after, families, changes);
-				}
+		return switch stageCommands(draftImage, request.commands) {
+			case StageRejected(error): PreviewRejected(error, currentRevision);
+			case StageReady(after, families, changes): previewStaged(draftImage, after, families, changes);
 		};
 	}
 
@@ -257,9 +257,9 @@ final class EditorSession {
 			case InspectCanonicalDraft:
 				CanonicalDraftObserved(currentRevision, canonicalDraft());
 			case InspectTree:
-				TreeObserved(currentRevision, buildTree(draft));
+				TreeObserved(currentRevision, buildTree(draftImage.parsed.candidate));
 			case InspectNode(ref):
-				NodeObserved(currentRevision, findNode(draft, ref));
+				NodeObserved(currentRevision, findNode(draftImage.parsed.candidate, ref));
 			case InspectValidation:
 				ValidationObserved(currentRevision, inspectValidation());
 		}
@@ -273,13 +273,10 @@ final class EditorSession {
 		inspecting diagnostics, so this path returns fresh copied evidence only.
 	**/
 	function inspectValidation():EditorValidationObservation {
-		return switch captureScenario(draft) {
-			case ImageRejected(error): DraftUnreadable(error);
-			case ImageReady(image):
-				switch ScenarioValidator.validate(image.parsed, registry) {
-					case ReadError(diagnostics): DraftInvalid(diagnostics.copy());
-					case ReadOk(_): DraftPlayable(image.bytes.sub(0, image.bytes.length));
-				}
+		final image = draftImage;
+		return switch ScenarioValidator.validate(image.parsed, registry) {
+			case ReadError(diagnostics): DraftInvalid(diagnostics.copy());
+			case ReadOk(_): DraftPlayable(image.bytes.sub(0, image.bytes.length));
 		}
 	}
 
@@ -312,18 +309,14 @@ final class EditorSession {
 			return MutationRejected(EmptyTransaction, currentRevision);
 		if (commands.length > settings.transactionCommands)
 			return MutationRejected(TransactionTooLarge(commands.length, settings.transactionCommands), currentRevision);
-		return switch captureScenario(draft) {
-			case ImageRejected(error): MutationRejected(error, currentRevision);
-			case ImageReady(before):
-				switch stageCommands(before, commands) {
-					case StageRejected(error): MutationRejected(error, currentRevision);
-					case StageReady(after, families, changes):
-						switch accept(before, after, Transaction, changes) {
-							case EditApplied(_, committedChanges, undoDepth, redoDepth):
-								MutationApplied(families.copy(), committedChanges, currentRevision, undoDepth, redoDepth);
-							case EditUnchanged(_): MutationUnchanged(families.copy(), currentRevision);
-							case EditRejected(error): MutationRejected(error, currentRevision);
-						}
+		return switch stageCommands(draftImage, commands) {
+			case StageRejected(error): MutationRejected(error, currentRevision);
+			case StageReady(after, families, changes):
+				switch accept(draftImage, after, Transaction, changes) {
+					case EditApplied(_, committedChanges, undoDepth, redoDepth):
+						MutationApplied(families.copy(), committedChanges, currentRevision, undoDepth, redoDepth);
+					case EditUnchanged(_): MutationUnchanged(families.copy(), currentRevision);
+					case EditRejected(error): MutationRejected(error, currentRevision);
 				}
 		}
 	}
@@ -432,8 +425,8 @@ final class EditorSession {
 				history.takeRedo();
 				HistoryRejected(error);
 			case ImageReady(image):
-				draft = image.parsed.candidate;
-				selection = selectionForScenario(selection, draft);
+				draftImage = image;
+				selection = selectionForScenario(selection, draftImage.parsed.candidate);
 				currentStateIdentity = entry.beforeStateIdentity;
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
@@ -459,8 +452,8 @@ final class EditorSession {
 				history.takeUndo();
 				HistoryRejected(error);
 			case ImageReady(image):
-				draft = image.parsed.candidate;
-				selection = selectionForScenario(selection, draft);
+				draftImage = image;
+				selection = selectionForScenario(selection, draftImage.parsed.candidate);
 				currentStateIdentity = entry.afterStateIdentity;
 				advanceRevision();
 				HistoryApplied(entry.family, entry.changes.copy(), history.undoDepth(), history.redoDepth());
@@ -469,15 +462,12 @@ final class EditorSession {
 
 	/** Validate the draft and update the separate last-known-playable snapshot. */
 	public function validate():EditorValidationResult {
-		return switch captureScenario(draft) {
-			case ImageRejected(error): ValidationBlocked(error);
-			case ImageReady(image):
-				switch ScenarioValidator.validate(image.parsed, registry) {
-					case ReadError(diagnostics): ValidationFailed(diagnostics);
-					case ReadOk(scenario):
-						lastPlayable = cloneScenario(scenario);
-						ValidationPassed(image.bytes.sub(0, image.bytes.length));
-				}
+		final image = draftImage;
+		return switch ScenarioValidator.validate(image.parsed, registry) {
+			case ReadError(diagnostics): ValidationFailed(diagnostics);
+			case ReadOk(scenario):
+				lastPlayable = cloneScenario(scenario);
+				ValidationPassed(image.bytes.sub(0, image.bytes.length));
 		}
 	}
 
@@ -557,10 +547,10 @@ final class EditorSession {
 	}
 
 	public function draftSnapshot():Scenario {
-		final snapshot = cloneScenario(draft);
-		if (snapshot == null)
-			throw "editor draft became unreadable";
-		return snapshot;
+		return switch restoreScenario(draftImage.bytes) {
+			case ImageReady(image): image.parsed.candidate;
+			case ImageRejected(_): throw "editor draft became unreadable";
+		}
 	}
 
 	public function lastPlayableSnapshot():Null<Scenario>
@@ -572,10 +562,7 @@ final class EditorSession {
 		a playable or persistable map.
 	**/
 	public function canonicalDraft():Bytes {
-		return switch captureScenario(draft) {
-			case ImageReady(image): image.bytes.sub(0, image.bytes.length);
-			case ImageRejected(_): throw "editor draft became unreadable";
-		}
+		return draftImage.bytes.sub(0, draftImage.bytes.length);
 	}
 
 	/** Return a copy of the workspace target shared by every editor view. */
@@ -629,8 +616,8 @@ final class EditorSession {
 			byteCost: byteCost
 		};
 		history.record(entry);
-		draft = after.parsed.candidate;
-		selection = selectionForScenario(selection, draft);
+		draftImage = after;
+		selection = selectionForScenario(selection, draftImage.parsed.candidate);
 		nextStateIdentity++;
 		currentStateIdentity = nextStateIdentity;
 		advanceRevision();
@@ -665,6 +652,7 @@ final class EditorSession {
 	}
 
 	function validateSelection(value:EditorSelection):EditorSelectionValidation {
+		final draft = draftImage.parsed.candidate;
 		return switch value {
 			case NoEditorSelection: WorkspaceSelectionReady(NoEditorSelection);
 			case VoxelSelection(bounds):

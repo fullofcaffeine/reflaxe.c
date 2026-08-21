@@ -1087,6 +1087,9 @@ visible voxel or empty floor cell. Object and environment controls use the same
 typed `EditorCommand` boundary as terrain, history, and tests. The screen caches
 a read-only complete-volume projection between accepted edits. It also tracks
 the saved history state without serializing the complete draft every frame.
+Crossing into another hover cell translates the tool from that cached state.
+Only a click runs the complete revision, reducer, canonical-format, and history
+checks.
 
 Save and Ctrl/Cmd+S validate the draft and publish the map with its campaign,
 runtime-content, and outer-package receipts. The native app shares one

@@ -20,7 +20,6 @@ import caxecraft.editor.EditorFlowProjection.projectZoneRules;
 import caxecraft.editor.EditorObjectDuplicate.duplicateObject;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
-import caxecraft.editor.EditorTypes.EditorPreviewResult;
 import caxecraft.editor.EditorTypes.EditorSelection;
 import caxecraft.editor.EditorTypes.EditorSelectionResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
@@ -57,6 +56,7 @@ import caxecraft.input.NavigationInput.NavigationCommand;
 import caxecraft.localization.RuntimeUiCatalog;
 import caxecraft.localization.UiTypes.LocaleCursor;
 import caxecraft.localization.UiTypes.UiMessage;
+import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
@@ -132,6 +132,7 @@ final class CaxecraftEditorScreen {
 	final editorPackage:EditorPackageSession;
 	var session:Null<EditorSession>;
 	var notice:EditorNotice;
+	var presentationDraft:Null<Scenario>;
 	var projection:Null<EditorWorldProjection>;
 	var planProjection:Null<EditorViewportProjection>;
 	var objectGizmos:Array<EditorObjectGizmo>;
@@ -173,6 +174,7 @@ final class CaxecraftEditorScreen {
 		this.editorPackage = editorPackage;
 		session = editorPackage.workspace();
 		notice = Ready;
+		presentationDraft = null;
 		projection = null;
 		planProjection = null;
 		objectGizmos = [];
@@ -1138,13 +1140,14 @@ final class CaxecraftEditorScreen {
 	/** Copy the shared object target through canonical history, then select the copy. */
 	function duplicateSelectedObject():Void {
 		final current = session;
-		if (current == null)
+		final draft = presentationDraft;
+		if (current == null || draft == null)
 			return;
 		final sourceId = switch current.selectionSnapshot() {
 			case NodeSelection(ObjectNode(value)): value;
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
-		final duplicate = duplicateObject(sourceId, current.draftSnapshot().objects);
+		final duplicate = duplicateObject(sourceId, draft.objects);
 		if (duplicate == null) {
 			notice = Invalid;
 			return;
@@ -1393,10 +1396,20 @@ final class CaxecraftEditorScreen {
 			&& z < current.origin.z + current.size.depth;
 	}
 
-	/** Recompute a reducer-backed ghost only after its snapped input changes. */
+	/**
+	 * Recompute the placement ghost from the cached presentation draft.
+	 *
+	 * Pointer movement must stay frame-local. This path translates the selected
+	 * tool and shows whether that gesture has the inputs it needs. A click still
+	 * enters `EditorSession.mutate`, which performs the complete reducer,
+	 * canonical CAXEMAP, revision, and history checks before it changes the draft.
+	 * The ghost can therefore look available immediately and still fail closed
+	 * if the authoritative commit rejects it.
+	 */
 	function updatePreview(point:VoxelPoint):Void {
 		final current = session;
-		if (current == null) {
+		final draft = presentationDraft;
+		if (current == null || draft == null) {
 			invalidatePreview();
 			return;
 		}
@@ -1412,26 +1425,16 @@ final class CaxecraftEditorScreen {
 		previewTool = activeTool;
 		var paletteCode = 0;
 		if (activeTool == PaintTool || activeTool == FillTool)
-			paletteCode = paletteCodeForBlock(current.draftSnapshot().world, contentRegistry.defaultEditorBlockId());
+			paletteCode = paletteCodeForBlock(draft.world, contentRegistry.defaultEditorBlockId());
 		if (paletteCode < 0) {
 			previewAllowed = false;
 			return;
 		}
-		final draft = current.draftSnapshot();
 		previewAllowed = switch commandForTool(activeTool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules,
 			activeRecipeFor(activeTool)) {
 			case ToolCommandRejected(_): false;
 			case ToolSelectionReady(_): true;
-			case ToolCommandReady(command):
-				switch current.preview({baseRevision: current.revision(), commands: [command]}) {
-					case PreviewAccepted(_, _, _) | PreviewUnchanged(_, _): true;
-					case PreviewRejected(_, _): false;
-				}
-			case ToolBatchReady(commands, _):
-				switch current.preview({baseRevision: current.revision(), commands: commands}) {
-					case PreviewAccepted(_, _, _) | PreviewUnchanged(_, _): true;
-					case PreviewRejected(_, _): false;
-				}
+			case ToolCommandReady(_) | ToolBatchReady(_, _): true;
 		};
 	}
 
@@ -1656,7 +1659,8 @@ final class CaxecraftEditorScreen {
 	 */
 	function applyToolAt(tool:EditorTool, point:VoxelPoint):Bool {
 		final current = session;
-		if (current == null) {
+		final draft = presentationDraft;
+		if (current == null || draft == null) {
 			notice = Invalid;
 			return false;
 		}
@@ -1672,13 +1676,12 @@ final class CaxecraftEditorScreen {
 			case CheckpointTool | CatalogObjectTool | TriggerZoneTool:
 		}
 		if (needsPalette) {
-			paletteCode = paletteCodeForBlock(current.draftSnapshot().world, contentRegistry.defaultEditorBlockId());
+			paletteCode = paletteCodeForBlock(draft.world, contentRegistry.defaultEditorBlockId());
 			if (paletteCode < 0) {
 				notice = Invalid;
 				return false;
 			}
 		}
-		final draft = current.draftSnapshot();
 		final toolResult = commandForTool(tool, point, paletteCode, current.selectedBounds(), draft.objects, draft.flow.rules, activeRecipeFor(tool));
 		return switch toolResult {
 			case ToolCommandRejected(_):
@@ -1741,6 +1744,7 @@ final class CaxecraftEditorScreen {
 	function refreshProjection(resetCamera:Bool = false):Void {
 		final current = session;
 		if (current == null) {
+			presentationDraft = null;
 			projection = null;
 			planProjection = null;
 			editLayerY = 0;
@@ -1756,6 +1760,7 @@ final class CaxecraftEditorScreen {
 			return;
 		}
 		final draft = current.draftSnapshot();
+		presentationDraft = draft;
 		syncWorldName(draft.title);
 		environment = draft.environment;
 		final previous = projection;
