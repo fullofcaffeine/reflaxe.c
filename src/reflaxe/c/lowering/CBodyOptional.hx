@@ -213,6 +213,7 @@ class CBodyOptionalRegistry {
 					if (!isDirectUnmanaged(field.type))
 						direct = false;
 				direct;
+			case CBVKOptional(optional): !optional.managedLifetime;
 			case _:
 				false;
 		};

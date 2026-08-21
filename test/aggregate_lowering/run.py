@@ -1603,6 +1603,33 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
                 raise AggregateLoweringFailure(
                     f"{label} did not emit exactly one readable ParsedChoice layout"
                 )
+            nested_optional_declarations = (
+                b"struct hxc_Main_OptionalEnvelope {\n"
+                b"  struct hxc_optional_Main_DirectPoint hxc_point;\n"
+                b"};",
+                b"struct hxc_optional_Main_OptionalEnvelope {\n"
+                b"  bool hxc_has_value;\n"
+                b"  struct hxc_Main_OptionalEnvelope hxc_value;\n"
+                b"};",
+            )
+            if any(
+                generated_headers.count(declaration) != 1
+                for declaration in nested_optional_declarations
+            ):
+                raise AggregateLoweringFailure(
+                    f"{label} did not emit one readable wrapper for each nested optional level"
+                )
+            generated_source = b"\n".join(
+                path.read_bytes() for path in sorted(output.rglob("*.c"))
+            )
+            for marker in (
+                b"hxc_Main_nestedOptionalSum((struct hxc_optional_Main_OptionalEnvelope){ .hxc_has_value = false })",
+                b"hxc_Main_nestedOptionalSum((struct hxc_optional_Main_OptionalEnvelope){ .hxc_has_value = true",
+            ):
+                if marker not in generated_source:
+                    raise AggregateLoweringFailure(
+                        f"{label} nested optional call omitted {marker!r}"
+                    )
 
         matrix = (
             ("first", "unity", False),
@@ -1659,6 +1686,21 @@ def check_managed_optional(*, requested_toolchain: str) -> None:
                     if marker not in parsed_choice:
                         raise AggregateLoweringFailure(
                             "contextually typed optional record HxcIR omitted "
+                            f"{marker!r}"
+                        )
+                nested_optional = named_function_section(
+                    hxcir, "Main", "nestedOptionalSum"
+                )
+                for marker in (
+                    'parameter "parameter.0" type=nullable(tagged,instance("instance.closed-record.',
+                    "direct-optional-null-equality",
+                    "optional-record-field-null-check",
+                    "optional-record-field-unwrap",
+                    "optional-record-field-project",
+                ):
+                    if marker not in nested_optional:
+                        raise AggregateLoweringFailure(
+                            "nested optional parameter HxcIR omitted "
                             f"{marker!r}"
                         )
             else:
