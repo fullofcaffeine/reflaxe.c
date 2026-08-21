@@ -602,6 +602,20 @@ final class RuntimeContentPack {
 		final root = reader.parse(input);
 		if (root == null)
 			return rejected(reader);
+		return decodeParsed(root);
+	}
+
+	/**
+	 * Admit one parser-bounded tree without parsing its source a second time.
+	 *
+	 * Only the runtime-schema probe receives this read-only friend capability. It
+	 * uses the entry point to isolate schema mutations after one real byte parse;
+	 * application callers must continue through `decode`, which owns byte, UTF-8,
+	 * syntax, and resource-bound validation.
+	 */
+	@:allow(caxecraft.qa.RuntimeSchemasProbe)
+	private static function decodeParsed(root:ContentJsonNode):RuntimeContentPackResult {
+		final reader = new RuntimeSchemaReader();
 		final fields = reader.object(root, "content pack", [
 			"schemaVersion",
 			"logicalPath",

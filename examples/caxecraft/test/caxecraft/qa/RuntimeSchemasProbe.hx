@@ -3,6 +3,11 @@ package caxecraft.qa;
 import caxecraft.content.ContentPackageModel.ContentPackageReadResult;
 import caxecraft.content.ContentPackageModel.LoadedPackageBytes;
 import caxecraft.content.ContentPackageStore;
+import caxecraft.content.ContentJson;
+import caxecraft.content.ContentJson.ContentJsonField;
+import caxecraft.content.ContentJson.ContentJsonNode;
+import caxecraft.content.ContentJson.ContentJsonReadResult;
+import caxecraft.content.ContentJson.ContentJsonValue;
 import caxecraft.content.LevelContentResolver.FluidContentResolution;
 import caxecraft.content.LevelContentResolver.ActorPresentationResolution;
 import caxecraft.content.LevelContentResolver.StatefulObjectCollisionProfile;
@@ -155,7 +160,7 @@ function selfCheck():Int {
 	}
 
 	if (catalog.localeCount() != 2
-		|| catalog.messageCount() != 70
+		|| catalog.messageCount() != 71
 		|| catalog.text(LocaleCursor.Locale0, UiMessage.Brand) != "CAXECRAFT  //  C + HAXE"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure) != "AVENTURA"
 		|| catalog.text(LocaleCursor.Locale1, UiMessage.EditorTitle) != "EDITOR DE MUNDOS CAXECRAFT")
@@ -164,7 +169,7 @@ function selfCheck():Int {
 		return 9;
 	}
 	traceUi = catalog.messageCount() * 100 + catalog.localeCount() * 10 + catalog.text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
-	if (traceUi != 7028)
+	if (traceUi != 7128)
 		return 36;
 
 	return negativeChecks();
@@ -337,71 +342,97 @@ function negativeChecks():Int {
 		case RuntimeContentPackRejected(_):
 			return 37;
 	}
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:idle","collision"', '"id":"caxecraft:missing","collision"'), UnresolvedReference))
+	final parsed = switch ContentJson.read(Bytes.ofString(minimal)) {
+		case ContentJsonReady(root): root;
+		case ContentJsonRejected(_): return 63;
+	};
+	if (!rejectsParsedPack(parsed,
+		replaceValue([field("statefulObjects"), index(0), field("states"), index(1), field("id")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 46;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:active","collision"', '"id":"caxecraft:idle","collision"'), DuplicateId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("states"), index(0), field("id")], JsonString("caxecraft:idle")),
+		DuplicateId))
 		return 47;
-	if (!rejectsPack(replaceOnce(minimal, '"widthMilli":1000', '"widthMilli":0'), InvalidInteger))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("bounds"), field("widthMilli")], JsonNumber("0")), InvalidInteger))
 		return 49;
-	if (!rejectsPack(replaceOnce(minimal, '"collision":"solid"', '"collision":"blocking"'), InvalidClosedValue))
+	if (!rejectsParsedPack(parsed, replaceValue([
+		field("statefulObjects"),
+		index(0),
+		field("states"),
+		index(0),
+		field("collision")
+	], JsonString("blocking")), InvalidClosedValue))
 		return 50;
-	if (!rejectsPack(replaceOnce(minimal, '"render":"hidden"', '"render":"sometimes"'), InvalidClosedValue))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("states"), index(1), field("render")], JsonString("sometimes")),
+		InvalidClosedValue))
 		return 51;
-	if (!rejectsPack(replaceOnce(minimal, '"durationTicks":2', '"durationTicks":0'), InvalidInteger))
+	if (!rejectsParsedPack(parsed, replaceValue([
+		field("statefulObjects"),
+		index(0),
+		field("states"),
+		index(0),
+		field("presentation"),
+		field("model"),
+		field("frames"),
+		index(1),
+		field("durationTicks")
+	], JsonNumber("0")), InvalidInteger))
 		return 56;
-	if (!rejectsPack(replaceOnce(minimal, '"interaction":"activate"', '"interaction":"none"'), InvalidInvariant))
+	if (!rejectsParsedPack(parsed, replaceValue([field("statefulObjects"), index(0), field("interaction")], JsonString("none")), InvalidInvariant))
 		return 54;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"entities"', '"id":"adventure-items"'), DuplicateId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(1), field("id")], JsonString("adventure-items")), DuplicateId))
 		return 41;
-	if (!rejectsPack(replaceOnce(minimal, '"grass-block"', '"berries"'), DuplicateValue))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(2), field("cells"), index(1)], JsonString("berries")), DuplicateValue))
 		return 42;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"adventure-items"', '"id":"zz-assets"'), NonCanonicalOrder))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(0), field("id")], JsonString("zz-assets")), NonCanonicalOrder))
 		return 43;
-	if (!rejectsPack(replaceOnce(minimal, '"mossling-front"', '"Mossling"'), InvalidString))
+	if (!rejectsParsedPack(parsed, replaceValue([field("assetCells"), index(1), field("cells"), index(0)], JsonString("Mossling")), InvalidString))
 		return 44;
-	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1,', ""), MissingField))
+	if (!rejectsParsedPack(parsed, removeField([], "packVersion"), MissingField))
 		return 12;
-	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1', '"surprise":1'), UnknownField))
+	if (!rejectsParsedPack(parsed, renameField([], "packVersion", "surprise"), UnknownField))
 		return 13;
-	if (!rejectsPack(replaceOnce(minimal, '"packVersion":1', '"packVersion":"1"'), WrongType))
+	if (!rejectsParsedPack(parsed, replaceValue([field("packVersion")], JsonString("1")), WrongType))
 		return 14;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:dirt"', '"id":"caxecraft:air"'), DuplicateId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(1), field("id")], JsonString("caxecraft:air")), DuplicateId))
 		return 15;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:feedback"', '"id":"caxecraft:core"'), CrossKindId))
+	if (!rejectsParsedPack(parsed, replaceValue([field("effects"), index(0), field("id")], JsonString("caxecraft:core")), CrossKindId))
 		return 16;
-	if (!rejectsPack(replaceOnce(minimal, '"simulationProfile":"bounded-water"', '"simulationProfile":"unbounded-water"'), InvalidClosedValue))
+	if (!rejectsParsedPack(parsed, replaceValue([field("fluids"), index(0), field("simulationProfile")], JsonString("unbounded-water")), InvalidClosedValue))
 		return 17;
-	final missingAir = replaceOnce(minimal, '"airBlock":"caxecraft:air"', '"airBlock":"caxecraft:missing"');
-	final missingAirDiagnostic = expectPackRejection(missingAir, UnresolvedReference);
-	if (!pointsAtFirstValue(missingAirDiagnostic, missingAir, "caxecraft:missing"))
+	final missingAirPath = [field("airBlock")];
+	final missingAirDiagnostic = expectParsedPackRejection(parsed, replaceValue(missingAirPath, JsonString("caxecraft:missing")), UnresolvedReference);
+	if (!pointsAtNode(missingAirDiagnostic, nodeAt(parsed, missingAirPath)))
 		return 34;
-	final missingDefault = replaceOnce(minimal, '"defaultAquaticProfile":"caxecraft:standard"', '"defaultAquaticProfile":"caxecraft:missing"');
-	final missingDefaultDiagnostic = expectPackRejection(missingDefault, UnresolvedReference);
-	if (!pointsAtFirstValue(missingDefaultDiagnostic, missingDefault, "caxecraft:missing"))
+	final missingDefaultPath = [field("defaultAquaticProfile")];
+	final missingDefaultDiagnostic = expectParsedPackRejection(parsed, replaceValue(missingDefaultPath, JsonString("caxecraft:missing")), UnresolvedReference);
+	if (!pointsAtNode(missingDefaultDiagnostic, nodeAt(parsed, missingDefaultPath)))
 		return 35;
-	if (!rejectsPack(replaceOnce(minimal, '"placementBlock":"caxecraft:dirt"', '"placementBlock":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("items"), index(0), field("placementBlock")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 18;
-	if (!rejectsPack(replaceOnce(minimal, '"dropItem":"caxecraft:block-item"', '"dropItem":"caxecraft:water"'), WrongReferenceKind))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(1), field("dropItem")], JsonString("caxecraft:water")), WrongReferenceKind))
 		return 19;
-	if (!rejectsPack(replaceOnce(minimal, '"aquaticProfile":"caxecraft:standard"', '"aquaticProfile":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("items"), index(1), field("aquaticProfile")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 20;
-	if (!rejectsPack(replaceOnce(minimal, '"drop":"caxecraft:drop"', '"drop":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("enemies"), index(0), field("drop")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 21;
-	if (!rejectsPack(replaceOnce(minimal, '"asset":"terrain"', '"asset":"missing"'), UnknownAsset))
+	if (!rejectsParsedPack(parsed, replaceValue([field("fluids"), index(0), field("presentation"), field("asset")], JsonString("missing")), UnknownAsset))
 		return 22;
-	if (!rejectsPack(replaceOnce(minimal, '"cell":"teal-water"', '"cell":"missing"'), UnknownAssetCell))
+	if (!rejectsParsedPack(parsed, replaceValue([field("fluids"), index(0), field("presentation"), field("cell")], JsonString("missing")), UnknownAssetCell))
 		return 23;
-	if (!rejectsPack(replaceOnce(minimal, '"id":"caxecraft:air"', '"id":"caxecraft:zz-air"'), NonCanonicalOrder))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(0), field("id")], JsonString("caxecraft:zz-air")), NonCanonicalOrder))
 		return 24;
-	if (!rejectsPack(replaceOnce(minimal, '"maxStack":64', '"maxStack":65'), InvalidInteger))
+	if (!rejectsParsedPack(parsed, replaceValue([field("items"), index(0), field("maxStack")], JsonNumber("65")), InvalidInteger))
 		return 25;
-	if (!rejectsPack(replaceOnce(minimal, '"storageCode":1', '"storageCode":0'), DuplicateStorageCode))
+	if (!rejectsParsedPack(parsed, replaceValue([field("blocks"), index(1), field("storageCode")], JsonNumber("0")), DuplicateStorageCode))
 		return 38;
-	if (!rejectsPack(replaceOnce(minimal, '"prefabs":[]', '"prefabs":[null]'), UnsupportedReservedKind))
+	final prefabs = nodeAt(parsed, [field("prefabs")]);
+	if (prefabs == null
+		|| !rejectsParsedPack(parsed, replaceValue([field("prefabs")], JsonArray([new ContentJsonNode(JsonNull, prefabs.line, prefabs.column)])),
+			UnsupportedReservedKind))
 		return 26;
-	if (!rejectsPack(replaceOnce(minimal, '"objectType":"caxecraft:glyph-control"', '"objectType":"caxecraft:missing"'), UnresolvedReference))
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(0), field("objectType")], JsonString("caxecraft:missing")), UnresolvedReference))
 		return 61;
-	if (!rejectsPack(replaceOnce(minimal, '"initialState":"caxecraft:idle"', '"initialState":"caxecraft:other"'), InvalidInvariant))
+	if (!rejectsParsedPack(parsed, replaceValue([field("editorObjects"), index(0), field("initialState")], JsonString("caxecraft:other")), InvalidInvariant))
 		return 62;
 	return uiNegativeChecks(minimalUiCatalog());
 }
@@ -457,7 +488,7 @@ function minimalPack():String
  * Return the first two correctly shaped typed messages for fast UI negatives.
  *
  * Every mutation below fails before the complete-catalog compatibility check;
- * the real 35-message positive path remains the proof that all shipped text is
+ * the real 71-message positive path remains the proof that all shipped text is
  * admitted and mapped to the existing constructors.
  */
 function minimalUiCatalog():String
@@ -484,9 +515,171 @@ function uiNegativeChecks(ui:String):Int {
 	return 0;
 }
 
-/** Decode one mutated pack and compare only its intended rejection family. */
-function rejectsPack(source:String, family:ExpectedSchemaFamily):Bool
-	return expectPackRejection(source, family) != null;
+/** One exact traversal step through the parser's closed JSON tree. */
+private enum JsonPathStep {
+	/** Select a named object field. */
+	JsonField(name:String);
+
+	/** Select a zero-based array element. */
+	JsonIndex(index:Int);
+}
+
+/** One immutable edit applied at the end of a JSON-tree path. */
+private enum JsonTreeOperation {
+	/** Replace a value while preserving its source coordinate. */
+	ReplaceJsonValue(value:ContentJsonValue);
+
+	/** Remove one required field from an object. */
+	RemoveJsonField(name:String);
+
+	/** Rename one known field into an unknown field. */
+	RenameJsonField(from:String, to:String);
+}
+
+/** A schema mutation whose path and operation are kept together. */
+private typedef JsonTreeMutation = {
+	/** Exact field/index path from the pack root. */
+	final path:Array<JsonPathStep>;
+
+	/** Immutable edit to apply at that path. */
+	final operation:JsonTreeOperation;
+}
+
+/** Construct one field path step without exposing enum spelling at call sites. */
+inline function field(name:String):JsonPathStep
+	return JsonField(name);
+
+/** Construct one array path step without exposing enum spelling at call sites. */
+inline function index(value:Int):JsonPathStep
+	return JsonIndex(value);
+
+/** Describe one value replacement at an exact schema path. */
+function replaceValue(path:Array<JsonPathStep>, value:ContentJsonValue):JsonTreeMutation
+	return {path: path, operation: ReplaceJsonValue(value)};
+
+/** Describe removal of one field from the object at an exact schema path. */
+function removeField(path:Array<JsonPathStep>, name:String):JsonTreeMutation
+	return {path: path, operation: RemoveJsonField(name)};
+
+/** Describe renaming one field in the object at an exact schema path. */
+function renameField(path:Array<JsonPathStep>, from:String, to:String):JsonTreeMutation
+	return {path: path, operation: RenameJsonField(from, to)};
+
+/**
+ * Copy only the containers along one mutation path.
+ *
+ * Untouched parser-owned nodes remain shared and immutable. This keeps each
+ * schema case independent without reparsing the same 3.3 KiB JSON source.
+ */
+function mutateNode(node:ContentJsonNode, path:Array<JsonPathStep>, operation:JsonTreeOperation):Null<ContentJsonNode> {
+	return mutateNodeAt(node, path, 0, operation);
+}
+
+/** Copy the next path container without allocating a sliced path. */
+function mutateNodeAt(node:ContentJsonNode, path:Array<JsonPathStep>, pathIndex:Int, operation:JsonTreeOperation):Null<ContentJsonNode> {
+	if (pathIndex == path.length)
+		return applyTreeOperation(node, operation);
+	return switch path[pathIndex] {
+		case JsonField(name):
+			switch node.value {
+				case JsonObject(fields):
+					final copied = fields.copy();
+					var found = false;
+					for (fieldIndex in 0...copied.length) {
+						final current = copied[fieldIndex];
+						if (!found && current.name == name) {
+							final changed = mutateNodeAt(current.value, path, pathIndex + 1, operation);
+							if (changed == null)
+								return null;
+							copied[fieldIndex] = new ContentJsonField(current.name, changed, current.line, current.column);
+							found = true;
+						}
+					}
+					found ? new ContentJsonNode(JsonObject(copied), node.line, node.column) : null;
+				case _: null;
+			}
+		case JsonIndex(arrayIndex):
+			switch node.value {
+				case JsonArray(values):
+					if (arrayIndex < 0 || arrayIndex >= values.length)
+						return null;
+					final changed = mutateNodeAt(values[arrayIndex], path, pathIndex + 1, operation);
+					if (changed == null)
+						return null;
+					final copied = values.copy();
+					copied[arrayIndex] = changed;
+					new ContentJsonNode(JsonArray(copied), node.line, node.column);
+				case _: null;
+			}
+	};
+}
+
+/** Apply one mutation after its complete path has resolved. */
+function applyTreeOperation(node:ContentJsonNode, operation:JsonTreeOperation):Null<ContentJsonNode> {
+	return switch operation {
+		case ReplaceJsonValue(value): new ContentJsonNode(value, node.line, node.column);
+		case RemoveJsonField(name):
+			switch node.value {
+				case JsonObject(fields):
+					final copied:Array<ContentJsonField> = [];
+					var removed = false;
+					for (current in fields) {
+						if (!removed && current.name == name)
+							removed = true;
+						else
+							copied.push(current);
+					}
+					removed ? new ContentJsonNode(JsonObject(copied), node.line, node.column) : null;
+				case _: null;
+			}
+		case RenameJsonField(from, to):
+			switch node.value {
+				case JsonObject(fields):
+					final copied = fields.copy();
+					var renamed = false;
+					for (fieldIndex in 0...copied.length) {
+						final current = copied[fieldIndex];
+						if (!renamed && current.name == from) {
+							copied[fieldIndex] = new ContentJsonField(to, current.value, current.line, current.column);
+							renamed = true;
+						}
+					}
+					renamed ? new ContentJsonNode(JsonObject(copied), node.line, node.column) : null;
+				case _: null;
+			}
+	};
+}
+
+/** Resolve one source-bearing node so location assertions stay explicit. */
+function nodeAt(root:ContentJsonNode, path:Array<JsonPathStep>):Null<ContentJsonNode> {
+	var current = root;
+	for (step in path) {
+		final next = switch step {
+			case JsonField(name):
+				switch current.value {
+					case JsonObject(fields):
+						var found:Null<ContentJsonNode> = null;
+						for (field in fields)
+							if (field.name == name)
+								found = field.value;
+						found;
+					case _: null;
+				}
+			case JsonIndex(arrayIndex):
+				switch current.value {
+					case JsonArray(values):
+						if (arrayIndex < 0 || arrayIndex >= values.length)
+							return null;
+						values[arrayIndex];
+					case _: null;
+				}
+		};
+		if (next == null)
+			return null;
+		current = next;
+	}
+	return current;
+}
 
 /** Return one located pack diagnostic when its family is the expected one. */
 function expectPackRejection(source:String, family:ExpectedSchemaFamily):Null<RuntimeSchemaDiagnostic> {
@@ -496,12 +689,24 @@ function expectPackRejection(source:String, family:ExpectedSchemaFamily):Null<Ru
 	};
 }
 
-/** Prove one diagnostic points at the mutated JSON String, not a fallback. */
-function pointsAtFirstValue(diagnostic:Null<RuntimeSchemaDiagnostic>, source:String, value:String):Bool {
-	if (diagnostic == null || diagnostic.line != 1)
-		return false;
-	return diagnostic.column == source.indexOf('"' + value + '"') + 1;
+/** Compare one immutable tree mutation with its intended rejection family. */
+function rejectsParsedPack(root:ContentJsonNode, mutation:JsonTreeMutation, family:ExpectedSchemaFamily):Bool
+	return expectParsedPackRejection(root, mutation, family) != null;
+
+/** Apply one schema-only mutation and return its located rejection. */
+function expectParsedPackRejection(root:ContentJsonNode, mutation:JsonTreeMutation, family:ExpectedSchemaFamily):Null<RuntimeSchemaDiagnostic> {
+	final candidate = mutateNode(root, mutation.path, mutation.operation);
+	if (candidate == null)
+		return null;
+	return switch RuntimeContentPack.decodeParsed(candidate) {
+		case RuntimeContentPackRejected(diagnostic) if (sameFamily(diagnostic.kind, family) && diagnostic.line > 0 && diagnostic.column > 0): diagnostic;
+		case _: null;
+	};
 }
+
+/** Prove one rejection points at the exact mutated value node. */
+function pointsAtNode(diagnostic:Null<RuntimeSchemaDiagnostic>, node:Null<ContentJsonNode>):Bool
+	return diagnostic != null && node != null && diagnostic.line == node.line && diagnostic.column == node.column;
 
 /** Decode one mutated UI catalog and compare its intended rejection family. */
 function rejectsUi(source:String, family:ExpectedSchemaFamily):Bool {
