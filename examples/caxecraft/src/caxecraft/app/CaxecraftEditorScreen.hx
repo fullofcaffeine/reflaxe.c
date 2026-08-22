@@ -411,7 +411,7 @@ final class CaxecraftEditorScreen {
 		return StayInEditor;
 	}
 
-	/** Draw direct world editing without the released-pointer desktop controls. */
+	/** Draw direct world editing with a compact five-tool hotbar. */
 	function drawImmersiveBuild(locale:LocaleCursor, width:Int, height:Int, resources:EditorRenderResources):Void {
 		final inset = 16;
 		drawWorldViewport(locale, inset, inset, width - inset * 2, height - inset * 2, resources);
@@ -419,23 +419,56 @@ final class CaxecraftEditorScreen {
 		final help = uiCatalog.text(locale, UiMessage.EditorCanvasHelp);
 		Raylib.DrawRectangle(inset + 10, inset + 10, width - inset * 2 - 20, 22, Color.rgba(8, 20, 24));
 		Raylib.DrawTextString(help, inset + 16, inset + 14, 14, CaxecraftPalette.hudText());
-		final tool = immersiveToolLabel(locale);
-		final toolWidth = 220;
-		Raylib.DrawRectangle(inset + 10, inset + 40, toolWidth, 30, Color.rgba(8, 20, 24));
-		Raylib.DrawRectangleLines(inset + 10, inset + 40, toolWidth, 30, CaxecraftPalette.selection());
-		Raylib.DrawTextString(tool, inset + 22, inset + 47, 18, CaxecraftPalette.hudText());
+		drawImmersiveHotbar(locale, width, height, inset);
 	}
 
-	/** Return the localized name of the tool that owns captured Build input. */
-	function immersiveToolLabel(locale:LocaleCursor):String {
-		return switch activeTool {
-			case SelectTool: '1  ${uiCatalog.text(locale, UiMessage.EditorSelect)}';
-			case PaintTool | EraseTool | FillTool: '2  ${uiCatalog.text(locale, UiMessage.EditorGround)}';
-			case CheckpointTool: '3  ${uiCatalog.text(locale, UiMessage.EditorCheckpoint)}';
+	/** Show every direct Build tool in the same order as number-key input. */
+	function drawImmersiveHotbar(locale:LocaleCursor, width:Int, height:Int, inset:Int):Void {
+		final gap = 8;
+		final availableWidth = width - inset * 2 - 40;
+		final fittedWidth = Std.int((availableWidth - gap * 4) / 5);
+		final slotWidth = fittedWidth < 170 ? fittedWidth : 170;
+		final barWidth = slotWidth * 5 + gap * 4;
+		final left = Std.int((width - barWidth) / 2);
+		final top = height - inset - 78;
+		for (slot in 1...6) {
+			final tool = toolForBuildHotbarSlot(slot);
+			if (tool != null) {
+				final slotLeft = left + (slot - 1) * (slotWidth + gap);
+				Raylib.DrawRectangle(slotLeft, top, slotWidth, 42, Color.rgba(8, 20, 24));
+				Raylib.DrawRectangle(slotLeft + 6, top + 7, 28, 28, immersiveToolColor(slot));
+				Raylib.DrawTextString(Std.string(slot), slotLeft + 16, top + 13, 16, Color.rgba(10, 24, 30));
+				Raylib.DrawTextString(immersiveToolLabel(locale, tool), slotLeft + 42, top + 13, 16, CaxecraftPalette.hudText());
+				if (activeTool == tool) {
+					Raylib.DrawRectangleLines(slotLeft, top, slotWidth, 42, CaxecraftPalette.selection());
+					Raylib.DrawRectangleLines(slotLeft + 1, top + 1, slotWidth - 2, 40, CaxecraftPalette.selection());
+				}
+			}
+		}
+	}
+
+	/** Return the localized name for one visible Build hotbar tool. */
+	function immersiveToolLabel(locale:LocaleCursor, tool:EditorTool):String {
+		return switch tool {
+			case SelectTool: uiCatalog.text(locale, UiMessage.EditorSelect);
+			case PaintTool | EraseTool | FillTool: uiCatalog.text(locale, UiMessage.EditorGround);
+			case CheckpointTool: uiCatalog.text(locale, UiMessage.EditorCheckpoint);
 			case CatalogObjectTool:
 				final recipe = contentRegistry.editorObjectAt(0);
-				'4  ${recipe == null ? "-" : locale == Locale0 ? recipe.labelEn : recipe.labelEsMx}';
-			case TriggerZoneTool: '5  ${uiCatalog.text(locale, UiMessage.EditorTrigger)}';
+				recipe == null ? "-" : locale == Locale0 ? recipe.labelEn : recipe.labelEsMx;
+			case TriggerZoneTool: uiCatalog.text(locale, UiMessage.EditorTrigger);
+		};
+	}
+
+	/** Match each compact slot to its released-pointer creation card. */
+	static function immersiveToolColor(slot:Int):Color {
+		return switch slot {
+			case 1: Color.rgba(84, 191, 205);
+			case 2: Color.rgba(111, 174, 91);
+			case 3: Color.rgba(76, 209, 198);
+			case 4: Color.rgba(226, 151, 72);
+			case 5: Color.rgba(210, 105, 230);
+			case _: CaxecraftPalette.hudText();
 		};
 	}
 

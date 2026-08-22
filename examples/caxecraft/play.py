@@ -1467,11 +1467,11 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
         return changed, len(colors)
 
     help_strip = region_evidence(26, 26, 1254, 48)
-    tool_badge = region_evidence(26, 56, 300, 88)
+    hotbar = region_evidence(190, 620, 1090, 672)
     canvas = region_evidence(16, 16, 1264, 704)
     evidence = (
         ("help-strip", help_strip, 2_000 * scale * scale, 2),
-        ("tool-badge", tool_badge, 2_000 * scale * scale, 3),
+        ("hotbar", hotbar, 15_000 * scale * scale, 5),
         ("canvas", canvas, 100_000 * scale * scale, 3),
     )
     failures = [
@@ -1563,11 +1563,11 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             f"3d-opaque-trigger-volume=pixels:{opaque_volume_pixels},maximum:{maximum_volume_pixels}"
         )
     tool_outline_pixels = 0
-    # The exact selection color around the compact badge proves that captured
+    # The exact selection color around one hotbar slot proves that captured
     # Build still identifies the tool that owns direct input.
-    for row in range(56 * scale, 88 * scale):
+    for row in range(620 * scale, 672 * scale):
         row_at = row * width * 4
-        for column in range(26 * scale, 300 * scale):
+        for column in range(190 * scale, 1090 * scale):
             at = row_at + column * 4
             if tuple(pixels[at : at + 3]) == (255, 132, 47):
                 tool_outline_pixels += 1
