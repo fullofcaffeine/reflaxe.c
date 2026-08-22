@@ -409,9 +409,11 @@ final class CaxecraftApp {
 				case ReturnToTitle | StartTestPlay(_):
 					rejectedEditCount++;
 			}
-			if (!editorScreen.applyPilotSave())
-				rejectedEditCount++;
 			if (!editorScreen.applyPilotBuildCapture())
+				rejectedEditCount++;
+			else if (!editorScreen.applyPilotDirectObjectEdits())
+				rejectedEditCount++;
+			if (!editorScreen.applyPilotSave())
 				rejectedEditCount++;
 		}
 		return {

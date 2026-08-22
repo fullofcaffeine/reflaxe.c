@@ -2,6 +2,7 @@ package caxecraft.editor;
 
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
+import caxecraft.editor.EditorWorldViewport.absolute;
 import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.moveFocus;
@@ -12,10 +13,10 @@ import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
  *
  * The native screen still translates Raylib events at the application edge.
  * These functions decide when Build owns pointer look, what the number keys
- * select, which controls keyboard focus visits, and what a terrain mouse button
- * does. The native screen converts the result into an ordinary editor command.
- * This separation lets the Eval probe protect the input rules without
- * imitating an operating-system mouse.
+ * select, which controls keyboard focus visits, and what direct terrain or
+ * object input does. The native screen converts the result into an ordinary
+ * editor command. This separation lets the Eval probe protect the input rules
+ * without imitating an operating-system mouse or keyboard.
  */
 /** Whether the Build camera or the surrounding editor controls own the pointer. */
 enum abstract EditorBuildPointerState(Int) {
@@ -28,6 +29,28 @@ enum EditorBuildTerrainAction {
 	NoTerrainAction;
 	RemoveTerrain(point:VoxelPoint);
 	PlaceTerrain(point:VoxelPoint);
+}
+
+/** One selected-object edit, or no edit when Build does not own the gesture. */
+enum EditorBuildObjectAction {
+	NoObjectAction;
+	NudgeSelectedObject(delta:VoxelPoint);
+	TurnSelectedObject(degrees:Int);
+}
+
+/** One frame of device-independent input for a selected object in Build. */
+typedef EditorBuildObjectInput = {
+	final pointerCaptured:Bool;
+	final selectToolActive:Bool;
+	final objectSelected:Bool;
+	final objectCanTurn:Bool;
+	final upPressed:Bool;
+	final rightPressed:Bool;
+	final downPressed:Bool;
+	final leftPressed:Bool;
+	final turnPressed:Bool;
+	final lookX:Float;
+	final lookZ:Float;
 }
 
 /**
@@ -61,6 +84,39 @@ function terrainAction(primaryPressed:Bool, secondaryPressed:Bool, hit:Null<Edit
 	if (secondaryPressed && hit.placement != null)
 		return PlaceTerrain(hit.placement);
 	return NoTerrainAction;
+}
+
+/**
+ * Convert arrow or turn key edges into at most one selected-object edit.
+ *
+ * Arrow movement follows the nearest horizontal camera axis. This keeps each
+ * edit on the voxel grid while Up still means away from the creator. Ties use
+ * the Z axis, which gives the default camera a stable forward direction. A
+ * vertical or malformed look vector cannot move an object. Arrow priority is
+ * Up, Right, Down, then Left; a simultaneous turn waits for another key edge.
+ */
+function objectAction(input:EditorBuildObjectInput):EditorBuildObjectAction {
+	if (!input.pointerCaptured || !input.selectToolActive || !input.objectSelected)
+		return NoObjectAction;
+	final horizontalMagnitude = absolute(input.lookX) + absolute(input.lookZ);
+	if (horizontalMagnitude > 0.000001 && (input.upPressed || input.rightPressed || input.downPressed || input.leftPressed)) {
+		var forwardX = 0;
+		var forwardZ = 0;
+		if (absolute(input.lookX) > absolute(input.lookZ))
+			forwardX = input.lookX >= 0.0 ? 1 : -1;
+		else
+			forwardZ = input.lookZ >= 0.0 ? 1 : -1;
+		if (input.upPressed)
+			return NudgeSelectedObject({x: forwardX, y: 0, z: forwardZ});
+		if (input.rightPressed)
+			return NudgeSelectedObject({x: -forwardZ, y: 0, z: forwardX});
+		if (input.downPressed)
+			return NudgeSelectedObject({x: -forwardX, y: 0, z: -forwardZ});
+		return NudgeSelectedObject({x: forwardZ, y: 0, z: -forwardX});
+	}
+	if (input.turnPressed && input.objectCanTurn)
+		return TurnSelectedObject(90);
+	return NoObjectAction;
 }
 
 /** True when Build uses direct remove and place controls for the selected tool. */

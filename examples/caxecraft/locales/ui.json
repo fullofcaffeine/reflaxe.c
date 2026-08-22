@@ -155,8 +155,8 @@
       "id": "editor_canvas_help",
       "symbol": "EditorCanvasHelp",
       "text": {
-        "en": "CLICK WORLD · 1-5 TOOLS · LMB REMOVE/USE · RMB PLACE · ESC RELEASE · C CAMERA",
-        "es-MX": "CLIC EN EL MUNDO · 1-5 HERRAMIENTAS · CLIC IZQ QUITAR/USAR · CLIC DER COLOCAR · ESC LIBERAR · C CÁMARA"
+        "en": "CLICK WORLD · 1-5 TOOLS · LMB USE · RMB PLACE · ARROWS MOVE · R TURN · ESC · C CAMERA",
+        "es-MX": "CLIC MUNDO · 1-5 HERR. · IZQ USAR · DER COLOCAR · FLECHAS MOVER · R GIRAR · ESC · C CÁMARA"
       }
     },
     {

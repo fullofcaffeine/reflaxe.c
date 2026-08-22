@@ -2,11 +2,14 @@ package caxecraft.qa;
 
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectInput;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
+import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -1264,6 +1267,165 @@ final class EditorProbe {
 		pointer = nextPointerState(EditorBuildPointerState.Captured, true, false, false, false);
 		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
 		checks++;
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: true,
+			rightPressed: false,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), 0, -1, "Build Up did not move the selected object away from the camera");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: true,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), 1, 0, "Build Right did not move across the camera view");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: false,
+			downPressed: true,
+			leftPressed: false,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), 0, 1, "Build Down did not move the selected object toward the camera");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: false,
+			downPressed: false,
+			leftPressed: true,
+			turnPressed: false,
+			lookX: 0.1,
+			lookZ: -0.9
+		}), -1, 0, "Build Left did not move across the camera view");
+		checks += expectObjectNudge(objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: true,
+			rightPressed: true,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: true,
+			lookX: 0.9,
+			lookZ: 0.2
+		}), 1, 0,
+			"Build did not snap movement to the dominant camera axis or keep one-action priority");
+		switch objectAction({
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectCanTurn: true,
+			upPressed: false,
+			rightPressed: false,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: true,
+			lookX: 0.0,
+			lookZ: -1.0
+		}) {
+			case TurnSelectedObject(90):
+			case NoObjectAction | NudgeSelectedObject(_) | TurnSelectedObject(_):
+				require(false, "Build R did not request one clockwise quarter turn");
+		}
+		checks++;
+		final inactiveObjectInputs:Array<EditorBuildObjectInput> = [
+			{
+				pointerCaptured: false,
+				selectToolActive: true,
+				objectSelected: true,
+				objectCanTurn: true,
+				upPressed: true,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: false,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: false,
+				objectSelected: true,
+				objectCanTurn: true,
+				upPressed: true,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: false,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: true,
+				objectSelected: false,
+				objectCanTurn: false,
+				upPressed: false,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: true,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: true,
+				objectSelected: true,
+				objectCanTurn: false,
+				upPressed: false,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: true,
+				lookX: 0.0,
+				lookZ: -1.0
+			},
+			{
+				pointerCaptured: true,
+				selectToolActive: true,
+				objectSelected: true,
+				objectCanTurn: true,
+				upPressed: true,
+				rightPressed: false,
+				downPressed: false,
+				leftPressed: false,
+				turnPressed: false,
+				lookX: 0.0,
+				lookZ: 0.0
+			}
+		];
+		for (input in inactiveObjectInputs) {
+			switch objectAction(input) {
+				case NoObjectAction:
+				case NudgeSelectedObject(_) | TurnSelectedObject(_):
+					require(false, "Build edited an object without an eligible captured Select gesture");
+			}
+			checks++;
+		}
 		final solidHit:EditorWorldHit = {
 			point: {x: 3, y: 2, z: 1},
 			placement: {x: 3, y: 3, z: 1},
@@ -1363,6 +1525,17 @@ final class EditorProbe {
 			"Build focus navigation visited Plan's hidden Erase card");
 		checks++;
 		return checks;
+	}
+
+	/** Require one horizontal nudge without weakening the exact action shape. */
+	static function expectObjectNudge(action:EditorBuildObjectAction, expectedX:Int, expectedZ:Int, message:String):Int {
+		switch action {
+			case NudgeSelectedObject(delta):
+				require(delta.x == expectedX && delta.y == 0 && delta.z == expectedZ, message);
+			case NoObjectAction | TurnSelectedObject(_):
+				require(false, message);
+		}
+		return 1;
 	}
 
 	/** Build one complete normalized input snapshot with concise test defaults. */

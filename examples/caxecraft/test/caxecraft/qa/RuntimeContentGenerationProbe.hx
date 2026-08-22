@@ -118,10 +118,10 @@ function selfCheck():Int {
 		return 17;
 	final selected = active.generation();
 	final receipt = selected.receipt();
-	if (receipt.generationSha256 != "acc5572fd55f01b83c5f1b9c5851c7195d86bc420a1dc9e7981989263184d0bc"
+	if (receipt.generationSha256 != "4c6c14d2aad3b4cb80f4deedb2ae47ecaa2aa04ea82eef334ff52b48b711f2b1"
 		|| receipt.assetManifestSha256 != "a04f45bc15e1e160ef67864de4993ecb58e83ea1c69689590e9e7121c2cd62cb"
 		|| receipt.content.sha256 != "58d45050c40c8dd618dff5cfa210fc945c9ee9a8501866dc03211d2813ec30c9"
-		|| receipt.ui.sha256 != "13f8bec09ba4cd8dbb26f92b959f7de880c8bae6649c624d4a1b608798a2c212"
+		|| receipt.ui.sha256 != "ece1d7fa926fefa7f0bf52cb58009c627d0df39d3c3c36faa3bd1d35b45a9c33"
 		|| receipt.map.sha256 != "465aa55527f99d2e421c186d40084687e3e851121aaf7a96296a070041e2f4ef")
 		return 9;
 	traceGenerationId = selected.generationId().value();
@@ -135,7 +135,7 @@ function selfCheck():Int {
 		+ selected.catalog().text(LocaleCursor.Locale1, UiMessage.MenuAdventure).length;
 	traceWorldState = selected.level().generation().semanticTrace().worldState;
 	traceSourceBytes = receipt.content.byteLength + receipt.ui.byteLength + receipt.map.byteLength;
-	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 7528 && traceWorldState == -1465000778 && traceSourceBytes == 51726 ? 0 : 10;
+	return traceGenerationId == 2 && tracePack == 132089 && traceUi == 7928 && traceWorldState == -1465000778 && traceSourceBytes == 52368 ? 0 : 10;
 }
 
 /** Load one real complete candidate through the shared package path. */
@@ -238,10 +238,10 @@ function assetManifestMismatchRejected(receiptText:String, content:Bytes, ui:Byt
 		player:caxecraft.content.RuntimeContentGeneration.RuntimeContentPlayerOptions):Bool {
 	final originalId = "caxecraft-showcase-v1-draft";
 	final otherId = "caxecraft-other-v1-draft";
-	final originalGeneration = "acc5572fd55f01b83c5f1b9c5851c7195d86bc420a1dc9e7981989263184d0bc";
+	final originalGeneration = "4c6c14d2aad3b4cb80f4deedb2ae47ecaa2aa04ea82eef334ff52b48b711f2b1";
 	final otherGeneration = runtimeGenerationSha256(otherId, "a04f45bc15e1e160ef67864de4993ecb58e83ea1c69689590e9e7121c2cd62cb",
 		new ContentReceipt("packs/caxecraft/base/content.json", content.length, "58d45050c40c8dd618dff5cfa210fc945c9ee9a8501866dc03211d2813ec30c9"),
-		new ContentReceipt("locales/ui.json", ui.length, "13f8bec09ba4cd8dbb26f92b959f7de880c8bae6649c624d4a1b608798a2c212"),
+		new ContentReceipt("locales/ui.json", ui.length, "ece1d7fa926fefa7f0bf52cb58009c627d0df39d3c3c36faa3bd1d35b45a9c33"),
 		new ContentReceipt("scenarios/first-playable/map.caxemap", map.length, "465aa55527f99d2e421c186d40084687e3e851121aaf7a96296a070041e2f4ef"));
 	final changedId = replaceOnce(receiptText, originalId, otherId);
 	final changedReceipt = replaceOnce(changedId, originalGeneration, otherGeneration);

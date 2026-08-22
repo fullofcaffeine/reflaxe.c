@@ -3,12 +3,14 @@ package caxecraft.app;
 #if c
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
+import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -1215,6 +1217,30 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
+	/**
+	 * Commit one direct Build object action through the inspector command path.
+	 *
+	 * The action has no separate drag or preview state. A successful key edge
+	 * therefore creates the same single revision and history entry as one exact
+	 * inspector button. The return value tells the viewport to read the refreshed
+	 * projection and Orbit target before it draws the current frame.
+	 */
+	function applyBuildObjectAction(action:EditorBuildObjectAction):Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		final beforeRevision = current.revision();
+		switch action {
+			case NoObjectAction:
+				return false;
+			case NudgeSelectedObject(delta):
+				moveSelectedObject(delta);
+			case TurnSelectedObject(degrees):
+				rotateSelectedObject(degrees);
+		}
+		return current.revision() == beforeRevision + 1;
+	}
+
 	/** Move the shared object target through the same revisioned history path. */
 	function moveSelectedObject(delta:VoxelPoint):Void {
 		final current = session;
@@ -1334,6 +1360,16 @@ final class CaxecraftEditorScreen {
 		return switch current.selectionSnapshot() {
 			case NodeSelection(ObjectNode(id)): objectIndex(id);
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): -1;
+		};
+	}
+
+	/** True when the projected object owns a transform-facing quarter turn. */
+	function objectCanTurn(index:Int):Bool {
+		if (index < 0 || index >= objectGizmos.length)
+			return false;
+		return switch objectGizmos[index].facing {
+			case ObjectYaw(_): true;
+			case NoObjectFacing: false;
 		};
 	}
 
@@ -1622,6 +1658,8 @@ final class CaxecraftEditorScreen {
 	 * button removes a solid and the secondary button places adjacent ground.
 	 * WASD moves the active camera. Fly also uses Q/E and the wheel. Orbit uses
 	 * the wheel for zoom. C changes camera mode, and F refocuses the active mode.
+	 * With Select and one object active, arrow keys move it by one camera-relative
+	 * cell and R turns an eligible object clockwise by one quarter turn.
 	 * Escape releases the pointer before the editor handles another cancel.
 	 */
 	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, resources:EditorRenderResources):Void {
@@ -1665,7 +1703,30 @@ final class CaxecraftEditorScreen {
 			}, Raylib.GetFrameTime().toFloat());
 		}
 		camera = currentCamera;
-		final currentPose = cameraPose(currentCamera);
+		var currentPose = cameraPose(currentCamera);
+		final directObjectIndex = selectedObjectIndex();
+		final directObjectEdited = applyBuildObjectAction(objectAction({
+			pointerCaptured: cameraInputEnabled,
+			selectToolActive: activeTool == SelectTool,
+			objectSelected: directObjectIndex >= 0,
+			objectCanTurn: objectCanTurn(directObjectIndex),
+			upPressed: Raylib.IsKeyPressed(KeyboardKey.Up),
+			rightPressed: Raylib.IsKeyPressed(KeyboardKey.Right),
+			downPressed: Raylib.IsKeyPressed(KeyboardKey.Down),
+			leftPressed: Raylib.IsKeyPressed(KeyboardKey.Left),
+			turnPressed: Raylib.IsKeyPressed(KeyboardKey.R),
+			lookX: currentPose.lookX,
+			lookZ: currentPose.lookZ
+		}));
+		if (directObjectEdited) {
+			final refreshedProjection = projection;
+			final refreshedCamera = camera;
+			if (refreshedProjection == null || refreshedCamera == null)
+				return;
+			current = refreshedProjection;
+			currentCamera = refreshedCamera;
+			currentPose = cameraPose(refreshedCamera);
+		}
 		final target = cameraTarget(currentCamera);
 		final nativeCamera = Camera3D.make(Vector3.fromFloat(currentPose.x, currentPose.y, currentPose.z), Vector3.fromFloat(target.x, target.y, target.z),
 			Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(52.0), CameraProjection.Perspective);
@@ -2220,11 +2281,59 @@ final class CaxecraftEditorScreen {
 		for (index in 0...objectVisuals.length)
 			switch objectVisuals[index] {
 				case ActorVisual(_, _):
+					setActiveTool(SelectTool);
 					selectObject(objectGizmos[index].id);
 					return selectedObjectIndex() == index;
 				case PlayerSpawnVisual | CheckpointVisual | ItemVisual(_, _) | StatefulObjectVisual(_, _) | TriggerVolumeVisual | FallbackObjectVisual:
 			}
 		return false;
+	}
+
+	/**
+	 * Move and turn the selected actor through two production Build key actions.
+	 *
+	 * The pilot bypasses only operating-system key delivery. Pointer ownership,
+	 * Select mode, camera-relative direction, revisioned commands, projection
+	 * refresh, and the Orbit target use the same path as interactive input.
+	 */
+	public function applyPilotDirectObjectEdits():Bool {
+		var currentCamera = camera;
+		var selected = selectedObjectIndex();
+		if (currentCamera == null || selected < 0)
+			return false;
+		var pose = cameraPose(currentCamera);
+		if (!applyBuildObjectAction(objectAction({
+			pointerCaptured: buildPointerState == EditorBuildPointerState.Captured,
+			selectToolActive: activeTool == SelectTool,
+			objectSelected: true,
+			objectCanTurn: objectCanTurn(selected),
+			upPressed: false,
+			rightPressed: true,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: false,
+			lookX: pose.lookX,
+			lookZ: pose.lookZ
+		})))
+			return false;
+		currentCamera = camera;
+		selected = selectedObjectIndex();
+		if (currentCamera == null || selected < 0)
+			return false;
+		pose = cameraPose(currentCamera);
+		return applyBuildObjectAction(objectAction({
+			pointerCaptured: buildPointerState == EditorBuildPointerState.Captured,
+			selectToolActive: activeTool == SelectTool,
+			objectSelected: true,
+			objectCanTurn: objectCanTurn(selected),
+			upPressed: false,
+			rightPressed: false,
+			downPressed: false,
+			leftPressed: false,
+			turnPressed: true,
+			lookX: pose.lookX,
+			lookZ: pose.lookZ
+		}));
 	}
 
 	/**
