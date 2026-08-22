@@ -13,6 +13,7 @@ import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
 import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.objectGrabActive;
+import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
 import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
@@ -1274,6 +1275,15 @@ final class EditorProbe {
 		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
 		checks++;
 		final grabbedId = id("build.grabbed");
+		final hoveredId = id("build.hovered");
+		require(objectGrabCandidate(grabbedId, hoveredId, true) == hoveredId, "Grab did not prefer the crosshair object");
+		checks++;
+		require(objectGrabCandidate(grabbedId, hoveredId, false) == grabbedId, "steady aiming transferred the selected object");
+		checks++;
+		require(objectGrabCandidate(null, hoveredId, true) == hoveredId, "Grab required a prior selection");
+		checks++;
+		require(objectGrabCandidate(grabbedId, null, true) == grabbedId, "Grab lost the selected-object fallback");
+		checks++;
 		var grab = nextObjectGrab(NoObjectGrab, grabbedId, true, false);
 		switch grab {
 			case HoldingObject(value):

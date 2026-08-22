@@ -14,6 +14,7 @@ import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
 import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.objectGrabActive;
+import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
 import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
@@ -1408,6 +1409,14 @@ final class CaxecraftEditorScreen {
 		return -1;
 	}
 
+	/** Select the crosshair object, then apply the shared presentation-only grab transition. */
+	function updateObjectGrab(selected:Null<ScenarioId>, hovered:Null<ScenarioId>, grabPressed:Bool):Void {
+		final candidate = objectGrabCandidate(selected, hovered, grabPressed);
+		if (grabPressed && hovered != null && (selected == null || selected.text() != hovered.text()))
+			selectObject(hovered);
+		objectGrab = nextObjectGrab(objectGrab, candidate, grabPressed, false);
+	}
+
 	function undo():Void {
 		final current = session;
 		if (current == null)
@@ -1732,14 +1741,12 @@ final class CaxecraftEditorScreen {
 		camera = currentCamera;
 		var currentPose = cameraPose(currentCamera);
 		final directObjectIndex = selectedObjectIndex();
-		final eligibleGrabId:Null<ScenarioId> = if (cameraInputEnabled && activeTool == SelectTool && directObjectIndex >= 0)
-			objectGizmos[directObjectIndex].id else null;
-		objectGrab = nextObjectGrab(objectGrab, eligibleGrabId, cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.G), false);
-		final holdingObject = objectGrabActive(objectGrab);
+		final grabPressed = cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.G);
+		var holdingObject = objectGrabActive(objectGrab);
 		final directObjectEdited = applyBuildObjectAction(objectAction({
 			pointerCaptured: cameraInputEnabled,
 			selectToolActive: activeTool == SelectTool,
-			objectSelected: directObjectIndex >= 0 && !holdingObject,
+			objectSelected: directObjectIndex >= 0 && !holdingObject && !grabPressed,
 			objectCanTurn: objectCanTurn(directObjectIndex),
 			upPressed: Raylib.IsKeyPressed(KeyboardKey.Up),
 			rightPressed: Raylib.IsKeyPressed(KeyboardKey.Right),
@@ -1784,6 +1791,12 @@ final class CaxecraftEditorScreen {
 					hoveredObject = objectIndex(objectHit.id);
 			}
 		}
+		final selectedGrabIndex = selectedObjectIndex();
+		final selectedGrabId:Null<ScenarioId> = if (cameraInputEnabled && activeTool == SelectTool && selectedGrabIndex >= 0)
+			objectGizmos[selectedGrabIndex].id else null;
+		final hoveredGrabId:Null<ScenarioId> = if (hoveredObject >= 0) objectGizmos[hoveredObject].id else null;
+		updateObjectGrab(selectedGrabId, hoveredGrabId, grabPressed);
+		holdingObject = objectGrabActive(objectGrab);
 		final grabbedIndex = switch objectGrab {
 			case NoObjectGrab: -1;
 			case HoldingObject(id): objectIndex(id);
@@ -2372,10 +2385,21 @@ final class CaxecraftEditorScreen {
 		var selected = selectedObjectIndex();
 		if (currentCamera == null || selected < 0)
 			return false;
-		final source = objectGizmos[selected];
-		objectGrab = nextObjectGrab(objectGrab, source.id, true, false);
-		if (!objectGrabActive(objectGrab))
+		var aimed = -1;
+		for (index in 0...objectGizmos.length)
+			if (aimed < 0 && index != selected)
+				switch objectVisuals[index] {
+					case ActorVisual(_, _):
+						aimed = index;
+					case PlayerSpawnVisual | CheckpointVisual | ItemVisual(_, _) | StatefulObjectVisual(_, _) | TriggerVolumeVisual | FallbackObjectVisual:
+				}
+		if (aimed < 0)
 			return false;
+		updateObjectGrab(objectGizmos[selected].id, objectGizmos[aimed].id, true);
+		selected = selectedObjectIndex();
+		if (selected != aimed || !objectGrabActive(objectGrab))
+			return false;
+		final source = objectGizmos[selected];
 		final target:VoxelPoint = {x: source.origin.x + 1, y: source.origin.y, z: source.origin.z};
 		if (!moveObject(source.id, objectPlacementDelta(source, target)))
 			return false;

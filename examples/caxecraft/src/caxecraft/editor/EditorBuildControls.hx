@@ -47,6 +47,16 @@ enum EditorBuildObjectGrab {
 }
 
 /**
+ * Choose the stable object that one Grab key edge owns.
+ *
+ * A visible crosshair object wins only when Grab starts. Steady frames retain
+ * the selected object, so aiming across another marker cannot transfer an
+ * active hold or change selection.
+ */
+function objectGrabCandidate(selected:Null<ScenarioId>, hovered:Null<ScenarioId>, grabPressed:Bool):Null<ScenarioId>
+	return grabPressed && hovered != null ? hovered : selected;
+
+/**
  * Start, retain, or cancel one selected-object grab without editing the draft.
  *
  * The stable ID must remain selected and Build must retain captured Select
