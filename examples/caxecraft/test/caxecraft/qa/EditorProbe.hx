@@ -1894,6 +1894,23 @@ final class EditorProbe {
 			&& session.canonicalDraft().compare(afterBatch) == 0,
 			"mutating a presentation observation changed the editor draft or the next view");
 
+		final observedDetails = switch session.query(InspectPresentationDetails) {
+			case PresentationDetailsObserved(4, value): value;
+			case _: throw "presentation-details query lost its revision";
+		};
+		observedDetails.world.palette.resize(0);
+		observedDetails.objects.resize(0);
+		observedDetails.ruleIds.resize(0);
+		final freshDetails = switch session.query(InspectPresentationDetails) {
+			case PresentationDetailsObserved(4, value): value;
+			case _: throw "second presentation-details query lost its revision";
+		};
+		require(freshDetails.world.palette.length == presentationPaletteCount
+			&& freshDetails.objects.length == presentationObjectCount
+			&& freshDetails.ruleIds.length == presentationRuleCount
+			&& session.canonicalDraft().compare(afterBatch) == 0,
+			"mutating terrain-independent presentation details changed the editor draft or the next view");
+
 		final tree = switch session.query(InspectTree) {
 			case TreeObserved(4, nodes): nodes;
 			case _: throw "campaign-tree query lost its revision";
@@ -1979,7 +1996,7 @@ final class EditorProbe {
 			case _:
 				throw "second invalid validation observation changed shape";
 		}
-		return 42;
+		return 43;
 	}
 
 	/**

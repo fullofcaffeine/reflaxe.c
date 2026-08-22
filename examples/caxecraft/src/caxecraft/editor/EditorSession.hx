@@ -11,6 +11,7 @@ import caxecraft.editor.EditorObservationPlan.sameNodeRef;
 import caxecraft.editor.EditorPolicy.defaults as defaultEditorSettings;
 import caxecraft.editor.EditorPolicy.validate as validateEditorSettings;
 import caxecraft.editor.EditorPresentation.project as projectPresentation;
+import caxecraft.editor.EditorPresentation.projectDetails as projectPresentationDetails;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImage;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioImageResult;
 import caxecraft.editor.EditorScenarioSnapshot.EditorScenarioParseState;
@@ -276,6 +277,8 @@ final class EditorSession {
 				DraftObserved(currentRevision, draftSnapshot());
 			case InspectPresentation:
 				PresentationObserved(currentRevision, projectPresentation(draftImage.scenario));
+			case InspectPresentationDetails:
+				PresentationDetailsObserved(currentRevision, projectPresentationDetails(draftImage.scenario));
 			case InspectCanonicalDraft:
 				CanonicalDraftObserved(currentRevision, canonicalDraft());
 			case InspectTree:

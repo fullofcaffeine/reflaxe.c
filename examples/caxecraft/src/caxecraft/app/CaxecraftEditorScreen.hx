@@ -44,6 +44,7 @@ import caxecraft.editor.EditorObjectPresentation.EditorObjectVisual;
 import caxecraft.editor.EditorObjectPresentation.visualFor as objectVisualFor;
 import caxecraft.editor.EditorObjectPresentation.visualUsesBillboard;
 import caxecraft.editor.EditorPresentation.EditorPresentationSnapshot;
+import caxecraft.editor.EditorPresentation.EditorPresentationDetails;
 import caxecraft.editor.EditorTypes.EditorMutationResult;
 import caxecraft.editor.EditorTypes.EditorNodeRef;
 import caxecraft.editor.EditorTypes.EditorObservation;
@@ -211,6 +212,12 @@ final class CaxecraftEditorScreen {
 
 	/** True when the most recent requested voxel patch had to rebuild all terrain. */
 	var pilotTerrainPatchFellBack:Bool = false;
+
+	/** Total synchronous time spent refreshing presentation that retained terrain. */
+	var pilotKeepTerrainRefreshMicroseconds:Int = 0;
+
+	/** Number of retained-terrain refreshes included in the pilot timing. */
+	var pilotKeepTerrainRefreshCount:Int = 0;
 	#end
 
 	/**
@@ -2231,14 +2238,28 @@ final class CaxecraftEditorScreen {
 			notice = Invalid;
 			return;
 		}
-		final draft = switch current.query(InspectPresentation) {
-			case PresentationObserved(_, value): value;
-			case _: throw "editor returned the wrong presentation observation";
+		#if caxecraft_pilot
+		final keepTerrainStarted = switch terrainRefresh {
+			case KeepTerrain: Raylib.GetTime();
+			case RefreshTerrainVoxel(_) | RefreshAllTerrain: -1.0;
+		};
+		#end
+		final previous = projection;
+		final draft:EditorPresentationSnapshot = switch terrainRefresh {
+			case KeepTerrain:
+				switch current.query(InspectPresentationDetails) {
+					case PresentationDetailsObserved(_, value): presentationWithProjection(value, previous);
+					case _: throw "editor returned the wrong presentation-details observation";
+				}
+			case RefreshTerrainVoxel(_) | RefreshAllTerrain:
+				switch current.query(InspectPresentation) {
+					case PresentationObserved(_, value): value;
+					case _: throw "editor returned the wrong presentation observation";
+				}
 		};
 		presentationDraft = draft;
 		syncWorldName(draft.title);
 		environment = draft.environment;
-		final previous = projection;
 		projection = draft.projection;
 		final runtimeProjection = projection;
 		#if caxecraft_pilot
@@ -2300,6 +2321,26 @@ final class CaxecraftEditorScreen {
 			if (currentCamera != null && cameraMode(currentCamera) == EditorCameraMode.OrbitCamera)
 				camera = retargetOrbitCamera(currentCamera, cameraFocus(next).target);
 		}
+		#if caxecraft_pilot
+		if (keepTerrainStarted >= 0.0) {
+			pilotKeepTerrainRefreshMicroseconds += Std.int((Raylib.GetTime() - keepTerrainStarted) * 1000000.0);
+			pilotKeepTerrainRefreshCount++;
+		}
+		#end
+	}
+
+	/** Combine copied non-terrain details with the retained world projection. */
+	function presentationWithProjection(details:EditorPresentationDetails, retained:Null<EditorWorldProjection>):EditorPresentationSnapshot {
+		return {
+			title: details.title,
+			environment: details.environment,
+			world: details.world,
+			projection: retained,
+			objects: details.objects,
+			ruleIds: details.ruleIds,
+			flowRuleCount: details.flowRuleCount,
+			zoneRuleLinks: details.zoneRuleLinks
+		};
 	}
 
 	/**
@@ -2408,6 +2449,14 @@ final class CaxecraftEditorScreen {
 	/** True when the last pilot voxel edit could not use the incremental path. */
 	public inline function pilotPatchFellBack():Bool
 		return pilotTerrainPatchFellBack;
+
+	/** Return total retained-terrain presentation time for this pilot run. */
+	public inline function pilotKeepTerrainMicroseconds():Int
+		return pilotKeepTerrainRefreshMicroseconds;
+
+	/** Return the number of retained-terrain refreshes measured by this pilot. */
+	public inline function pilotKeepTerrainCount():Int
+		return pilotKeepTerrainRefreshCount;
 
 	/** Place through the direct secondary action, then select the new terrain. */
 	public function applyPilotPaintFirstAir():Bool {

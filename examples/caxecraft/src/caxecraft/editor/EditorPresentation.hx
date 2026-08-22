@@ -29,7 +29,18 @@ typedef EditorPresentationWorld = {
 	final palette:Array<BlockPaletteEntry>;
 }
 
-/** One revision-independent visual view of the current typed draft. */
+/** Copy-owned visual values that do not decode or project terrain cells. */
+typedef EditorPresentationDetails = {
+	final title:ScenarioText;
+	final environment:Null<ScenarioEnvironment>;
+	final world:EditorPresentationWorld;
+	final objects:Array<ScenarioObject>;
+	final ruleIds:Array<ScenarioId>;
+	final flowRuleCount:Int;
+	final zoneRuleLinks:Array<EditorZoneRuleProjection>;
+}
+
+/** One complete revision-independent visual view of the current typed draft. */
 typedef EditorPresentationSnapshot = {
 	final title:ScenarioText;
 	final environment:Null<ScenarioEnvironment>;
@@ -48,6 +59,21 @@ typedef EditorPresentationSnapshot = {
  * `projection` is `null` when chunk data cannot describe the declared world.
  */
 function project(scenario:Scenario):EditorPresentationSnapshot {
+	final details = projectDetails(scenario);
+	return {
+		title: details.title,
+		environment: details.environment,
+		world: details.world,
+		projection: projectWorld(scenario.world),
+		objects: details.objects,
+		ruleIds: details.ruleIds,
+		flowRuleCount: details.flowRuleCount,
+		zoneRuleLinks: details.zoneRuleLinks
+	};
+}
+
+/** Copy the visual values for an edit that cannot change terrain. */
+function projectDetails(scenario:Scenario):EditorPresentationDetails {
 	return {
 		title: scenario.title,
 		environment: copyEnvironment(scenario.environment),
@@ -58,7 +84,6 @@ function project(scenario:Scenario):EditorPresentationSnapshot {
 					{code: entry.code, blockType: entry.blockType}
 			]
 		},
-		projection: projectWorld(scenario.world),
 		objects: [for (object in scenario.objects) copyObject(object)],
 		ruleIds: [for (rule in scenario.flow.rules) rule.id],
 		flowRuleCount: scenario.flow.rules.length,
