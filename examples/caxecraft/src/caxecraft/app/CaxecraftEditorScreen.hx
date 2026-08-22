@@ -10,6 +10,7 @@ import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
+import caxecraft.editor.EditorBuildControls.immersiveWorkspaceActive;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
@@ -305,6 +306,10 @@ final class CaxecraftEditorScreen {
 			drawEnvironmentPanel(locale, width, height);
 			return StayInEditor;
 		}
+		if (immersiveWorkspaceActive(workspaceView == BuildView, buildPointerState == EditorBuildPointerState.Captured)) {
+			drawImmersiveBuild(locale, width, height, resources);
+			return StayInEditor;
+		}
 		final outer = Rectangle.fromFloat(16.0, 16.0, width - 32.0, height - 32.0);
 		if (Raygui.WindowBoxString(outer, uiCatalog.text(locale, UiMessage.EditorTitle)).has(GuiResult.Pressed)) {
 			focusedControl = EditorFocusTarget.Back;
@@ -404,6 +409,34 @@ final class CaxecraftEditorScreen {
 		if (leavePromptOpen)
 			return drawLeavePrompt(locale, width, height);
 		return StayInEditor;
+	}
+
+	/** Draw direct world editing without the released-pointer desktop controls. */
+	function drawImmersiveBuild(locale:LocaleCursor, width:Int, height:Int, resources:EditorRenderResources):Void {
+		final inset = 16;
+		drawWorldViewport(locale, inset, inset, width - inset * 2, height - inset * 2, resources);
+		Raylib.DrawRectangleLines(inset, inset, width - inset * 2, height - inset * 2, CaxecraftPalette.selection());
+		final help = uiCatalog.text(locale, UiMessage.EditorCanvasHelp);
+		Raylib.DrawRectangle(inset + 10, inset + 10, width - inset * 2 - 20, 22, Color.rgba(8, 20, 24));
+		Raylib.DrawTextString(help, inset + 16, inset + 14, 14, CaxecraftPalette.hudText());
+		final tool = immersiveToolLabel(locale);
+		final toolWidth = 220;
+		Raylib.DrawRectangle(inset + 10, inset + 40, toolWidth, 30, Color.rgba(8, 20, 24));
+		Raylib.DrawRectangleLines(inset + 10, inset + 40, toolWidth, 30, CaxecraftPalette.selection());
+		Raylib.DrawTextString(tool, inset + 22, inset + 47, 18, CaxecraftPalette.hudText());
+	}
+
+	/** Return the localized name of the tool that owns captured Build input. */
+	function immersiveToolLabel(locale:LocaleCursor):String {
+		return switch activeTool {
+			case SelectTool: '1  ${uiCatalog.text(locale, UiMessage.EditorSelect)}';
+			case PaintTool | EraseTool | FillTool: '2  ${uiCatalog.text(locale, UiMessage.EditorGround)}';
+			case CheckpointTool: '3  ${uiCatalog.text(locale, UiMessage.EditorCheckpoint)}';
+			case CatalogObjectTool:
+				final recipe = contentRegistry.editorObjectAt(0);
+				'4  ${recipe == null ? "-" : locale == Locale0 ? recipe.labelEn : recipe.labelEsMx}';
+			case TriggerZoneTool: '5  ${uiCatalog.text(locale, UiMessage.EditorTrigger)}';
+		};
 	}
 
 	/**

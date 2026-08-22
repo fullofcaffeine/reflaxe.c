@@ -10,6 +10,7 @@ import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
+import caxecraft.editor.EditorBuildControls.immersiveWorkspaceActive;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
 import caxecraft.editor.EditorBuildControls.objectAction;
@@ -1276,6 +1277,12 @@ final class EditorProbe {
 		checks++;
 		pointer = nextPointerState(EditorBuildPointerState.Captured, true, false, false, false);
 		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
+		checks++;
+		require(immersiveWorkspaceActive(true, true), "captured Build retained the desktop editor controls");
+		checks++;
+		require(!immersiveWorkspaceActive(true, false), "released Build hid the desktop editor controls");
+		checks++;
+		require(!immersiveWorkspaceActive(false, true), "Plan admitted the immersive Build workspace");
 		checks++;
 		checks += expectObjectShortcut(objectShortcutAction({
 			inputAvailable: true,

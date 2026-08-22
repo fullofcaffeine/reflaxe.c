@@ -1430,17 +1430,16 @@ def validate_presented_screenshot(
 
 
 def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
-    """Prove the native editor drew its controls and active 3D world.
+    """Prove captured Build drew its compact controls and active 3D world.
 
     This is a structural framebuffer check, not a pixel golden. It admits small
     driver and font-rendering differences while still rejecting a blank frame,
     a gameplay frame, a flat placeholder canvas, or an editor missing one of
-    its main working regions. The pilot paints and selects one real air cell.
+    its direct-editing regions. The pilot paints and selects one real air cell.
     Broad color counts prove that the perspective view contains sky, authored
     terrain, and its selection outline without prescribing map geometry. The
-    focused sidebar subregion proves the scene controls are presented. The
-    exact yellow focus-ring color proves that device-neutral focus reached the
-    native toolbar; exact edit semantics remain owned by faster tests.
+    compact top regions prove that help and the current tool remain visible
+    after the desktop controls hide. Faster tests own exact edit semantics.
     """
     width, height, pixels = decode_rgba_png(path, "editor")
     logical_width, logical_height = 1280, 720
@@ -1467,24 +1466,18 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
                     changed += 1
         return changed, len(colors)
 
-    toolbar = region_evidence(32, 52, 672, 94)
-    canvas = region_evidence(32, 104, 1018, 650)
-    sidebar = region_evidence(1018, 104, 1248, 650)
-    world_name = region_evidence(126, 58, 386, 96)
-    status = region_evidence(32, 660, 1248, 700)
-    minimum_changed = (
-        2_000 * scale * scale,
-        25_000 * scale * scale,
-        8_000 * scale * scale,
-        8_000 * scale * scale,
-        2_000 * scale * scale,
+    help_strip = region_evidence(26, 26, 1254, 48)
+    tool_badge = region_evidence(26, 56, 300, 88)
+    canvas = region_evidence(16, 16, 1264, 704)
+    evidence = (
+        ("help-strip", help_strip, 2_000 * scale * scale, 2),
+        ("tool-badge", tool_badge, 2_000 * scale * scale, 3),
+        ("canvas", canvas, 100_000 * scale * scale, 3),
     )
-    evidence = (toolbar, canvas, sidebar, world_name, status)
-    labels = ("toolbar", "canvas", "sidebar", "world-name", "status")
     failures = [
         f"{label}=changed:{changed},colors:{colors}"
-        for label, (changed, colors), threshold in zip(labels, evidence, minimum_changed)
-        if changed < threshold or colors < 3
+        for label, (changed, colors), threshold, minimum_colors in evidence
+        if changed < threshold or colors < minimum_colors
     ]
     canvas_colors = {
         # Orbit frames the selected actor closely, so terrain owns most of the
@@ -1494,9 +1487,9 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     }
     for label, (expected, minimum) in canvas_colors.items():
         matching = 0
-        for row in range(104 * scale, 650 * scale):
+        for row in range(16 * scale, 704 * scale):
             row_at = row * width * 4
-            for column in range(32 * scale, 1018 * scale):
+            for column in range(16 * scale, 1264 * scale):
                 at = row_at + column * 4
                 if tuple(pixels[at : at + 3]) == expected:
                     matching += 1
@@ -1509,9 +1502,9 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     # distinguishes textured faces from the former flat overview rectangles.
     terrain_pixels = 0
     terrain_color_buckets: set[int] = set()
-    for row in range(104 * scale, 650 * scale):
+    for row in range(16 * scale, 704 * scale):
         row_at = row * width * 4
-        for column in range(32 * scale, 1018 * scale):
+        for column in range(16 * scale, 1264 * scale):
             at = row_at + column * 4
             red, green, blue = pixels[at : at + 3]
             green_terrain = green > red * 0.9 and green > blue * 1.2 and green > 50
@@ -1537,9 +1530,9 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
     # red-dominant pixels. Exclude the exact orange selection-wire color so an
     # empty gizmo cannot imitate authored art.
     actor_pixels = 0
-    for row in range(260 * scale, 430 * scale):
+    for row in range(260 * scale, 460 * scale):
         row_at = row * width * 4
-        for column in range(420 * scale, 610 * scale):
+        for column in range(540 * scale, 740 * scale):
             at = row_at + column * 4
             red, green, blue = pixels[at : at + 3]
             if (
@@ -1569,20 +1562,20 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
         failures.append(
             f"3d-opaque-trigger-volume=pixels:{opaque_volume_pixels},maximum:{maximum_volume_pixels}"
         )
-    focus_pixels = 0
-    # The child-first shell keeps the primary action at the far right. Check
-    # the complete toolbar so layout changes do not turn this into a stale
-    # coordinate test while still proving that keyboard focus is visible.
-    for row in range(48 * scale, 102 * scale):
+    tool_outline_pixels = 0
+    # The exact selection color around the compact badge proves that captured
+    # Build still identifies the tool that owns direct input.
+    for row in range(56 * scale, 88 * scale):
         row_at = row * width * 4
-        for column in range(32 * scale, 1248 * scale):
+        for column in range(26 * scale, 300 * scale):
             at = row_at + column * 4
-            if tuple(pixels[at : at + 3]) == (255, 216, 92):
-                focus_pixels += 1
-    minimum_focus_pixels = 150 * scale * scale
-    if focus_pixels < minimum_focus_pixels:
+            if tuple(pixels[at : at + 3]) == (255, 132, 47):
+                tool_outline_pixels += 1
+    minimum_tool_outline_pixels = 80 * scale * scale
+    if tool_outline_pixels < minimum_tool_outline_pixels:
         failures.append(
-            f"primary-action-focus-ring=pixels:{focus_pixels},minimum:{minimum_focus_pixels}"
+            "captured-tool-outline="
+            f"pixels:{tool_outline_pixels},minimum:{minimum_tool_outline_pixels}"
         )
     if failures:
         raise PlayFailure(

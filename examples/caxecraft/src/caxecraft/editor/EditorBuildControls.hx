@@ -157,6 +157,10 @@ function nextPointerState(current:EditorBuildPointerState, buildActive:Bool, win
 	return current;
 }
 
+/** True when direct Build input replaces the desktop editor controls. */
+function immersiveWorkspaceActive(buildActive:Bool, pointerCaptured:Bool):Bool
+	return buildActive && pointerCaptured;
+
 /**
  * Convert the two terrain mouse buttons into one exact edit.
  *
