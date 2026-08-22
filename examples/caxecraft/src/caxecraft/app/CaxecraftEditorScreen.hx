@@ -57,6 +57,7 @@ import caxecraft.editor.EditorViewport.boundsIntersectLayer;
 import caxecraft.editor.EditorViewport.clampLayer;
 import caxecraft.editor.EditorViewport.commandFor as commandForTool;
 import caxecraft.editor.EditorViewport.layout as layoutPlan;
+import caxecraft.editor.EditorViewport.inspectorVisible as shouldShowInspector;
 import caxecraft.editor.EditorViewport.paletteCodeAt as paletteCodeAtPlan;
 import caxecraft.editor.EditorViewport.pointAt as pointAtPlan;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
@@ -376,7 +377,8 @@ final class CaxecraftEditorScreen {
 
 		final canvasTop = 116;
 		final shelfTop = height - 154;
-		final inspectorVisible = selection != null || selectedObjectIndex() >= 0 || worldListOpen;
+		final hasSelection = selection != null || selectedObjectIndex() >= 0;
+		final inspectorVisible = shouldShowInspector(workspaceView == BuildView, hasSelection, detailsOpen, worldListOpen);
 		final inspectorWidth = inspectorVisible && width >= 900 ? 250 : 0;
 		final canvasLeft = 32;
 		final canvasWidth = width - 64 - inspectorWidth - (inspectorWidth > 0 ? 12 : 0);

@@ -156,6 +156,16 @@ function clampLayer(layerY:Int, worldHeight:Int):Int {
 	return layerY < worldHeight ? layerY : worldHeight - 1;
 }
 
+/**
+	Decide when the property inspector takes space from the world canvas.
+
+	Build keeps the world large until the creator opens details or the world
+	list. Plan shows a selected item immediately because that view supports
+	precise inspection. Both views always show an explicitly opened panel.
+**/
+function inspectorVisible(buildActive:Bool, hasSelection:Bool, detailsOpen:Bool, worldListOpen:Bool):Bool
+	return detailsOpen || worldListOpen || (!buildActive && hasSelection);
+
 /** True when one semantic voxel selection crosses the displayed layer. */
 function boundsIntersectLayer(bounds:VoxelBounds, layerY:Int):Bool
 	return layerY >= bounds.origin.y && layerY < bounds.origin.y + bounds.size.height;

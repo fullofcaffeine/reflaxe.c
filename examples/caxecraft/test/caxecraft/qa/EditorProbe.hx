@@ -74,6 +74,7 @@ import caxecraft.editor.EditorViewport.commandFor as commandForTool;
 import caxecraft.editor.EditorViewport.boundsIntersectLayer;
 import caxecraft.editor.EditorViewport.clampLayer;
 import caxecraft.editor.EditorViewport.layout as layoutViewport;
+import caxecraft.editor.EditorViewport.inspectorVisible;
 import caxecraft.editor.EditorViewport.paletteCodeAt;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorViewport.pointAt as viewportPointAt;
@@ -2112,6 +2113,11 @@ final class EditorProbe {
 	 * caught before a graphical pilot has to diagnose it from pixels.
 	 */
 	static function checkViewport():Int {
+		require(!inspectorVisible(true, true, false, false), "Build selection opened the inspector without a creator request");
+		require(inspectorVisible(true, true, true, false), "Build details did not open the inspector");
+		require(inspectorVisible(true, false, false, true), "Build world list did not open the inspector");
+		require(inspectorVisible(false, true, false, false), "Plan selection did not show the precision inspector");
+		require(!inspectorVisible(false, false, false, false), "empty Plan opened an unused inspector");
 		final session = open(defaultEditorSettings());
 		expectApplied(session.apply(ResizeWorld({width: 4, height: 2, depth: 3})), WorldShape, "viewport world size");
 		expectApplied(session.apply(SetPaletteEntry(7, STONE)), Voxel, "viewport palette");
@@ -2215,7 +2221,7 @@ final class EditorProbe {
 			case _:
 				throw "trigger tool did not produce one canonical object command";
 		}
-		return 20;
+		return 25;
 	}
 
 	/**
