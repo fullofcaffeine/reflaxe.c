@@ -1615,14 +1615,14 @@ final class EditorProbe {
 				require(false, "Build edited terrain without a world target");
 		}
 		checks++;
-		require(usesDirectTerrainControls(SelectTool)
+		require(!usesDirectTerrainControls(SelectTool)
 			&& usesDirectTerrainControls(PaintTool)
 			&& usesDirectTerrainControls(EraseTool)
 			&& !usesDirectTerrainControls(FillTool)
 			&& !usesDirectTerrainControls(CheckpointTool)
 			&& !usesDirectTerrainControls(CatalogObjectTool)
 			&& !usesDirectTerrainControls(TriggerZoneTool),
-			"Build direct terrain controls leaked into object or volume placement");
+			"Build direct terrain controls leaked into Select, object, or volume placement");
 		checks++;
 		require(toolForBuildHotbarSlot(1) == SelectTool
 			&& toolForBuildHotbarSlot(2) == PaintTool

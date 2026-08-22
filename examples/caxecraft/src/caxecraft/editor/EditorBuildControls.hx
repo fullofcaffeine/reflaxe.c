@@ -211,11 +211,11 @@ function objectAction(input:EditorBuildObjectInput):EditorBuildObjectAction {
 	return NoObjectAction;
 }
 
-/** True when Build uses direct remove and place controls for the selected tool. */
+/** True when Build uses direct remove and place controls for the Ground tool. */
 function usesDirectTerrainControls(tool:EditorTool):Bool {
 	return switch tool {
-		case SelectTool | PaintTool | EraseTool: true;
-		case FillTool | CheckpointTool | CatalogObjectTool | TriggerZoneTool: false;
+		case PaintTool | EraseTool: true;
+		case SelectTool | FillTool | CheckpointTool | CatalogObjectTool | TriggerZoneTool: false;
 	};
 }
 
