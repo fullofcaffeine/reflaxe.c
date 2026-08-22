@@ -40,6 +40,44 @@ enum EditorBuildObjectAction {
 	TurnSelectedObject(degrees:Int);
 }
 
+/** One recoverable object shortcut, or no action when another UI owns input. */
+enum EditorObjectShortcutAction {
+	NoObjectShortcut;
+	DuplicateSelectedObject;
+	DeleteSelectedObject;
+}
+
+/** One device-independent shortcut frame for the shared object selection. */
+typedef EditorObjectShortcutInput = {
+	final inputAvailable:Bool;
+	final buildActive:Bool;
+	final pointerCaptured:Bool;
+	final selectToolActive:Bool;
+	final objectSelected:Bool;
+	final objectHeld:Bool;
+	final duplicatePressed:Bool;
+	final deletePressed:Bool;
+}
+
+/**
+ * Admit one copy or delete key edge only when the active editor view owns it.
+ *
+ * Plan accepts precise selection shortcuts without pointer capture. Build
+ * requires captured Select mode and rejects shortcuts during a hold. Duplicate
+ * wins if both keys start together, so one frame creates at most one revision.
+ */
+function objectShortcutAction(input:EditorObjectShortcutInput):EditorObjectShortcutAction {
+	if (!input.inputAvailable || !input.objectSelected)
+		return NoObjectShortcut;
+	if (input.buildActive && (!input.pointerCaptured || !input.selectToolActive || input.objectHeld))
+		return NoObjectShortcut;
+	if (input.duplicatePressed)
+		return DuplicateSelectedObject;
+	if (input.deletePressed)
+		return DeleteSelectedObject;
+	return NoObjectShortcut;
+}
+
 /** Temporary Build ownership of one stable authored object. */
 enum EditorBuildObjectGrab {
 	NoObjectGrab;

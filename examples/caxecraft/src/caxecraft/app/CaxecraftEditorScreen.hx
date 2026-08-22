@@ -7,6 +7,7 @@ import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
+import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
@@ -16,6 +17,7 @@ import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.objectGrabActive;
 import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
 import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
+import caxecraft.editor.EditorBuildControls.objectShortcutAction;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -280,8 +282,23 @@ final class CaxecraftEditorScreen {
 				return navigationAction;
 		}
 		final editedName = worldName;
-		if (!leavePromptOpen && (editedName == null || !editedName.isEditing()) && Raylib.IsKeyPressed(KeyboardKey.Backspace))
-			deleteSelectedObject();
+		final shortcutInputAvailable = !leavePromptOpen && !environmentPanelOpen && (editedName == null || !editedName.isEditing());
+		switch objectShortcutAction({
+			inputAvailable: shortcutInputAvailable,
+			buildActive: workspaceView == BuildView,
+			pointerCaptured: buildPointerState == EditorBuildPointerState.Captured,
+			selectToolActive: activeTool == SelectTool,
+			objectSelected: selectedObjectIndex() >= 0,
+			objectHeld: objectGrabActive(objectGrab),
+			duplicatePressed: duplicateShortcutPressed(),
+			deletePressed: Raylib.IsKeyPressed(KeyboardKey.Backspace)
+		}) {
+			case NoObjectShortcut:
+			case DuplicateSelectedObject:
+				duplicateSelectedObject();
+			case DeleteSelectedObject:
+				deleteSelectedObject();
+		}
 		Raylib.ClearBackground(Color.rgba(12, 28, 36));
 		if (environmentPanelOpen) {
 			drawEnvironmentPanel(locale, width, height);
@@ -371,7 +388,7 @@ final class CaxecraftEditorScreen {
 		final innerWidth = canvasWidth - 24;
 		final innerHeight = canvasHeight - 48;
 		if (workspaceView == BuildView)
-			drawWorldViewport(innerLeft, innerTop, innerWidth, innerHeight, resources);
+			drawWorldViewport(locale, innerLeft, innerTop, innerWidth, innerHeight, resources);
 		else
 			drawPlanViewport(innerLeft, innerTop, innerWidth, innerHeight);
 		if (inspectorWidth > 0)
@@ -831,11 +848,19 @@ final class CaxecraftEditorScreen {
 	function saveShortcutPressed():Bool {
 		if (!Raylib.IsKeyPressed(KeyboardKey.S))
 			return false;
+		return shortcutModifierDown();
+	}
+
+	/** True when the platform copy/save modifier is held. */
+	function shortcutModifierDown():Bool
 		return Raylib.IsKeyDown(KeyboardKey.LeftControl)
 			|| Raylib.IsKeyDown(KeyboardKey.RightControl)
 			|| Raylib.IsKeyDown(KeyboardKey.LeftSuper)
 			|| Raylib.IsKeyDown(KeyboardKey.RightSuper);
-	}
+
+	/** True for one duplicate chord without consuming an ordinary D key edge. */
+	function duplicateShortcutPressed():Bool
+		return shortcutModifierDown() && Raylib.IsKeyPressed(KeyboardKey.D);
 
 	/**
 	 * Apply one navigation command to the editor's existing focus and actions.
@@ -1698,7 +1723,7 @@ final class CaxecraftEditorScreen {
 	 * eligible object clockwise by one quarter turn.
 	 * Escape cancels a held object first. Another press releases the pointer.
 	 */
-	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, resources:EditorRenderResources):Void {
+	function drawWorldViewport(locale:LocaleCursor, left:Int, top:Int, width:Int, height:Int, resources:EditorRenderResources):Void {
 		var current = projection;
 		var currentCamera = camera;
 		if (current == null || currentCamera == null || width <= 0 || height <= 0)
@@ -1729,9 +1754,10 @@ final class CaxecraftEditorScreen {
 			currentCamera = focusActiveCamera(current, currentCamera);
 		else if (cameraInputEnabled) {
 			final delta = Raylib.GetMouseDelta();
+			final shortcutModified = shortcutModifierDown();
 			currentCamera = stepCamera(current, currentCamera, {
-				forward: axis(Raylib.IsKeyDown(KeyboardKey.W), Raylib.IsKeyDown(KeyboardKey.S)),
-				right: axis(Raylib.IsKeyDown(KeyboardKey.D), Raylib.IsKeyDown(KeyboardKey.A)),
+				forward: axis(!shortcutModified && Raylib.IsKeyDown(KeyboardKey.W), !shortcutModified && Raylib.IsKeyDown(KeyboardKey.S)),
+				right: axis(!shortcutModified && Raylib.IsKeyDown(KeyboardKey.D), !shortcutModified && Raylib.IsKeyDown(KeyboardKey.A)),
 				vertical: axis(Raylib.IsKeyDown(KeyboardKey.E), Raylib.IsKeyDown(KeyboardKey.Q)),
 				yaw: capturePressed ? 0.0 : -delta.x.toFloat() * 0.004,
 				pitch: capturePressed ? 0.0 : -delta.y.toFloat() * 0.004,
@@ -1918,6 +1944,11 @@ final class CaxecraftEditorScreen {
 		}
 		Raylib.EndMode3D();
 		Raylib.EndScissorMode();
+		if (aiming && selectedObjectIndex() >= 0) {
+			final shortcutText = '${uiCatalog.text(locale, UiMessage.EditorDuplicate)}: CTRL/CMD+D  ·  ${uiCatalog.text(locale, UiMessage.EditorDelete)}: BACKSPACE';
+			Raylib.DrawRectangle(left + 8, top + height - 28, width - 16, 22, Color.rgba(8, 20, 24));
+			Raylib.DrawTextString(shortcutText, left + 14, top + height - 24, 14, CaxecraftPalette.hudText());
+		}
 		if (aiming)
 			drawBuildCrosshair(left + Std.int(width / 2), top + Std.int(height / 2));
 	}
@@ -2374,7 +2405,7 @@ final class CaxecraftEditorScreen {
 	}
 
 	/**
-	 * Place and turn the selected actor through production Build actions.
+	 * Place, turn, copy, and delete the selected actor through Build actions.
 	 *
 	 * The pilot bypasses only operating-system key delivery. Pointer ownership,
 	 * Select mode, camera-relative direction, revisioned commands, projection
@@ -2409,7 +2440,7 @@ final class CaxecraftEditorScreen {
 		if (currentCamera == null || selected < 0)
 			return false;
 		final pose = cameraPose(currentCamera);
-		return applyBuildObjectAction(objectAction({
+		if (!applyBuildObjectAction(objectAction({
 			pointerCaptured: buildPointerState == EditorBuildPointerState.Captured,
 			selectToolActive: activeTool == SelectTool,
 			objectSelected: true,
@@ -2421,7 +2452,19 @@ final class CaxecraftEditorScreen {
 			turnPressed: true,
 			lookX: pose.lookX,
 			lookZ: pose.lookZ
-		}));
+		})))
+			return false;
+		final editedId = source.id;
+		final beforeDuplicate = objectGizmos.length;
+		duplicateSelectedObject();
+		final duplicateIndex = selectedObjectIndex();
+		if (objectGizmos.length != beforeDuplicate + 1 || duplicateIndex < 0 || objectGizmos[duplicateIndex].id.text() == editedId.text())
+			return false;
+		deleteSelectedObject();
+		if (objectGizmos.length != beforeDuplicate || selectedObjectIndex() >= 0)
+			return false;
+		selectObject(editedId);
+		return selectedObjectIndex() >= 0;
 	}
 
 	/**

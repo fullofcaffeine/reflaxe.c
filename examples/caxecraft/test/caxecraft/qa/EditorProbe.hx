@@ -6,6 +6,7 @@ import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectInput;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
+import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
@@ -15,6 +16,7 @@ import caxecraft.editor.EditorBuildControls.objectAction;
 import caxecraft.editor.EditorBuildControls.objectGrabActive;
 import caxecraft.editor.EditorBuildControls.objectGrabCandidate;
 import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
+import caxecraft.editor.EditorBuildControls.objectShortcutAction;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -1274,6 +1276,67 @@ final class EditorProbe {
 		pointer = nextPointerState(EditorBuildPointerState.Captured, true, false, false, false);
 		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
 		checks++;
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: false,
+			pointerCaptured: false,
+			selectToolActive: false,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: false
+		}), DuplicateSelectedObject, "Plan rejected the duplicate shortcut");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: true,
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: false,
+			deletePressed: true
+		}), DeleteSelectedObject, "captured Build Select rejected the delete shortcut");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: true,
+			pointerCaptured: false,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: false
+		}), NoObjectShortcut, "released Build changed an object");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: true,
+			pointerCaptured: true,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: true,
+			duplicatePressed: false,
+			deletePressed: true
+		}), NoObjectShortcut, "Build deleted an object during a hold");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: false,
+			buildActive: false,
+			pointerCaptured: false,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: true
+		}), NoObjectShortcut, "a modal leaked an object shortcut");
+		checks += expectObjectShortcut(objectShortcutAction({
+			inputAvailable: true,
+			buildActive: false,
+			pointerCaptured: false,
+			selectToolActive: true,
+			objectSelected: true,
+			objectHeld: false,
+			duplicatePressed: true,
+			deletePressed: true
+		}), DuplicateSelectedObject,
+			"one key frame produced more than the priority shortcut");
 		final grabbedId = id("build.grabbed");
 		final hoveredId = id("build.hovered");
 		require(objectGrabCandidate(grabbedId, hoveredId, true) == hoveredId, "Grab did not prefer the crosshair object");
@@ -1584,6 +1647,12 @@ final class EditorProbe {
 			case NoObjectAction | TurnSelectedObject(_):
 				require(false, message);
 		}
+		return 1;
+	}
+
+	/** Require one exact object shortcut action. */
+	static function expectObjectShortcut(action:EditorObjectShortcutAction, expected:EditorObjectShortcutAction, message:String):Int {
+		require(action == expected, message);
 		return 1;
 	}
 
