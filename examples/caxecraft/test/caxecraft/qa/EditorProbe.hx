@@ -52,6 +52,7 @@ import caxecraft.editor.EditorRuntimeTerrain.runtimeCodeForPalette;
 import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
 import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
 import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
+import caxecraft.editor.EditorTerrainRefresh.forChanges as terrainRefreshForChanges;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
 import caxecraft.editor.EditorTypes.EditorCommandFamily;
@@ -413,6 +414,27 @@ final class EditorProbe {
 				throw "a terrain batch requested an incremental refresh";
 		}
 		checks++;
+		for (changes in [
+			[ChangedTitle],
+			[ChangedObject(id("editor.object"))],
+			[ChangedFluid(id("editor.fluid"))],
+			[ChangedRule(id("editor.rule"))]
+		]) {
+			switch terrainRefreshForChanges(changes) {
+				case KeepTerrain:
+				case RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
+					throw "non-terrain history invalidated terrain";
+			}
+			checks++;
+		}
+		for (changes in [[ChangedDocument], [ChangedWorldShape], [ChangedTerrain], [ChangedPalette(1)]]) {
+			switch terrainRefreshForChanges(changes) {
+				case RefreshAllTerrain:
+				case KeepTerrain | RefreshTerrainVoxel(_, _):
+					throw "terrain-affecting history retained stale terrain";
+			}
+			checks++;
+		}
 		return checks;
 	}
 

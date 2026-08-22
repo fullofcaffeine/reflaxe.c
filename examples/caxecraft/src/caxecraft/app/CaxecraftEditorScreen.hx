@@ -30,6 +30,7 @@ import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTerrainRefresh.EditorTerrainRefreshRequest;
 import caxecraft.editor.EditorTerrainRefresh.forBatch as terrainRefreshForBatch;
 import caxecraft.editor.EditorTerrainRefresh.forCommand as terrainRefreshForCommand;
+import caxecraft.editor.EditorTerrainRefresh.forChanges as terrainRefreshForChanges;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentControl;
 import caxecraft.editor.EditorEnvironment.EditorEnvironmentDirection;
 import caxecraft.editor.EditorEnvironment.editEnvironment;
@@ -225,6 +226,9 @@ final class CaxecraftEditorScreen {
 
 	/** Number of one-voxel refreshes included in the pilot timing. */
 	var pilotVoxelRefreshCount:Int = 0;
+
+	/** Total synchronous time for one object undo and matching redo. */
+	var pilotHistoryRoundTripMicroseconds:Int = 0;
 	#end
 
 	/**
@@ -1532,9 +1536,9 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return;
 		switch current.mutate({baseRevision: current.revision(), mutation: Undo}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, changes, _, _, _):
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, terrainRefreshForChanges(changes));
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -1547,9 +1551,9 @@ final class CaxecraftEditorScreen {
 		if (current == null)
 			return;
 		switch current.mutate({baseRevision: current.revision(), mutation: Redo}) {
-			case MutationApplied(_, _, _, _, _):
+			case MutationApplied(_, changes, _, _, _):
 				notice = Ready;
-				refreshProjection();
+				refreshProjection(false, terrainRefreshForChanges(changes));
 			case MutationUnchanged(_, _):
 				notice = Ready;
 			case MutationRejected(_, _):
@@ -2490,6 +2494,27 @@ final class CaxecraftEditorScreen {
 	/** Return the number of one-voxel refreshes measured by this pilot. */
 	public inline function pilotVoxelCount():Int
 		return pilotVoxelRefreshCount;
+
+	/** Return total object undo and redo time for this pilot run. */
+	public inline function pilotHistoryMicroseconds():Int
+		return pilotHistoryRoundTripMicroseconds;
+
+	/** Undo and redo the newest edit, then prove that its canonical state returned. */
+	public function applyPilotHistoryRoundTrip():Bool {
+		final current = session;
+		if (current == null || current.undoDepth() <= 0)
+			return false;
+		final beforeCanonical = current.canonicalDraft();
+		final beforeUndoDepth = current.undoDepth();
+		final beforeRedoDepth = current.redoDepth();
+		final started = Raylib.GetTime();
+		undo();
+		redo();
+		pilotHistoryRoundTripMicroseconds += Std.int((Raylib.GetTime() - started) * 1000000.0);
+		return current.canonicalDraft().compare(beforeCanonical) == 0
+			&& current.undoDepth() == beforeUndoDepth
+			&& current.redoDepth() == beforeRedoDepth;
+	}
 
 	/** Place through the direct secondary action, then select the new terrain. */
 	public function applyPilotPaintFirstAir():Bool {

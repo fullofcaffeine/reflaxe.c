@@ -413,10 +413,13 @@ final class CaxecraftApp {
 				rejectedEditCount++;
 			else if (!editorScreen.applyPilotDirectObjectEdits())
 				rejectedEditCount++;
+			else if (!editorScreen.applyPilotHistoryRoundTrip())
+				rejectedEditCount++;
 			if (!editorScreen.applyPilotSave())
 				rejectedEditCount++;
 			Sys.println('caxecraft: editor retained-terrain refreshes=${editorScreen.pilotKeepTerrainCount()} microseconds=${editorScreen.pilotKeepTerrainMicroseconds()}');
 			Sys.println('caxecraft: editor one-voxel refreshes=${editorScreen.pilotVoxelCount()} microseconds=${editorScreen.pilotVoxelMicroseconds()}');
+			Sys.println('caxecraft: editor object undo-redo microseconds=${editorScreen.pilotHistoryMicroseconds()}');
 		}
 		return {
 			navigationCommand: navigationCommand,
