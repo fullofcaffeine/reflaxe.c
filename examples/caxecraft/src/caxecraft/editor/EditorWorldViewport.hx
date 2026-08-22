@@ -12,12 +12,12 @@ import caxecraft.scenario.ScenarioWorld;
  * renderer.
  *
  * The CAXEMAP draft remains the only editable world. `projectWorld` creates a
- * read-only presentation cache after an accepted edit, camera functions turn
+ * screen-owned presentation cache after an accepted edit, camera functions turn
  * bounded input into a fresh snapshot, and `pickWorld` maps a viewing ray back
  * to one authored coordinate. Eval tests and the native Raylib editor therefore
  * share spatial rules without either implementation copying game state.
  */
-/** One read-only copy of the complete finite voxel volume. */
+/** One screen-owned copy of the complete finite voxel volume and its overview. */
 typedef EditorWorldProjection = {
 	final width:Int;
 	final height:Int;
@@ -241,6 +241,67 @@ function projectWorld(world:ScenarioWorld):Null<EditorWorldProjection> {
 		surfaceTops: surfaceTops,
 		surfacePatches: surfacePatches
 	};
+}
+
+/**
+ * Apply one accepted voxel edit to this screen-owned projection.
+ *
+ * The editor session has already validated and stored the command. This
+ * function updates the exact cell and rebuilds only the small x/z overview.
+ * It validates all array bounds before mutation, so `false` leaves the cache
+ * unchanged and lets the caller request a complete projection.
+ */
+function patchProjectedVoxel(projection:EditorWorldProjection, point:VoxelPoint, paletteCode:Int):Bool {
+	if (paletteCode < 0 || point.x < 0 || point.y < 0 || point.z < 0 || point.x >= projection.width || point.y >= projection.height
+		|| point.z >= projection.depth)
+		return false;
+	final volume = projection.width * projection.height * projection.depth;
+	final area = projection.width * projection.depth;
+	if (projection.width <= 0 || projection.height <= 0 || projection.depth <= 0 || projection.cells.length != volume || projection.surfaceTops.length != area)
+		return false;
+
+	final changedCell = (point.z * projection.height + point.y) * projection.width + point.x;
+	final changedColumn = point.z * projection.width + point.x;
+	final nextTops = projection.surfaceTops.copy();
+	var changedTop = -1;
+	for (y in 0...projection.height) {
+		final index = (point.z * projection.height + y) * projection.width + point.x;
+		final code = index == changedCell ? paletteCode : projection.cells[index];
+		if (code != 0)
+			changedTop = y;
+	}
+	nextTops[changedColumn] = changedTop;
+
+	final nextColumns:Array<EditorTerrainColumn> = [];
+	final nextPaletteCodes:Array<Int> = [];
+	for (z in 0...projection.depth)
+		for (x in 0...projection.width) {
+			final column = z * projection.width + x;
+			final topY = nextTops[column];
+			if (topY < -1 || topY >= projection.height)
+				return false;
+			final index = topY < 0 ? -1 : (z * projection.height + topY) * projection.width + x;
+			final code = index < 0 ? 0 : index == changedCell ? paletteCode : projection.cells[index];
+			if (topY >= 0)
+				nextColumns.push({
+					x: x,
+					z: z,
+					topY: topY,
+					paletteCode: code
+				});
+			nextPaletteCodes.push(code);
+		}
+	final nextPatches = projectSurfacePatches(projection.width, projection.depth, nextTops, nextPaletteCodes);
+
+	projection.cells[changedCell] = paletteCode;
+	projection.surfaceTops[changedColumn] = changedTop;
+	projection.columns.resize(0);
+	for (column in nextColumns)
+		projection.columns.push(column);
+	projection.surfacePatches.resize(0);
+	for (patch in nextPatches)
+		projection.surfacePatches.push(patch);
+	return true;
 }
 
 /** Merge adjacent equal top cells so the overview submits little geometry. */

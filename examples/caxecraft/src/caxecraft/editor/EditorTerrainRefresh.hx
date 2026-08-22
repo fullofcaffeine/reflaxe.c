@@ -16,8 +16,8 @@ enum EditorTerrainRefreshRequest {
 	/** The command cannot change terrain bytes or their runtime interpretation. */
 	KeepTerrain;
 
-	/** One accepted command changed exactly this authored voxel. */
-	RefreshTerrainVoxel(point:VoxelPoint);
+	/** One accepted command changed exactly this authored voxel to this palette code. */
+	RefreshTerrainVoxel(point:VoxelPoint, paletteCode:Int);
 
 	/** The command can change several cells, dimensions, palette meaning, or the complete draft. */
 	RefreshAllTerrain;
@@ -26,7 +26,8 @@ enum EditorTerrainRefreshRequest {
 /** Return the narrowest safe presentation refresh after one accepted command. */
 function forCommand(command:EditorCommand):EditorTerrainRefreshRequest {
 	return switch command {
-		case PaintVoxel(point, _) | EraseVoxel(point): RefreshTerrainVoxel(point);
+		case PaintVoxel(point, paletteCode): RefreshTerrainVoxel(point, paletteCode);
+		case EraseVoxel(point): RefreshTerrainVoxel(point, 0);
 		case ResizeWorld(_) | SetPaletteEntry(_, _) | PaintVoxels(_, _) | EraseVoxels(_) | FillBounds(_, _) | RestoreLastPlayable:
 			RefreshAllTerrain;
 		case SetTitle(_) | SetEnvironment(_) | PutFluid(_) | RemoveFluid(_) | StampPrefab(_, _, _, _) | PutObject(_) | MoveObjectBy(_, _) |
@@ -47,7 +48,7 @@ function forBatch(commands:Array<EditorCommand>):EditorTerrainRefreshRequest {
 	for (command in commands)
 		switch forCommand(command) {
 			case KeepTerrain:
-			case RefreshTerrainVoxel(_) | RefreshAllTerrain:
+			case RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
 				return RefreshAllTerrain;
 		}
 	return KeepTerrain;

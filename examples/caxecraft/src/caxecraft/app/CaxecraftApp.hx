@@ -416,6 +416,7 @@ final class CaxecraftApp {
 			if (!editorScreen.applyPilotSave())
 				rejectedEditCount++;
 			Sys.println('caxecraft: editor retained-terrain refreshes=${editorScreen.pilotKeepTerrainCount()} microseconds=${editorScreen.pilotKeepTerrainMicroseconds()}');
+			Sys.println('caxecraft: editor one-voxel refreshes=${editorScreen.pilotVoxelCount()} microseconds=${editorScreen.pilotVoxelMicroseconds()}');
 		}
 		return {
 			navigationCommand: navigationCommand,

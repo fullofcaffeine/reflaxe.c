@@ -98,6 +98,7 @@ import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
+import caxecraft.editor.EditorWorldViewport.patchProjectedVoxel;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
@@ -366,15 +367,15 @@ final class EditorProbe {
 		require(runtimeCodeForPalette(duplicatePaletteWorld, 1, registry) == -1, "incremental terrain palette resolution admitted a duplicate code");
 		checks++;
 		switch terrainRefreshForCommand(PaintVoxel({x: 4, y: 5, z: 6}, 1)) {
-			case RefreshTerrainVoxel(point):
-				require(point.x == 4 && point.y == 5 && point.z == 6, "paint lost its incremental terrain coordinate");
+			case RefreshTerrainVoxel(point, paletteCode):
+				require(point.x == 4 && point.y == 5 && point.z == 6 && paletteCode == 1, "paint lost its incremental terrain change");
 			case KeepTerrain | RefreshAllTerrain:
 				throw "paint requested a broad terrain refresh";
 		}
 		checks++;
 		switch terrainRefreshForCommand(EraseVoxel({x: 7, y: 8, z: 9})) {
-			case RefreshTerrainVoxel(point):
-				require(point.x == 7 && point.y == 8 && point.z == 9, "erase lost its incremental terrain coordinate");
+			case RefreshTerrainVoxel(point, paletteCode):
+				require(point.x == 7 && point.y == 8 && point.z == 9 && paletteCode == 0, "erase lost its incremental terrain change");
 			case KeepTerrain | RefreshAllTerrain:
 				throw "erase requested a broad terrain refresh";
 		}
@@ -389,26 +390,26 @@ final class EditorProbe {
 		]) {
 			switch terrainRefreshForCommand(command) {
 				case RefreshAllTerrain:
-				case KeepTerrain | RefreshTerrainVoxel(_):
+				case KeepTerrain | RefreshTerrainVoxel(_, _):
 					throw "a broad terrain change requested a narrow refresh";
 			}
 			checks++;
 		}
 		switch terrainRefreshForCommand(SetTitle(Literal("Presentation only"))) {
 			case KeepTerrain:
-			case RefreshTerrainVoxel(_) | RefreshAllTerrain:
+			case RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
 				throw "a title edit invalidated terrain";
 		}
 		checks++;
 		switch terrainRefreshForBatch([SetTitle(Literal("Metadata batch"))]) {
 			case KeepTerrain:
-			case RefreshTerrainVoxel(_) | RefreshAllTerrain:
+			case RefreshTerrainVoxel(_, _) | RefreshAllTerrain:
 				throw "a metadata-only batch invalidated terrain";
 		}
 		checks++;
 		switch terrainRefreshForBatch([SetTitle(Literal("Mixed batch")), PaintVoxel({x: 1, y: 0, z: 1}, 1)]) {
 			case RefreshAllTerrain:
-			case KeepTerrain | RefreshTerrainVoxel(_):
+			case KeepTerrain | RefreshTerrainVoxel(_, _):
 				throw "a terrain batch requested an incremental refresh";
 		}
 		checks++;
@@ -2290,6 +2291,32 @@ final class EditorProbe {
 			&& paletteCodeAtWorld(projection, 0, 0, 0) == 0
 			&& paletteCodeAtWorld(projection, 4, 0, 0) == -1,
 			"3D viewport projection lost solid, air, or excluded coordinates");
+		final incrementalProjection = projectWorld(session.draftSnapshot().world);
+		require(incrementalProjection != null, "one-voxel projection fixture did not decode");
+		require(patchProjectedVoxel(incrementalProjection, {x: 1, y: 1, z: 1}, 0)
+			&& paletteCodeAtWorld(incrementalProjection, 1, 1, 1) == 0
+			&& surfaceTopAt(incrementalProjection, 1, 1) == 0
+			&& incrementalProjection.columns.length == 2
+			&& incrementalProjection.columns[0].topY == 0,
+			"one-voxel erase did not update the exact cell and derived surface");
+		require(patchProjectedVoxel(incrementalProjection, {x: 0, y: 1, z: 0}, 1)
+			&& paletteCodeAtWorld(incrementalProjection, 0, 1, 0) == 1
+			&& surfaceTopAt(incrementalProjection, 0, 0) == 1
+			&& incrementalProjection.columns.length == 3,
+			"one-voxel paint did not add its derived surface column");
+		final malformedProjection:EditorWorldProjection = {
+			width: incrementalProjection.width,
+			height: incrementalProjection.height,
+			depth: incrementalProjection.depth,
+			cells: incrementalProjection.cells.copy(),
+			columns: incrementalProjection.columns.copy(),
+			surfaceTops: [],
+			surfacePatches: incrementalProjection.surfacePatches.copy()
+		};
+		final cellBeforeRejectedPatch = malformedProjection.cells[0];
+		require(!patchProjectedVoxel(malformedProjection, {x: 0, y: 0, z: 0}, 0)
+			&& malformedProjection.cells[0] == cellBeforeRejectedPatch,
+			"a malformed projection was partially patched");
 
 		final focused = focusCamera(projection);
 		final focusedPose = cameraPose(focused);
@@ -2473,7 +2500,7 @@ final class EditorProbe {
 			&& gizmoIntersectsLayer(objectGizmos[0], 1)
 			&& !gizmoIntersectsLayer(objectGizmos[0], 2),
 			"Plan object filtering lost exact vertical overlap");
-		return 27;
+		return 30;
 	}
 
 	/** Prove that Plan logic links retain rule order and fail closed. */

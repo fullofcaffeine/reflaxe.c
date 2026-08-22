@@ -81,6 +81,7 @@ import caxecraft.editor.EditorWorldViewport.cycleCameraMode;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
+import caxecraft.editor.EditorWorldViewport.patchProjectedVoxel;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
@@ -218,6 +219,12 @@ final class CaxecraftEditorScreen {
 
 	/** Number of retained-terrain refreshes included in the pilot timing. */
 	var pilotKeepTerrainRefreshCount:Int = 0;
+
+	/** Total synchronous time spent refreshing one accepted terrain voxel. */
+	var pilotVoxelRefreshMicroseconds:Int = 0;
+
+	/** Number of one-voxel refreshes included in the pilot timing. */
+	var pilotVoxelRefreshCount:Int = 0;
 	#end
 
 	/**
@@ -2239,19 +2246,30 @@ final class CaxecraftEditorScreen {
 			return;
 		}
 		#if caxecraft_pilot
-		final keepTerrainStarted = switch terrainRefresh {
-			case KeepTerrain: Raylib.GetTime();
-			case RefreshTerrainVoxel(_) | RefreshAllTerrain: -1.0;
+		final refreshStarted = switch terrainRefresh {
+			case KeepTerrain | RefreshTerrainVoxel(_, _): Raylib.GetTime();
+			case RefreshAllTerrain: -1.0;
 		};
 		#end
 		final previous = projection;
+		var voxelProjectionPatched = false;
 		final draft:EditorPresentationSnapshot = switch terrainRefresh {
 			case KeepTerrain:
 				switch current.query(InspectPresentationDetails) {
 					case PresentationDetailsObserved(_, value): presentationWithProjection(value, previous);
 					case _: throw "editor returned the wrong presentation-details observation";
 				}
-			case RefreshTerrainVoxel(_) | RefreshAllTerrain:
+			case RefreshTerrainVoxel(point, paletteCode):
+				switch current.query(InspectPresentationDetails) {
+					case PresentationDetailsObserved(_, value):
+						voxelProjectionPatched = previous != null && patchProjectedVoxel(previous, point, paletteCode);
+						if (voxelProjectionPatched) presentationWithProjection(value, previous); else switch current.query(InspectPresentation) {
+							case PresentationObserved(_, complete): complete;
+							case _: throw "editor returned the wrong presentation observation";
+						}
+					case _: throw "editor returned the wrong presentation-details observation";
+				}
+			case RefreshAllTerrain:
 				switch current.query(InspectPresentation) {
 					case PresentationObserved(_, value): value;
 					case _: throw "editor returned the wrong presentation observation";
@@ -2271,8 +2289,9 @@ final class CaxecraftEditorScreen {
 		else
 			switch terrainRefresh {
 				case KeepTerrain:
-				case RefreshTerrainVoxel(point):
-					final dirtyChunks = terrainPresentation.refreshVoxel(draft.world, runtimeProjection, contentRegistry, point);
+				case RefreshTerrainVoxel(point, _):
+					final dirtyChunks = if (voxelProjectionPatched) terrainPresentation.refreshVoxel(draft.world, runtimeProjection, contentRegistry,
+						point); else -1;
 					if (dirtyChunks < 0) {
 						terrainPresentation.refresh(draft.world, runtimeProjection, contentRegistry);
 						#if caxecraft_pilot
@@ -2322,10 +2341,16 @@ final class CaxecraftEditorScreen {
 				camera = retargetOrbitCamera(currentCamera, cameraFocus(next).target);
 		}
 		#if caxecraft_pilot
-		if (keepTerrainStarted >= 0.0) {
-			pilotKeepTerrainRefreshMicroseconds += Std.int((Raylib.GetTime() - keepTerrainStarted) * 1000000.0);
-			pilotKeepTerrainRefreshCount++;
-		}
+		if (refreshStarted >= 0.0)
+			switch terrainRefresh {
+				case KeepTerrain:
+					pilotKeepTerrainRefreshMicroseconds += Std.int((Raylib.GetTime() - refreshStarted) * 1000000.0);
+					pilotKeepTerrainRefreshCount++;
+				case RefreshTerrainVoxel(_, _):
+					pilotVoxelRefreshMicroseconds += Std.int((Raylib.GetTime() - refreshStarted) * 1000000.0);
+					pilotVoxelRefreshCount++;
+				case RefreshAllTerrain:
+			}
 		#end
 	}
 
@@ -2457,6 +2482,14 @@ final class CaxecraftEditorScreen {
 	/** Return the number of retained-terrain refreshes measured by this pilot. */
 	public inline function pilotKeepTerrainCount():Int
 		return pilotKeepTerrainRefreshCount;
+
+	/** Return total one-voxel presentation time for this pilot run. */
+	public inline function pilotVoxelMicroseconds():Int
+		return pilotVoxelRefreshMicroseconds;
+
+	/** Return the number of one-voxel refreshes measured by this pilot. */
+	public inline function pilotVoxelCount():Int
+		return pilotVoxelRefreshCount;
 
 	/** Place through the direct secondary action, then select the new terrain. */
 	public function applyPilotPaintFirstAir():Bool {
