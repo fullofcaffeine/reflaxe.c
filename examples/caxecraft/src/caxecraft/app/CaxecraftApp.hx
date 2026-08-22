@@ -315,6 +315,8 @@ final class CaxecraftApp {
 		var terrainPatchDirtyChunks = 0;
 		var terrainPatchFallbackCount = 0;
 		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
+			if (!editorScreen.pilotUsesWalkCamera())
+				rejectedEditCount++;
 			if (!editorScreen.applyPilotWorldName("Ivvy's Workshop"))
 				rejectedEditCount++;
 			if (!editorScreen.applyPilotLayer(1))
@@ -345,7 +347,7 @@ final class CaxecraftApp {
 				horizontal: 0.0,
 				vertical: 0.0
 			};
-			for (step in 0...10) {
+			for (step in 0...11) {
 				final elapsed = if (step == 0) 0.0 else if (step == 1) NavigationRepeater.INITIAL_REPEAT_DELAY_SECONDS else
 					NavigationRepeater.REPEAT_INTERVAL_SECONDS;
 				switch editorScreen.applyNavigation(editorNavigation.advance(heldDown, elapsed)) {
@@ -383,6 +385,10 @@ final class CaxecraftApp {
 		}
 		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 7) {
 			if (!editorScreen.applyPilotCatalogObject())
+				rejectedEditCount++;
+			if (!editorScreen.applyPilotSelectFirstActor())
+				rejectedEditCount++;
+			if (!editorScreen.applyPilotOrbitCamera())
 				rejectedEditCount++;
 			final environmentCommands = [
 				NavigationCommand.Left,

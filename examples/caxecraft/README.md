@@ -1075,7 +1075,7 @@ npm run test:caxecraft-editor
 It creates a complete small map through public typed commands and proves exact
 undo/redo, bounded history and gestures, canonical in-memory reload,
 last-playable recovery, disposable test play, complete-volume projection,
-bounded fly-camera steps, solid and empty-space ray picking, the optional
+bounded Walk/Fly/Orbit camera steps, solid and empty-space ray picking, the optional
 top-down projection, direct Build capture/release rules, numbered tool slots,
 and Select/Paint/Erase/Fill translation under C and a second installed locale
 (Spanish when available). The reusable editor package imports no Raylib or C
@@ -1083,11 +1083,14 @@ target API.
 
 The title screen's Editor button opens a native Raylib/Raygui perspective
 viewport. A creator clicks the world once to enter direct Build control. Mouse
-movement then looks through a centered crosshair without a held button. WASD/QE
-flies, the wheel moves along the view, F focuses the whole world, and 1 through
-6 select the visible tool cards. Left click applies the selected tool. Escape
-releases the pointer before another cancel can leave the editor. Plan keeps a
-free pointer for precise layer and object work.
+movement then looks through a centered crosshair without a held button. Build
+starts in Walk, which follows the authored surface at player eye height. The
+Camera button or C cycles through Walk, Fly, and Orbit. Fly adds Q/E movement,
+and Orbit uses the wheel to frame the selected object or the complete world. F
+refocuses the active mode. Keys 1 through 5 select the visible tool cards. Left
+click applies the selected tool. Escape releases the pointer before another
+cancel can leave the editor. Plan keeps a free pointer for precise layer and
+object work.
 
 Object and environment controls use the same typed `EditorCommand` boundary as
 terrain, history, and tests. The screen caches a read-only complete-volume

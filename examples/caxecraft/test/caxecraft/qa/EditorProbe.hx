@@ -72,10 +72,15 @@ import caxecraft.editor.EditorViewport.projectFromCells;
 import caxecraft.editor.EditorViewport.projectFromWorld;
 import caxecraft.editor.EditorViewport.toolFromIndex;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
+import caxecraft.editor.EditorWorldViewport.cameraMode;
+import caxecraft.editor.EditorWorldViewport.cameraPose;
+import caxecraft.editor.EditorWorldViewport.cycleCameraMode;
+import caxecraft.editor.EditorWorldViewport.EditorCameraMode;
 import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
+import caxecraft.editor.EditorWorldViewport.EditorWorldVector;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
@@ -84,6 +89,7 @@ import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
 import caxecraft.editor.EditorWorldViewport.projectWorld;
+import caxecraft.editor.EditorWorldViewport.retargetOrbitCamera;
 import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.input.NavigationInput.NavigationCommand;
@@ -1123,6 +1129,7 @@ final class EditorProbe {
 			EditorFocusTarget.Redo,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Plan,
+			EditorFocusTarget.CameraMode,
 			EditorFocusTarget.PreviousLayer,
 			EditorFocusTarget.NextLayer,
 			EditorFocusTarget.Environment,
@@ -1150,6 +1157,7 @@ final class EditorProbe {
 			EditorFocusTarget.Environment,
 			EditorFocusTarget.NextLayer,
 			EditorFocusTarget.PreviousLayer,
+			EditorFocusTarget.CameraMode,
 			EditorFocusTarget.Plan,
 			EditorFocusTarget.Build,
 			EditorFocusTarget.Redo,
@@ -1954,17 +1962,19 @@ final class EditorProbe {
 			"3D viewport projection lost solid, air, or excluded coordinates");
 
 		final focused = focusCamera(projection);
-		require(close(focused.x, 2.0)
-			&& close(focused.y, 5.6)
-			&& close(focused.z, 5.6)
-			&& close(focused.lookX, 0.0)
-			&& close(focused.lookY, -0.5)
-			&& close(focused.lookZ, -0.8660254037844386),
+		final focusedPose = cameraPose(focused);
+		require(cameraMode(focused) == EditorCameraMode.FlyCamera
+			&& close(focusedPose.x, 2.0)
+			&& close(focusedPose.y, 5.6)
+			&& close(focusedPose.z, 5.6)
+			&& close(focusedPose.lookX, 0.0)
+			&& close(focusedPose.lookY, -0.5)
+			&& close(focusedPose.lookZ, -0.8660254037844386),
 			"3D viewport focus did not frame the finite world deterministically");
 		final target = cameraTarget(focused);
-		require(close(target.x, focused.x + focused.lookX)
-			&& close(target.y, focused.y + focused.lookY)
-			&& close(target.z, focused.z + focused.lookZ),
+		require(close(target.x, focusedPose.x + focusedPose.lookX)
+			&& close(target.y, focusedPose.y + focusedPose.lookY)
+			&& close(target.z, focusedPose.z + focusedPose.lookZ),
 			"3D camera target drifted from its direction snapshot");
 		final moved = stepCamera(projection, focused, {
 			forward: 1.0,
@@ -1974,7 +1984,9 @@ final class EditorProbe {
 			pitch: 0.05,
 			wheel: 1.0
 		}, 0.05);
-		require(moved.x != focused.x && moved.y != focused.y && moved.z != focused.z && moved.lookX < 0.0 && moved.lookY > focused.lookY,
+		final movedPose = cameraPose(moved);
+		require(movedPose.x != focusedPose.x && movedPose.y != focusedPose.y && movedPose.z != focusedPose.z && movedPose.lookX < 0.0
+			&& movedPose.lookY > focusedPose.lookY,
 			"3D camera step ignored movement or look input");
 		final clamped = stepCamera(projection, moved, {
 			forward: 10000.0,
@@ -1984,14 +1996,81 @@ final class EditorProbe {
 			pitch: -10.0,
 			wheel: 10000.0
 		}, 10.0);
-		require(clamped.x >= -128.0
-			&& clamped.x <= projection.width + 128.0
-			&& clamped.y >= 0.25
-			&& clamped.y <= projection.height + 128.0
-			&& clamped.z >= -128.0
-			&& clamped.z <= projection.depth + 128.0
-			&& close(clamped.lookY, -0.90),
+		final clampedPose = cameraPose(clamped);
+		require(clampedPose.x >= -128.0
+			&& clampedPose.x <= projection.width + 128.0
+			&& clampedPose.y >= 0.25
+			&& clampedPose.y <= projection.height + 128.0
+			&& clampedPose.z >= -128.0
+			&& clampedPose.z <= projection.depth + 128.0
+			&& close(clampedPose.lookY, -0.90),
 			"3D camera failed to clamp frame time, position, yaw, or pitch");
+
+		final walking = focusCamera(projection, EditorCameraMode.WalkCamera);
+		final walkingPose = cameraPose(walking);
+		require(cameraMode(walking) == EditorCameraMode.WalkCamera
+			&& close(walkingPose.x, 2.0)
+			&& close(walkingPose.y, 1.62)
+			&& close(walkingPose.z, 2.5),
+			"Walk did not start inside the draft at player-like eye height");
+		final walked = stepCamera(projection, walking, {
+			forward: 0.0,
+			right: 1.0,
+			vertical: 1.0,
+			yaw: 0.0,
+			pitch: 0.0,
+			wheel: 100.0
+		}, 0.1);
+		final walkedAgain = stepCamera(projection, walked, {
+			forward: 0.0,
+			right: 1.0,
+			vertical: -1.0,
+			yaw: 0.0,
+			pitch: 0.0,
+			wheel: -100.0
+		}, 0.1);
+		final walkedPose = cameraPose(walkedAgain);
+		require(walkedPose.x > walkingPose.x && close(walkedPose.y, 2.62) && close(walkedPose.z, walkingPose.z),
+			"Walk did not follow the authored surface or ignored its no-flight contract");
+
+		final orbitTarget:EditorWorldVector = {x: 1.5, y: 1.0, z: 1.5};
+		final orbiting = focusCamera(projection, EditorCameraMode.OrbitCamera, orbitTarget, 4.0);
+		final orbitingPose = cameraPose(orbiting);
+		require(cameraMode(orbiting) == EditorCameraMode.OrbitCamera
+			&& close(cameraTarget(orbiting).x, orbitTarget.x)
+			&& close(cameraTarget(orbiting).y, orbitTarget.y)
+			&& close(cameraTarget(orbiting).z, orbitTarget.z),
+			"Orbit did not retain its explicit authored target");
+		final orbited = stepCamera(projection, orbiting, {
+			forward: 1.0,
+			right: 1.0,
+			vertical: 1.0,
+			yaw: 0.1,
+			pitch: 0.05,
+			wheel: 1.0
+		}, 0.1);
+		final orbitedPose = cameraPose(orbited);
+		require(orbitedPose.x != orbitingPose.x
+			&& orbitedPose.y != orbitingPose.y
+			&& orbitedPose.z != orbitingPose.z
+			&& close(cameraTarget(orbited).x, orbitTarget.x)
+			&& close(cameraTarget(orbited).y, orbitTarget.y)
+			&& close(cameraTarget(orbited).z, orbitTarget.z),
+			"Orbit did not rotate and zoom around its fixed target");
+		final nextOrbitTarget:EditorWorldVector = {x: 3.5, y: 1.0, z: 2.5};
+		final retargeted = retargetOrbitCamera(orbited, nextOrbitTarget);
+		final retargetedPose = cameraPose(retargeted);
+		require(close(cameraTarget(retargeted).x, nextOrbitTarget.x)
+			&& close(cameraTarget(retargeted).y, nextOrbitTarget.y)
+			&& close(cameraTarget(retargeted).z, nextOrbitTarget.z)
+			&& close(retargetedPose.lookX, orbitedPose.lookX)
+			&& close(retargetedPose.lookY, orbitedPose.lookY)
+			&& close(retargetedPose.lookZ, orbitedPose.lookZ),
+			"Orbit changed its viewing angle when selection moved its target");
+		require(cycleCameraMode(EditorCameraMode.WalkCamera) == EditorCameraMode.FlyCamera
+			&& cycleCameraMode(EditorCameraMode.FlyCamera) == EditorCameraMode.OrbitCamera
+			&& cycleCameraMode(EditorCameraMode.OrbitCamera) == EditorCameraMode.WalkCamera,
+			"the camera control did not cycle through one closed mode order");
 
 		final stacked = pickWorld(projection, {x: 1.5, y: 4.0, z: 1.5}, {x: 0.0, y: -1.0, z: 0.0}, 0, 16.0);
 		require(stacked != null && stacked.solid && stacked.point.x == 1 && stacked.point.y == 1 && stacked.point.z == 1 && stacked.placement == null
@@ -2061,7 +2140,7 @@ final class EditorProbe {
 			&& gizmoIntersectsLayer(objectGizmos[0], 1)
 			&& !gizmoIntersectsLayer(objectGizmos[0], 2),
 			"Plan object filtering lost exact vertical overlap");
-		return 21;
+		return 27;
 	}
 
 	/** Prove that Plan logic links retain rule order and fail closed. */

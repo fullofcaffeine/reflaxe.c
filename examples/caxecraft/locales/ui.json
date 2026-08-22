@@ -120,11 +120,43 @@
       }
     },
     {
+      "id": "editor_camera",
+      "symbol": "EditorCamera",
+      "text": {
+        "en": "CAMERA",
+        "es-MX": "CÁMARA"
+      }
+    },
+    {
+      "id": "editor_camera_fly",
+      "symbol": "EditorCameraFly",
+      "text": {
+        "en": "FLY",
+        "es-MX": "VOLAR"
+      }
+    },
+    {
+      "id": "editor_camera_orbit",
+      "symbol": "EditorCameraOrbit",
+      "text": {
+        "en": "ORBIT",
+        "es-MX": "ÓRBITA"
+      }
+    },
+    {
+      "id": "editor_camera_walk",
+      "symbol": "EditorCameraWalk",
+      "text": {
+        "en": "WALK",
+        "es-MX": "CAMINAR"
+      }
+    },
+    {
       "id": "editor_canvas_help",
       "symbol": "EditorCanvasHelp",
       "text": {
-        "en": "BUILD · CLICK WORLD TO LOOK · 1-5 TOOLS · LMB REMOVE/USE · RMB PLACE · ESC RELEASE · WASD/QE FLY",
-        "es-MX": "CONSTRUIR · CLIC EN EL MUNDO PARA MIRAR · 1-5 HERRAMIENTAS · CLIC IZQ QUITAR/USAR · CLIC DER COLOCAR · ESC LIBERAR · WASD/QE VOLAR"
+        "en": "CLICK WORLD · 1-5 TOOLS · LMB REMOVE/USE · RMB PLACE · ESC RELEASE · C CAMERA",
+        "es-MX": "CLIC EN EL MUNDO · 1-5 HERRAMIENTAS · CLIC IZQ QUITAR/USAR · CLIC DER COLOCAR · ESC LIBERAR · C CÁMARA"
       }
     },
     {

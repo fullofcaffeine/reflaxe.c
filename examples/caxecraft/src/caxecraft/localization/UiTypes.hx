@@ -115,4 +115,9 @@ enum abstract UiMessage(Int) {
 
 	/** Appended so existing message codes remain stable. Catalog storage stays ID-sorted. */
 	var PlayerFallen = 74;
+
+	var EditorCamera = 75;
+	var EditorCameraWalk = 76;
+	var EditorCameraFly = 77;
+	var EditorCameraOrbit = 78;
 }

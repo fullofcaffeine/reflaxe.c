@@ -53,19 +53,25 @@ import caxecraft.editor.EditorViewport.pointAt as pointAtPlan;
 import caxecraft.editor.EditorViewport.paletteCodeForBlock;
 import caxecraft.editor.EditorViewport.projectFromWorld;
 import caxecraft.editor.EditorWorldViewport.EditorCameraInput;
+import caxecraft.editor.EditorWorldViewport.EditorCameraMode;
 import caxecraft.editor.EditorWorldViewport.EditorCameraState;
 import caxecraft.editor.EditorWorldViewport.EditorObjectFacing;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.EditorObjectGizmoKind;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
 import caxecraft.editor.EditorWorldViewport.EditorWorldProjection;
+import caxecraft.editor.EditorWorldViewport.EditorWorldVector;
+import caxecraft.editor.EditorWorldViewport.cameraMode;
+import caxecraft.editor.EditorWorldViewport.cameraPose;
 import caxecraft.editor.EditorWorldViewport.cameraTarget;
+import caxecraft.editor.EditorWorldViewport.cycleCameraMode;
 import caxecraft.editor.EditorWorldViewport.focusCamera;
 import caxecraft.editor.EditorWorldViewport.gizmoIntersectsLayer;
 import caxecraft.editor.EditorWorldViewport.paletteCodeAtWorld;
 import caxecraft.editor.EditorWorldViewport.pickObject;
 import caxecraft.editor.EditorWorldViewport.pickWorld;
 import caxecraft.editor.EditorWorldViewport.projectObjects;
+import caxecraft.editor.EditorWorldViewport.retargetOrbitCamera;
 import caxecraft.editor.EditorWorldViewport.stepCamera;
 import caxecraft.editor.EditorWorldViewport.surfaceTopAt;
 import caxecraft.input.NavigationInput.NavigationCommand;
@@ -117,6 +123,12 @@ private enum EditorNotice {
 private enum abstract EditorWorkspaceView(Int) {
 	var BuildView = 0;
 	var PlanView = 1;
+}
+
+/** One object or world point that Orbit keeps in view. */
+private typedef EditorCameraFocus = {
+	final target:EditorWorldVector;
+	final orbitDistance:Float;
 }
 
 /** The exact baseline exists only after the editor opens a valid document. */
@@ -312,6 +324,11 @@ final class CaxecraftEditorScreen {
 			setWorkspaceView(BuildView);
 		if (focusedButtonSized(EditorFocusTarget.Plan, viewLeft + 108.0, toolbarTop, 100.0, 38.0, uiCatalog.text(locale, UiMessage.EditorPlan)))
 			setWorkspaceView(PlanView);
+		final toolbarCamera = camera;
+		if (toolbarCamera != null
+			&& focusedButtonSized(EditorFocusTarget.CameraMode, viewLeft + 216.0, toolbarTop, 156.0, 38.0,
+				cameraControlText(locale, cameraMode(toolbarCamera))))
+			cycleEditorCamera();
 		drawActiveControl(workspaceView == BuildView, Std.int(viewLeft), Std.int(toolbarTop), 100, 38);
 		drawActiveControl(workspaceView == PlanView, Std.int(viewLeft + 108.0), Std.int(toolbarTop), 100, 38);
 
@@ -907,6 +924,8 @@ final class CaxecraftEditorScreen {
 				setWorkspaceView(BuildView);
 			case Plan:
 				setWorkspaceView(PlanView);
+			case CameraMode:
+				cycleEditorCamera();
 			case PreviousLayer:
 				selectEditLayer(editLayerY - 1);
 			case NextLayer:
@@ -1006,6 +1025,56 @@ final class CaxecraftEditorScreen {
 		}
 		setBuildPointerState(nextPointerState(buildPointerState, view == BuildView, Raylib.IsWindowFocused(), false, false));
 		invalidatePreview();
+	}
+
+	/** Cycle the visible mode and frame the selected object or complete world. */
+	function cycleEditorCamera():Void {
+		final world = projection;
+		final current = camera;
+		if (world == null || current == null)
+			return;
+		final focus = cameraFocus(world);
+		camera = focusCamera(world, cycleCameraMode(cameraMode(current)), focus.target, focus.orbitDistance);
+		if (workspaceView != BuildView)
+			setWorkspaceView(BuildView);
+		invalidatePreview();
+	}
+
+	/** Focus the active mode on the selected object or the complete world. */
+	function focusActiveCamera(world:EditorWorldProjection, current:EditorCameraState):EditorCameraState {
+		final focus = cameraFocus(world);
+		return focusCamera(world, cameraMode(current), focus.target, focus.orbitDistance);
+	}
+
+	/** Resolve one copy-owned Orbit target without campaign-specific identities. */
+	function cameraFocus(world:EditorWorldProjection):EditorCameraFocus {
+		final selected = selectedObjectIndex();
+		if (selected >= 0) {
+			final gizmo = objectGizmos[selected];
+			var extent = gizmo.width;
+			if (gizmo.height > extent)
+				extent = gizmo.height;
+			if (gizmo.depth > extent)
+				extent = gizmo.depth;
+			return {
+				target: {x: gizmo.x, y: gizmo.y, z: gizmo.z},
+				orbitDistance: extent * 2.5 + 1.0
+			};
+		}
+		return {
+			target: {x: world.width * 0.5, y: world.height * 0.5, z: world.depth * 0.5},
+			orbitDistance: 0.0
+		};
+	}
+
+	/** Build one short localized label for the camera selector. */
+	function cameraControlText(locale:LocaleCursor, mode:EditorCameraMode):String {
+		final value = switch mode {
+			case WalkCamera: uiCatalog.text(locale, UiMessage.EditorCameraWalk);
+			case FlyCamera: uiCatalog.text(locale, UiMessage.EditorCameraFly);
+			case OrbitCamera: uiCatalog.text(locale, UiMessage.EditorCameraOrbit);
+		};
+		return '${uiCatalog.text(locale, UiMessage.EditorCamera)}: $value (C)';
 	}
 
 	/**
@@ -1136,6 +1205,10 @@ final class CaxecraftEditorScreen {
 			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
 				selection = current.selectedBounds();
 				objectList = new GuiListViewState(index);
+				final world = projection;
+				final currentCamera = camera;
+				if (world != null && currentCamera != null && cameraMode(currentCamera) == EditorCameraMode.OrbitCamera)
+					camera = retargetOrbitCamera(currentCamera, cameraFocus(world).target);
 				notice = Ready;
 			case SelectionRejected(_, _):
 				notice = Invalid;
@@ -1547,8 +1620,9 @@ final class CaxecraftEditorScreen {
 	 * draft fits the gameplay world. A click gives Build the pointer. Mouse
 	 * movement then looks without a held button. In terrain mode, the primary
 	 * button removes a solid and the secondary button places adjacent ground.
-	 * WASD/QE flies, number keys select the visible tool hotbar, and F focuses the
-	 * world. Escape releases the pointer before the editor handles another cancel.
+	 * WASD moves the active camera. Fly also uses Q/E and the wheel. Orbit uses
+	 * the wheel for zoom. C changes camera mode, and F refocuses the active mode.
+	 * Escape releases the pointer before the editor handles another cancel.
 	 */
 	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, resources:EditorRenderResources):Void {
 		var current = projection;
@@ -1571,8 +1645,14 @@ final class CaxecraftEditorScreen {
 			&& (name == null || !name.isEditing());
 		if (cameraInputEnabled)
 			selectBuildHotbarTool();
+		if (cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.C)) {
+			cycleEditorCamera();
+			final cycled = camera;
+			if (cycled != null)
+				currentCamera = cycled;
+		}
 		if (cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.F))
-			currentCamera = focusCamera(current);
+			currentCamera = focusActiveCamera(current, currentCamera);
 		else if (cameraInputEnabled) {
 			final delta = Raylib.GetMouseDelta();
 			currentCamera = stepCamera(current, currentCamera, {
@@ -1585,9 +1665,10 @@ final class CaxecraftEditorScreen {
 			}, Raylib.GetFrameTime().toFloat());
 		}
 		camera = currentCamera;
+		final currentPose = cameraPose(currentCamera);
 		final target = cameraTarget(currentCamera);
-		final nativeCamera = Camera3D.make(Vector3.fromFloat(currentCamera.x, currentCamera.y, currentCamera.z),
-			Vector3.fromFloat(target.x, target.y, target.z), Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(52.0), CameraProjection.Perspective);
+		final nativeCamera = Camera3D.make(Vector3.fromFloat(currentPose.x, currentPose.y, currentPose.z), Vector3.fromFloat(target.x, target.y, target.z),
+			Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(52.0), CameraProjection.Perspective);
 		var hover:Null<EditorWorldHit> = null;
 		var hoveredObject = -1;
 		final aiming = buildPointerState == EditorBuildPointerState.Captured;
@@ -1652,7 +1733,7 @@ final class CaxecraftEditorScreen {
 		for (z in 0...current.depth + 1)
 			Raylib.DrawLine3D(Vector3.fromFloat(0.0, layerGridY, z), Vector3.fromFloat(current.width, layerGridY, z), Color.rgba(78, 137, 143));
 		if (!terrainPresentation.draw(resources.terrainTexture, resources.terrainTextureReady, resources.adventureTerrainTexture,
-			resources.adventureTerrainTextureReady, currentCamera.x, currentCamera.z))
+			resources.adventureTerrainTextureReady, currentPose.x, currentPose.z))
 			drawTerrainOverview(current);
 		final selected = selection;
 		if (selected != null)
@@ -1961,7 +2042,14 @@ final class CaxecraftEditorScreen {
 			notice = Invalid;
 		} else if (resetCamera || camera == null || previous == null || previous.width != next.width || previous.height != next.height
 			|| previous.depth != next.depth) {
-			camera = focusCamera(next);
+			final previousCamera = camera;
+			final mode = previousCamera == null ? EditorCameraMode.WalkCamera : cameraMode(previousCamera);
+			final focus = cameraFocus(next);
+			camera = focusCamera(next, mode, focus.target, focus.orbitDistance);
+		} else {
+			final currentCamera = camera;
+			if (currentCamera != null && cameraMode(currentCamera) == EditorCameraMode.OrbitCamera)
+				camera = retargetOrbitCamera(currentCamera, cameraFocus(next).target);
 		}
 	}
 
@@ -1985,6 +2073,24 @@ final class CaxecraftEditorScreen {
 	}
 
 	#if caxecraft_pilot
+	/** True when a fresh Build screen uses the direct surface-following mode. */
+	public function pilotUsesWalkCamera():Bool {
+		final current = camera;
+		return current != null && cameraMode(current) == EditorCameraMode.WalkCamera;
+	}
+
+	/** Cycle through the production Camera control until Orbit owns the view. */
+	public function applyPilotOrbitCamera():Bool {
+		var attempts = 0;
+		var current = camera;
+		while (attempts < 3 && current != null && cameraMode(current) != EditorCameraMode.OrbitCamera) {
+			cycleEditorCamera();
+			attempts++;
+			current = camera;
+		}
+		return current != null && cameraMode(current) == EditorCameraMode.OrbitCamera;
+	}
+
 	/**
 	 * Commit one deterministic title through the production text-field path.
 	 *
@@ -2107,6 +2213,18 @@ final class CaxecraftEditorScreen {
 			return false;
 		selectObject(objectGizmos[0].id);
 		return selectedObjectIndex() == 0;
+	}
+
+	/** Select the first validated actor visual for the Orbit screenshot. */
+	public function applyPilotSelectFirstActor():Bool {
+		for (index in 0...objectVisuals.length)
+			switch objectVisuals[index] {
+				case ActorVisual(_, _):
+					selectObject(objectGizmos[index].id);
+					return selectedObjectIndex() == index;
+				case PlayerSpawnVisual | CheckpointVisual | ItemVisual(_, _) | StatefulObjectVisual(_, _) | TriggerVolumeVisual | FallbackObjectVisual:
+			}
+		return false;
 	}
 
 	/**

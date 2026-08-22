@@ -1487,7 +1487,9 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
         if changed < threshold or colors < 3
     ]
     canvas_colors = {
-        "sky": ((126, 190, 201), 50_000),
+        # Orbit frames the selected actor closely, so terrain owns most of the
+        # viewport. This still requires a broad, exact sky region.
+        "sky": ((126, 190, 201), 20_000),
         "selection-outline": ((255, 132, 47), 20),
     }
     for label, (expected, minimum) in canvas_colors.items():
@@ -1530,17 +1532,22 @@ def validate_editor_screenshot(path: Path, *, platform_name: str) -> tuple[int, 
             f"pixels:{terrain_pixels},minimum:{minimum_terrain_pixels},"
             f"colorBuckets:{len(terrain_color_buckets)},minimumBuckets:{minimum_terrain_buckets}"
         )
-    # The deterministic editor pilot faces the shipped Nia and mossling
-    # placements. Their admitted atlas cells contribute compact red-dominant
-    # pixels in the road corridor. A wire-only renderer does not fill those
-    # sprites. Keep the region broad enough for admitted pixel-scale changes.
+    # The deterministic editor pilot selects one shipped actor, then Orbit keeps
+    # that actor near the viewport center. Its atlas cell contributes compact
+    # red-dominant pixels. Exclude the exact orange selection-wire color so an
+    # empty gizmo cannot imitate authored art.
     actor_pixels = 0
-    for row in range(500 * scale, 540 * scale):
+    for row in range(260 * scale, 430 * scale):
         row_at = row * width * 4
-        for column in range(660 * scale, 730 * scale):
+        for column in range(420 * scale, 610 * scale):
             at = row_at + column * 4
             red, green, blue = pixels[at : at + 3]
-            if red > 60 and red > green * 1.25 and red > blue * 1.2:
+            if (
+                (red, green, blue) != (255, 132, 47)
+                and red > 60
+                and red > green * 1.25
+                and red > blue * 1.2
+            ):
                 actor_pixels += 1
     minimum_actor_pixels = 40 * scale * scale
     if actor_pixels < minimum_actor_pixels:

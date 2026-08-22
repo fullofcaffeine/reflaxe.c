@@ -98,20 +98,50 @@ typedef EditorObjectHit = {
 	final distance:Float;
 }
 
-/**
- * The editor camera's position and unit-like forward direction.
- *
- * This is a value snapshot rather than a class because it has no independent
- * identity or resource lifetime. `CaxecraftEditorScreen` owns the current
- * snapshot and replaces it after each input step.
- */
-typedef EditorCameraState = {
+/** The camera position and unit-like forward direction for one frame. */
+typedef EditorCameraPose = {
 	final x:Float;
 	final y:Float;
 	final z:Float;
 	final lookX:Float;
 	final lookY:Float;
 	final lookZ:Float;
+}
+
+/**
+ * The three creator views that Build can use.
+ *
+ * Walk follows the authored surface for direct edits. Fly keeps unrestricted
+ * movement for large worlds. Orbit keeps one explicit target in view for
+ * inspection. An enum abstract gives the closed choice an integer C value.
+ */
+enum abstract EditorCameraMode(Int) {
+	/** Follow each column's top surface for direct world edits. */
+	var WalkCamera = 0;
+
+	/** Move freely inside generous bounds around the finite world. */
+	var FlyCamera = 1;
+
+	/** Keep one selected object or world point at the center of the view. */
+	var OrbitCamera = 2;
+}
+
+/**
+ * One complete camera snapshot, including mode-specific state.
+ *
+ * Orbit alone owns a target and horizontal distance. The typed enum prevents
+ * Walk or Fly from carrying inactive orbit fields. The screen replaces this
+ * immutable snapshot after each input frame.
+ */
+enum EditorCameraState {
+	/** A surface-following creator pose. This is not player collision physics. */
+	WalkingCamera(pose:EditorCameraPose);
+
+	/** An unrestricted creator pose. */
+	FlyingCamera(pose:EditorCameraPose);
+
+	/** A creator pose with the exact point and distance that it keeps in view. */
+	OrbitingCamera(pose:EditorCameraPose, target:EditorWorldVector, horizontalDistance:Float);
 }
 
 /** Renderer-neutral movement and look input for one displayed frame. */
@@ -151,11 +181,15 @@ private typedef EditorRayInterval = {
 }
 
 final CAMERA_SPEED = 8.0;
+final WALK_SPEED = 5.0;
+final WALK_EYE_HEIGHT = 1.62;
 final WHEEL_DISTANCE = 2.0;
+final MIN_ORBIT_DISTANCE = 2.0;
 final MAX_FRAME_SECONDS = 0.1;
 final MAX_LOOK_STEP = 0.25;
 final MIN_PITCH = -0.90;
 final MAX_PITCH = 0.90;
+final MAX_ORBIT_PITCH = -0.05;
 final RAY_EPSILON = 0.000001;
 
 /**
@@ -382,40 +416,172 @@ function paletteCodeAtWorld(projection:EditorWorldProjection, x:Int, y:Int, z:In
 }
 
 /**
- * Place a perspective camera above and south of the complete draft.
+ * Place the requested camera at a deterministic useful view.
  *
- * Focusing depends only on finite world dimensions, so New World, resize, and
- * the `F` shortcut converge on the same deterministic view. The direction is a
- * reviewed unit-like constant and does not require target-specific trigonometry.
+ * Walk starts inside the south edge. Fly frames the complete draft from above.
+ * Orbit frames the supplied target, or the world center if no target exists.
+ * New World, resize, and the F shortcut therefore produce the same view for
+ * the same mode and target.
  */
-function focusCamera(projection:EditorWorldProjection):EditorCameraState {
+function focusCamera(projection:EditorWorldProjection, mode:EditorCameraMode = FlyCamera, ?orbitTarget:EditorWorldVector,
+		orbitDistance:Float = 0.0):EditorCameraState {
 	final extent = projection.width > projection.depth ? projection.width : projection.depth;
-	return {
-		x: projection.width * 0.5,
-		y: projection.height + extent * 0.4 + 2.0,
-		z: projection.depth + extent * 0.4 + 1.0,
-		lookX: 0.0,
-		lookY: -0.5,
-		lookZ: -0.8660254037844386
+	return switch mode {
+		case FlyCamera:
+			FlyingCamera({
+				x: projection.width * 0.5,
+				y: projection.height + extent * 0.4 + 2.0,
+				z: projection.depth + extent * 0.4 + 1.0,
+				lookX: 0.0,
+				lookY: -0.5,
+				lookZ: -0.8660254037844386
+			});
+		case WalkCamera:
+			final x = clamp(projection.width * 0.5, 0.001, projection.width - 0.001);
+			final z = clamp(projection.depth - 0.5, 0.001, projection.depth - 0.001);
+			WalkingCamera({
+				x: x,
+				y: walkEyeY(projection, x, z),
+				z: z,
+				lookX: 0.0,
+				lookY: -0.20,
+				lookZ: -1.0
+			});
+		case OrbitCamera:
+			final target:EditorWorldVector = if (orbitTarget == null) {
+				x: projection.width * 0.5,
+				y: projection.height * 0.5,
+				z: projection.depth * 0.5
+			} else {
+				x: orbitTarget.x,
+				y: orbitTarget.y,
+				z: orbitTarget.z
+			};
+			var distance = orbitDistance;
+			if (distance <= 0.0)
+				distance = extent * 0.75 + 2.0;
+			distance = clamp(distance, MIN_ORBIT_DISTANCE, maximumOrbitDistance(projection));
+			final direction:EditorCameraPose = {
+				x: 0.0,
+				y: 0.0,
+				z: 0.0,
+				lookX: 0.0,
+				lookY: -0.35,
+				lookZ: -1.0
+			};
+			OrbitingCamera(orbitPose(direction, target, distance), target, distance);
 	};
 }
 
 /**
- * Advance the fly camera by one bounded displayed-frame input.
+ * Advance the active camera by one bounded displayed-frame input.
  *
- * Forward movement follows the view direction; strafe stays horizontal; the
- * vertical axis is explicit. Yaw uses the same small-angle, normalize-after
- * update as the playable camera, avoiding a target-only math dependency.
- * Position clamps leave generous space around the finite draft while
- * preventing one stalled frame or extreme wheel event from losing the camera.
+ * Walk follows the visible surface and ignores flight input. Fly keeps the
+ * original free movement. Orbit changes its angle and distance but keeps its
+ * target fixed. Each mode uses the same bounded look update.
  */
 function stepCamera(projection:EditorWorldProjection, state:EditorCameraState, input:EditorCameraInput, frameSeconds:Float):EditorCameraState {
+	return switch state {
+		case WalkingCamera(pose): WalkingCamera(stepWalkCamera(projection, pose, input, frameSeconds));
+		case FlyingCamera(pose): FlyingCamera(stepFlyCamera(projection, pose, input, frameSeconds));
+		case OrbitingCamera(pose, target, horizontalDistance):
+			var distance = horizontalDistance - input.wheel * WHEEL_DISTANCE;
+			distance = clamp(distance, MIN_ORBIT_DISTANCE, maximumOrbitDistance(projection));
+			final direction = turnCamera(pose, input, MIN_PITCH, MAX_ORBIT_PITCH);
+			OrbitingCamera(orbitPose(direction, target, distance), target, distance);
+	};
+}
+
+/** Return the active mode without exposing its private state shape. */
+function cameraMode(state:EditorCameraState):EditorCameraMode {
+	return switch state {
+		case WalkingCamera(_): WalkCamera;
+		case FlyingCamera(_): FlyCamera;
+		case OrbitingCamera(_, _, _): OrbitCamera;
+	};
+}
+
+/** Return the next mode used by the visible Camera control and the C key. */
+function cycleCameraMode(mode:EditorCameraMode):EditorCameraMode {
+	return switch mode {
+		case WalkCamera: FlyCamera;
+		case FlyCamera: OrbitCamera;
+		case OrbitCamera: WalkCamera;
+	};
+}
+
+/** Return the renderer-ready pose for the active camera state. */
+function cameraPose(state:EditorCameraState):EditorCameraPose {
+	return switch state {
+		case WalkingCamera(pose): pose;
+		case FlyingCamera(pose): pose;
+		case OrbitingCamera(pose, _, _): pose;
+	};
+}
+
+/** Move only an Orbit target while preserving its angle and zoom distance. */
+function retargetOrbitCamera(state:EditorCameraState, target:EditorWorldVector):EditorCameraState {
+	return switch state {
+		case OrbitingCamera(pose, _, horizontalDistance):
+			final ownedTarget:EditorWorldVector = {x: target.x, y: target.y, z: target.z};
+			OrbitingCamera(orbitPose(pose, ownedTarget, horizontalDistance), ownedTarget, horizontalDistance);
+		case WalkingCamera(_) | FlyingCamera(_): state;
+	};
+}
+
+/** Advance unrestricted Fly movement and retain its generous outer bounds. */
+private function stepFlyCamera(projection:EditorWorldProjection, state:EditorCameraPose, input:EditorCameraInput, frameSeconds:Float):EditorCameraPose {
 	var seconds = frameSeconds;
 	if (seconds < 0.0)
 		seconds = 0.0;
 	if (seconds > MAX_FRAME_SECONDS)
 		seconds = MAX_FRAME_SECONDS;
+	final direction = turnCamera(state, input, MIN_PITCH, MAX_PITCH);
 
+	final distance = CAMERA_SPEED * seconds;
+	final wheelDistance = input.wheel * WHEEL_DISTANCE;
+	var x = state.x + (input.forward * direction.lookX - input.right * direction.lookZ) * distance + direction.lookX * wheelDistance;
+	var y = state.y + (input.forward * direction.lookY + input.vertical) * distance + direction.lookY * wheelDistance;
+	var z = state.z + (input.forward * direction.lookZ + input.right * direction.lookX) * distance + direction.lookZ * wheelDistance;
+	final margin = 128.0;
+	x = clamp(x, -margin, projection.width + margin);
+	y = clamp(y, 0.25, projection.height + margin);
+	z = clamp(z, -margin, projection.depth + margin);
+	return {
+		x: x,
+		y: y,
+		z: z,
+		lookX: direction.lookX,
+		lookY: direction.lookY,
+		lookZ: direction.lookZ
+	};
+}
+
+/** Advance grounded movement and place the camera eye above the new column. */
+private function stepWalkCamera(projection:EditorWorldProjection, state:EditorCameraPose, input:EditorCameraInput, frameSeconds:Float):EditorCameraPose {
+	var seconds = frameSeconds;
+	if (seconds < 0.0)
+		seconds = 0.0;
+	if (seconds > MAX_FRAME_SECONDS)
+		seconds = MAX_FRAME_SECONDS;
+	final direction = turnCamera(state, input, MIN_PITCH, MAX_PITCH);
+	final distance = WALK_SPEED * seconds;
+	var x = state.x + (input.forward * direction.lookX - input.right * direction.lookZ) * distance;
+	var z = state.z + (input.forward * direction.lookZ + input.right * direction.lookX) * distance;
+	x = clamp(x, 0.001, projection.width - 0.001);
+	z = clamp(z, 0.001, projection.depth - 0.001);
+	return {
+		x: x,
+		y: walkEyeY(projection, x, z),
+		z: z,
+		lookX: direction.lookX,
+		lookY: direction.lookY,
+		lookZ: direction.lookZ
+	};
+}
+
+/** Apply one bounded yaw and pitch change without target-specific math calls. */
+private function turnCamera(state:EditorCameraPose, input:EditorCameraInput, minimumPitch:Float, maximumPitch:Float):EditorCameraPose {
 	var yaw = input.yaw;
 	if (yaw > MAX_LOOK_STEP)
 		yaw = MAX_LOOK_STEP;
@@ -425,39 +591,58 @@ function stepCamera(projection:EditorWorldProjection, state:EditorCameraState, i
 	final candidateZ = state.lookZ - yaw * state.lookX;
 	final lengthSquared = candidateX * candidateX + candidateZ * candidateZ;
 	final normalization = 1.5 - 0.5 * lengthSquared;
-	final lookX = candidateX * normalization;
-	final lookZ = candidateZ * normalization;
 	var lookY = state.lookY + input.pitch;
-	if (lookY > MAX_PITCH)
-		lookY = MAX_PITCH;
-	if (lookY < MIN_PITCH)
-		lookY = MIN_PITCH;
-
-	final distance = CAMERA_SPEED * seconds;
-	final wheelDistance = input.wheel * WHEEL_DISTANCE;
-	var x = state.x + (input.forward * lookX - input.right * lookZ) * distance + lookX * wheelDistance;
-	var y = state.y + (input.forward * lookY + input.vertical) * distance + lookY * wheelDistance;
-	var z = state.z + (input.forward * lookZ + input.right * lookX) * distance + lookZ * wheelDistance;
-	final margin = 128.0;
-	x = clamp(x, -margin, projection.width + margin);
-	y = clamp(y, 0.25, projection.height + margin);
-	z = clamp(z, -margin, projection.depth + margin);
+	if (lookY > maximumPitch)
+		lookY = maximumPitch;
+	if (lookY < minimumPitch)
+		lookY = minimumPitch;
 	return {
-		x: x,
-		y: y,
-		z: z,
-		lookX: lookX,
+		x: state.x,
+		y: state.y,
+		z: state.z,
+		lookX: candidateX * normalization,
 		lookY: lookY,
-		lookZ: lookZ
+		lookZ: candidateZ * normalization
 	};
 }
 
-/** Return the point one direction unit ahead of the camera. */
-function cameraTarget(state:EditorCameraState):EditorWorldVector {
+/** Place an Orbit pose so its direction reaches the fixed target exactly. */
+private function orbitPose(direction:EditorCameraPose, target:EditorWorldVector, horizontalDistance:Float):EditorCameraPose {
 	return {
-		x: state.x + state.lookX,
-		y: state.y + state.lookY,
-		z: state.z + state.lookZ
+		x: target.x - direction.lookX * horizontalDistance,
+		y: target.y - direction.lookY * horizontalDistance,
+		z: target.z - direction.lookZ * horizontalDistance,
+		lookX: direction.lookX,
+		lookY: direction.lookY,
+		lookZ: direction.lookZ
+	};
+}
+
+/** Return a player-like eye height above a solid surface or the empty floor. */
+private function walkEyeY(projection:EditorWorldProjection, x:Float, z:Float):Float {
+	final top = surfaceTopAt(projection, Std.int(x), Std.int(z));
+	return (top < 0 ? 0.0 : top + 1.0) + WALK_EYE_HEIGHT;
+}
+
+/** Keep zoom within the same generous range as Fly movement. */
+private function maximumOrbitDistance(projection:EditorWorldProjection):Float {
+	var extent = projection.width;
+	if (projection.height > extent)
+		extent = projection.height;
+	if (projection.depth > extent)
+		extent = projection.depth;
+	return extent + 128.0;
+}
+
+/** Return the camera target used by the native renderer and world picker. */
+function cameraTarget(state:EditorCameraState):EditorWorldVector {
+	return switch state {
+		case OrbitingCamera(_, target, _): target;
+		case WalkingCamera(pose) | FlyingCamera(pose): {
+				x: pose.x + pose.lookX,
+				y: pose.y + pose.lookY,
+				z: pose.z + pose.lookZ
+			};
 	};
 }
 
