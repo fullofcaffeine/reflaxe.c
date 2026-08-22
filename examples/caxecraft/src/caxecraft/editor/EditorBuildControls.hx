@@ -2,11 +2,13 @@ package caxecraft.editor;
 
 import caxecraft.editor.EditorViewport.EditorTool;
 import caxecraft.editor.EditorWorldViewport.EditorWorldHit;
+import caxecraft.editor.EditorWorldViewport.EditorObjectGizmo;
 import caxecraft.editor.EditorWorldViewport.absolute;
 import caxecraft.editor.EditorFocus.EditorFocusMove;
 import caxecraft.editor.EditorFocus.EditorFocusTarget;
 import caxecraft.editor.EditorFocus.moveFocus;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioId;
 
 /**
  * Owns the small device-neutral interaction policy for direct 3D editing.
@@ -37,6 +39,44 @@ enum EditorBuildObjectAction {
 	NudgeSelectedObject(delta:VoxelPoint);
 	TurnSelectedObject(degrees:Int);
 }
+
+/** Temporary Build ownership of one stable authored object. */
+enum EditorBuildObjectGrab {
+	NoObjectGrab;
+	HoldingObject(id:ScenarioId);
+}
+
+/**
+ * Start, retain, or cancel one selected-object grab without editing the draft.
+ *
+ * The stable ID must remain selected and Build must retain captured Select
+ * input. Pressing Grab a second time cancels. This value owns no transform, so
+ * aiming cannot create revisions or stale document copies.
+ */
+function nextObjectGrab(current:EditorBuildObjectGrab, eligible:Null<ScenarioId>, grabPressed:Bool, cancelPressed:Bool):EditorBuildObjectGrab {
+	if (cancelPressed || eligible == null)
+		return NoObjectGrab;
+	return switch current {
+		case NoObjectGrab: grabPressed ? HoldingObject(eligible) : NoObjectGrab;
+		case HoldingObject(id):
+			if (id.text() != eligible.text() || grabPressed) NoObjectGrab; else current;
+	};
+}
+
+/** True while Build owns one stable object for crosshair placement. */
+function objectGrabActive(current:EditorBuildObjectGrab):Bool
+	return switch current {
+		case NoObjectGrab: false;
+		case HoldingObject(_): true;
+	};
+
+/** Translate one cached object origin to the chosen world cell. */
+function objectPlacementDelta(gizmo:EditorObjectGizmo, target:VoxelPoint):VoxelPoint
+	return {
+		x: target.x - gizmo.origin.x,
+		y: target.y - gizmo.origin.y,
+		z: target.z - gizmo.origin.z
+	};
 
 /** One frame of device-independent input for a selected object in Build. */
 typedef EditorBuildObjectInput = {

@@ -4,12 +4,16 @@ import caxecraft.editor.EditorActionPalette.availableScenarioActions;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectInput;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.nextObjectGrab;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
 import caxecraft.editor.EditorBuildControls.objectAction;
+import caxecraft.editor.EditorBuildControls.objectGrabActive;
+import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -1076,10 +1080,12 @@ final class EditorProbe {
 				"gizmo.stateful"
 			][index], 'object projection changed identity $index');
 		}
-		require(close(objects[0].x, 0.5) && close(objects[0].y, 0.5) && close(objects[0].z, 0.5),
+		require(close(objects[0].x, 0.5) && close(objects[0].y, 0.5) && close(objects[0].z, 0.5) && objects[0].origin.x == 0 && objects[0].origin.y == 0
+			&& objects[0].origin.z == 0,
 			"point-object projection changed authored thousandth-block coordinates");
 		require(close(objects[6].x, 3.5) && close(objects[6].y, 2.0) && close(objects[6].z, 3.0) && close(objects[6].width, 3.0)
-			&& close(objects[6].height, 2.0) && close(objects[6].depth, 4.0),
+			&& close(objects[6].height,
+				2.0) && close(objects[6].depth, 4.0) && objects[6].origin.x == 2 && objects[6].origin.y == 1 && objects[6].origin.z == 1,
 			"trigger projection changed its exact half-open authored bounds");
 		return 13;
 	}
@@ -1266,6 +1272,39 @@ final class EditorProbe {
 		checks++;
 		pointer = nextPointerState(EditorBuildPointerState.Captured, true, false, false, false);
 		require(pointer == EditorBuildPointerState.Released, "window focus loss retained first-person pointer capture");
+		checks++;
+		final grabbedId = id("build.grabbed");
+		var grab = nextObjectGrab(NoObjectGrab, grabbedId, true, false);
+		switch grab {
+			case HoldingObject(value):
+				require(value == grabbedId, "Build grabbed a different stable object");
+			case NoObjectGrab:
+				require(false, "Build did not grab the selected object");
+		}
+		checks++;
+		grab = nextObjectGrab(grab, grabbedId, false, false);
+		require(objectGrabActive(grab), "steady aiming dropped the held object");
+		checks++;
+		require(!objectGrabActive(nextObjectGrab(grab, grabbedId, true, false)), "a second Grab press did not cancel holding");
+		checks++;
+		require(!objectGrabActive(nextObjectGrab(grab, id("build.other"), false, false)), "a selection change retained the old held object");
+		checks++;
+		require(!objectGrabActive(nextObjectGrab(grab, grabbedId, false, true)), "cancel retained the held object");
+		checks++;
+		final placementDelta = objectPlacementDelta({
+			id: grabbedId,
+			kind: EditorObjectGizmoKind.TriggerZoneGizmo,
+			origin: {x: 2, y: 1, z: 3},
+			x: 3.5,
+			y: 2.0,
+			z: 5.0,
+			width: 3.0,
+			height: 2.0,
+			depth: 4.0,
+			facing: NoObjectFacing
+		}, {x: 6, y: 0, z: 8});
+		require(placementDelta.x == 4 && placementDelta.y == -1 && placementDelta.z == 5,
+			"Build placement used a visual center instead of the authored object origin");
 		checks++;
 		checks += expectObjectNudge(objectAction({
 			pointerCaptured: true,
@@ -2271,6 +2310,7 @@ final class EditorProbe {
 			{
 				id: id("object.near"),
 				kind: EditorObjectGizmoKind.CheckpointGizmo,
+				origin: {x: 1, y: 0, z: 1},
 				x: 1.5,
 				y: 1.0,
 				z: 1.5,
@@ -2282,6 +2322,7 @@ final class EditorProbe {
 			{
 				id: id("object.far"),
 				kind: EditorObjectGizmoKind.NpcGizmo,
+				origin: {x: 1, y: 0, z: 3},
 				x: 1.5,
 				y: 1.0,
 				z: 3.5,
@@ -2293,6 +2334,7 @@ final class EditorProbe {
 			{
 				id: id("object.overlap"),
 				kind: EditorObjectGizmoKind.ItemGizmo,
+				origin: {x: 1, y: 0, z: 1},
 				x: 1.5,
 				y: 1.0,
 				z: 1.5,

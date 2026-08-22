@@ -83,6 +83,10 @@ enum EditorObjectFacing {
 typedef EditorObjectGizmo = {
 	final id:ScenarioId;
 	final kind:EditorObjectGizmoKind;
+
+	/** Authored cell origin used by exact whole-cell placement gestures. */
+	final origin:VoxelPoint;
+
 	final x:Float;
 	final y:Float;
 	final z:Float;
@@ -315,6 +319,7 @@ function projectObjects(objects:Array<ScenarioObject>):Array<EditorObjectGizmo> 
 				{
 					id: object.id,
 					kind: TriggerZoneGizmo,
+					origin: {x: bounds.origin.x, y: bounds.origin.y, z: bounds.origin.z},
 					x: bounds.origin.x + bounds.size.width * 0.5,
 					y: bounds.origin.y + bounds.size.height * 0.5,
 					z: bounds.origin.z + bounds.size.depth * 0.5,
@@ -399,6 +404,11 @@ private inline function pointGizmo(id:ScenarioId, kind:EditorObjectGizmoKind, tr
 	return {
 		id: id,
 		kind: kind,
+		origin: {
+			x: Std.int(transform.xMilli / 1000),
+			y: Std.int(transform.yMilli / 1000),
+			z: Std.int(transform.zMilli / 1000)
+		},
 		x: transform.xMilli / 1000.0,
 		y: transform.yMilli / 1000.0 + 0.5,
 		z: transform.zMilli / 1000.0,

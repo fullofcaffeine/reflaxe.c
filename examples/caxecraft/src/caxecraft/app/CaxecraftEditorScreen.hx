@@ -4,13 +4,17 @@ package caxecraft.app;
 import caxecraft.content.RuntimeContentPack.RuntimeContentRegistry;
 import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
+import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
+import caxecraft.editor.EditorBuildControls.nextObjectGrab;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildFocus;
 import caxecraft.editor.EditorBuildControls.normalizeBuildTool;
 import caxecraft.editor.EditorBuildControls.objectAction;
+import caxecraft.editor.EditorBuildControls.objectGrabActive;
+import caxecraft.editor.EditorBuildControls.objectPlacementDelta;
 import caxecraft.editor.EditorBuildControls.terrainAction;
 import caxecraft.editor.EditorBuildControls.toolForBuildHotbarSlot;
 import caxecraft.editor.EditorBuildControls.usesDirectTerrainControls;
@@ -180,6 +184,7 @@ final class CaxecraftEditorScreen {
 	var focusedControl:EditorFocusTarget;
 	var workspaceView:EditorWorkspaceView;
 	var buildPointerState:EditorBuildPointerState;
+	var objectGrab:EditorBuildObjectGrab;
 	var editLayerY:Int;
 	var activeTool:EditorTool;
 	var detailsOpen:Bool;
@@ -233,6 +238,7 @@ final class CaxecraftEditorScreen {
 		focusedControl = initialFocus();
 		workspaceView = BuildView;
 		buildPointerState = EditorBuildPointerState.Released;
+		objectGrab = NoObjectGrab;
 		editLayerY = 0;
 		activeTool = SelectTool;
 		detailsOpen = false;
@@ -839,6 +845,10 @@ final class CaxecraftEditorScreen {
 	 * Keyboard, controller, and pilot commands all enter this one handler.
 	 */
 	public function applyNavigation(command:NavigationCommand):EditorScreenAction {
+		if (command == NavigationCommand.Cancel && objectGrabActive(objectGrab)) {
+			objectGrab = NoObjectGrab;
+			return StayInEditor;
+		}
 		if (command == NavigationCommand.Cancel && buildPointerState == EditorBuildPointerState.Captured) {
 			setBuildPointerState(nextPointerState(buildPointerState, workspaceView == BuildView, true, false, true));
 			return StayInEditor;
@@ -1137,6 +1147,8 @@ final class CaxecraftEditorScreen {
 	/** Choose one creation card while preserving the current semantic selection. */
 	function setActiveTool(tool:EditorTool):Void {
 		activeTool = tool;
+		if (tool != SelectTool)
+			objectGrab = NoObjectGrab;
 		invalidatePreview();
 	}
 
@@ -1153,8 +1165,10 @@ final class CaxecraftEditorScreen {
 		buildPointerState = next;
 		if (next == EditorBuildPointerState.Captured)
 			Raylib.DisableCursor();
-		else
+		else {
+			objectGrab = NoObjectGrab;
 			Raylib.EnableCursor();
+		}
 	}
 
 	/** Select one of the five visible Build cards from its number key. */
@@ -1203,6 +1217,7 @@ final class CaxecraftEditorScreen {
 		final index = objectIndex(id);
 		if (current == null || index < 0)
 			return;
+		objectGrab = NoObjectGrab;
 		switch current.select({baseRevision: current.revision(), selection: NodeSelection(ObjectNode(id))}) {
 			case SelectionApplied(_, _) | SelectionUnchanged(_, _):
 				selection = current.selectedBounds();
@@ -1251,15 +1266,26 @@ final class CaxecraftEditorScreen {
 			case NodeSelection(ObjectNode(value)): value;
 			case NoEditorSelection | VoxelSelection(_) | NodeSelection(_): return;
 		};
-		switch current.mutate({baseRevision: current.revision(), mutation: Apply(MoveObjectBy(id, delta))}) {
+		moveObject(id, delta);
+	}
+
+	/** Commit one stable object's whole-cell translation through shared history. */
+	function moveObject(id:ScenarioId, delta:VoxelPoint):Bool {
+		final current = session;
+		if (current == null)
+			return false;
+		return switch current.mutate({baseRevision: current.revision(), mutation: Apply(MoveObjectBy(id, delta))}) {
 			case MutationApplied(_, _, _, _, _):
 				notice = Ready;
 				refreshProjection(false, KeepTerrain);
+				true;
 			case MutationUnchanged(_, _):
 				notice = Ready;
+				false;
 			case MutationRejected(_, _):
 				notice = Invalid;
-		}
+				false;
+		};
 	}
 
 	/** Rotate the selected transform-backed object through revisioned history. */
@@ -1658,9 +1684,10 @@ final class CaxecraftEditorScreen {
 	 * button removes a solid and the secondary button places adjacent ground.
 	 * WASD moves the active camera. Fly also uses Q/E and the wheel. Orbit uses
 	 * the wheel for zoom. C changes camera mode, and F refocuses the active mode.
-	 * With Select and one object active, arrow keys move it by one camera-relative
-	 * cell and R turns an eligible object clockwise by one quarter turn.
-	 * Escape releases the pointer before the editor handles another cancel.
+	 * With Select and one object active, G holds it for one crosshair placement.
+	 * Arrow keys still move it by one camera-relative cell, and R turns an
+	 * eligible object clockwise by one quarter turn.
+	 * Escape cancels a held object first. Another press releases the pointer.
 	 */
 	function drawWorldViewport(left:Int, top:Int, width:Int, height:Int, resources:EditorRenderResources):Void {
 		var current = projection;
@@ -1705,10 +1732,14 @@ final class CaxecraftEditorScreen {
 		camera = currentCamera;
 		var currentPose = cameraPose(currentCamera);
 		final directObjectIndex = selectedObjectIndex();
+		final eligibleGrabId:Null<ScenarioId> = if (cameraInputEnabled && activeTool == SelectTool && directObjectIndex >= 0)
+			objectGizmos[directObjectIndex].id else null;
+		objectGrab = nextObjectGrab(objectGrab, eligibleGrabId, cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.G), false);
+		final holdingObject = objectGrabActive(objectGrab);
 		final directObjectEdited = applyBuildObjectAction(objectAction({
 			pointerCaptured: cameraInputEnabled,
 			selectToolActive: activeTool == SelectTool,
-			objectSelected: directObjectIndex >= 0,
+			objectSelected: directObjectIndex >= 0 && !holdingObject,
 			objectCanTurn: objectCanTurn(directObjectIndex),
 			upPressed: Raylib.IsKeyPressed(KeyboardKey.Up),
 			rightPressed: Raylib.IsKeyPressed(KeyboardKey.Right),
@@ -1743,7 +1774,7 @@ final class CaxecraftEditorScreen {
 				y: direction.y.toFloat(),
 				z: direction.z.toFloat()
 			}, editLayerY, 512.0);
-			if (activeTool == SelectTool) {
+			if (activeTool == SelectTool && !holdingObject) {
 				final objectHit = pickObject(objectGizmos, {x: origin.x.toFloat(), y: origin.y.toFloat(), z: origin.z.toFloat()}, {
 					x: direction.x.toFloat(),
 					y: direction.y.toFloat(),
@@ -1753,16 +1784,51 @@ final class CaxecraftEditorScreen {
 					hoveredObject = objectIndex(objectHit.id);
 			}
 		}
+		final grabbedIndex = switch objectGrab {
+			case NoObjectGrab: -1;
+			case HoldingObject(id): objectIndex(id);
+		};
+		if (grabbedIndex < 0 && holdingObject)
+			objectGrab = NoObjectGrab;
+		final objectTarget:Null<VoxelPoint> = if (grabbedIndex < 0 || hover == null) null else if (hover.placement != null) hover.placement else
+			if (!hover.solid) hover.point else null;
+		var objectPreview:Null<EditorObjectGizmo> = null;
+		if (objectTarget != null) {
+			final source = objectGizmos[grabbedIndex];
+			final delta = objectPlacementDelta(source, objectTarget);
+			objectPreview = {
+				id: source.id,
+				kind: source.kind,
+				origin: objectTarget,
+				x: source.x + delta.x,
+				y: source.y + delta.y,
+				z: source.z + delta.z,
+				width: source.width,
+				height: source.height,
+				depth: source.depth,
+				facing: source.facing
+			};
+		}
 		final terrainMode = usesDirectTerrainControls(activeTool);
 		final previewTool = activeTool == PaintTool ? PaintTool : (terrainMode ? EraseTool : activeTool);
 		final previewPoint:Null<VoxelPoint> = if (hover == null) null else if (activeTool == PaintTool) hover.placement else hover.point;
-		if (previewPoint == null || hoveredObject >= 0)
+		if (holdingObject || previewPoint == null || hoveredObject >= 0)
 			invalidatePreview();
 		else
 			updatePreview(previewPoint, previewTool);
-		if (!capturePressed && aiming && hoveredObject >= 0 && leftPressed) {
+		if (!capturePressed && aiming && objectPreview != null && leftPressed) {
+			final preview = objectPreview;
+			final delta = objectPlacementDelta(objectGizmos[grabbedIndex], preview.origin);
+			final id = objectGizmos[grabbedIndex].id;
+			if (moveObject(id, delta)) {
+				objectGrab = NoObjectGrab;
+				current = projection;
+				if (current == null)
+					return;
+			}
+		} else if (!capturePressed && aiming && !holdingObject && hoveredObject >= 0 && leftPressed) {
 			selectObject(objectGizmos[hoveredObject].id);
-		} else if (!capturePressed && aiming && hoveredObject < 0 && terrainMode && hover != null && (leftPressed || rightPressed)) {
+		} else if (!capturePressed && aiming && !holdingObject && hoveredObject < 0 && terrainMode && hover != null && (leftPressed || rightPressed)) {
 			final edited = switch terrainAction(leftPressed, rightPressed, hover) {
 				case NoTerrainAction: false;
 				case RemoveTerrain(point): applyToolAt(EditorTool.EraseTool, point);
@@ -1773,7 +1839,7 @@ final class CaxecraftEditorScreen {
 				return;
 			if (edited)
 				invalidatePreview();
-		} else if (!capturePressed && aiming && (hover != null || hoveredObject >= 0) && leftPressed) {
+		} else if (!capturePressed && aiming && !holdingObject && (hover != null || hoveredObject >= 0) && leftPressed) {
 			if (hover != null)
 				applyToolAt(activeTool, hover.point);
 			current = projection;
@@ -1819,6 +1885,11 @@ final class CaxecraftEditorScreen {
 			if (index == selectedObject || index == hoveredObject)
 				Raylib.DrawCubeWires(Vector3.fromFloat(gizmo.x, gizmo.y, gizmo.z), c.Float32.fromFloat(gizmo.width + 0.10),
 					c.Float32.fromFloat(gizmo.height + 0.10), c.Float32.fromFloat(gizmo.depth + 0.10), color);
+		}
+		if (objectPreview != null) {
+			final preview = objectPreview;
+			Raylib.DrawCubeWires(Vector3.fromFloat(preview.x, preview.y, preview.z), c.Float32.fromFloat(preview.width + 0.12),
+				c.Float32.fromFloat(preview.height + 0.12), c.Float32.fromFloat(preview.depth + 0.12), Color.rgba(255, 214, 92));
 		}
 		if (previewPoint != null && hoveredObject < 0 && !selectedCell(previewPoint.x, previewPoint.y, previewPoint.z)) {
 			final previewColor = previewAllowed ? Color.rgba(92, 240, 186) : Color.rgba(255, 104, 82);
@@ -2290,7 +2361,7 @@ final class CaxecraftEditorScreen {
 	}
 
 	/**
-	 * Move and turn the selected actor through two production Build key actions.
+	 * Place and turn the selected actor through production Build actions.
 	 *
 	 * The pilot bypasses only operating-system key delivery. Pointer ownership,
 	 * Select mode, camera-relative direction, revisioned commands, projection
@@ -2301,26 +2372,19 @@ final class CaxecraftEditorScreen {
 		var selected = selectedObjectIndex();
 		if (currentCamera == null || selected < 0)
 			return false;
-		var pose = cameraPose(currentCamera);
-		if (!applyBuildObjectAction(objectAction({
-			pointerCaptured: buildPointerState == EditorBuildPointerState.Captured,
-			selectToolActive: activeTool == SelectTool,
-			objectSelected: true,
-			objectCanTurn: objectCanTurn(selected),
-			upPressed: false,
-			rightPressed: true,
-			downPressed: false,
-			leftPressed: false,
-			turnPressed: false,
-			lookX: pose.lookX,
-			lookZ: pose.lookZ
-		})))
+		final source = objectGizmos[selected];
+		objectGrab = nextObjectGrab(objectGrab, source.id, true, false);
+		if (!objectGrabActive(objectGrab))
 			return false;
+		final target:VoxelPoint = {x: source.origin.x + 1, y: source.origin.y, z: source.origin.z};
+		if (!moveObject(source.id, objectPlacementDelta(source, target)))
+			return false;
+		objectGrab = NoObjectGrab;
 		currentCamera = camera;
 		selected = selectedObjectIndex();
 		if (currentCamera == null || selected < 0)
 			return false;
-		pose = cameraPose(currentCamera);
+		final pose = cameraPose(currentCamera);
 		return applyBuildObjectAction(objectAction({
 			pointerCaptured: buildPointerState == EditorBuildPointerState.Captured,
 			selectToolActive: activeTool == SelectTool,
