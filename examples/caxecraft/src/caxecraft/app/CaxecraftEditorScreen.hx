@@ -8,6 +8,7 @@ import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
+import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
 import caxecraft.editor.EditorBuildControls.immersiveWorkspaceActive;
@@ -1265,8 +1266,8 @@ final class CaxecraftEditorScreen {
 		}
 	}
 
-	/** Select one of the five visible Build cards from its number key. */
-	function selectBuildHotbarTool():Void {
+	/** Select a visible Build card from a number key or one mouse-wheel step. */
+	function selectBuildHotbarTool(wheelDirection:Int):Void {
 		var slot = 0;
 		if (Raylib.IsKeyPressed(KeyboardKey.One))
 			slot = 1;
@@ -1281,6 +1282,8 @@ final class CaxecraftEditorScreen {
 		final tool = toolForBuildHotbarSlot(slot);
 		if (tool != null)
 			setActiveTool(tool);
+		else if (wheelDirection != 0)
+			setActiveTool(cycleBuildHotbarTool(activeTool, wheelDirection));
 	}
 
 	/** Leave immediately only when the package draft equals its last saved bytes. */
@@ -1784,8 +1787,8 @@ final class CaxecraftEditorScreen {
 	 * draft fits the gameplay world. A click gives Build the pointer. Mouse
 	 * movement then looks without a held button. In terrain mode, the primary
 	 * button removes a solid and the secondary button places adjacent ground.
-	 * WASD moves the active camera. Fly also uses Q/E and the wheel. Orbit uses
-	 * the wheel for zoom. C changes camera mode, and F refocuses the active mode.
+	 * WASD moves the active camera, and Fly also uses Q/E. The mouse wheel moves
+	 * through the visible hotbar. C changes camera mode, and F refocuses it.
 	 * With Select and one object active, G holds it for one crosshair placement.
 	 * Arrow keys still move it by one camera-relative cell, and R turns an
 	 * eligible object clockwise by one quarter turn.
@@ -1810,8 +1813,10 @@ final class CaxecraftEditorScreen {
 		final cameraInputEnabled = buildPointerState == EditorBuildPointerState.Captured
 			&& Raylib.IsWindowFocused()
 			&& (name == null || !name.isEditing());
+		final wheel = cameraInputEnabled ? Raylib.GetMouseWheelMove().toFloat() : 0.0;
+		final wheelDirection = wheel > 0.0 ? -1 : wheel < 0.0 ? 1 : 0;
 		if (cameraInputEnabled)
-			selectBuildHotbarTool();
+			selectBuildHotbarTool(wheelDirection);
 		if (cameraInputEnabled && Raylib.IsKeyPressed(KeyboardKey.C)) {
 			cycleEditorCamera();
 			final cycled = camera;
@@ -1829,7 +1834,7 @@ final class CaxecraftEditorScreen {
 				vertical: axis(Raylib.IsKeyDown(KeyboardKey.E), Raylib.IsKeyDown(KeyboardKey.Q)),
 				yaw: capturePressed ? 0.0 : -delta.x.toFloat() * 0.004,
 				pitch: capturePressed ? 0.0 : -delta.y.toFloat() * 0.004,
-				wheel: Raylib.GetMouseWheelMove().toFloat()
+				wheel: 0.0
 			}, Raylib.GetFrameTime().toFloat());
 		}
 		camera = currentCamera;

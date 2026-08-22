@@ -237,6 +237,26 @@ function toolForBuildHotbarSlot(slot:Int):Null<EditorTool> {
 	};
 }
 
+/** Move by one visible Build hotbar slot and wrap at either end. */
+function cycleBuildHotbarTool(tool:EditorTool, direction:Int):EditorTool {
+	if (direction == 0)
+		return normalizeBuildTool(tool);
+	var slot = switch tool {
+		case SelectTool: 1;
+		case PaintTool | EraseTool | FillTool: 2;
+		case CheckpointTool: 3;
+		case CatalogObjectTool: 4;
+		case TriggerZoneTool: 5;
+	};
+	slot += direction > 0 ? 1 : -1;
+	if (slot < 1)
+		slot = 5;
+	else if (slot > 5)
+		slot = 1;
+	final next = toolForBuildHotbarSlot(slot);
+	return next == null ? normalizeBuildTool(tool) : next;
+}
+
 /** Replace Plan's hidden Erase mode with Build's direct terrain mode. */
 function normalizeBuildTool(tool:EditorTool):EditorTool
 	return tool == EraseTool ? PaintTool : tool;

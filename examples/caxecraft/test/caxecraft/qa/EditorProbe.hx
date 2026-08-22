@@ -7,6 +7,7 @@ import caxecraft.editor.EditorBuildControls.EditorBuildObjectInput;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
+import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
@@ -1632,6 +1633,14 @@ final class EditorProbe {
 			&& toolForBuildHotbarSlot(0) == null
 			&& toolForBuildHotbarSlot(6) == null,
 			"Build hotbar slots drifted from the five visible creation cards");
+		checks++;
+		require(cycleBuildHotbarTool(SelectTool, -1) == TriggerZoneTool
+			&& cycleBuildHotbarTool(TriggerZoneTool, 1) == SelectTool
+			&& cycleBuildHotbarTool(PaintTool, 1) == CheckpointTool
+			&& cycleBuildHotbarTool(CheckpointTool, -1) == PaintTool
+			&& cycleBuildHotbarTool(FillTool, 1) == CheckpointTool
+			&& cycleBuildHotbarTool(CatalogObjectTool, 0) == CatalogObjectTool,
+			"Build mouse-wheel selection did not cycle through the visible hotbar");
 		checks++;
 		require(normalizeBuildTool(EraseTool) == PaintTool
 			&& normalizeBuildTool(SelectTool) == SelectTool, "Build retained Plan's hidden Erase mode");
