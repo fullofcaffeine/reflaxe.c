@@ -314,6 +314,10 @@ final class CaxecraftApp {
 		var rejectedEditCount = 0;
 		var terrainPatchDirtyChunks = 0;
 		var terrainPatchFallbackCount = 0;
+		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 0) {
+			if (!editorScreen.applyPilotGroundPrompt())
+				rejectedEditCount++;
+		}
 		if (pilotName == PilotScriptName.EditorShell && onEditor && frameCount == 1) {
 			if (!editorScreen.pilotUsesWalkCamera())
 				rejectedEditCount++;
@@ -2003,7 +2007,7 @@ final class CaxecraftApp {
 				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				|| (pilotName == PilotScriptName.AquaticGear && frameCount == 146)
 				|| (pilotName == PilotScriptName.SmoothMotion && frameCount == 10)
-				|| (pilotName == PilotScriptName.EditorShell && frameCount == 5)
+				|| (pilotName == PilotScriptName.EditorShell && (frameCount == 0 || frameCount == 5))
 				|| (pilotName == PilotScriptName.CampaignTravel && frameCount == 3))
 				capturePilotFrame = true;
 			#if caxecraft_pilot_runtime
@@ -2044,6 +2048,8 @@ final class CaxecraftApp {
 				reviewScreenshotObserved = capturePilotScreenshot("caxecraft-pilot-smooth-motion.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 5)
 				capturePilotScreenshot("caxecraft-pilot-editor-play.png");
+			if (pilotName == PilotScriptName.EditorShell && frameCount == 0)
+				capturePilotScreenshot("caxecraft-pilot-editor-terrain-prompt.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 7)
 				capturePilotScreenshot("caxecraft-pilot-editor-environment.png");
 			if (pilotName == PilotScriptName.EditorShell && frameCount == 8)

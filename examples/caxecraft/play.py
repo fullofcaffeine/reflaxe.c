@@ -3240,6 +3240,7 @@ def run_pilot_sample(
         )
     elif pilot == "editor-shell":
         supporting_screenshots = (
+            executable.parent / "caxecraft-pilot-editor-terrain-prompt.png",
             executable.parent / "caxecraft-pilot-editor-play.png",
             executable.parent / "caxecraft-pilot-editor-environment.png",
         )
@@ -3322,6 +3323,8 @@ def run_pilot_sample(
             )
         elif supporting_screenshot.name == "caxecraft-pilot-editor-environment.png":
             validate_editor_environment_screenshot(supporting_screenshot, platform_name=platform_name)
+        elif supporting_screenshot.name == "caxecraft-pilot-editor-terrain-prompt.png":
+            validate_editor_screenshot(supporting_screenshot, platform_name=platform_name)
         else:
             validate_smoke_screenshot(supporting_screenshot, platform_name=platform_name)
         supporting_hashes[supporting_screenshot.name] = hashlib.sha256(

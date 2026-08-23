@@ -6,8 +6,10 @@ import caxecraft.content.EditorObjectCatalog.EditorObjectRecipe;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.EditorBuildPrompt;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
+import caxecraft.editor.EditorBuildControls.buildPrompt as buildPromptFor;
 import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
@@ -206,6 +208,10 @@ final class CaxecraftEditorScreen {
 	var previewRevision:Int;
 	var previewTool:EditorTool;
 	var previewAllowed:Bool;
+
+	/** Remaining view-only time for the in-world edit confirmation. */
+	var buildConfirmationSeconds:Float;
+
 	var objectList:GuiListViewState;
 
 	#if caxecraft_pilot
@@ -278,6 +284,7 @@ final class CaxecraftEditorScreen {
 		previewRevision = -1;
 		previewTool = SelectTool;
 		previewAllowed = false;
+		buildConfirmationSeconds = 0.0;
 		objectList = new GuiListViewState(-1);
 		worldName = GuiTextBoxState.create(64);
 		refreshProjection(true, RefreshAllTerrain);
@@ -438,9 +445,6 @@ final class CaxecraftEditorScreen {
 		final inset = 16;
 		drawWorldViewport(locale, inset, inset, width - inset * 2, height - inset * 2, resources);
 		Raylib.DrawRectangleLines(inset, inset, width - inset * 2, height - inset * 2, CaxecraftPalette.selection());
-		final help = uiCatalog.text(locale, UiMessage.EditorCanvasHelp);
-		Raylib.DrawRectangle(inset + 10, inset + 10, width - inset * 2 - 20, 22, Color.rgba(8, 20, 24));
-		Raylib.DrawTextString(help, inset + 16, inset + 14, 14, CaxecraftPalette.hudText());
 		drawImmersiveHotbar(locale, width, height, inset);
 	}
 
@@ -1816,6 +1820,10 @@ final class CaxecraftEditorScreen {
 	 * Escape cancels a held object first. Another press releases the pointer.
 	 */
 	function drawWorldViewport(locale:LocaleCursor, left:Int, top:Int, width:Int, height:Int, resources:EditorRenderResources):Void {
+		if (buildConfirmationSeconds > 0.0) {
+			final elapsed = Raylib.GetFrameTime().toFloat();
+			buildConfirmationSeconds = buildConfirmationSeconds > elapsed ? buildConfirmationSeconds - elapsed : 0.0;
+		}
 		var current = projection;
 		var currentCamera = camera;
 		if (current == null || currentCamera == null || width <= 0 || height <= 0)
@@ -1877,6 +1885,7 @@ final class CaxecraftEditorScreen {
 			lookZ: currentPose.lookZ
 		}));
 		if (directObjectEdited) {
+			showBuildConfirmation();
 			final refreshedProjection = projection;
 			final refreshedCamera = camera;
 			if (refreshedProjection == null || refreshedCamera == null)
@@ -1954,6 +1963,7 @@ final class CaxecraftEditorScreen {
 			final delta = objectPlacementDelta(objectGizmos[grabbedIndex], preview.origin);
 			final id = objectGizmos[grabbedIndex].id;
 			if (moveObject(id, delta)) {
+				showBuildConfirmation();
 				objectGrab = NoObjectGrab;
 				current = projection;
 				if (current == null)
@@ -1970,11 +1980,14 @@ final class CaxecraftEditorScreen {
 			current = projection;
 			if (current == null)
 				return;
-			if (edited)
+			if (edited) {
+				showBuildConfirmation();
 				invalidatePreview();
+			}
 		} else if (!capturePressed && aiming && !holdingObject && (hover != null || hoveredObject >= 0) && leftPressed) {
-			if (hover != null)
-				applyToolAt(activeTool, hover.point);
+			final applied = hover != null && applyToolAt(activeTool, hover.point);
+			if (applied && activeTool != SelectTool)
+				showBuildConfirmation();
 			current = projection;
 			if (current == null)
 				return;
@@ -1982,6 +1995,16 @@ final class CaxecraftEditorScreen {
 				updatePreview(hover.point, activeTool);
 		}
 
+		final prompt = buildPromptFor({
+			tool: activeTool,
+			targetAvailable: hover != null,
+			targetSolid: hover != null && hover.solid,
+			placementAvailable: hover != null && hover.placement != null,
+			objectTarget: hoveredObject >= 0,
+			objectHeld: objectGrabActive(objectGrab),
+			heldPlacementAvailable: objectPreview != null,
+			previewAllowed: previewAllowed
+		});
 		Raylib.DrawRectangle(left, top, width, height, CaxecraftPalette.sky());
 		Raylib.BeginScissorMode(left, top, width, height);
 		Raylib.BeginMode3D(nativeCamera);
@@ -2043,8 +2066,45 @@ final class CaxecraftEditorScreen {
 			Raylib.DrawRectangle(left + 8, top + height - 28, width - 16, 22, Color.rgba(8, 20, 24));
 			Raylib.DrawTextString(shortcutText, left + 14, top + height - 24, 14, CaxecraftPalette.hudText());
 		}
-		if (aiming)
-			drawBuildCrosshair(left + Std.int(width / 2), top + Std.int(height / 2));
+		if (aiming) {
+			final centerX = left + Std.int(width / 2);
+			final centerY = top + Std.int(height / 2);
+			drawBuildCrosshair(centerX, centerY);
+			drawBuildPrompt(locale, left, width, centerY, prompt);
+		}
+	}
+
+	/** Keep one accepted in-world edit visible long enough to read and Undo. */
+	function showBuildConfirmation():Void
+		buildConfirmationSeconds = 1.2;
+
+	/** Draw the exact typed action below the crosshair, or recent edit success. */
+	function drawBuildPrompt(locale:LocaleCursor, viewportLeft:Int, viewportWidth:Int, centerY:Int, prompt:EditorBuildPrompt):Void {
+		final label = if (buildConfirmationSeconds > 0.0)
+			'✓ ${uiCatalog.text(locale, UiMessage.EditorReady)}  ·  CTRL/CMD+Z ${uiCatalog.text(locale, UiMessage.EditorUndo)}'; else switch prompt {
+			case NoBuildTarget:
+				uiCatalog.text(locale, UiMessage.NoBlockInReach);
+			case TerrainBuildPrompt(canRemove, canPlace):
+				if (canRemove && canPlace)
+					'[LMB] ${uiCatalog.text(locale, UiMessage.EditorErase)}  ·  [RMB] ${uiCatalog.text(locale, UiMessage.EditorGround)}'; else if (canRemove)
+					'[LMB] ${uiCatalog.text(locale, UiMessage.EditorErase)}'; else '[RMB] ${uiCatalog.text(locale, UiMessage.EditorGround)}';
+			case SelectBuildPrompt(objectTarget):
+				if (objectTarget) '[LMB] ${uiCatalog.text(locale, UiMessage.EditorSelect)}  ·  [G] <->'; else
+					'[LMB] ${uiCatalog.text(locale, UiMessage.EditorSelect)}';
+			case CreateBuildPrompt(allowed):
+				if (allowed) '[LMB] ${immersiveToolLabel(locale, activeTool)}'; else uiCatalog.text(locale, UiMessage.PlaceBlocked);
+			case MoveBuildPrompt(allowed):
+				if (allowed) '[LMB] ✓  ·  [G / ESC] ×'; else '${uiCatalog.text(locale, UiMessage.PlaceBlocked)}  ·  [G / ESC] ×';
+		};
+		final availableWidth = viewportWidth - 32;
+		final width = availableWidth < 560 ? availableWidth : 560;
+		final left = viewportLeft + Std.int((viewportWidth - width) / 2);
+		Raylib.DrawRectangle(left, centerY + 20, width, 30, Color.rgba(8, 20, 24));
+		Raylib.DrawRectangleLines(left, centerY + 20, width, 30, CaxecraftPalette.selection());
+		final tool = immersiveToolLabel(locale, activeTool);
+		Raylib.DrawTextString('${uiCatalog.text(locale, UiMessage.EditorBuild)}  ·  $tool  ·  $label', left
+			+ 12, centerY
+			+ 27, 16, CaxecraftPalette.hudText());
 	}
 
 	/** Draw a compact high-contrast target at the captured Build ray origin. */
@@ -2691,6 +2751,12 @@ final class CaxecraftEditorScreen {
 	public function applyPilotBuildCapture():Bool {
 		setBuildPointerState(nextPointerState(buildPointerState, true, true, true, false));
 		return buildPointerState == EditorBuildPointerState.Captured;
+	}
+
+	/** Select Ground and capture Build for a representative contextual terrain frame. */
+	public function applyPilotGroundPrompt():Bool {
+		setActiveTool(PaintTool);
+		return applyPilotBuildCapture() && activeTool == PaintTool;
 	}
 	#end
 }

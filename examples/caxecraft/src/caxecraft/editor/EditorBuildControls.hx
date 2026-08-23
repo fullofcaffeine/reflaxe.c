@@ -33,6 +33,63 @@ enum EditorBuildTerrainAction {
 	PlaceTerrain(point:VoxelPoint);
 }
 
+/** Player-visible meaning of the next captured Build gesture. */
+enum EditorBuildPrompt {
+	/** The crosshair has no editable world target. */
+	NoBuildTarget;
+
+	/** Ground mode can remove, place, or do both at the current target. */
+	TerrainBuildPrompt(canRemove:Bool, canPlace:Bool);
+
+	/** Select mode points at terrain or at one authored object. */
+	SelectBuildPrompt(objectTarget:Bool);
+
+	/** One creation tool has a target, which can still fail its typed preview. */
+	CreateBuildPrompt(allowed:Bool);
+
+	/** A held object can or cannot move to the current crosshair target. */
+	MoveBuildPrompt(allowed:Bool);
+}
+
+/** Copy-free frame facts needed to explain the next Build input. */
+typedef EditorBuildPromptInput = {
+	final tool:EditorTool;
+	final targetAvailable:Bool;
+	final targetSolid:Bool;
+	final placementAvailable:Bool;
+	final objectTarget:Bool;
+	final objectHeld:Bool;
+	final heldPlacementAvailable:Bool;
+	final previewAllowed:Bool;
+}
+
+/**
+ * Explain the next direct gesture without inspecting Raylib or editor bytes.
+ *
+ * This is a view of state the native screen already computed for command
+ * preview. Keeping the policy here makes the prompt agree with the actual
+ * terrain, selection, creation, and held-object branches without adding a
+ * second mutation decision.
+ */
+function buildPrompt(input:EditorBuildPromptInput):EditorBuildPrompt {
+	if (input.objectHeld)
+		return MoveBuildPrompt(input.heldPlacementAvailable);
+	return switch input.tool {
+		case PaintTool | EraseTool:
+			if (!input.targetAvailable) NoBuildTarget; else {
+				final canRemove = input.targetSolid;
+				final canPlace = input.placementAvailable;
+				if (!canRemove && !canPlace)
+					NoBuildTarget;
+				else
+					TerrainBuildPrompt(canRemove, canPlace);
+			}
+		case SelectTool: input.objectTarget || input.targetAvailable ? SelectBuildPrompt(input.objectTarget) : NoBuildTarget;
+		case FillTool | CheckpointTool | CatalogObjectTool | TriggerZoneTool:
+			input.targetAvailable ? CreateBuildPrompt(input.previewAllowed) : NoBuildTarget;
+	};
+}
+
 /** One selected-object edit, or no edit when Build does not own the gesture. */
 enum EditorBuildObjectAction {
 	NoObjectAction;

@@ -2,12 +2,15 @@ package caxecraft.qa;
 
 import caxecraft.editor.EditorActionPalette.availableScenarioActions;
 import caxecraft.editor.EditorBuildControls.EditorBuildPointerState;
+import caxecraft.editor.EditorBuildControls.EditorBuildPrompt;
+import caxecraft.editor.EditorBuildControls.EditorBuildPromptInput;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectAction;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectInput;
 import caxecraft.editor.EditorBuildControls.EditorBuildObjectGrab;
 import caxecraft.editor.EditorBuildControls.EditorBuildTerrainAction;
 import caxecraft.editor.EditorBuildControls.EditorObjectShortcutAction;
 import caxecraft.editor.EditorBuildControls.cycleBuildHotbarTool;
+import caxecraft.editor.EditorBuildControls.buildPrompt;
 import caxecraft.editor.EditorBuildControls.moveBuildFocus;
 import caxecraft.editor.EditorBuildControls.nextPointerState;
 import caxecraft.editor.EditorBuildControls.nextObjectGrab;
@@ -1374,6 +1377,24 @@ final class EditorProbe {
 	/** Prove that direct Build capture and hotbar input stay finite and explicit. */
 	static function checkBuildControls():Int {
 		var checks = 0;
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(PaintTool, true, true, true)), TerrainBuildPrompt(true, true),
+			"Ground did not advertise direct remove and place actions");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(PaintTool, true, false, true)), TerrainBuildPrompt(false, true),
+			"Ground advertised removal from an empty target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(PaintTool, false, false, false)), NoBuildTarget,
+			"Ground advertised an action without a target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false)), SelectBuildPrompt(false),
+			"Select did not explain its terrain target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false, true)), SelectBuildPrompt(true),
+			"Select did not explain its object target");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(CheckpointTool, true, true, false, false, false, false, true)), CreateBuildPrompt(true),
+			"creation prompt rejected an accepted typed preview");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(TriggerZoneTool, true, true, false, false, false, false, false)), CreateBuildPrompt(false),
+			"creation prompt advertised a rejected typed preview");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false, true, true, true)), MoveBuildPrompt(true),
+			"held object did not replace the Select prompt with placement");
+		checks += expectBuildPrompt(buildPrompt(buildPromptInput(SelectTool, true, true, false, true, true, false)), MoveBuildPrompt(false),
+			"held object advertised a blocked placement");
 		var pointer = EditorBuildPointerState.Released;
 		pointer = nextPointerState(pointer, true, true, true, false);
 		require(pointer == EditorBuildPointerState.Captured, "a focused Build click did not capture the pointer");
@@ -1765,6 +1786,53 @@ final class EditorProbe {
 			"Build focus navigation visited Plan's hidden Erase card");
 		checks++;
 		return checks;
+	}
+
+	/** Build one complete prompt input while keeping each test case readable. */
+	static function buildPromptInput(tool:EditorTool, targetAvailable:Bool, targetSolid:Bool, placementAvailable:Bool, objectTarget:Bool = false,
+			objectHeld:Bool = false, heldPlacementAvailable:Bool = false, previewAllowed:Bool = false):EditorBuildPromptInput
+		return {
+			tool: tool,
+			targetAvailable: targetAvailable,
+			targetSolid: targetSolid,
+			placementAvailable: placementAvailable,
+			objectTarget: objectTarget,
+			objectHeld: objectHeld,
+			heldPlacementAvailable: heldPlacementAvailable,
+			previewAllowed: previewAllowed
+		};
+
+	/** Require one exact closed prompt without relying on enum equality lowering. */
+	static function expectBuildPrompt(actual:EditorBuildPrompt, expected:EditorBuildPrompt, message:String):Int {
+		final matches = switch actual {
+			case NoBuildTarget:
+				switch expected {
+					case NoBuildTarget: true;
+					case _: false;
+				}
+			case TerrainBuildPrompt(remove, place):
+				switch expected {
+					case TerrainBuildPrompt(expectedRemove, expectedPlace): remove == expectedRemove && place == expectedPlace;
+					case _: false;
+				}
+			case SelectBuildPrompt(objectTarget):
+				switch expected {
+					case SelectBuildPrompt(expectedObjectTarget): objectTarget == expectedObjectTarget;
+					case _: false;
+				}
+			case CreateBuildPrompt(allowed):
+				switch expected {
+					case CreateBuildPrompt(expectedAllowed): allowed == expectedAllowed;
+					case _: false;
+				}
+			case MoveBuildPrompt(allowed):
+				switch expected {
+					case MoveBuildPrompt(expectedAllowed): allowed == expectedAllowed;
+					case _: false;
+				}
+		};
+		require(matches, message);
+		return 1;
 	}
 
 	/** Require one horizontal nudge without weakening the exact action shape. */
