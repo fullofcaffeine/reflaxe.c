@@ -43,11 +43,14 @@ Before changing code, Codex MUST read:
 2. `AGENTS.md` for non-negotiable implementation behavior;
 3. this PRD completely, including Sections 31–40;
 4. `docs/architecture.md` for compiler-layer invariants;
-5. `docs/research/repo-patterns.md` for patterns extracted from the supplied target repositories and Haxe/hxcpp;
+5. `docs/research/repo-patterns.md` for patterns extracted from reviewed target repositories and Haxe/hxcpp sources;
 6. `docs/BEADS_PLAN.md` and `docs/specs/beads-plan.json` for the proposed execution graph;
 7. the existing source and runtime files before proposing replacements.
 
-The Repomix snapshots in `reference/repomix/` are evidence and precedent. They are not code to copy wholesale.
+The reproducible research-bundle recipe in
+`docs/specs/cross-target-research-bundle.json` identifies the reviewed source
+repositories and exact revisions. The recipe is evidence and precedent. It is
+not permission to copy source without a license review.
 
 ### 0.2 Status vocabulary
 
@@ -5049,7 +5052,7 @@ changes must update both surfaces in one reviewed change.
 | Development runner and future CLI (`development-cli`) | E8 plan, direct Haxe/HXML recovery path, and E1 executable build-adapter seed | Unsupported | No CLI source, schema, or template is present. The production `hxc` command surface, stable exit categories, JSON outputs, full toolchain/sysroot/cross build orchestration, bindgen/export orchestration, doctor, and packaging are planned under E8. The optional executable-only CMake/Meson files do not implement that product surface. |
 | Beads plan and materialization (`beads-bootstrap`) | `docs/specs/beads-plan.json`, schema, `scripts/beads/**`, `docs/BEADS_PLAN.md` | Verified governance bootstrap | The self-contained seed stores 11 epics, 122 tasks, their acceptance/requirement facts, 274 hard blocking edges, and 160 covered requirements. Standard-library-only validation and preview run without `bd`; the argument-array importer creates or reuses open/claimed/closed issues by stable identity, checks final ready-state parity, and writes only an ignored atomic recovery map outside Beads internals. |
 | Structural validation and archive integrity (`structural-validation`) | capability/toolchain/CI/license/governance policy checks, all-source HXML, runtime smoke, governance CI, package manifest | Implemented for the listed M0 policies | Present local gates verify capability claims, dependency/package policy, required CI wiring, contribution/security/release-policy drift, license/provenance, the complete current owned Haxe graph and macro branches, fail-closed production activation, native fixtures, generated primitive arithmetic under eligible UBSan, and the declared hello example without globbing future examples. The fuller archive structure/reference scripts named elsewhere are absent; broader sanitizer, platform, and release gates remain explicitly unverified. |
-| Supplied repository evidence (`research-evidence`) | `reference/repomix/*.xml`, checksums, `docs/research/repo-patterns.md` | Evidence-only | Searchable XML snapshots cover Haxe/hxcpp, Reflaxe, and sibling targets. They are precedent and provenance evidence—not code to copy wholesale—and adapted code still requires license review. |
+| Reproducible repository evidence (`research-evidence`) | `docs/specs/cross-target-research-bundle.json`, `scripts/research/build_cross_target_bundle.py`, `docs/research/{cross-target-semantics-bundle,repo-patterns}.md`, governance tests | Verified evidence recipe | The checked-in recipe names exact Git revisions, selected paths, licenses, and omissions for Haxe, Reflaxe, and sibling targets. The builder reads committed Git objects, scans the selected files, writes per-file hashes, and proves deterministic archive bytes. The generated archive is a local research artifact, not a supplied repository asset or code-copying license. |
 | Deterministic import tooling (`bindgen`) | PRD/task graph and independent pointlib fixture | Unsupported | No `tools/` implementation, Clang parser, binding generator, or user command exists. Implement exact preprocessing/target capture, normalized ABI model, raw externs, optional ergonomic wrappers, lock/provenance files, layout probes, drift reports, callbacks, and constrained C++ shims. |
 | Public C ABI and library production (`c-export`) | typed metadata vocabulary, PRD/task graph, independent native consumers | Unsupported | No `std/c/Export.hx`, Haxe export analyzer, generated public header, library packager, or generated shared-library example exists. Build stable headers/wrappers, ownership/error adapters, visibility/version maps, install metadata, ABI manifests/diffs, and independent consumers. |
 | Portable runtime and standard library (`portable-runtime-and-stdlib`) | Minimal `runtime/hxrt` seed and `stdlib-ledger.json` | Planned | Full portable Haxe semantics and standard-library parity are product requirements, not current capabilities. Ratify strings, memory, exceptions, and platform contracts before implementing selective runtime facilities and ledger-driven conformance. |
@@ -5852,6 +5855,8 @@ Primary implementation references, checked for this handoff on 2026-07-15:
 - Beads issue/dependency concepts: `https://beads.gascity.com/core-concepts/issues`
 - Beads CLI create reference: `https://beads.gascity.com/cli-reference/create`
 
-The Repomix snapshots under `reference/repomix/` are the primary local evidence for sibling-target repository conventions, Reflaxe integration patterns, and Haxe/hxcpp implementation precedent. `docs/research/repo-patterns.md` records the extracted patterns and should be updated when Codex discovers additional relevant precedent.
-
-The supplied repository snapshots remain the primary family-pattern evidence for this bootstrap.
+The recipe in `docs/specs/cross-target-research-bundle.json` is the source list
+for sibling-target, Reflaxe, Haxe, and hxcpp research. It pins exact Git
+revisions and records licenses, selected paths, and deliberate omissions.
+`docs/research/repo-patterns.md` records the extracted patterns. Update that
+document when new evidence changes a pattern.

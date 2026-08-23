@@ -121,6 +121,7 @@
         "test"
       ],
       "excludePaths": [
+        "examples/caxecraft/CLAUDE.md",
         "test/governance/test_cross_target_bundle.py"
       ]
     },
